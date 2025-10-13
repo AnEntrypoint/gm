@@ -1,0 +1,119 @@
+{
+  "permissions": {
+    "allow": ["Read", "Write", "Edit", "Bash", "Task", "WebFetch", "Glob", "Grep", "TodoWrite", "mcp__glootie__execute", "mcp__glootie__ast_tool", "mcp__glootie__caveat", "mcp__playwright__browser_navigate", "mcp__playwright__browser_click", "mcp__playwright__browser_type", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_close", "mcp__vexify__search_code"]
+  },
+  "mcpServers": {
+    "glootie": {
+      "command": "npx",
+      "args": ["-y", "mcp-glootie@latest"]
+    },
+    "vexify": {
+      "command": "npx",
+      "args": ["-y", "vexify@latest", "mcp"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    }
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y wfgy hook && cat CLAUDE.md && npx -y mcp-thorns@latest && cat ./context/work-guidelines.md"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y wfgy@latest hook && cat ./context/cleanup-guidelines.md"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y mcp-thorns@latest"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ["Write", "Edit"],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"🔧 Preparing to modify codebase...\""
+          }
+        ]
+      },
+      {
+        "matcher": ["Bash"],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"💻 Executing shell command...\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ["Write", "Edit"],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"✅ Code modification complete\""
+          }
+        ]
+      },
+      {
+        "matcher": ["Bash"],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"✅ Shell command executed\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"👋 Session ended - WFGY context saved\""
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": false,
+  "settings": {
+    "autoSave": true,
+    "compactOnStop": false,
+    "notificationTimeout": 5000,
+    "debugMode": false
+  },
+  "metadata": {
+    "name": "glootie-cc",
+    "version": "2.0.0",
+    "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+    "author": "AnEntrypoint",
+    "homepage": "https://github.com/AnEntrypoint/glootie-cc"
+  }
+}
