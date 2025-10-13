@@ -45,6 +45,33 @@
         "hooks": [
           {
             "type": "command",
+            "command": "claude mcp add glootie -- npx -y mcp-glootie@latest 2>/dev/null || echo 'Glootie MCP already exists'"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude mcp add vexify -- npx -y vexify@latest mcp 2>/dev/null || echo 'Vexify MCP already exists'"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude mcp add playwright -- npx -y @playwright/mcp@latest 2>/dev/null || echo 'Playwright MCP already exists'"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
             "command": "npx -y mcp-thorns@latest"
           }
         ]
@@ -91,6 +118,33 @@
       }
     ],
     "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude mcp remove glootie 2>/dev/null || echo 'Glootie MCP already removed'"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude mcp remove vexify 2>/dev/null || echo 'Vexify MCP already removed'"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude mcp remove playwright 2>/dev/null || echo 'Playwright MCP already removed'"
+          }
+        ]
+      },
       {
         "matcher": "*",
         "hooks": [
