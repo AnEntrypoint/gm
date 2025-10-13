@@ -3,10 +3,14 @@
   "version": "2.0.0",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "main": "claude-plugin.json",
+  "bin": {
+    "glootie-cc": "./cli.js"
+  },
   "files": [
     "claude-plugin.json",
     "context/",
-    "README.md"
+    "README.md",
+    "cli.js"
   ],
   "keywords": [
     "claude-code",
