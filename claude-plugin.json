@@ -2,20 +2,7 @@
   "permissions": {
     "allow": ["Read", "Write", "Edit", "Bash", "Task", "WebFetch", "Glob", "Grep", "TodoWrite", "mcp__glootie__execute", "mcp__glootie__ast_tool", "mcp__glootie__caveat", "mcp__playwright__browser_navigate", "mcp__playwright__browser_click", "mcp__playwright__browser_type", "mcp__playwright__browser_snapshot", "mcp__playwright__browser_close", "mcp__vexify__search_code"]
   },
-  "mcpServers": {
-    "glootie": {
-      "command": "npx",
-      "args": ["-y", "mcp-glootie@latest"]
-    },
-    "vexify": {
-      "command": "npx",
-      "args": ["-y", "vexify@latest", "mcp"]
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
-    }
-  },
+  "mcpServers": "./.mcp.json",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -40,33 +27,6 @@
       }
     ],
     "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp add glootie -- npx -y mcp-glootie@latest 2>/dev/null || echo 'Glootie MCP already exists'"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp add vexify -- npx -y vexify@latest mcp 2>/dev/null || echo 'Vexify MCP already exists'"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp add playwright -- npx -y @playwright/mcp@latest 2>/dev/null || echo 'Playwright MCP already exists'"
-          }
-        ]
-      },
       {
         "matcher": "*",
         "hooks": [
@@ -118,33 +78,6 @@
       }
     ],
     "SessionEnd": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp remove glootie 2>/dev/null || echo 'Glootie MCP already removed'"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp remove vexify 2>/dev/null || echo 'Vexify MCP already removed'"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude mcp remove playwright 2>/dev/null || echo 'Playwright MCP already removed'"
-          }
-        ]
-      },
       {
         "matcher": "*",
         "hooks": [
