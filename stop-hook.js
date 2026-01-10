@@ -62,6 +62,15 @@ const run = () => {
     if (entries.length === 0) {
       // No transcript to verify, just create the verification file
       fs.writeFileSync(verificationFile, 'VERIFIED');
+
+      // Verify file was created
+      if (!fs.existsSync(verificationFile)) {
+        return {
+          decision: 'block',
+          reason: 'Verification file creation failed - unable to confirm stop hook completion'
+        };
+      }
+
       return { decision: undefined };
     }
 
@@ -102,6 +111,14 @@ console.log(JSON.stringify(result, null, 2));
 
       fs.writeFileSync(verificationFile, JSON.stringify(verificationData, null, 2));
 
+      // Verify file was created
+      if (!fs.existsSync(verificationFile)) {
+        return {
+          decision: 'block',
+          reason: 'Verification file creation failed - unable to confirm stop hook completion'
+        };
+      }
+
       return { decision: undefined };
     } catch (e) {
       // Even on error, create verification file to proceed
@@ -110,6 +127,14 @@ console.log(JSON.stringify(result, null, 2));
         error: e.message,
         verified: false
       }, null, 2));
+
+      // Verify error file was created
+      if (!fs.existsSync(verificationFile)) {
+        return {
+          decision: 'block',
+          reason: `Stop hook verification failed: ${e.message} - unable to create verification file`
+        };
+      }
 
       return { decision: undefined };
     }
