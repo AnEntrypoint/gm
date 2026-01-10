@@ -47,26 +47,34 @@ const run = () => {
 
   try {
     const stopInput = readStopHookInput();
-    const transcriptPath = stopInput.transcript_path;
     const stopHookActive = stopInput.stop_hook_active || false;
 
     if (stopHookActive) {
-      return { decision: undefined, skipVerification: true };
+      return { decision: undefined };
     }
 
-    // Read last transcript entries for agent context
-    const entries = readTranscriptEntries(transcriptPath, 5);
-    const instruction = `Use glootie code execution to check the last few json entries in the transcript one by one, devise a mechanism to verify that it's finished, and touch the file ${verificationFile} when confirmed.`;
+    // Check if verification file exists
+    const fileExists = fs.existsSync(verificationFile);
 
-    const result = {
-      hookSpecificOutput: {
-        hookEventName: 'Stop',
-        additionalContext: instruction,
-        transcriptEntries: entries.length > 0 ? entries : null
-      }
-    };
+    if (!fileExists) {
+      // File doesn't exist - instruct agent to verify and create it
+      const transcriptPath = stopInput.transcript_path;
+      const entries = readTranscriptEntries(transcriptPath, 5);
+      const instruction = `Use glootie code execution to check the last few json entries in the transcript one by one, devise a mechanism to verify that it's finished, and touch the file ${verificationFile} when confirmed.`;
 
-    return result;
+      return {
+        decision: 'block',
+        reason: `Verification pending: ${instruction}`,
+        hookSpecificOutput: {
+          hookEventName: 'Stop',
+          additionalContext: instruction,
+          transcriptEntries: entries.length > 0 ? entries : null
+        }
+      };
+    }
+
+    // File exists - allow stop to proceed
+    return { decision: undefined };
   } catch (error) {
     return { decision: undefined };
   }
@@ -74,10 +82,15 @@ const run = () => {
 
 try {
   const result = run();
-  if (result.hookSpecificOutput) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.decision === 'block') {
-    console.log(JSON.stringify({ decision: result.decision, reason: result.reason }));
+  if (result.decision === 'block') {
+    const output = {
+      decision: result.decision,
+      reason: result.reason
+    };
+    if (result.hookSpecificOutput) {
+      output.hookSpecificOutput = result.hookSpecificOutput;
+    }
+    console.log(JSON.stringify(output, null, 2));
   }
 } catch (e) {
 }
