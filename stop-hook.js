@@ -2,10 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 const verificationFile = path.join(projectDir, '.glootie-stop-verified');
 
 let aborted = false;
@@ -53,91 +51,22 @@ const run = () => {
     const stopHookActive = stopInput.stop_hook_active || false;
 
     if (stopHookActive) {
-      return { decision: undefined };
+      return { decision: undefined, skipVerification: true };
     }
 
-    // Read and analyze last transcript entries
+    // Read last transcript entries for agent context
     const entries = readTranscriptEntries(transcriptPath, 5);
+    const instruction = `Use glootie code execution to check the last few json entries in the transcript one by one, devise a mechanism to verify that it's finished, and touch the file ${verificationFile} when confirmed.`;
 
-    if (entries.length === 0) {
-      // No transcript to verify, just create the verification file
-      fs.writeFileSync(verificationFile, 'VERIFIED');
-
-      // Verify file was created
-      if (!fs.existsSync(verificationFile)) {
-        return {
-          decision: 'block',
-          reason: 'Verification file creation failed - unable to confirm stop hook completion'
-        };
+    const result = {
+      hookSpecificOutput: {
+        hookEventName: 'Stop',
+        additionalContext: instruction,
+        transcriptEntries: entries.length > 0 ? entries : null
       }
+    };
 
-      return { decision: undefined };
-    }
-
-    // Create context for glootie execution
-    const entriesJson = JSON.stringify(entries, null, 2);
-    const verificationCode = `
-const entries = ${entriesJson};
-const result = {
-  entriesAnalyzed: entries.length,
-  lastEntry: entries[entries.length - 1],
-  hasErrors: entries.some(e => e.parseError || e.entry?.error),
-  analysis: entries.map(e => ({
-    line: e.line,
-    type: e.entry?.event || 'unknown'
-  }))
-};
-console.log(JSON.stringify(result, null, 2));
-`;
-
-    // Execute verification through glootie
-    try {
-      const output = execSync(`node -e "${verificationCode.replace(/"/g, '\\"')}"`, {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 5000
-      });
-
-      // Parse glootie output
-      const result = JSON.parse(output);
-
-      // Create verification file when done
-      const verificationData = {
-        timestamp: new Date().toISOString(),
-        entriesAnalyzed: result.entriesAnalyzed,
-        lastEntry: result.lastEntry,
-        analysis: result.analysis
-      };
-
-      fs.writeFileSync(verificationFile, JSON.stringify(verificationData, null, 2));
-
-      // Verify file was created
-      if (!fs.existsSync(verificationFile)) {
-        return {
-          decision: 'block',
-          reason: 'Verification file creation failed - unable to confirm stop hook completion'
-        };
-      }
-
-      return { decision: undefined };
-    } catch (e) {
-      // Even on error, create verification file to proceed
-      fs.writeFileSync(verificationFile, JSON.stringify({
-        timestamp: new Date().toISOString(),
-        error: e.message,
-        verified: false
-      }, null, 2));
-
-      // Verify error file was created
-      if (!fs.existsSync(verificationFile)) {
-        return {
-          decision: 'block',
-          reason: `Stop hook verification failed: ${e.message} - unable to create verification file`
-        };
-      }
-
-      return { decision: undefined };
-    }
+    return result;
   } catch (error) {
     return { decision: undefined };
   }
@@ -145,7 +74,9 @@ console.log(JSON.stringify(result, null, 2));
 
 try {
   const result = run();
-  if (result.decision === 'block') {
+  if (result.hookSpecificOutput) {
+    console.log(JSON.stringify(result, null, 2));
+  } else if (result.decision === 'block') {
     console.log(JSON.stringify({ decision: result.decision, reason: result.reason }));
   }
 } catch (e) {
