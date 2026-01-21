@@ -89,7 +89,14 @@ State in \`~/.gh/extensions/glootie/state.json\`.
   }
 
   getHookSourcePaths(hook) {
-    return [`glootie-copilot-cli/hooks/${hook}-hook.js`];
+    const hookMap = {
+      'pre-tool-use': 'pre-tool.js',
+      'session-start': 'session-start.js',
+      'prompt-submit': 'prompt-submit.js',
+      'stop': 'stop.js'
+    };
+    const hookFile = hookMap[hook] || `${hook}.js`;
+    return [`hooks/${hookFile}`, `glootie-copilot-cli/hooks/${hook}-hook.js`, `gloutie-cc/hooks/${hook}.js`];
   }
 }
 
