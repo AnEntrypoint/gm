@@ -96,7 +96,7 @@ State in \`~/.gh/extensions/glootie/state.json\`.
       'stop': 'stop.js'
     };
     const hookFile = hookMap[hook] || `${hook}.js`;
-    return [`hooks/${hookFile}`, `glootie-copilot-cli/hooks/${hook}-hook.js`, `gloutie-cc/hooks/${hook}.js`];
+    return [`hooks/${hookFile}`, `glootie-copilot-cli/hooks/${hook}-hook.js`, `glootie-cc/hooks/${hook}.js`];
   }
 }
 

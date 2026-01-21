@@ -35,7 +35,7 @@ ConventionLoader.load() must use path.resolve() on input pluginDir:
 - Relative paths (e.g., "./plugin" or "~/plugin") cause fs.existsSync() to fail unpredictably
 - path.resolve(pluginDir) normalizes to absolute path before joining
 - Fixed in Jan 21: ConventionLoader now resolves plugin directory before file operations
-- Without this fix, CLI would report "gloutie.json not found" even when file exists
+- Without this fix, CLI would report "glootie.json not found" even when file exists
 
 getHookSourcePaths() in CLIAdapter maps hook names to files:
 - Maps consistently: pre-tool → pre-tool.js, session-start → session-start.js

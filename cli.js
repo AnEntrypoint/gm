@@ -15,12 +15,12 @@ Usage:
   glootie-builder <plugin-dir> [output-dir]
 
 Arguments:
-  plugin-dir    Path to plugin directory (must contain gloutie.json)
-  output-dir    Output directory (default: ./gloutie-build)
+  plugin-dir    Path to plugin directory (must contain glootie.json)
+  output-dir    Output directory (default: ./glootie-build)
 
 Examples:
-  gloutie-builder ./my-plugin
-  gloutie-builder ./my-plugin /tmp/build
+  glootie-builder ./my-plugin
+  glootie-builder ./my-plugin /tmp/build
 
 Description:
   Automatically generates 8 platform outputs from a single plugin directory:
@@ -35,7 +35,7 @@ Description:
 
 Plugin Directory Structure:
   plugin/
-  ├── gloutie.json          # Single truth source
+  ├── glootie.json          # Single truth source
   ├── agents/               # Auto-detected
   │   ├── gm.md
   │   ├── codesearch.md
@@ -54,17 +54,17 @@ Zero configuration required. Just create the plugin structure and run!
   }
 
   const pluginDir = path.resolve(args[0]);
-  const outputDir = path.resolve(args[1] || './gloutie-build');
+  const outputDir = path.resolve(args[1] || './glootie-build');
 
   if (!fs.existsSync(pluginDir)) {
     console.error('Plugin directory not found:', pluginDir);
     process.exit(1);
   }
 
-  const gloutieJsonPath = path.join(pluginDir, 'gloutie.json');
+  const glootieJsonPath = path.join(pluginDir, 'glootie.json');
 
-  if (!fs.existsSync(gloutieJsonPath)) {
-    console.error('gloutie.json not found in:', pluginDir);
+  if (!fs.existsSync(glootieJsonPath)) {
+    console.error('glootie.json not found in:', pluginDir);
     process.exit(1);
   }
 

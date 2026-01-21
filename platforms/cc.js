@@ -32,6 +32,10 @@ class ClaudeCodeAdapter extends CLIAdapter {
   formatConfigJson(config, pluginSpec) {
     return JSON.stringify({
       ...config,
+      author: {
+        name: config.author,
+        url: 'https://github.com/AnEntrypoint'
+      },
       hooks: './hooks/hooks.json'
     }, null, 2);
   }
@@ -40,20 +44,37 @@ class ClaudeCodeAdapter extends CLIAdapter {
     return '.claude-plugin/plugin.json';
   }
 
+  getPackageJsonFields() {
+    return {
+      main: this.getPackageJsonMain(),
+      bin: { 'glootie-cc': './cli.js' },
+      files: this.getPackageJsonFiles(),
+      keywords: this.getKeywords(),
+      peerDependencies: { '@anthropic-ai/claude-code': '*' }
+    };
+  }
+
+  getKeywords() {
+    return [
+      'claude-code',
+      'claude-plugin',
+      'wfgy',
+      'mcp',
+      'automation',
+      'glootie'
+    ];
+  }
+
   getPackageJsonFiles() {
     return [
       '.claude-plugin/',
-      'agents/',
       'hooks/',
       'README.md',
-      this.contextFile,
+      'CLAUDE.md',
       '.mcp.json',
       'plugin.json',
-      'pre-tool-use-hook.js',
-      'session-start-hook.js',
       'prompt-submit-hook.js',
-      'stop-hook.js',
-      'stop-hook-git.js'
+      'stop-hook.js'
     ];
   }
 

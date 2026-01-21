@@ -34,7 +34,7 @@ jobs:
       - name: Create minimal starter template
         run: |
           mkdir -p plugforge-starter/{agents,hooks}
-          cat > plugforge-starter/gloutie.json << 'EOF'
+          cat > plugforge-starter/glootie.json << 'EOF'
           {"name":"glootie","version":"1.0.0","description":"Glootie","author":"AnEntrypoint","license":"MIT","mcp":{}}
           EOF
           echo "# gm" > plugforge-starter/agents/gm.md
