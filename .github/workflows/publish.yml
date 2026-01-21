@@ -43,7 +43,30 @@ jobs:
           node-version: '22'
 
       - name: Build plugin for ${{ matrix.name }}
-        run: node cli.js plugforge-starter /tmp/build
+        run: |
+          # Ensure starter template exists
+          if [ ! -d "plugforge-starter" ]; then
+            mkdir -p plugforge-starter/{agents,hooks}
+            cat > plugforge-starter/gloutie.json << 'EOF'
+          {
+            "name": "glootie",
+            "version": "1.0.0",
+            "description": "Glootie plugin",
+            "author": "AnEntrypoint",
+            "license": "MIT",
+            "mcp": {}
+          }
+          EOF
+            echo "# gm" > plugforge-starter/agents/gm.md
+            echo "# codesearch" > plugforge-starter/agents/codesearch.md
+            echo "# websearch" > plugforge-starter/agents/websearch.md
+            echo "module.exports = {};" > plugforge-starter/hooks/session-start.js
+            echo "module.exports = {};" > plugforge-starter/hooks/pre-tool.js
+            echo "module.exports = {};" > plugforge-starter/hooks/prompt-submit.js
+            echo "module.exports = {};" > plugforge-starter/hooks/stop.js
+            echo "module.exports = {};" > plugforge-starter/hooks/stop-git.js
+          fi
+          node cli.js plugforge-starter /tmp/build
 
       - name: Setup Git
         run: |
