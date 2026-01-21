@@ -31,18 +31,6 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Create minimal starter template
-        run: |
-          mkdir -p plugforge-starter/{agents,hooks}
-          cat > plugforge-starter/glootie.json << 'EOF'
-          {"name":"glootie","version":"1.0.0","description":"Glootie","author":"AnEntrypoint","license":"MIT","mcp":{}}
-          EOF
-          echo "# gm" > plugforge-starter/agents/gm.md
-          echo "# codesearch" > plugforge-starter/agents/codesearch.md
-          echo "# websearch" > plugforge-starter/agents/websearch.md
-          for hook in session-start pre-tool prompt-submit stop stop-git; do
-            echo "module.exports = {};" > "plugforge-starter/hooks/$hook.js"
-          done
 
       - name: Build ${{ matrix.name }}
         run: node cli.js plugforge-starter /tmp/build
