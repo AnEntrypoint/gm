@@ -7,7 +7,7 @@ Production-ready AI plugin builder for 8 platforms. Convention-driven, zero-conf
 ## Key Features
 
 - **Convention Over Configuration**: Drop files in standard directories, builder auto-detects structure
-- **Zero Config**: Works with just `glootie.json` and your hook code
+- **Zero Config**: Works with just `plugin.json` and your hook code
 - **Black Magic**: Single hook code translates to 8 platform-specific formats automatically
 - **Multi-Platform**: Support for CLI tools, IDEs, and browsers
 - **Hot Reload Ready**: State lives outside code for zero-downtime updates
@@ -21,10 +21,10 @@ cp -r glootie-starter my-plugin
 cd my-plugin
 
 # 2. Edit configuration
-nano gloutie.json
+nano plugin.json
 
 # 3. Run builder
-gloutie-builder . ../build
+plugforge . ../build
 
 # 4. Publish to platforms
 # Output in ../build/ ready for each platform
@@ -46,8 +46,8 @@ gloutie-builder . ../build
 ## Usage
 
 ```bash
-gloutie-builder ./plugin-dir                # Build for all 8 platforms
-gloutie-builder ./plugin-dir ./output-dir   # Specify output directory
+plugforge ./plugin-dir                # Build for all 8 platforms
+plugforge ./plugin-dir ./output-dir   # Specify output directory
 ```
 
 The builder always generates output for all 8 platforms - select desired platforms during deployment.
@@ -55,9 +55,9 @@ The builder always generates output for all 8 platforms - select desired platfor
 ## Installation
 
 ```bash
-npm install -g glootie-builder
+npm install -g plugforge
 # or
-npx glootie-builder ./my-plugin ./output
+npx plugforge ./my-plugin ./output
 ```
 
 ## How It Works
@@ -78,7 +78,7 @@ Single `session-start.js` hook becomes:
 
 ```
 my-plugin/
-├── glootie.json              # Configuration (name, version, author, license)
+├── plugin.json              # Configuration (name, version, author, license)
 ├── README.md                 # Plugin documentation
 ├── agents/                   # AI system prompts (*.md files)
 │   ├── gm.md
@@ -104,10 +104,10 @@ See documentation in the builder repository:
 ## Creating a Plugin
 
 1. `cp -r glootie-starter my-plugin`
-2. Edit `gloutie.json` with your plugin details (required)
+2. Edit `plugin.json` with your plugin details (required)
 3. Customize hook implementations in `hooks/` directory (optional - defaults provided)
 4. Add/update agents in `agents/` directory (optional - used as reference, not copied to output)
-5. Run `gloutie-builder . ../build` to generate all 8 platform outputs
+5. Run `plugforge . ../build` to generate all 8 platform outputs
 6. Select desired platforms from output directory and deploy
 
 ## License

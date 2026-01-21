@@ -4,8 +4,8 @@
 
 ### Generation Pipeline
 - AutoGenerator.generate() is async - must await: `await generator.generate()`
-- ConventionLoader.load() reads glootie.json, agents/, hooks/ from plugin directory
-- Validation requires: name, version, author, license in gloutie.json
+- ConventionLoader.load() reads plugin.json, agents/, hooks/ from plugin directory
+- Validation requires: name, version, author, license in plugin.json
 - Starter hook files provide minimal implementations - extend as needed
 
 ### Hook Translation System
@@ -37,7 +37,7 @@ getHookSourcePaths() in CLIAdapter maps hook names to files:
 - Gracefully handles missing optional files (returns null)
 
 ### MCP Configuration
-gloutie.json mcp property becomes .mcp.json per platform:
+plugin.json mcp property becomes .mcp.json per platform:
 - CLI platforms: .mcp.json in root (CLAUDE_PLUGIN_ROOT, GEMINI_PROJECT_DIR, etc.)
 - Validated against schema: https://schemas.modelcontextprotocol.io/0.1.0/mcp.json
 - Platform adapters override mcp paths in config if needed
