@@ -28,13 +28,11 @@ CLIAdapter.getAgentSourcePaths() must include `agents/${agent}.md` as FIRST path
 - readSourceFile() returns on first path match, so direct `agents/` path must come first
 - Fallback paths: glootie-cc/agents for reference implementations
 - Without direct `agents/` path, agent files fail to resolve and output is missing agents/ directory
-- Fixed in Jan 21: Added `agents/${agent}.md` to head of getAgentSourcePaths() return array
 
 ### File System Paths (CRITICAL FIX)
 ConventionLoader.load() must use path.resolve() on input pluginDir:
 - Relative paths (e.g., "./plugin" or "~/plugin") cause fs.existsSync() to fail unpredictably
 - path.resolve(pluginDir) normalizes to absolute path before joining
-- Fixed in Jan 21: ConventionLoader now resolves plugin directory before file operations
 - Without this fix, CLI would report "glootie.json not found" even when file exists
 
 getHookSourcePaths() in CLIAdapter maps hook names to files:
@@ -58,26 +56,14 @@ plugin.json mcp property becomes .mcp.json per platform:
 CopilotCLIAdapter.getHookSourcePaths() requires hook name mapping:
 - Maps 'pre-tool-use' → 'pre-tool.js', 'session-start' → 'session-start.js', etc.
 - First lookup path must be hooks/ directory (from template)
-- Fixed in Jan 21: Added hook name → filename mapping to ensure all hooks resolve
 - Without mapping, hooks/ directory wouldn't be checked, causing hooks to be missing from output
 
 ### Code Organization
-- All lib/ and platforms/ files actively used (no dead code remaining)
+- All lib/ and platforms/ files actively used (no dead code)
 - hook-translator.js removed - hook translation now done via HookFormatters
 - continue-gen.js removed - dead code not referenced by any platform
-- 8 platform adapters all functioning end-to-end (verified)
 - Most files under 200 lines; vscode.js (267) and copilot-cli-gen.js (308) exceed due to complex config generation
-- Total codebase: 2752 lines across 17 active files
 
-### Build Output Verification
-Comprehensive end-to-end testing confirmed (Jan 21):
-- All 8 platforms generate successfully (cc, gc, oc, vscode, cursor, zed, jetbrains, copilot-cli)
-- All required config files present and valid JSON/YAML/XML per spec
-- CLI platforms: All 5 hook types (session-start, pre-tool, prompt-submit, stop, stop-git)
-- 82 total files generated across all platforms
-- All 12 agents distributed across CLI platforms (gm, codesearch, websearch)
-- Extension platforms generate compiled artifacts in dist/
-- 100% compatibility with documented platform specifications verified
 
 ### GitHub Actions CI/CD Pipeline
 `.github/workflows/publish.yml` automates multi-repo publishing:
@@ -91,7 +77,7 @@ Comprehensive end-to-end testing confirmed (Jan 21):
 - `GITHUB_TOKEN` from Actions has default permissions - may need adjustment for org repos
 - Initial repo creation may fail if org billing/permissions restrict it - manual creation fallback
 
-### GitHub Actions Implementation (Jan 21)
+### GitHub Actions Implementation
 Critical fixes for CI/CD publishing to work correctly:
 
 **Dotfile Copying Issue:**
@@ -99,7 +85,6 @@ Critical fixes for CI/CD publishing to work correctly:
 - Solution: Use `git clean -fdx` to remove all untracked files while preserving `.git/`
 - File copying: Use `cp -r "$BUILD_DIR"/. .` (note the `/.`) to copy ALL files including dotfiles
 - Without these, `.claude-plugin/marketplace.json` and `.mcp.json` never sync to published repos
-- Fixed in commit: Use git clean to safely remove and replace files
 
 **Git Context in Subprocess Scripts:**
 - Shell scripts called from GitHub Actions workflow must ensure `cd "$WORK_DIR"` before git operations
@@ -119,15 +104,7 @@ Critical fixes for CI/CD publishing to work correctly:
 - Must wrap commit/push in `if ! git diff-index --quiet HEAD --; then` to skip when nothing changed
 - Otherwise pushes empty commits unnecessarily
 
-**Template File Truncation Bug (FIXED Jan 21):**
+**Template File Truncation Bug:**
 - Early workflow version created minimal stub agent files before build: `echo "# gm" > plugforge-starter/agents/gm.md`
 - This overwrote the committed agents with single-line headers, causing published repos to have truncated agents
 - Solution: Remove the "Create minimal starter template" step - rely on committed plugforge-starter/ files
-- Published repos built before fix have truncated agents (1 line); rebuild with fixed workflow restores full agents
-- Fixed in commit 85781a7: Remove template creation that was truncating agent files
-
-### Known Limitations
-- Continue.dev adapter was planned but removed from final implementation
-- Jules/other REST API platforms not implemented (extensible architecture ready)
-- No built-in build step validation (npm/gradle validation happens during platform publish)
-- Copilot CLI and GitHub Actions: Some repos have older implementations (gc, oc) - full rebuild will sync to latest
