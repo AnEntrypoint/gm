@@ -137,6 +137,14 @@ Critical fixes for CI/CD publishing to work correctly:
 - `git diff-index --quiet HEAD --` must run AFTER the `cd` to check correct repo state
 - Pre-git operations should not assume context (test `git init` first if needed)
 
+**Dist Folder Cleanup (Jan 23):**
+- Old IDE platform builds generated `dist/` directories that were committed to GitHub repos
+- `git clean -fdx` only removes UNTRACKED files - committed `dist/` persists after reset
+- Solution: Explicit `rm -rf dist/` after git reset/clean in workflow
+- This ensures old dist folders from previous builds are removed before copying new artifacts
+- Workflow step order: `git reset --hard` → `git clean -fdx` → `rm -rf dist/` → `cp -r "$BUILD_DIR"/.`
+- Published repos will be cleaned of dist folders on next workflow run (auto-cleanup)
+
 **Token Authentication:**
 - GITHUB_TOKEN from Actions has limited permissions (only current repo access)
 - For publishing to org repos, need personal access token with `repo` scope

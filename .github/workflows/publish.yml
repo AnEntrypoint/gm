@@ -66,6 +66,7 @@ jobs:
 
           git reset --hard HEAD 2>/dev/null || true
           git clean -fdx
+          rm -rf dist/
           cp -r "$BUILD_DIR"/. .
 
           git add -A
