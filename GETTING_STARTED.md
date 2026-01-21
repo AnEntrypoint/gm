@@ -5,7 +5,7 @@
 ## Step 1: Copy Starter Template
 
 ```bash
-cp -r glootie-starter my-awesome-plugin
+cp -r plugforge-starter my-awesome-plugin
 cd my-awesome-plugin
 ls -la
 ```
@@ -141,7 +141,7 @@ See PLATFORMS.md for complete deployment details for each platform.
 
 ### 1. Initialize
 ```bash
-cp -r glootie-starter code-quality
+cp -r plugforge-starter code-quality
 cd code-quality
 ```
 
@@ -191,7 +191,7 @@ Done! Your plugin works on 8 platforms.
 
 ## Next Steps
 
-- Explore `glootie-starter/` template
+- Explore `plugforge-starter/` template
 - Read builder source in `lib/` and `platforms/` directories
 - Check `CLAUDE.md` for technical caveats
 - Review `PLATFORMS.md` for platform-specific details

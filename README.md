@@ -17,7 +17,7 @@ Production-ready AI plugin builder for 8 platforms. Convention-driven, zero-conf
 
 ```bash
 # 1. Copy starter template
-cp -r glootie-starter my-plugin
+cp -r plugforge-starter my-plugin
 cd my-plugin
 
 # 2. Edit configuration
@@ -103,7 +103,7 @@ See documentation in the builder repository:
 
 ## Creating a Plugin
 
-1. `cp -r glootie-starter my-plugin`
+1. `cp -r plugforge-starter my-plugin`
 2. Edit `plugin.json` with your plugin details (required)
 3. Customize hook implementations in `hooks/` directory (optional - defaults provided)
 4. Add/update agents in `agents/` directory (optional - used as reference, not copied to output)
