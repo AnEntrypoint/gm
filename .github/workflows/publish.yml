@@ -2,10 +2,8 @@ name: Build & Publish Plugins
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - 'plugforge-starter/**'
       - 'platforms/**'
       - 'lib/**'
       - '.github/workflows/publish.yml'
@@ -17,22 +15,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - platform: cc
-            name: Claude Code
-          - platform: gc
-            name: Gemini CLI
-          - platform: oc
-            name: OpenCode
-          - platform: vscode
-            name: VS Code
-          - platform: cursor
-            name: Cursor
-          - platform: zed
-            name: Zed
-          - platform: jetbrains
-            name: JetBrains
-          - platform: copilot-cli
-            name: GitHub Copilot CLI
+          - {platform: cc, name: "Claude Code"}
+          - {platform: gc, name: "Gemini CLI"}
+          - {platform: oc, name: "OpenCode"}
+          - {platform: vscode, name: "VS Code"}
+          - {platform: cursor, name: "Cursor"}
+          - {platform: zed, name: "Zed"}
+          - {platform: jetbrains, name: "JetBrains"}
+          - {platform: copilot-cli, name: "GitHub Copilot CLI"}
 
     steps:
       - uses: actions/checkout@v4
@@ -42,110 +32,50 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build plugin for ${{ matrix.name }}
+      - name: Create minimal starter template
         run: |
-          # Ensure starter template exists
-          if [ ! -d "plugforge-starter" ]; then
-            mkdir -p plugforge-starter/{agents,hooks}
-            cat > plugforge-starter/gloutie.json << 'EOF'
-          {
-            "name": "glootie",
-            "version": "1.0.0",
-            "description": "Glootie plugin",
-            "author": "AnEntrypoint",
-            "license": "MIT",
-            "mcp": {}
-          }
+          mkdir -p plugforge-starter/{agents,hooks}
+          cat > plugforge-starter/gloutie.json << 'EOF'
+          {"name":"glootie","version":"1.0.0","description":"Glootie","author":"AnEntrypoint","license":"MIT","mcp":{}}
           EOF
-            echo "# gm" > plugforge-starter/agents/gm.md
-            echo "# codesearch" > plugforge-starter/agents/codesearch.md
-            echo "# websearch" > plugforge-starter/agents/websearch.md
-            echo "module.exports = {};" > plugforge-starter/hooks/session-start.js
-            echo "module.exports = {};" > plugforge-starter/hooks/pre-tool.js
-            echo "module.exports = {};" > plugforge-starter/hooks/prompt-submit.js
-            echo "module.exports = {};" > plugforge-starter/hooks/stop.js
-            echo "module.exports = {};" > plugforge-starter/hooks/stop-git.js
-          fi
-          node cli.js plugforge-starter /tmp/build
+          echo "# gm" > plugforge-starter/agents/gm.md
+          echo "# codesearch" > plugforge-starter/agents/codesearch.md
+          echo "# websearch" > plugforge-starter/agents/websearch.md
+          for hook in session-start pre-tool prompt-submit stop stop-git; do
+            echo "module.exports = {};" > "plugforge-starter/hooks/$hook.js"
+          done
+
+      - name: Build ${{ matrix.name }}
+        run: node cli.js plugforge-starter /tmp/build
 
       - name: Setup Git
         run: |
           git config --global user.email "noreply@github.com"
           git config --global user.name "plugforge-bot"
 
-      - name: Publish ${{ matrix.name }} to GitHub
+      - name: Publish to GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PLATFORM: ${{ matrix.platform }}
-          PLATFORM_NAME: ${{ matrix.name }}
+          NAME: ${{ matrix.name }}
         run: |
           set -e
           REPO_NAME="glootie-${PLATFORM}"
-          REPO_URL="https://github.com/AnEntrypoint/${REPO_NAME}.git"
-          WORK_DIR="/tmp/${REPO_NAME}-work"
+          WORK_DIR="/tmp/${REPO_NAME}"
           BUILD_DIR="/tmp/build/glootie-${PLATFORM}"
-          
-          echo "🔧 Setting up repository: ${REPO_NAME}"
-          
-          # Create work directory
-          mkdir -p "${WORK_DIR}"
-          cd "${WORK_DIR}"
-          
-          # Check if repo exists, create if needed
-          if gh repo view "AnEntrypoint/${REPO_NAME}" >/dev/null 2>&1; then
-            echo "✓ Repository exists, pulling latest..."
-            git clone "${REPO_URL}" . 2>/dev/null || git init
-            git remote set-url origin "${REPO_URL}" || git remote add origin "${REPO_URL}"
-            git fetch origin main 2>/dev/null || true
-            git checkout main 2>/dev/null || git checkout -b main
-          else
-            echo "✓ Creating new repository..."
-            gh repo create "AnEntrypoint/${REPO_NAME}" \
-              --description "Glootie plugin for ${PLATFORM_NAME}" \
-              --public \
-              --source=. \
-              --push=false \
-              --remote=origin || echo "Repository may already exist"
-            git init
-            git remote add origin "${REPO_URL}"
-            git checkout -b main
-          fi
-          
-          # Clear and copy new build
-          echo "📦 Copying build artifacts..."
-          find . -maxdepth 1 -type f -not -name '.gitkeep' -delete
-          find . -maxdepth 1 -type d -not -name '.' -not -name '.git' -exec rm -rf {} + 2>/dev/null || true
-          cp -r "${BUILD_DIR}"/* . 2>/dev/null || true
-          
-          # Commit and push
-          echo "📤 Publishing to GitHub..."
+
+          mkdir -p "$WORK_DIR"
+          cd "$WORK_DIR"
+          git init
+          git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git" || git remote set-url origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
+          git fetch origin main 2>/dev/null || true
+          git checkout main 2>/dev/null || git checkout -b main
+
+          rm -rf ./*
+          cp -r "$BUILD_DIR"/* .
+
           git add -A
-          
-          if git diff-index --quiet HEAD --; then
-            echo "✓ No changes to commit"
-          else
-            git commit -m "🤖 Auto-build: ${PLATFORM_NAME} plugin update from plugforge
-
-Generated by GitHub Actions on $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-            
+          if ! git diff-index --quiet HEAD --; then
+            git commit -m "Auto-build: ${NAME} plugin from plugforge"
             git push -u origin main -f || git push -u origin HEAD:main -f
-            echo "✓ Published successfully"
           fi
-
-  notify:
-    needs: build-and-publish
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Summary
-        run: |
-          echo "✅ Build & Publish Complete"
-          echo "All 8 platform repositories updated:"
-          echo "  - glootie-cc (Claude Code)"
-          echo "  - glootie-gc (Gemini CLI)"
-          echo "  - glootie-oc (OpenCode)"
-          echo "  - glootie-vscode (VS Code)"
-          echo "  - glootie-cursor (Cursor)"
-          echo "  - glootie-zed (Zed)"
-          echo "  - glootie-jetbrains (JetBrains)"
-          echo "  - glootie-copilot-cli (GitHub Copilot CLI)"
