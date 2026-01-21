@@ -17,16 +17,19 @@ class CursorAdapter extends ExtensionAdapter {
       'package.json': this.generatePackageJson(pluginSpec),
       '.cursor/mcp.json': this.generateCursorMcp(pluginSpec),
       '.cursorrules': this.generateCursorRules(),
-      'dist/extension.js': this.generateExtensionEntry(),
-      'dist/gm.md': readFile(this.getAgentSourcePaths('gm')),
-      'dist/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
-      'dist/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
+      'extension.js': this.generateExtensionEntry(),
+      'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
+      'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
+      'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'README.md': this.generateReadme()
     };
   }
 
   generatePackageJson(pluginSpec) {
-    return cursorManifest(pluginSpec);
+    const manifest = JSON.parse(cursorManifest(pluginSpec));
+    manifest.main = './extension.js';
+    manifest.files = ['.cursor/', 'extension.js', 'agents/', 'README.md'];
+    return JSON.stringify(manifest, null, 2);
   }
 
   generateCursorMcp(pluginSpec) {
@@ -46,7 +49,7 @@ Follow these patterns for Cursor IDE integrations.
 - Activate on workbench ready
 
 ## Agent Pattern
-- Load agents from dist/
+- Load agents from agents/
 - Initialize on startup
 `;
   }

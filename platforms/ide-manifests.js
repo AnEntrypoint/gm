@@ -33,8 +33,8 @@ const vscodeManifest = (pluginSpec) => JSON.stringify({
     }
   },
   keywords: ['ai', 'state-machine', 'gm', 'glootie', 'automation', 'development'],
-  main: './dist/extension.js',
-  files: ['dist/', 'README.md']
+  main: './extension.js',
+  files: ['extension.js', 'agents/', 'README.md']
 }, null, 2);
 
 const cursorManifest = (pluginSpec) => JSON.stringify({
@@ -51,8 +51,8 @@ const cursorManifest = (pluginSpec) => JSON.stringify({
   categories: ['AI', 'Other'],
   activationEvents: ['*'],
   keywords: ['ai', 'state-machine', 'gm', 'glootie', 'cursor'],
-  main: './dist/extension.js',
-  files: ['.cursor/', 'dist/', 'README.md']
+  main: './extension.js',
+  files: ['.cursor/', 'extension.js', 'agents/', 'README.md']
 }, null, 2);
 
 const zedManifest = (pluginSpec) => ({

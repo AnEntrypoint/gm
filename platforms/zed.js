@@ -17,10 +17,10 @@ class ZedAdapter extends ExtensionAdapter {
       'extension.json': this.generateExtensionManifest(pluginSpec),
       'settings.json': this.generateSettings(),
       'language.json': this.generateLanguageConfig(),
-      'dist/extension.js': this.generateExtensionEntry(),
-      'dist/gm.md': readFile(this.getAgentSourcePaths('gm')),
-      'dist/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
-      'dist/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
+      'extension.js': this.generateExtensionEntry(),
+      'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
+      'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
+      'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'README.md': this.generateReadme()
     };
   }

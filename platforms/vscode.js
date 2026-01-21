@@ -15,17 +15,20 @@ class VSCodeAdapter extends ExtensionAdapter {
     const readFile = (paths) => this.readSourceFile(sourceDir, paths);
     return {
       'package.json': this.generatePackageJson(pluginSpec),
-      'dist/extension.js': this.generateExtensionEntry(),
-      'dist/gm.md': readFile(this.getAgentSourcePaths('gm')),
-      'dist/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
-      'dist/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
+      'extension.js': this.generateExtensionEntry(),
+      'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
+      'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
+      'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       '.vscodeignore': this.generateVscodeignore(),
       'README.md': this.generateReadme()
     };
   }
 
   generatePackageJson(pluginSpec) {
-    return vscodeManifest(pluginSpec);
+    const manifest = JSON.parse(vscodeManifest(pluginSpec));
+    manifest.main = './extension.js';
+    manifest.files = ['extension.js', 'agents/', 'README.md'];
+    return JSON.stringify(manifest, null, 2);
   }
 
   generateExtensionEntry() {
@@ -97,7 +100,6 @@ module.exports = { activate, deactivate };
 !**/*.d.ts
 node_modules
 build
-dist
 .vscodeignore
 .prettierrc
 *.config.*
@@ -146,10 +148,10 @@ Configure via VSCode settings (\`settings.json\`):
 
 ## Development
 
-See agents documentation in \`dist/\`:
-- \`dist/gm.md\` - GM state machine agent
-- \`dist/codesearch.md\` - Code search agent
-- \`dist/websearch.md\` - Web search agent
+See agents documentation in \`agents/\`:
+- \`agents/gm.md\` - GM state machine agent
+- \`agents/codesearch.md\` - Code search agent
+- \`agents/websearch.md\` - Web search agent
 
 ## Publishing
 
