@@ -1,0 +1,32 @@
+{
+  "name": "glootie-builder",
+  "version": "1.0.0",
+  "description": "Unified multi-plugin builder for glootie plugins across Claude Code, Gemini CLI, and OpenCode",
+  "main": "cli.js",
+  "bin": {
+    "glootie-builder": "./cli.js"
+  },
+  "scripts": {
+    "build": "node cli.js build all",
+    "test": "node cli.js test",
+    "verify": "node cli.js verify all"
+  },
+  "keywords": [
+    "glootie",
+    "builder",
+    "multi-plugin",
+    "claude-code",
+    "gemini-cli",
+    "opencode"
+  ],
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/glootie-builder.git"
+  },
+  "homepage": "https://github.com/AnEntrypoint/glootie-builder#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
