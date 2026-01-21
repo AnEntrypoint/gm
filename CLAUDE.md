@@ -19,6 +19,15 @@ Codex was initially misclassified as ExtensionAdapter (like VSCode/Cursor) but i
 - Full parity with Claude Code reference verified: agents, hooks, configuration identical
 - Fixed in Jan 22: Added platforms/cli-config-codex.js and updated auto-generator.js routing
 
+### Platform-Specific README Generation (Jan 23)
+Each CLI platform generates its own README with platform-specific installation instructions:
+- **DO NOT read shared README.md** from plugforge-starter/ - it will have wrong instructions
+- CLI adapter now always calls `generateReadme(pluginSpec)` instead of reading source file
+- Each CLI config (cli-config-cc.js, cli-config-codex.js, etc.) defines `generateReadme(spec)` method
+- Factory in cli-platforms.js overrides generateReadme to call config's method
+- IDE platforms (vscode, cursor, zed, jetbrains) have generateReadme in their adapter classes
+- Copilot CLI uses copilot-cli-content.js for readme generation
+
 ## Critical Implementation Details
 
 ### Generation Pipeline
