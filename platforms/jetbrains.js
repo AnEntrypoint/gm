@@ -1,4 +1,5 @@
 const ExtensionAdapter = require('../lib/extension-adapter');
+const { jetbrainsPluginXml } = require('./ide-manifests');
 
 class JetBrainsAdapter extends ExtensionAdapter {
   constructor() {
@@ -30,38 +31,7 @@ class JetBrainsAdapter extends ExtensionAdapter {
   }
 
   generatePluginXml(pluginSpec) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<idea-plugin>
-  <id>com.glootie.glootie</id>
-  <name>Glootie - State Machine</name>
-  <version>${pluginSpec.version}</version>
-  <vendor email="hello@glootie.dev">Glootie</vendor>
-  <description>${pluginSpec.description || 'AI state machine for JetBrains IDEs'}</description>
-  <idea-version since-build="222.0"/>
-  <depends>com.intellij.modules.platform</depends>
-  <depends>com.intellij.modules.vcs</depends>
-  <extensions defaultExtensionNs="com.intellij">
-    <toolWindow id="Glootie" anchor="right" icon="AllIcons.Webreferences.Server"
-                factoryClass="com.glootie.GlootieToolWindowFactory" enableByDefault="true"/>
-    <projectService serviceImplementation="com.glootie.GlootieService"/>
-    <applicationService serviceImplementation="com.glootie.GlootieApplicationService"/>
-    <notificationGroup id="Glootie Notifications" displayType="BALLOON"/>
-    <completion.contributor language="any" implementationClass="com.glootie.GlootieCompletionContributor"/>
-    <projectConfigurable groupId="tools" id="com.glootie.settings" displayName="Glootie"
-                         instanceClass="com.glootie.GlootieConfigurable" nonDefaultProject="false"/>
-  </extensions>
-  <actions>
-    <group id="Glootie.Menu" text="Glootie">
-      <action id="Glootie.Activate" class="com.glootie.actions.ActivateAction" text="Activate"/>
-      <action id="Glootie.Deactivate" class="com.glootie.actions.DeactivateAction" text="Deactivate"/>
-      <action id="Glootie.ShowState" class="com.glootie.actions.ShowStateAction" text="Show State" keymap="ctrl alt shift G"/>
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-    </group>
-  </actions>
-  <listeners>
-    <listener class="com.glootie.listeners.ProjectOpenListener" topic="com.intellij.openapi.project.ProjectManagerListener"/>
-  </listeners>
-</idea-plugin>`;
+    return jetbrainsPluginXml(pluginSpec);
   }
 
   generateBuildGradle(pluginSpec) {

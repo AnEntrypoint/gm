@@ -1,4 +1,5 @@
 const ExtensionAdapter = require('../lib/extension-adapter');
+const { cursorManifest } = require('./ide-manifests');
 
 class CursorAdapter extends ExtensionAdapter {
   constructor() {
@@ -22,6 +23,10 @@ class CursorAdapter extends ExtensionAdapter {
       'dist/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'README.md': this.generateReadme()
     };
+  }
+
+  generatePackageJson(pluginSpec) {
+    return cursorManifest(pluginSpec);
   }
 
   generateCursorMcp(pluginSpec) {

@@ -1,4 +1,5 @@
 const ExtensionAdapter = require('../lib/extension-adapter');
+const { vscodeManifest } = require('./ide-manifests');
 
 class VSCodeAdapter extends ExtensionAdapter {
   constructor() {
@@ -23,99 +24,8 @@ class VSCodeAdapter extends ExtensionAdapter {
     };
   }
 
-  generateExtensionManifest(pluginSpec) {
-    return JSON.stringify({
-      name: 'glootie-vscode',
-      version: pluginSpec.version,
-      publisher: 'glootie',
-      displayName: 'Glootie - GM State Machine',
-      description: pluginSpec.description || 'AI-powered state machine for VSCode with dynamic adaptation',
-      author: pluginSpec.author || 'Glootie',
-      license: pluginSpec.license || 'MIT',
-      repository: {
-        type: 'git',
-        url: 'https://github.com/AnEntrypoint/glootie-vscode.git'
-      },
-      bugs: {
-        url: 'https://github.com/AnEntrypoint/glootie-vscode/issues'
-      },
-      engines: {
-        vscode: '^1.85.0'
-      },
-      categories: [
-        'AI',
-        'Debuggers',
-        'Other'
-      ],
-      activationEvents: ['*'],
-      contributes: {
-        views: {
-          'glootie-explorer': [
-            {
-              id: 'glootie.state',
-              name: 'State Machine'
-            },
-            {
-              id: 'glootie.agents',
-              name: 'Agents'
-            }
-          ]
-        },
-        commands: [
-          {
-            command: 'glootie.activate',
-            title: 'Glootie: Activate'
-          },
-          {
-            command: 'glootie.deactivate',
-            title: 'Glootie: Deactivate'
-          },
-          {
-            command: 'glootie.showState',
-            title: 'Glootie: Show State'
-          }
-        ],
-        configuration: {
-          title: 'Glootie',
-          properties: {
-            'glootie.enabled': {
-              type: 'boolean',
-              default: true,
-              description: 'Enable Glootie extension'
-            },
-            'glootie.logLevel': {
-              type: 'string',
-              enum: ['debug', 'info', 'warn', 'error'],
-              default: 'info',
-              description: 'Logging level'
-            },
-            'glootie.autoActivate': {
-              type: 'boolean',
-              default: true,
-              description: 'Automatically activate on startup'
-            }
-          }
-        }
-      },
-      keywords: [
-        'ai',
-        'state-machine',
-        'gm',
-        'glootie',
-        'automation',
-        'development'
-      ],
-      main: './dist/extension.js',
-      files: [
-        'dist/',
-        'README.md'
-      ]
-    }, null, 2);
-  }
-
   generatePackageJson(pluginSpec) {
-    const manifest = JSON.parse(this.generateExtensionManifest(pluginSpec));
-    return JSON.stringify(manifest, null, 2);
+    return vscodeManifest(pluginSpec);
   }
 
   generateExtensionEntry() {
@@ -130,7 +40,6 @@ class GlootieExtension {
   async activate() {
     this.isActive = true;
     console.log('Glootie extension activated');
-
     this.registerCommands();
     this.registerViews();
     this.setupConfiguration();
@@ -150,8 +59,7 @@ class GlootieExtension {
     );
   }
 
-  registerViews() {
-  }
+  registerViews() {}
 
   setupConfiguration() {
     const config = vscode.workspace.getConfiguration('glootie');

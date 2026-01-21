@@ -1,4 +1,5 @@
 const ExtensionAdapter = require('../lib/extension-adapter');
+const { zedManifest } = require('./ide-manifests');
 
 class ZedAdapter extends ExtensionAdapter {
   constructor() {
@@ -25,31 +26,7 @@ class ZedAdapter extends ExtensionAdapter {
   }
 
   generateExtensionManifest(pluginSpec) {
-    return JSON.stringify({
-      name: 'glootie',
-      description: pluginSpec.description || 'AI state machine for Zed with native Claude',
-      version: pluginSpec.version,
-      authors: [pluginSpec.author || 'Glootie'],
-      repository: 'https://github.com/AnEntrypoint/glootie-zed',
-      activation_events: ['startup'],
-      default_settings: {
-        'glootie.enabled': true,
-        'glootie.autoActivate': true,
-        'glootie.logLevel': 'info',
-        'glootie.llm': 'claude-3-5-sonnet'
-      },
-      commands: [
-        { command: 'glootie:activate', title: 'Activate State Machine' },
-        { command: 'glootie:deactivate', title: 'Deactivate' },
-        { command: 'glootie:showState', title: 'Show State' },
-        { command: 'glootie:toggleAssistant', title: 'Toggle AI Assistant' }
-      ],
-      capabilities: {
-        inline_completion_provider: true,
-        assistant_panel_provider: true,
-        extension_registry: true
-      }
-    }, null, 2);
+    return JSON.stringify(zedManifest(pluginSpec), null, 2);
   }
 
   generateSettings() {

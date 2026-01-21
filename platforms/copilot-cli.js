@@ -90,13 +90,19 @@ State in \`~/.gh/extensions/glootie/state.json\`.
 
   getHookSourcePaths(hook) {
     const hookMap = {
-      'pre-tool-use': 'pre-tool.js',
-      'session-start': 'session-start.js',
-      'prompt-submit': 'prompt-submit.js',
-      'stop': 'stop.js'
+      'pre-tool-use': ['pre-tool-use-hook.js', 'pre-tool.js'],
+      'session-start': ['session-start-hook.js', 'session-start.js'],
+      'prompt-submit': ['prompt-submit-hook.js', 'prompt-submit.js'],
+      'stop': ['stop-hook.js', 'stop.js']
     };
-    const hookFile = hookMap[hook] || `${hook}.js`;
-    return [`hooks/${hookFile}`, `glootie-copilot-cli/hooks/${hook}-hook.js`, `glootie-cc/hooks/${hook}.js`];
+    const hookFiles = hookMap[hook] || [`${hook}-hook.js`, `${hook}.js`];
+    const paths = [];
+    for (const file of hookFiles) {
+      paths.push(`hooks/${file}`);
+    }
+    paths.push(`glootie-copilot-cli/hooks/${hook}-hook.js`);
+    paths.push(`glootie-cc/hooks/${hook}.js`);
+    return paths;
   }
 }
 
