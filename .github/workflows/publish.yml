@@ -61,7 +61,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           NAME: ${{ matrix.name }}
         run: |
-          set -ex
+          set -e
           REPO_NAME="glootie-${PLATFORM}"
           WORK_DIR="/tmp/${REPO_NAME}"
           BUILD_DIR="/tmp/build/glootie-${PLATFORM}"
@@ -75,21 +75,12 @@ jobs:
           git fetch origin main 2>/dev/null || true
           git checkout main 2>/dev/null || git checkout -b main
 
-          echo "=== Removing old files ==="
           shopt -s dotglob
           rm -rf ./*
-          echo "=== Copying new build ==="
           cp -r "$BUILD_DIR"/* .
-          echo "=== Files copied ===" && ls -la
 
           git add -A
-          echo "=== Checking for differences ===" && git diff-index HEAD -- || echo "No HEAD yet or changes detected"
-
           if ! git diff-index --quiet HEAD --; then
-            echo "=== Committing changes ==="
             git commit -m "Auto-build: ${NAME} plugin from plugforge"
-            echo "=== Pushing to remote ==="
             git push -u origin main -f || git push -u origin HEAD:main -f
-          else
-            echo "No changes detected, skipping commit"
           fi
