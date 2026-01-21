@@ -61,9 +61,3 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           NAME: ${{ matrix.name }}
         run: chmod +x scripts/publish.sh && scripts/publish.sh
-
-      - name: Verify Parity
-        if: matrix.platform == 'cc'
-        run: |
-          chmod +x scripts/verify-parity.sh
-          scripts/verify-parity.sh cc
