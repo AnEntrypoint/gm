@@ -53,7 +53,7 @@ jobs:
 
       - name: Setup Git
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: |
           git config --global user.email "noreply@github.com"
           git config --global user.name "plugforge-bot"
@@ -61,7 +61,7 @@ jobs:
 
       - name: Publish to GitHub
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
           PLATFORM: ${{ matrix.platform }}
           NAME: ${{ matrix.name }}
         run: |
