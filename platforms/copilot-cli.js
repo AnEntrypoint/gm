@@ -85,7 +85,7 @@ State in \`~/.gh/extensions/glootie/state.json\`.
   }
 
   getAgentSourcePaths(agent) {
-    return [`glootie-copilot-cli/agents/${agent}.md`, `glootie-cc/agents/${agent}.md`];
+    return [`agents/${agent}.md`, `glootie-copilot-cli/agents/${agent}.md`, `glootie-cc/agents/${agent}.md`];
   }
 
   getHookSourcePaths(hook) {
