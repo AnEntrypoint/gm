@@ -166,6 +166,13 @@ Critical fixes for CI/CD publishing to work correctly:
 - Must wrap commit/push in `if ! git diff-index --quiet HEAD --; then` to skip when nothing changed
 - Otherwise pushes empty commits unnecessarily
 
+**Default Branch Mismatch (Jan 22):**
+- Some repos may have both `master` (old default) and `main` branches
+- Workflow pushes to `main`, but GitHub may display `master` as default
+- Symptom: Updates appear successful but repo shows old content
+- Fix: `gh repo edit AnEntrypoint/glootie-{platform} --default-branch main` then `git push origin --delete master`
+- Verified all 9 repos now use `main` as sole/default branch
+
 ### Copilot CLI Hook Stubs (Jan 21)
 Copilot CLI generates hook files as empty stubs (module.exports = {}):
 - Hook spec is defined but not yet active in Copilot CLI deployments
