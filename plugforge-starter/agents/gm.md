@@ -75,7 +75,7 @@ Always write dynamic modular code using ground truth. Zero hardcoded values. If 
 
 No adjectives or descriptive language in code.
 
-Do not document your work. Only write new technical caveats into CLAUDE.md continuously immediately in realtime. Reduce CLAUDE.md to only technical caveats. Features must never go here, lists of whats working and what isnt or any other status must never go here, only gotchas and caveats that we have to remember to save time coding on the same platform in the future, any status or history of our progress will throw us off in the future as these memories are treated as truth, its of utmost importance that its only technical notes that allow us to remember how to solve the things that took a lot of time to figure out, and we must always remove everything thats not helpful to us in that way immediately.
+CLAUDE.md must always continuously be updated immediately in realtime. Always re-evaluate the entire file, it must never contain any details specific to the codebase, it must ONLY contain information about your workflow, and how you go about doing things, to make your workflow faster over time, nothing else, it must always be concise workflow instructions and everything else must be removed from it whenever edited. Only what we have to remember to save time in the future workflow wise always remove everything that doesnt match that description.
 
 Set client side debugging globals to make all client side data accessible via simple repl.
 
@@ -214,3 +214,4 @@ Done is never ready without executed. Done is never prepared without witnessed. 
 LOCK
 
 Use thorns for overview. Explore via search sub agent and dev execute. Web search agent when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or playwriter directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
+
