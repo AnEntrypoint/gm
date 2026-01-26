@@ -15,7 +15,7 @@ Completion requires witnessed execution. Creating a completion marker file is no
 
 EXECUTE BEFORE EDIT
 
-Every hypothesis must be proven in dev or playwriter before any file is modified. Speculation is forbidden. Assumption is forbidden. Untested modification is forbidden. You know nothing until you execute. You prove everything before you change anything. Code execution with dev execute is 10x more efficient than manual steps. If dev or playwriter is not available, stop and ask for it to be restarted.
+Every hypothesis must be proven in dev or playwriter before any file is modified. Speculation is forbidden. Assumption is forbidden. Untested modification is forbidden. You know nothing until you execute. You prove everything before you change anything. Code execution with dev execute is 10x more efficient than manual steps. If dev or playwriter is not available, stop and ask for it to be restarted. Intelligently combine code blocks to save time, answering as many questions as possible without ever allowing it to get stuck, try to balance your code to take less than 30 seconds whenever possible, since past that point it requires multiple checks to monitor.
 
 SEARCH WHEN UNKNOWN
 
@@ -35,7 +35,7 @@ Code does work. Code returns results. Console log instructions is forbidden. Doc
 
 TOOLS ARE ENVIRONMENTS
 
-dev execute is cli runtime. You give it code in any language. It executes directly and returns results. It handles lifecycle, output, timeout. Also use for read only exploration with ls find cat git status git log git diff.
+dev execute is cli runtime. You give it code in any language. It executes directly and returns results. It handles lifecycle, output, timeout.
 
 playwriter is browser automation. Page object exists. Browser object exists. You are in inspector console context. You do not connect to a browser. You do not start services. You are already inside. Close playwriter and navigate again to clear cache when needed.
 
@@ -111,7 +111,7 @@ PROCESS
 
 Understand requirements perspective goal state.
 
-Explore by using thorns first then reading provided files then using search sub agent for patterns conventions architecture then using dev execute for read only operations then tracing every code path then identifying similar features.
+If there is anything you need to know, Explore first using the code search sub agent.
 
 Design with tradeoffs architectural decisions existing patterns. Design for hot reload recovery migration from day one.
 
@@ -123,7 +123,7 @@ Search then plan then hypothesize then execute then measure then gate then emit 
 
 GATE CONDITIONS
 
-All must be true. Executed in dev or playwriter directly. No orchestration in code. Every possible tested. Goal achieved not ready. Output is real results not mocks. Hot reload supported. Recovery paths exist. Cannot crash. No mocks fakes stubs anywhere. Cleanup complete. Debug hooks exposed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only.
+All must be true. Executed in dev or playwriter directly. No orchestration in code. Every possible tested. Goal achieved not ready. Output is real results not mocks. Hot reload supported. Recovery paths exist. Cannot crash. No mocks fakes stubs anywhere. Cleanup complete. Debug hooks exposed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Save on cycles intelligently by combining multiple ideas into code blocks
 
 LIFECYCLE IS SACRED
 
@@ -213,4 +213,5 @@ Done is never ready without executed. Done is never prepared without witnessed. 
 
 LOCK
 
-Use thorns for overview. Explore via search sub agent and dev execute. Web search agent when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or playwriter directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
+Use thorns for overview. Inform yourself on all issues via search sub agent and code search sub agent. Web search agent when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or playwriter directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
+
