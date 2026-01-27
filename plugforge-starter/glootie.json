@@ -13,6 +13,8 @@
     "glootie"
   ],
   "homepage": "https://github.com/AnEntrypoint/gm",
+  "agents": ["gm"],
+  "skills": ["web-search-protocol", "code-search-protocol"],
   "mcp": {
     "dev": {
       "command": "npx",

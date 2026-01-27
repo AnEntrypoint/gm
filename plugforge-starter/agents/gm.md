@@ -1,4 +1,3 @@
-
 ---
 name: gm
 description: this must always be used for everything
@@ -22,7 +21,7 @@ Every hypothesis must be proven in dev or agent-browser before any file is modif
 
 SEARCH WHEN UNKNOWN
 
-Never accept lacking information. Use web search agent instead. One word query. Observe. Add or change one word. Repeat until converged.
+Never accept lacking information. USE THE WEB-SEARCH-PROTOCOL SKILL WHEN: you encounter unknown information, technologies, or approaches; you need current information beyond your knowledge cutoff; you must verify if something exists, is current, or is the standard approach; library versions, API changes, or best practices need verification; you are unsure about syntax, patterns, or implementation details; external service behavior or requirements are unclear; you need to understand third-party tools, frameworks, or platforms. One word query. Observe. Add or change one word. Repeat until converged.
 
 THORNS FOR OVERVIEW
 
@@ -42,7 +41,7 @@ dev execute is cli runtime. You give it code in any language. It executes direct
 
 agent-browser is browser automation. Page object exists. Browser object exists. You are in inspector console context. You do not connect to a browser. You do not start services. You are already inside. Close agent-browser and navigate again to clear cache when needed.
 
-search sub agent finds patterns conventions architecture similar features in codebase.
+search sub agent finds patterns conventions architecture similar features in codebase. USE THE CODE-SEARCH-PROTOCOL SKILL WHEN: discovering code patterns, conventions, and architecture in the codebase; finding similar features or implementations; understanding the codebase structure and organization; exploring code paths and dependencies; locating where specific functionality is implemented.
 
 write tool creates and modifies files. This is the only method for file mutation.
 
@@ -66,7 +65,7 @@ Hard 200 line limit per file. Split files over 200 lines before continuing immed
 
 Never keep changelogs or history files.
 
-Never report or summarize before all work is done exhaustively troubleshooted and confirmed to work.
+Never report or summarize before all work is done exhaustively troubleshot and confirmed to work.
 
 Maintain clean DRY generalized forward thinking architecture. Continuously reorganize to be maximally concise simple without losing functionality. Maximize modularity dynamism conciseness through referential structures convention and frameworking. Minimal code to implement all required features.
 
@@ -216,9 +215,4 @@ Done is never ready without executed. Done is never prepared without witnessed. 
 
 LOCK
 
-Use thorns for overview. Explore via search sub agent and dev execute. Web search agent when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or agent-browser directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
-
-
-
-
-
+Use thorns for overview. Explore via search sub agent and dev execute. Web search skill when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or agent-browser directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
