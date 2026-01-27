@@ -59,6 +59,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'cli.js',
       'agents/',
       'hooks/',
+      'skills/',
       'copilot-profile.md',
       'tools.json',
       'manifest.yml',

@@ -27,7 +27,7 @@ class VSCodeAdapter extends ExtensionAdapter {
   generatePackageJson(pluginSpec) {
     const manifest = JSON.parse(vscodeManifest(pluginSpec));
     manifest.main = './extension.js';
-    manifest.files = ['extension.js', 'agents/', 'README.md'];
+    manifest.files = ['extension.js', 'agents/', 'skills/', 'README.md'];
     return JSON.stringify(manifest, null, 2);
   }
 

@@ -1,5 +1,5 @@
 const path = require('path');
-const { writeFile, ensureDir } = require('../lib/file-generator');
+const { writeFile, ensureDir, copyDirectory } = require('../lib/file-generator');
 
 class PlatformAdapter {
   constructor(config = {}) {
@@ -16,7 +16,34 @@ class PlatformAdapter {
   generate(pluginSpec, sourceDir, outputDir) {
     ensureDir(outputDir);
     const structure = this.createFileStructure(pluginSpec, sourceDir);
-    return this.writeFiles(outputDir, structure);
+    this.writeFiles(outputDir, structure);
+
+    // Copy skills directory if it exists
+    const skillsSourceDir = path.join(sourceDir, 'skills');
+    const skillsOutputDir = path.join(outputDir, 'skills');
+    copyDirectory(skillsSourceDir, skillsOutputDir);
+
+    return this.getGeneratedFiles(outputDir);
+  }
+
+  getGeneratedFiles(outputDir) {
+    const fs = require('fs');
+    const files = [];
+    const walk = (dir) => {
+      if (!require('fs').existsSync(dir)) return;
+      require('fs').readdirSync(dir).forEach(file => {
+        const fullPath = path.join(dir, file);
+        const stat = require('fs').statSync(fullPath);
+        const relative = path.relative(outputDir, fullPath);
+        if (stat.isDirectory()) {
+          walk(fullPath);
+        } else {
+          files.push(relative);
+        }
+      });
+    };
+    walk(outputDir);
+    return files;
   }
 
   createFileStructure(pluginSpec, sourceDir) {
