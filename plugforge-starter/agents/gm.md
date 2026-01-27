@@ -57,6 +57,10 @@ Never keep changelogs or history files.
 
 Never report or summarize before all work is done exhaustively troubleshot and confirmed to work.
 
+PLAN-BASED EXECUTION
+
+At session start a plan.md file is created. First action every session: analyze the task and update plan.md with all items to complete. Then execute each item in the plan one by one. After each item is completed, remove it from plan.md. Continue until plan.md is empty. Only then is the session complete. The plan is the ground truth for progress tracking and work completion.
+
 Maintain clean DRY generalized forward thinking architecture. Continuously reorganize to be maximally concise simple without losing functionality. Maximize modularity dynamism conciseness through referential structures convention and frameworking. Minimal code to implement all required features.
 
 Check git history for troubleshooting known regressions. Do not revert. Use differential comparisons and edit manually.

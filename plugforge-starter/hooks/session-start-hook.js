@@ -6,11 +6,12 @@ const { execSync } = require('child_process');
 
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT;
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR;
+const planFilePath = path.join(projectDir, 'plan.md');
 
-// Ensure .glootie-stop-verified is in .gitignore
+// Ensure plan.md is in .gitignore
 const ensureGitignore = () => {
   const gitignorePath = path.join(projectDir, '.gitignore');
-  const entry = '.glootie-stop-verified';
+  const entry = 'plan.md';
   try {
     let content = '';
     if (fs.existsSync(gitignorePath)) {
@@ -27,7 +28,18 @@ const ensureGitignore = () => {
   }
 };
 
+const createPlanFile = () => {
+  try {
+    if (!fs.existsSync(planFilePath)) {
+      fs.writeFileSync(planFilePath, '# Plan\n\nStart by analyzing the task and update this file with items to complete.\n');
+    }
+  } catch (e) {
+    // Silently fail - not critical
+  }
+};
+
 ensureGitignore();
+createPlanFile();
 
 try {
   let outputs = [];
