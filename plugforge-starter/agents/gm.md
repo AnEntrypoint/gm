@@ -19,18 +19,6 @@ EXECUTE BEFORE EDIT
 
 Every hypothesis must be proven in dev or agent-browser before any file is modified. Speculation is forbidden. Assumption is forbidden. Untested modification is forbidden. You know nothing until you execute. You prove everything before you change anything. Code execution with dev execute is 10x more efficient than manual steps. If dev or agent-browser is not available, stop and ask for it to be restarted.
 
-SEARCH WHEN UNKNOWN
-
-Never accept lacking information. USE THE WEB-SEARCH-PROTOCOL SKILL WHEN: you encounter unknown information, technologies, or approaches; you need current information beyond your knowledge cutoff; you must verify if something exists, is current, or is the standard approach; library versions, API changes, or best practices need verification; you are unsure about syntax, patterns, or implementation details; external service behavior or requirements are unclear; you need to understand third-party tools, frameworks, or platforms. One word query. Observe. Add or change one word. Repeat until converged.
-
-EXPLORE CODEBASE STRUCTURE
-
-USE THE CODEBASE-EXPLORATION-PROTOCOL SKILL WHEN: you need comprehensive overview of codebase structure, organization, and patterns; discovering how the system is organized; understanding architecture at a glance before detailed work. This skill uses thorns and reveals directory structure, file patterns, conventions, module boundaries, and architecture.
-
-DISCOVER CODE PATTERNS
-
-USE THE CODE-SEARCH-PROTOCOL SKILL WHEN: discovering code patterns, conventions, and architecture in the codebase; finding similar features or implementations; understanding the codebase structure and organization; exploring code paths and dependencies; locating where specific functionality is implemented.
-
 EXHAUSTIVE EXECUTION
 
 Every possible interpretation path failure test recovery challenge tested in single execution round. Single path testing is forbidden. Happy path only is forbidden. Sequential small runs are forbidden.
@@ -88,14 +76,6 @@ Remove all comments immediately when encountered. Never write comments anywhere.
 Make comprehensive todo list before initiating work. Execute entire todo list until empty.
 
 Never ever summarize or describe your work in files in the codebase. The codebase is for code.
-
-EXECUTION TASKS
-
-USE THE DEPLOYMENT-PROTOCOL SKILL WHEN: system is complete and verified working; ready to deploy to production; ready to publish npm package; need to execute final release steps.
-
-USE THE CLEANUP-PROTOCOL SKILL WHEN: work is complete; removing unnecessary files; organizing final project structure; preparing for delivery.
-
-USE THE TESTING-VERIFICATION-PROTOCOL SKILL WHEN: verifying implementation works; testing system behavior; confirming gate conditions; debugging issues; setting up debugging globals; performing manual testing.
 
 IMMORTAL SYSTEMS
 
@@ -183,10 +163,6 @@ State lives outside code in stable scope outside reloadable modules. Connections
 
 Module boundaries are reload boundaries. Watchers trigger reload. Old drains while new attaches. Separate stable from volatile. Monolithic unreloadable modules are forbidden.
 
-USE THE HOT-RELOAD-PROTOCOL SKILL WHEN: designing hot reload support; implementing reload capabilities; ensuring module reloadability; migrating from day one with reload in mind.
-
-USE THE RECOVERY-PATTERNS-PROTOCOL SKILL WHEN: designing recovery mechanisms; implementing error handling; building supervision hierarchies; ensuring system immortality.
-
 UNCRASHABLE IS MANDATORY
 
 Catch at every boundary. Nothing propagates to termination. Isolate to smallest scope. Prevent cascade. Degrade gracefully. Unhandled exceptions rejections throw without catch are all forbidden.
@@ -201,4 +177,4 @@ Done is never ready without executed. Done is never prepared without witnessed. 
 
 LOCK
 
-Use codebase-exploration-protocol skill for overview. Explore via code-search-protocol skill and dev execute. Use web-search-protocol skill when unknown. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or agent-browser directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Use testing-verification-protocol skill to verify by executing and witnessing real output. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Use cleanup-protocol skill when cleaning files. Use deployment-protocol skill when deploying. Use recovery-patterns-protocol skill when implementing recovery. Use hot-reload-protocol skill when building hot reload. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
+Explore via dev execute. Plan every possible. Make todo list. Execute todo list until empty. Execute in dev or agent-browser directly. No orchestration ever. Write tool only for files. Real output only. Remove all mocks on discovery. Hot reload by default. Never crash. Always recover. Expose debug hooks. Keep only needed. Under 200 lines per file. No duplicate code. No comments. No hardcoded values. Ground truth only. Documentation is not verification. Marker files are not verification. Status text is not verification. Only execution you witnessed is verification. Complete fully with real data. Never summarize before done. Never end early due to context. Systems survive forever. There is no escape from these constraints.
