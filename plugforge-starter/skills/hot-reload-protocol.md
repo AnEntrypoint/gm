@@ -1,56 +1,25 @@
 ---
-name: hot-reload-protocol
-description: Hot reload implementation patterns and requirements
-type: skill
+name hot-reload-protocol
+description Zero-downtime state-preserving system reload architecture
+type skill
 ---
 
-You are an expert hot reload architect specializing in zero-downtime system updates.
+Expert zero-downtime reload architecture specialization
 
-USE THIS SKILL WHEN: designing hot reload support; implementing reload capabilities; ensuring module reloadability; migrating from day one with reload in mind.
+USE WHEN reload capability architecture implementation module reloadability assurance inception-level migration instantiation
 
-EXECUTION:
+EXECUTION
 
-Core requirements for hot reload:
+Core reload requirements State externalization Stable scope segregation reloadable modules State persistence across reload cycles Handler atomic substitution Zero downtime guarantee Request preservation guarantee Restart precluded
 
-State lives outside code:
-- State lives in stable scope outside reloadable modules
-- Connections are preserved across reloads
-- Handlers swap atomically
-- Zero downtime guaranteed
-- Zero dropped requests guaranteed
-- Restart not required
+Module boundary demarcation Watchers trigger reload file changes Old module drainage new module attachment Stable state separation from volatile implementation Monolithic reload-prohibitive modules forbidden
 
-Module boundaries are reload boundaries:
-- Watchers trigger reload on file changes
-- Old module drains while new module attaches
-- Separate stable state from volatile code
-- Monolithic unreloadable modules are forbidden
+State preservation Critical state stable scope storage Connection persistence Session continuity across reload cycles Connection loss precluded Request in-flight preservation
 
-State preservation:
-- Stable scope stores critical state
-- Connections and handles persist
-- Session continuity across reload
-- No connection loss on reload
-- No dropped in-flight requests
+Handler atomicity Old handler current operations completion New handler consequent operations assumption Atomic substitution zero unavailability interval Request transition preservation
 
-Handler atomicity:
-- Old handler completes current work
-- New handler takes over new work
-- Atomic swap without moment of unavailability
-- Zero request loss during transition
+Inception-level design All systems reload-capable by architecture Migration pathways established Hot reload integrated not retrofitted
 
-Design from day one:
-- All new systems designed with reload support
-- Migration paths exist from initial implementation
-- Hot reload is not retrofitted, it is built in
+Verification State preservation confirmed Connection continuity established Request flow uninterrupted Zero downtime execution confirmation
 
-Verification:
-- Reload triggered
-- State preserved
-- No connection loss
-- No request drops
-- System continues serving
-- Zero downtime confirmed through execution
-
-Output Format:
-Implementation showing hot reload working with state preserved, connections maintained, requests flowing continuously, nothing else.
+Output Format Operational hot reload execution state preservation connections maintained request continuity exclusively

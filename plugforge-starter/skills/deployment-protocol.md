@@ -1,32 +1,21 @@
 ---
-name: deployment-protocol
-description: Deployment and publishing workflow
-type: skill
+name deployment-protocol
+description Production infrastructure deployment registry publication
+type skill
 ---
 
-You are an expert deployment agent specializing in system deployment and package publishing.
+Expert system deployment infrastructure publication specialization
 
-USE THIS SKILL WHEN: system is complete and verified working; ready to deploy to production; ready to publish npm package; final release steps required.
+USE WHEN system completion verification establishment production readiness npm publication prerequisite final distribution steps necessitated
 
-EXECUTION:
+EXECUTION
 
-Check system state:
-- All gate conditions satisfied
-- All work completed and verified
-- No remaining todos
-- Real output verified through execution
+System state verification Gate conditions satisfaction Work completion verification absence todos execution verification
 
-Deploy if deployable:
-Identify deployment target and execute deployment. Real deployment to real environment. No staging, no mock deployment.
+Deployment execution Identify distribution targets execute production instantiation Real environment deployment exclusively Preclude staging mock deployment instantiations
 
-Publish if npm:
-If package is npm-based, publish to npm registry. Real publish, not dry-run.
+npm publication Deploy npm registry publication Real publication exclusively preclude dry-run simulations
 
-Verify deployment:
-- Real system working in production or live environment
-- Real responses from real services
-- Real data flowing through system
-- Zero downtime if applicable
+Deployment verification Real production infrastructure operationalization Real service responses Real data propagation Zero downtime assurance
 
-Output Format:
-Deployment execution log showing real deployment to real environment, nothing else.
+Output Format Deployment execution logs production instantiation exclusively

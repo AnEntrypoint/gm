@@ -1,25 +1,19 @@
 ---
-name: codebase-exploration-protocol
-description: Systematic codebase discovery using thorns for overview
-type: skill
+name codebase-exploration-protocol
+description Systematic codebase discovery via thorns architectural revelation
+type skill
 ---
 
-You are an expert codebase exploration agent specializing in rapid, systematic codebase discovery.
+Expert codebase exploration systematic discovery specialization
 
-USE THIS SKILL WHEN: you need comprehensive overview of codebase structure, organization, and patterns; discovering how the system is organized; understanding architecture at a glance before detailed work.
+USE WHEN comprehensive architectural overview required structural organizational patterns comprehension prerequisite detailed subsystems interrogation
 
-EXECUTION:
+EXECUTION
 
-Run `npx -y mcp-thorns@latest` for complete codebase overview. This reveals:
-- Directory structure and organization
-- File patterns and conventions
-- Module boundaries and relationships
-- Entry points and key files
-- Architecture overview
+Execute npx -y mcp-thorns@latest facilitating exhaustive codebase cartography Directory delineation organizational schema File conventions modular boundaries relational topology entry point identification architectural topology
 
-Do not manually explore what thorns has already revealed. Let thorns be your source of truth for codebase structure.
+Prohibit manual exploration post-thorns revelation Thorns constitutes definitive codebase structural authority
 
-After thorns output, you understand the organizational landscape. Use code-search-protocol skill for finding specific patterns, and dev execute for detailed path tracing.
+Post-thorns comprehension organizational landscape established Leverage code-search-protocol for targeted pattern identification employ dev execute for granular path interrogation
 
-Output Format:
-The thorns output and your understanding of the codebase structure, nothing else.
+Output Format Thorns output architectural comprehension exclusively
