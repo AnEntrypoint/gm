@@ -1,5 +1,5 @@
 ---
-name cleanup-protocol
+name cleanup
 description File organization detritus elimination procedures
 type skill
 ---

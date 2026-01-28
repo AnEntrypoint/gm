@@ -1,5 +1,5 @@
 ---
-name testing-verification-protocol
+name testing-verification
 description Execution-based validation verification procedures
 type skill
 ---

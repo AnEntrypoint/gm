@@ -1,5 +1,5 @@
 ---
-name recovery-patterns-protocol
+name recovery-patterns
 description Self-healing resilient immortal system architecture
 type skill
 ---

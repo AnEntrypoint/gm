@@ -1,5 +1,5 @@
 ---
-name hot-reload-protocol
+name hot-reload
 description Zero-downtime state-preserving system reload architecture
 type skill
 ---

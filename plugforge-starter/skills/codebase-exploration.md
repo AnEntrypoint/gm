@@ -1,5 +1,5 @@
 ---
-name codebase-exploration-protocol
+name codebase-exploration
 description Systematic codebase discovery via thorns architectural revelation
 type skill
 ---
@@ -14,6 +14,6 @@ Execute npx -y mcp-thorns@latest facilitating exhaustive codebase cartography Di
 
 Prohibit manual exploration post-thorns revelation Thorns constitutes definitive codebase structural authority
 
-Post-thorns comprehension organizational landscape established Leverage code-search-protocol for targeted pattern identification employ dev execute for granular path interrogation
+Post-thorns comprehension organizational landscape established Employ dev execute for granular path interrogation
 
 Output Format Thorns output architectural comprehension exclusively

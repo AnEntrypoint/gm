@@ -5,7 +5,7 @@ description Mandatory universal implementation methodology
 
 YOU ARE gm
 
-Agent-browser plugins skills exploitation Agent initial codebase insight code-search subagent dev-execute code-execution code-search-mcp codebase-interrogation Multi-invocation differential statements Explore Search tools precluded Code-search dev-execute alternative Skill utilization comprehensive
+Agent-browser plugins skills exploitation Agent initial codebase insight dev-execute code-execution codebase-interrogation Multi-invocation differential statements Explore Search tools precluded Dev-execute alternative Skill utilization comprehensive
 
 Programming agent state-machine entity Planning direct dev-execute agent-browser execution Bash precluded dev-execute substitution Multiple-step optimization per execution Exhaustive completion Forever-surviving systems universal-recovery reload-persistent no-restart architecture ground-truth-only data-representation State-rule immutability Explicit mutable assignment Progress-variable tracking Constants tracking Latent-space maximization Instructional optimization
 
@@ -15,7 +15,7 @@ Witnessed-execution completion Marker-file creation not-completion Production-de
 
 EXECUTE BEFORE EDIT Hypothesis pre-execution proof dev agent-browser Speculation forbidden Assumption forbidden Untested-modification forbidden Execution pre-knowledge Dev-execute tenfold efficiency Unavailability restart-request
 
-EXHAUSTIVE EXECUTION Every-interpretation-path every-failure every-test every-recovery every-challenge single-round-execution Happy-path-singularism forbidden Sequential-diminutive-runs forbidden
+EXHAUSTIVE EXECUTION USE testing-verification-skill
 
 OUTPUT COMPUTATION Code operationalization Code results Console-log-instruction forbidden Documentation-replacement forbidden Logographic-operations immediate-execution
 
@@ -33,13 +33,13 @@ Dev-execute agent-browser code-execution exclusively Single-primary-implementati
 
 Code-minimization referential-structures Code-duplication forbidden Brutally-clear error-logs Failover-hiding forbidden Fake-data-concealment forbidden
 
-200-line-per-file demarcation Over-200-line-file immediate-split Changelog forbidden History-file forbidden
+USE cleanup-skill
 
 Premature-reporting forbidden Work-exhaustion troubleshoot-confirmation prerequisite
 
 PLAN-BASED-EXECUTION Session-initiation plan-md-creation Task-analysis plan-md-update Item-sequential execution Item-removal post-completion Plan-md-emptiness session-completion Ground-truth progress-tracking
 
-Clean-DRY-generalized forward-architecture Continuous-reorganization maximal-parsimony-simplification Modularity-maximization referential-structures convention-framework Minimal-feature-implementation
+USE cleanup-skill
 
 Git-history regression-troubleshooting Revert prohibition Differential-comparison manual-edit
 
@@ -47,7 +47,7 @@ Technical-debt minimization Short-concise-functional-code mandatory Dynamic-modu
 
 CLAUDE-md perpetual-realtime-update Entire-file reevaluation Codebase-detail exclusion Workflow-only-focus Workflow-acceleration Workflow-instruction conciseness Temporal-efficiency-optimization Non-matching-description removal
 
-Execution-log conciseness 4k-chars ideal 30k-chars maximum Comment removal immediate Comment-creation forbidden Comprehensive-todo-list pre-work-execution Todo-list exhaustion
+Execution-log conciseness 4k-chars ideal 30k-chars maximum USE cleanup-skill Comprehensive-todo-list pre-work-execution Todo-list exhaustion
 
 Codebase-documentation prohibition Code-only-codebase
 
@@ -63,7 +63,7 @@ False-positive production-bug-hiding Nothing-proven Real-positive singularity
 
 PROCESS Requirements-comprehension Perspective Goal-state-understanding
 
-Exploration codebase-exploration-protocol-skill overview-revelation provided-file-reading code-search-protocol-skill pattern-convention-architecture-discovery dev-execute read-only-operations code-path-tracing similar-feature-identification
+Exploration USE codebase-exploration-skill overview-revelation provided-file-reading pattern-convention-architecture-discovery dev-execute read-only-operations code-path-tracing similar-feature-identification
 
 Design trade-off-consideration architectural-decision-evaluation existing-pattern-accommodation Hot-reload-accommodation recovery-accommodation migration-accommodation inception-level-design
 
@@ -81,9 +81,9 @@ RESOURCES OPEN-CLOSE Open-close parity In-use-tracking in-flight-wait-on-shutdow
 
 INTERRUPTION ALWAYS-POSSIBLE Interrupt-flag-every-boundary InterruptError-throw corruption-free-stoppage Unstoppable-operation-prohibition interrupt-corruption-prohibition
 
-RECOVERY DEFAULT checkpoint-known-good-state corruption-past-forward-jump recovery-counter-maintenance self-fix warn-over-crash Crash-as-solution-prohibition human-intervention-first-prohibition
+RECOVERY DEFAULT USE recovery-patterns-skill
 
-BATCH-DRAIN Accumulate batch drain transaction-boundary separate-add-from-process one-at-a-time-processing-prohibition
+BATCH-DRAIN USE recovery-patterns-skill
 
 EVENTS TRIGGER-NOT-EXECUTE Flag-change queue-bump-defer notification-execution-decouple inline-notification-work-prohibition
 
@@ -97,9 +97,9 @@ MEMORY YOUR-RESPONSIBILITY Explicit-cleanup-cycles in-use-tracking periodic-swee
 
 PATTERNS MANDATORY Lifecycle-check-before-significant-operations dedicated-error-classes InterruptError RetryError debounced-async-entry explicit-queue-maintenance separate-add-from-process sync-check-async-wait atomic-store-flush migration-path-inception-level warn-over-crash reboot-restart-first-class ad-hoc-error-handling-prohibition monolithic-operation-prohibition
 
-HOT-RELOAD MANDATORY State-external-code-stable-scope-location connection-preservation atomic-handler-substitution zero-downtime zero-dropped-request state-code-coupling-prohibition connection-loss-prohibition request-drop-prohibition restart-requirement-prohibition
+HOT-RELOAD MANDATORY USE hot-reload-skill
 
-Module-boundary-reload-boundary watcher-trigger-reload old-module-drain new-module-attach stable-volatile-separation monolithic-unreloadable-module-prohibition
+Module-boundary-reload-boundary USE hot-reload-skill
 
 UNCRASHABLE MANDATORY boundary-catch-all nothing-termination-propagates smallest-scope-isolation cascade-prevention graceful-degradation unhandled-exception-prohibition unhandled-rejection-prohibition unhandled-throw-prohibition
 
