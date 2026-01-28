@@ -1,30 +1,35 @@
 # Technical Caveats & Gotchas
 
-## Agent Naming Convention (Jan 28)
+## Claude Code Skills Architecture (Jan 28)
 
-Agents in the `plugforge-starter/agents/` directory are registered by the **YAML frontmatter `name` field**, not the filename.
+Proper Claude Code plugins use skills for specialized knowledge. Skills are discovered from `plugforge-starter/skills/` directory with proper structure:
 
-Critical: The codesearch.md agent must have `name: code-search` (with hyphen) in its frontmatter, not `name: web-search`. The pre-tool-use-hook blocks Glob/Grep/Search tools and redirects to use the agent named exactly "code-search".
-
-Each agent file structure:
-```markdown
----
-name: agent-name  # This is what gets registered
-description: "..."
-model: haiku
-color: blue
----
-
-Agent instructions here...
+```
+skills/
+├── web-search/
+│   └── SKILL.md
+└── code-search/
+    └── SKILL.md
 ```
 
-The convention-loader discovers agents by reading all .md files in agents/ and extracting the frontmatter name field.
+Each SKILL.md requires YAML frontmatter:
+```yaml
+---
+name: skill-name
+description: When to use this skill
+---
 
-## Agent vs Skill vs MCP Server
+# Skill instructions and guidelines...
+```
 
-In this codebase:
-- **Agents**: .md files in agents/ with YAML frontmatter - autonomous entities with system prompts
-- **Skills**: Do not exist in this system (not implemented)
-- **MCP Servers**: Defined in glootie.json under "mcp" key - external tools/services
+The convention-loader discovers skills and CLI adapters include `skills/` in all platform outputs. Skills are automatically available in generated plugins.
 
-The hook blocks Glob/Grep/Search and says to use "code-search agent" - this refers to the agent with `name: code-search` in frontmatter, not a skill or MCP server.
+## Build System Integration
+
+Skills are included by:
+- `convention-loader.js::loadSkills()` - discovers SKILL.md files
+- `cli-adapter.js::createFileStructure()` - copies skills to output
+- All platform adapters (VSCode, Cursor, Zed, JetBrains, etc) - include skills/ in their generated output
+- `package.json` files array - includes `"skills/"` to ensure npm distribution
+
+Without skills/ in package.json files array, skills won't be published.
