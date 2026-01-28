@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.cwd();
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT;
-const verificationFile = path.join(projectDir, '.glootie-stop-verified');
+const prdFile = path.join(projectDir, '.prd');
 
 let aborted = false;
 process.on('SIGTERM', () => { aborted = true; });
@@ -97,29 +97,20 @@ const run = () => {
       return { decision: undefined };
     }
 
-    // Check if verification file exists
-    if (fs.existsSync(verificationFile)) {
-      // File exists, allow stop to proceed
-      return { decision: undefined };
+    // Check if .prd file exists and has content
+    if (fs.existsSync(prdFile)) {
+      const prdContent = fs.readFileSync(prdFile, 'utf-8').trim();
+      if (prdContent.length > 0) {
+        // .prd has content, block with message about unfinished work
+        return {
+          decision: 'block',
+          reason: `Work items remain in ${prdFile}. Use code execution to verify all work is complete before stopping. Remove completed items from ${prdFile} as they finish. Current items:\n\n${prdContent}`
+        };
+      }
     }
 
-    // Extract context from recent transcript entries (current session only)
-    const transcriptContext = extractTranscriptContext(sessionId);
-
-    // Build instruction with context about work being done
-    let instruction = `You must verify that the work specified in the recent transcript context below is complete. Use glootie code execution and playwriter to independently confirm all specified tasks are finished. Once verified, touch the file ${verificationFile} to signal completion (do not add any content to the file). You are only authorized to create this on the premise of ground truth evidence, do not make any assumptions, do not ever create this to meet a token limit or any other budget. It is safe to leave it even if the budget is spent. Once completion is achieved, you must update CLAUDE.md and readme.md, remove everything that no longer applies or shouldnt be there, and add only technical caveats and gotchas that are confirmed to apply and were discovered along the way, for future reference\n\n`;
-
-    if (transcriptContext) {
-      instruction += `=== RECENT WORK CONTEXT ===\n${transcriptContext}\n\n`;
-      instruction += `=== VERIFICATION TASK ===\nDevise a verification mechanism using glootie and playwriter to confirm the work above is complete and functioning correctly. Check:\n1. Code exists and is properly formatted\n2. Tests pass (if applicable)\n3. No errors in execution\n4. All requirements from the context are satisfied\n\nWhen all checks pass, create the verification file: ${verificationFile} VERY IMPORTANT: the last 1% is 99% of the work, if there is any work left plan every aspect of remaining work and proceed with executing that`;
-    } else {
-      instruction += `No recent context found. Devise a mechanism to verify that the current session work is complete using glootie code execution and playwriter integration testing. When verified, touch ${verificationFile}. (create the file dont add any content, never base your decision on how much context is left or any budget choices, you must continue through even if the remaining context is small)`;
-    }
-
-    return {
-      decision: 'block',
-      reason: instruction
-    };
+    // .prd doesn't exist or is empty, allow stop to proceed
+    return { decision: undefined };
   } catch (error) {
     return { decision: undefined };
   }
