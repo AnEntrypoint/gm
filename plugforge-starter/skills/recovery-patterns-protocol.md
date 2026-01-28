@@ -1,90 +1,31 @@
 ---
-name: recovery-patterns-protocol
-description: Recovery patterns and self-healing implementation
-type: skill
+name recovery-patterns-protocol
+description Self-healing resilient immortal system architecture
+type skill
 ---
 
-You are an expert recovery architect specializing in resilient, self-healing systems.
+Expert resilient self-healing immortality specialization
 
-USE THIS SKILL WHEN: designing recovery mechanisms; implementing error handling; building supervision hierarchies; ensuring system immortality.
+USE WHEN recovery mechanism architecture error handling establishment supervision hierarchy construction system immortality assurance
 
-EXECUTION:
+EXECUTION
 
-Recovery as default behavior:
+Recovery default behavioral paradigm Checkpoint known-good state Safe point demarcation Risky operation state preservation Corruption past-forward facilitation Corrupted state detection Bad data skipping Known-good checkpoint resumption Restart precluded
 
-Checkpoint known good state:
-- Mark safe points in execution
-- Save state before risky operations
-- Enable fast forward past corruption
+Recovery instrumentation Counter maintenance Failure pattern identification Repeated recovery notification System self-remediation Automated healing Human intervention precluded
 
-Fast forward past corruption:
-- Detect corrupted state
-- Skip bad data
-- Resume from last good checkpoint
-- Continue without restart
+Crash precluded Recovery continued Running persistence
 
-Maintain recovery counters:
-- Track how many times recovery was needed
-- Identify patterns in failures
-- Warn on repeated recovery
+Recovery hierarchy absolute Operation failure exponential backoff retry Retry exhaustion component isolation component restart Supervisor failure parent escalation Top-level catch-all logging recovery continuation
 
-Fix self:
-- System detects and repairs issues
-- Self healing is automatic
-- No human intervention required to recover
+Supervision mandatory architecture Every component supervised Parent-child observation Parent-failed-child restart Backoff escalation Repeated failures escalate Unsupervised components forbidden
 
-Warn over crash:
-- Never crash as solution
-- Never exit to be restarted
-- Warn about issues while recovering
-- Continue running
+Continuous checkpointing Execution checkpoint cycles Known-good state persistent availability Recovery loop fresh-state facilitation Stateless crash forbidden
 
-Recovery hierarchy is absolute:
-1. Operation fails → retry with exponential backoff
-2. Retry exhausted → isolate and restart component
-3. Component fails → supervisor restarts it
-4. Supervisor fails → parent supervisor restarts
-5. Top level catches all → logs and recovers and continues
+Uncrashability mandates Boundary catch-all Nothing termination propagates Failure isolation cascade prevention Graceful degradation Unhandled exception forbidden Unhandled rejection forbidden Unhandled throw forbidden
 
-Supervision structure:
-- Every component is supervised
-- Parent watches every child
-- Parent restarts failed child
-- Restart with backoff
-- Escalate if repeated failures
-- Unsupervised components are forbidden
+Eternal system lifetime Forever-running architecture Infinite uptime design Acceptable downtime forbidden Planned termination forbidden Process exit forbidden Restart requirement forbidden
 
-Continuous checkpointing:
-- Checkpoint continuously during execution
-- Known good state always available
-- Fresh state if recovery loops detected
-- Stateless crash is forbidden
+Verification System continuous operationalization Failure occurrence recovery confirmation Zero-recovery downtime Data loss precluded Restart precluded Infinite uptime execution verification
 
-Uncrashable requirements:
-- Catch at every boundary
-- Nothing propagates to termination
-- Isolate failures to smallest scope
-- Prevent cascade failures
-- Degrade gracefully
-- Unhandled exceptions are forbidden
-- Unhandled rejections are forbidden
-- Unhandled throws are forbidden
-
-System lifetime:
-- Runs forever by design
-- Uptime is infinite
-- Acceptable downtime is forbidden
-- Planned termination is forbidden
-- Process exit is forbidden
-- Restart required is forbidden
-
-Verification:
-- System runs continuously
-- Failures occur and system recovers
-- No downtime during recovery
-- No data loss
-- No restart needed
-- Uptime is infinite through execution
-
-Output Format:
-Execution showing failure, recovery, and system continuing operation indefinitely, nothing else.
+Output Format Failure recovery operation indefinite continuation exclusively

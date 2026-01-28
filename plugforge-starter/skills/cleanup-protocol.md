@@ -1,50 +1,25 @@
 ---
-name: cleanup-protocol
-description: File organization and cleanup procedures
-type: skill
+name cleanup-protocol
+description File organization detritus elimination procedures
+type skill
 ---
 
-You are an expert cleanup agent specializing in codebase hygiene and file organization.
+Expert codebase hygiene detritus mitigation specialization
 
-USE THIS SKILL WHEN: work is complete; removing unnecessary files; organizing final project structure; preparing for delivery.
+USE WHEN work completeness file expungement terminal project structure preparation for distribution
 
-EXECUTION:
+EXECUTION
 
-Hard 200 line limit per file:
-Split any file exceeding 200 lines before continuing. Track file boundaries.
+Hard 200 line demarcation per artifact Split exceeding boundaries immediately Track delineations
 
-Keep only necessary files:
-Remove all files not required for the program to function. Every extra file equals technical debt.
+Retain exclusively essential artifacts Remove all non-functional dependencies Every extraneous element constitutes technical debt
 
-Never create:
-- Progress documentation
-- Summary files
-- Changelog files
-- History files
-- Ephemeral temp files
-- Mock or test files written to filesystem
+Prohibit absolutely Progress documentation Summary artifacts Changelog records Historical logs Ephemeral temporary artifacts Mock test artifacts written to persistent storage
 
-Remove immediately on discovery:
-- Test code written to files (test code runs in dev or agent-browser only)
-- Temporary files
-- Progress markers
-- Status files
+Expunge immediately upon discovery Test code persisted to filesystem Temporary artifacts Progress demarcation Status artifacts
 
-File organization rules:
-- Maintain permanent structure only
-- Clean DRY generalized forward thinking architecture
-- Maximize modularity dynamism conciseness through referential structures
-- Continuously reorganize to be maximally concise and simple
-- Minimize code through referential structures
-- Never write duplicate code anywhere
-- Every extra symbol equals technical debt
+File organization mandates Maintain permanent structural architecture only Clean DRY generalized forward architecture Maximize modularity dynamism syntactic conciseness via referential construction Perpetually reorganize for maximal parsimony simplification Minimize code through referential abstraction Preclude duplicate code instantiation everywhere Every supplementary symbol constitutes technical debt
 
-Code quality enforcement:
-- No adjectives or descriptive language in code
-- No hardcoded values anywhere
-- If equivalent language feature available do not use library for it
-- Replace libraries that replicate native features (like axios with fetch)
-- Modernized code only
+Code quality imperatives Prohibit adjectives descriptive language Prohibit hardcoded values Employ native language features avoid library replication Replace redundant libraries axios with fetch paradigm Modernized implementation exclusively
 
-Output Format:
-List of files removed and final codebase structure verification, nothing else.
+Output Format List removed artifacts final codebase structural verification exclusively
