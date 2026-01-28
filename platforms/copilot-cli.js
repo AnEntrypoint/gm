@@ -32,7 +32,7 @@ class CopilotCLIAdapter extends CLIAdapter {
 
   createFileStructure(pluginSpec, sourceDir) {
     const readFile = (paths) => this.readSourceFile(sourceDir, paths);
-    return {
+    const structure = {
       'copilot-profile.md': gen.generateAgentProfile(pluginSpec),
       'tools.json': gen.generateToolsJson(pluginSpec),
       'manifest.yml': gen.generateManifest(pluginSpec),
@@ -48,6 +48,36 @@ class CopilotCLIAdapter extends CLIAdapter {
       'cli.js': gen.generateCliJs(),
       'README.md': gen.generateReadme()
     };
+    const skills = this.loadSkillsFromSource(sourceDir);
+    Object.assign(structure, skills);
+    return structure;
+  }
+
+  loadSkillsFromSource(sourceDir) {
+    const fs = require('fs');
+    const path = require('path');
+    const skillsDir = path.join(sourceDir, 'skills');
+    const skills = {};
+
+    if (!fs.existsSync(skillsDir)) {
+      return skills;
+    }
+
+    try {
+      fs.readdirSync(skillsDir).forEach(skillName => {
+        const skillPath = path.join(skillsDir, skillName);
+        const stat = fs.statSync(skillPath);
+        if (stat.isDirectory()) {
+          const skillMdPath = path.join(skillPath, 'SKILL.md');
+          if (fs.existsSync(skillMdPath)) {
+            const content = fs.readFileSync(skillMdPath, 'utf-8');
+            skills[`skills/${skillName}/SKILL.md`] = content;
+          }
+        }
+      });
+    } catch (e) {}
+
+    return skills;
   }
 
   getPackageJsonMain() {
@@ -59,6 +89,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'cli.js',
       'agents/',
       'hooks/',
+      'skills/',
       'copilot-profile.md',
       'tools.json',
       'manifest.yml',

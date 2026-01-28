@@ -13,7 +13,7 @@ class VSCodeAdapter extends ExtensionAdapter {
 
   createFileStructure(pluginSpec, sourceDir) {
     const readFile = (paths) => this.readSourceFile(sourceDir, paths);
-    return {
+    const structure = {
       'package.json': this.generatePackageJson(pluginSpec),
       'extension.js': this.generateExtensionEntry(),
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
@@ -22,12 +22,42 @@ class VSCodeAdapter extends ExtensionAdapter {
       '.vscodeignore': this.generateVscodeignore(),
       'README.md': this.generateReadme()
     };
+    const skills = this.loadSkillsFromSource(sourceDir);
+    Object.assign(structure, skills);
+    return structure;
+  }
+
+  loadSkillsFromSource(sourceDir) {
+    const fs = require('fs');
+    const path = require('path');
+    const skillsDir = path.join(sourceDir, 'skills');
+    const skills = {};
+
+    if (!fs.existsSync(skillsDir)) {
+      return skills;
+    }
+
+    try {
+      fs.readdirSync(skillsDir).forEach(skillName => {
+        const skillPath = path.join(skillsDir, skillName);
+        const stat = fs.statSync(skillPath);
+        if (stat.isDirectory()) {
+          const skillMdPath = path.join(skillPath, 'SKILL.md');
+          if (fs.existsSync(skillMdPath)) {
+            const content = fs.readFileSync(skillMdPath, 'utf-8');
+            skills[`skills/${skillName}/SKILL.md`] = content;
+          }
+        }
+      });
+    } catch (e) {}
+
+    return skills;
   }
 
   generatePackageJson(pluginSpec) {
     const manifest = JSON.parse(vscodeManifest(pluginSpec));
     manifest.main = './extension.js';
-    manifest.files = ['extension.js', 'agents/', 'README.md'];
+    manifest.files = ['extension.js', 'agents/', 'skills/', 'README.md'];
     return JSON.stringify(manifest, null, 2);
   }
 

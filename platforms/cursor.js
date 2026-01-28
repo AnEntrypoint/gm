@@ -13,7 +13,7 @@ class CursorAdapter extends ExtensionAdapter {
 
   createFileStructure(pluginSpec, sourceDir) {
     const readFile = (paths) => this.readSourceFile(sourceDir, paths);
-    return {
+    const structure = {
       'package.json': this.generatePackageJson(pluginSpec),
       '.cursor/mcp.json': this.generateCursorMcp(pluginSpec),
       '.cursorrules': this.generateCursorRules(),
@@ -23,12 +23,42 @@ class CursorAdapter extends ExtensionAdapter {
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'README.md': this.generateReadme()
     };
+    const skills = this.loadSkillsFromSource(sourceDir);
+    Object.assign(structure, skills);
+    return structure;
+  }
+
+  loadSkillsFromSource(sourceDir) {
+    const fs = require('fs');
+    const path = require('path');
+    const skillsDir = path.join(sourceDir, 'skills');
+    const skills = {};
+
+    if (!fs.existsSync(skillsDir)) {
+      return skills;
+    }
+
+    try {
+      fs.readdirSync(skillsDir).forEach(skillName => {
+        const skillPath = path.join(skillsDir, skillName);
+        const stat = fs.statSync(skillPath);
+        if (stat.isDirectory()) {
+          const skillMdPath = path.join(skillPath, 'SKILL.md');
+          if (fs.existsSync(skillMdPath)) {
+            const content = fs.readFileSync(skillMdPath, 'utf-8');
+            skills[`skills/${skillName}/SKILL.md`] = content;
+          }
+        }
+      });
+    } catch (e) {}
+
+    return skills;
   }
 
   generatePackageJson(pluginSpec) {
     const manifest = JSON.parse(cursorManifest(pluginSpec));
     manifest.main = './extension.js';
-    manifest.files = ['.cursor/', 'extension.js', 'agents/', 'README.md'];
+    manifest.files = ['.cursor/', 'extension.js', 'agents/', 'skills/', 'README.md'];
     return JSON.stringify(manifest, null, 2);
   }
 
