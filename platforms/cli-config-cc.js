@@ -64,7 +64,10 @@ module.exports = {
     return {
       '.claude-plugin/marketplace.json': JSON.stringify({
         name: arguments[0].name+'-cc',
-        owner: 'anEntrypoint',
+        "owner": {
+          "name": "AnEntrypoint",
+          "email": "almagestfraternite@gmail.com"
+        },
         version: arguments[0].version,
         description: arguments[0].description
       }, null, 2)
@@ -99,5 +102,6 @@ The plugin activates automatically on session start.
 `;
   }
 };
+
 
 
