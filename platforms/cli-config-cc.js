@@ -63,7 +63,7 @@ module.exports = {
   getAdditionalFiles() {
     return {
       '.claude-plugin/marketplace.json': JSON.stringify({
-        name: arguments[0].name,
+        name: arguments[0].name+'-cc',
         version: arguments[0].version,
         description: arguments[0].description
       }, null, 2)
@@ -98,3 +98,4 @@ The plugin activates automatically on session start.
 `;
   }
 };
+
