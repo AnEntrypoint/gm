@@ -108,6 +108,10 @@ class PlatformAdapter {
   getAgentSourcePaths(agent) {
     return [`agents/${agent}.md`, `glootie-${this.name}/agents/${agent}.md`, `glootie-cc/agents/${agent}.md`];
   }
+
+  getSkillSourcePath(skillName) {
+    return `skills/${skillName}/SKILL.md`;
+  }
 }
 
 module.exports = PlatformAdapter;
