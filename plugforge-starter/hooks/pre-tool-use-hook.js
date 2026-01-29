@@ -35,7 +35,7 @@ const run = () => {
     if (tool_name === 'Glob' || tool_name === 'Grep') {
       return {
         permissionDecision: 'deny',
-        permissionDecisionReason: `For semantic codebase search and exploration, use the code search sub agent, or if not available use mcp code-search, otherwise use dev execute over MCP using code for direct code exploration instead using code to intelligently navigate and understand the structure`
+        permissionDecisionReason: `For semantic codebase search and exploration, use gm:code-search skill, or use plugin:gm:dev for direct code exploration with intelligent navigation`
       };
     }
 
@@ -44,7 +44,7 @@ const run = () => {
       if (subagentType === 'Explore') {
         return {
           permissionDecision: 'deny',
-          permissionDecisionReason: 'Use gm sub agent with tell it to look at its initial codebase insight, use only code search sub agent or dev execute for code execution and code-search mcp for codebase exploration and call it many times with different statements if the sub agent is unavailable'
+          permissionDecisionReason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search or plugin:gm:dev for exploration'
         };
       }
       return { permissionDecision: 'allow' };
