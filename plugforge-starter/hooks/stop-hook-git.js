@@ -15,7 +15,7 @@ const run = () => {
   let blockReasons = [];
 
   try {
-    const ahead = execSync('git rev-list --count origin/HEAD..HEAD', {
+    const ahead = execSync('git rev-list --count origin/main..HEAD', {
       encoding: 'utf-8',
       cwd: projectDir,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -23,13 +23,13 @@ const run = () => {
     }).trim();
 
     if (parseInt(ahead) > 0) {
-      blockReasons.push(`Git: ${ahead} commit(s) ahead of origin/HEAD, must push to remote`);
+      blockReasons.push(`Git: ${ahead} commit(s) ahead of origin/main, must push to remote`);
     }
   } catch (e) {
   }
 
   try {
-    const behind = execSync('git rev-list --count HEAD..origin/HEAD', {
+    const behind = execSync('git rev-list --count HEAD..origin/main', {
       encoding: 'utf-8',
       cwd: projectDir,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -37,7 +37,7 @@ const run = () => {
     }).trim();
 
     if (parseInt(behind) > 0) {
-      blockReasons.push(`Git: ${behind} commit(s) behind origin/HEAD, must merge from remote`);
+      blockReasons.push(`Git: ${behind} commit(s) behind origin/main, must merge from remote`);
     }
   } catch (e) {
   }
