@@ -36,6 +36,10 @@ function createAdapterClass(cfg) {
     generatePackageJson(pluginSpec, extraFields = {}) {
       return cfg.generatePackageJson ? cfg.generatePackageJson(pluginSpec, extraFields) : super.generatePackageJson(pluginSpec, extraFields);
     }
+
+    buildHookCommand(hookFile) {
+      return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : super.buildHookCommand(hookFile);
+    }
   }
 
   return DynamicCLIAdapter;
