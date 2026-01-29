@@ -69,6 +69,9 @@ if (!args.length || args[0] === 'help' || args[0] === '--help' || args[0] === '-
 `
     };
   },
+  buildHookCommand(hookFile) {
+    return `node \${extensionPath}/${hookFile}`;
+  },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI
 
@@ -86,9 +89,9 @@ Or clone directly:
 git clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/${spec.name}
 \`\`\`
 
-## Environment
+## Automatic Path Resolution
 
-Set GEMINI_PROJECT_DIR to your project directory in your shell profile.
+Hooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.
 
 ## Features
 
