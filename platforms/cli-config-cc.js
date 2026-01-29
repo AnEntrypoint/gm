@@ -83,20 +83,21 @@ module.exports = {
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for Claude Code
+    const repoName = `${spec.name}-cc`;
+    return `# ${repoName} for Claude Code
 
 ## Installation
 
 \`\`\`bash
-claude plugin marketplace add AnEntrypoint/${spec.name}
-claude plugin install -s user ${spec.name}@${spec.name}
+claude plugin marketplace add AnEntrypoint/${repoName}
+claude plugin install -s user ${repoName}@${repoName}
 \`\`\`
 
 ## Update
 
 \`\`\`bash
-claude plugin marketplace update ${spec.name}
-claude plugin update ${spec.name}@${spec.name}
+claude plugin marketplace update ${repoName}
+claude plugin update ${repoName}@${repoName}
 \`\`\`
 
 ## Features
