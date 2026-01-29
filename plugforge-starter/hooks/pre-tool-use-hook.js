@@ -32,7 +32,7 @@ const run = () => {
       }
     }
 
-    if (tool_name === 'Glob' || tool_name === 'Grep' || tool_name === 'Search') {
+    if (tool_name === 'Glob' || tool_name === 'Grep') {
       return {
         permissionDecision: 'deny',
         permissionDecisionReason: `For semantic codebase search and exploration, use the code search sub agent, or if not available use mcp code-search, otherwise use dev execute over MCP using code for direct code exploration instead using code to intelligently navigate and understand the structure`
