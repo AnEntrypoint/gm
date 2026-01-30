@@ -46,6 +46,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'hooks/session-start-hook.js': readFile(this.getHookSourcePaths('session-start')),
       'hooks/prompt-submit-hook.js': readFile(this.getHookSourcePaths('prompt-submit')),
       'hooks/session-end-hook.js': readFile(this.getHookSourcePaths('stop')),
+      'hooks/session-end-git-hook.js': readFile(this.getHookSourcePaths('stop-git')),
       'cli.js': gen.generateCliJs(),
       'README.md': gen.generateReadme()
     };
@@ -124,6 +125,16 @@ State in \`~/.gh/extensions/glootie/state.json\`.
     // Use canonical hook naming: {name}-hook.js
     // Delegates to parent CLIAdapter for consistency
     return super.getHookSourcePaths(hook);
+  }
+
+  buildHookCommand(hookFile) {
+    // Copilot CLI uses custom hook file naming
+    const fileNameMap = {
+      'stop-hook.js': 'session-end-hook.js',
+      'stop-hook-git.js': 'session-end-git-hook.js'
+    };
+    const mappedFile = fileNameMap[hookFile] || hookFile;
+    return `node \${COPILOT_EXTENSION_DIR}/hooks/${mappedFile}`;
   }
 }
 
