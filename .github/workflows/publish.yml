@@ -57,20 +57,31 @@ jobs:
 
           gh repo create AnEntrypoint/${REPO_NAME} --public 2>/dev/null || true
 
+          # Complete fresh clone every time - no history preservation
+          rm -rf "$WORK_DIR"
           mkdir -p "$WORK_DIR"
           cd "$WORK_DIR"
-          git init
-          git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git" || git remote set-url origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
-          git fetch origin main 2>/dev/null || true
-          git checkout main 2>/dev/null || git checkout -b main
 
-          git reset --hard HEAD 2>/dev/null || true
+          # Clone fresh and reset to origin if it exists
+          git clone "https://github.com/AnEntrypoint/${REPO_NAME}.git" . 2>/dev/null || {
+            git init
+            git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
+          }
+
+          # Completely overwrite everything - no history, no mercy
+          git reset --hard origin/main 2>/dev/null || true
           git clean -fdx
 
+          # Get latest from remote if it exists
+          git fetch origin main 2>/dev/null || true
+
+          # Ensure we're on main branch
+          git checkout main 2>/dev/null || git checkout -b main
+
+          # Sync build output with complete replacement
           rsync -av --delete --exclude='.git' "$BUILD_DIR"/ .
 
+          # Always commit and force push - completely overwrite target repo
           git add -A
-          if ! git diff-index --quiet HEAD --; then
-            git commit -m "Auto-build: ${NAME} plugin from plugforge"
-            git push -u origin main -f || git push -u origin HEAD:main -f
-          fi
+          git commit -m "Auto-build: ${NAME} plugin from plugforge" --allow-empty
+          git push origin main -f
