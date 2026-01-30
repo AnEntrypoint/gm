@@ -89,27 +89,18 @@ try {
   const result = run();
   if (!result.ok) {
     console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'Stop',
-        decision: 'block',
-        reason: result.reason
-      }
+      decision: 'block',
+      reason: result.reason
     }, null, 2));
     process.exit(2);
   }
   console.log(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'Stop',
-      decision: 'allow'
-    }
+    decision: 'approve'
   }, null, 2));
   process.exit(0);
 } catch (e) {
   console.log(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'Stop',
-      decision: 'allow'
-    }
+    decision: 'approve'
   }, null, 2));
   process.exit(0);
 }
