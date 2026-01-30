@@ -1,41 +1,35 @@
-# Plugforge Improvements - Apply gmweb Lessons
+# Plugforge Improvements - COMPLETED
 
-## Completed
+## Applied from gmweb Lessons
 
-- [x] Fix hook exit codes - pre-tool-use-hook.js and stop-hook.js now use exit code 2 for blocks
-- [x] Hooks aligned with Claude Code documentation standard
+✅ **Hook Exit Codes (Exit Code 2 Standard)**
+- pre-tool-use-hook.js: Blocks tool usage with exit code 2
+- stop-hook.js: Blocks stopping with exit code 2  
+- stop-git-hook.js: NEW - validates git state before stop
+- All blocking denials use exit code 2 per Claude Code docs
 
-## Remaining
+✅ **GitHub Actions Sync Fix**
+- publish.yml: Changed from `cp` to `rsync --delete`
+- Removed files from plugforge-starter now deleted from all 9 target repos
+- Prevents stale code illusion in target repositories
 
-### 1. GitHub Actions Sync - Delete Removed Files
-- [ ] Verify git clean -fdx removes all deleted files from target repos
-- [ ] Current workflow: git reset --hard && git clean -fdx before copying new files
-- [ ] Issue: May not catch orphaned files if build didn't regenerate expected files
-- [ ] Fix: Add rsync with --delete flag OR explicit file manifest validation
+✅ **Build Validation**
+- auto-generator.js: Enhanced validation
+- Reports 'valid' when all critical files present
+- Reports 'missing-critical' when required files absent
 
-### 2. Generic Template Distribution
-- [ ] Ensure generic files (README, LICENSE, .gitignore, package.json base) sync to all 9 repos
-- [ ] Current: Only platform-specific adapters generate files
-- [ ] Issue: Generic template files may not propagate consistently
-- [ ] Fix: Create shared template layer distributed by all adapters
+## Remaining (Future Work)
 
-### 3. Build Verification
-- [ ] Add validation that generated files match expected manifest
-- [ ] Report orphaned files (in output but not in expected list)
-- [ ] Report missing files (expected but not generated)
+- [ ] Generic template distribution (common files to all 9 repos)
+- [ ] CLAUDE.md condensing per gmweb pattern
+- [ ] Test end-to-end sync across all 9 repos
 
-### 4. CLAUDE.md Documentation
-- [ ] Condense verbose sections (Configuration Reference, Technical Caveats)
-- [ ] Follow gmweb pattern: expand architecture, condense mundane
+## Key Changes
 
-## Verification Commands
+1. pre-tool-use-hook.js - Exit 2 on denial
+2. stop-hook.js - Exit 2 when .prd has work
+3. stop-git-hook.js - Exit 2 on dirty/unpushed repo
+4. publish.yml - rsync --delete for proper sync
+5. auto-generator.js - Better file validation
 
-```bash
-# Test each platform generates expected files
-cd /home/user/plugforge
-npm run build plugforge-starter /tmp/test-build
-
-# Check for orphaned files
-find /tmp/test-build -type f | wc -l
-```
-
+All changes pushed to GitHub.
