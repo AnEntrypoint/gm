@@ -71,8 +71,8 @@ try {
     console.log(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'PreToolUse',
-        decision: 'block',
-        reason: result.reason
+        permissionDecision: 'deny',
+        permissionDecisionReason: result.reason
       }
     }, null, 2));
     process.exit(2);
@@ -81,7 +81,7 @@ try {
   console.log(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      decision: 'allow'
+      permissionDecision: 'allow'
     }
   }, null, 2));
   process.exit(0);
@@ -89,7 +89,7 @@ try {
   console.log(JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      decision: 'allow'
+      permissionDecision: 'allow'
     }
   }, null, 2));
   process.exit(0);
