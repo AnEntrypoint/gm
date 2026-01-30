@@ -20,7 +20,7 @@
           {
             "type": "command",
             "command": "node ${__dirname}/session-start-hook.js",
-            "timeout": 10000
+            "timeout": 180000
           }
         ]
       }
