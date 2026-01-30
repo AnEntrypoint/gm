@@ -123,8 +123,11 @@ try {
       decision: result.decision,
       reason: result.reason
     }));
+    process.exit(0);
   }
+  process.exit(0);
 } catch (e) {
+  process.exit(0);
 }
 
 
