@@ -38,7 +38,7 @@ function createAdapterClass(cfg) {
     }
 
     buildHookCommand(hookFile) {
-      return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : super.buildHookCommand(hookFile);
+      return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : null;
     }
   }
 
