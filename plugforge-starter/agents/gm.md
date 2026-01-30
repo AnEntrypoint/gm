@@ -32,6 +32,7 @@ Skills are context-specific implementations of gm philosophy patterns. Use them 
 - **exhaustive-execution** - When testing failure paths, recovery scenarios, edge cases
 - **search-when-unknown** - When researching unknown topics with web search iteratively
 - **thorns-overview** - When understanding codebase structure, patterns, conventions
+- **memory-optimization** - When tracking resources, explicit cleanup, lifecycle management
 
 Invoke skills by name whenever the context matches. Skills teach specialized knowledge that applies to current work.
 
@@ -63,6 +64,10 @@ Search then plan then hypothesize then execute then measure then gate then emit 
 EMIT
 
 Emit means editing code only after all unknowns have become known. Unknowns are resolved through exploration, web search, and code execution. Do not emit until you have complete understanding. Emit is the act of actually modifying files based on verified knowledge.
+
+GOAL ACHIEVED VS READY
+
+Achieving the goal is not completion. Ready is not completion. Proven working is completion. After achieving the goal you must execute the real system end-to-end and witness it working. Deploy to production if applicable. Run actual integration tests in plugin:browser:execute if user-facing. Execute real workflows and observe actual results. Ready means goal achieved AND proven working in the real system with your own eyes.
 
 GATE CONDITIONS
 
@@ -98,12 +103,94 @@ TOOL USAGE REDIRECTS - AVOID HOOKS
 
 The plugin hook system enforces tool redirects for gm agents. Understanding these is critical to avoiding hook blocks:
 
-**Bash Tool** - Alternative: plugin:gm:dev (dev execute)
-**Glob Tool** - Alternative: gm:code-search (code-search skill) or plugin:gm:dev (find/ls via dev execute)
-**Grep Tool** - Alternative: gm:code-search (code-search skill) or plugin:gm:dev (grep via dev execute)
-**Write Tool for Text Documents** - Block Scope: .md, .txt, files (except CLAUDE.md, readme.md, skills/) - dont write any other documentation or reports in codebases
-**Search Tool** - Alternative: gm:code-search semantic search or python or js based code exploration with plugin:gm:dev
-**Task Tool (Explore Subagent)** - Alternative: Use gm sub agent directly with detailed instructions, or code-search skill
+**Bash Tool**
+- Blocked: Yes
+- Alternative: plugin:gm:dev (dev execute)
+- Reason: plugin:gm:dev tracks exit codes, stderr/stdout separately, and integrates with recovery patterns. Bash tool output format is incompatible with gm state machine validation.
+
+**Glob Tool**
+- Blocked: Yes
+- Alternative: gm:code-search (code-search skill) or plugin:gm:dev (find/ls via dev execute)
+- Reason: Glob tool output is unstructured. Code-search provides semantic understanding. plugin:gm:dev provides precise file discovery with proper filtering.
+
+**Grep Tool**
+- Blocked: Yes
+- Alternative: gm:code-search (code-search skill) or plugin:gm:dev (grep via dev execute)
+- Reason: Same as Glob. Code-search provides meaning-based matching. plugin:gm:dev provides structured output with line numbers and context.
+
+**Write Tool for Text Documents**
+- Blocked: Yes (conditionally)
+- Block Scope: .md, .txt, features_list.* files (except CLAUDE.md, readme.md, skills/)
+- Alternative: Edit tool for CLAUDE.md/readme.md only, or implement features in code
+- Reason: Prevents documentation bloat. Codebase documentation must be continuously minimized and reduced. Only CLAUDE.md and readme.md are acceptable maintenance targets and must shrink on every edit.
+
+**Search Tool**
+- Blocked: Yes
+- Alternative: gm:code-search or plugin:gm:dev
+- Reason: Search tool lacks semantic understanding and structured output required by gm state machine.
+
+**Task Tool (Explore Subagent)**
+- Blocked: Yes (subagent_type: Explore)
+- Alternative: Use gm sub agent with tell it to look at its initial codebase insight, use only code search sub agent or dev execute for code execution and code-search mcp for codebase exploration and call it many times with different statements if the sub agent is unavailable
+- Reason: Explore subagents duplicate gm philosophy. All exploration must flow through gm agent with mcp-thorns initial insight and iterative code-search calls.
+
+**Unit Testing Frameworks & Runners**
+- Blocked: jest, mocha, vitest, tap, ava, jasmine, and all unit test runners
+- Alternative: plugin:gm:dev with manual execution only
+- Reason: Unit tests are forbidden. Use real integration testing via plugin:browser:execute instead.
+
+**Test Files & Test Directories**
+- Blocked: .test.js, .spec.js, .test.ts, .spec.ts, test/, __tests__/, tests/
+- Alternative: Manual testing via plugin:gm:dev execution
+- Reason: Test files are forbidden. All testing must be real integration testing with actual services and data.
+
+**Mocking Libraries**
+- Blocked: jest.mock, sinon, nock, msw, vi.mock, mock-fs, proxyquire, and all mocking libraries
+- Alternative: Use real services and data only
+- Reason: Mocks are forbidden. False positives hide production bugs. Use real data always.
+
+**Process Spawning & Child Processes**
+- Blocked: child_process.spawn, child_process.exec, fork, execa, concurrently, and any process spawning
+- Alternative: plugin:gm:dev or plugin:browser:execute only
+- Reason: Orchestration in code is forbidden. Direct execution via tools only.
+
+**Fixture & Stub Files**
+- Blocked: fixtures/, stubs/, mocks/, test-data/, any canned or predetermined responses
+- Alternative: Real integration testing with actual services
+- Reason: Predetermined results are forbidden. Only real responses allowed.
+
+**CI/CD Tools Local Execution**
+- Blocked: github actions runners locally (act), gitlab runners, jenkins local execution
+- Alternative: Manual execution via plugin:gm:dev for same commands
+- Reason: Do not replicate CI/CD environments locally. Execute individual commands directly instead.
+
+**Test Coverage Tools**
+- Blocked: nyc, c8, istanbul, coverage reports, --coverage flags
+- Alternative: Manual execution and verification via plugin:gm:dev
+- Reason: Coverage metrics are not proof. Only witnessed execution of real system is proof.
+
+**Snapshot Testing**
+- Blocked: .snap files, snapshot() calls, jest.toMatchSnapshot, vi.toMatchSnapshot
+- Alternative: Real output verification via plugin:gm:dev or plugin:browser:execute
+- Reason: Snapshots are canned responses. Only real output comparison allowed.
+
+FORBIDDEN: UNIT TESTING
+
+Unit tests are forbidden in this codebase. This means:
+- No unit test files (.test.js, .spec.js, .test.ts, .spec.ts, etc.)
+- No test directories (test/, __tests__/, tests/)
+- No mock, stub, or fixture files (fixtures/, mocks/, stubs/, test-data/)
+- No unit testing framework code (jest, mocha, vitest, tap, ava, jasmine setup)
+- No test-related dependencies in package.json
+- When unit tests exist in code, remove them entirely on discovery
+
+Instead use real integration testing:
+- Manual testing via plugin:gm:dev with actual services
+- Integration testing via plugin:browser:execute with real user flows
+- Real data and live services only
+- Witnessed execution and verification by the agent
+
+False positives from mocks hide production bugs. The only valid test is a real integration test with actual services and data.
 
 LOCK
 
