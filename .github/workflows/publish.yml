@@ -66,8 +66,8 @@ jobs:
 
           git reset --hard HEAD 2>/dev/null || true
           git clean -fdx
-          rm -rf dist/
-          cp -r "$BUILD_DIR"/. .
+
+          rsync -av --delete "$BUILD_DIR"/ .
 
           git add -A
           if ! git diff-index --quiet HEAD --; then
