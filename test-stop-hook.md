@@ -1,3 +1,3 @@
 # Test Stop Hook
 
-This file is created to test the stop hook behavior.
+This file is created to test the stop hook functionality.
