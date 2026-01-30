@@ -10,103 +10,70 @@ const run = () => {
     const { tool_name, tool_input } = data;
 
     if (!tool_name) {
-      return { permissionDecision: 'allow' };
+      return { allow: true };
     }
 
+    // Block Bash - use dev execute instead
     if (tool_name === 'Bash') {
       return {
-        permissionDecision: 'deny',
-        permissionDecisionReason: 'Use dev execute instead for all command execution'
+        block: true,
+        reason: 'Use dev execute instead for all command execution'
       };
     }
 
+    // Block Write for documentation files (except CLAUDE.md, readme.md, skills/)
     if (tool_name === 'Write') {
       const file_path = tool_input?.file_path || '';
       const file_extension = path.extname(file_path);
       const inSkillsDir = file_path.includes('/skills/');
-      if ((file_extension === '.md' || file_extension === '.txt' || path.basename(file_path).startsWith('features_list')) && !path.basename(file_path).startsWith('CLAUDE') && !path.basename(file_path).startsWith('readme') && !inSkillsDir) {
+      const basename = path.basename(file_path);
+      
+      if ((file_extension === '.md' || file_extension === '.txt' || basename.startsWith('features_list')) && 
+          !basename.toLowerCase().startsWith('claude') && 
+          !basename.toLowerCase().startsWith('readme') && 
+          !inSkillsDir) {
         return {
-          permissionDecision: 'deny',
-          permissionDecisionReason: 'As a coding agent you may not create any new text documents, you may only maintain a continuously reduced technical caveats-only version of CLAUDE.md and readme.md (only by editing), and continuously remove anything it doesnt need from that perspective every time you edit it'
+          block: true,
+          reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained.'
         };
       }
     }
 
+    // Block Glob and Grep - use code search instead
     if (tool_name === 'Glob' || tool_name === 'Grep') {
       return {
-        permissionDecision: 'deny',
-        permissionDecisionReason: `For semantic codebase search and exploration, use gm:code-search skill, or use plugin:gm:dev for direct code exploration with intelligent navigation`
+        block: true,
+        reason: `Use gm:code-search skill or plugin:gm:dev for code exploration`
       };
     }
 
+    // Block Explore subagent
     if (tool_name === 'Task') {
       const subagentType = tool_input?.subagent_type || '';
       if (subagentType === 'Explore') {
         return {
-          permissionDecision: 'deny',
-          permissionDecisionReason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search or plugin:gm:dev for exploration'
+          block: true,
+          reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search or plugin:gm:dev'
         };
       }
-      return { permissionDecision: 'allow' };
     }
 
-    return { permissionDecision: 'allow' };
+    return { allow: true };
   } catch (error) {
-    return { permissionDecision: 'allow' };
+    return { allow: true };
   }
 };
 
 try {
   const result = run();
 
-  const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
-  const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
-
-  if (isGemini) {
-    const output = {
-      decision: result.permissionDecision,
-      systemMessage: result.permissionDecisionReason || ''
-    };
-    console.log(JSON.stringify(output, null, 2));
-  } else if (isOpenCode) {
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'tool.execute.before',
-        decision: result.permissionDecision,
-        systemMessage: result.permissionDecisionReason || ''
-      }
-    };
-    console.log(JSON.stringify(output, null, 2));
-  } else {
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        ...result
-      }
-    };
-    console.log(JSON.stringify(output, null, 2));
+  if (result.block) {
+    console.error(result.reason);
+    process.exit(2);
   }
+
+  // Exit code 0 for allow
+  process.exit(0);
 } catch (error) {
-  const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
-
-  if (isGemini) {
-    console.log(JSON.stringify({
-      decision: 'allow',
-      systemMessage: ''
-    }, null, 2));
-  } else {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow'
-      }
-    }, null, 2));
-  }
+  process.exit(0);
 }
-
-
-
-
-
-
-

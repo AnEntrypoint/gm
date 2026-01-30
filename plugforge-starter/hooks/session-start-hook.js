@@ -7,8 +7,8 @@ const { execSync } = require('child_process');
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT;
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR;
 
-// Ensure .glootie-stop-verified is in .gitignore
 const ensureGitignore = () => {
+  if (!projectDir) return;
   const gitignorePath = path.join(projectDir, '.gitignore');
   const entry = '.glootie-stop-verified';
   try {
@@ -33,25 +33,33 @@ try {
   let outputs = [];
 
   // 1. Read ./start.md
-  const startMdPath = path.join(pluginRoot, '/agents/gm.md');
-  const startMdContent = fs.readFileSync(startMdPath, 'utf-8');
-  outputs.push(startMdContent);
+  if (pluginRoot) {
+    const startMdPath = path.join(pluginRoot, '/agents/gm.md');
+    try {
+      const startMdContent = fs.readFileSync(startMdPath, 'utf-8');
+      outputs.push(startMdContent);
+    } catch (e) {
+      // File may not exist in this context
+    }
+  }
 
   // 2. Run mcp-thorns (npx)
-  try {
-    const thornOutput = execSync(`npx -y gxe@latest AnEntrypoint/mcp-thorns thorns`, {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: projectDir,
-      timeout: 180000,
-      killSignal: 'SIGTERM'
-    });
-    outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
-  } catch (e) {
-    if (e.killed && e.signal === 'SIGTERM') {
-      outputs.push(`=== mcp-thorns ===\nSkipped (3min timeout)`);
-    } else {
-      outputs.push(`=== mcp-thorns ===\nSkipped (error: ${e.message.split('\n')[0]})`);
+  if (projectDir && fs.existsSync(projectDir)) {
+    try {
+      const thornOutput = execSync(`npx -y gxe@latest AnEntrypoint/mcp-thorns thorns`, {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: projectDir,
+        timeout: 180000,
+        killSignal: 'SIGTERM'
+      });
+      outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
+    } catch (e) {
+      if (e.killed && e.signal === 'SIGTERM') {
+        outputs.push(`=== mcp-thorns ===\nSkipped (3min timeout)`);
+      } else {
+        outputs.push(`=== mcp-thorns ===\nSkipped (error: ${e.message.split('\n')[0]})`);
+      }
     }
   }
   outputs.push('Use gm as a philosophy to coordinate all plans and the gm subagent to create and execute all plans');
@@ -87,25 +95,25 @@ try {
   const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
-    console.error(JSON.stringify({
+    console.log(JSON.stringify({
       systemMessage: `Error executing hook: ${error.message}`
     }, null, 2));
   } else if (isOpenCode) {
-    console.error(JSON.stringify({
+    console.log(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'session.created',
         additionalContext: `Error executing hook: ${error.message}`
       }
     }, null, 2));
   } else {
-    console.error(JSON.stringify({
+    console.log(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
         additionalContext: `Error executing hook: ${error.message}`
       }
     }, null, 2));
   }
-  process.exit(1);
+  process.exit(0);
 }
 
 

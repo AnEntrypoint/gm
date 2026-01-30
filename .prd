@@ -1,0 +1,33 @@
+# Plugforge Improvements - Apply gmweb Lessons
+
+## Issues to Fix
+
+### 1. GitHub Actions Sync Issues
+- [ ] Verify deleted files from plugforge-starter are cleared from target repos
+  - Current: workflow uses `git clean -fdx` before copying files
+  - Issue: May not catch all cases, need explicit file deletion tracking
+  - Fix: Add rsync with --delete flag or explicit deletion list
+
+### 2. Generic Template Distribution  
+- [ ] Ensure generic files (README, LICENSE, package.json boilerplate) sync to all repos
+  - Current: Only platform-specific adapters generate files
+  - Issue: Generic templates may not propagate to all 9 repos consistently
+  - Fix: Create generic template layer distributed by all adapters
+
+### 3. CLAUDE.md Documentation
+- [ ] Restructure CLAUDE.md - condense mundane, expand architecture
+  - Current: Good structure but can be more concise per gmweb pattern
+  - Configuration Reference section too verbose
+  - Technical Caveats could be more condensed (issue/fix format)
+
+### 4. Build Verification
+- [ ] Add validation that generated files match expected manifest
+  - Report orphaned files (in output but not expected)
+  - Report missing files (expected but not in output)
+
+## Verification Needed
+
+- [ ] Check if `git clean -fdx` truly removes all deleted files from target repos
+- [ ] Verify all 9 repos receive identical generic template files
+- [ ] Confirm adapter file generation is consistent across platforms
+
