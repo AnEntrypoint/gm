@@ -1,33 +1,41 @@
 # Plugforge Improvements - Apply gmweb Lessons
 
-## Issues to Fix
+## Completed
 
-### 1. GitHub Actions Sync Issues
-- [ ] Verify deleted files from plugforge-starter are cleared from target repos
-  - Current: workflow uses `git clean -fdx` before copying files
-  - Issue: May not catch all cases, need explicit file deletion tracking
-  - Fix: Add rsync with --delete flag or explicit deletion list
+- [x] Fix hook exit codes - pre-tool-use-hook.js and stop-hook.js now use exit code 2 for blocks
+- [x] Hooks aligned with Claude Code documentation standard
 
-### 2. Generic Template Distribution  
-- [ ] Ensure generic files (README, LICENSE, package.json boilerplate) sync to all repos
-  - Current: Only platform-specific adapters generate files
-  - Issue: Generic templates may not propagate to all 9 repos consistently
-  - Fix: Create generic template layer distributed by all adapters
+## Remaining
 
-### 3. CLAUDE.md Documentation
-- [ ] Restructure CLAUDE.md - condense mundane, expand architecture
-  - Current: Good structure but can be more concise per gmweb pattern
-  - Configuration Reference section too verbose
-  - Technical Caveats could be more condensed (issue/fix format)
+### 1. GitHub Actions Sync - Delete Removed Files
+- [ ] Verify git clean -fdx removes all deleted files from target repos
+- [ ] Current workflow: git reset --hard && git clean -fdx before copying new files
+- [ ] Issue: May not catch orphaned files if build didn't regenerate expected files
+- [ ] Fix: Add rsync with --delete flag OR explicit file manifest validation
 
-### 4. Build Verification
+### 2. Generic Template Distribution
+- [ ] Ensure generic files (README, LICENSE, .gitignore, package.json base) sync to all 9 repos
+- [ ] Current: Only platform-specific adapters generate files
+- [ ] Issue: Generic template files may not propagate consistently
+- [ ] Fix: Create shared template layer distributed by all adapters
+
+### 3. Build Verification
 - [ ] Add validation that generated files match expected manifest
-  - Report orphaned files (in output but not expected)
-  - Report missing files (expected but not in output)
+- [ ] Report orphaned files (in output but not in expected list)
+- [ ] Report missing files (expected but not generated)
 
-## Verification Needed
+### 4. CLAUDE.md Documentation
+- [ ] Condense verbose sections (Configuration Reference, Technical Caveats)
+- [ ] Follow gmweb pattern: expand architecture, condense mundane
 
-- [ ] Check if `git clean -fdx` truly removes all deleted files from target repos
-- [ ] Verify all 9 repos receive identical generic template files
-- [ ] Confirm adapter file generation is consistent across platforms
+## Verification Commands
+
+```bash
+# Test each platform generates expected files
+cd /home/user/plugforge
+npm run build plugforge-starter /tmp/test-build
+
+# Check for orphaned files
+find /tmp/test-build -type f | wc -l
+```
 
