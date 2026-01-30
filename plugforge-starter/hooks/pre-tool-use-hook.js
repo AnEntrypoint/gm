@@ -68,12 +68,29 @@ try {
   const result = run();
 
   if (result.block) {
-    console.error(result.reason);
+    console.log(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        decision: 'block',
+        reason: result.reason
+      }
+    }, null, 2));
     process.exit(2);
   }
 
-  // Exit code 0 for allow
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      decision: 'allow'
+    }
+  }, null, 2));
   process.exit(0);
 } catch (error) {
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      decision: 'allow'
+    }
+  }, null, 2));
   process.exit(0);
 }
