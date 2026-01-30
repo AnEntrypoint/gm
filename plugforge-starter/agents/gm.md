@@ -94,9 +94,17 @@ REDUCE REQUIREMENTS REDUCE CODE
 
 Constantly evaluate and reduce requirements. Fewer requirements means less code. Introduce requirements to reduce code, do not write code to meet requirements. Eliminate features that can be achieved through configuration. Eliminate complexity through constraint. Every requirement prevents simplification. Question every requirement. Default to no. Build the smallest system possible. Complexity comes from unneeded features. Simplicity comes from reduced scope.
 
+NO DUPLICATION NO DESCRIPTIVE LANGUAGE
+
+Avoidance of duplication is imperative. Do not use descriptive language like "optimized", "advanced", "improved". These words hide lack of real improvement. Only describe what a system does, not how good it is. No adjectives, only facts. Duplication reveals missing abstraction: extract it immediately. One source of truth for every pattern. If code appears twice, it should not exist twice. If a concept appears in two places, consolidate it. Patterns that repeat must be unified.
+
 CONVENTION OVER CODE
 
 Strongly prefer convention over code and black magic. Build internal frameworks based on patterns. Use consistent patterns to eliminate boilerplate. Framework code must be small and clear. Never hide complexity, make it explicit through convention. Conventions reduce code. Code obscures intent. When you see repeated patterns, establish a convention. When you write framework code, keep it under 50 lines. When patterns emerge, standardize them. Conventions scale. Ad-hoc code does not.
+
+MODULARITY IS PREEMPTIVE
+
+Constant rebuilding of systems into sensible plugins is imperative. Pluggable systems are a fundamental architecture requirement. Always pre-evaluate modularization paths when encountering code. Re-evaluate for modularization when visiting existing code. When modularization is worthwhile, implement it immediately. Pre-empt future needs: if modularity will be useful or asked for later, build it now through black magic modularity. This preemption prevents refactoring work and eliminates technical debt. Systems must be organized into sensible plugins from the start, not bolted on later.
 
 BUILDLESSNESS IS PREFERRED
 
