@@ -17,24 +17,45 @@ Create a .prd file at project root before starting work using your planning. Thi
 - When stopping, the stop hook will check if .prd has content and block if work remains
 - Use code execution to verify all work is done before stopping
 
-ALWAYS USE SKILLS WHEN APPLICABLE
+CODE SEARCH
 
-Skills are context-specific implementations of gm philosophy patterns. Use them whenever possible:
+Search code repositories semantically when exploring unfamiliar codebases, finding patterns, or discovering how features are implemented. Describe what you're looking for in natural language rather than exact syntax. Start broad, refine if results too wide. Look at imports and exports to understand dependencies. Check multiple files to see patterns across codebase.
 
-- **code-search** - When exploring unfamiliar codebases, finding patterns, understanding architecture
-- **web-search** - When you need current information, verify facts, research topics
-- **hot-reload-systems** - When designing systems that need zero-downtime updates
-- **recovery-mechanisms** - When implementing checkpoints, restores, self-healing
-- **uncrashable-design** - When architecting systems for infinite uptime
-- **async-patterns** - When coordinating promises, debouncing, managing concurrency
-- **debug-hooks** - When exposing internals for inspection, debugging complex systems
-- **cleanup-standards** - When removing code, ephemeral files, keeping codebase minimal
-- **exhaustive-execution** - When testing failure paths, recovery scenarios, edge cases
-- **search-when-unknown** - When researching unknown topics with web search iteratively
-- **thorns-overview** - When understanding codebase structure, patterns, conventions
-- **memory-optimization** - When tracking resources, explicit cleanup, lifecycle management
+WEB SEARCH
 
-Invoke skills by name whenever the context matches. Skills teach specialized knowledge that applies to current work.
+Search the web and synthesize findings when you need current information, verify facts, research topics, or find recent documentation. Be specific in search queries. Search for authoritative sources. Cross-reference multiple sources for important information. Note publication dates as older results may be outdated.
+
+HOT RELOAD IS MANDATORY
+
+State lives outside code in stable scope outside reloadable modules. Connections preserved. Handlers swap atomically. Zero downtime. Zero dropped requests. State coupled to code is forbidden. Connection loss is forbidden. Request drop is forbidden. Restart required is forbidden. Module boundaries are reload boundaries. Watchers trigger reload. Old drains while new attaches. Separate stable from volatile. Monolithic unreloadable modules are forbidden.
+
+RECOVERY IS DEFAULT
+
+Checkpoint known good state. Fast forward past corruption. Maintain recovery counters. Fix self. Warn over crash. Crash as solution is forbidden. Human intervention first is forbidden.
+
+UNCRASHABLE IS MANDATORY
+
+Catch at every boundary. Nothing propagates to termination. Isolate to smallest scope. Prevent cascade. Degrade gracefully. Unhandled exceptions rejections throw without catch are all forbidden. Recovery hierarchy is absolute. Operation fails then retry with backoff. Retry exhausted then isolate and restart component. Component fails then supervisor restarts. Supervisor fails then parent supervisor restarts. Top level catches all then logs and recovers and continues. Crash exit terminate are forbidden. Every component is supervised. Parent watches. Parent restarts. Restart with backoff. Escalate if repeated. Unsupervised components are forbidden. Checkpoint continuously. Known good state. Restore and resume. Fresh state if recovery loops. Stateless crash is forbidden. System runs forever. Uptime infinite by design. Acceptable downtime is forbidden. Planned termination is forbidden. Process exit is forbidden.
+
+ASYNC IS CONTROLLED CHAOS
+
+Contain promises because they scatter. Debounce entry. Coordinate via signals. Locks protect critical sections. Queue then drain then repeat. Scattered promises are forbidden. Uncontrolled concurrency is forbidden.
+
+DEBUG HOOKS ARE MANDATORY
+
+Hook state to global scope. Expose internals for live inspection. Give human handles to probe. Set client side debugging globals for repl access. Hidden state is forbidden. Inaccessible internals are forbidden.
+
+CLEANUP IS RUTHLESS
+
+Keep only what project needs to function. Remove everything else. Test code written to files is forbidden. Ephemeral execution files are forbidden. Test code runs in dev or agent-browser and is never written to filesystem.
+
+EXHAUSTIVE EXECUTION
+
+Every possible interpretation path failure test recovery challenge tested in single execution round. Single path testing is forbidden. Happy path only is forbidden. Sequential small runs are forbidden.
+
+THORNS FOR OVERVIEW
+
+Use npx -y mcp-thorns@latest for codebase overview. Do not manually explore what thorns already revealed.
 
 
 COMPLETION IS ABSOLUTE
