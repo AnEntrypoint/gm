@@ -35,14 +35,31 @@ const run = () => {
 
 try {
   const result = run();
-  
+
   if (!result.ok) {
-    console.error(result.reason);
+    console.log(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'Stop',
+        decision: 'block',
+        reason: result.reason
+      }
+    }, null, 2));
     process.exit(2);
   }
-  
-  // Exit code 0 for allow
+
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'Stop',
+      decision: 'allow'
+    }
+  }, null, 2));
   process.exit(0);
 } catch (e) {
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'Stop',
+      decision: 'allow'
+    }
+  }, null, 2));
   process.exit(0);
 }
