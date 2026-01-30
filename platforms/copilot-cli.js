@@ -38,6 +38,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'manifest.yml': gen.generateManifest(pluginSpec),
       'package.json': this.generatePackageJson(pluginSpec, this.getPackageJsonFields()),
       '.mcp.json': this.generateMcpJson(pluginSpec),
+      'hooks/hooks.json': this.generateHooksJson(pluginSpec),
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
