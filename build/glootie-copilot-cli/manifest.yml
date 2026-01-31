@@ -1,0 +1,51 @@
+name: glootie
+version: 2.0.4
+description: Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks
+author: AnEntrypoint
+
+repository:
+  url: https://github.com/AnEntrypoint/glootie-copilot-cli
+  type: git
+
+license: MIT
+
+keywords:
+  - ai
+  - state-machine
+  - agent
+
+activation:
+  on_load: true
+  auto_activate: true
+
+commands:
+  - name: glootie:activate
+    description: Activate state machine
+  - name: glootie:analyze
+    description: Analyze code
+  - name: glootie:search
+    description: Semantic search
+  - name: glootie:refactor
+    description: Refactor code
+
+api:
+  version: 1.0.0
+  min_gh_version: 2.45.0
+
+permissions:
+  - read:environment
+  - read:project
+  - write:project
+
+configuration:
+  settings:
+    - name: enabled
+      type: boolean
+      default: true
+    - name: auto_activate
+      type: boolean
+      default: true
+    - name: log_level
+      type: string
+      enum: [debug, info, warn, error]
+      default: info

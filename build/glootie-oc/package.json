@@ -1,0 +1,45 @@
+{
+  "name": "glootie-oc",
+  "version": "2.0.4",
+  "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "mcp",
+    "automation",
+    "glootie"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/glootie-oc.git"
+  },
+  "homepage": "https://github.com/AnEntrypoint/glootie-oc#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/glootie-oc/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "index.js",
+  "bin": {
+    "glootie-oc": "./index.js"
+  },
+  "files": [
+    "agents/",
+    "hooks/",
+    "index.js",
+    "opencode.json",
+    ".mcp.json",
+    "setup.sh",
+    "setup.bat",
+    "setup-global.js",
+    "install-global.sh",
+    "install-global.bat",
+    "README.md"
+  ]
+}

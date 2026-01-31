@@ -1,0 +1,95 @@
+{
+  "name": "glootie-vscode",
+  "version": "2.0.4",
+  "publisher": "glootie",
+  "displayName": "Glootie - GM State Machine",
+  "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/glootie-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/glootie-vscode/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Debuggers",
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "views": {
+      "glootie-explorer": [
+        {
+          "id": "glootie.state",
+          "name": "State Machine"
+        },
+        {
+          "id": "glootie.agents",
+          "name": "Agents"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "glootie.activate",
+        "title": "Glootie: Activate"
+      },
+      {
+        "command": "glootie.deactivate",
+        "title": "Glootie: Deactivate"
+      },
+      {
+        "command": "glootie.showState",
+        "title": "Glootie: Show State"
+      }
+    ],
+    "configuration": {
+      "title": "Glootie",
+      "properties": {
+        "glootie.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Glootie extension"
+        },
+        "glootie.logLevel": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info"
+        },
+        "glootie.autoActivate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-activate on startup"
+        }
+      }
+    }
+  },
+  "keywords": [
+    "ai",
+    "state-machine",
+    "gm",
+    "glootie",
+    "automation",
+    "development"
+  ],
+  "main": "./extension.js",
+  "files": [
+    "extension.js",
+    "agents/",
+    "skills/",
+    "README.md"
+  ]
+}

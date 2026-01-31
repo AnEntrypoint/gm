@@ -1,0 +1,25 @@
+id = "glootie"
+name = "Glootie"
+description = "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks"
+version = "2.0.4"
+schema_version = 1
+authors = ["AnEntrypoint"]
+repository = "https://github.com/AnEntrypoint/glootie-zed"
+
+[package]
+category = ["AI", "Code Completion"]
+description = "AI state machine with autonomous agent coordination and MCP integration"
+
+[commands]
+glootie.activate = "Activate Glootie state machine"
+glootie.deactivate = "Deactivate Glootie state machine"
+glootie.showState = "Show state machine status"
+glootie.toggleAssistant = "Toggle AI assistant"
+
+[settings]
+glootie.enabled = { description = "Enable Glootie extension", type = "boolean", default = true }
+glootie.autoActivate = { description = "Auto-activate on startup", type = "boolean", default = true }
+glootie.logLevel = { description = "Log level", type = "string", enum = ["debug", "info", "warn", "error"], default = "info" }
+glootie.llm = { description = "LLM model", type = "string", default = "claude-3-5-sonnet" }
+glootie.temperature = { description = "Temperature for LLM", type = "number", default = 0.7 }
+glootie.contextWindow = { description = "Context window size", type = "integer", default = 200000 }

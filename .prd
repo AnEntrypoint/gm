@@ -1,0 +1,41 @@
+# Plugforge Kerned Framework PRD
+
+## Work Items
+
+- [x] Merge all 10 skills into single agents/gm.md (DONE: No per-invocation skill cost)
+- [x] Delete separate skill files (DONE: skills/ directory removed entirely)
+- [x] Rewrite gm.md with unambiguous expressive language (DONE: 2131 words, clear and explicit)
+- [x] Remove all punctuation except where semantically required (DONE: unpunctuated paragraphs)
+- [x] Document all complexity into CLAUDE.md with corner cases (DONE: Kerned framework section)
+- [x] Create kerned framework design to prevent runtime surprises (DONE: 30+ corner cases documented)
+- [x] Ensure buildless turnkey zero config setup verified (DONE: Build succeeds for all 9 platforms)
+- [ ] Verify hot reload capability in real execution
+- [ ] Verify crash recovery in real execution
+- [ ] Validate plugin:gm:dev execution works
+- [ ] Validate plugin:browser:execute workflows
+- [ ] Remove dead code identified by thorns (auto-healer.js orphaned)
+- [ ] Consolidate template-builder patterns duplication (thorns identified 5x)
+- [ ] Reduce cli-config-* files duplication (5x copy-paste pattern)
+- [ ] Reduce base.js vs copilot-cli-gen.js duplication (5x common code)
+- [ ] Verify no test files exist (unit testing forbidden)
+
+## Completed This Session
+
+1. Merged 10 individual skill files into agents/gm.md
+2. Eliminated per-invocation cost by removing separate skill directories
+3. Made all language explicit unambiguous through comprehensive clarity review
+4. Addressed all 60+ clarity issues identified by fresh perspective agent
+5. Created comprehensive CLAUDE.md kerned framework documentation
+6. Documented all corner cases and contingencies
+7. Removed all punctuation except where semantically required
+8. Verified build succeeds for all 9 platforms without skills/
+9. Updated CLAUDE.md to reflect skills consolidation
+10. Confirmed conventions-driven discovery working
+
+## Architecture Changes
+
+- Before skills/ directory with 10 separate SKILL.md files
+- After agents/gm.md single unified agent with all behavioral rules
+- Eliminates agent startup overhead and per-invocation skill costs
+- Each merged skill section substantial enough to justify consolidation
+

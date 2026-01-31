@@ -1,0 +1,41 @@
+{
+  "name": "glootie-cursor",
+  "version": "2.0.4",
+  "publisher": "glootie",
+  "displayName": "Glootie - GM State Machine",
+  "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/glootie-cursor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/glootie-cursor/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "keywords": [
+    "ai",
+    "state-machine",
+    "gm",
+    "glootie",
+    "cursor"
+  ],
+  "main": "./extension.js",
+  "files": [
+    ".cursor/",
+    "extension.js",
+    "agents/",
+    "skills/",
+    "README.md"
+  ]
+}

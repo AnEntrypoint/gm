@@ -1,0 +1,12 @@
+# Cursor Agent Rules
+
+Follow these patterns for Cursor IDE integrations.
+
+## Tool Usage
+- Use cursor.extensions.* APIs for integration
+- Register hooks in extension manifest
+- Activate on workbench ready
+
+## Agent Pattern
+- Load agents from agents/
+- Initialize on startup

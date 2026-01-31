@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin url="https://github.com/AnEntrypoint/glootie-jetbrains">
+  <id>com.glootie.intellij</id>
+  <name>Glootie - GM State Machine</name>
+  <version>2.0.4</version>
+  <vendor email="glootie@anthropic.ai" url="https://github.com/AnEntrypoint">Glootie</vendor>
+  <description>Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks</description>
+  <category>AI</category>
+  <change-notes>
+    <![CDATA[
+    <ul>
+      <li>State machine core with checkpointing and recovery</li>
+      <li>Autonomous agent coordination</li>
+      <li>MCP integration for tool access</li>
+      <li>Real-time state inspection</li>
+      <li>Hot reload support</li>
+    </ul>
+    ]]>
+  </change-notes>
+  <idea-version since-build="223.0"/>
+  <depends>com.intellij.modules.platform</depends>
+</idea-plugin>

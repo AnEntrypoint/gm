@@ -1,0 +1,58 @@
+{
+  "description": "Hooks for glootie OpenCode extension",
+  "hooks": {
+    "tool.execute.before": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${OC_PLUGIN_ROOT}/hooks/pre-tool-use-hook.js",
+            "timeout": 3600
+          }
+        ]
+      }
+    ],
+    "session.created": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${OC_PLUGIN_ROOT}/hooks/session-start-hook.js",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "message.updated": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${OC_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
+            "timeout": 3600
+          }
+        ]
+      }
+    ],
+    "session.closing": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${OC_PLUGIN_ROOT}/hooks/stop-hook.js",
+            "timeout": 300000
+          },
+          {
+            "type": "command",
+            "command": "node ${OC_PLUGIN_ROOT}/hooks/stop-hook-git.js",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}

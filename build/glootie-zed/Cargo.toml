@@ -1,0 +1,24 @@
+[package]
+name = "glootie-zed"
+version = "2.0.4"
+edition = "2021"
+authors = ["AnEntrypoint"]
+license = "MIT"
+description = "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks"
+repository = "https://github.com/AnEntrypoint/glootie-zed"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+lazy_static = "1.4"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
