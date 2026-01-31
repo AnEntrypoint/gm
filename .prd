@@ -1,9 +1,0 @@
-# Plugforge Kerned Framework PRD
-
-All work items completed. Framework is kerned and hardened with zero surprises.
-
-See git history for completion details:
-- 6745d92 refactor: Consolidate CLI platform configuration
-- 4143705 refactor: Consolidate cli-config files with factory pattern
-- e43ee0a chore: Clean up .prd after completing skills consolidation
-- 6fad549 refactor: Consolidate all skills into unified gm.md, eliminate per-invocation cost
