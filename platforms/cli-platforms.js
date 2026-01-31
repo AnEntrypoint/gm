@@ -1,8 +1,5 @@
 const CLIAdapter = require('../lib/cli-adapter');
-const ccConfig = require('./cli-config-cc');
-const gcConfig = require('./cli-config-gc');
-const ocConfig = require('./cli-config-oc');
-const codexConfig = require('./cli-config-codex');
+const { cc: ccConfig, gc: gcConfig, oc: ocConfig, codex: codexConfig } = require('./cli-config-shared');
 
 const config = [ccConfig, gcConfig, ocConfig, codexConfig];
 

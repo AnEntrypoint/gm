@@ -1,14 +1,17 @@
 # Plugforge Kerned Framework PRD
 
-## Remaining Work Items
+## Completed Work Items
 
-- [ ] Verify hot reload capability in real execution
-- [ ] Verify crash recovery in real execution
-- [ ] Validate plugin:gm:dev execution works
-- [ ] Validate plugin:browser:execute workflows
-- [ ] Remove dead code identified by thorns (auto-healer.js orphaned)
-- [ ] Consolidate template-builder patterns duplication (thorns identified 5x)
-- [ ] Reduce cli-config-* files duplication (5x copy-paste pattern)
-- [ ] Reduce base.js vs copilot-cli-gen.js duplication (5x common code)
-- [ ] Verify no test files exist (unit testing forbidden)
+- [x] Remove dead code identified by thorns (auto-healer.js orphaned)
+- [x] Consolidate template-builder patterns duplication (thorns identified 5x)
+- [x] Reduce cli-config-* files duplication (5x copy-paste pattern) - REMOVED 4 re-export files, consolidated to cli-config-shared.js
+- [x] Reduce base.js vs copilot-cli-gen.js duplication (verified: not duplicates - different architectural patterns)
+- [x] Verify no test files exist (unit testing forbidden) - VERIFIED: no .test.js, .spec.js, test/, __tests__/, fixtures/, mocks/ found
+- [x] Validate plugin:gm:dev execution works - VERIFIED: all Node.js capabilities operational
+
+## Blocked Work Items (Architecture Dependency)
+
+- [ ] Verify hot reload capability in real execution - BLOCKED: Requires hot reload implementation in cli.js (watch mode, handler drain)
+- [ ] Verify crash recovery in real execution - BLOCKED: Requires recovery checkpoint system implementation
+- [ ] Validate plugin:browser:execute workflows - BLOCKED: Requires real IDE deployment for testing
 
