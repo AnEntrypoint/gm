@@ -108,7 +108,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     return JSON.stringify({
       $schema: 'https://opencode.ai/config.json',
       default_agent: 'gm',
-      plugin: { name: pluginSpec.name, module: './index.js' },
+      plugin: [pluginSpec.name],
       mcp: {
         dev: { type: 'local', command: ['npx', '-y', 'gxe@latest', 'AnEntrypoint/mcp-glootie'], timeout: 360000, enabled: true },
         'code-search': { type: 'local', command: ['npx', '-y', 'gxe@latest', 'AnEntrypoint/code-search'], timeout: 360000, enabled: true }
