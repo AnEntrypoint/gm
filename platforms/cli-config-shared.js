@@ -31,7 +31,7 @@ const cc = factory('cc', 'Claude Code', 'plugin.json', 'CLAUDE.md', {
   },
   generateReadme(spec) {
     const repoName = `${spec.name}-cc`;
-    return `# ${repoName} for Claude Code\n\n## Installation\n\n\`\`\`bash\nclaude plugin marketplace add AnEntrypoint/${repoName}\nclaude plugin install -s user ${repoName}@${repoName}\n\`\`\`\n\n## Update\n\n\`\`\`bash\nclaude plugin marketplace update ${repoName}\nclaude plugin update ${repoName}@${repoName}\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${repoName} for Claude Code\n\n## Installation\n\n\`\`\`bash\nclaude plugin marketplace add AnEntrypoint/${repoName}\nclaude plugin install -s user gm@${repoName}\n\`\`\`\n\n## Update\n\n\`\`\`bash\nclaude plugin marketplace update ${repoName}\nclaude plugin update gm@${repoName}\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
