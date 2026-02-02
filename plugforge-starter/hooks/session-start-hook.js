@@ -43,10 +43,10 @@ try {
     }
   }
 
-  // 2. Run mcp-thorns (npx)
+  // 2. Run mcp-thorns (bunx)
   if (projectDir && fs.existsSync(projectDir)) {
     try {
-      const thornOutput = execSync(`curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/mcp-thorns/main/bun-run.sh | bash -s thorns`, {
+      const thornOutput = execSync(`bunx mcp-thorns@latest`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: projectDir,

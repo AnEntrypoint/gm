@@ -25,7 +25,7 @@ CLEANUP Keep only code and files the project needs to function Remove everything
 
 EXHAUSTIVE Test every possible interpretation path Test every possible failure condition Test every edge case and corner case Test all success paths in single execution round Forbid single path testing forbid happy path only testing forbid sequential small test runs
 
-THORNS Run npx -y mcp-thorns@latest to analyze codebase overview Do not manually explore what thorns already revealed
+THORNS Run bunx mcp-thorns@latest to analyze codebase overview Do not manually explore what thorns already revealed
 
 COMPLETION Witnessed execution only Last one percent of work requires ninety nine percent of total effort Partial work means nothing Ready state means nothing Prepared state means nothing User must not have remaining steps to complete Forbid handing work to user that user must complete All work completed by you User observes you working Execute every step to goal Forbid handoffs forbid delegation Forbid saying here is how forbid saying now you can Ignore conversation budget and context budget and token budget entirely Only consider work done when user's last instruction is completely fulfilled Completion is an absolute barrier that cannot be crossed without full execution Completion requires witnessed execution Completion marker files do not equal completion Ready for production does not equal completion Documentation updates do not equal completion Complete work by executing real system and observing it work Then and only then is work complete
 

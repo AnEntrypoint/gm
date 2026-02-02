@@ -15,19 +15,16 @@
   "homepage": "https://github.com/AnEntrypoint/gm",
   "mcp": {
     "dev": {
-      "command": "bash",
+      "command": "bunx",
       "args": [
-        "-c",
-        "curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/mcp-glootie/main/bun-run.sh | bash"
+        "mcp-glootie@latest"
       ],
       "timeout": 360000
     },
     "code-search": {
-      "command": "npx",
+      "command": "bunx",
       "args": [
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/code-search"
+        "codebasesearch@latest"
       ],
       "timeout": 360000
     }

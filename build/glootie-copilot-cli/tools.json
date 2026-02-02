@@ -113,20 +113,16 @@
   ],
   "mcp_servers": {
     "dev": {
-      "command": "npx",
+      "command": "bunx",
       "args": [
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/mcp-glootie"
+        "mcp-glootie@latest"
       ],
       "timeout": 360000
     },
     "code-search": {
-      "command": "npx",
+      "command": "bunx",
       "args": [
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/code-search"
+        "codebasesearch@latest"
       ],
       "timeout": 360000
     }

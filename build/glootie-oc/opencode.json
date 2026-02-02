@@ -1,18 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "gm",
-  "plugin": {
-    "name": "glootie",
-    "module": "./index.js"
-  },
+  "plugin": [
+    "glootie"
+  ],
   "mcp": {
     "dev": {
       "type": "local",
       "command": [
-        "npx",
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/mcp-glootie"
+        "bunx",
+        "mcp-glootie@latest"
       ],
       "timeout": 360000,
       "enabled": true
@@ -20,10 +17,8 @@
     "code-search": {
       "type": "local",
       "command": [
-        "npx",
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/code-search"
+        "bunx",
+        "codebasesearch@latest"
       ],
       "timeout": 360000,
       "enabled": true

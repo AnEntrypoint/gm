@@ -110,8 +110,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       default_agent: 'gm',
       plugin: [pluginSpec.name],
       mcp: {
-        dev: { type: 'local', command: ['bash', '-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/mcp-glootie/main/bun-run.sh | bash'], timeout: 360000, enabled: true },
-        'code-search': { type: 'local', command: ['npx', '-y', 'gxe@latest', 'AnEntrypoint/code-search'], timeout: 360000, enabled: true }
+        dev: { type: 'local', command: ['bunx', 'mcp-glootie@latest'], timeout: 360000, enabled: true },
+        'code-search': { type: 'local', command: ['bunx', 'codebasesearch@latest'], timeout: 360000, enabled: true }
       }
     }, null, 2);
   },

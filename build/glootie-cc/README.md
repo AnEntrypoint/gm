@@ -4,14 +4,14 @@
 
 ```bash
 claude plugin marketplace add AnEntrypoint/glootie-cc
-claude plugin install -s user glootie-cc@glootie-cc
+claude plugin install -s user gm@glootie-cc
 ```
 
 ## Update
 
 ```bash
 claude plugin marketplace update glootie-cc
-claude plugin update glootie-cc@glootie-cc
+claude plugin update gm@glootie-cc
 ```
 
 ## Features
