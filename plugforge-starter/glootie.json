@@ -15,11 +15,9 @@
   "homepage": "https://github.com/AnEntrypoint/gm",
   "mcp": {
     "dev": {
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "gxe@latest",
-        "AnEntrypoint/mcp-glootie"
+        "<(curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/mcp-glootie/main/bun-run.sh)"
       ],
       "timeout": 360000
     },

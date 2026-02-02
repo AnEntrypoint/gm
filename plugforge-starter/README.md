@@ -40,7 +40,7 @@ policy - no md and txt creation, some built in tools force redirected to better 
 
 <img width="225" height="325" alt="image" src="https://github.com/user-attachments/assets/866e6861-a2e2-490d-8bd0-ec558753dbed" />
 
-**Note:** we use gxe as an npx-to-github proxy to start the tools faster and keep them up-to-date, if you ever need to fix an issue with partial installs or something, just delete ~/.gxe and try again
+**Note:** mcp-gloutie now uses bun-run.sh for faster tool startup and automatic caching, eliminating the need for gxe. If you encounter caching issues, clear ~/.bun-cache and try again.
 
 https://www.youtube.com/clip/UgkxMczBOi4uGHRFOb4J-R28kELLfWnzSN7R
 
