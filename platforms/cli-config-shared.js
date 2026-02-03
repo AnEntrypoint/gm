@@ -41,7 +41,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js']
+      files: ['agents/', 'hooks/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
   getAdditionalFiles(pluginSpec) {
@@ -50,7 +50,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     };
   },
   buildHookCommand(hookFile) {
-    return `node \${extensionPath}/${hookFile}`;
+    return `node \${extensionPath}/hooks/${hookFile}`;
   },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI\n\n## Installation\n\nCopy to your Gemini extensions directory:\n\n\`\`\`bash\ncp -r . ~/.gemini/extensions/${spec.name}\n\`\`\`\n\nOr clone directly:\n\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;

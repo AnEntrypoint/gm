@@ -3,28 +3,28 @@
   "hooks": {
     "BeforeTool": {
       "type": "command",
-      "command": "node ${extensionPath}/pre-tool-use-hook.js",
+      "command": "node ${extensionPath}/hooks/pre-tool-use-hook.js",
       "timeout": 3600
     },
     "SessionStart": {
       "type": "command",
-      "command": "node ${extensionPath}/session-start-hook.js",
+      "command": "node ${extensionPath}/hooks/session-start-hook.js",
       "timeout": 10000
     },
     "BeforeAgent": {
       "type": "command",
-      "command": "node ${extensionPath}/prompt-submit-hook.js",
+      "command": "node ${extensionPath}/hooks/prompt-submit-hook.js",
       "timeout": 3600
     },
     "SessionEnd": [
       {
         "type": "command",
-        "command": "node ${extensionPath}/stop-hook.js",
+        "command": "node ${extensionPath}/hooks/stop-hook.js",
         "timeout": 300000
       },
       {
         "type": "command",
-        "command": "node ${extensionPath}/stop-hook-git.js",
+        "command": "node ${extensionPath}/hooks/stop-hook-git.js",
         "timeout": 60000
       }
     ]
