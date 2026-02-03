@@ -2,40 +2,30 @@
 
 ## Installation
 
-### Local (project-level)
+### Global (recommended)
+
+Copy plugin to opencode config:
 
 ```bash
-./setup.sh
+mkdir -p ~/.config/opencode/plugin
+cp -r . ~/.config/opencode/plugin/
+cd ~/.config/opencode/plugin && bun install
 ```
 
-Or on Windows:
-
-```bat
-setup.bat
-```
-
-### Global
+### Project-level
 
 ```bash
-./install-global.sh
+mkdir -p .opencode/plugins
+cp glootie.mjs index.js package.json .opencode/plugins/
+cp -r agents .opencode/plugins/
+cd .opencode && bun install
 ```
-
-Or on Windows:
-
-```bat
-install-global.bat
-```
-
-## Environment
-
-Set OC_PLUGIN_ROOT to your plugin directory in your shell profile.
 
 ## Features
 
 - MCP tools for code execution and search
 - State machine agent policy (gm)
-- Stop hook verification loop
-- Git enforcement on session end
+- Git enforcement on session idle
 - AST analysis via thorns at session start
 
 The plugin activates automatically on session start.

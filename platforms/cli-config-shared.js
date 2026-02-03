@@ -79,13 +79,97 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   }
 });
 
+function ocPluginSource() {
+  const BT = '`';
+  const lines = [
+    "import fs from 'fs';",
+    "import path from 'path';",
+    "import { fileURLToPath } from 'url';",
+    "import { analyze } from 'mcp-thorns';",
+    "",
+    "export const GlootiePlugin = async ({ project, client, $, directory, worktree }) => {",
+    "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
+    "",
+    "  const runSessionStart = async () => {",
+    "    if (!client || !client.tui) return;",
+    "    await new Promise(resolve => setTimeout(resolve, 500));",
+    "    const outputs = [];",
+    "    const agentMd = path.join(pluginDir, 'agents', 'gm.md');",
+    "    if (fs.existsSync(agentMd)) {",
+    "      try { outputs.push(fs.readFileSync(agentMd, 'utf-8')); } catch (e) {}",
+    "    }",
+    "    try {",
+    "      outputs.push('=== mcp-thorns ===\\n' + analyze(directory));",
+    "    } catch (e) {",
+    "      outputs.push('=== mcp-thorns ===\\nSkipped (' + e.message + ')');",
+    "    }",
+    "    if (outputs.length === 0) return;",
+    "    const text = outputs.join('\\n\\n')",
+    "      .replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/g, '')",
+    "      .replace(/[\\u2028\\u2029]/g, '\\n')",
+    "      .trim();",
+    "    try {",
+    "      await client.tui.appendPrompt({ body: { text } });",
+    "    } catch (e) {",
+    "      if (e.message && (e.message.includes('EditBuffer') || e.message.includes('disposed') || e.message.includes('illegal character') || e.message.includes('Array index'))) return;",
+    "      throw e;",
+    "    }",
+    "  };",
+    "",
+    "  const runSessionIdle = async () => {",
+    "    if (!client || !client.tui) return;",
+    "    const blockReasons = [];",
+    "    try {",
+    "      const ahead = await $" + BT + "git rev-list --count origin/HEAD..HEAD" + BT + ".timeout(2000).nothrow();",
+    "      if (ahead.exitCode === 0 && parseInt(ahead.stdout.trim()) > 0)",
+    "        blockReasons.push('Git: ' + ahead.stdout.trim() + ' commit(s) ahead of origin/HEAD');",
+    "    } catch (e) {}",
+    "    try {",
+    "      const behind = await $" + BT + "git rev-list --count HEAD..origin/HEAD" + BT + ".timeout(2000).nothrow();",
+    "      if (behind.exitCode === 0 && parseInt(behind.stdout.trim()) > 0)",
+    "        blockReasons.push('Git: ' + behind.stdout.trim() + ' commit(s) behind origin/HEAD');",
+    "    } catch (e) {}",
+    "    const prdFile = path.join(directory, '.prd');",
+    "    if (fs.existsSync(prdFile)) {",
+    "      const prd = fs.readFileSync(prdFile, 'utf-8').trim();",
+    "      if (prd.length > 0) blockReasons.push('Work items remain in .prd:\\n' + prd);",
+    "    }",
+    "    if (blockReasons.length > 0) throw new Error(blockReasons.join(' | '));",
+    "    const filesToRun = [];",
+    "    const evalJs = path.join(directory, 'eval.js');",
+    "    if (fs.existsSync(evalJs)) filesToRun.push('eval.js');",
+    "    const evalsDir = path.join(directory, 'evals');",
+    "    if (fs.existsSync(evalsDir) && fs.statSync(evalsDir).isDirectory()) {",
+    "      filesToRun.push(...fs.readdirSync(evalsDir)",
+    "        .filter(f => f.endsWith('.js') && !path.join(evalsDir, f).includes('/lib/'))",
+    "        .sort().map(f => path.join('evals', f)));",
+    "    }",
+    "    for (const file of filesToRun) {",
+    "      try { await $" + BT + "node ${file}" + BT + ".timeout(60000); } catch (e) {",
+    "        throw new Error('eval error: ' + e.message + '\\n' + (e.stdout || '') + '\\n' + (e.stderr || ''));",
+    "      }",
+    "    }",
+    "  };",
+    "",
+    "  return {",
+    "    event: async ({ event }) => {",
+    "      if (event.type === 'session.created') await runSessionStart();",
+    "      else if (event.type === 'session.idle') await runSessionIdle();",
+    "    }",
+    "  };",
+    "};",
+  ];
+  return lines.join('\n') + '\n';
+}
+
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
   getPackageJsonFields() {
     return {
-      main: 'index.js',
-      bin: { 'glootie-oc': './index.js' },
-      files: ['agents/', 'hooks/', 'index.js', 'opencode.json', '.mcp.json', 'setup.sh', 'setup.bat', 'setup-global.js', 'install-global.sh', 'install-global.bat', 'README.md'],
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie']
+      type: 'module',
+      main: 'glootie.mjs',
+      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.mcp.json', 'README.md'],
+      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
+      dependencies: { 'mcp-thorns': '^4.1.0' }
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
@@ -95,19 +179,21 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-      keywords: pluginSpec.keywords,
+      type: 'module',
+      main: 'glootie.mjs',
+      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       repository: { type: 'git', url: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc.git` },
       homepage: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc#readme`,
       bugs: { url: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc/issues` },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
+      dependencies: { 'mcp-thorns': '^4.1.0' },
       ...extraFields
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
     return JSON.stringify({
       $schema: 'https://opencode.ai/config.json',
-      default_agent: 'gm',
       plugin: [pluginSpec.name],
       mcp: {
         dev: { type: 'local', command: ['bunx', 'mcp-glootie@latest'], timeout: 360000, enabled: true },
@@ -117,16 +203,12 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export const glootie = async ({ project, client, $, directory, worktree }) => {\n  return {\n    hooks: {\n      sessionStart: require('./hooks/session-start-hook.js'),\n      preTool: require('./hooks/pre-tool-use-hook.js'),\n      promptSubmit: require('./hooks/prompt-submit-hook.js'),\n      stop: require('./hooks/stop-hook.js'),\n      stopGit: require('./hooks/stop-hook-git.js')\n    }\n  };\n};\n`,
-      'setup.sh': `#!/bin/bash\nset -e\nSCRIPT_DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"\nmkdir -p "$SCRIPT_DIR/.opencode/agents"\nmkdir -p "$SCRIPT_DIR/.opencode/plugins"\ncp "$SCRIPT_DIR/agents/gm.md" "$SCRIPT_DIR/.opencode/agents/" 2>/dev/null || true\nnpm install --save-dev 2>/dev/null || true\necho "Setup complete!"\n`,
-      'setup.bat': `@echo off\nsetlocal enabledelayedexpansion\nset SCRIPT_DIR=%~dp0\nif not exist "%SCRIPT_DIR%.opencode" mkdir "%SCRIPT_DIR%.opencode"\nif not exist "%SCRIPT_DIR%.opencode\\\\agents" mkdir "%SCRIPT_DIR%.opencode\\\\agents"\ncopy "%SCRIPT_DIR%agents\\\\gm.md" "%SCRIPT_DIR%.opencode\\\\agents\\\\" >nul 2>&1 || true\ncall npm install --save-dev >nul 2>&1 || true\necho Setup complete!\n`,
-      'setup-global.js': `#!/usr/bin/env node\nconst fs = require('fs');\nconst path = require('path');\nconst os = require('os');\n\nconst configDir = process.env.XDG_CONFIG_HOME ? path.join(process.env.XDG_CONFIG_HOME, 'opencode') : path.join(os.homedir(), '.config', 'opencode');\nconst pluginDir = path.join(configDir, 'plugins', 'glootie');\nconst scriptDir = __dirname;\n\nconsole.log('Installing glootie plugin globally...');\nconsole.log('Target directory:', pluginDir);\n\ntry {\n  if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });\n  const parentDir = path.dirname(pluginDir);\n  if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });\n  const files = fs.readdirSync(scriptDir);\n  files.forEach(file => {\n    const src = path.join(scriptDir, file);\n    const dest = path.join(pluginDir, file);\n    if (file !== 'node_modules' && file !== '.git') copyRecursive(src, dest);\n  });\n  console.log('Installation complete!');\n} catch (err) {\n  console.error('Installation failed:', err.message);\n  process.exit(1);\n}\n\nfunction copyRecursive(src, dest) {\n  const stat = fs.statSync(src);\n  if (stat.isDirectory()) {\n    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });\n    fs.readdirSync(src).forEach(file => copyRecursive(path.join(src, file), path.join(dest, file)));\n  } else fs.copyFileSync(src, dest);\n}\n`,
-      'install-global.sh': `#!/bin/bash\nset -e\nSCRIPT_DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"\nOPENCODE_CONFIG_DIR="\${XDG_CONFIG_HOME:-$HOME/.config}/opencode"\nmkdir -p "$OPENCODE_CONFIG_DIR/plugins"\ncp -r "$SCRIPT_DIR" "$OPENCODE_CONFIG_DIR/plugins/glootie"\necho "Global installation complete!"\n`,
-      'install-global.bat': `@echo off\nsetlocal enabledelayedexpansion\nset SCRIPT_DIR=%~dp0\nif "%APPDATA%"=="" (\n    echo Error: APPDATA not set\n    exit /b 1\n)\nset OPENCODE_CONFIG_DIR=%APPDATA%\\\\opencode\\\\plugins\nif not exist "%OPENCODE_CONFIG_DIR%" mkdir "%OPENCODE_CONFIG_DIR%"\nxcopy /E /I /Y "%SCRIPT_DIR%" "%OPENCODE_CONFIG_DIR%\\\\glootie" >nul 2>&1\necho Global installation complete!\n`
+      'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
+      'glootie.mjs': ocPluginSource(),
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Local (project-level)\n\n\`\`\`bash\n./setup.sh\n\`\`\`\n\nOr on Windows:\n\n\`\`\`bat\nsetup.bat\n\`\`\`\n\n### Global\n\n\`\`\`bash\n./install-global.sh\n\`\`\`\n\nOr on Windows:\n\n\`\`\`bat\ninstall-global.bat\n\`\`\`\n\n## Environment\n\nSet OC_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\nCopy plugin to opencode config:\n\n\`\`\`bash\nmkdir -p ~/.config/opencode/plugin\ncp -r . ~/.config/opencode/plugin/\ncd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n### Project-level\n\n\`\`\`bash\nmkdir -p .opencode/plugins\ncp glootie.mjs index.js package.json .opencode/plugins/\ncp -r agents .opencode/plugins/\ncd .opencode && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
