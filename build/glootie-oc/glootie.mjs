@@ -3,17 +3,26 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { analyze } from 'mcp-thorns';
 
+const SHELL_TOOLS = ['bash'];
+const SEARCH_TOOLS = ['glob', 'grep', 'list'];
+
 export const GlootiePlugin = async ({ project, client, $, directory, worktree }) => {
   const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+  let agentRules = '';
+
+  const loadAgentRules = () => {
+    if (agentRules) return agentRules;
+    const agentMd = path.join(pluginDir, 'agents', 'gm.md');
+    try { agentRules = fs.readFileSync(agentMd, 'utf-8'); } catch (e) {}
+    return agentRules;
+  };
 
   const runSessionStart = async () => {
     if (!client || !client.tui) return;
     await new Promise(resolve => setTimeout(resolve, 500));
     const outputs = [];
-    const agentMd = path.join(pluginDir, 'agents', 'gm.md');
-    if (fs.existsSync(agentMd)) {
-      try { outputs.push(fs.readFileSync(agentMd, 'utf-8')); } catch (e) {}
-    }
+    const rules = loadAgentRules();
+    if (rules) outputs.push(rules);
     try {
       outputs.push('=== mcp-thorns ===\n' + analyze(directory));
     } catch (e) {
@@ -71,6 +80,36 @@ export const GlootiePlugin = async ({ project, client, $, directory, worktree })
     event: async ({ event }) => {
       if (event.type === 'session.created') await runSessionStart();
       else if (event.type === 'session.idle') await runSessionIdle();
+    },
+
+    'tool.execute.before': async (input, output) => {
+      const tool = input.tool;
+      if (SHELL_TOOLS.includes(tool)) {
+        throw new Error('Use plugin:gm:dev execute for all command execution');
+      }
+      if (SEARCH_TOOLS.includes(tool)) {
+        throw new Error('Use plugin:gm:code-search or plugin:gm:dev for code exploration');
+      }
+      if (tool === 'write' || tool === 'edit' || tool === 'patch') {
+        const fp = output.args?.file_path || output.args?.filePath || output.args?.path || '';
+        const ext = path.extname(fp);
+        const base = path.basename(fp).toLowerCase();
+        const inSkills = fp.includes('/skills/');
+        if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
+            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('glootie') && !inSkills) {
+          throw new Error('Cannot create documentation files. Only CLAUDE.md, GLOOTIE.md, and README.md are maintained.');
+        }
+      }
+    },
+
+    'experimental.chat.system.transform': async (input, output) => {
+      const rules = loadAgentRules();
+      if (rules) output.system.push(rules);
+    },
+
+    'experimental.session.compacting': async (input, output) => {
+      const rules = loadAgentRules();
+      if (rules) output.context.push(rules);
     }
   };
 };
