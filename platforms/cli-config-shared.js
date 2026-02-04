@@ -231,13 +231,29 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
+    // Convert MCP config from glootie.json format (command + args) to opencode format (command array)
+    const mcpServers = {};
+    if (pluginSpec.mcp) {
+      for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
+        const command = Array.isArray(serverConfig.command) 
+          ? serverConfig.command 
+          : [serverConfig.command];
+        const args = serverConfig.args || [];
+        mcpServers[serverName] = {
+          type: 'local',
+          command: command[0],
+          args: [...command.slice(1), ...args],
+          timeout: serverConfig.timeout || 360000,
+          enabled: true
+        };
+      }
+    }
+    
     return JSON.stringify({
       $schema: 'https://opencode.ai/config.json',
-      plugin: [pluginSpec.name],
-      mcp: {
-        dev: { type: 'local', command: ['bunx', 'mcp-glootie@latest'], timeout: 360000, enabled: true },
-        'code-search': { type: 'local', command: ['bunx', 'codebasesearch@latest'], timeout: 360000, enabled: true }
-      }
+      default_agent: 'gm',
+      mcp: mcpServers,
+      plugin: ['glootie-oc']
     }, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
