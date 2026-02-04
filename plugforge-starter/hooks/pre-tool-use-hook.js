@@ -30,6 +30,14 @@ const run = () => {
           !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
         return { block: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained.' };
       }
+      if (/\.(test|spec)\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
+          /^(jest|vitest|mocha|ava|jasmine|tap)\.(config|setup)/.test(base) ||
+          file_path.includes('/__tests__/') || file_path.includes('/test/') ||
+          file_path.includes('/tests/') || file_path.includes('/fixtures/') ||
+          file_path.includes('/test-data/') || file_path.includes('/__mocks__/') ||
+          /\.(snap|stub|mock|fixture)\.(js|ts|json)$/.test(base)) {
+        return { block: true, reason: 'Test files forbidden on disk. Use plugin:gm:dev with real services for all testing.' };
+      }
     }
 
     if (searchTools.includes(tool_name)) {
