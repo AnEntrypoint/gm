@@ -2,35 +2,33 @@
 
 ## Installation
 
-### Plugin Marketplace Installation
+### Direct Project Installation (Recommended for claude.ai/code)
 
-The easiest way to install glootie-cc is through Claude Code's plugin marketplace:
+Install glootie-cc directly into your project. This is the **primary installation method** for claude.ai/code, which only supports project-level settings (not user-level plugins):
 
-```bash
-claude plugin marketplace add AnEntrypoint/glootie-cc
-claude plugin install -s user gm@glootie-cc
-```
-
-### Repository Installation
-
-For development or customization, you can install glootie-cc directly from the repository:
+Install glootie-cc directly into any JavaScript project without using the Claude Code plugin system:
 
 ```bash
-npm install glootie-cc && npx glootie install
+cd /path/to/your/project
+npm install glootie-cc
+npx glootie install
 ```
 
-This installation method is ideal when you need to:
-- Customize hooks or agents for your workflow
-- Integrate with existing Claude Code projects
-- Use the latest development version before marketplace updates
-- Configure platform-specific behavior
+This installs the gm philosophy into your project's own directories:
 
-#### Installation Command Breakdown
-
-The `npm install glootie-cc && npx glootie install` command performs two steps:
-
-1. **`npm install glootie-cc`** - Downloads the glootie-cc package and stores it in your project's `node_modules/` directory
-2. **`npx glootie install`** - Runs the glootie installer that copies configuration files into your Claude Code plugin directory
+```
+your-project/
+├── agents/
+│   └── gm.md                      # State machine agent with behavioral rules
+├── hooks/
+│   ├── pre-tool-use-hook.js        # Validates tools before execution
+│   ├── prompt-submit-hook.js       # Processes user prompts
+│   ├── session-start-hook.js       # Initializes session, runs thorns analysis
+│   ├── stop-hook.js                # Verifies session completion (.prd enforcement)
+│   └── stop-hook-git.js            # Enforces git on session end
+├── .mcp.json                       # MCP server configuration
+└── .gitignore                       # Git exclusions (auto-updated)
+```
 
 **Expected output:**
 ```
@@ -39,32 +37,52 @@ added 12 packages in 3.5s
 
 $ npx glootie install
 Installing glootie-cc...
-✓ Created .claude-plugin/ directory
+✓ Created agents/ directory
 ✓ Copied agents/gm.md
-✓ Copied hooks/* (6 files)
+✓ Created hooks/ directory
+✓ Copied 5 hook files
 ✓ Created .mcp.json
 ✓ Updated .gitignore
-Installation complete. Point Claude Code at: ~/.claude-plugins/glootie-cc
+✓ Installation complete!
+
+Location: /path/to/your/project/
+  - Agent: agents/gm.md
+  - Hooks: hooks/
+  - Config: .mcp.json
 ```
 
-#### File Installation Locations
+#### Using in Claude Code / claude.ai/code
 
-After running `npx glootie install`, the following files are installed in your Claude Code plugin directory:
+Point your Claude Code instance at your project's installed files:
+
+In **claude.ai/code** (project-level settings only):
+```json
+{
+  "plugins": [
+    "./"
+  ]
+}
+```
+
+This tells claude.ai/code to use the `agents/` and `hooks/` directories in your project root.
+
+#### File Locations After Installation
+
+All files are installed directly in your project root (not in `~/.claude-plugins/`):
 
 ```
-~/.claude-plugins/glootie-cc/
+your-project/
 ├── agents/
 │   └── gm.md                      # State machine agent with behavioral rules
 ├── hooks/
-│   ├── hooks.json                 # Hook configuration and enablement
 │   ├── pre-tool-use-hook.js        # Validates tools before execution
 │   ├── prompt-submit-hook.js       # Processes user prompts
 │   ├── session-start-hook.js       # Initializes session, runs thorns analysis
 │   ├── stop-hook.js                # Verifies session completion (.prd enforcement)
 │   └── stop-hook-git.js            # Enforces git on session end
 ├── .mcp.json                       # MCP server configuration
-├── .gitignore                      # Git exclusions (auto-updated)
-└── plugin.json                     # Plugin manifest
+├── .gitignore                       # Git exclusions (auto-updated)
+└── node_modules/glootie-cc/        # Package (npm install)
 ```
 
 **Key files explained:**
@@ -330,33 +348,49 @@ claude plugin marketplace remove glootie-cc
    # Should output: No such file or directory
    ```
 
-## Installation Comparison: Plugin vs Repository
+## Installation Methods
 
-| Feature | Plugin Marketplace | Repository Installation |
-|---------|-------------------|------------------------|
+### For claude.ai/code (Project-Level Settings)
+
+**Direct Project Installation** is the only supported method for claude.ai/code because it only supports project-level plugin configuration:
+
+```bash
+cd /path/to/your/project
+npm install glootie-cc
+npx glootie install
+```
+
+Then add to your project's claude.ai/code settings:
+```json
+{
+  "plugins": ["."]
+}
+```
+
+### For Claude Code Desktop (User-Level Settings Available)
+
+If you're using Claude Code with user-level plugin settings, you can also use the plugin marketplace:
+
+```bash
+claude plugin marketplace add AnEntrypoint/glootie-cc
+claude plugin install -s user gm@glootie-cc
+```
+
+However, **direct project installation is still recommended** for:
+- Version controlling agents and hooks with your codebase
+- Customizing gm.md and hooks per project
+- Using the same approach across claude.ai/code and Claude Code Desktop
+- Full control over behavior at project level
+
+## Comparison: Installation Methods
+
+| Feature | Plugin Marketplace (Desktop Only) | Direct Project Installation |
+|---------|----------------------------------|---------------------------|
+| **Works with claude.ai/code** | ❌ No | ✅ Yes |
+| **Works with Claude Code Desktop** | ✅ Yes | ✅ Yes |
 | **Setup Time** | 1-2 minutes | 2-3 minutes |
-| **Updates** | Automatic via marketplace | Manual `npm update` + `npx glootie install` |
-| **Customization** | Limited (plugin manifest only) | Full (agents, hooks, .mcp.json) |
-| **Version Control** | Managed by marketplace | Your choice (include in git or not) |
-| **Development** | Not suitable | Ideal for development and debugging |
-| **Support** | Official plugin marketplace | Community/self-support |
-| **Breaking Changes** | Marketplace gates breaking versions | You control when to update |
-| **File Locations** | Marketplace default | Your choice of directory |
-| **Multiple Instances** | One per user | Multiple versions possible |
-| **Customization Level** | 0% - Static | 100% - Full control |
-
-### When to Use Plugin Marketplace
-
-- You want the easiest installation
-- You don't need to customize hooks or agents
-- You want automatic updates
-- You prefer official support
-
-### When to Use Repository Installation
-
-- You need to customize hooks or agents
-- You're developing new features for glootie-cc
-- You want to lock specific versions
-- You're integrating with other Claude Code plugins
-- You need full control over behavior
-- You want to contribute back improvements
+| **Updates** | Automatic | Manual `npm update` + `npx glootie install` |
+| **Customization** | Limited | Full (agents, hooks, .mcp.json) |
+| **Version Control** | Managed externally | Your choice (include in git) |
+| **File Locations** | User plugin directory | Project root |
+| **Best For** | User-level plugins only | All use cases, especially projects |
