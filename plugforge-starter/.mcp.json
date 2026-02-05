@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.modelcontextprotocol.io/0.1.0/mcp.json",
+  "mcpServers": {
+    "dev": {
+      "command": "bunx",
+      "args": [
+        "mcp-glootie@latest"
+      ],
+      "timeout": 360000
+    },
+    "code-search": {
+      "command": "bunx",
+      "args": [
+        "codebasesearch@latest"
+      ],
+      "timeout": 360000
+    }
+  }
+}

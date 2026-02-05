@@ -9,7 +9,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', '.mcp.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.mcp.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -19,7 +19,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   generateReadme(spec) {
     const repoName = `${spec.name}-cc`;
-    return `# ${repoName} for Claude Code\n\n## Installation\n\nInstall ${repoName} into your project to add the gm state machine and hooks:\n\n\`\`\`bash\ncd /path/to/your/project\nnpm install ${repoName}\n\`\`\`\n\nThis installs the following files to your project root:\n\n\`\`\`\nproject/\n├── agents/\n│   └── gm.md\n├── hooks/\n│   ├── pre-tool-use-hook.js\n│   ├── session-start-hook.js\n│   ├── prompt-submit-hook.js\n│   ├── stop-hook.js\n│   └── stop-hook-git.js\n└── .mcp.json\n\`\`\`\n\n### Using in Claude Code\n\nAdd one line to your project settings:\n\n\`\`\`json\n{\n  "plugins": ["./"]\n}\n\`\`\`\n\nClaude Code now reads agents/gm.md, hooks/, and .mcp.json from your project root.\n\n## Update\n\n\`\`\`bash\nnpm update ${repoName}\n\`\`\`\n\n## Features\n\n- State machine agent with exhaustive behavioral rules\n- Five enforcement hooks (validation, prompts, startup, completion, git)\n- MCP integration for code execution and search\n- Automatic thorns AST analysis at session start\n- .prd completion enforcement at session end\n`;
+    return `# ${repoName} for Claude Code\n\n## Installation (Standalone Mode)\n\nInstall ${repoName} into your project to add the gm state machine and hooks:\n\n\`\`\`bash\ncd /path/to/your/project\nnpm install ${repoName}\n\`\`\`\n\nThe postinstall script automatically copies files to your project's \`.claude/\` directory:\n\n\`\`\`\nproject/\n├── node_modules/glootie-cc/\n└── .claude/\n    ├── agents/\n    │   └── gm.md\n    ├── hooks/\n    │   ├── pre-tool-use-hook.js\n    │   ├── session-start-hook.js\n    │   ├── prompt-submit-hook.js\n    │   ├── stop-hook.js\n    │   └── stop-hook-git.js\n    └── .mcp.json\n\`\`\`\n\nClaude Code automatically discovers and reads from the \`.claude/\` directory without any configuration needed.\n\n## Update\n\n\`\`\`bash\nnpm update ${repoName}\n\`\`\`\n\nThe postinstall script runs again and updates all files in \`.claude/\`.\n\n## Features\n\n- State machine agent with exhaustive behavioral rules\n- Five enforcement hooks (validation, prompts, startup, completion, git)\n- MCP integration for code execution and search\n- Automatic thorns AST analysis at session start\n- .prd completion enforcement at session end\n- Automatic .claude/ directory setup via postinstall\n`;
   }
 });
 

@@ -34,5 +34,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
   }
 }
