@@ -2,12 +2,22 @@
   "name": "glootie",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
-  "author": "AnEntrypoint",
+  "author": {
+    "name": "AnEntrypoint"
+  },
   "homepage": "https://github.com/AnEntrypoint/gm",
   "agents": [
-    "agents/gm.md"
+    {
+      "name": "gm",
+      "file": "agents/gm.md"
+    }
   ],
-  "hooks": "hooks/hooks.json",
+  "hooks": {
+    "pre_tool_use": "hooks/pre-tool-use-hook.js",
+    "session_start": "hooks/session-start-hook.js",
+    "prompt_submit": "hooks/prompt-submit-hook.js",
+    "stop": "hooks/stop-hook.js"
+  },
   "mcpServers": {
     "dev": {
       "command": "bunx",
