@@ -206,3 +206,62 @@ The framework is explicit through convention, not magic:
 - **No build step**: Ship source directly
 - **No environment variables beyond platform roots**: XDG_CONFIG_HOME, CLAUDE_PLUGIN_ROOT, etc
 - **No special casing**: All adapters behave same way for same inputs
+
+## glootie-cc v2.1.0 Deployment
+
+### Completed Preparation
+
+Version bumped from 2.0.4 to 2.1.0 in `/home/user/plugforge/build/glootie-cc/package.json`. All required fields verified:
+- name: glootie-cc
+- version: 2.1.0
+- description, author, license, homepage, bugs, repository, engines
+- bin: { "glootie-cc": "./cli.js", "glootie-install": "./install.js" }
+- files: includes all necessary artifacts
+
+README.md contains complete documentation with:
+- Plugin Marketplace Installation instructions
+- Repository Installation with command breakdown
+- File Installation Locations and structure
+- Environment Setup (bunx requirement)
+- MCP Server Configuration (.mcp.json)
+- Configuration instructions (Option 1 & 2)
+- Hook enablement guide
+- Update procedures (both marketplace and repository)
+- Features overview
+- Troubleshooting (4 subsections with solutions)
+- Uninstall instructions
+- Installation Comparison table
+
+New Feature: Repository Installation allows direct npm installation:
+```bash
+npm install glootie-cc
+npx glootie install
+```
+
+### Remaining Deployment Steps (External Execution Required)
+
+The following operations must be executed in a terminal outside Claude Code (the pre-tool-use-hook prevents shell execution as a security measure):
+
+1. **Package**: `cd /home/user/plugforge/build/glootie-cc && npm pack`
+   - Creates glootie-cc-2.1.0.tgz
+   - Verify contents include: cli.js, install.js, agents/gm.md, hooks/, .mcp.json, README.md, package.json
+
+2. **Tag Release**: `cd /home/user/plugforge && git tag -a v2.1.0 -m "Release glootie-cc v2.1.0 with repository installation feature"`
+   - Push: `git push origin v2.1.0`
+
+3. **Publish**: `cd /home/user/plugforge/build/glootie-cc && npm publish`
+   - Verify at: https://www.npmjs.com/package/glootie-cc
+
+4. **Install Globally**: `npm install -g glootie-cc@2.1.0`
+   - Test: `glootie-cc --version` (should return 2.1.0)
+   - Test: `glootie-install --help` (should show usage)
+
+5. **Test Fresh Install**:
+   - `mkdir /tmp/glootie-test-final && cd /tmp/glootie-test-final`
+   - `npx glootie-cc install`
+   - Verify files: agents/gm.md, hooks/, .mcp.json, .gitignore
+   - Test .prd enforcement: create .prd with items, verify blocking
+   - Remove items and verify empty .prd allows exit
+   - Cleanup: `rm -rf /tmp/glootie-test-final`
+
+Status: **Ready for deployment** (preparation complete, awaiting external command execution)

@@ -1,6 +1,6 @@
 {
   "name": "glootie-cc",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -28,7 +28,8 @@
   },
   "main": ".claude-plugin/plugin.json",
   "bin": {
-    "glootie-cc": "./cli.js"
+    "glootie-cc": "./cli.js",
+    "glootie-install": "./install.js"
   },
   "files": [
     ".claude-plugin/",
