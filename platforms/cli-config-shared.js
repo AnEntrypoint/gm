@@ -17,7 +17,8 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   getAdditionalFiles(spec) {
     const TemplateBuilder = require('../lib/template-builder');
     return {
-      '.claude-plugin/plugin.json': TemplateBuilder.generatePluginJson(spec)
+      '.claude-plugin/plugin.json': TemplateBuilder.generatePluginJson(spec),
+      '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec)
     };
   },
   generateReadme(spec) {
