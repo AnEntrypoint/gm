@@ -6,18 +6,8 @@
     "name": "AnEntrypoint"
   },
   "homepage": "https://github.com/AnEntrypoint/gm",
-  "agents": [
-    {
-      "name": "gm",
-      "file": "agents/gm.md"
-    }
-  ],
-  "hooks": {
-    "pre_tool_use": "hooks/pre-tool-use-hook.js",
-    "session_start": "hooks/session-start-hook.js",
-    "prompt_submit": "hooks/prompt-submit-hook.js",
-    "stop": "hooks/stop-hook.js"
-  },
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.json",
   "mcpServers": {
     "dev": {
       "command": "bunx",
