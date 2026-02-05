@@ -3,8 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.cwd();
-const prdFile = path.join(projectDir, '.prd');
+// Always use current working directory for .prd location
+// Explicitly resolve to ./.prd in the current folder
+const projectDir = process.cwd();
+const prdFile = path.resolve(projectDir, '.prd');
 
 let aborted = false;
 process.on('SIGTERM', () => { aborted = true; });
