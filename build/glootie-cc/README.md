@@ -2,11 +2,7 @@
 
 ## Installation
 
-### Direct Project Installation (Recommended for claude.ai/code)
-
-Install glootie-cc directly into your project. This is the **primary installation method** for claude.ai/code, which only supports project-level settings (not user-level plugins):
-
-Install glootie-cc directly into any JavaScript project without using the Claude Code plugin system:
+Install glootie-cc directly into your project to add the gm state machine and hooks:
 
 ```bash
 cd /path/to/your/project
@@ -14,12 +10,12 @@ npm install glootie-cc
 npx glootie install
 ```
 
-This installs the gm philosophy into your project's own directories:
+This adds the following files to your project root:
 
 ```
 your-project/
 ├── agents/
-│   └── gm.md                      # State machine agent with behavioral rules
+│   └── gm.md                       # State machine agent with behavioral rules
 ├── hooks/
 │   ├── pre-tool-use-hook.js        # Validates tools before execution
 │   ├── prompt-submit-hook.js       # Processes user prompts
@@ -30,32 +26,10 @@ your-project/
 └── .gitignore                       # Git exclusions (auto-updated)
 ```
 
-**Expected output:**
-```
-$ npm install glootie-cc
-added 12 packages in 3.5s
+### Using glootie-cc in Claude Code / claude.ai/code
 
-$ npx glootie install
-Installing glootie-cc...
-✓ Created agents/ directory
-✓ Copied agents/gm.md
-✓ Created hooks/ directory
-✓ Copied 5 hook files
-✓ Created .mcp.json
-✓ Updated .gitignore
-✓ Installation complete!
+After installation, add one line to your project settings to tell Claude Code to use these files:
 
-Location: /path/to/your/project/
-  - Agent: agents/gm.md
-  - Hooks: hooks/
-  - Config: .mcp.json
-```
-
-#### Using in Claude Code / claude.ai/code
-
-Point your Claude Code instance at your project's installed files:
-
-In **claude.ai/code** (project-level settings only):
 ```json
 {
   "plugins": [
@@ -64,168 +38,74 @@ In **claude.ai/code** (project-level settings only):
 }
 ```
 
-This tells claude.ai/code to use the `agents/` and `hooks/` directories in your project root.
+That's it. Claude Code now reads `agents/gm.md`, `hooks/`, and `.mcp.json` from your project root and uses them automatically.
 
-#### File Locations After Installation
+### What Gets Installed
 
-All files are installed directly in your project root (not in `~/.claude-plugins/`):
+- **agents/gm.md** - The unified agent containing all behavioral rules and state machine logic
+- **hooks/** - Five hook files that validate tools, process prompts, initialize sessions, and enforce completion
+- **.mcp.json** - Configuration for MCP servers (dev and code-search) that provide code execution and search
+- **.gitignore** - Updated to exclude `.glootie-stop-verified`
 
-```
-your-project/
-├── agents/
-│   └── gm.md                      # State machine agent with behavioral rules
-├── hooks/
-│   ├── pre-tool-use-hook.js        # Validates tools before execution
-│   ├── prompt-submit-hook.js       # Processes user prompts
-│   ├── session-start-hook.js       # Initializes session, runs thorns analysis
-│   ├── stop-hook.js                # Verifies session completion (.prd enforcement)
-│   └── stop-hook-git.js            # Enforces git on session end
-├── .mcp.json                       # MCP server configuration
-├── .gitignore                       # Git exclusions (auto-updated)
-└── node_modules/glootie-cc/        # Package (npm install)
-```
+### Requirements
 
-**Key files explained:**
-
-- **agents/gm.md** - The unified agent that contains all behavioral rules and state machine logic. This is the core of glootie-cc.
-- **hooks/hooks.json** - Declares which hooks to run on which events (PreToolUse, SessionStart, UserPromptSubmit, Stop)
-- **.mcp.json** - Configures MCP servers (dev and code-search) that provide code execution and search capabilities
-- **.gitignore** - Updated with `.glootie-stop-verified` to track session completion state
-
-#### Environment Setup
-
-glootie-cc requires `bunx` to run MCP servers. Verify it's installed:
+glootie-cc requires `bunx` (from Bun) to run MCP servers:
 
 ```bash
 bunx --version
 ```
 
-If not installed, install bun:
+If not installed, install Bun:
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-**MCP Server Configuration** (in `.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "dev": {
-      "command": "bunx",
-      "args": ["mcp-glootie@latest"],
-      "timeout": 360000
-    },
-    "code-search": {
-      "command": "bunx",
-      "args": ["codebasesearch@latest"],
-      "timeout": 360000
-    }
-  }
-}
-```
-
-**Default environment variables:**
-
-- `CLAUDE_PLUGIN_ROOT` - Set automatically by Claude Code, points to plugin directory
-- `XDG_CONFIG_HOME` - Optional, defaults to `~/.config`
-- `NODE_PATH` - Defaults to system Node.js path
-
-No manual environment variable setup is required; Claude Code manages these automatically.
-
-#### Configuring Claude Code to Use Installed Files
-
-After running `npx glootie install`, configure Claude Code to load the installed plugin:
-
-**Option 1: Direct Plugin Directory**
-
-In Claude Code settings, add the plugin directory:
-
-```json
-{
-  "plugins": [
-    "~/.claude-plugins/glootie-cc"
-  ]
-}
-```
-
-**Option 2: Via Plugin Manager**
-
-```bash
-claude plugin install -s user gm@glootie-cc
-```
-
-**Enable hooks in Claude Code settings:**
-
-Open `~/.claude-plugins/glootie-cc/hooks/hooks.json` and verify all hooks are enabled:
-
-- **PreToolUse** - Validates all tool calls (required for enforcement)
-- **SessionStart** - Runs thorns analysis at session start (recommended)
-- **UserPromptSubmit** - Processes prompts before execution
-- **Stop** - Enforces .prd completion and git status (required)
-
-Each hook references:
-```
-${CLAUDE_PLUGIN_ROOT}/hooks/[hook-file].js
-```
-
-Claude Code automatically expands `${CLAUDE_PLUGIN_ROOT}` to the plugin directory path.
-
 ## Update
 
-### Plugin Marketplace Update
-
-```bash
-claude plugin marketplace update glootie-cc
-claude plugin update gm@glootie-cc
-```
-
-### Repository-Based Update
+To update glootie-cc to the latest version:
 
 ```bash
 npm update glootie-cc
 npx glootie install
 ```
 
+This updates the agent, hooks, and MCP configuration in your project.
+
 ## Features
 
-- MCP tools for code execution and search
-- State machine agent policy (gm)
-- Stop hook verification loop
-- Git enforcement on session end
-- AST analysis via thorns at session start
-
-The plugin activates automatically on session start.
+- State machine agent with exhaustive behavioral rules
+- Five enforcement hooks (validation, prompts, startup, completion, git)
+- MCP integration for code execution and search
+- Automatic thorns AST analysis at session start
+- .prd completion enforcement at session end
 
 ## Troubleshooting
 
 ### Hooks Not Running
 
-**Symptom:** Hooks specified in hooks.json are not executing.
+**Symptom:** Hooks are not executing during coding sessions.
 
 **Solutions:**
 
-1. Verify hooks are enabled in Claude Code:
+1. Verify hook files exist in your project:
    ```bash
-   cat ~/.claude-plugins/glootie-cc/hooks/hooks.json
+   ls -la hooks/
    ```
-   Ensure `"matcher": "*"` is present for each hook.
+   Should show: `pre-tool-use-hook.js`, `prompt-submit-hook.js`, `session-start-hook.js`, `stop-hook.js`, `stop-hook-git.js`
 
-2. Check that `${CLAUDE_PLUGIN_ROOT}` is properly set:
+2. Verify .mcp.json exists and is valid JSON:
    ```bash
-   echo $CLAUDE_PLUGIN_ROOT
+   cat .mcp.json
    ```
-   Should output your plugin directory path (e.g., `/Users/name/.claude-plugins/glootie-cc`).
 
-3. Verify hook files are executable:
+3. Check that Claude Code can find your project's plugin directory:
    ```bash
-   ls -la ~/.claude-plugins/glootie-cc/hooks/*.js
+   cat .claude/settings.json | grep plugins
    ```
-   Should show `-rw-r--r--` permissions (readable).
+   Should show `"plugins": ["./"]`
 
-4. Check Claude Code logs for hook errors:
-   - Open Claude Code Developer Console (Help > Toggle Developer Tools)
-   - Look for messages containing "hook" or "PreToolUse"
+4. Restart Claude Code completely (close and reopen) to reload hooks.
 
 ### MCP Server Connection Failed
 
@@ -233,62 +113,53 @@ The plugin activates automatically on session start.
 
 **Solutions:**
 
-1. Verify bunx is installed and working:
+1. Verify bunx is installed:
    ```bash
    bunx --version
    ```
 
-2. Test MCP server manually:
+2. Test the dev MCP server manually:
    ```bash
    bunx mcp-glootie@latest
    ```
-   Should output connection details without errors.
+   Should connect without errors.
 
-3. Verify .mcp.json is valid:
+3. Test code-search MCP server:
    ```bash
-   cat ~/.claude-plugins/glootie-cc/.mcp.json
+   bunx codebasesearch@latest
    ```
-   Should be valid JSON with "mcpServers" key.
 
-4. Clear Claude Code cache and restart:
+4. Verify .mcp.json has correct MCP server configuration:
    ```bash
-   rm -rf ~/.claude-plugins/glootie-cc/.cache
+   cat .mcp.json
    ```
-   Then restart Claude Code.
+   Should contain `"mcpServers"` with `"dev"` and `"code-search"` entries.
 
 ### .prd Not Enforcing
 
-**Symptom:** `.prd` file is not being checked at session stop, or tasks appear to complete despite pending items.
+**Symptom:** `.prd` file is not being checked at session end, or sessions end despite pending items.
 
 **Solutions:**
 
-1. Verify stop-hook.js is running:
-   ```bash
-   cat ~/.claude-plugins/glootie-cc/hooks/hooks.json | grep -A5 '"Stop"'
-   ```
-   Should list `stop-hook.js` in Stop hooks.
-
-2. Check that `.prd` file exists and is valid:
+1. Verify `.prd` file exists:
    ```bash
    cat .prd
    ```
-   Should have pending items listed (lines starting with `- [ ]`).
+   Should contain pending items (lines starting with `- [ ]`).
 
-3. Verify git is initialized in the project:
+2. Verify stop-hook.js exists in your project:
+   ```bash
+   ls -la hooks/stop-hook.js
+   ```
+
+3. Check git is initialized:
    ```bash
    git status
    ```
-   Should show valid git repository.
-
-4. Check stop-hook.js logic:
-   ```bash
-   node ~/.claude-plugins/glootie-cc/hooks/stop-hook.js
-   ```
-   Should output verification status.
 
 ### Git Enforcement Failing
 
-**Symptom:** Git status is not being checked at session end, or enforcement is not blocking session completion.
+**Symptom:** Git status is not being checked at session end.
 
 **Solutions:**
 
@@ -297,100 +168,38 @@ The plugin activates automatically on session start.
    git status
    ```
 
-2. Check stop-hook-git.js is enabled:
+2. Check stop-hook-git.js exists:
    ```bash
-   cat ~/.claude-plugins/glootie-cc/hooks/hooks.json | grep stop-hook-git
+   ls -la hooks/stop-hook-git.js
    ```
 
-3. Verify all changes are staged:
+3. Stage all changes before session end:
    ```bash
-   git status --short
-   ```
-   Should show no unstaged changes (no first character in status).
-
-4. Review git enforcement policy in agent (agents/gm.md):
-   ```bash
-   cat ~/.claude-plugins/glootie-cc/agents/gm.md | grep -i "git"
+   git add .
    ```
 
 ## Uninstall
 
-To completely remove glootie-cc:
+To remove glootie-cc from your project:
 
-### Plugin Marketplace Uninstall
-
-```bash
-claude plugin uninstall gm@glootie-cc
-claude plugin marketplace remove glootie-cc
-```
-
-### Repository Installation Cleanup
-
-1. Remove installed plugin files:
+1. Remove installed files:
    ```bash
-   rm -rf ~/.claude-plugins/glootie-cc
+   rm -rf agents/ hooks/ .mcp.json
    ```
 
-2. Remove npm package (if installed locally):
+2. Remove npm package:
    ```bash
    npm uninstall glootie-cc
    ```
 
-3. Clean up .gitignore (if updated during installation):
+3. Remove from project settings:
    ```bash
-   # Remove this line from .gitignore if present:
+   # Remove "plugins": ["./"] from your .claude/settings.json or project settings
+   ```
+
+4. Clean up .gitignore (optional):
+   ```bash
+   # Remove this line if present:
    .glootie-stop-verified
    ```
 
-4. Verify cleanup:
-   ```bash
-   ls ~/.claude-plugins/glootie-cc
-   # Should output: No such file or directory
-   ```
-
-## Installation Methods
-
-### For claude.ai/code (Project-Level Settings)
-
-**Direct Project Installation** is the only supported method for claude.ai/code because it only supports project-level plugin configuration:
-
-```bash
-cd /path/to/your/project
-npm install glootie-cc
-npx glootie install
-```
-
-Then add to your project's claude.ai/code settings:
-```json
-{
-  "plugins": ["."]
-}
-```
-
-### For Claude Code Desktop (User-Level Settings Available)
-
-If you're using Claude Code with user-level plugin settings, you can also use the plugin marketplace:
-
-```bash
-claude plugin marketplace add AnEntrypoint/glootie-cc
-claude plugin install -s user gm@glootie-cc
-```
-
-However, **direct project installation is still recommended** for:
-- Version controlling agents and hooks with your codebase
-- Customizing gm.md and hooks per project
-- Using the same approach across claude.ai/code and Claude Code Desktop
-- Full control over behavior at project level
-
-## Comparison: Installation Methods
-
-| Feature | Plugin Marketplace (Desktop Only) | Direct Project Installation |
-|---------|----------------------------------|---------------------------|
-| **Works with claude.ai/code** | ❌ No | ✅ Yes |
-| **Works with Claude Code Desktop** | ✅ Yes | ✅ Yes |
-| **Setup Time** | 1-2 minutes | 2-3 minutes |
-| **Updates** | Automatic | Manual `npm update` + `npx glootie install` |
-| **Customization** | Limited | Full (agents, hooks, .mcp.json) |
-| **Version Control** | Managed externally | Your choice (include in git) |
-| **File Locations** | User plugin directory | Project root |
-| **Best For** | User-level plugins only | All use cases, especially projects |
