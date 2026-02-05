@@ -35,6 +35,7 @@
     "glootie.mjs",
     "index.js",
     "opencode.json",
+    ".github/",
     ".mcp.json",
     "README.md"
   ]

@@ -1,13 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "glootie"
-  ],
+  "default_agent": "gm",
   "mcp": {
     "dev": {
       "type": "local",
-      "command": [
-        "bunx",
+      "command": "bunx",
+      "args": [
         "mcp-glootie@latest"
       ],
       "timeout": 360000,
@@ -15,12 +13,15 @@
     },
     "code-search": {
       "type": "local",
-      "command": [
-        "bunx",
+      "command": "bunx",
+      "args": [
         "codebasesearch@latest"
       ],
       "timeout": 360000,
       "enabled": true
     }
-  }
+  },
+  "plugin": [
+    "glootie-oc"
+  ]
 }

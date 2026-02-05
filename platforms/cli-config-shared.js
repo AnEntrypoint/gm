@@ -9,7 +9,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.mcp.json', '.claude-plugin/', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -32,7 +32,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
+      files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
   getAdditionalFiles(pluginSpec) {
@@ -61,7 +61,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'glootie-codex': './cli.js' },
-      files: ['hooks/', 'agents/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie']
     };
   },
@@ -197,7 +197,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     return {
       type: 'module',
       main: 'glootie.mjs',
-      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.mcp.json', 'README.md'],
+      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };

@@ -92,6 +92,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/',
       'hooks/',
       'skills/',
+      '.github/',
       'copilot-profile.md',
       'tools.json',
       'manifest.yml',

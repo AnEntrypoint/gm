@@ -36,6 +36,7 @@
     "extension.js",
     "agents/",
     "skills/",
+    ".github/",
     "README.md"
   ]
 }
