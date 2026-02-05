@@ -2,15 +2,14 @@
 
 ## Installation
 
-Install glootie-cc directly into your project to add the gm state machine and hooks:
+Install glootie-cc into your project to add the gm state machine and hooks:
 
 ```bash
 cd /path/to/your/project
 npm install glootie-cc
-npx glootie install
 ```
 
-This adds the following files to your project root:
+This installs the following files to your project root:
 
 ```
 your-project/
@@ -67,7 +66,6 @@ To update glootie-cc to the latest version:
 
 ```bash
 npm update glootie-cc
-npx glootie install
 ```
 
 This updates the agent, hooks, and MCP configuration in your project.

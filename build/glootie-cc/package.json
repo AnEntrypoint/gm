@@ -1,13 +1,13 @@
 {
   "name": "glootie-cc",
   "version": "2.1.0",
-  "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+  "description": "Claude Code agent installer with gm state machine, hooks, and MCP configuration",
   "author": "AnEntrypoint",
   "license": "MIT",
   "keywords": [
     "claude-code",
-    "claude-plugin",
-    "wfgy",
+    "agent",
+    "state-machine",
     "mcp",
     "automation",
     "glootie"
@@ -26,20 +26,16 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": ".claude-plugin/plugin.json",
-  "bin": {
-    "glootie-cc": "./cli.js",
-    "glootie-install": "./install.js"
-  },
   "files": [
-    ".claude-plugin/",
+    "agents/",
     "hooks/",
-    "README.md",
-    "CLAUDE.md",
     ".mcp.json",
-    "plugin.json",
-    "prompt-submit-hook.js",
-    "stop-hook.js"
+    "README.md",
+    "LICENSE",
+    ".gitignore",
+    ".editorconfig",
+    "CONTRIBUTING.md",
+    "CLAUDE.md"
   ],
   "peerDependencies": {
     "@anthropic-ai/claude-code": "*"
