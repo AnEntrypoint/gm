@@ -1,37 +1,25 @@
 const factory = require('./cli-config-factory');
 
-const cc = factory('cc', 'Claude Code', 'plugin.json', 'CLAUDE.md', {
+const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   formatConfigJson(config) {
     return JSON.stringify({
       ...config,
-      author: { name: config.author, url: 'https://github.com/AnEntrypoint' },
-      hooks: './hooks/hooks.json'
+      author: { name: config.author, url: 'https://github.com/AnEntrypoint' }
     }, null, 2);
   },
-  getPackageJsonMain() { return '.claude-plugin/plugin.json'; },
   getPackageJsonFields() {
     return {
-      main: '.claude-plugin/plugin.json',
-      bin: { 'glootie-cc': './cli.js' },
-      files: ['.claude-plugin/', 'hooks/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'prompt-submit-hook.js', 'stop-hook.js'],
-      keywords: ['claude-code', 'claude-plugin', 'wfgy', 'mcp', 'automation', 'glootie'],
+      files: ['agents/', 'hooks/', '.mcp.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
   },
   getAdditionalFiles(spec) {
-    return {
-      '.claude-plugin/marketplace.json': JSON.stringify({
-        name: spec.name + '-cc',
-        owner: { name: 'AnEntrypoint', email: 'almagestfraternite@gmail.com' },
-        version: spec.version,
-        description: spec.description,
-        plugins: [{ name: 'gm', source: './' }]
-      }, null, 2)
-    };
+    return {};
   },
   generateReadme(spec) {
     const repoName = `${spec.name}-cc`;
-    return `# ${repoName} for Claude Code\n\n## Installation\n\n\`\`\`bash\nclaude plugin marketplace add AnEntrypoint/${repoName}\nclaude plugin install -s user gm@${repoName}\n\`\`\`\n\n## Update\n\n\`\`\`bash\nclaude plugin marketplace update ${repoName}\nclaude plugin update gm@${repoName}\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${repoName} for Claude Code\n\n## Installation\n\nInstall ${repoName} into your project to add the gm state machine and hooks:\n\n\`\`\`bash\ncd /path/to/your/project\nnpm install ${repoName}\n\`\`\`\n\nThis installs the following files to your project root:\n\n\`\`\`\nproject/\n├── agents/\n│   └── gm.md\n├── hooks/\n│   ├── pre-tool-use-hook.js\n│   ├── session-start-hook.js\n│   ├── prompt-submit-hook.js\n│   ├── stop-hook.js\n│   └── stop-hook-git.js\n└── .mcp.json\n\`\`\`\n\n### Using in Claude Code\n\nAdd one line to your project settings:\n\n\`\`\`json\n{\n  "plugins": ["./"]\n}\n\`\`\`\n\nClaude Code now reads agents/gm.md, hooks/, and .mcp.json from your project root.\n\n## Update\n\n\`\`\`bash\nnpm update ${repoName}\n\`\`\`\n\n## Features\n\n- State machine agent with exhaustive behavioral rules\n- Five enforcement hooks (validation, prompts, startup, completion, git)\n- MCP integration for code execution and search\n- Automatic thorns AST analysis at session start\n- .prd completion enforcement at session end\n`;
   }
 });
 
