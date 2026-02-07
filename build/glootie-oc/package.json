@@ -1,5 +1,5 @@
 {
-  "name": "glootie-oc",
+  "name": "gm-oc",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
@@ -15,11 +15,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/glootie-oc.git"
+    "url": "https://github.com/AnEntrypoint/gm-oc.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/glootie-oc#readme",
+  "homepage": "https://github.com/AnEntrypoint/gm-oc#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/glootie-oc/issues"
+    "url": "https://github.com/AnEntrypoint/gm-oc/issues"
   },
   "engines": {
     "node": ">=16.0.0"

@@ -1,5 +1,5 @@
 {
-  "name": "glootie-codex",
+  "name": "gm-codex",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
@@ -17,11 +17,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/glootie-codex.git"
+    "url": "https://github.com/AnEntrypoint/gm-codex.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/glootie-codex#readme",
+  "homepage": "https://github.com/AnEntrypoint/gm-codex#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/glootie-codex/issues"
+    "url": "https://github.com/AnEntrypoint/gm-codex/issues"
   },
   "engines": {
     "node": ">=16.0.0"

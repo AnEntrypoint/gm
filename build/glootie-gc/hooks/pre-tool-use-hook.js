@@ -7,7 +7,7 @@ const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
 
 const shellTools = ['Bash', 'run_shell_command'];
 const writeTools = ['Write', 'write_file'];
-const searchTools = ['Glob', 'Grep', 'glob', 'search_file_content'];
+const searchTools = ['Glob', 'Grep', 'glob', 'search_file_content', 'Search', 'search', 'mcp__plugin_gm_code-search__search'];
 
 const run = () => {
   try {

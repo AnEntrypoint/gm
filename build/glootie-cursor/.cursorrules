@@ -10,3 +10,23 @@ Follow these patterns for Cursor IDE integrations.
 ## Agent Pattern
 - Load agents from agents/
 - Initialize on startup
+
+## Semantic Code Search
+
+Your editor uses **semantic code search** to understand your intent, not just syntax patterns.
+
+### How It Works
+- **Intent-based**: Describe what you're looking for in plain language
+  - "Find authentication validation" → locates auth checks, guards, permission logic
+  - "Where is database initialization?" → finds connection setup, migrations, schemas
+  - "Show error handling patterns" → discovers try/catch patterns, error boundaries
+
+- **NOT syntax-based**: Unlike regex patterns, semantic search understands meaning across files
+- **Cross-file understanding**: Finds related code patterns regardless of implementation details
+
+### When to Use Code Search
+- Exploring unfamiliar codebases
+- Finding similar patterns you've seen before
+- Understanding how components integrate
+- Locating where features are implemented
+- Discovering related code sections

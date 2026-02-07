@@ -8,7 +8,7 @@ repository = "https://github.com/AnEntrypoint/glootie-zed"
 
 [package]
 category = ["AI", "Code Completion"]
-description = "AI state machine with autonomous agent coordination and MCP integration"
+description = "AI state machine with semantic code search, autonomous agents, and MCP integration. Use natural language prompts like 'Find auth validation' to explore your codebase."
 
 [commands]
 glootie.activate = "Activate Glootie state machine"
