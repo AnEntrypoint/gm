@@ -63,6 +63,7 @@ jobs:
           REPO_NAME="glootie-${PLATFORM}"
           WORK_DIR="/tmp/${REPO_NAME}"
           BUILD_DIR="./build/glootie-${PLATFORM}"
+          SOURCE_ROOT="${GITHUB_WORKSPACE}"
 
           # Ensure build directory exists and has content
           if [ ! -d "$BUILD_DIR" ]; then
@@ -94,7 +95,7 @@ jobs:
           git checkout main 2>/dev/null || git checkout -b main
 
           # Sync build output with complete replacement
-          rsync -av --delete --exclude='.git' "$(cd - && pwd)/$BUILD_DIR"/ .
+          rsync -av --delete --exclude='.git' "${SOURCE_ROOT}/${BUILD_DIR}"/ .
 
           # Only commit if there are actual changes
           if ! git diff-index --quiet HEAD --; then
