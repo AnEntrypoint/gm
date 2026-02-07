@@ -43,7 +43,30 @@ try {
     }
   }
 
-  // 2. Run mcp-thorns (bunx)
+  // 2. Add semantic code-search explanation
+  const codeSearchContext = `## 🔍 Semantic Code Search Now Available
+
+Your prompts will trigger **semantic code search** - intelligent, intent-based exploration of your codebase.
+
+### How It Works
+Describe what you need in plain language, and the search understands your intent:
+- "Find authentication validation" → locates auth checks, guards, permission logic
+- "Where is database initialization?" → finds connection setup, migrations, schemas
+- "Show error handling patterns" → discovers try/catch patterns, error boundaries
+
+NOT syntax-based regex matching - truly semantic understanding across files.
+
+### Example
+Instead of regex patterns, simply describe your intent:
+"Find where API authorization is checked"
+
+The search will find permission validations, role checks, authentication guards - however they're implemented.
+
+### When to Use Code Search
+When exploring unfamiliar code, finding similar patterns, understanding integrations, or locating feature implementations across your codebase.`;
+  outputs.push(codeSearchContext);
+
+  // 3. Run mcp-thorns (bunx)
   if (projectDir && fs.existsSync(projectDir)) {
     try {
       const thornOutput = execSync(`bunx mcp-thorns@latest`, {

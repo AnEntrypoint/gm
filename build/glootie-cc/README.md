@@ -1,4 +1,4 @@
-# glootie-cc for Claude Code
+# gm-cc for Claude Code
 
 ## Installation
 
@@ -6,18 +6,18 @@ This package supports three installation modes:
 
 ### Mode 1: Standalone (npm install in project)
 
-Install glootie-cc into your project to add the gm state machine and hooks:
+Install gm-cc into your project to add the gm state machine and hooks:
 
 ```bash
 cd /path/to/your/project
-npm install glootie-cc
+npm install gm-cc
 ```
 
 The postinstall script automatically copies files to your project's `.claude/` directory:
 
 ```
 project/
-├── node_modules/glootie-cc/
+├── node_modules/gm-cc/
 └── .claude/
     ├── agents/
     │   └── gm.md
@@ -37,7 +37,7 @@ Claude Code automatically discovers and reads from the `.claude/` directory with
 For Claude Code plugin system recognition, the package includes `.claude-plugin/plugin.json`:
 
 ```
-node_modules/glootie-cc/
+node_modules/gm-cc/
 └── .claude-plugin/
     └── plugin.json
 ```
@@ -59,7 +59,7 @@ Standalone mode takes precedence when installed locally. Plugin mode available w
 ## Update
 
 ```bash
-npm update glootie-cc
+npm update gm-cc
 ```
 
 The postinstall script runs again and updates all files in `.claude/`.

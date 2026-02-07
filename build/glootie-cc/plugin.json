@@ -1,12 +1,12 @@
 {
-  "name": "glootie",
+  "name": "gm",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": {
-    "name": "AnEntrypoint"
+    "name": "AnEntrypoint",
+    "url": "https://github.com/AnEntrypoint"
   },
   "homepage": "https://github.com/AnEntrypoint/gm",
-  "agents": "./agents/",
   "hooks": "./hooks/hooks.json",
   "mcpServers": {
     "dev": {
@@ -23,14 +23,5 @@
       ],
       "timeout": 360000
     }
-  },
-  "keywords": [
-    "claude-code",
-    "claude-plugin",
-    "wfgy",
-    "mcp",
-    "automation",
-    "glootie"
-  ],
-  "license": "MIT"
+  }
 }

@@ -1,17 +1,17 @@
-# glootie for Gemini CLI
+# gm for Gemini CLI
 
 ## Installation
 
 Copy to your Gemini extensions directory:
 
 ```bash
-cp -r . ~/.gemini/extensions/glootie
+cp -r . ~/.gemini/extensions/gm
 ```
 
 Or clone directly:
 
 ```bash
-git clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/glootie
+git clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/gm
 ```
 
 ## Automatic Path Resolution
