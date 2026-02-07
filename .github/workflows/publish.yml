@@ -34,7 +34,16 @@ jobs:
 
 
       - name: Build ${{ matrix.name }}
-        run: node cli.js plugforge-starter /tmp/plugforge-build
+        run: node cli.js plugforge-starter ./build
+
+      - name: Validate build output
+        run: |
+          BUILD_DIR="./build/glootie-${{ matrix.platform }}"
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "❌ Build failed: $BUILD_DIR does not exist"
+            exit 1
+          fi
+          echo "✅ Build output validated at $BUILD_DIR"
 
       - name: Setup Git
         env:
@@ -53,7 +62,13 @@ jobs:
           set -e
           REPO_NAME="glootie-${PLATFORM}"
           WORK_DIR="/tmp/${REPO_NAME}"
-          BUILD_DIR="/tmp/plugforge-build/glootie-${PLATFORM}"
+          BUILD_DIR="./build/glootie-${PLATFORM}"
+
+          # Ensure build directory exists and has content
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "❌ Build directory not found: $BUILD_DIR"
+            exit 1
+          fi
 
           gh repo create AnEntrypoint/${REPO_NAME} --public 2>/dev/null || true
 
@@ -79,9 +94,13 @@ jobs:
           git checkout main 2>/dev/null || git checkout -b main
 
           # Sync build output with complete replacement
-          rsync -av --delete --exclude='.git' "$BUILD_DIR"/ .
+          rsync -av --delete --exclude='.git' "$(cd - && pwd)/$BUILD_DIR"/ .
 
-          # Always commit and force push - completely overwrite target repo
-          git add -A
-          git commit -m "Auto-build: ${NAME} plugin from plugforge" --allow-empty
-          git push origin main -f
+          # Only commit if there are actual changes
+          if ! git diff-index --quiet HEAD --; then
+            git add -A
+            git commit -m "Auto-build: ${NAME} plugin from plugforge"
+            git push origin main
+          else
+            echo "✅ No changes to commit for $NAME"
+          fi

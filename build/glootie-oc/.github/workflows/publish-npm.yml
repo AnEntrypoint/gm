@@ -4,43 +4,51 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
-      - uses: oven-sh/setup-bun@v1
-
-      - name: Bump version
+      - name: Validate package.json
         run: |
+          if [ ! -f package.json ]; then
+            echo "❌ package.json not found"
+            exit 1
+          fi
           VERSION=$(jq -r '.version' package.json)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-          jq --arg v "$NEW_VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          echo "VERSION_BUMPED=true" >> $GITHUB_ENV
+          PACKAGE=$(jq -r '.name' package.json)
+          if [ -z "$VERSION" ] || [ -z "$PACKAGE" ]; then
+            echo "❌ Invalid package.json: missing version or name"
+            exit 1
+          fi
+          echo "Package: $PACKAGE"
+          echo "Version: $VERSION"
 
-      - name: Configure git
+      - name: Check version availability
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-      - name: Commit version bump
-        run: |
-          git add package.json
-          git commit -m "chore: bump version to ${{ env.NEW_VERSION }}"
-          git push
-
-      - name: Setup npm credentials
-        run: |
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          PACKAGE=$(jq -r '.name' package.json)
+          VERSION=$(jq -r '.version' package.json)
+          echo "Checking if $PACKAGE@$VERSION is already published..."
+          if npm view "$PACKAGE@$VERSION" 2>/dev/null | grep -q "time"; then
+            echo "✅ Version $VERSION already published - skipping"
+            echo "SKIP_PUBLISH=true" >> $GITHUB_ENV
+          else
+            echo "ℹ️  Version $VERSION not yet published - will publish"
+            echo "SKIP_PUBLISH=false" >> $GITHUB_ENV
+          fi
 
       - name: Publish to npm
+        if: env.SKIP_PUBLISH != 'true'
         run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
