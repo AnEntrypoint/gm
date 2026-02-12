@@ -1,50 +1,103 @@
 # glootius maximus (gm)
-GM is a claude code plugin that adds code search and execution mcp tooling, with a policy opinionation that was built over time through daily use and testing.
 
-tl/dr: 
+gm is a claude code plugin that delivers an opinionated programming state machine through system prompt policy, code execution tooling, semantic code search, and hook-based workflow enforcement. it was built over ~200 commits of daily use and testing. it is free, open source, and maintained by one person.
+
+disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, and force you to push git before ending a session. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep reading.
+
+## install
+
 ```
 claude plugin marketplace add AnEntrypoint/gm
 claude plugin install -s user gm@gm
-#update
-# claude plugin marketplace update gm
-# claude plugin update gm@gm
-# SET UP AN ALIAS FOR THAT
+```
+
+update:
+```
+claude plugin marketplace update gm
+claude plugin update gm@gm
+```
+
+or set up an alias so you stop forgetting:
+```bash
 mkdir -p ~/.local/bin && echo -e '#!/bin/sh\nclaude plugin marketplace update gm' > ~/.local/bin/gmupdate && chmod +x ~/.local/bin/gmupdate && echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 ```
 
-It should 'just work' but if you want to make sure the sub agent always calls, you can add 'gm everything' to your prompt
+it should just work. if you want to make sure the subagent always engages, add "gm everything" to your prompt. the gm agent is injected at session start and reinforced on every prompt submit, but explicitly calling it does help.
 
-This is my personal dev workflow on discovering the best approach to automatic use of this, and use glootie for everything is already included as a system prompt, however prompting it does appear to help right now
+**note:** all tools use bunx for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-glootie all run via bunx with @latest versions. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 
-the plugin marketplace will appear as 'gm'
-the mcp tools will appear under the 'gm' plugin
-plugin:gm:dev is how it will now execute all code, giving a controllable environment for execution, currently the recommended way to add client side coding abilities to this tool is playwriter:
+## what it does
+
+### gm agent
+
+the core. a system prompt delivered as a state machine, organized into 7 charters:
+
+1. **prd** - task planning with .prd file enforcement. every task gets a dependency graph with parallel execution waves. the stop hook blocks session end when .prd items remain. this is the single biggest behavior change - the agent cannot declare "done" and walk away with work remaining.
+
+2. **execution environment** - all code runs through plugin:gm:dev, not bash. every hypothesis proven by execution before changing files. tool redirects enforce this: bash is blocked, find is blocked, grep is blocked. everything goes through dev execute or code-search.
+
+3. **ground truth** - no mocks, no fakes, no unit tests, no test files on disk. real services, real api responses only. when the agent discovers mocks in your codebase it will delete them and implement real paths. this is the most controversial charter.
+
+4. **system architecture** - hot reload, crash-proof, recovery hierarchies, async containment, debug hooks. every system the agent builds must survive forever by design.
+
+5. **code quality** - 200 line file limit, no comments in code, no duplication, convention over code, buildless, dynamic systems, preemptive modularity.
+
+6. **gate conditions** - quality gate before any file modification. all conditions must pass simultaneously: executed, tested, witnessed, hot reloadable, crash-proof, no mocks, under 200 lines, no hardcoded values.
+
+7. **completion verification** - witnessed execution is the only proof. not marker files, not documentation updates, not saying "done." the agent must execute the system end to end and observe actual behavior.
+
+the charter system was rewritten on feb 12 using concepts from WFGY research - 33 flat sections reorganized into 7 scoped charters with a constraints block. 44% token savings while preserving all 82 behavioral concepts.
+
+### tools
+
+**dev** (mcp-glootie) - code execution in any language from a temp file. replaces bash and edit-run-read loops. 30 second auto handoff to background process control with live notifications. this is where all code actually runs.
+
+**code-search** (codebasesearch) - dependency-free semantic vector search. describe intent in plain language, not regex syntax. "find authentication validation" locates auth checks, guards, permission logic - however they're implemented.
+
+**thorns** (mcp-thorns) - one-shot AST analysis at conversation start. compact codebase overview: structure, flow, orphans, hubs, repetitions. eliminates the first 5-10 turns of manual exploration.
+
+### hooks
+
+**session-start** - injects gm agent context, runs thorns AST analysis, adds code-search documentation. sets up the entire session.
+
+**prompt-submit** - reminds the agent to use gm subagent for everything. reinforcement on every turn.
+
+**pre-tool-use** - blocks bash, find, grep, glob in favor of plugin:gm:dev and code-search. blocks .md file creation (except CLAUDE.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
+
+**stop (.prd)** - checks .prd file. if items remain, blocks session end. this is the looping mechanism - more refined than wiggum looping, includes native planning behaviors with better tooling preferences and a revision loop.
+
+**stop (git)** - checks for uncommitted changes and unpushed commits. blocks session end until everything is pushed. make sure you have a git remote set up.
+
+### browser access
+
+for client-side coding and browser automation, the recommended approach is playwriter:
 https://github.com/remorses/playwriter
-NOTE: playwriter uses a browser plugin, be sure to grab and activate that too to get browser access
 
-what glootie does is it enacts a system policy as a virtual state machine that the LLM then has to try and emulate, enforces the use of code execution instead of file edit and run loops, adds:
+note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references plugin:browser:execute throughout the charter system for this integration.
 
-code-search - external dependency-free code search
+## plugforge
 
-dev (mcp-glootie) - local execution in any language (replaces bash and create/run/read/edit/run loops) 
+this plugin is built by plugforge, a build system that generates 9 platform implementations from a single source directory:
 
-gm agent (only agent you need, also system prompt hook) - strong, opinionated state machine-like coding policy, self cleaning, self correcting (instead of traditional learning), self re-architecting, grounding-over-stasis policies, with optimizations for LLM context based on long-term heuristic benchmarks in token reduction and execution accuracy, ideas like not commenting the code. Strong policy based on research of context compaction, latent space extraction, linguistic hyperparameters, LLM state machine emulation, embedding machines like WFGY is the basis for the concepts behind the system prompt, but its been optimized for human edinting
+- 5 CLI platforms: claude code, gemini cli, opencode, codex, github copilot cli
+- 4 IDE extensions: vs code, cursor, zed, jetbrains
 
-looping (stop hook) - a more refined alternative to wiggum looping: including the native behaviors that claude code does during planning with better tooling preferences, and having a revision loop at the end with conversation insight as experimental improvements on wiggum looping (no special commands required, its built in)
+one source in plugforge-starter/ (glootie.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
 
-git enforcement (stop hook) - always pushes code after updates (make sure you have init and a git remote)
+repo: https://github.com/AnEntrypoint/plugforge
 
-ast analysis (thorns) - automated one-shot ast at conversation start offsets the need for explorative ast with compact context and less turns, code-search provides explorative discovery semantically, and code execution and reading being its final stage
+## what doesn't work yet
 
-policy - no md and txt creation, some built in tools force redirected to better tools
+- hot reload is architecture-ready but not fully implemented in the plugin itself
+- the ground truth charter is aggressive and will delete your test suites if you're not expecting it
+- thorns can timeout on very large codebases
+- the gemini and opencode adapters are functional but less battle-tested than claude code
+- ide extensions (vscode, cursor, zed, jetbrains) don't have hooks yet - only cli platforms do
 
 <img width="225" height="325" alt="image" src="https://github.com/user-attachments/assets/866e6861-a2e2-490d-8bd0-ec558753dbed" />
 
-**Note:** Tools now use bunx for fast startup and automatic npm caching. All tools (mcp-thorns, codebasesearch, mcp-glootie) run via bunx with @latest package versions.
-
 https://www.youtube.com/clip/UgkxMczBOi4uGHRFOb4J-R28kELLfWnzSN7R
 
-<!-- Stop hook test: 2026-01-13 -->
+## license
 
-
-
+MIT
