@@ -4,17 +4,27 @@ AI state machine agent for Copilot CLI.
 
 ## Installation
 
-Works on Windows, macOS, and Linux with a single command:
-
+**Windows and Unix:**
 ```bash
 gh extension install AnEntrypoint/glootie-copilot-cli
 ```
 
-Requires: GitHub CLI (`gh`) installed (https://cli.github.com/)
+**Windows PowerShell:**
+```powershell
+gh extension install AnEntrypoint/glootie-copilot-cli
+```
 
 ## Quick Start
 
+**Windows and Unix:**
 ```bash
+gh copilot run "analyze code complexity"
+gh copilot run "refactor component"
+gh copilot run "generate tests"
+```
+
+**Windows PowerShell:**
+```powershell
 gh copilot run "analyze code complexity"
 gh copilot run "refactor component"
 gh copilot run "generate tests"
@@ -30,7 +40,9 @@ gh copilot run "generate tests"
 
 ## Configuration
 
-`~/.copilot/config.json`:
+**Unix:** `~/.copilot/config.json`
+
+**Windows:** `%APPDATA%\copilot\config.json`
 
 ```json
 {

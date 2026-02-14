@@ -2,14 +2,14 @@
 
 ## Installation
 
-**Windows and Unix (recommended):**
+**Windows and Unix:**
 ```bash
 git clone https://github.com/AnEntrypoint/glootie-codex ~/.codex/plugins/gm
 ```
 
 **Windows PowerShell:**
 ```powershell
-git clone https://github.com/AnEntrypoint/glootie-codex "$env:USERPROFILE\.codex\plugins\gm"
+git clone https://github.com/AnEntrypoint/glootie-codex "\$env:APPDATA\codex\plugins\gm"
 ```
 
 ## Environment

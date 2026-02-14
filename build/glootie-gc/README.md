@@ -2,17 +2,15 @@
 
 ## Installation
 
-**Windows and Unix (recommended):**
+**Windows and Unix:**
 ```bash
 git clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/gm
 ```
 
 **Windows PowerShell:**
 ```powershell
-git clone https://github.com/AnEntrypoint/glootie-gc "$env:USERPROFILE\.gemini\extensions\gm"
+git clone https://github.com/AnEntrypoint/glootie-gc "\$env:APPDATA\gemini\extensions\gm"
 ```
-
-The extension auto-discovers platform paths and requires no additional setup.
 
 ## Automatic Path Resolution
 
