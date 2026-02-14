@@ -21,9 +21,9 @@ This installation method is best for:
 
 For development or project-specific customization, install gm-cc directly into your project:
 
+**Windows and Unix (single command):**
 ```bash
-cd /path/to/your/project
-npm install gm-cc && npx glootie install
+cd /path/to/your/project && npm install gm-cc && npx glootie install
 ```
 
 This installation method is ideal when you need to:
@@ -73,16 +73,16 @@ Each hook runs automatically at the appropriate session event. No manual trigger
 
 ## File Installation (Manual Setup)
 
-If you prefer manual file management, clone the repository and copy files directly:
+If you prefer manual file management, clone the repository directly into your Claude Code directory:
 
+**Windows and Unix:**
 ```bash
-# Clone the repository
-git clone https://github.com/AnEntrypoint/gm-cc.git
+git clone https://github.com/AnEntrypoint/gm-cc.git ~/.claude && cd ~/.claude && npm install
+```
 
-# Copy to your Claude Code plugin directory
-cp -r ./agents ~/.claude/agents
-cp -r ./hooks ~/.claude/hooks
-cp .mcp.json ~/.claude/.mcp.json
+Or for Windows PowerShell specifically:
+```powershell
+git clone https://github.com/AnEntrypoint/gm-cc.git "$env:USERPROFILE\.claude" && cd "$env:USERPROFILE\.claude" && npm install
 ```
 
 ## Environment Setup

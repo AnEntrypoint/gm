@@ -2,16 +2,14 @@
 
 ## Installation
 
-Copy to your Codex plugins directory:
-
-```bash
-cp -r . ~/.codex/plugins/gm
-```
-
-Or clone directly:
-
+**Windows and Unix (recommended):**
 ```bash
 git clone https://github.com/AnEntrypoint/glootie-codex ~/.codex/plugins/gm
+```
+
+**Windows PowerShell:**
+```powershell
+git clone https://github.com/AnEntrypoint/glootie-codex "$env:USERPROFILE\.codex\plugins\gm"
 ```
 
 ## Environment

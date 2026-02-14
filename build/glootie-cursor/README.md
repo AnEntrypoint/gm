@@ -4,9 +4,17 @@ Custom AI plugin for Cursor IDE with multi-platform support.
 
 ## Installation
 
-1. Copy extension to `.cursor/extensions/`
-2. Restart Cursor IDE
-3. Extension activates automatically
+**Windows and Unix (single command):**
+```bash
+git clone https://github.com/AnEntrypoint/glootie-cursor ~/.cursor/extensions/glootie
+```
+
+**Windows PowerShell:**
+```powershell
+git clone https://github.com/AnEntrypoint/glootie-cursor "$env:USERPROFILE\.cursor\extensions\glootie"
+```
+
+Then restart Cursor IDE. Extension activates automatically.
 
 ## Features
 

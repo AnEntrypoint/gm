@@ -12,21 +12,30 @@ AI-powered state machine for Zed Editor with native Claude 3.5 Sonnet support, a
 
 ### Build Steps
 
+**Windows, macOS, and Linux:**
 ```bash
-cargo build --release
+git clone https://github.com/AnEntrypoint/glootie-zed && cd glootie-zed && cargo build --release
 ```
 
-The compiled extension will be in `target/release/glootie.so` (Linux/Mac) or `glootie.dll` (Windows).
+The compiled extension will be in:
+- Linux/macOS: `target/release/glootie.so`
+- Windows: `target/release/glootie.dll`
 
 ## Installation
 
 ### From Built Binary
 
-1. Compile with `cargo build --release`
-2. Copy compiled library to Zed extensions directory:
-   - macOS/Linux: `~/.config/zed/extensions/glootie`
-   - Windows: `%APPDATA%\\Zed\\extensions\\glootie`
-3. Restart Zed
+**Build and install (Windows, macOS, and Linux):**
+```bash
+git clone https://github.com/AnEntrypoint/glootie-zed && cd glootie-zed && cargo build --release && cp target/release/glootie.* ~/.config/zed/extensions/glootie/
+```
+
+**Windows PowerShell:**
+```powershell
+git clone https://github.com/AnEntrypoint/glootie-zed && cd glootie-zed && cargo build --release && copy "target\release\glootie.dll" "$env:APPDATA\Zed\extensions\glootie\"
+```
+
+Then restart Zed.
 
 ### From Registry
 
