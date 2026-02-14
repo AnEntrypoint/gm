@@ -27,6 +27,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
   "dependencies": {
     "mcp-thorns": "^4.1.0"
   },
