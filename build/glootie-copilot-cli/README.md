@@ -4,9 +4,13 @@ AI state machine agent for Copilot CLI.
 
 ## Installation
 
+Works on Windows, macOS, and Linux with a single command:
+
 ```bash
 gh extension install AnEntrypoint/glootie-copilot-cli
 ```
+
+Requires: GitHub CLI (`gh`) installed (https://cli.github.com/)
 
 ## Quick Start
 

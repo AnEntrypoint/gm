@@ -13,8 +13,15 @@ An AI-powered state machine extension for Visual Studio Code with dynamic adapta
 
 ## Installation
 
-1. Install from VSCode Extension Marketplace (search for "Glootie")
-2. Or manually: Clone this repo and run `vsce package` then install the VSIX file
+**Windows, macOS, and Linux:**
+1. Open VSCode Extension Marketplace (Ctrl+Shift+X / Cmd+Shift+X)
+2. Search for "Glootie"
+3. Click Install
+
+**Manual installation:**
+```bash
+git clone https://github.com/AnEntrypoint/glootie-vscode && cd glootie-vscode && npm install && vsce package && code --install-extension glootie-*.vsix
+```
 
 ## Quick Start
 
