@@ -1,37 +1,26 @@
 {
-  "name": "gm-codex",
+  "name": "glootie-codex",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
-  "keywords": [
-    "codex",
-    "claude-code",
-    "wfgy",
-    "mcp",
-    "automation",
-    "glootie"
-  ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+  "main": "plugin.json",
+  "bin": {
+    "glootie-codex": "./cli.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm-codex.git"
+    "url": "https://github.com/AnEntrypoint/glootie-codex.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/gm-codex#readme",
+  "homepage": "https://github.com/AnEntrypoint/glootie-codex#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/gm-codex/issues"
+    "url": "https://github.com/AnEntrypoint/glootie-codex/issues"
   },
   "engines": {
     "node": ">=16.0.0"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "main": "plugin.json",
-  "bin": {
-    "glootie-codex": "./cli.js"
   },
   "files": [
     "hooks/",
@@ -46,5 +35,13 @@
     "prompt-submit-hook.js",
     "stop-hook.js",
     "stop-hook-git.js"
+  ],
+  "keywords": [
+    "codex",
+    "claude-code",
+    "wfgy",
+    "mcp",
+    "automation",
+    "glootie"
   ]
 }

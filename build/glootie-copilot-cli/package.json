@@ -1,27 +1,21 @@
 {
-  "name": "gm-copilot-cli",
+  "name": "glootie-copilot-cli",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
-  "keywords": [
-    "claude-code",
-    "claude-plugin",
-    "wfgy",
-    "mcp",
-    "automation",
-    "glootie"
-  ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+  "main": "cli.js",
+  "bin": {
+    "glootie-copilot-cli": "./cli.js",
+    "glootie-install": "./install.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm-copilot-cli.git"
+    "url": "https://github.com/AnEntrypoint/glootie-copilot-cli.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/gm-copilot-cli#readme",
+  "homepage": "https://github.com/AnEntrypoint/glootie-copilot-cli#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/gm-copilot-cli/issues"
+    "url": "https://github.com/AnEntrypoint/glootie-copilot-cli/issues"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -29,7 +23,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "cli.js",
   "files": [
     "cli.js",
     "agents/",

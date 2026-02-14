@@ -1,33 +1,26 @@
 {
-  "name": "gm-cc",
+  "name": "glootie-cc",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
-  "keywords": [
-    "claude-code",
-    "agent",
-    "state-machine",
-    "mcp",
-    "automation",
-    "glootie"
-  ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm-cc.git"
+    "url": "https://github.com/AnEntrypoint/glootie-cc.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/gm-cc#readme",
+  "homepage": "https://github.com/AnEntrypoint/glootie-cc#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/gm-cc/issues"
+    "url": "https://github.com/AnEntrypoint/glootie-cc/issues"
   },
   "engines": {
     "node": ">=16.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "bin": {
+    "glootie-cc": "./cli.js",
+    "glootie-install": "./install.js"
   },
   "files": [
     "agents/",
@@ -45,7 +38,18 @@
     "CONTRIBUTING.md",
     "CLAUDE.md"
   ],
+  "keywords": [
+    "claude-code",
+    "agent",
+    "state-machine",
+    "mcp",
+    "automation",
+    "glootie"
+  ],
   "peerDependencies": {
     "@anthropic-ai/claude-code": "*"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
   }
 }

@@ -1,27 +1,16 @@
 {
-  "name": "gm-gc",
+  "name": "glootie-gc",
   "version": "2.0.4",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
-  "keywords": [
-    "claude-code",
-    "claude-plugin",
-    "wfgy",
-    "mcp",
-    "automation",
-    "glootie"
-  ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm-gc.git"
+    "url": "https://github.com/AnEntrypoint/glootie-gc.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/gm-gc#readme",
+  "homepage": "https://github.com/AnEntrypoint/glootie-gc#readme",
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/gm-gc/issues"
+    "url": "https://github.com/AnEntrypoint/glootie-gc/issues"
   },
   "engines": {
     "node": ">=16.0.0"

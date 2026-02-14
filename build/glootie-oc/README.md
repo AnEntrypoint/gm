@@ -6,19 +6,19 @@
 
 **Windows and Unix:**
 ```bash
-git clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install
+git clone https://github.com/AnEntrypoint/glootie-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install
 ```
 
 **Windows PowerShell:**
 ```powershell
-git clone https://github.com/AnEntrypoint/gm-oc "\$env:APPDATA\opencode\plugin" && cd "\$env:APPDATA\opencode\plugin" && bun install
+git clone https://github.com/AnEntrypoint/glootie-oc "\$env:APPDATA\opencode\plugin" && cd "\$env:APPDATA\opencode\plugin" && bun install
 ```
 
 ### Project-level
 
 **Windows and Unix:**
 ```bash
-git clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install
+git clone https://github.com/AnEntrypoint/glootie-oc .opencode/plugins && cd .opencode/plugins && bun install
 ```
 
 ## Features

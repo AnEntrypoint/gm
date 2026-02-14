@@ -1,14 +1,14 @@
-# gm-cc for Claude Code
+# glootie-cc for Claude Code
 
 ## Installation
 
 ### Plugin Marketplace Installation (Recommended)
 
-The easiest way to install gm-cc is through Claude Code's plugin marketplace:
+The easiest way to install glootie-cc is through Claude Code's plugin marketplace:
 
 ```bash
-claude plugin marketplace add AnEntrypoint/gm-cc
-claude plugin install -s user gm@gm-cc
+claude plugin marketplace add AnEntrypoint/glootie-cc
+claude plugin install -s user gm@glootie-cc
 ```
 
 This installation method is best for:
@@ -19,11 +19,11 @@ This installation method is best for:
 
 ### Repository Installation (Project-Specific)
 
-For development or project-specific customization, install gm-cc directly into your project:
+For development or project-specific customization, install glootie-cc directly into your project:
 
 ```bash
 cd /path/to/your/project
-npm install gm-cc && npx glootie install
+npm install glootie-cc && npx glootie install
 ```
 
 This installation method is ideal when you need to:
@@ -34,18 +34,18 @@ This installation method is ideal when you need to:
 
 #### Installation Command Breakdown
 
-The `npm install gm-cc && npx glootie install` command performs two steps:
+The `npm install glootie-cc && npx glootie install` command performs two steps:
 
-1. **`npm install gm-cc`** - Downloads the gm-cc package and stores it in your project's `node_modules/` directory
+1. **`npm install glootie-cc`** - Downloads the glootie-cc package and stores it in your project's `node_modules/` directory
 2. **`npx glootie install`** - Runs the glootie installer that copies configuration files into your Claude Code plugin directory
 
 **Expected output:**
 ```
-$ npm install gm-cc
+$ npm install glootie-cc
 added 1 package in 1.2s
 
 $ npx glootie install
-Installing gm-cc...
+Installing glootie-cc...
 ✓ Created .claude/ directory
 ✓ Copied agents/gm.md
 ✓ Copied hooks to .claude/hooks/
@@ -77,7 +77,7 @@ If you prefer manual file management, clone the repository and copy files direct
 
 ```bash
 # Clone the repository
-git clone https://github.com/AnEntrypoint/gm-cc.git
+git clone https://github.com/AnEntrypoint/glootie-cc.git
 
 # Copy to your Claude Code plugin directory
 cp -r ./agents ~/.claude/agents
@@ -145,22 +145,22 @@ claude plugin marketplace update gm-cc
 claude plugin update gm@gm-cc
 
 # Method 2: Manual update
-npm install -g gm-cc@latest
+npm install -g glootie-cc@latest
 ```
 
 ### Project-Specific Installation
 
 ```bash
 # Update the package
-npm update gm-cc
+npm update glootie-cc
 
 # Re-run the installer to update .claude/ directory
 npx glootie install
 
 # Or manually copy updated files
-cp -r node_modules/gm-cc/agents/* .claude/agents/
-cp -r node_modules/gm-cc/hooks/* .claude/hooks/
-cp node_modules/gm-cc/.mcp.json .claude/.mcp.json
+cp -r node_modules/glootie-cc/agents/* .claude/agents/
+cp -r node_modules/glootie-cc/hooks/* .claude/hooks/
+cp node_modules/glootie-cc/.mcp.json .claude/.mcp.json
 ```
 
 ## Features
@@ -201,7 +201,7 @@ cp node_modules/gm-cc/.mcp.json .claude/.mcp.json
 **Symptom:** Plugin doesn't show in `claude plugin marketplace list`
 
 **Solutions:**
-1. Check plugin is published: `npm view gm-cc`
+1. Check plugin is published: `npm view glootie-cc`
 2. Verify package.json has correct plugin metadata
 3. Check .claude-plugin/marketplace.json is valid JSON
 4. Wait 5-10 minutes for marketplace index to refresh
@@ -238,7 +238,7 @@ claude plugin remove gm@gm-cc
 
 ```bash
 # Remove from project
-npm uninstall gm-cc
+npm uninstall glootie-cc
 
 # Remove configuration
 rm -rf .claude/
@@ -254,7 +254,7 @@ rm -rf .claude/
 
 ## Contributing
 
-Issues and pull requests welcome: [GitHub Issues](https://github.com/AnEntrypoint/gm-cc/issues)
+Issues and pull requests welcome: [GitHub Issues](https://github.com/AnEntrypoint/glootie-cc/issues)
 
 ## License
 
