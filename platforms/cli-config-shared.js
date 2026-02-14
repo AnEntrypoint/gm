@@ -7,6 +7,26 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       author: { name: config.author, url: 'https://github.com/AnEntrypoint' }
     }, null, 2);
   },
+  generatePackageJson(pluginSpec, extraFields = {}) {
+    return JSON.stringify({
+      name: 'glootie-cc',
+      version: pluginSpec.version,
+      description: pluginSpec.description,
+      author: pluginSpec.author,
+      license: pluginSpec.license,
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-cc.git' },
+      homepage: 'https://github.com/AnEntrypoint/glootie-cc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/glootie-cc/issues' },
+      engines: pluginSpec.engines,
+      publishConfig: pluginSpec.publishConfig,
+      bin: { 'glootie-cc': './cli.js', 'glootie-install': './install.js' },
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
+      peerDependencies: { '@anthropic-ai/claude-code': '*' },
+      scripts: pluginSpec.scripts,
+      ...extraFields
+    }, null, 2);
+  },
   getPackageJsonFields() {
     return {
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
@@ -22,7 +42,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     };
   },
   generateReadme(spec) {
-    const repoName = 'gm-cc';
+    const repoName = 'glootie-cc';
     return `# ${repoName} for Claude Code
 
 ## Installation
@@ -292,6 +312,22 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   formatConfigJson(config) {
     return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
   },
+  generatePackageJson(pluginSpec, extraFields = {}) {
+    return JSON.stringify({
+      name: 'glootie-gc',
+      version: pluginSpec.version,
+      description: pluginSpec.description,
+      author: pluginSpec.author,
+      license: pluginSpec.license,
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-gc.git' },
+      homepage: 'https://github.com/AnEntrypoint/glootie-gc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/glootie-gc/issues' },
+      engines: pluginSpec.engines,
+      publishConfig: pluginSpec.publishConfig,
+      files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js'],
+      ...extraFields
+    }, null, 2);
+  },
   getPackageJsonFields() {
     return {
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
@@ -316,6 +352,25 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       ...config,
       author: { name: config.author, url: 'https://github.com/AnEntrypoint' },
       hooks: './hooks/hooks.json'
+    }, null, 2);
+  },
+  generatePackageJson(pluginSpec, extraFields = {}) {
+    return JSON.stringify({
+      name: 'glootie-codex',
+      version: pluginSpec.version,
+      description: pluginSpec.description,
+      author: pluginSpec.author,
+      license: pluginSpec.license,
+      main: 'plugin.json',
+      bin: { 'glootie-codex': './cli.js' },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-codex.git' },
+      homepage: 'https://github.com/AnEntrypoint/glootie-codex#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/glootie-codex/issues' },
+      engines: pluginSpec.engines,
+      publishConfig: pluginSpec.publishConfig,
+      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie'],
+      ...extraFields
     }, null, 2);
   },
   getPackageJsonMain() { return 'plugin.json'; },
@@ -471,7 +526,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: `${pluginSpec.name}-oc`,
+      name: 'glootie-oc',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
@@ -479,9 +534,9 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       type: 'module',
       main: 'glootie.mjs',
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
-      repository: { type: 'git', url: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc.git` },
-      homepage: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc#readme`,
-      bugs: { url: `https://github.com/AnEntrypoint/${pluginSpec.name}-oc/issues` },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-oc.git' },
+      homepage: 'https://github.com/AnEntrypoint/glootie-oc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/glootie-oc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
@@ -521,7 +576,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/${spec.name}-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/${spec.name}-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/${spec.name}-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/glootie-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
