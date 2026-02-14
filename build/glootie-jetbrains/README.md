@@ -14,14 +14,11 @@ AI state machine plugin for all JetBrains IDEs with semantic code search.
 
 ## Installation
 
-### Plugin Marketplace (Recommended - Windows, macOS, Linux)
-
-1. Open any JetBrains IDE
+From Plugin Marketplace:
+1. Open IDE
 2. Settings → Plugins → Marketplace
 3. Search "Glootie"
 4. Install and restart
-
-All platforms supported with a single plugin.
 
 ## Features
 
