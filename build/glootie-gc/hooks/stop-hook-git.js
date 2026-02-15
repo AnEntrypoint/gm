@@ -1,8 +1,66 @@
 #!/usr/bin/env node
 
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+const getCounterPath = () => {
+  const hash = crypto.createHash('md5').update(projectDir).digest('hex');
+  return path.join('/tmp', `glootie-git-block-counter-${hash}.json`);
+};
+
+const readCounter = () => {
+  try {
+    const counterPath = getCounterPath();
+    if (fs.existsSync(counterPath)) {
+      const data = fs.readFileSync(counterPath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {}
+  return { count: 0, lastGitHash: null };
+};
+
+const writeCounter = (data) => {
+  try {
+    const counterPath = getCounterPath();
+    fs.writeFileSync(counterPath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {}
+};
+
+const getCurrentGitHash = () => {
+  try {
+    const hash = execSync('git rev-parse HEAD', {
+      cwd: projectDir,
+      stdio: 'pipe',
+      encoding: 'utf-8'
+    }).trim();
+    return hash;
+  } catch (e) {
+    return null;
+  }
+};
+
+const resetCounterIfCommitted = (currentHash) => {
+  const counter = readCounter();
+  if (counter.lastGitHash && currentHash && counter.lastGitHash !== currentHash) {
+    counter.count = 0;
+    counter.lastGitHash = currentHash;
+    writeCounter(counter);
+    return true;
+  }
+  return false;
+};
+
+const incrementCounter = (currentHash) => {
+  const counter = readCounter();
+  counter.count = (counter.count || 0) + 1;
+  counter.lastGitHash = currentHash;
+  writeCounter(counter);
+  return counter.count;
+};
 
 const getGitStatus = () => {
   try {
@@ -61,6 +119,9 @@ const run = () => {
   const gitStatus = getGitStatus();
   if (!gitStatus.isRepo) return { ok: true };
 
+  const currentHash = getCurrentGitHash();
+  resetCounterIfCommitted(currentHash);
+
   const issues = [];
   if (gitStatus.isDirty) {
     issues.push('Uncommitted changes exist');
@@ -76,10 +137,19 @@ const run = () => {
   }
 
   if (issues.length > 0) {
+    const blockCount = incrementCounter(currentHash);
     return {
       ok: false,
-      reason: `Git: ${issues.join(', ')}, must push to remote`
+      reason: `Git: ${issues.join(', ')}, must push to remote`,
+      blockCount,
+      isHardFail: blockCount > 3
     };
+  }
+
+  const counter = readCounter();
+  if (counter.count > 0) {
+    counter.count = 0;
+    writeCounter(counter);
   }
 
   return { ok: true };
@@ -88,11 +158,20 @@ const run = () => {
 try {
   const result = run();
   if (!result.ok) {
-    console.log(JSON.stringify({
-      decision: 'block',
-      reason: result.reason
-    }, null, 2));
-    process.exit(2);
+    if (result.isHardFail) {
+      console.log(JSON.stringify({
+        decision: 'block',
+        reason: `${result.reason} [Block #${result.blockCount} - HARD FAIL: Git hook blocked 3+ times. Commit your changes and push before proceeding.]`,
+        isHardFail: true
+      }, null, 2));
+      process.exit(1);
+    } else {
+      console.log(JSON.stringify({
+        decision: 'block',
+        reason: `${result.reason} [Block #${result.blockCount}/3]`
+      }, null, 2));
+      process.exit(2);
+    }
   }
   console.log(JSON.stringify({
     decision: 'approve'
