@@ -1,4 +1,5 @@
 .glootie-stop-verified
 .prd
+build/
 
 .code-search/
