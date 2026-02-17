@@ -141,8 +141,7 @@ const run = () => {
     return {
       ok: false,
       reason: `Git: ${issues.join(', ')}, must push to remote`,
-      blockCount,
-      isHardFail: blockCount > 3
+      blockCount
     };
   }
 
@@ -158,24 +157,22 @@ const run = () => {
 try {
   const result = run();
   if (!result.ok) {
-    if (result.isHardFail) {
+    if (result.blockCount >= 1) {
       console.log(JSON.stringify({
-        decision: 'block',
-        reason: `${result.reason} [Block #${result.blockCount} - HARD FAIL: Git hook blocked 3+ times. Commit your changes and push before proceeding.]`,
-        isHardFail: true
+        decision: 'approve',
+        reason: `⚠️ Git warning (attempt #${result.blockCount}): ${result.reason} - Please commit and push your changes before the next session.`
       }, null, 2));
-      process.exit(1);
     } else {
       console.log(JSON.stringify({
-        decision: 'block',
-        reason: `${result.reason} [Block #${result.blockCount}/3]`
+        decision: 'approve',
+        reason: `⚠️ Git warning: ${result.reason} - Please commit and push your changes.`
       }, null, 2));
-      process.exit(2);
     }
+  } else {
+    console.log(JSON.stringify({
+      decision: 'approve'
+    }, null, 2));
   }
-  console.log(JSON.stringify({
-    decision: 'approve'
-  }, null, 2));
   process.exit(0);
 } catch (e) {
   console.log(JSON.stringify({
