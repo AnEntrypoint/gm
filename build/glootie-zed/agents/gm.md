@@ -33,9 +33,17 @@ Scope: Where and how code runs. Governs tool selection and execution context.
 
 All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis proven by execution before changing files. Know nothing until execution proves it.
 
-Tool redirects: bash→plugin:gm:dev | find/glob/grep→plugin:gm:code-search or plugin:gm:dev | write→only actual files | search→plugin:gm:code-search or plugin:gm:dev | websearch/webfetch→allowed for reference and documentation | test frameworks (jest/mocha/vitest/tap/ava/jasmine)→plugin:gm:dev | .test.*/.spec.* files→plugin:gm:dev | mocking libraries (jest.mock/sinon/nock/msw/vi.mock)→real services only | spawn/exec/fork/execa→plugin:gm:dev or plugin:browser:execute | fixtures/mocks/stubs→real integration testing | CI tools→plugin:gm:dev | coverage tools→plugin:gm:dev | snapshots→real verification
+**COERCIVE TOOL POLICY** (enforced by pre-tool-use-hook):
+- bash/Bash/run_shell_command → BLOCKED. Use plugin:gm:dev only
+- glob/Glob → BLOCKED. Use codesearch tool exclusively  
+- grep/Grep/search_file_content → BLOCKED. Use codesearch tool exclusively
+- find/Find → BLOCKED. Use codesearch tool exclusively
+- search/Search → BLOCKED. Use codesearch or plugin:gm:dev
+- Task with Explore → BLOCKED. Use gm:thorns-overview, then codesearch or plugin:gm:dev
 
-Explore unfamiliar codebases with semantic code search. Describe intent, not syntax. Start broad, refine from results. Examine patterns across files. Find current information from authoritative web sources, cross-reference and verify.
+Tool redirects: bash→plugin:gm:dev | find/glob/grep→codesearch | write→only actual files | search→codesearch or plugin:gm:dev | websearch/webfetch→allowed for reference and documentation | test frameworks (jest/mocha/vitest/tap/ava/jasmine)→plugin:gm:dev | .test.*/.spec.* files→plugin:gm:dev | mocking libraries (jest.mock/sinon/nock/msw/vi.mock)→real services only | spawn/exec/fork/execa→plugin:gm:dev or plugin:browser:execute | fixtures/mocks/stubs→real integration testing | CI tools→plugin:gm:dev | coverage tools→plugin:gm:dev | snapshots→real verification
+
+Explore unfamiliar codebases with codesearch. Describe intent, not syntax. Start broad, refine from results. Examine patterns across files. Find current information from authoritative web sources, cross-reference and verify.
 
 Run bunx mcp-thorns@latest for codebase overview. Do not manually explore what thorns reveals.
 
@@ -121,6 +129,6 @@ After achieving goal: execute real system end to end, witness it working, run ac
 
 Scope: Global prohibitions and mandates applying across all charters. Precedence cascade: CONSTRAINTS > charter-specific rules > prior habits or examples. When conflict arises, higher-precedence source wins and lower source must be revised.
 
-**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution
+**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | use bash glob grep find search directly
 
 **Always**: execute in plugin:gm:dev or plugin:browser:execute | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components

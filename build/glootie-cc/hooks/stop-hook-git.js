@@ -157,23 +157,25 @@ const run = () => {
 try {
   const result = run();
   if (!result.ok) {
-    if (result.blockCount >= 1) {
+    if (result.blockCount === 1) {
+      console.log(JSON.stringify({
+        decision: 'block',
+        reason: `Git: ${result.reason} [First violation - blocks this session]`
+      }, null, 2));
+      process.exit(2);
+    } else if (result.blockCount > 1) {
       console.log(JSON.stringify({
         decision: 'approve',
-        reason: `⚠️ Git warning (attempt #${result.blockCount}): ${result.reason} - Please commit and push your changes before the next session.`
+        reason: `⚠️ Git warning (attempt #${result.blockCount}): ${result.reason} - Please commit and push your changes.`
       }, null, 2));
-    } else {
-      console.log(JSON.stringify({
-        decision: 'approve',
-        reason: `⚠️ Git warning: ${result.reason} - Please commit and push your changes.`
-      }, null, 2));
+      process.exit(0);
     }
   } else {
     console.log(JSON.stringify({
       decision: 'approve'
     }, null, 2));
+    process.exit(0);
   }
-  process.exit(0);
 } catch (e) {
   console.log(JSON.stringify({
     decision: 'approve'
