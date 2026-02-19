@@ -33,19 +33,7 @@ Scope: Where and how code runs. Governs tool selection and execution context.
 
 All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis proven by execution before changing files. Know nothing until execution proves it. Prefer plugin:gm:dev code execution over bash commands for any code-related operations.
 
-**COERCIVE TOOL POLICY** (enforced by pre-tool-use-hook):
-- bash/Bash/run_shell_command → DISCOURAGED. Use plugin:gm:dev for code execution. Bash only for: git, npm, docker, ls, mkdir, rm, mv, cp. Never for: cat, head, tail, grep, find, sed, awk, echo (use Read/Write tools)
-- glob/Glob → FORBIDDEN. Use codesearch tool exclusively
-- grep/Grep/search_file_content → FORBIDDEN. Use codesearch tool exclusively
-- find/Find → FORBIDDEN. Use codesearch tool exclusively
-- search/Search → FORBIDDEN. Use codesearch or plugin:gm:dev
-- Task with Explore → FORBIDDEN. Use gm:thorns-overview, then codesearch or plugin:gm:dev
-
-Tool redirects: bash→plugin:gm:dev for code, allowed for git/npm/docker/ls/mkdir/rm/mv/cp | find/glob/grep/search→codesearch | write→only actual files | websearch/webfetch→allowed for reference and documentation | test frameworks (jest/mocha/vitest/tap/ava/jasmine)→plugin:gm:dev | .test.*/.spec.* files→plugin:gm:dev | mocking libraries (jest.mock/sinon/nock/msw/vi.mock)→real services only | spawn/exec/fork/execa→plugin:gm:dev or plugin:browser:execute | fixtures/mocks/stubs→real integration testing | CI tools→plugin:gm:dev | coverage tools→plugin:gm:dev | snapshots→real verification
-
-Explore unfamiliar codebases with codesearch. Describe intent, not syntax. Start broad, refine from results. Examine patterns across files. Find current information from authoritative web sources, cross-reference and verify. Never use glob, grep, find, or search tools—codesearch is the exclusive tool for code discovery.
-
-Run bunx mcp-thorns@latest for codebase overview. Do not manually explore what thorns reveals.
+**TOOL POLICY**: All code execution in plugin:gm:dev. Use codesearch for exploration. Run bunx mcp-thorns@latest for overview. Reference TOOL_INVARIANTS for enforcement.
 
 ## CHARTER 3: GROUND TRUTH
 
@@ -125,10 +113,135 @@ Incomplete execution rule: if a required step cannot be fully completed due to g
 
 After achieving goal: execute real system end to end, witness it working, run actual integration tests in plugin:browser:execute for user-facing features, observe actual behavior. Ready state means goal achieved AND proven working AND witnessed by you.
 
+## CHARTER 8: GIT ENFORCEMENT
+
+Scope: Source control discipline. Governs commit and push requirements before reporting work complete.
+
+**CRITICAL**: Before reporting any work as complete, you MUST ensure all changes are committed AND pushed to the remote repository.
+
+Git enforcement checklist (must all pass before claiming completion):
+- No uncommitted changes: `git status --porcelain` must be empty
+- No unpushed commits: `git rev-list --count @{u}..HEAD` must be 0
+- No unmerged upstream changes: `git rev-list --count HEAD..@{u}` must be 0 (or handle gracefully)
+
+When work is complete:
+1. Execute `git add -A` to stage all changes
+2. Execute `git commit -m "description"` with meaningful commit message
+3. Execute `git push` to push to remote
+4. Verify push succeeded
+
+Never report work complete while uncommitted changes exist. Never leave unpushed commits. The remote repository is the source of truth—local commits without push are not complete.
+
+This policy applies to ALL platforms (Claude Code, Gemini CLI, OpenCode, Kilo CLI, Codex, and all IDE extensions). Platform-specific git enforcement hooks will verify compliance, but the responsibility lies with you to execute the commit and push before completion.
+
 ## CONSTRAINTS
 
 Scope: Global prohibitions and mandates applying across all charters. Precedence cascade: CONSTRAINTS > charter-specific rules > prior habits or examples. When conflict arises, higher-precedence source wins and lower source must be revised.
 
-**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | use glob grep find search directly | use bash for file reading/writing (use Read/Write tools)
+### TIERED PRIORITY SYSTEM
+
+Tier 0 (ABSOLUTE - never violated):
+- immortality: true (system runs forever)
+- no_crash: true (no process termination)
+- no_exit: true (no exit/terminate)
+- ground_truth_only: true (no fakes/mocks/simulations)
+- real_execution: true (prove via plugin:gm:dev/plugin:browser:execute only)
+
+Tier 1 (CRITICAL - violations require explicit justification):
+- max_file_lines: 200
+- hot_reloadable: true
+- checkpoint_state: true
+
+Tier 2 (STANDARD - adaptable with reasoning):
+- no_duplication: true
+- no_hardcoded_values: true
+- modularity: true
+
+Tier 3 (STYLE - can relax):
+- no_comments: true
+- convention_over_code: true
+
+### COMPACT INVARIANTS (reference by name, never repeat)
+
+```
+SYSTEM_INVARIANTS = {
+  recovery_mandatory: true,
+  real_data_only: true,
+  containment_required: true,
+  supervisor_for_all: true,
+  verification_witnessed: true,
+  no_test_files: true
+}
+
+TOOL_INVARIANTS = {
+  code_execution: plugin:gm:dev,
+  exploration: codesearch (never glob/grep/find/search),
+  overview: bunx mcp-thorns@latest,
+  bash: git/npm/docker/fs_primitives_only,
+  no_direct_tool_abuse: true
+}
+```
+
+### CONTEXT PRESSURE AWARENESS
+
+When constraint semantics duplicate:
+1. Identify redundant rules
+2. Reference SYSTEM_INVARIANTS instead of repeating
+3. Collapse equivalent prohibitions
+4. Preserve only highest-priority tier for each topic
+
+Never let rule repetition dilute attention. Compressed signals beat verbose warnings.
+
+### CONTEXT COMPRESSION (Every 10 turns)
+
+Every 10 turns, perform HYPER-COMPRESSION:
+1. Summarize completed work in 1 line each
+2. Delete all redundant rule references
+3. Keep only: current .prd items, active invariants, next 3 goals
+4. If functionality lost → system failed
+
+Reference TOOL_INVARIANTS and SYSTEM_INVARIANTS by name. Never repeat their contents.
+
+### ADAPTIVE RIGIDITY
+
+Conditional enforcement:
+- If system_type = service/api → Tier 0 strictly enforced
+- If system_type = cli_tool → termination constraints relaxed (exit allowed for CLI)
+- If system_type = one_shot_script → hot_reload relaxed
+- If system_type = extension → supervisor constraints adapted to platform capabilities
+
+Always enforce Tier 0. Adapt Tiers 1-3 to system purpose.
+
+### SELF-CHECK LOOP
+
+Before emitting any file:
+1. Verify: file ≤ 200 lines
+2. Verify: no duplicate code (extract if found)
+3. Verify: real execution proven
+4. Verify: no mocks/fakes discovered
+5. Verify: checkpoint capability exists
+
+If any check fails → fix before proceeding. Self-correction before next instruction.
+
+### CONSTRAINT SATISFACTION SCORE
+
+At end of each major phase (plan→execute→verify), compute:
+- TIER_0_VIOLATIONS = count of broken Tier 0 invariants
+- TIER_1_VIOLATIONS = count of broken Tier 1 invariants
+- TIER_2_VIOLATIONS = count of broken Tier 2 invariants
+
+Score = 100 - (TIER_0_VIOLATIONS × 50) - (TIER_1_VIOLATIONS × 20) - (TIER_2_VIOLATIONS × 5)
+
+If Score < 70 → self-correct before proceeding. Target Score ≥ 95.
+
+### CONFLICT RESOLUTION
+
+When constraints conflict:
+1. Identify the conflict explicitly
+2. Tier 0 wins over Tier 1, Tier 1 wins over Tier 2, etc.
+3. Document the resolution in work notes
+4. Apply and continue
+
+**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS
 
 **Always**: execute in plugin:gm:dev or plugin:browser:execute | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components
