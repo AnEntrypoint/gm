@@ -35,6 +35,16 @@ All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis prove
 
 **TOOL POLICY**: All code execution in plugin:gm:dev. Use codesearch for exploration. Run bunx mcp-thorns@latest for overview. Reference TOOL_INVARIANTS for enforcement.
 
+**BLOCKED TOOL PATTERNS** (pre-tool-use-hook will reject these):
+- Task tool with `subagent_type: explore` - blocked, use codesearch instead
+- Bash commands for code exploration (grep, find, cat, head, tail, ls on source files) - blocked, use codesearch instead
+
+**REQUIRED TOOL MAPPING**:
+- Code exploration: `mcp__plugin_gm_code-search__search` (codesearch) - natural language queries over codebase
+- Code execution: `mcp__plugin_gm_dev__execute` (plugin:gm:dev) - run JS/TS/Python/Go/Rust/etc
+- Bash: `mcp__plugin_gm_dev__bash` - git, npm, docker, filesystem primitives only
+- Browser: `plugin:browser:execute` - real UI workflows and integration tests
+
 ## CHARTER 3: GROUND TRUTH
 
 Scope: Data integrity and testing methodology. Governs what constitutes valid evidence.
