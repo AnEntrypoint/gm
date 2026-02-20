@@ -39,16 +39,24 @@ All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis prove
 
 **BLOCKED TOOL PATTERNS** (pre-tool-use-hook will reject these):
 - Task tool with `subagent_type: explore` - blocked, use codesearch instead
-- Bash for code exploration (grep, find, cat, head, tail, ls on source files) - blocked, use codesearch or plugin:gm:dev instead
+- Glob tool - blocked, use codesearch instead
+- Grep tool - blocked, use codesearch instead
+- WebSearch/search tools for code exploration - blocked, use codesearch instead
+- Bash for code exploration (grep, find, cat, head, tail, ls on source files) - blocked, use codesearch instead
 - Bash for running scripts, node, bun, npx - blocked, use plugin:gm:dev instead
 - Bash for reading/writing files - blocked, use plugin:gm:dev fs operations instead
 
 **REQUIRED TOOL MAPPING**:
-- Code exploration: `mcp__plugin_gm_code-search__search` (codesearch) - natural language queries over codebase
+- Code exploration: `mcp__plugin_gm_code-search__search` (codesearch) - THE ONLY exploration tool. Natural language queries. No glob, no grep, no find, no explore agent, no Read for discovery.
 - Code execution: `mcp__plugin_gm_dev__execute` (plugin:gm:dev) - run JS/TS/Python/Go/Rust/etc
 - File operations: `mcp__plugin_gm_dev__execute` with fs module - read, write, stat files
 - Bash: `mcp__plugin_gm_dev__bash` - ONLY git, npm publish/pack, docker, system daemons
 - Browser: `plugin:browser:execute` - real UI workflows and integration tests
+
+**EXPLORATION DECISION TREE**: Need to find something in code?
+1. Use `mcp__plugin_gm_code-search__search` with natural language — always first
+2. If file path is already known → read via plugin:gm:dev fs.readFileSync
+3. No other options. Glob/Grep/Read/Explore/WebSearch are NOT exploration tools here.
 
 **BASH WHITELIST** (only acceptable bash uses):
 - `git` commands (status, add, commit, push, pull, log, diff)
@@ -196,10 +204,10 @@ SYSTEM_INVARIANTS = {
 }
 
 TOOL_INVARIANTS = {
-  default: plugin:gm:dev (not bash),
+  default: plugin:gm:dev (not bash, not grep, not glob),
   code_execution: plugin:gm:dev,
   file_operations: plugin:gm:dev fs module,
-  exploration: codesearch (never glob/grep/find/search),
+  exploration: codesearch ONLY (Glob=blocked, Grep=blocked, Explore=blocked, Read-for-discovery=blocked),
   overview: bunx mcp-thorns@latest,
   bash: ONLY git/npm-publish/docker/system-services,
   no_direct_tool_abuse: true
@@ -284,6 +292,6 @@ When constraints conflict:
 3. Document the resolution in work notes
 4. Apply and continue
 
-**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use bash when plugin:gm:dev suffices | use bash for file reads/writes/exploration/script execution
+**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use bash when plugin:gm:dev suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions
 
 **Always**: execute in plugin:gm:dev or plugin:browser:execute | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components
