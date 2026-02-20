@@ -38,7 +38,7 @@ The .prd must be created before any work begins. It must be the longest possible
 
 Longer is better. Missing items means missing work. Err towards listing too many.
 
-Structure as dependency graph: each item lists what it blocks and what blocks it. Group independent items into parallel execution waves. Launch multiple gm subagents simultaneously via Task tool with subagent_type gm:gm for independent items. Orchestrate waves so blocked items begin only after dependencies complete. When a wave finishes, remove completed items, launch next wave. Continue until empty. Maximize parallelism always. Never execute independent items sequentially.
+Structure as dependency graph: each item lists what it blocks and what blocks it. Group independent items into parallel execution waves. Launch gm subagents simultaneously via Task tool with subagent_type gm:gm for independent items. **Maximum 3 subagents per wave.** If a wave has more than 3 independent items, split into batches of 3, complete each batch before starting the next. Orchestrate waves so blocked items begin only after dependencies complete. When a wave finishes, remove completed items, launch next wave of ≤3. Continue until empty. Never execute independent items sequentially. Never launch more than 3 agents at once.
 
 The .prd is the single source of truth for remaining work and is frozen at creation. Only permitted mutation: removing finished items as they complete. Never add items post-creation unless user requests new work. Never rewrite or reorganize. Discovering new information during execution does not justify altering the .prd plan—complete existing items, then surface findings to user. The stop hook blocks session end when items remain. Empty .prd means all work complete.
 
