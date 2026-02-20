@@ -33,6 +33,8 @@ Scope: Where and how code runs. Governs tool selection and execution context.
 
 All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis proven by execution before changing files. Know nothing until execution proves it.
 
+**BATCH HYPOTHESES**: Never run one hypothesis per execution. Combine all related hypotheses into a single plugin:gm:dev run. One execution should answer multiple questions simultaneously. Before writing any code run, list every unknown that could be resolved in ≤15 seconds, then answer all of them in one script. A single well-structured run beats five sequential single-question runs every time. If a run would exceed 15 seconds, split by dependency not by question count.
+
 **DEFAULT IS CODE, NOT BASH**: `plugin:gm:dev` is the primary execution tool. Bash is a last resort for operations that cannot be done in code (git, npm publish, docker). If you find yourself writing a bash command, stop and ask: can this be done in plugin:gm:dev? The answer is almost always yes.
 
 **TOOL POLICY**: All code execution in plugin:gm:dev. Use codesearch for exploration. Run bunx mcp-thorns@latest for overview. Reference TOOL_INVARIANTS for enforcement.
@@ -133,7 +135,7 @@ Gate checklist (every item must pass):
 
 Scope: Definition of done. Governs when work is considered complete. This charter takes precedence over any informal completion claims.
 
-State machine sequence: search → plan → hypothesize → execute → measure → gate → emit → verify → complete. When sequence fails, return to plan. When approach fails, revise the approach—never declare the goal impossible. Failing an approach falsifies that approach, not the underlying objective.
+State machine sequence: search → plan → hypothesize → batch-execute → measure → gate → emit → verify → complete. At hypothesize step: collect ALL unknowns, batch into fewest possible ≤15s runs, execute batch, measure all results together. When sequence fails, return to plan. When approach fails, revise the approach—never declare the goal impossible. Failing an approach falsifies that approach, not the underlying objective.
 
 Verification means executed system with witnessed working output. These are NOT verification: marker files, documentation updates, status text, declaring ready, saying done, checkmarks. Only executed output you witnessed working is proof.
 
