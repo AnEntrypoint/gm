@@ -10,7 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -34,21 +34,17 @@ jobs:
           echo "Package: $PACKAGE"
           echo "Version: $VERSION"
 
-      - name: Check version availability
+      - name: Auto-bump and publish
         run: |
           PACKAGE=$(jq -r '.name' package.json)
           VERSION=$(jq -r '.version' package.json)
-          echo "Checking if $PACKAGE@$VERSION is already published..."
-          if npm view "$PACKAGE@$VERSION" 2>/dev/null | grep -q "time"; then
-            echo "✅ Version $VERSION already published - skipping"
-            echo "SKIP_PUBLISH=true" >> $GITHUB_ENV
-          else
-            echo "ℹ️  Version $VERSION not yet published - will publish"
-            echo "SKIP_PUBLISH=false" >> $GITHUB_ENV
+          LATEST=$(npm view "$PACKAGE" version 2>/dev/null || echo "0.0.0")
+          if [ "$LATEST" = "$VERSION" ]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST"
+            NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+            echo "Auto-bumping $PACKAGE from $VERSION to $NEW_VERSION"
+            jq ".version = \"\$NEW_VERSION\"" package.json > package.tmp.json && mv package.tmp.json package.json
           fi
-
-      - name: Publish to npm
-        if: env.SKIP_PUBLISH != 'true'
-        run: npm publish
+          npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

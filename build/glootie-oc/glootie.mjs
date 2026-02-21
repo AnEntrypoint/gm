@@ -27,38 +27,36 @@ export const GlootiePlugin = async ({ project, client, $, directory, worktree })
     }
   };
 
-  const showIdleWarnings = async () => {
-    const warnings = [];
+  const runSessionIdle = async () => {
+    if (!client || !client.tui) return;
+    const blockReasons = [];
     try {
       const status = await $`git status --porcelain`.timeout(2000).nothrow();
       if (status.exitCode === 0 && status.stdout.trim().length > 0)
-        warnings.push('Uncommitted changes');
+        blockReasons.push('Git: Uncommitted changes exist');
     } catch (e) {}
     try {
       const ahead = await $`git rev-list --count @{u}..HEAD`.timeout(2000).nothrow();
       if (ahead.exitCode === 0 && parseInt(ahead.stdout.trim()) > 0)
-        warnings.push(ahead.stdout.trim() + ' unpushed commits');
+        blockReasons.push('Git: ' + ahead.stdout.trim() + ' commit(s) not pushed');
+    } catch (e) {}
+    try {
+      const behind = await $`git rev-list --count HEAD..@{u}`.timeout(2000).nothrow();
+      if (behind.exitCode === 0 && parseInt(behind.stdout.trim()) > 0)
+        blockReasons.push('Git: ' + behind.stdout.trim() + ' upstream change(s) not pulled');
     } catch (e) {}
     const prdFile = path.join(directory, '.prd');
     if (fs.existsSync(prdFile)) {
       const prd = fs.readFileSync(prdFile, 'utf-8').trim();
-      if (prd.length > 0) warnings.push('Work items in .prd');
+      if (prd.length > 0) blockReasons.push('Work items remain in .prd:\n' + prd);
     }
-    if (warnings.length > 0 && client?.tui) {
-      try {
-        await client.tui.showToast({ body: {
-          message: 'Review needed: ' + warnings.join(', '),
-          variant: 'warning',
-          duration: 10000
-        }});
-      } catch (e) {}
-    }
+    if (blockReasons.length > 0) throw new Error(blockReasons.join(' | '));
   };
 
   return {
     event: async ({ event }) => {
       if (event.type === 'session.created') await runThornsAnalysis();
-      else if (event.type === 'session.idle') await showIdleWarnings();
+      else if (event.type === 'session.idle') await runSessionIdle();
     },
 
     'tool.execute.before': async (input, output) => {
