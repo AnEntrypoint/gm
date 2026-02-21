@@ -4,7 +4,7 @@
     "name": "AnEntrypoint"
   },
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "metadata": {
     "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks"
   },

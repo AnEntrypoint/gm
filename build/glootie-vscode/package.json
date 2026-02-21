@@ -1,6 +1,6 @@
 {
   "name": "glootie-vscode",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "publisher": "glootie",
   "displayName": "Glootie - GM State Machine",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",

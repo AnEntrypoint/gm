@@ -1,6 +1,6 @@
 {
   "name": "glootie-cc",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -50,8 +50,5 @@
   ],
   "peerDependencies": {
     "@anthropic-ai/claude-code": "*"
-  },
-  "scripts": {
-    "postinstall": "node -e \"const fs=require('fs'); try { fs.chmodSync('./cli.mjs', 0o755); } catch(e) {}\""
   }
 }

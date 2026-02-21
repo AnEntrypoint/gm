@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/AnEntrypoint/glootie-jetbrains">
   <id>com.glootie.intellij</id>
   <name>Glootie - GM State Machine</name>
-  <version>2.0.4</version>
+  <version>2.0.5</version>
   <vendor email="glootie@anthropic.ai" url="https://github.com/AnEntrypoint">Glootie</vendor>
   <description>Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks</description>
   <category>AI</category>

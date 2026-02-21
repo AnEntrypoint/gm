@@ -1102,13 +1102,13 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       main: 'glootie.mjs',
       bin: { 'glootie-kilo': './cli.mjs' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-kilo.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-kilo#readme',
       bugs: { url: 'https://github.com/AnEntrypoint/glootie-kilo/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
+      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
       ...extraFields
     }, null, 2);
   },
