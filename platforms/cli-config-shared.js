@@ -180,6 +180,219 @@ try {
 `;
 }
 
+function createClaudeCodeCliScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = path.join(homeDir, '.claude');
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading glootie-cc...' : 'Installing glootie-cc...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = [
+    ['agents', 'agents'],
+    ['hooks', 'hooks'],
+    ['.mcp.json', '.mcp.json'],
+    ['README.md', 'README.md']
+  ];
+
+  function copyRecursive(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  const destPath = process.platform === 'win32'
+    ? destDir.replace(/\\\\/g, '/')
+    : destDir;
+  console.log(\`✓ glootie-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('Restart Claude Code to activate.');
+} catch (e) {
+  console.error('Installation failed:', e.message);
+  process.exit(1);
+}
+`;
+}
+
+function createClaudeCodeInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+function isInsideNodeModules() {
+  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+}
+
+function getProjectRoot() {
+  if (!isInsideNodeModules()) {
+    return null;
+  }
+
+  let current = __dirname;
+  while (current !== path.dirname(current)) {
+    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (path.basename(current) === 'node_modules') {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function safeCopyFile(src, dst) {
+  try {
+    const content = fs.readFileSync(src, 'utf-8');
+    const dstDir = path.dirname(dst);
+    if (!fs.existsSync(dstDir)) {
+      fs.mkdirSync(dstDir, { recursive: true });
+    }
+    fs.writeFileSync(dst, content, 'utf-8');
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function safeCopyDirectory(src, dst) {
+  try {
+    if (!fs.existsSync(src)) {
+      return false;
+    }
+
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    entries.forEach(entry => {
+      const srcPath = path.join(src, entry.name);
+      const dstPath = path.join(dst, entry.name);
+
+      if (entry.isDirectory()) {
+        safeCopyDirectory(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        safeCopyFile(srcPath, dstPath);
+      }
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function updateGitignore(projectRoot) {
+  try {
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+    const entry = '.glootie-stop-verified';
+
+    let content = '';
+    if (fs.existsSync(gitignorePath)) {
+      content = fs.readFileSync(gitignorePath, 'utf-8');
+    }
+
+    if (content.includes(entry)) {
+      return true;
+    }
+
+    if (content && !content.endsWith('\\n')) {
+      content += '\\n';
+    }
+    content += entry + '\\n';
+
+    fs.writeFileSync(gitignorePath, content, 'utf-8');
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function install() {
+  if (!isInsideNodeModules()) {
+    return;
+  }
+
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+
+  const claudeDir = path.join(projectRoot, '.claude');
+  const sourceDir = __dirname.replace(/[\\/]scripts$/, '');
+
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
+  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
+
+  updateGitignore(projectRoot);
+}
+
+install();
+`;
+}
+
+function createCodexCliScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'glootie')
+  : path.join(homeDir, '.codex', 'plugins', 'glootie');
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading glootie-codex...' : 'Installing glootie-codex...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = [
+    ['agents', 'agents'],
+    ['hooks', 'hooks'],
+    ['.mcp.json', '.mcp.json'],
+    ['plugin.json', 'plugin.json'],
+    ['README.md', 'README.md']
+  ];
+
+  function copyRecursive(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  const destPath = process.platform === 'win32'
+    ? destDir.replace(/\\\\/g, '/')
+    : destDir;
+  console.log(\`✓ glootie-codex \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('Restart Codex to activate.');
+} catch (e) {
+  console.error('Installation failed:', e.message);
+  process.exit(1);
+}
+`;
+}
+
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   formatConfigJson(config) {
     return JSON.stringify({
@@ -209,7 +422,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -218,7 +431,9 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     const TemplateBuilder = require('../lib/template-builder');
     return {
       'plugin.json': TemplateBuilder.generatePluginJson(spec),
-      '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec)
+      '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec),
+      'cli.js': createClaudeCodeCliScript(),
+      'install.js': createClaudeCodeInstallScript()
     };
   },
   generateReadme(spec) {
@@ -562,12 +777,17 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'glootie-codex': './cli.js' },
-      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie']
     };
   },
   generateReadme(spec) {
     return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/glootie-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+  },
+  getAdditionalFiles(spec) {
+    return {
+      'cli.js': createCodexCliScript()
+    };
   }
 });
 
