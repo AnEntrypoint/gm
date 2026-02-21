@@ -7,7 +7,8 @@
   "type": "module",
   "main": "glootie.mjs",
   "bin": {
-    "glootie-oc": "./cli.mjs"
+    "glootie-oc": "./cli.mjs",
+    "glootie-oc-install": "./install.mjs"
   },
   "keywords": [
     "opencode",
@@ -41,6 +42,7 @@
     ".github/",
     ".mcp.json",
     "README.md",
-    "cli.mjs"
+    "cli.mjs",
+    "install.mjs"
   ]
 }

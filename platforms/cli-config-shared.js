@@ -2,6 +2,311 @@ const factory = require('./cli-config-factory');
 const path = require('path');
 const fs = require('fs');
 
+
+function createGeminiInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+function isInsideNodeModules() {
+  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+}
+
+function getProjectRoot() {
+  if (!isInsideNodeModules()) {
+    return null;
+  }
+
+  let current = __dirname;
+  while (current !== path.dirname(current)) {
+    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (path.basename(current) === 'node_modules') {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function safeCopyDirectory(src, dst) {
+  try {
+    if (!fs.existsSync(src)) {
+      return false;
+    }
+
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    entries.forEach(entry => {
+      const srcPath = path.join(src, entry.name);
+      const dstPath = path.join(dst, entry.name);
+
+      if (entry.isDirectory()) {
+        safeCopyDirectory(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        const content = fs.readFileSync(srcPath, 'utf-8');
+        const dstDir = path.dirname(dstPath);
+        if (!fs.existsSync(dstDir)) {
+          fs.mkdirSync(dstDir, { recursive: true });
+        }
+        fs.writeFileSync(dstPath, content, 'utf-8');
+      }
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function install() {
+  if (!isInsideNodeModules()) {
+    return;
+  }
+
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+
+  const geminiDir = path.join(projectRoot, '.gemini', 'extensions', 'glootie-gc');
+  const sourceDir = __dirname;
+
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(geminiDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(geminiDir, 'hooks'));
+}
+
+install();
+`;
+}
+function createCodexInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+function isInsideNodeModules() {
+  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+}
+
+function getProjectRoot() {
+  if (!isInsideNodeModules()) {
+    return null;
+  }
+
+  let current = __dirname;
+  while (current !== path.dirname(current)) {
+    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (path.basename(current) === 'node_modules') {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function safeCopyDirectory(src, dst) {
+  try {
+    if (!fs.existsSync(src)) {
+      return false;
+    }
+
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    entries.forEach(entry => {
+      const srcPath = path.join(src, entry.name);
+      const dstPath = path.join(dst, entry.name);
+
+      if (entry.isDirectory()) {
+        safeCopyDirectory(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        const content = fs.readFileSync(srcPath, 'utf-8');
+        const dstDir = path.dirname(dstPath);
+        if (!fs.existsSync(dstDir)) {
+          fs.mkdirSync(dstDir, { recursive: true });
+        }
+        fs.writeFileSync(dstPath, content, 'utf-8');
+      }
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function install() {
+  if (!isInsideNodeModules()) {
+    return;
+  }
+
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+
+  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'glootie');
+  const sourceDir = __dirname;
+
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
+}
+
+install();
+`;
+}
+function createOpenCodeInstallScript() {
+  return `#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function isInsideNodeModules() {
+  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+}
+
+function getProjectRoot() {
+  if (!isInsideNodeModules()) {
+    return null;
+  }
+
+  let current = __dirname;
+  while (current !== path.dirname(current)) {
+    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (path.basename(current) === 'node_modules') {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function safeCopyDirectory(src, dst) {
+  try {
+    if (!fs.existsSync(src)) {
+      return false;
+    }
+
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    entries.forEach(entry => {
+      const srcPath = path.join(src, entry.name);
+      const dstPath = path.join(dst, entry.name);
+
+      if (entry.isDirectory()) {
+        safeCopyDirectory(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        const content = fs.readFileSync(srcPath, 'utf-8');
+        const dstDir = path.dirname(dstPath);
+        if (!fs.existsSync(dstDir)) {
+          fs.mkdirSync(dstDir, { recursive: true });
+        }
+        fs.writeFileSync(dstPath, content, 'utf-8');
+      }
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function install() {
+  if (!isInsideNodeModules()) {
+    return;
+  }
+
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+
+  const ocDir = path.join(projectRoot, '.config', 'opencode', 'plugin');
+  const sourceDir = __dirname;
+
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(ocDir, 'agents'));
+}
+
+install();
+`;
+}
+function createKiloInstallScript() {
+  return `#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function isInsideNodeModules() {
+  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+}
+
+function getProjectRoot() {
+  if (!isInsideNodeModules()) {
+    return null;
+  }
+
+  let current = __dirname;
+  while (current !== path.dirname(current)) {
+    current = path.dirname(current);
+    const parent = path.dirname(current);
+    if (path.basename(current) === 'node_modules') {
+      return parent;
+    }
+  }
+  return null;
+}
+
+function safeCopyDirectory(src, dst) {
+  try {
+    if (!fs.existsSync(src)) {
+      return false;
+    }
+
+    fs.mkdirSync(dst, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    entries.forEach(entry => {
+      const srcPath = path.join(src, entry.name);
+      const dstPath = path.join(dst, entry.name);
+
+      if (entry.isDirectory()) {
+        safeCopyDirectory(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        const content = fs.readFileSync(srcPath, 'utf-8');
+        const dstDir = path.dirname(dstPath);
+        if (!fs.existsSync(dstDir)) {
+          fs.mkdirSync(dstDir, { recursive: true });
+        }
+        fs.writeFileSync(dstPath, content, 'utf-8');
+      }
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function install() {
+  if (!isInsideNodeModules()) {
+    return;
+  }
+
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+
+  const kiloDir = path.join(projectRoot, '.config', 'kilo', 'plugin');
+  const sourceDir = __dirname;
+
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(kiloDir, 'agents'));
+}
+
+install();
+`;
+}
 function createGeminiInstallerScript() {
   return `#!/usr/bin/env node
 const fs = require('fs');
@@ -719,21 +1024,22 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/glootie-gc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      bin: { 'glootie-gc': './cli.js' },
-      files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js'],
+      bin: { 'glootie-gc': './cli.js', 'glootie-gc-install': './install.js' },
+      files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
     }, null, 2);
   },
   getPackageJsonFields() {
     return {
-      bin: { 'glootie-gc': './cli.js' },
+      bin: { 'glootie-gc': './cli.js', 'glootie-gc-install': './install.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'cli.js': createGeminiInstallerScript()
+      'cli.js': createGeminiInstallerScript(),
+      'install.js': createGeminiInstallScript()
     };
   },
   buildHookCommand(hookFile) {
@@ -760,13 +1066,13 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       author: pluginSpec.author,
       license: pluginSpec.license,
       main: 'plugin.json',
-      bin: { 'glootie-codex': './cli.js' },
+      bin: { 'glootie-codex': './cli.js', 'glootie-codex-install': './install.js' },
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-codex.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-codex#readme',
       bugs: { url: 'https://github.com/AnEntrypoint/glootie-codex/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
@@ -776,7 +1082,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   getPackageJsonFields() {
     return {
       main: 'plugin.json',
-      bin: { 'glootie-codex': './cli.js' },
+      bin: { 'glootie-codex': './cli.js', 'glootie-codex-install': './install.js' },
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie']
     };
@@ -786,7 +1092,8 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   },
   getAdditionalFiles(spec) {
     return {
-      'cli.js': createCodexCliScript()
+      'cli.js': createCodexCliScript(),
+      'install.js': createCodexInstallScript()
     };
   }
 });
@@ -901,8 +1208,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     return {
       type: 'module',
       main: 'glootie.mjs',
-      bin: { 'glootie-oc': './cli.mjs' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
+      bin: { 'glootie-oc': './cli.mjs', 'glootie-oc-install': './install.mjs' },
+      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -916,7 +1223,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       license: pluginSpec.license,
       type: 'module',
       main: 'glootie.mjs',
-      bin: { 'glootie-oc': './cli.mjs' },
+      bin: { 'glootie-oc': './cli.mjs', 'glootie-oc-install': './install.mjs' },
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-oc.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-oc#readme',
@@ -959,6 +1266,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
       'glootie.mjs': ocPluginSource(),
       'cli.mjs': createOpenCodeInstallerScript(),
+      'install.mjs': createOpenCodeInstallScript(),
     };
   },
   generateReadme(spec) {
@@ -1085,8 +1393,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     return {
       type: 'module',
       main: 'glootie.mjs',
-      bin: { 'glootie-kilo': './cli.mjs' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
+      bin: { 'glootie-kilo': './cli.mjs', 'glootie-kilo-install': './install.mjs' },
+      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -1100,7 +1408,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       license: pluginSpec.license,
       type: 'module',
       main: 'glootie.mjs',
-      bin: { 'glootie-kilo': './cli.mjs' },
+      bin: { 'glootie-kilo': './cli.mjs', 'glootie-kilo-install': './install.mjs' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-kilo.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-kilo#readme',
@@ -1108,7 +1416,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
+      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
       ...extraFields
     }, null, 2);
   },
@@ -1142,6 +1450,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
       'glootie.mjs': kiloPluginSource(),
       'cli.mjs': createKiloInstallerScript(),
+      'install.mjs': createKiloInstallScript(),
     };
   },
   generateReadme(spec) {

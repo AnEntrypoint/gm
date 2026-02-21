@@ -19,7 +19,8 @@
     "access": "public"
   },
   "bin": {
-    "glootie-gc": "./cli.js"
+    "glootie-gc": "./cli.js",
+    "glootie-gc-install": "./install.js"
   },
   "files": [
     "agents/",
