@@ -30,6 +30,7 @@
     "CLAUDE.md",
     ".mcp.json",
     "plugin.json",
+    "cli.js",
     "pre-tool-use-hook.js",
     "session-start-hook.js",
     "prompt-submit-hook.js",

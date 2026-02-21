@@ -31,6 +31,8 @@
     ".mcp.json",
     ".claude-plugin/",
     "plugin.json",
+    "cli.js",
+    "install.js",
     "README.md",
     "LICENSE",
     ".gitignore",
