@@ -1,4 +1,184 @@
 const factory = require('./cli-config-factory');
+const path = require('path');
+const fs = require('fs');
+
+function createGeminiInstallerScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'gemini', 'extensions', 'gm')
+  : path.join(homeDir, '.gemini', 'extensions', 'gm');
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading glootie-gc...' : 'Installing glootie-gc...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = [
+    ['agents', 'agents'],
+    ['hooks', 'hooks'],
+    ['.mcp.json', '.mcp.json'],
+    ['gemini-extension.json', 'gemini-extension.json'],
+    ['README.md', 'README.md'],
+    ['GEMINI.md', 'GEMINI.md']
+  ];
+
+  function copyRecursive(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  const destPath = process.platform === 'win32'
+    ? destDir.replace(/\\\\/g, '/')
+    : destDir;
+  console.log(\`✓ glootie-gc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('Restart Gemini CLI to activate.');
+} catch (e) {
+  console.error('Installation failed:', e.message);
+  process.exit(1);
+}
+`;
+}
+
+function createOpenCodeInstallerScript() {
+  return `#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'opencode', 'plugin')
+  : path.join(homeDir, '.config', 'opencode', 'plugin');
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading glootie-oc...' : 'Installing glootie-oc...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = [
+    ['agents', 'agents'],
+    ['index.js', 'index.js'],
+    ['glootie.mjs', 'glootie.mjs'],
+    ['opencode.json', 'opencode.json'],
+    ['.mcp.json', '.mcp.json'],
+    ['README.md', 'README.md']
+  ];
+
+  function copyRecursive(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  try {
+    console.log('Installing dependencies...');
+    execSync('npm install', { cwd: destDir, stdio: 'inherit' });
+  } catch (e) {
+    console.warn('npm install encountered an issue, but installation may still work');
+  }
+
+  const destPath = process.platform === 'win32'
+    ? destDir.replace(/\\\\/g, '/')
+    : destDir;
+  console.log(\`✓ glootie-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('Restart OpenCode to activate.');
+} catch (e) {
+  console.error('Installation failed:', e.message);
+  process.exit(1);
+}
+`;
+}
+
+function createKiloInstallerScript() {
+  return `#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'kilo', 'plugin')
+  : path.join(homeDir, '.config', 'kilo', 'plugin');
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading glootie-kilo...' : 'Installing glootie-kilo...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = [
+    ['agents', 'agents'],
+    ['index.js', 'index.js'],
+    ['glootie.mjs', 'glootie.mjs'],
+    ['kilocode.json', 'kilocode.json'],
+    ['.mcp.json', '.mcp.json'],
+    ['README.md', 'README.md']
+  ];
+
+  function copyRecursive(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  try {
+    console.log('Installing dependencies...');
+    execSync('npm install', { cwd: destDir, stdio: 'inherit' });
+  } catch (e) {
+    console.warn('npm install encountered an issue, but installation may still work');
+  }
+
+  const destPath = process.platform === 'win32'
+    ? destDir.replace(/\\\\/g, '/')
+    : destDir;
+  console.log(\`✓ glootie-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('Restart Kilo CLI to activate.');
+} catch (e) {
+  console.error('Installation failed:', e.message);
+  process.exit(1);
+}
+`;
+}
 
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   formatConfigJson(config) {
@@ -324,18 +504,20 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/glootie-gc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
+      bin: { 'glootie-gc': './cli.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js'],
       ...extraFields
     }, null, 2);
   },
   getPackageJsonFields() {
     return {
+      bin: { 'glootie-gc': './cli.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'cli.js': `#!/usr/bin/env node\n\nconst show = () => {\n  console.log('glootie-gc: Advanced Gemini CLI extension');\n  console.log('Version: 2.0.9');\n  console.log('');\n  console.log('Usage: glootie-gc [command]');\n  console.log('Commands:');\n  console.log('  help, --help, -h');\n  console.log('  version, --version');\n};\n\nconst args = process.argv.slice(2);\nif (!args.length || args[0] === 'help' || args[0] === '--help' || args[0] === '-h') {\n  show();\n} else if (args[0] === 'version' || args[0] === '--version') {\n  console.log('2.0.9');\n}\n`
+      'cli.js': createGeminiInstallerScript()
     };
   },
   buildHookCommand(hookFile) {
@@ -497,7 +679,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     return {
       type: 'module',
       main: 'glootie.mjs',
-      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md'],
+      bin: { 'glootie-oc': './cli.mjs' },
+      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -511,6 +694,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       license: pluginSpec.license,
       type: 'module',
       main: 'glootie.mjs',
+      bin: { 'glootie-oc': './cli.mjs' },
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-oc.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-oc#readme',
@@ -551,6 +735,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     return {
       'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
       'glootie.mjs': ocPluginSource(),
+      'cli.mjs': createOpenCodeInstallerScript(),
     };
   },
   generateReadme(spec) {
@@ -677,7 +862,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     return {
       type: 'module',
       main: 'glootie.mjs',
-      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md'],
+      bin: { 'glootie-kilo': './cli.mjs' },
+      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -691,6 +877,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       license: pluginSpec.license,
       type: 'module',
       main: 'glootie.mjs',
+      bin: { 'glootie-kilo': './cli.mjs' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-kilo.git' },
       homepage: 'https://github.com/AnEntrypoint/glootie-kilo#readme',
@@ -730,6 +917,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     return {
       'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
       'glootie.mjs': kiloPluginSource(),
+      'cli.mjs': createKiloInstallerScript(),
     };
   },
   generateReadme(spec) {
@@ -819,7 +1007,7 @@ You should see \`dev\` and \`code-search\` marked as connected.
 
 **Plugin not loading:**
 - Verify plugin path in \`kilocode.json\` is absolute (e.g., \`/home/user/.config/kilo/plugin\`, not relative)
-- Check \`index.js\` and \`gloutie.mjs\` exist in the plugin directory
+- Check \`index.js\` and \`glootie.mjs\` exist in the plugin directory
 - Run \`bun install\` in the plugin directory to ensure dependencies are installed
 
 The plugin activates automatically on session start once MCP servers are configured.

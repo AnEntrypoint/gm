@@ -66,16 +66,39 @@ The search will find permission validations, role checks, authentication guards 
 When exploring unfamiliar code, finding similar patterns, understanding integrations, or locating feature implementations across your codebase.`;
   outputs.push(codeSearchContext);
 
-  // 3. Run mcp-thorns (bunx)
+  // 3. Run mcp-thorns (bunx with npx fallback)
   if (projectDir && fs.existsSync(projectDir)) {
     try {
-      const thornOutput = execSync(`bunx mcp-thorns@latest`, {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: projectDir,
-        timeout: 180000,
-        killSignal: 'SIGTERM'
-      });
+      let thornOutput;
+      try {
+        thornOutput = execSync(`bunx mcp-thorns@latest`, {
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          cwd: projectDir,
+          timeout: 180000,
+          killSignal: 'SIGTERM'
+        });
+      } catch (bunErr) {
+        if (bunErr.killed && bunErr.signal === 'SIGTERM') {
+          thornOutput = '=== mcp-thorns ===\nSkipped (3min timeout)';
+        } else {
+          try {
+            thornOutput = execSync(`npx -y mcp-thorns@latest`, {
+              encoding: 'utf-8',
+              stdio: ['pipe', 'pipe', 'pipe'],
+              cwd: projectDir,
+              timeout: 180000,
+              killSignal: 'SIGTERM'
+            });
+          } catch (npxErr) {
+            if (npxErr.killed && npxErr.signal === 'SIGTERM') {
+              thornOutput = '=== mcp-thorns ===\nSkipped (3min timeout)';
+            } else {
+              thornOutput = `=== mcp-thorns ===\nSkipped (error: ${bunErr.message.split('\n')[0]})`;
+            }
+          }
+        }
+      }
       outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
     } catch (e) {
       if (e.killed && e.signal === 'SIGTERM') {
