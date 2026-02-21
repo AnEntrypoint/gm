@@ -136,9 +136,9 @@ jobs:
           npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
 
           # Publish to npm
-          npm publish 2>&1 || {
+          npm_output=$(npm publish 2>&1) || {
             # Check if version already exists
-            if grep -q "npm ERR.*403.*Forbidden" <<< "$?"; then
+            if echo "$npm_output" | grep -q "403.*Forbidden\|You do not have permission"; then
               echo "⚠️ Version already published, bumping patch version..."
               # Extract current version and bump patch
               CURRENT_VERSION=$(jq -r '.version' package.json)
