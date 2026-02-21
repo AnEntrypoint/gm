@@ -6,7 +6,8 @@
   "license": "MIT",
   "main": "plugin.json",
   "bin": {
-    "glootie-codex": "./cli.js"
+    "glootie-codex": "./cli.js",
+    "glootie-codex-install": "./install.js"
   },
   "repository": {
     "type": "git",
