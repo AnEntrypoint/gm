@@ -46,7 +46,7 @@ const run = () => {
     }
 
     if (searchTools.includes(tool_name)) {
-      return { block: true, reason: 'Use gm:code-search skill or plugin:gm:dev for code exploration' };
+      return { block: true, reason: 'Code exploration must use: gm:code-search skill or plugin:gm:dev execute. This restriction enforces semantic search over filesystem patterns.' };
     }
 
     if (tool_name === 'Task') {

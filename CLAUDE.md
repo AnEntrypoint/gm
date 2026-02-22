@@ -84,6 +84,8 @@ Each built by GitHub Actions from `plugforge-starter/` on every commit.
 
 **IDE extensions missing hooks**: VSCode Cursor Zed JetBrains extensions do not have hooks directories. Only CLI platforms have hooks. This is expected behavior.
 
+**Hook error display**: When pre-tool-use-hook blocks a tool call, it returns a `permissionDecisionReason` in the hook output. Claude Code may display this as a generic "Sibling tool call errored" message instead of extracting the specific reason. The hook is working correctly and the reason is in the output; improved error display is a Claude Code UI enhancement. Workaround: check system reminders which show the actual hook reason.
+
 ## Kerned Framework: Zero-Surprise Design
 
 Everything is predictable and turnkey. All corner cases handled before they occur.
