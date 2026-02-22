@@ -157,7 +157,20 @@ Scope: Definition of done. Governs when work is considered complete. This charte
 
 State machine sequence: `PLAN → EXECUTE → EMIT → VERIFY → COMPLETE`. PLAN names every possible unknown. EXECUTE runs every possible code execution needed, each under 15 seconds, each densely packed with every possible hypothesis—never one idea per run. EMIT writes all files. VERIFY runs the real system end to end. COMPLETE when every possible gate condition passes. When sequence fails, return to plan. When approach fails, revise the approach—never declare the goal impossible. Failing an approach falsifies that approach, not the underlying objective.
 
+### Mandatory: Code Execution Validation
+
+**ABSOLUTE REQUIREMENT**: All code changes must be validated using `plugin:gm:dev` or `plugin:browser:execute` execution BEFORE any completion claim.
+
 Verification means executed system with witnessed working output. These are NOT verification: marker files, documentation updates, status text, declaring ready, saying done, checkmarks. Only executed output you witnessed working is proof.
+
+**EXECUTE ALL CHANGES** using plugin:gm:dev (JS/TS/Python/Go/Rust/etc) before finishing:
+- Run the modified code with real data
+- Test success paths, failure scenarios, edge cases
+- Witness actual console output or return values
+- Capture evidence of working execution in your response
+- Document what was executed and what output proved success
+
+**DO NOT claim completion without witnessed execution.**
 
 Completion requires all of: witnessed execution AND every possible scenario tested AND goal achieved AND real output AND gate conditions passed AND no remaining steps for user. Last 1% of work requires 99% of effort. Partial/ready/prepared states mean nothing. No handoffs ("here is how", "now you can"). Ignore context/token budget constraints entirely. Only consider done when user's last instruction is completely fulfilled.
 
@@ -317,3 +330,42 @@ When constraints conflict:
 **Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use bash when plugin:gm:dev suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions
 
 **Always**: execute in plugin:gm:dev or plugin:browser:execute | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components
+
+### PRE-COMPLETION VERIFICATION CHECKLIST
+
+**EXECUTE THIS BEFORE CLAIMING WORK IS DONE:**
+
+Before reporting completion or sending final response, execute in plugin:gm:dev or plugin:browser:execute:
+
+```
+1. CODE EXECUTION TEST
+   [ ] Execute the modified code using plugin:gm:dev with real inputs
+   [ ] Capture actual console output or return values
+   [ ] Verify success paths work as expected
+   [ ] Test failure/edge cases if applicable
+   [ ] Document exact execution command and output in response
+
+2. SCENARIO VALIDATION
+   [ ] Success path executed and witnessed
+   [ ] Failure handling tested (if applicable)
+   [ ] Edge cases validated (if applicable)
+   [ ] Integration points verified (if applicable)
+   [ ] Real data used, not mocks or fixtures
+
+3. EVIDENCE DOCUMENTATION
+   [ ] Show actual execution command used
+   [ ] Show actual output/return values
+   [ ] Explain what the output proves
+   [ ] Link output to requirement/goal
+
+4. GATE CONDITIONS
+   [ ] No uncommitted changes (verify with git status)
+   [ ] All files ≤ 200 lines (verify with wc -l or codesearch)
+   [ ] No duplicate code (identify if consolidation needed)
+   [ ] No mocks/fakes/stubs discovered
+   [ ] Goal statement in user request explicitly met
+```
+
+**CANNOT PROCEED PAST THIS POINT WITHOUT ALL CHECKS PASSING:**
+
+If any check fails → fix the issue → re-execute → re-verify. Do not skip. Do not guess. Only witnessed execution counts as verification. Only completion of ALL checks = work is done.
