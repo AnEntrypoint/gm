@@ -7,6 +7,8 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_
 
 const COMPACT_CONTEXT = 'use gm agent | ref: TOOL_INVARIANTS | codesearch for exploration | plugin:gm:dev for execution';
 
+const PLAN_MODE_BLOCK = 'DO NOT use EnterPlanMode or any plan mode tool. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) instead. Plan mode is blocked.';
+
 const getBaseContext = (resetMsg = '') => {
   let ctx = 'use gm agent';
   if (resetMsg) ctx += ' - ' + resetMsg;
@@ -69,7 +71,7 @@ const emit = (additionalContext) => {
 
 try {
   const prompt = readStdinPrompt();
-  const parts = [getBaseContext() + ' | ' + COMPACT_CONTEXT];
+  const parts = [getBaseContext() + ' | ' + COMPACT_CONTEXT + ' | ' + PLAN_MODE_BLOCK];
 
   if (prompt && projectDir) {
     const searchResults = runCodeSearch(prompt, projectDir);

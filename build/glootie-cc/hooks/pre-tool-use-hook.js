@@ -56,6 +56,10 @@ const run = () => {
       }
     }
 
+    if (tool_name === 'EnterPlanMode') {
+      return { block: true, reason: 'Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.' };
+    }
+
     return { allow: true };
   } catch (error) {
     return { allow: true };
