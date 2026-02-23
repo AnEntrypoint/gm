@@ -1099,7 +1099,7 @@ function ocPluginSource() {
     "let thornsOutput = '';",
     "",
     "const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
-    "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
+    "  const pluginDir = __dirname;",
     "  let agentRules = '';",
     "",
     "  const loadAgentRules = () => {",
