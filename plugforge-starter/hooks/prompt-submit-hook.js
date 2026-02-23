@@ -31,7 +31,7 @@ const runCodeSearch = (query, cwd) => {
     const escaped = query.replace(/"/g, '\\"').substring(0, 200);
     let out;
     try {
-      out = execSync(`bunx codebasesearch@latest "${escaped}"`, {
+      out = execSync(`bun x codebasesearch@latest "${escaped}"`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd,
