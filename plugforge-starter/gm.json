@@ -1,6 +1,6 @@
 {
   "name": "gm",
-  "version": "2.0.9",
+  "version": "2.0.11",
   "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
   "author": "AnEntrypoint",
   "license": "MIT",
