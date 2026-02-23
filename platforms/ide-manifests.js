@@ -2,9 +2,9 @@ const vscodeManifest = (pluginSpec) => JSON.stringify({
   name: 'gm-vscode',
   version: pluginSpec.version,
   publisher: 'gm',
-  displayName: 'Glootie - GM State Machine',
+  displayName: 'GM - GM State Machine',
   description: pluginSpec.description || 'AI-powered state machine for VSCode with dynamic adaptation',
-  author: pluginSpec.author || 'Glootie',
+  author: pluginSpec.author || 'GM',
   license: pluginSpec.license || 'MIT',
   repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-vscode.git' },
   bugs: { url: 'https://github.com/AnEntrypoint/gm-vscode/issues' },
@@ -19,14 +19,14 @@ const vscodeManifest = (pluginSpec) => JSON.stringify({
       ]
     },
     commands: [
-      { command: 'gm.activate', title: 'Glootie: Activate' },
-      { command: 'gm.deactivate', title: 'Glootie: Deactivate' },
-      { command: 'gm.showState', title: 'Glootie: Show State' }
+      { command: 'gm.activate', title: 'GM: Activate' },
+      { command: 'gm.deactivate', title: 'GM: Deactivate' },
+      { command: 'gm.showState', title: 'GM: Show State' }
     ],
     configuration: {
-      title: 'Glootie',
+      title: 'GM',
       properties: {
-        'gm.enabled': { type: 'boolean', default: true, description: 'Enable Glootie extension' },
+        'gm.enabled': { type: 'boolean', default: true, description: 'Enable GM extension' },
         'gm.logLevel': { type: 'string', enum: ['debug', 'info', 'warn', 'error'], default: 'info' },
         'gm.autoActivate': { type: 'boolean', default: true, description: 'Auto-activate on startup' }
       }
@@ -41,9 +41,9 @@ const cursorManifest = (pluginSpec) => JSON.stringify({
   name: 'gm-cursor',
   version: pluginSpec.version,
   publisher: 'gm',
-  displayName: 'Glootie - GM State Machine',
+  displayName: 'GM - GM State Machine',
   description: pluginSpec.description || 'AI-powered state machine for Cursor with autonomous decision-making',
-  author: pluginSpec.author || 'Glootie',
+  author: pluginSpec.author || 'GM',
   license: pluginSpec.license || 'MIT',
   repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-cursor.git' },
   bugs: { url: 'https://github.com/AnEntrypoint/gm-cursor/issues' },
@@ -59,20 +59,20 @@ const zedManifest = (pluginSpec) => ({
   name: 'gm',
   version: pluginSpec.version,
   description: pluginSpec.description || 'AI-powered state machine for Zed',
-  authors: [{ name: pluginSpec.author || 'Glootie' }],
+  authors: [{ name: pluginSpec.author || 'GM' }],
   repository: 'https://github.com/AnEntrypoint/gm-zed',
   themes: [
-    { name: 'Glootie Dark', appearance: 'dark', path: './themes/gm-dark.json' },
-    { name: 'Glootie Light', appearance: 'light', path: './themes/gm-light.json' }
+    { name: 'GM Dark', appearance: 'dark', path: './themes/gm-dark.json' },
+    { name: 'GM Light', appearance: 'light', path: './themes/gm-light.json' }
   ]
 });
 
 const jetbrainsPluginXml = (pluginSpec) => `<?xml version="1.0" encoding="UTF-8"?>
 <idea-plugin url="https://github.com/AnEntrypoint/gm-jetbrains">
   <id>com.gm.intellij</id>
-  <name>Glootie - GM State Machine</name>
+  <name>GM - GM State Machine</name>
   <version>${pluginSpec.version}</version>
-  <vendor email="gm@anthropic.ai" url="https://github.com/AnEntrypoint">Glootie</vendor>
+  <vendor email="gm@anthropic.ai" url="https://github.com/AnEntrypoint">GM</vendor>
   <description>${pluginSpec.description || 'AI-powered state machine for JetBrains IDEs'}</description>
   <category>AI</category>
   <change-notes>
