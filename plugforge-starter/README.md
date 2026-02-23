@@ -24,7 +24,7 @@ mkdir -p ~/.local/bin && echo -e '#!/bin/sh\nclaude plugin marketplace update gm
 
 it should just work. if you want to make sure the subagent always engages, add "gm everything" to your prompt. the gm agent is injected at session start and reinforced on every prompt submit, but explicitly calling it does help.
 
-**note:** all tools use bunx for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-gm all run via bunx with @latest versions. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
+**note:** all tools use bun x for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-gm all run via bun x with @latest versions. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 
 ## what it does
 

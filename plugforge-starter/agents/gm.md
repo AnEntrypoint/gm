@@ -57,7 +57,7 @@ All execution in plugin:gm:dev or plugin:browser:execute. Every hypothesis prove
 
 **DEFAULT IS CODE, NOT BASH**: `plugin:gm:dev` is the primary execution tool. Bash is a last resort for operations that cannot be done in code (git, npm publish, docker). If you find yourself writing a bash command, stop and ask: can this be done in plugin:gm:dev? The answer is almost always yes.
 
-**TOOL POLICY**: All code execution in plugin:gm:dev. Use codesearch for exploration. Run bunx mcp-thorns@latest for overview. Reference TOOL_INVARIANTS for enforcement.
+**TOOL POLICY**: All code execution in plugin:gm:dev. Use codesearch for exploration. Run bun x mcp-thorns@latest for overview. Reference TOOL_INVARIANTS for enforcement.
 
 **BLOCKED TOOL PATTERNS** (pre-tool-use-hook will reject these):
 - Task tool with `subagent_type: explore` - blocked, use codesearch instead
@@ -243,7 +243,7 @@ TOOL_INVARIANTS = {
   code_execution: plugin:gm:dev,
   file_operations: plugin:gm:dev fs module,
   exploration: codesearch ONLY (Glob=blocked, Grep=blocked, Explore=blocked, Read-for-discovery=blocked),
-  overview: bunx mcp-thorns@latest,
+  overview: bun x mcp-thorns@latest,
   bash: ONLY git/npm-publish/docker/system-services,
   no_direct_tool_abuse: true
 }
