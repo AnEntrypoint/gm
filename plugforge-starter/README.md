@@ -24,7 +24,7 @@ mkdir -p ~/.local/bin && echo -e '#!/bin/sh\nclaude plugin marketplace update gm
 
 it should just work. if you want to make sure the subagent always engages, add "gm everything" to your prompt. the gm agent is injected at session start and reinforced on every prompt submit, but explicitly calling it does help.
 
-**note:** all tools use bunx for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-glootie all run via bunx with @latest versions. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
+**note:** all tools use bunx for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-gm all run via bunx with @latest versions. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 
 ## what it does
 
@@ -50,7 +50,7 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 ### tools
 
-**dev** (mcp-glootie) - code execution in any language from a temp file. replaces bash and edit-run-read loops. 30 second auto handoff to background process control with live notifications. this is where all code actually runs.
+**dev** (mcp-gm) - code execution in any language from a temp file. replaces bash and edit-run-read loops. 30 second auto handoff to background process control with live notifications. this is where all code actually runs.
 
 **code-search** (codebasesearch) - dependency-free semantic vector search. describe intent in plain language, not regex syntax. "find authentication validation" locates auth checks, guards, permission logic - however they're implemented.
 
@@ -82,7 +82,7 @@ this plugin is built by plugforge, a build system that generates 9 platform impl
 - 5 CLI platforms: claude code, gemini cli, opencode, codex, github copilot cli
 - 4 IDE extensions: vs code, cursor, zed, jetbrains
 
-one source in plugforge-starter/ (glootie.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
+one source in plugforge-starter/ (gm.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
 
 repo: https://github.com/AnEntrypoint/plugforge
 

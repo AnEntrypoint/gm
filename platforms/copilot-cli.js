@@ -104,16 +104,16 @@ class CopilotCLIAdapter extends CLIAdapter {
 
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-copilot-cli',
+      name: 'gm-copilot-cli',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
       main: 'cli.js',
-      bin: { 'glootie-copilot-cli': './cli.js', 'glootie-install': './install.js' },
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-copilot-cli.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-copilot-cli#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-copilot-cli/issues' },
+      bin: { 'gm-copilot-cli': './cli.js', 'gm-install': './install.js' },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-copilot-cli.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-copilot-cli#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-copilot-cli/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       files: [
@@ -145,12 +145,12 @@ Tool mapping:
 - grep → file_search
 - search → semantic_search
 
-State in \`~/.gh/extensions/glootie/state.json\`.
+State in \`~/.gh/extensions/gm/state.json\`.
 `;
   }
 
   getAgentSourcePaths(agent) {
-    return [`agents/${agent}.md`, `glootie-copilot-cli/agents/${agent}.md`, `glootie-cc/agents/${agent}.md`];
+    return [`agents/${agent}.md`, `gm-copilot-cli/agents/${agent}.md`, `gm-cc/agents/${agent}.md`];
   }
 
   getHookSourcePaths(hook) {

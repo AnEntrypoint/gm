@@ -1,5 +1,5 @@
 {
-  "description": "Hooks for glootie Claude Code plugin",
+  "description": "Hooks for gm Claude Code plugin",
   "hooks": {
     "PreToolUse": [
       {

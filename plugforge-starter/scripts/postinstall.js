@@ -4,24 +4,24 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Postinstall script for glootie-cc
+ * Postinstall script for gm-cc
  * Implements Mode 1: Standalone .claude/ directory installation
  * 
  * When installed via npm in a project:
  * - Copies agents/, hooks/, .mcp.json to project's .claude/
- * - Updates .gitignore with .glootie-stop-verified
+ * - Updates .gitignore with .gm-stop-verified
  * - Runs silently, never breaks npm install
  * - Safe to run multiple times (idempotent)
  */
 
 function isInsideNodeModules() {
   // Check if __dirname contains /node_modules/ in its path
-  // Example: /project/node_modules/glootie-cc/scripts
+  // Example: /project/node_modules/gm-cc/scripts
   return __dirname.includes(path.sep + 'node_modules' + path.sep);
 }
 
 function getProjectRoot() {
-  // From /project/node_modules/glootie-cc/scripts
+  // From /project/node_modules/gm-cc/scripts
   // Navigate to /project
   if (!isInsideNodeModules()) {
     return null;
@@ -83,7 +83,7 @@ function safeCopyDirectory(src, dst) {
 function updateGitignore(projectRoot) {
   try {
     const gitignorePath = path.join(projectRoot, '.gitignore');
-    const entry = '.glootie-stop-verified';
+    const entry = '.gm-stop-verified';
     
     // Read existing content
     let content = '';

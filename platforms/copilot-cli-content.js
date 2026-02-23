@@ -7,12 +7,12 @@ AI state machine agent for Copilot CLI.
 
 **Windows and Unix:**
 \`\`\`bash
-gh extension install AnEntrypoint/glootie-copilot-cli
+gh extension install AnEntrypoint/gm-copilot-cli
 \`\`\`
 
 **Windows PowerShell:**
 \`\`\`powershell
-gh extension install AnEntrypoint/glootie-copilot-cli
+gh extension install AnEntrypoint/gm-copilot-cli
 \`\`\`
 
 ## Quick Start
@@ -47,7 +47,7 @@ gh copilot run "generate tests"
 
 \`\`\`json
 {
-  "glootie": {
+  "gm": {
     "enabled": true,
     "auto_activate": true,
     "log_level": "info"
