@@ -155,11 +155,8 @@ install();
 }
 function createOpenCodeInstallScript() {
   return `#!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fs = require('fs');
+const path = require('path');
 
 function isInsideNodeModules() {
   return __dirname.includes(path.sep + 'node_modules' + path.sep);
@@ -232,11 +229,8 @@ install();
 }
 function createKiloInstallScript() {
   return `#!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fs = require('fs');
+const path = require('path');
 
 function isInsideNodeModules() {
   return __dirname.includes(path.sep + 'node_modules' + path.sep);
@@ -361,13 +355,10 @@ try {
 
 function createOpenCodeInstallerScript() {
   return `#!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
 const destDir = process.platform === 'win32'
@@ -385,7 +376,7 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['index.js', 'index.js'],
-    ['gm.mjs', 'gm.mjs'],
+    ['gm.js', 'gm.js'],
     ['opencode.json', 'opencode.json'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
@@ -424,13 +415,10 @@ try {
 
 function createKiloInstallerScript() {
   return `#!/usr/bin/env node
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
 const destDir = process.platform === 'win32'
@@ -448,7 +436,7 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['index.js', 'index.js'],
-    ['gm.mjs', 'gm.mjs'],
+    ['gm.js', 'gm.js'],
     ['kilocode.json', 'kilocode.json'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
@@ -1101,17 +1089,16 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
 function ocPluginSource() {
   const BT = '`';
   const lines = [
-    "import fs from 'fs';",
-    "import path from 'path';",
-    "import { fileURLToPath } from 'url';",
-    "import { analyze } from 'mcp-thorns';",
+    "const fs = require('fs');",
+    "const path = require('path');",
+    "const { analyze } = require('mcp-thorns');",
     "",
     "const SHELL_TOOLS = ['bash'];",
     "const SEARCH_TOOLS = ['glob', 'grep', 'list'];",
     "",
     "let thornsOutput = '';",
     "",
-    "export const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
+    "const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
     "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
     "  let agentRules = '';",
     "",
@@ -1199,6 +1186,8 @@ function ocPluginSource() {
     "    }",
     "  };",
     "};",
+    "",
+    "module.exports = { GmPlugin };",
   ];
   return lines.join('\n') + '\n';
 }
@@ -1206,10 +1195,9 @@ function ocPluginSource() {
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
   getPackageJsonFields() {
     return {
-      type: 'module',
-      main: 'gm.mjs',
-      bin: { 'gm-oc': './cli.mjs', 'gm-oc-install': './install.mjs' },
-      files: ['agents/', 'gm.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      main: 'gm.js',
+      bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
+      files: ['agents/', 'gm.js', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -1221,9 +1209,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-      type: 'module',
-      main: 'gm.mjs',
-      bin: { 'gm-oc': './cli.mjs', 'gm-oc-install': './install.mjs' },
+      main: 'gm.js',
+      bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-oc.git' },
       homepage: 'https://github.com/AnEntrypoint/gm-oc#readme',
@@ -1263,32 +1250,31 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GmPlugin } from './gm.mjs';\n`,
-      'gm.mjs': ocPluginSource(),
-      'cli.mjs': createOpenCodeInstallerScript(),
-      'install.mjs': createOpenCodeInstallScript(),
+      'index.js': `module.exports = { GmPlugin: require('./gm.js').GmPlugin };\n`,
+      'gm.js': ocPluginSource(),
+      'cli.js': createOpenCodeInstallerScript(),
+      'install.js': createOpenCodeInstallScript(),
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### One-liner (recommended)\n\nInstall directly from npm using bunx:\n\n\`\`\`bash\nbunx gm-oc@latest\n\`\`\`\n\nThis command will automatically install gm-oc to the correct location for your platform and restart OpenCode to activate.\n\n### Manual installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
 function kiloPluginSource() {
   const BT = '`';
   const lines = [
-    "import fs from 'fs';",
-    "import path from 'path';",
-    "import { fileURLToPath } from 'url';",
-    "import { analyze } from 'mcp-thorns';",
+    "const fs = require('fs');",
+    "const path = require('path');",
+    "const { analyze } = require('mcp-thorns');",
     "",
     "const SHELL_TOOLS = ['bash'];",
     "const SEARCH_TOOLS = ['glob', 'grep', 'list'];",
     "",
     "let thornsOutput = '';",
     "",
-    "export const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
-    "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
+    "const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
+    "  const pluginDir = __dirname;",
     "  let agentRules = '';",
     "",
     "  const loadAgentRules = () => {",
@@ -1384,6 +1370,8 @@ function kiloPluginSource() {
     "    }",
     "  };",
     "};",
+    "",
+    "module.exports = { GmPlugin };",
   ];
   return lines.join('\n') + '\n';
 }
@@ -1391,10 +1379,9 @@ function kiloPluginSource() {
 const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   getPackageJsonFields() {
     return {
-      type: 'module',
-      main: 'gm.mjs',
-      bin: { 'gm-kilo': './cli.mjs', 'gm-kilo-install': './install.mjs' },
-      files: ['agents/', 'gm.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      main: 'gm.js',
+      bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
+      files: ['agents/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -1406,9 +1393,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-      type: 'module',
-      main: 'gm.mjs',
-      bin: { 'gm-kilo': './cli.mjs', 'gm-kilo-install': './install.mjs' },
+      main: 'gm.js',
+      bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-kilo.git' },
       homepage: 'https://github.com/AnEntrypoint/gm-kilo#readme',
@@ -1416,7 +1402,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
-      files: ['agents/', 'gm.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      files: ['agents/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
       ...extraFields
     }, null, 2);
   },
@@ -1447,10 +1433,10 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GmPlugin } from './gm.mjs';\n`,
-      'gm.mjs': kiloPluginSource(),
-      'cli.mjs': createKiloInstallerScript(),
-      'install.mjs': createKiloInstallScript(),
+      'index.js': `module.exports = { GmPlugin: require('./gm.js').GmPlugin };\n`,
+      'gm.js': kiloPluginSource(),
+      'cli.js': createKiloInstallerScript(),
+      'install.js': createKiloInstallScript(),
     };
   },
   generateReadme(spec) {
@@ -1458,7 +1444,17 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
 
 ## Installation
 
-### Step 1: Clone the Plugin
+### One-liner (recommended)
+
+Install directly from npm using bunx:
+
+\`\`\`bash
+bunx gm-kilo@latest
+\`\`\`
+
+This command will automatically install gm-kilo to the correct location for your platform and restart Kilo to activate.
+
+### Manual installation
 
 **Windows and Unix:**
 \`\`\`bash
