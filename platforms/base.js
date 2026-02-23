@@ -87,7 +87,7 @@ class PlatformAdapter {
   }
 
   getAgentSourcePaths(agent) {
-    return [`agents/${agent}.md`, `glootie-${this.name}/agents/${agent}.md`, `glootie-cc/agents/${agent}.md`];
+    return [`agents/${agent}.md`, `gm-${this.name}/agents/${agent}.md`, `gm-cc/agents/${agent}.md`];
   }
 
   getSkillSourcePath(skillName) {

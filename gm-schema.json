@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "plugforge glootie.json Schema",
+  "title": "plugforge gm.json Schema",
   "description": "Configuration schema for plugforge plugin specifications",
   "type": "object",
   "required": ["name", "version", "author", "license"],
@@ -11,7 +11,7 @@
       "description": "Plugin name (used for repo naming)",
       "minLength": 1,
       "pattern": "^[a-z0-9-]+$",
-      "examples": ["gm", "glootie"]
+      "examples": ["gm", "gm"]
     },
     "version": {
       "type": "string",

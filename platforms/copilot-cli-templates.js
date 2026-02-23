@@ -1,10 +1,10 @@
 module.exports = {
   agentProfile: (pluginSpec) => `---
-name: glootie
+name: gm
 version: ${pluginSpec.version}
 description: ${pluginSpec.description || 'AI state machine for GitHub Copilot CLI'}
 author: ${pluginSpec.author || 'Glootie'}
-repository: https://github.com/AnEntrypoint/glootie-copilot-cli
+repository: https://github.com/AnEntrypoint/gm-copilot-cli
 license: MIT
 capabilities:
   - code_analysis
@@ -46,7 +46,7 @@ Auto-activates on prompt submission.
 
 ## State Management
 
-State in \`~/.gh/extensions/glootie/state.json\`.
+State in \`~/.gh/extensions/gm/state.json\`.
 
 ## Configuration
 
@@ -54,7 +54,7 @@ State in \`~/.gh/extensions/glootie/state.json\`.
 
 \`\`\`json
 {
-  "glootie": {
+  "gm": {
     "enabled": true,
     "auto_activate": true,
     "log_level": "info"
@@ -71,13 +71,13 @@ gh copilot run "generate tests"
 \`\`\`
 `,
 
-  manifest: (pluginSpec) => `name: glootie
+  manifest: (pluginSpec) => `name: gm
 version: ${pluginSpec.version}
 description: ${pluginSpec.description || 'AI state machine for Copilot CLI'}
 author: ${pluginSpec.author || 'Glootie'}
 
 repository:
-  url: https://github.com/AnEntrypoint/glootie-copilot-cli
+  url: https://github.com/AnEntrypoint/gm-copilot-cli
   type: git
 
 license: MIT
@@ -92,13 +92,13 @@ activation:
   auto_activate: true
 
 commands:
-  - name: glootie:activate
+  - name: gm:activate
     description: Activate state machine
-  - name: glootie:analyze
+  - name: gm:analyze
     description: Analyze code
-  - name: glootie:search
+  - name: gm:search
     description: Semantic search
-  - name: glootie:refactor
+  - name: gm:refactor
     description: Refactor code
 
 api:
@@ -135,8 +135,8 @@ const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
 
 const commands = {
   help() {
-    console.log(\`glootie v\${pkg.version} - AI State Machine Agent\`);
-    console.log('Usage: glootie [command]');
+    console.log(\`gm v\${pkg.version} - AI State Machine Agent\`);
+    console.log('Usage: gm [command]');
     console.log('Commands:');
     console.log('  help      Show this help');
     console.log('  version   Show version');

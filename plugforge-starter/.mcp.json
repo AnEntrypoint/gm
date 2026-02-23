@@ -4,7 +4,7 @@
     "dev": {
       "command": "bunx",
       "args": [
-        "mcp-glootie@latest"
+        "mcp-gm@latest"
       ],
       "timeout": 360000
     },

@@ -17,8 +17,8 @@ class JetBrainsAdapter extends ExtensionAdapter {
     const structure = {
       'plugin.xml': this.generatePluginXml(pluginSpec),
       'build.gradle.kts': this.generateBuildGradle(pluginSpec),
-      'src/main/kotlin/com/glootie/GlootiePlugin.kt': this.generatePluginClass(),
-      'src/main/kotlin/com/glootie/GlootieToolWindow.kt': this.generateToolWindow(),
+      'src/main/kotlin/com/gm/GlootiePlugin.kt': this.generatePluginClass(),
+      'src/main/kotlin/com/gm/GlootieToolWindow.kt': this.generateToolWindow(),
       'src/main/resources/META-INF/plugin.xml': this.generatePluginXml(pluginSpec),
       'README.md': this.generateReadme(),
       'docs/gm.md': readFile(this.getAgentSourcePaths('gm')),
@@ -49,7 +49,7 @@ class JetBrainsAdapter extends ExtensionAdapter {
   id("org.jetbrains.kotlin.jvm") version "1.9.22"
 }
 
-group = "com.glootie"
+group = "com.gm"
 version = "${pluginSpec.version}"
 
 repositories {
@@ -80,7 +80,7 @@ intellij {
   }
 
   generatePluginClass() {
-    return `package com.glootie
+    return `package com.gm
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
@@ -119,7 +119,7 @@ class GlootieApplicationService {
   }
 
   generateToolWindow() {
-    return `package com.glootie
+    return `package com.gm
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow

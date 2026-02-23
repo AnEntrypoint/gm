@@ -10,7 +10,7 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_
 const ensureGitignore = () => {
   if (!projectDir) return;
   const gitignorePath = path.join(projectDir, '.gitignore');
-  const entry = '.glootie-stop-verified';
+  const entry = '.gm-stop-verified';
   try {
     let content = '';
     if (fs.existsSync(gitignorePath)) {

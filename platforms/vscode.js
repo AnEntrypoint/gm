@@ -59,13 +59,13 @@ class GlootieExtension {
 
   registerCommands() {
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('glootie.activate', () => {
+      vscode.commands.registerCommand('gm.activate', () => {
         vscode.window.showInformationMessage('Glootie activated');
       }),
-      vscode.commands.registerCommand('glootie.deactivate', () => {
+      vscode.commands.registerCommand('gm.deactivate', () => {
         vscode.window.showInformationMessage('Glootie deactivated');
       }),
-      vscode.commands.registerCommand('glootie.showState', () => {
+      vscode.commands.registerCommand('gm.showState', () => {
         vscode.window.showInformationMessage('Glootie state machine');
       })
     );
@@ -74,7 +74,7 @@ class GlootieExtension {
   registerViews() {}
 
   setupConfiguration() {
-    const config = vscode.workspace.getConfiguration('glootie');
+    const config = vscode.workspace.getConfiguration('gm');
     this.isActive = config.get('autoActivate', true);
   }
 
@@ -93,16 +93,16 @@ class GlootieExtension {
   }
 }
 
-let glootie;
+let gm;
 
 function activate(context) {
-  glootie = new GlootieExtension(context);
-  glootie.activate();
+  gm = new GlootieExtension(context);
+  gm.activate();
 }
 
 function deactivate() {
-  if (glootie) {
-    glootie.deactivate();
+  if (gm) {
+    gm.deactivate();
   }
 }
 
@@ -158,9 +158,9 @@ Configure via VSCode settings (\`settings.json\`):
 
 \`\`\`json
 {
-  "glootie.enabled": true,
-  "glootie.autoActivate": true,
-  "glootie.logLevel": "info"
+  "gm.enabled": true,
+  "gm.autoActivate": true,
+  "gm.logLevel": "info"
 }
 \`\`\`
 

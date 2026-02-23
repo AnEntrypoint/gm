@@ -9,7 +9,7 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 const getCounterPath = () => {
   const hash = crypto.createHash('md5').update(projectDir).digest('hex');
-  return path.join('/tmp', `glootie-git-block-counter-${hash}.json`);
+  return path.join('/tmp', `gm-git-block-counter-${hash}.json`);
 };
 
 const readCounter = () => {

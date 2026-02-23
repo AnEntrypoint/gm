@@ -1,10 +1,10 @@
 {
-  "name": "glootie-builder",
+  "name": "gm-builder",
   "version": "1.0.0",
-  "description": "Unified multi-plugin builder for glootie plugins across Claude Code, Gemini CLI, and OpenCode",
+  "description": "Unified multi-plugin builder for gm plugins across Claude Code, Gemini CLI, and OpenCode",
   "main": "cli.js",
   "bin": {
-    "glootie-builder": "./cli.js"
+    "gm-builder": "./cli.js"
   },
   "scripts": {
     "build": "node cli.js plugforge-starter ./build",
@@ -12,7 +12,6 @@
     "verify": "node cli.js verify all"
   },
   "keywords": [
-    "glootie",
     "builder",
     "multi-plugin",
     "claude-code",
@@ -23,9 +22,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/glootie-builder.git"
+    "url": "https://github.com/AnEntrypoint/gm-builder.git"
   },
-  "homepage": "https://github.com/AnEntrypoint/glootie-builder#readme",
+  "homepage": "https://github.com/AnEntrypoint/gm-builder#readme",
   "engines": {
     "node": ">=16.0.0"
   }

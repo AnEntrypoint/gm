@@ -8,7 +8,7 @@ plugforge generates 9 platform implementations from a single convention-driven s
 
 plugforge uses convention-driven discovery instead of build-time configuration:
 
-- **Single source** in `plugforge-starter/`: glootie.json, agents/, skills/, hooks/
+- **Single source** in `plugforge-starter/`: gm.json, agents/, skills/, hooks/
 - **Adapters transform** source to platform-specific format (package.json, Cargo.toml, build.gradle.kts, etc)
 - **No configuration files** - directory structure defines behavior
 - **Adding a skill** automatically appears in all 9 outputs
@@ -63,7 +63,7 @@ All adapters use these methods. Template changes propagate automatically.
 
 **Source** (`plugforge-starter/`):
 ```
-glootie.json              # Single spec
+gm.json              # Single spec
 agents/gm.md              # Single unified agent with all behavioral rules
 hooks/*.js                # Platform-agnostic hooks
 ```
@@ -71,8 +71,8 @@ hooks/*.js                # Platform-agnostic hooks
 **Architecture Note**: All 10 skills are merged into agents/gm.md as single sections. Separate skill files were deleted to eliminate per-invocation token cost. Each skill section is substantial (10+ lines) to justify inclusion. This consolidation reduces agent startup overhead dramatically compared to invoking individual skills.
 
 **Output**: 9 auto-generated GitHub repositories
-- 5 CLI platforms: glootie-cc, glootie-gc, glootie-oc, glootie-codex, glootie-copilot-cli
-- 4 IDE extensions: glootie-vscode, glootie-cursor, glootie-zed, glootie-jetbrains
+- 5 CLI platforms: gm-cc, gm-gc, gm-oc, gm-codex, gm-copilot-cli
+- 4 IDE extensions: gm-vscode, gm-cursor, gm-zed, gm-jetbrains
 
 Each built by GitHub Actions from `plugforge-starter/` on every commit.
 
@@ -209,15 +209,15 @@ The framework is explicit through convention, not magic:
 - **No environment variables beyond platform roots**: XDG_CONFIG_HOME, CLAUDE_PLUGIN_ROOT, etc
 - **No special casing**: All adapters behave same way for same inputs
 
-## glootie-cc v2.1.0 Deployment
+## gm-cc v2.1.0 Deployment
 
 ### Completed Preparation
 
-Version bumped from 2.0.4 to 2.1.0 in `/home/user/plugforge/build/glootie-cc/package.json`. All required fields verified:
-- name: glootie-cc
+Version bumped from 2.0.4 to 2.1.0 in `/home/user/plugforge/build/gm-cc/package.json`. All required fields verified:
+- name: gm-cc
 - version: 2.1.0
 - description, author, license, homepage, bugs, repository, engines
-- bin: { "glootie-cc": "./cli.js", "glootie-install": "./install.js" }
+- bin: { "gm-cc": "./cli.js", "gm-install": "./install.js" }
 - files: includes all necessary artifacts
 
 README.md contains complete documentation with:
@@ -236,34 +236,34 @@ README.md contains complete documentation with:
 
 New Feature: Repository Installation allows direct npm installation:
 ```bash
-npm install glootie-cc
-npx glootie install
+npm install gm-cc
+npx gm install
 ```
 
 ### Remaining Deployment Steps (External Execution Required)
 
 The following operations must be executed in a terminal outside Claude Code (the pre-tool-use-hook prevents shell execution as a security measure):
 
-1. **Package**: `cd /home/user/plugforge/build/glootie-cc && npm pack`
-   - Creates glootie-cc-2.1.0.tgz
+1. **Package**: `cd /home/user/plugforge/build/gm-cc && npm pack`
+   - Creates gm-cc-2.1.0.tgz
    - Verify contents include: cli.js, install.js, agents/gm.md, hooks/, .mcp.json, README.md, package.json
 
-2. **Tag Release**: `cd /home/user/plugforge && git tag -a v2.1.0 -m "Release glootie-cc v2.1.0 with repository installation feature"`
+2. **Tag Release**: `cd /home/user/plugforge && git tag -a v2.1.0 -m "Release gm-cc v2.1.0 with repository installation feature"`
    - Push: `git push origin v2.1.0`
 
-3. **Publish**: `cd /home/user/plugforge/build/glootie-cc && npm publish`
-   - Verify at: https://www.npmjs.com/package/glootie-cc
+3. **Publish**: `cd /home/user/plugforge/build/gm-cc && npm publish`
+   - Verify at: https://www.npmjs.com/package/gm-cc
 
-4. **Install Globally**: `npm install -g glootie-cc@2.1.0`
-   - Test: `glootie-cc --version` (should return 2.1.0)
-   - Test: `glootie-install --help` (should show usage)
+4. **Install Globally**: `npm install -g gm-cc@2.1.0`
+   - Test: `gm-cc --version` (should return 2.1.0)
+   - Test: `gm-install --help` (should show usage)
 
 5. **Test Fresh Install**:
-   - `mkdir /tmp/glootie-test-final && cd /tmp/glootie-test-final`
-   - `npx glootie-cc install`
+   - `mkdir /tmp/gm-test-final && cd /tmp/gm-test-final`
+   - `npx gm-cc install`
    - Verify files: agents/gm.md, hooks/, .mcp.json, .gitignore
    - Test .prd enforcement: create .prd with items, verify blocking
    - Remove items and verify empty .prd allows exit
-   - Cleanup: `rm -rf /tmp/glootie-test-final`
+   - Cleanup: `rm -rf /tmp/gm-test-final`
 
 Status: **Ready for deployment** (preparation complete, awaiting external command execution)

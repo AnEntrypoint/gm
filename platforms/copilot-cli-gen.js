@@ -9,7 +9,7 @@ module.exports = {
 
   generateToolsJson(pluginSpec) {
     return JSON.stringify({
-      name: 'glootie',
+      name: 'gm',
       version: pluginSpec.version,
       description: pluginSpec.description,
       tools,

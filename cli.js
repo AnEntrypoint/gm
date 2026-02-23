@@ -9,18 +9,18 @@ const main = async () => {
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     console.log(`
-glootie-builder - Convention-driven multi-platform plugin builder
+gm-builder - Convention-driven multi-platform plugin builder
 
 Usage:
-  glootie-builder <plugin-dir> [output-dir]
+  gm-builder <plugin-dir> [output-dir]
 
 Arguments:
-  plugin-dir    Path to plugin directory (must contain glootie.json)
-  output-dir    Output directory (default: ./glootie-build)
+  plugin-dir    Path to plugin directory (must contain gm.json)
+  output-dir    Output directory (default: ./gm-build)
 
 Examples:
-  glootie-builder ./my-plugin
-  glootie-builder ./my-plugin /tmp/build
+  gm-builder ./my-plugin
+  gm-builder ./my-plugin /tmp/build
 
 Description:
   Automatically generates 8 platform outputs from a single plugin directory:
@@ -35,7 +35,7 @@ Description:
 
 Plugin Directory Structure:
   plugin/
-  ├── glootie.json          # Single truth source
+  ├── gm.json          # Single truth source
   ├── agents/               # Auto-detected
   │   ├── gm.md
   │   ├── codesearch.md
@@ -54,17 +54,17 @@ Zero configuration required. Just create the plugin structure and run!
   }
 
   const pluginDir = path.resolve(args[0]);
-  const outputDir = path.resolve(args[1] || './glootie-build');
+  const outputDir = path.resolve(args[1] || './gm-build');
 
   if (!fs.existsSync(pluginDir)) {
     console.error('Plugin directory not found:', pluginDir);
     process.exit(1);
   }
 
-  const glootieJsonPath = path.join(pluginDir, 'glootie.json');
+  const gmJsonPath = path.join(pluginDir, 'gm.json');
 
-  if (!fs.existsSync(glootieJsonPath)) {
-    console.error('glootie.json not found in:', pluginDir);
+  if (!fs.existsSync(gmJsonPath)) {
+    console.error('gm.json not found in:', pluginDir);
     process.exit(1);
   }
 

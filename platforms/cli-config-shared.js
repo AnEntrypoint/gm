@@ -68,7 +68,7 @@ function install() {
     return;
   }
 
-  const geminiDir = path.join(projectRoot, '.gemini', 'extensions', 'glootie-gc');
+  const geminiDir = path.join(projectRoot, '.gemini', 'extensions', 'gm-gc');
   const sourceDir = __dirname;
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(geminiDir, 'agents'));
@@ -143,7 +143,7 @@ function install() {
     return;
   }
 
-  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'glootie');
+  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm');
   const sourceDir = __dirname;
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
@@ -321,7 +321,7 @@ const destDir = process.platform === 'win32'
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
 
-console.log(isUpgrade ? 'Upgrading glootie-gc...' : 'Installing glootie-gc...');
+console.log(isUpgrade ? 'Upgrading gm-gc...' : 'Installing gm-gc...');
 
 try {
   fs.mkdirSync(destDir, { recursive: true });
@@ -350,7 +350,7 @@ try {
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-  console.log(\`✓ glootie-gc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log(\`✓ gm-gc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart Gemini CLI to activate.');
 } catch (e) {
   console.error('Installation failed:', e.message);
@@ -377,7 +377,7 @@ const destDir = process.platform === 'win32'
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
 
-console.log(isUpgrade ? 'Upgrading glootie-oc...' : 'Installing glootie-oc...');
+console.log(isUpgrade ? 'Upgrading gm-oc...' : 'Installing gm-oc...');
 
 try {
   fs.mkdirSync(destDir, { recursive: true });
@@ -385,7 +385,7 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['index.js', 'index.js'],
-    ['glootie.mjs', 'glootie.mjs'],
+    ['gm.mjs', 'gm.mjs'],
     ['opencode.json', 'opencode.json'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
@@ -413,7 +413,7 @@ try {
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-  console.log(\`✓ glootie-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart OpenCode to activate.');
 } catch (e) {
   console.error('Installation failed:', e.message);
@@ -440,7 +440,7 @@ const destDir = process.platform === 'win32'
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
 
-console.log(isUpgrade ? 'Upgrading glootie-kilo...' : 'Installing glootie-kilo...');
+console.log(isUpgrade ? 'Upgrading gm-kilo...' : 'Installing gm-kilo...');
 
 try {
   fs.mkdirSync(destDir, { recursive: true });
@@ -448,7 +448,7 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['index.js', 'index.js'],
-    ['glootie.mjs', 'glootie.mjs'],
+    ['gm.mjs', 'gm.mjs'],
     ['kilocode.json', 'kilocode.json'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
@@ -476,7 +476,7 @@ try {
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-  console.log(\`✓ glootie-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart Kilo CLI to activate.');
 } catch (e) {
   console.error('Installation failed:', e.message);
@@ -497,7 +497,7 @@ const destDir = path.join(homeDir, '.claude');
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
 
-console.log(isUpgrade ? 'Upgrading glootie-cc...' : 'Installing glootie-cc...');
+console.log(isUpgrade ? 'Upgrading gm-cc...' : 'Installing gm-cc...');
 
 try {
   fs.mkdirSync(destDir, { recursive: true });
@@ -524,7 +524,7 @@ try {
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-  console.log(\`✓ glootie-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log(\`✓ gm-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart Claude Code to activate.');
 } catch (e) {
   console.error('Installation failed:', e.message);
@@ -600,7 +600,7 @@ function safeCopyDirectory(src, dst) {
 function updateGitignore(projectRoot) {
   try {
     const gitignorePath = path.join(projectRoot, '.gitignore');
-    const entry = '.glootie-stop-verified';
+    const entry = '.gm-stop-verified';
 
     let content = '';
     if (fs.existsSync(gitignorePath)) {
@@ -655,13 +655,13 @@ const os = require('os');
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
 const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'glootie')
-  : path.join(homeDir, '.codex', 'plugins', 'glootie');
+  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
+  : path.join(homeDir, '.codex', 'plugins', 'gm');
 
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
 
-console.log(isUpgrade ? 'Upgrading glootie-codex...' : 'Installing glootie-codex...');
+console.log(isUpgrade ? 'Upgrading gm-codex...' : 'Installing gm-codex...');
 
 try {
   fs.mkdirSync(destDir, { recursive: true });
@@ -689,7 +689,7 @@ try {
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-  console.log(\`✓ glootie-codex \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log(\`✓ gm-codex \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart Codex to activate.');
 } catch (e) {
   console.error('Installation failed:', e.message);
@@ -707,19 +707,19 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-cc',
+      name: 'gm-cc',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-cc.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-cc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-cc/issues' },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-cc.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-cc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-cc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      bin: { 'glootie-cc': './cli.js', 'glootie-install': './install.js' },
+      bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
-      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
+      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
       scripts: pluginSpec.scripts,
       ...extraFields
@@ -728,7 +728,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   getPackageJsonFields() {
     return {
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
-      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'glootie'],
+      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
   },
@@ -742,7 +742,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     };
   },
   generateReadme(spec) {
-    const repoName = 'glootie-cc';
+    const repoName = 'gm-cc';
     return `# ${repoName} for Claude Code
 
 ## Installation
@@ -768,7 +768,7 @@ For development or project-specific customization, install ${repoName} directly 
 
 \`\`\`bash
 cd /path/to/your/project
-npm install ${repoName} && npx glootie install
+npm install ${repoName} && npx gm install
 \`\`\`
 
 This installation method is ideal when you need to:
@@ -779,17 +779,17 @@ This installation method is ideal when you need to:
 
 #### Installation Command Breakdown
 
-The \`npm install ${repoName} && npx glootie install\` command performs two steps:
+The \`npm install ${repoName} && npx gm install\` command performs two steps:
 
 1. **\`npm install ${repoName}\`** - Downloads the ${repoName} package and stores it in your project's \`node_modules/\` directory
-2. **\`npx glootie install\`** - Runs the glootie installer that copies configuration files into your Claude Code plugin directory
+2. **\`npx gm install\`** - Runs the gm installer that copies configuration files into your Claude Code plugin directory
 
 **Expected output:**
 \`\`\`
 $ npm install ${repoName}
 added 1 package in 1.2s
 
-$ npx glootie install
+$ npx gm install
 Installing ${repoName}...
 ✓ Created .claude/ directory
 ✓ Copied agents/gm.md
@@ -799,7 +799,7 @@ Installing ${repoName}...
 
 #### Installed File Structure (Project-Specific)
 
-After running \`npx glootie install\`, your project will have:
+After running \`npx gm install\`, your project will have:
 
 \`\`\`
 .claude/
@@ -900,7 +900,7 @@ npm install -g ${repoName}@latest
 npm update ${repoName}
 
 # Re-run the installer to update .claude/ directory
-npx glootie install
+npx gm install
 
 # Or manually copy updated files
 cp -r node_modules/${repoName}/agents/* .claude/agents/
@@ -1014,17 +1014,17 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-gc',
+      name: 'gm-gc',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-gc.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-gc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-gc/issues' },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-gc.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-gc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-gc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      bin: { 'glootie-gc': './cli.js', 'glootie-gc-install': './install.js' },
+      bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
@@ -1032,7 +1032,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   },
   getPackageJsonFields() {
     return {
-      bin: { 'glootie-gc': './cli.js', 'glootie-gc-install': './install.js' },
+      bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
@@ -1046,7 +1046,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     return `node \${extensionPath}/hooks/${hookFile}`;
   },
   generateReadme(spec) {
-    return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/glootie-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
+    return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
   }
 });
 
@@ -1060,20 +1060,20 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-codex',
+      name: 'gm-codex',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
       main: 'plugin.json',
-      bin: { 'glootie-codex': './cli.js', 'glootie-codex-install': './install.js' },
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-codex.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-codex#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-codex/issues' },
+      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-codex.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-codex#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-codex/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
-      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie'],
+      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
     }, null, 2);
@@ -1082,13 +1082,13 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   getPackageJsonFields() {
     return {
       main: 'plugin.json',
-      bin: { 'glootie-codex': './cli.js', 'glootie-codex-install': './install.js' },
+      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
-      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'glootie']
+      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/glootie-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   },
   getAdditionalFiles(spec) {
     return {
@@ -1176,7 +1176,7 @@ function ocPluginSource() {
     "        const base = path.basename(fp).toLowerCase();",
     "        const inSkills = fp.includes('/skills/');",
     "        if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&",
-    "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('glootie') && !inSkills) {",
+    "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('gm') && !inSkills) {",
     "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GLOOTIE.md, and README.md are maintained.');",
     "        }",
     "      }",
@@ -1207,27 +1207,27 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
   getPackageJsonFields() {
     return {
       type: 'module',
-      main: 'glootie.mjs',
-      bin: { 'glootie-oc': './cli.mjs', 'glootie-oc-install': './install.mjs' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
+      main: 'gm.mjs',
+      bin: { 'gm-oc': './cli.mjs', 'gm-oc-install': './install.mjs' },
+      files: ['agents/', 'gm.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-oc',
+      name: 'gm-oc',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
       type: 'module',
-      main: 'glootie.mjs',
-      bin: { 'glootie-oc': './cli.mjs', 'glootie-oc-install': './install.mjs' },
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'glootie'],
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-oc.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-oc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-oc/issues' },
+      main: 'gm.mjs',
+      bin: { 'gm-oc': './cli.mjs', 'gm-oc-install': './install.mjs' },
+      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-oc.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-oc#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-oc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
@@ -1236,7 +1236,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
-    // Convert MCP config from glootie.json format (command + args) to opencode format (command array)
+    // Convert MCP config from gm.json format (command + args) to opencode format (command array)
     const mcpServers = {};
     if (pluginSpec.mcp) {
       for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
@@ -1258,19 +1258,19 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
       $schema: 'https://opencode.ai/config.json',
       default_agent: 'gm',
       mcp: mcpServers,
-      plugin: ['glootie-oc']
+      plugin: ['gm-oc']
     }, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
-      'glootie.mjs': ocPluginSource(),
+      'index.js': `export { GlootiePlugin } from './gm.mjs';\n`,
+      'gm.mjs': ocPluginSource(),
       'cli.mjs': createOpenCodeInstallerScript(),
       'install.mjs': createOpenCodeInstallScript(),
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/glootie-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/glootie-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### Global (recommended)\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
@@ -1366,7 +1366,7 @@ function kiloPluginSource() {
     "        const base = path.basename(fp).toLowerCase();",
     "        const inSkills = fp.includes('/skills/');",
     "        if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&",
-    "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('glootie') && !inSkills) {",
+    "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('gm') && !inSkills) {",
     "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GLOOTIE.md, and README.md are maintained.');",
     "        }",
     "      }",
@@ -1392,31 +1392,31 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   getPackageJsonFields() {
     return {
       type: 'module',
-      main: 'glootie.mjs',
-      bin: { 'glootie-kilo': './cli.mjs', 'glootie-kilo-install': './install.mjs' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
-      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
+      main: 'gm.mjs',
+      bin: { 'gm-kilo': './cli.mjs', 'gm-kilo-install': './install.mjs' },
+      files: ['agents/', 'gm.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
-      name: 'glootie-kilo',
+      name: 'gm-kilo',
       version: pluginSpec.version,
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
       type: 'module',
-      main: 'glootie.mjs',
-      bin: { 'glootie-kilo': './cli.mjs', 'glootie-kilo-install': './install.mjs' },
-      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'glootie'],
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/glootie-kilo.git' },
-      homepage: 'https://github.com/AnEntrypoint/glootie-kilo#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/glootie-kilo/issues' },
+      main: 'gm.mjs',
+      bin: { 'gm-kilo': './cli.mjs', 'gm-kilo-install': './install.mjs' },
+      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
+      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-kilo.git' },
+      homepage: 'https://github.com/AnEntrypoint/gm-kilo#readme',
+      bugs: { url: 'https://github.com/AnEntrypoint/gm-kilo/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
-      files: ['agents/', 'glootie.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
+      files: ['agents/', 'gm.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.mjs', 'install.mjs'],
       ...extraFields
     }, null, 2);
   },
@@ -1442,13 +1442,13 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       $schema: 'https://kilo.ai/config.json',
       default_agent: 'gm',
       mcp: mcpServers,
-      plugin: ['glootie-kilo']
+      plugin: ['gm-kilo']
     }, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GlootiePlugin } from './glootie.mjs';\n`,
-      'glootie.mjs': kiloPluginSource(),
+      'index.js': `export { GlootiePlugin } from './gm.mjs';\n`,
+      'gm.mjs': kiloPluginSource(),
       'cli.mjs': createKiloInstallerScript(),
       'install.mjs': createKiloInstallScript(),
     };
@@ -1462,12 +1462,12 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
 
 **Windows and Unix:**
 \`\`\`bash
-git clone https://github.com/AnEntrypoint/glootie-kilo ~/.config/kilo/plugin && cd ~/.config/kilo/plugin && bun install
+git clone https://github.com/AnEntrypoint/gm-kilo ~/.config/kilo/plugin && cd ~/.config/kilo/plugin && bun install
 \`\`\`
 
 **Windows PowerShell:**
 \`\`\`powershell
-git clone https://github.com/AnEntrypoint/glootie-kilo "\\\$env:APPDATA\\kilo\\plugin" && cd "\\\$env:APPDATA\\kilo\\plugin" && bun install
+git clone https://github.com/AnEntrypoint/gm-kilo "\\\$env:APPDATA\\kilo\\plugin" && cd "\\\$env:APPDATA\\kilo\\plugin" && bun install
 \`\`\`
 
 ### Step 2: Configure MCP Servers
@@ -1480,7 +1480,7 @@ Kilo uses the OpenCode configuration format. Create or update \`~/.config/kilo/o
   "mcp": {
     "dev": {
       "type": "local",
-      "command": ["bunx", "mcp-glootie@latest"],
+      "command": ["bunx", "mcp-gm@latest"],
       "timeout": 360000,
       "enabled": true
     },
@@ -1540,7 +1540,7 @@ You should see \`dev\` and \`code-search\` marked as connected.
 
 **Plugin not loading:**
 - Verify plugin path in \`kilocode.json\` is absolute (e.g., \`/home/user/.config/kilo/plugin\`, not relative)
-- Check \`index.js\` and \`glootie.mjs\` exist in the plugin directory
+- Check \`index.js\` and \`gm.mjs\` exist in the plugin directory
 - Run \`bun install\` in the plugin directory to ensure dependencies are installed
 
 The plugin activates automatically on session start once MCP servers are configured.
