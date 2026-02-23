@@ -116,7 +116,7 @@ module.exports = { activate, deactivate };
   }
 
   generateReadme() {
-    return `# Glootie Extension for Cursor IDE
+    return `# GM Extension for Cursor IDE
 
 Custom AI plugin for Cursor IDE with multi-platform support.
 

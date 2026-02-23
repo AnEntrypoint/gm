@@ -3,7 +3,7 @@ module.exports = {
 name: gm
 version: ${pluginSpec.version}
 description: ${pluginSpec.description || 'AI state machine for GitHub Copilot CLI'}
-author: ${pluginSpec.author || 'Glootie'}
+author: ${pluginSpec.author || 'GM'}
 repository: https://github.com/AnEntrypoint/gm-copilot-cli
 license: MIT
 capabilities:
@@ -20,7 +20,7 @@ models:
   - claude-opus-4-1
 ---
 
-# Glootie State Machine Agent
+# GM State Machine Agent
 
 Autonomous AI-powered state machine for GitHub Copilot CLI.
 
@@ -74,7 +74,7 @@ gh copilot run "generate tests"
   manifest: (pluginSpec) => `name: gm
 version: ${pluginSpec.version}
 description: ${pluginSpec.description || 'AI state machine for Copilot CLI'}
-author: ${pluginSpec.author || 'Glootie'}
+author: ${pluginSpec.author || 'GM'}
 
 repository:
   url: https://github.com/AnEntrypoint/gm-copilot-cli

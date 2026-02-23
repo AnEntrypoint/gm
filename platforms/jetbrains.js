@@ -17,8 +17,8 @@ class JetBrainsAdapter extends ExtensionAdapter {
     const structure = {
       'plugin.xml': this.generatePluginXml(pluginSpec),
       'build.gradle.kts': this.generateBuildGradle(pluginSpec),
-      'src/main/kotlin/com/gm/GlootiePlugin.kt': this.generatePluginClass(),
-      'src/main/kotlin/com/gm/GlootieToolWindow.kt': this.generateToolWindow(),
+      'src/main/kotlin/com/gm/GmPlugin.kt': this.generatePluginClass(),
+      'src/main/kotlin/com/gm/GmToolWindow.kt': this.generateToolWindow(),
       'src/main/resources/META-INF/plugin.xml': this.generatePluginXml(pluginSpec),
       'README.md': this.generateReadme(),
       'docs/gm.md': readFile(this.getAgentSourcePaths('gm')),
@@ -71,7 +71,7 @@ dependencies {
 }
 
 intellij {
-  pluginName = "Glootie"
+  pluginName = "GM"
   version = "2024.1.0"
   type = "IC"
   updateSinceUntilBuild = false
@@ -86,7 +86,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 
 @Service(Service.Level.PROJECT)
-class GlootieService(val project: Project) {
+class GMService(val project: Project) {
   var isActive = false
   var state = mutableMapOf<String, Any>()
 
@@ -106,7 +106,7 @@ class GlootieService(val project: Project) {
 }
 
 @Service(Service.Level.APP)
-class GlootieApplicationService {
+class GMApplicationService {
   var settings = mutableMapOf(
     "enabled" to true,
     "autoActivate" to true,
@@ -128,11 +128,11 @@ import com.intellij.ui.content.ContentFactory
 import javax.swing.JLabel
 import javax.swing.JPanel
 
-class GlootieToolWindowFactory : ToolWindowFactory {
+class GmToolWindowFactory : ToolWindowFactory {
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
     val panel = JPanel()
-    panel.add(JLabel("Glootie State Machine"))
-    val content = ContentFactory.getInstance().createContent(panel, "Glootie State", false)
+    panel.add(JLabel("GM State Machine"))
+    val content = ContentFactory.getInstance().createContent(panel, "GM State", false)
     toolWindow.contentManager.addContent(content)
   }
   override fun shouldBeAvailable(project: Project) = true
@@ -140,7 +140,7 @@ class GlootieToolWindowFactory : ToolWindowFactory {
   }
 
   generateReadme() {
-    return `# Glootie for JetBrains IDEs
+    return `# GM for JetBrains IDEs
 
 AI state machine plugin for all JetBrains IDEs with semantic code search.
 
@@ -159,7 +159,7 @@ AI state machine plugin for all JetBrains IDEs with semantic code search.
 From Plugin Marketplace:
 1. Open IDE
 2. Settings → Plugins → Marketplace
-3. Search "Glootie"
+3. Search "GM"
 4. Install and restart
 
 ## Features
@@ -192,14 +192,14 @@ Your IDE uses **semantic code search** - describe what you're looking for in pla
 
 ## Quick Start
 
-1. Tools → Glootie → Activate
+1. Tools → GM → Activate
 2. Ctrl+Alt+Shift+G (Show State)
-3. Right-click → Glootie → Analyze
+3. Right-click → GM → Analyze
 4. Use semantic code search: type "Find [what you're looking for]" in queries
 
 ## Configuration
 
-Settings → Tools → Glootie
+Settings → Tools → GM
 
 ## License
 

@@ -1111,7 +1111,7 @@ function ocPluginSource() {
     "",
     "let thornsOutput = '';",
     "",
-    "export const GlootiePlugin = async ({ project, client, $, directory, worktree }) => {",
+    "export const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
     "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
     "  let agentRules = '';",
     "",
@@ -1177,7 +1177,7 @@ function ocPluginSource() {
     "        const inSkills = fp.includes('/skills/');",
     "        if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&",
     "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('gm') && !inSkills) {",
-    "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GLOOTIE.md, and README.md are maintained.');",
+    "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GM.md, and README.md are maintained.');",
     "        }",
     "      }",
     "    },",
@@ -1203,7 +1203,7 @@ function ocPluginSource() {
   return lines.join('\n') + '\n';
 }
 
-const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
+const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
   getPackageJsonFields() {
     return {
       type: 'module',
@@ -1263,7 +1263,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GLOOTIE.md', {
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GlootiePlugin } from './gm.mjs';\n`,
+      'index.js': `export { GmPlugin } from './gm.mjs';\n`,
       'gm.mjs': ocPluginSource(),
       'cli.mjs': createOpenCodeInstallerScript(),
       'install.mjs': createOpenCodeInstallScript(),
@@ -1287,7 +1287,7 @@ function kiloPluginSource() {
     "",
     "let thornsOutput = '';",
     "",
-    "export const GlootiePlugin = async ({ project, client, $, directory, worktree }) => {",
+    "export const GmPlugin = async ({ project, client, $, directory, worktree }) => {",
     "  const pluginDir = path.dirname(fileURLToPath(import.meta.url));",
     "  let agentRules = '';",
     "",
@@ -1367,7 +1367,7 @@ function kiloPluginSource() {
     "        const inSkills = fp.includes('/skills/');",
     "        if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&",
     "            !base.startsWith('claude') && !base.startsWith('readme') && !base.startsWith('gm') && !inSkills) {",
-    "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GLOOTIE.md, and README.md are maintained.');",
+    "          throw new Error('Cannot create documentation files. Only CLAUDE.md, GM.md, and README.md are maintained.');",
     "        }",
     "      }",
     "    },",
@@ -1447,7 +1447,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   },
   getAdditionalFiles(pluginSpec) {
     return {
-      'index.js': `export { GlootiePlugin } from './gm.mjs';\n`,
+      'index.js': `export { GmPlugin } from './gm.mjs';\n`,
       'gm.mjs': kiloPluginSource(),
       'cli.mjs': createKiloInstallerScript(),
       'install.mjs': createKiloInstallScript(),
