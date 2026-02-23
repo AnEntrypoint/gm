@@ -224,7 +224,7 @@ README.md contains complete documentation with:
 - Plugin Marketplace Installation instructions
 - Repository Installation with command breakdown
 - File Installation Locations and structure
-- Environment Setup (bunx requirement)
+- Environment Setup (bun x requirement)
 - MCP Server Configuration (.mcp.json)
 - Configuration instructions (Option 1 & 2)
 - Hook enablement guide

@@ -66,12 +66,12 @@ The search will find permission validations, role checks, authentication guards 
 When exploring unfamiliar code, finding similar patterns, understanding integrations, or locating feature implementations across your codebase.`;
   outputs.push(codeSearchContext);
 
-  // 3. Run mcp-thorns (bunx with npx fallback)
+  // 3. Run mcp-thorns (bun x with npx fallback)
   if (projectDir && fs.existsSync(projectDir)) {
     try {
       let thornOutput;
       try {
-        thornOutput = execSync(`bunx mcp-thorns@latest`, {
+        thornOutput = execSync(`bun x mcp-thorns@latest`, {
           encoding: 'utf-8',
           stdio: ['pipe', 'pipe', 'pipe'],
           cwd: projectDir,

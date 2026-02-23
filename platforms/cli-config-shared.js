@@ -823,17 +823,17 @@ cp .mcp.json ~/.claude/.mcp.json
 ## Environment Setup
 
 \`\`\`bash
-# Ensure you have Node.js and bunx installed
-# bunx is required for hook execution
+# Ensure you have Node.js and bun x installed
+# bun x is required for hook execution
 # It's bundled with Node.js 18+
-which bunx
-bunx --version
+which bun x
+bun x --version
 \`\`\`
 
 ## MCP Server Configuration
 
 The \`.mcp.json\` file automatically configures:
-- **dev**: Local code execution environment (uses \`bunx\`)
+- **dev**: Local code execution environment (uses \`bun x\`)
 - **code-search**: Semantic code search via mcp-codebasesearch
 
 No additional configuration needed.
@@ -928,7 +928,7 @@ cp node_modules/${repoName}/.mcp.json .claude/.mcp.json
 **Solutions:**
 1. Verify .mcp.json exists: \`cat ~/.claude/.mcp.json\`
 2. Check MCP configuration references correct paths
-3. Ensure bunx is installed: \`which bunx\`
+3. Ensure bun x is installed: \`which bun x\`
 4. Restart Claude Code and retry
 
 ### Plugin not appearing in marketplace
@@ -1259,7 +1259,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### One-liner (recommended)\n\nInstall directly from npm using bunx:\n\n\`\`\`bash\nbunx gm-oc@latest\n\`\`\`\n\nThis command will automatically install gm-oc to the correct location for your platform and restart OpenCode to activate.\n\n### Manual installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    return `# ${spec.name} for OpenCode\n\n## Installation\n\n### One-liner (recommended)\n\nInstall directly from npm using bun x:\n\n\`\`\`bash\nbun x gm-oc@latest\n\`\`\`\n\nThis command will automatically install gm-oc to the correct location for your platform and restart OpenCode to activate.\n\n### Manual installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
 
@@ -1448,10 +1448,10 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
 
 ### One-liner (recommended)
 
-Install directly from npm using bunx:
+Install directly from npm using bun x:
 
 \`\`\`bash
-bunx gm-kilo@latest
+bun x gm-kilo@latest
 \`\`\`
 
 This command will automatically install gm-kilo to the correct location for your platform and restart Kilo to activate.
