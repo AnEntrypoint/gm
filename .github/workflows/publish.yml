@@ -33,6 +33,38 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Auto-bump version if needed
+        run: |
+          # Get latest version from npm (check gm-cc as reference)
+          NPM_VERSION=$(npm view gm-cc version 2>/dev/null || echo "0.0.0")
+          CURRENT_VERSION=$(jq -r '.version' plugforge-starter/gm.json)
+
+          echo "npm latest: $NPM_VERSION"
+          echo "current: $CURRENT_VERSION"
+
+          # Parse versions
+          IFS='.' read -r NPM_MAJOR NPM_MINOR NPM_PATCH <<< "$NPM_VERSION"
+          IFS='.' read -r CURR_MAJOR CURR_MINOR CURR_PATCH <<< "$CURRENT_VERSION"
+
+          # If npm version >= current, bump patch
+          if [ "$NPM_MAJOR" -gt "$CURR_MAJOR" ] || \
+             ([ "$NPM_MAJOR" -eq "$CURR_MAJOR" ] && [ "$NPM_MINOR" -gt "$CURR_MINOR" ]) || \
+             ([ "$NPM_MAJOR" -eq "$CURR_MAJOR" ] && [ "$NPM_MINOR" -eq "$CURR_MINOR" ] && [ "$NPM_PATCH" -ge "$CURR_PATCH" ]); then
+            NEW_PATCH=$((NPM_PATCH + 1))
+            NEW_VERSION="$NPM_MAJOR.$NPM_MINOR.$NEW_PATCH"
+            echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
+            jq --arg v "$NEW_VERSION" '.version = $v' plugforge-starter/gm.json > /tmp/gm.json.tmp
+            mv /tmp/gm.json.tmp plugforge-starter/gm.json
+
+            git config --global user.email "noreply@github.com"
+            git config --global user.name "plugforge-bot"
+            git add plugforge-starter/gm.json
+            git commit -m "chore: auto-bump version to $NEW_VERSION"
+            git push origin main
+            echo "Version bumped and pushed"
+          else
+            echo "No version bump needed"
+          fi
 
       - name: Build ${{ matrix.name }}
         run: node cli.js plugforge-starter ./build
