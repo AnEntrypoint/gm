@@ -375,12 +375,18 @@ try {
 
   const filesToCopy = [
     ['agents', 'agents'],
+    ['hooks', 'hooks'],
+    ['skills', 'skills'],
     ['index.js', 'index.js'],
     ['gm.js', 'gm.js'],
     ['opencode.json', 'opencode.json'],
     ['package.json', 'package.json'],
     ['.mcp.json', '.mcp.json'],
-    ['README.md', 'README.md']
+    ['README.md', 'README.md'],
+    ['LICENSE', 'LICENSE'],
+    ['CONTRIBUTING.md', 'CONTRIBUTING.md'],
+    ['.gitignore', '.gitignore'],
+    ['.editorconfig', '.editorconfig']
   ];
 
   function copyRecursive(src, dst) {
@@ -436,12 +442,18 @@ try {
 
   const filesToCopy = [
     ['agents', 'agents'],
+    ['hooks', 'hooks'],
+    ['skills', 'skills'],
     ['index.js', 'index.js'],
     ['gm.js', 'gm.js'],
     ['kilocode.json', 'kilocode.json'],
     ['package.json', 'package.json'],
     ['.mcp.json', '.mcp.json'],
-    ['README.md', 'README.md']
+    ['README.md', 'README.md'],
+    ['LICENSE', 'LICENSE'],
+    ['CONTRIBUTING.md', 'CONTRIBUTING.md'],
+    ['.gitignore', '.gitignore'],
+    ['.editorconfig', '.editorconfig']
   ];
 
   function copyRecursive(src, dst) {
@@ -1136,7 +1148,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
     return {
       main: 'gm.js',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      files: ['agents/', 'gm.js', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
+      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -1157,6 +1169,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
+      scripts: { postinstall: 'node scripts/postinstall.js' },
+      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
     }, null, 2);
@@ -1180,12 +1194,17 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       }
     }
 
-    return JSON.stringify({
+    const ocConfig = {
       $schema: 'https://opencode.ai/config.json',
       default_agent: 'gm',
-      mcp: mcpServers,
       plugin: ['gm-oc']
-    }, null, 2);
+    };
+
+    if (Object.keys(mcpServers).length > 0) {
+      ocConfig.mcp = mcpServers;
+    }
+
+    return JSON.stringify(ocConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
@@ -1297,7 +1316,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     return {
       main: 'gm.js',
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
-      files: ['agents/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
+      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': '^4.1.0' }
     };
@@ -1318,7 +1337,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': '^4.1.0' },
-      files: ['agents/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js'],
+      scripts: { postinstall: 'node scripts/postinstall.js' },
+      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     }, null, 2);
   },
@@ -1340,12 +1360,17 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       }
     }
 
-    return JSON.stringify({
+    const kiloConfig = {
       $schema: 'https://kilo.ai/config.json',
       default_agent: 'gm',
-      mcp: mcpServers,
       plugin: ['gm-kilo']
-    }, null, 2);
+    };
+
+    if (Object.keys(mcpServers).length > 0) {
+      kiloConfig.mcp = mcpServers;
+    }
+
+    return JSON.stringify(kiloConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
