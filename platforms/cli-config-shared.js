@@ -223,7 +223,6 @@ function install() {
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(ocDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(ocDir, 'hooks'));
-  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(ocDir, 'skills'));
 }
 
 install();
@@ -299,7 +298,6 @@ function install() {
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(kiloDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(kiloDir, 'hooks'));
-  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(kiloDir, 'skills'));
 }
 
 install();
@@ -345,6 +343,14 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
+  // Install skills globally via the skills package (supports all agents)
+  const { execSync } = require('child_process');
+  try {
+    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('Warning: skills install failed (non-fatal):', e.message);
+  }
+
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
@@ -388,18 +394,15 @@ try {
   // Install ESM plugin for opencode auto-loading from plugins directory
   fs.copyFileSync(path.join(srcDir, 'gm-oc.mjs'), path.join(ocConfigDir, 'plugins', 'gm-oc.mjs'));
 
-  // Copy agents and skills into opencode config dir
+  // Copy agents into opencode config dir
   copyRecursive(path.join(srcDir, 'agents'), path.join(ocConfigDir, 'agents'));
-  copyRecursive(path.join(srcDir, 'skills'), path.join(ocConfigDir, 'skills'));
 
-  // Write/update opencode.json — merge MCP from package, set default_agent
+  // Write/update opencode.json — set default_agent
   const ocJsonPath = path.join(ocConfigDir, 'opencode.json');
   let ocConfig = {};
   try { ocConfig = JSON.parse(fs.readFileSync(ocJsonPath, 'utf-8')); } catch (e) {}
-  try {
-    const pkgConfig = JSON.parse(fs.readFileSync(path.join(srcDir, 'opencode.json'), 'utf-8'));
-    if (pkgConfig.mcp) ocConfig.mcp = Object.assign({}, pkgConfig.mcp, ocConfig.mcp);
-  } catch (e) {}
+  // Remove stale MCP config (no longer used)
+  delete ocConfig.mcp;
   ocConfig.default_agent = 'gm';
   fs.writeFileSync(ocJsonPath, JSON.stringify(ocConfig, null, 2) + '\\n');
 
@@ -408,6 +411,14 @@ try {
     ? path.join(homeDir, 'AppData', 'Roaming', 'opencode', 'plugin') : null;
   if (oldDir && fs.existsSync(oldDir)) {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
+  }
+
+  // Install skills globally via the skills package (supports all agents)
+  const { execSync: execSync2 } = require('child_process');
+  try {
+    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('Warning: skills install failed (non-fatal):', e.message);
   }
 
   console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${ocConfigDir}\`);
@@ -450,11 +461,10 @@ try {
   // Install ESM plugin for kilo auto-loading from plugins directory
   fs.copyFileSync(path.join(srcDir, 'gm-kilo.mjs'), path.join(kiloConfigDir, 'plugins', 'gm-kilo.mjs'));
 
-  // Copy agents and skills into kilo config dir
+  // Copy agents into kilo config dir
   copyRecursive(path.join(srcDir, 'agents'), path.join(kiloConfigDir, 'agents'));
-  copyRecursive(path.join(srcDir, 'skills'), path.join(kiloConfigDir, 'skills'));
 
-  // Write/fix kilocode.json — merge MCP from package, set default_agent, fix $schema
+  // Write/fix kilocode.json — set default_agent, fix $schema
   const kiloJsonPath = path.join(kiloConfigDir, 'kilocode.json');
   let kiloConfig = {};
   try {
@@ -463,10 +473,8 @@ try {
     // Fix corrupted $schema key (written as "" in older versions)
     if (kiloConfig['']) { delete kiloConfig['']; }
   } catch (e) {}
-  try {
-    const pkgConfig = JSON.parse(fs.readFileSync(path.join(srcDir, 'kilocode.json'), 'utf-8'));
-    if (pkgConfig.mcp) kiloConfig.mcp = Object.assign({}, pkgConfig.mcp, kiloConfig.mcp);
-  } catch (e) {}
+  // Remove stale MCP config (no longer used)
+  delete kiloConfig.mcp;
   kiloConfig['$schema'] = 'https://kilo.ai/config.json';
   kiloConfig.default_agent = 'gm';
   // Remove stale local-path plugin reference
@@ -481,6 +489,14 @@ try {
     ? path.join(homeDir, 'AppData', 'Roaming', 'kilo', 'plugin') : null;
   if (oldDir && fs.existsSync(oldDir)) {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
+  }
+
+  // Install skills globally via the skills package (supports all agents)
+  const { execSync: execSync2 } = require('child_process');
+  try {
+    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('Warning: skills install failed (non-fatal):', e.message);
   }
 
   console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${kiloConfigDir}\`);
@@ -512,7 +528,6 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['hooks', 'hooks'],
-    ['skills', 'skills'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
   ];
@@ -528,6 +543,14 @@ try {
   }
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  // Install skills globally via the skills package (supports all agents)
+  const { execSync } = require('child_process');
+  try {
+    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('Warning: skills install failed (non-fatal):', e.message);
+  }
 
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
@@ -646,7 +669,6 @@ function install() {
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
-  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(claudeDir, 'skills'));
   safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
 
   updateGitignore(projectRoot);
@@ -695,6 +717,14 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
+  // Install skills globally via the skills package (supports all agents)
+  const { execSync } = require('child_process');
+  try {
+    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('Warning: skills install failed (non-fatal):', e.message);
+  }
+
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
@@ -708,6 +738,7 @@ try {
 }
 
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
+  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
   formatConfigJson(config) {
     return JSON.stringify({
       ...config,
@@ -1018,6 +1049,7 @@ MIT - See LICENSE file for details
 });
 
 const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
+  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
   formatConfigJson(config) {
     return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
   },
@@ -1060,6 +1092,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
 });
 
 const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
+  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
   formatConfigJson(config) {
     return JSON.stringify({
       ...config,
@@ -1144,13 +1177,14 @@ function ocPluginMjsSource() {
 }
 
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
+  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
   getPackageJsonFields() {
     return {
       main: 'gm.js',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
-      dependencies: { 'mcp-thorns': '^4.1.0' }
+      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
+      dependencies: {}
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
@@ -1162,48 +1196,24 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       license: pluginSpec.license,
       main: 'gm-oc.mjs',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
+      keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-oc.git' },
       homepage: 'https://github.com/AnEntrypoint/gm-oc#readme',
       bugs: { url: 'https://github.com/AnEntrypoint/gm-oc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      dependencies: { 'mcp-thorns': '^4.1.0' },
+      dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
-    // Convert MCP config from gm.json format (command + args) to opencode format (command array)
-    const mcpServers = {};
-    if (pluginSpec.mcp) {
-      for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
-        const command = Array.isArray(serverConfig.command)
-          ? serverConfig.command
-          : [serverConfig.command];
-        const args = serverConfig.args || [];
-        mcpServers[serverName] = {
-          type: 'local',
-          command: command[0],
-          args: [...command.slice(1), ...args],
-          timeout: serverConfig.timeout || 360000,
-          enabled: true
-        };
-      }
-    }
-
     const ocConfig = {
       $schema: 'https://opencode.ai/config.json',
-      default_agent: 'gm',
-      plugin: ['gm-oc']
+      default_agent: 'gm'
     };
-
-    if (Object.keys(mcpServers).length > 0) {
-      ocConfig.mcp = mcpServers;
-    }
-
     return JSON.stringify(ocConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
@@ -1258,13 +1268,14 @@ function kiloPluginMjsSource() {
 
 
 const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
+  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
   getPackageJsonFields() {
     return {
       main: 'gm.js',
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
-      dependencies: { 'mcp-thorns': '^4.1.0' }
+      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      keywords: ['kilo', 'kilo-cli', 'automation', 'gm'],
+      dependencies: {}
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
@@ -1282,40 +1293,17 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-kilo/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      dependencies: { 'mcp-thorns': '^4.1.0' },
+      dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
-    const mcpServers = {};
-    if (pluginSpec.mcp) {
-      for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
-        const command = Array.isArray(serverConfig.command)
-          ? serverConfig.command
-          : [serverConfig.command];
-        const args = serverConfig.args || [];
-        mcpServers[serverName] = {
-          type: 'local',
-          command: command[0],
-          args: [...command.slice(1), ...args],
-          timeout: serverConfig.timeout || 360000,
-          enabled: true
-        };
-      }
-    }
-
     const kiloConfig = {
       $schema: 'https://kilo.ai/config.json',
-      default_agent: 'gm',
-      plugin: ['gm-kilo']
+      default_agent: 'gm'
     };
-
-    if (Object.keys(mcpServers).length > 0) {
-      kiloConfig.mcp = mcpServers;
-    }
-
     return JSON.stringify(kiloConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {

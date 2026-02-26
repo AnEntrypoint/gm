@@ -37,6 +37,10 @@ function createAdapterClass(cfg) {
     buildHookCommand(hookFile) {
       return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : null;
     }
+
+    loadSkillsFromSource(sourceDir) {
+      return cfg.loadSkillsFromSource ? cfg.loadSkillsFromSource(sourceDir) : super.loadSkillsFromSource(sourceDir);
+    }
   }
 
   return DynamicCLIAdapter;
