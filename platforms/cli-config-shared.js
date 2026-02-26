@@ -375,6 +375,11 @@ const isUpgrade = fs.existsSync(destDir);
 console.log(isUpgrade ? 'Upgrading gm-oc...' : 'Installing gm-oc...');
 
 try {
+  // Clean managed subdirectories to remove stale files from old versions
+  for (const dir of ['agents', 'hooks', 'skills']) {
+    const p = path.join(destDir, dir);
+    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+  }
   fs.mkdirSync(destDir, { recursive: true });
 
   const filesToCopy = [
@@ -442,6 +447,11 @@ const isUpgrade = fs.existsSync(destDir);
 console.log(isUpgrade ? 'Upgrading gm-kilo...' : 'Installing gm-kilo...');
 
 try {
+  // Clean managed subdirectories to remove stale files from old versions
+  for (const dir of ['agents', 'hooks', 'skills']) {
+    const p = path.join(destDir, dir);
+    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+  }
   fs.mkdirSync(destDir, { recursive: true });
 
   const filesToCopy = [
@@ -1240,14 +1250,6 @@ function kiloPluginSource() {
     "    const agentMd = path.join(pluginDir, 'agents', 'gm.md');",
     "    try { agentRules = fs.readFileSync(agentMd, 'utf-8'); } catch (e) {}",
     "    return agentRules;",
-    "  };",
-    "",
-    "  const runThornsAnalysis = async () => {",
-    "    try {",
-    "      thornsOutput = '=== mcp-thorns ===\\n' + analyze(directory);",
-    "    } catch (e) {",
-    "      thornsOutput = '=== mcp-thorns ===\\nSkipped (' + e.message + ')';",
-    "    }",
     "  };",
     "",
     "  const runSessionIdle = async () => {",

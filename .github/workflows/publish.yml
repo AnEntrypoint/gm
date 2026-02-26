@@ -23,11 +23,16 @@ jobs:
 
       - name: Auto-bump version if needed
         run: |
-          # Get latest version from npm (check gm-cc as reference)
-          NPM_VERSION=$(npm view gm-cc version 2>/dev/null || echo "0.0.0")
+          # Get the highest published version across all CLI packages
+          MAX_NPM="0.0.0"
+          for PKG in gm-cc gm-gc gm-oc gm-kilo gm-codex gm-copilot-cli; do
+            V=$(npm view "$PKG" version 2>/dev/null || echo "0.0.0")
+            MAX_NPM=$(printf '%s\n' "$V" "$MAX_NPM" | sort -V | tail -1)
+          done
+          NPM_VERSION="$MAX_NPM"
           CURRENT_VERSION=$(jq -r '.version' plugforge-starter/gm.json)
 
-          echo "npm latest: $NPM_VERSION"
+          echo "npm max across all packages: $NPM_VERSION"
           echo "current: $CURRENT_VERSION"
 
           # Parse versions
