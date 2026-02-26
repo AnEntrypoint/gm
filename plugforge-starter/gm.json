@@ -1,33 +1,16 @@
 {
   "name": "gm",
   "version": "2.0.24",
-  "description": "Advanced Claude Code plugin with WFGY integration, MCP tools, and automated hooks",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
   "keywords": [
     "claude-code",
     "claude-plugin",
     "wfgy",
-    "mcp",
     "automation"
   ],
   "homepage": "https://github.com/AnEntrypoint/gm",
-  "mcp": {
-    "dev": {
-      "command": "bun x",
-      "args": [
-        "mcp-gm@latest"
-      ],
-      "timeout": 360000
-    },
-    "code-search": {
-      "command": "bun x",
-      "args": [
-        "codebasesearch@latest"
-      ],
-      "timeout": 360000
-    }
-  },
   "engines": {
     "node": ">=16.0.0"
   },
