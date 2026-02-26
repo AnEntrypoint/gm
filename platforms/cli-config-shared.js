@@ -511,6 +511,7 @@ try {
   const filesToCopy = [
     ['agents', 'agents'],
     ['hooks', 'hooks'],
+    ['skills', 'skills'],
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
   ];
@@ -644,6 +645,7 @@ function install() {
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
+  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(claudeDir, 'skills'));
   safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
 
   updateGitignore(projectRoot);

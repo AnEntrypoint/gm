@@ -9,22 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish:
+  prepare:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - {platform: cc, name: "Claude Code"}
-          - {platform: gc, name: "Gemini CLI"}
-          - {platform: oc, name: "OpenCode"}
-          - {platform: vscode, name: "VS Code"}
-          - {platform: cursor, name: "Cursor"}
-          - {platform: codex, name: "Codex"}
-          - {platform: kilo, name: "Kilo CLI"}
-          - {platform: zed, name: "Zed"}
-          - {platform: jetbrains, name: "JetBrains"}
-          - {platform: copilot-cli, name: "GitHub Copilot CLI"}
-
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,12 +47,43 @@ jobs:
             git config --global user.email "noreply@github.com"
             git config --global user.name "plugforge-bot"
             git add plugforge-starter/gm.json
-            git commit -m "chore: auto-bump version to $NEW_VERSION"
+            git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             git push origin main
             echo "Version bumped and pushed"
           else
             echo "No version bump needed"
           fi
+
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r '.version' plugforge-starter/gm.json)" >> $GITHUB_OUTPUT
+
+  build-and-publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - {platform: cc, name: "Claude Code"}
+          - {platform: gc, name: "Gemini CLI"}
+          - {platform: oc, name: "OpenCode"}
+          - {platform: vscode, name: "VS Code"}
+          - {platform: cursor, name: "Cursor"}
+          - {platform: codex, name: "Codex"}
+          - {platform: kilo, name: "Kilo CLI"}
+          - {platform: zed, name: "Zed"}
+          - {platform: jetbrains, name: "JetBrains"}
+          - {platform: copilot-cli, name: "GitHub Copilot CLI"}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Build ${{ matrix.name }}
         run: node cli.js plugforge-starter ./build
@@ -140,56 +159,3 @@ jobs:
             echo "✅ No changes to commit for $NAME"
             git reset HEAD
           fi
-
-      - name: Publish to npm (CLI platforms only)
-        if: |
-          matrix.platform == 'cc' ||
-          matrix.platform == 'gc' ||
-          matrix.platform == 'oc' ||
-          matrix.platform == 'codex' ||
-          matrix.platform == 'kilo' ||
-          matrix.platform == 'copilot-cli'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          PLATFORM: ${{ matrix.platform }}
-          NAME: ${{ matrix.name }}
-        run: |
-          set -e
-          BUILD_DIR="./build/gm-${PLATFORM}"
-          cd "$BUILD_DIR"
-
-          # Check if package.json exists and has bin field (CLI platforms)
-          if [ ! -f "package.json" ]; then
-            echo "❌ package.json not found in $BUILD_DIR"
-            exit 1
-          fi
-
-          # Setup npm authentication
-          npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
-
-          # Publish to npm
-          npm_output=$(npm publish 2>&1) || {
-            # Check if version already exists
-            if echo "$npm_output" | grep -q "403.*Forbidden\|You do not have permission"; then
-              echo "⚠️ Version already published, bumping patch version..."
-              # Extract current version and bump patch
-              CURRENT_VERSION=$(jq -r '.version' package.json)
-              MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
-              MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
-              PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
-              NEW_PATCH=$((PATCH + 1))
-              NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
-
-              # Update version in package.json
-              jq --arg v "$NEW_VERSION" '.version = $v' package.json > package.json.tmp
-              mv package.json.tmp package.json
-
-              # Publish new version
-              npm publish
-              echo "✅ Published $NAME as v${NEW_VERSION}"
-            else
-              echo "❌ npm publish failed for $NAME"
-              exit 1
-            fi
-          }
-          echo "✅ Published $NAME to npm"
