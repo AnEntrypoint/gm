@@ -375,10 +375,13 @@ const isUpgrade = fs.existsSync(destDir);
 console.log(isUpgrade ? 'Upgrading gm-oc...' : 'Installing gm-oc...');
 
 try {
-  // Clean managed subdirectories to remove stale files from old versions
-  for (const dir of ['agents', 'hooks', 'skills']) {
-    const p = path.join(destDir, dir);
-    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+  // Clean all managed files/dirs except node_modules to remove stale files
+  if (fs.existsSync(destDir)) {
+    for (const entry of fs.readdirSync(destDir)) {
+      if (entry !== 'node_modules' && entry !== 'package-lock.json') {
+        fs.rmSync(path.join(destDir, entry), { recursive: true, force: true });
+      }
+    }
   }
   fs.mkdirSync(destDir, { recursive: true });
 
@@ -447,10 +450,13 @@ const isUpgrade = fs.existsSync(destDir);
 console.log(isUpgrade ? 'Upgrading gm-kilo...' : 'Installing gm-kilo...');
 
 try {
-  // Clean managed subdirectories to remove stale files from old versions
-  for (const dir of ['agents', 'hooks', 'skills']) {
-    const p = path.join(destDir, dir);
-    if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+  // Clean all managed files/dirs except node_modules to remove stale files
+  if (fs.existsSync(destDir)) {
+    for (const entry of fs.readdirSync(destDir)) {
+      if (entry !== 'node_modules' && entry !== 'package-lock.json') {
+        fs.rmSync(path.join(destDir, entry), { recursive: true, force: true });
+      }
+    }
   }
   fs.mkdirSync(destDir, { recursive: true });
 
