@@ -158,5 +158,4 @@ jobs:
             git push origin main
           else
             echo "✅ No changes to commit for $NAME"
-            git reset HEAD
           fi
