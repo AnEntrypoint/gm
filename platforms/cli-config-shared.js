@@ -1111,9 +1111,44 @@ MIT - See LICENSE file for details
   }
 });
 
+function transformToGeminiAgent(content, agentName = 'gm') {
+  if (!content) return content;
+  const lines = content.split('\n');
+  let inFrontmatter = false;
+  let frontmatterEnd = -1;
+  let bodyStart = 0;
+  const forbiddenKeys = ['agent', 'enforce'];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '---') {
+      if (!inFrontmatter) {
+        inFrontmatter = true;
+      } else {
+        frontmatterEnd = i;
+        bodyStart = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (frontmatterEnd < 0) return content;
+
+  const frontmatterLines = lines.slice(1, frontmatterEnd).filter(l => {
+    const key = l.split(':')[0].trim();
+    return !forbiddenKeys.includes(key);
+  });
+
+  const body = lines.slice(bodyStart).join('\n').trim();
+  return ['---', ...frontmatterLines, '---', '', body].join('\n') + '\n';
+}
+
 const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   formatConfigJson(config) {
     return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
+  },
+  transformAgentContent(agentName, content) {
+    return transformToGeminiAgent(content, agentName);
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
