@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT;
-const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR;
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT;
+const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 const ensureGitignore = () => {
   if (!projectDir) return;
@@ -113,13 +113,14 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
 
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
   const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
+  const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
     const result = {
       systemMessage: additionalContext
     };
     console.log(JSON.stringify(result, null, 2));
-  } else if (isOpenCode) {
+  } else if (isOpenCode || isKilo) {
     const result = {
       hookSpecificOutput: {
         hookEventName: 'session.created',
@@ -139,12 +140,13 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
 } catch (error) {
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
   const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
+  const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
     console.log(JSON.stringify({
       systemMessage: `Error executing hook: ${error.message}`
     }, null, 2));
-  } else if (isOpenCode) {
+  } else if (isOpenCode || isKilo) {
     console.log(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: 'session.created',
