@@ -7,7 +7,7 @@ const factory = (name, label, configFile, contextFile, overrides = {}) => {
     kilo: { sessionStart: 'session.created', preTool: 'tool.execute.before', promptSubmit: 'message.updated', stop: 'session.closing' }
   };
 
-  const hookFormats = { cc: 'wrapped', gc: 'bare', codex: 'wrapped', oc: 'sdk', kilo: 'sdk' };
+  const hookFormats = { cc: 'wrapped', gc: 'wrapped', codex: 'wrapped', oc: 'sdk', kilo: 'sdk' };
   const toolNames = {
     cc: { bash: 'Bash', write: 'Write', glob: 'Glob', grep: 'Grep', search: 'Search' },
     gc: { bash: 'run_shell_command', write: 'write_file', glob: 'glob', grep: 'search_file_content', search: 'search' },
