@@ -539,6 +539,15 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
+  // Also write plugin/ directory - Kilo loads from ~/.config/kilo/plugin/ as a local file plugin
+  const pluginDir = path.join(destDir, 'plugin');
+  fs.mkdirSync(pluginDir, { recursive: true });
+  const gmMjsSrc = path.join(srcDir, 'gm.mjs');
+  if (fs.existsSync(gmMjsSrc)) {
+    fs.copyFileSync(gmMjsSrc, path.join(pluginDir, 'gm.mjs'));
+  }
+  fs.writeFileSync(path.join(pluginDir, 'index.js'), "export { default } from './gm.mjs';\\n", 'utf-8');
+
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
