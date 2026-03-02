@@ -902,8 +902,7 @@ This installation method is best for:
 For development or project-specific customization, install ${repoName} directly into your project:
 
 \`\`\`bash
-cd /path/to/your/project
-npm install ${repoName} && npx gm install
+bun x ${repoName}@latest
 \`\`\`
 
 This installation method is ideal when you need to:
@@ -912,29 +911,9 @@ This installation method is ideal when you need to:
 - Use the latest development version
 - Configure platform-specific behavior per project
 
-#### Installation Command Breakdown
-
-The \`npm install ${repoName} && npx gm install\` command performs two steps:
-
-1. **\`npm install ${repoName}\`** - Downloads the ${repoName} package and stores it in your project's \`node_modules/\` directory
-2. **\`npx gm install\`** - Runs the gm installer that copies configuration files into your Claude Code plugin directory
-
-**Expected output:**
-\`\`\`
-$ npm install ${repoName}
-added 1 package in 1.2s
-
-$ npx gm install
-Installing ${repoName}...
-✓ Created .claude/ directory
-✓ Copied agents/gm.md
-✓ Copied hooks to .claude/hooks/
-✓ Created .mcp.json for MCP integration
-\`\`\`
-
 #### Installed File Structure (Project-Specific)
 
-After running \`npx gm install\`, your project will have:
+After running \`bun x ${repoName}@latest\`, your project will have:
 
 \`\`\`
 .claude/
@@ -1031,16 +1010,8 @@ npm install -g ${repoName}@latest
 ### Project-Specific Installation
 
 \`\`\`bash
-# Update the package
-npm update ${repoName}
-
 # Re-run the installer to update .claude/ directory
-npx gm install
-
-# Or manually copy updated files
-cp -r node_modules/${repoName}/agents/* .claude/agents/
-cp -r node_modules/${repoName}/hooks/* .claude/hooks/
-cp node_modules/${repoName}/.mcp.json .claude/.mcp.json
+bun x ${repoName}@latest
 \`\`\`
 
 ## Features
