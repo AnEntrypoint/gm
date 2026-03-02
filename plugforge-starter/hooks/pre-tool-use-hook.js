@@ -55,6 +55,14 @@ const run = () => {
       return { block: true, reason: 'Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.' };
     }
 
+    if (tool_name === 'Bash') {
+      const command = (tool_input?.command || '').trim();
+      const allowed = /^(git |gh |npm publish|npm pack|docker |sudo systemctl|systemctl )/.test(command);
+      if (!allowed) {
+        return { block: true, reason: 'Bash is blocked. Use the code_execution MCP tool instead. It supports Python, JS/TS, Go, Rust, C/C++ and bash via the language parameter.' };
+      }
+    }
+
     return { allow: true };
   } catch (error) {
     return { allow: true };
@@ -70,7 +78,7 @@ try {
     } else {
       console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: result.reason } }));
     }
-    process.exit(2);
+    process.exit(0);
   }
 
   if (isGemini) {
