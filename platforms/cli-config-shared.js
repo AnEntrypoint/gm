@@ -627,26 +627,19 @@ try {
   // Register in installed_plugins.json so Claude Code loads plugin from local filesystem
   const pluginVersion = require('./package.json').version;
   const installedPluginsPath = path.join(pluginsDir, 'installed_plugins.json');
-  let installedPlugins = { version: 2, plugins: [] };
+  let installedPlugins = { version: 2, plugins: {} };
   if (fs.existsSync(installedPluginsPath)) {
     try { installedPlugins = JSON.parse(fs.readFileSync(installedPluginsPath, 'utf-8')); } catch (e) {}
   }
-  if (!Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = [];
+  if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
   const now = new Date().toISOString();
-  const existing = installedPlugins.plugins.find(p => p.id === 'gm@gm-cc');
-  const entry = {
-    id: 'gm@gm-cc',
+  installedPlugins.plugins['gm@gm-cc'] = {
     scope: 'user',
     installPath: destDir,
     version: pluginVersion,
-    installedAt: existing?.installedAt || now,
+    installedAt: installedPlugins.plugins['gm@gm-cc']?.installedAt || now,
     lastUpdated: now
   };
-  if (existing) {
-    Object.assign(existing, entry);
-  } else {
-    installedPlugins.plugins.push(entry);
-  }
   fs.writeFileSync(installedPluginsPath, JSON.stringify(installedPlugins, null, 2), 'utf-8');
   console.log('✓ Plugin registered in installed_plugins.json');
 
