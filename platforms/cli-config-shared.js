@@ -617,7 +617,7 @@ try {
     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch (e) {}
   }
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
-  settings.enabledPlugins['gm@gm-cc'] = true;
+  settings.enabledPlugins['gm-cc'] = true;
   // Remove stale hook entries that pointed to ~/.claude/hooks/ (now handled by plugin's hooks.json)
   if (settings.hooks) delete settings.hooks;
   fs.mkdirSync(claudeDir, { recursive: true });
@@ -633,8 +633,8 @@ try {
   }
   if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
   const now = new Date().toISOString();
-  const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
-  installedPlugins.plugins['gm@gm-cc'] = [{
+  const existing = Array.isArray(installedPlugins.plugins['gm-cc']) ? installedPlugins.plugins['gm-cc'][0] : null;
+  installedPlugins.plugins['gm-cc'] = [{
     scope: 'user',
     installPath: destDir,
     version: pluginVersion,
