@@ -57,9 +57,9 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-      const allowed = /^(git |gh |npm publish|npm pack|docker |sudo systemctl|systemctl )/.test(command);
+      const allowed = /^(git |gh |npm |npx |bun |node |python |python3 |ruby |go |deno |tsx |ts-node |docker |sudo systemctl|systemctl )/.test(command);
       if (!allowed) {
-        return { block: true, reason: 'Bash is blocked for non-git/npm/docker commands. Use Read/Write/Edit tools for file operations, or code-search skill for exploration.' };
+        return { block: true, reason: 'Bash only allows: git, node, python, bun, npx, ruby, go, deno, docker, npm, systemctl. Write all logic as code and execute it via Bash (e.g. node -e "...", python -c "...", bun -e "..."). Use Read/Write/Edit for file ops. Use code-search skill for exploration.' };
       }
     }
 

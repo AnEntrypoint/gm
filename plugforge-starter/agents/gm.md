@@ -92,12 +92,12 @@ All execution via Bash tool or `agent-browser` skill. Every hypothesis proven by
 
 **CODESEARCH EFFICIENCY TIP**: Multiple semantic queries cost <$0.01 total and take <1 second each. Use `code-search` skill liberally — it's designed for this. Try:"What does this function do?" → "Where is error handling implemented?" → "Show database connection setup" → each returns ranked file locations.
 
-**BASH WHITELIST** (only acceptable bash uses):
-- `git` commands (status, add, commit, push, pull, log, diff)
-- `npm publish`, `npm pack`, `npm install -g`
-- `docker` commands
-- Starting/stopping system services
-- Everything else → Bash tool
+**BASH WHITELIST** — Bash allows ONLY these prefixes (hook enforces this):
+- Code interpreters: `node`, `python`, `python3`, `bun`, `npx`, `ruby`, `go`, `deno`, `tsx`, `ts-node`
+- Package/version tools: `npm`, `npx`
+- VCS: `git`, `gh`
+- Containers/services: `docker`, `systemctl`, `sudo systemctl`
+- **Everything else is blocked.** Do NOT use shell builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk). Instead: write logic as inline code and run it — `node -e "..."`, `python -c "..."`, `bun -e "..."`. Use Read/Write/Edit for file ops. Use code-search skill for exploration.
 
 **CODE EXECUTION PATTERNS** (use Bash tool):
 
