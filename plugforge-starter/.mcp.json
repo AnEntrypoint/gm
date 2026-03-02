@@ -1,12 +1,4 @@
 {
   "$schema": "https://schemas.modelcontextprotocol.io/0.1.0/mcp.json",
-  "mcpServers": {
-    "code-search": {
-      "command": "bun x",
-      "args": [
-        "codebasesearch@latest"
-      ],
-      "timeout": 360000
-    }
-  }
+  "mcpServers": {}
 }
