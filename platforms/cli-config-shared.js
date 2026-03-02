@@ -610,6 +610,7 @@ try {
 
   filesToCopy.forEach(name => copyRecursive(path.join(srcDir, name), path.join(destDir, name)));
 
+  // Register in settings.json (enabledPlugins only, no hook injection)
   const settingsPath = path.join(claudeDir, 'settings.json');
   let settings = {};
   if (fs.existsSync(settingsPath)) {
@@ -617,9 +618,30 @@ try {
   }
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
   settings.enabledPlugins['gm@gm-cc'] = true;
+  // Remove stale hook entries that pointed to ~/.claude/hooks/ (now handled by plugin's hooks.json)
+  if (settings.hooks) delete settings.hooks;
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
   console.log('✓ Plugin registered in ~/.claude/settings.json');
+
+  // Register in installed_plugins.json so Claude Code loads plugin from local filesystem
+  const pluginVersion = require('./package.json').version;
+  const installedPluginsPath = path.join(pluginsDir, 'installed_plugins.json');
+  let installedPlugins = { version: 2, plugins: {} };
+  if (fs.existsSync(installedPluginsPath)) {
+    try { installedPlugins = JSON.parse(fs.readFileSync(installedPluginsPath, 'utf-8')); } catch (e) {}
+  }
+  if (!installedPlugins.plugins) installedPlugins.plugins = {};
+  const now = new Date().toISOString();
+  installedPlugins.plugins['gm@gm-cc'] = {
+    scope: 'user',
+    installPath: destDir,
+    version: pluginVersion,
+    installedAt: installedPlugins.plugins['gm@gm-cc']?.installedAt || now,
+    lastUpdated: now
+  };
+  fs.writeFileSync(installedPluginsPath, JSON.stringify(installedPlugins, null, 2), 'utf-8');
+  console.log('✓ Plugin registered in installed_plugins.json');
 
   console.log(\`✓ gm-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destDir}\`);
   console.log('Restart Claude Code to activate the gm plugin.');
