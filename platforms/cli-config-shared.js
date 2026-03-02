@@ -573,10 +573,7 @@ function createClaudeCodeCliScript() {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = path.join(homeDir, '.claude');
+const destDir = path.join(process.cwd(), '.claude');
 
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
@@ -605,7 +602,7 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-  // Register hooks in ~/.claude/settings.json
+  // Register hooks in .claude/settings.json
   const settingsPath = path.join(destDir, 'settings.json');
   const hooksJsonPath = path.join(srcDir, 'hooks', 'hooks.json');
   if (fs.existsSync(hooksJsonPath)) {
@@ -629,7 +626,7 @@ try {
       }
     }
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-    console.log('✓ Hooks registered in ~/.claude/settings.json');
+    console.log('✓ Hooks registered in .claude/settings.json');
   }
 
   const destPath = process.platform === 'win32'
