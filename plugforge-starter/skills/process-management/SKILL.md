@@ -12,6 +12,27 @@ description: >-
 
 All applications MUST run through PM2. Direct invocations (node, bun, python) are forbidden for any process that produces output or has a lifecycle.
 
+## Installation (First Time Only)
+
+Check if PM2 is installed:
+
+```bash
+pm2 --version
+```
+
+If command not found, install globally:
+
+```bash
+npm install -g pm2
+```
+
+Verify installation:
+
+```bash
+pm2 --version        # should print version number
+pm2 ping             # should respond "pong"
+```
+
 ## Pre-Start Check (MANDATORY)
 
 Before starting any process, check what is already running:
