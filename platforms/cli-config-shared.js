@@ -633,8 +633,9 @@ try {
   }
   if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
   const now = new Date().toISOString();
-  const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
-  installedPlugins.plugins['gm@gm-cc'] = [{
+  const existing = Array.isArray(installedPlugins.plugins['gm-cc']) ? installedPlugins.plugins['gm-cc'].find(p => p.name === 'gm') : null;
+  installedPlugins.plugins['gm-cc'] = [{
+    name: 'gm',
     scope: 'user',
     installPath: destDir,
     version: pluginVersion,
