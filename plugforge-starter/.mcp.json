@@ -1,6 +1,11 @@
 {
   "$schema": "https://schemas.modelcontextprotocol.io/0.1.0/mcp.json",
   "mcpServers": {
+    "code_execution": {
+      "command": "npx",
+      "args": ["-y", "mcp-gm"],
+      "timeout": 360000
+    },
     "dev": {
       "command": "bun x",
       "args": [
