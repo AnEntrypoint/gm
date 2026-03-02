@@ -633,13 +633,14 @@ try {
   }
   if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
   const now = new Date().toISOString();
-  installedPlugins.plugins['gm@gm-cc'] = {
+  const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
+  installedPlugins.plugins['gm@gm-cc'] = [{
     scope: 'user',
     installPath: destDir,
     version: pluginVersion,
-    installedAt: installedPlugins.plugins['gm@gm-cc']?.installedAt || now,
+    installedAt: existing?.installedAt || now,
     lastUpdated: now
-  };
+  }];
   fs.writeFileSync(installedPluginsPath, JSON.stringify(installedPlugins, null, 2), 'utf-8');
   console.log('✓ Plugin registered in installed_plugins.json');
 
