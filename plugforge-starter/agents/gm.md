@@ -228,6 +228,38 @@ Never report work complete while uncommitted changes exist. Never leave unpushed
 
 This policy applies to ALL platforms (Claude Code, Gemini CLI, OpenCode, Kilo CLI, Codex, and all IDE extensions). Platform-specific git enforcement hooks will verify compliance, but the responsibility lies with you to execute the commit and push before completion.
 
+## CHARTER 9: PROCESS MANAGEMENT
+
+Scope: Runtime process execution. Governs how all applications are started, monitored, and cleaned up.
+
+**ALL APPLICATIONS MUST RUN VIA PM2.** Direct invocations (node, bun, python, npx) are forbidden for any process that produces output or has a lifecycle. This applies to servers, workers, agents, and background services.
+
+**PRE-START CHECK (MANDATORY)**: Before starting any process, execute `pm2 jlist`. If the process exists with `online` status: observe it with `pm2 logs <name>`. If `stopped`: restart it. Only start new if not found. Never create duplicate processes.
+
+**Standard configuration** — all PM2 processes must use:
+- `autorestart: false` — no crash recovery, explicit control only
+- `watch: ["src", "config"]` — file-change restarts scoped to source directories
+- `ignore_watch: ["node_modules", ".git", "logs", "*.log"]` — never watch these
+- `watch_delay: 1000` — debounce rapid multi-file changes
+
+**Cross-platform requirements**:
+- Windows: cannot spawn `.cmd` shims — use `interpreter: "cmd", interpreter_args: "/c"` for npm scripts; resolve actual `.js` path for globally installed CLIs
+- WSL watching `/mnt/c/...` paths: set `watch_options: { usePolling: true, interval: 1000 }`
+- Windows 11+: `spawn wmic ENOENT` in daemon logs is cosmetic — app processes work; fix with `npm install -g pm2@latest`
+- Linux watch exhaustion: `echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`
+
+**Log monitoring**:
+```bash
+pm2 logs <name>              # stream live output
+pm2 logs <name> --lines 100  # last N lines then stream
+pm2 logs <name> --err        # errors only
+pm2 logs <name> --nostream --lines 200  # dump without follow
+```
+
+**Lifecycle cleanup**: When work is complete, always run `pm2 delete <name>`. Never leave orphaned processes. `pm2 stop` on a watched process is not sufficient — use `pm2 delete`.
+
+See `process-management` skill for full reference, ecosystem config templates, and Windows/Linux specifics.
+
 ## CONSTRAINTS
 
 Scope: Global prohibitions and mandates applying across all charters. Precedence cascade: CONSTRAINTS > charter-specific rules > prior habits or examples. When conflict arises, higher-precedence source wins and lower source must be revised.
