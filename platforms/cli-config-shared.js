@@ -618,13 +618,16 @@ try {
   }
   if (!settings.enabledPlugins) settings.enabledPlugins = {};
   settings.enabledPlugins['gm@gm-cc'] = true;
-  // Remove stale hook entries that pointed to ~/.claude/hooks/ (now handled by plugin's hooks.json)
+  // Remove stale hook entries (handled by plugin hooks.json)
   if (settings.hooks) delete settings.hooks;
+  // Register marketplace so Claude Code resolves gm@gm-cc locally
+  if (!settings.extraKnownMarketplaces) settings.extraKnownMarketplaces = {};
+  settings.extraKnownMarketplaces['gm-cc'] = { source: { source: 'directory', path: destDir } };
   fs.mkdirSync(claudeDir, { recursive: true });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
   console.log('✓ Plugin registered in ~/.claude/settings.json');
 
-  // Register in installed_plugins.json so Claude Code loads plugin from local filesystem
+  // Write installed_plugins.json so Claude Code loads from local cache
   const pluginVersion = require('./package.json').version;
   const installedPluginsPath = path.join(pluginsDir, 'installed_plugins.json');
   let installedPlugins = { version: 2, plugins: {} };
@@ -633,11 +636,22 @@ try {
   }
   if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
   const now = new Date().toISOString();
-  const existing = Array.isArray(installedPlugins.plugins['gm-cc']) ? installedPlugins.plugins['gm-cc'].find(p => p.name === 'gm') : null;
-  installedPlugins.plugins['gm-cc'] = [{
-    name: 'gm',
+  const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
+  // Also write cache dir so Claude Code finds it without network fetch
+  const cacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm', pluginVersion);
+  const filesToCache = ['agents', 'hooks', '.mcp.json', '.claude-plugin', 'plugin.json', 'README.md', 'CLAUDE.md'];
+  function copyRecursiveCache(src, dst) {
+    if (!fs.existsSync(src)) return;
+    if (fs.statSync(src).isDirectory()) {
+      fs.mkdirSync(dst, { recursive: true });
+      fs.readdirSync(src).forEach(f => copyRecursiveCache(path.join(src, f), path.join(dst, f)));
+    } else { fs.copyFileSync(src, dst); }
+  }
+  fs.mkdirSync(cacheDir, { recursive: true });
+  filesToCache.forEach(name => copyRecursiveCache(path.join(destDir, name), path.join(cacheDir, name)));
+  installedPlugins.plugins['gm@gm-cc'] = [{
     scope: 'user',
-    installPath: destDir,
+    installPath: cacheDir,
     version: pluginVersion,
     installedAt: existing?.installedAt || now,
     lastUpdated: now
