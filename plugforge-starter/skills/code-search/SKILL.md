@@ -6,7 +6,7 @@ allowed-tools: Bash(bun x codebasesearch*)
 
 # Semantic Code Search
 
-Only use bun x codebasesearch to search, ro custon code, never use other cli tools to search the codebase. Search the codebase using natural language. Do multiple searches when looking for files, starting with fewer words and adding more if you need to refine the search. 102 file types are covered, returns results with file paths and line numbers.
+Only use bun x codebasesearch for searching code, or execute some custom code if you need more than that, never use other cli tools to search the codebase. Search the codebase using natural language. Do multiple searches when looking for files, starting with fewer words and adding more if you need to refine the search. 102 file types are covered, returns results with file paths and line numbers.
 
 ## Usage
 
