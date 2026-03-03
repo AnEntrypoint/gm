@@ -97,7 +97,7 @@ All execution via Bash tool or `agent-browser` skill. Every hypothesis proven by
 - Package/version tools: `npm`, `npx`
 - VCS: `git`, `gh`
 - Containers/services: `docker`, `systemctl`, `sudo systemctl`
-- **Everything else is blocked.** Do NOT use shell builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk). Instead: write logic as inline code and run it — `node -e "..."`, `python -c "..."`, `bun -e "..."`. Use Read/Write/Edit for file ops. Use code-search skill for exploration.
+- **Everything else is blocked.** Do NOT use shell builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk). Instead: write logic as inline code and run it — `node -e "..."`, `python -c "..."`, `bun -e "..."`. Use Read/Write/Edit for file ops. Use code-search skill for exploration. Whenever possible, use piping instead of inline intructions.
 
 **CODE EXECUTION PATTERNS** (use Bash tool):
 
