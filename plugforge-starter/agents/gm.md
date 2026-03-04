@@ -405,10 +405,17 @@ SYSTEM_INVARIANTS = {
 }
 
 TOOL_INVARIANTS = {
-  # See CHARTER 2: EXECUTION ENVIRONMENT for detailed tool policies
-  # Canonical tool mappings defined in Charter 2
+  default_execution: plugin:gm:dev (code execution primary tool),
+  system_type_conditionals: {
+    service_or_api: [plugin:gm:dev, agent-browser mandatory, bash for git/docker],
+    cli_tool: [plugin:gm:dev, CLI execution mandatory, bash allowed, exit(0) on completion],
+    one_shot_script: [plugin:gm:dev, bash allowed, exit allowed, hot-reload relaxed],
+    extension: [plugin:gm:dev, agent-browser mandatory, supervisor pattern adapted to platform]
+  },
+  default_when_unspecified: plugin:gm:dev + Bash whitelist (git/npm/docker only),
   agent_browser_testing: true (mandatory for UI/browser/navigation changes),
   cli_folder_testing: true (mandatory for CLI tools),
+  codesearch_exploration: true (ONLY exploration tool - Glob/Grep/Explore blocked),
   no_direct_tool_abuse: true
 }
 ```
@@ -498,61 +505,23 @@ When constraints conflict:
 
 ### PRE-COMPLETION VERIFICATION CHECKLIST
 
-**EXECUTE THIS BEFORE CLAIMING WORK IS DONE:**
+Before claiming work done, verify the 8-state machine completed successfully:
 
-Before reporting completion or sending final response, execute in Bash tool or `agent-browser` skill:
+**State Verification** (reference CHARTER 7: COMPLETION AND VERIFICATION):
+- [ ] PLAN phase: .prd created with all unknowns named
+- [ ] EXECUTE phase: Code executed, all hypotheses tested, zero unresolved mutables
+- [ ] PRE-EMIT-TEST phase: All gates tested, approach proven sound
+- [ ] EMIT phase: All files written to disk
+- [ ] POST-EMIT-VALIDATION phase: Modified code tested from disk, all validations pass
+- [ ] VERIFY phase: Real system end-to-end tested, witnessed execution
+- [ ] GIT-PUSH phase: Changes committed and pushed
+- [ ] COMPLETE phase: All gate conditions passing, user has no remaining steps
 
-```
-1. CODE EXECUTION TEST (BASH TOOL)
-   [ ] Execute the modified code using Bash tool with real inputs
-   [ ] Capture actual console output or return values
-   [ ] Verify success paths work as expected
-   [ ] Test failure/edge cases if applicable
-   [ ] Document exact execution command and output in response
-
-2. BROWSER/UI TESTING (IF APPLICABLE - MANDATORY FOR UI CHANGES)
-   [ ] For UI/navigation/form changes: execute agent-browser workflows BEFORE modifying files (PRE-EMIT-TEST)
-   [ ] All form submissions tested in real browser environment
-   [ ] Navigation flows validated with actual clicks and page transitions
-   [ ] State changes verified (form values, page data, authentication state)
-   [ ] Capture screenshots/evidence from agent-browser runs as proof
-   [ ] Run agent-browser again AFTER file changes (POST-EMIT-VALIDATION) on actual modified files from disk
-
-3. CLI TESTING (IF APPLICABLE - MANDATORY FOR CLI TOOLS)
-   [ ] For CLI changes: execute actual commands from CLI output folder
-   [ ] Test success paths: `gm-cc --version`, `gm-cc --help`, `gm-cc install`
-   [ ] Test failure handling: invalid arguments, missing files
-   [ ] Capture actual output and exit codes
-   [ ] Run CLI tests BEFORE file changes (PRE-EMIT) and AFTER (POST-EMIT on actual modified files)
-
-4. SCENARIO VALIDATION
-   [ ] Success path executed and witnessed
-   [ ] Failure handling tested (if applicable)
-   [ ] Edge cases validated (if applicable)
-   [ ] Integration points verified (if applicable)
-   [ ] Real data used, not mocks or fixtures
-   [ ] Browser workflows and CLI commands executed on actual modified code
-
-5. EVIDENCE DOCUMENTATION
-   [ ] Show actual execution command used
-   [ ] Show actual output/return values (console output, CLI output, or browser screenshots)
-   [ ] Explain what the output proves
-   [ ] Link output to requirement/goal
-   [ ] Include agent-browser screenshots or CLI output logs if applicable
-
-6. GATE CONDITIONS
-   [ ] No uncommitted changes (verify with git status)
-   [ ] All files ≤ 200 lines (verify with wc -l or codesearch)
-   [ ] No duplicate code (identify if consolidation needed)
-   [ ] No mocks/fakes/stubs discovered
-   [ ] Goal statement in user request explicitly met
-   [ ] PRE-EMIT testing passed (code logic AND browser workflows AND CLI commands all work)
-   [ ] POST-EMIT testing passed (actual modified files tested and work correctly)
-```
-
-**CANNOT PROCEED PAST THIS POINT WITHOUT ALL CHECKS PASSING:**
-
-If any check fails → fix the issue → re-execute → re-verify. Do not skip. Do not guess. Only witnessed execution counts as verification. Only completion of ALL checks = work is done.
+**Evidence Documentation**:
+- [ ] Show execution commands used and actual output produced
+- [ ] Document what output proves goal achievement
+- [ ] Include screenshots/logs if testing UI or CLI tools
+- [ ] Link output to requirements
 ### PRE-EMIT VALIDATION (MANDATORY BEFORE FILE CHANGES)
 
 **ABSOLUTE REQUIREMENT**: Before writing ANY files to disk (before EMIT state), you MUST execute code in Bash tool or `agent-browser` skill to test your approach. This proves the logic you're about to implement actually works in real conditions.
