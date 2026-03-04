@@ -52,6 +52,8 @@ class CopilotCLIAdapter extends CLIAdapter {
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);
+    const scripts = this.loadScriptsFromSource(sourceDir);
+    Object.assign(structure, scripts);
     return structure;
   }
 
@@ -92,6 +94,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/',
       'hooks/',
       'skills/',
+      'scripts/',
       '.github/',
       'copilot-profile.md',
       'tools.json',
@@ -121,6 +124,7 @@ class CopilotCLIAdapter extends CLIAdapter {
         'agents/',
         'hooks/',
         'skills/',
+        'scripts/',
         '.github/',
         'copilot-profile.md',
         'tools.json',
@@ -129,6 +133,8 @@ class CopilotCLIAdapter extends CLIAdapter {
         'README.md',
         this.contextFile
       ],
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js' },
       ...extraFields
     }, null, 2);
   }
