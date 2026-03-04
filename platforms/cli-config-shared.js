@@ -863,7 +863,8 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
-      scripts: pluginSpec.scripts,
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js', ...pluginSpec.scripts },
       ...extraFields
     }, null, 2);
   },
@@ -1173,8 +1174,9 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
-      files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
+      files: ['agents/', 'hooks/', 'scripts/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
       ...extraFields
     }, null, 2);
   },
@@ -1220,9 +1222,10 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-codex/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'scripts/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
       ...extraFields
     }, null, 2);
   },
@@ -1327,7 +1330,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
-      dependencies: { 'mcp-thorns': '^4.1.0' }
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js' }
     };
   },
   transformAgentContent(agentName, content) {
@@ -1348,10 +1352,9 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-oc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      dependencies: { 'mcp-thorns': '^4.1.0' },
-      scripts: { postinstall: 'node scripts/postinstall.js' },
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
       ...extraFields
     }, null, 2);
   },
@@ -1474,7 +1477,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
-      dependencies: { 'mcp-thorns': '^4.1.0' }
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js' }
     };
   },
   transformAgentContent(agentName, content) {
@@ -1495,8 +1499,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-kilo/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-      dependencies: { 'mcp-thorns': '^4.1.0' },
-      scripts: { postinstall: 'node scripts/postinstall.js' },
+      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
+      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     }, null, 2);

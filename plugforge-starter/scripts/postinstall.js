@@ -2,38 +2,19 @@
 
 const fs = require('fs');
 const path = require('path');
-
-/**
- * Postinstall script for gm-cc
- * Implements Mode 1: Standalone .claude/ directory installation
- * 
- * When installed via npm in a project:
- * - Copies agents/, hooks/, .mcp.json to project's .claude/
- * - Updates .gitignore with .gm-stop-verified
- * - Runs silently, never breaks npm install
- * - Safe to run multiple times (idempotent)
- */
+const { execSync } = require('child_process');
 
 function isInsideNodeModules() {
-  // Check if __dirname contains /node_modules/ in its path
-  // Example: /project/node_modules/gm-cc/scripts
   return __dirname.includes(path.sep + 'node_modules' + path.sep);
 }
 
 function getProjectRoot() {
-  // From /project/node_modules/gm-cc/scripts
-  // Navigate to /project
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-  
-  // Find the node_modules parent (project root)
+  if (!isInsideNodeModules()) return null;
   let current = __dirname;
-  while (current !== path.dirname(current)) { // While not at root
+  while (current !== path.dirname(current)) {
     current = path.dirname(current);
-    const parent = path.dirname(current);
     if (path.basename(current) === 'node_modules') {
-      return parent;
+      return path.dirname(current);
     }
   }
   return null;
@@ -43,39 +24,26 @@ function safeCopyFile(src, dst) {
   try {
     const content = fs.readFileSync(src, 'utf-8');
     const dstDir = path.dirname(dst);
-    if (!fs.existsSync(dstDir)) {
-      fs.mkdirSync(dstDir, { recursive: true });
-    }
+    if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
     fs.writeFileSync(dst, content, 'utf-8');
     return true;
   } catch (err) {
-    // Silently skip errors
     return false;
   }
 }
 
 function safeCopyDirectory(src, dst) {
   try {
-    if (!fs.existsSync(src)) {
-      return false; // Source doesn't exist, skip
-    }
-    
+    if (!fs.existsSync(src)) return false;
     fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    
-    entries.forEach(entry => {
+    fs.readdirSync(src, { withFileTypes: true }).forEach(entry => {
       const srcPath = path.join(src, entry.name);
       const dstPath = path.join(dst, entry.name);
-      
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        safeCopyFile(srcPath, dstPath);
-      }
+      if (entry.isDirectory()) safeCopyDirectory(srcPath, dstPath);
+      else if (entry.isFile()) safeCopyFile(srcPath, dstPath);
     });
     return true;
   } catch (err) {
-    // Silently skip errors
     return false;
   }
 }
@@ -84,45 +52,22 @@ function updateGitignore(projectRoot) {
   try {
     const gitignorePath = path.join(projectRoot, '.gitignore');
     const entry = '.gm-stop-verified';
-    
-    // Read existing content
-    let content = '';
-    if (fs.existsSync(gitignorePath)) {
-      content = fs.readFileSync(gitignorePath, 'utf-8');
-    }
-    
-    // Check if entry already exists
-    if (content.includes(entry)) {
-      return true; // Already there
-    }
-    
-    // Append entry
-    if (content && !content.endsWith('\n')) {
-      content += '\n';
-    }
-    content += entry + '\n';
-    
-    fs.writeFileSync(gitignorePath, content, 'utf-8');
+    let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
+    if (content.includes(entry)) return true;
+    if (content && !content.endsWith('\n')) content += '\n';
+    fs.writeFileSync(gitignorePath, content + entry + '\n', 'utf-8');
     return true;
   } catch (err) {
-    // Silently skip errors
     return false;
   }
 }
 
 function install() {
-  // Only run if inside node_modules
-  if (!isInsideNodeModules()) {
-    return; // Silent exit
-  }
-  
+  if (!isInsideNodeModules()) return;
   const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return; // Silent exit
-  }
-  
+  if (!projectRoot) return;
   const claudeDir = path.join(projectRoot, '.claude');
-  const sourceDir = __dirname.replace(/[\/]scripts$/, ''); // Remove /scripts
+  const sourceDir = __dirname.replace(/[/\\]scripts$/, '');
   
   // Copy files
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
@@ -131,8 +76,26 @@ function install() {
   
   // Update .gitignore
   updateGitignore(projectRoot);
-  
+
+  // Warm bun x cache for packages used by hooks
+  warmBunCache();
+
   // Silent success
+}
+
+function warmBunCache() {
+  const packages = ['mcp-thorns@latest', 'codebasesearch@latest'];
+  for (const pkg of packages) {
+    try {
+      execSync(`bun x ${pkg} --version`, {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+        timeout: 60000
+      });
+    } catch (e) {
+      // Silent - cache warming is best-effort
+    }
+  }
 }
 
 install();

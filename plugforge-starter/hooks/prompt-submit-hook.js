@@ -31,7 +31,7 @@ const runCodeSearch = (query, cwd) => {
     const escaped = query.replace(/"/g, '\\"').substring(0, 200);
     let out;
     try {
-      out = execSync(`bun x codebasesearch@latest "${escaped}"`, {
+      out = execSync(`bun x codebasesearch "${escaped}"`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd,
@@ -40,7 +40,7 @@ const runCodeSearch = (query, cwd) => {
       });
     } catch (bunErr) {
       if (bunErr.killed) return '';
-      out = execSync(`npx -y codebasesearch@latest "${escaped}"`, {
+      out = execSync(`npx -y codebasesearch "${escaped}"`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd,

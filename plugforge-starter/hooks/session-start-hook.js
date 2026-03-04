@@ -71,7 +71,7 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
     try {
       let thornOutput;
       try {
-        thornOutput = execSync(`bun x mcp-thorns@latest`, {
+        thornOutput = execSync(`bun x mcp-thorns`, {
           encoding: 'utf-8',
           stdio: ['pipe', 'pipe', 'pipe'],
           cwd: projectDir,
@@ -83,7 +83,7 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
           thornOutput = '=== mcp-thorns ===\nSkipped (3min timeout)';
         } else {
           try {
-            thornOutput = execSync(`npx -y mcp-thorns@latest`, {
+            thornOutput = execSync(`npx -y mcp-thorns`, {
               encoding: 'utf-8',
               stdio: ['pipe', 'pipe', 'pipe'],
               cwd: projectDir,
