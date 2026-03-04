@@ -591,6 +591,7 @@ try {
   const filesToCopy = [
     'agents',
     'hooks',
+    'skills',
     '.mcp.json',
     '.claude-plugin',
     'plugin.json',
@@ -639,7 +640,7 @@ try {
   const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
   // Also write cache dir so Claude Code finds it without network fetch
   const cacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm', pluginVersion);
-  const filesToCache = ['agents', 'hooks', '.mcp.json', '.claude-plugin', 'plugin.json', 'README.md', 'CLAUDE.md'];
+  const filesToCache = ['agents', 'hooks', 'skills', '.mcp.json', '.claude-plugin', 'plugin.json', 'README.md', 'CLAUDE.md'];
   function copyRecursiveCache(src, dst) {
     if (!fs.existsSync(src)) return;
     if (fs.statSync(src).isDirectory()) {
