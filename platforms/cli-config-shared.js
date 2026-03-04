@@ -594,7 +594,6 @@ try {
     'skills',
     '.mcp.json',
     '.claude-plugin',
-    'plugin.json',
     'README.md',
     'CLAUDE.md'
   ];
@@ -610,6 +609,10 @@ try {
   }
 
   filesToCopy.forEach(name => copyRecursive(path.join(srcDir, name), path.join(destDir, name)));
+
+  // Remove stale root-level plugin.json (moved to .claude-plugin/plugin.json)
+  const stalePluginJson = path.join(destDir, 'plugin.json');
+  if (fs.existsSync(stalePluginJson)) fs.unlinkSync(stalePluginJson);
 
   // Register in settings.json (enabledPlugins only, no hook injection)
   const settingsPath = path.join(claudeDir, 'settings.json');
@@ -640,7 +643,7 @@ try {
   const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
   // Also write cache dir so Claude Code finds it without network fetch
   const cacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm', pluginVersion);
-  const filesToCache = ['agents', 'hooks', 'skills', '.mcp.json', '.claude-plugin', 'plugin.json', 'README.md', 'CLAUDE.md'];
+  const filesToCache = ['agents', 'hooks', 'skills', '.mcp.json', '.claude-plugin', 'README.md', 'CLAUDE.md'];
   function copyRecursiveCache(src, dst) {
     if (!fs.existsSync(src)) return;
     if (fs.statSync(src).isDirectory()) {
@@ -650,6 +653,9 @@ try {
   }
   fs.mkdirSync(cacheDir, { recursive: true });
   filesToCache.forEach(name => copyRecursiveCache(path.join(destDir, name), path.join(cacheDir, name)));
+  // Remove stale root-level plugin.json from cache (moved to .claude-plugin/plugin.json)
+  const staleCachePluginJson = path.join(cacheDir, 'plugin.json');
+  if (fs.existsSync(staleCachePluginJson)) fs.unlinkSync(staleCachePluginJson);
   installedPlugins.plugins['gm@gm-cc'] = [{
     scope: 'user',
     installPath: cacheDir,
@@ -854,7 +860,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
       scripts: pluginSpec.scripts,
@@ -863,7 +869,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -871,7 +877,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   getAdditionalFiles(spec) {
     const TemplateBuilder = require('../lib/template-builder');
     return {
-      'plugin.json': TemplateBuilder.generatePluginJson(spec),
+      '.claude-plugin/plugin.json': TemplateBuilder.generatePluginJson(spec),
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec),
       'cli.js': createClaudeCodeCliScript(),
       'install.js': createClaudeCodeInstallScript()
