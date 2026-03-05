@@ -76,22 +76,12 @@ try {
     if (isGemini) {
       console.log(JSON.stringify({ decision: 'deny', reason: result.reason }));
     } else {
-      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: result.reason } }));
+      console.log(JSON.stringify({ decision: 'block', reason: result.reason }));
     }
     process.exit(0);
   }
 
-  if (isGemini) {
-    console.log(JSON.stringify({ decision: 'allow' }));
-  } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
-  }
   process.exit(0);
 } catch (error) {
-  if (isGemini) {
-    console.log(JSON.stringify({ decision: 'allow' }));
-  } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
-  }
   process.exit(0);
 }
