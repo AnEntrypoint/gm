@@ -1484,7 +1484,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
-      scripts: { postinstall: 'node scripts/postinstall.js' }
+      scripts: { postinstall: 'node scripts/postinstall-oc.js' }
     };
   },
   transformAgentContent(agentName, content) {
@@ -1506,7 +1506,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
-      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
+      scripts: { postinstall: 'node scripts/postinstall-oc.js', ...(pluginSpec.scripts || {}) },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     }, null, 2);
@@ -1631,7 +1631,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
-      scripts: { postinstall: 'node scripts/postinstall.js' }
+      scripts: { postinstall: 'node scripts/postinstall-kilo.js' }
     };
   },
   transformAgentContent(agentName, content) {
@@ -1653,7 +1653,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
-      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
+      scripts: { postinstall: 'node scripts/postinstall-kilo.js', ...(pluginSpec.scripts || {}) },
       files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     }, null, 2);
