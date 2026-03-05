@@ -65,7 +65,7 @@ const emit = (additionalContext) => {
   } else if (isOpenCode) {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'message.updated', additionalContext } }, null, 2));
   } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext } }, null, 2));
+    console.log(JSON.stringify({ additionalContext }, null, 2));
   }
 };
 
