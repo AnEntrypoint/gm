@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT;
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT || path.join(__dirname, '..');
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 const ensureGitignore = () => {
@@ -116,26 +116,11 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
   const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
-    const result = {
-      systemMessage: additionalContext
-    };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ systemMessage: additionalContext }, null, 2));
   } else if (isOpenCode || isKilo) {
-    const result = {
-      hookSpecificOutput: {
-        hookEventName: 'session.created',
-        additionalContext
-      }
-    };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'session.created', additionalContext } }, null, 2));
   } else {
-    const result = {
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext
-      }
-    };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ additionalContext }, null, 2));
   }
 } catch (error) {
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
@@ -143,23 +128,11 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
   const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
-    console.log(JSON.stringify({
-      systemMessage: `Error executing hook: ${error.message}`
-    }, null, 2));
+    console.log(JSON.stringify({ systemMessage: `Error executing hook: ${error.message}` }, null, 2));
   } else if (isOpenCode || isKilo) {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'session.created',
-        additionalContext: `Error executing hook: ${error.message}`
-      }
-    }, null, 2));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'session.created', additionalContext: `Error executing hook: ${error.message}` } }, null, 2));
   } else {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext: `Error executing hook: ${error.message}`
-      }
-    }, null, 2));
+    console.log(JSON.stringify({ additionalContext: `Error executing hook: ${error.message}` }, null, 2));
   }
   process.exit(0);
 }

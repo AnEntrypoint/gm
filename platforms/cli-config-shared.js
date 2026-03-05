@@ -650,7 +650,7 @@ function provisionProject() {
       hooks: [{
         type: 'command',
         command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start-hook.js',
-        timeout: 10000
+        timeout: 180000
       }]
     }];
     settings.hooks.UserPromptSubmit = [{
@@ -658,7 +658,7 @@ function provisionProject() {
       hooks: [{
         type: 'command',
         command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/prompt-submit-hook.js',
-        timeout: 3600
+        timeout: 60000
       }]
     }];
     settings.hooks.Stop = [{
