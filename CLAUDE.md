@@ -55,7 +55,7 @@ All adapters use these methods. Template changes propagate automatically.
 
 **Graceful platform degradation**: Single platform failure doesn't block others. All 9 attempt generation. Failed platforms reported separately.
 
-**Skill consolidation**: All skills merged into agents/gm.md. No separate skill files. Reduces agent invocation overhead.
+**Skill discovery**: Skills are auto-discovered from `skills/` directory and distributed to all 9 platform outputs.
 
 **GitHub Actions rsync sync**: Uses `rsync --delete` to remove orphaned files from target repos, preventing stale code illusion.
 
@@ -64,11 +64,12 @@ All adapters use these methods. Template changes propagate automatically.
 **Source** (`plugforge-starter/`):
 ```
 gm.json              # Single spec
-agents/gm.md              # Single unified agent with all behavioral rules
-hooks/*.js                # Platform-agnostic hooks
+agents/              # Agent configurations (gm.md is the main agent)
+skills/              # Skill directories, each with SKILL.md
+hooks/*.js           # Platform-agnostic hooks
 ```
 
-**Architecture Note**: All 10 skills are merged into agents/gm.md as single sections. Separate skill files were deleted to eliminate per-invocation token cost. Each skill section is substantial (10+ lines) to justify inclusion. This consolidation reduces agent startup overhead dramatically compared to invoking individual skills.
+**Architecture Note**: Skills are maintained as separate directories under `skills/` with each skill having its own SKILL.md file. Skills are auto-discovered and distributed to all 9 platform outputs without manual configuration.
 
 **Output**: 9 auto-generated GitHub repositories
 - 5 CLI platforms: gm-cc, gm-gc, gm-oc, gm-codex, gm-copilot-cli
@@ -132,11 +133,11 @@ Everything is predictable and turnkey. All corner cases handled before they occu
 - Proceeds with empty collections rather than crashing
 - User gets empty plugin, not broken plugin
 
-**Skills consolidation complete**:
-- All 10 skills merged into agents/gm.md
-- Separate skill files deleted to eliminate per-invocation cost
-- Each skill section is substantial (10+ lines) to justify inclusion
-- No more skill discovery or path variance handling needed
+**Skill discovery complete**:
+- All skills auto-discovered from skills/ directory
+- Each skill distributed to all 9 platform outputs
+- Platform-specific path variations handled automatically
+- No manual registration required
 
 **Hook file naming variance**:
 - `getHookSourcePaths()` checks both `name.js` and `name-hook.js`
@@ -186,10 +187,9 @@ Executed via Bash tool only:
 - [ ] validateGeneratedFiles() passes for all 9
 - [ ] thorns reveals no unexpected duplications
 - [ ] ConventionLoader loads empty source gracefully
-- [x] All skills consolidated into agents/gm.md (no separate files)
-- [ ] Adding new hook auto-appears in all 9 outputs
-- [ ] gm.md merged (455 words, 44% compression)
-- [ ] All skills removed from /skills/ (consolidated into gm.md)
+- [ ] Adding new skill auto-appears in all 9 outputs
+- [ ] Skills properly discovered from skills/ directory
+- [ ] All expected skills distributed to generated platforms
 - [ ] No .test.* files exist anywhere
 - [ ] auto-healer.js deleted (if orphaned)
 - [ ] buildReporter categorizes files correctly
