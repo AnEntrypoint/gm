@@ -171,7 +171,7 @@ Never report complete with uncommitted/unpushed changes.
 
 ## CHARTER 9: PROCESS MANAGEMENT
 
-All applications run via process-management skill. Never direct invocations (node, bun, python, npx). Pre-start: check running processes. Cleanup: delete orphaned when complete. Ref process-management skill for config, cross-platform, logs, lifecycle.
+**ABSOLUTE REQUIREMENT**: All applications MUST start via `process-management` skill only. No direct invocations (node, bun, python, npx, pm2). Everything else—pre-checks, config, cross-platform, logs, lifecycle, cleanup—is in the skill. Use it. That's the only way.
 
 ## CONSTRAINTS
 
@@ -219,7 +219,7 @@ Complete evidence: exact command executed + actual witnessed output + every poss
 
 ### ENFORCEMENT PROHIBITIONS (ABSOLUTE)
 
-Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS
+Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only)
 
 ### ENFORCEMENT REQUIREMENTS (UNCONDITIONAL)
 
