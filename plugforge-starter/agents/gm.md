@@ -33,12 +33,12 @@ enforce: critical
 
 | State | Action | Exit Condition |
 |-------|--------|---|
-| **PLAN** | Build `./.prd` (planning skill): enumerate every possible edge case, test scenario, dependency. Frozen at creation. | `.prd` written, all unknowns named |
-| **EXECUTE** | Run every possible code execution (≤15s, densely packed). Launch ≤3 parallel gm:gm per wave. Assign witnessed values to mutables. Browser changes: agent-browser PoC. | Zero unresolved mutables |
-| **PRE-EMIT-TEST** | Execute every possible hypothesis before file changes (success/failure/edge). Browser changes: agent-browser workflows. | All hypotheses proven, real output confirms approach, zero failures. **BLOCKING GATE** |
+| **PLAN** | Build `./.prd`: enumerate every possible edge case, test scenario, dependency. Frozen at creation. | `.prd` written, all unknowns named |
+| **EXECUTE** | Run every possible code execution (≤15s, densely packed). Launch ≤3 parallel gm:gm per wave. Assign witnessed values to mutables. | Zero unresolved mutables |
+| **PRE-EMIT-TEST** | Execute every possible hypothesis before file changes (success/failure/edge). | All hypotheses proven, real output confirms approach, zero failures. **BLOCKING GATE** |
 | **EMIT** | Write files. **IMMEDIATE NEXT STEP**: POST-EMIT-VALIDATION (no pause). | Files written |
-| **POST-EMIT-VALIDATION** | Execute ACTUAL modified disk code (fs.readFileSync verify). Real data. Browser: agent-browser on modified files. | Modified disk code executed, witnessed output, zero failures, real data tested. **BLOCKING GATE** |
-| **VERIFY** | E2E system test. Real execution witnessed. Browser: full agent-browser workflows. | `witnessed_execution=true` on actual system |
+| **POST-EMIT-VALIDATION** | Execute ACTUAL modified disk code. Real data. All scenarios tested. | Modified disk code executed, witnessed output, zero failures. **BLOCKING GATE** |
+| **VERIFY** | Real system E2E test. Witnessed execution. | `witnessed_execution=true` on actual system |
 | **GIT-PUSH** | Only after VERIFY. `git add -A && git commit && git push` | Push succeeds |
 | **COMPLETE** | All gates passed, push done, zero user steps remaining | `gate_passed=true && user_steps=0` |
 
@@ -73,33 +73,16 @@ All execution: Bash tool or `agent-browser` skill. Every hypothesis proven by ex
 **BLOCKED** (pre-tool-use-hook enforces): Task:explore, Glob, Grep, WebSearch for code, Bash grep/find/cat on source, Puppeteer/Playwright.
 
 **TOOL MAPPING**:
-- **Code exploration** (ONLY): `code-search` skill (semantic, 102 types, natural language, line numbers)
-- **Code execution**: Bash (`node -e`, `bun -e`, `python -c`, git, npm, docker, systemctl only)
+- **Code exploration** (ONLY): code-search skill
+- **Code execution**: Bash (node, bun, python, git, npm, docker, systemctl only)
 - **File ops**: Read/Write/Edit (known paths); Bash (inline)
-- **Browser**: `agent-browser` skill (no puppeteer/playwright)
+- **Browser**: agent-browser skill
 
 **EXPLORATION**: (1) code-search natural language (always first) → (2) multiple queries (faster than CLI) → (3) use returned line numbers + Read → (4) Bash only after 5+ code-search fails → (5) known path = Read directly.
 
 **BASH WHITELIST**: `node`, `python`, `bun`, `npm`, `git`, `docker`, `systemctl` (ONLY). No builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk)—use inline code instead. No spawn/exec/fork.
 
-**CODE EXECUTION PATTERNS**:
-```bash
-bun -e "const fs=require('fs'); console.log(fs.readdirSync('.'))"
-bun -e "require('fs').writeFileSync('out.json', JSON.stringify({x:1}, null, 2))"
-node script.js && git status
-python -c "import json; print(json.dumps({'ok': True}))"
-```
-Rules: ≤15s per run. Pack every related hypothesis per run. No temp files. No spawn/exec/fork.
-
-**BROWSER EXECUTION PATTERNS** (agent-browser):
-```javascript
-await browser.goto('http://localhost:3000/form');
-await browser.fill('input[name="email"]', 'test@example.com');
-await browser.click('button[type="submit"]');
-const errorMsg = await browser.textContent('.error-message');
-console.log('Validation shown:', errorMsg); // witnessed proof
-```
-Rules: ≤15s per run. Pack every hypothesis. No mocks. Real application. Witness behavior.
+**EXECUTION**: Bash for code/git/npm/docker/python. agent-browser skill for browser/UI workflows. Rules: ≤15s per run. Pack every related hypothesis per run. No temp files. No mocks. Real data only.
 
 
 ## CHARTER 3: GROUND TRUTH
@@ -111,7 +94,6 @@ Real services, real timing, zero black magic. Discover mocks/stubs/fixtures → 
 **CLI VALIDATION** (mandatory for CLI changes):
 - PRE-EMIT: Run CLI from source, capture output.
 - POST-EMIT: Run modified CLI from disk, verify all commands.
-- Examples: `./build/gm-cc/cli.js --version` (exit 0), `npm pack` (tarball created).
 - Document: command, actual output, exit code.
 
 
@@ -189,20 +171,7 @@ Never report complete with uncommitted/unpushed changes.
 
 ## CHARTER 9: PROCESS MANAGEMENT
 
-**ALL APPLICATIONS RUN VIA PM2.** Direct invocations (node, bun, python, npx) forbidden.
-
-**Pre-start**: `pm2 jlist`. If online: observe `pm2 logs <name>`. If stopped: restart. Only start if not found. Never duplicate.
-
-**PM2 config** (all processes): `autorestart: false, watch: ["src", "config"], ignore_watch: ["node_modules", ".git", "logs"], watch_delay: 1000`
-
-**Cross-platform**:
-- Windows: use `interpreter: "cmd", interpreter_args: "/c"` for npm scripts; resolve actual .js for globals; all spawned subprocesses need `windowsHide: true`
-- WSL polling: `watch_options: { usePolling: true, interval: 1000 }` for /mnt/c paths
-- Watch exhaustion: `echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p`
-
-**Logs**: `pm2 logs <name>` (stream) | `pm2 logs <name> --lines 100` (last N) | `pm2 logs <name> --err` (errors only)
-
-**Cleanup**: `pm2 delete <name>` when complete. Not `stop`. Never leave orphaned. Ref `process-management` skill.
+All applications run via process-management skill. Never direct invocations (node, bun, python, npx). Pre-start: check running processes. Cleanup: delete orphaned when complete. Ref process-management skill for config, cross-platform, logs, lifecycle.
 
 ## CONSTRAINTS
 
