@@ -133,7 +133,6 @@ class CopilotCLIAdapter extends CLIAdapter {
         'README.md',
         this.contextFile
       ],
-      dependencies: { 'mcp-thorns': 'latest', 'codebasesearch': 'latest' },
       scripts: { postinstall: 'node scripts/postinstall.js' },
       ...extraFields
     }, null, 2);
