@@ -740,6 +740,10 @@ function installGlobally() {
     const stalePluginJson = path.join(destDir, 'plugin.json');
     if (fs.existsSync(stalePluginJson)) fs.unlinkSync(stalePluginJson);
 
+    // Copy marketplace.json to root so extraKnownMarketplaces directory lookup finds it
+    const mktSrc = path.join(destDir, '.claude-plugin', 'marketplace.json');
+    if (fs.existsSync(mktSrc)) fs.copyFileSync(mktSrc, path.join(destDir, 'marketplace.json'));
+
     // Register in settings.json (enabledPlugins only, no hook injection)
     const settingsPath = path.join(claudeDir, 'settings.json');
     let settings = {};
@@ -782,6 +786,9 @@ function installGlobally() {
     // Remove stale root-level plugin.json from cache (moved to .claude-plugin/plugin.json)
     const staleCachePluginJson = path.join(cacheDir, 'plugin.json');
     if (fs.existsSync(staleCachePluginJson)) fs.unlinkSync(staleCachePluginJson);
+    // Copy marketplace.json to cache root too
+    const mktCacheSrc = path.join(cacheDir, '.claude-plugin', 'marketplace.json');
+    if (fs.existsSync(mktCacheSrc)) fs.copyFileSync(mktCacheSrc, path.join(cacheDir, 'marketplace.json'));
     installedPlugins.plugins['gm@gm-cc'] = [{
       scope: 'user',
       installPath: cacheDir,
