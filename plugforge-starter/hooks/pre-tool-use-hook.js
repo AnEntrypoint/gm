@@ -81,6 +81,10 @@ try {
     process.exit(0);
   }
 
+  if (isGemini) {
+    console.log(JSON.stringify({ decision: 'allow' }));
+  }
+
   process.exit(0);
 } catch (error) {
   process.exit(0);
