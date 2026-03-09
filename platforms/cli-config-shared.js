@@ -736,11 +736,9 @@ function installGlobally() {
 
     filesToCopy.forEach(name => copyRecursive(path.join(srcDir, name), path.join(destDir, name)));
 
-    // Remove stale root-level plugin.json (moved to .claude-plugin/plugin.json)
-    const stalePluginJson = path.join(destDir, 'plugin.json');
-    if (fs.existsSync(stalePluginJson)) fs.unlinkSync(stalePluginJson);
-
-    // Copy marketplace.json to root so extraKnownMarketplaces directory lookup finds it
+    // Copy plugin.json and marketplace.json to root so marketplace source lookup finds them
+    const pluginJsonSrc = path.join(destDir, '.claude-plugin', 'plugin.json');
+    if (fs.existsSync(pluginJsonSrc)) fs.copyFileSync(pluginJsonSrc, path.join(destDir, 'plugin.json'));
     const mktSrc = path.join(destDir, '.claude-plugin', 'marketplace.json');
     if (fs.existsSync(mktSrc)) fs.copyFileSync(mktSrc, path.join(destDir, 'marketplace.json'));
 
@@ -783,10 +781,9 @@ function installGlobally() {
     }
     fs.mkdirSync(cacheDir, { recursive: true });
     filesToCache.forEach(name => copyRecursiveCache(path.join(destDir, name), path.join(cacheDir, name)));
-    // Remove stale root-level plugin.json from cache (moved to .claude-plugin/plugin.json)
-    const staleCachePluginJson = path.join(cacheDir, 'plugin.json');
-    if (fs.existsSync(staleCachePluginJson)) fs.unlinkSync(staleCachePluginJson);
-    // Copy marketplace.json to cache root too
+    // Copy plugin.json and marketplace.json to cache root too
+    const cachePluginJsonSrc = path.join(cacheDir, '.claude-plugin', 'plugin.json');
+    if (fs.existsSync(cachePluginJsonSrc)) fs.copyFileSync(cachePluginJsonSrc, path.join(cacheDir, 'plugin.json'));
     const mktCacheSrc = path.join(cacheDir, '.claude-plugin', 'marketplace.json');
     if (fs.existsSync(mktCacheSrc)) fs.copyFileSync(mktCacheSrc, path.join(cacheDir, 'marketplace.json'));
     installedPlugins.plugins['gm@gm-cc'] = [{
