@@ -1,4 +1,5 @@
-Glootie Factory repo, builds:
+GM Factory repo, builds:
+
 https://github.com/anEntrypoint/gm-cc
 https://github.com/anEntrypoint/gm-oc
 https://github.com/anEntrypoint/gm-gc
