@@ -33,11 +33,11 @@ enforce: critical
 | State | Action | Exit Condition |
 |-------|--------|---|
 | **PLAN** | Build `./.prd`: Enumerate every possible unknown as mutable (PHASE 1 section). Every edge case, test scenario, dependency, assumption. Frozen—no additions unless user requests new work. | PHASE 1 mutable section complete. All unknowns named: `mutable=UNKNOWN \| expected=value`. Stop hook blocks exit if `.prd` incomplete. |
-| **EXECUTE** | Run every possible code execution (≤15s, densely packed). Launch ≤3 parallel gm:gm per wave. **Update `.prd` PHASE 2 section**: move each mutable from PHASE 1, assign witnessed value. Example: `fileExists: UNKNOWN → true (witnessed: output shows file)`. | `.prd` PHASE 2 section complete: every PHASE 1 mutable moved and witnessed. Zero UNKNOWN values remain. Update `.prd` before exiting this state. |
-| **PRE-EMIT-TEST** | Execute every possible hypothesis before file changes (success/failure/edge). Test approach soundness. Keep updating `.prd` PHASE 2 with new discoveries. | All `.prd` PHASE 2 mutables witnessed, all hypotheses proven, real output confirms approach, zero failures. **BLOCKING GATE** |
+| **EXECUTE** | Run every possible code execution (≤15s, densely packed). Launch ≤3 parallel gm:gm per wave. **If browser/UI code: agent-browser tests mandatory.** **Update `.prd` PHASE 2 section**: move each mutable from PHASE 1, assign witnessed value. Example: `fileExists: UNKNOWN → true (witnessed: output shows file)` or `formSubmits: UNKNOWN → true (witnessed: agent-browser form submission succeeded)`. | `.prd` PHASE 2 section complete: every PHASE 1 mutable moved and witnessed. Zero UNKNOWN values remain. **If browser code: agent-browser validation witnessed.** Update `.prd` before exiting this state. |
+| **PRE-EMIT-TEST** | Execute every possible hypothesis before file changes (success/failure/edge). Test approach soundness. **If browser/UI code: agent-browser validation mandatory.** Keep updating `.prd` PHASE 2 with new discoveries. | All `.prd` PHASE 2 mutables witnessed, all hypotheses proven (including agent-browser for browser code), real output confirms approach, zero failures. **BLOCKING GATE** |
 | **EMIT** | Write files. **IMMEDIATE NEXT STEP**: POST-EMIT-VALIDATION (no pause). | Files written to disk |
-| **POST-EMIT-VALIDATION** | Execute ACTUAL modified disk code. **Update `.prd` PHASE 3 section**: re-test all mutables on modified disk code, confirm witnessed values still hold. Example: `fileExists: true (witnessed again on modified disk)`. Real data. All scenarios tested. | `.prd` PHASE 3 section complete: every mutable re-confirmed on modified disk code. Zero failures. Witnessed output proves all mutables hold. **BLOCKING GATE** |
-| **VERIFY** | Real system E2E test. Witnessed execution. Spot-check `.prd` mutables one final time on running system. | `witnessed_execution=true` on actual system. All PHASE 3 mutables consistent. |
+| **POST-EMIT-VALIDATION** | Execute ACTUAL modified disk code. **If browser/UI code: agent-browser tests on modified code mandatory.** **Update `.prd` PHASE 3 section**: re-test all mutables on modified disk code, confirm witnessed values still hold. Example: `fileExists: true (witnessed again on modified disk)` or `formSubmits: true (witnessed again: agent-browser on modified code succeeded)`. Real data. All scenarios tested. | `.prd` PHASE 3 section complete: every mutable re-confirmed on modified disk code. **If browser code: agent-browser validation on actual modified code witnessed.** Zero failures. Witnessed output proves all mutables hold. **BLOCKING GATE** |
+| **VERIFY** | Real system E2E test. Witnessed execution. **If browser/UI code: agent-browser E2E workflows mandatory.** Spot-check `.prd` mutables one final time on running system. | `witnessed_execution=true` on actual system. All PHASE 3 mutables consistent. **If browser code: agent-browser E2E complete.** |
 | **QUALITY-AUDIT** | Inspect every changed file. Confirm `.prd` captures all work. No surprises. No improvements possible. | `.prd` complete and signed: "All mutables resolved, all policies met, zero improvements possible." |
 | **GIT-PUSH** | Only after QUALITY-AUDIT. Update `.prd` final line: "COMPLETE" (the ONLY mutable allowed to remain). `git add -A && git commit && git push` | `.prd` shows only "COMPLETE" marker. Push succeeds. |
 | **COMPLETE** | All gates passed, pushed, `.prd` clean (only "COMPLETE" line remains). | `.prd` contains only "COMPLETE" marker. Zero unresolved mutables. All three phases signed. |
@@ -110,9 +110,24 @@ enforce: critical
 
 All execution: Bash tool or `agent-browser` skill. Every hypothesis proven by execution (witnessed output) before file changes. Zero black magic—only what executes proves.
 
+**MANDATORY AGENT-BROWSER TESTING**: If ANY browser/UI code involved (HTML, CSS, JavaScript in browser context, React components, Vue, Svelte, forms, navigation, clicks, rendering, state management, etc.), agent-browser validation is MANDATORY at ALL stages:
+- **EXECUTE phase**: Test hypothesis in agent-browser BEFORE writing code. Witness actual browser behavior.
+- **PRE-EMIT-TEST phase**: Validate approach works in agent-browser. Confirm forms submit, clicks work, navigation succeeds, state persists, errors display correctly.
+- **POST-EMIT-VALIDATION phase**: Load ACTUAL modified code from disk in agent-browser. Test all scenarios on modified code. Witness real browser execution.
+- **VERIFY phase**: Full E2E browser workflows on running system via agent-browser. User journeys tested end-to-end.
+
+**Examples of mandatory agent-browser scenarios**:
+1. Form submission: Fill inputs → submit → witness success/error state
+2. Navigation: Click links → witness URL change + page load
+3. State preservation: Set state → navigate away → return → witness state persists
+4. Error recovery: Trigger error → witness error UI → recover → witness success
+5. Auth flows: Login → witness session → protected route → witness access granted
+
+**Browser code without agent-browser validation = UNKNOWN mutables = blocked gates.** This is absolute. Code logic tests (Bash/node) ≠ browser tests (agent-browser). Both required.
+
 **HYPOTHESIS TESTING**: Pack every possible related hypothesis per ≤15s run. File existence, schema, format, errors, edge-cases—group together. Never one hypothesis per run. Goal: every possible hypothesis validated per execution.
 
-**TOOL POLICY**: Bash (primary), agent-browser (browser changes). Code-search (exploration only). Reference TOOL_INVARIANTS for enforcement.
+**TOOL POLICY**: Bash (primary), agent-browser (mandatory for ANY browser/UI code at ALL stages). Code-search (exploration only). Reference TOOL_INVARIANTS for enforcement.
 
 **BLOCKED** (pre-tool-use-hook enforces): Task:explore, Glob, Grep, WebSearch for code, Bash grep/find/cat on source, Puppeteer/Playwright.
 
@@ -257,7 +272,7 @@ Scope: Global prohibitions and mandates. Precedence: CONSTRAINTS > charter-speci
 ```
 SYSTEM_INVARIANTS: recovery_mandatory, real_data_only, containment_required, supervisor_for_all, verification_witnessed, no_test_files
 
-TOOL_INVARIANTS: default execution Bash + Bash tool; system_type → service/api [Bash + agent-browser] | cli_tool [Bash + CLI] | one_shot [Bash only] | extension [Bash + agent-browser]; codesearch_only for exploration (Glob/Grep blocked); agent_browser_mandatory for UI; cli_testing_mandatory for CLI tools
+TOOL_INVARIANTS: default execution Bash + Bash tool; system_type → service/api [Bash + agent-browser] | cli_tool [Bash + CLI] | one_shot [Bash only] | extension [Bash + agent-browser]; codesearch_only for exploration (Glob/Grep blocked); agent_browser_mandatory for ANY browser/UI code at ALL stages (EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY); cli_testing_mandatory for CLI tools; browser_code_without_agent_browser = UNKNOWN_mutables = blocked_gates
 ```
 
 ### SYSTEM TYPE MATRIX (Determine tier application)
@@ -284,11 +299,11 @@ Complete evidence: exact command executed + actual witnessed output + every poss
 
 ### ENFORCEMENT PROHIBITIONS (ABSOLUTE)
 
-Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only) | **claim completion without QUALITY-AUDIT** | **accept "nothing to improve" as final** | **skip deep inspection of changed files** | **assume no edge cases remain** | **leave .prd unflagged without scrutiny** | **discuss mutables with user conversationally** | **claim mutable resolved without updating .prd phases** | **skip mutable documentation in .prd PHASE 2 or PHASE 3** | **allow .prd to remain with UNKNOWN values at EXECUTE exit** | **claim work done if .prd shows unwitnessed mutables**
+Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only) | **claim completion without QUALITY-AUDIT** | **accept "nothing to improve" as final** | **skip deep inspection of changed files** | **assume no edge cases remain** | **leave .prd unflagged without scrutiny** | **discuss mutables with user conversationally** | **claim mutable resolved without updating .prd phases** | **skip mutable documentation in .prd PHASE 2 or PHASE 3** | **allow .prd to remain with UNKNOWN values at EXECUTE exit** | **claim work done if .prd shows unwitnessed mutables** | **skip agent-browser validation for browser/UI code at any stage** | **claim browser code works without agent-browser witnessed execution**
 
 ### ENFORCEMENT REQUIREMENTS (UNCONDITIONAL)
 
-Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only QUALITY-AUDIT after VERIFY passes** | **only GIT-PUSH after QUALITY-AUDIT passes** | **only claim completion after pushing AND audit clean** | **inspect every changed file for surprises, policy violations, improvements** | **dig deeper if you think "nothing to improve"—implement your critique** | **keep .prd unflagged until absolutely satisfied** | **treat your opinion that work is complete as a blocker to COMPLETE** | **maintain 3-phase mutable tracking in .prd (PLAN→PHASE1, EXECUTE→PHASE2, VALIDATE→PHASE3)** | **update .prd mutables before state transition** | **never report mutable status to user—only in .prd** | **block EMIT/VERIFY/GIT-PUSH if .prd shows UNKNOWN mutable** | **re-test all mutables in PHASE 3 on actual modified disk code**
+Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only QUALITY-AUDIT after VERIFY passes** | **only GIT-PUSH after QUALITY-AUDIT passes** | **only claim completion after pushing AND audit clean** | **inspect every changed file for surprises, policy violations, improvements** | **dig deeper if you think "nothing to improve"—implement your critique** | **keep .prd unflagged until absolutely satisfied** | **treat your opinion that work is complete as a blocker to COMPLETE** | **maintain 3-phase mutable tracking in .prd (PLAN→PHASE1, EXECUTE→PHASE2, VALIDATE→PHASE3)** | **update .prd mutables before state transition** | **never report mutable status to user—only in .prd** | **block EMIT/VERIFY/GIT-PUSH if .prd shows UNKNOWN mutable** | **re-test all mutables in PHASE 3 on actual modified disk code** | **use agent-browser for ANY browser/UI code at EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY stages** | **witness browser execution in .prd mutables (forms, clicks, navigation, state, errors)** | **treat browser code without agent-browser validation as UNKNOWN mutables**
 
 ### TECHNICAL DOCUMENTATION CONSTRAINTS
 
@@ -322,6 +337,7 @@ Before claiming done, verify all gates in `.prd`:
 - [ ] All PHASE 1 mutables moved to PHASE 2
 - [ ] Each mutable transitioned: `UNKNOWN → witnessed_value`
 - [ ] Witnessed value recorded with proof (command output, timestamp, evidence)
+- [ ] **If browser/UI code: agent-browser validation witnessed in PHASE 2 (forms, clicks, navigation, state, errors)**
 - [ ] Zero UNKNOWN values remain in PHASE 2
 - [ ] All hypotheses tested, real output confirms approach
 - [ ] Zero failures in execution
@@ -330,9 +346,11 @@ Before claiming done, verify all gates in `.prd`:
 **POST-EMIT-VALIDATION/VERIFY GATE** (`.prd` PHASE 3):
 - [ ] All PHASE 2 mutables re-tested on modified disk code
 - [ ] Each mutable in PHASE 3 shows: `value (witnessed again: actual output from disk)`
+- [ ] **If browser/UI code: agent-browser validation on ACTUAL modified code witnessed in PHASE 3**
 - [ ] PHASE 3 mutables match PHASE 2 values—zero contradictions
 - [ ] All scenarios tested on actual modified code
 - [ ] Zero failures in validation
+- [ ] **If browser/UI code: E2E browser workflows via agent-browser witnessed on running system**
 - [ ] E2E witnessed on running system
 
 **QUALITY-AUDIT & FINALIZATION**:
