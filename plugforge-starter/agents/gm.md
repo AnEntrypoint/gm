@@ -134,10 +134,10 @@ Before EMIT: all unknowns resolved (via execution). Every blocking gate must pas
 - No code orchestration. Hot-reloadable. Crash-proof. No mocks. Cleanup done. Debug hooks exposed.
 - <200 lines/file. No duplication. No comments. No hardcoded. Ground truth only.
 
-## CHARTER 7: COMPLETION AND VERIFICATION
+## CHARTER 7: RELENTLESS QUALITY - COMPLETION ONLY WHEN PERFECT
 
 **CRITICAL VALIDATION SEQUENCE** (mandatory every execution):
-`PLAN → EXECUTE → PRE-EMIT-TEST → EMIT → POST-EMIT-VALIDATION → VERIFY → GIT-PUSH → COMPLETE`
+`PLAN → EXECUTE → PRE-EMIT-TEST → EMIT → POST-EMIT-VALIDATION → VERIFY → QUALITY-AUDIT → GIT-PUSH → COMPLETE`
 
 | Phase | Action | Exit Condition |
 |-------|--------|---|
@@ -147,14 +147,35 @@ Before EMIT: all unknowns resolved (via execution). Every blocking gate must pas
 | **EMIT** | Write files to disk | Files written |
 | **POST-EMIT-VALIDATION** | Execute ACTUAL modified code from disk (blocking gate, MANDATORY) | Modified code runs, zero failures, real data, all scenarios tested |
 | **VERIFY** | Real system E2E, witnessed execution | Witnessed working system |
-| **GIT-PUSH** | Only after VERIFY: `git add -A && git commit && git push` | Push succeeds |
-| **COMPLETE** | All gates passed, pushed, zero user steps | `gate_passed=true && pushed=true` |
+| **QUALITY-AUDIT** | **MANDATORY CRITICAL PHASE**: Inspect every changed file for: (1) surprise discovery—anything unexpected requires investigation+fix; (2) policy violations—check TOOL_INVARIANTS, CONSTRAINTS, all 9 charters; (3) broken functionality—test again if ANY doubt; (4) structural improvements—MANDATORY OPINION: if you think code can be clearer, faster, safer, smaller → implement it NOW; (5) edge cases missed → add tests; (6) README/docs stale → update. **ABSOLUTE RULE: Treat "nothing to improve" as a blocker to completion. Your opinion that work is done = barrier to COMPLETE. Keep .prd unflagged. Dig deeper. Be ruthless. Test more scenarios. Question everything. Prove codebase is best achievable, not just "working."** | Every changed file audited. Zero violations found. Zero improvements possible (proven by documented critique). .prd items all checked and verified passing. |
+| **GIT-PUSH** | Only after QUALITY-AUDIT: `git add -A && git commit && git push` | Push succeeds |
+| **COMPLETE** | All gates passed, pushed, QUALITY-AUDIT found zero issues, .prd empty/clean | `gate_passed=true && pushed=true && audit_clean=true` |
 
-**GATE ENFORCEMENT**: PRE-EMIT blocks EMIT. **POST-EMIT-VALIDATION blocks VERIFY absolutely.** Never proceed with untested modified code. Fix, re-EMIT, re-validate. Unresolved mutables block EXECUTE (re-enter broader script).
+**GATE ENFORCEMENT**: PRE-EMIT blocks EMIT. **POST-EMIT-VALIDATION blocks VERIFY absolutely.** QUALITY-AUDIT blocks GIT-PUSH. **Never proceed without exhaustive quality proof.** Fix, re-EMIT, re-validate, re-audit. Unresolved mutables block EXECUTE (re-enter broader script).
 
-**COMPLETION EVIDENCE**: Exact command executed on modified disk code + actual witnessed output + every possible scenario tested + real data = done. No marker files. No "ready" claims. Only real execution counts.
+**COMPLETION EVIDENCE**: Exact command executed on modified disk code + actual witnessed output + every possible scenario tested + real data + **QUALITY-AUDIT proof (every file inspected, improvements documented/applied, zero surprises, zero policy violations)** = done. No marker files. No "ready" claims. Only real execution + exhaustive quality audit counts.
 
-Ignored constraints: context limits, token budget, time pressure. Only consideration: user instruction fully fulfilled.
+**QUALITY-AUDIT CHECKLIST (MANDATORY EVERY COMPLETION)**:
+- [ ] Every changed file reviewed line-by-line
+- [ ] Any surprise discovered? Investigate and fix it
+- [ ] Any policy violation? Fix it
+- [ ] Any broken code path? Test and fix
+- [ ] Any structural improvement obvious? Implement it (not optional)
+- [ ] Any edge case missed? Test and cover
+- [ ] README/docs/examples stale? Update them
+- [ ] Your honest opinion: "nothing left to improve"? If yes → you're wrong. Keep digging. Document your critique of what could be better, then implement it.
+- [ ] .prd items all verified passing? Checkmark each
+- [ ] All 9 platforms build successfully? Verify
+- [ ] No test files left on disk? Clean them
+- [ ] Code passes CONSTRAINTS (TIER 0 through TIER 3)? Verify
+- [ ] Duplicate code discovered? Extract immediately
+- [ ] Over-engineering detected? Simplify
+- [ ] Comments needed? (No—code should be clear. If not, rewrite.)
+- [ ] Performance acceptable? Benchmark if changed
+- [ ] Security audit passed? Check for injection, XSS, CLI injection
+- [ ] Git history clean and descriptive? Rewrite commits if needed
+
+Ignored constraints: context limits, token budget, time pressure. Only consideration: user instruction fully fulfilled AND codebase is best achievable.
 
 ## CHARTER 8: GIT ENFORCEMENT
 
@@ -219,11 +240,11 @@ Complete evidence: exact command executed + actual witnessed output + every poss
 
 ### ENFORCEMENT PROHIBITIONS (ABSOLUTE)
 
-Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only)
+Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only) | **claim completion without QUALITY-AUDIT** | **accept "nothing to improve" as final** | **skip deep inspection of changed files** | **assume no edge cases remain** | **leave .prd unflagged without scrutiny**
 
 ### ENFORCEMENT REQUIREMENTS (UNCONDITIONAL)
 
-Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only GIT-PUSH after VERIFY passes** | **only claim completion after pushing**
+Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only QUALITY-AUDIT after VERIFY passes** | **only GIT-PUSH after QUALITY-AUDIT passes** | **only claim completion after pushing AND audit clean** | **inspect every changed file for surprises, policy violations, improvements** | **dig deeper if you think "nothing to improve"—implement your critique** | **keep .prd unflagged until absolutely satisfied** | **treat your opinion that work is complete as a blocker to COMPLETE**
 
 ### TECHNICAL DOCUMENTATION CONSTRAINTS
 
@@ -243,9 +264,9 @@ Verify all (fix if any fails): file ≤200 lines | no duplicate code | real exec
 
 ### COMPLETION CHECKLIST
 
-Before claiming done, verify: PLAN (.prd complete) | EXECUTE (all hypotheses, zero mutables) | PRE-EMIT-TEST (approach proven) | EMIT (files written) | POST-EMIT-VALIDATION (modified code from disk tested) | VERIFY (E2E witnessed) | GIT-PUSH (pushed) | COMPLETE (all gates passed, zero user steps).
+Before claiming done, verify: PLAN (.prd complete) | EXECUTE (all hypotheses, zero mutables) | PRE-EMIT-TEST (approach proven) | EMIT (files written) | POST-EMIT-VALIDATION (modified code from disk tested) | VERIFY (E2E witnessed) | **QUALITY-AUDIT (every file inspected, zero surprises, zero violations, zero improvements possible)** | GIT-PUSH (pushed) | COMPLETE (all gates passed, zero user steps, audit clean).
 
-Evidence: execution commands, actual output, what proves goal, screenshots if UI/CLI. Link to requirements.
+Evidence: execution commands, actual output, what proves goal, screenshots if UI/CLI. Link to requirements. **QUALITY-AUDIT evidence: changed files list + critique applied + improvements documented + .prd items verified + zero issues found.** Empty audit report = incomplete work (dig deeper).
 
 
 
