@@ -1,10 +1,10 @@
 const factory = (name, label, configFile, contextFile, overrides = {}) => {
   const hookEvents = {
-    cc: { preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
-    gc: { preTool: 'BeforeTool', promptSubmit: 'BeforeAgent', stop: 'SessionEnd' },
-    codex: { preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
-    oc: { preTool: 'tool.execute.before', promptSubmit: 'message.updated', stop: 'session.closing' },
-    kilo: { preTool: 'tool.execute.before', promptSubmit: 'message.updated', stop: 'session.closing' }
+    cc: { preTool: 'PreToolUse', postTool: 'PostToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
+    gc: { preTool: 'BeforeTool', postTool: 'AfterTool', promptSubmit: 'BeforeAgent', stop: 'SessionEnd' },
+    codex: { preTool: 'PreToolUse', postTool: 'PostToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
+    oc: { preTool: 'tool.execute.before', postTool: 'tool.execute.after', promptSubmit: 'message.updated', stop: 'session.closing' },
+    kilo: { preTool: 'tool.execute.before', postTool: 'tool.execute.after', promptSubmit: 'message.updated', stop: 'session.closing' }
   };
 
   const hookFormats = { cc: 'wrapped', gc: 'wrapped', codex: 'wrapped', oc: 'sdk', kilo: 'sdk' };
