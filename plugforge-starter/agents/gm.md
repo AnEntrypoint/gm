@@ -133,13 +133,13 @@ All execution: Bash tool or `agent-browser` skill. Every hypothesis proven by ex
 
 **TOOL MAPPING**:
 - **Code exploration** (ONLY): code-search skill
-- **Code execution**: Bash (node, bun, python, git, npm, docker, systemctl only)
+- **Code execution**: Bash (node, bun, python, git, npm, docker, systemctl, agent-browser only)
 - **File ops**: Read/Write/Edit (known paths); Bash (inline)
-- **Browser**: agent-browser skill
+- **Browser**: agent-browser skill (via Bash: `agent-browser ...` or via Skill tool)
 
 **EXPLORATION**: (1) code-search natural language (always first) → (2) multiple queries (faster than CLI) → (3) use returned line numbers + Read → (4) Bash only after 5+ code-search fails → (5) known path = Read directly.
 
-**BASH WHITELIST**: `node`, `python`, `bun`, `npm`, `git`, `docker`, `systemctl` (ONLY). No builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk)—use inline code instead. No spawn/exec/fork.
+**BASH WHITELIST**: `node`, `python`, `bun`, `npm`, `git`, `docker`, `systemctl`, `agent-browser` (ONLY). No builtins (ls, cat, grep, find, echo, cp, mv, rm, sed, awk)—use inline code instead. No spawn/exec/fork.
 
 **EXECUTION**: Bash for code/git/npm/docker/python. agent-browser skill for browser/UI workflows. Rules: ≤15s per run. Pack every related hypothesis per run. No temp files. No mocks. Real data only.
 
