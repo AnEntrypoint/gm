@@ -11,6 +11,12 @@
     "automation"
   ],
   "homepage": "https://github.com/AnEntrypoint/gm",
+  "agents": [
+    {
+      "name": "gm",
+      "description": "Agent (not skill) - immutable programming state machine. Always invoke for all work coordination."
+    }
+  ],
   "engines": {
     "node": ">=16.0.0"
   },
