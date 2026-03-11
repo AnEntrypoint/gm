@@ -4,9 +4,9 @@ const path = require('path');
 const os = require('os');
 
 const args = process.argv.slice(2);
-const isProvision = args.includes('-p') || args.includes('--provision');
+const isProjectLocal = args.includes('-p') || args.includes('--provision') || args.includes('--project');
 
-if (isProvision) {
+if (isProjectLocal) {
   provisionProject();
 } else {
   installGlobally();
