@@ -224,6 +224,18 @@ function installGlobally() {
     fs.writeFileSync(installedPluginsPath, JSON.stringify(installedPlugins, null, 2), 'utf-8');
     console.log('✓ Plugin registered in installed_plugins.json');
 
+    // Clean up stale cache entries to avoid validation errors from old formats
+    try {
+      const gmCacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm');
+      if (fs.existsSync(gmCacheDir)) {
+        const entries = fs.readdirSync(gmCacheDir);
+        for (const entry of entries) {
+          if (entry === pluginVersion || entry === 'unknown') continue;
+          try { fs.rmSync(path.join(gmCacheDir, entry), { recursive: true, force: true }); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+
     console.log(`✓ gm-cc ${isUpgrade ? 'upgraded' : 'installed'} to ${destDir}`);
     console.log('Restart Claude Code to activate the gm plugin.');
   } catch (e) {
