@@ -645,20 +645,12 @@ function provisionProject() {
         timeout: 3600
       }]
     }];
-    settings.hooks.SessionStart = [{
-      matcher: '*',
-      hooks: [{
-        type: 'command',
-        command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start-hook.js',
-        timeout: 180000
-      }]
-    }];
     settings.hooks.UserPromptSubmit = [{
       matcher: '*',
       hooks: [{
         type: 'command',
         command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/prompt-submit-hook.js',
-        timeout: 60000
+        timeout: 180000
       }]
     }];
     settings.hooks.Stop = [{
