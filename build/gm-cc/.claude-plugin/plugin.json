@@ -1,6 +1,6 @@
 {
   "name": "gm",
-  "version": "2.0.98",
+  "version": "2.0.99",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": {
     "name": "AnEntrypoint",
@@ -8,9 +8,6 @@
   },
   "homepage": "https://github.com/AnEntrypoint/gm",
   "agents": [
-    {
-      "name": "gm",
-      "path": "agents/gm.md"
-    }
+    "agents/gm.md"
   ]
 }
