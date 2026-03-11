@@ -9,7 +9,6 @@ class CopilotCLIAdapter extends CLIAdapter {
       configFile: 'copilot-profile.md',
       contextFile: 'COPILOT.md',
       hookEventNames: {
-        sessionStart: 'session:start',
         preTool: 'tool:invoke',
         promptSubmit: 'prompt:submit',
         stop: 'session:end',
@@ -43,7 +42,6 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'hooks/pre-tool-use-hook.js': readFile(this.getHookSourcePaths('pre-tool-use')),
-      'hooks/session-start-hook.js': readFile(this.getHookSourcePaths('session-start')),
       'hooks/prompt-submit-hook.js': readFile(this.getHookSourcePaths('prompt-submit')),
       'hooks/session-end-hook.js': readFile(this.getHookSourcePaths('stop')),
       'hooks/session-end-git-hook.js': readFile(this.getHookSourcePaths('stop-git')),
