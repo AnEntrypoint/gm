@@ -1,47 +1,27 @@
 ---
 name: code-search
 description: Semantic code search across the codebase. Use for all code exploration, finding implementations, locating files, and answering codebase questions. Replaces mcp__plugin_gm_code-search__search and codebasesearch MCP tool.
-<<<<<<< HEAD
-allowed-tools: Bash(bunx codebasesearch*)
-=======
 allowed-tools: Bash(bun x codebasesearch*)
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 ---
 
 # Semantic Code Search
 
-<<<<<<< HEAD
-Search the codebase using natural language. Searches 102 file types, returns results with file paths and line numbers.
-=======
 Only use bun x codebasesearch for searching code, or execute some custom code if you need more than that, never use other cli tools to search the codebase. Search the codebase using natural language. Do multiple searches when looking for files, starting with fewer words and adding more if you need to refine the search. 102 file types are covered, returns results with file paths and line numbers.
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 ## Usage
 
 ```bash
-<<<<<<< HEAD
-bunx codebasesearch "your natural language query"
-=======
 bun x codebasesearch "your natural language query"
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 ```
 
 ## Examples
 
 ```bash
-<<<<<<< HEAD
-bunx codebasesearch "where is authentication handled"
-bunx codebasesearch "database connection setup"
-bunx codebasesearch "how are errors logged"
-bunx codebasesearch "function that parses config files"
-bunx codebasesearch "where is the rate limiter"
-=======
 bun x codebasesearch "where is authentication handled"
 bun x codebasesearch "database connection setup"
 bun x codebasesearch "how are errors logged"
 bun x codebasesearch "function that parses config files"
 bun x codebasesearch "where is the rate limiter"
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 ```
 
 ## Rules

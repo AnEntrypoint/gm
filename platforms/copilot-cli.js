@@ -9,7 +9,10 @@ class CopilotCLIAdapter extends CLIAdapter {
       configFile: 'copilot-profile.md',
       contextFile: 'COPILOT.md',
       hookEventNames: {
+<<<<<<< HEAD
         sessionStart: 'session:start',
+=======
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
         preTool: 'tool:invoke',
         promptSubmit: 'prompt:submit',
         stop: 'session:end',
@@ -43,7 +46,10 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       'hooks/pre-tool-use-hook.js': readFile(this.getHookSourcePaths('pre-tool-use')),
+<<<<<<< HEAD
       'hooks/session-start-hook.js': readFile(this.getHookSourcePaths('session-start')),
+=======
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       'hooks/prompt-submit-hook.js': readFile(this.getHookSourcePaths('prompt-submit')),
       'hooks/session-end-hook.js': readFile(this.getHookSourcePaths('stop')),
       'hooks/session-end-git-hook.js': readFile(this.getHookSourcePaths('stop-git')),
@@ -52,6 +58,11 @@ class CopilotCLIAdapter extends CLIAdapter {
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);
+<<<<<<< HEAD
+=======
+    const scripts = this.loadScriptsFromSource(sourceDir);
+    Object.assign(structure, scripts);
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     return structure;
   }
 
@@ -92,6 +103,10 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/',
       'hooks/',
       'skills/',
+<<<<<<< HEAD
+=======
+      'scripts/',
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       '.github/',
       'copilot-profile.md',
       'tools.json',
@@ -121,6 +136,10 @@ class CopilotCLIAdapter extends CLIAdapter {
         'agents/',
         'hooks/',
         'skills/',
+<<<<<<< HEAD
+=======
+        'scripts/',
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
         '.github/',
         'copilot-profile.md',
         'tools.json',
@@ -129,6 +148,10 @@ class CopilotCLIAdapter extends CLIAdapter {
         'README.md',
         this.contextFile
       ],
+<<<<<<< HEAD
+=======
+      scripts: { postinstall: 'node scripts/postinstall.js' },
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   }

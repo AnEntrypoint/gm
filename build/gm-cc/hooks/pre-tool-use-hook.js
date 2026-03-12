@@ -5,16 +5,9 @@ const path = require('path');
 
 const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
 
-<<<<<<< HEAD
-const shellTools = ['Bash', 'run_shell_command'];
-const writeTools = ['Write', 'write_file'];
-const searchTools = ['Glob', 'Grep', 'glob', 'search_file_content', 'Search', 'search'];
-const forbiddenTools = ['find', 'Find'];
-=======
 const writeTools = ['Write', 'write_file'];
 const searchTools = ['glob', 'search_file_content', 'Search', 'search'];
 const forbiddenTools = ['find', 'Find', 'Glob', 'Grep'];
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 const run = () => {
   try {
@@ -25,19 +18,9 @@ const run = () => {
     if (!tool_name) return { allow: true };
 
     if (forbiddenTools.includes(tool_name)) {
-<<<<<<< HEAD
-      return { block: true, reason: 'Use gm:code-search or plugin:gm:dev for semantic codebase search instead of filesystem find' };
-    }
-
-    if (shellTools.includes(tool_name)) {
-      return { block: true, reason: 'Use dev execute instead for all command execution' };
-    }
-
-=======
       return { block: true, reason: 'Use the code-search skill for codebase exploration instead of Grep/Glob/find. Describe what you need in plain language — it understands intent, not just patterns.' };
     }
 
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     if (writeTools.includes(tool_name)) {
       const file_path = tool_input?.file_path || '';
       const ext = path.extname(file_path);
@@ -53,30 +36,18 @@ const run = () => {
           file_path.includes('/tests/') || file_path.includes('/fixtures/') ||
           file_path.includes('/test-data/') || file_path.includes('/__mocks__/') ||
           /\.(snap|stub|mock|fixture)\.(js|ts|json)$/.test(base)) {
-<<<<<<< HEAD
-        return { block: true, reason: 'Test files forbidden on disk. Use plugin:gm:dev with real services for all testing.' };
-=======
         return { block: true, reason: 'Test files forbidden on disk. Use Bash tool with real services for all testing.' };
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       }
     }
 
     if (searchTools.includes(tool_name)) {
-<<<<<<< HEAD
-      return { block: true, reason: 'Code exploration must use: gm:code-search skill or plugin:gm:dev execute. This restriction enforces semantic search over filesystem patterns.' };
-=======
       return { allow: true };
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     }
 
     if (tool_name === 'Task') {
       const subagentType = tool_input?.subagent_type || '';
       if (subagentType === 'Explore') {
-<<<<<<< HEAD
-        return { block: true, reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search or plugin:gm:dev' };
-=======
         return { block: true, reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search' };
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       }
     }
 
@@ -84,8 +55,6 @@ const run = () => {
       return { block: true, reason: 'Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.' };
     }
 
-<<<<<<< HEAD
-=======
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
       const allowed = /^(git |gh |npm |npx |bun |node |python |python3 |ruby |go |deno |tsx |ts-node |docker |sudo systemctl|systemctl |pm2 |cd |agent-browser )/.test(command);
@@ -100,7 +69,6 @@ const run = () => {
       return { allow: true };
     }
 
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     return { allow: true };
   } catch (error) {
     return { allow: true };
@@ -114,35 +82,16 @@ try {
     if (isGemini) {
       console.log(JSON.stringify({ decision: 'deny', reason: result.reason }));
     } else {
-<<<<<<< HEAD
-      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: result.reason } }));
-    }
-    process.exit(2);
-=======
       console.log(JSON.stringify({ decision: 'block', reason: result.reason }));
     }
     process.exit(0);
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   }
 
   if (isGemini) {
     console.log(JSON.stringify({ decision: 'allow' }));
-<<<<<<< HEAD
-  } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
-  }
-  process.exit(0);
-} catch (error) {
-  if (isGemini) {
-    console.log(JSON.stringify({ decision: 'allow' }));
-  } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }));
-  }
-=======
   }
 
   process.exit(0);
 } catch (error) {
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   process.exit(0);
 }

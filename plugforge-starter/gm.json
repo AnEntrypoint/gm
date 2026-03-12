@@ -1,6 +1,10 @@
 {
   "name": "gm",
+<<<<<<< HEAD
   "version": "2.0.24",
+=======
+  "version": "2.0.104",
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -11,6 +15,15 @@
     "automation"
   ],
   "homepage": "https://github.com/AnEntrypoint/gm",
+<<<<<<< HEAD
+=======
+  "agents": [
+    {
+      "name": "gm",
+      "description": "Agent (not skill) - immutable programming state machine. Always invoke for all work coordination."
+    }
+  ],
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   "engines": {
     "node": ">=16.0.0"
   },

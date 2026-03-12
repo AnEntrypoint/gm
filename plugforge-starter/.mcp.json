@@ -1,6 +1,7 @@
 {
   "$schema": "https://schemas.modelcontextprotocol.io/0.1.0/mcp.json",
   "mcpServers": {
+<<<<<<< HEAD
     "dev": {
       "command": "bun x",
       "args": [
@@ -17,3 +18,11 @@
     }
   }
 }
+=======
+    "mcp-gm": {
+      "command": "npx",
+      "args": ["-y", "mcp-gm"]
+    }
+  }
+}
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
