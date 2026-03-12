@@ -64,7 +64,7 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-      if (!/^(bun x gm-cc|bunx gm-cc)(\s|$)/.test(command)) {
+      if (!/^(bun x gm-cc|bunx gm-cc)(@[^\s]*)?(\s|$)/.test(command)) {
         return { block: true, reason: 'Bash is restricted to: bunx gm-cc\n\ngm-cc is the only allowed execution tool.\n\nUsage: bunx gm-cc\n\nAll other Bash commands are blocked.' };
       }
     }
