@@ -2,6 +2,10 @@
 
 plugforge generates 9 platform implementations from a single convention-driven source. The system eliminates duplication through inheritance, shared template building, and clean regeneration patterns.
 
+## Coding Style
+
+**No comments in code.** Never write inline comments, block comments, or JSDoc. Code must be self-explanatory through naming. This applies everywhere — source files, generated output, hooks, scripts.
+
 ## Design Philosophy
 
 ### Convention Over Configuration
@@ -55,11 +59,7 @@ All adapters use these methods. Template changes propagate automatically.
 
 **Graceful platform degradation**: Single platform failure doesn't block others. All 9 attempt generation. Failed platforms reported separately.
 
-<<<<<<< HEAD
 **Skill consolidation**: All skills merged into agents/gm.md. No separate skill files. Reduces agent invocation overhead.
-=======
-**Skill discovery**: Skills are auto-discovered from `skills/` directory and distributed to all 9 platform outputs.
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 **GitHub Actions rsync sync**: Uses `rsync --delete` to remove orphaned files from target repos, preventing stale code illusion.
 
@@ -68,20 +68,11 @@ All adapters use these methods. Template changes propagate automatically.
 **Source** (`plugforge-starter/`):
 ```
 gm.json              # Single spec
-<<<<<<< HEAD
-agents/gm.md              # Single unified agent with all behavioral rules
-hooks/*.js                # Platform-agnostic hooks
-```
-
-**Architecture Note**: All 10 skills are merged into agents/gm.md as single sections. Separate skill files were deleted to eliminate per-invocation token cost. Each skill section is substantial (10+ lines) to justify inclusion. This consolidation reduces agent startup overhead dramatically compared to invoking individual skills.
-=======
-agents/              # Agent configurations (gm.md is the main agent)
-skills/              # Skill directories, each with SKILL.md
+agents/gm.md         # Single unified agent with all behavioral rules
 hooks/*.js           # Platform-agnostic hooks
 ```
 
-**Architecture Note**: Skills are maintained as separate directories under `skills/` with each skill having its own SKILL.md file. Skills are auto-discovered and distributed to all 9 platform outputs without manual configuration.
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
+**Architecture Note**: All 10 skills are merged into agents/gm.md as single sections. Separate skill files were deleted to eliminate per-invocation token cost. Each skill section is substantial (10+ lines) to justify inclusion. This consolidation reduces agent startup overhead dramatically compared to invoking individual skills.
 
 **Output**: 9 auto-generated GitHub repositories
 - 5 CLI platforms: gm-cc, gm-gc, gm-oc, gm-codex, gm-copilot-cli
@@ -145,19 +136,11 @@ Everything is predictable and turnkey. All corner cases handled before they occu
 - Proceeds with empty collections rather than crashing
 - User gets empty plugin, not broken plugin
 
-<<<<<<< HEAD
 **Skills consolidation complete**:
 - All 10 skills merged into agents/gm.md
 - Separate skill files deleted to eliminate per-invocation cost
 - Each skill section is substantial (10+ lines) to justify inclusion
 - No more skill discovery or path variance handling needed
-=======
-**Skill discovery complete**:
-- All skills auto-discovered from skills/ directory
-- Each skill distributed to all 9 platform outputs
-- Platform-specific path variations handled automatically
-- No manual registration required
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 **Hook file naming variance**:
 - `getHookSourcePaths()` checks both `name.js` and `name-hook.js`
@@ -197,13 +180,11 @@ Everything is predictable and turnkey. All corner cases handled before they occu
 
 **Never leave orphaned files**: GitHub Actions rsync --delete handles this, but delete locally too.
 
+**Never write comments in code**: Code must be self-explanatory. No inline, block, or JSDoc comments anywhere.
+
 ### Verification Checklist (Execute Before Release)
 
-<<<<<<< HEAD
 Executed in plugin:gm:dev only:
-=======
-Executed via Bash tool only:
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 ```
 - [ ] cleanBuildDir() produces empty output dirs
@@ -211,22 +192,17 @@ Executed via Bash tool only:
 - [ ] validateGeneratedFiles() passes for all 9
 - [ ] thorns reveals no unexpected duplications
 - [ ] ConventionLoader loads empty source gracefully
-<<<<<<< HEAD
 - [x] All skills consolidated into agents/gm.md (no separate files)
 - [ ] Adding new hook auto-appears in all 9 outputs
 - [ ] gm.md merged (455 words, 44% compression)
 - [ ] All skills removed from /skills/ (consolidated into gm.md)
-=======
-- [ ] Adding new skill auto-appears in all 9 outputs
-- [ ] Skills properly discovered from skills/ directory
-- [ ] All expected skills distributed to generated platforms
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 - [ ] No .test.* files exist anywhere
 - [ ] auto-healer.js deleted (if orphaned)
 - [ ] buildReporter categorizes files correctly
 - [ ] Extension manifests valid for VSCode/Cursor/Zed/JetBrains
 - [ ] CLI configs valid for CC/GC/OC/Codex/Copilot
 - [ ] GitHub Actions sync simulation works (rsync --delete equivalent)
+- [ ] No comments anywhere in generated or source code
 ```
 
 ### Minimal Black Magic
@@ -239,62 +215,3 @@ The framework is explicit through convention, not magic:
 - **No build step**: Ship source directly
 - **No environment variables beyond platform roots**: XDG_CONFIG_HOME, CLAUDE_PLUGIN_ROOT, etc
 - **No special casing**: All adapters behave same way for same inputs
-
-## gm-cc v2.1.0 Deployment
-
-### Completed Preparation
-
-Version bumped from 2.0.4 to 2.1.0 in `/home/user/plugforge/build/gm-cc/package.json`. All required fields verified:
-- name: gm-cc
-- version: 2.1.0
-- description, author, license, homepage, bugs, repository, engines
-- bin: { "gm-cc": "./cli.js", "gm-install": "./install.js" }
-- files: includes all necessary artifacts
-
-README.md contains complete documentation with:
-- Plugin Marketplace Installation instructions
-- Repository Installation with command breakdown
-- File Installation Locations and structure
-- Environment Setup (bun x requirement)
-- MCP Server Configuration (.mcp.json)
-- Configuration instructions (Option 1 & 2)
-- Hook enablement guide
-- Update procedures (both marketplace and repository)
-- Features overview
-- Troubleshooting (4 subsections with solutions)
-- Uninstall instructions
-- Installation Comparison table
-
-New Feature: Repository Installation allows direct npm installation:
-```bash
-npm install gm-cc
-npx gm install
-```
-
-### Remaining Deployment Steps (External Execution Required)
-
-The following operations must be executed in a terminal outside Claude Code (the pre-tool-use-hook prevents shell execution as a security measure):
-
-1. **Package**: `cd /home/user/plugforge/build/gm-cc && npm pack`
-   - Creates gm-cc-2.1.0.tgz
-   - Verify contents include: cli.js, install.js, agents/gm.md, hooks/, .mcp.json, README.md, package.json
-
-2. **Tag Release**: `cd /home/user/plugforge && git tag -a v2.1.0 -m "Release gm-cc v2.1.0 with repository installation feature"`
-   - Push: `git push origin v2.1.0`
-
-3. **Publish**: `cd /home/user/plugforge/build/gm-cc && npm publish`
-   - Verify at: https://www.npmjs.com/package/gm-cc
-
-4. **Install Globally**: `npm install -g gm-cc@2.1.0`
-   - Test: `gm-cc --version` (should return 2.1.0)
-   - Test: `gm-install --help` (should show usage)
-
-5. **Test Fresh Install**:
-   - `mkdir /tmp/gm-test-final && cd /tmp/gm-test-final`
-   - `npx gm-cc install`
-   - Verify files: agents/gm.md, hooks/, .mcp.json, .gitignore
-   - Test .prd enforcement: create .prd with items, verify blocking
-   - Remove items and verify empty .prd allows exit
-   - Cleanup: `rm -rf /tmp/gm-test-final`
-
-Status: **Ready for deployment** (preparation complete, awaiting external command execution)
