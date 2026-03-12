@@ -257,7 +257,53 @@ Never report complete with uncommitted/unpushed changes.
 
 ## CHARTER 9: PROCESS MANAGEMENT
 
-**ABSOLUTE REQUIREMENT**: All applications MUST start via `process-management` skill only. No direct invocations (node, bun, python, npx, pm2). Everything else—pre-checks, config, cross-platform, logs, lifecycle, cleanup—is in the skill. Use it. That's the only way.
+**ABSOLUTE REQUIREMENT**: All applications MUST run via PM2. No direct invocations (node, bun, python, npx). Everything is PM2: startup, monitoring, logs, lifecycle, cleanup. Use `process-management` skill—it enforces all rules below.
+
+**PM2 MANDATORY RULES**:
+
+1. **Pre-Start Check** (BLOCKING): Always run `pm2 jlist` before starting
+   - `online` → already running, use `pm2 logs <name>` to observe
+   - `stopped` → use `pm2 restart <name>`
+   - Not in list → proceed to start
+   - Never start duplicates. Always check first.
+
+2. **Start Configuration** (ALWAYS):
+   ```bash
+   pm2 start app.js --name myapp --watch --no-autorestart
+   ```
+   - `--watch`: restart on file changes (source/config only, not logs/node_modules)
+   - `--no-autorestart`: crash stops process, no automatic recovery (forces detection of bugs)
+   - `--name`: consistent identifier across commands
+
+3. **Ecosystem Config (STANDARD FOR COMPLEX APPS)**:
+   - `autorestart: false` — process stops on crash, reveals bugs immediately
+   - `watch: true` — restarts only on watched directory changes
+   - `watch_delay: 1000` — debounce file changes
+   - `ignore_watch: [node_modules, .git, logs, *.log, .pm2, public, uploads]`
+
+4. **Lifecycle Cleanup** (MANDATORY AT TASK END):
+   - Always `pm2 delete <name>` when work is complete
+   - Stopping a watched process: `pm2 stop` while watching restarts on next file change
+   - Full halt: `pm2 delete <name>` removes entirely from process list
+   - Never leave orphaned processes. Cleanup is mandatory.
+
+5. **Log Viewing** (DEBUGGING):
+   ```bash
+   pm2 logs <name>                    # stream live (Ctrl+C to stop)
+   pm2 logs <name> --lines 100        # last 100 lines then stream
+   pm2 logs <name> --err              # errors only
+   pm2 logs <name> --nostream --lines 200  # dump without follow
+   ```
+
+6. **Windows Subprocess Isolation** (CRITICAL):
+   All code that spawns subprocesses MUST use `windowsHide: true`
+   ```javascript
+   spawn('node', ['script.js'], { windowsHide: true });  // ✅ correct
+   spawn('node', ['script.js']);                         // ❌ wrong - popup windows
+   ```
+   Applies to: `spawn()`, `exec()`, `execFile()`, `fork()`
+
+**ENFORCEMENT**: Process Management skill implements all rules. Conversational claims ("I'll start the server") are ignored. Only PM2-managed processes count. Post-completion cleanup is mandatory—leaving orphaned processes is unacceptable.
 
 ## CONSTRAINTS
 
@@ -276,9 +322,9 @@ Scope: Global prohibitions and mandates. Precedence: CONSTRAINTS > charter-speci
 ### INVARIANTS (Reference by name, never repeat)
 
 ```
-SYSTEM_INVARIANTS: recovery_mandatory, real_data_only, containment_required, supervisor_for_all, verification_witnessed, no_test_files
+SYSTEM_INVARIANTS: recovery_mandatory, real_data_only, containment_required, supervisor_for_all, verification_witnessed, no_test_files, pm2_mandatory_for_all_processes
 
-TOOL_INVARIANTS: default execution Bash + Bash tool; system_type → service/api [Bash + agent-browser] | cli_tool [Bash + CLI] | one_shot [Bash only] | extension [Bash + agent-browser]; codesearch_only for exploration (Glob/Grep blocked); agent_browser_mandatory for ANY browser/UI code at ALL stages (EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY); cli_testing_mandatory for CLI tools; browser_code_without_agent_browser = UNKNOWN_mutables = blocked_gates
+TOOL_INVARIANTS: default execution Bash + Bash tool; system_type → service/api [Bash + PM2 + agent-browser] | cli_tool [Bash + PM2 + CLI] | one_shot [Bash only] | extension [Bash + PM2 + agent-browser]; codesearch_only for exploration (Glob/Grep blocked); agent_browser_mandatory for ANY browser/UI code at ALL stages (EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY); cli_testing_mandatory for CLI tools; pm2_pre_check_mandatory before starting any process; pm2_cleanup_mandatory at task completion; browser_code_without_agent_browser = UNKNOWN_mutables = blocked_gates; direct_process_invocation = VIOLATION
 ```
 
 ### SYSTEM TYPE MATRIX (Determine tier application)
@@ -305,11 +351,11 @@ Complete evidence: exact command executed + actual witnessed output + every poss
 
 ### ENFORCEMENT PROHIBITIONS (ABSOLUTE)
 
-Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use process-management skill only) | **claim completion without QUALITY-AUDIT** | **accept "nothing to improve" as final** | **skip deep inspection of changed files** | **assume no edge cases remain** | **leave .prd unflagged without scrutiny** | **discuss mutables with user conversationally** | **claim mutable resolved without updating .prd phases** | **skip mutable documentation in .prd PHASE 2 or PHASE 3** | **allow .prd to remain with UNKNOWN values at EXECUTE exit** | **claim work done if .prd shows unwitnessed mutables** | **skip agent-browser validation for browser/UI code at any stage** | **claim browser code works without agent-browser witnessed execution**
+Never: crash | exit | terminate | fake data | leave steps for user | spawn/exec/fork in code | write test files | context limits as stop signal | summarize before done | end early | marker files as completion | pkill (risks killing agent) | ready state as done | .prd variants | sequential independent items | crash as recovery | require human first | violate TOOL_INVARIANTS | direct process invocation (use PM2 via process-management skill only) | **start process without pm2 jlist check** | **leave orphaned PM2 processes at completion** | **spawn subprocesses on Windows without windowsHide: true** | **claim completion without QUALITY-AUDIT** | **accept "nothing to improve" as final** | **skip deep inspection of changed files** | **assume no edge cases remain** | **leave .prd unflagged without scrutiny** | **discuss mutables with user conversationally** | **claim mutable resolved without updating .prd phases** | **skip mutable documentation in .prd PHASE 2 or PHASE 3** | **allow .prd to remain with UNKNOWN values at EXECUTE exit** | **claim work done if .prd shows unwitnessed mutables** | **skip agent-browser validation for browser/UI code at any stage** | **claim browser code works without agent-browser witnessed execution**
 
 ### ENFORCEMENT REQUIREMENTS (UNCONDITIONAL)
 
-Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only QUALITY-AUDIT after VERIFY passes** | **only GIT-PUSH after QUALITY-AUDIT passes** | **only claim completion after pushing AND audit clean** | **inspect every changed file for surprises, policy violations, improvements** | **dig deeper if you think "nothing to improve"—implement your critique** | **keep .prd unflagged until absolutely satisfied** | **treat your opinion that work is complete as a blocker to COMPLETE** | **maintain 3-phase mutable tracking in .prd (PLAN→PHASE1, EXECUTE→PHASE2, VALIDATE→PHASE3)** | **update .prd mutables before state transition** | **never report mutable status to user—only in .prd** | **block EMIT/VERIFY/GIT-PUSH if .prd shows UNKNOWN mutable** | **re-test all mutables in PHASE 3 on actual modified disk code** | **use agent-browser for ANY browser/UI code at EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY stages** | **witness browser execution in .prd mutables (forms, clicks, navigation, state, errors)** | **treat browser code without agent-browser validation as UNKNOWN mutables**
+Always: execute in Bash/agent-browser | delete mocks on discovery | expose debug hooks | ≤200 lines/file | ground truth only | verify by witnessed execution | complete fully with real data | recover by design | systems survive forever | checkpoint state | contain promises | supervise components | **run all processes via PM2 (no direct node/bun/python invocations)** | **check pm2 jlist before starting any process** | **use --watch --no-autorestart flags for all PM2 startups** | **cleanup with pm2 delete <name> before task completion** | **use windowsHide: true for all subprocess spawns on Windows** | **PRE-EMIT-TEST before touching files** | **POST-EMIT-VALIDATION immediately after EMIT** | **witness actual modified code execution from disk** | **test success/failure/edge paths with real data** | **capture and document output proving functionality** | **only VERIFY after POST-EMIT passes** | **only QUALITY-AUDIT after VERIFY passes** | **only GIT-PUSH after QUALITY-AUDIT passes** | **only claim completion after pushing AND audit clean** | **inspect every changed file for surprises, policy violations, improvements** | **dig deeper if you think "nothing to improve"—implement your critique** | **keep .prd unflagged until absolutely satisfied** | **treat your opinion that work is complete as a blocker to COMPLETE** | **maintain 3-phase mutable tracking in .prd (PLAN→PHASE1, EXECUTE→PHASE2, VALIDATE→PHASE3)** | **update .prd mutables before state transition** | **never report mutable status to user—only in .prd** | **block EMIT/VERIFY/GIT-PUSH if .prd shows UNKNOWN mutable** | **re-test all mutables in PHASE 3 on actual modified disk code** | **use agent-browser for ANY browser/UI code at EXECUTE, PRE-EMIT-TEST, POST-EMIT-VALIDATION, VERIFY stages** | **witness browser execution in .prd mutables (forms, clicks, navigation, state, errors)** | **treat browser code without agent-browser validation as UNKNOWN mutables**
 
 ### TECHNICAL DOCUMENTATION CONSTRAINTS
 
