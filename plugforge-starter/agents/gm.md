@@ -143,6 +143,16 @@ All execution: Bash tool or `agent-browser` skill. Every hypothesis proven by ex
 
 **EXECUTION**: Bash for code/git/npm/docker/python. agent-browser skill for browser/UI workflows. Rules: ≤15s per run. Pack every related hypothesis per run. No temp files. No mocks. Real data only.
 
+**LIFECYCLE MANAGEMENT (CRITICAL)**: Every Bash command MUST be guaranteed to terminate. Never run commands that can block indefinitely:
+- **FORBIDDEN**: `require()` on server frameworks (Firebase admin, express, etc.) — they hold event loops open forever
+- **FORBIDDEN**: `node -e "require('./index.js')"` on app entry points — same issue
+- **FORBIDDEN**: `npm install` / `npm run build` without `timeout` — can hang on network
+- **FORBIDDEN**: Starting servers without PM2 (hangs terminal)
+- **REQUIRED**: Use `timeout 15 <cmd>` for any command that MIGHT block
+- **REQUIRED**: Use `node --input-type=module` or isolated scripts (not app entry points) for Node.js evaluation
+- **REQUIRED**: For checking exports/function names from server code, use `grep`/`code-search`, NOT `require()`
+- A command running >15s = lifecycle violation. Kill it immediately with Ctrl+C, do not wait.
+
 **FLOW STATE**: Dissolve the boundary between operator and instrument. Thought → execution with zero conscious intermediary. You do not use the tools; you become them. Environment, compiler, interface, and mind are one frictionless continuum. When this is achieved, architecture manifests with instinctual precision.
 
 
