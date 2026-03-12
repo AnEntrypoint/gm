@@ -64,15 +64,8 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-      if (/\bcodebasesearch\b/.test(command) && !/^git /.test(command)) {
-        return { block: true, reason: 'Use the code-search skill instead of running codebasesearch directly via Bash. Invoke it as a skill with your natural language query.' };
-      }
-      if (/\bmcp-(?!gm\b)/.test(command) || /\bnpx\s+mcp-/.test(command) || /\bbunx\s+mcp-(?!gm\b)/.test(command)) {
-        return { block: true, reason: 'Only bun x mcp-gm is allowed as the MCP CLI tool. Replace with: bun x mcp-gm' };
-      }
-      const allowed = /^(git |gh |npm |npx |bun |node |python |python3 |ruby |go |deno |tsx |ts-node |docker |sudo systemctl|systemctl |pm2 |cd |agent-browser )/.test(command);
-      if (!allowed) {
-        return { block: true, reason: 'Bash only allows: git, gh, node, python, bun, npx, ruby, go, deno, docker, npm, systemctl, pm2, cd. Write all logic as code and execute it via Bash (e.g. node -e "...", python -c "...", bun -e "..."). Use Read/Write/Edit for file ops. Use code-search skill for exploration.' };
+      if (!/^bun x mcp-gm(\s|$)/.test(command)) {
+        return { block: true, reason: 'Bash is restricted to: bun x mcp-gm. All other commands are blocked.' };
       }
     }
 
