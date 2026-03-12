@@ -13,14 +13,14 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "SessionStart": [
       {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-hook.js",
-            "timeout": 30000
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.js",
+            "timeout": 10000
           }
         ]
       }
@@ -32,7 +32,7 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
-            "timeout": 180000
+            "timeout": 3600
           }
         ]
       }

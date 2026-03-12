@@ -34,11 +34,7 @@ the core. a system prompt delivered as a state machine, organized into 7 charter
 
 1. **prd** - task planning with .prd file enforcement. every task gets a dependency graph with parallel execution waves. the stop hook blocks session end when .prd items remain. this is the single biggest behavior change - the agent cannot declare "done" and walk away with work remaining.
 
-<<<<<<< HEAD
-2. **execution environment** - all code runs through plugin:gm:dev, not bash. every hypothesis proven by execution before changing files. tool redirects enforce this: bash is blocked, find is blocked, grep is blocked. everything goes through dev execute or code-search.
-=======
 2. **execution environment** - all code runs through the Bash tool. every hypothesis proven by execution before changing files. tool redirects enforce this: find is blocked, glob is blocked. exploration goes through code-search.
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 3. **ground truth** - no mocks, no fakes, no unit tests, no test files on disk. real services, real api responses only. when the agent discovers mocks in your codebase it will delete them and implement real paths. this is the most controversial charter.
 
@@ -54,11 +50,6 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 ### tools
 
-<<<<<<< HEAD
-**dev** (mcp-gm) - code execution in any language from a temp file. replaces bash and edit-run-read loops. 30 second auto handoff to background process control with live notifications. this is where all code actually runs.
-
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 **code-search** (codebasesearch) - dependency-free semantic vector search. describe intent in plain language, not regex syntax. "find authentication validation" locates auth checks, guards, permission logic - however they're implemented.
 
 **thorns** (mcp-thorns) - one-shot AST analysis at conversation start. compact codebase overview: structure, flow, orphans, hubs, repetitions. eliminates the first 5-10 turns of manual exploration.
@@ -69,11 +60,7 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 **prompt-submit** - reminds the agent to use gm subagent for everything. reinforcement on every turn.
 
-<<<<<<< HEAD
-**pre-tool-use** - blocks bash, find, grep, glob in favor of plugin:gm:dev and code-search. blocks .md file creation (except CLAUDE.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
-=======
 **pre-tool-use** - blocks find and glob in favor of code-search. blocks .md file creation (except CLAUDE.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 **stop (.prd)** - checks .prd file. if items remain, blocks session end. this is the looping mechanism - more refined than wiggum looping, includes native planning behaviors with better tooling preferences and a revision loop.
 
@@ -84,11 +71,7 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 for client-side coding and browser automation, the recommended approach is playwriter:
 https://github.com/remorses/playwriter
 
-<<<<<<< HEAD
-note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references plugin:browser:execute throughout the charter system for this integration.
-=======
 note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references `agent-browser` skill throughout the charter system for browser integration.
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 ## plugforge
 
