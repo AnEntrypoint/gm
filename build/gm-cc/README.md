@@ -22,7 +22,8 @@ This installation method is best for:
 For development or project-specific customization, install gm-cc directly into your project:
 
 ```bash
-bun x gm-cc@latest
+cd /path/to/your/project
+npm install gm-cc && npx gm install
 ```
 
 This installation method is ideal when you need to:
@@ -31,9 +32,29 @@ This installation method is ideal when you need to:
 - Use the latest development version
 - Configure platform-specific behavior per project
 
+#### Installation Command Breakdown
+
+The `npm install gm-cc && npx gm install` command performs two steps:
+
+1. **`npm install gm-cc`** - Downloads the gm-cc package and stores it in your project's `node_modules/` directory
+2. **`npx gm install`** - Runs the gm installer that copies configuration files into your Claude Code plugin directory
+
+**Expected output:**
+```
+$ npm install gm-cc
+added 1 package in 1.2s
+
+$ npx gm install
+Installing gm-cc...
+✓ Created .claude/ directory
+✓ Copied agents/gm.md
+✓ Copied hooks to .claude/hooks/
+✓ Created .mcp.json for MCP integration
+```
+
 #### Installed File Structure (Project-Specific)
 
-After running `bun x gm-cc@latest`, your project will have:
+After running `npx gm install`, your project will have:
 
 ```
 .claude/
@@ -49,32 +70,6 @@ After running `bun x gm-cc@latest`, your project will have:
 ```
 
 Each hook runs automatically at the appropriate session event. No manual trigger needed.
-
-### Project Provisioning (Explicit Installation)
-
-To explicitly add all gm-cc hooks, agents, and skills to an existing project:
-
-```bash
-bun x gm-cc@latest -- -p
-```
-
-Or with a global installation:
-
-```bash
-gm-cc -p
-```
-
-This creates a project-local `.claude/settings.json` that configures hooks to use `${CLAUDE_PROJECT_DIR}` for project-specific environments. Useful for:
-- Explicitly provisioning gm-cc to an existing project
-- Overriding global plugin settings for a specific project
-- Team workflows requiring consistent project-level configuration
-
-The `-p` flag copies:
-- All hooks to `.claude/hooks/`
-- All agents to `.claude/agents/`
-- All skills to `.claude/skills/`
-- MCP configuration to `.claude/.mcp.json`
-- Project-specific hook settings to `.claude/settings.json`
 
 ## File Installation (Manual Setup)
 
@@ -156,8 +151,16 @@ npm install -g gm-cc@latest
 ### Project-Specific Installation
 
 ```bash
+# Update the package
+npm update gm-cc
+
 # Re-run the installer to update .claude/ directory
-bun x gm-cc@latest
+npx gm install
+
+# Or manually copy updated files
+cp -r node_modules/gm-cc/agents/* .claude/agents/
+cp -r node_modules/gm-cc/hooks/* .claude/hooks/
+cp node_modules/gm-cc/.mcp.json .claude/.mcp.json
 ```
 
 ## Features

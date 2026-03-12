@@ -1,6 +1,6 @@
 {
   "name": "gm-cc",
-  "version": "2.0.100",
+  "version": "2.0.104",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -30,6 +30,7 @@
     ".github/",
     ".mcp.json",
     ".claude-plugin/",
+    "plugin.json",
     "cli.js",
     "install.js",
     "README.md",
@@ -49,8 +50,5 @@
   ],
   "peerDependencies": {
     "@anthropic-ai/claude-code": "*"
-  },
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
   }
 }

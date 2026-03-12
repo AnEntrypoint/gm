@@ -30,7 +30,6 @@ const ensureGitignore = () => {
   }
 };
 
-
 const getBaseContext = (resetMsg = '') => {
   let ctx = 'use gm agent';
   if (resetMsg) ctx += ' - ' + resetMsg;

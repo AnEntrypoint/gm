@@ -7,103 +7,72 @@ function isInsideNodeModules() {
 }
 
 function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
+  if (!isInsideNodeModules()) return null;
   let current = __dirname;
   while (current !== path.dirname(current)) {
     current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
+    if (path.basename(current) === 'node_modules') return path.dirname(current);
   }
   return null;
 }
 
-function safeCopyFile(src, dst) {
-  try {
-    const content = fs.readFileSync(src, 'utf-8');
-    const dstDir = path.dirname(dst);
-    if (!fs.existsSync(dstDir)) {
-      fs.mkdirSync(dstDir, { recursive: true });
-    }
-    fs.writeFileSync(dst, content, 'utf-8');
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
 function safeCopyDirectory(src, dst) {
   try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
+    if (!fs.existsSync(src)) return false;
     fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        safeCopyFile(srcPath, dstPath);
-      }
+    fs.readdirSync(src, { withFileTypes: true }).forEach(entry => {
+      const s = path.join(src, entry.name), d = path.join(dst, entry.name);
+      if (entry.isDirectory()) safeCopyDirectory(s, d);
+      else { fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, fs.readFileSync(s, 'utf-8'), 'utf-8'); }
     });
     return true;
-  } catch (err) {
-    return false;
-  }
+  } catch (e) { return false; }
+}
+
+function safeCopyFile(src, dst) {
+  try {
+    const dstDir = path.dirname(dst);
+    if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
+    fs.writeFileSync(dst, fs.readFileSync(src, 'utf-8'), 'utf-8');
+    return true;
+  } catch (e) { return false; }
+}
+
+function safeCopyDirectoryFull(src, dst) {
+  try {
+    if (!fs.existsSync(src)) return false;
+    fs.mkdirSync(dst, { recursive: true });
+    fs.readdirSync(src, { withFileTypes: true }).forEach(entry => {
+      const s = path.join(src, entry.name), d = path.join(dst, entry.name);
+      if (entry.isDirectory()) safeCopyDirectoryFull(s, d);
+      else safeCopyFile(s, d);
+    });
+    return true;
+  } catch (e) { return false; }
 }
 
 function updateGitignore(projectRoot) {
   try {
     const gitignorePath = path.join(projectRoot, '.gitignore');
     const entry = '.gm-stop-verified';
-
-    let content = '';
-    if (fs.existsSync(gitignorePath)) {
-      content = fs.readFileSync(gitignorePath, 'utf-8');
-    }
-
-    if (content.includes(entry)) {
-      return true;
-    }
-
-    if (content && !content.endsWith('\n')) {
-      content += '\n';
-    }
+    let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
+    if (content.includes(entry)) return true;
+    if (content && !content.endsWith('\n')) content += '\n';
     content += entry + '\n';
-
     fs.writeFileSync(gitignorePath, content, 'utf-8');
     return true;
-  } catch (err) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
+  if (!isInsideNodeModules()) return;
   const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
+  if (!projectRoot) return;
   const claudeDir = path.join(projectRoot, '.claude');
   const sourceDir = __dirname.replace(/[\/]scripts$/, '');
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
+  safeCopyDirectoryFull(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
+  safeCopyDirectoryFull(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
   safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
-
   updateGitignore(projectRoot);
 }
 
