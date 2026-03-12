@@ -267,13 +267,59 @@ function createGeminiInstallerScript() {
 }
 
 function createClaudeCodeCliScript() {
+  const extraSetup = `
+  const pluginDir = path.join(destDir, 'plugins', 'gm-cc');
+  fs.mkdirSync(pluginDir, { recursive: true });
+
+  const pkg = JSON.parse(fs.readFileSync(path.join(srcDir, 'package.json'), 'utf-8'));
+  const version = pkg.version;
+
+  copyRecursive(path.join(srcDir, 'agents'), path.join(pluginDir, 'agents'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(pluginDir, 'hooks'));
+  if (fs.existsSync(path.join(srcDir, 'skills'))) {
+    copyRecursive(path.join(srcDir, 'skills'), path.join(pluginDir, 'skills'));
+  }
+
+  const marketplaceSrc = path.join(srcDir, '.claude-plugin', 'marketplace.json');
+  if (fs.existsSync(marketplaceSrc)) {
+    fs.copyFileSync(marketplaceSrc, path.join(pluginDir, 'marketplace.json'));
+  }
+
+  const pluginJson = {
+    name: 'gm',
+    version,
+    description: 'State machine agent with hooks, skills, and automated git enforcement',
+    author: { name: 'AnEntrypoint', url: 'https://github.com/AnEntrypoint' },
+    homepage: 'https://github.com/AnEntrypoint/gm',
+    hooks: './hooks/hooks.json'
+  };
+  fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\\n');
+
+  const installedPath = path.join(destDir, 'plugins', 'installed_plugins.json');
+  let installed = { version: 2, plugins: {} };
+  try { installed = JSON.parse(fs.readFileSync(installedPath, 'utf-8')); } catch (e) {}
+  installed.version = 2;
+  installed.plugins = installed.plugins || {};
+  installed.plugins.gm = { version, enabled: true };
+  fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + '\\n');
+
+  const settingsPath = path.join(destDir, 'settings.json');
+  let settings = {};
+  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch (e) {}
+  settings.enabledPlugins = settings.enabledPlugins || {};
+  settings.enabledPlugins['gm@gm-cc'] = true;
+  settings.extraKnownMarketplaces = settings.extraKnownMarketplaces || {};
+  settings.extraKnownMarketplaces['gm-cc'] = pluginDir;
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\\n');
+`;
   return createCliInstaller({
     pkg: 'gm-cc',
     label: 'Claude Code',
     destDir: `path.join(homeDir, '.claude')`,
     filesToCopy: [
-      ['agents', 'agents'], ['hooks', 'hooks'], ['skills', 'plugins/gm-cc/skills'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
+      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
     ],
+    extraSetup,
     restartMsg: 'Restart Claude Code to activate.',
     skipSkillsInstall: true
   });
