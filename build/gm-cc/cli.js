@@ -14,7 +14,7 @@ console.log(isUpgrade ? 'Upgrading gm-cc...' : 'Installing gm-cc...');
 try {
   fs.mkdirSync(destDir, { recursive: true });
 
-  const filesToCopy = [["agents","agents"],["hooks","hooks"],["skills","plugins/gm-cc/skills"],[".mcp.json",".mcp.json"],["README.md","README.md"]];
+  const filesToCopy = [["agents","agents"],["hooks","hooks"],[".mcp.json",".mcp.json"],["README.md","README.md"]];
 
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
@@ -27,6 +27,12 @@ try {
   }
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+
+  const { execSync: exec } = require('child_process');
+  const run = (cmd) => { try { return exec(cmd, { stdio: 'inherit', env: { ...process.env, CLAUDECODE: '' } }); } catch (e) { console.warn('Warning:', e.message); } };
+
+  run('claude plugin marketplace add AnEntrypoint/gm-cc');
+  run('claude plugin install gm@gm-cc --scope user');
 
 
 
