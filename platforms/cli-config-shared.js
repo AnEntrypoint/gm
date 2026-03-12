@@ -268,21 +268,32 @@ function createGeminiInstallerScript() {
 
 function createClaudeCodeCliScript() {
   const extraSetup = `
-  const pluginDir = path.join(destDir, 'plugins', 'gm-cc');
-  fs.mkdirSync(pluginDir, { recursive: true });
-
   const pkg = JSON.parse(fs.readFileSync(path.join(srcDir, 'package.json'), 'utf-8'));
   const version = pkg.version;
 
-  copyRecursive(path.join(srcDir, 'agents'), path.join(pluginDir, 'agents'));
-  copyRecursive(path.join(srcDir, 'hooks'), path.join(pluginDir, 'hooks'));
+  const cacheDir = path.join(destDir, 'plugins', 'cache', 'gm-cc', 'gm', version);
+  fs.mkdirSync(cacheDir, { recursive: true });
+  fs.mkdirSync(path.join(cacheDir, '.claude-plugin'), { recursive: true });
+
+  copyRecursive(path.join(srcDir, 'agents'), path.join(cacheDir, 'agents'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(cacheDir, 'hooks'));
   if (fs.existsSync(path.join(srcDir, 'skills'))) {
-    copyRecursive(path.join(srcDir, 'skills'), path.join(pluginDir, 'skills'));
+    copyRecursive(path.join(srcDir, 'skills'), path.join(cacheDir, 'skills'));
+  }
+  if (fs.existsSync(path.join(srcDir, '.mcp.json'))) {
+    fs.copyFileSync(path.join(srcDir, '.mcp.json'), path.join(cacheDir, '.mcp.json'));
+  }
+  if (fs.existsSync(path.join(srcDir, 'CLAUDE.md'))) {
+    fs.copyFileSync(path.join(srcDir, 'CLAUDE.md'), path.join(cacheDir, 'CLAUDE.md'));
+  }
+  if (fs.existsSync(path.join(srcDir, 'README.md'))) {
+    fs.copyFileSync(path.join(srcDir, 'README.md'), path.join(cacheDir, 'README.md'));
   }
 
   const marketplaceSrc = path.join(srcDir, '.claude-plugin', 'marketplace.json');
   if (fs.existsSync(marketplaceSrc)) {
-    fs.copyFileSync(marketplaceSrc, path.join(pluginDir, 'marketplace.json'));
+    fs.copyFileSync(marketplaceSrc, path.join(cacheDir, '.claude-plugin', 'marketplace.json'));
+    fs.copyFileSync(marketplaceSrc, path.join(cacheDir, 'marketplace.json'));
   }
 
   const pluginJson = {
@@ -293,14 +304,13 @@ function createClaudeCodeCliScript() {
     homepage: 'https://github.com/AnEntrypoint/gm',
     hooks: './hooks/hooks.json'
   };
-  fs.writeFileSync(path.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\\n');
+  fs.writeFileSync(path.join(cacheDir, '.claude-plugin', 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\\n');
+  fs.writeFileSync(path.join(cacheDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\\n');
 
   const installedPath = path.join(destDir, 'plugins', 'installed_plugins.json');
-  let installed = { version: 2, plugins: {} };
+  let installed = {};
   try { installed = JSON.parse(fs.readFileSync(installedPath, 'utf-8')); } catch (e) {}
-  installed.version = 2;
-  installed.plugins = installed.plugins || {};
-  installed.plugins.gm = { version, enabled: true };
+  installed['gm@gm-cc'] = [{ scope: 'user', installPath: cacheDir, version }];
   fs.writeFileSync(installedPath, JSON.stringify(installed, null, 2) + '\\n');
 
   const settingsPath = path.join(destDir, 'settings.json');
@@ -309,7 +319,7 @@ function createClaudeCodeCliScript() {
   settings.enabledPlugins = settings.enabledPlugins || {};
   settings.enabledPlugins['gm@gm-cc'] = true;
   settings.extraKnownMarketplaces = settings.extraKnownMarketplaces || {};
-  settings.extraKnownMarketplaces['gm-cc'] = pluginDir;
+  settings.extraKnownMarketplaces['gm-cc'] = { source: { source: 'github', repo: 'AnEntrypoint/gm-cc' } };
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\\n');
 `;
   return createCliInstaller({
