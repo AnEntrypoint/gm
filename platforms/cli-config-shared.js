@@ -2,47 +2,6 @@ const factory = require('./cli-config-factory');
 const path = require('path');
 const fs = require('fs');
 
-<<<<<<< HEAD
-=======
-function transformToOpenCodeAgent(content, agentName = 'gm') {
-  if (!content) return content;
-  
-  const lines = content.split('\n');
-  let inFrontmatter = false;
-  let frontmatterEnd = -1;
-  let bodyStart = 0;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trim() === '---') {
-      if (!inFrontmatter) {
-        inFrontmatter = true;
-      } else {
-        frontmatterEnd = i;
-        bodyStart = i + 1;
-        break;
-      }
-    }
-  }
-  
-  const body = bodyStart > 0 ? lines.slice(bodyStart).join('\n').trim() : content;
-  
-  const openCodeFrontmatter = [
-    '---',
-    `description: GM agent - Immutable programming state machine for autonomous task execution`,
-    'mode: primary',
-    '---',
-    ''
-  ].join('\n');
-  
-  return openCodeFrontmatter + body;
-}
-
-function transformToKiloAgent(content, agentName = 'gm') {
-  return transformToOpenCodeAgent(content, agentName);
-}
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 function createGeminiInstallScript() {
   return `#!/usr/bin/env node
@@ -249,26 +208,6 @@ function safeCopyDirectory(src, dst) {
   }
 }
 
-<<<<<<< HEAD
-=======
-function safeCopyFile(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-    const content = fs.readFileSync(src, 'utf-8');
-    const dstDir = path.dirname(dst);
-    if (!fs.existsSync(dstDir)) {
-      fs.mkdirSync(dstDir, { recursive: true });
-    }
-    fs.writeFileSync(dst, content, 'utf-8');
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 function install() {
   if (!isInsideNodeModules()) {
     return;
@@ -279,20 +218,11 @@ function install() {
     return;
   }
 
-<<<<<<< HEAD
   const ocDir = path.join(projectRoot, '.config', 'opencode', 'plugin');
-=======
-  const ocDir = path.join(projectRoot, '.config', 'opencode');
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   const sourceDir = __dirname;
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(ocDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(ocDir, 'hooks'));
-<<<<<<< HEAD
-=======
-  safeCopyFile(path.join(sourceDir, 'opencode.json'), path.join(ocDir, 'opencode.json'));
-  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(ocDir, '.mcp.json'));
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 }
 
 install();
@@ -353,26 +283,6 @@ function safeCopyDirectory(src, dst) {
   }
 }
 
-<<<<<<< HEAD
-=======
-function safeCopyFile(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-    const content = fs.readFileSync(src, 'utf-8');
-    const dstDir = path.dirname(dst);
-    if (!fs.existsSync(dstDir)) {
-      fs.mkdirSync(dstDir, { recursive: true });
-    }
-    fs.writeFileSync(dst, content, 'utf-8');
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 function install() {
   if (!isInsideNodeModules()) {
     return;
@@ -383,29 +293,17 @@ function install() {
     return;
   }
 
-<<<<<<< HEAD
   const kiloDir = path.join(projectRoot, '.config', 'kilo', 'plugin');
-=======
-  const kiloDir = path.join(projectRoot, '.config', 'kilo');
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   const sourceDir = __dirname;
 
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(kiloDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(kiloDir, 'hooks'));
-<<<<<<< HEAD
-=======
-  safeCopyFile(path.join(sourceDir, 'kilocode.json'), path.join(kiloDir, 'kilocode.json'));
-  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(kiloDir, '.mcp.json'));
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 }
 
 install();
 `;
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 function createGeminiInstallerScript() {
   return `#!/usr/bin/env node
 const fs = require('fs');
@@ -446,7 +344,6 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-<<<<<<< HEAD
   // Install skills globally via the skills package (supports all agents)
   const { execSync } = require('child_process');
   try {
@@ -455,8 +352,6 @@ try {
     console.warn('Warning: skills install failed (non-fatal):', e.message);
   }
 
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
@@ -474,29 +369,16 @@ function createOpenCodeInstallerScript() {
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-<<<<<<< HEAD
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
 const ocConfigDir = path.join(homeDir, '.config', 'opencode');
 const srcDir = __dirname;
 const pluginMarker = path.join(ocConfigDir, 'plugins', 'gm-oc.mjs');
 const isUpgrade = fs.existsSync(pluginMarker);
-=======
-const { execSync } = require('child_process');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'opencode')
-  : path.join(homeDir, '.config', 'opencode');
-
-const srcDir = __dirname;
-const isUpgrade = fs.existsSync(path.join(destDir, 'agents', 'gm.md'));
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 console.log(isUpgrade ? 'Upgrading gm-oc...' : 'Installing gm-oc...');
 
 try {
-<<<<<<< HEAD
   fs.mkdirSync(path.join(ocConfigDir, 'plugins'), { recursive: true });
   fs.mkdirSync(path.join(ocConfigDir, 'agents'), { recursive: true });
 
@@ -642,28 +524,13 @@ const isUpgrade = fs.existsSync(destDir);
 console.log(isUpgrade ? 'Upgrading gm-cc...' : 'Installing gm-cc...');
 
 try {
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   fs.mkdirSync(destDir, { recursive: true });
 
   const filesToCopy = [
     ['agents', 'agents'],
     ['hooks', 'hooks'],
-<<<<<<< HEAD
     ['.mcp.json', '.mcp.json'],
     ['README.md', 'README.md']
-=======
-    ['skills', 'skills'],
-    ['index.mjs', 'index.mjs'],
-    ['gm.mjs', 'gm.mjs'],
-    ['opencode.json', 'opencode.json'],
-    ['.mcp.json', '.mcp.json'],
-    ['README.md', 'README.md'],
-    ['LICENSE', 'LICENSE'],
-    ['CONTRIBUTING.md', 'CONTRIBUTING.md'],
-    ['.gitignore', '.gitignore'],
-    ['.editorconfig', '.editorconfig']
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   ];
 
   function copyRecursive(src, dst) {
@@ -678,34 +545,19 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-<<<<<<< HEAD
   // Install skills globally via the skills package (supports all agents)
   const { execSync } = require('child_process');
   try {
     execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
   } catch (e) {
     console.warn('Warning: skills install failed (non-fatal):', e.message);
-=======
-  // Also write to plugins/gm-oc.mjs - the actual file OpenCode loads
-  const pluginsDir = path.join(destDir, 'plugins');
-  fs.mkdirSync(pluginsDir, { recursive: true });
-  const gmMjsSrc = path.join(srcDir, 'gm.mjs');
-  if (fs.existsSync(gmMjsSrc)) {
-    fs.copyFileSync(gmMjsSrc, path.join(pluginsDir, 'gm-oc.mjs'));
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   }
 
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
-<<<<<<< HEAD
   console.log(\`✓ gm-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('Restart Claude Code to activate.');
-=======
-  console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
-  console.log('Restart OpenCode to activate.');
-  console.log('Run "opencode agent list" to verify your agent is available.');
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 } catch (e) {
   console.error('Installation failed:', e.message);
   process.exit(1);
@@ -713,319 +565,6 @@ try {
 `;
 }
 
-<<<<<<< HEAD
-=======
-function createKiloInstallerScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { execSync } = require('child_process');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'kilo')
-  : path.join(homeDir, '.config', 'kilo');
-
-const srcDir = __dirname;
-const isUpgrade = fs.existsSync(path.join(destDir, 'agents', 'gm.md'));
-
-console.log(isUpgrade ? 'Upgrading gm-kilo...' : 'Installing gm-kilo...');
-
-try {
-  fs.mkdirSync(destDir, { recursive: true });
-
-  const filesToCopy = [
-    ['agents', 'agents'],
-    ['hooks', 'hooks'],
-    ['skills', 'skills'],
-    ['index.mjs', 'index.mjs'],
-    ['gm.mjs', 'gm.mjs'],
-    ['kilocode.json', 'kilocode.json'],
-    ['.mcp.json', '.mcp.json'],
-    ['README.md', 'README.md'],
-    ['LICENSE', 'LICENSE'],
-    ['CONTRIBUTING.md', 'CONTRIBUTING.md'],
-    ['.gitignore', '.gitignore'],
-    ['.editorconfig', '.editorconfig']
-  ];
-
-  function copyRecursive(src, dst) {
-    if (!fs.existsSync(src)) return;
-    if (fs.statSync(src).isDirectory()) {
-      fs.mkdirSync(dst, { recursive: true });
-      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-    } else {
-      fs.copyFileSync(src, dst);
-    }
-  }
-
-  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
-
-  // Also write plugin/ directory - Kilo loads from ~/.config/kilo/plugin/ as a local file plugin
-  const pluginDir = path.join(destDir, 'plugin');
-  fs.mkdirSync(pluginDir, { recursive: true });
-  const gmMjsSrc = path.join(srcDir, 'gm.mjs');
-  if (fs.existsSync(gmMjsSrc)) {
-    fs.copyFileSync(gmMjsSrc, path.join(pluginDir, 'gm.mjs'));
-  }
-  fs.writeFileSync(path.join(pluginDir, 'index.js'), "export { default } from './gm.mjs';\\n", 'utf-8');
-
-  const destPath = process.platform === 'win32'
-    ? destDir.replace(/\\\\/g, '/')
-    : destDir;
-  console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
-  console.log('Restart Kilo CLI to activate.');
-  console.log('Run "kilo agents list" to verify your agent is available.');
-} catch (e) {
-  console.error('Installation failed:', e.message);
-  process.exit(1);
-}
-`;
-}
-
-function createClaudeCodeCliScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-
-const args = process.argv.slice(2);
-const isProjectLocal = args.includes('-p') || args.includes('--provision') || args.includes('--project');
-
-if (isProjectLocal) {
-  provisionProject();
-} else {
-  installGlobally();
-}
-
-function provisionProject() {
-  const projectDir = process.cwd();
-  const claudeDir = path.join(projectDir, '.claude');
-  const srcDir = __dirname;
-
-  console.log('Provisioning gm-cc to current project...');
-
-  try {
-    const filesToCopy = [
-      'agents',
-      'hooks',
-      'skills',
-      '.mcp.json'
-    ];
-
-    function copyRecursive(src, dst) {
-      if (!fs.existsSync(src)) return;
-      if (fs.statSync(src).isDirectory()) {
-        fs.mkdirSync(dst, { recursive: true });
-        fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-      } else {
-        fs.copyFileSync(src, dst);
-      }
-    }
-
-    filesToCopy.forEach(name => copyRecursive(path.join(srcDir, name), path.join(claudeDir, name)));
-
-    // Update .gitignore to exclude .gm-stop-verified
-    const gitignorePath = path.join(projectDir, '.gitignore');
-    const gitignoreEntry = '.gm-stop-verified';
-
-    let gitignoreContent = '';
-    if (fs.existsSync(gitignorePath)) {
-      gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
-    }
-
-    if (!gitignoreContent.includes(gitignoreEntry)) {
-      if (gitignoreContent && !gitignoreContent.endsWith('\\n')) {
-        gitignoreContent += '\\n';
-      }
-      gitignoreContent += gitignoreEntry + '\\n';
-      fs.writeFileSync(gitignorePath, gitignoreContent, 'utf-8');
-    }
-
-    // Generate project-specific settings.json with hook configuration
-    const settingsPath = path.join(claudeDir, 'settings.json');
-    let settings = {};
-    if (fs.existsSync(settingsPath)) {
-      try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch (e) {}
-    }
-
-    // Configure hooks to use project-local paths with \${CLAUDE_PROJECT_DIR}
-    if (!settings.hooks) settings.hooks = {};
-    settings.hooks.PreToolUse = [{
-      matcher: '*',
-      hooks: [{
-        type: 'command',
-        command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use-hook.js',
-        timeout: 3600
-      }]
-    }];
-    settings.hooks.UserPromptSubmit = [{
-      matcher: '*',
-      hooks: [{
-        type: 'command',
-        command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/prompt-submit-hook.js',
-        timeout: 180000
-      }]
-    }];
-    settings.hooks.Stop = [{
-      matcher: '*',
-      hooks: [
-        {
-          type: 'command',
-          command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-hook.js',
-          timeout: 300000
-        },
-        {
-          type: 'command',
-          command: 'node \${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-hook-git.js',
-          timeout: 60000
-        }
-      ]
-    }];
-
-    fs.mkdirSync(claudeDir, { recursive: true });
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-
-    console.log('✓ Hooks copied to .claude/hooks/');
-    console.log('✓ Agents copied to .claude/agents/');
-    console.log('✓ Skills copied to .claude/skills/');
-    console.log('✓ MCP configuration written to .claude/.mcp.json');
-    console.log('✓ Hook configuration written to .claude/settings.json');
-    console.log('✓ .gitignore updated');
-    console.log('');
-    console.log('Provisioning complete! Your project now has:');
-    console.log('  • All gm-cc hooks in .claude/hooks/');
-    console.log('  • All agents in .claude/agents/');
-    console.log('  • All skills in .claude/skills/');
-    console.log('  • Hook configuration in .claude/settings.json');
-    console.log('');
-    console.log('Restart Claude Code to activate the hooks.');
-  } catch (e) {
-    console.error('Provisioning failed:', e.message);
-    process.exit(1);
-  }
-}
-
-function installGlobally() {
-  const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-  const claudeDir = path.join(homeDir, '.claude');
-  const pluginsDir = path.join(claudeDir, 'plugins');
-  const destDir = path.join(pluginsDir, 'gm-cc');
-
-  const srcDir = __dirname;
-  const isUpgrade = fs.existsSync(destDir);
-
-  console.log(isUpgrade ? 'Upgrading gm-cc plugin...' : 'Installing gm-cc plugin...');
-
-  try {
-    fs.mkdirSync(destDir, { recursive: true });
-
-    const filesToCopy = [
-      'agents',
-      'hooks',
-      'skills',
-      '.mcp.json',
-      '.claude-plugin',
-      'README.md',
-      'CLAUDE.md'
-    ];
-
-    function copyRecursive(src, dst) {
-      if (!fs.existsSync(src)) return;
-      if (fs.statSync(src).isDirectory()) {
-        fs.mkdirSync(dst, { recursive: true });
-        fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-      } else {
-        fs.copyFileSync(src, dst);
-      }
-    }
-
-    filesToCopy.forEach(name => copyRecursive(path.join(srcDir, name), path.join(destDir, name)));
-
-    // Copy plugin.json and marketplace.json to root so marketplace source lookup finds them
-    const pluginJsonSrc = path.join(destDir, '.claude-plugin', 'plugin.json');
-    if (fs.existsSync(pluginJsonSrc)) fs.copyFileSync(pluginJsonSrc, path.join(destDir, 'plugin.json'));
-    const mktSrc = path.join(destDir, '.claude-plugin', 'marketplace.json');
-    if (fs.existsSync(mktSrc)) fs.copyFileSync(mktSrc, path.join(destDir, 'marketplace.json'));
-
-    // Register in settings.json (enabledPlugins only, no hook injection)
-    const settingsPath = path.join(claudeDir, 'settings.json');
-    let settings = {};
-    if (fs.existsSync(settingsPath)) {
-      try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); } catch (e) {}
-    }
-    if (!settings.enabledPlugins) settings.enabledPlugins = {};
-    settings.enabledPlugins['gm@gm-cc'] = true;
-    // Remove stale hook entries (handled by plugin hooks.json)
-    if (settings.hooks) delete settings.hooks;
-    // Register marketplace so Claude Code resolves gm@gm-cc locally
-    if (!settings.extraKnownMarketplaces) settings.extraKnownMarketplaces = {};
-    settings.extraKnownMarketplaces['gm-cc'] = { source: { source: 'directory', path: destDir } };
-    fs.mkdirSync(claudeDir, { recursive: true });
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
-    console.log('✓ Plugin registered in ~/.claude/settings.json');
-
-    // Write installed_plugins.json so Claude Code loads from local cache
-    const pluginVersion = require('./package.json').version;
-    const installedPluginsPath = path.join(pluginsDir, 'installed_plugins.json');
-    let installedPlugins = { version: 2, plugins: {} };
-    if (fs.existsSync(installedPluginsPath)) {
-      try { installedPlugins = JSON.parse(fs.readFileSync(installedPluginsPath, 'utf-8')); } catch (e) {}
-    }
-    if (!installedPlugins.plugins || Array.isArray(installedPlugins.plugins)) installedPlugins.plugins = {};
-    const now = new Date().toISOString();
-    const existing = Array.isArray(installedPlugins.plugins['gm@gm-cc']) ? installedPlugins.plugins['gm@gm-cc'][0] : null;
-    // Also write cache dir so Claude Code finds it without network fetch
-    const cacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm', pluginVersion);
-    const filesToCache = ['agents', 'hooks', 'skills', '.mcp.json', '.claude-plugin', 'README.md', 'CLAUDE.md'];
-    function copyRecursiveCache(src, dst) {
-      if (!fs.existsSync(src)) return;
-      if (fs.statSync(src).isDirectory()) {
-        fs.mkdirSync(dst, { recursive: true });
-        fs.readdirSync(src).forEach(f => copyRecursiveCache(path.join(src, f), path.join(dst, f)));
-      } else { fs.copyFileSync(src, dst); }
-    }
-    fs.mkdirSync(cacheDir, { recursive: true });
-    filesToCache.forEach(name => copyRecursiveCache(path.join(destDir, name), path.join(cacheDir, name)));
-    // Copy plugin.json and marketplace.json to cache root too
-    const cachePluginJsonSrc = path.join(cacheDir, '.claude-plugin', 'plugin.json');
-    if (fs.existsSync(cachePluginJsonSrc)) fs.copyFileSync(cachePluginJsonSrc, path.join(cacheDir, 'plugin.json'));
-    const mktCacheSrc = path.join(cacheDir, '.claude-plugin', 'marketplace.json');
-    if (fs.existsSync(mktCacheSrc)) fs.copyFileSync(mktCacheSrc, path.join(cacheDir, 'marketplace.json'));
-    installedPlugins.plugins['gm@gm-cc'] = [{
-      scope: 'user',
-      installPath: cacheDir,
-      version: pluginVersion,
-      installedAt: existing?.installedAt || now,
-      lastUpdated: now
-    }];
-    fs.writeFileSync(installedPluginsPath, JSON.stringify(installedPlugins, null, 2), 'utf-8');
-    console.log('✓ Plugin registered in installed_plugins.json');
-
-    // Clean up stale cache entries to avoid validation errors from old formats
-    try {
-      const gmCacheDir = path.join(pluginsDir, 'cache', 'gm-cc', 'gm');
-      if (fs.existsSync(gmCacheDir)) {
-        const entries = fs.readdirSync(gmCacheDir);
-        for (const entry of entries) {
-          if (entry === pluginVersion || entry === 'unknown') continue;
-          try { fs.rmSync(path.join(gmCacheDir, entry), { recursive: true, force: true }); } catch (e) {}
-        }
-      }
-    } catch (e) {}
-
-    console.log(\`✓ gm-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destDir}\`);
-    console.log('Restart Claude Code to activate the gm plugin.');
-  } catch (e) {
-    console.error('Installation failed:', e.message);
-    process.exit(1);
-  }
-}
-`;
-}
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 function createClaudeCodeInstallScript() {
   return `#!/usr/bin/env node
 const fs = require('fs');
@@ -1179,7 +718,6 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-<<<<<<< HEAD
   // Install skills globally via the skills package (supports all agents)
   const { execSync } = require('child_process');
   try {
@@ -1188,8 +726,6 @@ try {
     console.warn('Warning: skills install failed (non-fatal):', e.message);
   }
 
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   const destPath = process.platform === 'win32'
     ? destDir.replace(/\\\\/g, '/')
     : destDir;
@@ -1203,10 +739,7 @@ try {
 }
 
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
-<<<<<<< HEAD
-  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
+  loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
     return JSON.stringify({
       ...config,
@@ -1226,27 +759,16 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
-<<<<<<< HEAD
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
       scripts: pluginSpec.scripts,
-=======
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
-      keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
-      peerDependencies: { '@anthropic-ai/claude-code': '*' },
-      scripts: { postinstall: 'node scripts/postinstall.js', ...pluginSpec.scripts },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   },
   getPackageJsonFields() {
     return {
-<<<<<<< HEAD
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
-=======
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -1254,11 +776,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   getAdditionalFiles(spec) {
     const TemplateBuilder = require('../lib/template-builder');
     return {
-<<<<<<< HEAD
       'plugin.json': TemplateBuilder.generatePluginJson(spec),
-=======
-      '.claude-plugin/plugin.json': TemplateBuilder.generatePluginJson(spec),
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec),
       'cli.js': createClaudeCodeCliScript(),
       'install.js': createClaudeCodeInstallScript()
@@ -1290,12 +808,8 @@ This installation method is best for:
 For development or project-specific customization, install ${repoName} directly into your project:
 
 \`\`\`bash
-<<<<<<< HEAD
 cd /path/to/your/project
 npm install ${repoName} && npx gm install
-=======
-bun x ${repoName}@latest
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 \`\`\`
 
 This installation method is ideal when you need to:
@@ -1304,7 +818,6 @@ This installation method is ideal when you need to:
 - Use the latest development version
 - Configure platform-specific behavior per project
 
-<<<<<<< HEAD
 #### Installation Command Breakdown
 
 The \`npm install ${repoName} && npx gm install\` command performs two steps:
@@ -1328,11 +841,6 @@ Installing ${repoName}...
 #### Installed File Structure (Project-Specific)
 
 After running \`npx gm install\`, your project will have:
-=======
-#### Installed File Structure (Project-Specific)
-
-After running \`bun x ${repoName}@latest\`, your project will have:
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 
 \`\`\`
 .claude/
@@ -1349,35 +857,6 @@ After running \`bun x ${repoName}@latest\`, your project will have:
 
 Each hook runs automatically at the appropriate session event. No manual trigger needed.
 
-<<<<<<< HEAD
-=======
-### Project Provisioning (Explicit Installation)
-
-To explicitly add all ${repoName} hooks, agents, and skills to an existing project:
-
-\`\`\`bash
-bun x ${repoName}@latest -- -p
-\`\`\`
-
-Or with a global installation:
-
-\`\`\`bash
-${repoName} -p
-\`\`\`
-
-This creates a project-local \`.claude/settings.json\` that configures hooks to use \`\${CLAUDE_PROJECT_DIR}\` for project-specific environments. Useful for:
-- Explicitly provisioning gm-cc to an existing project
-- Overriding global plugin settings for a specific project
-- Team workflows requiring consistent project-level configuration
-
-The \`-p\` flag copies:
-- All hooks to \`.claude/hooks/\`
-- All agents to \`.claude/agents/\`
-- All skills to \`.claude/skills/\`
-- MCP configuration to \`.claude/.mcp.json\`
-- Project-specific hook settings to \`.claude/settings.json\`
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 ## File Installation (Manual Setup)
 
 If you prefer manual file management, clone the repository and copy files directly:
@@ -1458,7 +937,6 @@ npm install -g ${repoName}@latest
 ### Project-Specific Installation
 
 \`\`\`bash
-<<<<<<< HEAD
 # Update the package
 npm update ${repoName}
 
@@ -1469,10 +947,6 @@ npx gm install
 cp -r node_modules/${repoName}/agents/* .claude/agents/
 cp -r node_modules/${repoName}/hooks/* .claude/hooks/
 cp node_modules/${repoName}/.mcp.json .claude/.mcp.json
-=======
-# Re-run the installer to update .claude/ directory
-bun x ${repoName}@latest
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 \`\`\`
 
 ## Features
@@ -1575,53 +1049,11 @@ MIT - See LICENSE file for details
   }
 });
 
-<<<<<<< HEAD
 const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
-  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
+  loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
     return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
   },
-=======
-function transformToGeminiAgent(content, agentName = 'gm') {
-  if (!content) return content;
-  const lines = content.split('\n');
-  let inFrontmatter = false;
-  let frontmatterEnd = -1;
-  let bodyStart = 0;
-  const forbiddenKeys = ['agent', 'enforce'];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.trim() === '---') {
-      if (!inFrontmatter) {
-        inFrontmatter = true;
-      } else {
-        frontmatterEnd = i;
-        bodyStart = i + 1;
-        break;
-      }
-    }
-  }
-
-  if (frontmatterEnd < 0) return content;
-
-  const frontmatterLines = lines.slice(1, frontmatterEnd).filter(l => {
-    const key = l.split(':')[0].trim();
-    return !forbiddenKeys.includes(key);
-  });
-
-  const body = lines.slice(bodyStart).join('\n').trim();
-  return ['---', ...frontmatterLines, '---', '', body].join('\n') + '\n';
-}
-
-const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
-  formatConfigJson(config) {
-    return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
-  },
-  transformAgentContent(agentName, content) {
-    return transformToGeminiAgent(content, agentName);
-  },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
       name: 'gm-gc',
@@ -1635,24 +1067,15 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
-<<<<<<< HEAD
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-=======
-      files: ['agents/', 'hooks/', 'scripts/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
-      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   },
   getPackageJsonFields() {
     return {
       bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
-<<<<<<< HEAD
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
-=======
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md']
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     };
   },
   getAdditionalFiles(pluginSpec) {
@@ -1670,10 +1093,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
 });
 
 const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
-<<<<<<< HEAD
-  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
-=======
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
+  loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
     return JSON.stringify({
       ...config,
@@ -1695,15 +1115,9 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-codex/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-<<<<<<< HEAD
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-=======
-      files: ['hooks/', 'agents/', 'scripts/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
-      keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
-      scripts: { postinstall: 'node scripts/postinstall.js', ...(pluginSpec.scripts || {}) },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   },
@@ -1712,11 +1126,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-<<<<<<< HEAD
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
-=======
-      files: ['hooks/', 'agents/', 'skills/', 'scripts/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'install.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md'],
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
@@ -1732,8 +1142,6 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
 });
 
 function ocPluginSource() {
-<<<<<<< HEAD
-  // CJS stub kept for npm package main field compatibility
   return `module.exports = require('./gm-oc.mjs');\n`;
 }
 
@@ -1741,62 +1149,16 @@ function ocPluginMjsSource() {
   const lines = [
     "import { readFileSync, existsSync } from 'fs';",
     "import { join, dirname } from 'path';",
-=======
-  const lines = [
-    "import { readFileSync, existsSync, readdirSync } from 'fs';",
-    "import { join, dirname } from 'path';",
-    "import { exec } from 'child_process';",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     "import { fileURLToPath } from 'url';",
     "",
     "const __dirname = dirname(fileURLToPath(import.meta.url));",
     "",
     "export async function GmPlugin({ directory }) {",
-<<<<<<< HEAD
     "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
-=======
-    "  const agentsDir = join(__dirname, '..', 'agents');",
-    "",
-    "  const loadAgentRules = () => {",
-    "    try { return readFileSync(join(agentsDir, 'gm.md'), 'utf-8'); } catch (e) { return ''; }",
-    "  };",
-    "",
-    "  const runThorns = () => new Promise((resolve) => {",
-    "    exec('bun x mcp-thorns@latest', {",
-    "      encoding: 'utf-8', cwd: directory, timeout: 180000",
-    "    }, (err, stdout) => resolve(err ? '' : (stdout || '').trim()));",
-    "  });",
-    "",
-    "  const runCodeSearch = (query) => new Promise((resolve) => {",
-    "    const q = query.replace(/\"/g, '\\\\\"').substring(0, 200);",
-    "    exec('bun x codebasesearch@latest \"' + q + '\"', {",
-    "      encoding: 'utf-8', cwd: directory, timeout: 300000",
-    "    }, (err, stdout) => {",
-    "      if (err) return resolve('');",
-    "      const lines = (stdout || '').split('\\n');",
-    "      const start = lines.findIndex(l => l.includes('Searching for:'));",
-    "      resolve(start >= 0 ? lines.slice(start).join('\\n').trim() : (stdout || '').trim());",
-    "    });",
-    "  });",
-    "",
-    "  const getLastUserMessage = (msgs) => {",
-    "    for (let i = msgs.length - 1; i >= 0; i--) {",
-    "      const m = msgs[i];",
-    "      if (m.role === 'user') {",
-    "        const parts = Array.isArray(m.content) ? m.content : [m.content];",
-    "        const text = parts.map(p => typeof p === 'string' ? p : (p?.text || '')).join(' ').trim();",
-    "        if (text) return text;",
-    "      }",
-    "    }",
-    "    return '';",
-    "  };",
-    "",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     "  const prdFile = join(directory, '.prd');",
     "",
     "  return {",
     "    'experimental.chat.system.transform': async (input, output) => {",
-<<<<<<< HEAD
     "      try {",
     "        const rules = readFileSync(agentMd, 'utf-8');",
     "        if (rules) output.system.unshift(rules);",
@@ -1805,64 +1167,6 @@ function ocPluginMjsSource() {
     "        if (existsSync(prdFile)) {",
     "          const prd = readFileSync(prdFile, 'utf-8').trim();",
     "          if (prd) output.system.push('\\nPENDING WORK (.prd):\\n' + prd);",
-=======
-    "      const rules = loadAgentRules();",
-    "      const prd = existsSync(prdFile) ? readFileSync(prdFile, 'utf-8').trim() : '';",
-    "      let content = rules || '';",
-    "      if (prd) content += '\\n\\nPENDING WORK (.prd):\\n' + prd;",
-    "      const msgs = input?.messages || [];",
-    "      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;",
-    "      const hasNewUserPrompt = !lastMsg || lastMsg.role === 'user';",
-    "      if (hasNewUserPrompt) {",
-    "        const userQuery = getLastUserMessage(msgs);",
-    "        const [thorns, search] = await Promise.all([",
-    "          runThorns(),",
-    "          userQuery ? runCodeSearch(userQuery) : Promise.resolve('')",
-    "        ]);",
-    "        if (thorns) content += '\\n\\n=== Repository Analysis (mcp-thorns) ===\\n' + thorns;",
-    "        if (search) content += '\\n\\n=== Semantic Code Search Results ===\\n' + search;",
-    "      }",
-    "      if (content) output.system.push(content);",
-    "    },",
-    "    config: async (config) => {",
-    "      if (!config.agent) config.agent = {};",
-    "      const agentDir = join(__dirname, '..', 'agents');",
-    "      if (!existsSync(agentDir)) return;",
-    "      try {",
-    "        const files = readdirSync(agentDir).filter(f => f.endsWith('.md'));",
-    "        for (const file of files) {",
-    "          try {",
-    "            const content = readFileSync(join(agentDir, file), 'utf-8');",
-    "            const lines = content.split('\\n');",
-    "            let inFm = false;",
-    "            let fmEnd = -1;",
-    "            let body = content;",
-    "            for (let i = 0; i < lines.length; i++) {",
-    "              if (lines[i].trim() === '---') {",
-    "                if (!inFm) {",
-    "                  inFm = true;",
-    "                } else {",
-    "                  fmEnd = i;",
-    "                  body = lines.slice(i + 1).join('\\n').trim();",
-    "                  break;",
-    "                }",
-    "              }",
-    "            }",
-    "            let name = file.replace('.md', '');",
-    "            let description = '';",
-    "            let mode = 'subagent';",
-    "            if (fmEnd > 0) {",
-    "              const fmLines = lines.slice(1, fmEnd);",
-    "              for (const line of fmLines) {",
-    "                if (line.startsWith('name:')) name = line.slice(5).trim();",
-    "                else if (line.startsWith('description:')) description = line.slice(12).trim();",
-    "                else if (line.startsWith('mode:')) mode = line.slice(5).trim();",
-    "              }",
-    "            }",
-    "            if (!description) description = name + ' agent';",
-    "            config.agent[name] = { description, prompt: body, mode };",
-    "          } catch (e) {}",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     "        }",
     "      } catch (e) {}",
     "    }",
@@ -1873,8 +1177,7 @@ function ocPluginMjsSource() {
 }
 
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
-<<<<<<< HEAD
-  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
+  loadSkillsFromSource() { return {}; },
   getPackageJsonFields() {
     return {
       main: 'gm.js',
@@ -1884,20 +1187,6 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       dependencies: {}
     };
   },
-=======
-  getPackageJsonFields() {
-    return {
-      main: 'gm.mjs',
-      bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
-      scripts: { postinstall: 'node scripts/postinstall-oc.js' }
-    };
-  },
-  transformAgentContent(agentName, content) {
-    return transformToOpenCodeAgent(content, agentName);
-  },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
       name: 'gm-oc',
@@ -1905,80 +1194,33 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-<<<<<<< HEAD
       main: 'gm-oc.mjs',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
       keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
-=======
-      main: 'gm.mjs',
-      bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      keywords: ['opencode', 'opencode-plugin', 'mcp', 'automation', 'gm'],
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-oc.git' },
       homepage: 'https://github.com/AnEntrypoint/gm-oc#readme',
       bugs: { url: 'https://github.com/AnEntrypoint/gm-oc/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-<<<<<<< HEAD
       dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-=======
-      scripts: { postinstall: 'node scripts/postinstall-oc.js', ...(pluginSpec.scripts || {}) },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'opencode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
-<<<<<<< HEAD
     const ocConfig = {
       $schema: 'https://opencode.ai/config.json',
       default_agent: 'gm'
     };
-=======
-    // Convert MCP config from gm.json format (command + args) to opencode format (command array)
-    const mcpServers = {};
-    if (pluginSpec.mcp) {
-      for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
-        const command = Array.isArray(serverConfig.command)
-          ? serverConfig.command
-          : [serverConfig.command];
-        const args = serverConfig.args || [];
-        mcpServers[serverName] = {
-          type: 'local',
-          command: command[0],
-          args: [...command.slice(1), ...args],
-          timeout: serverConfig.timeout || 360000,
-          enabled: true
-        };
-      }
-    }
-
-    const ocConfig = {
-      $schema: 'https://opencode.ai/config.json',
-      default_agent: 'gm',
-      plugin: ['gm-oc']
-    };
-
-    if (Object.keys(mcpServers).length > 0) {
-      ocConfig.mcp = mcpServers;
-    }
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     return JSON.stringify(ocConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
-<<<<<<< HEAD
       'index.js': `module.exports = { GmPlugin: require('./gm-oc.mjs').GmPlugin };\n`,
       'gm.js': ocPluginSource(),
       'gm-oc.mjs': ocPluginMjsSource(),
-=======
-      'index.mjs': `export { default } from './gm.mjs';\n`,
-      'gm.mjs': ocPluginSource(),
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       'cli.js': createOpenCodeInstallerScript(),
       'install.js': createOpenCodeInstallScript(),
     };
@@ -1989,8 +1231,6 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
 });
 
 function kiloPluginSource() {
-<<<<<<< HEAD
-  // CJS stub kept for npm package main field compatibility
   return `module.exports = require('./gm-kilo.mjs');\n`;
 }
 
@@ -1998,17 +1238,10 @@ function kiloPluginMjsSource() {
   const lines = [
     "import { readFileSync, existsSync } from 'fs';",
     "import { join, dirname } from 'path';",
-=======
-  const lines = [
-    "import { readFileSync, existsSync, readdirSync } from 'fs';",
-    "import { join, dirname } from 'path';",
-    "import { exec } from 'child_process';",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     "import { fileURLToPath } from 'url';",
     "",
     "const __dirname = dirname(fileURLToPath(import.meta.url));",
     "",
-<<<<<<< HEAD
     "export async function GmPlugin({ directory }) {",
     "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
     "  const prdFile = join(directory, '.prd');",
@@ -2023,116 +1256,17 @@ function kiloPluginMjsSource() {
     "        if (existsSync(prdFile)) {",
     "          const prd = readFileSync(prdFile, 'utf-8').trim();",
     "          if (prd) output.system.push('\\nPENDING WORK (.prd):\\n' + prd);",
-=======
-    "export default async ({ directory }) => {",
-    "  const agentsDir = join(__dirname, 'agents');",
-    "  const loadAgentRules = () => {",
-    "    try { return readFileSync(join(agentsDir, 'gm.md'), 'utf-8'); } catch (e) { return ''; }",
-    "  };",
-    "  const runThorns = () => new Promise((resolve) => {",
-    "    exec('bun x mcp-thorns@latest', {",
-    "      encoding: 'utf-8', cwd: directory, timeout: 180000",
-    "    }, (err, stdout) => resolve(err ? '' : (stdout || '').trim()));",
-    "  });",
-    "  const runCodeSearch = (query) => new Promise((resolve) => {",
-    "    const q = query.replace(/\"/g, '\\\\\"').substring(0, 200);",
-    "    exec('bun x codebasesearch@latest \"' + q + '\"', {",
-    "      encoding: 'utf-8', cwd: directory, timeout: 300000",
-    "    }, (err, stdout) => {",
-    "      if (err) return resolve('');",
-    "      const lines = (stdout || '').split('\\n');",
-    "      const start = lines.findIndex(l => l.includes('Searching for:'));",
-    "      resolve(start >= 0 ? lines.slice(start).join('\\n').trim() : (stdout || '').trim());",
-    "    });",
-    "  });",
-    "  const getLastUserMessage = (msgs) => {",
-    "    for (let i = msgs.length - 1; i >= 0; i--) {",
-    "      const m = msgs[i];",
-    "      if (m.role === 'user') {",
-    "        const parts = Array.isArray(m.content) ? m.content : [m.content];",
-    "        const text = parts.map(p => typeof p === 'string' ? p : (p?.text || '')).join(' ').trim();",
-    "        if (text) return text;",
-    "      }",
-    "    }",
-    "    return '';",
-    "  };",
-    "  const prdFile = join(directory, '.prd');",
-    "  return {",
-    "    'experimental.chat.system.transform': async (input, output) => {",
-    "      const rules = loadAgentRules();",
-    "      const prd = existsSync(prdFile) ? readFileSync(prdFile, 'utf-8').trim() : '';",
-    "      let content = rules || '';",
-    "      if (prd) content += '\\n\\nPENDING WORK (.prd):\\n' + prd;",
-    "      const msgs = input?.messages || [];",
-    "      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;",
-    "      const hasNewUserPrompt = !lastMsg || lastMsg.role === 'user';",
-    "      if (hasNewUserPrompt) {",
-    "        const userQuery = getLastUserMessage(msgs);",
-    "        const [thorns, search] = await Promise.all([",
-    "          runThorns(),",
-    "          userQuery ? runCodeSearch(userQuery) : Promise.resolve('')",
-    "        ]);",
-    "        if (thorns) content += '\\n\\n=== Repository Analysis (mcp-thorns) ===\\n' + thorns;",
-    "        if (search) content += '\\n\\n=== Semantic Code Search Results ===\\n' + search;",
-    "      }",
-    "      if (content) output.system.push(content);",
-    "    },",
-    "    config: async (config) => {",
-    "      if (!config.agent) config.agent = {};",
-    "      const agentDir = join(__dirname, '..', 'agents');",
-    "      if (!existsSync(agentDir)) return;",
-    "      try {",
-    "        const files = readdirSync(agentDir).filter(f => f.endsWith('.md'));",
-    "        for (const file of files) {",
-    "          try {",
-    "            const content = readFileSync(join(agentDir, file), 'utf-8');",
-    "            const lines = content.split('\\n');",
-    "            let inFm = false;",
-    "            let fmEnd = -1;",
-    "            let body = content;",
-    "            for (let i = 0; i < lines.length; i++) {",
-    "              if (lines[i].trim() === '---') {",
-    "                if (!inFm) {",
-    "                  inFm = true;",
-    "                } else {",
-    "                  fmEnd = i;",
-    "                  body = lines.slice(i + 1).join('\\n').trim();",
-    "                  break;",
-    "                }",
-    "              }",
-    "            }",
-    "            let name = file.replace('.md', '');",
-    "            let description = '';",
-    "            let mode = 'subagent';",
-    "            if (fmEnd > 0) {",
-    "              const fmLines = lines.slice(1, fmEnd);",
-    "              for (const line of fmLines) {",
-    "                if (line.startsWith('name:')) name = line.slice(5).trim();",
-    "                else if (line.startsWith('description:')) description = line.slice(12).trim();",
-    "                else if (line.startsWith('mode:')) mode = line.slice(5).trim();",
-    "              }",
-    "            }",
-    "            if (!description) description = name + ' agent';",
-    "            config.agent[name] = { description, prompt: body, mode };",
-    "          } catch (e) {}",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     "        }",
     "      } catch (e) {}",
     "    }",
     "  };",
-<<<<<<< HEAD
     "}",
-=======
-    "};",
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   ];
   return lines.join('\n') + '\n';
 }
 
-<<<<<<< HEAD
-
 const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
-  loadSkillsFromSource() { return {}; }, // Skills installed via `bunx skills add`, not bundled
+  loadSkillsFromSource() { return {}; },
   getPackageJsonFields() {
     return {
       main: 'gm.js',
@@ -2142,21 +1276,6 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       dependencies: {}
     };
   },
-=======
-const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
-  getPackageJsonFields() {
-    return {
-      main: 'gm.mjs',
-      bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
-      scripts: { postinstall: 'node scripts/postinstall-kilo.js' }
-    };
-  },
-  transformAgentContent(agentName, content) {
-    return transformToKiloAgent(content, agentName);
-  },
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   generatePackageJson(pluginSpec, extraFields = {}) {
     return JSON.stringify({
       name: 'gm-kilo',
@@ -2164,11 +1283,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       description: pluginSpec.description,
       author: pluginSpec.author,
       license: pluginSpec.license,
-<<<<<<< HEAD
       main: 'gm-kilo.mjs',
-=======
-      main: 'gm.mjs',
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-kilo.git' },
@@ -2176,64 +1291,24 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-kilo/issues' },
       engines: pluginSpec.engines,
       publishConfig: pluginSpec.publishConfig,
-<<<<<<< HEAD
       dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-=======
-      scripts: { postinstall: 'node scripts/postinstall-kilo.js', ...(pluginSpec.scripts || {}) },
-      files: ['agents/', 'hooks/', 'skills/', 'scripts/', 'gm.mjs', 'index.mjs', 'kilocode.json', '.github/', '.mcp.json', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       ...extraFields
     }, null, 2);
   },
   formatConfigJson(config, pluginSpec) {
-<<<<<<< HEAD
     const kiloConfig = {
       $schema: 'https://kilo.ai/config.json',
       default_agent: 'gm'
     };
-=======
-    const mcpServers = {};
-    if (pluginSpec.mcp) {
-      for (const [serverName, serverConfig] of Object.entries(pluginSpec.mcp)) {
-        const command = Array.isArray(serverConfig.command)
-          ? serverConfig.command
-          : [serverConfig.command];
-        const args = serverConfig.args || [];
-        mcpServers[serverName] = {
-          type: 'local',
-          command: command[0],
-          args: [...command.slice(1), ...args],
-          timeout: serverConfig.timeout || 360000,
-          enabled: true
-        };
-      }
-    }
-
-    const kiloConfig = {
-      $schema: 'https://kilo.ai/config.json',
-      default_agent: 'gm',
-      plugin: ['gm-kilo']
-    };
-
-    if (Object.keys(mcpServers).length > 0) {
-      kiloConfig.mcp = mcpServers;
-    }
-
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     return JSON.stringify(kiloConfig, null, 2);
   },
   getAdditionalFiles(pluginSpec) {
     return {
-<<<<<<< HEAD
       'index.js': `module.exports = { GmPlugin: require('./gm-kilo.mjs').GmPlugin };\n`,
       'gm.js': kiloPluginSource(),
       'gm-kilo.mjs': kiloPluginMjsSource(),
-=======
-      'index.mjs': `export { default } from './gm.mjs';\n`,
-      'gm.mjs': kiloPluginSource(),
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
       'cli.js': createKiloInstallerScript(),
       'install.js': createKiloInstallScript(),
     };
