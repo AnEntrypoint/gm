@@ -1,337 +1,37 @@
 const factory = require('./cli-config-factory');
-const path = require('path');
-const fs = require('fs');
+const TemplateBuilder = require('../lib/template-builder');
 
-
-function createGeminiInstallScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-
+// Shared boilerplate embedded in generated install scripts (postinstall / npm install path)
+const NODE_MODULES_HELPERS = `
 function isInsideNodeModules() {
   return __dirname.includes(path.sep + 'node_modules' + path.sep);
 }
 
 function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
+  if (!isInsideNodeModules()) return null;
   let current = __dirname;
   while (current !== path.dirname(current)) {
     current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
+    if (path.basename(current) === 'node_modules') return path.dirname(current);
   }
   return null;
 }
 
 function safeCopyDirectory(src, dst) {
   try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
+    if (!fs.existsSync(src)) return false;
     fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        const content = fs.readFileSync(srcPath, 'utf-8');
-        const dstDir = path.dirname(dstPath);
-        if (!fs.existsSync(dstDir)) {
-          fs.mkdirSync(dstDir, { recursive: true });
-        }
-        fs.writeFileSync(dstPath, content, 'utf-8');
-      }
+    fs.readdirSync(src, { withFileTypes: true }).forEach(entry => {
+      const s = path.join(src, entry.name), d = path.join(dst, entry.name);
+      if (entry.isDirectory()) safeCopyDirectory(s, d);
+      else { fs.mkdirSync(path.dirname(d), { recursive: true }); fs.writeFileSync(d, fs.readFileSync(s, 'utf-8'), 'utf-8'); }
     });
     return true;
-  } catch (err) {
-    return false;
-  }
-}
+  } catch (e) { return false; }
+}`.trim();
 
-function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
-  const geminiDir = path.join(projectRoot, '.gemini', 'extensions', 'gm-gc');
-  const sourceDir = __dirname;
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(geminiDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(geminiDir, 'hooks'));
-}
-
-install();
-`;
-}
-function createCodexInstallScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-
-function isInsideNodeModules() {
-  return __dirname.includes(path.sep + 'node_modules' + path.sep);
-}
-
-function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
-  let current = __dirname;
-  while (current !== path.dirname(current)) {
-    current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
-  }
-  return null;
-}
-
-function safeCopyDirectory(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
-    fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        const content = fs.readFileSync(srcPath, 'utf-8');
-        const dstDir = path.dirname(dstPath);
-        if (!fs.existsSync(dstDir)) {
-          fs.mkdirSync(dstDir, { recursive: true });
-        }
-        fs.writeFileSync(dstPath, content, 'utf-8');
-      }
-    });
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
-  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm');
-  const sourceDir = __dirname;
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
-}
-
-install();
-`;
-}
-function createOpenCodeInstallScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-
-function isInsideNodeModules() {
-  return __dirname.includes(path.sep + 'node_modules' + path.sep);
-}
-
-function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
-  let current = __dirname;
-  while (current !== path.dirname(current)) {
-    current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
-  }
-  return null;
-}
-
-function safeCopyDirectory(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
-    fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        const content = fs.readFileSync(srcPath, 'utf-8');
-        const dstDir = path.dirname(dstPath);
-        if (!fs.existsSync(dstDir)) {
-          fs.mkdirSync(dstDir, { recursive: true });
-        }
-        fs.writeFileSync(dstPath, content, 'utf-8');
-      }
-    });
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
-  const ocDir = path.join(projectRoot, '.config', 'opencode', 'plugin');
-  const sourceDir = __dirname;
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(ocDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(ocDir, 'hooks'));
-}
-
-install();
-`;
-}
-function createKiloInstallScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-
-function isInsideNodeModules() {
-  return __dirname.includes(path.sep + 'node_modules' + path.sep);
-}
-
-function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
-  let current = __dirname;
-  while (current !== path.dirname(current)) {
-    current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
-  }
-  return null;
-}
-
-function safeCopyDirectory(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
-    fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        const content = fs.readFileSync(srcPath, 'utf-8');
-        const dstDir = path.dirname(dstPath);
-        if (!fs.existsSync(dstDir)) {
-          fs.mkdirSync(dstDir, { recursive: true });
-        }
-        fs.writeFileSync(dstPath, content, 'utf-8');
-      }
-    });
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
-  const kiloDir = path.join(projectRoot, '.config', 'kilo', 'plugin');
-  const sourceDir = __dirname;
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(kiloDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(kiloDir, 'hooks'));
-}
-
-install();
-`;
-}
-
-function createGeminiInstallerScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'gemini', 'extensions', 'gm')
-  : path.join(homeDir, '.gemini', 'extensions', 'gm');
-
-const srcDir = __dirname;
-const isUpgrade = fs.existsSync(destDir);
-
-console.log(isUpgrade ? 'Upgrading gm-gc...' : 'Installing gm-gc...');
-
-try {
-  fs.mkdirSync(destDir, { recursive: true });
-
-  const filesToCopy = [
-    ['agents', 'agents'],
-    ['hooks', 'hooks'],
-    ['.mcp.json', '.mcp.json'],
-    ['gemini-extension.json', 'gemini-extension.json'],
-    ['README.md', 'README.md'],
-    ['GEMINI.md', 'GEMINI.md']
-  ];
-
+// Shared copyRecursive used in CLI installer scripts (global install path)
+const COPY_RECURSIVE_FN = `
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
     if (fs.statSync(src).isDirectory()) {
@@ -340,28 +40,260 @@ try {
     } else {
       fs.copyFileSync(src, dst);
     }
-  }
+  }`.trim();
 
-  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
-
-  // Install skills globally via the skills package (supports all agents)
-  const { execSync } = require('child_process');
+const SKILLS_INSTALL = `  const { execSync } = require('child_process');
   try {
     execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
   } catch (e) {
     console.warn('Warning: skills install failed (non-fatal):', e.message);
-  }
+  }`;
 
-  const destPath = process.platform === 'win32'
-    ? destDir.replace(/\\\\/g, '/')
-    : destDir;
-  console.log(\`✓ gm-gc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
-  console.log('Restart Gemini CLI to activate.');
+function installScriptNodeModules(dirExpr, dirs) {
+  const copies = dirs.map(([src, dst]) =>
+    `  safeCopyDirectory(path.join(sourceDir, '${src}'), path.join(${dirExpr}, '${dst}'));`
+  ).join('\n');
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const destDir = path.join(projectRoot, ${dirExpr.replace('destDir', 'x')});
+  const sourceDir = __dirname;
+${copies}
+}
+
+install();
+`;
+}
+
+// Per-platform postinstall scripts (npm install into node_modules triggers copy to project)
+function createGeminiInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const geminiDir = path.join(projectRoot, '.gemini', 'extensions', 'gm-gc');
+  const sourceDir = __dirname;
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(geminiDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(geminiDir, 'hooks'));
+}
+
+install();
+`;
+}
+
+function createCodexInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm');
+  const sourceDir = __dirname;
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
+}
+
+install();
+`;
+}
+
+function createOpenCodeInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const ocDir = path.join(projectRoot, '.config', 'opencode', 'plugin');
+  const sourceDir = __dirname;
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(ocDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(ocDir, 'hooks'));
+}
+
+install();
+`;
+}
+
+function createKiloInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const kiloDir = path.join(projectRoot, '.config', 'kilo', 'plugin');
+  const sourceDir = __dirname;
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(kiloDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(kiloDir, 'hooks'));
+}
+
+install();
+`;
+}
+
+function createClaudeCodeInstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+${NODE_MODULES_HELPERS}
+
+function safeCopyFile(src, dst) {
+  try {
+    const dstDir = path.dirname(dst);
+    if (!fs.existsSync(dstDir)) fs.mkdirSync(dstDir, { recursive: true });
+    fs.writeFileSync(dst, fs.readFileSync(src, 'utf-8'), 'utf-8');
+    return true;
+  } catch (e) { return false; }
+}
+
+function safeCopyDirectoryFull(src, dst) {
+  try {
+    if (!fs.existsSync(src)) return false;
+    fs.mkdirSync(dst, { recursive: true });
+    fs.readdirSync(src, { withFileTypes: true }).forEach(entry => {
+      const s = path.join(src, entry.name), d = path.join(dst, entry.name);
+      if (entry.isDirectory()) safeCopyDirectoryFull(s, d);
+      else safeCopyFile(s, d);
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+function updateGitignore(projectRoot) {
+  try {
+    const gitignorePath = path.join(projectRoot, '.gitignore');
+    const entry = '.gm-stop-verified';
+    let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
+    if (content.includes(entry)) return true;
+    if (content && !content.endsWith('\\n')) content += '\\n';
+    content += entry + '\\n';
+    fs.writeFileSync(gitignorePath, content, 'utf-8');
+    return true;
+  } catch (e) { return false; }
+}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const claudeDir = path.join(projectRoot, '.claude');
+  const sourceDir = __dirname.replace(/[\\/]scripts$/, '');
+  safeCopyDirectoryFull(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
+  safeCopyDirectoryFull(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
+  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
+  updateGitignore(projectRoot);
+}
+
+install();
+`;
+}
+
+// Global CLI installer scripts (run directly as cli.js / bun x gm-xx@latest)
+function createCliInstaller({ pkg, label, destDir, filesToCopy, restartMsg, extraSetup = '' }) {
+  const copies = filesToCopy.map(([src, dst]) =>
+    `  filesToCopy.forEach(([src, dst]) => ${COPY_RECURSIVE_FN.includes('copyRecursive') ? 'copyRecursive' : 'copy'}(path.join(srcDir, src), path.join(destDir, dst)));`
+  );
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const destDir = ${destDir};
+
+const srcDir = __dirname;
+const isUpgrade = fs.existsSync(destDir);
+
+console.log(isUpgrade ? 'Upgrading ${pkg}...' : 'Installing ${pkg}...');
+
+try {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  const filesToCopy = ${JSON.stringify(filesToCopy)};
+
+  ${COPY_RECURSIVE_FN}
+
+  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
+${extraSetup}
+${SKILLS_INSTALL}
+
+  const destPath = process.platform === 'win32' ? destDir.replace(/\\\\/g, '/') : destDir;
+  console.log(\`✓ ${pkg} \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
+  console.log('${restartMsg}');
 } catch (e) {
   console.error('Installation failed:', e.message);
   process.exit(1);
 }
 `;
+}
+
+function createGeminiInstallerScript() {
+  return createCliInstaller({
+    pkg: 'gm-gc',
+    label: 'Gemini CLI',
+    destDir: `process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'gemini', 'extensions', 'gm')
+  : path.join(homeDir, '.gemini', 'extensions', 'gm')`,
+    filesToCopy: [
+      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'],
+      ['gemini-extension.json', 'gemini-extension.json'], ['README.md', 'README.md'], ['GEMINI.md', 'GEMINI.md']
+    ],
+    restartMsg: 'Restart Gemini CLI to activate.'
+  });
+}
+
+function createClaudeCodeCliScript() {
+  return createCliInstaller({
+    pkg: 'gm-cc',
+    label: 'Claude Code',
+    destDir: `path.join(homeDir, '.claude')`,
+    filesToCopy: [
+      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
+    ],
+    restartMsg: 'Restart Claude Code to activate.'
+  });
+}
+
+function createCodexCliScript() {
+  return createCliInstaller({
+    pkg: 'gm-codex',
+    label: 'Codex',
+    destDir: `process.platform === 'win32'
+  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
+  : path.join(homeDir, '.codex', 'plugins', 'gm')`,
+    filesToCopy: [
+      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'],
+      ['plugin.json', 'plugin.json'], ['README.md', 'README.md']
+    ],
+    restartMsg: 'Restart Codex to activate.'
+  });
 }
 
 function createOpenCodeInstallerScript() {
@@ -392,29 +324,22 @@ try {
     }
   }
 
-  // Install ESM plugin for opencode auto-loading from plugins directory
   fs.copyFileSync(path.join(srcDir, 'gm-oc.mjs'), path.join(ocConfigDir, 'plugins', 'gm-oc.mjs'));
-
-  // Copy agents into opencode config dir
   copyRecursive(path.join(srcDir, 'agents'), path.join(ocConfigDir, 'agents'));
 
-  // Write/update opencode.json — set default_agent
   const ocJsonPath = path.join(ocConfigDir, 'opencode.json');
   let ocConfig = {};
   try { ocConfig = JSON.parse(fs.readFileSync(ocJsonPath, 'utf-8')); } catch (e) {}
-  // Remove stale MCP config (no longer used)
   delete ocConfig.mcp;
   ocConfig.default_agent = 'gm';
   fs.writeFileSync(ocJsonPath, JSON.stringify(ocConfig, null, 2) + '\\n');
 
-  // Clean old AppData install location (no longer used by opencode)
   const oldDir = process.platform === 'win32'
     ? path.join(homeDir, 'AppData', 'Roaming', 'opencode', 'plugin') : null;
   if (oldDir && fs.existsSync(oldDir)) {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-  // Install skills globally via the skills package (supports all agents)
   const { execSync: execSync2 } = require('child_process');
   try {
     execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
@@ -459,40 +384,31 @@ try {
     }
   }
 
-  // Install ESM plugin for kilo auto-loading from plugins directory
   fs.copyFileSync(path.join(srcDir, 'gm-kilo.mjs'), path.join(kiloConfigDir, 'plugins', 'gm-kilo.mjs'));
-
-  // Copy agents into kilo config dir
   copyRecursive(path.join(srcDir, 'agents'), path.join(kiloConfigDir, 'agents'));
 
-  // Write/fix kilocode.json — set default_agent, fix $schema
   const kiloJsonPath = path.join(kiloConfigDir, 'kilocode.json');
   let kiloConfig = {};
   try {
     const raw = fs.readFileSync(kiloJsonPath, 'utf-8');
     kiloConfig = JSON.parse(raw);
-    // Fix corrupted $schema key (written as "" in older versions)
     if (kiloConfig['']) { delete kiloConfig['']; }
   } catch (e) {}
-  // Remove stale MCP config (no longer used)
   delete kiloConfig.mcp;
   kiloConfig['$schema'] = 'https://kilo.ai/config.json';
   kiloConfig.default_agent = 'gm';
-  // Remove stale local-path plugin reference
   if (Array.isArray(kiloConfig.plugin)) {
     kiloConfig.plugin = kiloConfig.plugin.filter(p => !path.isAbsolute(p) && !p.startsWith('C:') && !p.startsWith('/'));
     if (kiloConfig.plugin.length === 0) delete kiloConfig.plugin;
   }
   fs.writeFileSync(kiloJsonPath, JSON.stringify(kiloConfig, null, 2) + '\\n');
 
-  // Clean old AppData install location (no longer used by kilo)
   const oldDir = process.platform === 'win32'
     ? path.join(homeDir, 'AppData', 'Roaming', 'kilo', 'plugin') : null;
   if (oldDir && fs.existsSync(oldDir)) {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-  // Install skills globally via the skills package (supports all agents)
   const { execSync: execSync2 } = require('child_process');
   try {
     execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
@@ -509,262 +425,64 @@ try {
 `;
 }
 
-function createClaudeCodeCliScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = path.join(homeDir, '.claude');
-
-const srcDir = __dirname;
-const isUpgrade = fs.existsSync(destDir);
-
-console.log(isUpgrade ? 'Upgrading gm-cc...' : 'Installing gm-cc...');
-
-try {
-  fs.mkdirSync(destDir, { recursive: true });
-
-  const filesToCopy = [
-    ['agents', 'agents'],
-    ['hooks', 'hooks'],
-    ['.mcp.json', '.mcp.json'],
-    ['README.md', 'README.md']
-  ];
-
-  function copyRecursive(src, dst) {
-    if (!fs.existsSync(src)) return;
-    if (fs.statSync(src).isDirectory()) {
-      fs.mkdirSync(dst, { recursive: true });
-      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-    } else {
-      fs.copyFileSync(src, dst);
-    }
-  }
-
-  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
-
-  // Install skills globally via the skills package (supports all agents)
-  const { execSync } = require('child_process');
-  try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-  } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
-  }
-
-  const destPath = process.platform === 'win32'
-    ? destDir.replace(/\\\\/g, '/')
-    : destDir;
-  console.log(\`✓ gm-cc \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
-  console.log('Restart Claude Code to activate.');
-} catch (e) {
-  console.error('Installation failed:', e.message);
-  process.exit(1);
-}
-`;
+function makePackageJson(fields) {
+  return JSON.stringify(fields, null, 2);
 }
 
-function createClaudeCodeInstallScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-
-function isInsideNodeModules() {
-  return __dirname.includes(path.sep + 'node_modules' + path.sep);
+function repoFields(pkg) {
+  return {
+    repository: { type: 'git', url: `https://github.com/AnEntrypoint/${pkg}.git` },
+    homepage: `https://github.com/AnEntrypoint/${pkg}#readme`,
+    bugs: { url: `https://github.com/AnEntrypoint/${pkg}/issues` }
+  };
 }
 
-function getProjectRoot() {
-  if (!isInsideNodeModules()) {
-    return null;
-  }
-
-  let current = __dirname;
-  while (current !== path.dirname(current)) {
-    current = path.dirname(current);
-    const parent = path.dirname(current);
-    if (path.basename(current) === 'node_modules') {
-      return parent;
-    }
-  }
-  return null;
-}
-
-function safeCopyFile(src, dst) {
-  try {
-    const content = fs.readFileSync(src, 'utf-8');
-    const dstDir = path.dirname(dst);
-    if (!fs.existsSync(dstDir)) {
-      fs.mkdirSync(dstDir, { recursive: true });
-    }
-    fs.writeFileSync(dst, content, 'utf-8');
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function safeCopyDirectory(src, dst) {
-  try {
-    if (!fs.existsSync(src)) {
-      return false;
-    }
-
-    fs.mkdirSync(dst, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-
-    entries.forEach(entry => {
-      const srcPath = path.join(src, entry.name);
-      const dstPath = path.join(dst, entry.name);
-
-      if (entry.isDirectory()) {
-        safeCopyDirectory(srcPath, dstPath);
-      } else if (entry.isFile()) {
-        safeCopyFile(srcPath, dstPath);
-      }
-    });
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function updateGitignore(projectRoot) {
-  try {
-    const gitignorePath = path.join(projectRoot, '.gitignore');
-    const entry = '.gm-stop-verified';
-
-    let content = '';
-    if (fs.existsSync(gitignorePath)) {
-      content = fs.readFileSync(gitignorePath, 'utf-8');
-    }
-
-    if (content.includes(entry)) {
-      return true;
-    }
-
-    if (content && !content.endsWith('\\n')) {
-      content += '\\n';
-    }
-    content += entry + '\\n';
-
-    fs.writeFileSync(gitignorePath, content, 'utf-8');
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
-function install() {
-  if (!isInsideNodeModules()) {
-    return;
-  }
-
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-
-  const claudeDir = path.join(projectRoot, '.claude');
-  const sourceDir = __dirname.replace(/[\\/]scripts$/, '');
-
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
-  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
-
-  updateGitignore(projectRoot);
-}
-
-install();
-`;
-}
-
-function createCodexCliScript() {
-  return `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-
-const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
-  : path.join(homeDir, '.codex', 'plugins', 'gm');
-
-const srcDir = __dirname;
-const isUpgrade = fs.existsSync(destDir);
-
-console.log(isUpgrade ? 'Upgrading gm-codex...' : 'Installing gm-codex...');
-
-try {
-  fs.mkdirSync(destDir, { recursive: true });
-
-  const filesToCopy = [
-    ['agents', 'agents'],
-    ['hooks', 'hooks'],
-    ['.mcp.json', '.mcp.json'],
-    ['plugin.json', 'plugin.json'],
-    ['README.md', 'README.md']
-  ];
-
-  function copyRecursive(src, dst) {
-    if (!fs.existsSync(src)) return;
-    if (fs.statSync(src).isDirectory()) {
-      fs.mkdirSync(dst, { recursive: true });
-      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-    } else {
-      fs.copyFileSync(src, dst);
-    }
-  }
-
-  filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
-
-  // Install skills globally via the skills package (supports all agents)
-  const { execSync } = require('child_process');
-  try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-  } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
-  }
-
-  const destPath = process.platform === 'win32'
-    ? destDir.replace(/\\\\/g, '/')
-    : destDir;
-  console.log(\`✓ gm-codex \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
-  console.log('Restart Codex to activate.');
-} catch (e) {
-  console.error('Installation failed:', e.message);
-  process.exit(1);
-}
-`;
+function pluginMjsSource(pluginFile) {
+  return [
+    "import { readFileSync, existsSync } from 'fs';",
+    "import { join, dirname } from 'path';",
+    "import { fileURLToPath } from 'url';",
+    "",
+    "const __dirname = dirname(fileURLToPath(import.meta.url));",
+    "",
+    "export async function GmPlugin({ directory }) {",
+    "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
+    "  const prdFile = join(directory, '.prd');",
+    "",
+    "  return {",
+    "    'experimental.chat.system.transform': async (input, output) => {",
+    "      try {",
+    "        const rules = readFileSync(agentMd, 'utf-8');",
+    "        if (rules) output.system.unshift(rules);",
+    "      } catch (e) {}",
+    "      try {",
+    "        if (existsSync(prdFile)) {",
+    "          const prd = readFileSync(prdFile, 'utf-8').trim();",
+    "          if (prd) output.system.push('\\nPENDING WORK (.prd):\\n' + prd);",
+    "        }",
+    "      } catch (e) {}",
+    "    }",
+    "  };",
+    "}",
+  ].join('\n') + '\n';
 }
 
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
-    return JSON.stringify({
-      ...config,
-      author: { name: config.author, url: 'https://github.com/AnEntrypoint' }
-    }, null, 2);
+    return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' } });
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
-    return JSON.stringify({
-      name: 'gm-cc',
-      version: pluginSpec.version,
-      description: pluginSpec.description,
-      author: pluginSpec.author,
-      license: pluginSpec.license,
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-cc.git' },
-      homepage: 'https://github.com/AnEntrypoint/gm-cc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/gm-cc/issues' },
-      engines: pluginSpec.engines,
-      publishConfig: pluginSpec.publishConfig,
+    return makePackageJson({
+      name: 'gm-cc', version: pluginSpec.version, description: pluginSpec.description,
+      author: pluginSpec.author, license: pluginSpec.license,
+      ...repoFields('gm-cc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
-      scripts: pluginSpec.scripts,
-      ...extraFields
-    }, null, 2);
+      scripts: pluginSpec.scripts, ...extraFields
+    });
   },
   getPackageJsonFields() {
     return {
@@ -774,7 +492,6 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     };
   },
   getAdditionalFiles(spec) {
-    const TemplateBuilder = require('../lib/template-builder');
     return {
       'plugin.json': TemplateBuilder.generatePluginJson(spec),
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec),
@@ -1052,25 +769,17 @@ MIT - See LICENSE file for details
 const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
-    return JSON.stringify({ ...config, contextFileName: this.contextFile }, null, 2);
+    return makePackageJson({ ...config, contextFileName: this.contextFile });
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
-    return JSON.stringify({
-      name: 'gm-gc',
-      version: pluginSpec.version,
-      description: pluginSpec.description,
-      author: pluginSpec.author,
-      license: pluginSpec.license,
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-gc.git' },
-      homepage: 'https://github.com/AnEntrypoint/gm-gc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/gm-gc/issues' },
-      engines: pluginSpec.engines,
-      publishConfig: pluginSpec.publishConfig,
+    return makePackageJson({
+      name: 'gm-gc', version: pluginSpec.version, description: pluginSpec.description,
+      author: pluginSpec.author, license: pluginSpec.license,
+      ...repoFields('gm-gc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-      ...extraFields
-    }, null, 2);
+      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
+    });
   },
   getPackageJsonFields() {
     return {
@@ -1078,11 +787,8 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
-  getAdditionalFiles(pluginSpec) {
-    return {
-      'cli.js': createGeminiInstallerScript(),
-      'install.js': createGeminiInstallScript()
-    };
+  getAdditionalFiles() {
+    return { 'cli.js': createGeminiInstallerScript(), 'install.js': createGeminiInstallScript() };
   },
   buildHookCommand(hookFile) {
     return `node \${extensionPath}/hooks/${hookFile}`;
@@ -1095,31 +801,18 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
 const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
-    return JSON.stringify({
-      ...config,
-      author: { name: config.author, url: 'https://github.com/AnEntrypoint' },
-      hooks: './hooks/hooks.json'
-    }, null, 2);
+    return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' }, hooks: './hooks/hooks.json' });
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
-    return JSON.stringify({
-      name: 'gm-codex',
-      version: pluginSpec.version,
-      description: pluginSpec.description,
-      author: pluginSpec.author,
-      license: pluginSpec.license,
-      main: 'plugin.json',
+    return makePackageJson({
+      name: 'gm-codex', version: pluginSpec.version, description: pluginSpec.description,
+      author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-codex.git' },
-      homepage: 'https://github.com/AnEntrypoint/gm-codex#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/gm-codex/issues' },
-      engines: pluginSpec.engines,
-      publishConfig: pluginSpec.publishConfig,
+      ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-      ...extraFields
-    }, null, 2);
+      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
+    });
   },
   getPackageJsonMain() { return 'plugin.json'; },
   getPackageJsonFields() {
@@ -1133,48 +826,10 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   generateReadme(spec) {
     return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   },
-  getAdditionalFiles(spec) {
-    return {
-      'cli.js': createCodexCliScript(),
-      'install.js': createCodexInstallScript()
-    };
+  getAdditionalFiles() {
+    return { 'cli.js': createCodexCliScript(), 'install.js': createCodexInstallScript() };
   }
 });
-
-function ocPluginSource() {
-  return `module.exports = require('./gm-oc.mjs');\n`;
-}
-
-function ocPluginMjsSource() {
-  const lines = [
-    "import { readFileSync, existsSync } from 'fs';",
-    "import { join, dirname } from 'path';",
-    "import { fileURLToPath } from 'url';",
-    "",
-    "const __dirname = dirname(fileURLToPath(import.meta.url));",
-    "",
-    "export async function GmPlugin({ directory }) {",
-    "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
-    "  const prdFile = join(directory, '.prd');",
-    "",
-    "  return {",
-    "    'experimental.chat.system.transform': async (input, output) => {",
-    "      try {",
-    "        const rules = readFileSync(agentMd, 'utf-8');",
-    "        if (rules) output.system.unshift(rules);",
-    "      } catch (e) {}",
-    "      try {",
-    "        if (existsSync(prdFile)) {",
-    "          const prd = readFileSync(prdFile, 'utf-8').trim();",
-    "          if (prd) output.system.push('\\nPENDING WORK (.prd):\\n' + prd);",
-    "        }",
-    "      } catch (e) {}",
-    "    }",
-    "  };",
-    "}",
-  ];
-  return lines.join('\n') + '\n';
-}
 
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
   loadSkillsFromSource() { return {}; },
@@ -1188,39 +843,26 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
-    return JSON.stringify({
-      name: 'gm-oc',
-      version: pluginSpec.version,
-      description: pluginSpec.description,
-      author: pluginSpec.author,
-      license: pluginSpec.license,
-      main: 'gm-oc.mjs',
+    return makePackageJson({
+      name: 'gm-oc', version: pluginSpec.version, description: pluginSpec.description,
+      author: pluginSpec.author, license: pluginSpec.license, main: 'gm-oc.mjs',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
       keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-oc.git' },
-      homepage: 'https://github.com/AnEntrypoint/gm-oc#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/gm-oc/issues' },
-      engines: pluginSpec.engines,
-      publishConfig: pluginSpec.publishConfig,
+      ...repoFields('gm-oc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
-      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }),
-      ...extraFields
-    }, null, 2);
+      ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
+    });
   },
-  formatConfigJson(config, pluginSpec) {
-    const ocConfig = {
-      $schema: 'https://opencode.ai/config.json',
-      default_agent: 'gm'
-    };
-    return JSON.stringify(ocConfig, null, 2);
+  formatConfigJson() {
+    return makePackageJson({ $schema: 'https://opencode.ai/config.json', default_agent: 'gm' });
   },
-  getAdditionalFiles(pluginSpec) {
+  getAdditionalFiles() {
     return {
       'index.js': `module.exports = { GmPlugin: require('./gm-oc.mjs').GmPlugin };\n`,
-      'gm.js': ocPluginSource(),
-      'gm-oc.mjs': ocPluginMjsSource(),
+      'gm.js': `module.exports = require('./gm-oc.mjs');\n`,
+      'gm-oc.mjs': pluginMjsSource('gm-oc'),
       'cli.js': createOpenCodeInstallerScript(),
       'install.js': createOpenCodeInstallScript(),
     };
@@ -1229,41 +871,6 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
     return `# ${spec.name} for OpenCode\n\n## Installation\n\n### One-liner (recommended)\n\nInstall directly from npm using bun x:\n\n\`\`\`bash\nbun x gm-oc@latest\n\`\`\`\n\nThis command will automatically install gm-oc to the correct location for your platform and restart OpenCode to activate.\n\n### Manual installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc ~/.config/opencode/plugin && cd ~/.config/opencode/plugin && bun install\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-oc \"\\$env:APPDATA\\opencode\\plugin\" && cd \"\\$env:APPDATA\\opencode\\plugin\" && bun install\n\`\`\`\n\n### Project-level\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-oc .opencode/plugins && cd .opencode/plugins && bun install\n\`\`\`\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Git enforcement on session idle\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   }
 });
-
-function kiloPluginSource() {
-  return `module.exports = require('./gm-kilo.mjs');\n`;
-}
-
-function kiloPluginMjsSource() {
-  const lines = [
-    "import { readFileSync, existsSync } from 'fs';",
-    "import { join, dirname } from 'path';",
-    "import { fileURLToPath } from 'url';",
-    "",
-    "const __dirname = dirname(fileURLToPath(import.meta.url));",
-    "",
-    "export async function GmPlugin({ directory }) {",
-    "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
-    "  const prdFile = join(directory, '.prd');",
-    "",
-    "  return {",
-    "    'experimental.chat.system.transform': async (input, output) => {",
-    "      try {",
-    "        const rules = readFileSync(agentMd, 'utf-8');",
-    "        if (rules) output.system.unshift(rules);",
-    "      } catch (e) {}",
-    "      try {",
-    "        if (existsSync(prdFile)) {",
-    "          const prd = readFileSync(prdFile, 'utf-8').trim();",
-    "          if (prd) output.system.push('\\nPENDING WORK (.prd):\\n' + prd);",
-    "        }",
-    "      } catch (e) {}",
-    "    }",
-    "  };",
-    "}",
-  ];
-  return lines.join('\n') + '\n';
-}
 
 const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   loadSkillsFromSource() { return {}; },
@@ -1277,38 +884,26 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     };
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
-    return JSON.stringify({
-      name: 'gm-kilo',
-      version: pluginSpec.version,
-      description: pluginSpec.description,
-      author: pluginSpec.author,
-      license: pluginSpec.license,
-      main: 'gm-kilo.mjs',
+    return makePackageJson({
+      name: 'gm-kilo', version: pluginSpec.version, description: pluginSpec.description,
+      author: pluginSpec.author, license: pluginSpec.license, main: 'gm-kilo.mjs',
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
-      repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-kilo.git' },
-      homepage: 'https://github.com/AnEntrypoint/gm-kilo#readme',
-      bugs: { url: 'https://github.com/AnEntrypoint/gm-kilo/issues' },
-      engines: pluginSpec.engines,
-      publishConfig: pluginSpec.publishConfig,
+      ...repoFields('gm-kilo'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       dependencies: {},
       scripts: { postinstall: 'node scripts/postinstall.js' },
       files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
-    }, null, 2);
+    });
   },
-  formatConfigJson(config, pluginSpec) {
-    const kiloConfig = {
-      $schema: 'https://kilo.ai/config.json',
-      default_agent: 'gm'
-    };
-    return JSON.stringify(kiloConfig, null, 2);
+  formatConfigJson() {
+    return makePackageJson({ $schema: 'https://kilo.ai/config.json', default_agent: 'gm' });
   },
-  getAdditionalFiles(pluginSpec) {
+  getAdditionalFiles() {
     return {
       'index.js': `module.exports = { GmPlugin: require('./gm-kilo.mjs').GmPlugin };\n`,
-      'gm.js': kiloPluginSource(),
-      'gm-kilo.mjs': kiloPluginMjsSource(),
+      'gm.js': `module.exports = require('./gm-kilo.mjs');\n`,
+      'gm-kilo.mjs': pluginMjsSource('gm-kilo'),
       'cli.js': createKiloInstallerScript(),
       'install.js': createKiloInstallScript(),
     };
