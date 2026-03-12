@@ -216,10 +216,7 @@ install();
 }
 
 // Global CLI installer scripts (run directly as cli.js / bun x gm-xx@latest)
-function createCliInstaller({ pkg, label, destDir, filesToCopy, restartMsg, extraSetup = '' }) {
-  const copies = filesToCopy.map(([src, dst]) =>
-    `  filesToCopy.forEach(([src, dst]) => ${COPY_RECURSIVE_FN.includes('copyRecursive') ? 'copyRecursive' : 'copy'}(path.join(srcDir, src), path.join(destDir, dst)));`
-  );
+function createCliInstaller({ pkg, label, destDir, filesToCopy, restartMsg, extraSetup = '', skipSkillsInstall = false }) {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
@@ -242,7 +239,7 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 ${extraSetup}
-${SKILLS_INSTALL}
+${skipSkillsInstall ? '' : SKILLS_INSTALL}
 
   const destPath = process.platform === 'win32' ? destDir.replace(/\\\\/g, '/') : destDir;
   console.log(\`✓ ${pkg} \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
@@ -275,9 +272,10 @@ function createClaudeCodeCliScript() {
     label: 'Claude Code',
     destDir: `path.join(homeDir, '.claude')`,
     filesToCopy: [
-      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
+      ['agents', 'agents'], ['hooks', 'hooks'], ['skills', 'plugins/gm-cc/skills'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
     ],
-    restartMsg: 'Restart Claude Code to activate.'
+    restartMsg: 'Restart Claude Code to activate.',
+    skipSkillsInstall: true
   });
 }
 
@@ -468,7 +466,6 @@ function pluginMjsSource(pluginFile) {
 }
 
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
-  loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
     return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' } });
   },
