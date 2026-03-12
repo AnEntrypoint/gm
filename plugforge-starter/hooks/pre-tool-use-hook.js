@@ -64,8 +64,8 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-      if (!/^(bun x mcp-gm|bunx mcp-gm)(\s|$)/.test(command)) {
-        return { block: true, reason: 'Bash is restricted to: bunx mcp-gm\n\nmcp-gm is the only allowed execution tool. It runs code in JS/TS, Python, Go, Rust, C, C++, and Bash.\n\nAvailable tools: execute (run code), bash (shell commands), process_status, process_close, sleep.\n\nUsage: bunx mcp-gm\nDocs: https://www.npmjs.com/package/mcp-gm\n\nAll other Bash commands are blocked.' };
+      if (!/^(bun x gm-cc|bunx gm-cc)(\s|$)/.test(command)) {
+        return { block: true, reason: 'Bash is restricted to: bunx gm-cc\n\ngm-cc is the only allowed execution tool.\n\nUsage: bunx gm-cc\n\nAll other Bash commands are blocked.' };
       }
     }
 
