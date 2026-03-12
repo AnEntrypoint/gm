@@ -273,6 +273,19 @@ function createClaudeCodeCliScript() {
 
   run('claude plugin marketplace add AnEntrypoint/gm-cc');
   run('claude plugin install gm@gm-cc --scope user');
+
+  function overwritePluginHooks(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.forEach(entry => {
+      if (!entry.isDirectory()) return;
+      const sub = path.join(dir, entry.name);
+      const hooksTarget = path.join(sub, 'hooks');
+      if (fs.existsSync(hooksTarget)) copyRecursive(path.join(srcDir, 'hooks'), hooksTarget);
+      overwritePluginHooks(sub);
+    });
+  }
+  overwritePluginHooks(path.join(destDir, 'plugins'));
 `;
   return createCliInstaller({
     pkg: 'gm-cc',
