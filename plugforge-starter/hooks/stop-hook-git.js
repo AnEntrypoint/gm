@@ -166,7 +166,7 @@ try {
     if (result.blockCount === 1) {
       console.log(JSON.stringify({
         decision: 'block',
-        reason: `Git: ${result.reason} [First violation - blocks this session]`
+        reason: `Git: ${result.reason}`
       }, null, 2));
       process.exit(2);
     } else if (result.blockCount > 1) {
