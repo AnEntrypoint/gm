@@ -1,6 +1,5 @@
 const factory = (name, label, configFile, contextFile, overrides = {}) => {
   const hookEvents = {
-<<<<<<< HEAD
     cc: { sessionStart: 'SessionStart', preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
     gc: { sessionStart: 'SessionStart', preTool: 'BeforeTool', promptSubmit: 'BeforeAgent', stop: 'SessionEnd' },
     codex: { sessionStart: 'SessionStart', preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
@@ -9,16 +8,6 @@ const factory = (name, label, configFile, contextFile, overrides = {}) => {
   };
 
   const hookFormats = { cc: 'wrapped', gc: 'bare', codex: 'wrapped', oc: 'sdk', kilo: 'sdk' };
-=======
-    cc: { preTool: 'PreToolUse', postTool: 'PostToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
-    gc: { preTool: 'BeforeTool', postTool: 'AfterTool', promptSubmit: 'BeforeAgent', stop: 'SessionEnd' },
-    codex: { preTool: 'PreToolUse', postTool: 'PostToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
-    oc: { preTool: 'tool.execute.before', postTool: 'tool.execute.after', promptSubmit: 'message.updated', stop: 'session.closing' },
-    kilo: { preTool: 'tool.execute.before', postTool: 'tool.execute.after', promptSubmit: 'message.updated', stop: 'session.closing' }
-  };
-
-  const hookFormats = { cc: 'wrapped', gc: 'wrapped', codex: 'wrapped', oc: 'sdk', kilo: 'sdk' };
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   const toolNames = {
     cc: { bash: 'Bash', write: 'Write', glob: 'Glob', grep: 'Grep', search: 'Search' },
     gc: { bash: 'run_shell_command', write: 'write_file', glob: 'glob', grep: 'search_file_content', search: 'search' },
