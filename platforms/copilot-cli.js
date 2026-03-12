@@ -55,33 +55,6 @@ class CopilotCLIAdapter extends CLIAdapter {
     return structure;
   }
 
-  loadSkillsFromSource(sourceDir) {
-    const fs = require('fs');
-    const path = require('path');
-    const skillsDir = path.join(sourceDir, 'skills');
-    const skills = {};
-
-    if (!fs.existsSync(skillsDir)) {
-      return skills;
-    }
-
-    try {
-      fs.readdirSync(skillsDir).forEach(skillName => {
-        const skillPath = path.join(skillsDir, skillName);
-        const stat = fs.statSync(skillPath);
-        if (stat.isDirectory()) {
-          const skillMdPath = path.join(skillPath, 'SKILL.md');
-          if (fs.existsSync(skillMdPath)) {
-            const content = fs.readFileSync(skillMdPath, 'utf-8');
-            skills[`skills/${skillName}/SKILL.md`] = content;
-          }
-        }
-      });
-    } catch (e) {}
-
-    return skills;
-  }
-
   getPackageJsonMain() {
     return 'cli.js';
   }
