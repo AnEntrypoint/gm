@@ -55,8 +55,18 @@ const run = () => {
       return { block: true, reason: 'Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.' };
     }
 
+    if (tool_name === 'Skill') {
+      const skill = (tool_input?.skill || '').toLowerCase().replace(/^gm:/, '');
+      if (skill === 'explore' || skill === 'search') {
+        return { block: true, reason: 'Use the code-search skill for codebase exploration. Describe what you need in plain language — it understands intent, not just patterns.' };
+      }
+    }
+
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
+      if (/\bcodebasesearch\b/.test(command) && !/^git /.test(command)) {
+        return { block: true, reason: 'Use the code-search skill instead of running codebasesearch directly via Bash. Invoke it as a skill with your natural language query.' };
+      }
       const allowed = /^(git |gh |npm |npx |bun |node |python |python3 |ruby |go |deno |tsx |ts-node |docker |sudo systemctl|systemctl |pm2 |cd |agent-browser )/.test(command);
       if (!allowed) {
         return { block: true, reason: 'Bash only allows: git, gh, node, python, bun, npx, ruby, go, deno, docker, npm, systemctl, pm2, cd. Write all logic as code and execute it via Bash (e.g. node -e "...", python -c "...", bun -e "..."). Use Read/Write/Edit for file ops. Use code-search skill for exploration.' };
