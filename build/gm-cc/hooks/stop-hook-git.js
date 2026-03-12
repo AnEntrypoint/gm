@@ -146,7 +146,7 @@ const run = () => {
     const blockCount = incrementCounter(currentHash);
     return {
       ok: false,
-      reason: `Git: ${issues.join(', ')}, must push to remote`,
+      reason: `${issues.join(', ')}, must push to remote`,
       blockCount
     };
   }
@@ -166,7 +166,7 @@ try {
     if (result.blockCount === 1) {
       console.log(JSON.stringify({
         decision: 'block',
-        reason: `Git: ${result.reason} [First violation - blocks this session]`
+        reason: `Git: ${result.reason}`
       }, null, 2));
       process.exit(2);
     } else if (result.blockCount > 1) {

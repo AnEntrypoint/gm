@@ -14,7 +14,7 @@ console.log(isUpgrade ? 'Upgrading gm-cc...' : 'Installing gm-cc...');
 try {
   fs.mkdirSync(destDir, { recursive: true });
 
-  const filesToCopy = [["agents","agents"],["hooks","hooks"],[".mcp.json",".mcp.json"],["README.md","README.md"]];
+  const filesToCopy = [["agents","agents"],["hooks","hooks"],["skills","plugins/gm-cc/skills"],[".mcp.json",".mcp.json"],["README.md","README.md"]];
 
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
@@ -28,12 +28,7 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-  const { execSync } = require('child_process');
-  try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-  } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
-  }
+
 
   const destPath = process.platform === 'win32' ? destDir.replace(/\\/g, '/') : destDir;
   console.log(`✓ gm-cc ${isUpgrade ? 'upgraded' : 'installed'} to ${destPath}`);
