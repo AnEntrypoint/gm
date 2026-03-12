@@ -1,16 +1,6 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
-<<<<<<< HEAD
-const { execSync } = require('child_process');
-
-const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR;
-
-const COMPACT_CONTEXT = 'use gm agent | ref: TOOL_INVARIANTS | codesearch for exploration | plugin:gm:dev for execution';
-
-const PLAN_MODE_BLOCK = 'DO NOT use EnterPlanMode or any plan mode tool. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) instead. Plan mode is blocked.';
-
-=======
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -41,7 +31,6 @@ const ensureGitignore = () => {
 };
 
 
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 const getBaseContext = (resetMsg = '') => {
   let ctx = 'use gm agent';
   if (resetMsg) ctx += ' - ' + resetMsg;
@@ -58,8 +47,6 @@ const readStdinPrompt = () => {
   }
 };
 
-<<<<<<< HEAD
-=======
 const readGmAgent = () => {
   if (!pluginRoot) return '';
   try {
@@ -108,18 +95,13 @@ const runMcpThorns = () => {
   }
 };
 
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 const runCodeSearch = (query, cwd) => {
   if (!query || !cwd || !fs.existsSync(cwd)) return '';
   try {
     const escaped = query.replace(/"/g, '\\"').substring(0, 200);
     let out;
     try {
-<<<<<<< HEAD
-      out = execSync(`bun x codebasesearch@latest "${escaped}"`, {
-=======
       out = execSync(`bun x codebasesearch "${escaped}"`, {
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd,
@@ -128,11 +110,7 @@ const runCodeSearch = (query, cwd) => {
       });
     } catch (bunErr) {
       if (bunErr.killed) return '';
-<<<<<<< HEAD
-      out = execSync(`npx -y codebasesearch@latest "${escaped}"`, {
-=======
       out = execSync(`npx -y codebasesearch "${escaped}"`, {
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd,
@@ -150,16 +128,6 @@ const runCodeSearch = (query, cwd) => {
 
 const emit = (additionalContext) => {
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
-<<<<<<< HEAD
-  const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
-
-  if (isGemini) {
-    console.log(JSON.stringify({ systemMessage: additionalContext }, null, 2));
-  } else if (isOpenCode) {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'message.updated', additionalContext } }, null, 2));
-  } else {
-    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext } }, null, 2));
-=======
   const isOpenCode = process.env.OC_PROJECT_DIR !== undefined;
   const isKilo = process.env.KILO_PROJECT_DIR !== undefined;
 
@@ -169,20 +137,10 @@ const emit = (additionalContext) => {
     console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'message.updated', additionalContext } }, null, 2));
   } else {
     console.log(JSON.stringify({ additionalContext }, null, 2));
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
   }
 };
 
 try {
-<<<<<<< HEAD
-  const prompt = readStdinPrompt();
-  const parts = [getBaseContext() + ' | ' + COMPACT_CONTEXT + ' | ' + PLAN_MODE_BLOCK];
-
-  if (prompt && projectDir) {
-    const searchResults = runCodeSearch(prompt, projectDir);
-    if (searchResults) {
-      parts.push(`=== Semantic code search results for initial prompt ===\n${searchResults}`);
-=======
   ensureGitignore();
 
   const prompt = readStdinPrompt();
@@ -204,7 +162,6 @@ try {
     const searchResults = runCodeSearch(prompt, projectDir);
     if (searchResults) {
       parts.push(`=== Semantic code search results ===\n${searchResults}`);
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     }
   }
 

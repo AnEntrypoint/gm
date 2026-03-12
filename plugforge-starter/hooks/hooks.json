@@ -3,6 +3,7 @@
   "hooks": {
     "PreToolUse": [
       {
+<<<<<<< HEAD
         "matcher": "*",
         "hooks": [
           {
@@ -15,12 +16,31 @@
     ],
     "SessionStart": [
       {
+=======
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
+<<<<<<< HEAD
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.js",
             "timeout": 180000
+=======
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use-hook.js",
+            "timeout": 3600
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-hook.js",
+            "timeout": 30000
           }
         ]
       }
@@ -32,7 +52,11 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
+<<<<<<< HEAD
             "timeout": 60000
+=======
+            "timeout": 180000
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
           }
         ]
       }
