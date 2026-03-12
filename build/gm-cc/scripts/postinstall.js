@@ -62,27 +62,6 @@ function updateGitignore(projectRoot) {
   }
 }
 
-function install() {
-  if (!isInsideNodeModules()) return;
-  const projectRoot = getProjectRoot();
-  if (!projectRoot) return;
-  const claudeDir = path.join(projectRoot, '.claude');
-  const sourceDir = __dirname.replace(/[/\\]scripts$/, '');
-  
-  // Copy files
-  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
-  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
-  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
-  
-  // Update .gitignore
-  updateGitignore(projectRoot);
-
-  // Warm bun x cache for packages used by hooks
-  warmBunCache();
-
-  // Silent success
-}
-
 function warmBunCache() {
   const packages = ['mcp-thorns@latest', 'codebasesearch@latest'];
   for (const pkg of packages) {
@@ -96,6 +75,27 @@ function warmBunCache() {
       // Silent - cache warming is best-effort
     }
   }
+}
+
+function install() {
+  if (!isInsideNodeModules()) return;
+  const projectRoot = getProjectRoot();
+  if (!projectRoot) return;
+  const claudeDir = path.join(projectRoot, '.claude');
+  const sourceDir = __dirname.replace(/[/\\]scripts$/, '');
+
+  // Copy files
+  safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(claudeDir, 'agents'));
+  safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(claudeDir, 'hooks'));
+  safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(claudeDir, '.mcp.json'));
+
+  // Update .gitignore
+  updateGitignore(projectRoot);
+
+  // Warm bun x cache for packages used by hooks
+  warmBunCache();
+
+  // Silent success
 }
 
 install();

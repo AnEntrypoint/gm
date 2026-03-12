@@ -24,7 +24,7 @@ const run = () => {
     if (writeTools.includes(tool_name)) {
       const file_path = tool_input?.file_path || '';
       const ext = path.extname(file_path);
-      const inSkillsDir = file_path.includes('/skills/');
+      const inSkillsDir = file_path.includes('/skills/') || file_path.includes('\\skills\\');
       const base = path.basename(file_path).toLowerCase();
       if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
           !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
@@ -59,7 +59,7 @@ const run = () => {
       const command = (tool_input?.command || '').trim();
       const allowed = /^(git |gh |npm |npx |bun |node |python |python3 |ruby |go |deno |tsx |ts-node |docker |sudo systemctl|systemctl |pm2 |cd |agent-browser )/.test(command);
       if (!allowed) {
-        return { block: true, reason: 'Bash only allows: git, gh, node, python, bun, npx, ruby, go, deno, docker, npm, systemctl, pm2, cd, agent-browser. Write all logic as code and execute it via Bash (e.g. node -e "...", python -c "...", bun -e "..."). Use Read/Write/Edit for file ops. Use code-search skill for exploration.' };
+        return { block: true, reason: 'Bash only allows: git, gh, node, python, bun, npx, ruby, go, deno, docker, npm, systemctl, pm2, cd. Write all logic as code and execute it via Bash (e.g. node -e "...", python -c "...", bun -e "..."). Use Read/Write/Edit for file ops. Use code-search skill for exploration.' };
       }
     }
 
