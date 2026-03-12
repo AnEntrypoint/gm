@@ -38,6 +38,13 @@ function createAdapterClass(cfg) {
       return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : null;
     }
 
+<<<<<<< HEAD
+=======
+    transformAgentContent(agentName, content) {
+      return cfg.transformAgentContent ? cfg.transformAgentContent(agentName, content) : content;
+    }
+
+>>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
     loadSkillsFromSource(sourceDir) {
       return cfg.loadSkillsFromSource ? cfg.loadSkillsFromSource(sourceDir) : super.loadSkillsFromSource(sourceDir);
     }
