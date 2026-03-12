@@ -146,7 +146,7 @@ const run = () => {
     const blockCount = incrementCounter(currentHash);
     return {
       ok: false,
-      reason: `Git: ${issues.join(', ')}, must push to remote`,
+      reason: `${issues.join(', ')}, must push to remote`,
       blockCount
     };
   }
