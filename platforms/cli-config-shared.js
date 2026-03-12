@@ -271,6 +271,9 @@ function createClaudeCodeCliScript() {
   const { execSync: exec } = require('child_process');
   const run = (cmd) => { try { return exec(cmd, { stdio: 'inherit', env: { ...process.env, CLAUDECODE: '' } }); } catch (e) { console.warn('Warning:', e.message); } };
 
+  const pluginCacheDir = path.join(homeDir, '.claude', 'plugins', 'cache', 'gm-cc');
+  copyRecursive(srcDir, pluginCacheDir);
+
   run('claude plugin marketplace add AnEntrypoint/gm-cc');
   run('claude plugin install gm@gm-cc --scope user');
 `;
@@ -278,9 +281,7 @@ function createClaudeCodeCliScript() {
     pkg: 'gm-cc',
     label: 'Claude Code',
     destDir: `path.join(homeDir, '.claude')`,
-    filesToCopy: [
-      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'], ['README.md', 'README.md']
-    ],
+    filesToCopy: [],
     extraSetup,
     restartMsg: 'Restart Claude Code to activate.',
     skipSkillsInstall: true
