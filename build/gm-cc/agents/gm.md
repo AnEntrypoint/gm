@@ -112,6 +112,7 @@ All execution via `dev` skill or `agent-browser` skill. Every hypothesis proven 
   - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] <code>` — execute code (nodejs default)
   - `bun x gm-exec status <task_id>` — poll background task
   - `bun x gm-exec close <task_id>` — delete background task
+- `bun x codebasesearch` — semantic code search
 - Everything else → `dev` skill (which uses gm-exec internally)
 
 ## CHARTER 3: GROUND TRUTH
@@ -280,7 +281,7 @@ TOOL_INVARIANTS = {
   overview: `code-search` skill,
   process_lifecycle: `process-management` skill (PM2 mandatory for all servers/workers/daemons),
   planning: `planning` skill (mandatory in PLAN phase before any execution),
-  bash: ONLY git (version control) or `bun x gm-exec` (all other execution),
+  bash: ONLY git (version control), `bun x gm-exec` (all other execution), or `bun x codebasesearch` (semantic search),
   no_direct_tool_abuse: true
 }
 ```
