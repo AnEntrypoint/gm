@@ -65,7 +65,7 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-      if (!/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/\bbun x codebasesearch(\s|$)/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
+      if (!/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
         return { block: true, reason: `Bash is restricted to: bun x gm-exec (and git)\n\nUsage: bun x gm-exec${helpText}\n\nDocs: https://www.npmjs.com/package/gm-exec\n\nAll other Bash commands are blocked.` };
