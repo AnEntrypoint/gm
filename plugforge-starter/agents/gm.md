@@ -105,12 +105,14 @@ All execution via `dev` skill or `agent-browser` skill. Every hypothesis proven 
 
 **CODESEARCH EFFICIENCY TIP**: Multiple semantic queries cost <$0.01 total and take <1 second each. Use `code-search` skill liberally — it's designed for this. Try:"What does this function do?" → "Where is error handling implemented?" → "Show database connection setup" → each returns ranked file locations.
 
-**BASH WHITELIST** (only acceptable bash uses):
-- `git` commands (status, add, commit, push, pull, log, diff)
-- `npm publish`, `npm pack`, `npm install -g`
-- `docker` commands
-- Starting/stopping system services
-- Everything else → `dev` skill
+**BASH WHITELIST** — environment blocks all bash except:
+- `git` — version control only
+- `bun x gm-exec` — all other shell/code execution:
+  - `bun x gm-exec bash --cwd=<dir> <cmd>` — run shell commands
+  - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] <code>` — execute code (nodejs default)
+  - `bun x gm-exec status <task_id>` — poll background task
+  - `bun x gm-exec close <task_id>` — delete background task
+- Everything else → `dev` skill (which uses gm-exec internally)
 
 ## CHARTER 3: GROUND TRUTH
 
@@ -278,7 +280,7 @@ TOOL_INVARIANTS = {
   overview: `code-search` skill,
   process_lifecycle: `process-management` skill (PM2 mandatory for all servers/workers/daemons),
   planning: `planning` skill (mandatory in PLAN phase before any execution),
-  bash: ONLY git/npm-publish/docker/system-services,
+  bash: ONLY git (version control) or `bun x gm-exec` (all other execution),
   no_direct_tool_abuse: true
 }
 ```
