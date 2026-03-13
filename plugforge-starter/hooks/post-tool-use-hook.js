@@ -30,6 +30,7 @@ function runLinters() {
       const eslintOutput = execSync('npx eslint . --format=json 2>/dev/null || true', {
         cwd,
         encoding: 'utf-8',
+        timeout: 5000,
         maxBuffer: 10 * 1024 * 1024
       }).trim();
 
@@ -61,6 +62,7 @@ function runLinters() {
       const prettierOutput = execSync('npx prettier . --check 2>&1 || true', {
         cwd,
         encoding: 'utf-8',
+        timeout: 5000,
         maxBuffer: 10 * 1024 * 1024
       }).trim();
 
