@@ -7,6 +7,7 @@ if (process.env.AGENTGUI_SUBPROCESS === '1') {
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT || path.join(__dirname, '..');
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
@@ -32,6 +33,24 @@ const ensureGitignore = () => {
   } catch (e) {}
 };
 
+const runThorns = () => {
+  if (!projectDir || !fs.existsSync(projectDir)) return '';
+  const localThorns = path.join(process.env.HOME || '/root', 'mcp-thorns', 'index.js');
+  const thornsBin = fs.existsSync(localThorns) ? `node ${localThorns}` : 'bun x mcp-thorns@latest';
+  try {
+    const out = execSync(`${thornsBin} ${projectDir}`, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 15000,
+      killSignal: 'SIGTERM'
+    });
+    return `=== mcp-thorns ===\n${out.trim()}`;
+  } catch (e) {
+    if (e.killed) return '=== mcp-thorns ===\nSkipped (timeout)';
+    return '';
+  }
+};
+
 const emit = (additionalContext) => {
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
   const isOpenCode = process.env.OC_PROJECT_DIR !== undefined;
@@ -48,7 +67,11 @@ const emit = (additionalContext) => {
 
 try {
   ensureGitignore();
-  emit('use gm agent | ' + COMPACT_CONTEXT + ' | ' + PLAN_MODE_BLOCK);
+  const parts = [];
+  const thorns = runThorns();
+  if (thorns) parts.push(thorns);
+  parts.push('use gm agent | ' + COMPACT_CONTEXT + ' | ' + PLAN_MODE_BLOCK);
+  emit(parts.join('\n\n'));
 } catch (error) {
   emit('use gm agent | hook error: ' + error.message);
   process.exit(0);
