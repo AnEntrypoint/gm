@@ -1,6 +1,6 @@
 ---
 name: gm
-description: Agent - immutable programming state machine. Always invoke for all work coordination.
+description: Agent - immutable programming state machine. Always invoke for all work.
 ---
 
 # GM AGENT — Immutable Programming State Machine
