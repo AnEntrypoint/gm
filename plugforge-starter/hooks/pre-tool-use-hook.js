@@ -29,7 +29,7 @@ const run = () => {
       const base = path.basename(file_path).toLowerCase();
       if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
           !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
-        return { block: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained.' };
+        return { block: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained. For task-specific notes, use .prd. For permanent reference material, add to CLAUDE.md.' };
       }
       if (/\.(test|spec)\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
           /^(jest|vitest|mocha|ava|jasmine|tap)\.(config|setup)/.test(base) ||
