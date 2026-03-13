@@ -108,11 +108,13 @@ All execution via `dev` skill or `agent-browser` skill. Every hypothesis proven 
 **BASH WHITELIST** — environment blocks all bash except:
 - `git` — version control only
 - `bun x gm-exec` — all other shell/code execution:
-  - `bun x gm-exec bash --cwd=<dir> <cmd>` — run shell commands
-  - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] <code>` — execute code (nodejs default)
-  - `bun x gm-exec status <task_id>` — poll background task
+  - `bun x gm-exec bash [--cwd=<dir>] <cmd>` — run shell commands
+  - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] [--file=<path>] <code>` — execute code (nodejs default; langs: nodejs, python, go, rust, c, cpp, java, deno, bash)
+  - `bun x gm-exec status <task_id>` — poll status + drain output of background task
+  - `bun x gm-exec sleep <task_id> [seconds]` — wait for task completion (default 30s timeout)
   - `bun x gm-exec close <task_id>` — delete background task
-- `bun x codebasesearch` — semantic code search
+  - `bun x gm-exec runner start|stop|status` — manage task runner process (PM2)
+- `bun x codebasesearch <query>` — semantic code search
 - Everything else → `dev` skill (which uses gm-exec internally)
 
 ## CHARTER 3: GROUND TRUTH
