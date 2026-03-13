@@ -154,6 +154,12 @@ Scope: Code structure and style. Governs how code is written and organized.
 
 **Cleanup**: Keep only code the project needs. Remove everything unnecessary. Test code runs in dev or agent browser only. Never write test files to disk.
 
+**Immediate Fix**: When any inconsistency, policy violation, naming error, structural issue, or duplication is spotted during work—fix it immediately. Not noted. Not deferred. Not flagged for later. Fix it before moving to the next step. Spotted = fixed.
+
+**No-Defer Refactoring**: If code should be restructured (wrong naming, wrong structure, duplication, convention violation), restructure it immediately as part of current work. "I'll leave that for another time" is a policy violation. Seeing a problem and not fixing it is the same as introducing it.
+
+**Logical Improvements**: Any logical improvement identified while working on the codebase must be implemented immediately. Not mentioned to the user. Not noted. Implemented. If you think "this could be better," make it better now.
+
 ## CHARTER 6: GATE CONDITIONS
 
 Scope: Quality gate before emitting changes. All conditions must be true simultaneously before any file modification.
@@ -175,6 +181,7 @@ Gate checklist (every possible item must pass):
 - No comments in code
 - No hardcoded values
 - Ground truth only
+- Docs-code sync: CLAUDE.md, README, and any spec files describe what the code actually does—not what it used to do, not what was planned. If docs say X and code does Y, reconcile before emitting. Never leave docs and code out of sync.
 
 ## CHARTER 7: COMPLETION AND VERIFICATION
 
@@ -314,8 +321,11 @@ Before emitting any file:
 3. Verify: real execution proven
 4. Verify: no mocks/fakes discovered
 5. Verify: checkpoint capability exists
+6. Verify: no policy violations in code just written (naming, structure, comments, hardcoded values)
+7. Verify: docs match code—if CLAUDE.md or README describes this area, confirm it reflects current behavior
+8. Verify: any inconsistency spotted during this work is fixed, not deferred
 
-If any check fails → fix before proceeding. Self-correction before next instruction.
+If any check fails → fix before proceeding. Self-correction before next instruction. Policy violations discovered here are fixed here, not logged for later.
 
 ### CONSTRAINT SATISFACTION SCORE
 
@@ -346,17 +356,28 @@ When recording technical constraints, caveats, or gotchas in project documentati
 
 **Rationale:** Line numbers create maintenance burden and provide false confidence. The constraint itself is what matters. Developers can find specifics via grep/codesearch. Documentation should explain the gotcha, not pinpoint its location.
 
+### NOTES POLICY
+
+Notes have exactly two valid destinations:
+- **Temporary notes** (work-in-progress tracking, mutables, hypotheses) → `.prd` only
+- **Permanent notes** (decisions, constraints, gotchas, architectural choices) → `CLAUDE.md` only
+
+No other locations. No inline comments. No README notes. No TODO comments. No doc strings that serve as notes. If it belongs nowhere else, it belongs in `.prd` (if temporary) or `CLAUDE.md` (if permanent). If it belongs in neither, it should not be written at all.
+
 ### CONFLICT RESOLUTION
 
 When constraints conflict:
 1. Identify the conflict explicitly
 2. Tier 0 wins over Tier 1, Tier 1 wins over Tier 2, etc.
-3. Document the resolution in work notes
-4. Apply and continue
+3. Apply the more specific rule when tiers are equal
+4. If two rules conflict and neither is more specific, update CLAUDE.md to resolve the ambiguity—never silently pick one and ignore the other
+5. Apply and continue
 
-**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use bash when `dev` skill suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions | start servers/workers without process-management skill | skip planning skill in PLAN phase | leave orphaned PM2 processes after work completes
+No policy conflict is preserved. Every conflict is resolved at the moment it is spotted.
 
-**Always**: execute in `dev` skill or `agent-browser` skill | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components
+**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use bash when `dev` skill suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions | start servers/workers without process-management skill | skip planning skill in PLAN phase | leave orphaned PM2 processes after work completes | defer fixing a spotted inconsistency | defer refactoring code that violates conventions | note an improvement without implementing it | write notes anywhere except .prd (temporary) or CLAUDE.md (permanent) | leave docs out of sync with code | silently pick one rule when two conflict | preserve a policy conflict without resolving it | enforce a policy only at end of session instead of at point of violation
+
+**Always**: execute in `dev` skill or `agent-browser` skill | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components | fix inconsistencies immediately when spotted | restructure code immediately when convention violation found | implement logical improvements immediately when identified | reconcile docs and code before emitting | resolve policy conflicts at the moment they are spotted
 
 ### PRE-COMPLETION VERIFICATION CHECKLIST
 
