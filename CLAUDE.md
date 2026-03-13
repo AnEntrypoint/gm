@@ -215,3 +215,73 @@ The framework is explicit through convention, not magic:
 - **No build step**: Ship source directly
 - **No environment variables beyond platform roots**: XDG_CONFIG_HOME, CLAUDE_PLUGIN_ROOT, etc
 - **No special casing**: All adapters behave same way for same inputs
+
+## gm.md Design & Evolution
+
+### Multi-Layer Validation Architecture
+
+gm.md enforces a 9-phase state machine with mandatory validation gates:
+
+**State Sequence**: `PLAN → EXECUTE → PRE-EMIT-TEST → EMIT → POST-EMIT-VALIDATION → VERIFY → QUALITY-AUDIT → GIT-PUSH → COMPLETE`
+
+**Validation Layers**:
+- **PRE-EMIT-TEST**: Tests all hypotheses BEFORE modifying files (blocking gate to EMIT)
+- **POST-EMIT-VALIDATION**: Tests ACTUAL modified code FROM DISK immediately after EMIT (blocking gate to VERIFY)
+- **QUALITY-AUDIT**: Mandatory exhaustive inspection of every changed file before push (blocking gate to GIT-PUSH)
+
+**Critical Rules**:
+- All code changes validated via `dev` skill or `agent-browser` skill execution
+- Real execution with witnessed output only—no mocks, fakes, or simulations
+- If agent concludes "nothing to improve," that's a completion blocker. Dig deeper, implement critique.
+- Non-empty .prd (except final COMPLETE marker) blocks GIT-PUSH absolutely
+
+### 3-Phase Mutable Tracking
+
+Work progresses through .prd evolution with witnessed evidence at each phase:
+
+- **PHASE 1 (PLAN)**: Enumerate all unknowns as mutables with expected values
+- **PHASE 2 (EXECUTE/PRE-EMIT-TEST)**: Execute and assign witnessed values to mutables
+- **PHASE 3 (POST-EMIT-VALIDATION/VERIFY)**: Re-test all mutables on actual modified disk code
+
+State transitions blocked if any mutable remains UNKNOWN.
+
+### Agent-Browser Validation Mandate
+
+For ALL browser/UI code (HTML, CSS, JS, React, Vue, Svelte, forms, navigation, clicks, rendering, state, errors, auth):
+
+- **EXECUTE**: Test hypothesis in agent-browser BEFORE writing code
+- **PRE-EMIT-TEST**: Validate approach works in agent-browser with real interactions
+- **POST-EMIT-VALIDATION**: Load ACTUAL modified code from disk in agent-browser, test all scenarios
+- **VERIFY**: Full E2E browser workflows via agent-browser on running system
+
+Code logic tests (node/bash) ≠ browser tests (agent-browser). Both required.
+
+### Tool Mapping & Exploration
+
+**Code Exploration**: `code-search` skill is ONLY tool (no Glob, Grep, Read-for-discovery, Explore agent)
+- Primary: `code-search` skill with semantic search across 102+ file types
+- Bash fallback: `bun x codebasesearch <query>` (only when skill unavailable)
+
+**Code Execution**: `dev` skill exclusively for code execution, file operations, hypothesis testing
+- Bash: ONLY git, npm publish, docker, system daemons, or `bun x codebasesearch`
+- Direct bash for scripts/node/python blocked—use `dev` skill instead
+
+**Browser Automation**: `agent-browser` skill replaces puppeteer/playwright entirely
+- Cleaner syntax, built for AI agents
+- MANDATORY for all browser/UI work
+
+**Process Management**: `process-management` skill (PM2) for all servers, workers, daemons
+- Pre-check running processes before start
+- Watch enabled, autorestart disabled
+- Lifecycle cleanup when done
+
+### WFGY Design Patterns Applied
+
+gm.md uses tension-based state variables, effective layer anchoring, and adaptive rigidity:
+
+- Separate WHAT (requirements) from HOW (implementation)
+- Unified tiering system for conflict resolution
+- World selection via system_type conditionals (service/api, cli_tool, script, extension)
+- Enforcement phrases standardized: MANDATORY, ABSOLUTE REQUIREMENT, blocking gates
+- All 82+ critical behavioral concepts preserved across consolidation
+- 44% token compression achieved through duplication elimination
