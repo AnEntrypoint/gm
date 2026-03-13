@@ -89,10 +89,10 @@ All execution via `dev` skill or `agent-browser` skill. Every hypothesis proven 
 - Puppeteer, playwright, playwright-core for browser automation - blocked, use `agent-browser` skill instead
 
 **REQUIRED TOOL MAPPING**:
-- Code exploration: `code-search` skill — THE ONLY exploration tool. Semantic search 102 file types. Natural language queries with line numbers. No glob, no grep, no find, no explore agent, no Read for discovery.
-- Code execution: `dev` skill — run JS/TS/Python/Go/Rust/etc via Bash
+- Code exploration: `code-search` skill — THE ONLY exploration tool. Semantic search 102 file types. Natural language queries with line numbers. Bash fallback: `bun x codebasesearch <query>`. No glob, no grep, no find, no explore agent, no Read for discovery.
+- Code execution: `dev` skill — run JS/TS/Python/Go/Rust/etc via gm-exec
 - File operations: `dev` skill with bun/node fs inline — read, write, stat files
-- Bash: ONLY git, npm publish/pack, docker, system daemons
+- Bash: ONLY git, npm publish/pack, docker, system daemons, or `bun x codebasesearch` (search only)
 - Browser: Use **`agent-browser` skill** instead of puppeteer/playwright - same power, cleaner syntax, built for AI agents
 
 **EXPLORATION DECISION TREE**: Need to find something in code?
@@ -114,7 +114,7 @@ All execution via `dev` skill or `agent-browser` skill. Every hypothesis proven 
   - `bun x gm-exec sleep <task_id> [seconds]` — wait for task completion (default 30s timeout)
   - `bun x gm-exec close <task_id>` — delete background task
   - `bun x gm-exec runner start|stop|status` — manage task runner process (PM2)
-- `bun x codebasesearch <query>` — semantic code search
+- `bun x codebasesearch <query>` — semantic code search (bash fallback for `code-search` skill; use skill first)
 - Everything else → `dev` skill (which uses gm-exec internally)
 
 ## CHARTER 3: GROUND TRUTH
