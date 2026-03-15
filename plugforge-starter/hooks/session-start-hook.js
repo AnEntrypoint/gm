@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT;
-const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR;
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT;
+const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 const ensureGitignore = () => {
   if (!projectDir) return;
@@ -22,9 +22,7 @@ const ensureGitignore = () => {
         : content + '\n' + entry + '\n';
       fs.writeFileSync(gitignorePath, newContent);
     }
-  } catch (e) {
-    // Silently fail - not critical
-  }
+  } catch (e) {}
 };
 
 ensureGitignore();
@@ -32,41 +30,24 @@ ensureGitignore();
 try {
   let outputs = [];
 
-  // 1. Read ./start.md
   if (pluginRoot) {
-    const startMdPath = path.join(pluginRoot, '/agents/gm.md');
+    const gmMdPath = path.join(pluginRoot, '/agents/gm.md');
     try {
-      const startMdContent = fs.readFileSync(startMdPath, 'utf-8');
-      outputs.push(startMdContent);
-    } catch (e) {
-      // File may not exist in this context
-    }
+      const gmMdContent = fs.readFileSync(gmMdPath, 'utf-8');
+      outputs.push(gmMdContent);
+    } catch (e) {}
   }
 
-  // 2. Add semantic code-search explanation
-  const codeSearchContext = `## 🔍 Semantic Code Search Now Available
+  const codeSearchContext = `## Semantic Code Search Available
 
-Your prompts will trigger **semantic code search** - intelligent, intent-based exploration of your codebase.
+Describe what you need in plain language to search the codebase:
+- "Find authentication validation" locates auth checks, guards, permission logic
+- "Where is database initialization?" finds connection setup, migrations, schemas
+- "Show error handling patterns" discovers try/catch patterns, error boundaries
 
-### How It Works
-Describe what you need in plain language, and the search understands your intent:
-- "Find authentication validation" → locates auth checks, guards, permission logic
-- "Where is database initialization?" → finds connection setup, migrations, schemas
-- "Show error handling patterns" → discovers try/catch patterns, error boundaries
-
-NOT syntax-based regex matching - truly semantic understanding across files.
-
-### Example
-Instead of regex patterns, simply describe your intent:
-"Find where API authorization is checked"
-
-The search will find permission validations, role checks, authentication guards - however they're implemented.
-
-### When to Use Code Search
-When exploring unfamiliar code, finding similar patterns, understanding integrations, or locating feature implementations across your codebase.`;
+Use the code-search skill for all codebase exploration.`;
   outputs.push(codeSearchContext);
 
-  // 3. Run mcp-thorns (bun x with npx fallback)
   if (projectDir && fs.existsSync(projectDir)) {
     try {
       let thornOutput;
@@ -97,55 +78,26 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
 
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
   const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
+  const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
-    const result = {
-      systemMessage: additionalContext
-    };
-    console.log(JSON.stringify(result, null, 2));
-  } else if (isOpenCode) {
-    const result = {
-      hookSpecificOutput: {
-        hookEventName: 'session.created',
-        additionalContext
-      }
-    };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ systemMessage: additionalContext }, null, 2));
+  } else if (isOpenCode || isKilo) {
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'session.created', additionalContext } }, null, 2));
   } else {
-    const result = {
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext
-      }
-    };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext } }, null, 2));
   }
 } catch (error) {
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
   const isOpenCode = process.env.OC_PLUGIN_ROOT !== undefined;
+  const isKilo = process.env.KILO_PLUGIN_ROOT !== undefined;
 
   if (isGemini) {
-    console.log(JSON.stringify({
-      systemMessage: `Error executing hook: ${error.message}`
-    }, null, 2));
-  } else if (isOpenCode) {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'session.created',
-        additionalContext: `Error executing hook: ${error.message}`
-      }
-    }, null, 2));
+    console.log(JSON.stringify({ systemMessage: `Error executing hook: ${error.message}` }, null, 2));
+  } else if (isOpenCode || isKilo) {
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'session.created', additionalContext: `Error executing hook: ${error.message}` } }, null, 2));
   } else {
-    console.log(JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext: `Error executing hook: ${error.message}`
-      }
-    }, null, 2));
+    console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `Error executing hook: ${error.message}` } }, null, 2));
   }
   process.exit(0);
 }
-
-
-
-
