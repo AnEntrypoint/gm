@@ -1,6 +1,5 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-// Skip hooks when running inside agentgui subprocess to prevent spurious injections
 if (process.env.AGENTGUI_SUBPROCESS === '1') {
   console.log(JSON.stringify({ decision: 'approve' }));
   process.exit(0);
@@ -9,13 +8,14 @@ if (process.env.AGENTGUI_SUBPROCESS === '1') {
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const crypto = require('crypto');
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
 const getCounterPath = () => {
   const hash = crypto.createHash('md5').update(projectDir).digest('hex');
-  return path.join('/tmp', `gm-git-block-counter-${hash}.json`);
+  return path.join(os.tmpdir(), `gm-git-block-counter-${hash}.json`);
 };
 
 const readCounter = () => {

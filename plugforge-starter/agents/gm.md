@@ -185,7 +185,7 @@ Server + client split:
 - `git` — version control only
 - `bun x gm-exec` — all other shell/code execution:
   - `bun x gm-exec bash [--cwd=<dir>] <cmd>` — run shell commands
-  - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] [--file=<path>] <code>` — execute code (nodejs default; langs: nodejs, python, go, rust, c, cpp, java, deno, bash)
+  - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] [--file=<path>] <code>` — execute code (nodejs default; langs: nodejs, python, go, rust, c, cpp, java, deno, bash, cmd)
   - `bun x gm-exec status <task_id>` — poll status + drain output of background task
   - `bun x gm-exec sleep <task_id> [seconds]` — wait for task completion (default 30s timeout)
   - `bun x gm-exec close <task_id>` — delete background task
@@ -194,8 +194,8 @@ Server + client split:
 - Everything else is blocked
 
 **gm-exec EXEC SAFETY RULES** — prevent stray files and working directory pollution:
-- NEVER run `bun x gm-exec exec` without `--cwd` pointing to a safe scratch directory, not the project root. Use `--cwd=/tmp` or `--cwd=C:/Windows/Temp` for throwaway runs. Only use `--cwd=<project>` when the code explicitly needs to import from that project.
-- For any code longer than a single expression, use `--file=<path>` instead of inline `<code>`. Write the code to a temp file first via `bun x gm-exec exec "require('fs').writeFileSync('/tmp/run.mjs', \`...\`)"` then run `bun x gm-exec exec --file=/tmp/run.mjs`. This prevents shell quoting failures from leaking code fragments as filenames in the working directory.
+- NEVER run `bun x gm-exec exec` without `--cwd` pointing to a safe scratch directory, not the project root. Use the system temp directory (`os.tmpdir()` — `/tmp` on Unix, `C:\Users\<user>\AppData\Local\Temp` on Windows) for throwaway runs. Only use `--cwd=<project>` when the code explicitly needs to import from that project.
+- For any code longer than a single expression, use `--file=<path>` instead of inline `<code>`. Write the code to a temp file first via `bun x gm-exec exec "require('fs').writeFileSync(require('os').tmpdir()+'/run.mjs', \`...\`)"` then run `bun x gm-exec exec --file=<tmpdir>/run.mjs`. This prevents shell quoting failures from leaking code fragments as filenames in the working directory.
 - Single-line inline code is safe only when it contains no shell metacharacters (backticks, quotes, parens, brackets). If in doubt, use `--file`.
 - After any exec session, verify no stray files were created: `bun x gm-exec bash --cwd=<project> "git status --porcelain"` must be empty. If stray files appear, delete them before proceeding.
 
