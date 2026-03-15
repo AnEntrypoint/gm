@@ -76,6 +76,16 @@ All execution via `bun x gm-exec` (Bash) or `agent-browser` skill. Every hypothe
 
 **OPERATION CHAIN TESTING**: When analyzing or modifying systems with multi-step operation chains, decompose and test each part independently before testing the full chain. Never test a 5-step chain end-to-end first—test each link in isolation, then test adjacent pairs, then the full chain. This reveals exactly which link fails and prevents false passes from coincidental success.
 
+**STEP-BY-STEP DECOMPOSITION PROTOCOL**:
+Every multi-step chain must be broken into individually-verified steps BEFORE any end-to-end run:
+1. List every distinct operation in the chain as numbered steps (e.g. 1:parse → 2:validate → 3:transform → 4:write → 5:confirm)
+2. For each step, define: input shape, expected output shape, success condition, failure condition
+3. Execute step 1 in isolation. Witness output. Assign mutable. Only proceed to step 2 when step 1 mutable is KNOWN.
+4. Execute step 2 with step 1's witnessed output as input. Repeat for every step.
+5. After all steps pass individually, execute adjacent pairs (1+2, 2+3, 3+4...) to test handoffs
+6. Only after all pairs pass, run the full chain end-to-end
+7. Any step failure → fix that step only. Rerun from that step. Never skip forward.
+
 Decomposition rules:
 - Identify every distinct operation in the chain (input validation, API call, response parsing, state update, side effect, render)
 - Test stateless operations in isolation first — they have no dependencies and confirm pure logic
@@ -83,34 +93,62 @@ Decomposition rules:
 - Bundle every confirmation that shares an assertion target into one run — same variable, same API call, same file = same run
 - Unrelated assertion targets = separate runs
 
+**IMPORT-BASED EXECUTION**: Always test real codebase code, never reimplementations.
+- In `bun x gm-exec exec` runs, import the actual module under test: `const { fn } = await import('/abs/path/to/module.js')`
+- Call the real function with real inputs. Witness real output. This IS the ground truth.
+- Never rewrite logic inline to test it — that tests your reimplementation, not the actual code
+- When the codebase uses a library, import that same library version from the actual node_modules
+- For server code: `bun x gm-exec exec --cwd=/project "const mod = await import('./src/thing.js'); console.log(await mod.doWork(realInput))"`
+- Witnessed output from real imports = resolved mutable. Reimplemented output = UNKNOWN mutable.
+
+**CLIENT-SIDE GLOBALS FOR BROWSER VERIFICATION**: When testing browser/UI code, establish a globals scaffold before asserting state.
+At the start of every agent-browser session that involves state verification:
+```js
+// Inject into page via evaluate before any assertions:
+window.__gm = {
+  captures: [],
+  log: (...args) => window.__gm.captures.push({t: Date.now(), args}),
+  assert: (label, cond) => { window.__gm.captures.push({label, pass: !!cond, val: cond}); return !!cond; },
+  dump: () => JSON.stringify(window.__gm.captures, null, 2)
+};
+```
+Then instrument the page:
+- Intercept key function calls: `window.originalFn = window.targetFn; window.targetFn = (...a) => { window.__gm.log('targetFn', a); return window.originalFn(...a); }`
+- Capture network responses: use fetch/XHR interception patterns via evaluate
+- After interactions, call `window.__gm.dump()` to get witnessed capture log
+- Every mutable about UI state resolves only from __gm.captures, not from visual inspection or assumption
+
 Tool selection per operation type:
-- Pure logic (parse, validate, transform, calculate): `bun x gm-exec` — no DOM needed
-- API call + response + error handling (node): `bun x gm-exec` — test all three in one run
-- State mutation + downstream state effect: `bun x gm-exec` — test mutation and effect together
-- DOM rendering, visual state, layout: `agent-browser` skill — requires real DOM
+- Pure logic (parse, validate, transform, calculate): `bun x gm-exec` with real imports — no DOM needed
+- API call + response + error handling (node): `bun x gm-exec` with real module imports — test all three in one run
+- State mutation + downstream state effect: `bun x gm-exec` — test mutation and effect together using real code
+- DOM rendering, visual state, layout: `agent-browser` skill with __gm globals injected
 - User interaction (click, type, submit, navigate): `agent-browser` skill — requires real events
-- State mutation visible on DOM: `agent-browser` skill — test both mutation and DOM effect in one session
-- Error path on UI (spinner, toast, retry): `agent-browser` skill — test full visible error flow
+- State mutation visible on DOM: `agent-browser` skill with __gm captures — test both mutation and DOM effect
+- Error path on UI (spinner, toast, retry): `agent-browser` skill — test full visible error flow with __gm.assert
 
 PRE-EMIT-TEST (before editing any file):
-1. Test current behavior on disk — understand what exists before changing it
-2. Execute proposed logic in isolation via `bun x gm-exec` WITHOUT writing to any file
-3. Confirm proposed approach produces correct output
-4. Test failure paths of proposed approach
-5. All mutables must resolve to KNOWN before EMIT phase opens
+1. Test current behavior on disk — import the actual module, run it, witness real output
+2. Execute proposed logic in isolation via `bun x gm-exec` importing real deps, WITHOUT writing to any file
+3. Confirm proposed approach produces correct output with witnessed evidence
+4. Test failure paths of proposed approach with real error inputs
+5. For browser code: inject __gm globals, run interactions, dump captures, verify
+6. All mutables must resolve to KNOWN (via real imports and real captures) before EMIT phase opens
 
 POST-EMIT-VALIDATION (immediately after writing files to disk):
-1. Load the actual modified file from disk — not the in-memory version
-2. Execute against real inputs with `bun x gm-exec` or `agent-browser` skill
-3. Confirm the on-disk code behaves identically to what was proven in PRE-EMIT-TEST
-4. Test all scenarios again on the real disk file — success, failure, edge cases
+1. Load the actual modified file from disk via real import — not in-memory version, not reimplementation
+2. Execute against real inputs with `bun x gm-exec` importing the on-disk file
+3. Confirm on-disk code output matches PRE-EMIT-TEST witnessed output exactly
+4. For browser: reload page from disk, re-inject __gm globals, re-run interactions, compare __gm.captures
 5. Any variance from PRE-EMIT-TEST results = regression, fix immediately before proceeding
+6. Both server imports AND browser captures must match before POST-EMIT-VALIDATION passes
 
 Server + client split:
-- Backend operations (node, API, DB, queue, file system): prove with `bun x gm-exec` first
-- Frontend operations (DOM, forms, navigation, rendering): prove with `agent-browser` skill
-- When a single feature spans server and client: run `bun x gm-exec` server tests AND `agent-browser` client tests — both required, neither substitutes for the other
+- Backend operations (node, API, DB, queue, file system): prove with `bun x gm-exec` using real imports first
+- Frontend operations (DOM, forms, navigation, rendering): prove with `agent-browser` skill + __gm globals
+- When a single feature spans server and client: run `bun x gm-exec` server import tests AND `agent-browser` __gm-instrumented client tests — both required, neither substitutes for the other
 - A server test passing does NOT prove the UI works. A browser test passing does NOT prove the backend handles edge cases.
+- Dual-side validation is mandatory for any full-stack feature — single-side = UNKNOWN mutable = blocked gate
 
 **DEFAULT IS gm-exec**: `bun x gm-exec` is the primary execution tool. Use `bun x gm-exec exec <code>` for inline code, `bun x gm-exec bash <cmd>` for shell commands. Git is the only other allowed Bash command.
 
