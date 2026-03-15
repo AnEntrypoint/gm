@@ -1,6 +1,6 @@
 # Architecture & Philosophy
 
-plugforge generates 9 platform implementations from a single convention-driven source. The system eliminates duplication through inheritance, shared template building, and clean regeneration patterns.
+plugforge generates 10 platform implementations from a single convention-driven source. The system eliminates duplication through inheritance, shared template building, and clean regeneration patterns.
 
 ## Coding Style
 
@@ -15,7 +15,7 @@ plugforge uses convention-driven discovery instead of build-time configuration:
 - **Single source** in `plugforge-starter/`: gm.json, agents/, skills/, hooks/
 - **Adapters transform** source to platform-specific format (package.json, Cargo.toml, build.gradle.kts, etc)
 - **No configuration files** - directory structure defines behavior
-- **Adding a skill** automatically appears in all 9 outputs
+- **Adding a skill** automatically appears in all 10 outputs
 
 ### Clean Build Pattern
 
@@ -47,7 +47,7 @@ All adapters use these methods. Template changes propagate automatically.
 
 **ExtensionAdapter** (extension-adapter.js): IDE extension base (VSCode, Cursor, Zed, JetBrains)
 
-**CLIAdapter** (cli-adapter.js): CLI platform base (Claude Code, Gemini, OpenCode, Codex)
+**CLIAdapter** (cli-adapter.js): CLI platform base (Claude Code, Gemini, OpenCode, Kilo, Codex)
 - Specialized hook generation for CLI tool requirements
 
 **Platform-specific adapters**: Minimal code (vscode.js, zed.js, etc)
@@ -55,9 +55,9 @@ All adapters use these methods. Template changes propagate automatically.
 
 ### Key Architectural Decisions
 
-**Generic template distribution**: License, .gitignore, .editorconfig, CONTRIBUTING.md automatically included in all 9 platforms. Platform-specific implementations override when needed.
+**Generic template distribution**: License, .gitignore, .editorconfig, CONTRIBUTING.md automatically included in all 10 platforms. Platform-specific implementations override when needed.
 
-**Graceful platform degradation**: Single platform failure doesn't block others. All 9 attempt generation. Failed platforms reported separately.
+**Graceful platform degradation**: Single platform failure doesn't block others. All 10 attempt generation. Failed platforms reported separately.
 
 **Skill consolidation**: All skills merged into agents/gm.md. No separate skill files. Reduces agent invocation overhead.
 
@@ -74,8 +74,8 @@ hooks/*.js           # Platform-agnostic hooks
 
 **Architecture Note**: All 10 skills are merged into agents/gm.md as single sections. Separate skill files were deleted to eliminate per-invocation token cost. Each skill section is substantial (10+ lines) to justify inclusion. This consolidation reduces agent startup overhead dramatically compared to invoking individual skills.
 
-**Output**: 9 auto-generated GitHub repositories
-- 5 CLI platforms: gm-cc, gm-gc, gm-oc, gm-codex, gm-copilot-cli
+**Output**: 10 auto-generated GitHub repositories
+- 6 CLI platforms: gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-copilot-cli
 - 4 IDE extensions: gm-vscode, gm-cursor, gm-zed, gm-jetbrains
 
 Each built by GitHub Actions from `plugforge-starter/` on every commit.
@@ -103,14 +103,14 @@ Everything is predictable and turnkey. All corner cases handled before they occu
 - GitHub Actions uses rsync --delete, cleans orphaned files
 
 **Platform failure isolation**:
-- Each of 9 platforms generated independently
+- Each of 10 platforms generated independently
 - One platform error doesn't block others
 - Failed platforms reported separately in build-reporter
 - User can review which platforms succeeded/failed
 
 **Template propagation guaranteed**:
 - All adapters inherit from base.js and use TemplateBuilder
-- Template changes in TemplateBuilder affect all 9 outputs
+- Template changes in TemplateBuilder affect all 10 outputs
 - No adapter overrides = automatic inheritance
 - Single source of truth for LICENSE, .gitignore, .editorconfig, CONTRIBUTING.md
 
@@ -119,7 +119,7 @@ Everything is predictable and turnkey. All corner cases handled before they occu
 **Convention enforcement**:
 - No runtime config files needed
 - Directory structure alone defines behavior
-- Adding skill: create `skills/name/SKILL.md` → auto-appears in all 9
+- Adding skill: create `skills/name/SKILL.md` → auto-appears in all 10
 - Adding hook: drop in `hooks/` → auto-discovered and distributed
 - No registration files. No config. Just files.
 
@@ -188,19 +188,19 @@ Executed in plugin:gm:dev only:
 
 ```
 - [ ] cleanBuildDir() produces empty output dirs
-- [ ] All 9 platforms generate without errors
-- [ ] validateGeneratedFiles() passes for all 9
+- [ ] All 10 platforms generate without errors
+- [ ] validateGeneratedFiles() passes for all 10
 - [ ] thorns reveals no unexpected duplications
 - [ ] ConventionLoader loads empty source gracefully
 - [x] All skills consolidated into agents/gm.md (no separate files)
-- [ ] Adding new hook auto-appears in all 9 outputs
+- [ ] Adding new hook auto-appears in all 10 outputs
 - [ ] gm.md merged (455 words, 44% compression)
 - [ ] All skills removed from /skills/ (consolidated into gm.md)
 - [ ] No .test.* files exist anywhere
 - [ ] auto-healer.js deleted (if orphaned)
 - [ ] buildReporter categorizes files correctly
 - [ ] Extension manifests valid for VSCode/Cursor/Zed/JetBrains
-- [ ] CLI configs valid for CC/GC/OC/Codex/Copilot
+- [ ] CLI configs valid for CC/GC/OC/Kilo/Codex/Copilot
 - [ ] GitHub Actions sync simulation works (rsync --delete equivalent)
 - [ ] No comments anywhere in generated or source code
 ```
@@ -220,9 +220,9 @@ The framework is explicit through convention, not magic:
 
 ### Multi-Layer Validation Architecture
 
-gm.md enforces a 9-phase state machine with mandatory validation gates:
+gm.md enforces a 5-phase state machine with mandatory validation gates:
 
-**State Sequence**: `PLAN → EXECUTE → PRE-EMIT-TEST → EMIT → POST-EMIT-VALIDATION → VERIFY → QUALITY-AUDIT → GIT-PUSH → COMPLETE`
+**State Sequence**: `PLAN → EXECUTE → EMIT → VERIFY → COMPLETE`
 
 **Validation Layers**:
 - **PRE-EMIT-TEST**: Tests all hypotheses BEFORE modifying files (blocking gate to EMIT)
@@ -230,7 +230,7 @@ gm.md enforces a 9-phase state machine with mandatory validation gates:
 - **QUALITY-AUDIT**: Mandatory exhaustive inspection of every changed file before push (blocking gate to GIT-PUSH)
 
 **Critical Rules**:
-- All code changes validated via `dev` skill or `agent-browser` skill execution
+- All code changes validated via `bun x gm-exec` or `agent-browser` skill execution
 - Real execution with witnessed output only—no mocks, fakes, or simulations
 - If agent concludes "nothing to improve," that's a completion blocker. Dig deeper, implement critique.
 - Non-empty .prd (except final COMPLETE marker) blocks GIT-PUSH absolutely
@@ -262,9 +262,9 @@ Code logic tests (node/bash) ≠ browser tests (agent-browser). Both required.
 - Primary: `code-search` skill with semantic search across 102+ file types
 - Bash fallback: `bun x codebasesearch <query>` (only when skill unavailable)
 
-**Code Execution**: `dev` skill exclusively for code execution, file operations, hypothesis testing
-- Bash: ONLY git, npm publish, docker, system daemons, or `bun x codebasesearch`
-- Direct bash for scripts/node/python blocked—use `dev` skill instead
+**Code Execution**: `bun x gm-exec` for all code execution, file operations, hypothesis testing
+- Bash: ONLY git, `bun x gm-exec`, or `bun x codebasesearch`
+- Direct bash for scripts/node/python blocked—use `bun x gm-exec` instead
 
 **Browser Automation**: `agent-browser` skill replaces puppeteer/playwright entirely
 - Cleaner syntax, built for AI agents
