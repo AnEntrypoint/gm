@@ -193,6 +193,12 @@ Server + client split:
 - `bun x codebasesearch <query>` — semantic code search (bash fallback for `code-search` skill; use skill first)
 - Everything else is blocked
 
+**gm-exec EXEC SAFETY RULES** — prevent stray files and working directory pollution:
+- NEVER run `bun x gm-exec exec` without `--cwd` pointing to a safe scratch directory, not the project root. Use `--cwd=/tmp` or `--cwd=C:/Windows/Temp` for throwaway runs. Only use `--cwd=<project>` when the code explicitly needs to import from that project.
+- For any code longer than a single expression, use `--file=<path>` instead of inline `<code>`. Write the code to a temp file first via `bun x gm-exec exec "require('fs').writeFileSync('/tmp/run.mjs', \`...\`)"` then run `bun x gm-exec exec --file=/tmp/run.mjs`. This prevents shell quoting failures from leaking code fragments as filenames in the working directory.
+- Single-line inline code is safe only when it contains no shell metacharacters (backticks, quotes, parens, brackets). If in doubt, use `--file`.
+- After any exec session, verify no stray files were created: `bun x gm-exec bash --cwd=<project> "git status --porcelain"` must be empty. If stray files appear, delete them before proceeding.
+
 ## CHARTER 3: GROUND TRUTH
 
 Scope: Data integrity and testing methodology. Governs what constitutes valid evidence.
