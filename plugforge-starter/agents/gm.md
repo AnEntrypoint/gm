@@ -74,6 +74,44 @@ All execution via `bun x gm-exec` (Bash) or `agent-browser` skill. Every hypothe
 
 **CODE YOUR HYPOTHESES**: Test every possible hypothesis using `bun x gm-exec` or `agent-browser` skill. Each execution run must be under 15 seconds and must intelligently test every possible related idea—never one idea per run. Run every possible execution needed, but each one must be densely packed with every possible related hypothesis. File existence, schema validity, output format, error conditions, edge cases—group every possible related unknown together. The goal is every possible hypothesis per run. Use `agent-browser` skill for cross-client UI testing and browser-based hypothesis validation.
 
+**OPERATION CHAIN TESTING**: When analyzing or modifying systems with multi-step operation chains, decompose and test each part independently before testing the full chain. Never test a 5-step chain end-to-end first—test each link in isolation, then test adjacent pairs, then the full chain. This reveals exactly which link fails and prevents false passes from coincidental success.
+
+Decomposition rules:
+- Identify every distinct operation in the chain (input validation, API call, response parsing, state update, side effect, render)
+- Test stateless operations in isolation first — they have no dependencies and confirm pure logic
+- Test stateful operations together with their immediate downstream effect — they share a state boundary
+- Bundle every confirmation that shares an assertion target into one run — same variable, same API call, same file = same run
+- Unrelated assertion targets = separate runs
+
+Tool selection per operation type:
+- Pure logic (parse, validate, transform, calculate): `bun x gm-exec` — no DOM needed
+- API call + response + error handling (node): `bun x gm-exec` — test all three in one run
+- State mutation + downstream state effect: `bun x gm-exec` — test mutation and effect together
+- DOM rendering, visual state, layout: `agent-browser` skill — requires real DOM
+- User interaction (click, type, submit, navigate): `agent-browser` skill — requires real events
+- State mutation visible on DOM: `agent-browser` skill — test both mutation and DOM effect in one session
+- Error path on UI (spinner, toast, retry): `agent-browser` skill — test full visible error flow
+
+PRE-EMIT-TEST (before editing any file):
+1. Test current behavior on disk — understand what exists before changing it
+2. Execute proposed logic in isolation via `bun x gm-exec` WITHOUT writing to any file
+3. Confirm proposed approach produces correct output
+4. Test failure paths of proposed approach
+5. All mutables must resolve to KNOWN before EMIT phase opens
+
+POST-EMIT-VALIDATION (immediately after writing files to disk):
+1. Load the actual modified file from disk — not the in-memory version
+2. Execute against real inputs with `bun x gm-exec` or `agent-browser` skill
+3. Confirm the on-disk code behaves identically to what was proven in PRE-EMIT-TEST
+4. Test all scenarios again on the real disk file — success, failure, edge cases
+5. Any variance from PRE-EMIT-TEST results = regression, fix immediately before proceeding
+
+Server + client split:
+- Backend operations (node, API, DB, queue, file system): prove with `bun x gm-exec` first
+- Frontend operations (DOM, forms, navigation, rendering): prove with `agent-browser` skill
+- When a single feature spans server and client: run `bun x gm-exec` server tests AND `agent-browser` client tests — both required, neither substitutes for the other
+- A server test passing does NOT prove the UI works. A browser test passing does NOT prove the backend handles edge cases.
+
 **DEFAULT IS gm-exec**: `bun x gm-exec` is the primary execution tool. Use `bun x gm-exec exec <code>` for inline code, `bun x gm-exec bash <cmd>` for shell commands. Git is the only other allowed Bash command.
 
 **TOOL POLICY**: All code execution via `bun x gm-exec`. Use `code-search` skill for exploration. Reference TOOL_INVARIANTS for enforcement.
