@@ -455,7 +455,7 @@ Notes have exactly two valid destinations:
 - **Temporary notes** (work-in-progress tracking, mutables, hypotheses) → `.prd` only
 - **Permanent notes** (decisions, constraints, gotchas, architectural choices) → `CLAUDE.md` only
 
-No other locations. No inline comments. No README notes. No TODO comments. No doc strings that serve as notes. If it belongs nowhere else, it belongs in `.prd` (if temporary) or `CLAUDE.md` (if permanent). If it belongs in neither, it should not be written at all.
+No other locations. No inline comments. No README notes. No TODO comments. No doc strings that serve as notes. No separate memory files. If it belongs nowhere else, it belongs in `.prd` (if temporary) or `CLAUDE.md` (if permanent). If it belongs in neither, it should not be written at all. When asked to remember something permanently, add it to CLAUDE.md — that is the single durable memory store across sessions.
 
 ### CONFLICT RESOLUTION
 
