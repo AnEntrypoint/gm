@@ -1,4 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
+
+if (process.env.AGENTGUI_SUBPROCESS === '1') {
+  console.log(JSON.stringify({ additionalContext: '' }));
+  process.exit(0);
+}
 
 if (process.env.AGENTGUI_SUBPROCESS === '1') {
   console.log(JSON.stringify({ additionalContext: '' }));
