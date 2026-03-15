@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 const fs = require('fs');
 const path = require('path');
@@ -75,29 +75,13 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
           encoding: 'utf-8',
           stdio: ['pipe', 'pipe', 'pipe'],
           cwd: projectDir,
-          timeout: 180000,
+          timeout: 15000,
           killSignal: 'SIGTERM'
         });
       } catch (bunErr) {
-        if (bunErr.killed && bunErr.signal === 'SIGTERM') {
-          thornOutput = '=== mcp-thorns ===\nSkipped (3min timeout)';
-        } else {
-          try {
-            thornOutput = execSync(`npx -y mcp-thorns@latest`, {
-              encoding: 'utf-8',
-              stdio: ['pipe', 'pipe', 'pipe'],
-              cwd: projectDir,
-              timeout: 180000,
-              killSignal: 'SIGTERM'
-            });
-          } catch (npxErr) {
-            if (npxErr.killed && npxErr.signal === 'SIGTERM') {
-              thornOutput = '=== mcp-thorns ===\nSkipped (3min timeout)';
-            } else {
-              thornOutput = `=== mcp-thorns ===\nSkipped (error: ${bunErr.message.split('\n')[0]})`;
-            }
-          }
-        }
+        thornOutput = bunErr.killed
+          ? '=== mcp-thorns ===\nSkipped (timeout)'
+          : `=== mcp-thorns ===\nSkipped (error: ${bunErr.message.split('\n')[0]})`;
       }
       outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
     } catch (e) {
@@ -161,10 +145,6 @@ When exploring unfamiliar code, finding similar patterns, understanding integrat
   }
   process.exit(0);
 }
-
-
-
-
 
 
 
