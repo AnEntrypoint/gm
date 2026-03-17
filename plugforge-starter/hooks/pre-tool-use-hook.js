@@ -94,30 +94,35 @@ const run = () => {
           }
           return out;
         };
+        const spawnDirect = (bin, args, input) => {
+          const opts = { encoding: 'utf-8', timeout: 30000 };
+          if (cwd) opts.cwd = cwd;
+          if (input !== undefined) opts.input = input;
+          const r = spawnSync(bin, args, opts);
+          const out = stripFooter((r.stdout || '') + (r.stderr || ''));
+          if (!out && r.error) return `[spawn error: ${r.error.message}]`;
+          if (!out && r.status !== 0) return `[exit ${r.status}]`;
+          return out;
+        };
         try {
-          let args;
+          let result;
           if (lang === 'bash' || lang === 'cmd') {
-            args = ['x', 'gm-exec', 'bash'];
-            if (cwd) args.push(`--cwd=${cwd}`);
-            args.push(code);
+            result = runExec(['x', 'gm-exec', 'bash', ...(cwd ? [`--cwd=${cwd}`] : []), code]);
+          } else if (lang === 'python' || lang === 'py') {
+            result = spawnDirect('python3', ['-c', code]);
+            if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', code]);
+          } else if (!lang || lang === 'nodejs' || lang === 'typescript' || lang === 'deno') {
+            const extMap = { typescript: 'ts', deno: 'ts' };
+            const ext = extMap[lang] || 'mjs';
+            const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
+            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { const t = typeof __result; if (t === 'object' || Array.isArray(__result)) { console.log(JSON.stringify(__result, null, 2)); } else if (t !== 'undefined') { console.log(__result); } }`;
+            fs.writeFileSync(tmpFile, wrapped, 'utf-8');
+            result = spawnDirect('bun', ['run', tmpFile]);
+            try { fs.unlinkSync(tmpFile); } catch (e) {}
           } else {
-            const isMultiLine = code.includes('\n');
-            if (isMultiLine) {
-              const extMap = { nodejs: 'mjs', typescript: 'ts', python: 'py', go: 'go', rust: 'rs', deno: 'ts' };
-              const ext = extMap[lang] || 'mjs';
-              const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-              fs.writeFileSync(tmpFile, code, 'utf-8');
-              args = ['x', 'gm-exec', 'exec', `--lang=${lang}`, `--file=${tmpFile}`];
-              if (cwd) args.push(`--cwd=${cwd}`);
-              const result = runExec(args);
-              try { fs.unlinkSync(tmpFile); } catch (e) {}
-              return { block: true, reason: result || '(no output)' };
-            }
-            args = ['x', 'gm-exec', 'exec', `--lang=${lang}`];
-            if (cwd) args.push(`--cwd=${cwd}`);
-            args.push(code);
+            result = runExec(['x', 'gm-exec', 'exec', `--lang=${lang}`, ...(cwd ? [`--cwd=${cwd}`] : []), code]);
           }
-          return { block: true, reason: runExec(args) || '(no output)' };
+          return { block: true, reason: `[exec intercepted]\n${result || '(no output)'}` };
         } catch (e) {
           return { block: true, reason: (e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)' };
         }
