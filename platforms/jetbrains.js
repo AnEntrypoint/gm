@@ -23,7 +23,8 @@ class JetBrainsAdapter extends ExtensionAdapter {
       'README.md': this.generateReadme(),
       'docs/gm.md': readFile(this.getAgentSourcePaths('gm')),
       'docs/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
-      'docs/websearch.md': readFile(this.getAgentSourcePaths('websearch'))
+      'docs/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
+      'index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('jetbrains', pluginSpec))
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);

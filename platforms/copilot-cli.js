@@ -48,7 +48,8 @@ class CopilotCLIAdapter extends CLIAdapter {
       'hooks/session-end-hook.js': readFile(this.getHookSourcePaths('stop')),
       'hooks/session-end-git-hook.js': readFile(this.getHookSourcePaths('stop-git')),
       'cli.js': gen.generateCliJs(),
-      'README.md': gen.generateReadme()
+      'README.md': gen.generateReadme(),
+      'index.html': require('../lib/template-builder').generateGitHubPage(require('../lib/template-builder').getPlatformPageConfig('copilot-cli', pluginSpec))
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);
@@ -71,6 +72,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'manifest.yml',
       '.mcp.json',
       'README.md',
+      'index.html',
       this.contextFile
     ];
   }
