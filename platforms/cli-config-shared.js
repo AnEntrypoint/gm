@@ -516,7 +516,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       'plugin.json': TemplateBuilder.generatePluginJson(spec),
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec, 'gm-cc'),
       'cli.js': createClaudeCodeCliScript(),
-      'install.js': createClaudeCodeInstallScript()
+      'install.js': createClaudeCodeInstallScript(),
     };
   },
   generateReadme(spec) {
@@ -807,8 +807,11 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       files: ['agents/', 'hooks/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
     };
   },
-  getAdditionalFiles() {
-    return { 'cli.js': createGeminiInstallerScript(), 'install.js': createGeminiInstallScript() };
+  getAdditionalFiles(spec) {
+    return {
+      'cli.js': createGeminiInstallerScript(),
+      'install.js': createGeminiInstallScript(),
+    };
   },
   buildHookCommand(hookFile) {
     return `bun \${extensionPath}/hooks/${hookFile}`;
@@ -846,8 +849,11 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   generateReadme(spec) {
     return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
   },
-  getAdditionalFiles() {
-    return { 'cli.js': createCodexCliScript(), 'install.js': createCodexInstallScript() };
+  getAdditionalFiles(spec) {
+    return {
+      'cli.js': createCodexCliScript(),
+      'install.js': createCodexInstallScript(),
+    };
   }
 });
 
@@ -878,7 +884,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
   formatConfigJson() {
     return makePackageJson({ $schema: 'https://opencode.ai/config.json', default_agent: 'gm' });
   },
-  getAdditionalFiles() {
+  getAdditionalFiles(spec) {
     return {
       'index.js': `module.exports = { GmPlugin: require('./gm-oc.mjs').GmPlugin };\n`,
       'gm.js': `module.exports = require('./gm-oc.mjs');\n`,
@@ -919,7 +925,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
   formatConfigJson() {
     return makePackageJson({ $schema: 'https://kilo.ai/config.json', default_agent: 'gm' });
   },
-  getAdditionalFiles() {
+  getAdditionalFiles(spec) {
     return {
       'index.js': `module.exports = { GmPlugin: require('./gm-kilo.mjs').GmPlugin };\n`,
       'gm.js': `module.exports = require('./gm-kilo.mjs');\n`,

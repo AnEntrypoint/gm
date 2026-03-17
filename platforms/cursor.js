@@ -22,7 +22,8 @@ class CursorAdapter extends ExtensionAdapter {
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
-      'README.md': this.generateReadme()
+      'README.md': this.generateReadme(),
+      'index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('cursor', pluginSpec))
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);

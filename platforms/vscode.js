@@ -21,7 +21,8 @@ class VSCodeAdapter extends ExtensionAdapter {
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       '.vscodeignore': this.generateVscodeignore(),
-      'README.md': this.generateReadme()
+      'README.md': this.generateReadme(),
+      'index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('vscode', pluginSpec))
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);
