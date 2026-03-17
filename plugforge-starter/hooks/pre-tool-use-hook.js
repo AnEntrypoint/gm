@@ -65,6 +65,9 @@ const run = () => {
       if (execMatch) {
         const rawLang = (execMatch[1] || '').toLowerCase();
         const code = execMatch[2];
+        if (/^\s*agent-browser\s/.test(code)) {
+          return { block: true, reason: `Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\n<plain JS here>\n\nThe code is piped directly to the browser eval. No base64, no flags, no shell wrapping.` };
+        }
         const cwd = tool_input?.cwd;
         const detectLang = (src) => {
           if (/^\s*(import |from |export |const |let |var |function |class |async |await |console\.|process\.)/.test(src)) return 'nodejs';
