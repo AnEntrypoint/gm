@@ -11,16 +11,31 @@ const writeTools = ['Write', 'write_file'];
 const searchTools = ['glob', 'search_file_content', 'Search', 'search'];
 const forbiddenTools = ['find', 'Find', 'Glob', 'Grep'];
 
+const allow = (additionalContext) => ({
+  hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', ...(additionalContext && { additionalContext }) }
+});
+const deny = (reason) => isGemini
+  ? { decision: 'deny', reason }
+  : { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
+const allowWithNoop = (context) => ({
+  hookSpecificOutput: {
+    hookEventName: 'PreToolUse',
+    permissionDecision: 'allow',
+    additionalContext: context,
+    updatedInput: { command: 'echo ""' }
+  }
+});
+
 const run = () => {
   try {
     const input = fs.readFileSync(0, 'utf-8');
     const data = JSON.parse(input);
     const { tool_name, tool_input } = data;
 
-    if (!tool_name) return { allow: true };
+    if (!tool_name) return allow();
 
     if (forbiddenTools.includes(tool_name)) {
-      return { block: true, reason: 'Use the code-search skill for codebase exploration instead of Grep/Glob/find. Describe what you need in plain language — it understands intent, not just patterns.' };
+      return deny('Use the code-search skill for codebase exploration instead of Grep/Glob/find. Describe what you need in plain language — it understands intent, not just patterns.');
     }
 
     if (writeTools.includes(tool_name)) {
@@ -30,7 +45,7 @@ const run = () => {
       const base = path.basename(file_path).toLowerCase();
       if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
           !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
-        return { block: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained. For task-specific notes, use .prd. For permanent reference material, add to CLAUDE.md.' };
+        return deny('Cannot create documentation files. Only CLAUDE.md and readme.md are maintained. For task-specific notes, use .prd. For permanent reference material, add to CLAUDE.md.');
       }
       if (/\.(test|spec)\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
           /^(jest|vitest|mocha|ava|jasmine|tap)\.(config|setup)/.test(base) ||
@@ -38,24 +53,24 @@ const run = () => {
           file_path.includes('/tests/') || file_path.includes('/fixtures/') ||
           file_path.includes('/test-data/') || file_path.includes('/__mocks__/') ||
           /\.(snap|stub|mock|fixture)\.(js|ts|json)$/.test(base)) {
-        return { block: true, reason: 'Test files forbidden on disk. Use Bash tool with real services for all testing.' };
+        return deny('Test files forbidden on disk. Use Bash tool with real services for all testing.');
       }
     }
 
-    if (searchTools.includes(tool_name)) return { allow: true };
+    if (searchTools.includes(tool_name)) return allow();
 
     if (tool_name === 'Task' && (tool_input?.subagent_type || '') === 'Explore') {
-      return { block: true, reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search' };
+      return deny('Use gm:thorns-overview for codebase insight, then use gm:code-search');
     }
 
     if (tool_name === 'EnterPlanMode') {
-      return { block: true, reason: 'Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.' };
+      return deny('Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.');
     }
 
     if (tool_name === 'Skill') {
       const skill = (tool_input?.skill || '').toLowerCase().replace(/^gm:/, '');
       if (skill === 'explore' || skill === 'search') {
-        return { block: true, reason: 'Use the code-search skill for codebase exploration. Describe what you need in plain language — it understands intent, not just patterns.' };
+        return deny('Use the code-search skill for codebase exploration. Describe what you need in plain language — it understands intent, not just patterns.');
       }
     }
 
@@ -66,7 +81,7 @@ const run = () => {
         const rawLang = (execMatch[1] || '').toLowerCase();
         const code = execMatch[2];
         if (/^\s*agent-browser\s/.test(code)) {
-          return { block: true, reason: `Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\n<plain JS here>\n\nThe code is piped directly to the browser eval. No base64, no flags, no shell wrapping.` };
+          return deny(`Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\n<plain JS here>\n\nThe code is piped directly to the browser eval. No base64, no flags, no shell wrapping.`);
         }
         const cwd = tool_input?.cwd;
         const detectLang = (src) => {
@@ -134,35 +149,31 @@ const run = () => {
           } else {
             result = runWithFile(lang, safeCode);
           }
-          return { block: true, reason: `exec ran successfully. Output:\n\n${result || '(no output)'}` };
+          return allowWithNoop(`exec:${lang} output:\n\n${result || '(no output)'}`);
         } catch (e) {
-          return { block: true, reason: `exec ran. Error:\n\n${(e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)'}` };
+          return allowWithNoop(`exec:${lang} error:\n\n${(e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)'}`);
         }
       }
 
       if (!/^exec(\s|:)/.test(command) && !/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb/.test(command) && !/^bun install --cwd \/config\/.gmweb/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
-        return { block: true, reason: `Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.` };
+        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.`);
       }
     }
 
     const allowedTools = ['agent-browser', 'Skill', 'code-search', 'electron', 'TaskOutput', 'ReadMcpResourceTool', 'ListMcpResourcesTool'];
-    if (allowedTools.includes(tool_name)) return { allow: true };
+    if (allowedTools.includes(tool_name)) return allow();
 
-    return { allow: true };
+    return allow();
   } catch (error) {
-    return { allow: true };
+    return allow();
   }
 };
 
 try {
   const result = run();
-  if (result.block) {
-    console.log(JSON.stringify({ decision: isGemini ? 'deny' : 'block', reason: result.reason }));
-    process.exit(0);
-  }
-  if (isGemini) console.log(JSON.stringify({ decision: 'allow' }));
+  console.log(JSON.stringify(result));
   process.exit(0);
 } catch (error) {
   process.exit(0);
