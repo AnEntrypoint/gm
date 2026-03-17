@@ -115,10 +115,11 @@ const run = () => {
             const extMap = { typescript: 'ts', deno: 'ts' };
             const ext = extMap[lang] || 'mjs';
             const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { const t = typeof __result; if (t === 'object' || Array.isArray(__result)) { console.log(JSON.stringify(__result, null, 2)); } else if (t !== 'undefined') { console.log(__result); } }`;
+            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { const t = typeof __result; if (t === 'object' || Array.isArray(__result)) { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
             fs.writeFileSync(tmpFile, wrapped, 'utf-8');
             result = spawnDirect('bun', ['run', tmpFile]);
             try { fs.unlinkSync(tmpFile); } catch (e) {}
+            if (result) result = result.split(tmpFile).join('<script>');
           } else {
             result = runExec(['x', 'gm-exec', 'exec', `--lang=${lang}`, ...(cwd ? [`--cwd=${cwd}`] : []), code]);
           }
