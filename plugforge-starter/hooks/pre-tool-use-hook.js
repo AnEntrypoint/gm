@@ -81,8 +81,9 @@ const run = () => {
         const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
         const lang = langAliases[rawLang] || rawLang || detectLang(code);
         const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+        const IS_WIN = process.platform === 'win32';
         const gmExecLangs = new Set(['go', 'rust', 'c', 'cpp', 'java']);
-        const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
+        const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: IS_WIN ? 'ps1' : 'sh', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
         const spawnDirect = (bin, args, input) => {
           const opts = { encoding: 'utf-8', timeout: 60000 };
           if (cwd) opts.cwd = cwd;
@@ -114,11 +115,18 @@ const run = () => {
         try {
           let result;
           if (lang === 'bash') {
-            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.ps1`);
+            const ext = IS_WIN ? 'ps1' : 'sh';
+            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
             fs.writeFileSync(shFile, code, 'utf-8');
-            result = spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile]);
-            try { fs.unlinkSync(shFile); } catch (e) {}
-            if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
+            if (IS_WIN) {
+              result = spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile]);
+              try { fs.unlinkSync(shFile); } catch (e) {}
+              if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
+            } else {
+              result = spawnDirect('bash', [shFile]);
+              try { fs.unlinkSync(shFile); } catch (e) {}
+              if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
+            }
           } else if (lang === 'python') {
             result = spawnDirect('python3', ['-c', code]);
             if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', code]);
