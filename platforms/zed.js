@@ -22,7 +22,8 @@ class ZedAdapter extends ExtensionAdapter {
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
       '.gitignore': this.generateGitignore(),
-      'README.md': this.generateReadme(pluginSpec)
+      'README.md': this.generateReadme(pluginSpec),
+      'index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('zed', pluginSpec))
     };
     const skills = this.loadSkillsFromSource(sourceDir);
     Object.assign(structure, skills);
