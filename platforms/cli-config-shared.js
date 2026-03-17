@@ -30,7 +30,21 @@ function safeCopyDirectory(src, dst) {
   } catch (e) { return false; }
 }`.trim();
 
-// Shared copyRecursive used in CLI installer scripts (global install path)
+
+const SKILLS_INSTALL_BODY = (varName = 'execSync') => `  const { execSync: ${varName} } = require('child_process');
+  try {
+    ${varName}('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
+  } catch (e) {
+    try {
+      ${varName}('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    } catch (e2) {
+      console.warn('Warning: skills install failed (non-fatal):', e2.message);
+    }
+  }`;
+
+const SKILLS_INSTALL = SKILLS_INSTALL_BODY('execSync');
+const SKILLS_INSTALL_CC = SKILLS_INSTALL_BODY('execSkills');
+
 const COPY_RECURSIVE_FN = `
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
@@ -42,27 +56,19 @@ const COPY_RECURSIVE_FN = `
     }
   }`.trim();
 
-const SKILLS_INSTALL = `  const { execSync } = require('child_process');
-  try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }`;
+const COPY_RECURSIVE_INLINE = COPY_RECURSIVE_FN;
 
-const SKILLS_INSTALL_CC = `  const { execSync: execSkills } = require('child_process');
+const AUTO_UPDATE_CC = `
+  const knownMarketplacesPath = path.join(homeDir, '.claude', 'plugins', 'known_marketplaces.json');
   try {
-    execSkills('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSkills('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }`;
+    let km = {};
+    try { km = JSON.parse(fs.readFileSync(knownMarketplacesPath, 'utf-8')); } catch (e) {}
+    if (!km['gm-cc']) km['gm-cc'] = {};
+    km['gm-cc'].autoUpdate = true;
+    km['gm-cc'].lastUpdated = new Date().toISOString();
+    fs.mkdirSync(path.dirname(knownMarketplacesPath), { recursive: true });
+    fs.writeFileSync(knownMarketplacesPath, JSON.stringify(km, null, 2) + '\\n');
+  } catch (e) {}`.trim();
 
 function installScriptNodeModules(dirExpr, dirs) {
   const copies = dirs.map(([src, dst]) =>
@@ -308,6 +314,7 @@ function createClaudeCodeCliScript() {
 
   run('claude plugin marketplace add AnEntrypoint/gm-cc');
   run('claude plugin install gm@gm-cc --scope user');
+  ${AUTO_UPDATE_CC}
 ${SKILLS_INSTALL_CC}
 `;
   return createCliInstaller({
@@ -354,15 +361,7 @@ try {
   fs.mkdirSync(path.join(ocConfigDir, 'plugins'), { recursive: true });
   fs.mkdirSync(path.join(ocConfigDir, 'agents'), { recursive: true });
 
-  function copyRecursive(src, dst) {
-    if (!fs.existsSync(src)) return;
-    if (fs.statSync(src).isDirectory()) {
-      fs.mkdirSync(dst, { recursive: true });
-      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-    } else {
-      fs.copyFileSync(src, dst);
-    }
-  }
+  ${COPY_RECURSIVE_FN}
 
   fs.copyFileSync(path.join(srcDir, 'gm-oc.mjs'), path.join(ocConfigDir, 'plugins', 'gm-oc.mjs'));
   copyRecursive(path.join(srcDir, 'agents'), path.join(ocConfigDir, 'agents'));
@@ -380,16 +379,7 @@ try {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-  const { execSync: execSync2 } = require('child_process');
-  try {
-    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }
+  ${SKILLS_INSTALL_BODY('execSync2')}
 
   console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${ocConfigDir}\`);
   console.log('Restart OpenCode to activate.');
@@ -418,15 +408,7 @@ try {
   fs.mkdirSync(path.join(kiloConfigDir, 'plugins'), { recursive: true });
   fs.mkdirSync(path.join(kiloConfigDir, 'agents'), { recursive: true });
 
-  function copyRecursive(src, dst) {
-    if (!fs.existsSync(src)) return;
-    if (fs.statSync(src).isDirectory()) {
-      fs.mkdirSync(dst, { recursive: true });
-      fs.readdirSync(src).forEach(f => copyRecursive(path.join(src, f), path.join(dst, f)));
-    } else {
-      fs.copyFileSync(src, dst);
-    }
-  }
+  ${COPY_RECURSIVE_FN}
 
   fs.copyFileSync(path.join(srcDir, 'gm-kilo.mjs'), path.join(kiloConfigDir, 'plugins', 'gm-kilo.mjs'));
   copyRecursive(path.join(srcDir, 'agents'), path.join(kiloConfigDir, 'agents'));
@@ -453,16 +435,7 @@ try {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-  const { execSync: execSync2 } = require('child_process');
-  try {
-    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }
+  ${SKILLS_INSTALL_BODY('execSync2')}
 
   console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${kiloConfigDir}\`);
   console.log('Restart Kilo CLI to activate.');
