@@ -78,7 +78,7 @@ const run = () => {
           if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
           return 'nodejs';
         };
-        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash' };
+        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
         const lang = langAliases[rawLang] || rawLang || detectLang(code);
         const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
         const runExec = (args) => {
@@ -127,6 +127,8 @@ const run = () => {
             result = spawnDirect('bun', ['run', tmpFile]);
             try { fs.unlinkSync(tmpFile); } catch (e) {}
             if (result) result = result.split(tmpFile).join('<script>');
+          } else if (lang === 'agent-browser') {
+            result = spawnDirect('agent-browser', ['eval', '--stdin'], code);
           } else {
             result = runExec(['x', 'gm-exec', 'exec', `--lang=${lang}`, ...(cwd ? [`--cwd=${cwd}`] : []), code]);
           }
