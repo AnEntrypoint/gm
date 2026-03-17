@@ -50,6 +50,8 @@ Scope: All available skills and their mandatory usage rules. Every skill listed 
 
 **`gm` agent** — Subagent orchestration. MANDATORY for parallel work waves. Launch via Task tool with subagent_type gm:gm. Maximum 3 per wave. Independent items run simultaneously; dependent items wait. Sequential execution of independent items is forbidden.
 
+**`exec` tool** — Transparent code execution via pre-tool-use hook interception. Call as a native tool with params: `lang` (nodejs|python|bash|sh|cmd|go|rust|c|cpp|java|deno|typescript, default nodejs), `code` (the code or command to run), `cmd` (alias for code, preferred for bash/cmd langs), `cwd` (optional working directory). Returns stdout+stderr of execution as the tool response. The hook intercepts the call, runs it via gm-exec, and returns the output synchronously. Use instead of Bash tool for all code and shell execution.
+
 
 
 ## CHARTER 1: PRD
@@ -183,7 +185,8 @@ Server + client split:
 
 **BASH WHITELIST** — environment blocks all bash except:
 - `git` — version control only
-- `bun x gm-exec` — all other shell/code execution:
+- `exec` tool — preferred over Bash for all code execution and shell commands (intercepted by hook, runs via gm-exec, returns output as tool response)
+- `bun x gm-exec` — fallback when exec tool is unavailable:
   - `bun x gm-exec bash [--cwd=<dir>] <cmd>` — run shell commands
   - `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] [--file=<path>] <code>` — execute code (nodejs default; langs: nodejs, python, go, rust, c, cpp, java, deno, bash, cmd)
   - `bun x gm-exec status <task_id>` — poll status + drain output of background task
@@ -364,9 +367,10 @@ SYSTEM_INVARIANTS = {
 }
 
 TOOL_INVARIANTS = {
-  default: `bun x gm-exec` (not raw bash, not grep, not glob),
-  code_execution: `bun x gm-exec exec <code>`,
-  file_operations: `bun x gm-exec exec` with inline fs,
+  default: `exec` tool (not raw bash, not grep, not glob),
+  exec_tool: use exec tool for all code execution when available (lang=nodejs|python|bash|etc, code=..., cwd=...),
+  code_execution: `exec` tool with lang param, fallback to `bun x gm-exec exec <code>`,
+  file_operations: `exec` tool with lang=nodejs and inline fs, fallback to `bun x gm-exec exec` with inline fs,
   exploration: codesearch ONLY (Glob=blocked, Grep=blocked, Explore=blocked, Read-for-discovery=blocked),
   overview: `code-search` skill,
   process_lifecycle: `process-management` skill (PM2 mandatory for all servers/workers/daemons),

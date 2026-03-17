@@ -18,6 +18,35 @@ const run = () => {
 
     if (!tool_name) return { allow: true };
 
+    if (tool_name === 'exec') {
+      const { lang = 'nodejs', code, cmd, cwd } = tool_input || {};
+      const actualCode = code || cmd;
+      if (!actualCode) {
+        return { block: true, reason: 'exec tool requires code or cmd parameter' };
+      }
+      try {
+        let args;
+        if (lang === 'bash' || lang === 'cmd' || lang === 'sh') {
+          args = ['x', 'gm-exec', 'bash'];
+          if (cwd) args.push(`--cwd=${cwd}`);
+          args.push(actualCode);
+        } else {
+          args = ['x', 'gm-exec', 'exec', `--lang=${lang}`];
+          if (cwd) args.push(`--cwd=${cwd}`);
+          args.push(actualCode);
+        }
+        const result = execSync('bun ' + args.map(a => JSON.stringify(a)).join(' '), {
+          encoding: 'utf-8',
+          timeout: 30000,
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+        return { block: true, reason: result || '(no output)' };
+      } catch (e) {
+        const err = (e.stdout || '') + (e.stderr || '') || e.message;
+        return { block: true, reason: `exec error: ${err}` };
+      }
+    }
+
     if (forbiddenTools.includes(tool_name)) {
       return { block: true, reason: 'Use the code-search skill for codebase exploration instead of Grep/Glob/find. Describe what you need in plain language — it understands intent, not just patterns.' };
     }
