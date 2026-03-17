@@ -42,15 +42,10 @@ const run = () => {
       }
     }
 
-    if (searchTools.includes(tool_name)) {
-      return { allow: true };
-    }
+    if (searchTools.includes(tool_name)) return { allow: true };
 
-    if (tool_name === 'Task') {
-      const subagentType = tool_input?.subagent_type || '';
-      if (subagentType === 'Explore') {
-        return { block: true, reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search' };
-      }
+    if (tool_name === 'Task' && (tool_input?.subagent_type || '') === 'Explore') {
+      return { block: true, reason: 'Use gm:thorns-overview for codebase insight, then use gm:code-search' };
     }
 
     if (tool_name === 'EnterPlanMode') {
@@ -66,7 +61,6 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
-
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
       if (execMatch) {
         const rawLang = (execMatch[1] || '').toLowerCase();
@@ -78,72 +72,64 @@ const run = () => {
           if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
           return 'nodejs';
         };
-        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
-        const lang = langAliases[rawLang] || rawLang || detectLang(code);
-        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
+        const lang = aliases[rawLang] || rawLang || detectLang(code);
         const IS_WIN = process.platform === 'win32';
-        const gmExecLangs = new Set(['go', 'rust', 'c', 'cpp', 'java']);
+        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: IS_WIN ? 'ps1' : 'sh', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
-        const spawnDirect = (bin, args, input) => {
-          const opts = { encoding: 'utf-8', timeout: 60000 };
-          if (cwd) opts.cwd = cwd;
-          if (input !== undefined) opts.input = input;
+        const spawnDirect = (bin, args, stdin) => {
+          const opts = { encoding: 'utf-8', timeout: 60000, ...(cwd && { cwd }), ...(stdin !== undefined && { input: stdin }) };
           const r = spawnSync(bin, args, opts);
           if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
-          const stdout = (r.stdout || '').trimEnd();
-          const stderr = stripFooter(r.stderr || '').trimEnd();
-          if (stdout && stderr) return stdout + '\n[stderr]\n' + stderr;
-          return stripFooter(stdout || stderr);
+          const out = (r.stdout || '').trimEnd(), err = stripFooter(r.stderr || '').trimEnd();
+          return out && err ? out + '\n[stderr]\n' + err : stripFooter(out || err);
         };
-        const runWithFile = (lang, code) => {
-          const ext = langExts[lang] || lang;
-          const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-          fs.writeFileSync(tmpFile, code, 'utf-8');
-          const r = spawnSync('bun', ['x', 'gm-exec', 'exec', `--lang=${lang}`, `--file=${tmpFile}`, ...(cwd ? [`--cwd=${cwd}`] : [])], { encoding: 'utf-8', timeout: 65000 });
-          try { fs.unlinkSync(tmpFile); } catch (e) {}
+        const runWithFile = (l, src) => {
+          const tmp = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${langExts[l] || l}`);
+          fs.writeFileSync(tmp, src, 'utf-8');
+          const r = spawnSync('bun', ['x', 'gm-exec', 'exec', `--lang=${l}`, `--file=${tmp}`, ...(cwd ? [`--cwd=${cwd}`] : [])], { encoding: 'utf-8', timeout: 65000 });
+          try { fs.unlinkSync(tmp); } catch (e) {}
           let out = stripFooter((r.stdout || '') + (r.stderr || ''));
-          const bgMatch = out.match(/Command running in background with ID:\s*(\S+)/);
-          if (bgMatch) {
-            const taskId = bgMatch[1];
-            spawnSync('bun', ['x', 'gm-exec', 'sleep', taskId, '60'], { encoding: 'utf-8', timeout: 70000 });
-            const sr = spawnSync('bun', ['x', 'gm-exec', 'status', taskId], { encoding: 'utf-8', timeout: 15000 });
+          const bg = out.match(/Command running in background with ID:\s*(\S+)/);
+          if (bg) {
+            spawnSync('bun', ['x', 'gm-exec', 'sleep', bg[1], '60'], { encoding: 'utf-8', timeout: 70000 });
+            const sr = spawnSync('bun', ['x', 'gm-exec', 'status', bg[1]], { encoding: 'utf-8', timeout: 15000 });
             out = stripFooter((sr.stdout || '') + (sr.stderr || ''));
-            spawnSync('bun', ['x', 'gm-exec', 'close', taskId], { encoding: 'utf-8', timeout: 10000 });
+            spawnSync('bun', ['x', 'gm-exec', 'close', bg[1]], { encoding: 'utf-8', timeout: 10000 });
           }
           return out;
         };
+        const decodeB64 = (s) => {
+          const t = s.trim();
+          if (t.length < 16 || t.length % 4 !== 0 || !/^[A-Za-z0-9+/\r\n]+=*$/.test(t)) return s;
+          try { const d = Buffer.from(t, 'base64').toString('utf-8'); return /[\x00-\x08\x0b\x0e-\x1f]/.test(d) ? s : d; } catch { return s; }
+        };
+        const safeCode = decodeB64(code);
         try {
           let result;
           if (lang === 'bash') {
-            const ext = IS_WIN ? 'ps1' : 'sh';
-            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-            fs.writeFileSync(shFile, code, 'utf-8');
-            if (IS_WIN) {
-              result = spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile]);
-              try { fs.unlinkSync(shFile); } catch (e) {}
-              if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
-            } else {
-              result = spawnDirect('bash', [shFile]);
-              try { fs.unlinkSync(shFile); } catch (e) {}
-              if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
-            }
+            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${IS_WIN ? 'ps1' : 'sh'}`);
+            fs.writeFileSync(shFile, safeCode, 'utf-8');
+            result = IS_WIN
+              ? spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile])
+              : spawnDirect('bash', [shFile]);
+            try { fs.unlinkSync(shFile); } catch (e) {}
+            if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', safeCode);
           } else if (lang === 'python') {
-            result = spawnDirect('python3', ['-c', code]);
-            if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', code]);
-          } else if (!lang || lang === 'nodejs' || lang === 'typescript' || lang === 'deno') {
+            result = spawnDirect('python3', ['-c', safeCode]);
+            if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', safeCode]);
+          } else if (!lang || ['nodejs', 'typescript', 'deno'].includes(lang)) {
             const ext = lang === 'typescript' || lang === 'deno' ? 'ts' : 'mjs';
-            const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
-            fs.writeFileSync(tmpFile, wrapped, 'utf-8');
-            result = spawnDirect('bun', ['run', tmpFile]);
-            try { fs.unlinkSync(tmpFile); } catch (e) {}
-            if (result) result = result.split(tmpFile).join('<script>');
+            const tmp = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
+            const wrapped = `const __result = await (async () => {\n${safeCode}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
+            fs.writeFileSync(tmp, wrapped, 'utf-8');
+            result = spawnDirect('bun', ['run', tmp]);
+            try { fs.unlinkSync(tmp); } catch (e) {}
+            if (result) result = result.split(tmp).join('<script>');
           } else if (lang === 'agent-browser') {
-            result = spawnDirect('agent-browser', ['eval', '--stdin'], code);
-          } else if (gmExecLangs.has(lang)) {
-            result = runWithFile(lang, code);
+            result = spawnDirect('agent-browser', ['eval', '--stdin'], safeCode);
           } else {
-            result = runWithFile(lang, code);
+            result = runWithFile(lang, safeCode);
           }
           return { block: true, reason: `exec ran successfully. Output:\n\n${result || '(no output)'}` };
         } catch (e) {
@@ -151,38 +137,15 @@ const run = () => {
         }
       }
 
-      if (!/^exec(\s|:)/.test(command) && !/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
+      if (!/^exec(\s|:)/.test(command) && !/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb/.test(command) && !/^bun install --cwd \/config\/.gmweb/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
-        return { block: true, reason: `Bash is restricted to exec:<lang> interception and git.\n\nUse exec:<lang> syntax:\n  exec:nodejs\\n<js code>\n  exec:python\\n<python code>\n  exec:bash\\n<shell commands>\n  exec:typescript\\n<ts code>\n  exec (no lang — auto-detects)\n\nOr use bun x gm-exec directly:\n  bun x gm-exec${helpText}\n\nDocs: https://www.npmjs.com/package/gm-exec\n\nAll other Bash commands are blocked.` };
+        return { block: true, reason: `Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.` };
       }
     }
 
-    if (tool_name === 'agent-browser') {
-      const input = tool_input || {};
-      const script = input.script || input.code || '';
-      if (script && !input.url && !input.navigate) {
-        const sFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
-        try {
-          const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.mjs`);
-          fs.writeFileSync(tmpFile, script, 'utf-8');
-          const r = spawnSync('bun', ['run', tmpFile], { encoding: 'utf-8', timeout: 65000 });
-          try { fs.unlinkSync(tmpFile); } catch (e) {}
-          const stdout = (r.stdout || '').trimEnd();
-          const stderr = sFooter(r.stderr || '').trimEnd();
-          const out = stdout && stderr ? stdout + '\n[stderr]\n' + stderr : sFooter(stdout || stderr);
-          return { block: true, reason: `exec ran successfully. Output:\n\n${out || '(no output)'}` };
-        } catch (e) {
-          return { block: true, reason: `exec ran. Error:\n\n${(e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)'}` };
-        }
-      }
-    }
-
-    // Allow essential tools explicitly
     const allowedTools = ['agent-browser', 'Skill', 'code-search', 'electron', 'TaskOutput', 'ReadMcpResourceTool', 'ListMcpResourcesTool'];
-    if (allowedTools.includes(tool_name)) {
-      return { allow: true };
-    }
+    if (allowedTools.includes(tool_name)) return { allow: true };
 
     return { allow: true };
   } catch (error) {
@@ -192,20 +155,11 @@ const run = () => {
 
 try {
   const result = run();
-
   if (result.block) {
-    if (isGemini) {
-      console.log(JSON.stringify({ decision: 'deny', reason: result.reason }));
-    } else {
-      console.log(JSON.stringify({ decision: 'block', reason: result.reason }));
-    }
+    console.log(JSON.stringify({ decision: isGemini ? 'deny' : 'block', reason: result.reason }));
     process.exit(0);
   }
-
-  if (isGemini) {
-    console.log(JSON.stringify({ decision: 'allow' }));
-  }
-
+  if (isGemini) console.log(JSON.stringify({ decision: 'allow' }));
   process.exit(0);
 } catch (error) {
   process.exit(0);
