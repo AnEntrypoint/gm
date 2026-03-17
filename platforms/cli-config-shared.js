@@ -544,7 +544,6 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec, 'gm-cc'),
       'cli.js': createClaudeCodeCliScript(),
       'install.js': createClaudeCodeInstallScript(),
-      'docs/index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('cc', spec))
     };
   },
   generateReadme(spec) {
@@ -839,7 +838,6 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     return {
       'cli.js': createGeminiInstallerScript(),
       'install.js': createGeminiInstallScript(),
-      'docs/index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('gc', spec || {}))
     };
   },
   buildHookCommand(hookFile) {
@@ -882,7 +880,6 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       'cli.js': createCodexCliScript(),
       'install.js': createCodexInstallScript(),
-      'docs/index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('codex', spec || {}))
     };
   }
 });
@@ -921,7 +918,6 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       'gm-oc.mjs': pluginMjsSource('gm-oc'),
       'cli.js': createOpenCodeInstallerScript(),
       'install.js': createOpenCodeInstallScript(),
-      'docs/index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('oc', spec || {}))
     };
   },
   generateReadme(spec) {
@@ -963,7 +959,6 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       'gm-kilo.mjs': pluginMjsSource('gm-kilo'),
       'cli.js': createKiloInstallerScript(),
       'install.js': createKiloInstallScript(),
-      'docs/index.html': TemplateBuilder.generateGitHubPage(TemplateBuilder.getPlatformPageConfig('kilo', spec || {}))
     };
   },
   generateReadme(spec) {

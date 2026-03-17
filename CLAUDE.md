@@ -63,6 +63,8 @@ All adapters use these methods. Template changes propagate automatically.
 
 **GitHub Actions rsync sync**: Uses `rsync --delete` to remove orphaned files from target repos, preventing stale code illusion.
 
+**GitHub Pages cross-linking**: Each of the 10 platform repos generates a `docs/index.html` page served via GitHub Pages. Every page includes an "Also Available For" section listing all 10 platforms, grouped as CLI Tools and IDE Extensions, with the current platform highlighted. `lib/page-generator.js` contains `getPlatformPageConfig(adapterName, pluginSpec)` and `generateGitHubPage(config)` — these are the single source for all page generation. `TemplateBuilder` delegates to them via thin wrappers. The plugforge hub page lives at `docs/index.html` in this repo. GitHub Pages must be configured to serve from the `docs/` folder in each repo settings. Adding a new platform requires updating `PLATFORM_META` in `lib/page-generator.js`.
+
 ## File Structure
 
 **Source** (`plugforge-starter/`):
