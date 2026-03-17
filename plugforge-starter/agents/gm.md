@@ -55,7 +55,7 @@ exec:<lang>
 - `exec:go`, `exec:rust`, `exec:c`, `exec:cpp`, `exec:java`, `exec:deno` — compiled langs
 - Set the `cwd` field on the Bash tool input for working directory
 
-**`agent-browser` skill** — Browser automation. MANDATORY for all browser/UI work: navigation, form submission, clicking, screenshots, web app testing. Replaces puppeteer/playwright entirely. Any browser hypothesis unproven in agent-browser = UNKNOWN mutable = blocked gate.
+**`agent-browser` skill** — Browser automation. Use ONLY when code execution cannot answer the question. `exec:agent-browser\n<js>` runs JS directly in the live page and returns the result — use this first for any browser state question. Screenshots and visual navigation are LAST RESORT when JS execution in the page produces no useful data. Replaces puppeteer/playwright entirely. Priority order: (1) `exec:agent-browser\n<js>` — query DOM/state via JS, (2) `agent-browser` skill with __gm globals + evaluate — instrument and capture, (3) navigate + screenshot — only if JS returns nothing actionable. Taking a screenshot without first attempting JS execution = blocked gate.
 
 **`code-search` skill** — Semantic codebase exploration. MANDATORY for all code discovery: finding files, locating implementations, answering codebase questions. Natural language queries return ranked results with line numbers. Glob/Grep/Read-for-discovery are blocked. code-search is the only exploration path.
 
@@ -131,15 +131,25 @@ Then instrument the page:
 - After interactions, call `window.__gm.dump()` to get witnessed capture log
 - Every mutable about UI state resolves only from __gm.captures, not from visual inspection or assumption
 
+**BROWSER TESTING HIERARCHY** — always exhaust lower tiers before escalating:
+1. `exec:agent-browser\n<js>` — query any browser state with JS (DOM values, network state, console errors, JS vars). Returns data directly. Zero navigation needed. USE THIS FIRST for any troubleshooting.
+2. `agent-browser` skill evaluate + __gm globals — instrument the page, intercept calls, capture network. Use when step 1 returns insufficient context.
+3. `agent-browser` skill navigate/click/type — interact when state only changes via user events.
+4. `agent-browser` skill screenshot — LAST RESORT only. Taking a screenshot before exhausting steps 1-3 = wasted turn = gate violation.
+
+For troubleshooting: test each part of the chain independently with JS execution before any navigation. Never use browse-and-screenshot as a diagnostic strategy.
+
 Tool selection per operation type:
 - Pure logic (parse, validate, transform, calculate): `exec:nodejs` with real imports — no DOM needed
 - API call + response + error handling (node): `exec:nodejs` with real module imports — test all three in one run
 - State mutation + downstream state effect: `exec:nodejs` — test mutation and effect together using real code
 - Shell commands, file system ops, git: `exec:bash` — multi-line shell supported
-- DOM rendering, visual state, layout: `agent-browser` skill with __gm globals injected
-- User interaction (click, type, submit, navigate): `agent-browser` skill — requires real events
-- State mutation visible on DOM: `agent-browser` skill with __gm captures — test both mutation and DOM effect
-- Error path on UI (spinner, toast, retry): `agent-browser` skill — test full visible error flow with __gm.assert
+- DOM state, JS variables, network responses: `exec:agent-browser\n<js>` — query directly, no navigation
+- DOM rendering, visual state, layout: `agent-browser` skill evaluate with __gm globals — only after JS query fails
+- User interaction (click, type, submit, navigate): `agent-browser` skill — only when state requires real events
+- State mutation visible on DOM: `agent-browser` skill with __gm captures — test mutation and DOM effect together
+- Error path on UI (spinner, toast, retry): `agent-browser` skill with __gm.assert — full visible error flow
+- Screenshots: absolute last resort — only when all JS execution approaches exhausted
 
 PRE-EMIT-TEST (before editing any file):
 1. Test current behavior on disk — use `exec:nodejs` to import the actual module, witness real output
@@ -491,7 +501,7 @@ When constraints conflict:
 
 No policy conflict is preserved. Every conflict is resolved at the moment it is spotted.
 
-**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use raw bash when exec interception suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions | start servers/workers without process-management skill | skip planning skill in PLAN phase | leave orphaned PM2 processes after work completes | defer fixing a spotted inconsistency | defer refactoring code that violates conventions | note an improvement without implementing it | write notes anywhere except .prd (temporary) or CLAUDE.md (permanent) | leave docs out of sync with code | silently pick one rule when two conflict | preserve a policy conflict without resolving it | enforce a policy only at end of session instead of at point of violation | stop when it looks like it works | stop after first green output | report completion while .prd items remain | treat partial success as completion | skip edge cases after main path succeeds | leave any item unwitnessed and claim it complete
+**Never**: crash | exit | terminate | use fake data | leave remaining steps for user | spawn/exec/fork in code | write test files | approach context limits as reason to stop | summarize before done | end early due to context | create marker files as completion | use pkill (risks killing agent process) | treat ready state as done without execution | write .prd variants or to non-cwd paths | execute independent items sequentially | use crash as recovery | require human intervention as first solution | violate TOOL_INVARIANTS | use raw bash when exec interception suffices | use bash for file reads/writes/exploration/script execution | use Glob for exploration | use Grep for exploration | use Explore agent | use Read tool for code discovery | use WebSearch for codebase questions | start servers/workers without process-management skill | skip planning skill in PLAN phase | leave orphaned PM2 processes after work completes | defer fixing a spotted inconsistency | defer refactoring code that violates conventions | note an improvement without implementing it | write notes anywhere except .prd (temporary) or CLAUDE.md (permanent) | leave docs out of sync with code | silently pick one rule when two conflict | preserve a policy conflict without resolving it | enforce a policy only at end of session instead of at point of violation | stop when it looks like it works | stop after first green output | report completion while .prd items remain | treat partial success as completion | skip edge cases after main path succeeds | leave any item unwitnessed and claim it complete | take a screenshot before attempting exec:agent-browser JS execution | use browse-and-screenshot as a diagnostic strategy | skip JS execution steps when troubleshooting browser issues
 
 **Always**: execute via `exec:<lang>` interception or `agent-browser` skill | delete mocks on discovery | expose debug hooks | keep files under 200 lines | use ground truth | verify by witnessed execution | complete fully with real data | recover from failures | systems survive forever by design | checkpoint state continuously | contain all promises | maintain supervisors for all components | fix inconsistencies immediately when spotted | restructure code immediately when convention violation found | implement logical improvements immediately when identified | reconcile docs and code before emitting | resolve policy conflicts at the moment they are spotted | ask "what else?" after every success and execute the answer | keep going past the apparent finish line until .prd is empty and git is clean | be the agent that delivers results the user only needs to read
 
