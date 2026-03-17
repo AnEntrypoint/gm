@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
 
@@ -71,6 +71,7 @@ const run = () => {
         const lang = execMatch[1] || 'nodejs';
         const code = execMatch[2];
         const cwd = tool_input?.cwd;
+        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
         try {
           let args;
           if (lang === 'bash' || lang === 'sh' || lang === 'cmd') {
@@ -82,9 +83,16 @@ const run = () => {
             if (cwd) args.push(`--cwd=${cwd}`);
             args.push(code);
           }
-          const result = execSync(['bun'].concat(args).map(a => JSON.stringify(a)).join(' '), {
-            encoding: 'utf-8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe']
-          });
+          const r = spawnSync('bun', args, { encoding: 'utf-8', timeout: 30000 });
+          let result = stripFooter((r.stdout || '') + (r.stderr || ''));
+          const bgMatch = result.match(/Command running in background with ID:\s*(\S+)/);
+          if (bgMatch) {
+            const taskId = bgMatch[1];
+            spawnSync('bun', ['x', 'gm-exec', 'sleep', taskId, '60'], { encoding: 'utf-8', timeout: 70000 });
+            const sr = spawnSync('bun', ['x', 'gm-exec', 'status', taskId], { encoding: 'utf-8', timeout: 15000 });
+            result = stripFooter((sr.stdout || '') + (sr.stderr || ''));
+            spawnSync('bun', ['x', 'gm-exec', 'close', taskId], { encoding: 'utf-8', timeout: 10000 });
+          }
           return { block: true, reason: result || '(no output)' };
         } catch (e) {
           const err = (e.stdout || '') + (e.stderr || '') || e.message;
