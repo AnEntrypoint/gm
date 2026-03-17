@@ -50,7 +50,19 @@ Scope: All available skills and their mandatory usage rules. Every skill listed 
 
 **`gm` agent** — Subagent orchestration. MANDATORY for parallel work waves. Launch via Task tool with subagent_type gm:gm. Maximum 3 per wave. Independent items run simultaneously; dependent items wait. Sequential execution of independent items is forbidden.
 
-**`exec` via Bash** — Shorthand for `bun x gm-exec exec`. Use `Bash` tool with command `bun x gm-exec exec [--lang=<lang>] [--cwd=<dir>] <code>` for all code execution. Langs: nodejs (default), python, bash, cmd, go, rust, c, cpp, java, deno, typescript. This is the ONLY way to run code — raw node/bun/python calls in Bash are blocked.
+**`exec` via Bash interception** — Run raw code by using the Bash tool with an `exec` prefix. The hook intercepts it, runs via gm-exec, and returns output as the tool result. Syntax:
+```
+exec:<lang>
+<code or shell commands here>
+```
+- `exec:nodejs` or just `exec` (default) — JavaScript/TypeScript via bun
+- `exec:python` — Python
+- `exec:bash` or `exec:sh` — Shell commands (multi-line supported)
+- `exec:cmd` — Windows cmd.exe
+- `exec:go`, `exec:rust`, `exec:c`, `exec:cpp`, `exec:java`, `exec:deno` — compiled langs
+- Optional `cwd` field on the Bash tool input sets working directory
+- Output returned as tool result synchronously (up to 30s)
+- Use this for ALL code execution instead of `bun x gm-exec exec` — cleaner and more direct
 
 
 
