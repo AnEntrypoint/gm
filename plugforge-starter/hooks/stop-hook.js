@@ -22,10 +22,14 @@ const run = () => {
     if (fs.existsSync(prdFile)) {
       const prdContent = fs.readFileSync(prdFile, 'utf-8').trim();
       if (prdContent.length > 0) {
-        return {
-          ok: false,
-          reason: `Work items remain in ${prdFile}. Remove completed items as they finish. Current items:\n\n${prdContent}`
-        };
+        let items;
+        try { items = JSON.parse(prdContent); } catch { items = null; }
+        if (!Array.isArray(items) || items.length > 0) {
+          return {
+            ok: false,
+            reason: `Work items remain in ${prdFile}. Remove completed items as they finish. Current items:\n\n${prdContent}`
+          };
+        }
       }
     }
     return { ok: true };
