@@ -44,9 +44,24 @@ const COPY_RECURSIVE_FN = `
 
 const SKILLS_INSTALL = `  const { execSync } = require('child_process');
   try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
   } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
+    try {
+      execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    } catch (e2) {
+      console.warn('Warning: skills install failed (non-fatal):', e2.message);
+    }
+  }`;
+
+const SKILLS_INSTALL_CC = `  const { execSync: execSkills } = require('child_process');
+  try {
+    execSkills('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
+  } catch (e) {
+    try {
+      execSkills('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    } catch (e2) {
+      console.warn('Warning: skills install failed (non-fatal):', e2.message);
+    }
   }`;
 
 function installScriptNodeModules(dirExpr, dirs) {
@@ -293,6 +308,7 @@ function createClaudeCodeCliScript() {
 
   run('claude plugin marketplace add AnEntrypoint/gm-cc');
   run('claude plugin install gm@gm-cc --scope user');
+${SKILLS_INSTALL_CC}
 `;
   return createCliInstaller({
     pkg: 'gm-cc',
@@ -366,9 +382,13 @@ try {
 
   const { execSync: execSync2 } = require('child_process');
   try {
-    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
   } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
+    try {
+      execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    } catch (e2) {
+      console.warn('Warning: skills install failed (non-fatal):', e2.message);
+    }
   }
 
   console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${ocConfigDir}\`);
@@ -435,9 +455,13 @@ try {
 
   const { execSync: execSync2 } = require('child_process');
   try {
-    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
   } catch (e) {
-    console.warn('Warning: skills install failed (non-fatal):', e.message);
+    try {
+      execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
+    } catch (e2) {
+      console.warn('Warning: skills install failed (non-fatal):', e2.message);
+    }
   }
 
   console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${kiloConfigDir}\`);
