@@ -108,7 +108,13 @@ const run = () => {
         try {
           let result;
           if (lang === 'bash' || lang === 'cmd') {
-            result = runExec(['x', 'gm-exec', 'bash', ...(cwd ? [`--cwd=${cwd}`] : []), code]);
+            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.ps1`);
+            fs.writeFileSync(shFile, code, 'utf-8');
+            result = spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile]);
+            try { fs.unlinkSync(shFile); } catch (e) {}
+            if (!result || result.startsWith('[spawn error:')) {
+              result = runExec(['x', 'gm-exec', 'bash', ...(cwd ? [`--cwd=${cwd}`] : []), code]);
+            }
           } else if (lang === 'python' || lang === 'py') {
             result = spawnDirect('python3', ['-c', code]);
             if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', code]);
