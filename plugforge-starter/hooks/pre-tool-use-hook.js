@@ -65,6 +65,33 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
+
+      const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
+      if (execMatch) {
+        const lang = execMatch[1] || 'nodejs';
+        const code = execMatch[2];
+        const cwd = tool_input?.cwd;
+        try {
+          let args;
+          if (lang === 'bash' || lang === 'sh' || lang === 'cmd') {
+            args = ['x', 'gm-exec', 'bash'];
+            if (cwd) args.push(`--cwd=${cwd}`);
+            args.push(code);
+          } else {
+            args = ['x', 'gm-exec', 'exec', `--lang=${lang}`];
+            if (cwd) args.push(`--cwd=${cwd}`);
+            args.push(code);
+          }
+          const result = execSync(['bun'].concat(args).map(a => JSON.stringify(a)).join(' '), {
+            encoding: 'utf-8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe']
+          });
+          return { block: true, reason: result || '(no output)' };
+        } catch (e) {
+          const err = (e.stdout || '') + (e.stderr || '') || e.message;
+          return { block: true, reason: err || '(exec failed)' };
+        }
+      }
+
       if (!/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
