@@ -68,13 +68,34 @@ const run = () => {
 
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
       if (execMatch) {
-        const lang = execMatch[1] || 'nodejs';
+        const rawLang = (execMatch[1] || '').toLowerCase();
         const code = execMatch[2];
         const cwd = tool_input?.cwd;
+        const detectLang = (src) => {
+          if (/^\s*(import |from |export |const |let |var |function |class |async |await |console\.|process\.)/.test(src)) return 'nodejs';
+          if (/^\s*(import |def |print\(|class |if __name__)/.test(src)) return 'python';
+          if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
+          return 'nodejs';
+        };
+        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash' };
+        const lang = langAliases[rawLang] || rawLang || detectLang(code);
         const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+        const runExec = (args) => {
+          const r = spawnSync('bun', args, { encoding: 'utf-8', timeout: 65000 });
+          let out = stripFooter((r.stdout || '') + (r.stderr || ''));
+          const bgMatch = out.match(/Command running in background with ID:\s*(\S+)/);
+          if (bgMatch) {
+            const taskId = bgMatch[1];
+            spawnSync('bun', ['x', 'gm-exec', 'sleep', taskId, '60'], { encoding: 'utf-8', timeout: 70000 });
+            const sr = spawnSync('bun', ['x', 'gm-exec', 'status', taskId], { encoding: 'utf-8', timeout: 15000 });
+            out = stripFooter((sr.stdout || '') + (sr.stderr || ''));
+            spawnSync('bun', ['x', 'gm-exec', 'close', taskId], { encoding: 'utf-8', timeout: 10000 });
+          }
+          return out;
+        };
         try {
           let args;
-          if (lang === 'bash' || lang === 'sh' || lang === 'cmd') {
+          if (lang === 'bash' || lang === 'cmd') {
             args = ['x', 'gm-exec', 'bash'];
             if (cwd) args.push(`--cwd=${cwd}`);
             args.push(code);
@@ -83,27 +104,31 @@ const run = () => {
             if (cwd) args.push(`--cwd=${cwd}`);
             args.push(code);
           }
-          const r = spawnSync('bun', args, { encoding: 'utf-8', timeout: 30000 });
-          let result = stripFooter((r.stdout || '') + (r.stderr || ''));
-          const bgMatch = result.match(/Command running in background with ID:\s*(\S+)/);
-          if (bgMatch) {
-            const taskId = bgMatch[1];
-            spawnSync('bun', ['x', 'gm-exec', 'sleep', taskId, '60'], { encoding: 'utf-8', timeout: 70000 });
-            const sr = spawnSync('bun', ['x', 'gm-exec', 'status', taskId], { encoding: 'utf-8', timeout: 15000 });
-            result = stripFooter((sr.stdout || '') + (sr.stderr || ''));
-            spawnSync('bun', ['x', 'gm-exec', 'close', taskId], { encoding: 'utf-8', timeout: 10000 });
-          }
-          return { block: true, reason: result || '(no output)' };
+          return { block: true, reason: runExec(args) || '(no output)' };
         } catch (e) {
-          const err = (e.stdout || '') + (e.stderr || '') || e.message;
-          return { block: true, reason: err || '(exec failed)' };
+          return { block: true, reason: (e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)' };
         }
       }
 
-      if (!/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
+      if (!/^exec(\s|:)/.test(command) && !/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command) && !/^bun install --cwd \/config\/.gmweb\/npm-global\/lib\/node_modules\/gm-exec/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
-        return { block: true, reason: `Bash is restricted to: bun x gm-exec (and git)\n\nUsage: bun x gm-exec${helpText}\n\nDocs: https://www.npmjs.com/package/gm-exec\n\nAll other Bash commands are blocked.` };
+        return { block: true, reason: `Bash is restricted to exec:<lang> interception and git.\n\nUse exec:<lang> syntax:\n  exec:nodejs\\n<js code>\n  exec:python\\n<python code>\n  exec:bash\\n<shell commands>\n  exec:typescript\\n<ts code>\n  exec (no lang — auto-detects)\n\nOr use bun x gm-exec directly:\n  bun x gm-exec${helpText}\n\nDocs: https://www.npmjs.com/package/gm-exec\n\nAll other Bash commands are blocked.` };
+      }
+    }
+
+    if (tool_name === 'agent-browser') {
+      const input = tool_input || {};
+      const script = input.script || input.code || '';
+      if (script && !input.url && !input.navigate) {
+        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+        try {
+          const r = spawnSync('bun', ['x', 'gm-exec', 'exec', '--lang=nodejs', script], { encoding: 'utf-8', timeout: 65000 });
+          const out = stripFooter((r.stdout || '') + (r.stderr || ''));
+          return { block: true, reason: out || '(no output)' };
+        } catch (e) {
+          return { block: true, reason: (e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)' };
+        }
       }
     }
 
