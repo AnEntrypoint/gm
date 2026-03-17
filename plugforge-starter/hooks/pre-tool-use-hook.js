@@ -78,11 +78,28 @@ const run = () => {
           if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
           return 'nodejs';
         };
-        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
+        const langAliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser' };
         const lang = langAliases[rawLang] || rawLang || detectLang(code);
         const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
-        const runExec = (args) => {
-          const r = spawnSync('bun', args, { encoding: 'utf-8', timeout: 65000 });
+        const gmExecLangs = new Set(['go', 'rust', 'c', 'cpp', 'java']);
+        const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
+        const spawnDirect = (bin, args, input) => {
+          const opts = { encoding: 'utf-8', timeout: 60000 };
+          if (cwd) opts.cwd = cwd;
+          if (input !== undefined) opts.input = input;
+          const r = spawnSync(bin, args, opts);
+          if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
+          const stdout = (r.stdout || '').trimEnd();
+          const stderr = stripFooter(r.stderr || '').trimEnd();
+          if (stdout && stderr) return stdout + '\n[stderr]\n' + stderr;
+          return stripFooter(stdout || stderr);
+        };
+        const runWithFile = (lang, code) => {
+          const ext = langExts[lang] || lang;
+          const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
+          fs.writeFileSync(tmpFile, code, 'utf-8');
+          const r = spawnSync('bun', ['x', 'gm-exec', 'exec', `--lang=${lang}`, `--file=${tmpFile}`, ...(cwd ? [`--cwd=${cwd}`] : [])], { encoding: 'utf-8', timeout: 65000 });
+          try { fs.unlinkSync(tmpFile); } catch (e) {}
           let out = stripFooter((r.stdout || '') + (r.stderr || ''));
           const bgMatch = out.match(/Command running in background with ID:\s*(\S+)/);
           if (bgMatch) {
@@ -94,43 +111,31 @@ const run = () => {
           }
           return out;
         };
-        const spawnDirect = (bin, args, input) => {
-          const opts = { encoding: 'utf-8', timeout: 30000 };
-          if (cwd) opts.cwd = cwd;
-          if (input !== undefined) opts.input = input;
-          const r = spawnSync(bin, args, opts);
-          if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
-          const stdout = (r.stdout || '').trimEnd();
-          const stderr = stripFooter(r.stderr || '').trimEnd();
-          if (stdout && stderr) return stdout + '\n[stderr]\n' + stderr;
-          return stripFooter(stdout || stderr);
-        };
         try {
           let result;
-          if (lang === 'bash' || lang === 'cmd') {
+          if (lang === 'bash') {
             const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.ps1`);
             fs.writeFileSync(shFile, code, 'utf-8');
             result = spawnDirect('powershell', ['-NoProfile', '-NonInteractive', '-File', shFile]);
             try { fs.unlinkSync(shFile); } catch (e) {}
-            if (!result || result.startsWith('[spawn error:')) {
-              result = runExec(['x', 'gm-exec', 'bash', ...(cwd ? [`--cwd=${cwd}`] : []), code]);
-            }
-          } else if (lang === 'python' || lang === 'py') {
+            if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', code);
+          } else if (lang === 'python') {
             result = spawnDirect('python3', ['-c', code]);
             if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', code]);
           } else if (!lang || lang === 'nodejs' || lang === 'typescript' || lang === 'deno') {
-            const extMap = { typescript: 'ts', deno: 'ts' };
-            const ext = extMap[lang] || 'mjs';
+            const ext = lang === 'typescript' || lang === 'deno' ? 'ts' : 'mjs';
             const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
-            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { const t = typeof __result; if (t === 'object' || Array.isArray(__result)) { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
+            const wrapped = `const __result = await (async () => {\n${code}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
             fs.writeFileSync(tmpFile, wrapped, 'utf-8');
             result = spawnDirect('bun', ['run', tmpFile]);
             try { fs.unlinkSync(tmpFile); } catch (e) {}
             if (result) result = result.split(tmpFile).join('<script>');
           } else if (lang === 'agent-browser') {
             result = spawnDirect('agent-browser', ['eval', '--stdin'], code);
+          } else if (gmExecLangs.has(lang)) {
+            result = runWithFile(lang, code);
           } else {
-            result = runExec(['x', 'gm-exec', 'exec', `--lang=${lang}`, ...(cwd ? [`--cwd=${cwd}`] : []), code]);
+            result = runWithFile(lang, code);
           }
           return { block: true, reason: `exec ran successfully. Output:\n\n${result || '(no output)'}` };
         } catch (e) {
