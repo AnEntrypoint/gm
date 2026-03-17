@@ -99,10 +99,11 @@ const run = () => {
           if (cwd) opts.cwd = cwd;
           if (input !== undefined) opts.input = input;
           const r = spawnSync(bin, args, opts);
-          const out = stripFooter((r.stdout || '') + (r.stderr || ''));
-          if (!out && r.error) return `[spawn error: ${r.error.message}]`;
-          if (!out && r.status !== 0) return `[exit ${r.status}]`;
-          return out;
+          if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
+          const stdout = (r.stdout || '').trimEnd();
+          const stderr = stripFooter(r.stderr || '').trimEnd();
+          if (stdout && stderr) return stdout + '\n[stderr]\n' + stderr;
+          return stripFooter(stdout || stderr);
         };
         try {
           let result;
@@ -123,9 +124,9 @@ const run = () => {
           } else {
             result = runExec(['x', 'gm-exec', 'exec', `--lang=${lang}`, ...(cwd ? [`--cwd=${cwd}`] : []), code]);
           }
-          return { block: true, reason: `[exec intercepted]\n${result || '(no output)'}` };
+          return { block: true, reason: `exec ran successfully. Output:\n\n${result || '(no output)'}` };
         } catch (e) {
-          return { block: true, reason: (e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)' };
+          return { block: true, reason: `exec ran. Error:\n\n${(e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)'}` };
         }
       }
 
@@ -140,13 +141,18 @@ const run = () => {
       const input = tool_input || {};
       const script = input.script || input.code || '';
       if (script && !input.url && !input.navigate) {
-        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+        const sFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
         try {
-          const r = spawnSync('bun', ['x', 'gm-exec', 'exec', '--lang=nodejs', script], { encoding: 'utf-8', timeout: 65000 });
-          const out = stripFooter((r.stdout || '') + (r.stderr || ''));
-          return { block: true, reason: out || '(no output)' };
+          const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.mjs`);
+          fs.writeFileSync(tmpFile, script, 'utf-8');
+          const r = spawnSync('bun', ['run', tmpFile], { encoding: 'utf-8', timeout: 65000 });
+          try { fs.unlinkSync(tmpFile); } catch (e) {}
+          const stdout = (r.stdout || '').trimEnd();
+          const stderr = sFooter(r.stderr || '').trimEnd();
+          const out = stdout && stderr ? stdout + '\n[stderr]\n' + stderr : sFooter(stdout || stderr);
+          return { block: true, reason: `exec ran successfully. Output:\n\n${out || '(no output)'}` };
         } catch (e) {
-          return { block: true, reason: (e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)' };
+          return { block: true, reason: `exec ran. Error:\n\n${(e.stdout || '') + (e.stderr || '') || e.message || '(exec failed)'}` };
         }
       }
     }
