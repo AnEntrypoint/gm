@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync, spawnSync } = require('child_process');
 
 const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
@@ -100,6 +101,18 @@ const run = () => {
             if (cwd) args.push(`--cwd=${cwd}`);
             args.push(code);
           } else {
+            const isMultiLine = code.includes('\n');
+            if (isMultiLine) {
+              const extMap = { nodejs: 'mjs', typescript: 'ts', python: 'py', go: 'go', rust: 'rs', deno: 'ts' };
+              const ext = extMap[lang] || 'mjs';
+              const tmpFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
+              fs.writeFileSync(tmpFile, code, 'utf-8');
+              args = ['x', 'gm-exec', 'exec', `--lang=${lang}`, `--file=${tmpFile}`];
+              if (cwd) args.push(`--cwd=${cwd}`);
+              const result = runExec(args);
+              try { fs.unlinkSync(tmpFile); } catch (e) {}
+              return { block: true, reason: result || '(no output)' };
+            }
             args = ['x', 'gm-exec', 'exec', `--lang=${lang}`];
             if (cwd) args.push(`--cwd=${cwd}`);
             args.push(code);
