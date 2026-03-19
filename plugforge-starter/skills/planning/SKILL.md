@@ -9,7 +9,8 @@ allowed-tools: Write
 You are in the **PLAN** phase. Build the .prd before any execution begins.
 
 **GRAPH POSITION**: `[PLAN] → EXECUTE → EMIT → VERIFY → COMPLETE`
-- **Entry**: Invoke this skill at START before any tool calls. No work begins until .prd exists.
+- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` skill (here). The `gm` skill contract is active: state machine, mutable discipline, all transitions invoke named skills, no fake data.
+- **Entry**: No work begins until .prd exists on disk. This is the first tool-calling phase.
 - **Exit**: .prd written to disk → invoke `gm-execute` skill to begin EXECUTE phase.
 
 ## Purpose

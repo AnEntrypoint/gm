@@ -8,7 +8,8 @@ description: EMIT phase gate validation, pre/post-emit testing, code quality enf
 You are in the **EMIT** phase. All mutables were resolved in EXECUTE. Now validate, write, and verify files.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
-- **Entry**: Invoke this skill when all EXECUTE mutables resolved to KNOWN via witnessed execution.
+- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` skill (here). The `gm` skill contract is active: state machine, mutable discipline, ground truth only, all transitions invoke named skills.
+- **Entry**: All EXECUTE mutables resolved to KNOWN via witnessed execution. .prd items are scoped and proven.
 - **Exit**: Files written, post-emit validation passes, all gate conditions true simultaneously → invoke `gm-complete` skill.
 - **Rollback**: If post-emit validation fails → fix immediately in this phase, do not advance.
 

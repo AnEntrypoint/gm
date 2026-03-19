@@ -8,7 +8,8 @@ description: EXECUTE phase methodology. Hypothesis testing, chain decomposition,
 You are in the **EXECUTE** phase. All mutables must resolve to KNOWN via witnessed execution before transitioning to EMIT.
 
 **GRAPH POSITION**: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
-- **Entry**: Invoke this skill when entering EXECUTE. .prd exists with all unknowns named.
+- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` skill → `gm-execute` skill (here). The `gm` skill contract is active: state machine, mutable discipline, ground truth only, all transitions invoke named skills.
+- **Entry**: .prd exists with all unknowns named. This skill owns the EXECUTE phase entirely.
 - **Exit**: Zero unresolved mutables → invoke `gm-emit` skill for gate validation and file writing.
 - **Sub-skills**: code discovery → invoke `code-search` skill | browser work → invoke `agent-browser` skill | servers/workers/daemons → invoke `process-management` skill
 - **Re-entry**: If mutables remain unresolved, re-invoke `gm-execute` skill with broader scope. Never add stages.
