@@ -2740,7 +2740,23 @@ class AgentGUIClient {
           }
           return;
         }
-        throw wsErr;
+        const [convRes, chunksRes, msgsRes] = await Promise.all([
+          fetch(`/gm/api/conversations/${conversationId}`),
+          fetch(`/gm/api/conversations/${conversationId}/chunks`),
+          fetch(`/gm/api/conversations/${conversationId}/messages?limit=500`)
+        ]);
+        const convData = await convRes.json();
+        const chunksData = await chunksRes.json();
+        const msgsData = await msgsRes.json();
+        fullData = {
+          conversation: convData.conversation,
+          isActivelyStreaming: false,
+          latestSession: null,
+          chunks: chunksData.chunks || [],
+          totalChunks: (chunksData.chunks || []).length,
+          messages: msgsData.messages || []
+        };
+        if (convSignal.aborted) return;
       }
       if (convSignal.aborted) return;
       const { conversation, isActivelyStreaming, latestSession, chunks: rawChunks, totalChunks, messages: allMessages } = fullData;
@@ -2812,7 +2828,14 @@ class AgentGUIClient {
             loadMoreBtn.disabled = true;
             loadMoreBtn.textContent = 'Loading...';
             try {
-              await window.wsClient.rpc('conv.full', { id: conversationId, allChunks: true });
+              try {
+                await window.wsClient.rpc('conv.full', { id: conversationId, allChunks: true });
+              } catch (wsErr) {
+                await Promise.all([
+                  fetch(`/gm/api/conversations/${conversationId}/chunks`),
+                  fetch(`/gm/api/conversations/${conversationId}/messages?limit=500`)
+                ]);
+              }
               this.invalidateCache(conversationId);
               await this.loadConversationMessages(conversationId);
             } catch (e) {
@@ -3075,17 +3098,29 @@ class AgentGUIClient {
 
           let result;
           if (detectionState.oldestMessageId) {
-            result = await window.wsClient.rpc('msg.ls.earlier', {
-              id: conversationId,
-              before: detectionState.oldestMessageId,
-              limit: 50
-            });
+            try {
+              result = await window.wsClient.rpc('msg.ls.earlier', {
+                id: conversationId,
+                before: detectionState.oldestMessageId,
+                limit: 50
+              });
+            } catch (e) {
+              const r = await fetch(`/gm/api/conversations/${conversationId}/messages?limit=50`);
+              const d = await r.json();
+              result = { messages: d.messages || [] };
+            }
           } else if (detectionState.oldestTimestamp > 0) {
-            result = await window.wsClient.rpc('conv.chunks.earlier', {
-              id: conversationId,
-              before: detectionState.oldestTimestamp,
-              limit: 500
-            });
+            try {
+              result = await window.wsClient.rpc('conv.chunks.earlier', {
+                id: conversationId,
+                before: detectionState.oldestTimestamp,
+                limit: 500
+              });
+            } catch (e) {
+              const r = await fetch(`/gm/api/conversations/${conversationId}/chunks`);
+              const d = await r.json();
+              result = { chunks: d.chunks || [] };
+            }
           }
 
           if (result && ((result.messages && result.messages.length > 0) || (result.chunks && result.chunks.length > 0))) {
