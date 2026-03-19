@@ -2,12 +2,6 @@
 .prd
 build/
 
-<<<<<<< HEAD
-.code-search/
-=======
 .code-search/
 .gm-stop-verified
-
-plugforge-starter/skills/gm/SKILL.md
->>>>>>> b708331285b38456222c1c4738a11addfb57d3f9
 loggedin/
