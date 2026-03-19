@@ -2740,27 +2740,23 @@ class AgentGUIClient {
           }
           return;
         }
-        try {
-          const [convRes, chunksRes, msgsRes] = await Promise.all([
-            fetch(`/gm/api/conversations/${conversationId}`),
-            fetch(`/gm/api/conversations/${conversationId}/chunks`),
-            fetch(`/gm/api/conversations/${conversationId}/messages?limit=500`)
-          ]);
-          const convData = await convRes.json();
-          const chunksData = await chunksRes.json();
-          const msgsData = await msgsRes.json();
-          fullData = {
-            conversation: convData.conversation,
-            isActivelyStreaming: false,
-            latestSession: null,
-            chunks: chunksData.chunks || [],
-            totalChunks: (chunksData.chunks || []).length,
-            messages: msgsData.messages || []
-          };
-          if (convSignal.aborted) return;
-        } catch (restErr) {
-          throw wsErr;
-        }
+        const [convRes, chunksRes, msgsRes] = await Promise.all([
+          fetch(`/gm/api/conversations/${conversationId}`),
+          fetch(`/gm/api/conversations/${conversationId}/chunks`),
+          fetch(`/gm/api/conversations/${conversationId}/messages?limit=500`)
+        ]);
+        const convData = await convRes.json();
+        const chunksData = await chunksRes.json();
+        const msgsData = await msgsRes.json();
+        fullData = {
+          conversation: convData.conversation,
+          isActivelyStreaming: false,
+          latestSession: null,
+          chunks: chunksData.chunks || [],
+          totalChunks: (chunksData.chunks || []).length,
+          messages: msgsData.messages || []
+        };
+        if (convSignal.aborted) return;
       }
       if (convSignal.aborted) return;
       const { conversation, isActivelyStreaming, latestSession, chunks: rawChunks, totalChunks, messages: allMessages } = fullData;
@@ -2835,12 +2831,10 @@ class AgentGUIClient {
               try {
                 await window.wsClient.rpc('conv.full', { id: conversationId, allChunks: true });
               } catch (wsErr) {
-                const [chunksRes, msgsRes] = await Promise.all([
+                await Promise.all([
                   fetch(`/gm/api/conversations/${conversationId}/chunks`),
                   fetch(`/gm/api/conversations/${conversationId}/messages?limit=500`)
                 ]);
-                const chunksData = await chunksRes.json();
-                const msgsData = await msgsRes.json();
               }
               this.invalidateCache(conversationId);
               await this.loadConversationMessages(conversationId);
