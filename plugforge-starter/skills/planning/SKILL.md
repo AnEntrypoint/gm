@@ -53,7 +53,7 @@ Path: exactly `./.prd` in current working directory. No variants (.prd-rename, .
 ## Execution
 
 1. Find all `pending` items with empty `blockedBy`.
-2. Launch ≤3 parallel subagents (`subagent_type: general-purpose`) per wave.
+2. Launch ≤3 parallel subagents (`subagent_type: gm:gm`) per wave.
 3. Each subagent completes one item, verifies via witnessed execution.
 4. On completion: remove item from `.prd`, write updated file.
 5. Check for newly unblocked items. Launch next wave.
