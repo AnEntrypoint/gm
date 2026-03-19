@@ -43,7 +43,6 @@ const SKILLS_INSTALL_BODY = (varName = 'execSync') => `  const { execSync: ${var
   }`;
 
 const SKILLS_INSTALL = SKILLS_INSTALL_BODY('execSync');
-const SKILLS_INSTALL_CC = SKILLS_INSTALL_BODY('execSkills');
 
 const COPY_RECURSIVE_FN = `
   function copyRecursive(src, dst) {
@@ -315,7 +314,6 @@ function createClaudeCodeCliScript() {
   run('claude plugin marketplace add AnEntrypoint/gm-cc');
   run('claude plugin install gm@gm-cc --scope user');
   ${AUTO_UPDATE_CC}
-${SKILLS_INSTALL_CC}
 `;
   return createCliInstaller({
     pkg: 'gm-cc',
