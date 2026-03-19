@@ -60,11 +60,11 @@ const run = () => {
     if (searchTools.includes(tool_name)) return allow();
 
     if (tool_name === 'Task' && (tool_input?.subagent_type || '') === 'Explore') {
-      return deny('Use gm:thorns-overview for codebase insight, then use gm:code-search');
+      return deny('Use the code-search skill for codebase exploration. Describe what you need in plain language.');
     }
 
     if (tool_name === 'EnterPlanMode') {
-      return deny('Plan mode is disabled. Use GM agent planning (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) via gm:gm subagent instead.');
+      return deny('Plan mode is disabled. Use the gm skill (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) instead.');
     }
 
     if (tool_name === 'Skill') {
