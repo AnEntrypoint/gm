@@ -8,7 +8,8 @@ description: VERIFY and COMPLETE phase. End-to-end verification, completion defi
 You are in the **VERIFY → COMPLETE** phase. Files are written and validated. Now prove the system works end-to-end and enforce git discipline.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY → COMPLETE]`
-- **Entry**: Invoke this skill after all EMIT gate conditions passed and files written.
+- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` → `gm-complete` skill (here). The `gm` skill contract is active: state machine, mutable discipline, ground truth only, git enforcement.
+- **Entry**: All EMIT gate conditions passed and files written to disk.
 - **Loop**: If .prd items remain after verification → invoke `gm-execute` skill for next wave.
 - **Done**: .prd empty + git clean + all pushes confirmed → COMPLETE.
 
