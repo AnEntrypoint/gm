@@ -165,13 +165,8 @@ const run = () => {
             result = spawnDirect('python3', ['-c', safeCode]);
             if (!result || result.startsWith('[spawn error:')) result = spawnDirect('python', ['-c', safeCode]);
           } else if (!lang || ['nodejs', 'typescript', 'deno'].includes(lang)) {
-            const ext = lang === 'typescript' || lang === 'deno' ? 'ts' : 'mjs';
-            const tmp = path.join(os.tmpdir(), `gm-exec-${Date.now()}.${ext}`);
             const wrapped = `const __result = await (async () => {\n${safeCode}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
-            fs.writeFileSync(tmp, wrapped, 'utf-8');
-            result = spawnDirect('bun', ['run', tmp]);
-            try { fs.unlinkSync(tmp); } catch (e) {}
-            if (result) result = result.split(tmp).join('<script>');
+            result = runWithFile(lang || 'nodejs', wrapped);
           } else if (lang === 'agent-browser') {
             result = spawnDirect('agent-browser', ['eval', '--stdin'], safeCode);
           } else {
