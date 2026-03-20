@@ -9,11 +9,11 @@ enforce: critical
 
 **Invoke the `gm` skill immediately.** Use the Skill tool with `skill: "gm"`.
 
+**CRITICAL: Skills are invoked via the Skill tool ONLY. Do NOT use the Agent tool to load skills. Skills are not agents. Use: `Skill tool` with `skill: "gm"` (or `"planning"`, `"gm-execute"`, `"gm-emit"`, `"gm-complete"`). Using the Agent tool for skills is a violation.**
+
 All work coordination, planning, execution, and verification happens through the skill tree:
 - `gm` skill → `planning` skill → `gm-execute` skill → `gm-emit` skill → `gm-complete` skill
 
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
 
 Do not use `EnterPlanMode`. Do not run code directly via Bash. Invoke `gm` skill first.
-
-Skills are invoked via the **Skill tool** (`skill: "name"`). Never use the Agent tool to load a skill — skills are not agents. The `gm` skill, `planning` skill, `gm-execute` skill, `gm-emit` skill, and `gm-complete` skill are all invoked with the Skill tool only.
