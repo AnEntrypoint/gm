@@ -1,82 +1,84 @@
 ---
 name: planning
-description: PRD construction for work planning. Compulsory in PLAN phase. Builds .prd file as frozen dependency graph of every possible work item before execution begins. Triggers on any new task, multi-step work, or when gm enters PLAN state.
+description: Mutable discovery and PRD construction. Invoke at session start and any time new unknowns surface during execution. Loop until no new mutables are discovered.
 allowed-tools: Write
 ---
 
-# PRD Construction
+# PRD Construction — Mutable Discovery Loop
 
-You are in the **PLAN** phase. Build the .prd before any execution begins.
+You are in the **PLAN** phase. Your job is to discover every unknown before execution begins.
 
 **GRAPH POSITION**: `[PLAN] → EXECUTE → EMIT → VERIFY → COMPLETE`
-- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` skill (here).
+- **Entry chain**: prompt-submit hook → `gm` skill → `planning` skill (here).
+- **Also entered**: any time a new unknown surfaces in EXECUTE, EMIT, or VERIFY.
 
 ## TRANSITIONS
 
-**FORWARD (ladders)**:
-- .prd written → invoke `gm-execute` skill to begin EXECUTE
+**FORWARD**:
+- No new mutables discovered in latest pass → .prd is complete → invoke `gm-execute` skill
 
-**BACKWARD (snakes) — when to return here**:
-- From EXECUTE: discovered unknowns require .prd restructure → re-invoke `planning` skill, revise .prd, re-enter EXECUTE
-- From EMIT: scope changed, current .prd items no longer match what needs to be done → re-invoke `planning` skill
-- From VERIFY: end-to-end reveals requirements were wrong → re-invoke `planning` skill, rewrite affected items
+**SELF-LOOP (stay in PLAN)**:
+- Each planning pass may surface new unknowns → add them to .prd → plan again
+- Loop until a full pass produces zero new items
+- Do not advance to EXECUTE while unknowns remain discoverable through reasoning alone
 
-**When to snake back to PLAN**: requirements changed | discovered hidden dependencies | .prd items are wrong/missing | scope expanded beyond current .prd
+**BACKWARD (snakes back here from later phases)**:
+- From EXECUTE: execution reveals an unknown not in .prd → snake here, add it, re-plan
+- From EMIT: scope shifted mid-write → snake here, revise affected items, re-plan
+- From VERIFY: end-to-end reveals requirement was wrong → snake here, rewrite items, re-plan
 
-## Purpose
+## WHAT PLANNING MEANS
 
-The `.prd` is the single source of truth for remaining work. A frozen dependency graph capturing every possible item — steps, substeps, edge cases, corner cases, dependencies, transitive dependencies, unknowns, assumptions, decisions, trade-offs, acceptance criteria, scenarios, failure paths, recovery paths, integration points, state transitions, error conditions, boundary conditions, configuration variants, environment differences, backwards compatibility, rollback paths, verification steps.
+Planning = exhaustive mutable discovery. For every aspect of the task ask:
+- What do I not know? → name it as a mutable
+- What could go wrong? → name it as an edge case item
+- What depends on what? → map blocking/blockedBy
+- What assumptions am I making? → validate each as a mutable
 
-Longer is better. Missing items means missing work.
+**Iterate until**: a full reasoning pass adds zero new items to .prd.
 
-## File Rules
+Categories of unknowns to enumerate: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency | integration points | backwards compatibility | rollback paths | deployment steps | verification criteria
 
-Path: exactly `./.prd` in current working directory. No variants. Valid JSON.
+## .PRD SCHEMA
 
-## Item Schema
+Path: exactly `./.prd` in current working directory. Valid JSON array.
 
 ```json
 {
   "id": "descriptive-kebab-id",
-  "subject": "Imperative verb describing outcome",
+  "subject": "Imperative verb phrase — what must be true when done",
   "status": "pending",
-  "description": "What must be true when this is done",
-  "blocking": ["ids-this-prevents"],
-  "blockedBy": ["ids-that-must-finish-first"],
+  "description": "Precise completion criterion",
+  "blocking": ["ids this prevents from starting"],
+  "blockedBy": ["ids that must complete first"],
   "effort": "small|medium|large",
-  "category": "feature|bug|refactor|docs|infra",
-  "acceptance": ["measurable criteria"],
-  "edge_cases": ["known complications"]
+  "category": "feature|bug|refactor|infra",
+  "acceptance": ["measurable, binary criteria"],
+  "edge_cases": ["known failure modes and boundary conditions"]
 }
 ```
 
-**Subject**: imperative form. **Status**: `pending` → `in_progress` → `completed`. **Effort**: `small` (<15min) | `medium` (<45min) | `large` (1h+). **Blocking/blockedBy**: bidirectional, every dependency explicit.
+**Status flow**: `pending` → `in_progress` → `completed` (completed items are removed from file).
+**Effort**: `small` = single execution, under 15min | `medium` = 2-3 rounds, under 45min | `large` = multiple rounds, over 1h.
+**blocking/blockedBy**: always bidirectional. Every dependency must be explicit in both directions.
 
-## Construction
+## EXECUTION WAVES
 
-1. Enumerate every possible unknown as a work item.
-2. Map every possible dependency (blocking/blockedBy).
-3. Group independent items into parallel waves (max 3 per wave).
-4. Capture every edge case as either a separate item or edge_case field.
-5. Write `./.prd` to disk.
-6. **FREEZE** — no additions after creation. Only mutation: removing finished items.
+Independent items (empty `blockedBy`) run in parallel waves of ≤3 subagents.
+- Find all pending items with empty `blockedBy`
+- Launch ≤3 parallel `gm:gm` subagents via Task tool
+- Each subagent handles one item: resolves it, witnesses output, removes from .prd
+- After each wave: check newly unblocked items, launch next wave
+- Never run independent items sequentially. Never launch more than 3 at once.
 
-## Execution
+## COMPLETION CRITERION
 
-1. Find all `pending` items with empty `blockedBy`.
-2. Launch ≤3 parallel subagents (`subagent_type: gm:gm`) per wave.
-3. Each subagent completes one item, verifies via witnessed execution.
-4. On completion: remove item from `.prd`, write updated file.
-5. Check for newly unblocked items. Launch next wave.
-6. Continue until `.prd` is empty.
+.prd is ready when: one full reasoning pass produces zero new items AND all items have explicit acceptance criteria AND all dependencies are mapped.
 
-Never execute independent items sequentially. Never launch more than 3 at once.
-
-## Completion
-
-`.prd` must be empty at COMPLETE. Skip this skill if task is trivially single-step (under 5 minutes, no dependencies, no unknowns).
+**Skip planning entirely** if: task is single-step, trivially bounded, zero unknowns, under 5 minutes.
 
 ---
 
-**→ FORWARD**: .prd written → invoke `gm-execute` skill.
-**↩ SNAKE**: re-invoke `planning` if requirements change at any later phase.
+**→ FORWARD**: No new mutables → invoke `gm-execute` skill.
+**↺ SELF-LOOP**: New items discovered → add to .prd → plan again.
+**↩ SNAKE here**: New unknown surfaces in any later phase → add it, re-plan, re-advance.
