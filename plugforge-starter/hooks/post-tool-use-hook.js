@@ -100,7 +100,21 @@ function reportIssues(issues) {
   console.log(report);
 }
 
+function cleanupStoppedTasks() {
+  try {
+    const { spawnSync } = require('child_process');
+    const r = spawnSync('pm2', ['jlist'], { encoding: 'utf-8', timeout: 5000 });
+    if (!r.stdout) return;
+    const list = JSON.parse(r.stdout);
+    const stopped = list.filter(p => p.name?.startsWith('gm-exec-task-') && p.pm2_env?.status !== 'online');
+    for (const p of stopped) {
+      spawnSync('pm2', ['delete', p.name], { encoding: 'utf-8', timeout: 5000 });
+    }
+  } catch (e) {}
+}
+
 try {
+  cleanupStoppedTasks();
   const issues = runLinters();
   reportIssues(issues);
 } catch (e) {}
