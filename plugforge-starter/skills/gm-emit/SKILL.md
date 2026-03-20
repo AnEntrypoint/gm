@@ -1,88 +1,101 @@
 ---
 name: gm-emit
-description: EMIT phase. Pre-emit debugging, file writing, post-emit verification. Invoke when all EXECUTE mutables resolved. Snake back from VERIFY if files need fixes.
+description: EMIT phase. Pre-emit debug, write files, post-emit verify from disk. Any new unknown triggers immediate snake back to planning — restart chain.
 ---
 
 # GM EMIT — Writing and Verifying Files
 
-You are in the **EMIT** phase. Every mutable was resolved in EXECUTE. Now prove the write is correct, write, then confirm from disk.
+You are in the **EMIT** phase. Every mutable is KNOWN. Prove the write is correct, write, confirm from disk. Any new unknown = snake to `planning`, restart chain.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
-- **Entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` (here). Also entered via snake from VERIFY.
+- **Entry**: All .prd mutables resolved. Entered from `gm-execute` or via snake from VERIFY.
 
 ## TRANSITIONS
 
-**FORWARD (ladders)**:
-- All gates pass simultaneously → invoke `gm-complete` skill
+**FORWARD**: All gate conditions true simultaneously → invoke `gm-complete` skill
 
-**BACKWARD (snakes) — when to leave this phase**:
-- Pre-emit debugging reveals logic error not caught in EXECUTE → snake back: invoke `gm-execute` skill, re-resolve the broken mutable, return here
-- Post-emit verification shows disk output differs from expected → fix in this phase immediately, do not advance, re-run verification
-- Scope changed mid-emit, .prd items no longer accurate → snake back: invoke `planning` skill to revise .prd
-- From VERIFY: end-to-end reveals broken file → snake back here, fix file, re-verify post-emit, then re-advance to VERIFY
+**SELF-LOOP**: Post-emit variance with known cause → fix immediately, re-verify, do not advance until zero variance
 
-**WHEN TO SNAKE TO EXECUTE**: logic is wrong, needs re-debugging before re-writing
-**WHEN TO SNAKE TO PLAN**: requirements changed, .prd items need restructure
-**WHEN TO STAY HERE**: file written but post-emit verification fails → fix immediately, re-verify
+**BACKWARD**:
+- Pre-emit reveals logic error (known mutable) → invoke `gm-execute` skill, re-resolve, return here
+- Pre-emit reveals new unknown → invoke `planning` skill, restart chain
+- Post-emit variance with unknown cause → invoke `planning` skill, restart chain
+- Scope changed → invoke `planning` skill, restart chain
+- From VERIFY: end-to-end reveals broken file → re-enter here, fix, re-verify, re-advance
 
 ## MUTABLE DISCIPLINE
 
-Each gate condition is a mutable. Pre-emit run = expected value. Post-emit run = current value. Zero variance required. Any unresolved gate = absolute barrier. State-tracking mutables in conversation only, never written to files.
+Each gate condition is a mutable. Pre-emit run witnesses expected value. Post-emit run witnesses current value. Zero variance = resolved. Variance with unknown cause = new unknown = snake to `planning`.
+
+## CODE EXECUTION
+
+**exec:<lang> is the only way to run code.** Bash tool body: `exec:<lang>\n<code>`
+
+`exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`
+
+Only git in bash directly. `Bash(node/npm/npx/bun)` = violations. File writes via exec:nodejs + require('fs').
 
 ## PRE-EMIT DEBUGGING (before writing any file)
 
 1. Import actual module from disk via `exec:nodejs` — witness current on-disk behavior
-2. Run proposed logic in isolation WITHOUT writing any file — witness output with real inputs
-3. Debug failure paths with real error inputs
-4. For browser code: inject `__gm` globals, run interactions, dump captures, verify
+2. Run proposed logic in isolation WITHOUT writing — witness output with real inputs
+3. Debug failure paths with real error inputs — record expected values
 
-`exec:nodejs\nconst { fn } = await import('/abs/path')` — never rewrite logic inline.
+```
+exec:nodejs
+const { fn } = await import('/abs/path/to/module.js');
+console.log(await fn(realInput));
+```
 
-Pre-emit run failing → snake back to `gm-execute` skill, do not write.
+Pre-emit revealing unexpected behavior → new unknown → snake to `planning`.
 
 ## WRITING FILES
 
-Use `exec:nodejs` with `require('fs')`. Write only when every gate mutable is `resolved=true` simultaneously.
+`exec:nodejs` with `require('fs')`. Write only when every gate mutable is `resolved=true` simultaneously.
 
 ## POST-EMIT VERIFICATION (immediately after writing)
 
-1. Load actual modified file from disk via real import — not in-memory version
-2. Output must match pre-emit run exactly — any variance = regression
+1. Re-import the actual file from disk — not in-memory version
+2. Run same inputs as pre-emit — output must match exactly
 3. For browser: reload from disk, re-inject `__gm` globals, re-run, compare captures
-4. Variance → fix immediately, re-verify. Never advance with variance.
+4. Known variance → fix and re-verify | Unknown variance → snake to `planning`
 
-## GATE CONDITIONS (all must be true simultaneously)
+## GATE CONDITIONS (all true simultaneously before advancing)
 
-- Pre-emit run passed with real inputs and real error inputs
-- Post-emit verification matches pre-emit run exactly
+- Pre-emit debug passed with real inputs and error inputs
+- Post-emit verification matches pre-emit exactly
 - Hot reloadable: state outside reloadable modules, handlers swap atomically
 - Crash-proof: catch at every boundary, recovery hierarchy
 - No mocks/fakes/stubs anywhere
-- Files ≤200 lines
-- No duplicate code, no comments, no hardcoded values
-- Docs-code sync: CLAUDE.md reflects actual behavior
+- Files ≤200 lines, no duplicate code, no comments, no hardcoded values
+- CLAUDE.md reflects actual behavior
 
-## TOOL REFERENCE
+## CODEBASE EXPLORATION
 
-**`exec:<lang>`** — Bash tool: `exec:<lang>\n<code>`. `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`. Only git directly in bash.
+```
+exec:codesearch
+<natural language description>
+```
 
-**`agent-browser`** — Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
+Alias: `exec:search`. Glob, Grep, Explore = blocked.
 
-**`code-search`** — Invoke `code-search` skill. Glob/Grep/Explore blocked.
+## BROWSER DEBUGGING
+
+Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
 
 ## SELF-CHECK (before and after each file)
 
-File ≤200 lines | No duplication | Pre-emit run passed | No mocks | No comments | Docs match | All spotted issues fixed immediately
+File ≤200 lines | No duplication | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
 
 ## CONSTRAINTS
 
-**Never**: write before pre-emit run passes | advance with post-emit variance | skip doc sync | defer spotted issues | comments in code | hardcoded values
+**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | defer spotted issues
 
-**Always**: pre-emit debug before writing | post-emit verify after writing | dual-side for full-stack | fix immediately | snake back when blocked
+**Always**: pre-emit debug before writing | post-emit verify from disk | snake to planning on any new unknown | fix immediately
 
 ---
 
 **→ FORWARD**: All gates pass → invoke `gm-complete` skill.
-**↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
-**↩ SNAKE to PLAN**: scope changed → invoke `planning` skill.
-**↩ SNAKE from VERIFY**: file broken → fix here, re-verify, re-advance.
+**↺ SELF-LOOP**: Known post-emit variance → fix, re-verify.
+**↩ SNAKE to EXECUTE**: Known logic error → invoke `gm-execute` skill.
+**↩ SNAKE to PLAN**: Any new unknown → invoke `planning` skill, restart chain.

@@ -1,85 +1,97 @@
 ---
 name: gm-complete
-description: VERIFY and COMPLETE phase. End-to-end system verification, git enforcement, completion gate. Invoke after EMIT gates pass. Snake back to EMIT or EXECUTE if verification reveals failures.
+description: VERIFY and COMPLETE phase. End-to-end system verification and git enforcement. Any new unknown triggers immediate snake back to planning — restart chain.
 ---
 
 # GM COMPLETE — Verification and Completion
 
-You are in the **VERIFY → COMPLETE** phase. Files are written. Now prove the whole system works and enforce git discipline.
+You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole system works end-to-end. Any new unknown = snake to `planning`, restart chain.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY → COMPLETE]`
-- **Entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` → `gm-complete` (here).
+- **Entry**: All EMIT gates passed. Entered from `gm-emit`.
 
 ## TRANSITIONS
 
-**FORWARD (ladders)**:
-- .prd items remain → invoke `gm-execute` skill for next wave (new items unblocked)
+**FORWARD**:
+- .prd items remain → invoke `gm-execute` skill (next wave)
 - .prd empty + git clean + all pushed → COMPLETE
 
-**BACKWARD (snakes) — when to leave this phase**:
-- End-to-end reveals broken file (wrong output, crash, bad structure) → snake back: invoke `gm-emit` skill, fix and re-verify the file, return here
-- End-to-end reveals logic error not a file issue (wrong algorithm, missing step) → snake back: invoke `gm-execute` skill, re-resolve mutables, re-emit, return here
-- End-to-end reveals requirements were wrong → snake back: invoke `planning` skill, revise .prd, restart cycle
+**BACKWARD**:
+- Verification reveals broken file output → invoke `gm-emit` skill, fix, re-verify, return
+- Verification reveals logic error → invoke `gm-execute` skill, re-resolve, re-emit, return
+- Verification reveals new unknown → invoke `planning` skill, restart chain
+- Verification reveals requirements wrong → invoke `planning` skill, restart chain
 
-**WHEN TO SNAKE TO EMIT**: output is wrong but the logic was right — file needs rewriting
-**WHEN TO SNAKE TO EXECUTE**: algorithm is wrong — needs re-debugging before re-writing
-**WHEN TO SNAKE TO PLAN**: requirements changed or were misunderstood
+**TRIAGE on failure**: broken file output → snake to `gm-emit` | wrong logic → snake to `gm-execute` | new unknown or wrong requirements → snake to `planning`
+
+**RULE**: Any surprise = new unknown = snake to `planning`. Never patch around surprises.
 
 ## MUTABLE DISCIPLINE
 
-- `witnessed_execution=UNKNOWN` until real end-to-end run produces witnessed output
-- `git_clean=UNKNOWN` until `git status --porcelain` returns empty
-- `git_pushed=UNKNOWN` until `git rev-list --count @{u}..HEAD` returns 0
+- `witnessed_e2e=UNKNOWN` until real end-to-end run produces witnessed output
+- `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
+- `git_pushed=UNKNOWN` until `exec:bash\ngit rev-list --count @{u}..HEAD` returns 0
 - `prd_empty=UNKNOWN` until .prd has zero items
 
-All four must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier. Trigger a snake if stuck.
+All four must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
 ## END-TO-END VERIFICATION
 
-Run the real system. Witness it working with real data and real interactions.
+Run the real system with real data. Witness actual output.
 
-Verification = witnessed system output. NOT verification: marker files, docs updates, status text, saying done, screenshots alone.
+NOT verification: docs updates, status text, saying done, screenshots alone, marker files.
 
-- `exec:nodejs` with real imports and real data — witness success paths and failure paths
-- For browser/UI: `agent-browser` skill with real workflows
-- Dual-side: server + client features require both `exec:nodejs` AND `agent-browser`
+```
+exec:nodejs
+const { fn } = await import('/abs/path/to/module.js');
+console.log(await fn(realInput));
+```
 
-If verification fails: identify whether it's a file issue (→ snake to EMIT) or logic issue (→ snake to EXECUTE).
+For browser/UI: invoke `agent-browser` skill with real workflows. Server + client features require both exec:nodejs AND agent-browser. After every success: enumerate what remains — never stop at first green.
 
-## TOOL REFERENCE
+## CODE EXECUTION
 
-**`exec:<lang>`** — Bash tool: `exec:<lang>\n<code>`. `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`. Only git directly in bash.
+**exec:<lang> is the only way to run code.** Bash tool body: `exec:<lang>\n<code>`
 
-**`agent-browser`** — Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
+`exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`
 
-**`process-management`** — Invoke `process-management` skill. Clean up all processes before COMPLETE. Orphaned PM2 = gate violation.
+Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<id>`, `exec:close\n<id>`. Runner: `exec:runner\nstart|stop|status`. All activity visible in `pm2 list` and `pm2 monit` in user terminal.
+
+## CODEBASE EXPLORATION
+
+```
+exec:codesearch
+<natural language description>
+```
 
 ## GIT ENFORCEMENT
 
-All changes committed AND pushed before COMPLETE.
+```
+exec:bash
+git status --porcelain
+```
+Must return empty.
 
-1. `exec:bash\ngit status --porcelain` → must be empty
-2. `exec:bash\ngit rev-list --count @{u}..HEAD` → must be 0
-3. If not: `git add -A` → `git commit -m "..."` → `git push` → re-verify both
-
-Local commit without push ≠ complete.
+```
+exec:bash
+git rev-list --count @{u}..HEAD
+```
+Must return 0. If not: stage → commit → push → re-verify. Local commit without push ≠ complete.
 
 ## COMPLETION DEFINITION
 
-All of: witnessed end-to-end execution | every failure path debugged | `user_steps_remaining=0` | .prd empty | git clean and pushed | all processes cleaned up
-
-Do not stop when it first works. Enumerate what remains after every success. Execute all remaining items.
+All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | `user_steps_remaining=0`
 
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed execution | uncommitted changes | unpushed commits | .prd items remaining | orphaned processes | handoffs to user | stop at first green
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | .prd items remaining | stop at first green | absorb surprises silently
 
-**Always**: witness end-to-end | git commit + push + verify | empty .prd before done | clean processes | enumerate remaining after every success | snake back on failure
+**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success
 
 ---
 
-**→ FORWARD**: .prd items remain → invoke `gm-execute` skill for next wave.
+**→ FORWARD**: .prd items remain → invoke `gm-execute` skill.
 **→ DONE**: .prd empty + git clean → COMPLETE.
-**↩ SNAKE to EMIT**: file broken → invoke `gm-emit` skill.
+**↩ SNAKE to EMIT**: file output wrong → invoke `gm-emit` skill.
 **↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
-**↩ SNAKE to PLAN**: requirements wrong → invoke `planning` skill.
+**↩ SNAKE to PLAN**: new unknown or wrong requirements → invoke `planning` skill, restart chain.
