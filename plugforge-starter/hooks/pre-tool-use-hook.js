@@ -92,7 +92,7 @@ const run = () => {
           if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
           return 'nodejs';
         };
-        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner' };
+        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type' };
         const lang = aliases[rawLang] || rawLang || detectLang(code);
         const IS_WIN = process.platform === 'win32';
         const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
@@ -151,6 +151,13 @@ const run = () => {
           const r = spawnSync('bun', ['x', 'gm-exec', 'runner', sub], { encoding: 'utf-8', timeout: 15000 });
           return allowWithNoop(`exec:runner output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
         }
+        if (lang === 'type') {
+          const lines = safeCode.split(/\r?\n/);
+          const taskId = lines[0].trim();
+          const input = lines.slice(1).join('\n').trim();
+          const r = spawnSync('bun', ['x', 'gm-exec', 'type', taskId, input], { encoding: 'utf-8', timeout: 15000 });
+          return allowWithNoop(`exec:type output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
+        }
         try {
           let result;
           if (lang === 'bash') {
@@ -181,7 +188,7 @@ const run = () => {
       if (!/^exec(\s|:)/.test(command) && !/^bun x gm-exec(@[^\s]*)?(\s|$)/.test(command) && !/^git /.test(command) && !/^bun x codebasesearch/.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb/.test(command) && !/^bun install --cwd \/config\/.gmweb/.test(command)) {
         let helpText = '';
         try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000 }).toString().trim(); } catch (e) {}
-        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.`);
+        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:type\n  <task_id>\n  <input to send to stdin>\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.`);
       }
     }
 
