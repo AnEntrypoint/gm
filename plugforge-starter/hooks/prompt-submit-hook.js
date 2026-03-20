@@ -7,7 +7,24 @@ if (process.env.AGENTGUI_SUBPROCESS === '1') {
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const os = require('os');
+const { execSync, spawnSync } = require('child_process');
+
+const IS_WIN = process.platform === 'win32';
+const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
+
+function localBin(name) {
+  const ext = IS_WIN ? '.exe' : '';
+  return path.join(TOOLS_DIR, 'node_modules', '.bin', name + ext);
+}
+
+function runLocal(name, args, opts = {}) {
+  const bin = localBin(name);
+  if (fs.existsSync(bin)) {
+    return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+  }
+  return spawnSync('bun', ['x', name, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+}
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
@@ -26,26 +43,21 @@ const ensureGitignore = () => {
 
 const runThorns = () => {
   if (!projectDir || !fs.existsSync(projectDir)) return '';
-  const localThorns = path.join(process.env.HOME || '/root', 'mcp-thorns', 'index.js');
-  const thornsBin = fs.existsSync(localThorns) ? `node ${localThorns}` : 'bun x mcp-thorns@latest';
   try {
-    const out = execSync(`${thornsBin} ${projectDir}`, {
-      encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000, killSignal: 'SIGTERM'
-    });
-    return `=== mcp-thorns ===\n${out.trim()}`;
+    const r = runLocal('mcp-thorns', [projectDir], { timeout: 15000 });
+    const out = ((r.stdout || '') + (r.stderr || '')).trim();
+    return out ? `=== mcp-thorns ===\n${out}` : '';
   } catch (e) {
-    return e.killed ? '=== mcp-thorns ===\nSkipped (timeout)' : '';
+    return '';
   }
 };
 
 const runCodeSearch = (prompt) => {
   if (!prompt || !projectDir) return '';
   try {
-    const out = execSync(`bun x codebasesearch ${JSON.stringify(prompt)}`, {
-      encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000, killSignal: 'SIGTERM',
-      cwd: projectDir
-    });
-    return `=== codebasesearch ===\n${out.trim()}`;
+    const r = runLocal('codebasesearch', [prompt], { timeout: 10000, cwd: projectDir });
+    const out = ((r.stdout || '') + (r.stderr || '')).trim();
+    return out ? `=== codebasesearch ===\n${out}` : '';
   } catch (e) {
     return '';
   }
@@ -67,7 +79,7 @@ const emit = (additionalContext) => {
 try {
   let prompt = '';
   try {
-    const input = JSON.parse(fs.readFileSync('/dev/stdin', 'utf-8'));
+    const input = JSON.parse(fs.readFileSync(0, 'utf-8'));
     prompt = input.prompt || input.message || input.userMessage || '';
   } catch (e) {}
 
