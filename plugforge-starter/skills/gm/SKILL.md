@@ -73,7 +73,7 @@ exec:runner
 start|stop|status
 ```
 
-`exec:runner start` launches a single PM2 process (`gm-exec-runner`) that hosts all execution as worker threads inside it. Individual `exec:<lang>` calls are worker threads — they do NOT appear as separate entries in `pm2 list`. Only the runner process is visible. Use `exec:runner status` to check it.
+`exec:runner start` launches the `gm-exec-runner` PM2 process. Each `exec:<lang>` call creates its own `gm-exec-task-{id}` PM2 process — all appear in `pm2 list`. Use `exec:runner status` to check the runner. Use `exec:pm2list` to see all processes including exec tasks.
 
 ## CODEBASE EXPLORATION
 
