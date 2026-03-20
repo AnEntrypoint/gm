@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.GEMINI_PROJECT_DIR || process.env.OC_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT;
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 const ensureGitignore = () => {
@@ -30,23 +29,7 @@ ensureGitignore();
 try {
   let outputs = [];
 
-  if (pluginRoot) {
-    const gmMdPath = path.join(pluginRoot, '/agents/gm.md');
-    try {
-      const gmMdContent = fs.readFileSync(gmMdPath, 'utf-8');
-      outputs.push(gmMdContent);
-    } catch (e) {}
-  }
-
-  const codeSearchContext = `## Semantic Code Search Available
-
-Describe what you need in plain language to search the codebase:
-- "Find authentication validation" locates auth checks, guards, permission logic
-- "Where is database initialization?" finds connection setup, migrations, schemas
-- "Show error handling patterns" discovers try/catch patterns, error boundaries
-
-Use the code-search skill for all codebase exploration.`;
-  outputs.push(codeSearchContext);
+  outputs.push('Invoke the `gm` skill to begin. All code execution uses exec:<lang> via the Bash tool — never direct Bash(node ...) or Bash(npm ...) or Bash(npx ...).');
 
   if (projectDir && fs.existsSync(projectDir)) {
     try {
@@ -73,7 +56,6 @@ Use the code-search skill for all codebase exploration.`;
       }
     }
   }
-  outputs.push('Use gm as a philosophy to coordinate all plans and the gm subagent to create and execute all plans');
   const additionalContext = outputs.join('\n\n');
 
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;

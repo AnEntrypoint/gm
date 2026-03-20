@@ -1,84 +1,88 @@
 ---
 name: gm-emit
-description: EMIT phase gate validation, pre/post-emit testing, code quality enforcement. Invoke when all EXECUTE mutables resolved and ready to write files.
+description: EMIT phase. Pre-emit debugging, file writing, post-emit verification. Invoke when all EXECUTE mutables resolved. Snake back from VERIFY if files need fixes.
 ---
 
-# GM EMIT — Gate Validation and File Writing
+# GM EMIT — Writing and Verifying Files
 
-You are in the **EMIT** phase. All mutables were resolved in EXECUTE. Now validate, write, and verify files.
+You are in the **EMIT** phase. Every mutable was resolved in EXECUTE. Now prove the write is correct, write, then confirm from disk.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
-- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` skill (here). The `gm` skill contract is active: state machine, mutable discipline, ground truth only, all transitions invoke named skills.
-- **Entry**: All EXECUTE mutables resolved to KNOWN via witnessed execution. .prd items are scoped and proven.
-- **Exit**: Files written, post-emit validation passes, all gate conditions true simultaneously → invoke `gm-complete` skill.
-- **Rollback**: If post-emit validation fails → fix immediately in this phase, do not advance.
+- **Entry chain**: prompt-submit hook → `gm` skill → `planning` → `gm-execute` → `gm-emit` (here). Also entered via snake from VERIFY.
+
+## TRANSITIONS
+
+**FORWARD (ladders)**:
+- All gates pass simultaneously → invoke `gm-complete` skill
+
+**BACKWARD (snakes) — when to leave this phase**:
+- Pre-emit debugging reveals logic error not caught in EXECUTE → snake back: invoke `gm-execute` skill, re-resolve the broken mutable, return here
+- Post-emit verification shows disk output differs from expected → fix in this phase immediately, do not advance, re-run verification
+- Scope changed mid-emit, .prd items no longer accurate → snake back: invoke `planning` skill to revise .prd
+- From VERIFY: end-to-end reveals broken file → snake back here, fix file, re-verify post-emit, then re-advance to VERIFY
+
+**WHEN TO SNAKE TO EXECUTE**: logic is wrong, needs re-debugging before re-writing
+**WHEN TO SNAKE TO PLAN**: requirements changed, .prd items need restructure
+**WHEN TO STAY HERE**: file written but post-emit verification fails → fix immediately, re-verify
 
 ## MUTABLE DISCIPLINE
 
-Each gate condition is a mutable that must resolve to `true` before files are written. Pre-emit test results = expected values. Post-emit test results = current values. Zero variance required. Unresolved gate mutable = absolute barrier to VERIFY phase. State-tracking mutables live in conversation only. Never written to files.
+Each gate condition is a mutable. Pre-emit run = expected value. Post-emit run = current value. Zero variance required. Any unresolved gate = absolute barrier. State-tracking mutables in conversation only, never written to files.
 
-## PRE-EMIT-TEST (before writing any file)
+## PRE-EMIT DEBUGGING (before writing any file)
 
-1. Import the actual module from disk via `exec:nodejs`, witness current on-disk behavior
-2. Execute proposed logic in isolation — WITHOUT writing to any file
-3. Witness correct output with real inputs. Test failure paths with real error inputs.
+1. Import actual module from disk via `exec:nodejs` — witness current on-disk behavior
+2. Run proposed logic in isolation WITHOUT writing any file — witness output with real inputs
+3. Debug failure paths with real error inputs
 4. For browser code: inject `__gm` globals, run interactions, dump captures, verify
 
-Always: `exec:nodejs\nconst { fn } = await import('/abs/path')` — never rewrite logic inline.
+`exec:nodejs\nconst { fn } = await import('/abs/path')` — never rewrite logic inline.
+
+Pre-emit run failing → snake back to `gm-execute` skill, do not write.
 
 ## WRITING FILES
 
-Use `exec:nodejs` with `require('fs')` for all file operations. Write all files only when every gate mutable is `resolved=true` simultaneously.
+Use `exec:nodejs` with `require('fs')`. Write only when every gate mutable is `resolved=true` simultaneously.
 
-## POST-EMIT-VALIDATION (immediately after writing)
+## POST-EMIT VERIFICATION (immediately after writing)
 
 1. Load actual modified file from disk via real import — not in-memory version
-2. Output must match PRE-EMIT-TEST witnessed output exactly
-3. For browser: reload from disk, re-inject `__gm` globals, re-run interactions, compare captures
-4. Any variance = regression, fix immediately before proceeding
+2. Output must match pre-emit run exactly — any variance = regression
+3. For browser: reload from disk, re-inject `__gm` globals, re-run, compare captures
+4. Variance → fix immediately, re-verify. Never advance with variance.
 
 ## GATE CONDITIONS (all must be true simultaneously)
 
-- Executed via `exec:<lang>` or `agent-browser` — witnessed real output
-- Every scenario tested: success, failure, edge, corner, error, recovery
-- Real witnessed output proves goal achieved
+- Pre-emit run passed with real inputs and real error inputs
+- Post-emit verification matches pre-emit run exactly
 - Hot reloadable: state outside reloadable modules, handlers swap atomically
-- Crash-proof: catch at every boundary, recovery hierarchy, every component supervised
-- No mocks/fakes/stubs anywhere in codebase
-- Files ≤200 lines each
-- No duplicate code
-- No comments in code
-- No hardcoded values
-- Docs-code sync: CLAUDE.md reflects actual code behavior
+- Crash-proof: catch at every boundary, recovery hierarchy
+- No mocks/fakes/stubs anywhere
+- Files ≤200 lines
+- No duplicate code, no comments, no hardcoded values
+- Docs-code sync: CLAUDE.md reflects actual behavior
 
 ## TOOL REFERENCE
 
-**`exec:<lang>`** — Bash tool: `exec:<lang>\n<code>`. Languages: `exec:nodejs` (default) | `exec:python` | `exec:bash` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`. Lang auto-detected. `cwd` sets directory. File I/O via exec:nodejs with require('fs'). Bash: only git directly.
+**`exec:<lang>`** — Bash tool: `exec:<lang>\n<code>`. `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`. Only git directly in bash.
 
-**`agent-browser`** — Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` first → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
+**`agent-browser`** — Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
 
-**`code-search`** — Invoke `code-search` skill. MANDATORY for all exploration. Glob/Grep/Explore blocked.
-
-## DUAL-SIDE VALIDATION
-
-Backend proven with `exec:nodejs`, frontend with `agent-browser` + `__gm`. Neither substitutes. Single-side = UNKNOWN mutable = blocked gate.
+**`code-search`** — Invoke `code-search` skill. Glob/Grep/Explore blocked.
 
 ## SELF-CHECK (before and after each file)
 
-1. File ≤200 lines | 2. No duplicate code | 3. Pre-emit test passed | 4. No mocks | 5. No comments | 6. Docs match code | 7. All spotted issues fixed
+File ≤200 lines | No duplication | Pre-emit run passed | No mocks | No comments | Docs match | All spotted issues fixed immediately
 
-Score = 100 - (T0_violations×50) - (T1_violations×20) - (T2_violations×5). Target ≥95.
+## CONSTRAINTS
 
-## GROUND TRUTH
+**Never**: write before pre-emit run passes | advance with post-emit variance | skip doc sync | defer spotted issues | comments in code | hardcoded values
 
-Real services only. On discovering mocks/fakes/stubs: delete immediately, implement real paths.
-
-## CONSTRAINTS (EMIT-PHASE)
-
-**Never**: skip pre-emit testing | skip post-emit validation | leave docs-code desync | defer spotted issues | advance with failing gate | comments in code | hardcoded values
-
-**Always**: pre-emit test before writing | post-emit validate after writing | dual-side for full-stack | self-check every file | reconcile docs | fix immediately
+**Always**: pre-emit debug before writing | post-emit verify after writing | dual-side for full-stack | fix immediately | snake back when blocked
 
 ---
 
-**→ NEXT**: When all gate conditions pass → invoke `gm-complete` skill for end-to-end verification and git enforcement.
+**→ FORWARD**: All gates pass → invoke `gm-complete` skill.
+**↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
+**↩ SNAKE to PLAN**: scope changed → invoke `planning` skill.
+**↩ SNAKE from VERIFY**: file broken → fix here, re-verify, re-advance.

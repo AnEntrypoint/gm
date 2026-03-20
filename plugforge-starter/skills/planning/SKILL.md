@@ -9,13 +9,23 @@ allowed-tools: Write
 You are in the **PLAN** phase. Build the .prd before any execution begins.
 
 **GRAPH POSITION**: `[PLAN] → EXECUTE → EMIT → VERIFY → COMPLETE`
-- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` skill (here). The `gm` skill contract is active: state machine, mutable discipline, all transitions invoke named skills, no fake data.
-- **Entry**: No work begins until .prd exists on disk. This is the first tool-calling phase.
-- **Exit**: .prd written to disk → invoke `gm-execute` skill to begin EXECUTE phase.
+- **Session entry chain**: prompt-submit hook → `gm` skill → `planning` skill (here).
+
+## TRANSITIONS
+
+**FORWARD (ladders)**:
+- .prd written → invoke `gm-execute` skill to begin EXECUTE
+
+**BACKWARD (snakes) — when to return here**:
+- From EXECUTE: discovered unknowns require .prd restructure → re-invoke `planning` skill, revise .prd, re-enter EXECUTE
+- From EMIT: scope changed, current .prd items no longer match what needs to be done → re-invoke `planning` skill
+- From VERIFY: end-to-end reveals requirements were wrong → re-invoke `planning` skill, rewrite affected items
+
+**When to snake back to PLAN**: requirements changed | discovered hidden dependencies | .prd items are wrong/missing | scope expanded beyond current .prd
 
 ## Purpose
 
-The `.prd` is the single source of truth for remaining work. A frozen dependency graph capturing every possible item — steps, substeps, edge cases, corner cases, dependencies, transitive dependencies, unknowns, assumptions, decisions, trade-offs, acceptance criteria, scenarios, failure paths, recovery paths, integration points, state transitions, race conditions, concurrency concerns, error conditions, boundary conditions, configuration variants, environment differences, platform concerns, backwards compatibility, rollback paths, verification steps.
+The `.prd` is the single source of truth for remaining work. A frozen dependency graph capturing every possible item — steps, substeps, edge cases, corner cases, dependencies, transitive dependencies, unknowns, assumptions, decisions, trade-offs, acceptance criteria, scenarios, failure paths, recovery paths, integration points, state transitions, error conditions, boundary conditions, configuration variants, environment differences, backwards compatibility, rollback paths, verification steps.
 
 Longer is better. Missing items means missing work.
 
@@ -40,10 +50,7 @@ Path: exactly `./.prd` in current working directory. No variants. Valid JSON.
 }
 ```
 
-**Subject**: imperative form — "Fix auth bug", "Add webhook support". Never "Bug: auth".
-**Status**: `pending` → `in_progress` → `completed`. No other values.
-**Effort**: `small` (<15min) | `medium` (<45min) | `large` (1h+).
-**Blocking/blockedBy**: bidirectional. Every dependency explicit.
+**Subject**: imperative form. **Status**: `pending` → `in_progress` → `completed`. **Effort**: `small` (<15min) | `medium` (<45min) | `large` (1h+). **Blocking/blockedBy**: bidirectional, every dependency explicit.
 
 ## Construction
 
@@ -67,12 +74,9 @@ Never execute independent items sequentially. Never launch more than 3 at once.
 
 ## Completion
 
-`.prd` must be empty at COMPLETE. The stop hook blocks session end when items remain.
-
-## Do Not Use
-
-Skip this skill if the task is trivially single-step (under 5 minutes, no dependencies, no unknowns).
+`.prd` must be empty at COMPLETE. Skip this skill if task is trivially single-step (under 5 minutes, no dependencies, no unknowns).
 
 ---
 
-**→ NEXT**: .prd written → invoke `gm-execute` skill to begin EXECUTE phase.
+**→ FORWARD**: .prd written → invoke `gm-execute` skill.
+**↩ SNAKE**: re-invoke `planning` if requirements change at any later phase.
