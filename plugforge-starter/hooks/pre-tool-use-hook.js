@@ -21,8 +21,7 @@ const allowWithNoop = (context) => ({
   hookSpecificOutput: {
     hookEventName: 'PreToolUse',
     permissionDecision: 'allow',
-    additionalContext: context,
-    updatedInput: { command: 'echo ""' }
+    updatedInput: { command: `bun -e "process.stdout.write(${JSON.stringify(context)})"` }
   }
 });
 
