@@ -369,6 +369,9 @@ try {
   try { ocConfig = JSON.parse(fs.readFileSync(ocJsonPath, 'utf-8')); } catch (e) {}
   delete ocConfig.mcp;
   ocConfig.default_agent = 'gm';
+  const pluginMjsPath = path.join(ocConfigDir, 'plugins', 'gm-oc.mjs');
+  if (!Array.isArray(ocConfig.plugin)) ocConfig.plugin = [];
+  if (!ocConfig.plugin.includes(pluginMjsPath)) ocConfig.plugin.push(pluginMjsPath);
   fs.writeFileSync(ocJsonPath, JSON.stringify(ocConfig, null, 2) + '\\n');
 
   const oldDir = process.platform === 'win32'
@@ -421,10 +424,10 @@ try {
   delete kiloConfig.mcp;
   kiloConfig['$schema'] = 'https://kilo.ai/config.json';
   kiloConfig.default_agent = 'gm';
-  if (Array.isArray(kiloConfig.plugin)) {
-    kiloConfig.plugin = kiloConfig.plugin.filter(p => !path.isAbsolute(p) && !p.startsWith('C:') && !p.startsWith('/'));
-    if (kiloConfig.plugin.length === 0) delete kiloConfig.plugin;
-  }
+  const kiloPluginPath = path.join(kiloConfigDir, 'plugins', 'gm-kilo.mjs');
+  if (!Array.isArray(kiloConfig.plugin)) kiloConfig.plugin = [];
+  kiloConfig.plugin = kiloConfig.plugin.filter(p => !p.includes('gm-kilo'));
+  kiloConfig.plugin.push(kiloPluginPath);
   fs.writeFileSync(kiloJsonPath, JSON.stringify(kiloConfig, null, 2) + '\\n');
 
   const oldDir = process.platform === 'win32'
