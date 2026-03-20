@@ -88,6 +88,12 @@ const run = () => {
         const r = spawnSync('bun', ['x', 'gm-exec', 'pm2list'], { encoding: 'utf-8', timeout: 15000 });
         return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
       }
+      if (/^exec:pm2logs(\s|$)/.test(command)) {
+        const args = command.replace(/^exec:pm2logs\s*/, '').trim();
+        const pmArgs = args ? ['logs', '--nostream', '--lines', '50', args] : ['logs', '--nostream', '--lines', '50'];
+        const r = spawnSync('pm2', pmArgs, { encoding: 'utf-8', timeout: 15000 });
+        return allowWithNoop(`exec:pm2logs output:\n\n${stripFooter((r.stdout || '') + (r.stderr || '')) || '(no logs)'}`);
+      }
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
       if (execMatch) {
         const rawLang = (execMatch[1] || '').toLowerCase();
