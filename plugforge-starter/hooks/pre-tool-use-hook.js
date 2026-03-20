@@ -17,13 +17,16 @@ const allow = (additionalContext) => ({
 const deny = (reason) => isGemini
   ? { decision: 'deny', reason }
   : { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
-const allowWithNoop = (context) => ({
-  hookSpecificOutput: {
-    hookEventName: 'PreToolUse',
-    permissionDecision: 'allow',
-    updatedInput: { command: `bun -e "process.stdout.write(${JSON.stringify(context)})"` }
-  }
-});
+const allowWithNoop = (context) => {
+  const b64 = Buffer.from(context, 'utf-8').toString('base64');
+  return {
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'allow',
+      updatedInput: { command: `bun -e "process.stdout.write(Buffer.from('${b64}','base64').toString())"` }
+    }
+  };
+};
 
 const run = () => {
   try {
