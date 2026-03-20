@@ -18,12 +18,17 @@ const deny = (reason) => isGemini
   ? { decision: 'deny', reason }
   : { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
 const allowWithNoop = (context) => {
-  const b64 = Buffer.from(context, 'utf-8').toString('base64');
+  const tmp = path.join(os.tmpdir(), `gm-out-${Date.now()}.txt`);
+  fs.writeFileSync(tmp, context, 'utf-8');
+  const IS_WIN = process.platform === 'win32';
+  const cmd = IS_WIN
+    ? `powershell -NoProfile -NonInteractive -Command "Get-Content -Raw '${tmp}'; Remove-Item '${tmp}'"`
+    : `cat '${tmp}'; rm -f '${tmp}'`;
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'allow',
-      updatedInput: { command: `bun -e "process.stdout.write(Buffer.from('${b64}','base64').toString())"` }
+      updatedInput: { command: cmd }
     }
   };
 };
