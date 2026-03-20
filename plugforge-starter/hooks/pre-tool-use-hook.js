@@ -78,6 +78,11 @@ const run = () => {
 
     if (tool_name === 'Bash') {
       const command = (tool_input?.command || '').trim();
+      const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
+      if (/^exec:pm2list\s*$/.test(command)) {
+        const r = spawnSync('bun', ['x', 'gm-exec', 'pm2list'], { encoding: 'utf-8', timeout: 15000 });
+        return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
+      }
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
       if (execMatch) {
         const rawLang = (execMatch[1] || '').toLowerCase();
@@ -92,10 +97,9 @@ const run = () => {
           if (/^\s*(echo |ls |cd |mkdir |rm |cat |grep |find |export |source |#!)/.test(src)) return 'bash';
           return 'nodejs';
         };
-        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type' };
+        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'bash', ps1: 'bash', cmd: 'bash', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type', pm2list: 'pm2list' };
         const lang = aliases[rawLang] || rawLang || detectLang(code);
         const IS_WIN = process.platform === 'win32';
-        const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: IS_WIN ? 'ps1' : 'sh', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
         const spawnDirect = (bin, args, stdin) => {
           const opts = { encoding: 'utf-8', timeout: 60000, ...(cwd && { cwd }), ...(stdin !== undefined && { input: stdin }) };
@@ -157,6 +161,10 @@ const run = () => {
           const input = lines.slice(1).join('\n').trim();
           const r = spawnSync('bun', ['x', 'gm-exec', 'type', taskId, input], { encoding: 'utf-8', timeout: 15000 });
           return allowWithNoop(`exec:type output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
+        }
+        if (lang === 'pm2list') {
+          const r = spawnSync('bun', ['x', 'gm-exec', 'pm2list'], { encoding: 'utf-8', timeout: 15000 });
+          return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
         }
         try {
           let result;
