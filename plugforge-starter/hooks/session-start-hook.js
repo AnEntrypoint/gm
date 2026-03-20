@@ -2,7 +2,44 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const os = require('os');
+const { spawnSync } = require('child_process');
+
+const IS_WIN = process.platform === 'win32';
+const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
+
+function localBin(name) {
+  const ext = IS_WIN ? '.exe' : '';
+  return path.join(TOOLS_DIR, 'node_modules', '.bin', name + ext);
+}
+
+function runLocal(name, args, opts = {}) {
+  const bin = localBin(name);
+  if (fs.existsSync(bin)) {
+    return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+  }
+  return spawnSync('bun', ['x', name, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+}
+
+const MANAGED_PKGS = ['gm-exec', 'codebasesearch', 'mcp-thorns', 'agent-browser'];
+const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
+
+function ensureTools() {
+  try { fs.mkdirSync(TOOLS_DIR, { recursive: true }); } catch {}
+  if (!fs.existsSync(PKG_JSON)) {
+    try { fs.writeFileSync(PKG_JSON, JSON.stringify({ name: 'gm-tools', version: '1.0.0', private: true })); } catch {}
+  }
+  const missing = MANAGED_PKGS.filter(p => !fs.existsSync(localBin(p)));
+  if (missing.length > 0) {
+    try {
+      spawnSync('bun', ['add', ...missing.map(p => p + '@latest')], {
+        cwd: TOOLS_DIR, encoding: 'utf8', timeout: 180000, windowsHide: true
+      });
+    } catch {}
+  }
+}
+
+ensureTools();
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
@@ -33,28 +70,12 @@ try {
 
   if (projectDir && fs.existsSync(projectDir)) {
     try {
-      let thornOutput;
-      try {
-        thornOutput = execSync(`bun x mcp-thorns@latest`, {
-          encoding: 'utf-8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-          cwd: projectDir,
-          timeout: 15000,
-          killSignal: 'SIGTERM'
-        });
-      } catch (bunErr) {
-        thornOutput = bunErr.killed
-          ? '=== mcp-thorns ===\nSkipped (timeout)'
-          : `=== mcp-thorns ===\nSkipped (error: ${bunErr.message.split('\n')[0]})`;
+      const r = runLocal('mcp-thorns', [projectDir], { timeout: 15000 });
+      const thornOutput = ((r.stdout || '') + (r.stderr || '')).trim();
+      if (thornOutput) {
+        outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
       }
-      outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
-    } catch (e) {
-      if (e.killed && e.signal === 'SIGTERM') {
-        outputs.push(`=== mcp-thorns ===\nSkipped (3min timeout)`);
-      } else {
-        outputs.push(`=== mcp-thorns ===\nSkipped (error: ${e.message.split('\n')[0]})`);
-      }
-    }
+    } catch (e) {}
   }
   const additionalContext = outputs.join('\n\n');
 
