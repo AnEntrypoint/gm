@@ -1,7 +1,6 @@
 ---
 name: gm
-description: Immutable programming state machine. Root orchestrator. Invoke for all work coordination.
-agent: true
+description: Immutable programming state machine. Root orchestrator. Invoke for all work coordination via the Skill tool.
 enforce: critical
 ---
 
@@ -68,13 +67,13 @@ exec:close
 <task_id>
 ```
 
-**Runner management** (PM2-backed, visible in `pm2 list` and `pm2 monit`):
+**Runner management** (the runner itself is a PM2 process named `gm-exec-runner`):
 ```
 exec:runner
 start|stop|status
 ```
 
-All gm-exec activity runs under PM2. Use `exec:bash\npm2 list` to see all running processes. Users can run `pm2 monit` directly in their terminal to watch live activity.
+`exec:runner start` launches a single PM2 process (`gm-exec-runner`) that hosts all execution as worker threads inside it. Individual `exec:<lang>` calls are worker threads — they do NOT appear as separate entries in `pm2 list`. Only the runner process is visible. Use `exec:runner status` to check it.
 
 ## CODEBASE EXPLORATION
 

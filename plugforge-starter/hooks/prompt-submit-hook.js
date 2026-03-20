@@ -74,7 +74,7 @@ try {
   ensureGitignore();
 
   const parts = [];
-  parts.push('Invoke the `gm` skill to begin. DO NOT use EnterPlanMode. DO NOT use gm subagent directly — use the `gm` skill via the Skill tool.');
+  parts.push('Use the Skill tool with skill: "gm" to begin — do NOT use the Agent tool to load skills. Skills are invoked via the Skill tool only, never as agents. DO NOT use EnterPlanMode.');
 
   const search = runCodeSearch(prompt);
   if (search) parts.push(search);
