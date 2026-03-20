@@ -17,3 +17,5 @@ All work coordination, planning, execution, and verification happens through the
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
 
 Do not use `EnterPlanMode`. Do not run code directly via Bash. Invoke `gm` skill first.
+
+Responses to the user must be two sentences maximum, only when the user needs to know something, and in plain conversational language — no file paths, filenames, symbols, or technical identifiers.
