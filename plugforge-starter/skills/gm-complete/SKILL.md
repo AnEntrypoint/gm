@@ -7,14 +7,14 @@ description: VERIFY and COMPLETE phase. End-to-end system verification and git e
 
 You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole system works end-to-end. Any new unknown = snake to `planning`, restart chain.
 
-**GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY → COMPLETE]`
+**GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY] → UPDATE-DOCS → COMPLETE`
 - **Entry**: All EMIT gates passed. Entered from `gm-emit`.
 
 ## TRANSITIONS
 
 **FORWARD**:
 - .prd items remain → invoke `gm-execute` skill (next wave)
-- .prd empty + git clean + all pushed → COMPLETE
+- .prd empty + feature work pushed → invoke `update-docs` skill
 
 **BACKWARD**:
 - Verification reveals broken file output → invoke `gm-emit` skill, fix, re-verify, return
@@ -91,7 +91,7 @@ All of: witnessed end-to-end output | all failure paths exercised | .prd empty |
 ---
 
 **→ FORWARD**: .prd items remain → invoke `gm-execute` skill.
-**→ DONE**: .prd empty + git clean → COMPLETE.
+**→ FORWARD**: .prd empty + feature work pushed → invoke `update-docs` skill.
 **↩ SNAKE to EMIT**: file output wrong → invoke `gm-emit` skill.
 **↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
 **↩ SNAKE to PLAN**: new unknown or wrong requirements → invoke `planning` skill, restart chain.
