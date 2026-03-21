@@ -7,6 +7,7 @@ const { execSync, spawnSync } = require('child_process');
 
 const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
 const IS_WIN = process.platform === 'win32';
+const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 // ─── Local tool management ────────────────────────────────────────────────────
 const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
