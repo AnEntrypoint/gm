@@ -104,6 +104,24 @@ async function ensureTools() {
 // Run tool installation (fire-and-forget, won't block hook)
 ensureTools().catch(() => {});
 
+// ─── Lang plugin loader ───────────────────────────────────────────────────────
+function loadLangPlugins(projectDir) {
+  if (!projectDir) return [];
+  const langDir = path.join(projectDir, 'lang');
+  if (!fs.existsSync(langDir)) return [];
+  try {
+    return fs.readdirSync(langDir)
+      .filter(f => f.endsWith('.js') && f !== 'loader.js' && f !== 'SPEC.md')
+      .reduce((acc, f) => {
+        try {
+          const p = require(path.join(langDir, f));
+          if (p && typeof p.id === 'string' && p.exec && p.exec.match instanceof RegExp && typeof p.exec.run === 'function') acc.push(p);
+        } catch (_) {}
+        return acc;
+      }, []);
+  } catch (_) { return []; }
+}
+
 // Helper: run a local binary (falls back to bunx if not installed)
 function runLocal(name, args, opts = {}) {
   const bin = localBin(name);
@@ -225,6 +243,29 @@ const run = () => {
           return deny(`Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\n<plain JS here>\n\nThe code is piped directly to the browser eval. No base64, no flags, no shell wrapping.`);
         }
         const cwd = tool_input?.cwd;
+
+        // ─── Lang plugin dispatch ─────────────────────────────────────────────
+        if (rawLang) {
+          const builtins = new Set(['js','javascript','ts','typescript','node','nodejs','py','python','sh','bash','shell','zsh','powershell','ps1','go','rust','c','cpp','java','deno','cmd','browser','ab','agent-browser','codesearch','search','status','sleep','close','runner','type','pm2list']);
+          if (!builtins.has(rawLang)) {
+            const plugins = loadLangPlugins(projectDir);
+            const plugin = plugins.find(p => p.exec.match.test(`exec:${rawLang}\n${code}`));
+            if (plugin) {
+              const runnerCode = `
+                const plugin = require(${JSON.stringify(path.join(projectDir, 'lang', plugin.id + '.js'))});
+                Promise.resolve(plugin.exec.run(${JSON.stringify(code)}, ${JSON.stringify(cwd || projectDir || process.cwd())}))
+                  .then(out => process.stdout.write(String(out || '')))
+                  .catch(e => { process.stderr.write(e.message || String(e)); process.exit(1); });
+              `;
+              const r = spawnSync('bun', ['-e', runnerCode], { encoding: 'utf-8', timeout: 30000, windowsHide: true });
+              const out = (r.stdout || '').trimEnd();
+              const err = (r.stderr || '').trimEnd();
+              if (r.status !== 0 || r.error) return allowWithNoop(`exec:${rawLang} error:\n\n${r.error ? r.error.message : (err || 'exec failed')}`);
+              return allowWithNoop(`exec:${rawLang} output:\n\n${out || '(no output)'}`);
+            }
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────
         const detectLang = (src) => {
           if (/^\s*(import |from |export |const |let |var |function |class |async |await |console\.|process\.)/.test(src)) return 'nodejs';
           if (/^\s*(import |def |print\(|class |if __name__)/.test(src)) return 'python';

@@ -43,6 +43,32 @@ ensureTools();
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
+function loadLangPlugins(dir) {
+  if (!dir) return [];
+  const langDir = path.join(dir, 'lang');
+  if (!fs.existsSync(langDir)) return [];
+  try {
+    return fs.readdirSync(langDir)
+      .filter(f => f.endsWith('.js') && f !== 'loader.js' && f !== 'SPEC.md')
+      .reduce((acc, f) => {
+        try {
+          const p = require(path.join(langDir, f));
+          if (p && typeof p.id === 'string' && p.exec && p.exec.match instanceof RegExp && typeof p.exec.run === 'function') acc.push(p);
+        } catch (_) {}
+        return acc;
+      }, []);
+  } catch (_) { return []; }
+}
+
+function getLangPluginContext(dir) {
+  const plugins = loadLangPlugins(dir);
+  return plugins
+    .filter(p => p.context)
+    .map(p => { const ctx = typeof p.context === 'function' ? p.context() : p.context; return ctx ? String(ctx).slice(0, 2000) : ''; })
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 const ensureGitignore = () => {
   if (!projectDir) return;
   const gitignorePath = path.join(projectDir, '.gitignore');
@@ -77,6 +103,10 @@ try {
       }
     } catch (e) {}
   }
+
+  const langCtx = getLangPluginContext(projectDir);
+  if (langCtx) outputs.push(langCtx);
+
   const additionalContext = outputs.join('\n\n');
 
   const isGemini = process.env.GEMINI_PROJECT_DIR !== undefined;
