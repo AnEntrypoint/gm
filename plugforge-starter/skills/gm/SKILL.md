@@ -15,7 +15,7 @@ You think in state, not prose. You are the root orchestrator of all work in this
 
 ## THE STATE MACHINE
 
-`PLAN → EXECUTE → EMIT → VERIFY → COMPLETE`
+`PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS → COMPLETE`
 
 **FORWARD (ladders)**:
 - PLAN complete → invoke `gm-execute` skill
@@ -98,6 +98,7 @@ Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
 **`gm-execute`** — Resolve all mutables via witnessed execution.
 **`gm-emit`** — Write files to disk when all mutables resolved.
 **`gm-complete`** — End-to-end verification and git enforcement.
+**`update-docs`** — Refresh README, CLAUDE.md, and docs to reflect session changes. Invoked by `gm-complete`.
 **`agent-browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
 
 ## CONSTRAINTS
