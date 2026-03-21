@@ -28,6 +28,69 @@ function runLocal(name, args, opts = {}) {
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
+function loadLangPlugins(dir) {
+  if (!dir) return [];
+  const langDir = path.join(dir, 'lang');
+  if (!fs.existsSync(langDir)) return [];
+  try {
+    return fs.readdirSync(langDir)
+      .filter(f => f.endsWith('.js') && f !== 'loader.js' && f !== 'SPEC.md')
+      .reduce((acc, f) => {
+        try {
+          const p = require(path.join(langDir, f));
+          if (p && typeof p.id === 'string' && p.exec && p.exec.match instanceof RegExp && typeof p.exec.run === 'function') acc.push(p);
+        } catch (_) {}
+        return acc;
+      }, []);
+  } catch (_) { return []; }
+}
+
+function walkFiles(dir, exts, depth) {
+  if (depth <= 0 || !fs.existsSync(dir)) return [];
+  let results = [];
+  try {
+    for (const f of fs.readdirSync(dir)) {
+      if (f.startsWith('.') || f === 'node_modules') continue;
+      const full = path.join(dir, f);
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) results = results.concat(walkFiles(full, exts, depth - 1));
+      else if (exts.some(e => f.endsWith(e))) results.push({ path: full, mtime: stat.mtimeMs });
+    }
+  } catch (_) {}
+  return results;
+}
+
+function getLangPluginContext(dir) {
+  const plugins = loadLangPlugins(dir);
+  if (!plugins.length) return '';
+  const parts = [];
+  for (const p of plugins) {
+    if (p.context) {
+      const ctx = typeof p.context === 'function' ? p.context() : p.context;
+      if (ctx) parts.push(String(ctx).slice(0, 2000));
+    }
+    if (p.lsp && p.extensions && p.extensions.length) {
+      try {
+        const files = walkFiles(dir, p.extensions, 4)
+          .sort((a, b) => b.mtime - a.mtime)
+          .slice(0, 3);
+        const diags = [];
+        for (const f of files) {
+          try {
+            const code = fs.readFileSync(f.path, 'utf-8');
+            const results = p.lsp.check(code, dir);
+            if (Array.isArray(results)) {
+              for (const d of results) diags.push(`${path.relative(dir, f.path)}:${d.line}:${d.col}: ${d.severity}: ${d.message}`);
+            }
+          } catch (_) {}
+        }
+        if (diags.length) parts.push(`=== ${p.id} LSP diagnostics ===\n${diags.join('\n').slice(0, 3000)}`);
+      } catch (_) {}
+    }
+  }
+  return parts.join('\n\n');
+}
+
 const ensureGitignore = () => {
   if (!projectDir) return;
   const gitignorePath = path.join(projectDir, '.gitignore');
@@ -93,6 +156,9 @@ try {
 
   const thorns = runThorns();
   if (thorns) parts.push(thorns);
+
+  const langCtx = getLangPluginContext(projectDir);
+  if (langCtx) parts.push(langCtx);
 
   emit(parts.join('\n\n'));
 } catch (error) {
