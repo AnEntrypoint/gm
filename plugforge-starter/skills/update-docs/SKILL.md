@@ -50,7 +50,7 @@ Write only sections that changed. Do not rewrite unchanged content. Rules per fi
 
 **README.md**: platform count matches adapters in `platforms/`, skill tree diagram matches current state machine, quick start commands work.
 
-**CLAUDE.md**: Architecture section reflects actual class hierarchy. File structure section matches actual directory layout. Known gotchas reflect actual observed edge cases. Verification checklist reflects actual completed items.
+**CLAUDE.md**: Only non-obvious technical caveats that required multiple runs to discover — things that could not be known without hitting the problem first. Remove anything that no longer applies. Never add anything obvious from reading the code or that any developer would already know. The test: "would a developer need to discover this the hard way, or is it self-evident?" If self-evident, exclude it.
 
 **docs/index.html**: `PHASES` array matches current skill state machine phases. Platform lists match `platforms/` directory. State machine diagram updated if new phases added.
 
