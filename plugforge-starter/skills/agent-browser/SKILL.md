@@ -1,10 +1,18 @@
 ---
 name: agent-browser
 description: Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.
-allowed-tools: Bash(agent-browser:*)
+allowed-tools: agent-browser, Bash(exec:agent-browser*)
 ---
 
 # Browser Automation with agent-browser
+
+## Two Pathways
+
+**Ordinary browser control** — call the `agent-browser` tool directly. This covers all standard browser tasks: navigating, clicking, filling forms, taking screenshots, extracting text. The tool accepts CLI-style commands as its input.
+
+**JavaScript eval** — use `exec:agent-browser` via Bash when you need to run arbitrary JavaScript in the page context. The code body is piped directly to `agent-browser eval --stdin`. Use this for DOM inspection, custom extraction logic, or anything the CLI commands don't cover.
+
+Use the ordinary pathway by default. Switch to eval only when you need JavaScript access to the page.
 
 ## Core Workflow
 
@@ -202,34 +210,27 @@ agent-browser find placeholder "Search" type "query"
 agent-browser find testid "submit-btn" click
 ```
 
-## JavaScript Evaluation (eval)
+## JavaScript Evaluation (exec pathway)
 
-Use `eval` to run JavaScript in the browser context. **Shell quoting can corrupt complex expressions** -- use `--stdin` or `-b` to avoid issues.
+Use this pathway when you need to run JavaScript in the browser context — not ordinary CLI commands. This goes through `exec:agent-browser` via Bash, which pipes your code to `agent-browser eval --stdin`. **Shell quoting can corrupt complex expressions** — use the heredoc form.
 
-```bash
-# Simple expressions work with regular quoting
-agent-browser eval 'document.title'
-agent-browser eval 'document.querySelectorAll("img").length'
+Use `exec:agent-browser` via Bash. The code body is piped directly to `agent-browser eval --stdin` — no shell, no escaping.
 
-# Complex JS: use --stdin with heredoc (RECOMMENDED)
-agent-browser eval --stdin <<'EVALEOF'
+```
+exec:agent-browser
+document.title
+```
+
+```
+exec:agent-browser
 JSON.stringify(
   Array.from(document.querySelectorAll("img"))
     .filter(i => !i.alt)
     .map(i => ({ src: i.src.split("/").pop(), width: i.width }))
 )
-EVALEOF
-
-# Alternative: base64 encoding (avoids all shell escaping issues)
-agent-browser eval -b "$(echo -n 'Array.from(document.querySelectorAll("a")).map(a => a.href)' | base64)"
 ```
 
-**Why this matters:** When the shell processes your command, inner double quotes, `!` characters (history expansion), backticks, and `$()` can all corrupt the JavaScript before it reaches agent-browser. The `--stdin` and `-b` flags bypass shell interpretation entirely.
-
-**Rules of thumb:**
-- Single-line, no nested quotes -> regular `eval 'expression'` with single quotes is fine
-- Nested quotes, arrow functions, template literals, or multiline -> use `eval --stdin <<'EVALEOF'`
-- Programmatic/generated scripts -> use `eval -b` with base64
+Never base64-encode the code. Never add `agent-browser eval` flags. Write plain JavaScript directly as the exec body.
 
 ## Complete Command Reference
 
@@ -348,12 +349,12 @@ agent-browser wait --load networkidle # Wait for load state (load, domcontentloa
 agent-browser wait --fn "window.ready === true"  # Wait for JS condition
 ```
 
-### JavaScript Evaluation
-```bash
-agent-browser eval <js>               # Run JavaScript in browser
-agent-browser eval -b "<base64>"      # Base64-encoded JS (avoid shell escaping)
-agent-browser eval --stdin <<'EOF'    # JS from stdin (heredoc, recommended for complex code)
+### JavaScript Evaluation (exec pathway — not a direct tool command)
 ```
+exec:agent-browser
+<plain JS>
+```
+Use `exec:agent-browser` via Bash. Code is piped to `agent-browser eval --stdin`. No base64, no flags.
 
 ### Browser Environment
 ```bash
@@ -499,7 +500,11 @@ agent-browser -p ios close            # Close simulator
 
 **Always use agent-browser instead of puppeteer, playwright, or playwright-core** — it has the same capabilities with simpler syntax and better integration with AI agents.
 
-**Multi-step workflows**:
+**Which pathway to use**:
+- Ordinary browser control (navigation, clicking, forms, screenshots) → call the `agent-browser` tool directly
+- Need to run JavaScript in the page → use `exec:agent-browser` via Bash with plain JS as the body
+
+**Multi-step workflows** (ordinary pathway — direct tool calls):
 1. `agent-browser open <url>`
 2. `agent-browser snapshot -i` (get refs)
 3. `agent-browser fill @e1 "value"`
@@ -507,6 +512,12 @@ agent-browser -p ios close            # Close simulator
 5. `agent-browser wait --load networkidle` (after navigation)
 6. `agent-browser snapshot -i` (re-snapshot for new refs)
 
+**JavaScript inspection** (exec pathway — when you need page access):
+```
+exec:agent-browser
+document.title
+```
+
 **Debugging complex interactions**: Use `agent-browser --headed open <url>` to see visual browser, then `agent-browser highlight @e1` to verify element targeting.
 
-**Ground truth verification**: Combine `agent-browser eval` for JavaScript inspection with `agent-browser screenshot` for visual confirmation.
+**Ground truth verification**: Use the ordinary pathway (`agent-browser screenshot`) for visual confirmation; use the exec pathway for JavaScript-level inspection.
