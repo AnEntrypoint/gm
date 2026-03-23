@@ -258,7 +258,7 @@ const run = () => {
                   .then(out => process.stdout.write(String(out || '')))
                   .catch(e => { process.stderr.write(e.message || String(e)); process.exit(1); });
               `;
-              const r = spawnSync('bun', ['-e', runnerCode], { encoding: 'utf-8', timeout: 30000, windowsHide: true });
+              const r = spawnSync('bun', ['-e', runnerCode], { encoding: 'utf-8', timeout: 60000, windowsHide: true });
               const out = (r.stdout || '').trimEnd();
               const err = (r.stderr || '').trimEnd();
               if (r.status !== 0 || r.error) return allowWithNoop(`exec:${rawLang} error:\n\n${r.error ? r.error.message : (err || 'exec failed')}`);
