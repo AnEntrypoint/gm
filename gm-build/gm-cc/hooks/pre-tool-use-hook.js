@@ -279,8 +279,7 @@ const run = () => {
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'sh', powershell: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
 
         const spawnDirect = (bin, args, stdin) => {
-          const spawnCwd = cwd || (lang === 'agent-browser' ? process.cwd() : undefined);
-          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: true, ...(spawnCwd && { cwd: spawnCwd }), ...(stdin !== undefined && { input: stdin }) };
+          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: true, ...(cwd && { cwd }), ...(stdin !== undefined && { input: stdin }) };
           const r = spawnSync(bin, args, opts);
           if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
           const out = (r.stdout || '').trimEnd(), err = stripFooter(r.stderr || '').trimEnd();
@@ -369,43 +368,6 @@ const run = () => {
             const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
             const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
             const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
-            function loadAbProfile(dir) {
-              if (!dir) return { flags: [], env: {} };
-              const candidates = ['agent-browser.json', '.agent-browser.json'];
-              for (const name of candidates) {
-                try {
-                  const cfg = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
-                  const flags = [], env = {};
-                  if (cfg.headed) { flags.push('--headed'); env.AGENT_BROWSER_HEADED = '1'; }
-                  if (cfg.headless) flags.push('--headless');
-                  if (cfg.profile) { flags.push('--profile', cfg.profile); env.AGENT_BROWSER_PROFILE = cfg.profile; }
-                  if (cfg.cdp) flags.push('--cdp', String(cfg.cdp));
-                  if (cfg.platform || cfg.p) flags.push('-p', cfg.platform || cfg.p);
-                  if (cfg.device) flags.push('--device', cfg.device);
-                  if (cfg['allow-file-access']) flags.push('--allow-file-access');
-                  if (cfg['color-scheme']) { flags.push('--color-scheme', cfg['color-scheme']); env.AGENT_BROWSER_COLOR_SCHEME = cfg['color-scheme']; }
-                  return { flags, env };
-                } catch {}
-              }
-              return { flags: [], env: {} };
-            }
-            const { flags: abProfileFlags, env: abProfileEnv } = loadAbProfile(process.cwd());
-            // If profile config exists and no daemon is running, pre-start the daemon with correct cwd
-            if (abProfileFlags.length > 0) {
-              const portFile = path.join(os.tmpdir(), 'agent-shell.port');
-              const daemonRunning = fs.existsSync(portFile);
-              if (!daemonRunning) {
-                // Start daemon in background from correct cwd so it picks up agent-browser.json
-                require('child_process').spawn(abBin, ['open', 'about:blank'], {
-                  detached: true, stdio: 'ignore',
-                  cwd: process.cwd(),
-                  env: { ...process.env, ...abProfileEnv },
-                  windowsHide: true
-                }).unref();
-                // Wait for daemon to bind
-                spawnSync('cmd.exe', ['/c', 'ping -n 3 127.0.0.1 > nul'], { windowsHide: true, timeout: 5000 });
-              }
-            }
             const AB_SESSION_STATE = path.join(os.tmpdir(), 'gm-ab-sessions.json');
             function readAbSessions() { try { return JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8')); } catch { return {}; } }
             function writeAbSessions(s) { try { fs.writeFileSync(AB_SESSION_STATE, JSON.stringify(s)); } catch {} }
@@ -434,16 +396,6 @@ const run = () => {
             if (isClose) delete sessions[sessionName];
             writeAbSessions(sessions);
             const openSessions = Object.entries(sessions);
-            function mergeProfileFlags(userGlobalArgs) {
-              const userFlagSet = new Set(userGlobalArgs.filter(f => f.startsWith('-')));
-              const filtered = [];
-              for (let i = 0; i < abProfileFlags.length; i++) {
-                const f = abProfileFlags[i];
-                if (f.startsWith('-') && userFlagSet.has(f)) { if (AB_GLOBAL_FLAGS_WITH_VALUE.has(f)) i++; continue; }
-                filtered.push(f);
-              }
-              return [...filtered, ...userGlobalArgs];
-            }
             if (AB_CMDS.has(firstWord)) {
               const lines = safeCode.split('\n').map(l => l.trim()).filter(Boolean);
               if (lines.length === 1) {
