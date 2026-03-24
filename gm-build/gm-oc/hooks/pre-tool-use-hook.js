@@ -279,9 +279,7 @@ const run = () => {
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'sh', powershell: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
 
         const spawnDirect = (bin, args, stdin) => {
-          const isAb = lang === 'agent-browser';
-          const spawnCwd = cwd || (isAb ? process.cwd() : undefined);
-          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: true, ...(isAb && IS_WIN && { shell: true }), ...(spawnCwd && { cwd: spawnCwd }), ...(stdin !== undefined && { input: stdin }) };
+          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: true, ...(cwd && { cwd }), ...(stdin !== undefined && { input: stdin }) };
           const r = spawnSync(bin, args, opts);
           if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
           const out = (r.stdout || '').trimEnd(), err = stripFooter(r.stderr || '').trimEnd();
@@ -366,9 +364,7 @@ const run = () => {
             const wrapped = `const __result = await (async () => {\n${safeCode}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
             result = runWithFile(lang || 'nodejs', wrapped);
           } else if (lang === 'agent-browser') {
-            // agent-browser reads agent-browser.json from cwd automatically (headed, profile, session, etc.)
-            // Just run with shell:true so .cmd wrappers resolve, and use process.cwd() so config is picked up
-            const abBin = 'agent-browser';
+            const abBin = fs.existsSync(localBin('agent-browser')) ? localBin('agent-browser') : 'agent-browser';
             const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
             const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
             const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);

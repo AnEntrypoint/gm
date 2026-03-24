@@ -1,0 +1,96 @@
+{
+  "name": "gm-vscode",
+  "version": "2.0.213",
+  "publisher": "gm",
+  "displayName": "GM - GM State Machine",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm-vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-vscode/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Debuggers",
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "views": {
+      "gm-explorer": [
+        {
+          "id": "gm.state",
+          "name": "State Machine"
+        },
+        {
+          "id": "gm.agents",
+          "name": "Agents"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gm.activate",
+        "title": "GM: Activate"
+      },
+      {
+        "command": "gm.deactivate",
+        "title": "GM: Deactivate"
+      },
+      {
+        "command": "gm.showState",
+        "title": "GM: Show State"
+      }
+    ],
+    "configuration": {
+      "title": "GM",
+      "properties": {
+        "gm.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GM extension"
+        },
+        "gm.logLevel": {
+          "type": "string",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info"
+        },
+        "gm.autoActivate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-activate on startup"
+        }
+      }
+    }
+  },
+  "keywords": [
+    "ai",
+    "state-machine",
+    "gm",
+    "gm",
+    "automation",
+    "development"
+  ],
+  "main": "./extension.js",
+  "files": [
+    "extension.js",
+    "agents/",
+    "skills/",
+    ".github/",
+    "README.md"
+  ]
+}
