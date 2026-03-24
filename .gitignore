@@ -5,3 +5,6 @@ build/
 .code-search/
 .gm-stop-verified
 loggedin/
+site/node_modules/
+docs/bundle.js
+docs/styles.css
