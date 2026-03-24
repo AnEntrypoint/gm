@@ -368,6 +368,23 @@ const run = () => {
             const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
             const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
             const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
+            function loadAbProfile(dir) {
+              if (!dir) return [];
+              try {
+                const cfg = JSON.parse(fs.readFileSync(path.join(dir, '.agent-browser.json'), 'utf8'));
+                const flags = [];
+                if (cfg.headed) flags.push('--headed');
+                if (cfg.headless) flags.push('--headless');
+                if (cfg.profile) flags.push('--profile', cfg.profile);
+                if (cfg.cdp) flags.push('--cdp', String(cfg.cdp));
+                if (cfg.platform || cfg.p) flags.push('-p', cfg.platform || cfg.p);
+                if (cfg.device) flags.push('--device', cfg.device);
+                if (cfg['allow-file-access']) flags.push('--allow-file-access');
+                if (cfg['color-scheme']) flags.push('--color-scheme', cfg['color-scheme']);
+                return flags;
+              } catch { return []; }
+            }
+            const abProfileFlags = loadAbProfile(projectDir || cwd || process.cwd());
             const AB_SESSION_STATE = path.join(os.tmpdir(), 'gm-ab-sessions.json');
             function readAbSessions() { try { return JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8')); } catch { return {}; } }
             function writeAbSessions(s) { try { fs.writeFileSync(AB_SESSION_STATE, JSON.stringify(s)); } catch {} }
@@ -396,11 +413,21 @@ const run = () => {
             if (isClose) delete sessions[sessionName];
             writeAbSessions(sessions);
             const openSessions = Object.entries(sessions);
+            function mergeProfileFlags(userGlobalArgs) {
+              const userFlagSet = new Set(userGlobalArgs.filter(f => f.startsWith('-')));
+              const filtered = [];
+              for (let i = 0; i < abProfileFlags.length; i++) {
+                const f = abProfileFlags[i];
+                if (f.startsWith('-') && userFlagSet.has(f)) { if (AB_GLOBAL_FLAGS_WITH_VALUE.has(f)) i++; continue; }
+                filtered.push(f);
+              }
+              return [...filtered, ...userGlobalArgs];
+            }
             if (AB_CMDS.has(firstWord)) {
               const lines = safeCode.split('\n').map(l => l.trim()).filter(Boolean);
               if (lines.length === 1) {
                 const { globalArgs, rest } = parseAbLine(lines[0]);
-                result = spawnDirect(abBin, [...globalArgs, ...rest]);
+                result = spawnDirect(abBin, [...mergeProfileFlags(globalArgs), ...rest]);
               } else {
                 const hasClose = lines.some(l => { const w = (parseAbLine(l).rest[0]||'').toLowerCase(); return ['close','quit','exit'].includes(w); });
                 const cmds = lines.map(l => {
@@ -408,14 +435,15 @@ const run = () => {
                   const w = (rest[0]||'').toLowerCase();
                   if (['open','goto','navigate'].includes(w)) sessions[sessionName] = { url: rest[1]||'?', ts: Date.now() };
                   if (['close','quit','exit'].includes(w)) delete sessions[sessionName];
-                  return [...globalArgs, ...rest];
+                  if (!AB_CMDS.has(w)) return [...mergeProfileFlags(globalArgs), 'eval', l.trim()];
+                  return [...mergeProfileFlags(globalArgs), ...rest];
                 });
                 writeAbSessions(sessions);
                 result = spawnDirect(abBin, ['batch'], JSON.stringify(cmds));
                 if (!hasClose && openSessions.length > 0) result += `\n\n[tab] Browser session "${sessionName}" still open. Close when done:\n  exec:agent-browser\n  close`;
               }
             } else {
-              result = spawnDirect(abBin, ['eval', '--stdin'], safeCode);
+              result = spawnDirect(abBin, [...abProfileFlags, 'eval', '--stdin'], safeCode);
             }
             if (openSessions.length > 1) {
               const stale = openSessions.filter(([n]) => n !== sessionName).map(([n,v]) => `  "${n}" → ${v.url} (${Math.round((Date.now()-v.ts)/60000)}min ago)`).join('\n');
