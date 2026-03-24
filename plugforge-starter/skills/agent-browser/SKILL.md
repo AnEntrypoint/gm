@@ -8,11 +8,23 @@ allowed-tools: agent-browser, Bash(exec:agent-browser*)
 
 ## Two Pathways
 
-**Ordinary browser control** — call the `agent-browser` tool directly. This covers all standard browser tasks: navigating, clicking, filling forms, taking screenshots, extracting text. The tool accepts CLI-style commands as its input.
+**`exec:agent-browser` (primary)** — run browser CLI commands or JavaScript eval via Bash. Each line in the body is a CLI command. Lines that are not recognized CLI commands are automatically routed through `eval --stdin`. Supports multi-command batches in a single block.
 
-**JavaScript eval** — use `exec:agent-browser` via Bash when you need to run arbitrary JavaScript in the page context. The code body is piped directly to `agent-browser eval --stdin`. Use this for DOM inspection, custom extraction logic, or anything the CLI commands don't cover.
+```
+exec:agent-browser
+open http://localhost:3001
+wait 2000
+snapshot -i
+```
 
-Use the ordinary pathway by default. Switch to eval only when you need JavaScript access to the page.
+```
+exec:agent-browser
+document.title
+```
+
+**`agent-browser` tool (alternative)** — call the MCP tool directly with a single CLI command at a time. Use when you only need one command and don't need batching.
+
+**Always close tabs when done**: every `open` is tracked. Use `exec:agent-browser\nclose` (or `--session <name> close`) when finished. Leaving sessions open accumulates stale tabs — the hook will warn you when other sessions are still open.
 
 ## Core Workflow
 
