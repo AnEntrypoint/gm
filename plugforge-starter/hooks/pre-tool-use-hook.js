@@ -241,7 +241,7 @@ const run = () => {
         const rawLang = (execMatch[1] || '').toLowerCase();
         const code = execMatch[2];
         if (/^\s*agent-browser\s/.test(code)) {
-          return deny(`Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\n<plain JS here>\n\nThe code is piped directly to the browser eval. No base64, no flags, no shell wrapping.`);
+          return deny(`Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\nopen http://example.com\n\nMultiple commands in one block:\n\nexec:agent-browser\nopen http://localhost:3001\nwait 2000\nsnapshot -i\n\nFor JS eval (DOM inspection, custom logic):\n\nexec:agent-browser\ndocument.title\n\nCLI commands (open, click, screenshot, snapshot, wait, console, tab, etc.) run directly.\nAnything that is not a CLI command goes through eval --stdin.\nClose tabs when done: exec:agent-browser\\nclose`);
         }
         const cwd = tool_input?.cwd;
 
@@ -364,11 +364,62 @@ const run = () => {
             const wrapped = `const __result = await (async () => {\n${safeCode}\n})();\nif (__result !== undefined) { if (typeof __result === 'object') { console.log(JSON.stringify(__result, null, 2)); } else { console.log(__result); } }`;
             result = runWithFile(lang || 'nodejs', wrapped);
           } else if (lang === 'agent-browser') {
-            const abBin = localBin('agent-browser');
-            if (fs.existsSync(abBin)) {
-              result = spawnDirect(abBin, ['eval', '--stdin'], safeCode);
+            const abBin = fs.existsSync(localBin('agent-browser')) ? localBin('agent-browser') : 'agent-browser';
+            const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
+            const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
+            const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
+            const AB_SESSION_STATE = path.join(os.tmpdir(), 'gm-ab-sessions.json');
+            function readAbSessions() { try { return JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8')); } catch { return {}; } }
+            function writeAbSessions(s) { try { fs.writeFileSync(AB_SESSION_STATE, JSON.stringify(s)); } catch {} }
+            function parseAbLine(line) {
+              const tokens = line.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+              const globalArgs = [], rest = [];
+              let i = 0;
+              while (i < tokens.length) {
+                if (AB_GLOBAL_FLAGS.has(tokens[i])) {
+                  globalArgs.push(tokens[i]);
+                  if (AB_GLOBAL_FLAGS_WITH_VALUE.has(tokens[i]) && i + 1 < tokens.length && !tokens[i+1].startsWith('--')) {
+                    globalArgs.push(tokens[++i]);
+                  }
+                  i++;
+                } else { rest.push(...tokens.slice(i)); break; }
+              }
+              return { globalArgs, rest };
+            }
+            const firstLineParsed = parseAbLine(safeCode.trim().split('\n')[0].trim());
+            const firstWord = (firstLineParsed.rest[0] || '').toLowerCase();
+            const sessionName = (() => { const si = firstLineParsed.globalArgs.indexOf('--session'); return si >= 0 ? firstLineParsed.globalArgs[si+1] : 'default'; })();
+            const isOpen = ['open','goto','navigate'].includes(firstWord);
+            const isClose = ['close','quit','exit'].includes(firstWord);
+            const sessions = readAbSessions();
+            if (isOpen) sessions[sessionName] = { url: (firstLineParsed.rest[1] || '?'), ts: Date.now() };
+            if (isClose) delete sessions[sessionName];
+            writeAbSessions(sessions);
+            const openSessions = Object.entries(sessions);
+            if (AB_CMDS.has(firstWord)) {
+              const lines = safeCode.split('\n').map(l => l.trim()).filter(Boolean);
+              if (lines.length === 1) {
+                const { globalArgs, rest } = parseAbLine(lines[0]);
+                result = spawnDirect(abBin, [...globalArgs, ...rest]);
+              } else {
+                const hasClose = lines.some(l => { const w = (parseAbLine(l).rest[0]||'').toLowerCase(); return ['close','quit','exit'].includes(w); });
+                const cmds = lines.map(l => {
+                  const { globalArgs, rest } = parseAbLine(l);
+                  const w = (rest[0]||'').toLowerCase();
+                  if (['open','goto','navigate'].includes(w)) sessions[sessionName] = { url: rest[1]||'?', ts: Date.now() };
+                  if (['close','quit','exit'].includes(w)) delete sessions[sessionName];
+                  return [...globalArgs, ...rest];
+                });
+                writeAbSessions(sessions);
+                result = spawnDirect(abBin, ['batch'], JSON.stringify(cmds));
+                if (!hasClose && openSessions.length > 0) result += `\n\n[tab] Browser session "${sessionName}" still open. Close when done:\n  exec:agent-browser\n  close`;
+              }
             } else {
-              result = spawnDirect('agent-browser', ['eval', '--stdin'], safeCode);
+              result = spawnDirect(abBin, ['eval', '--stdin'], safeCode);
+            }
+            if (openSessions.length > 1) {
+              const stale = openSessions.filter(([n]) => n !== sessionName).map(([n,v]) => `  "${n}" → ${v.url} (${Math.round((Date.now()-v.ts)/60000)}min ago)`).join('\n');
+              result = (result || '') + `\n\n[tab] ${openSessions.length - 1} other session(s) still open:\n${stale}\n  Close with: exec:agent-browser\\nclose  (or --session <name> close)`;
             }
           } else {
             result = runWithFile(lang, safeCode);
@@ -384,7 +435,7 @@ const run = () => {
         try { helpText = '\n\n' + execSync(`"${localBin('gm-exec')}" --help`, { timeout: 10000, windowsHide: true }).toString().trim(); } catch (e) {
           try { helpText = '\n\n' + execSync('bun x gm-exec --help', { timeout: 10000, windowsHide: true }).toString().trim(); } catch {}
         }
-        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:cmd            ← runs cmd.exe /c on Windows\n  exec:agent-browser  ← plain JS piped to browser eval (NO base64)\n  exec               ← auto-detects language\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:type\n  <task_id>\n  <input to send to stdin>\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nNEVER encode agent-browser code as base64 — pass plain JS directly.\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.`);
+        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:cmd            ← runs cmd.exe /c on Windows\n  exec:agent-browser  ← browser CLI (open, click, snapshot, wait, tab, console...)\n                        OR JS eval when body is not a CLI command\n  exec               ← auto-detects language\n\nexec:agent-browser examples:\n  open http://localhost:3001     ← navigate\n  snapshot -i                    ← get element refs\n  wait 2000                      ← wait ms\n  console                        ← read browser console\n  close                          ← ALWAYS close when done\n  document.title                 ← JS eval (not a CLI command)\n\nMultiple CLI commands in one block run as batch:\n  exec:agent-browser\n  open http://localhost:3001\n  wait 2000\n  snapshot -i\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:type\n  <task_id>\n  <input to send to stdin>\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nbun x gm-exec${helpText}\n\nAll other Bash commands are blocked.`);
       }
     }
 
