@@ -2,7 +2,7 @@
   "name": "plugforge-site",
   "private": true,
   "scripts": {
-    "build": "bun build main.js --outfile ../docs/bundle.js && bunx @tailwindcss/cli -i input.css -o ../docs/styles.css --content main.js,index.html && cp index.html ../docs/index.html"
+    "build": "bun build main.js --outfile ../docs/bundle.js && bunx @tailwindcss/cli -i input.css -o ../docs/styles.css --content main.js,index.html && cp index.html ../docs/index.html && cp ../paper.html ../docs/paper.html"
   },
   "dependencies": {
     "webjsx": "0.0.73"
