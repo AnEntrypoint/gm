@@ -1,27 +1,36 @@
-import { createElement as h, applyDiff, createDOMElement, Fragment } from "webjsx";
+import { createElement as h, createDOMElement, Fragment } from "webjsx";
+
+const PHASES = [
+  { name: 'PLAN', desc: 'Name every unknown. Build a .prd with acceptance criteria. No work without a plan.' },
+  { name: 'EXECUTE', desc: 'Resolve unknowns through witnessed code execution only. No speculation, no narration.' },
+  { name: 'EMIT', desc: 'Write files after pre-emit validation passes. Post-emit verification from disk confirms output.' },
+  { name: 'VERIFY', desc: 'End-to-end witnessed execution. Real services, real data, real timing.' },
+  { name: 'COMPLETE', desc: '.prd empty, git clean, pushed. Session cannot end with unresolved work.' },
+];
+
+const PRINCIPLES = [
+  { title: 'JIT Execution', desc: 'Code runs through a managed lifecycle (gm-exec) that intercepts shell calls, auto-detects languages, and backgrounds long tasks. Agents prove hypotheses before editing files.' },
+  { title: '1-Shot Overviews', desc: 'Compact codebase analysis via AST parsing (tree-sitter) delivers structure, complexity, and caveats on first prompt. No exploration phase needed.' },
+  { title: 'Semantic Search', desc: 'Local vector-based codebase search finds relevant code by intent, not just string matching. Compact results that fit in context.' },
+  { title: 'Closed-Loop Testing', desc: 'Agents test ideas via JIT execution without editing the codebase. Validate client and server side through further execution. No test files on disk.' },
+  { title: 'Context Reduction', desc: 'Only install tools you need. A tested skill tree guides the agent through proven steps. No bloated system prompts.' },
+  { title: 'Repo Reduction', desc: 'Deduplicate all concerns including cross-domain: unit tests replaced by agentic closed-loop testing, comments removed, specs consolidated.' },
+];
 
 const CLI_PLATFORMS = [
-  { id: 'gm-cc', label: 'Claude Code', desc: 'Hooks + agents for Claude Code CLI' },
-  { id: 'gm-gc', label: 'Gemini CLI', desc: 'Hooks + agents for Gemini CLI' },
-  { id: 'gm-oc', label: 'OpenCode', desc: 'Hooks + agents for OpenCode CLI' },
-  { id: 'gm-kilo', label: 'Kilo Code', desc: 'Hooks + agents for Kilo Code CLI' },
-  { id: 'gm-codex', label: 'Codex', desc: 'Hooks + agents for Codex CLI' },
-  { id: 'gm-copilot-cli', label: 'Copilot CLI', desc: 'Extension for GitHub Copilot CLI' },
+  { id: 'gm-cc', label: 'Claude Code' },
+  { id: 'gm-gc', label: 'Gemini CLI' },
+  { id: 'gm-oc', label: 'OpenCode' },
+  { id: 'gm-kilo', label: 'Kilo Code' },
+  { id: 'gm-codex', label: 'Codex' },
+  { id: 'gm-copilot-cli', label: 'Copilot CLI' },
 ];
 
 const IDE_PLATFORMS = [
-  { id: 'gm-vscode', label: 'VS Code', desc: 'Extension for Visual Studio Code' },
-  { id: 'gm-cursor', label: 'Cursor', desc: 'Extension for Cursor IDE' },
-  { id: 'gm-zed', label: 'Zed', desc: 'Extension for Zed Editor (Rust/WASM)' },
-  { id: 'gm-jetbrains', label: 'JetBrains', desc: 'Plugin for all JetBrains IDEs' },
-];
-
-const PHASES = [
-  { name: 'PLAN', desc: 'Write .prd with all unknowns as named items. No work without a plan.' },
-  { name: 'EXECUTE', desc: 'Prove every hypothesis via witnessed code execution. Import real modules.' },
-  { name: 'EMIT', desc: 'Write files only after all tests pass. Pre and post-emit validation gates.' },
-  { name: 'VERIFY', desc: 'End-to-end execution confirms everything works as expected.' },
-  { name: 'COMPLETE', desc: '.prd empty, git clean, pushed. Zero unresolved items.' },
+  { id: 'gm-vscode', label: 'VS Code' },
+  { id: 'gm-cursor', label: 'Cursor' },
+  { id: 'gm-zed', label: 'Zed' },
+  { id: 'gm-jetbrains', label: 'JetBrains' },
 ];
 
 const GITHUB_ICON = h('svg', { viewBox: '0 0 16 16', class: 'w-5 h-5 fill-current', 'aria-hidden': 'true' },
@@ -31,17 +40,16 @@ const GITHUB_ICON = h('svg', { viewBox: '0 0 16 16', class: 'w-5 h-5 fill-curren
 function NavBar() {
   return h('nav', { class: 'border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-10' },
     h('div', { class: 'max-w-5xl mx-auto px-4 py-3 flex items-center justify-between' },
-      h('span', { class: 'text-white font-bold text-lg tracking-tight' }, 'plugforge'),
+      h('span', { class: 'text-white font-bold text-lg tracking-tight' }, 'gm'),
       h('div', { class: 'flex items-center gap-4' },
-        h('a', {
-          href: './paper.html',
-          class: 'text-gray-400 hover:text-white transition-colors text-sm'
-        }, 'Paper'),
+        h('a', { href: '#principles', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Principles'),
+        h('a', { href: '#state-machine', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'State Machine'),
+        h('a', { href: './paper.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper'),
         h('a', {
           href: 'https://github.com/AnEntrypoint/plugforge',
           target: '_blank', rel: 'noopener',
           class: 'flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm'
-        }, GITHUB_ICON, 'GitHub')
+        }, GITHUB_ICON, 'Source')
       )
     )
   );
@@ -50,30 +58,58 @@ function NavBar() {
 function Hero() {
   return h('section', { class: 'gradient-hero py-28 px-4' },
     h('div', { class: 'max-w-4xl mx-auto text-center' },
-      h('span', { class: 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white bg-indigo-600 mb-6' }, 'Convention-Driven Plugin Generator'),
-      h('h1', { class: 'text-5xl md:text-7xl font-bold text-white mb-5 tracking-tight' }, 'One source.', h('br', null), h('span', { class: 'text-indigo-400' }, 'Ten platforms.')),
+      h('span', { class: 'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white bg-indigo-600 mb-6' }, 'Immutable Programming'),
+      h('h1', { class: 'text-5xl md:text-7xl font-bold text-white mb-5 tracking-tight' },
+        'Control the agent.', h('br', null), h('span', { class: 'text-indigo-400' }, 'Not the other way around.')
+      ),
       h('p', { class: 'text-lg text-gray-300 max-w-2xl mx-auto mb-4' },
-        'Write your agents, hooks, and skills once in ',
-        h('code', { class: 'text-indigo-300 bg-gray-800 px-1.5 py-0.5 rounded text-base' }, 'plugforge-starter/'),
-        '. plugforge generates fully working plugins for 6 CLI tools and 4 IDE extensions — automatically.'
+        'A state machine framework for agentic coding that enforces lifecycle phases, names every unknown, and requires witnessed execution before writing code.'
       ),
       h('p', { class: 'text-gray-500 max-w-xl mx-auto mb-10 text-sm' },
-        'No config files. No registration. Directory structure alone defines behavior. Adding a skill makes it appear in all 10 outputs.'
+        'No silent assumptions. No skipped verification. No premature completion. Available across 10 platforms.'
       ),
-      h('a', {
-        href: 'https://github.com/AnEntrypoint/plugforge',
-        target: '_blank', rel: 'noopener',
-        class: 'inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-7 py-3 rounded-lg transition-colors text-sm'
-      }, GITHUB_ICON, 'View on GitHub')
+      h('div', { class: 'flex gap-4 justify-center' },
+        h('a', {
+          href: './paper.html',
+          class: 'inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-7 py-3 rounded-lg transition-colors text-sm'
+        }, 'Read the Paper'),
+        h('a', {
+          href: 'https://github.com/AnEntrypoint/plugforge',
+          target: '_blank', rel: 'noopener',
+          class: 'inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-7 py-3 rounded-lg transition-colors text-sm border border-gray-700'
+        }, GITHUB_ICON, 'Source')
+      )
+    )
+  );
+}
+
+function PrinciplesSection() {
+  return h('section', { id: 'principles', class: 'py-20 px-4' },
+    h('div', { class: 'max-w-5xl mx-auto' },
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'Core Principles'),
+      h('p', { class: 'text-gray-400 text-center mb-10 text-sm max-w-2xl mx-auto' },
+        'Six techniques that make LLM coding agents reliable. Each addresses a specific failure mode in unconstrained agentic systems.'
+      ),
+      h('div', { class: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+        ...PRINCIPLES.map((p, i) => h('div', { key: i, class: 'card-hover bg-gray-900 border border-gray-800 rounded-xl p-6' },
+          h('h3', { class: 'font-semibold text-white mb-2' }, p.title),
+          h('p', { class: 'text-gray-400 text-sm leading-relaxed' }, p.desc)
+        ))
+      )
     )
   );
 }
 
 function StateMachineSection() {
-  return h('section', { class: 'py-20 px-4 bg-gray-900/40' },
+  return h('section', { id: 'state-machine', class: 'py-20 px-4 bg-gray-900/40' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'State Machine'),
-      h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'Every task runs through five mandatory phases. No shortcuts. No skipped gates.'),
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'The State Machine'),
+      h('p', { class: 'text-gray-400 text-center mb-4 text-sm max-w-2xl mx-auto' },
+        'Every task progresses through five mandatory phases. New unknowns at any phase trigger a backward transition to PLAN. Forward progress requires all conditions to hold simultaneously.'
+      ),
+      h('p', { class: 'text-gray-500 text-center mb-10 text-xs' },
+        'Snakes and Ladders: climb by satisfying conditions, slide back when assumptions break.'
+      ),
       h('div', { class: 'flex flex-col md:flex-row items-stretch gap-0 md:gap-0' },
         ...PHASES.flatMap((phase, i) => {
           const card = h('div', {
@@ -85,7 +121,7 @@ function StateMachineSection() {
             h('p', { class: 'text-gray-400 text-sm leading-relaxed flex-1' }, phase.desc)
           );
           if (i < PHASES.length - 1) {
-            return [card, h('div', { key: `arrow-${i}`, class: 'phase-arrow hidden md:flex items-center justify-center px-1 text-xl' }, '→')];
+            return [card, h('div', { key: `arrow-${i}`, class: 'phase-arrow hidden md:flex items-center justify-center px-1 text-xl' }, '\u2192')];
           }
           return [card];
         })
@@ -94,58 +130,45 @@ function StateMachineSection() {
   );
 }
 
-function HowItWorksSection() {
-  const steps = [
-    { num: '1', title: 'Write once', body: h('span', null, 'Create agents, hooks, and skills in ', h('code', { class: 'text-indigo-300 bg-gray-800 px-1 py-0.5 rounded text-xs' }, 'plugforge-starter/'), '. Directory structure is the only config.') },
-    { num: '2', title: 'Run npx gm-builder', body: h('span', null, 'plugforge adapts your source for every platform. Clean build every time — no stale files, no silent failures.') },
-    { num: '3', title: 'GitHub Actions publishes', body: h('span', null, 'All 10 outputs pushed automatically. rsync --delete removes orphaned files from every target repo.') },
+function MutableDisciplineSection() {
+  const rules = [
+    { title: 'Name every unknown', desc: 'Before acting, declare what you don\'t know. apiShape=UNKNOWN, fileExists=UNKNOWN. No unnamed assumptions.' },
+    { title: 'Witnessed execution only', desc: 'A mutable is resolved when real code runs against real services and produces real output. Reading docs or reasoning doesn\'t count.' },
+    { title: 'Two-pass rule', desc: 'If a mutable remains unresolved after two attempts, it becomes a new unknown and the agent snakes back to PLAN.' },
+    { title: 'No silent surprises', desc: 'Unexpected output is never absorbed silently. Every discrepancy generates a new named mutable and triggers re-planning.' },
   ];
   return h('section', { class: 'py-20 px-4' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-10 text-center' }, 'How It Works'),
-      h('div', { class: 'grid grid-cols-1 md:grid-cols-3 gap-6' },
-        ...steps.map(s => h('div', { key: s.num, class: 'card-hover bg-gray-900 border border-gray-800 rounded-xl p-6' },
-          h('div', { class: 'w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white mb-4' }, s.num),
-          h('h3', { class: 'font-semibold text-white mb-2' }, s.title),
-          h('p', { class: 'text-gray-400 text-sm leading-relaxed' }, s.body)
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'The Mutable Discipline'),
+      h('p', { class: 'text-gray-400 text-center mb-10 text-sm max-w-2xl mx-auto' },
+        'The central enforcement mechanism. Agents must confront uncertainty explicitly rather than generating plausible-but-unverified code.'
+      ),
+      h('div', { class: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+        ...rules.map((r, i) => h('div', { key: i, class: 'card-hover bg-gray-900 border border-gray-800 rounded-xl p-6' },
+          h('h3', { class: 'font-semibold text-white mb-2' }, r.title),
+          h('p', { class: 'text-gray-400 text-sm leading-relaxed' }, r.desc)
         ))
       )
     )
   );
 }
 
-function PlatformCard({ p, isCLI }) {
-  return h('a', {
-    href: `https://AnEntrypoint.github.io/${p.id}`,
-    target: '_blank', rel: 'noopener',
-    class: 'card-hover block bg-gray-900 border border-gray-800 rounded-xl p-5 no-underline'
-  },
-    h('div', { class: 'flex items-start justify-between mb-2' },
-      h('span', { class: 'font-semibold text-white text-sm' }, p.label),
-      h('span', {
-        class: `text-xs px-2 py-0.5 rounded-full font-medium ${isCLI ? 'bg-blue-900/60 text-blue-300' : 'bg-purple-900/60 text-purple-300'}`
-      }, isCLI ? 'CLI' : 'IDE')
-    ),
-    h('p', { class: 'text-gray-400 text-xs leading-relaxed' }, p.desc)
-  );
-}
-
 function PlatformsSection() {
+  const allPlatforms = [...CLI_PLATFORMS.map(p => ({...p, type: 'CLI'})), ...IDE_PLATFORMS.map(p => ({...p, type: 'IDE'}))];
   return h('section', { class: 'py-20 px-4 bg-gray-900/40' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, '10 Generated Platforms'),
-      h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'Every platform is generated from the same source. Click any to visit its page.'),
-      h('div', { class: 'mb-8' },
-        h('p', { class: 'text-xs font-semibold text-blue-400 uppercase tracking-wider mb-4' }, 'CLI Tools'),
-        h('div', { class: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' },
-          ...CLI_PLATFORMS.map(p => h(PlatformCard, { p, isCLI: true, key: p.id }))
-        )
-      ),
-      h('div', null,
-        h('p', { class: 'text-xs font-semibold text-purple-400 uppercase tracking-wider mb-4' }, 'IDE Extensions'),
-        h('div', { class: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
-          ...IDE_PLATFORMS.map(p => h(PlatformCard, { p, isCLI: false, key: p.id }))
-        )
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'Available Everywhere'),
+      h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'The same agent behavior, enforced across 10 platforms.'),
+      h('div', { class: 'flex flex-wrap justify-center gap-3' },
+        ...allPlatforms.map(p => h('a', {
+          key: p.id,
+          href: `https://AnEntrypoint.github.io/${p.id}`,
+          target: '_blank', rel: 'noopener',
+          class: `inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors no-underline ${p.type === 'CLI' ? 'bg-blue-950/40 border-blue-800/50 text-blue-300 hover:bg-blue-900/40' : 'bg-purple-950/40 border-purple-800/50 text-purple-300 hover:bg-purple-900/40'}`
+        },
+          h('span', null, p.label),
+          h('span', { class: 'text-xs opacity-60' }, p.type)
+        ))
       )
     )
   );
@@ -154,24 +177,15 @@ function PlatformsSection() {
 function Footer() {
   return h('footer', { class: 'border-t border-gray-800 py-8 px-4 text-center text-gray-500 text-sm' },
     h('p', null,
-      'Generated by plugforge — ',
-      h('a', { href: 'https://github.com/AnEntrypoint/plugforge', target: '_blank', rel: 'noopener', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'github.com/AnEntrypoint/plugforge')
+      'Built with ',
+      h('a', { href: 'https://github.com/AnEntrypoint/plugforge', target: '_blank', rel: 'noopener', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'plugforge'),
+      ' \u2014 ',
+      h('a', { href: './paper.html', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'Read the paper')
     )
   );
 }
 
-function App() {
-  return h(Fragment, null,
-    h(NavBar, null),
-    h(Hero, null),
-    h(StateMachineSection, null),
-    h(HowItWorksSection, null),
-    h(PlatformsSection, null),
-    h(Footer, null)
-  );
-}
-
-const sections = [NavBar(), Hero(), StateMachineSection(), HowItWorksSection(), PlatformsSection(), Footer()];
+const sections = [NavBar(), Hero(), PrinciplesSection(), StateMachineSection(), MutableDisciplineSection(), PlatformsSection(), Footer()];
 for (const vnode of sections) {
   const el = createDOMElement(vnode);
   if (el) document.body.appendChild(el);
