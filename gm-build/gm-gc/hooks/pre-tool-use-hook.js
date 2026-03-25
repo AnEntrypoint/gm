@@ -369,7 +369,35 @@ const run = () => {
             const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
             const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
             const AB_SESSION_STATE = path.join(os.tmpdir(), 'gm-ab-sessions.json');
-            function readAbSessions() { try { return JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8')); } catch { return {}; } }
+            const AB_SOCKET_DIR = process.env.AGENT_BROWSER_SOCKET_DIR || path.join(os.homedir(), '.agent-browser');
+            function isDaemonAlive(session) {
+              try {
+                const pidFile = path.join(AB_SOCKET_DIR, `${session}.pid`);
+                if (!fs.existsSync(pidFile)) return false;
+                const pid = parseInt(fs.readFileSync(pidFile, 'utf8').trim(), 10);
+                process.kill(pid, 0);
+                return true;
+              } catch { return false; }
+            }
+            function pruneStaleDaemons(sessions) {
+              let changed = false;
+              for (const name of Object.keys(sessions)) {
+                if (!isDaemonAlive(name)) {
+                  delete sessions[name];
+                  try { fs.unlinkSync(path.join(AB_SOCKET_DIR, `${name}.pid`)); } catch {}
+                  try { fs.unlinkSync(path.join(AB_SOCKET_DIR, `${name}.port`)); } catch {}
+                  changed = true;
+                }
+              }
+              return changed;
+            }
+            function readAbSessions() {
+              try {
+                const s = JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8'));
+                if (pruneStaleDaemons(s)) writeAbSessions(s);
+                return s;
+              } catch { return {}; }
+            }
             function writeAbSessions(s) { try { fs.writeFileSync(AB_SESSION_STATE, JSON.stringify(s)); } catch {} }
             function parseAbLine(line) {
               const tokens = line.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
