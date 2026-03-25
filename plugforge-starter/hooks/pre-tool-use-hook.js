@@ -296,10 +296,12 @@ const run = () => {
           let out = stripFooter((r.stdout || '') + (r.stderr || ''));
           const bg = out.match(/Task ID:\s*(task_\S+)/);
           if (bg) {
-            runGmExec(['sleep', bg[1], '60'], { timeout: 70000 });
+            runGmExec(['sleep', bg[1], '15'], { timeout: 25000 });
             const sr = runGmExec(['status', bg[1]], { timeout: 15000 });
-            out = stripFooter((sr.stdout || '') + (sr.stderr || ''));
-            runGmExec(['close', bg[1]], { timeout: 10000 });
+            const statusOut = stripFooter((sr.stdout || '') + (sr.stderr || ''));
+            const stillRunning = /Status:\s*running/i.test(statusOut);
+            out = statusOut;
+            if (!stillRunning) runGmExec(['close', bg[1]], { timeout: 10000 });
           }
           return out;
         };
