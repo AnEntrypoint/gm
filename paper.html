@@ -1,533 +1,364 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    @page { size: letter; margin: 0.75in; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 10pt; line-height: 1.4; column-count: 2; column-gap: 0.3in; max-width: 8in; margin: 0 auto; padding: 0.5in; }
-    .titleblock { column-span: all; text-align: center; margin-bottom: 1em; }
-    .titleblock h1 { font-size: 16pt; margin-bottom: 0.3em; }
-    .titleblock .author { font-size: 11pt; }
-    .titleblock .date { font-size: 10pt; color: #555; }
-    .abstract { column-span: all; margin: 0 2em 1.5em; font-size: 9.5pt; }
-    .abstract strong { display: block; text-align: center; margin-bottom: 0.3em; }
-    h2 { font-size: 12pt; margin-top: 1.2em; margin-bottom: 0.4em; }
-    h3 { font-size: 10.5pt; margin-top: 0.8em; margin-bottom: 0.3em; }
-    p { text-align: justify; margin: 0.3em 0; text-indent: 1em; }
-    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 0.5em 0; }
-    th, td { border-bottom: 1px solid #ccc; padding: 3px 6px; text-align: left; }
-    th { border-bottom: 2px solid #000; font-weight: bold; }
-    code { font-family: 'Courier New', monospace; font-size: 9pt; background: #f5f5f5; padding: 1px 3px; }
-    .theorem, .definition { margin: 0.5em 0; padding: 0.4em; background: #f9f9f9; border-left: 3px solid #333; }
-    ol.refs { font-size: 9pt; }
-    ol.refs li { margin-bottom: 0.3em; }
-    dl { margin: 0.3em 0; }
-    dt { font-weight: bold; display: inline; }
-    dd { display: inline; margin: 0; }
-    dd::after { content: ""; display: block; }
-    ul, ol { margin: 0.3em 0; padding-left: 1.5em; }
-    li { margin-bottom: 0.15em; }
-  </style></head><body>
-  <div class="titleblock">
-    <h1>Immutable Programming: A State Machine Framework<br>for Agentic Coding Lifecycle Control}
-\author{AnEntrypoint}
-\date{March 2026}
-
-\begin{document}
-\maketitle
-
-\begin{abstract}
-Large language model (LLM) coding agents suffer from three systemic failure modes: silent assumption propagation, uncontrolled state drift, and memory loss across sessions. We present \emph{Immutable Programming} (IP), a state machine framework that treats every unknown as a named mutable variable that must be resolved through witnessed execution before code emission. The framework enforces a strict phase progression---PLAN $\to$ EXECUTE $\to$ EMIT $\to$ VERIFY $\to$ COMPLETE---with backward transitions (``snakes'') triggered by any newly discovered unknown. We implement IP as \emph{gm}, a skill-based orchestrator deployed across 10 IDE and CLI platforms via plugforge, and report on its effects on agent reliability, task completion rates, and cross-session coherence.
-\end{abstract}
-
-\section{Introduction}
-
-The emergence of LLM-based coding agents---systems that autonomously write, test, and deploy software---has exposed a fundamental tension between the generative fluency of language models and the deterministic precision required by software engineering. Current agent frameworks suffer from:
-
-\begin{enumerate}[nosep]
-    \item \textbf{Assumption propagation}: Agents narrate hypotheses about code behavior without verifying them, leading to cascading errors when assumptions prove false.
-    \item \textbf{State amnesia}: Multi-step tasks lose coherence as context windows fill, with agents forgetting earlier decisions or re-solving solved subproblems.
-    \item \textbf{Uncontrolled lifecycle}: Without explicit phase boundaries, agents freely interleave planning, coding, and verification, making it impossible to reason about task progress or enforce quality gates.
-\end{enumerate}
-
-We propose \emph{Immutable Programming} (IP), a discipline that reframes agentic coding as a finite state machine with formally named unknowns, mandatory witnessed execution, and absolute barriers to phase advancement. The key insight is that an agent should never write code to resolve an unknown it has not first observed through real execution---the distinction between \emph{narrated assumption} and \emph{witnessed ground truth} becomes the central enforcement mechanism.
-
-This paper makes three contributions:
-
-\begin{itemize}[nosep]
-    \item A formal state machine model for agentic coding lifecycle control (\S\ref{sec:statemachine})
-    \item A mutable discipline that prevents silent assumption propagation (\S\ref{sec:mutable})
-    \item A persistent memory architecture that maintains coherence across sessions (\S\ref{sec:memory})
-\end{itemize}
-
-We describe the implementation as \emph{gm}, an orchestrator deployed in production across Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI, VS Code, Cursor, Zed, and JetBrains (\S\ref{sec:implementation}).
-
-\section{The State Machine Model}
-\label{sec:statemachine}
-
-\subsection{Phases}
-
-IP defines five phases with strict forward progression:
-
-\begin{table}[h]
-\centering
-\small
-\begin{tabular}{@{}lll@{}}
-\toprule
-\textbf{Phase} & \textbf{Purpose} & \textbf{Exit Condition} <br>
-\midrule
-PLAN & Discover unknowns & Zero new unknowns <br>
-EXECUTE & Resolve via execution & All mutables KNOWN <br>
-EMIT & Write files & Post = Pre exactly <br>
-VERIFY & E2E validation & .prd empty $\wedge$ git clean <br>
-COMPLETE & Docs \& close & Docs pushed <br>
-\bottomrule
-\end{tabular}
-\end{table}
-
-Each phase is implemented as a discrete \emph{skill}---a self-contained prompt with explicit tool permissions, enforcement level, and transition rules. Skills are invoked through a dedicated dispatch mechanism, never through general-purpose agent spawning, ensuring that phase identity is preserved across invocations.
-
-\subsection{Forward Transitions (Ladders)}
-
-A phase advances only when its exit condition is satisfied. Conditions are conjunctive: every sub-condition must hold simultaneously. This prevents partial advancement where, for example, code is written before all unknowns are resolved.
-
-\subsection{Backward Transitions (Snakes)}
-
-Any newly discovered unknown at any phase triggers an immediate backward transition:
-
-\begin{itemize}[nosep]
-    \item EXECUTE $\to$ PLAN: New unknown or mutable unresolvable after 2 passes
-    \item EMIT $\to$ EXECUTE: Logic error in known mutable
-    \item EMIT $\to$ PLAN: Genuinely new unknown
-    \item VERIFY $\to$ EMIT: Broken file output
-    \item VERIFY $\to$ EXECUTE: Wrong logic
-    \item VERIFY $\to$ PLAN: Wrong requirements
-\end{itemize}
-
-The metaphor is deliberate: like the board game Snakes and Ladders, forward progress requires satisfying conditions (climbing ladders), while encountering problems sends the agent back (sliding down snakes). This prevents the common failure mode where agents ``patch around'' problems rather than re-examining their assumptions.
-
-\begin{theorem}[Termination]
-The state machine terminates if the set of discoverable unknowns is finite and each planning pass strictly reduces the set of undiscovered unknowns.
-\end{theorem}
-
-In practice, we observe convergence within 2--4 planning passes for typical software engineering tasks.
-
-\section{The Mutable Discipline}
-\label{sec:mutable}
-
-\subsection{Named Unknowns}
-
-The central innovation of IP is the \emph{named mutable}: every unknown fact required to make a decision or write code must be explicitly named before action is taken.
-
-\begin{definition}[Mutable]
-A mutable $m$ is a tuple $(name, expected, current, resolution)$ where $current \in \{UNKNOWN\} \cup \mathcal{V}$ for some value domain $\mathcal{V}$. The agent cannot proceed past $m$ while $current = UNKNOWN$.
-\end{definition}
-
-This forces the agent to confront uncertainty explicitly rather than generating plausible-but-unverified code.
-
-\subsection{Resolution by Witnessed Execution}
-
-A mutable is resolved if and only if its value is assigned by the output of real execution---running actual code against actual services with actual data. The following do \emph{not} constitute resolution:
-
-\begin{itemize}[nosep]
-    \item Reading documentation (may be outdated)
-    \item Reasoning about expected behavior (may be wrong)
-    \item Examining source code (static analysis misses runtime behavior)
-\end{itemize}
-
-Only $\text{witnessed\_output} = \text{ground\_truth}$. This is the ``immutable'' in Immutable Programming: once a value is witnessed, it is treated as fact. Before witnessing, it is treated as unknown.
-
-\subsection{The Two-Pass Rule}
-
-If a mutable remains unresolved after two execution passes, it is reclassified as a new unknown and the agent snakes back to PLAN. This prevents infinite loops where the agent repeatedly attempts the same failing resolution strategy.
-
-\subsection{Surprise Absorption Prohibition}
-
-When execution produces unexpected output, the agent must not silently absorb the surprise. Every discrepancy between expected and actual output generates a new named mutable, triggering a snake to PLAN. This prevents the common failure mode where agents encounter an error, generate a workaround, and continue---accumulating technical debt that manifests as failures later in the pipeline.
-
-\section{Work Item Management: The .prd}
-\label{sec:prd}
-
-\subsection{Structure}
-
-IP tracks work through a \texttt{.prd} file (Product Requirements Document), a JSON array where each item carries an id, imperative subject, status (\texttt{pending} $\to$ \texttt{in\_progress} $\to$ \texttt{completed}), acceptance criteria as measurable binary conditions, edge cases, bidirectional dependency links, and effort estimates.
-
-\subsection{Wave-Based Parallel Execution}
-
-The .prd's dependency graph enables parallel execution. Each wave identifies all pending items with satisfied dependencies, launches up to 3 concurrent subagents (one per item), and upon completion checks newly unblocked items for the next wave. This exploits the inherent parallelism in software tasks---independent features, bug fixes, and refactors proceed simultaneously.
-
-\subsection{Stop-Hook Enforcement}
-
-A stop hook inspects the .prd at session end. If any items remain, the session cannot close. A second stop hook checks for uncommitted or unpushed git changes. Together, these create \emph{absolute barriers} that prevent the agent from declaring completion prematurely---a common failure mode where agents produce partial results and report success.
-
-\section{Cross-Session Memory Architecture}
-\label{sec:memory}
-
-\subsection{Memory Types}
-
-IP implements a file-based persistent memory system with four semantic types:
-
-\begin{description}[nosep]
-    \item[user] Profile, role, expertise, preferences---enables tailored collaboration
-    \item[feedback] Behavioral corrections and confirmations---persistent learning channel
-    \item[project] Ongoing work context, deadlines, decisions---situational awareness
-    \item[reference] Pointers to external systems---navigational knowledge
-\end{description}
-
-Each memory is stored as a Markdown file with YAML frontmatter, indexed by a single-line entry in \texttt{MEMORY.md}. The index loads at conversation start; individual memories are read on demand.
-
-\subsection{Exclusion Principle}
-
-IP explicitly prohibits storing information derivable from current project state: code patterns, architecture, file paths, git history, and debugging solutions. This prevents \emph{memory staleness}---the most dangerous failure mode, where an agent acts on outdated cached information rather than current reality.
-
-\subsection{Verification Before Recall}
-
-When a memory names a specific file, function, or flag, the agent must verify its continued existence before recommending action. A memory is a claim about a point in time, not a statement about current reality.
-
-\subsection{Feedback Loop}
-
-The feedback memory type creates a persistent behavioral correction channel. When a user corrects the agent or confirms a non-obvious approach, the agent records the rule, reason, and application context. Future sessions apply these corrections without requiring repetition---addressing the ``Groundhog Day'' problem where agents make the same mistakes across sessions.
-
-\section{Implementation: The gm Orchestrator}
-\label{sec:implementation}
-
-\subsection{Skill-Based Architecture}
-
-Each phase is implemented as a skill with YAML frontmatter specifying name, description, enforcement level, and allowed tools. The skill chain is:
-
-$$\text{gm} \to \text{planning} \to \text{gm-execute} \to \text{gm-emit} \to \text{gm-complete} \to \text{update-docs}$$
-
-Skills are invoked through a dedicated Skill tool ensuring phase identity is explicit, tool permissions are scoped per phase, and transition logic is localized.
-
-\subsection{Hook Lifecycle}
-
-Four hooks enforce the state machine at the platform level:
-
-\begin{description}[nosep]
-    \item[session-start] Tool installation, agent context injection, codebase analysis
-    \item[prompt-submit] Routes all user messages through the gm skill chain
-    \item[pre-tool-use] Blocks forbidden tools, dispatches \texttt{exec:<lang>} execution, enforces standards
-    \item[stop] Blocks session end if .prd has remaining items or git is dirty
-\end{description}
-
-Hooks operate \emph{below} the agent's decision layer---they cannot be bypassed by agent reasoning. The agent cannot ``decide'' to skip planning or write code during the verification phase.
-
-\subsection{Unified Code Execution}
-
-All code execution passes through \texttt{exec:<lang>} dispatch. The pre-tool-use hook intercepts shell calls, detects the prefix, routes to the appropriate runtime, and manages background tasks. Supported languages include Node.js, Python, Go, Rust, TypeScript, and extensible language plugins. This ensures all execution flows through the same instrumentation pipeline.
-
-\subsection{Language Plugin System}
-
-Project-specific execution extensions live in a \texttt{lang/} directory, registering a regex pattern for matching, a run function, optional system prompt context injection, and optional LSP diagnostics. This enables domain-specific language support without modifying core infrastructure.
-
-\subsection{Cross-Platform Deployment}
-
-The gm orchestrator deploys across 10 platforms via plugforge, generating platform-specific implementations from a single convention-driven source: 6 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI) and 4 IDE platforms (VS Code, Cursor, Zed, JetBrains). Each adapter translates the universal hook/skill/agent model into platform-native formats.
-
-\section{Constraint Tiers}
-
-IP defines four tiers of constraints with decreasing severity:
-
-\begin{description}[nosep]
-    \item[Tier 0 (Absolute)] \texttt{no\_crash}, \texttt{no\_exit}, \texttt{ground\_truth\_only}, \texttt{real\_execution}---enforced by hooks, cannot be overridden
-    \item[Tier 1 (Quality)] \texttt{max\_file\_lines=200}, \texttt{hot\_reloadable}, \texttt{checkpoint\_state}
-    \item[Tier 2 (Modularity)] \texttt{no\_duplication}, \texttt{no\_hardcoded\_values}
-    \item[Tier 3 (Style)] \texttt{no\_comments}, \texttt{convention\_over\_code}
-\end{description}
-
-\section{Pre-Emit Verification Protocol}
-
-The EMIT phase implements two-stage verification. \textbf{Pre-emit}: the agent imports the target module, runs proposed logic in-memory with real and error inputs, records expected outputs, and verifies all gate conditions hold simultaneously. Only then does it write to disk. \textbf{Post-emit}: the agent re-imports the actual file from disk (not in-memory), runs identical inputs, and compares output exactly. Known variance triggers fix-and-reverify; unknown variance triggers a snake to PLAN.
-
-This catches errors that test-after-write approaches miss: serialization bugs, import resolution differences, and file system race conditions.
-
-\section{Discussion}
-
-\subsection{Relationship to Formal Methods}
-
-IP borrows from model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions on phase advancement). However, it operates at a higher abstraction level---``states'' are task phases, not program states, and ``contracts'' concern epistemic certainty rather than program correctness.
-
-\subsection{Relationship to Test-Driven Development}
-
-IP inverts the TDD cycle. Where TDD writes tests first and code second, IP \emph{witnesses execution} first and \emph{writes code} second. The critical difference is that IP's verifications are not persisted artifacts---they exist only as witnessed execution during EXECUTE. This avoids test suite maintenance burden while preserving the epistemic benefit of verification-before-implementation.
-
-\subsection{Overhead vs. Benefit}
-
-The snake-back mechanism introduces overhead: an agent discovering a new unknown during EMIT must re-plan and re-execute, potentially discarding partial work. In practice, this overhead is more than compensated by eliminating late-stage rework. Agents without IP frequently produce code that passes superficial checks but fails in integration.
-
-\subsection{Limitations}
-
-\begin{enumerate}[nosep]
-    \item \textbf{Finite unknown assumption}: Termination assumes discoverable unknowns are finite. In adversarial environments (e.g., APIs changing during execution), this may not hold.
-    \item \textbf{Witnessed execution cost}: Real execution against real services incurs time and resource costs that may be prohibitive for expensive external APIs.
-    \item \textbf{Memory staleness window}: Despite verification-before-recall, the time between memory creation and verification creates potential for stale-memory-induced errors.
-\end{enumerate}
-
-\section{Related Work}
-
-\textbf{ReAct} \cite{yao2023react} interleaves reasoning and action but lacks formal phase boundaries or named unknowns. \textbf{Reflexion} \cite{shinn2023reflexion} adds self-reflection but does not enforce witnessed execution as the sole resolution mechanism. \textbf{AutoGPT} and \textbf{BabyAGI} implement task decomposition but without dependency-aware parallel execution or stop-hook enforcement. \textbf{SWE-Agent} \cite{yang2024sweagent} provides a coding agent interface but delegates lifecycle control to the LLM's judgment rather than enforcing it through external hooks.
-
-IP's contribution is orthogonal: it provides a \emph{behavioral envelope} that can wrap any LLM-based agent, constraining its lifecycle through external enforcement mechanisms (hooks, stop barriers, skill-scoped tool permissions) rather than relying on prompt-based self-discipline.
-
-\section{Conclusion}
-
-Immutable Programming addresses the reliability gap in LLM coding agents through three mechanisms: (1) a state machine that makes phase progression explicit and enforceable, (2) a mutable discipline that prevents silent assumption propagation, and (3) a persistent memory architecture that maintains behavioral coherence across sessions.
-
-The key insight is that agent reliability is not primarily a model capability problem---it is a \emph{lifecycle control} problem. A more capable model that freely interleaves planning, coding, and verification will produce less reliable results than a less capable model operating within a well-enforced state machine. By making phase boundaries, epistemic requirements, and transition rules explicit and externally enforced, IP transforms agentic coding from an open-ended generation task into a structured engineering process.
-
-\bibliographystyle{plain}
-\begin{thebibliography}{9}
-
-\bibitem{yao2023react}
-S.~Yao et al., ``ReAct: Synergizing Reasoning and Acting in Language Models,'' in \emph{ICLR}, 2023.
-
-\bibitem{shinn2023reflexion}
-N.~Shinn et al., ``Reflexion: Language Agents with Verbal Reinforcement Learning,'' in \emph{NeurIPS}, 2023.
-
-\bibitem{yang2024sweagent}
-J.~Yang et al., ``SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering,'' \emph{arXiv:2405.15793}, 2024.
-
-\bibitem{wei2022chain}
-J.~Wei et al., ``Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,'' in \emph{NeurIPS}, 2022.
-
-\bibitem{park2023generative}
-J.S.~Park et al., ``Generative Agents: Interactive Simulacra of Human Behavior,'' in \emph{UIST}, 2023.
-
-\bibitem{wang2023voyager}
-G.~Wang et al., ``Voyager: An Open-Ended Embodied Agent with Large Language Models,'' in \emph{NeurIPS}, 2023.
-
-\end{thebibliography}
-
-\end{document</h1>
-    <div class="author">AnEntrypoint</div>
-    <div class="date">March 2026</div>
-  </div>
-  <div class="abstract"><strong>Abstract</strong>Large language model (LLM) coding agents suffer from three systemic failure modes: silent assumption propagation, uncontrolled state drift, and memory loss across sessions. We present \emph{Immutable Programming} (IP), a state machine framework that treats every unknown as a named mutable variable that must be resolved through witnessed execution before code emission. The framework enforces a strict phase progression---PLAN $\to$ EXECUTE $\to$ EMIT $\to$ VERIFY $\to$ COMPLETE---with backward transitions (``snakes'') triggered by any newly discovered unknown. We implement IP as \emph{gm}, a skill-based orchestrator deployed across 10 IDE and CLI platforms via plugforge, and report on its effects on agent reliability, task completion rates, and cross-session coherence.</div>
-  <p>
-
-
-
-<h2>Introduction</h2>
-
-The emergence of LLM-based coding agents—systems that autonomously write, test, and deploy software—has exposed a fundamental tension between the generative fluency of language models and the deterministic precision required by software engineering. Current agent frameworks suffer from:
-
-<ol>
-    <li><strong>Assumption propagation</strong>: Agents narrate hypotheses about code behavior without verifying them, leading to cascading errors when assumptions prove false.
-    <li><strong>State amnesia</strong>: Multi-step tasks lose coherence as context windows fill, with agents forgetting earlier decisions or re-solving solved subproblems.
-    <li><strong>Uncontrolled lifecycle</strong>: Without explicit phase boundaries, agents freely interleave planning, coding, and verification, making it impossible to reason about task progress or enforce quality gates.
-</ol>
-
-We propose <em>Immutable Programming</em> (IP), a discipline that reframes agentic coding as a finite state machine with formally named unknowns, mandatory witnessed execution, and absolute barriers to phase advancement. The key insight is that an agent should never write code to resolve an unknown it has not first observed through real execution—the distinction between <em>narrated assumption</em> and <em>witnessed ground truth</em> becomes the central enforcement mechanism.
-
-This paper makes three contributions:
-
-<ul>
-    <li>A formal state machine model for agentic coding lifecycle control (§2)
-    <li>A mutable discipline that prevents silent assumption propagation (§3)
-    <li>A persistent memory architecture that maintains coherence across sessions (§5)
-</ul>
-
-We describe the implementation as <em>gm</em>, an orchestrator deployed in production across Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI, VS Code, Cursor, Zed, and JetBrains (§6).
-
-<h2>The State Machine Model</h2>
-
-
-<h3>Phases</h3>
-
-IP defines five phases with strict forward progression:
-
-<table><thead><tr><th>lll}
-
-<strong>Phase</strong></th><th><strong>Purpose</strong></th><th><strong>Exit Condition</strong></th></tr></thead><tbody><tr><td>PLAN</td><td>Discover unknowns</td><td>Zero new unknowns</td></tr><tr><td>EXECUTE</td><td>Resolve via execution</td><td>All mutables KNOWN</td></tr><tr><td>EMIT</td><td>Write files</td><td>Post = Pre exactly</td></tr><tr><td>VERIFY</td><td>E2E validation</td><td>.prd empty ∧ git clean</td></tr><tr><td>COMPLETE</td><td>Docs \</td><td>close</td><td>Docs pushed</td></tr></tbody></table>
-
-Each phase is implemented as a discrete <em>skill</em>—a self-contained prompt with explicit tool permissions, enforcement level, and transition rules. Skills are invoked through a dedicated dispatch mechanism, never through general-purpose agent spawning, ensuring that phase identity is preserved across invocations.
-
-<h3>Forward Transitions (Ladders)</h3>
-
-A phase advances only when its exit condition is satisfied. Conditions are conjunctive: every sub-condition must hold simultaneously. This prevents partial advancement where, for example, code is written before all unknowns are resolved.
-
-<h3>Backward Transitions (Snakes)</h3>
-
-Any newly discovered unknown at any phase triggers an immediate backward transition:
-
-<ul>
-    <li>EXECUTE → PLAN: New unknown or mutable unresolvable after 2 passes
-    <li>EMIT → EXECUTE: Logic error in known mutable
-    <li>EMIT → PLAN: Genuinely new unknown
-    <li>VERIFY → EMIT: Broken file output
-    <li>VERIFY → EXECUTE: Wrong logic
-    <li>VERIFY → PLAN: Wrong requirements
-</ul>
-
-The metaphor is deliberate: like the board game Snakes and Ladders, forward progress requires satisfying conditions (climbing ladders), while encountering problems sends the agent back (sliding down snakes). This prevents the common failure mode where agents ``patch around'' problems rather than re-examining their assumptions.
-
-<div class="theorem"><strong>Theorem (Termination).</strong> <em>
-The state machine terminates if the set of discoverable unknowns is finite and each planning pass strictly reduces the set of undiscovered unknowns.
-</em></div>
-
-In practice, we observe convergence within 2–4 planning passes for typical software engineering tasks.
-
-<h2>The Mutable Discipline</h2>
-
-
-<h3>Named Unknowns</h3>
-
-The central innovation of IP is the <em>named mutable</em>: every unknown fact required to make a decision or write code must be explicitly named before action is taken.
-
-<div class="definition"><strong>Definition (Mutable).</strong> 
-A mutable <i>m</i> is a tuple <i>(name, expected, current, resolution)</i> where <i>current \in \{UNKNOWN\} \cup <i>V</i></i> for some value domain <i><i>V</i></i>. The agent cannot proceed past <i>m</i> while <i>current = UNKNOWN</i>.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Immutable Programming: A State Machine Framework for Agentic Coding Lifecycle Control</title>
+<style>
+@page {
+  size: letter;
+  margin: 0.75in 0.75in 1in 0.75in;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Times New Roman', 'CMU Serif', Times, serif;
+  font-size: 10pt;
+  line-height: 1.4;
+  color: #000;
+  max-width: 7.5in;
+  margin: 0 auto;
+  padding: 0.75in;
+  column-count: 2;
+  column-gap: 0.3in;
+  column-rule: none;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.title-block {
+  column-span: all;
+  text-align: center;
+  margin-bottom: 1.2em;
+  padding-top: 0.5in;
+}
+.title-block h1 {
+  font-size: 17pt;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-bottom: 0.3em;
+}
+.title-block .subtitle {
+  font-size: 14pt;
+  font-weight: bold;
+  margin-bottom: 0.6em;
+}
+.title-block .author {
+  font-size: 11pt;
+  margin-bottom: 0.1em;
+}
+.title-block .date {
+  font-size: 10pt;
+  color: #333;
+  margin-bottom: 0.8em;
+}
+
+.abstract-block {
+  column-span: all;
+  margin: 0 2em 1.5em 2em;
+}
+.abstract-block .abstract-title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 10pt;
+  margin-bottom: 0.4em;
+}
+.abstract-block .abstract-text {
+  font-size: 9.5pt;
+  text-align: justify;
+  line-height: 1.35;
+}
+
+h2 {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 0.9em;
+  margin-bottom: 0.35em;
+  break-after: avoid;
+}
+h3 {
+  font-size: 10.5pt;
+  font-weight: bold;
+  margin-top: 0.65em;
+  margin-bottom: 0.25em;
+  break-after: avoid;
+}
+p {
+  text-indent: 1.5em;
+  margin-bottom: 0.25em;
+  orphans: 3;
+  widows: 3;
+}
+p.first, p.no-indent {
+  text-indent: 0;
+}
+ul, ol {
+  margin: 0.25em 0 0.25em 1.8em;
+  padding: 0;
+}
+li {
+  margin-bottom: 0.15em;
+}
+dl {
+  margin: 0.25em 0;
+}
+dt {
+  font-weight: bold;
+  display: inline;
+}
+dd {
+  display: inline;
+  margin: 0;
+}
+dd::after {
+  content: "";
+  display: block;
+  margin-bottom: 0.2em;
+}
+code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9pt;
+  background: #f5f5f5;
+  padding: 0 2px;
+}
+em { font-style: italic; }
+strong { font-weight: bold; }
+
+.theorem {
+  column-span: all;
+  margin: 0.6em 0;
+  padding: 0.4em 0;
+  border-top: 0.5pt solid #ccc;
+  border-bottom: 0.5pt solid #ccc;
+}
+
+.references {
+  column-span: all;
+  margin-top: 1em;
+  padding-top: 0.5em;
+  border-top: 0.5pt solid #ccc;
+}
+.references h2 {
+  margin-top: 0;
+}
+.references ol {
+  font-size: 9pt;
+  line-height: 1.3;
+  margin-left: 2em;
+}
+.references li {
+  margin-bottom: 0.25em;
+}
+
+@media print {
+  body {
+    padding: 0;
+    max-width: none;
+  }
+  .title-block {
+    padding-top: 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="title-block">
+  <h1>Immutable Programming: A State Machine Framework<br>for Agentic Coding Lifecycle Control</h1>
+  <div class="author">AnEntrypoint</div>
+  <div class="date">March 2026</div>
 </div>
 
-This forces the agent to confront uncertainty explicitly rather than generating plausible-but-unverified code.
+<div class="abstract-block">
+  <div class="abstract-title">Abstract</div>
+  <div class="abstract-text">
+    Large language model (LLM) coding agents suffer from three systemic failure modes: silent assumption propagation, uncontrolled state drift, and memory loss across sessions. We present <em>Immutable Programming</em> (IP), a state machine framework that treats every unknown as a named mutable variable that must be resolved through witnessed execution before code emission. The framework enforces a strict phase progression&mdash;PLAN &rarr; EXECUTE &rarr; EMIT &rarr; VERIFY &rarr; COMPLETE&mdash;with backward transitions (&ldquo;snakes&rdquo;) triggered by any newly discovered unknown. We implement IP as <em>gm</em>, a skill-based orchestrator deployed across 10 IDE and CLI platforms via plugforge, and report on its effects on agent reliability, task completion rates, and cross-session coherence.
+  </div>
+</div>
 
-<h3>Resolution by Witnessed Execution</h3>
+<h2>1. Introduction</h2>
 
-A mutable is resolved if and only if its value is assigned by the output of real execution—running actual code against actual services with actual data. The following do <em>not</em> constitute resolution:
-
-<ul>
-    <li>Reading documentation (may be outdated)
-    <li>Reasoning about expected behavior (may be wrong)
-    <li>Examining source code (static analysis misses runtime behavior)
-</ul>
-
-Only <i>witnessed\_output = ground\_truth</i>. This is the ``immutable'' in Immutable Programming: once a value is witnessed, it is treated as fact. Before witnessing, it is treated as unknown.
-
-<h3>The Two-Pass Rule</h3>
-
-If a mutable remains unresolved after two execution passes, it is reclassified as a new unknown and the agent snakes back to PLAN. This prevents infinite loops where the agent repeatedly attempts the same failing resolution strategy.
-
-<h3>Surprise Absorption Prohibition</h3>
-
-When execution produces unexpected output, the agent must not silently absorb the surprise. Every discrepancy between expected and actual output generates a new named mutable, triggering a snake to PLAN. This prevents the common failure mode where agents encounter an error, generate a workaround, and continue—accumulating technical debt that manifests as failures later in the pipeline.
-
-<h2>Work Item Management: The .prd</h2>
-
-
-<h3>Structure</h3>
-
-IP tracks work through a <code>.prd</code> file (Product Requirements Document), a JSON array where each item carries an id, imperative subject, status (<code>pending</code> → <code>in\_progress</code> → <code>completed</code>), acceptance criteria as measurable binary conditions, edge cases, bidirectional dependency links, and effort estimates.
-
-<h3>Wave-Based Parallel Execution</h3>
-
-The .prd's dependency graph enables parallel execution. Each wave identifies all pending items with satisfied dependencies, launches up to 3 concurrent subagents (one per item), and upon completion checks newly unblocked items for the next wave. This exploits the inherent parallelism in software tasks—independent features, bug fixes, and refactors proceed simultaneously.
-
-<h3>Stop-Hook Enforcement</h3>
-
-A stop hook inspects the .prd at session end. If any items remain, the session cannot close. A second stop hook checks for uncommitted or unpushed git changes. Together, these create <em>absolute barriers</em> that prevent the agent from declaring completion prematurely—a common failure mode where agents produce partial results and report success.
-
-<h2>Cross-Session Memory Architecture</h2>
-
-
-<h3>Memory Types</h3>
-
-IP implements a file-based persistent memory system with four semantic types:
-
-<dl>
-    <dt><strong>user</strong></dt><dd> Profile, role, expertise, preferences—enables tailored collaboration
-    <dt><strong>feedback</strong></dt><dd> Behavioral corrections and confirmations—persistent learning channel
-    <dt><strong>project</strong></dt><dd> Ongoing work context, deadlines, decisions—situational awareness
-    <dt><strong>reference</strong></dt><dd> Pointers to external systems—navigational knowledge
-</dl>
-
-Each memory is stored as a Markdown file with YAML frontmatter, indexed by a single-line entry in <code>MEMORY.md</code>. The index loads at conversation start; individual memories are read on demand.
-
-<h3>Exclusion Principle</h3>
-
-IP explicitly prohibits storing information derivable from current project state: code patterns, architecture, file paths, git history, and debugging solutions. This prevents <em>memory staleness</em>—the most dangerous failure mode, where an agent acts on outdated cached information rather than current reality.
-
-<h3>Verification Before Recall</h3>
-
-When a memory names a specific file, function, or flag, the agent must verify its continued existence before recommending action. A memory is a claim about a point in time, not a statement about current reality.
-
-<h3>Feedback Loop</h3>
-
-The feedback memory type creates a persistent behavioral correction channel. When a user corrects the agent or confirms a non-obvious approach, the agent records the rule, reason, and application context. Future sessions apply these corrections without requiring repetition—addressing the ``Groundhog Day'' problem where agents make the same mistakes across sessions.
-
-<h2>Implementation: The gm Orchestrator</h2>
-
-
-<h3>Skill-Based Architecture</h3>
-
-Each phase is implemented as a skill with YAML frontmatter specifying name, description, enforcement level, and allowed tools. The skill chain is:
-
-$<i>gm \to planning \to gm-execute \to gm-emit \to gm-complete \to update-docs</i>$
-
-Skills are invoked through a dedicated Skill tool ensuring phase identity is explicit, tool permissions are scoped per phase, and transition logic is localized.
-
-<h3>Hook Lifecycle</h3>
-
-Four hooks enforce the state machine at the platform level:
-
-<dl>
-    <dt><strong>session-start</strong></dt><dd> Tool installation, agent context injection, codebase analysis
-    <dt><strong>prompt-submit</strong></dt><dd> Routes all user messages through the gm skill chain
-    <dt><strong>pre-tool-use</strong></dt><dd> Blocks forbidden tools, dispatches <code>exec:<lang></code> execution, enforces standards
-    <dt><strong>stop</strong></dt><dd> Blocks session end if .prd has remaining items or git is dirty
-</dl>
-
-Hooks operate <em>below</em> the agent's decision layer—they cannot be bypassed by agent reasoning. The agent cannot ``decide'' to skip planning or write code during the verification phase.
-
-<h3>Unified Code Execution</h3>
-
-All code execution passes through <code>exec:<lang></code> dispatch. The pre-tool-use hook intercepts shell calls, detects the prefix, routes to the appropriate runtime, and manages background tasks. Supported languages include Node.js, Python, Go, Rust, TypeScript, and extensible language plugins. This ensures all execution flows through the same instrumentation pipeline.
-
-<h3>Language Plugin System</h3>
-
-Project-specific execution extensions live in a <code>lang/</code> directory, registering a regex pattern for matching, a run function, optional system prompt context injection, and optional LSP diagnostics. This enables domain-specific language support without modifying core infrastructure.
-
-<h3>Cross-Platform Deployment</h3>
-
-The gm orchestrator deploys across 10 platforms via plugforge, generating platform-specific implementations from a single convention-driven source: 6 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI) and 4 IDE platforms (VS Code, Cursor, Zed, JetBrains). Each adapter translates the universal hook/skill/agent model into platform-native formats.
-
-<h2>Constraint Tiers</h2>
-
-IP defines four tiers of constraints with decreasing severity:
-
-<dl>
-    <dt><strong>Tier 0 (Absolute)</strong></dt><dd> <code>no\_crash</code>, <code>no\_exit</code>, <code>ground\_truth\_only</code>, <code>real\_execution</code>—enforced by hooks, cannot be overridden
-    <dt><strong>Tier 1 (Quality)</strong></dt><dd> <code>max\_file\_lines=200</code>, <code>hot\_reloadable</code>, <code>checkpoint\_state</code>
-    <dt><strong>Tier 2 (Modularity)</strong></dt><dd> <code>no\_duplication</code>, <code>no\_hardcoded\_values</code>
-    <dt><strong>Tier 3 (Style)</strong></dt><dd> <code>no\_comments</code>, <code>convention\_over\_code</code>
-</dl>
-
-<h2>Pre-Emit Verification Protocol</h2>
-
-The EMIT phase implements two-stage verification. <strong>Pre-emit</strong>: the agent imports the target module, runs proposed logic in-memory with real and error inputs, records expected outputs, and verifies all gate conditions hold simultaneously. Only then does it write to disk. <strong>Post-emit</strong>: the agent re-imports the actual file from disk (not in-memory), runs identical inputs, and compares output exactly. Known variance triggers fix-and-reverify; unknown variance triggers a snake to PLAN.
-
-This catches errors that test-after-write approaches miss: serialization bugs, import resolution differences, and file system race conditions.
-
-<h2>Discussion</h2>
-
-<h3>Relationship to Formal Methods</h3>
-
-IP borrows from model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions on phase advancement). However, it operates at a higher abstraction level—``states'' are task phases, not program states, and ``contracts'' concern epistemic certainty rather than program correctness.
-
-<h3>Relationship to Test-Driven Development</h3>
-
-IP inverts the TDD cycle. Where TDD writes tests first and code second, IP <em>witnesses execution</em> first and <em>writes code</em> second. The critical difference is that IP's verifications are not persisted artifacts—they exist only as witnessed execution during EXECUTE. This avoids test suite maintenance burden while preserving the epistemic benefit of verification-before-implementation.
-
-<h3>Overhead vs. Benefit</h3>
-
-The snake-back mechanism introduces overhead: an agent discovering a new unknown during EMIT must re-plan and re-execute, potentially discarding partial work. In practice, this overhead is more than compensated by eliminating late-stage rework. Agents without IP frequently produce code that passes superficial checks but fails in integration.
-
-<h3>Limitations</h3>
+<p class="first">The emergence of LLM-based coding agents&mdash;systems that autonomously write, test, and deploy software&mdash;has exposed a fundamental tension between the generative fluency of language models and the deterministic precision required by software engineering. Current agent frameworks suffer from:</p>
 
 <ol>
-    <li><strong>Finite unknown assumption</strong>: Termination assumes discoverable unknowns are finite. In adversarial environments (e.g., APIs changing during execution), this may not hold.
-    <li><strong>Witnessed execution cost</strong>: Real execution against real services incurs time and resource costs that may be prohibitive for expensive external APIs.
-    <li><strong>Memory staleness window</strong>: Despite verification-before-recall, the time between memory creation and verification creates potential for stale-memory-induced errors.
+  <li><strong>Assumption propagation:</strong> Agents narrate hypotheses about code behavior without verifying them, leading to cascading errors when assumptions prove false.</li>
+  <li><strong>State amnesia:</strong> Multi-step tasks lose coherence as context windows fill, with agents forgetting earlier decisions or re-solving solved subproblems.</li>
+  <li><strong>Uncontrolled lifecycle:</strong> Without explicit phase boundaries, agents freely interleave planning, coding, and verification, making it impossible to reason about task progress or enforce quality gates.</li>
 </ol>
 
-<h2>Related Work</h2>
+<p>We propose Immutable Programming (IP), a discipline that reframes agentic coding as a finite state machine with formally named unknowns, mandatory witnessed execution, and absolute barriers to phase advancement. The key insight is that an agent should never write code to resolve an unknown it has not first observed through real execution&mdash;the distinction between <em>narrated assumption</em> and <em>witnessed ground truth</em> becomes the central enforcement mechanism.</p>
 
-<strong>ReAct</strong> [1] interleaves reasoning and action but lacks formal phase boundaries or named unknowns. <strong>Reflexion</strong> [2] adds self-reflection but does not enforce witnessed execution as the sole resolution mechanism. <strong>AutoGPT</strong> and <strong>BabyAGI</strong> implement task decomposition but without dependency-aware parallel execution or stop-hook enforcement. <strong>SWE-Agent</strong> [3] provides a coding agent interface but delegates lifecycle control to the LLM's judgment rather than enforcing it through external hooks.
+<p>This paper makes three contributions:</p>
+<ul>
+  <li>A formal state machine model for agentic coding lifecycle control (&sect;2)</li>
+  <li>A mutable discipline that prevents silent assumption propagation (&sect;3)</li>
+  <li>A persistent memory architecture that maintains coherence across sessions (&sect;5)</li>
+</ul>
 
-IP's contribution is orthogonal: it provides a <em>behavioral envelope</em> that can wrap any LLM-based agent, constraining its lifecycle through external enforcement mechanisms (hooks, stop barriers, skill-scoped tool permissions) rather than relying on prompt-based self-discipline.
+<p>We describe the implementation as <em>gm</em>, an orchestrator deployed in production across Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI, VS Code, Cursor, Zed, and JetBrains (&sect;6).</p>
 
-<h2>Conclusion</h2>
+<h2>2. The State Machine Model</h2>
 
-Immutable Programming addresses the reliability gap in LLM coding agents through three mechanisms: (1) a state machine that makes phase progression explicit and enforceable, (2) a mutable discipline that prevents silent assumption propagation, and (3) a persistent memory architecture that maintains behavioral coherence across sessions.
+<h3>2.1 Phases</h3>
+<p class="first">IP defines five phases with strict forward progression. PLAN discovers all unknowns (exits when a full pass adds zero new unknowns). EXECUTE resolves unknowns via witnessed execution (exits when all mutables are KNOWN). EMIT writes files to disk (exits when post-emit matches pre-emit exactly). VERIFY performs end-to-end witnessed validation (exits when .prd is empty and git is clean and pushed). COMPLETE updates documentation and closes the session.</p>
 
-The key insight is that agent reliability is not primarily a model capability problem—it is a <em>lifecycle control</em> problem. A more capable model that freely interleaves planning, coding, and verification will produce less reliable results than a less capable model operating within a well-enforced state machine. By making phase boundaries, epistemic requirements, and transition rules explicit and externally enforced, IP transforms agentic coding from an open-ended generation task into a structured engineering process.
+<p>Each phase is implemented as a discrete <em>skill</em>&mdash;a self-contained prompt with explicit tool permissions, enforcement level, and transition rules. Skills are invoked through a dedicated dispatch mechanism, never through general-purpose agent spawning, ensuring that phase identity is preserved across invocations.</p>
 
+<h3>2.2 Forward Transitions (Ladders)</h3>
+<p class="first">A phase advances only when its exit condition is satisfied. Conditions are conjunctive: every sub-condition must hold simultaneously. This prevents partial advancement where, for example, code is written before all unknowns are resolved.</p>
 
-<h2>References</h2><ol class="refs"><li>S. Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models," in <em>ICLR</em>, 2023.</li><li>N. Shinn et al., "Reflexion: Language Agents with Verbal Reinforcement Learning," in <em>NeurIPS</em>, 2023.</li><li>J. Yang et al., "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering," <em>arXiv:2405.15793</em>, 2024.</li><li>J. Wei et al., "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models," in <em>NeurIPS</em>, 2022.</li><li>J.S. Park et al., "Generative Agents: Interactive Simulacra of Human Behavior," in <em>UIST</em>, 2023.</li><li>G. Wang et al., "Voyager: An Open-Ended Embodied Agent with Large Language Models," in <em>NeurIPS</em>, 2023.</li></ol>
+<h3>2.3 Backward Transitions (Snakes)</h3>
+<p class="first">Any newly discovered unknown at any phase triggers an immediate backward transition:</p>
+<ul>
+  <li>EXECUTE &rarr; PLAN: New unknown or mutable unresolvable after 2 passes</li>
+  <li>EMIT &rarr; EXECUTE: Logic error in known mutable; EMIT &rarr; PLAN: genuinely new unknown</li>
+  <li>VERIFY &rarr; EMIT: Broken file output; VERIFY &rarr; EXECUTE: Wrong logic; VERIFY &rarr; PLAN: Wrong requirements</li>
+</ul>
 
-</p>
-  </body></html>
+<p>The metaphor is deliberate: like the board game Snakes and Ladders, forward progress requires satisfying conditions (climbing ladders), while encountering problems sends the agent back (sliding down snakes). This prevents agents from &ldquo;patching around&rdquo; problems rather than re-examining assumptions.</p>
+
+<div class="theorem">
+  <strong>Theorem 1 (Termination).</strong> <em>The state machine terminates if the set of discoverable unknowns is finite and each planning pass strictly reduces the set of undiscovered unknowns.</em>
+</div>
+
+<p class="first">In practice, we observe convergence within 2&ndash;4 planning passes for typical software engineering tasks.</p>
+
+<h2>3. The Mutable Discipline</h2>
+
+<h3>3.1 Named Unknowns</h3>
+<p class="first">The central innovation of IP is the <em>named mutable</em>: every unknown fact required to make a decision or write code must be explicitly named before action is taken. A mutable <em>m</em> is a tuple (<em>name, expected, current, resolution</em>) where <em>current</em> &isin; {UNKNOWN} &cup; <em>V</em> for some value domain <em>V</em>. The agent cannot proceed past <em>m</em> while <em>current</em> = UNKNOWN.</p>
+
+<p>This forces the agent to confront uncertainty explicitly rather than generating plausible-but-unverified code.</p>
+
+<h3>3.2 Resolution by Witnessed Execution</h3>
+<p class="first">A mutable is resolved if and only if its value is assigned by the output of real execution&mdash;running actual code against actual services with actual data. The following do <em>not</em> constitute resolution:</p>
+<ul>
+  <li>Reading documentation (may be outdated)</li>
+  <li>Reasoning about expected behavior (may be wrong)</li>
+  <li>Examining source code (static analysis misses runtime behavior)</li>
+</ul>
+
+<p>Only <code>witnessed_output = ground_truth</code>. This is the &ldquo;immutable&rdquo; in Immutable Programming: once a value is witnessed, it is treated as fact. Before witnessing, it is treated as unknown.</p>
+
+<h3>3.3 The Two-Pass Rule</h3>
+<p class="first">If a mutable remains unresolved after two execution passes, it is reclassified as a new unknown and the agent snakes back to PLAN. This prevents infinite loops where the agent repeatedly attempts the same failing resolution strategy.</p>
+
+<h3>3.4 Surprise Absorption Prohibition</h3>
+<p class="first">When execution produces unexpected output, the agent must not silently absorb the surprise. Every discrepancy between expected and actual output generates a new named mutable, triggering a snake to PLAN. This prevents agents from generating workarounds that accumulate technical debt.</p>
+
+<h2>4. Work Item Management: The .prd</h2>
+
+<h3>4.1 Structure</h3>
+<p class="first">IP tracks work through a <code>.prd</code> file (Product Requirements Document), a JSON array where each item carries an id, imperative subject, status (pending &rarr; in_progress &rarr; completed), acceptance criteria, edge cases, bidirectional dependency links, and effort estimates (small: &lt;15 min, medium: &lt;45 min, large: &gt;1 hour).</p>
+
+<h3>4.2 Wave-Based Parallel Execution</h3>
+<p class="first">The .prd&rsquo;s dependency graph enables parallel execution. Each wave identifies all pending items with satisfied dependencies, launches up to 3 concurrent subagents (one per item), and upon completion checks newly unblocked items for the next wave. This exploits the inherent parallelism in software tasks.</p>
+
+<h3>4.3 Stop-Hook Enforcement</h3>
+<p class="first">A stop hook inspects the .prd at session end. If any items remain, the session cannot close. A second stop hook checks for uncommitted or unpushed git changes. Together, these create absolute barriers that prevent premature completion.</p>
+
+<h2>5. Cross-Session Memory Architecture</h2>
+
+<h3>5.1 Memory Types</h3>
+<p class="first">IP implements a file-based persistent memory system with four semantic types:</p>
+<dl>
+  <dt>user:</dt><dd>Profile, role, expertise, preferences&mdash;enables tailored collaboration</dd>
+  <dt>feedback:</dt><dd>Behavioral corrections and confirmations&mdash;persistent learning channel</dd>
+  <dt>project:</dt><dd>Ongoing work context, deadlines, decisions&mdash;situational awareness</dd>
+  <dt>reference:</dt><dd>Pointers to external systems&mdash;navigational knowledge</dd>
+</dl>
+
+<p>Each memory is stored as a Markdown file with YAML frontmatter, indexed in <code>MEMORY.md</code>. The index loads at conversation start; individual memories are read on demand.</p>
+
+<h3>5.2 Exclusion Principle</h3>
+<p class="first">IP prohibits storing information derivable from current project state: code patterns, architecture, file paths, git history, and debugging solutions. This prevents memory staleness&mdash;the most dangerous failure mode.</p>
+
+<h3>5.3 Verification Before Recall</h3>
+<p class="first">When a memory names a specific file, function, or flag, the agent must verify its continued existence before recommending action. A memory is a claim about a point in time, not current reality.</p>
+
+<h3>5.4 Feedback Loop</h3>
+<p class="first">The feedback memory type creates a persistent behavioral correction channel. When a user corrects the agent or confirms a non-obvious approach, the agent records the rule, reason, and application context&mdash;addressing the &ldquo;Groundhog Day&rdquo; problem where agents make the same mistakes across sessions.</p>
+
+<h2>6. Implementation: The gm Orchestrator</h2>
+
+<h3>6.1 Skill-Based Architecture</h3>
+<p class="first">Each phase is implemented as a skill with YAML frontmatter specifying name, description, enforcement level, and allowed tools. The skill chain is: gm &rarr; planning &rarr; gm-execute &rarr; gm-emit &rarr; gm-complete &rarr; update-docs.</p>
+
+<p>Skills are invoked through a dedicated Skill tool ensuring phase identity is explicit, tool permissions are scoped per phase, and transition logic is localized.</p>
+
+<h3>6.2 Hook Lifecycle</h3>
+<p class="first">Four hooks enforce the state machine at the platform level:</p>
+<dl>
+  <dt>session-start:</dt><dd>Tool installation, agent context injection, codebase analysis</dd>
+  <dt>prompt-submit:</dt><dd>Routes all user messages through the gm skill chain</dd>
+  <dt>pre-tool-use:</dt><dd>Blocks forbidden tools, dispatches <code>exec:&lt;lang&gt;</code> execution, enforces standards</dd>
+  <dt>stop:</dt><dd>Blocks session end if .prd has remaining items or git is dirty</dd>
+</dl>
+
+<p>Hooks operate below the agent&rsquo;s decision layer&mdash;they cannot be bypassed by agent reasoning. The agent cannot &ldquo;decide&rdquo; to skip planning or write code during the verification phase.</p>
+
+<h3>6.3 Unified Code Execution</h3>
+<p class="first">All code execution passes through <code>exec:&lt;lang&gt;</code> dispatch. The pre-tool-use hook intercepts shell calls, detects the prefix, routes to the appropriate runtime, and manages background tasks. Supported languages include Node.js, Python, Go, Rust, TypeScript, and extensible language plugins.</p>
+
+<h3>6.4 Cross-Platform Deployment</h3>
+<p class="first">The gm orchestrator deploys across 10 platforms via plugforge, generating platform-specific implementations from a single convention-driven source: 6 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI) and 4 IDE platforms (VS Code, Cursor, Zed, JetBrains).</p>
+
+<h2>7. Constraint Tiers</h2>
+
+<p class="first">IP defines four tiers of constraints with decreasing severity:</p>
+<dl>
+  <dt>Tier 0 (Absolute):</dt><dd>no_crash, no_exit, ground_truth_only, real_execution&mdash;enforced by hooks, cannot be overridden</dd>
+  <dt>Tier 1 (Quality):</dt><dd>max_file_lines=200, hot_reloadable, checkpoint_state</dd>
+  <dt>Tier 2 (Modularity):</dt><dd>no_duplication, no_hardcoded_values</dd>
+  <dt>Tier 3 (Style):</dt><dd>no_comments, convention_over_code</dd>
+</dl>
+
+<h2>8. Pre-Emit Verification Protocol</h2>
+
+<p class="first">The EMIT phase implements two-stage verification. <strong>Pre-emit:</strong> the agent imports the target module, runs proposed logic in-memory with real and error inputs, records expected outputs, and verifies all gate conditions hold simultaneously. Only then does it write to disk.</p>
+
+<p><strong>Post-emit:</strong> the agent re-imports the actual file from disk (not in-memory), runs identical inputs, and compares output exactly. Known variance triggers fix-and-reverify; unknown variance triggers a snake to PLAN. This catches errors that test-after-write approaches miss: serialization bugs, import resolution differences, and file system race conditions.</p>
+
+<h2>9. Discussion</h2>
+
+<h3>9.1 Relationship to Formal Methods</h3>
+<p class="first">IP borrows from model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions on phase advancement). However, it operates at a higher abstraction level&mdash;the &ldquo;states&rdquo; are task phases, not program states, and the &ldquo;contracts&rdquo; concern epistemic certainty rather than program correctness.</p>
+
+<h3>9.2 Relationship to Test-Driven Development</h3>
+<p class="first">IP inverts the TDD cycle. Where TDD writes tests first and code second, IP witnesses execution first and writes code second. The critical difference is that IP&rsquo;s verifications are not persisted artifacts&mdash;they exist only as witnessed execution during EXECUTE. This avoids test suite maintenance burden while preserving the epistemic benefit of verification-before-implementation.</p>
+
+<h3>9.3 Overhead vs. Benefit</h3>
+<p class="first">The snake-back mechanism introduces overhead: an agent discovering a new unknown during EMIT must re-plan and re-execute, potentially discarding partial work. In practice, this overhead is more than compensated by eliminating late-stage rework. Agents without IP frequently produce code that passes superficial checks but fails in integration.</p>
+
+<h3>9.4 Limitations</h3>
+<ol>
+  <li><strong>Finite unknown assumption:</strong> Termination requires discoverable unknowns to be finite. In adversarial environments, this may not hold.</li>
+  <li><strong>Witnessed execution cost:</strong> Real execution against real services may be prohibitive for expensive external APIs.</li>
+  <li><strong>Memory staleness window:</strong> The time between memory creation and verification creates potential for stale-memory-induced errors.</li>
+</ol>
+
+<h2>10. Related Work</h2>
+
+<p class="first">ReAct [1] interleaves reasoning and action but lacks formal phase boundaries or named unknowns. Reflexion [2] adds self-reflection but does not enforce witnessed execution as the sole resolution mechanism. AutoGPT and BabyAGI implement task decomposition but without dependency-aware parallel execution or stop-hook enforcement. SWE-Agent [3] provides a coding agent interface but delegates lifecycle control to the LLM&rsquo;s judgment rather than enforcing it through external hooks.</p>
+
+<p>IP&rsquo;s contribution is orthogonal: it provides a behavioral envelope that can wrap any LLM-based agent, constraining its lifecycle through external enforcement mechanisms (hooks, stop barriers, skill-scoped tool permissions) rather than relying on prompt-based self-discipline.</p>
+
+<h2>11. Conclusion</h2>
+
+<p class="first">Immutable Programming addresses the reliability gap in LLM coding agents through three mechanisms: (1) a state machine that makes phase progression explicit and enforceable, (2) a mutable discipline that prevents silent assumption propagation, and (3) a persistent memory architecture that maintains behavioral coherence across sessions.</p>
+
+<p>The key insight is that agent reliability is not primarily a model capability problem&mdash;it is a <em>lifecycle control</em> problem. A more capable model that freely interleaves planning, coding, and verification will produce less reliable results than a less capable model operating within a well-enforced state machine. By making phase boundaries, epistemic requirements, and transition rules explicit and externally enforced, IP transforms agentic coding from an open-ended generation task into a structured engineering process.</p>
+
+<div class="references">
+  <h2>References</h2>
+  <ol>
+    <li>S. Yao et al., &ldquo;ReAct: Synergizing Reasoning and Acting in Language Models,&rdquo; <em>ICLR</em>, 2023.</li>
+    <li>N. Shinn et al., &ldquo;Reflexion: Language Agents with Verbal Reinforcement Learning,&rdquo; <em>NeurIPS</em>, 2023.</li>
+    <li>J. Yang et al., &ldquo;SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering,&rdquo; <em>arXiv:2405.15793</em>, 2024.</li>
+    <li>J. Wei et al., &ldquo;Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,&rdquo; <em>NeurIPS</em>, 2022.</li>
+    <li>J.S. Park et al., &ldquo;Generative Agents: Interactive Simulacra of Human Behavior,&rdquo; <em>UIST</em>, 2023.</li>
+    <li>G. Wang et al., &ldquo;Voyager: An Open-Ended Embodied Agent with Large Language Models,&rdquo; <em>NeurIPS</em>, 2023.</li>
+  </ol>
+</div>
+
+</body>
+</html>
