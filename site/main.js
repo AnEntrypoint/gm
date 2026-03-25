@@ -171,14 +171,8 @@ function App() {
   );
 }
 
-const appVNode = h(App, null);
-const appEl = createDOMElement(appVNode);
-if (appEl) {
-  if (appEl instanceof DocumentFragment) {
-    document.body.appendChild(appEl);
-  } else {
-    document.body.appendChild(appEl);
-  }
-} else {
-  applyDiff(document.body, [appVNode]);
+const sections = [NavBar(), Hero(), StateMachineSection(), HowItWorksSection(), PlatformsSection(), Footer()];
+for (const vnode of sections) {
+  const el = createDOMElement(vnode);
+  if (el) document.body.appendChild(el);
 }
