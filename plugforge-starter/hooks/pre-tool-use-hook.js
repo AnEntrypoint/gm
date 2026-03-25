@@ -368,7 +368,15 @@ const run = () => {
           } else if (lang === 'agent-browser') {
             // agent-browser reads agent-browser.json from cwd automatically (headed, profile, session, etc.)
             // Just run with shell:true so .cmd wrappers resolve, and use process.cwd() so config is picked up
-            const abBin = 'agent-browser';
+            const abNative = (() => {
+              const abDir = path.join(TOOLS_DIR, 'node_modules', 'agent-browser', 'bin');
+              const ext = IS_WIN ? '.exe' : '';
+              const archMap = { x64: 'x64', arm64: 'arm64', ia32: 'x64' };
+              const osMap = { win32: 'win32', darwin: 'darwin', linux: 'linux' };
+              const candidate = path.join(abDir, `agent-browser-${osMap[process.platform] || process.platform}-${archMap[process.arch] || process.arch}${ext}`);
+              return fs.existsSync(candidate) ? candidate : null;
+            })();
+            const abBin = abNative || (fs.existsSync(localBin('agent-browser')) ? localBin('agent-browser') : 'agent-browser');
             const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
             const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
             const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
