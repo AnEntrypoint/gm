@@ -296,8 +296,10 @@ const run = () => {
           if (bg) {
             runGmExec(['sleep', bg[1], '60'], { timeout: 70000 });
             const sr = runGmExec(['status', bg[1]], { timeout: 15000 });
-            out = stripFooter((sr.stdout || '') + (sr.stderr || ''));
-            runGmExec(['close', bg[1]], { timeout: 10000 });
+            const statusOut = stripFooter((sr.stdout || '') + (sr.stderr || ''));
+            const stillRunning = /Status:\\s*running/i.test(statusOut);
+            out = statusOut;
+            if (!stillRunning) runGmExec(['close', bg[1]], { timeout: 10000 });
           }
           return out;
         };
@@ -347,11 +349,7 @@ const run = () => {
         try {
           let result;
           if (lang === 'bash') {
-            const shFile = path.join(os.tmpdir(), `gm-exec-${Date.now()}.sh`);
-            fs.writeFileSync(shFile, safeCode, 'utf-8');
-            result = spawnDirect('bash', [shFile]);
-            try { fs.unlinkSync(shFile); } catch (e) {}
-            if (!result || result.startsWith('[spawn error:')) result = runWithFile('bash', safeCode);
+            result = runWithFile('bash', safeCode);
           } else if (lang === 'cmd') {
             // exec:cmd always runs cmd.exe /c — explicit Windows command prompt
             result = spawnDirect('cmd.exe', ['/c', safeCode]);
