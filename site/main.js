@@ -1,4 +1,4 @@
-import { createElement as h, applyDiff, Fragment } from "webjsx";
+import { createElement as h, applyDiff, createDOMElement, Fragment } from "webjsx";
 
 const CLI_PLATFORMS = [
   { id: 'gm-cc', label: 'Claude Code', desc: 'Hooks + agents for Claude Code CLI' },
@@ -171,4 +171,14 @@ function App() {
   );
 }
 
-applyDiff(document.body, [h(App, null)]);
+const appVNode = h(App, null);
+const appEl = createDOMElement(appVNode);
+if (appEl) {
+  if (appEl instanceof DocumentFragment) {
+    document.body.appendChild(appEl);
+  } else {
+    document.body.appendChild(appEl);
+  }
+} else {
+  applyDiff(document.body, [appVNode]);
+}
