@@ -32,11 +32,17 @@ function NavBar() {
   return h('nav', { class: 'border-b border-gray-800 bg-gray-950/80 backdrop-blur sticky top-0 z-10' },
     h('div', { class: 'max-w-5xl mx-auto px-4 py-3 flex items-center justify-between' },
       h('span', { class: 'text-white font-bold text-lg tracking-tight' }, 'plugforge'),
-      h('a', {
-        href: 'https://github.com/AnEntrypoint/plugforge',
-        target: '_blank', rel: 'noopener',
-        class: 'flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm'
-      }, GITHUB_ICON, 'GitHub')
+      h('div', { class: 'flex items-center gap-4' },
+        h('a', {
+          href: './paper.html',
+          class: 'text-gray-400 hover:text-white transition-colors text-sm'
+        }, 'Paper'),
+        h('a', {
+          href: 'https://github.com/AnEntrypoint/plugforge',
+          target: '_blank', rel: 'noopener',
+          class: 'flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm'
+        }, GITHUB_ICON, 'GitHub')
+      )
     )
   );
 }
