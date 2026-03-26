@@ -1,32 +1,47 @@
 ---
 name: agent-browser
 description: Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.
-allowed-tools: agent-browser, Bash(exec:agent-browser*)
+allowed-tools: agent-browser, Bash(agent-browser:*), Bash(exec:agent-browser*)
 ---
 
 # Browser Automation with agent-browser
 
 ## Two Pathways
 
-**Page control** — use the `agent-browser` tool directly for all browser interaction: navigating, clicking, filling forms, taking screenshots, reading snapshots. This is the primary pathway for driving the browser.
+**Browser CLI commands** — use `agent-browser:` prefix via Bash for all browser control: navigating, clicking, filling forms, taking screenshots, reading snapshots.
 
-**Code execution** — use `exec:agent-browser` via Bash when you need to run JavaScript in the page context. The body is piped to `eval --stdin`. Use this for DOM inspection, custom extraction logic, or anything requiring programmatic page access.
+```
+agent-browser:
+open http://localhost:3001
+wait 2000
+snapshot -i
+```
+
+Single commands:
+
+```
+agent-browser:
+open http://example.com
+```
+
+```
+agent-browser:
+close
+```
+
+**JS eval in browser** — use `exec:agent-browser` via Bash when you need to run JavaScript in the page context. The body is piped to `eval --stdin`. Use this for DOM inspection, custom extraction logic, or anything requiring programmatic page access.
 
 ```
 exec:agent-browser
 document.title
 ```
 
-Multi-line `exec:agent-browser` blocks where lines are recognized CLI commands run as a batch instead of eval — useful for sequencing page control steps when the `agent-browser` tool isn't available:
-
 ```
 exec:agent-browser
-open http://localhost:3001
-wait 2000
-snapshot -i
+document.querySelectorAll('a').length
 ```
 
-**Always close tabs when done**: every `open` is tracked. Use `exec:agent-browser\nclose` (or `--session <name> close`) when finished. Leaving sessions open accumulates stale tabs — the hook will warn you when other sessions are still open.
+**Always close tabs when done**: every `open` is tracked. Use `agent-browser:\nclose` (or `--session <name> close`) when finished. Leaving sessions open accumulates stale tabs — the hook will warn you when other sessions are still open.
 
 ## Core Workflow
 
@@ -509,6 +524,17 @@ agent-browser -p ios screenshot mobile.png
 agent-browser -p ios close            # Close simulator
 # Requires: macOS, Xcode, Appium (npm install -g appium && appium driver install xcuitest)
 ```
+
+## Windows: "Daemon not found" Fix
+
+If `agent-browser` fails with `Daemon not found. Set AGENT_BROWSER_HOME environment variable or run from project directory.` on Windows, the `AGENT_BROWSER_HOME` env var is missing or pointing to the wrong path. It must point to the npm package directory containing `dist/daemon.js`:
+
+```cmd
+:: Find and set the correct path (run in cmd or PowerShell)
+for /f "delims=" %i in ('npm root -g') do setx AGENT_BROWSER_HOME "%i\agent-browser"
+```
+
+Open a new terminal after running. See `references/windows-troubleshooting.md` for details on stale port files and Git Bash setup.
 
 ## Key Patterns for Agents
 
