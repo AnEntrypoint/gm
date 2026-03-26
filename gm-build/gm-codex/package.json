@@ -1,6 +1,6 @@
 {
   "name": "gm-codex",
-  "version": "2.0.213",
+  "version": "2.0.237",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",

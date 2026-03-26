@@ -31,7 +31,7 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 - `witnessed_e2e=UNKNOWN` until real end-to-end run produces witnessed output
 - `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
 - `git_pushed=UNKNOWN` until `exec:bash\ngit rev-list --count @{u}..HEAD` returns 0
-- `prd_empty=UNKNOWN` until .prd has zero items
+- `prd_empty=UNKNOWN` until .prd file is deleted (not just empty — file must not exist)
 
 All four must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
