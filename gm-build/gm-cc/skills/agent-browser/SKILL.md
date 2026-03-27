@@ -155,12 +155,22 @@ agent-browser --auto-connect snapshot
 agent-browser --cdp 9222 snapshot
 ```
 
-### Visual Browser (Debugging)
+### Visual Browser (Headed Mode)
 
-```bash
-agent-browser --headed open https://example.com
-agent-browser highlight @e1          # Highlight element
-agent-browser record start demo.webm # Record session
+Use `--headed` as the first flag on the first line — it propagates to all commands in the block:
+
+```
+agent-browser:
+--headed open https://example.com
+wait --load networkidle
+snapshot -i
+```
+
+```
+agent-browser:
+--headed open https://example.com
+highlight @e1
+record start demo.webm
 ```
 
 ### Local Files (PDFs, HTML)
@@ -451,10 +461,14 @@ agent-browser profiler stop [path]   # Stop and save .json profile
 ```
 
 ### Visual Debugging
-```bash
-agent-browser --headed open <url>     # Headless=false, show visual browser
-agent-browser record start <file.webm> # Record session
-agent-browser record stop             # Stop recording
+```
+agent-browser:
+--headed open <url>
+record start <file.webm>
+```
+```
+agent-browser:
+record stop
 ```
 
 ### Comparisons & Diffs
@@ -543,6 +557,6 @@ exec:agent-browser
 document.title
 ```
 
-**Debugging complex interactions**: Use `agent-browser --headed open <url>` to see visual browser, then `agent-browser highlight @e1` to verify element targeting.
+**Debugging complex interactions**: Use headed mode — put `--headed` as the first flag on the first line of an `agent-browser:` block. It propagates to all subsequent commands in the block.
 
 **Ground truth verification**: Use the ordinary pathway (`agent-browser screenshot`) for visual confirmation; use the exec pathway for JavaScript-level inspection.
