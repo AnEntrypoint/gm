@@ -225,17 +225,6 @@ const run = () => {
       const command = (tool_input?.command || '').trim();
       const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
 
-      if (/^exec:pm2list\s*$/.test(command)) {
-        const r = runGmExec(['pm2list']);
-        return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
-      }
-      if (/^exec:pm2logs(\s|$)/.test(command)) {
-        const args = command.replace(/^exec:pm2logs\s*/, '').trim();
-        const pmArgs = args ? ['logs', '--nostream', '--lines', '50', args] : ['logs', '--nostream', '--lines', '50'];
-        const r = spawnSync('pm2', pmArgs, { encoding: 'utf-8', timeout: 15000, windowsHide: true });
-        return allowWithNoop(`exec:pm2logs output:\n\n${stripFooter((r.stdout || '') + (r.stderr || '')) || '(no logs)'}`);
-      }
-
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
       if (execMatch) {
         const rawLang = (execMatch[1] || '').toLowerCase();
@@ -247,7 +236,7 @@ const run = () => {
 
         // ─── Lang plugin dispatch ─────────────────────────────────────────────
         if (rawLang) {
-          const builtins = new Set(['js','javascript','ts','typescript','node','nodejs','py','python','sh','bash','shell','zsh','powershell','ps1','go','rust','c','cpp','java','deno','cmd','browser','ab','agent-browser','codesearch','search','status','sleep','close','runner','type','pm2list']);
+          const builtins = new Set(['js','javascript','ts','typescript','node','nodejs','py','python','sh','bash','shell','zsh','powershell','ps1','go','rust','c','cpp','java','deno','cmd','browser','ab','agent-browser','codesearch','search','status','sleep','close','runner','type']);
           if (!builtins.has(rawLang)) {
             const plugins = loadLangPlugins(projectDir);
             const plugin = plugins.find(p => p.exec.match.test(`exec:${rawLang}\n${code}`));
@@ -274,7 +263,7 @@ const run = () => {
           return 'nodejs';
         };
         // Note: 'cmd' is NOT aliased to 'bash' — it has its own handler below
-        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'powershell', ps1: 'powershell', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type', pm2list: 'pm2list' };
+        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'powershell', ps1: 'powershell', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type' };
         const lang = aliases[rawLang] || rawLang || detectLang(code);
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'sh', powershell: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
 
@@ -343,11 +332,6 @@ const run = () => {
           const r = runGmExec(['type', taskId, inputData], { timeout: 15000 });
           return allowWithNoop(`exec:type output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
         }
-        if (lang === 'pm2list') {
-          const r = runGmExec(['pm2list'], { timeout: 15000 });
-          return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
-        }
-
         try {
           let result;
           if (lang === 'bash') {

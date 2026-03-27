@@ -67,13 +67,11 @@ exec:close
 <task_id>
 ```
 
-**Runner management** (the runner itself is a PM2 process named `gm-exec-runner`):
+**Runner management**:
 ```
 exec:runner
 start|stop|status
 ```
-
-`exec:runner start` launches the `gm-exec-runner` PM2 process. Each `exec:<lang>` call creates its own `gm-exec-task-{id}` PM2 process — all appear in `pm2 list`. Use `exec:runner status` to check the runner. Use `exec:pm2list` to see all processes including exec tasks.
 
 ## CODEBASE EXPLORATION
 
@@ -101,6 +99,15 @@ Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
 **`update-docs`** — Refresh README, CLAUDE.md, and docs to reflect session changes. Invoked by `gm-complete`.
 **`agent-browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
 
+## DO NOT STOP
+
+**You may not respond to the user or stop working while any of these are true:**
+- .prd file exists and has items
+- git has uncommitted changes
+- git has unpushed commits
+
+Completing a phase is NOT stopping. After every phase: read .prd, check git, invoke next skill. Only when .prd is deleted AND git is clean AND all commits are pushed may you return a final response to the user.
+
 ## CONSTRAINTS
 
 **Tier 0**: no_crash, no_exit, ground_truth_only, real_execution
@@ -108,6 +115,6 @@ Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains
 
-**Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | keep going until .prd empty and git clean
+**Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | keep going until .prd deleted and git clean
