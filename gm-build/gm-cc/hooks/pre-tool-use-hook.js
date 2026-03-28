@@ -13,7 +13,7 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_
 const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const CHECK_STAMP = path.join(TOOLS_DIR, '.last-check');
 const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
-const MANAGED_PKGS = ['gm-exec', 'codebasesearch', 'mcp-thorns', 'agent-browser'];
+const MANAGED_PKGS = ['agent-browser'];
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 function ensureToolsDir() {
@@ -124,12 +124,27 @@ function loadLangPlugins(projectDir) {
 }
 
 // Helper: run a local binary (falls back to bunx if not installed)
+function pkgEntry(name) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(TOOLS_DIR, 'node_modules', name, 'package.json'), 'utf8'));
+    const binVal = pkg.bin;
+    const rel = typeof binVal === 'string' ? binVal : (binVal?.[name] || Object.values(binVal || {})[0]);
+    if (rel) return path.join(TOOLS_DIR, 'node_modules', name, rel);
+  } catch {}
+  return null;
+}
+
 function runLocal(name, args, opts = {}) {
+  if (IS_WIN) {
+    const entry = pkgEntry(name);
+    if (entry && fs.existsSync(entry)) {
+      return spawnSync('bun', [entry, ...args], { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
+    }
+  }
   const bin = localBin(name);
   if (fs.existsSync(bin)) {
     return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
   }
-  // Fallback to bunx
   return spawnSync('bun', ['x', name, ...args], { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
 }
 
@@ -163,13 +178,15 @@ const allowWithNoop = (context) => {
   };
 };
 
-// ─── gm-exec runner helper ────────────────────────────────────────────────────
+// ─── plugkit runner helper ────────────────────────────────────────────────────
+function plugkitBin() { return path.join(TOOLS_DIR, IS_WIN ? 'plugkit.exe' : 'plugkit'); }
+
 function runGmExec(args, opts = {}) {
-  const bin = localBin('gm-exec');
+  const bin = plugkitBin();
   if (fs.existsSync(bin)) {
     return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
   }
-  return spawnSync('bun', ['x', 'gm-exec', ...args], { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
+  return spawnSync('plugkit', args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
 }
 
 // ─── Main hook ────────────────────────────────────────────────────────────────
@@ -225,15 +242,91 @@ const run = () => {
       const command = (tool_input?.command || '').trim();
       const stripFooter = (s) => s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd();
 
-      if (/^exec:pm2list\s*$/.test(command)) {
-        const r = runGmExec(['pm2list']);
-        return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
-      }
-      if (/^exec:pm2logs(\s|$)/.test(command)) {
-        const args = command.replace(/^exec:pm2logs\s*/, '').trim();
-        const pmArgs = args ? ['logs', '--nostream', '--lines', '50', args] : ['logs', '--nostream', '--lines', '50'];
-        const r = spawnSync('pm2', pmArgs, { encoding: 'utf-8', timeout: 15000, windowsHide: true });
-        return allowWithNoop(`exec:pm2logs output:\n\n${stripFooter((r.stdout || '') + (r.stderr || '')) || '(no logs)'}`);
+      // ─── agent-browser: CLI commands ──────────────────────────────────────────
+      const abCliMatch = command.match(/^agent-browser:\n([\s\S]+)$/);
+      if (abCliMatch) {
+        const abCode = abCliMatch[1];
+        const abNative = (() => {
+          const abDir = path.join(TOOLS_DIR, 'node_modules', 'agent-browser', 'bin');
+          const ext = IS_WIN ? '.exe' : '';
+          const archMap = { x64: 'x64', arm64: 'arm64', ia32: 'x64' };
+          const osMap = { win32: 'win32', darwin: 'darwin', linux: 'linux' };
+          const candidate = path.join(abDir, `agent-browser-${osMap[process.platform] || process.platform}-${archMap[process.arch] || process.arch}${ext}`);
+          return fs.existsSync(candidate) ? candidate : null;
+        })();
+        const abBin = abNative || (fs.existsSync(localBin('agent-browser')) ? localBin('agent-browser') : 'agent-browser');
+        const AB_CMDS = new Set(['open','goto','navigate','close','quit','exit','back','forward','reload','click','dblclick','type','fill','press','check','uncheck','select','drag','upload','hover','focus','scroll','scrollintoview','wait','screenshot','pdf','snapshot','get','is','find','eval','connect','tab','frame','dialog','state','session','network','cookies','storage','set','trace','profiler','record','console','errors','highlight','inspect','diff','keyboard','mouse','install','upgrade','confirm','deny','auth','device','window']);
+        const AB_GLOBAL_FLAGS = new Set(['--cdp','--headed','--headless','--session','--session-name','--auto-connect','--profile','--allow-file-access','--color-scheme','-p','--platform','--device']);
+        const AB_GLOBAL_FLAGS_WITH_VALUE = new Set(['--cdp','--session','--session-name','--profile','--color-scheme','-p','--platform','--device']);
+        const AB_SESSION_STATE = path.join(os.tmpdir(), 'gm-ab-sessions.json');
+        function readAbSessions() { try { return JSON.parse(fs.readFileSync(AB_SESSION_STATE, 'utf8')); } catch { return {}; } }
+        function writeAbSessions(s) { try { fs.writeFileSync(AB_SESSION_STATE, JSON.stringify(s)); } catch {} }
+        function parseAbLine(line) {
+          const tokens = line.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+          const globalArgs = [], rest = [];
+          let i = 0;
+          while (i < tokens.length) {
+            if (AB_GLOBAL_FLAGS.has(tokens[i])) {
+              globalArgs.push(tokens[i]);
+              if (AB_GLOBAL_FLAGS_WITH_VALUE.has(tokens[i]) && i + 1 < tokens.length && !tokens[i+1].startsWith('--')) globalArgs.push(tokens[++i]);
+              i++;
+            } else { rest.push(...tokens.slice(i)); break; }
+          }
+          return { globalArgs, rest };
+        }
+        const spawnAb = (bin, args, stdin) => {
+          const headed = args.includes('--headed');
+          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: !headed, ...(IS_WIN && { shell: true }), cwd: process.cwd(), ...(stdin !== undefined && { input: stdin }) };
+          const r = spawnSync(bin, args, opts);
+          if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
+          const out = (r.stdout || '').trimEnd(), err = stripFooter(r.stderr || '').trimEnd();
+          return out && err ? out + '\n[stderr]\n' + err : stripFooter(out || err);
+        };
+        try {
+          const safeAb = abCode.trim();
+          const firstParsed = parseAbLine(safeAb.split('\n')[0].trim());
+          const firstWord = (firstParsed.rest[0] || '').toLowerCase();
+          const sessionName = (() => { const si = firstParsed.globalArgs.indexOf('--session'); return si >= 0 ? firstParsed.globalArgs[si+1] : 'default'; })();
+          const sessions = readAbSessions();
+          if (['open','goto','navigate'].includes(firstWord)) sessions[sessionName] = { url: firstParsed.rest[1] || '?', ts: Date.now() };
+          if (['close','quit','exit'].includes(firstWord)) delete sessions[sessionName];
+          writeAbSessions(sessions);
+          const openSessions = Object.entries(sessions);
+          let result;
+          if (AB_CMDS.has(firstWord)) {
+            const lines = safeAb.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length === 1) {
+              const { globalArgs, rest } = parseAbLine(lines[0]);
+              result = spawnAb(abBin, [...globalArgs, ...rest]);
+            } else {
+              const hasClose = lines.some(l => { const w = (parseAbLine(l).rest[0]||'').toLowerCase(); return ['close','quit','exit'].includes(w); });
+              const batchGlobals = firstParsed.globalArgs;
+              const results = [];
+              for (const l of lines) {
+                const { globalArgs, rest } = parseAbLine(l);
+                const mergedGlobals = [...batchGlobals.filter(f => !globalArgs.includes(f)), ...globalArgs];
+                const w = (rest[0]||'').toLowerCase();
+                if (['open','goto','navigate'].includes(w)) sessions[sessionName] = { url: rest[1]||'?', ts: Date.now() };
+                if (['close','quit','exit'].includes(w)) delete sessions[sessionName];
+                const args = AB_CMDS.has(w) ? [...mergedGlobals, ...rest] : [...mergedGlobals, 'eval', '--stdin'];
+                const stdin = AB_CMDS.has(w) ? undefined : l.trim();
+                results.push(spawnAb(abBin, args, stdin));
+              }
+              writeAbSessions(sessions);
+              result = results.filter(Boolean).join('\n');
+              if (!hasClose && openSessions.length > 0) result += `\n\n[tab] Browser session "${sessionName}" still open. Close when done:\n  agent-browser:\n  close`;
+            }
+          } else {
+            result = spawnAb(abBin, ['eval', '--stdin'], safeAb);
+          }
+          if (openSessions.length > 1) {
+            const stale = openSessions.filter(([n]) => n !== sessionName).map(([n,v]) => `  "${n}" → ${v.url} (${Math.round((Date.now()-v.ts)/60000)}min ago)`).join('\n');
+            result = (result || '') + `\n\n[tab] ${openSessions.length - 1} other session(s) still open:\n${stale}\n  Close with: agent-browser:\\nclose  (or --session <name> close)`;
+          }
+          return allowWithNoop(`agent-browser output:\n\n${result || '(no output)'}`);
+        } catch(e) {
+          return allowWithNoop(`agent-browser error:\n\n${e.message || '(exec failed)'}`);
+        }
       }
 
       const execMatch = command.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
@@ -241,13 +334,13 @@ const run = () => {
         const rawLang = (execMatch[1] || '').toLowerCase();
         const code = execMatch[2];
         if (/^\s*agent-browser\s/.test(code)) {
-          return deny(`Do not call agent-browser via exec:bash. Use exec:agent-browser instead:\n\nexec:agent-browser\nopen http://example.com\n\nMultiple commands in one block:\n\nexec:agent-browser\nopen http://localhost:3001\nwait 2000\nsnapshot -i\n\nFor JS eval (DOM inspection, custom logic):\n\nexec:agent-browser\ndocument.title\n\nCLI commands (open, click, screenshot, snapshot, wait, console, tab, etc.) run directly.\nAnything that is not a CLI command goes through eval --stdin.\nClose tabs when done: exec:agent-browser\\nclose`);
+          return deny(`Do not call agent-browser via exec:bash. Use agent-browser: for CLI commands:\n\nagent-browser:\nopen http://example.com\n\nMultiple commands:\n\nagent-browser:\nopen http://localhost:3001\nwait 2000\nsnapshot -i\n\nFor headed mode:\n\nagent-browser:\n--headed open http://localhost:3001\nwait --load networkidle\nsnapshot -i\n\nFor JS eval in browser:\n\nexec:agent-browser\ndocument.title`);
         }
         const cwd = tool_input?.cwd;
 
         // ─── Lang plugin dispatch ─────────────────────────────────────────────
         if (rawLang) {
-          const builtins = new Set(['js','javascript','ts','typescript','node','nodejs','py','python','sh','bash','shell','zsh','powershell','ps1','go','rust','c','cpp','java','deno','cmd','browser','ab','agent-browser','codesearch','search','status','sleep','close','runner','type','pm2list']);
+          const builtins = new Set(['js','javascript','ts','typescript','node','nodejs','py','python','sh','bash','shell','zsh','powershell','ps1','go','rust','c','cpp','java','deno','cmd','browser','ab','agent-browser','codesearch','search','status','sleep','close','runner','type']);
           if (!builtins.has(rawLang)) {
             const plugins = loadLangPlugins(projectDir);
             const plugin = plugins.find(p => p.exec.match.test(`exec:${rawLang}\n${code}`));
@@ -274,7 +367,7 @@ const run = () => {
           return 'nodejs';
         };
         // Note: 'cmd' is NOT aliased to 'bash' — it has its own handler below
-        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'powershell', ps1: 'powershell', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type', pm2list: 'pm2list' };
+        const aliases = { js: 'nodejs', javascript: 'nodejs', ts: 'typescript', node: 'nodejs', py: 'python', sh: 'bash', shell: 'bash', zsh: 'bash', powershell: 'powershell', ps1: 'powershell', browser: 'agent-browser', ab: 'agent-browser', codesearch: 'codesearch', search: 'search', status: 'status', sleep: 'sleep', close: 'close', runner: 'runner', type: 'type' };
         const lang = aliases[rawLang] || rawLang || detectLang(code);
         const langExts = { nodejs: 'mjs', typescript: 'ts', deno: 'ts', python: 'py', bash: 'sh', powershell: 'ps1', go: 'go', rust: 'rs', c: 'c', cpp: 'cpp', java: 'java' };
 
@@ -316,7 +409,7 @@ const run = () => {
 
         if (['codesearch', 'search'].includes(lang)) {
           const query = safeCode.trim();
-          const r = runLocal('codebasesearch', [query], { timeout: 30000, ...(cwd && { cwd }) });
+          const r = runGmExec(['search', ...(cwd ? ['--path', cwd] : []), query], { timeout: 30000, ...(cwd && { cwd }) });
           return allowWithNoop(`exec:${lang} output:\n\n${stripFooter((r.stdout || '') + (r.stderr || '')) || '(no results)'}`);
         }
         if (lang === 'status') {
@@ -343,11 +436,6 @@ const run = () => {
           const r = runGmExec(['type', taskId, inputData], { timeout: 15000 });
           return allowWithNoop(`exec:type output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
         }
-        if (lang === 'pm2list') {
-          const r = runGmExec(['pm2list'], { timeout: 15000 });
-          return allowWithNoop(`exec:pm2list output:\n\n${stripFooter((r.stdout || '') + (r.stderr || ''))}`);
-        }
-
         try {
           let result;
           if (lang === 'bash') {
@@ -369,7 +457,7 @@ const run = () => {
             result = runWithFile(lang || 'nodejs', wrapped);
           } else if (lang === 'agent-browser') {
             // exec:agent-browser = JS eval in browser page context only.
-            // Browser CLI commands (open, click, snapshot, etc.) use the agent-browser: prefix.
+            // Browser CLI commands (open, click, snapshot, headed mode, etc.) use agent-browser: prefix.
             const abNative = (() => {
               const abDir = path.join(TOOLS_DIR, 'node_modules', 'agent-browser', 'bin');
               const ext = IS_WIN ? '.exe' : '';
@@ -389,12 +477,12 @@ const run = () => {
         }
       }
 
-      if (/^bun\s+x\s+(gm-exec|codebasesearch)/.test(command)) {
+      if (/^bun\s+x\s+(gm-exec|rs-exec|plugkit|codebasesearch)/.test(command)) {
         return deny(`Do not call ${command.match(/^bun\s+x\s+(\S+)/)[1]} directly. Use exec:<lang> syntax instead.\n\nExamples:\n  exec:nodejs\n  console.log("hello")\n\n  exec:codesearch\n  find all database queries\n\n  exec:bash\n  ls -la\n\nThe exec: prefix routes through the hook dispatcher which handles language detection, background tasks, and tool management automatically.`);
       }
 
-      if (!/^exec(\s|:)/.test(command) && !/^git /.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb/.test(command) && !/^bun install --cwd \/config\/.gmweb/.test(command)) {
-        return deny(`Bash is restricted to exec:<lang> and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:cmd            ← runs cmd.exe /c on Windows\n  exec:agent-browser  ← JS eval in browser page context (document.title, DOM queries, etc.)\n  exec               ← auto-detects language\n\nexec:agent-browser — JS eval in browser page context:\n  exec:agent-browser\n  document.title\n\n  exec:agent-browser\n  JSON.stringify([...document.querySelectorAll('h1')].map(h => h.textContent))\n\nBrowser CLI commands (open, click, snapshot, etc.) use agent-browser: prefix:\n  agent-browser:\n  open http://localhost:3001\n\n  agent-browser:\n  --headed open http://localhost:3001\n  wait --load networkidle\n  snapshot -i\n\n  agent-browser:\n  close\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:type\n  <task_id>\n  <input to send to stdin>\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nAll other Bash commands are blocked.`);
+      if (!/^exec(\s|:)/.test(command) && !/^agent-browser:/.test(command) && !/^git /.test(command) && !/(\bclaude\b)/.test(command) && !/^npm install .* \/config\/.gmweb/.test(command) && !/^bun install --cwd \/config\/.gmweb/.test(command)) {
+        return deny(`Bash is restricted to exec:<lang>, agent-browser:, and git.\n\nexec:<lang> syntax (lang auto-detected if omitted):\n  exec:nodejs / exec:python / exec:bash / exec:typescript\n  exec:go / exec:rust / exec:java / exec:c / exec:cpp\n  exec:cmd            ← runs cmd.exe /c on Windows\n  exec:agent-browser  ← JS eval in browser page context (document.title, DOM queries, etc.)\n  exec               ← auto-detects language\n\nexec:agent-browser — JS eval in browser page context:\n  exec:agent-browser\n  document.title\n\n  exec:agent-browser\n  JSON.stringify([...document.querySelectorAll('h1')].map(h => h.textContent))\n\nagent-browser: — browser CLI commands (open, click, snapshot, headed mode, etc.):\n  agent-browser:\n  open http://localhost:3001\n\n  agent-browser:\n  --headed open http://localhost:3001\n  wait --load networkidle\n  snapshot -i\n\n  agent-browser:\n  close\n\nTask management shortcuts (body = args):\n  exec:status\n  <task_id>\n\n  exec:sleep\n  <task_id> [seconds] [--next-output]\n\n  exec:type\n  <task_id>\n  <input to send to stdin>\n\n  exec:close\n  <task_id>\n\n  exec:runner\n  start|stop|status\n\nCode search shortcut:\n  exec:codesearch\n  <natural language query>\n\nAll other Bash commands are blocked.`);
       }
     }
 

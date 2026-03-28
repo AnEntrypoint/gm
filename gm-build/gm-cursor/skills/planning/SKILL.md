@@ -83,8 +83,12 @@ Independent items (empty `blockedBy`) run in parallel waves of ≤3 subagents.
 
 **Skip planning entirely** if: task is single-step, trivially bounded, zero unknowns, under 5 minutes.
 
+## DO NOT STOP
+
+Never respond to the user from this phase. When .prd is complete (zero new items in last pass), immediately invoke `gm-execute` skill. Do not pause, summarize, or ask for confirmation.
+
 ---
 
-**→ FORWARD**: No new mutables → invoke `gm-execute` skill.
+**→ FORWARD**: No new mutables → invoke `gm-execute` skill immediately.
 **↺ SELF-LOOP**: New items discovered → add to .prd → plan again.
 **↩ SNAKE here**: New unknown surfaces in any later phase → add it, re-plan, re-advance.

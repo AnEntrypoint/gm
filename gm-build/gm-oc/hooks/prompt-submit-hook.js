@@ -26,6 +26,16 @@ function runLocal(name, args, opts = {}) {
   return spawnSync('bun', ['x', name, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
 }
 
+function plugkitBin() { return path.join(TOOLS_DIR, IS_WIN ? 'plugkit.exe' : 'plugkit'); }
+
+function runPlugkit(args, opts = {}) {
+  const bin = plugkitBin();
+  if (fs.existsSync(bin)) {
+    return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+  }
+  return spawnSync('plugkit', args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+}
+
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
 function loadLangPlugins(dir) {
@@ -107,9 +117,9 @@ const ensureGitignore = () => {
 const runThorns = () => {
   if (!projectDir || !fs.existsSync(projectDir)) return '';
   try {
-    const r = runLocal('mcp-thorns', [projectDir], { timeout: 15000 });
+    const r = runPlugkit(['codeinsight', projectDir], { timeout: 15000 });
     const out = ((r.stdout || '') + (r.stderr || '')).trim();
-    return out ? `=== mcp-thorns ===\n${out}` : '';
+    return out ? `=== codeinsight ===\n${out}` : '';
   } catch (e) {
     return '';
   }
@@ -118,9 +128,9 @@ const runThorns = () => {
 const runCodeSearch = (prompt) => {
   if (!prompt || !projectDir) return '';
   try {
-    const r = runLocal('codebasesearch', [prompt], { timeout: 10000, cwd: projectDir });
+    const r = runPlugkit(['search', '--path', projectDir, prompt], { timeout: 10000, cwd: projectDir });
     const out = ((r.stdout || '') + (r.stderr || '')).trim();
-    return out ? `=== codebasesearch ===\n${out}` : '';
+    return out ? `=== search ===\n${out}` : '';
   } catch (e) {
     return '';
   }
