@@ -13,7 +13,7 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_
 const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const CHECK_STAMP = path.join(TOOLS_DIR, '.last-check');
 const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
-const MANAGED_PKGS = ['gm-exec', 'codebasesearch', 'mcp-thorns', 'agent-browser'];
+const MANAGED_PKGS = ['codebasesearch', 'mcp-thorns', 'agent-browser'];
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 function ensureToolsDir() {
@@ -163,13 +163,15 @@ const allowWithNoop = (context) => {
   };
 };
 
-// ─── gm-exec runner helper ────────────────────────────────────────────────────
+// ─── rs-exec runner helper ────────────────────────────────────────────────────
+function rsExecBin() { return path.join(TOOLS_DIR, IS_WIN ? 'rs-exec.exe' : 'rs-exec'); }
+
 function runGmExec(args, opts = {}) {
-  const bin = localBin('gm-exec');
+  const bin = rsExecBin();
   if (fs.existsSync(bin)) {
     return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
   }
-  return spawnSync('bun', ['x', 'gm-exec', ...args], { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
+  return spawnSync('rs-exec', args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
 }
 
 // ─── Main hook ────────────────────────────────────────────────────────────────
@@ -460,7 +462,7 @@ const run = () => {
         }
       }
 
-      if (/^bun\s+x\s+(gm-exec|codebasesearch)/.test(command)) {
+      if (/^bun\s+x\s+(gm-exec|rs-exec|codebasesearch)/.test(command)) {
         return deny(`Do not call ${command.match(/^bun\s+x\s+(\S+)/)[1]} directly. Use exec:<lang> syntax instead.\n\nExamples:\n  exec:nodejs\n  console.log("hello")\n\n  exec:codesearch\n  find all database queries\n\n  exec:bash\n  ls -la\n\nThe exec: prefix routes through the hook dispatcher which handles language detection, background tasks, and tool management automatically.`);
       }
 
