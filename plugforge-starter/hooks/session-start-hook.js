@@ -37,28 +37,22 @@ function runLocal(name, args, opts = {}) {
   return spawnSync('bun', ['x', name, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
 }
 
-const MANAGED_PKGS = ['codebasesearch', 'mcp-thorns', 'agent-browser'];
+const MANAGED_PKGS = ['agent-browser'];
 const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
 
-const RS_EXEC_REPO = 'AnEntrypoint/rs-exec';
+const PLUGKIT_REPO = 'AnEntrypoint/rs-plugkit';
 const archMap = { x64: 'x86_64', arm64: 'aarch64', ia32: 'x86_64' };
-const osTargets = {
-  win32: a => `rs-exec-${a}-pc-windows-msvcexe`,
-  darwin: a => `rs-exec-${a}-apple-darwin`,
-  linux: a => `rs-exec-${a}-unknown-linux-gnu`,
-};
-const osProcTargets = {
-  win32: a => `rs-exec-process-${a}-pc-windows-msvcexe`,
-  darwin: a => `rs-exec-process-${a}-apple-darwin`,
-  linux: a => `rs-exec-process-${a}-unknown-linux-gnu`,
+const plugkitTargets = {
+  win32: a => `plugkit-x86_64-pc-windows-msvc/plugkit.exe`,
+  darwin: a => `plugkit-x86_64-unknown-linux-gnu/plugkit`,
+  linux: a => `plugkit-x86_64-unknown-linux-gnu/plugkit`,
 };
 
-function rsExecBin() { return path.join(TOOLS_DIR, IS_WIN ? 'rs-exec.exe' : 'rs-exec'); }
-function rsExecProcessBin() { return path.join(TOOLS_DIR, IS_WIN ? 'rs-exec-process.exe' : 'rs-exec-process'); }
+function plugkitBin() { return path.join(TOOLS_DIR, IS_WIN ? 'plugkit.exe' : 'plugkit'); }
 
-function downloadBin(assetName, dest) {
+function downloadBin(assetPath, dest) {
   const https = require('https');
-  const url = `https://github.com/${RS_EXEC_REPO}/releases/latest/download/${assetName}`;
+  const url = `https://github.com/${PLUGKIT_REPO}/releases/latest/download/${assetPath}`;
   return new Promise((resolve) => {
     const follow = (u) => https.get(u, { headers: { 'User-Agent': 'gm' } }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400) return follow(res.headers.location);
@@ -70,15 +64,12 @@ function downloadBin(assetName, dest) {
   });
 }
 
-async function ensureRsExec() {
-  const arch = archMap[process.arch] || 'x86_64';
-  const plat = process.platform;
-  const mainBin = rsExecBin();
-  const procBin = rsExecProcessBin();
-  const downloads = [];
-  if (!fs.existsSync(mainBin)) downloads.push(downloadBin(osTargets[plat]?.(arch) || osTargets.linux(arch), mainBin));
-  if (!fs.existsSync(procBin)) downloads.push(downloadBin(osProcTargets[plat]?.(arch) || osProcTargets.linux(arch), procBin));
-  if (downloads.length) await Promise.all(downloads);
+async function ensurePlugkit() {
+  const bin = plugkitBin();
+  if (!fs.existsSync(bin)) {
+    const assetPath = plugkitTargets[process.platform]?.(archMap[process.arch] || 'x86_64') || plugkitTargets.linux('x86_64');
+    await downloadBin(assetPath, bin);
+  }
 }
 
 function ensureTools() {
@@ -97,7 +88,7 @@ function ensureTools() {
 }
 
 ensureTools();
-ensureRsExec().catch(() => {});
+ensurePlugkit().catch(() => {});
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_DIR || process.env.OC_PROJECT_DIR || process.env.KILO_PROJECT_DIR;
 
@@ -150,14 +141,17 @@ ensureGitignore();
 try {
   let outputs = [];
 
-  outputs.push('Use the Skill tool with skill: "gm" to begin — do NOT use the Agent tool to load skills. Skills are invoked via the Skill tool only, never as agents. All code execution uses exec:<lang> via the Bash tool — never direct Bash(node ...) or Bash(npm ...) or Bash(npx ...) or Bash(bun x rs-exec ...).');
+  outputs.push('Use the Skill tool with skill: "gm" to begin — do NOT use the Agent tool to load skills. Skills are invoked via the Skill tool only, never as agents. All code execution uses exec:<lang> via the Bash tool — never direct Bash(node ...) or Bash(npm ...) or Bash(npx ...) or Bash(plugkit ...).');
 
   if (projectDir && fs.existsSync(projectDir)) {
     try {
-      const r = runLocal('mcp-thorns', [projectDir], { timeout: 15000 });
-      const thornOutput = ((r.stdout || '') + (r.stderr || '')).trim();
-      if (thornOutput) {
-        outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${thornOutput}`);
+      const bin = plugkitBin();
+      const r = fs.existsSync(bin)
+        ? spawnSync(bin, ['codeinsight', projectDir], { encoding: 'utf8', windowsHide: true, timeout: 15000 })
+        : spawnSync('plugkit', ['codeinsight', projectDir], { encoding: 'utf8', windowsHide: true, timeout: 15000 });
+      const insightOutput = ((r.stdout || '') + (r.stderr || '')).trim();
+      if (insightOutput) {
+        outputs.push(`=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\n${insightOutput}`);
       }
     } catch (e) {}
   }

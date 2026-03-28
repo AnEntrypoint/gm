@@ -47,7 +47,7 @@ exec:close
 <task_id>
 ```
 
-**Runner** (PM2-backed — all activity visible in `pm2 list` and `pm2 monit` in user terminal):
+**Runner**:
 ```
 exec:runner
 start|stop|status
@@ -108,14 +108,18 @@ window.__gm = { captures: [], log: (...a) => window.__gm.captures.push({t:Date.n
 
 Real services, real data, real timing. Mocks/fakes/stubs = delete immediately. No .test.js/.spec.js. Delete on discovery.
 
+## DO NOT STOP
+
+Never respond to the user from this phase. When all mutables are KNOWN, immediately invoke `gm-emit` skill. The chain continues until .prd is deleted and git is clean — that happens in `gm-complete`, not here.
+
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Explore | sequential independent items | absorb surprises silently
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Explore | sequential independent items | absorb surprises silently | respond to user or pause for input
 
-**Always**: witness every hypothesis | import real modules | snake to planning on any new unknown | fix immediately on discovery
+**Always**: witness every hypothesis | import real modules | snake to planning on any new unknown | fix immediately on discovery | invoke next skill immediately when done
 
 ---
 
-**→ FORWARD**: All mutables KNOWN → invoke `gm-emit` skill.
+**→ FORWARD**: All mutables KNOWN → invoke `gm-emit` skill immediately.
 **↺ SELF-LOOP**: Still UNKNOWN → re-run (max 2 passes).
 **↩ SNAKE to PLAN**: Any new unknown → invoke `planning` skill, restart chain.
