@@ -60,7 +60,7 @@ exec:codesearch
 <natural language description of what you need>
 ```
 
-Alias: `exec:search`. Glob, Grep, Read-for-discovery, Explore, WebSearch = blocked.
+Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** — the pre-tool-use hook denies them. Use `exec:codesearch` exclusively for all codebase discovery.
 
 ## IMPORT-BASED DEBUGGING
 
@@ -114,7 +114,7 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Explore | sequential independent items | absorb surprises silently | respond to user or pause for input
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input
 
 **Always**: witness every hypothesis | import real modules | snake to planning on any new unknown | fix immediately on discovery | invoke next skill immediately when done
 

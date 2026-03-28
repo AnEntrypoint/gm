@@ -77,7 +77,7 @@ exec:codesearch
 <natural language description>
 ```
 
-Alias: `exec:search`. Glob, Grep, Explore = blocked.
+Alias: `exec:search`. **Glob, Grep, Read, Explore are hook-blocked** — use `exec:codesearch` exclusively.
 
 ## BROWSER DEBUGGING
 
