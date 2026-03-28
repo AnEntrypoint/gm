@@ -258,7 +258,8 @@ const run = () => {
           return { globalArgs, rest };
         }
         const spawnAb = (bin, args, stdin) => {
-          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: true, ...(IS_WIN && { shell: true }), cwd: process.cwd(), ...(stdin !== undefined && { input: stdin }) };
+          const headed = args.includes('--headed');
+          const opts = { encoding: 'utf-8', timeout: 60000, windowsHide: !headed, ...(IS_WIN && { shell: true }), cwd: process.cwd(), ...(stdin !== undefined && { input: stdin }) };
           const r = spawnSync(bin, args, opts);
           if (!r.stdout && !r.stderr && r.error) return `[spawn error: ${r.error.message}]`;
           const out = (r.stdout || '').trimEnd(), err = stripFooter(r.stderr || '').trimEnd();
