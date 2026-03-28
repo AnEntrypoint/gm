@@ -13,7 +13,23 @@ function localBin(name) {
   return path.join(TOOLS_DIR, 'node_modules', '.bin', name + ext);
 }
 
+function pkgEntry(name) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(TOOLS_DIR, 'node_modules', name, 'package.json'), 'utf8'));
+    const binVal = pkg.bin;
+    const rel = typeof binVal === 'string' ? binVal : (binVal?.[name] || Object.values(binVal || {})[0]);
+    if (rel) return path.join(TOOLS_DIR, 'node_modules', name, rel);
+  } catch {}
+  return null;
+}
+
 function runLocal(name, args, opts = {}) {
+  if (IS_WIN) {
+    const entry = pkgEntry(name);
+    if (entry && fs.existsSync(entry)) {
+      return spawnSync('bun', [entry, ...args], { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
+    }
+  }
   const bin = localBin(name);
   if (fs.existsSync(bin)) {
     return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 30000, ...opts });
