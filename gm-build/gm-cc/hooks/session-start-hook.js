@@ -41,11 +41,10 @@ const MANAGED_PKGS = ['agent-browser'];
 const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
 
 const PLUGKIT_REPO = 'AnEntrypoint/rs-plugkit';
-const archMap = { x64: 'x86_64', arm64: 'aarch64', ia32: 'x86_64' };
 const plugkitTargets = {
-  win32: a => `plugkit-x86_64-pc-windows-msvc/plugkit.exe`,
-  darwin: a => `plugkit-x86_64-unknown-linux-gnu/plugkit`,
-  linux: a => `plugkit-x86_64-unknown-linux-gnu/plugkit`,
+  win32: () => `plugkit.exe`,
+  darwin: () => `plugkit`,
+  linux: () => `plugkit`,
 };
 
 function plugkitBin() { return path.join(TOOLS_DIR, IS_WIN ? 'plugkit.exe' : 'plugkit'); }
@@ -67,7 +66,7 @@ function downloadBin(assetPath, dest) {
 async function ensurePlugkit() {
   const bin = plugkitBin();
   if (!fs.existsSync(bin)) {
-    const assetPath = plugkitTargets[process.platform]?.(archMap[process.arch] || 'x86_64') || plugkitTargets.linux('x86_64');
+    const assetPath = plugkitTargets[process.platform]?.() || plugkitTargets.linux();
     await downloadBin(assetPath, bin);
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "gm-vscode",
-  "version": "2.0.244",
+  "version": "2.0.245",
   "publisher": "gm",
   "displayName": "GM - GM State Machine",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
