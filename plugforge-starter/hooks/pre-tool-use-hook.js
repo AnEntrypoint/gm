@@ -283,17 +283,19 @@ const run = () => {
             } else {
               const hasClose = lines.some(l => { const w = (parseAbLine(l).rest[0]||'').toLowerCase(); return ['close','quit','exit'].includes(w); });
               const batchGlobals = firstParsed.globalArgs;
-              const cmds = lines.map(l => {
+              const results = [];
+              for (const l of lines) {
                 const { globalArgs, rest } = parseAbLine(l);
                 const mergedGlobals = [...batchGlobals.filter(f => !globalArgs.includes(f)), ...globalArgs];
                 const w = (rest[0]||'').toLowerCase();
                 if (['open','goto','navigate'].includes(w)) sessions[sessionName] = { url: rest[1]||'?', ts: Date.now() };
                 if (['close','quit','exit'].includes(w)) delete sessions[sessionName];
-                if (!AB_CMDS.has(w)) return [...mergedGlobals, 'eval', l.trim()];
-                return [...mergedGlobals, ...rest];
-              });
+                const args = AB_CMDS.has(w) ? [...mergedGlobals, ...rest] : [...mergedGlobals, 'eval', '--stdin'];
+                const stdin = AB_CMDS.has(w) ? undefined : l.trim();
+                results.push(spawnAb(abBin, args, stdin));
+              }
               writeAbSessions(sessions);
-              result = spawnAb(abBin, ['batch'], JSON.stringify(cmds));
+              result = results.filter(Boolean).join('\n');
               if (!hasClose && openSessions.length > 0) result += `\n\n[tab] Browser session "${sessionName}" still open. Close when done:\n  agent-browser:\n  close`;
             }
           } else {
