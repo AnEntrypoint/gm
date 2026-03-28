@@ -55,7 +55,7 @@ For browser/UI: invoke `agent-browser` skill with real workflows. Server + clien
 
 `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`
 
-Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<id>`, `exec:close\n<id>`. Runner: `exec:runner\nstart|stop|status`. All activity visible in `pm2 list` and `pm2 monit` in user terminal.
+Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<id>`, `exec:close\n<id>`. Runner: `exec:runner\nstart|stop|status`.
 
 ## CODEBASE EXPLORATION
 
@@ -82,16 +82,20 @@ Must return 0. If not: stage → commit → push → re-verify. Local commit wit
 
 All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | `user_steps_remaining=0`
 
+## DO NOT STOP
+
+After end-to-end verification passes: read .prd from disk. If any items remain, immediately invoke `gm-execute` skill — do not respond to the user. Only respond when .prd is deleted AND git is clean AND all commits are pushed.
+
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | .prd items remaining | stop at first green | absorb surprises silently
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | .prd items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items
 
-**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success
+**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass
 
 ---
 
-**→ FORWARD**: .prd items remain → invoke `gm-execute` skill.
-**→ FORWARD**: .prd empty + feature work pushed → invoke `update-docs` skill.
+**→ FORWARD**: .prd items remain → invoke `gm-execute` skill (keep going, do not stop).
+**→ FORWARD**: .prd deleted + feature work pushed → invoke `update-docs` skill.
 **↩ SNAKE to EMIT**: file output wrong → invoke `gm-emit` skill.
 **↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
 **↩ SNAKE to PLAN**: new unknown or wrong requirements → invoke `planning` skill, restart chain.

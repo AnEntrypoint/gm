@@ -13,7 +13,7 @@ const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.GEMINI_PROJECT_
 const TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const CHECK_STAMP = path.join(TOOLS_DIR, '.last-check');
 const PKG_JSON = path.join(TOOLS_DIR, 'package.json');
-const MANAGED_PKGS = ['codebasesearch', 'mcp-thorns', 'agent-browser'];
+const MANAGED_PKGS = ['agent-browser'];
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 function ensureToolsDir() {
@@ -178,15 +178,15 @@ const allowWithNoop = (context) => {
   };
 };
 
-// ─── rs-exec runner helper ────────────────────────────────────────────────────
-function rsExecBin() { return path.join(TOOLS_DIR, IS_WIN ? 'rs-exec.exe' : 'rs-exec'); }
+// ─── plugkit runner helper ────────────────────────────────────────────────────
+function plugkitBin() { return path.join(TOOLS_DIR, IS_WIN ? 'plugkit.exe' : 'plugkit'); }
 
 function runGmExec(args, opts = {}) {
-  const bin = rsExecBin();
+  const bin = plugkitBin();
   if (fs.existsSync(bin)) {
     return spawnSync(bin, args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
   }
-  return spawnSync('rs-exec', args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
+  return spawnSync('plugkit', args, { encoding: 'utf8', windowsHide: true, timeout: 65000, ...opts });
 }
 
 // ─── Main hook ────────────────────────────────────────────────────────────────
@@ -409,7 +409,7 @@ const run = () => {
 
         if (['codesearch', 'search'].includes(lang)) {
           const query = safeCode.trim();
-          const r = runLocal('codebasesearch', [query], { timeout: 30000, ...(cwd && { cwd }) });
+          const r = runGmExec(['search', ...(cwd ? ['--path', cwd] : []), query], { timeout: 30000, ...(cwd && { cwd }) });
           return allowWithNoop(`exec:${lang} output:\n\n${stripFooter((r.stdout || '') + (r.stderr || '')) || '(no results)'}`);
         }
         if (lang === 'status') {
@@ -477,7 +477,7 @@ const run = () => {
         }
       }
 
-      if (/^bun\s+x\s+(gm-exec|rs-exec|codebasesearch)/.test(command)) {
+      if (/^bun\s+x\s+(gm-exec|rs-exec|plugkit|codebasesearch)/.test(command)) {
         return deny(`Do not call ${command.match(/^bun\s+x\s+(\S+)/)[1]} directly. Use exec:<lang> syntax instead.\n\nExamples:\n  exec:nodejs\n  console.log("hello")\n\n  exec:codesearch\n  find all database queries\n\n  exec:bash\n  ls -la\n\nThe exec: prefix routes through the hook dispatcher which handles language detection, background tasks, and tool management automatically.`);
       }
 

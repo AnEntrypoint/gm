@@ -63,7 +63,7 @@ function updateGitignore(projectRoot) {
 }
 
 function warmBunCache() {
-  const packages = ['mcp-thorns@latest', 'codebasesearch@latest'];
+  const packages = [];
   for (const pkg of packages) {
     try {
       execSync(`bun x ${pkg} --version`, {

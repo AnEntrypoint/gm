@@ -87,15 +87,19 @@ Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2)
 
 File ≤200 lines | No duplication | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
 
+## DO NOT STOP
+
+Never respond to the user from this phase. When all gate conditions pass, immediately invoke `gm-complete` skill. Do not pause, summarize, or ask questions.
+
 ## CONSTRAINTS
 
-**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | defer spotted issues
+**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | defer spotted issues | respond to user or pause for input
 
-**Always**: pre-emit debug before writing | post-emit verify from disk | snake to planning on any new unknown | fix immediately
+**Always**: pre-emit debug before writing | post-emit verify from disk | snake to planning on any new unknown | fix immediately | invoke next skill immediately when gates pass
 
 ---
 
-**→ FORWARD**: All gates pass → invoke `gm-complete` skill.
+**→ FORWARD**: All gates pass → invoke `gm-complete` skill immediately.
 **↺ SELF-LOOP**: Known post-emit variance → fix, re-verify.
 **↩ SNAKE to EXECUTE**: Known logic error → invoke `gm-execute` skill.
 **↩ SNAKE to PLAN**: Any new unknown → invoke `planning` skill, restart chain.
