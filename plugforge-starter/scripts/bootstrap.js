@@ -10,13 +10,25 @@ if (!pluginRoot) process.exit(0);
 const IS_WIN = process.platform === 'win32';
 const binPath = path.join(pluginRoot, 'bin', IS_WIN ? 'plugkit.exe' : 'plugkit');
 
-if (fs.existsSync(binPath)) process.exit(0);
-
 function getVersion() {
   try {
     return JSON.parse(fs.readFileSync(path.join(pluginRoot, 'gm.json'), 'utf8')).plugkitVersion || null;
   } catch { return null; }
 }
+
+function getCurrentVersion() {
+  if (!fs.existsSync(binPath)) return null;
+  try {
+    const { execFileSync } = require('child_process');
+    const out = execFileSync(binPath, ['--version'], { timeout: 5000 }).toString().trim();
+    const m = out.match(/(\d+\.\d+\.\d+)/);
+    return m ? m[1] : null;
+  } catch { return null; }
+}
+
+const required = getVersion();
+const current = getCurrentVersion();
+if (current && current === required) process.exit(0);
 
 function download(version, dest, cb) {
   const asset = IS_WIN ? 'plugkit.exe' : 'plugkit';
@@ -39,7 +51,7 @@ function download(version, dest, cb) {
   follow(`https://github.com${urlPath}`);
 }
 
-download(getVersion(), binPath, (err) => {
+download(required, binPath, (err) => {
   if (err) { process.stderr.write(`bootstrap: ${err.message}\n`); process.exit(1); }
   process.exit(0);
 });
