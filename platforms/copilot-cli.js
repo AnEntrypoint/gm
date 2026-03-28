@@ -42,11 +42,6 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
-      'hooks/pre-tool-use-hook.js': readFile(this.getHookSourcePaths('pre-tool-use')),
-      'hooks/session-start-hook.js': readFile(this.getHookSourcePaths('session-start')),
-      'hooks/prompt-submit-hook.js': readFile(this.getHookSourcePaths('prompt-submit')),
-      'hooks/session-end-hook.js': readFile(this.getHookSourcePaths('stop')),
-      'hooks/session-end-git-hook.js': readFile(this.getHookSourcePaths('stop-git')),
       'cli.js': gen.generateCliJs(),
       'README.md': gen.generateReadme(),
       'index.html': require('../lib/template-builder').generateGitHubPage(require('../lib/template-builder').getPlatformPageConfig('copilot-cli', pluginSpec))
@@ -132,13 +127,14 @@ State in \`~/.gh/extensions/gm/state.json\`.
     return super.getHookSourcePaths(hook);
   }
 
-  buildHookCommand(hookFile) {
-    const fileNameMap = {
-      'stop-hook.js': 'session-end-hook.js',
-      'stop-hook-git.js': 'session-end-git-hook.js'
-    };
-    const mappedFile = fileNameMap[hookFile] || hookFile;
-    return `node \${COPILOT_EXTENSION_DIR}/hooks/${mappedFile}`;
+  buildBootstrapCommand() {
+    return `node \${COPILOT_EXTENSION_DIR}/scripts/bootstrap.js`;
+  }
+
+  buildHookCommand(hookEvent) {
+    const hookEventMap = { 'stop': 'session-end', 'stop-git': 'session-end-git' };
+    const mappedEvent = hookEventMap[hookEvent] || hookEvent;
+    return `\${COPILOT_EXTENSION_DIR}/bin/plugkit hook ${mappedEvent}`;
   }
 }
 
