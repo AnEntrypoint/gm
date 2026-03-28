@@ -907,8 +907,11 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       'install.js': createGeminiInstallScript(),
     };
   },
-  buildHookCommand(hookFile) {
-    return `bun \${extensionPath}/hooks/${hookFile}`;
+  buildBootstrapCommand() {
+    return `node \${extensionPath}/scripts/bootstrap.js`;
+  },
+  buildHookCommand(hookEvent) {
+    return `\${extensionPath}/bin/plugkit hook ${hookEvent}`;
   },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
