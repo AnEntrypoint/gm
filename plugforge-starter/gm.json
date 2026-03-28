@@ -23,5 +23,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "plugkitVersion": "0.1.4"
+  "plugkitVersion": "0.1.5"
 }
