@@ -80,7 +80,7 @@ exec:codesearch
 <natural language description>
 ```
 
-Alias: `exec:search`. Glob, Grep, Read-for-discovery, Explore, WebSearch = blocked.
+Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** — the pre-tool-use hook denies them. Use `exec:codesearch` exclusively for all codebase discovery.
 
 ## BROWSER AUTOMATION
 
