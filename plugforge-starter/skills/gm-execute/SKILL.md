@@ -93,16 +93,11 @@ Step failure revealing new unknown → snake to `planning`.
 
 ## BROWSER DEBUGGING
 
-Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
-1. `exec:agent-browser\n<js>` — query DOM/state. Always first.
-2. `agent-browser` skill + `__gm` globals — instrument and capture
+Invoke `browser` skill. Escalation — exhaust each before advancing:
+1. `exec:browser\n<js>` — query DOM/state. Always first.
+2. `browser` skill — for full session workflows
 3. navigate/click/type — only when real events required
 4. screenshot — last resort
-
-`__gm` scaffold:
-```js
-window.__gm = { captures: [], log: (...a) => window.__gm.captures.push({t:Date.now(),a}), assert: (l,c) => { window.__gm.captures.push({l,pass:!!c,val:c}); return !!c; }, dump: () => JSON.stringify(window.__gm.captures,null,2) };
-```
 
 ## GROUND TRUTH
 
