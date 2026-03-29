@@ -31,19 +31,6 @@ function safeCopyDirectory(src, dst) {
 }`.trim();
 
 
-const SKILLS_INSTALL_BODY = (varName = 'execSync') => `  const { execSync: ${varName} } = require('child_process');
-  try {
-    ${varName}('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      ${varName}('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }`;
-
-const SKILLS_INSTALL = SKILLS_INSTALL_BODY('execSync');
-
 const COPY_RECURSIVE_FN = `
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
@@ -236,7 +223,7 @@ install();
 }
 
 // Global CLI installer scripts (run directly as cli.js / bun x gm-xx@latest)
-function createCliInstaller({ pkg, label, destDir, filesToCopy, restartMsg, extraSetup = '', skipSkillsInstall = false }) {
+function createCliInstaller({ pkg, label, destDir, filesToCopy, restartMsg, extraSetup = '' }) {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
@@ -259,8 +246,6 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 ${extraSetup}
-${skipSkillsInstall ? '' : SKILLS_INSTALL}
-
   const destPath = process.platform === 'win32' ? destDir.replace(/\\\\/g, '/') : destDir;
   console.log(\`✓ ${pkg} \${isUpgrade ? 'upgraded' : 'installed'} to \${destPath}\`);
   console.log('${restartMsg}');
@@ -321,8 +306,7 @@ function createClaudeCodeCliScript() {
     destDir: `path.join(homeDir, '.claude')`,
     filesToCopy: [],
     extraSetup,
-    restartMsg: 'Restart Claude Code to activate.',
-    skipSkillsInstall: true
+    restartMsg: 'Restart Claude Code to activate.'
   });
 }
 
@@ -380,8 +364,6 @@ try {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-  ${SKILLS_INSTALL_BODY('execSync2')}
-
   console.log(\`✓ gm-oc \${isUpgrade ? 'upgraded' : 'installed'} to \${ocConfigDir}\`);
   console.log('Restart OpenCode to activate.');
 } catch (e) {
@@ -435,8 +417,6 @@ try {
   if (oldDir && fs.existsSync(oldDir)) {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
-
-  ${SKILLS_INSTALL_BODY('execSync2')}
 
   console.log(\`✓ gm-kilo \${isUpgrade ? 'upgraded' : 'installed'} to \${kiloConfigDir}\`);
   console.log('Restart Kilo CLI to activate.');
