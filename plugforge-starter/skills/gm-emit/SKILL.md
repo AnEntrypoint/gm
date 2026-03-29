@@ -81,7 +81,7 @@ Alias: `exec:search`. **Glob, Grep, Read, Explore are hook-blocked** — use `ex
 
 ## BROWSER DEBUGGING
 
-Invoke `agent-browser` skill. Escalation: (1) `exec:agent-browser\n<js>` → (2) skill + `__gm` globals → (3) navigate/click → (4) screenshot last resort.
+Invoke `browser` skill. Escalation: (1) `exec:browser\n<js>` → (2) `browser` skill → (3) navigate/click → (4) screenshot last resort.
 
 ## SELF-CHECK (before and after each file)
 
