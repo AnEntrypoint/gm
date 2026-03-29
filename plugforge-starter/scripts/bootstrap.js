@@ -9,6 +9,26 @@ if (!pluginRoot) process.exit(0);
 
 const IS_WIN = process.platform === 'win32';
 const binPath = path.join(pluginRoot, 'bin', IS_WIN ? 'plugkit.exe' : 'plugkit');
+const pendingPath = binPath + '.pending';
+
+function getAssetName() {
+  const platform = process.platform;
+  const arch = process.arch;
+  const os = platform === 'win32' ? 'win32' : platform === 'darwin' ? 'darwin' : 'linux';
+  const cpu = arch === 'arm64' ? 'arm64' : 'x64';
+  const ext = platform === 'win32' ? '.exe' : '';
+  return `plugkit-${os}-${cpu}${ext}`;
+}
+
+function applyPending() {
+  if (!fs.existsSync(pendingPath)) return;
+  try {
+    if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
+    fs.renameSync(pendingPath, binPath);
+  } catch {}
+}
+
+applyPending();
 
 function getVersion() {
   try {
@@ -26,24 +46,12 @@ function getCurrentVersion() {
   } catch { return null; }
 }
 
-const pendingPath = binPath + '.pending';
-
-function applyPending() {
-  if (!fs.existsSync(pendingPath)) return;
-  try {
-    if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
-    fs.renameSync(pendingPath, binPath);
-  } catch {}
-}
-
-applyPending();
-
 const required = getVersion();
 const current = getCurrentVersion();
 if (current && current === required) process.exit(0);
 
 function download(version, dest, cb) {
-  const asset = IS_WIN ? 'plugkit.exe' : 'plugkit';
+  const asset = getAssetName();
   const urlPath = version
     ? `/AnEntrypoint/rs-plugkit/releases/download/v${version}/${asset}`
     : `/AnEntrypoint/rs-plugkit/releases/latest/download/${asset}`;
