@@ -33,6 +33,12 @@ Each mutable: name | expected | current | resolution method. Execute → witness
 
 Lang auto-detected if omitted. `cwd` sets directory. File I/O via exec:nodejs + require('fs'). Only git in bash directly. `Bash(node/npm/npx/bun)` = violations.
 
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+
 **Background tasks** (auto-backgrounded when execution exceeds 15s):
 ```
 exec:sleep

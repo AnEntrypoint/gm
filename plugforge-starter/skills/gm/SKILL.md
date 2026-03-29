@@ -53,6 +53,12 @@ Languages: `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescr
 - File I/O: `exec:nodejs` with `require('fs')`
 - Only `git` runs directly in Bash. `Bash(node/npm/npx/bun)` = violations.
 
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+
 **Background tasks** (auto-backgrounded after 15s):
 ```
 exec:sleep

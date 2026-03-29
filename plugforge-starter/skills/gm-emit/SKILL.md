@@ -35,6 +35,12 @@ Each gate condition is a mutable. Pre-emit run witnesses expected value. Post-em
 
 Only git in bash directly. `Bash(node/npm/npx/bun)` = violations. File writes via exec:nodejs + require('fs').
 
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+
 ## PRE-EMIT DEBUGGING (before writing any file)
 
 1. Import actual module from disk via `exec:nodejs` — witness current on-disk behavior
