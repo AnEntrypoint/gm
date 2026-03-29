@@ -84,9 +84,9 @@ Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** 
 
 ## BROWSER AUTOMATION
 
-Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
-1. `exec:agent-browser\n<js>` — query DOM/state via JS
-2. `agent-browser` skill + `__gm` globals — instrument and capture
+Invoke `browser` skill. Escalation — exhaust each before advancing:
+1. `exec:browser\n<js>` — query DOM/state via JS
+2. `browser` skill — for full session workflows
 3. navigate/click/type — only when real events required
 4. screenshot — last resort only
 
@@ -97,7 +97,7 @@ Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
 **`gm-emit`** — Write files to disk when all mutables resolved.
 **`gm-complete`** — End-to-end verification and git enforcement.
 **`update-docs`** — Refresh README, CLAUDE.md, and docs to reflect session changes. Invoked by `gm-complete`.
-**`agent-browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
+**`browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
 
 ## DO NOT STOP
 
