@@ -26,6 +26,18 @@ function getCurrentVersion() {
   } catch { return null; }
 }
 
+const pendingPath = binPath + '.pending';
+
+function applyPending() {
+  if (!fs.existsSync(pendingPath)) return;
+  try {
+    if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
+    fs.renameSync(pendingPath, binPath);
+  } catch {}
+}
+
+applyPending();
+
 const required = getVersion();
 const current = getCurrentVersion();
 if (current && current === required) process.exit(0);
@@ -52,6 +64,16 @@ function download(version, dest, cb) {
 }
 
 download(required, binPath, (err) => {
+  if (err && err.message.includes('EBUSY')) {
+    download(required, pendingPath, (err2) => {
+      if (err2) {
+        process.stderr.write(`bootstrap: ${err2.message}\n`);
+        process.exit(fs.existsSync(binPath) ? 0 : 1);
+      }
+      process.exit(0);
+    });
+    return;
+  }
   if (err) {
     process.stderr.write(`bootstrap: ${err.message}\n`);
     process.exit(fs.existsSync(binPath) ? 0 : 1);
