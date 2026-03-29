@@ -52,6 +52,9 @@ function download(version, dest, cb) {
 }
 
 download(required, binPath, (err) => {
-  if (err) { process.stderr.write(`bootstrap: ${err.message}\n`); process.exit(1); }
+  if (err) {
+    process.stderr.write(`bootstrap: ${err.message}\n`);
+    process.exit(fs.existsSync(binPath) ? 0 : 1);
+  }
   process.exit(0);
 });
