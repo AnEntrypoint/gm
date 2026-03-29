@@ -47,7 +47,7 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-For browser/UI: invoke `agent-browser` skill with real workflows. Server + client features require both exec:nodejs AND agent-browser. After every success: enumerate what remains — never stop at first green.
+For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser. After every success: enumerate what remains — never stop at first green.
 
 ## CODE EXECUTION
 
