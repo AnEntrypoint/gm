@@ -10,6 +10,7 @@ if (!pluginRoot) process.exit(0);
 const IS_WIN = process.platform === 'win32';
 const binPath = path.join(pluginRoot, 'bin', IS_WIN ? 'plugkit.exe' : 'plugkit');
 const pendingPath = binPath + '.pending';
+const versionFile = path.join(pluginRoot, 'bin', '.plugkit-version');
 
 function getAssetName() {
   const platform = process.platform;
@@ -20,11 +21,16 @@ function getAssetName() {
   return `plugkit-${os}-${cpu}${ext}`;
 }
 
+const pendingVersionFile = pendingPath + '.version';
+
 function applyPending() {
   if (!fs.existsSync(pendingPath)) return;
   try {
     if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
     fs.renameSync(pendingPath, binPath);
+    if (fs.existsSync(pendingVersionFile)) {
+      try { fs.renameSync(pendingVersionFile, versionFile); } catch {}
+    }
   } catch {}
 }
 
@@ -39,10 +45,7 @@ function getVersion() {
 function getCurrentVersion() {
   if (!fs.existsSync(binPath)) return null;
   try {
-    const { execFileSync } = require('child_process');
-    const out = execFileSync(binPath, ['--version'], { timeout: 5000 }).toString().trim();
-    const m = out.match(/(\d+\.\d+\.\d+)/);
-    return m ? m[1] : null;
+    return fs.readFileSync(versionFile, 'utf8').trim() || null;
   } catch { return null; }
 }
 
@@ -78,6 +81,7 @@ download(required, binPath, (err) => {
         process.stderr.write(`bootstrap: ${err2.message}\n`);
         process.exit(fs.existsSync(binPath) ? 0 : 1);
       }
+      try { fs.writeFileSync(pendingVersionFile, required); } catch {}
       process.exit(0);
     });
     return;
@@ -86,5 +90,6 @@ download(required, binPath, (err) => {
     process.stderr.write(`bootstrap: ${err.message}\n`);
     process.exit(fs.existsSync(binPath) ? 0 : 1);
   }
+  try { fs.writeFileSync(versionFile, required); } catch {}
   process.exit(0);
 });
