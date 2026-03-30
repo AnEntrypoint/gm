@@ -1,7 +1,6 @@
 ---
 name: gm
 description: Immutable programming state machine. Root orchestrator. Invoke for all work coordination via the Skill tool.
-enforce: critical
 ---
 
 # GM — Immutable Programming State Machine
