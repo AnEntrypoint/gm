@@ -63,30 +63,22 @@ function download(version, dest, cb) {
   const asset = getAssetName();
   const urlPath = `/AnEntrypoint/rs-plugkit/releases/download/v${version}/${asset}`;
   if (!fs.existsSync(path.dirname(dest))) fs.mkdirSync(path.dirname(dest), { recursive: true });
-  let done = false;
-  const timer = setTimeout(() => { if (!done) { done = true; cb(new Error('download timeout')); } }, 30000);
   const follow = (url) => {
     const mod = url.startsWith('https') ? https : require('http');
-    const opts = { ...require('url').parse(url), headers: { 'User-Agent': 'gm-bootstrap' }, timeout: 15000 };
-    const req = mod.get(opts, res => {
-      if (done) return res.destroy();
+    const opts = { ...require('url').parse(url), headers: { 'User-Agent': 'gm-bootstrap' } };
+    mod.get(opts, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return follow(res.headers.location);
-      if (res.statusCode !== 200) { clearTimeout(timer); if (!done) { done = true; cb(new Error(`HTTP ${res.statusCode}`)); } return; }
+      if (res.statusCode !== 200) return cb(new Error(`HTTP ${res.statusCode}`));
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
-        clearTimeout(timer);
-        if (done) return;
-        done = true;
         try {
           fs.writeFileSync(dest, Buffer.concat(chunks));
           try { fs.chmodSync(dest, 0o755); } catch {}
           cb(null);
         } catch (e) { cb(e); }
       });
-    });
-    req.on('error', (e) => { clearTimeout(timer); if (!done) { done = true; cb(e); } });
-    req.on('timeout', () => { req.destroy(); clearTimeout(timer); if (!done) { done = true; cb(new Error('connect timeout')); } });
+    }).on('error', cb);
   };
   follow(`https://github.com${urlPath}`);
 }
