@@ -10,14 +10,18 @@ allowed-tools: Bash(browser:*), Bash(exec:browser*)
 
 **Session commands** — use `browser:` prefix via Bash for all browser control.
 
-Create a session first, then run commands against it:
+Create a session first, then run commands against it. Use `--direct` for CDP mode (no extension needed — requires Chrome with remote debugging):
 
 ```
 browser:
-playwriter session new
+playwriter session new --direct
 ```
 
 Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent commands.
+
+If `--direct` fails, the user needs Chrome running with debugging enabled:
+- Open `chrome://inspect/#remote-debugging` in Chrome, OR
+- Launch Chrome with `chrome --remote-debugging-port=9222`
 
 ```
 browser:
