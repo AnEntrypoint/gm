@@ -1,0 +1,20 @@
+﻿{
+    "name":  "plugforge-local",
+    "interface":  {
+                      "displayName":  "Plugforge Local"
+                  },
+    "plugins":  [
+                    {
+                        "policy":  {
+                                       "installation":  "AVAILABLE",
+                                       "authentication":  "ON_INSTALL"
+                                   },
+                        "category":  "Productivity",
+                        "name":  "gm-codex",
+                        "source":  {
+                                       "path":  "./plugins/gm-codex",
+                                       "source":  "local"
+                                   }
+                    }
+                ]
+}
