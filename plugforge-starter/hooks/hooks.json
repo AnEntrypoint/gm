@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.js",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.cmd",
             "timeout": 60000
           },
           {
@@ -36,25 +36,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.js",
-            "timeout": 60000
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook prompt-submit",
             "timeout": 60000
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook session-end",
-            "timeout": 10000
           }
         ]
       }
