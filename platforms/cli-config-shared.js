@@ -112,7 +112,7 @@ function install() {
   if (!isInsideNodeModules()) return;
   const projectRoot = getProjectRoot();
   if (!projectRoot) return;
-  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm');
+  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm-codex');
   const sourceDir = __dirname;
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
@@ -120,7 +120,9 @@ function install() {
   safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(codexDir, 'skills'));
   safeCopyDirectory(path.join(sourceDir, '.agents'), path.join(codexDir, '.agents'));
   safeCopyDirectory(path.join(sourceDir, '.codex-plugin'), path.join(codexDir, '.codex-plugin'));
+  safeCopyDirectory(path.join(sourceDir, 'assets'), path.join(codexDir, 'assets'));
   try { fs.copyFileSync(path.join(sourceDir, '.mcp.json'), path.join(codexDir, '.mcp.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, '.app.json'), path.join(codexDir, '.app.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'plugin.json'), path.join(codexDir, 'plugin.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
@@ -323,12 +325,11 @@ function createCodexCliScript() {
   return createCliInstaller({
     pkg: 'gm-codex',
     label: 'Codex',
-    destDir: `process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
-  : path.join(homeDir, '.codex', 'plugins', 'gm')`,
+    destDir: `path.join(homeDir, '.codex', 'plugins', 'gm-codex')`,
     filesToCopy: [
       ['agents', 'agents'], ['hooks', 'hooks'], ['scripts', 'scripts'], ['skills', 'skills'],
       ['.agents', '.agents'], ['.codex-plugin', '.codex-plugin'],
+      ['assets', 'assets'], ['.app.json', '.app.json'],
       ['.mcp.json', '.mcp.json'], ['plugin.json', 'plugin.json'], ['gm.json', 'gm.json'],
       ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md']
     ],
@@ -919,7 +920,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
       ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
@@ -929,7 +930,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
@@ -955,18 +956,18 @@ npm install ${repoName}
 npx ${repoName}-install
 \`\`\`
 
-The installer copies plugin assets into \`.codex/plugins/gm\` in your project and is useful for local customization.
+The installer copies plugin assets into \`.codex/plugins/gm-codex\` in your project and is useful for local customization.
 
 ### Manual Installation
 
 **Windows and Unix:**
 \`\`\`bash
-git clone https://github.com/AnEntrypoint/${repoName} ~/.codex/plugins/gm
+git clone https://github.com/AnEntrypoint/${repoName} ~/.codex/plugins/gm-codex
 \`\`\`
 
 **Windows PowerShell:**
 \`\`\`powershell
-git clone https://github.com/AnEntrypoint/${repoName} "\\$env:APPDATA\\codex\\plugins\\gm"
+git clone https://github.com/AnEntrypoint/${repoName} "\\$env:APPDATA\\codex\\plugins\\gm-codex"
 \`\`\`
 
 ## Installed Layout
@@ -974,7 +975,7 @@ git clone https://github.com/AnEntrypoint/${repoName} "\\$env:APPDATA\\codex\\pl
 After install, the Codex plugin directory contains:
 
 \`\`\`
-plugins/gm/
+plugins/gm-codex/
 ├── .codex-plugin/plugin.json
 ├── .agents/plugins/marketplace.json
 ├── agents/
@@ -1050,6 +1051,9 @@ MIT
     return {
       'cli.js': createCodexCliScript(),
       'install.js': createCodexInstallScript(),
+      '.app.json': JSON.stringify({}, null, 2),
+      'assets/icon.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#3B82F6"/><path d="M16 33h32v6H16zM16 22h32v6H16zM16 44h20v6H16z" fill="#fff"/></svg>\n',
+      'assets/logo.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#1E3A8A"/><path d="M28 50h72v12H28zM28 70h72v12H28z" fill="#93C5FD"/><circle cx="40" cy="34" r="8" fill="#93C5FD"/></svg>\n',
       '.codex-plugin/plugin.json': TemplateBuilder.generateCodexPluginManifest(spec),
       '.agents/plugins/marketplace.json': TemplateBuilder.generateCodexMarketplaceJson('gm-codex')
     };

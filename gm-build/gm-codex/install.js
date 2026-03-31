@@ -33,7 +33,7 @@ function install() {
   if (!isInsideNodeModules()) return;
   const projectRoot = getProjectRoot();
   if (!projectRoot) return;
-  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm');
+  const codexDir = path.join(projectRoot, '.codex', 'plugins', 'gm-codex');
   const sourceDir = __dirname;
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
@@ -41,7 +41,9 @@ function install() {
   safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(codexDir, 'skills'));
   safeCopyDirectory(path.join(sourceDir, '.agents'), path.join(codexDir, '.agents'));
   safeCopyDirectory(path.join(sourceDir, '.codex-plugin'), path.join(codexDir, '.codex-plugin'));
+  safeCopyDirectory(path.join(sourceDir, 'assets'), path.join(codexDir, 'assets'));
   try { fs.copyFileSync(path.join(sourceDir, '.mcp.json'), path.join(codexDir, '.mcp.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, '.app.json'), path.join(codexDir, '.app.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'plugin.json'), path.join(codexDir, 'plugin.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}

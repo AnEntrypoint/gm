@@ -18,18 +18,18 @@ npm install gm-codex
 npx gm-codex-install
 ```
 
-The installer copies plugin assets into `.codex/plugins/gm` in your project and is useful for local customization.
+The installer copies plugin assets into `.codex/plugins/gm-codex` in your project and is useful for local customization.
 
 ### Manual Installation
 
 **Windows and Unix:**
 ```bash
-git clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/gm
+git clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/gm-codex
 ```
 
 **Windows PowerShell:**
 ```powershell
-git clone https://github.com/AnEntrypoint/gm-codex "\$env:APPDATA\codex\plugins\gm"
+git clone https://github.com/AnEntrypoint/gm-codex "\$env:APPDATA\codex\plugins\gm-codex"
 ```
 
 ## Installed Layout
@@ -37,7 +37,7 @@ git clone https://github.com/AnEntrypoint/gm-codex "\$env:APPDATA\codex\plugins\
 After install, the Codex plugin directory contains:
 
 ```
-plugins/gm/
+plugins/gm-codex/
 ├── .codex-plugin/plugin.json
 ├── .agents/plugins/marketplace.json
 ├── agents/

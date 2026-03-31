@@ -4,9 +4,7 @@ const path = require('path');
 const os = require('os');
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
-  : path.join(homeDir, '.codex', 'plugins', 'gm');
+const destDir = path.join(homeDir, '.codex', 'plugins', 'gm-codex');
 
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);
@@ -16,7 +14,7 @@ console.log(isUpgrade ? 'Upgrading gm-codex...' : 'Installing gm-codex...');
 try {
   fs.mkdirSync(destDir, { recursive: true });
 
-  const filesToCopy = [["agents","agents"],["hooks","hooks"],["scripts","scripts"],["skills","skills"],[".agents",".agents"],[".codex-plugin",".codex-plugin"],[".mcp.json",".mcp.json"],["plugin.json","plugin.json"],["gm.json","gm.json"],["README.md","README.md"],["CLAUDE.md","CLAUDE.md"]];
+  const filesToCopy = [["agents","agents"],["hooks","hooks"],["scripts","scripts"],["skills","skills"],[".agents",".agents"],[".codex-plugin",".codex-plugin"],["assets","assets"],[".app.json",".app.json"],[".mcp.json",".mcp.json"],["plugin.json","plugin.json"],["gm.json","gm.json"],["README.md","README.md"],["CLAUDE.md","CLAUDE.md"]];
 
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;
