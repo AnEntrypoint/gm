@@ -8,3 +8,4 @@ loggedin/
 site/node_modules/
 docs/bundle.js
 docs/styles.css
+*.tgz
