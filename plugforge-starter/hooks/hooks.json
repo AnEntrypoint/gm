@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.cmd",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/bootstrap.sh",
             "timeout": 60000
           },
           {
