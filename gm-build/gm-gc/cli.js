@@ -30,17 +30,6 @@ try {
 
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
-  const { execSync: execSync } = require('child_process');
-  try {
-    execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSync('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }
-
   const destPath = process.platform === 'win32' ? destDir.replace(/\\/g, '/') : destDir;
   console.log(`✓ gm-gc ${isUpgrade ? 'upgraded' : 'installed'} to ${destPath}`);
   console.log('Restart Gemini CLI to activate.');

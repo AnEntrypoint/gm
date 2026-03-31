@@ -33,6 +33,12 @@ Each mutable: name | expected | current | resolution method. Execute → witness
 
 Lang auto-detected if omitted. `cwd` sets directory. File I/O via exec:nodejs + require('fs'). Only git in bash directly. `Bash(node/npm/npx/bun)` = violations.
 
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+
 **Background tasks** (auto-backgrounded when execution exceeds 15s):
 ```
 exec:sleep
@@ -60,7 +66,7 @@ exec:codesearch
 <natural language description of what you need>
 ```
 
-Alias: `exec:search`. Glob, Grep, Read-for-discovery, Explore, WebSearch = blocked.
+Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** — the pre-tool-use hook denies them. Use `exec:codesearch` exclusively for all codebase discovery.
 
 ## IMPORT-BASED DEBUGGING
 
@@ -93,16 +99,11 @@ Step failure revealing new unknown → snake to `planning`.
 
 ## BROWSER DEBUGGING
 
-Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
-1. `exec:agent-browser\n<js>` — query DOM/state. Always first.
-2. `agent-browser` skill + `__gm` globals — instrument and capture
+Invoke `browser` skill. Escalation — exhaust each before advancing:
+1. `exec:browser\n<js>` — query DOM/state. Always first.
+2. `browser` skill — for full session workflows
 3. navigate/click/type — only when real events required
 4. screenshot — last resort
-
-`__gm` scaffold:
-```js
-window.__gm = { captures: [], log: (...a) => window.__gm.captures.push({t:Date.now(),a}), assert: (l,c) => { window.__gm.captures.push({l,pass:!!c,val:c}); return !!c; }, dump: () => JSON.stringify(window.__gm.captures,null,2) };
-```
 
 ## GROUND TRUTH
 
@@ -114,7 +115,7 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Explore | sequential independent items | absorb surprises silently | respond to user or pause for input
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input
 
 **Always**: witness every hypothesis | import real modules | snake to planning on any new unknown | fix immediately on discovery | invoke next skill immediately when done
 

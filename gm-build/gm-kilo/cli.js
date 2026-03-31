@@ -50,17 +50,6 @@ try {
     try { fs.rmSync(oldDir, { recursive: true, force: true }); } catch (e) {}
   }
 
-    const { execSync: execSync2 } = require('child_process');
-  try {
-    execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes --exclude=gm', { stdio: 'inherit' });
-  } catch (e) {
-    try {
-      execSync2('bunx skills add AnEntrypoint/plugforge --full-depth --all --global --yes', { stdio: 'inherit' });
-    } catch (e2) {
-      console.warn('Warning: skills install failed (non-fatal):', e2.message);
-    }
-  }
-
   console.log(`✓ gm-kilo ${isUpgrade ? 'upgraded' : 'installed'} to ${kiloConfigDir}`);
   console.log('Restart Kilo CLI to activate.');
 } catch (e) {

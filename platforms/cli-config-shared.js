@@ -116,6 +116,15 @@ function install() {
   const sourceDir = __dirname;
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
+  safeCopyDirectory(path.join(sourceDir, 'scripts'), path.join(codexDir, 'scripts'));
+  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(codexDir, 'skills'));
+  safeCopyDirectory(path.join(sourceDir, '.agents'), path.join(codexDir, '.agents'));
+  safeCopyDirectory(path.join(sourceDir, '.codex-plugin'), path.join(codexDir, '.codex-plugin'));
+  try { fs.copyFileSync(path.join(sourceDir, '.mcp.json'), path.join(codexDir, '.mcp.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'plugin.json'), path.join(codexDir, 'plugin.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'CLAUDE.md'), path.join(codexDir, 'CLAUDE.md')); } catch {}
 }
 
 install();
@@ -318,8 +327,10 @@ function createCodexCliScript() {
   ? path.join(homeDir, 'AppData', 'Roaming', 'codex', 'plugins', 'gm')
   : path.join(homeDir, '.codex', 'plugins', 'gm')`,
     filesToCopy: [
-      ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'],
-      ['plugin.json', 'plugin.json'], ['README.md', 'README.md']
+      ['agents', 'agents'], ['hooks', 'hooks'], ['scripts', 'scripts'], ['skills', 'skills'],
+      ['.agents', '.agents'], ['.codex-plugin', '.codex-plugin'],
+      ['.mcp.json', '.mcp.json'], ['plugin.json', 'plugin.json'], ['gm.json', 'gm.json'],
+      ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md']
     ],
     restartMsg: 'Restart Codex to activate.'
   });
@@ -899,7 +910,6 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
 });
 
 const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
-  loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
     return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' }, hooks: './hooks/hooks.json' });
   },
@@ -909,7 +919,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
       ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
@@ -919,17 +929,129 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      files: ['hooks/', 'agents/', '.github/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
   generateReadme(spec) {
-    return `# ${spec.name} for Codex\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-codex \"\\$env:APPDATA\\codex\\plugins\\${spec.name}\"\n\`\`\`\n\n## Environment\n\nSet CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe plugin activates automatically on session start.\n`;
+    const repoName = 'gm-codex';
+    return `# ${repoName} for Codex
+
+## Installation
+
+### One-liner (recommended)
+
+\`\`\`bash
+bun x ${repoName}@latest
+\`\`\`
+
+This installs or upgrades the plugin into your user Codex plugins directory and keeps the package layout consistent across platforms.
+
+### Repository Installation (Project-Specific)
+
+\`\`\`bash
+cd /path/to/your/project
+npm install ${repoName}
+npx ${repoName}-install
+\`\`\`
+
+The installer copies plugin assets into \`.codex/plugins/gm\` in your project and is useful for local customization.
+
+### Manual Installation
+
+**Windows and Unix:**
+\`\`\`bash
+git clone https://github.com/AnEntrypoint/${repoName} ~/.codex/plugins/gm
+\`\`\`
+
+**Windows PowerShell:**
+\`\`\`powershell
+git clone https://github.com/AnEntrypoint/${repoName} "\\$env:APPDATA\\codex\\plugins\\gm"
+\`\`\`
+
+## Installed Layout
+
+After install, the Codex plugin directory contains:
+
+\`\`\`
+plugins/gm/
+├── .codex-plugin/plugin.json
+├── .agents/plugins/marketplace.json
+├── agents/
+├── hooks/
+├── scripts/
+├── skills/
+├── .mcp.json
+├── gm.json
+└── plugin.json
+\`\`\`
+
+## Runtime Behavior
+
+- Hooks call \`bin/plugkit\` through \`\${CODEX_PLUGIN_ROOT}\`.
+- \`scripts/bootstrap.js\` provisions the Rust plugkit binary from \`rs-plugkit\` releases when needed.
+- \`plugkit\` uses:
+  - \`rs-exec\` for execution/runtime process management
+  - \`rs-codeinsight\` for AST/project analysis
+  - \`rs-search\` for search/MCP search behavior
+
+## Environment
+
+- \`CODEX_PLUGIN_ROOT\`: plugin root used by hooks
+- \`CODEX_PROJECT_DIR\`: project root for hook/runtime operations
+
+## Features
+
+- Stateful agent policy via \`agents/gm.md\`
+- Hook enforcement for session lifecycle
+- Rust-backed execution and background task control
+- Rust-backed code insight and search integrations
+- Generated Codex plugin metadata and marketplace manifests
+
+## Update Procedures
+
+### User-wide install
+
+\`\`\`bash
+bun x ${repoName}@latest
+\`\`\`
+
+### Project-level install
+
+\`\`\`bash
+npm update ${repoName}
+npx ${repoName}-install
+\`\`\`
+
+## Troubleshooting
+
+### Hooks run but \`plugkit\` is missing
+
+- Trigger any prompt submit/session start event to run bootstrap.
+- Verify \`scripts/bootstrap.js\` exists in the plugin directory.
+- Ensure network access to GitHub Releases for \`rs-plugkit\`.
+
+### Hook path issues
+
+- Verify \`CODEX_PLUGIN_ROOT\` points to the installed plugin root.
+- Confirm \`hooks/hooks.json\` commands resolve to \`\${CODEX_PLUGIN_ROOT}/bin/plugkit\`.
+
+### Plugin loaded but behavior is incomplete
+
+- Check \`skills/\`, \`scripts/\`, and \`agents/\` were copied by installer.
+- Re-run installer and restart Codex.
+
+## License
+
+MIT
+`;
   },
   getAdditionalFiles(spec) {
     return {
       'cli.js': createCodexCliScript(),
       'install.js': createCodexInstallScript(),
+      '.codex-plugin/plugin.json': TemplateBuilder.generateCodexPluginManifest(spec),
+      '.agents/plugins/marketplace.json': TemplateBuilder.generateCodexMarketplaceJson('gm-codex')
     };
   }
 });

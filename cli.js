@@ -23,15 +23,17 @@ Examples:
   gm-builder ./my-plugin /tmp/build
 
 Description:
-  Automatically generates 8 platform outputs from a single plugin directory:
+  Automatically generates 10 platform outputs from a single plugin directory:
   - Claude Code (cc)
   - Gemini CLI (gc)
   - OpenCode (oc)
+  - Codex (codex)
+  - Kilo CLI (kilo)
   - VS Code (vscode)
   - Cursor (cursor)
   - Zed (zed)
   - JetBrains (jetbrains)
-  - Copilot (copilot)
+  - Copilot CLI (copilot-cli)
 
 Plugin Directory Structure:
   plugin/
