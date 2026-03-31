@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook pre-tool-use",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/run-hook.sh pre-tool-use",
             "timeout": 5000
           }
         ]
@@ -24,7 +24,7 @@
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook session-start",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/run-hook.sh session-start",
             "timeout": 180000
           }
         ]
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook prompt-submit",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/run-hook.sh prompt-submit",
             "timeout": 60000
           }
         ]
@@ -48,12 +48,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook stop",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/run-hook.sh stop",
             "timeout": 300000
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook stop-git",
+            "command": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/run-hook.sh stop-git",
             "timeout": 60000
           }
         ]
