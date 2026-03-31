@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ${KILO_PLUGIN_ROOT}/hooks/pre-tool-use-hook.js",
+            "command": "${KILO_PLUGIN_ROOT}/bin/plugkit hook pre-tool-use",
             "timeout": 3600
           }
         ]
@@ -19,8 +19,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ${KILO_PLUGIN_ROOT}/hooks/session-start-hook.js",
-            "timeout": 10000
+            "command": "${KILO_PLUGIN_ROOT}/bin/plugkit hook session-start",
+            "timeout": 180000
           }
         ]
       }
@@ -31,8 +31,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ${KILO_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
-            "timeout": 3600
+            "command": "node ${KILO_PLUGIN_ROOT}/scripts/bootstrap.js",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "${KILO_PLUGIN_ROOT}/bin/plugkit hook prompt-submit",
+            "timeout": 60000
           }
         ]
       }
@@ -43,12 +48,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ${KILO_PLUGIN_ROOT}/hooks/stop-hook.js",
+            "command": "${KILO_PLUGIN_ROOT}/bin/plugkit hook stop",
             "timeout": 300000
           },
           {
             "type": "command",
-            "command": "bun ${KILO_PLUGIN_ROOT}/hooks/stop-hook-git.js",
+            "command": "${KILO_PLUGIN_ROOT}/bin/plugkit hook stop-git",
             "timeout": 60000
           }
         ]

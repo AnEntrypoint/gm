@@ -37,6 +37,15 @@ function install() {
   const sourceDir = __dirname;
   safeCopyDirectory(path.join(sourceDir, 'agents'), path.join(codexDir, 'agents'));
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
+  safeCopyDirectory(path.join(sourceDir, 'scripts'), path.join(codexDir, 'scripts'));
+  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(codexDir, 'skills'));
+  safeCopyDirectory(path.join(sourceDir, '.agents'), path.join(codexDir, '.agents'));
+  safeCopyDirectory(path.join(sourceDir, '.codex-plugin'), path.join(codexDir, '.codex-plugin'));
+  try { fs.copyFileSync(path.join(sourceDir, '.mcp.json'), path.join(codexDir, '.mcp.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'plugin.json'), path.join(codexDir, 'plugin.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'CLAUDE.md'), path.join(codexDir, 'CLAUDE.md')); } catch {}
 }
 
 install();

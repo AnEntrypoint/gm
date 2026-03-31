@@ -1,7 +1,6 @@
 ---
 name: gm
 description: Immutable programming state machine. Root orchestrator. Invoke for all work coordination via the Skill tool.
-enforce: critical
 ---
 
 # GM — Immutable Programming State Machine
@@ -53,6 +52,12 @@ Languages: `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescr
 - File I/O: `exec:nodejs` with `require('fs')`
 - Only `git` runs directly in Bash. `Bash(node/npm/npx/bun)` = violations.
 
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+
 **Background tasks** (auto-backgrounded after 15s):
 ```
 exec:sleep
@@ -80,13 +85,13 @@ exec:codesearch
 <natural language description>
 ```
 
-Alias: `exec:search`. Glob, Grep, Read-for-discovery, Explore, WebSearch = blocked.
+Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** — the pre-tool-use hook denies them. Use `exec:codesearch` exclusively for all codebase discovery.
 
 ## BROWSER AUTOMATION
 
-Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
-1. `exec:agent-browser\n<js>` — query DOM/state via JS
-2. `agent-browser` skill + `__gm` globals — instrument and capture
+Invoke `browser` skill. Escalation — exhaust each before advancing:
+1. `exec:browser\n<js>` — query DOM/state via JS
+2. `browser` skill — for full session workflows
 3. navigate/click/type — only when real events required
 4. screenshot — last resort only
 
@@ -97,7 +102,7 @@ Invoke `agent-browser` skill. Escalation — exhaust each before advancing:
 **`gm-emit`** — Write files to disk when all mutables resolved.
 **`gm-complete`** — End-to-end verification and git enforcement.
 **`update-docs`** — Refresh README, CLAUDE.md, and docs to reflect session changes. Invoked by `gm-complete`.
-**`agent-browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
+**`browser`** — Browser automation. Invoke inside EXECUTE for all browser/UI work.
 
 ## DO NOT STOP
 

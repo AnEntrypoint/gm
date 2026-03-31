@@ -30,7 +30,7 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 
 - `witnessed_e2e=UNKNOWN` until real end-to-end run produces witnessed output
 - `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
-- `git_pushed=UNKNOWN` until `exec:bash\ngit rev-list --count @{u}..HEAD` returns 0
+- `git_pushed=UNKNOWN` until `git log origin/main..HEAD --oneline` returns empty
 - `prd_empty=UNKNOWN` until .prd file is deleted (not just empty — file must not exist)
 
 All four must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
@@ -47,7 +47,7 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-For browser/UI: invoke `agent-browser` skill with real workflows. Server + client features require both exec:nodejs AND agent-browser. After every success: enumerate what remains — never stop at first green.
+For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser. After every success: enumerate what remains — never stop at first green.
 
 ## CODE EXECUTION
 
@@ -56,6 +56,12 @@ For browser/UI: invoke `agent-browser` skill with real workflows. Server + clien
 `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`
 
 Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<id>`, `exec:close\n<id>`. Runner: `exec:runner\nstart|stop|status`.
+
+**Execution efficiency — pack every run:**
+- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
+- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
+- Target under 12s per exec call; split work across multiple calls only when dependencies require it
+- Prefer a single well-structured exec that does 5 things over 5 sequential execs
 
 ## CODEBASE EXPLORATION
 
@@ -74,9 +80,9 @@ Must return empty.
 
 ```
 exec:bash
-git rev-list --count @{u}..HEAD
+git log origin/main..HEAD --oneline
 ```
-Must return 0. If not: stage → commit → push → re-verify. Local commit without push ≠ complete.
+Must return empty. If not: stage → commit → push → re-verify. Local commit without push ≠ complete.
 
 ## COMPLETION DEFINITION
 

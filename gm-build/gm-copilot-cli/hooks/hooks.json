@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${COPILOT_EXTENSION_DIR}/hooks/pre-tool-use-hook.js",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook pre-tool-use",
             "timeout": 3600
           }
         ]
@@ -19,8 +19,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${COPILOT_EXTENSION_DIR}/hooks/session-start-hook.js",
-            "timeout": 10000
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-start",
+            "timeout": 180000
           }
         ]
       }
@@ -31,8 +31,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${COPILOT_EXTENSION_DIR}/hooks/prompt-submit-hook.js",
-            "timeout": 3600
+            "command": "node ${COPILOT_EXTENSION_DIR}/scripts/bootstrap.js",
+            "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook prompt-submit",
+            "timeout": 60000
           }
         ]
       }
@@ -43,12 +48,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${COPILOT_EXTENSION_DIR}/hooks/session-end-hook.js",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-end",
             "timeout": 300000
           },
           {
             "type": "command",
-            "command": "node ${COPILOT_EXTENSION_DIR}/hooks/session-end-git-hook.js",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-end-git",
             "timeout": 60000
           }
         ]

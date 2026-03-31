@@ -1,6 +1,26 @@
-# gm for Codex
+# gm-codex for Codex
 
 ## Installation
+
+### One-liner (recommended)
+
+```bash
+bun x gm-codex@latest
+```
+
+This installs or upgrades the plugin into your user Codex plugins directory and keeps the package layout consistent across platforms.
+
+### Repository Installation (Project-Specific)
+
+```bash
+cd /path/to/your/project
+npm install gm-codex
+npx gm-codex-install
+```
+
+The installer copies plugin assets into `.codex/plugins/gm` in your project and is useful for local customization.
+
+### Manual Installation
 
 **Windows and Unix:**
 ```bash
@@ -12,16 +32,78 @@ git clone https://github.com/AnEntrypoint/gm-codex ~/.codex/plugins/gm
 git clone https://github.com/AnEntrypoint/gm-codex "\$env:APPDATA\codex\plugins\gm"
 ```
 
+## Installed Layout
+
+After install, the Codex plugin directory contains:
+
+```
+plugins/gm/
+├── .codex-plugin/plugin.json
+├── .agents/plugins/marketplace.json
+├── agents/
+├── hooks/
+├── scripts/
+├── skills/
+├── .mcp.json
+├── gm.json
+└── plugin.json
+```
+
+## Runtime Behavior
+
+- Hooks call `bin/plugkit` through `${CODEX_PLUGIN_ROOT}`.
+- `scripts/bootstrap.js` provisions the Rust plugkit binary from `rs-plugkit` releases when needed.
+- `plugkit` uses:
+  - `rs-exec` for execution/runtime process management
+  - `rs-codeinsight` for AST/project analysis
+  - `rs-search` for search/MCP search behavior
+
 ## Environment
 
-Set CODEX_PLUGIN_ROOT to your plugin directory in your shell profile.
+- `CODEX_PLUGIN_ROOT`: plugin root used by hooks
+- `CODEX_PROJECT_DIR`: project root for hook/runtime operations
 
 ## Features
 
-- MCP tools for code execution and search
-- State machine agent policy (gm)
-- Stop hook verification loop
-- Git enforcement on session end
-- AST analysis via thorns at session start
+- Stateful agent policy via `agents/gm.md`
+- Hook enforcement for session lifecycle
+- Rust-backed execution and background task control
+- Rust-backed code insight and search integrations
+- Generated Codex plugin metadata and marketplace manifests
 
-The plugin activates automatically on session start.
+## Update Procedures
+
+### User-wide install
+
+```bash
+bun x gm-codex@latest
+```
+
+### Project-level install
+
+```bash
+npm update gm-codex
+npx gm-codex-install
+```
+
+## Troubleshooting
+
+### Hooks run but `plugkit` is missing
+
+- Trigger any prompt submit/session start event to run bootstrap.
+- Verify `scripts/bootstrap.js` exists in the plugin directory.
+- Ensure network access to GitHub Releases for `rs-plugkit`.
+
+### Hook path issues
+
+- Verify `CODEX_PLUGIN_ROOT` points to the installed plugin root.
+- Confirm `hooks/hooks.json` commands resolve to `${CODEX_PLUGIN_ROOT}/bin/plugkit`.
+
+### Plugin loaded but behavior is incomplete
+
+- Check `skills/`, `scripts/`, and `agents/` were copied by installer.
+- Re-run installer and restart Codex.
+
+## License
+
+MIT

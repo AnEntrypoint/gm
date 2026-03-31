@@ -41,29 +41,28 @@ Categories of unknowns to enumerate: file existence | API shape | data format | 
 
 ## .PRD FORMAT
 
-Path: exactly `./.prd` in current working directory. **Markdown format** (`.md` content, no extension).
+Path: exactly `./.prd` in current working directory. **JSON array** written via `exec:nodejs`.
 
 **Delete the file when empty.** Do not leave an empty `.prd` on disk — remove it entirely when all items are completed.
 
-```markdown
-# .prd
-
-## pending: descriptive-kebab-id
-**Subject:** Imperative verb phrase — what must be true when done
-**Status:** pending
-**Description:** Precise completion criterion
-**Effort:** small|medium|large
-**Category:** feature|bug|refactor|infra
-**Blocking:** id-a, id-b
-**Blocked by:** id-c
-**Acceptance:**
-- measurable, binary criterion 1
-- measurable, binary criterion 2
-**Edge cases:**
-- known failure mode 1
+```json
+[
+  {
+    "id": "descriptive-kebab-id",
+    "subject": "Imperative verb phrase — what must be true when done",
+    "status": "pending",
+    "description": "Precise completion criterion",
+    "effort": "small|medium|large",
+    "category": "feature|bug|refactor|infra",
+    "blocking": ["ids this prevents from starting"],
+    "blockedBy": ["ids that must complete first"],
+    "acceptance": ["measurable, binary criterion 1"],
+    "edge_cases": ["known failure mode 1"]
+  }
+]
 ```
 
-**Status flow**: `pending` → `in_progress` → `completed` (completed items are removed from file).
+**Status flow**: `pending` → `in_progress` → `completed` (completed items are removed from array).
 **Effort**: `small` = single execution, under 15min | `medium` = 2-3 rounds, under 45min | `large` = multiple rounds, over 1h.
 **blocking/blockedBy**: always bidirectional. Every dependency must be explicit in both directions.
 **Deletion rule**: when the last item is completed and removed, delete the `.prd` file. An empty file is a violation.

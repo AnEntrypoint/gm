@@ -64,8 +64,6 @@ try {
     fs.writeFileSync(knownMarketplacesPath, JSON.stringify(km, null, 2) + '\n');
   } catch (e) {}
 
-
-
   const destPath = process.platform === 'win32' ? destDir.replace(/\\/g, '/') : destDir;
   console.log(`✓ gm-cc ${isUpgrade ? 'upgraded' : 'installed'} to ${destPath}`);
   console.log('Restart Claude Code to activate.');

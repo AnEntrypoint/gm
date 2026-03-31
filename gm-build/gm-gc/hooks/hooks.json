@@ -3,28 +3,28 @@
   "hooks": {
     "BeforeTool": {
       "type": "command",
-      "command": "bun ${extensionPath}/hooks/pre-tool-use-hook.js",
+      "command": "${extensionPath}/bin/plugkit hook pre-tool-use",
       "timeout": 3600
     },
     "SessionStart": {
       "type": "command",
-      "command": "bun ${extensionPath}/hooks/session-start-hook.js",
-      "timeout": 10000
+      "command": "${extensionPath}/bin/plugkit hook session-start",
+      "timeout": 180000
     },
     "BeforeAgent": {
       "type": "command",
-      "command": "bun ${extensionPath}/hooks/prompt-submit-hook.js",
-      "timeout": 3600
+      "command": null,
+      "timeout": 60000
     },
     "SessionEnd": [
       {
         "type": "command",
-        "command": "bun ${extensionPath}/hooks/stop-hook.js",
+        "command": "${extensionPath}/bin/plugkit hook stop",
         "timeout": 300000
       },
       {
         "type": "command",
-        "command": "bun ${extensionPath}/hooks/stop-hook-git.js",
+        "command": "${extensionPath}/bin/plugkit hook stop-git",
         "timeout": 60000
       }
     ]
