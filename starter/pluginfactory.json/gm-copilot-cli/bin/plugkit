@@ -1,0 +1,11 @@
+#!/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+case "$(uname -s)" in
+  Darwin) OS=darwin ;;
+  *)      OS=linux  ;;
+esac
+case "$(uname -m)" in
+  arm64|aarch64) ARCH=arm64 ;;
+  *)             ARCH=x64   ;;
+esac
+exec "$DIR/plugkit-$OS-$ARCH" "$@"

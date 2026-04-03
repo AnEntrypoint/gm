@@ -1,0 +1,13 @@
+.git
+.gitignore
+**/*.map
+**/*.ts
+!**/*.d.ts
+node_modules
+build
+.vscodeignore
+.prettierrc
+*.config.*
+CHANGELOG.md
+LICENSE
+CONTRIBUTING.md

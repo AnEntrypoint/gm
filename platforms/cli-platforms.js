@@ -38,8 +38,16 @@ function createAdapterClass(cfg) {
       return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : null;
     }
 
+    buildHooksMap(pluginSpec) {
+      return cfg.buildHooksMap ? cfg.buildHooksMap.call(this, pluginSpec) : super.buildHooksMap(pluginSpec);
+    }
+
     loadSkillsFromSource(sourceDir) {
       return cfg.loadSkillsFromSource ? cfg.loadSkillsFromSource(sourceDir) : super.loadSkillsFromSource(sourceDir);
+    }
+
+    loadLangFromSource(sourceDir) {
+      return cfg.loadLangFromSource ? cfg.loadLangFromSource(sourceDir) : {};
     }
   }
 

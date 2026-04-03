@@ -1,0 +1,40 @@
+{
+  "name": "gm-copilot-cli",
+  "version": "2.0.337",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "main": "cli.js",
+  "bin": {
+    "gm-copilot-cli": "./cli.js",
+    "gm-install": "./install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm-copilot-cli.git"
+  },
+  "homepage": "https://github.com/AnEntrypoint/gm-copilot-cli#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-copilot-cli/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "cli.js",
+    "agents/",
+    "hooks/",
+    "skills/",
+    ".github/",
+    "copilot-profile.md",
+    "tools.json",
+    "manifest.yml",
+    ".mcp.json",
+    "README.md",
+    "index.html",
+    "COPILOT.md"
+  ]
+}
