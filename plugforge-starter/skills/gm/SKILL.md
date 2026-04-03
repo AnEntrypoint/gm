@@ -86,12 +86,19 @@ start|stop|status
 
 ## CODEBASE EXPLORATION
 
+`exec:codesearch` is the only way to search. **Glob, Grep, Read, Explore, WebSearch are hook-blocked.**
+
 ```
 exec:codesearch
-<natural language description>
+<two-word query to start>
 ```
 
-Alias: `exec:search`. **Glob, Grep, Read, Explore, WebSearch are hook-blocked** — the pre-tool-use hook denies them. Use `exec:codesearch` exclusively for all codebase discovery.
+**Mandatory search protocol** (from `code-search` skill):
+1. Start with exactly **two words** — never one, never a sentence
+2. No results → change one word (synonym or related term)
+3. Still no results → add a third word to narrow scope
+4. Keep changing or adding words each pass until content is found
+5. Minimum 4 attempts before concluding content is absent
 
 ## BROWSER AUTOMATION
 
