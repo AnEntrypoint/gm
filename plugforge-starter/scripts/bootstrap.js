@@ -34,13 +34,17 @@ function killDaemon() {
 function applyPending() {
   if (!fs.existsSync(pendingPath)) return;
   killDaemon();
+  const oldPath = binPath + '.old';
+  try { fs.unlinkSync(oldPath); } catch {}
+  try { fs.renameSync(binPath, oldPath); } catch {}
   try {
-    if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
     fs.renameSync(pendingPath, binPath);
     if (fs.existsSync(pendingVersionFile)) {
       try { fs.renameSync(pendingVersionFile, versionFile); } catch {}
     }
-  } catch {}
+  } catch {
+    try { if (!fs.existsSync(binPath)) fs.renameSync(oldPath, binPath); } catch {}
+  }
 }
 
 applyPending();
