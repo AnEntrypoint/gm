@@ -72,6 +72,12 @@ exec:close
 <task_id>
 ```
 
+**When a task is backgrounded, you must monitor it — do not abandon it:**
+1. Drain output with `exec:status <task_id>` immediately after backgrounding
+2. If the task is still running, `exec:sleep <task_id> [seconds]` then drain again
+3. Repeat until the task exits or you have enough output to proceed
+4. `exec:close <task_id>` when the task is no longer needed
+
 **Runner management**:
 ```
 exec:runner

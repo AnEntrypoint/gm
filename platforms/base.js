@@ -1,5 +1,6 @@
 const path = require('path');
-const { writeFile, ensureDir } = require('../lib/file-generator');
+const fs = require('fs');
+const { writeFile, ensureDir, copyFile } = require('../lib/file-generator');
 const TemplateBuilder = require('../lib/template-builder');
 
 class PlatformAdapter {
@@ -19,7 +20,25 @@ class PlatformAdapter {
     const structure = this.createFileStructure(pluginSpec, sourceDir);
     const genericFiles = this.getGenericFilesToUse();
     const withGeneric = { ...genericFiles, ...structure };
-    return this.writeFiles(outputDir, withGeneric);
+    this.writeFiles(outputDir, withGeneric);
+    this.copyBinaryFiles(sourceDir, outputDir);
+  }
+
+  copyBinaryFiles(sourceDir, outputDir) {
+    const binDir = path.join(sourceDir, 'bin');
+    if (!fs.existsSync(binDir)) {
+      return;
+    }
+    const outputBinDir = path.join(outputDir, 'bin');
+    ensureDir(outputBinDir);
+    const entries = fs.readdirSync(binDir, { withFileTypes: true });
+    entries.forEach(entry => {
+      if (entry.isFile()) {
+        const srcPath = path.join(binDir, entry.name);
+        const dstPath = path.join(outputBinDir, entry.name);
+        copyFile(srcPath, dstPath);
+      }
+    });
   }
 
   getGenericFilesToUse() {
