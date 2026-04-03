@@ -164,3 +164,24 @@ jobs:
           else
             echo "✅ No changes to commit for $NAME"
           fi
+
+      - name: Publish to npm
+        if: matrix.platform == 'oc' || matrix.platform == 'kilo'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          BUILD_DIR="./build/gm-${{ matrix.platform }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          # Update version in build output package.json
+          cd "$BUILD_DIR"
+          jq --arg v "$VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
+          mv /tmp/pkg.json.tmp package.json
+
+          # Set npm auth
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+
+          # Publish
+          npm publish . --access public
+          echo "✅ Published gm-${{ matrix.platform }}@${VERSION} to npm"

@@ -1,0 +1,4 @@
+{
+  "$schema": "https://kilo.ai/config.json",
+  "default_agent": "gm"
+}
