@@ -19,10 +19,26 @@ function detectLang(src) {
 
 function stripFooter(s) { return s ? s.replace(/\n\[Running tools\][\s\S]*$/, '').trimEnd() : ''; }
 
+function tryLangPlugin(lang, code, cwd) {
+  const langPluginDir = join(__dirname, '..', 'lang');
+  const langPluginFile = join(langPluginDir, lang+'.js');
+  if (!existsSync(langPluginFile)) return null;
+  try {
+    const plugin = require(langPluginFile);
+    if (plugin && plugin.exec && plugin.exec.run) {
+      const result = plugin.exec.run(code, cwd || process.cwd());
+      return String(result === undefined ? '' : result);
+    }
+  } catch(e) {}
+  return null;
+}
+
 function runExec(rawLang, code, cwd) {
   const lang = LANG_ALIASES[rawLang] || (rawLang || detectLang(code));
   const opts = { encoding: 'utf-8', timeout: 30000, ...(cwd && { cwd }) };
   const out = (r) => { const o = (r.stdout||'').trimEnd(), e = stripFooter(r.stderr||'').trimEnd(); return o && e ? o+'\n[stderr]\n'+e : o||e||'(no output)'; };
+  const pluginResult = tryLangPlugin(lang, code, cwd);
+  if (pluginResult !== null) return pluginResult;
   if (lang === 'python') return out(spawnSync('python3',['-c',code],opts));
   const ext = lang === 'typescript' ? 'ts' : lang === 'bash' ? 'sh' : 'mjs';
   const tmp = join(tmpdir(),'gm-plugin-'+Date.now()+'.'+ext);
@@ -94,6 +110,14 @@ export async function GmPlugin({ directory }) {
         output.args = { ...output.args, command: safePrintf('Use the code-search skill for codebase exploration instead of '+input.tool+'. Describe what you need in plain language.') };
         return;
       }
+      if (input.tool === 'EnterPlanMode') {
+        output.args = { ...output.args, command: safePrintf('Plan mode is disabled. Use the gm skill (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) instead.') };
+        return;
+      }
+      if (input.tool === 'Task' && input.args?.subagent_type === 'Explore') {
+        output.args = { ...output.args, command: safePrintf('The Explore agent is blocked. Use exec:codesearch in the Bash tool instead.\n\nexec:codesearch\n<natural language description of what to find>') };
+        return;
+      }
       if (input.tool === 'write' || input.tool === 'Write') {
         const fp = (output.args && output.args.file_path) || '';
         const base = basename(fp).toLowerCase();
@@ -108,8 +132,12 @@ export async function GmPlugin({ directory }) {
       if (input.tool !== 'bash') return;
       const cmd = output.args && output.args.command;
       if (!cmd) return;
+      if (/^\s*git(?:\s|$)/.test(cmd)) return;
       const m = cmd.match(/^exec(?::(\S+))?\n([\s\S]+)$/);
-      if (!m) return;
+      if (!m) {
+        output.args = { ...output.args, command: safePrintf('Bash tool can only be used with exec syntax:\n\nexec[:lang]\n<command>\n\nExamples:\nexec\nls -la\n\nexec:nodejs\nnode -e "console.log(1)"') };
+        return;
+      }
       const result = runExec(m[1]||'', m[2], output.args.workdir || directory);
       output.args = { ...output.args, command: safePrintf('exec:'+(m[1]||'auto')+' output:\n\n'+result) };
     }
