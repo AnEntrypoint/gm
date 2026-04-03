@@ -1,0 +1,35 @@
+{
+  "name": "gm-gc",
+  "version": "2.0.337",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm-gc.git"
+  },
+  "homepage": "https://github.com/AnEntrypoint/gm-gc#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-gc/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "gm-gc": "./cli.js",
+    "gm-gc-install": "./install.js"
+  },
+  "files": [
+    "agents/",
+    "hooks/",
+    ".github/",
+    "README.md",
+    "GEMINI.md",
+    ".mcp.json",
+    "gemini-extension.json",
+    "cli.js"
+  ]
+}

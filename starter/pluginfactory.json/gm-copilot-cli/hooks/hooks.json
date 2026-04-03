@@ -1,0 +1,58 @@
+{
+  "description": "Hooks for gm GitHub Copilot CLI extension",
+  "hooks": {
+    "tool:invoke": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook pre-tool-use",
+            "timeout": 3600
+          }
+        ]
+      }
+    ],
+    "session:start": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-start",
+            "timeout": 180000
+          }
+        ]
+      }
+    ],
+    "prompt:submit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook prompt-submit",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "session:end": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-end",
+            "timeout": 300000
+          },
+          {
+            "type": "command",
+            "command": "${COPILOT_EXTENSION_DIR}/bin/plugkit hook session-end-git",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  }
+}

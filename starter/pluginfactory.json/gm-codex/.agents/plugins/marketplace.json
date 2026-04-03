@@ -1,0 +1,20 @@
+{
+  "name": "gm-marketplace",
+  "interface": {
+    "displayName": "GM Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "gm-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gm-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

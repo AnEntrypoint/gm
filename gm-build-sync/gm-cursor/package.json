@@ -1,0 +1,42 @@
+{
+  "name": "gm-cursor",
+  "version": "2.0.337",
+  "publisher": "gm",
+  "displayName": "GM - GM State Machine",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm-cursor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-cursor/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "keywords": [
+    "ai",
+    "state-machine",
+    "gm",
+    "gm",
+    "cursor"
+  ],
+  "main": "./extension.js",
+  "files": [
+    ".cursor/",
+    "extension.js",
+    "agents/",
+    "skills/",
+    ".github/",
+    "README.md"
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "gm-kilo",
+  "version": "2.0.337",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "main": "gm.js",
+  "bin": {
+    "gm-kilo": "./cli.js",
+    "gm-kilo-install": "./install.js"
+  },
+  "keywords": [
+    "kilo",
+    "kilo-cli",
+    "automation",
+    "gm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm-kilo.git"
+  },
+  "homepage": "https://github.com/AnEntrypoint/gm-kilo#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-kilo/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {},
+  "scripts": {
+    "postinstall": "node scripts/postinstall-kilo.js"
+  },
+  "files": [
+    "agents/",
+    "hooks/",
+    "scripts/",
+    "skills/",
+    "lang/",
+    "gm.js",
+    "gm-kilo.mjs",
+    "index.js",
+    "kilocode.json",
+    ".github/",
+    "README.md",
+    "cli.js",
+    "install.js",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    ".gitignore",
+    ".editorconfig"
+  ]
+}

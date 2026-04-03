@@ -354,20 +354,32 @@ console.log(isUpgrade ? 'Upgrading gm-oc...' : 'Installing gm-oc...');
 try {
   fs.mkdirSync(path.join(ocConfigDir, 'plugins'), { recursive: true });
   fs.mkdirSync(path.join(ocConfigDir, 'agents'), { recursive: true });
+  fs.mkdirSync(path.join(ocConfigDir, 'skills'), { recursive: true });
+  fs.mkdirSync(path.join(ocConfigDir, 'lang'), { recursive: true });
 
   ${COPY_RECURSIVE_FN}
 
   fs.copyFileSync(path.join(srcDir, 'gm-oc.mjs'), path.join(ocConfigDir, 'plugins', 'gm-oc.mjs'));
   copyRecursive(path.join(srcDir, 'agents'), path.join(ocConfigDir, 'agents'));
+  copyRecursive(path.join(srcDir, 'skills'), path.join(ocConfigDir, 'skills'));
+  copyRecursive(path.join(srcDir, 'lang'), path.join(ocConfigDir, 'lang'));
+  copyRecursive(path.join(srcDir, 'bin'), path.join(ocConfigDir, 'bin'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(ocConfigDir, 'hooks'));
 
   const ocJsonPath = path.join(ocConfigDir, 'opencode.json');
   let ocConfig = {};
-  try { ocConfig = JSON.parse(fs.readFileSync(ocJsonPath, 'utf-8')); } catch (e) {}
+  try {
+    const raw = fs.readFileSync(ocJsonPath, 'utf-8');
+    ocConfig = JSON.parse(raw);
+    if (ocConfig['']) { delete ocConfig['']; }
+  } catch (e) {}
   delete ocConfig.mcp;
+  ocConfig['$schema'] = 'https://opencode.ai/config.json';
   ocConfig.default_agent = 'gm';
   const pluginMjsPath = path.join(ocConfigDir, 'plugins', 'gm-oc.mjs');
   if (!Array.isArray(ocConfig.plugin)) ocConfig.plugin = [];
-  if (!ocConfig.plugin.includes(pluginMjsPath)) ocConfig.plugin.push(pluginMjsPath);
+  ocConfig.plugin = ocConfig.plugin.filter(p => !p.includes('gm-oc'));
+  ocConfig.plugin.push(pluginMjsPath);
   fs.writeFileSync(ocJsonPath, JSON.stringify(ocConfig, null, 2) + '\\n');
 
   const oldDir = process.platform === 'win32'
@@ -402,11 +414,17 @@ console.log(isUpgrade ? 'Upgrading gm-kilo...' : 'Installing gm-kilo...');
 try {
   fs.mkdirSync(path.join(kiloConfigDir, 'plugins'), { recursive: true });
   fs.mkdirSync(path.join(kiloConfigDir, 'agents'), { recursive: true });
+  fs.mkdirSync(path.join(kiloConfigDir, 'skills'), { recursive: true });
+  fs.mkdirSync(path.join(kiloConfigDir, 'lang'), { recursive: true });
 
   ${COPY_RECURSIVE_FN}
 
   fs.copyFileSync(path.join(srcDir, 'gm-kilo.mjs'), path.join(kiloConfigDir, 'plugins', 'gm-kilo.mjs'));
   copyRecursive(path.join(srcDir, 'agents'), path.join(kiloConfigDir, 'agents'));
+  copyRecursive(path.join(srcDir, 'skills'), path.join(kiloConfigDir, 'skills'));
+  copyRecursive(path.join(srcDir, 'lang'), path.join(kiloConfigDir, 'lang'));
+  copyRecursive(path.join(srcDir, 'bin'), path.join(kiloConfigDir, 'bin'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(kiloConfigDir, 'hooks'));
 
   const kiloJsonPath = path.join(kiloConfigDir, 'kilocode.json');
   let kiloConfig = {};
@@ -460,53 +478,20 @@ function pluginMjsSource(pluginFile) {
     "import { tmpdir } from 'os';",
     "",
     "const __dirname = dirname(fileURLToPath(import.meta.url));",
-    "const LANG_ALIASES = { js:'nodejs',javascript:'nodejs',ts:'typescript',node:'nodejs',py:'python',sh:'bash',shell:'bash',zsh:'bash' };",
     "const FORBIDDEN_TOOLS = new Set(['glob','Glob','grep','Grep','search_file_content','Find','find']);",
     "const FORBIDDEN_FILE_RE = [/\\.(test|spec)\\.(js|ts|jsx|tsx|mjs|cjs)$/, /^(jest|vitest|mocha|ava|jasmine|tap)\\.(config|setup)/, /\\.(snap|stub|mock|fixture)\\.(js|ts|json)$/];",
     "const FORBIDDEN_PATH_RE = ['/__tests__/','/test/','/tests/','/fixtures/','/test-data/',\"/__mocks__/\"];",
     "const DOC_BLOCK_RE = /\\.(md|txt)$/;",
     "",
-    "function detectLang(src) {",
-    "  if (/^\\s*(import |from |export |const |let |var |function |class |async |await |console\\.|process\\.)/.test(src)) return 'nodejs';",
-    "  if (/^\\s*(import |def |print\\(|class |if __name__)/.test(src)) return 'python';",
-    "  return 'bash';",
-    "}",
-    "",
-    "function stripFooter(s) { return s ? s.replace(/\\n\\[Running tools\\][\\s\\S]*$/, '').trimEnd() : ''; }",
-    "",
-    "function runExec(rawLang, code, cwd) {",
-    "  const lang = LANG_ALIASES[rawLang] || (rawLang || detectLang(code));",
-    "  const opts = { encoding: 'utf-8', timeout: 30000, ...(cwd && { cwd }) };",
-    "  const out = (r) => { const o = (r.stdout||'').trimEnd(), e = stripFooter(r.stderr||'').trimEnd(); return o && e ? o+'\\n[stderr]\\n'+e : o||e||'(no output)'; };",
-    "  if (lang === 'python') return out(spawnSync('python3',['-c',code],opts));",
-    "  const ext = lang === 'typescript' ? 'ts' : lang === 'bash' ? 'sh' : 'mjs';",
-    "  const tmp = join(tmpdir(),'gm-plugin-'+Date.now()+'.'+ext);",
-    "  const src = lang === 'bash' ? code : 'const __r=await(async()=>{\\n'+code+'\\n})();if(__r!==undefined){if(typeof __r===\"object\"){console.log(JSON.stringify(__r,null,2));}else{console.log(__r);}}';",
-    "  writeFileSync(tmp,src,'utf-8');",
-    "  const r = lang === 'bash' ? spawnSync('bash',[tmp],opts) : spawnSync('bun',['run',tmp],opts);",
-    "  try { unlinkSync(tmp); } catch(e) {}",
-    "  let result = out(r);",
-    "  if (lang !== 'bash') result = result.split(tmp).join('<script>');",
-    "  return result;",
-    "}",
-    "",
-    "function safePrintf(s) {",
-    "  return \"printf '%s' '\" + String(s).replace(/\\\\\\\\/g,'\\\\\\\\\\\\\\\\').replace(/'/g,\"'\\\\\\\\''\")+\"'\";",
-    "}",
-    "",
-    "function runThorns(dir) {",
+    "function runPlugkit(args) {",
+    "  const bin = join(__dirname, '..', 'bin', 'plugkit.js');",
+    "  if (!existsSync(bin)) return '';",
     "  try {",
-    "    const r = spawnSync('bun',['x','mcp-thorns@latest'],{encoding:'utf-8',timeout:15000,cwd:dir});",
-    "    return r.killed ? '' : (r.stdout||'').trim();",
+    "    const r = spawnSync('node', [bin, ...args], { encoding: 'utf-8', timeout: 15000 });",
+    "    return (r.stdout || '').trim() || (r.stderr || '').trim();",
     "  } catch(e) { return ''; }",
     "}",
-    "",
-    "function runSearch(query, dir) {",
-    "  try {",
-    "    const r = spawnSync('bun',['x','codebasesearch',query],{encoding:'utf-8',timeout:10000,cwd:dir});",
-    "    return (r.stdout||'').trim();",
-    "  } catch(e) { return ''; }",
-    "}",
+
     "",
     "export async function GmPlugin({ directory }) {",
     "  const agentMd = join(__dirname, '..', 'agents', 'gm.md');",
@@ -515,6 +500,17 @@ function pluginMjsSource(pluginFile) {
     "",
     "  return {",
     "    'experimental.chat.system.transform': async (input, output) => {",
+    "      try {",
+    "        const giPath = join(directory, '.gitignore');",
+    "        const entry = '.gm-stop-verified';",
+    "        try {",
+    "          let content = existsSync(giPath) ? readFileSync(giPath,'utf-8') : '';",
+    "          if (!content.split('\\n').some(l => l.trim() === entry)) {",
+    "            const nc = (content.endsWith('\\n') || content === '') ? content + entry + '\\n' : content + '\\n' + entry + '\\n';",
+    "            writeFileSync(giPath, nc, 'utf-8');",
+    "          }",
+    "        } catch(e) {}",
+    "      } catch(e) {}",
     "      try { const rules = readFileSync(agentMd,'utf-8'); if (rules) output.system.unshift(rules); } catch(e) {}",
     "      try {",
     "        if (existsSync(prdFile)) {",
@@ -536,9 +532,12 @@ function pluginMjsSource(pluginFile) {
     "      const prompt = textPart ? textPart.text.trim() : '';",
     "      const parts = [];",
     "      parts.push('Invoke the `gm` skill to begin. DO NOT use EnterPlanMode.');",
-    "      const thorns = runThorns(directory);",
-    "      if (thorns) parts.push('=== mcp-thorns ===\\n'+thorns);",
-    "      if (prompt) { const s = runSearch(prompt, directory); if (s) parts.push('=== codebasesearch ===\\n'+s); }",
+    "      const insight = runPlugkit(['codeinsight', directory]);",
+    "      if (insight && !insight.startsWith('Error')) parts.push('=== codeinsight ===\\n'+insight);",
+    "      if (prompt) {",
+    "        const search = runPlugkit(['search', '--path', directory, prompt]);",
+    "        if (search && !search.startsWith('No results')) parts.push('=== search ===\\n'+search);",
+    "      }",
     "      const injection = '<system-reminder>\\n'+parts.join('\\n\\n')+'\\n</system-reminder>';",
     "      if (textPart) textPart.text = injection + '\\n' + textPart.text;",
     "      else if (msg.parts) msg.parts.unshift({ type: 'text', text: injection });",
@@ -546,27 +545,41 @@ function pluginMjsSource(pluginFile) {
     "",
     "    'tool.execute.before': async (input, output) => {",
     "      if (FORBIDDEN_TOOLS.has(input.tool)) {",
-    "        output.args = { ...output.args, command: safePrintf('Use the code-search skill for codebase exploration instead of '+input.tool+'. Describe what you need in plain language.') };",
-    "        return;",
+    "        throw new Error('Use the code-search skill for codebase exploration instead of '+input.tool+'. Describe what you need in plain language.');",
     "      }",
-    "      if (input.tool === 'write' || input.tool === 'Write') {",
-    "        const fp = (output.args && output.args.file_path) || '';",
+    "      if (input.tool === 'EnterPlanMode') {",
+    "        throw new Error('Plan mode is disabled. Use the gm skill (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE state machine) instead.');",
+    "      }",
+    "      if (input.tool === 'Task' && input.args?.subagent_type === 'Explore') {",
+    "        throw new Error('The Explore agent is blocked. Use exec:codesearch in the Bash tool instead.\\n\\nexec:codesearch\\n<natural language description of what to find>');",
+    "      }",
+    "      if (input.tool === 'write' || input.tool === 'Write' || input.tool === 'edit') {",
+    "        const fp = (output.args && output.args.file_path) || (input.args && input.args.file_path) || '';",
     "        const base = basename(fp).toLowerCase();",
     "        const ext = extname(fp);",
     "        const blocked = FORBIDDEN_FILE_RE.some(re => re.test(base)) || FORBIDDEN_PATH_RE.some(p => fp.includes(p))",
     "          || (DOC_BLOCK_RE.test(ext) && !base.startsWith('claude') && !base.startsWith('readme') && !fp.includes('/skills/'));",
     "        if (blocked) {",
-    "          output.args = { ...output.args, command: safePrintf('Cannot create test/doc files. Use .prd for task notes, CLAUDE.md for permanent notes.') };",
-    "          return;",
+    "          throw new Error('Cannot create test/doc files. Use .prd for task notes, CLAUDE.md for permanent notes.');",
     "        }",
     "      }",
     "      if (input.tool !== 'bash') return;",
-    "      const cmd = output.args && output.args.command;",
+    "      const cmd = (output.args && output.args.command) || '';",
     "      if (!cmd) return;",
+    "      if (/^\\s*git(?:\\s|$)/.test(cmd)) return;",
     "      const m = cmd.match(/^exec(?::(\\S+))?\\n([\\s\\S]+)$/);",
-    "      if (!m) return;",
-    "      const result = runExec(m[1]||'', m[2], output.args.workdir || directory);",
-    "      output.args = { ...output.args, command: safePrintf('exec:'+(m[1]||'auto')+' output:\\n\\n'+result) };",
+     "      if (!m) {",
+     "        output.args.command = \"echo 'Bash tool can only be used with exec syntax:\\n\\nexec[:lang]\\n<command>\\n\\nExamples:\\nexec\\nls -la\\n\\nexec:nodejs\\nconsole.log(\\\"hello\\\")' 1>&2 && false\";",
+     "        return;",
+     "      }",
+     "      const lang = m[1] || 'nodejs';",
+     "      const code = m[2];",
+     "      const ext = lang === 'python' ? 'py' : lang === 'bash' || lang === 'sh' ? 'sh' : 'mjs';",
+     "      const ts = Date.now();",
+     "      const tmp = join(tmpdir(), 'plugkit-exec-' + ts + '.' + ext);",
+     "      writeFileSync(tmp, code, 'utf-8');",
+     "      const binJs = join(__dirname, '..', 'bin', 'plugkit.js');",
+     "      output.args.command = 'node ' + binJs + ' exec --lang=' + lang + ' --file=' + tmp + ' --cwd=' + (output.args.workdir || directory);",
     "    }",
     "  };",
     "}",
@@ -584,7 +597,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license,
       ...repoFields('gm-cc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'gm.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'gm.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
       scripts: pluginSpec.scripts, ...extraFields
@@ -592,7 +605,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -1061,12 +1074,17 @@ MIT
 });
 
 const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
-  loadSkillsFromSource() { return {}; },
+  loadSkillsFromSource(sourceDir) {
+    return TemplateBuilder.loadSkillsFromSource(sourceDir, 'skills');
+  },
+  loadLangFromSource(sourceDir) {
+    return TemplateBuilder.loadLangFromSource(sourceDir, 'lang');
+  },
   getPackageJsonFields() {
     return {
       main: 'gm.js',
       bin: { 'gm-oc': './cli.js', 'gm-oc-install': './install.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', 'lang/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
       dependencies: {}
     };
@@ -1079,13 +1097,32 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       keywords: ['opencode', 'opencode-plugin', 'automation', 'gm'],
       ...repoFields('gm-oc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       dependencies: {},
-      scripts: { postinstall: 'node scripts/postinstall.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      scripts: { postinstall: 'node scripts/postinstall-oc.js' },
+      files: ['agents/', 'hooks/', 'scripts/', 'skills/', 'lang/', 'gm.js', 'gm-oc.mjs', 'index.js', 'opencode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
   },
   formatConfigJson() {
-    return makePackageJson({ $schema: 'https://opencode.ai/config.json', default_agent: 'gm' });
+    return makePackageJson({
+      $schema: 'https://opencode.ai/config.json',
+      default_agent: 'gm',
+      agent: {
+        gm: {
+          mode: 'primary',
+          description: 'GM state machine agent — PLAN→EXECUTE→EMIT→VERIFY→COMPLETE',
+          prompt: '{file:./agents/gm.md}'
+        }
+      }
+    });
+  },
+  buildHooksMap() {
+    const hooks = {};
+    hooks['message.updated'] = [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit', timeout: 60000 }] }];
+    hooks['session.closing'] = [{ matcher: '*', hooks: [
+      { type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook stop', timeout: 300000 },
+      { type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook stop-git', timeout: 60000 }
+    ] }];
+    return hooks;
   },
   getAdditionalFiles(spec) {
     return {
@@ -1102,12 +1139,17 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
 });
 
 const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
-  loadSkillsFromSource() { return {}; },
+  loadSkillsFromSource(sourceDir) {
+    return TemplateBuilder.loadSkillsFromSource(sourceDir, 'skills');
+  },
+  loadLangFromSource(sourceDir) {
+    return TemplateBuilder.loadLangFromSource(sourceDir, 'lang');
+  },
   getPackageJsonFields() {
     return {
       main: 'gm.js',
       bin: { 'gm-kilo': './cli.js', 'gm-kilo-install': './install.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'lang/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       keywords: ['kilo', 'kilo-cli', 'automation', 'gm'],
       dependencies: {}
     };
@@ -1120,13 +1162,32 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       keywords: ['kilo', 'kilo-cli', 'mcp', 'automation', 'gm'],
       ...repoFields('gm-kilo'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       dependencies: {},
-      scripts: { postinstall: 'node scripts/postinstall.js' },
-      files: ['agents/', 'hooks/', 'scripts/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
+      scripts: { postinstall: 'node scripts/postinstall-kilo.js' },
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'lang/', 'gm.js', 'gm-kilo.mjs', 'index.js', 'kilocode.json', '.github/', 'README.md', 'cli.js', 'install.js', 'LICENSE', 'CONTRIBUTING.md', '.gitignore', '.editorconfig'],
       ...extraFields
     });
   },
   formatConfigJson() {
-    return makePackageJson({ $schema: 'https://kilo.ai/config.json', default_agent: 'gm' });
+    return makePackageJson({
+      $schema: 'https://kilo.ai/config.json',
+      default_agent: 'gm',
+      agent: {
+        gm: {
+          mode: 'primary',
+          description: 'GM state machine agent — PLAN→EXECUTE→EMIT→VERIFY→COMPLETE',
+          prompt: '{file:./agents/gm.md}'
+        }
+      }
+    });
+  },
+  buildHooksMap() {
+    const hooks = {};
+    hooks['message.updated'] = [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit', timeout: 60000 }] }];
+    hooks['session.closing'] = [{ matcher: '*', hooks: [
+      { type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook stop', timeout: 300000 },
+      { type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook stop-git', timeout: 60000 }
+    ] }];
+    return hooks;
   },
   getAdditionalFiles(spec) {
     return {

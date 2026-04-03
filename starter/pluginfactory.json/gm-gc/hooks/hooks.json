@@ -1,0 +1,32 @@
+{
+  "description": "Hooks for gm Gemini CLI extension",
+  "hooks": {
+    "BeforeTool": {
+      "type": "command",
+      "command": "${extensionPath}/bin/plugkit hook pre-tool-use",
+      "timeout": 3600
+    },
+    "SessionStart": {
+      "type": "command",
+      "command": "${extensionPath}/bin/plugkit hook session-start",
+      "timeout": 180000
+    },
+    "BeforeAgent": {
+      "type": "command",
+      "command": "${extensionPath}/bin/plugkit hook prompt-submit",
+      "timeout": 60000
+    },
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": "${extensionPath}/bin/plugkit hook stop",
+        "timeout": 300000
+      },
+      {
+        "type": "command",
+        "command": "${extensionPath}/bin/plugkit hook stop-git",
+        "timeout": 60000
+      }
+    ]
+  }
+}
