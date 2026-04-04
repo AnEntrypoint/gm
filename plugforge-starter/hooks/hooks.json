@@ -44,7 +44,7 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook stop",
-            "timeout": 300000
+            "timeout": 15000
           },
           {
             "type": "command",
