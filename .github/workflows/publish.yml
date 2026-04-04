@@ -154,7 +154,7 @@ jobs:
 
           # Sync build output with complete replacement
           # Use --no-times to prevent timestamp preservation issues with git change detection
-          rsync -av --delete --exclude='.git' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ .
+          rsync -av --delete --exclude='.git' --exclude='bin/' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ .
 
           # Only commit if there are actual changes
           git add -A
