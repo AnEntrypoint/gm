@@ -271,9 +271,7 @@ function createGeminiInstallerScript() {
   return createCliInstaller({
     pkg: 'gm-gc',
     label: 'Gemini CLI',
-    destDir: `process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'gemini', 'extensions', 'gm')
-  : path.join(homeDir, '.gemini', 'extensions', 'gm')`,
+    destDir: `path.join(homeDir, '.gemini', 'extensions', 'gm')`,
     filesToCopy: [
       ['agents', 'agents'], ['hooks', 'hooks'], ['.mcp.json', '.mcp.json'],
       ['gemini-extension.json', 'gemini-extension.json'], ['README.md', 'README.md'], ['GEMINI.md', 'GEMINI.md']
@@ -961,7 +959,7 @@ const run = () => {
       const isExec = command.startsWith('exec:');
       const isGit = /^(git |gh )/.test(command);
       if (!isExec && !isGit) {
-        return { deny: true, reason: 'run_shell_command only allows exec:<lang> syntax or git/gh. Use exec:nodejs, exec:bash, exec:python etc. for code execution.' };
+        return { deny: true, reason: 'run_shell_command requires exec:<lang> format with a NEWLINE between the lang and code. Example: exec:bash\\nnpm --version\\n(newline after exec:bash, not a space). Allowed: exec:nodejs, exec:bash, exec:python, exec:typescript, git, gh.' };
       }
     }
     return { allow: true };
@@ -998,10 +996,9 @@ const readGmAgent = () => {
 const runMcpThorns = () => {
   if (!projectDir || !fs.existsSync(projectDir)) return '';
   try {
-    let out;
-    try { out = execSync('bun x mcp-thorns', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
-    catch (e) { out = execSync('npx -y mcp-thorns', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
-    return '=== Repository analysis ===\\n' + out;
+    const out = execSync('plugkit codeinsight ' + JSON.stringify(projectDir), { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 });
+    if (!out || out.startsWith('Error')) return '';
+    return '=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\\n' + out;
   } catch (e) { return ''; }
 };
 const runCodeSearch = (query) => {
@@ -1021,13 +1018,7 @@ try {
   const parts = [];
   const gm = readGmAgent();
   if (gm) parts.push(gm);
-  const thorns = runMcpThorns();
-  if (thorns) parts.push(thorns);
   parts.push('use gm agent | ref: TOOL_INVARIANTS | codesearch for exploration | exec: for execution');
-  if (prompt) {
-    const sr = runCodeSearch(prompt);
-    if (sr) parts.push('=== Semantic code search results ===\\n' + sr);
-  }
   console.log(JSON.stringify({ systemMessage: parts.join('\\n\\n') }, null, 2));
 } catch (e) {
   console.log(JSON.stringify({ systemMessage: 'use gm agent' }, null, 2));
@@ -1121,10 +1112,8 @@ try {
   try { parts.push(fs.readFileSync(path.join(pluginRoot, 'agents/gm.md'), 'utf-8')); } catch (e) {}
   if (projectDir && fs.existsSync(projectDir)) {
     try {
-      let out;
-      try { out = execSync('bun x mcp-thorns@latest', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
-      catch (e) { out = execSync('npx -y mcp-thorns@latest', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
-      parts.push('=== This is your initial insight of the repository ===\\n' + out);
+      const out = execSync('plugkit codeinsight ' + JSON.stringify(projectDir), { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 });
+      if (out && !out.startsWith('Error')) parts.push('=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\\n' + out);
     } catch (e) {}
   }
   parts.push('Use gm as a philosophy to coordinate all plans and the gm subagent to create and execute all plans');
