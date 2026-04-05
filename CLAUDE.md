@@ -30,6 +30,8 @@ node cli.js plugforge-starter ./build
 
 **Hook error display**: When pre-tool-use-hook blocks a tool call, Claude Code shows "Sibling tool call errored" instead of the actual block reason. The hook is working correctly — the real reason is in the system reminder.
 
+**kilo/oc exec: must be synchronous**: `plugkit exec` is async/runner-based — it returns a task ID and hangs when called via `spawnSync` from inside a bash tool. The kilo/oc `.mjs` plugin's `tool.execute.before` must run code inline using `spawnSync(bun/node/python3/bash)` and return via `safePrintf`. Never delegate exec: to `plugkit exec --file` from the plugin context.
+
 **bash_banned_tool blocking**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere.
 
 ## Rust Binary Update Pipeline
