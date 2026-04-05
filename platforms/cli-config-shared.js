@@ -610,7 +610,7 @@ function pluginMjsSource(pluginFile) {
     "          throw new Error('Cannot create test/doc files. Use .prd for task notes, CLAUDE.md for permanent notes.');",
     "        }",
     "      }",
-    "      if (input.tool !== 'bash') return;",
+    "      if (input.tool !== 'bash' && input.tool !== 'Bash') return;",
     "      const cmd = (output.args && output.args.command) || '';",
     "      if (!cmd) return;",
     "      if (/^\\s*git(?:\\s|$)/.test(cmd)) return;",
