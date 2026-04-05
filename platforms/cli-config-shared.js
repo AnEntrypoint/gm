@@ -926,6 +926,215 @@ MIT - See LICENSE file for details
   }
 });
 
+function createGcPreToolUseHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const writeTools = ['write_file'];
+const forbiddenTools = ['find', 'Find', 'Glob', 'Grep', 'glob', 'search_file_content'];
+const run = () => {
+  try {
+    const input = fs.readFileSync(0, 'utf-8');
+    const data = JSON.parse(input);
+    const { tool_name, tool_input } = data;
+    if (!tool_name) return { allow: true };
+    if (forbiddenTools.includes(tool_name)) {
+      return { deny: true, reason: 'Use the code-search skill for codebase exploration instead of Grep/Glob/find. Describe what you need in plain language.' };
+    }
+    if (writeTools.includes(tool_name)) {
+      const file_path = tool_input?.file_path || '';
+      const ext = path.extname(file_path);
+      const inSkillsDir = file_path.includes('/skills/');
+      const base = path.basename(file_path).toLowerCase();
+      if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
+          !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
+        return { deny: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained.' };
+      }
+      if (/\\.(test|spec)\\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
+          file_path.includes('/__tests__/') || file_path.includes('/test/') ||
+          file_path.includes('/tests/') || file_path.includes('/__mocks__/')) {
+        return { deny: true, reason: 'Test files forbidden on disk. Use real services for all testing.' };
+      }
+    }
+    if (tool_name === 'run_shell_command') {
+      const command = (tool_input?.command || '').trim();
+      const isExec = command.startsWith('exec:');
+      const isGit = /^(git |gh )/.test(command);
+      if (!isExec && !isGit) {
+        return { deny: true, reason: 'run_shell_command only allows exec:<lang> syntax or git/gh. Use exec:nodejs, exec:bash, exec:python etc. for code execution.' };
+      }
+    }
+    return { allow: true };
+  } catch (e) {
+    return { allow: true };
+  }
+};
+try {
+  const result = run();
+  if (result.deny) {
+    console.log(JSON.stringify({ decision: 'deny', reason: result.reason }));
+    process.exit(0);
+  }
+  process.exit(0);
+} catch (e) {
+  process.exit(0);
+}
+`;
+}
+
+function createGcPromptSubmitHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+const pluginRoot = process.env.GEMINI_PROJECT_DIR ? path.join(__dirname, '..') : (process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..'));
+const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
+const readStdinPrompt = () => {
+  try { return JSON.parse(fs.readFileSync(0, 'utf-8')).prompt || ''; } catch (e) { return ''; }
+};
+const readGmAgent = () => {
+  try { return fs.readFileSync(path.join(pluginRoot, 'agents/gm.md'), 'utf-8'); } catch (e) { return ''; }
+};
+const runMcpThorns = () => {
+  if (!projectDir || !fs.existsSync(projectDir)) return '';
+  try {
+    let out;
+    try { out = execSync('bun x mcp-thorns', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
+    catch (e) { out = execSync('npx -y mcp-thorns', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
+    return '=== Repository analysis ===\\n' + out;
+  } catch (e) { return ''; }
+};
+const runCodeSearch = (query) => {
+  if (!query || !projectDir) return '';
+  try {
+    const q = query.replace(/"/g, '\\\\"').substring(0, 200);
+    let out;
+    try { out = execSync(\`bun x codebasesearch "\${q}"\`, { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 }); }
+    catch (e) { out = execSync(\`npx -y codebasesearch "\${q}"\`, { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 }); }
+    const lines = out.split('\\n');
+    const start = lines.findIndex(l => l.includes('Searching for:'));
+    return start >= 0 ? lines.slice(start).join('\\n').trim() : out.trim();
+  } catch (e) { return ''; }
+};
+try {
+  const prompt = readStdinPrompt();
+  const parts = [];
+  const gm = readGmAgent();
+  if (gm) parts.push(gm);
+  const thorns = runMcpThorns();
+  if (thorns) parts.push(thorns);
+  parts.push('use gm agent | ref: TOOL_INVARIANTS | codesearch for exploration | exec: for execution');
+  if (prompt) {
+    const sr = runCodeSearch(prompt);
+    if (sr) parts.push('=== Semantic code search results ===\\n' + sr);
+  }
+  console.log(JSON.stringify({ systemMessage: parts.join('\\n\\n') }, null, 2));
+} catch (e) {
+  console.log(JSON.stringify({ systemMessage: 'use gm agent' }, null, 2));
+}
+`;
+}
+
+function createGcStopHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const prdFile = path.resolve(process.cwd(), '.prd');
+let aborted = false;
+process.on('SIGTERM', () => { aborted = true; });
+process.on('SIGINT', () => { aborted = true; });
+try {
+  if (!aborted && fs.existsSync(prdFile)) {
+    const content = fs.readFileSync(prdFile, 'utf-8').trim();
+    if (content.length > 0) {
+      console.log(JSON.stringify({ decision: 'block', reason: 'Work items remain in .prd. Remove completed items as they finish. Current items:\\n\\n' + content }, null, 2));
+      process.exit(2);
+    }
+  }
+  console.log(JSON.stringify({ decision: 'approve' }, null, 2));
+  process.exit(0);
+} catch (e) {
+  console.log(JSON.stringify({ decision: 'approve' }, null, 2));
+  process.exit(0);
+}
+`;
+}
+
+function createGcStopHookGit() {
+  return `#!/usr/bin/env node
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
+const counterPath = path.join(require('os').tmpdir(), 'gm-gc-git-' + crypto.createHash('md5').update(projectDir).digest('hex') + '.json');
+const readCounter = () => { try { return JSON.parse(fs.readFileSync(counterPath, 'utf-8')); } catch (e) { return { count: 0, lastHash: null }; } };
+const writeCounter = (d) => { try { fs.writeFileSync(counterPath, JSON.stringify(d)); } catch (e) {} };
+const gitHash = () => { try { return execSync('git rev-parse HEAD', { cwd: projectDir, stdio: 'pipe', encoding: 'utf-8' }).trim(); } catch (e) { return null; } };
+const getStatus = () => {
+  try { execSync('git rev-parse --git-dir', { cwd: projectDir, stdio: 'pipe' }); } catch (e) { return null; }
+  const status = execSync('git status --porcelain', { cwd: projectDir, stdio: 'pipe', encoding: 'utf-8' }).trim();
+  let unpushed = 0;
+  try { unpushed = parseInt(execSync('git rev-list --count @{u}..HEAD', { cwd: projectDir, stdio: 'pipe', encoding: 'utf-8' }).trim()) || 0; } catch (e) { unpushed = -1; }
+  return { isDirty: status.length > 0, unpushed };
+};
+try {
+  const st = getStatus();
+  if (!st) { console.log(JSON.stringify({ decision: 'approve' })); process.exit(0); }
+  const hash = gitHash();
+  const counter = readCounter();
+  if (counter.lastHash && hash && counter.lastHash !== hash) { counter.count = 0; counter.lastHash = hash; writeCounter(counter); }
+  const issues = [];
+  if (st.isDirty) issues.push('uncommitted changes');
+  if (st.unpushed > 0) issues.push(st.unpushed + ' commit(s) not pushed');
+  if (st.unpushed === -1) issues.push('push status unknown');
+  if (issues.length > 0) {
+    counter.count = (counter.count || 0) + 1;
+    counter.lastHash = hash;
+    writeCounter(counter);
+    if (counter.count === 1) {
+      console.log(JSON.stringify({ decision: 'block', reason: 'Git: ' + issues.join(', ') + '. Commit and push before ending session.' }, null, 2));
+      process.exit(2);
+    }
+    console.log(JSON.stringify({ decision: 'approve', reason: 'Git warning #' + counter.count + ': ' + issues.join(', ') }, null, 2));
+    process.exit(0);
+  }
+  if (counter.count > 0) { counter.count = 0; writeCounter(counter); }
+  console.log(JSON.stringify({ decision: 'approve' }, null, 2));
+  process.exit(0);
+} catch (e) {
+  console.log(JSON.stringify({ decision: 'approve' }, null, 2));
+  process.exit(0);
+}
+`;
+}
+
+function createGcSessionStartHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+const pluginRoot = path.join(__dirname, '..');
+const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
+try {
+  const parts = [];
+  try { parts.push(fs.readFileSync(path.join(pluginRoot, 'agents/gm.md'), 'utf-8')); } catch (e) {}
+  if (projectDir && fs.existsSync(projectDir)) {
+    try {
+      let out;
+      try { out = execSync('bun x mcp-thorns@latest', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
+      catch (e) { out = execSync('npx -y mcp-thorns@latest', { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 180000 }); }
+      parts.push('=== This is your initial insight of the repository ===\\n' + out);
+    } catch (e) {}
+  }
+  parts.push('Use gm as a philosophy to coordinate all plans and the gm subagent to create and execute all plans');
+  console.log(JSON.stringify({ systemMessage: parts.join('\\n\\n') }, null, 2));
+} catch (e) {
+  console.log(JSON.stringify({ systemMessage: 'use gm agent' }, null, 2));
+}
+`;
+}
+
 const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
   loadSkillsFromSource() { return {}; },
   formatConfigJson(config) {
@@ -951,13 +1160,23 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     return {
       'cli.js': createGeminiInstallerScript(),
       'install.js': createGeminiInstallScript(),
+      'hooks/pre-tool-use-hook.js': createGcPreToolUseHook(),
+      'hooks/prompt-submit-hook.js': createGcPromptSubmitHook(),
+      'hooks/stop-hook.js': createGcStopHook(),
+      'hooks/stop-hook-git.js': createGcStopHookGit(),
+      'hooks/session-start-hook.js': createGcSessionStartHook(),
     };
   },
-  buildBootstrapCommand() {
-    return `node \${extensionPath}/scripts/bootstrap.js`;
-  },
-  buildHookCommand(hookEvent) {
-    return `\${extensionPath}/bin/plugkit hook ${hookEvent}`;
+  buildHooksMap() {
+    return {
+      BeforeTool: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/pre-tool-use-hook.js', timeout: 3600 }] }],
+      SessionStart: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/session-start-hook.js', timeout: 180000 }] }],
+      BeforeAgent: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/prompt-submit-hook.js', timeout: 60000 }] }],
+      SessionEnd: [{ matcher: '*', hooks: [
+        { type: 'command', command: 'node ${extensionPath}/hooks/stop-hook.js', timeout: 300000 },
+        { type: 'command', command: 'node ${extensionPath}/hooks/stop-hook-git.js', timeout: 60000 }
+      ] }]
+    };
   },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
