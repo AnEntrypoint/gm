@@ -8,47 +8,20 @@ allowed-tools: Bash(browser:*), Bash(exec:browser*)
 
 ## Two Pathways
 
-**Session commands** — use `browser:` prefix via Bash for all browser control.
+**Session management** — use `browser:` prefix via Bash for session lifecycle only.
 
-Create a session first, then run commands against it. Use `--direct` for CDP mode (no extension needed — requires Chrome with remote debugging):
+Create a session first:
 
 ```
 browser:
 playwriter session new --direct
 ```
 
-Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent commands.
+Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent `exec:browser` calls.
 
 If `--direct` fails, the user needs Chrome running with debugging enabled:
 - Open `chrome://inspect/#remote-debugging` in Chrome, OR
 - Launch Chrome with `chrome --remote-debugging-port=9222`
-
-```
-browser:
-playwriter -s 1 -e 'await page.goto("https://example.com")'
-```
-
-```
-browser:
-playwriter -s 1 -e 'await snapshot({ page })'
-```
-
-```
-browser:
-playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
-```
-
-State persists across calls within a session:
-
-```
-browser:
-playwriter -s 1 -e 'state.x = 1'
-```
-
-```
-browser:
-playwriter -s 1 -e 'console.log(state.x)'
-```
 
 List active sessions:
 
@@ -57,7 +30,7 @@ browser:
 playwriter session list
 ```
 
-**JS eval in browser** — use `exec:browser` via Bash when you need to run JavaScript in the page context directly.
+**JS eval** — use `exec:browser` via Bash for ALL JavaScript execution. Never use `playwriter -s <id> -e '...'` for JS code — single-quote quoting fails on Windows CMD. The exec runner writes code to a temp file, avoiding all shell quoting issues.
 
 ```
 exec:browser
@@ -71,27 +44,28 @@ const title = await page.title()
 console.log(title)
 ```
 
-Always use single quotes for the `-e` argument to avoid shell quoting issues.
+State persists across `exec:browser` calls within a session. Never add shell quoting or escaping to the exec body — write plain JavaScript directly.
 
 ## Core Workflow
 
 Every browser automation follows this pattern:
 
-1. **Create session**: `playwriter session new` (note the returned ID)
-2. **Navigate**: `playwriter -s <id> -e 'await page.goto("https://example.com")'`
-3. **Snapshot**: `playwriter -s <id> -e 'await snapshot({ page })'`
-4. **Interact**: click, fill, type via JS expressions
-5. **Re-snapshot**: after navigation or DOM changes
+1. **Create session**: `browser:\nplaywriter session new --direct` (note the returned ID)
+2. **All JS code**: use `exec:browser` with plain JS body — navigate, interact, snapshot, extract
 
 ```
 browser:
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://example.com/form")'
-playwriter -s 1 -e 'await snapshot({ page })'
-playwriter -s 1 -e 'await page.fill("[name=email]", "user@example.com")'
-playwriter -s 1 -e 'await page.click("[type=submit]")'
-playwriter -s 1 -e 'await page.waitForLoadState("networkidle")'
-playwriter -s 1 -e 'await snapshot({ page })'
+playwriter session new --direct
+```
+
+```
+exec:browser
+await page.goto('https://example.com/form')
+await snapshot({ page })
+await page.fill('[name=email]', 'user@example.com')
+await page.click('[type=submit]')
+await page.waitForLoadState('networkidle')
+await snapshot({ page })
 ```
 
 ## Common Patterns
@@ -99,17 +73,16 @@ playwriter -s 1 -e 'await snapshot({ page })'
 ### Navigation and Snapshot
 
 ```
-browser:
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://example.com")'
-playwriter -s 1 -e 'await snapshot({ page })'
+exec:browser
+await page.goto('https://example.com')
+await snapshot({ page })
 ```
 
 ### Screenshot with Accessibility Labels
 
 ```
-browser:
-playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
+exec:browser
+await screenshotWithAccessibilityLabels({ page })
 ```
 
 ### Data Extraction
@@ -124,51 +97,34 @@ console.log(JSON.stringify(items))
 ### Persistent State Across Steps
 
 ```
-browser:
-playwriter -s 1 -e 'state.loginDone = false'
-playwriter -s 1 -e 'await page.goto("https://app.example.com/login")'
-playwriter -s 1 -e 'await page.fill("[name=user]", "admin")'
-playwriter -s 1 -e 'await page.fill("[name=pass]", "secret")'
-playwriter -s 1 -e 'await page.click("[type=submit]")'
-playwriter -s 1 -e 'state.loginDone = true'
+exec:browser
+state.loginDone = false
+await page.goto('https://app.example.com/login')
+await page.fill('[name=user]', 'admin')
+await page.fill('[name=pass]', 'secret')
+await page.click('[type=submit]')
+state.loginDone = true
 ```
 
-### Multiple Sessions
-
-```
-browser:
-playwriter session new
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://site-a.com")'
-playwriter -s 2 -e 'await page.goto("https://site-b.com")'
-playwriter session list
-```
-
-## JavaScript Evaluation (exec pathway)
-
-Use `exec:browser` via Bash when you need direct page access. The body is plain JavaScript executed in the browser context.
+### Console Monitoring
 
 ```
 exec:browser
-await page.goto('https://example.com')
-await snapshot({ page })
+state.consoleMsgs = []
+page.on('console', msg => state.consoleMsgs.push({ type: msg.type(), text: msg.text() }))
+page.on('pageerror', e => state.consoleMsgs.push({ type: 'error', text: e.message }))
 ```
 
 ```
 exec:browser
-const links = await page.$$eval('a', els => els.map(e => e.href))
-console.log(JSON.stringify(links))
+console.log(JSON.stringify(state.consoleMsgs))
 ```
-
-Never add shell quoting or escaping to the exec body — write plain JavaScript directly.
 
 ## Key Patterns for Agents
 
-**Which pathway to use**:
-- Multi-step session workflows → `browser:` prefix with `playwriter -s <id> -e '...'`
-- Quick JS eval or data extraction → `exec:browser` with plain JS body
+**Always use `exec:browser`** for any JavaScript — never `playwriter -s <id> -e '...'` for JS code.
 
-**Always use single quotes** for the `-e` argument to playwriter to avoid shell interpretation.
+**`browser:` prefix** is only for session management: `playwriter session new`, `playwriter session list`.
 
 **Session IDs are numeric**: `playwriter session new` returns `1`, `2`, etc. Use the exact returned value.
 
