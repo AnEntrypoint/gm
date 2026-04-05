@@ -1,36 +1,12 @@
 ---
 name: browser
-description: Browser automation via playwriter. Use when user needs to interact with websites, navigate pages, fill forms, click buttons, take screenshots, extract data, test web apps, or automate any browser task.
-allowed-tools: Bash(browser:*), Bash(exec:browser*)
+description: Browser automation. Use when user needs to interact with websites, navigate pages, fill forms, click buttons, take screenshots, extract data, test web apps, or automate any browser task.
+allowed-tools: Bash(exec:browser*)
 ---
 
-# Browser Automation with playwriter
+# Browser Automation
 
-## Two Pathways
-
-**Session management** — use `browser:` prefix via Bash for session lifecycle only.
-
-Create a session first:
-
-```
-browser:
-playwriter session new --direct
-```
-
-Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent `exec:browser` calls.
-
-If `--direct` fails, the user needs Chrome running with debugging enabled:
-- Open `chrome://inspect/#remote-debugging` in Chrome, OR
-- Launch Chrome with `chrome --remote-debugging-port=9222`
-
-List active sessions:
-
-```
-browser:
-playwriter session list
-```
-
-**JS eval** — use `exec:browser` via Bash for ALL JavaScript execution. Never use `playwriter -s <id> -e '...'` for JS code — single-quote quoting fails on Windows CMD. The exec runner writes code to a temp file, avoiding all shell quoting issues.
+Use `exec:browser` via Bash for all browser automation. The runtime provides `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state` as globals. Sessions persist across calls automatically.
 
 ```
 exec:browser
@@ -38,25 +14,9 @@ await page.goto('https://example.com')
 await snapshot({ page })
 ```
 
-```
-exec:browser
-const title = await page.title()
-console.log(title)
-```
-
-State persists across `exec:browser` calls within a session. Never add shell quoting or escaping to the exec body — write plain JavaScript directly.
-
 ## Core Workflow
 
-Every browser automation follows this pattern:
-
-1. **Create session**: `browser:\nplaywriter session new --direct` (note the returned ID)
-2. **All JS code**: use `exec:browser` with plain JS body — navigate, interact, snapshot, extract
-
-```
-browser:
-playwriter session new --direct
-```
+Navigate, snapshot to understand the page, then interact:
 
 ```
 exec:browser
@@ -69,14 +29,6 @@ await snapshot({ page })
 ```
 
 ## Common Patterns
-
-### Navigation and Snapshot
-
-```
-exec:browser
-await page.goto('https://example.com')
-await snapshot({ page })
-```
 
 ### Screenshot with Accessibility Labels
 
@@ -98,12 +50,14 @@ console.log(JSON.stringify(items))
 
 ```
 exec:browser
-state.loginDone = false
-await page.goto('https://app.example.com/login')
-await page.fill('[name=user]', 'admin')
-await page.fill('[name=pass]', 'secret')
-await page.click('[type=submit]')
-state.loginDone = true
+state.count = 0
+await page.goto('https://example.com')
+state.title = await page.title()
+```
+
+```
+exec:browser
+console.log(state.title, state.count)
 ```
 
 ### Console Monitoring
@@ -120,12 +74,10 @@ exec:browser
 console.log(JSON.stringify(state.consoleMsgs))
 ```
 
-## Key Patterns for Agents
+## Key Rules
 
-**Always use `exec:browser`** for any JavaScript — never `playwriter -s <id> -e '...'` for JS code.
+**Only `exec:browser`** — never run any browser CLI tool directly via Bash.
 
-**`browser:` prefix** is only for session management: `playwriter session new`, `playwriter session list`.
+**Snapshot before interacting** — always call `await snapshot({ page })` to understand current page state before clicking or filling.
 
-**Session IDs are numeric**: `playwriter session new` returns `1`, `2`, etc. Use the exact returned value.
-
-**Snapshot before interacting**: always call `await snapshot({ page })` to understand current page state before clicking or filling.
+**State persists** — `state` object and page session carry across multiple `exec:browser` calls.
