@@ -25,7 +25,7 @@ jobs:
         run: |
           # Get the highest published version across all CLI packages
           MAX_NPM="0.0.0"
-          for PKG in gm-cc gm-gc gm-oc gm-kilo gm-codex gm-copilot-cli; do
+          for PKG in gm-cc gm-gc gm-oc gm-kilo gm-codex gm-qwen gm-copilot-cli; do
             V=$(npm view "$PKG" version 2>/dev/null || echo "0.0.0")
             MAX_NPM=$(printf '%s\n' "$V" "$MAX_NPM" | sort -V | tail -1)
           done
@@ -79,6 +79,7 @@ jobs:
           - {platform: kilo, name: "Kilo CLI"}
           - {platform: zed, name: "Zed"}
           - {platform: jetbrains, name: "JetBrains"}
+          - {platform: qwen, name: "Qwen Code"}
           - {platform: copilot-cli, name: "GitHub Copilot CLI"}
 
     steps:
@@ -166,7 +167,7 @@ jobs:
           fi
 
       - name: Publish to npm
-        if: matrix.platform == 'oc' || matrix.platform == 'kilo'
+        if: matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
