@@ -1554,4 +1554,89 @@ The plugin activates automatically on session start once MCP servers are configu
   }
 });
 
-module.exports = { cc, gc, codex, oc, kilo };
+function createQwenInstallerScript() {
+  return createCliInstaller({
+    pkg: 'gm-qwen',
+    label: 'Qwen Code',
+    destDir: `path.join(homeDir, '.qwen', 'extensions', 'gm-qwen')`,
+    filesToCopy: [
+      ['agents', 'agents'], ['hooks', 'hooks'], ['scripts', 'scripts'], ['skills', 'skills'],
+      ['bin', 'bin'], ['gm.json', 'gm.json'], ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md']
+    ],
+    restartMsg: 'Restart Qwen Code to activate.',
+    extraSetup: `
+  const qwenExtJson = path.join(destDir, 'qwen-extension.json');
+  if (!fs.existsSync(qwenExtJson)) {
+    const pkg = JSON.parse(fs.readFileSync(path.join(srcDir, 'package.json'), 'utf-8'));
+    fs.writeFileSync(qwenExtJson, JSON.stringify({
+      name: 'gm',
+      version: pkg.version,
+      description: pkg.description,
+      hooks: './hooks/hooks.json',
+      skills: './skills'
+    }, null, 2) + '\\n');
+  }
+`
+  });
+}
+
+const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
+  formatConfigJson(config) {
+    return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' } });
+  },
+  getPackageJsonFields() {
+    return {
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'gm.json', 'cli.js', 'install.js', 'README.md', 'CLAUDE.md', '.gitignore', 'CONTRIBUTING.md'],
+      keywords: ['qwen-code', 'agent', 'state-machine', 'automation', 'gm'],
+      peerDependencies: { '@qwen-code/qwen-code': '*' }
+    };
+  },
+  getAdditionalFiles(spec) {
+    return {
+      'qwen-extension.json': JSON.stringify({
+        name: spec.name,
+        version: spec.version,
+        description: spec.description,
+        author: { name: spec.author, url: 'https://github.com/AnEntrypoint' },
+        homepage: spec.homepage,
+        hooks: './hooks/hooks.json',
+        skills: './skills',
+        mcpServers: {}
+      }, null, 2),
+      'cli.js': createQwenInstallerScript(),
+    };
+  },
+  buildHooksMap() {
+    const root = '${CLAUDE_PLUGIN_ROOT}';
+    return {
+      PreToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook pre-tool-use`, timeout: 3600 }] }],
+      SessionStart: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook session-start`, timeout: 180000 }] }],
+      UserPromptSubmit: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook prompt-submit`, timeout: 60000 }] }],
+      Stop: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop`, timeout: 300000 }] }, { matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop-git`, timeout: 60000 }] }]
+    };
+  },
+  generateReadme(spec) {
+    return `# gm-qwen for Qwen Code
+
+## Installation
+
+\`\`\`bash
+npm install -g gm-qwen
+\`\`\`
+
+Or install directly:
+
+\`\`\`bash
+qwen extensions install https://github.com/AnEntrypoint/gm-qwen
+\`\`\`
+
+Restart Qwen Code to activate.
+
+## What it does
+
+Installs the gm state machine agent (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE) into Qwen Code with full hook support, skills, and automated git enforcement.
+`;
+  }
+});
+
+module.exports = { cc, gc, codex, oc, kilo, qwen };
