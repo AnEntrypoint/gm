@@ -1,12 +1,71 @@
 ---
 name: browser
-description: Browser automation. Use when user needs to interact with websites, navigate pages, fill forms, click buttons, take screenshots, extract data, test web apps, or automate any browser task.
-allowed-tools: Bash(exec:browser*)
+description: Browser automation via playwriter. Use when user needs to interact with websites, navigate pages, fill forms, click buttons, take screenshots, extract data, test web apps, or automate any browser task.
+allowed-tools: Bash(browser:*), Bash(exec:browser*)
 ---
 
-# Browser Automation
+# Browser Automation with playwriter
 
-Use `exec:browser` via Bash for all browser automation. The runtime provides `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state` as globals. Sessions persist across calls automatically.
+## Two Pathways
+
+**Session commands** (`browser:` prefix) — manage multi-step sessions via playwriter CLI. Each `browser:` block runs its commands sequentially.
+
+**JS execution** (`exec:browser`) — run JavaScript directly against `page`. State persists across calls.
+
+**CRITICAL**: Never mix these two pathways. Each `browser:` block is a separate Bash call. Each `exec:browser` block is a separate Bash call.
+
+## Session Pathway (`browser:`)
+
+Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):
+
+```
+browser:
+playwriter session new --direct
+```
+
+Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent calls. **Each command must be a separate Bash call:**
+
+```
+browser:
+playwriter -s 1 -e 'await page.goto("http://example.com")'
+```
+
+```
+browser:
+playwriter -s 1 -e 'await snapshot({ page })'
+```
+
+```
+browser:
+playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
+```
+
+State persists across session calls:
+
+```
+browser:
+playwriter -s 1 -e 'state.x = 1'
+```
+
+```
+browser:
+playwriter -s 1 -e 'console.log(state.x)'
+```
+
+List active sessions:
+
+```
+browser:
+playwriter session list
+```
+
+**RULE**: The `-e` argument must use single quotes. The JS inside must use double quotes for strings.
+
+**RULE**: Never chain multiple `playwriter` commands in one `browser:` block — run one command per block.
+
+## JS Execution Pathway (`exec:browser`)
+
+For direct page access, DOM queries, and data extraction. The runtime provides `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state` as globals.
 
 ```
 exec:browser
@@ -14,53 +73,40 @@ await page.goto('https://example.com')
 await snapshot({ page })
 ```
 
-## Core Workflow
-
-Navigate, snapshot to understand the page, then interact:
-
 ```
 exec:browser
-await page.goto('https://example.com/form')
-await snapshot({ page })
-await page.fill('[name=email]', 'user@example.com')
-await page.click('[type=submit]')
-await page.waitForLoadState('networkidle')
-await snapshot({ page })
+const title = await page.title()
+console.log(title)
 ```
+
+Never add shell quoting — write plain JavaScript directly.
+
+## Core Workflow
+
+1. **Create session**: `browser:\nplaywriter session new --direct`
+2. **Navigate** (one call per command): `browser:\nplaywriter -s 1 -e 'await page.goto("url")'`
+3. **Snapshot**: `browser:\nplaywriter -s 1 -e 'await snapshot({ page })'`
+4. **Interact**: click, fill, type — each as a separate browser: call
+5. **Extract data**: use `exec:browser` for JS queries
 
 ## Common Patterns
 
-### Screenshot with Accessibility Labels
+### Screenshot
+
+```
+browser:
+playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
+```
+
+### Data Extraction (use exec:browser)
 
 ```
 exec:browser
-await screenshotWithAccessibilityLabels({ page })
-```
-
-### Data Extraction
-
-```
-exec:browser
-await page.goto('https://example.com/products')
 const items = await page.$$eval('.product-title', els => els.map(e => e.textContent))
 console.log(JSON.stringify(items))
 ```
 
-### Persistent State Across Steps
-
-```
-exec:browser
-state.count = 0
-await page.goto('https://example.com')
-state.title = await page.title()
-```
-
-```
-exec:browser
-console.log(state.title, state.count)
-```
-
-### Console Monitoring
+### Console Monitoring (exec:browser)
 
 ```
 exec:browser
@@ -76,60 +122,49 @@ console.log(JSON.stringify(state.consoleMsgs))
 
 ### Web Worker Console Monitoring
 
-Capture console output from Dedicated Web Workers (e.g. game server workers):
-
 ```
 exec:browser
 state.workerMsgs = []
-// Capture from already-spawned workers
 for (const w of page.workers()) {
   w.evaluate(() => {
-    const orig = console.log.bind(console)
-    console.log = (...a) => { orig(...a); self.postMessage({ __log: a.map(String).join(' ') }) }
+    const o = console.log.bind(console)
+    console.log = (...a) => { o(...a) }
   }).catch(() => {})
 }
-// Capture from workers spawned after this point
 page.on('worker', w => {
-  state.workerMsgs.push('[worker attached] ' + w.url())
-  w.evaluate(() => {
-    const orig = console.log.bind(console)
-    console.log = (...a) => { orig(...a); self.postMessage({ __log: a.map(String).join(' ') }) }
-  }).catch(() => {})
+  state.workerMsgs.push('[worker] ' + w.url())
 })
 ```
 
 ```
 exec:browser
-// List all active workers and their URLs
 const workers = page.workers()
 console.log('Workers:', workers.length, workers.map(w => w.url()).join(', '))
 ```
 
 ```
 exec:browser
-// Evaluate JS inside the first worker
-const result = await page.workers()[0].evaluate(() => typeof self.someGlobal)
-console.log(result)
+if (page.workers().length > 0) {
+  const r = await page.workers()[0].evaluate(() => JSON.stringify({ type: 'worker alive' }))
+  console.log(r)
+}
 ```
 
-### Inject Global Debug State into Page
+### Access window.debug globals
 
 ```
 exec:browser
-const result = await page.evaluate(() => {
-  // Access app globals exposed on window
-  return JSON.stringify({
-    entityCount: window.debug?.scene?.children?.length,
-    playerId: window.debug?.client?.playerId
-  })
-})
+const result = await page.evaluate(() => JSON.stringify({
+  entityCount: window.debug?.scene?.children?.length,
+  playerId: window.debug?.client?.playerId
+}))
 console.log(result)
 ```
 
 ## Key Rules
 
-**Only `exec:browser`** — never run any browser CLI tool directly via Bash.
-
-**Snapshot before interacting** — always call `await snapshot({ page })` to understand current page state before clicking or filling.
-
-**State persists** — `state` object and page session carry across multiple `exec:browser` calls.
+- `browser:` prefix → playwriter session management (one command per block)
+- `exec:browser` → JS in page context (multi-line JS allowed)
+- Never mix pathways in the same Bash call
+- `-e` argument: single quotes on outside, double quotes inside for JS strings
+- One `playwriter` command per `browser:` block
