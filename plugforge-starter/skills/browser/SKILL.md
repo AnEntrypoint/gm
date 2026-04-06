@@ -74,6 +74,58 @@ exec:browser
 console.log(JSON.stringify(state.consoleMsgs))
 ```
 
+### Web Worker Console Monitoring
+
+Capture console output from Dedicated Web Workers (e.g. game server workers):
+
+```
+exec:browser
+state.workerMsgs = []
+// Capture from already-spawned workers
+for (const w of page.workers()) {
+  w.evaluate(() => {
+    const orig = console.log.bind(console)
+    console.log = (...a) => { orig(...a); self.postMessage({ __log: a.map(String).join(' ') }) }
+  }).catch(() => {})
+}
+// Capture from workers spawned after this point
+page.on('worker', w => {
+  state.workerMsgs.push('[worker attached] ' + w.url())
+  w.evaluate(() => {
+    const orig = console.log.bind(console)
+    console.log = (...a) => { orig(...a); self.postMessage({ __log: a.map(String).join(' ') }) }
+  }).catch(() => {})
+})
+```
+
+```
+exec:browser
+// List all active workers and their URLs
+const workers = page.workers()
+console.log('Workers:', workers.length, workers.map(w => w.url()).join(', '))
+```
+
+```
+exec:browser
+// Evaluate JS inside the first worker
+const result = await page.workers()[0].evaluate(() => typeof self.someGlobal)
+console.log(result)
+```
+
+### Inject Global Debug State into Page
+
+```
+exec:browser
+const result = await page.evaluate(() => {
+  // Access app globals exposed on window
+  return JSON.stringify({
+    entityCount: window.debug?.scene?.children?.length,
+    playerId: window.debug?.client?.playerId
+  })
+})
+console.log(result)
+```
+
 ## Key Rules
 
 **Only `exec:browser`** — never run any browser CLI tool directly via Bash.
