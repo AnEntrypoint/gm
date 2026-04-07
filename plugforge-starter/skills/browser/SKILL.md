@@ -24,6 +24,8 @@ Every `exec:browser` call has a 15s live window. During that window, all stdout/
 
 **Never use `await new Promise(r => setTimeout(r, N))` with N > 10000.** Use short poll loops instead (see patterns below).
 
+**"Assertion failed: UV_HANDLE_CLOSING" in output** means the call exceeded 15s and was cut off — ignore the assertion noise, look at the output before it. The task was backgrounded normally.
+
 ## Session Pathway (`browser:`)
 
 Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):
@@ -155,6 +157,19 @@ playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
 exec:browser
 const items = await page.$$eval('.product-title', els => els.map(e => e.textContent))
 console.log(JSON.stringify(items))
+```
+
+### Fetch bypassing browser cache
+
+`fetch()` inside `page.evaluate()` hits the browser cache — use `cache: 'no-store'` to get fresh content:
+
+```
+exec:browser
+const text = await page.evaluate(async () => {
+  const r = await fetch('./app.js', { cache: 'no-store' })
+  return await r.text()
+})
+console.log('Has feature:', text.includes('myFunction'))
 ```
 
 ### Console Monitoring — set up listener first, then poll
