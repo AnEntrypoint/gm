@@ -127,8 +127,8 @@ Before declaring complete, sweep the entire codebase for violations:
 3. **Test files** (.test.js, .spec.js, __tests__/) → delete
 4. **Mock/stub/simulation files** → delete
 5. **Unnecessary doc files** (not CHANGELOG/CLAUDE/README/TODO.md) → delete
-6. **Duplicate code** → consolidate
-7. **Hardcoded values** → extract to config/constants
+6. **Duplicate concern** (overlapping responsibility, similar logic, parallel implementations, consolidatable code) → snake to `planning` with restructuring instructions — do not patch locally
+7. **Hardcoded values** → derive from ground truth, config, or convention
 8. **Fallback/demo modes** → remove, fail loud instead
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
