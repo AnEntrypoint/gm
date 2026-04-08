@@ -77,6 +77,7 @@ Independent items (empty `blockedBy`) run in parallel waves of ≤3 subagents.
 - Each subagent handles one item: resolves it, witnesses output, removes from .prd
 - After each wave: check newly unblocked items, launch next wave
 - Never run independent items sequentially. Never launch more than 3 at once.
+- **Exception — browser tasks**: items requiring `exec:browser` must run sequentially, never in parallel. Each project has one Chrome instance; concurrent browser subagents will conflict.
 
 ## COMPLETION CRITERION
 
