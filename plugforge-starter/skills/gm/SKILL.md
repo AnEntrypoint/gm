@@ -141,13 +141,15 @@ These rules apply to ALL phases. Violations trigger immediate snake to planning.
 - Clean ALL files not required for the program to function
 
 **CODE QUALITY**:
-- ALWAYS scan codebase (exec:codesearch) before editing to find existing implementations — resolve duplicates immediately, NEVER duplicate existing functionality
-- DRY/clean/generalized/forward-thinking architecture — immediately solve architectural issues, CONTINUOUSLY reorganize to be maximally concise/simple without losing functionality
-- Every extra symbol = technical debt — enforce clean short concise functional code
-- ALWAYS write dynamic/modular code using ground truth — ZERO hardcoded values
+- ALWAYS scan codebase (exec:codesearch) before editing — find everything that touches the same concern
+- **Duplicate concern = snake to planning**: overlapping responsibility, similar logic in different places, parallel implementations, or code that could be consolidated. Snake to `planning` with consolidation instructions
+- After every file write: run exec:codesearch for the primary function/concern you just wrote. If ANY other code serves the same concern → snake to `planning` with consolidation instructions. This is not optional — it is a gate
+- When a native feature, stdlib function, or convention replaces custom code → delete the custom code. When it would add code → do not use it
+- When a naming convention, directory structure, or auto-discovery pattern can replace explicit registration or configuration → replace it
+- ZERO hardcoded values — all values derived from ground truth, config, or convention
 - NO adjectives/descriptive language in code (variable/function names must be terse and functional)
 - No mocks/simulations/fallbacks/hardcoded/fake elements — delete on discovery
-- Set client-side debugging globals to make ALL client-side data accessible via simple REPL (window.__debug or similar)
+- Client-side code: expose all state via debug globals (window.__debug or similar)
 
 **ERROR HANDLING**:
 - Every error must throw and propagate with clear context
@@ -159,17 +161,17 @@ These rules apply to ALL phases. Violations trigger immediate snake to planning.
 - Check git history (`git log`, `git diff`) for troubleshooting known regressions — never revert, use differential comparisons and edit new code manually
 - Keep execution logs concise (<4k chars ideal, 30k max)
 - Clear cache before playwright/browser debugging
-- Test locally when possible over live
 
-**DOCUMENTATION**:
-- CLAUDE.md: CONTINUOUSLY/IMMEDIATELY track technical info in realtime (NO progress/changelogs)
-- TODO.md: CONTINUOUSLY track persistent todos — MUST completely clear/empty/delete before stopping
-- CHANGELOG.md: CONTINUOUSLY append concise change summaries
-- Deploy if deployable, publish to npm if package is on npm
+**DOCUMENTATION** (update at every phase transition, not at the end):
+- CLAUDE.md: after each structural change, update technical info. NO progress/changelogs
+- TODO.md: add items when discovered, remove when done. File must not exist at completion
+- CHANGELOG.md: append entry after each commit
+- After push: deploy if deployable, publish if npm package
 
 **PROCESS**:
 - Only persistent background shells for long-running CLI processes
-- Manual testing ONLY — NO test files ever
+- Test via exec: and browser skill — NO test files ever
+- Test locally before live
 
 ## CONSTRAINTS
 
@@ -178,6 +180,6 @@ These rules apply to ALL phases. Violations trigger immediate snake to planning.
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors | duplicate existing code | leave comments | create test files
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files | leave stale architecture when changes reveal restructuring opportunity
 
-**Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | scan codebase before edits | keep going until .prd deleted and git clean
+**Always**: invoke named skill at every transition | snake to planning on any new unknown | snake to planning when duplicate concern or restructuring opportunity discovered | witnessed execution only | scan codebase before edits | keep going until .prd deleted and git clean

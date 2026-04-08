@@ -39,7 +39,7 @@ Planning = exhaustive mutable discovery. For every aspect of the task ask:
 
 Categories of unknowns to enumerate: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency | integration points | backwards compatibility | rollback paths | deployment steps | verification criteria
 
-**MANDATORY CODEBASE SCAN**: Before planning any new implementation, search (exec:codesearch) for existing code that already does what you need. Add `existingImpl=UNKNOWN` mutable for every new feature — resolve by searching. Duplicating existing functionality is a Tier 2 violation.
+**MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN` mutable. Resolve by running exec:codesearch for the concern (not the implementation). If existing code serves the same concern → the .prd item becomes a consolidation task, not an addition. The plan restructures existing code to absorb the new requirement — never bolt new code alongside existing code that does related work.
 
 ## .PRD FORMAT
 
