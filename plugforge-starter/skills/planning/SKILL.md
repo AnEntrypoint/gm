@@ -39,6 +39,8 @@ Planning = exhaustive mutable discovery. For every aspect of the task ask:
 
 Categories of unknowns to enumerate: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency | integration points | backwards compatibility | rollback paths | deployment steps | verification criteria
 
+**MANDATORY CODEBASE SCAN**: Before planning any new implementation, search (exec:codesearch) for existing code that already does what you need. Add `existingImpl=UNKNOWN` mutable for every new feature — resolve by searching. Duplicating existing functionality is a Tier 2 violation.
+
 ## .PRD FORMAT
 
 Path: exactly `./.prd` in current working directory. **JSON array** written via `exec:nodejs`.

@@ -118,9 +118,28 @@ gh run list --repo AnEntrypoint/<downstream-repo> --limit 3 --json databaseId,na
 ```
 Monitor any cascade runs the same way — poll, diagnose failures, fix if the cause is in this repo.
 
+## CODEBASE HYGIENE SWEEP
+
+Before declaring complete, sweep the entire codebase for violations:
+
+1. **Files >200 lines** → split immediately
+2. **Comments in code** → remove all
+3. **Test files** (.test.js, .spec.js, __tests__/) → delete
+4. **Mock/stub/simulation files** → delete
+5. **Unnecessary doc files** (not CHANGELOG/CLAUDE/README/TODO.md) → delete
+6. **Duplicate code** → consolidate
+7. **Hardcoded values** → extract to config/constants
+8. **Fallback/demo modes** → remove, fail loud instead
+9. **TODO.md** → must be empty/deleted before completion
+10. **CHANGELOG.md** → must have entries for this session's changes
+11. **CLAUDE.md** → must reflect current technical state
+12. **Deploy/publish** → if deployable, deploy. If npm package, publish.
+
+Any violation found = fix immediately before advancing.
+
 ## COMPLETION DEFINITION
 
-All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | all CI runs green | `user_steps_remaining=0`
+All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | all CI runs green | codebase hygiene sweep clean | TODO.md empty/deleted | CHANGELOG.md updated | `user_steps_remaining=0`
 
 ## DO NOT STOP
 
@@ -128,9 +147,9 @@ After end-to-end verification passes: read .prd from disk. If any items remain, 
 
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items | skip hygiene sweep | leave comments/mocks/test files/fallbacks
 
-**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass
+**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
 
 ---
 
