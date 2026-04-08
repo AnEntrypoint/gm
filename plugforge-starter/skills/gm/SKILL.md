@@ -108,6 +108,8 @@ Invoke `browser` skill. Escalation — exhaust each before advancing:
 3. navigate/click/type — only when real events required
 4. screenshot — last resort only
 
+**Browser tasks serialize within a project**: never launch parallel subagents that both use `exec:browser` for the same project/session. Each project gets one Chrome instance; concurrent browser calls share the same window and will conflict.
+
 ## SKILL REGISTRY
 
 **`planning`** — Mutable discovery and .prd construction. Invoke at start and on any new unknown.
