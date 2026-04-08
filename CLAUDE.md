@@ -20,6 +20,8 @@ node cli.js plugforge-starter ./build
 
 ## Known Gotchas
 
+**npm publish E403 race condition**: Plugforge's `publish.yml` pushes to downstream repos AND publishes to npm. The push triggers the downstream repo's own `publish-npm.yml`, which tries to publish the same version again → E403. Both `lib/template-builder.js:generatePublishNpmWorkflow()` and `plugforge-starter/.github/workflows/publish-npm.yml` must tolerate "cannot publish over previously published versions" by grepping the error output instead of failing.
+
 **Adding a new platform**: update `PLATFORM_META` in `lib/page-generator.js` — this is the single registration point, not obvious from the adapter structure.
 
 **Clean build required**: `cleanBuildDir()` must delete the entire output dir before regenerating. Skipping causes stale files to silently shadow new ones — the build appears to succeed but old output persists.
