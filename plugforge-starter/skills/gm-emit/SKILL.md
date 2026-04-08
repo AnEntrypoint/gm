@@ -71,11 +71,18 @@ Pre-emit revealing unexpected behavior → new unknown → snake to `planning`.
 - Pre-emit debug passed with real inputs and error inputs
 - Post-emit verification matches pre-emit exactly
 - Hot reloadable: state outside reloadable modules, handlers swap atomically
-- Crash-proof: catch at every boundary, recovery hierarchy
-- No mocks/fakes/stubs anywhere
-- Files ≤200 lines, no duplicate code, no comments, no hardcoded values
-- No fallbacks, demo modes, or silent error swallowing — every error must throw and propagate
+- Errors throw with clear context — no fallbacks, demo modes, silent swallowing, `|| default`, `catch { return null }`
+- No mocks/fakes/stubs/simulations/test files anywhere — delete on discovery
+- Files ≤200 lines — split immediately if over, do not advance
+- No duplicate code — scan codebase for existing implementations before writing
+- No comments — remove any found
+- No hardcoded values — dynamic/modular code using ground truth only
+- No adjectives/descriptive language in variable/function names
+- No unnecessary files — clean anything not required for the program to function
+- Client-side code exposes debug globals (window.__debug or similar)
 - CLAUDE.md reflects actual behavior
+- CHANGELOG.md updated with changes
+- TODO.md cleared or deleted
 
 ## CODEBASE EXPLORATION
 

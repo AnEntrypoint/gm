@@ -114,7 +114,11 @@ Invoke `browser` skill. Escalation — exhaust each before advancing:
 
 ## GROUND TRUTH
 
-Real services, real data, real timing. Mocks/fakes/stubs = delete immediately. No .test.js/.spec.js. Delete on discovery.
+Real services, real data, real timing. Mocks/fakes/stubs/simulations = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must fail loud with clear logs.
+
+**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same functionality. Resolve duplicates immediately — NEVER duplicate existing code.
+
+**HYPOTHESIZE VIA EXECUTION**: Always troubleshoot and validate hypotheses through witnessed execution BEFORE editing files. Never edit based on assumptions — run the code first, observe the actual behavior, then edit with ground truth.
 
 ## DO NOT STOP
 
@@ -122,9 +126,9 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | test files | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code
 
-**Always**: witness every hypothesis | import real modules | snake to planning on any new unknown | fix immediately on discovery | invoke next skill immediately when done
+**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | snake to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/test files on discovery | invoke next skill immediately when done
 
 ---
 

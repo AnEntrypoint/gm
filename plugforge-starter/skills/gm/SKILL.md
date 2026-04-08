@@ -126,6 +126,51 @@ Invoke `browser` skill. Escalation — exhaust each before advancing:
 
 Completing a phase is NOT stopping. After every phase: read .prd, check git, invoke next skill. Only when .prd is deleted AND git is clean AND all commits are pushed may you return a final response to the user.
 
+## MANDATORY DEV WORKFLOW — ABSOLUTE RULES
+
+These rules apply to ALL phases. Violations trigger immediate snake to planning.
+
+**FILES**:
+- Permanent structure ONLY — NO ephemeral/temp/mock/simulation files. Use exec: and browser skill instead
+- Single primary implementations — ZERO failovers/fallbacks/demo modes ever
+- Errors fail with brutally clear logs — NEVER hide through failovers or silent catches
+- Hard 200-line limit per file — split files >200 lines BEFORE continuing
+- NO report/doc files except CHANGELOG.md, CLAUDE.md, README.md, TODO.md — DELETE others on discovery
+- Remove ALL comments immediately when encountered — zero tolerance
+- NO test files (.test.js, .spec.js, __tests__/) — manual testing only via exec: and browser skill
+- Clean ALL files not required for the program to function
+
+**CODE QUALITY**:
+- ALWAYS scan codebase (exec:codesearch) before editing to find existing implementations — resolve duplicates immediately, NEVER duplicate existing functionality
+- DRY/clean/generalized/forward-thinking architecture — immediately solve architectural issues, CONTINUOUSLY reorganize to be maximally concise/simple without losing functionality
+- Every extra symbol = technical debt — enforce clean short concise functional code
+- ALWAYS write dynamic/modular code using ground truth — ZERO hardcoded values
+- NO adjectives/descriptive language in code (variable/function names must be terse and functional)
+- No mocks/simulations/fallbacks/hardcoded/fake elements — delete on discovery
+- Set client-side debugging globals to make ALL client-side data accessible via simple REPL (window.__debug or similar)
+
+**ERROR HANDLING**:
+- Every error must throw and propagate with clear context
+- No `|| defaultValue`, no `catch { return null }`, no graceful degradation
+- The only acceptable error handling: catch → log the real error → re-throw or display to user
+
+**DEBUGGING**:
+- ALWAYS hypothesize/troubleshoot via execution BEFORE editing any files
+- Check git history (`git log`, `git diff`) for troubleshooting known regressions — never revert, use differential comparisons and edit new code manually
+- Keep execution logs concise (<4k chars ideal, 30k max)
+- Clear cache before playwright/browser debugging
+- Test locally when possible over live
+
+**DOCUMENTATION**:
+- CLAUDE.md: CONTINUOUSLY/IMMEDIATELY track technical info in realtime (NO progress/changelogs)
+- TODO.md: CONTINUOUSLY track persistent todos — MUST completely clear/empty/delete before stopping
+- CHANGELOG.md: CONTINUOUSLY append concise change summaries
+- Deploy if deployable, publish to npm if package is on npm
+
+**PROCESS**:
+- Only persistent background shells for long-running CLI processes
+- Manual testing ONLY — NO test files ever
+
 ## CONSTRAINTS
 
 **Tier 0**: no_crash, no_exit, ground_truth_only, real_execution, fail_loud
@@ -133,8 +178,6 @@ Completing a phase is NOT stopping. After every phase: read .prd, check git, inv
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**FAIL LOUD — NO FALLBACKS**: Never create fallback modes, demo modes, graceful degradation, silent error swallowing, or try/catch that returns a default value instead of propagating the error. Every error must throw and propagate. If something fails, the user must see exactly what failed and why. No `|| defaultValue`, no `catch { return null }`, no "demo mode", no "offline mode", no degraded functionality. The only acceptable error handling is: catch → log the real error → re-throw or display to user.
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors | duplicate existing code | leave comments | create test files
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors
-
-**Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | keep going until .prd deleted and git clean
+**Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | scan codebase before edits | keep going until .prd deleted and git clean
