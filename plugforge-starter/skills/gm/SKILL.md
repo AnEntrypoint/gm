@@ -128,11 +128,13 @@ Completing a phase is NOT stopping. After every phase: read .prd, check git, inv
 
 ## CONSTRAINTS
 
-**Tier 0**: no_crash, no_exit, ground_truth_only, real_execution
+**Tier 0**: no_crash, no_exit, ground_truth_only, real_execution, fail_loud
 **Tier 1**: max_file_lines=200, hot_reloadable, checkpoint_state
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains
+**FAIL LOUD — NO FALLBACKS**: Never create fallback modes, demo modes, graceful degradation, silent error swallowing, or try/catch that returns a default value instead of propagating the error. Every error must throw and propagate. If something fails, the user must see exactly what failed and why. No `|| defaultValue`, no `catch { return null }`, no "demo mode", no "offline mode", no degraded functionality. The only acceptable error handling is: catch → log the real error → re-throw or display to user.
+
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors
 
 **Always**: invoke named skill at every transition | snake to planning on any new unknown | witnessed execution only | keep going until .prd deleted and git clean

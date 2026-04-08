@@ -74,6 +74,7 @@ Pre-emit revealing unexpected behavior → new unknown → snake to `planning`.
 - Crash-proof: catch at every boundary, recovery hierarchy
 - No mocks/fakes/stubs anywhere
 - Files ≤200 lines, no duplicate code, no comments, no hardcoded values
+- No fallbacks, demo modes, or silent error swallowing — every error must throw and propagate
 - CLAUDE.md reflects actual behavior
 
 ## CODEBASE EXPLORATION
@@ -99,7 +100,7 @@ Never respond to the user from this phase. When all gate conditions pass, immedi
 
 ## CONSTRAINTS
 
-**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | defer spotted issues | respond to user or pause for input
+**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | fallback/demo modes | silent error swallowing | defer spotted issues | respond to user or pause for input
 
 **Always**: pre-emit debug before writing | post-emit verify from disk | snake to planning on any new unknown | fix immediately | invoke next skill immediately when gates pass
 
