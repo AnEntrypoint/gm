@@ -31,9 +31,10 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 - `witnessed_e2e=UNKNOWN` until real end-to-end run produces witnessed output
 - `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
 - `git_pushed=UNKNOWN` until `git log origin/main..HEAD --oneline` returns empty
+- `ci_passed=UNKNOWN` until all GitHub Actions runs triggered by the push reach `conclusion: success`
 - `prd_empty=UNKNOWN` until .prd file is deleted (not just empty — file must not exist)
 
-All four must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
+All five must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
 ## END-TO-END VERIFICATION
 
@@ -84,9 +85,42 @@ git log origin/main..HEAD --oneline
 ```
 Must return empty. If not: stage → commit → push → re-verify. Local commit without push ≠ complete.
 
+## CI ENFORCEMENT
+
+After push, monitor all triggered GitHub Actions runs until they complete:
+
+1. List runs triggered by the push:
+```
+exec:bash
+gh run list --limit 5 --json databaseId,name,status,conclusion,headBranch
+```
+
+2. For each run that is `in_progress` or `queued`, poll until it completes:
+```
+exec:bash
+gh run watch <run_id> --exit-status
+```
+
+3. If a run fails, view the logs to diagnose:
+```
+exec:bash
+gh run view <run_id> --log-failed
+```
+
+4. Fix the root cause → snake to the appropriate phase (emit for file issues, execute for logic issues, planning for new unknowns) → re-push → re-monitor.
+
+5. All runs must reach `conclusion: success` before advancing. A failed CI run is a KNOWN mutable that blocks completion — never ignore it.
+
+**Cascade awareness**: pushes to this repo may trigger downstream workflows (see CLAUDE.md Rust Binary Update Pipeline). After local CI passes, check downstream repos for triggered runs:
+```
+exec:bash
+gh run list --repo AnEntrypoint/<downstream-repo> --limit 3 --json databaseId,name,status,conclusion
+```
+Monitor any cascade runs the same way — poll, diagnose failures, fix if the cause is in this repo.
+
 ## COMPLETION DEFINITION
 
-All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | `user_steps_remaining=0`
+All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | all CI runs green | `user_steps_remaining=0`
 
 ## DO NOT STOP
 
@@ -94,7 +128,7 @@ After end-to-end verification passes: read .prd from disk. If any items remain, 
 
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | .prd items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items
 
 **Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass
 
