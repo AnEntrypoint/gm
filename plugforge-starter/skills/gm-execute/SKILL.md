@@ -116,7 +116,7 @@ Invoke `browser` skill. Escalation — exhaust each before advancing:
 
 Real services, real data, real timing. Mocks/fakes/stubs/simulations = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must fail loud with clear logs.
 
-**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same functionality. Resolve duplicates immediately — NEVER duplicate existing code.
+**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, snake to `planning` with restructuring instructions instead of continuing.
 
 **HYPOTHESIZE VIA EXECUTION**: Always troubleshoot and validate hypotheses through witnessed execution BEFORE editing files. Never edit based on assumptions — run the code first, observe the actual behavior, then edit with ground truth.
 

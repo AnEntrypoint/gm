@@ -74,7 +74,7 @@ Pre-emit revealing unexpected behavior → new unknown → snake to `planning`.
 - Errors throw with clear context — no fallbacks, demo modes, silent swallowing, `|| default`, `catch { return null }`
 - No mocks/fakes/stubs/simulations/test files anywhere — delete on discovery
 - Files ≤200 lines — split immediately if over, do not advance
-- No duplicate code — scan codebase for existing implementations before writing
+- No duplicate concern — after writing, run exec:codesearch for the primary concern. If ANY other code serves the same concern → do NOT advance, snake to `planning` with consolidation instructions
 - No comments — remove any found
 - No hardcoded values — dynamic/modular code using ground truth only
 - No adjectives/descriptive language in variable/function names
@@ -99,7 +99,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser\n<js>` → (2) `browser` s
 
 ## SELF-CHECK (before and after each file)
 
-File ≤200 lines | No duplication | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
+File ≤200 lines | No duplicate concern | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
 
 ## DO NOT STOP
 
