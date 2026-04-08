@@ -52,6 +52,14 @@ jobs:
 
       - name: Publish to npm
         if: env.SKIP_PUBLISH != 'true'
-        run: npm publish
+        run: |
+          npm publish --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
+          if [ "$EXIT" != "0" ]; then
+            if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
+              echo "⚠️  Version already published, skipping"
+            else
+              exit "$EXIT"
+            fi
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
