@@ -50,7 +50,7 @@ Write only sections that changed. Do not rewrite unchanged content. Rules per fi
 
 **README.md**: platform count matches adapters in `platforms/`, skill tree diagram matches current state machine, quick start commands work.
 
-**CLAUDE.md**: Launch memorize subagent in background with session learnings. Do not inline-edit CLAUDE.md — the memorize agent handles extraction, deduplication, and writing.
+**CLAUDE.md**: Launch memorize sub-agent in background with session learnings. Do not inline-edit CLAUDE.md — the memorize agent handles extraction, deduplication, and writing. Use: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
 
 **docs/index.html**: `PHASES` array matches current skill state machine phases. Platform lists match `platforms/` directory. State machine diagram updated if new phases added.
 

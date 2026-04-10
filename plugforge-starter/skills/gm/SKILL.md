@@ -121,7 +121,7 @@ Invoke `browser` skill. Escalation — exhaust each before advancing:
 **`gm-complete`** — VERIFY state. End-to-end verification and git enforcement. EXIT: invoke `gm-execute` if .prd items remain; invoke `update-docs` if .prd empty and pushed.
 **`update-docs`** — Refresh README, CLAUDE.md, and docs to reflect session changes. Invoked by `gm-complete`. Terminal state — declares COMPLETE.
 **`browser`** — Browser automation. Invoke inside EXECUTE state for all browser/UI work.
-**`memorize`** — Background memory agent (haiku, run_in_background=true). Launch when structural changes occur. Never blocks execution.
+**`memorize`** — Sub-agent (not skill). Background memory agent (haiku, run_in_background=true). Launch when structural changes occur. Never blocks execution. Invocation: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
 ## PARALLEL SUBAGENTS (post-PLAN)
 
@@ -179,7 +179,7 @@ These rules apply to ALL states. Violations trigger immediate regression to PLAN
 - Adjacent step pairs are the most common failure site in chains — debug handoffs, not just individual steps
 
 **DOCUMENTATION** (update at every phase transition, not at the end):
-- CLAUDE.md: launch `memorize` subagent in background with what was learned. Never inline-edit CLAUDE.md directly.
+- CLAUDE.md: launch `memorize` sub-agent in background with what was learned. Never inline-edit CLAUDE.md directly. Use: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 - TODO.md: add items when discovered, remove when done. File must not exist at completion
 - CHANGELOG.md: append entry after each commit
 - After push: deploy if deployable, publish if npm package
