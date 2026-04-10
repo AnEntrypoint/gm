@@ -14,30 +14,32 @@ You are in the **PLAN** phase. Your job is to discover every unknown before exec
 
 ## TRANSITIONS
 
-**FORWARD**:
-- No new mutables discovered in latest pass → .prd is complete → invoke `gm-execute` skill
+**EXIT — invoke `gm-execute` skill immediately when**:
+- Zero new unknowns discovered in the latest reasoning pass
+- All .prd items have explicit acceptance criteria
+- All dependencies are mapped bidirectionally
+- Do NOT advance while unknowns remain discoverable through reasoning alone
 
-**SELF-LOOP (stay in PLAN)**:
-- Each planning pass may surface new unknowns → add them to .prd → plan again
+**SELF-LOOP (remain in PLAN state)**:
+- Each planning pass surfaces new unknowns → add them to .prd → plan again
 - Loop until a full pass produces zero new items
-- Do not advance to EXECUTE while unknowns remain discoverable through reasoning alone
 
-**BACKWARD (snakes back here from later phases)**:
-- From EXECUTE: execution reveals an unknown not in .prd → snake here, add it, re-plan
-- From EMIT: scope shifted mid-write → snake here, revise affected items, re-plan
-- From VERIFY: end-to-end reveals requirement was wrong → snake here, rewrite items, re-plan
+**REGRESSION ENTRIES (this skill is re-entered from later states)**:
+- From EXECUTE state: execution reveals an unknown not in .prd → add it, re-plan, re-advance
+- From EMIT state: scope shifted mid-write → revise affected items, re-plan, re-advance
+- From VERIFY state: end-to-end reveals wrong requirement → rewrite items, re-plan, re-advance
 
 ## WHAT PLANNING MEANS
 
-Planning = exhaustive mutable discovery. For every aspect of the task ask:
-- What do I not know? → name it as a mutable
-- What could go wrong? → name it as an edge case item
-- What depends on what? → map blocking/blockedBy
-- What assumptions am I making? → validate each as a mutable
+Planning = exhaustive fault-surface enumeration. For every aspect of the task, apply diagnostic questioning:
+- What do I not know? → name it as a mutable (UNKNOWN)
+- What could go wrong? → name it as an edge case item with a failure mode
+- What depends on what? → map blocking/blockedBy explicitly
+- What assumptions am I making? → each assumption is an unwitnessed hypothesis = mutable until proven by execution
 
-**Iterate until**: a full reasoning pass adds zero new items to .prd.
+**Iterate until**: a full reasoning pass adds zero new items to .prd. Every item must have an acceptance criterion that is binary and measurable — no subjective criteria.
 
-Categories of unknowns to enumerate: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency | integration points | backwards compatibility | rollback paths | deployment steps | verification criteria
+Fault surfaces to enumerate exhaustively: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency hazards | integration seams | backwards compatibility | rollback paths | deployment steps | verification criteria | CI/CD pipeline correctness
 
 **MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN` mutable. Resolve by running exec:codesearch for the concern (not the implementation). If existing code serves the same concern → the .prd item becomes a consolidation task, not an addition. The plan restructures existing code to absorb the new requirement — never bolt new code alongside existing code that does related work.
 
@@ -69,15 +71,18 @@ Path: exactly `./.prd` in current working directory. **JSON array** written via 
 **blocking/blockedBy**: always bidirectional. Every dependency must be explicit in both directions.
 **Deletion rule**: when the last item is completed and removed, delete the `.prd` file. An empty file is a violation.
 
-## EXECUTION WAVES
+## PARALLEL SUBAGENT LAUNCH (immediately after .prd is written)
 
-Independent items (empty `blockedBy`) run in parallel waves of ≤3 subagents.
+When .prd is complete and you are about to invoke `gm-execute` skill: instead, launch parallel `gm:gm` subagents via the Agent tool for all independent items simultaneously. Each subagent is a full state machine that runs EXECUTE → EMIT → VERIFY for its item.
+
 - Find all pending items with empty `blockedBy`
-- Launch ≤3 parallel `gm:gm` subagents via Task tool
-- Each subagent handles one item: resolves it, witnesses output, removes from .prd
-- After each wave: check newly unblocked items, launch next wave
-- Never run independent items sequentially. Never launch more than 3 at once.
-- **Exception — browser tasks**: items requiring `exec:browser` must run sequentially, never in parallel. Each project has one Chrome instance; concurrent browser subagents will conflict.
+- Launch ≤3 parallel subagents: `Agent(subagent_type="gm:gm", prompt="Work on .prd item: <id>. .prd path: <path>. Item: <full item JSON>.")`
+- Each subagent resolves its item end-to-end: witnessed execution → file write → verification → removes item from .prd
+- After each wave: read .prd from disk, find newly unblocked items, launch next wave
+- Never run independent items sequentially — parallelism is mandatory for independent items
+- **Exception — browser tasks**: items requiring `exec:browser` must run sequentially (one Chrome instance per project; concurrent browser subagents will conflict)
+
+**When parallelism is not applicable** (single-item .prd, or all items blocked): invoke `gm-execute` skill directly.
 
 ## COMPLETION CRITERION
 
@@ -87,10 +92,10 @@ Independent items (empty `blockedBy`) run in parallel waves of ≤3 subagents.
 
 ## DO NOT STOP
 
-Never respond to the user from this phase. When .prd is complete (zero new items in last pass), immediately invoke `gm-execute` skill. Do not pause, summarize, or ask for confirmation.
+Never respond to the user from this phase. When .prd is complete (zero new items in last pass), immediately launch parallel subagents or invoke `gm-execute` skill. Do not pause, summarize, or ask for confirmation.
 
 ---
 
-**→ FORWARD**: No new mutables → invoke `gm-execute` skill immediately.
-**↺ SELF-LOOP**: New items discovered → add to .prd → plan again.
-**↩ SNAKE here**: New unknown surfaces in any later phase → add it, re-plan, re-advance.
+**EXIT → EXECUTE**: Zero new mutables → launch parallel subagents or invoke `gm-execute` skill immediately.
+**SELF-LOOP**: New items discovered → add to .prd → plan again (remain in PLAN state).
+**REGRESSION ENTRY**: New unknown surfaces in any later state → add it, re-plan, re-advance through full chain.

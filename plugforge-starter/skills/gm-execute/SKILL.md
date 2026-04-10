@@ -12,14 +12,15 @@ You are in the **EXECUTE** phase. Resolve every named mutable via witnessed exec
 
 ## TRANSITIONS
 
-**FORWARD**: All mutables KNOWN → invoke `gm-emit` skill
+**EXIT — invoke `gm-emit` skill immediately when**: All mutables are KNOWN (zero UNKNOWN remaining). Do not wait, do not summarize. Invoke the skill.
 
-**SELF-LOOP**: Mutable still UNKNOWN after one pass → re-run with different angle (max 2 passes then snake)
+**SELF-LOOP (remain in EXECUTE state)**: Mutable still UNKNOWN after one pass → re-run with different angle (max 2 passes, then regress to PLAN)
 
-**BACKWARD**:
-- New unknown discovered → invoke `planning` skill immediately, restart chain
-- From EMIT: logic error → re-enter here, re-resolve mutable
-- From VERIFY: runtime failure → re-enter here, re-resolve with real system state
+**STATE REGRESSIONS**:
+- New unknown discovered → invoke `planning` skill immediately, reset to PLAN state
+- EXECUTE mutable unresolvable after 2 passes → invoke `planning` skill, reset to PLAN state
+- Re-entered from EMIT state (logic error) → re-resolve the mutable, then re-invoke `gm-emit` skill
+- Re-entered from VERIFY state (runtime failure) → re-resolve with real system state, then re-invoke `gm-emit` skill
 
 ## MUTABLE DISCIPLINE
 
@@ -75,9 +76,9 @@ exec:codesearch
 4. Keep changing or adding words each pass until content is found
 5. Minimum 4 attempts before concluding content is absent
 
-## IMPORT-BASED DEBUGGING
+## DIAGNOSTIC PROTOCOL — IMPORT-BASED EXECUTION
 
-Always import actual codebase modules. Never rewrite logic inline.
+Always import actual codebase modules. Never rewrite logic inline. Reimplemented output is unwitnessed and inadmissible as ground truth.
 
 ```
 exec:nodejs
@@ -87,38 +88,40 @@ console.log(await fn(realInput));
 
 Witnessed import output = resolved mutable. Reimplemented output = UNKNOWN.
 
+**Differential diagnosis**: when behavior diverges from expectation, run the smallest possible isolation test first. Compare actual vs expected. Name the delta. The delta is the mutable — resolve it before touching any file.
+
 ## EXECUTION DENSITY
 
-Pack every related hypothesis into one run. Each run ≤15s. Witnessed output = ground truth. Narrated assumption = nothing.
+Pack every related hypothesis into one run. Each run ≤15s. Witnessed output = ground truth. Narrated assumption = inadmissible.
 
-Parallel waves: ≤3 `gm:gm` subagents via Task tool — independent items simultaneously, never sequentially.
+Parallel waves: ≤3 `gm:gm` subagents via Agent tool (`Agent(subagent_type="gm:gm", ...)`) — independent items simultaneously, never sequentially.
 
-## CHAIN DECOMPOSITION
+## CHAIN DECOMPOSITION — FAULT ISOLATION
 
-Break every multi-step operation before running end-to-end:
+Break every multi-step operation before running end-to-end. Treat each step as a diagnostic unit:
 1. Number every distinct step
 2. Per step: input shape, output shape, success condition, failure mode
-3. Run each step in isolation — witness — assign mutable — KNOWN before next
-4. Debug adjacent pairs for handoff correctness
+3. Run each step in isolation — witness output — assign mutable — must be KNOWN before proceeding to next step
+4. Debug adjacent step pairs for handoff correctness — the seam between steps is the most common failure site
 5. Only when all pairs pass: run full chain end-to-end
 
-Step failure revealing new unknown → snake to `planning`.
+Step failure revealing new unknown → regress to `planning` state immediately.
 
-## BROWSER DEBUGGING
+## BROWSER DIAGNOSTIC ESCALATION
 
-Invoke `browser` skill. Escalation — exhaust each before advancing:
-1. `exec:browser\n<js>` — query DOM/state. Always first.
-2. `browser` skill — for full session workflows
-3. navigate/click/type — only when real events required
-4. screenshot — last resort
+Invoke `browser` skill. Exhaust each level before advancing to next:
+1. `exec:browser\n<js>` — inspect DOM state, read globals, check network responses. Always first.
+2. `browser` skill — for full session workflows requiring navigation
+3. navigate/click/type — only when real events required and DOM inspection insufficient
+4. screenshot — last resort, only after all JS-based diagnostics exhausted
 
-## GROUND TRUTH
+## GROUND TRUTH ENFORCEMENT
 
-Real services, real data, real timing. Mocks/fakes/stubs/simulations = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must fail loud with clear logs.
+Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
 
-**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, snake to `planning` with restructuring instructions instead of continuing.
+**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, regress to `planning` with restructuring instructions instead of continuing.
 
-**HYPOTHESIZE VIA EXECUTION**: Always troubleshoot and validate hypotheses through witnessed execution BEFORE editing files. Never edit based on assumptions — run the code first, observe the actual behavior, then edit with ground truth.
+**HYPOTHESIZE VIA EXECUTION — NEVER VIA ASSUMPTION**: Formulate a falsifiable hypothesis. Run it. Witness the output. The output either confirms or falsifies. Only a witnessed falsification justifies editing a file. Never edit based on unwitnessed assumptions — form hypothesis → run → witness → edit.
 
 ## DO NOT STOP
 
@@ -128,10 +131,10 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 **Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | test files | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code
 
-**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | snake to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/test files on discovery | invoke next skill immediately when done
+**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/test files on discovery | invoke next skill immediately when done
 
 ---
 
-**→ FORWARD**: All mutables KNOWN → invoke `gm-emit` skill immediately.
-**↺ SELF-LOOP**: Still UNKNOWN → re-run (max 2 passes).
-**↩ SNAKE to PLAN**: Any new unknown → invoke `planning` skill, restart chain.
+**EXIT → EMIT**: All mutables KNOWN → invoke `gm-emit` skill immediately.
+**SELF-LOOP**: Still UNKNOWN → re-run (max 2 passes, then regress to PLAN).
+**REGRESS → PLAN**: Any new unknown → invoke `planning` skill, reset to PLAN state.
