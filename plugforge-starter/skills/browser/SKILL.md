@@ -6,6 +6,9 @@ allowed-tools: Bash(browser:*), Bash(exec:browser*)
 
 # Browser Automation with playwriter
 
+**Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
+
+
 ## Two Pathways
 
 **Session commands** (`browser:` prefix) — manage multi-step sessions via playwriter CLI. Each `browser:` block runs its commands sequentially.
@@ -64,12 +67,6 @@ browser:
 playwriter -s 1 -e 'console.log(state.x)'
 ```
 
-List active sessions:
-
-```
-browser:
-playwriter session list
-```
 
 **RULE**: The `-e` argument must use single quotes. The JS inside must use double quotes for strings.
 
@@ -135,21 +132,7 @@ task_N
 
 ## Common Patterns
 
-### Navigate and check current URL/status
 
-```
-exec:browser
-await page.goto('https://example.com')
-console.log('URL:', page.url())
-console.log('title:', await page.title())
-```
-
-### Screenshot
-
-```
-browser:
-playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
-```
 
 ### Data Extraction
 
@@ -159,18 +142,6 @@ const items = await page.$$eval('.product-title', els => els.map(e => e.textCont
 console.log(JSON.stringify(items))
 ```
 
-### Fetch bypassing browser cache
-
-`fetch()` inside `page.evaluate()` hits the browser cache — use `cache: 'no-store'` to get fresh content:
-
-```
-exec:browser
-const text = await page.evaluate(async () => {
-  const r = await fetch('./app.js', { cache: 'no-store' })
-  return await r.text()
-})
-console.log('Has feature:', text.includes('myFunction'))
-```
 
 ### Console Monitoring — set up listener first, then poll
 
@@ -189,14 +160,6 @@ console.log('logs so far:', JSON.stringify(state.logs.slice(-20)))
 console.log('errors:', JSON.stringify(state.errors))
 ```
 
-### Web Worker Access
-
-```
-exec:browser
-const workers = page.workers()
-console.log('Workers:', workers.length, workers.map(w => w.url()).join(', '))
-```
-
 ```
 exec:browser
 if (page.workers().length > 0) {
@@ -205,9 +168,6 @@ if (page.workers().length > 0) {
 }
 ```
 
-### Access window globals
-
-```
 exec:browser
 const result = await page.evaluate(() => JSON.stringify({
   entityCount: window.debug?.scene?.children?.length,
@@ -216,9 +176,6 @@ const result = await page.evaluate(() => JSON.stringify({
 console.log(result)
 ```
 
-### Wait for element with short poll
-
-```
 exec:browser
 const start = Date.now()
 while (Date.now() - start < 12000) {
