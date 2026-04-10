@@ -123,6 +123,14 @@ Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnosti
 
 **HYPOTHESIZE VIA EXECUTION — NEVER VIA ASSUMPTION**: Formulate a falsifiable hypothesis. Run it. Witness the output. The output either confirms or falsifies. Only a witnessed falsification justifies editing a file. Never edit based on unwitnessed assumptions — form hypothesis → run → witness → edit.
 
+## MEMORY
+
+When any mutable resolves from UNKNOWN to KNOWN (zero variance confirmed), launch memorize subagent in background — non-blocking, execution continues:
+
+`Agent(subagent_type='general-purpose', model='haiku', run_in_background=true, prompt=<memorize SKILL.md content>\n\n## CONTEXT TO MEMORIZE\n<resolved fact>)`
+
+Qualifies for memorization: new API shapes discovered, environment differences, behavioral constraints, runtime quirks, user feedback observed during execution.
+
 ## DO NOT STOP
 
 Never respond to the user from this phase. When all mutables are KNOWN, immediately invoke `gm-emit` skill. The chain continues until .prd is deleted and git is clean — that happens in `gm-complete`, not here.

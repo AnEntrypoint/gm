@@ -86,7 +86,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - No adjectives/descriptive language in variable/function names
 - No unnecessary files — clean anything not required for the program to function
 - Client-side code exposes debug globals (window.__debug or similar)
-- CLAUDE.md reflects actual behavior
+- memorize subagent launched in background with what was learned before advancing
 - CHANGELOG.md updated with changes
 - TODO.md cleared or deleted
 
