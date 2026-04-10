@@ -2,6 +2,8 @@
 .prd
 build/
 gm-build/
+gm-build-latest/
+gm-build-sync/
 .codeinsight
 
 .code-search/
