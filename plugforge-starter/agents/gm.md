@@ -13,7 +13,7 @@ enforce: critical
 
 All work coordination, planning, execution, and verification happens through the skill tree:
 - `gm` skill → `planning` skill → `gm-execute` skill → `gm-emit` skill → `gm-complete` skill → `update-docs` skill
-- `memorize` skill — background only, non-sequential, launched via Agent with model=haiku and run_in_background=true
+- `memorize` sub-agent — background only, non-sequential. Invocation: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
 

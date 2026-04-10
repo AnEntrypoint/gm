@@ -139,7 +139,7 @@ Before declaring complete, sweep the entire codebase for violations:
 8. **Fallback/demo modes** → remove, fail loud instead
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
-11. **memorize** → launch memorize subagent in background with session learnings before invoking update-docs
+11. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
 12. **Deploy/publish** → if deployable, deploy. If npm package, publish.
 
 Any violation found = fix immediately before advancing.

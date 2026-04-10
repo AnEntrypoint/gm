@@ -127,7 +127,7 @@ Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnosti
 
 When any mutable resolves from UNKNOWN to KNOWN (zero variance confirmed), launch memorize subagent in background — non-blocking, execution continues:
 
-`Agent(subagent_type='general-purpose', model='haiku', run_in_background=true, prompt=<memorize SKILL.md content>\n\n## CONTEXT TO MEMORIZE\n<resolved fact>)`
+`Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')`
 
 Qualifies for memorization: new API shapes discovered, environment differences, behavioral constraints, runtime quirks, user feedback observed during execution.
 
