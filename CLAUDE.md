@@ -39,6 +39,12 @@ node cli.js plugforge-starter ./build
 **bash_banned_tool blocking**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere.
 
 
+**rs-exec session-cleanup subcommand**: `rs-plugkit/src/session_end.rs` spawns `plugkit session-cleanup --session=<id>`. This subcommand must exist in `rs-exec`'s `main.rs` `Cmd` enum or session-end cleanup silently fails — clap exits with an error but null stdio hides it.
+
+**rs-exec mod declarations**: After extracting `rpc.rs` and `kill.rs`, `main.rs` must have `mod rpc; mod kill;` alongside the other `mod` declarations. Missing these causes compile errors on `crate::rpc` and `crate::kill` references in `runner.rs`.
+
+**--exec-process-mode flag in rs-exec main()**: The rs-exec binary re-invokes itself with `--exec-process-mode` for each task. `main()` must check for this flag before clap parsing and call `rs_exec::run_exec_process()`. If removed, all code execution fails silently.
+
 **memorize sub-agent manages CLAUDE.md**: Do not inline-edit CLAUDE.md directly. The `memorize` sub-agent (haiku model, run_in_background=true) reads context, extracts non-obvious caveats, deduplicates against existing entries, and writes. Invocation: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
 ## Rust Binary Update Pipeline
