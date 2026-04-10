@@ -150,8 +150,8 @@ function MutableSection() {
 function PlatformsSection() {
   return h('section', { class: 'py-20 px-4 bg-gray-900/40' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'Available Everywhere'),
-      h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'The same agent behavior, enforced across 10 platforms.'),
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, '10 Platforms'),
+      h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'The same state machine runs on every major AI coding tool.'),
       h('div', { class: 'flex flex-wrap justify-center gap-3' },
         ...PLATFORMS.map(p => h('a', {
           key: p.id,
@@ -169,7 +169,7 @@ function Footer() {
     h('p', null,
       'Built with ',
       h('a', { href: 'https://github.com/AnEntrypoint/plugforge', target: '_blank', rel: 'noopener', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'plugforge'),
-      ' \u2014 ',
+      ' · ',
       h('a', { href: './paper.html', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'Read the paper')
     )
   );
