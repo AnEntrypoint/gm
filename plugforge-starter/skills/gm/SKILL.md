@@ -197,4 +197,4 @@ These rules apply to ALL states. Violations trigger immediate regression to PLAN
 
 **Never**: `Bash(node/npm/npx/bun)` | skip planning | sequential independent items | screenshot before JS exhausted | narrate past unresolved mutables | stop while .prd has items | ask the user what to do next while work remains | create fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files | leave stale architecture when changes reveal restructuring opportunity
 
-**Always**: invoke named skill at every state transition | regress to planning on any new unknown | regress to planning when duplicate concern or restructuring opportunity discovered | witnessed execution only | scan codebase before edits | keep going until .prd deleted and git clean
+**Always**: invoke named skill at every state transition | regress to planning on any new unknown | regress to planning when duplicate concern or restructuring opportunity discovered | witnessed execution only | scan codebase before edits | keep going until .prd deleted and git clean | know the caveman skill for response policy
