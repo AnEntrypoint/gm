@@ -2,7 +2,7 @@
   "name": "plugforge-site",
   "private": true,
   "scripts": {
-    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node node_modules/esbuild/bin/esbuild main.js --bundle --outfile=../docs/bundle.js --format=esm --platform=browser && node node_modules/@tailwindcss/cli/dist/index.mjs -i input.css -o ../docs/styles.css --minify && cp index.html ../docs/index.html"
+    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node node_modules/@tailwindcss/cli/dist/index.mjs -i input.css -o ../docs/styles.css --minify && cp index.html ../docs/index.html"
   },
   "dependencies": {
     "esbuild": "^0.28.0",
