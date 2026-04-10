@@ -86,7 +86,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - No adjectives/descriptive language in variable/function names
 - No unnecessary files — clean anything not required for the program to function
 - Client-side code exposes debug globals (window.__debug or similar)
-- memorize subagent launched in background with what was learned before advancing
+- memorize sub-agent launched in background before advancing: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 - CHANGELOG.md updated with changes
 - TODO.md cleared or deleted
 
