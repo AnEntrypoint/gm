@@ -10,6 +10,8 @@ gm-build-sync/
 .gm-stop-verified
 loggedin/
 site/node_modules/
+site/platforms-out.json
+site/package-lock.json
 docs/bundle.js
 docs/styles.css
 *.tgz

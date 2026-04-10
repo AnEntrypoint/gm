@@ -1,0 +1,52 @@
+[
+  {
+    "filename": "gm-cc",
+    "label": "Claude Code",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-gc",
+    "label": "Gemini CLI",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-oc",
+    "label": "OpenCode",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-kilo",
+    "label": "Kilo Code",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-codex",
+    "label": "Codex",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-copilot-cli",
+    "label": "Copilot CLI",
+    "type": "CLI"
+  },
+  {
+    "filename": "gm-vscode",
+    "label": "VS Code",
+    "type": "IDE"
+  },
+  {
+    "filename": "gm-cursor",
+    "label": "Cursor",
+    "type": "IDE"
+  },
+  {
+    "filename": "gm-zed",
+    "label": "Zed",
+    "type": "IDE"
+  },
+  {
+    "filename": "gm-jetbrains",
+    "label": "JetBrains",
+    "type": "IDE"
+  }
+]
