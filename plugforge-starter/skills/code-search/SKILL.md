@@ -5,6 +5,9 @@ description: Mandatory codebase search workflow. Use whenever you need to find a
 
 # CODEBASE SEARCH — Mandatory Workflow
 
+**Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
+
+
 `exec:codesearch` is the only way to search the codebase. Glob, Grep, Find, Explore are hook-blocked.
 
 ## Syntax
