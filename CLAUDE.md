@@ -38,6 +38,8 @@ node cli.js plugforge-starter ./build
 
 **bash_banned_tool blocking**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere.
 
+
+**memorize skill manages CLAUDE.md**: Do not inline-edit CLAUDE.md directly. The `memorize` skill (haiku model, run_in_background=true) reads context, extracts non-obvious caveats, deduplicates against existing entries, and writes. Direct edits will be overwritten or cause duplication.
 ## Rust Binary Update Pipeline
 
 Every change to any Rust library auto-cascades all the way to the installed binary. The chain:
