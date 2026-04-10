@@ -35,7 +35,7 @@ const GITHUB_ICON = h('svg', { viewBox: '0 0 16 16', class: 'w-5 h-5 fill-curren
 );
 
 function NavBar() {
-  return h('nav', { class: 'navbar navbar-sticky navbar-glass navbar-bordered' },
+  return h('nav', { class: 'navbar navbar-sticky navbar-bordered', style: 'background:#0f172a;border-bottom:1px solid rgba(99,102,241,0.2);' },
     h('div', { class: 'max-w-5xl mx-auto px-4 w-full flex items-center justify-between' },
       h('span', { class: 'text-white font-bold text-lg tracking-tight' }, 'gm'),
       h('div', { class: 'flex items-center gap-4' },
