@@ -2,9 +2,12 @@
   "name": "plugforge-site",
   "private": true,
   "scripts": {
-    "build": "bun build main.js --outfile ../docs/bundle.js && bunx @tailwindcss/cli -i input.css -o ../docs/styles.css --content main.js,index.html && cp index.html ../docs/index.html"
+    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node node_modules/esbuild/bin/esbuild main.js --bundle --outfile=../docs/bundle.js --format=esm --platform=browser && node node_modules/@tailwindcss/cli/dist/index.mjs -i input.css -o ../docs/styles.css --minify && cp index.html ../docs/index.html"
   },
   "dependencies": {
+    "esbuild": "^0.28.0",
+    "flatspace": "^1.0.11",
+    "rippleui": "^1.12.1",
     "webjsx": "0.0.70"
   },
   "devDependencies": {
