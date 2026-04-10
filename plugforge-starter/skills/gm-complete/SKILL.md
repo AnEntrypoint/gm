@@ -12,19 +12,19 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 
 ## TRANSITIONS
 
-**FORWARD**:
-- .prd items remain → invoke `gm-execute` skill (next wave)
-- .prd empty + feature work pushed → invoke `update-docs` skill
+**EXIT — .prd items remain**: Verified items completed, .prd still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
 
-**BACKWARD**:
-- Verification reveals broken file output → invoke `gm-emit` skill, fix, re-verify, return
-- Verification reveals logic error → invoke `gm-execute` skill, re-resolve, re-emit, return
-- Verification reveals new unknown → invoke `planning` skill, restart chain
-- Verification reveals requirements wrong → invoke `planning` skill, restart chain
+**EXIT — COMPLETE**: .prd empty + all work pushed + CI green → invoke `update-docs` skill.
 
-**TRIAGE on failure**: broken file output → snake to `gm-emit` | wrong logic → snake to `gm-execute` | new unknown or wrong requirements → snake to `planning`
+**STATE REGRESSIONS**:
+- Verification reveals broken file output → invoke `gm-emit` skill, reset to EMIT state, re-verify on return
+- Verification reveals logic error → invoke `gm-execute` skill, reset to EXECUTE state, re-emit and re-verify on return
+- Verification reveals new unknown → invoke `planning` skill, reset to PLAN state
+- Verification reveals wrong requirements → invoke `planning` skill, reset to PLAN state
 
-**RULE**: Any surprise = new unknown = snake to `planning`. Never patch around surprises.
+**TRIAGE on failure**: broken file output → regress to `gm-emit` | wrong logic → regress to `gm-execute` | new unknown or wrong requirements → regress to `planning`
+
+**RULE**: Any surprise = new unknown = regress to `planning`. Never patch around surprises.
 
 ## MUTABLE DISCIPLINE
 
@@ -36,11 +36,11 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 
 All five must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
-## END-TO-END VERIFICATION
+## END-TO-END DIAGNOSTIC VERIFICATION
 
-Run the real system with real data. Witness actual output.
+Run the real system with real data. Witness actual output. This is a full-system fault-detection pass.
 
-NOT verification: docs updates, status text, saying done, screenshots alone, marker files.
+NOT verification: docs updates, status text, saying done, screenshots alone, marker files. Unwitnessed claims are inadmissible.
 
 ```
 exec:nodejs
@@ -48,7 +48,14 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser. After every success: enumerate what remains — never stop at first green.
+**Failure triage protocol**: when end-to-end fails, do not patch blindly. Isolate the fault:
+1. Identify which subsystem produced the unexpected output
+2. Reproduce the failure in isolation (single function, single module)
+3. Name the delta between expected and actual — this is the mutable
+4. Triage: broken file output → regress to EMIT | wrong logic → regress to EXECUTE | new unknown → regress to PLAN
+5. Never fix a symptom without identifying and fixing the root cause
+
+For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser diagnostics. After every success: enumerate what remains — never stop at first green. First green is not COMPLETE.
 
 ## CODE EXECUTION
 
@@ -149,12 +156,12 @@ After end-to-end verification passes: read .prd from disk. If any items remain, 
 
 **Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items | skip hygiene sweep | leave comments/mocks/test files/fallbacks
 
-**Always**: triage failure before snaking | witness end-to-end | snake to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
+**Always**: triage failure before regressing | witness end-to-end | regress to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
 
 ---
 
-**→ FORWARD**: .prd items remain → invoke `gm-execute` skill (keep going, do not stop).
-**→ FORWARD**: .prd deleted + feature work pushed → invoke `update-docs` skill.
-**↩ SNAKE to EMIT**: file output wrong → invoke `gm-emit` skill.
-**↩ SNAKE to EXECUTE**: logic wrong → invoke `gm-execute` skill.
-**↩ SNAKE to PLAN**: new unknown or wrong requirements → invoke `planning` skill, restart chain.
+**EXIT → EXECUTE**: .prd items remain → invoke `gm-execute` skill immediately (keep going, never stop with .prd items).
+**EXIT → COMPLETE**: .prd deleted + feature work pushed + CI green → invoke `update-docs` skill.
+**REGRESS → EMIT**: file output wrong → invoke `gm-emit` skill, reset to EMIT state.
+**REGRESS → EXECUTE**: logic wrong → invoke `gm-execute` skill, reset to EXECUTE state.
+**REGRESS → PLAN**: new unknown or wrong requirements → invoke `planning` skill, reset to PLAN state.
