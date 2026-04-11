@@ -15,3 +15,5 @@ site/package-lock.json
 docs/bundle.js
 docs/styles.css
 *.tgz
+.plugkit-browser-profile/
+tmp/
