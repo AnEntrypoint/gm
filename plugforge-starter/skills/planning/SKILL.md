@@ -43,6 +43,16 @@ Fault surfaces to enumerate exhaustively: file existence | API shape | data form
 
 **MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN` mutable. Resolve by running exec:codesearch for the concern (not the implementation). If existing code serves the same concern → the .prd item becomes a consolidation task, not an addition. The plan restructures existing code to absorb the new requirement — never bolt new code alongside existing code that does related work.
 
+## OBSERVABILITY ENUMERATION
+
+During every planning pass, enumerate every possible observability improvement for the app under change:
+
+**Server-side**: Does every internal state machine, queue, cache, and connection pool expose a real-time inspection API or log? Can any internal state be queried without restarting? Are profiling hooks present for hot paths?
+
+**Client-side**: Does `window.__debug` (or equivalent) expose every piece of state, every log entry, every active request, every rendered component's props? Nothing hidden from the agent — full execution transparency at all times.
+
+**Mandate**: On discovery of any observability gap → immediately add a .prd item for it. Observability improvements are highest-priority — never deferred, never skipped. The agent must be able to see specifically anything it wants, and nothing should require a guess.
+
 ## .PRD FORMAT
 
 Path: exactly `./.prd` in current working directory. **JSON array** written via `exec:nodejs`.
