@@ -41,7 +41,8 @@ function NavBar() {
       h('div', { class: 'flex items-center gap-4' },
         h('a', { href: '#principles', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Principles'),
         h('a', { href: '#state-machine', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'State Machine'),
-        h('a', { href: './paper.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper'),
+        h('a', { href: './paper.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper I'),
+        h('a', { href: './paper2.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper II'),
         h('a', {
           href: 'https://github.com/AnEntrypoint/plugforge',
           target: '_blank', rel: 'noopener',

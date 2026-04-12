@@ -171,7 +171,7 @@ strong { font-weight: bold; }
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    LLM-based coding agents frequently exhibit three failure modes: silent assumption propagation, uncontrolled state drift, and memory loss across sessions. We describe a set of practical techniques for addressing these failures through external lifecycle enforcement rather than prompt-based self-discipline. The approach centers on a phase-gated state machine&mdash;PLAN &rarr; EXECUTE &rarr; EMIT &rarr; VERIFY &rarr; COMPLETE&mdash;where forward progress requires satisfying explicit conditions and newly discovered unknowns trigger backward transitions to earlier phases. We complement this with a discipline for naming unknowns before acting on them, requiring witnessed execution to resolve them, and a file-based memory system for cross-session coherence. We describe our implementation, <em>gm</em>, which has been deployed across 10 IDE and CLI platforms, and discuss the tradeoffs involved.
+    LLM-based coding agents frequently exhibit three failure modes: silent assumption propagation, uncontrolled state drift, and memory loss across sessions. We describe a set of practical techniques for addressing these failures through external lifecycle enforcement rather than prompt-based self-discipline. The approach centers on a phase-gated state machine&mdash;PLAN &rarr; EXECUTE &rarr; EMIT &rarr; VERIFY &rarr; COMPLETE&mdash;where forward progress requires satisfying explicit conditions and newly discovered unknowns trigger backward transitions to earlier phases. We complement this with a discipline for naming unknowns before acting on them, requiring witnessed execution to resolve them, and a file-based memory system for cross-session coherence. We describe our implementation, <em>gm</em>, which has been deployed across 11 IDE and CLI platforms. An addendum (Section 10) documents major system advances made in the three weeks following initial publication, including a deterministic browser runtime, vector embedding search, session-scoped task isolation, an automated cascade build pipeline, and a mandatory observability enumeration discipline.
   </div>
 </div>
 
@@ -187,7 +187,7 @@ strong { font-weight: bold; }
 
 <p>This paper describes a set of techniques we have found useful for mitigating these failures. The approach uses a phase-gated state machine with named unknowns and mandatory witnessed execution. Rather than relying on the model to self-regulate, constraints are enforced externally through hooks that operate below the agent&rsquo;s decision layer.</p>
 
-<p>The paper is organized as follows: &sect;2 describes the state machine model; &sect;3 introduces the discipline for handling unknowns; &sect;4&ndash;5 cover work tracking and cross-session memory; &sect;6 describes the implementation; and &sect;7&ndash;9 discuss constraints, verification, and limitations.</p>
+<p>The paper is organized as follows: &sect;2 describes the state machine model; &sect;3 introduces the discipline for handling unknowns; &sect;4&ndash;5 cover work tracking and cross-session memory; &sect;6 describes the implementation; &sect;7&ndash;9 discuss constraints, verification, and limitations; &sect;10 documents advances made in the three weeks following initial publication.</p>
 
 <h2>2. The State Machine Model</h2>
 
@@ -291,7 +291,7 @@ strong { font-weight: bold; }
 <p class="first">All code execution passes through <code>exec:&lt;lang&gt;</code> dispatch. The pre-tool-use hook intercepts shell calls, detects the prefix, routes to the appropriate runtime, and manages background tasks. Supported languages include Node.js, Python, Go, Rust, TypeScript, and extensible language plugins.</p>
 
 <h3>6.4 Cross-Platform Deployment</h3>
-<p class="first">The gm orchestrator deploys across 10 platforms via plugforge, generating platform-specific implementations from a single convention-driven source: 6 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI) and 4 IDE platforms (VS Code, Cursor, Zed, JetBrains).</p>
+<p class="first">The gm orchestrator deploys across 11 platforms via plugforge, generating platform-specific implementations from a single convention-driven source: 7 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI, Qwen Code) and 4 IDE platforms (VS Code, Cursor, Zed, JetBrains).</p>
 
 <h2>7. Constraint Tiers</h2>
 
@@ -327,15 +327,65 @@ strong { font-weight: bold; }
   <li><strong>Memory staleness window:</strong> The time between memory creation and verification creates potential for stale-memory-induced errors.</li>
 </ol>
 
-<h2>10. Related Work</h2>
+<h2>10. Advances Since Initial Publication</h2>
+
+<p class="first">This section documents major advances made between the paper&rsquo;s initial publication (March 25, 2026) and April 12, 2026. Entries are dated to the commit that introduced the capability.</p>
+
+<h3>10.1 Deterministic Browser Runtime (March 31, 2026)</h3>
+<p class="first">An <code>exec:browser</code> runtime was added to rs-exec, replacing ad-hoc browser invocations with a deterministic managed-Chrome pipeline. The runtime launches a portable Chromium instance with a fixed debugging port (32882), detects an existing session before spawning a new one, and cleans up all browser state on session end. Early versions suffered from file-lock races on Windows when two agents shared a Chrome profile; this was resolved by per-agent cwd-local profiles (April 12).</p>
+
+<p>Session ownership is enforced at the RPC layer: <code>getTask</code>, <code>getAndClearOutput</code>, and <code>waitForOutput</code> all reject requests from sessions that did not create the task. Cross-session contamination on Windows&mdash;where a race in port-to-session mapping could return another agent&rsquo;s browser&mdash;was closed on April 9.</p>
+
+<h3>10.2 exec:rust and exec:serial (March&ndash;April 2026)</h3>
+<p class="first"><code>exec:rust</code> was added (March 31) supporting inline <code>// cargo-dep:</code> and <code>// cargo-path:</code> annotations so Rust snippets can declare their own dependencies without a manifest file. <code>exec:serial</code> was added (April 6) for COM-port streaming, routing through the global npm root for the serialport native module.</p>
+
+<h3>10.3 Orphan Process Reaper (April 11, 2026)</h3>
+<p class="first">On runner restart, the in-memory active-PID map is lost, leaving <code>--exec-process-mode</code> child processes with no cleanup path. A startup reaper was added to rs-exec that uses sysinfo to find exec-process-mode processes whose parent is not a live runner-mode process (with a 5-second age guard) and kills them via recursive process-tree kill. Without this, orphans accumulated across restarts, reaching 300+ processes and ~5.9&nbsp;GB RAM in observed failure cases.</p>
+
+<h3>10.4 Fixed Port and Stable Task Tracking (April 6, 2026)</h3>
+<p class="first">The runner previously selected a random port on each start. This caused task-ID loss across restarts because the plugkit client could not reconnect to the same port. The port was fixed at 32882, making task IDs stable across runner restarts and enabling reliable <code>exec:sleep</code> / <code>exec:status</code> / <code>exec:close</code> workflows.</p>
+
+<h3>10.5 Vector Embedding Search (April 11, 2026)</h3>
+<p class="first">rs-search gained a vector embedding backend using <code>nomic-embed-text-v1.5.Q4_K_M</code> (a GGUF-quantized model, split into 6 parts for distribution). Search output is now structured as four sections: BM25 symbol hits, BM25 content hits, vector similarity hits, and git commit index hits. The combination gives the agent semantic recall for concepts that BM25 misses due to vocabulary mismatch, while retaining BM25&rsquo;s precision for exact identifiers.</p>
+
+<p>The git commit index was added simultaneously, enabling search queries to surface relevant commit messages alongside code results&mdash;surfacing the &ldquo;why&rdquo; of a change alongside the &ldquo;what.&rdquo;</p>
+
+<h3>10.6 Session-Scoped Task Isolation (April 8, 2026)</h3>
+<p class="first">Background tasks are now isolated by a compound key of <code>session_id + cwd</code>. This prevents tasks from one agent session from appearing in another agent&rsquo;s task list when both operate in the same working directory. The compound key is forwarded by the pre-tool-use hook on every exec invocation.</p>
+
+<h3>10.7 exec:kill-port and Runner Start Lock (April 6, 2026)</h3>
+<p class="first">An <code>exec:kill-port</code> command was added to reclaim ports held by stale processes. A start-lock mechanism was added to prevent multiple simultaneous plugkit runner instances&mdash;a race that previously caused split task state between two competing daemons.</p>
+
+<h3>10.8 Memorize Sub-Agent (April 10, 2026)</h3>
+<p class="first">Inline edits to <code>CLAUDE.md</code> were replaced by a background <code>memorize</code> sub-agent (Haiku model, run_in_background=true). The sub-agent receives context, extracts non-obvious caveats, deduplicates against existing entries, and writes. This separates the agent&rsquo;s task stream from memory management and prevents mid-task context pollution from large file reads.</p>
+
+<h3>10.9 Observability Mandate (April 11, 2026)</h3>
+<p class="first">The planning skill was extended with a mandatory <em>observability enumeration</em> pass: on every planning iteration, the agent must enumerate every subsystem that lacks a permanent queryable inspection endpoint and add a .prd item to address each gap. The mandate distinguishes permanent structures (named, addressable, queryable without restart) from ad-hoc logs (<code>console.log</code>). On the client side, <code>window.__debug</code> must be a live structured registry&mdash;every component&rsquo;s state, every active request, every WebSocket connection, addressable by key. New modules register on mount and deregister on unmount.</p>
+
+<h3>10.10 Minimal-Code / Maximal-DX Mandate (April 12, 2026)</h3>
+<p class="first">A four-step resolution order was codified across all phases: (1)&nbsp;native first&mdash;does the language or runtime already do this?; (2)&nbsp;library second&mdash;does an existing dependency solve this pattern?; (3)&nbsp;structure third&mdash;can the problem be encoded as data (map, table, pipeline) so the structure enforces correctness?; (4)&nbsp;write last&mdash;only author new logic when the above three are exhausted. The mandate names the pattern when structure eliminates a class of wrong states: dispatch tables replacing switch chains, pipelines replacing loop-with-accumulator, maps replacing if/else forests are treated as correctness properties, not style preferences.</p>
+
+<h3>10.11 Immutable State Machine Terminology (April 9, 2026)</h3>
+<p class="first">The &ldquo;snakes and ladders&rdquo; metaphor (Section 2.3) was replaced throughout the skill chain with explicit immutable state machine language: forward transitions are named by their condition, backward transitions are named by the trigger that caused them. This eliminates ambiguity about which phase boundary an agent is at and what condition must be satisfied to leave it.</p>
+
+<h3>10.12 Cascade Pipeline (April 3, 2026)</h3>
+<p class="first">A fully automated cascade pipeline was established linking all five Rust repositories. A push to any of rs-exec, rs-codeinsight, rs-search, or rs-plugkit triggers a <code>workflow_dispatch</code> to rs-plugkit&rsquo;s release workflow, which runs <code>cargo update</code> (picking up the latest git dep hashes), builds six platform binaries (linux/mac/win &times; x64/arm64), auto-bumps the rs-plugkit patch version, commits the binaries into plugforge, and triggers the plugforge publish workflow. The plugforge publish workflow builds and pushes to the downstream <code>gm-cc</code> repository, whose HEAD hash is what the <code>/plugin</code> command tracks to deliver updates to agents. No manual version bumps or local cargo builds are required at any step.</p>
+
+<h3>10.13 Qwen Platform and Lang Plugin System (April 5&ndash;6, 2026)</h3>
+<p class="first">An eleventh platform, <code>gm-qwen</code>, was added for Qwen Code (a Claude Code fork with a Qwen-specific extension manifest). Simultaneously, a <code>lang/</code> plugin system was introduced: language plugins in a local project&rsquo;s <code>lang/</code> directory are resolved before global package plugins, allowing per-project runtime extensions without modifying the package. The <code>lang/browser.js</code> plugin routes <code>exec:browser</code> through plugkit in the kilo/oc platforms.</p>
+
+<h3>10.14 CI Enforcement Gate (April 8, 2026)</h3>
+<p class="first">The gm-complete skill was extended with a CI enforcement gate: the COMPLETE phase cannot be declared until CI is confirmed green on the pushed commit. This closes a gap where a session could terminate with all .prd items resolved and git clean but a failing build on the remote.</p>
+
+<h2>11. Related Work</h2>
 
 <p class="first">ReAct [1] interleaves reasoning and action but lacks formal phase boundaries or named unknowns. Reflexion [2] adds self-reflection but does not enforce witnessed execution as the sole resolution mechanism. AutoGPT and BabyAGI implement task decomposition but without dependency-aware parallel execution or stop-hook enforcement. SWE-Agent [3] provides a coding agent interface but delegates lifecycle control to the LLM&rsquo;s judgment rather than enforcing it through external hooks.</p>
 
 <p>Our approach is largely orthogonal to these efforts: it provides an external behavioral envelope that constrains agent lifecycle through hooks, stop barriers, and tool permissions, rather than improving the agent&rsquo;s internal reasoning. In principle, these techniques could be combined.</p>
 
-<h2>11. Conclusion</h2>
+<h2>12. Conclusion</h2>
 
-<p class="first">We have described a set of techniques for improving the reliability of LLM coding agents: a phase-gated state machine, a discipline for naming and resolving unknowns, and a persistent memory system for cross-session coherence. These techniques are implemented in the <em>gm</em> orchestrator and deployed across 10 platforms.</p>
+<p class="first">We have described a set of techniques for improving the reliability of LLM coding agents: a phase-gated state machine, a discipline for naming and resolving unknowns, and a persistent memory system for cross-session coherence. These techniques are implemented in the <em>gm</em> orchestrator and deployed across 11 platforms.</p>
 
 <p>Our experience suggests that agent reliability depends substantially on lifecycle control&mdash;not just model capability. An agent operating within explicit phase boundaries and external enforcement mechanisms tends to produce more predictable results than one relying on self-regulation alone. We offer these techniques as practical tools rather than general claims, and expect that further work will clarify their scope and limitations.</p>
 
