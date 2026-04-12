@@ -85,7 +85,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - No hardcoded values — dynamic/modular code using ground truth only
 - No adjectives/descriptive language in variable/function names
 - No unnecessary files — clean anything not required for the program to function
-- Client-side code exposes debug globals (window.__debug or similar)
+- Observability: every new server subsystem exposes a named inspection endpoint; every new client module registers into `window.__debug` by key and deregisters on unmount. Ad-hoc `console.log` is not observability — permanent queryable structure is. Any new code path not reachable via `window.__debug` or a `/debug/<subsystem>` endpoint → do NOT advance, add observability before writing feature code.
 - Structural quality: if/else chains where a dispatch table or pipeline suffices → regress to `gm-execute` for restructuring. One-liners that compress logic at the cost of readability → expand. Any logic that reinvents a native API or library → replace with the native/library call. Structure must make wrong states unrepresentable — if it doesn't, it's not done.
 - memorize sub-agent launched in background before advancing: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 - CHANGELOG.md updated with changes

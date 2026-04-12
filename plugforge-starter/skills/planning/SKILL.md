@@ -47,11 +47,13 @@ Planning = exhaustive fault-surface enumeration. For every aspect of the task:
 
 ## OBSERVABILITY ENUMERATION — MANDATORY EVERY PASS
 
-During every planning pass, enumerate every possible aspect of the app's runtime observability that can be improved:
+During every planning pass, enumerate every possible aspect of the app's runtime observability that can be improved. The goal is permanent structures — not ad-hoc logs — that make any future debugging session start from a complete, live picture of system state.
 
-**Server-side**: Does every internal — state machine, queue, cache, connection pool, active task map, process registry, RPC handler, hook dispatcher — expose a real-time inspection API? Can any internal state be read, queried, or modified without restarting? Are profiling hooks present on every hot path? Are logs structured and filterable by subsystem at any time?
+**Server-side permanent structures**: Every internal subsystem — state machine, queue, cache, connection pool, active task map, process registry, RPC handler, hook dispatcher — must expose a named, queryable inspection endpoint (e.g. `/debug/<subsystem>`). State must be readable, filterable, and ideally modifiable without restart. Profiling hooks on every hot path. Structured logs with subsystem tag, severity, and timestamp — filterable at runtime by subsystem, not just log level. Any internal state that requires a restart to inspect is an observability gap.
 
-**Client-side**: Does `window.__debug` expose every possible piece of state — all component state, all active requests, all log entries, all event queues, all WebSocket connections, all rendered props? Is every execution path traceable via globals?
+**Client-side permanent structures**: `window.__debug` must be a live, structured registry — not a dump. Every component's state, every active request, every event queue, every WebSocket connection, every rendered prop, every error boundary — all addressable by key, all queryable without refreshing. New modules register themselves into `window.__debug` on mount and deregister on unmount. Any execution path not traceable via `window.__debug` is an observability gap.
+
+**Permanent vs ad-hoc**: `console.log` = ad-hoc = not observability. A structured logger with subsystem routing = permanent. `window.__debug.myModule.state` = permanent. `window.__debug = { ...window.__debug, tmp: x }` = ad-hoc = not acceptable. Permanent structures survive deploys and accumulate diagnostic value across sessions.
 
 **Mandate**: on discovery of any observability gap → immediately add a .prd item. Observability improvements are highest-priority — never deferred. The agent must be able to see specifically anything it wants and nothing else — no guessing, no blind spots.
 
