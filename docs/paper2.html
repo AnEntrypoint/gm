@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Runtime Infrastructure for Autonomous LLM Coding Agents: Browser Automation, Vector Search, and Cascade Deployment</title>
+<title>Advances in Agentic Discipline for LLM Coding Agents</title>
 <style>
 @page {
   size: letter;
@@ -32,15 +32,10 @@ body {
   padding-top: 0.5in;
 }
 .title-block h1 {
-  font-size: 16pt;
+  font-size: 17pt;
   font-weight: bold;
   line-height: 1.2;
   margin-bottom: 0.3em;
-}
-.title-block .subtitle {
-  font-size: 13pt;
-  font-weight: bold;
-  margin-bottom: 0.6em;
 }
 .title-block .author {
   font-size: 11pt;
@@ -163,8 +158,7 @@ strong { font-weight: bold; }
 <body>
 
 <div class="title-block">
-  <h1>Runtime Infrastructure for Autonomous<br>LLM Coding Agents</h1>
-  <div class="subtitle">Browser Automation, Vector Search, and Cascade Deployment</div>
+  <h1>Advances in Agentic Discipline<br>for LLM Coding Agents</h1>
   <div class="author">AnEntrypoint</div>
   <div class="date">April 2026</div>
 </div>
@@ -172,194 +166,166 @@ strong { font-weight: bold; }
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    We describe a set of runtime infrastructure advances that extend the lifecycle control framework introduced in our earlier work on the <em>gm</em> orchestrator. The three central contributions are: (1) a deterministic managed-browser runtime for LLM agents that provides per-session Chrome isolation, automatic process cleanup, and cross-platform reliability without manual Chrome installation; (2) a hybrid code search backend combining BM25 term matching, vector embedding similarity (nomic-embed-text-v1.5), and git commit indexing, yielding both keyword precision and semantic recall; and (3) a fully automated cascade deployment pipeline that propagates any change in a Rust library repository through binary builds, version bumps, and plugin package publication without manual intervention. We also describe session-scoped task isolation with compound keys, orphan process reaping, a mandatory observability enumeration discipline, and a minimal-code structural mandate. These advances were validated in continuous production use across 11 agent platforms during March&ndash;April 2026.
+    We describe a set of advances to the agentic discipline of the <em>gm</em> orchestrator, building on the phase-gated state machine introduced in our earlier work [1]. Four concerns motivate this paper. First, agents lack a principled protocol for searching codebases, leading to false negatives and overly broad result sets. Second, agents accumulate code complexity through habitual addition&mdash;writing new logic when native or structural solutions would have sufficed. Third, agents operating across multiple concurrent tasks lack mechanisms to ensure tasks are truly independent before executing them in parallel. Fourth, agents produce outputs that cannot be inspected at runtime without restarting the process or adding temporary logging. We describe techniques addressing each concern: a minimum-two-word codebase search protocol with iteration requirements, a four-step resolution order that defers code authorship to last resort, a structural mandate for wave-based parallel execution with dependency enforcement, and a permanent observability registry discipline. Together these advances tighten the behavioral envelope within which the gm state machine operates.
   </div>
 </div>
 
 <h2>1. Introduction</h2>
 
-<p class="first">Our earlier paper [1] described the <em>gm</em> orchestrator&mdash;a phase-gated state machine for LLM coding agents that enforces lifecycle control through external hooks, named unknowns, and witnessed execution. That paper focused on the agent&rsquo;s behavioral envelope: the rules that govern what an agent can do and in what order.</p>
+<p class="first">Our earlier paper [1] described the <em>gm</em> orchestrator: a phase-gated state machine for LLM coding agents enforcing lifecycle control through hooks, named unknowns, and witnessed execution. That paper addressed agent lifecycle&mdash;the order in which work may proceed and the conditions for advancing between phases. It did not address the quality of work within each phase.</p>
 
-<p>This paper describes the runtime infrastructure that makes those rules operational. Three problems motivated the work. First, agents that can execute arbitrary code need a reliable, isolated browser environment without depending on the user&rsquo;s system configuration. Second, agents that search a codebase need both lexical precision (for exact identifiers) and semantic recall (for conceptual queries). Third, a multi-repository binary delivery pipeline that requires manual version management is a latent reliability failure&mdash;any step missed leaves agents running stale code.</p>
-
-<p>The paper is organized as follows: &sect;2 describes the browser runtime; &sect;3 covers hybrid code search; &sect;4 describes the cascade pipeline; &sect;5 addresses session isolation and process hygiene; &sect;6 covers the observability mandate; &sect;7 introduces the minimal-code structural mandate; and &sect;8&ndash;9 discuss limitations and related work.</p>
-
-<h2>2. Deterministic Browser Runtime</h2>
-
-<h3>2.1 Problem</h3>
-<p class="first">LLM coding agents frequently need to interact with web interfaces: testing frontend changes, scraping data, or automating browser-based workflows. The naive approach&mdash;invoking the user&rsquo;s default Chrome installation via CDP&mdash;is unreliable: multiple agents share a single Chrome process and profile, producing cross-session contamination where one agent&rsquo;s navigation state leaks into another&rsquo;s. On Windows, this manifests as lock-file races on the Chrome user data directory when two agents attempt to launch simultaneously.</p>
-
-<h3>2.2 Architecture</h3>
-<p class="first">The <code>exec:browser</code> runtime in rs-exec provides each agent session with an isolated Chrome instance. The runtime proceeds as follows on each invocation:</p>
+<p>This paper describes four advances to the discipline of work within phases. Each addresses a failure mode we observed in practice:</p>
 
 <ol>
-  <li>Resolve a cwd-local browser profile path (<code>.plugkit-browser-profile/</code>), scoped to the working directory rather than the user account.</li>
-  <li>Check whether an existing Chrome instance owns that profile and is reachable on the fixed debugging port (32882). If yes, connect to it.</li>
-  <li>If no existing instance is found, clear any stale lock files from the profile, then launch a new managed Chromium (ms-playwright distribution) with <code>--no-sandbox --disable-gpu --remote-debugging-port=32882</code>.</li>
-  <li>Wait up to 60 seconds for the profile lock to release if another agent holds it, then launch.</li>
+  <li><strong>Search failure:</strong> Agents declare a symbol absent after a single overly broad query, or accept a large result set without narrowing it. This leads to duplicate implementations and missed consolidation opportunities.</li>
+  <li><strong>Complexity accumulation:</strong> Agents write new logic when a native API, existing library, or structural encoding would have resolved the need without new code. Each such addition is new surface area, new bugs, and a new maintenance obligation.</li>
+  <li><strong>False parallelism:</strong> Agents launch concurrent subagents for tasks whose dependency relationships have not been verified, producing race conditions and conflicting edits to shared files.</li>
+  <li><strong>Opacity:</strong> Agent internal state&mdash;what tasks are running, what phase the state machine is in, what the last tool output was&mdash;is not queryable at runtime. Debugging requires restarts or ad-hoc logging that disappears after the session.</li>
 </ol>
 
-<p>Session teardown is symmetrical: on session end, the plugkit stop hook kills the Chrome process, closes all playwriter sessions, and releases the profile lock. The <code>exec:close</code> command provides mid-session cleanup of individual tasks and their associated browser resources.</p>
+<p>The paper is organized as follows: &sect;2 describes the codebase search discipline; &sect;3 introduces the minimal-code resolution order; &sect;4 covers structural parallelism enforcement; &sect;5 describes the observability mandate; and &sect;6&ndash;8 discuss related work, limitations, and conclusions.</p>
 
-<h3>2.3 Session Ownership Enforcement</h3>
-<p class="first">The rs-exec RPC layer enforces session ownership at the data layer. The handlers for <code>getTask</code>, <code>getAndClearOutput</code>, and <code>waitForOutput</code> reject requests from a session that did not create the task, returning an error rather than silently returning another session&rsquo;s output. This closes the contamination vector at the protocol level rather than relying on naming conventions.</p>
+<h2>2. Codebase Search Discipline</h2>
 
-<h3>2.4 Reliability Engineering</h3>
-<p class="first">Several Windows-specific issues required explicit handling:</p>
-<ul>
-  <li><strong>Quote splitting:</strong> Playwriter&rsquo;s <code>-e</code> argument uses shlex for quote-aware splitting, since Windows CMD does not handle single-quoted arguments the way POSIX shells do.</li>
-  <li><strong>Port stability:</strong> The debugging port is fixed at 32882. A random port caused task-ID loss across runner restarts because the plugkit client could not reconnect.</li>
-  <li><strong>Chrome exit code 21:</strong> Chrome exits with code 21 on Windows without the <code>--no-sandbox</code> flag; the managed browser launch unconditionally includes it.</li>
-  <li><strong>Profile lock races:</strong> A profile held by another agent triggers a 60-second wait-and-retry before giving up and spawning a fresh instance.</li>
-</ul>
+<h3>2.1 The Single-Query Failure Mode</h3>
+<p class="first">When an agent searches a codebase for an existing implementation, the most common failure is a single overly broad query that either returns too many results (the agent gives up and writes new code anyway) or returns zero results (the agent concludes the symbol is absent when it exists under a different name). In either case, the result is a duplicate implementation or a missed consolidation.</p>
 
-<h3>2.5 drainSessionOutput and listSessionTasks</h3>
-<p class="first">Two RPC methods were added to improve observability: <code>drainSessionOutput</code> flushes all buffered stdout/stderr for a session in one call (used by plugkit on every interaction to ensure no output is lost); <code>listSessionTasks</code> returns the full task list for a session with status, background flag, and last-seen output, providing an always-current view of what the agent has running.</p>
+<p>A secondary failure is the agent treating a search result as conclusive after a single attempt. Codebase search is a vocabulary problem: the agent&rsquo;s name for a concept may not match the codebase&rsquo;s name for it. A single query covering only one vocabulary is not sufficient evidence of absence.</p>
 
-<h2>3. Hybrid Code Search</h2>
+<h3>2.2 The Minimum-Two-Word Protocol</h3>
+<p class="first">The search discipline requires every codebase query to contain at least two words. Single-word queries are rejected at the invocation layer. The rationale is simple: a two-word query with a subject and a context returns substantially fewer false positives than a one-word query, making the result set actionable rather than requiring manual filtering.</p>
 
-<h3>3.1 Problem</h3>
-<p class="first">Codebase search for LLM agents faces a precision-recall tension. BM25 term matching is precise for known identifiers but fails on conceptual queries (&ldquo;find where we handle authentication errors&rdquo;) where the vocabulary of the query and the vocabulary of the code diverge. Pure embedding search has the opposite problem: high recall on semantically related content but low precision on exact symbol names, and a tendency to surface conceptually adjacent but irrelevant code.</p>
-
-<h3>3.2 Four-Section Search Output</h3>
-<p class="first">rs-search now produces structured output in four sections, each addressing a different query type:</p>
-<dl>
-  <dt>BM25 symbol hits:</dt><dd> exact term matches in symbol names and identifiers</dd>
-  <dt>BM25 content hits:</dt><dd> exact term matches in file content</dd>
-  <dt>Vector similarity hits:</dt><dd> semantically similar code and documentation passages</dd>
-  <dt>Git commit hits:</dt><dd> commit messages matching the query terms</dd>
-</dl>
-
-<p>The agent receives all four sections simultaneously, combining BM25&rsquo;s identifier precision with vector search&rsquo;s semantic recall and commit search&rsquo;s intent surfacing.</p>
-
-<h3>3.3 Vector Embedding Backend</h3>
-<p class="first">The embedding backend uses <code>nomic-embed-text-v1.5.Q4_K_M</code>, a GGUF-quantized model distributed in six parts to stay within file-size limits. The model is loaded at first search and cached for the session lifetime. Embeddings are computed over code chunks and stored in a flat index; similarity is computed by cosine distance at query time.</p>
-
-<p>The choice of nomic-embed-text-v1.5 reflects its design for code and technical text retrieval, unlike general-purpose embedding models that may underweight programming vocabulary. The Q4_K_M quantization provides a 4&times; size reduction relative to the full-precision model with negligible recall degradation on code retrieval benchmarks.</p>
-
-<h3>3.4 Git Commit Indexing</h3>
-<p class="first">The git commit index provides the agent with change intent: a query for &ldquo;session cleanup&rdquo; surfaces not only code containing those terms but the commit messages that described the intent when the change was made. This is particularly valuable for understanding the rationale behind non-obvious code patterns that BM25 and vector search would surface without context.</p>
-
-<h3>3.5 Mandatory Two-Word Protocol</h3>
-<p class="first">The codesearch skill enforces a minimum-two-word query protocol: single-word queries are rejected, requiring the agent to provide at least a second disambiguating term. This reduces result noise and prevents the most common failure mode of overly broad queries that return hundreds of hits from which the relevant result must be manually extracted. When no results are found, the protocol instructs the agent to change one word and add a third before concluding a symbol is absent&mdash;requiring a minimum of four attempts before declaring a negative result.</p>
-
-<h2>4. Cascade Deployment Pipeline</h2>
-
-<h3>4.1 Problem</h3>
-<p class="first">The gm system depends on five Rust repositories: rs-exec (code execution runtime), rs-codeinsight (code analysis), rs-search (search backend), rs-plugkit (binary entry point), and plugforge (plugin package generator). Previously, updating a Rust library required manually bumping version references, triggering builds, and verifying binary delivery through each downstream consumer. Any missed step left agents running stale code silently.</p>
-
-<h3>4.2 Pipeline Design</h3>
-<p class="first">The cascade pipeline eliminates all manual steps:</p>
+<p>When a query returns no results, the protocol prescribes a specific iteration strategy: change one word and add a third. This forces the agent to consider alternate vocabulary rather than concluding immediately that no result exists. The protocol requires a minimum of four distinct queries before a negative result is accepted:</p>
 
 <ol>
-  <li><strong>Trigger:</strong> A push to any of rs-exec, rs-codeinsight, or rs-search fires a <code>workflow_dispatch</code> to rs-plugkit via a <code>PUBLISHER_TOKEN</code> secret.</li>
-  <li><strong>Build:</strong> rs-plugkit&rsquo;s release workflow runs <code>cargo update</code> (pulling the latest git dependency hashes for all upstream repos), then builds six platform binaries: linux/mac/win &times; x64/arm64.</li>
-  <li><strong>Version:</strong> rs-plugkit auto-bumps its own patch version in <code>Cargo.toml</code> and commits with <code>[skip ci]</code>.</li>
-  <li><strong>Publish:</strong> A publish-binaries job copies the binaries into the plugforge repository under <code>gm-build-latest/gm-cc/bin/</code> and updates the <code>plugkitVersion</code> field in <code>gm.json</code>. The commit does not carry <code>[skip ci]</code>, triggering the next step.</li>
-  <li><strong>Plugin:</strong> plugforge&rsquo;s publish workflow builds all 11 platform plugins and pushes to the downstream <code>gm-cc</code> repository.</li>
-  <li><strong>Delivery:</strong> The <code>/plugin</code> command in Claude Code tracks the HEAD hash of <code>gm-cc</code>; when it changes, the plugin cache is invalidated and the bootstrap script downloads the new binary on next agent start.</li>
+  <li>Initial two-word query</li>
+  <li>Change one word (different vocabulary for the same concept)</li>
+  <li>Add a third word (narrower scope)</li>
+  <li>Change the third word (different narrowing)</li>
 </ol>
+
+<p>Only after all four attempts return no results may the agent conclude the symbol is absent. This discipline addresses the vocabulary mismatch problem systematically rather than by chance.</p>
+
+<h3>2.3 Scan Before Edit</h3>
+<p class="first">The search discipline extends to edits: before modifying any concern, the agent must scan the codebase for existing implementations of the same concern. A duplicate concern discovered during an edit&mdash;rather than during search&mdash;triggers an immediate regression to PLAN. The scan-before-edit rule converts consolidation from an afterthought into a gate condition on all modifications.</p>
 
 <div class="theorem">
-  <strong>Observation (End-to-End Latency).</strong> <em>From a push to rs-exec to binary availability in a running agent, the pipeline takes approximately 12&ndash;18 minutes, dominated by the six-platform Rust build. No human action is required at any step.</em>
+  <strong>Observation (Coverage).</strong> <em>The minimum-four-attempt protocol does not guarantee discovery of all existing implementations. It does guarantee that the agent has exhausted at least four distinct vocabulary hypotheses before concluding absence, which substantially reduces the false-negative rate compared to single-attempt protocols.</em>
 </div>
 
-<h3>4.3 Force-Add Workaround</h3>
-<p class="first">The <code>gm-build-latest/</code> directory is listed in plugforge&rsquo;s <code>.gitignore</code> to prevent accidental committing of local build artifacts. The publish-binaries job must use <code>git add -f</code> to force-add the binaries past this ignore rule. Without <code>-f</code>, the <code>git add</code> silently succeeds (exit 0) while staging nothing, and the subsequent commit contains no binary changes.</p>
+<h2>3. The Minimal-Code Resolution Order</h2>
 
-<h3>4.4 E403 Race Condition Tolerance</h3>
-<p class="first">The cascade sometimes triggers two parallel npm publish attempts for the same version: once from plugforge&rsquo;s publish workflow, and again from the downstream <code>gm-cc</code> repository&rsquo;s own publish-npm workflow triggered by the push. The second publish always fails with E403 (cannot publish over a previously published version). Both workflows grep the npm error output for this specific message and treat it as a success condition rather than a failure. This makes the pipeline idempotent with respect to publish ordering.</p>
+<h3>3.1 The Complexity Accumulation Problem</h3>
+<p class="first">LLM coding agents have a systematic tendency to write new code. This is unsurprising: generating code is the primary training objective. The failure mode is not writing bad code&mdash;it is writing code at all when no new code was needed. Every line of new code is a line that must be read, tested, maintained, and eventually deleted. An agent that reaches for a new function before checking whether the standard library already provides it is accumulating complexity without reason.</p>
 
-<h2>5. Session Isolation and Process Hygiene</h2>
+<p>We observe this failure in three common forms: writing a utility function that wraps a one-line native API call; writing a conditional chain that could be encoded as a dispatch table; and writing a loop accumulator that could be expressed as a pipeline. None of these adds functionality. All add surface area.</p>
 
-<h3>5.1 Compound Session Key</h3>
-<p class="first">Background tasks are indexed by a compound key of <code>session_id + cwd</code>. This prevents two distinct agents operating in the same working directory from seeing each other&rsquo;s task lists, while allowing a single agent to recover its own tasks after a network interruption. The compound key is forwarded by the pre-tool-use hook on every <code>exec:</code> invocation, ensuring the runner can always attribute an execution to its originating session.</p>
+<h3>3.2 Four-Step Resolution Order</h3>
+<p class="first">The minimal-code mandate imposes a resolution order that must be followed before writing any logic. The agent stops at the first step that resolves the need:</p>
 
-<h3>5.2 Runner Start Lock</h3>
-<p class="first">A file-system start lock prevents multiple concurrent plugkit runner instances. Previously, if the daemon failed to start and the agent retried, two runners would compete for the same port, producing split task state&mdash;each runner knowing about only half the active tasks. The lock is held for the duration of the runner process and released on exit or crash.</p>
+<dl>
+  <dt>Step 1 &mdash; Native:</dt><dd> Does the language or runtime provide this? Use it as designed. Do not wrap it.</dd>
+  <dt>Step 2 &mdash; Library:</dt><dd> Does an existing dependency solve this pattern? Use its API directly. Do not abstract over it.</dd>
+  <dt>Step 3 &mdash; Structure:</dt><dd> Can the problem be encoded as data&mdash;a map, table, or pipeline&mdash;so the structure enforces correctness and eliminates branching?</dd>
+  <dt>Step 4 &mdash; Write:</dt><dd> Only if steps 1&ndash;3 are exhausted: author new logic.</dd>
+</dl>
 
-<h3>5.3 Orphan Process Reaper</h3>
-<p class="first">Each task spawned by rs-exec runs as a child process in <code>--exec-process-mode</code>. When the runner restarts, its in-memory PID map is lost. Orphaned exec-process-mode children have no cleanup path: they hold file handles, ports, and browser sessions indefinitely. The reaper runs at startup and identifies orphans as processes with <code>--exec-process-mode</code> in their command line whose parent PID does not belong to a live runner-mode process, subject to a 5-second age guard that prevents the reaper from killing processes it just spawned.</p>
+<p>The order is strict. An agent that reaches step 4 without documenting why steps 1&ndash;3 were inapplicable has violated the protocol. This is not enforced mechanically&mdash;the agent must apply the resolution order as a cognitive discipline before each authorship decision.</p>
 
-<p>In observed failure cases before the reaper was introduced, orphan accumulation reached 300+ processes consuming ~5.9&nbsp;GB RAM. The reaper eliminates this failure mode by making startup the cleanup point rather than requiring operator intervention.</p>
+<h3>3.3 Structure as Correctness</h3>
+<p class="first">Step 3 deserves elaboration because its benefit is not merely conciseness. When a set of cases is encoded as a dispatch table, the table shape makes it structurally impossible to dispatch to the wrong handler&mdash;there is no branching logic to contain a bug. When a data transformation is expressed as a pipeline of pure functions, there is no mutable accumulator in which intermediate state can corrupt the result. These are not style preferences: they are correctness properties that the structure enforces without requiring the reader to trace execution.</p>
 
-<h3>5.4 Process Tree Kill</h3>
-<p class="first">Killing a task requires killing its entire process tree, not just the root PID. A child that spawns its own subprocesses (e.g., a Node.js script that forks workers) would otherwise leave zombie children after the parent is killed. The <code>kill_pid</code> function in rs-exec recursively enumerates the process tree using sysinfo and kills children depth-first before the parent, preventing orphan creation at kill time.</p>
+<p>The mandate requires that when a structural choice eliminates a class of wrong states, that elimination is named explicitly. The name is not a comment&mdash;comments are prohibited. It is a function name, a type name, or a variable name that makes the structural property self-evident to any reader.</p>
 
-<h2>6. Observability Mandate</h2>
+<h3>3.4 Readability Criterion</h3>
+<p class="first">The mandate includes a readability gate: code that requires the reader to mentally simulate execution in order to determine its behavior is not complete. Code that can be read top-to-bottom&mdash;each line following from the last without requiring the reader to hold intermediate state&mdash;is complete. This operationalizes the principle without subjective judgment about &ldquo;clean code.&rdquo; If you must trace execution to understand behavior, the structure must change.</p>
 
-<h3>6.1 Permanent vs. Ad-Hoc Structures</h3>
-<p class="first">The planning skill was extended with a mandatory observability enumeration pass executed on every planning iteration. The mandate distinguishes two categories of observability:</p>
+<h2>4. Structural Parallelism Enforcement</h2>
 
-<p><strong>Permanent structures</strong> are named, queryable, and survive across agent interactions: a <code>/debug/&lt;subsystem&gt;</code> endpoint that returns current state, a <code>window.__debug.&lt;module&gt;</code> registry entry populated on mount and removed on unmount, a structured log with subsystem tag and severity filterable at runtime without restart.</p>
+<h3>4.1 False Parallelism</h3>
+<p class="first">The .prd dependency graph enables wave-based parallel execution: items with satisfied dependencies are launched as concurrent subagents, each working on an independent task. The failure mode is false parallelism: launching items as concurrent when they have implicit dependencies that the dependency graph did not capture. The result is conflicting edits to shared files, race conditions in test execution, or one subagent completing work that invalidates another&rsquo;s assumption.</p>
 
-<p><strong>Ad-hoc structures</strong> are not observability: a <code>console.log</code> statement, a temporary variable dump, a comment describing expected behavior. These require foreknowledge of where to look and disappear when the relevant code path is not executing.</p>
+<p>False parallelism is particularly insidious because it is not visible in the .prd structure. Two items may have no declared dependencies but both modify the same file, or both depend on the same external service being in a specific state. The dependency graph captures declared dependencies; it cannot capture implicit ones.</p>
 
-<h3>6.2 Server-Side Requirements</h3>
-<p class="first">Every internal subsystem must expose a named inspection endpoint. The mandate enumerates the required subjects: state machine phase, work queue depth, connection pool utilization, active task map, process registry, RPC handler latency, hook dispatcher invocation counts. State must be readable and filterable without restarting the daemon. Any internal state that requires a restart to inspect is classified as an observability gap and generates a .prd item in the next planning pass.</p>
+<h3>4.2 Wave Discipline</h3>
+<p class="first">The wave discipline requires the agent to verify independence before launching a parallel wave. For each pair of items in the proposed wave, the agent must confirm:</p>
 
-<h3>6.3 Client-Side Requirements</h3>
-<p class="first"><code>window.__debug</code> must be a live structured registry. New modules register themselves on mount and deregister on unmount. The registry must be addressable by key: <code>window.__debug.chat.pendingMessages</code>, <code>window.__debug.ws.connectionState</code>, <code>window.__debug.tasks.active</code>. Any execution path not traceable through <code>window.__debug</code> is an observability gap.</p>
+<ul>
+  <li>No shared file modifications (both items write to distinct files)</li>
+  <li>No shared external state (neither item depends on a service state that the other modifies)</li>
+  <li>No output dependency (neither item consumes the output of the other)</li>
+</ul>
 
-<h3>6.4 Enforcement Mechanism</h3>
-<p class="first">Observability improvements are classified as highest-priority items in the .prd and cannot be deferred. The planning skill is explicit: &ldquo;on discovery of any observability gap, immediately add a .prd item.&rdquo; This makes observability a first-class engineering concern that competes for priority with features rather than being deferred to a &ldquo;logging pass&rdquo; that never arrives.</p>
+<p>If any pair fails these checks, the failing items are serialized: one executes first, and the other is deferred to the next wave after the first completes. The wave size is capped at three concurrent subagents to limit blast radius when a false dependency is missed.</p>
 
-<h2>7. Minimal-Code Structural Mandate</h2>
+<h3>4.3 Browser Task Serialization</h3>
+<p class="first">Browser automation tasks are unconditionally serialized regardless of declared dependencies. The rationale is that a managed browser instance is inherently stateful shared resource&mdash;navigation, cookies, and DOM state from one task bleed into the next. Even tasks that appear independent (navigating to different pages) share a browser profile and can interfere through cached credentials, service workers, or local storage. Serialization eliminates this failure class at the cost of reduced parallelism on browser-heavy workloads.</p>
 
-<h3>7.1 Resolution Order</h3>
-<p class="first">Before writing any logic, the agent must follow a four-step resolution order, stopping at the first step that resolves the need:</p>
+<h3>4.4 The Memorize Sub-Agent</h3>
+<p class="first">Memory persistence was previously performed inline during the agent&rsquo;s task stream, requiring the agent to read and edit the memory index file mid-task. This introduced both context pollution (large file reads during active task execution) and a sequencing hazard (memory writes could conflict with task edits to adjacent files).</p>
+
+<p>The advance replaces inline memory persistence with a background sub-agent: a separate Haiku-model agent invoked with <code>run_in_background=true</code> that receives the context to persist, classifies it into the appropriate memory type, deduplicates against existing entries, and writes. The sub-agent runs independently of the main task stream, returning no result to the invoking agent. The invoking agent does not wait for it. This separates memory management from task execution both temporally and in terms of context window consumption.</p>
+
+<h2>5. Permanent Observability</h2>
+
+<h3>5.1 The Opacity Problem</h3>
+<p class="first">An agent that cannot inspect its own runtime state must guess when diagnosing failures. A guess is an unwitnessed hypothesis&mdash;precisely the failure mode the mutable discipline is designed to prevent. The opacity problem is therefore not merely an operational inconvenience: it is a category violation of the witnessed-execution principle. If the agent cannot see what is running, what has been output, or what phase the state machine is in without adding temporary logging, then its debugging process is structurally identical to narrating hypotheses&mdash;which it is explicitly prohibited from doing.</p>
+
+<h3>5.2 Permanent vs. Ad-Hoc Observability</h3>
+<p class="first">The mandate distinguishes two categories:</p>
+
+<p><strong>Permanent structures</strong> exist independently of any specific debugging session. They are named, queryable, and survive across agent interactions. A structured inspection endpoint at <code>/debug/&lt;subsystem&gt;</code> that returns current state is permanent. A <code>window.__debug.chat.pendingMessages</code> registry entry populated on mount and removed on unmount is permanent. A structured log filterable by subsystem tag at runtime without restart is permanent.</p>
+
+<p><strong>Ad-hoc structures</strong> are temporary and disappear. A <code>console.log</code> statement is ad-hoc. A variable dump added during a debugging session and removed after is ad-hoc. Ad-hoc observability requires foreknowledge of where to look and disappears the moment it is no longer immediately needed. It accumulates no diagnostic value across sessions.</p>
+
+<h3>5.3 Enumeration Mandate</h3>
+<p class="first">During every planning pass, the agent must enumerate every internal subsystem that lacks a permanent queryable inspection point and add a .prd item for each gap. The enumeration is not optional and is not deferred: observability items are classified as highest-priority and cannot be blocked by feature work. The mandate names the required subjects: state machine current phase, .prd item list with statuses, active background task map, last tool output per task, hook invocation counts, and memory index freshness.</p>
+
+<p>The intent is to make each planning pass leave the system more observable than it was before the pass began, independent of what other work is in progress.</p>
+
+<h3>5.4 Client-Side Registry</h3>
+<p class="first">For agent systems with a client-side component, <code>window.__debug</code> must be a live structured registry, not a dump. Each module registers itself on mount (<code>window.__debug.moduleName = { state, methods }</code>) and deregisters on unmount (<code>delete window.__debug.moduleName</code>). The registry is addressable by key: any component&rsquo;s current state is reachable without refreshing. Any execution path not traceable through <code>window.__debug</code> is classified as an observability gap and generates a .prd item in the next planning pass.</p>
+
+<h2>6. Relationship to Earlier Work</h2>
+
+<p class="first">The first paper [1] addressed the agent&rsquo;s behavioral envelope: what it may do and in what order. This paper addresses the quality of work within that envelope. The two concerns are orthogonal: an agent can follow the phase transitions perfectly while still searching poorly, writing unnecessary code, launching false-parallel tasks, and operating opaquely. The advances described here are therefore not replacements for the state machine discipline&mdash;they are refinements of behavior within it.</p>
+
+<p>The minimal-code resolution order extends the witnessed-execution discipline of &sect;3 in the first paper. Witnessed execution prohibits acting on unverified hypotheses about runtime behavior; the resolution order prohibits acting on unverified hypotheses about whether existing code solves the need. Both address the same root failure: the agent generating plausible output without verifying the premise that output was needed.</p>
+
+<p>The search discipline extends the named-mutable discipline of &sect;3.1. A search result is a mutable&mdash;it has an expected value (the symbol exists here), a current value (UNKNOWN), and a resolution method (execute the query and witness the output). The minimum-four-attempt protocol operationalizes the two-pass rule of &sect;3.3: if two attempts with different vocabulary both fail, the mutable is reclassified and the agent regresses to PLAN.</p>
+
+<h2>7. Limitations</h2>
 
 <ol>
-  <li><strong>Native first:</strong> Does the language or runtime already do this? Use it as designed.</li>
-  <li><strong>Library second:</strong> Does an existing dependency solve this pattern? Use its API directly.</li>
-  <li><strong>Structure third:</strong> Can the problem be encoded as data (map, table, pipeline) so the structure enforces correctness and eliminates branching?</li>
-  <li><strong>Write last:</strong> Only author new logic when the above three are exhausted. New logic is new surface area and new bugs.</li>
+  <li><strong>Protocol compliance:</strong> The search and resolution-order protocols are cognitive disciplines, not mechanically enforced gates. An agent can violate them without triggering a hook. Enforcement depends on the protocols being internalized across all phases of the skill chain.</li>
+  <li><strong>Implicit dependency detection:</strong> The wave discipline requires the agent to enumerate shared file modifications and service state dependencies manually. This is not exhaustive. Dependencies that flow through environment variables, network state, or time-dependent behavior are difficult to enumerate before execution.</li>
+  <li><strong>Observability coverage:</strong> The mandate requires enumeration of subsystems without permanent observability, but cannot guarantee that the enumeration is complete. A subsystem the agent is unaware of&mdash;because it was added in a dependency rather than in the project&mdash;will not appear in the enumeration.</li>
 </ol>
 
-<h3>7.2 Structure as Correctness</h3>
-<p class="first">The mandate elevates structure to a correctness argument, not a style preference. A dispatch table that maps tool names to handler functions cannot accidentally dispatch to the wrong handler&mdash;the table shape makes the wrong state structurally impossible. A pipeline that transforms data through a sequence of pure functions cannot accumulate mutable state in a loop variable&mdash;the pipeline shape eliminates the accumulator bug class. When a structural choice eliminates a class of wrong states, the mandate requires naming that property explicitly in code review, so future maintainers understand what the structure is protecting.</p>
+<h2>8. Related Work</h2>
 
-<h3>7.3 Readable Without Simulation</h3>
-<p class="first">The mandate includes a readability criterion: code that can be read top-to-bottom without mental simulation is done right; code that requires the reader to trace execution flow to understand behavior is not. This operationalizes the principle without requiring subjective judgment about &ldquo;clean code&rdquo;&mdash;if you have to run the code in your head to know what it does, the structure needs to change.</p>
+<p class="first">The minimal-code resolution order shares motivation with the principle of least power [2]: prefer the least powerful tool that solves the problem, because less powerful tools are easier to analyze and less likely to produce unexpected behavior. Our formulation is specifically calibrated for LLM agents, where the failure mode is excess code generation rather than the use of overly expressive languages.</p>
 
-<h2>8. Discussion and Limitations</h2>
+<p>The observability mandate draws on the observability-as-code literature [3], which argues that structured inspection endpoints should be designed into systems from the start rather than added as an afterthought. Our contribution is applying this principle to the agent itself as a system, rather than only to the software the agent produces.</p>
 
-<h3>8.1 Browser Runtime Scope</h3>
-<p class="first">The managed browser runtime handles single-agent browser automation reliably. It does not address scenarios where multiple concurrent agents need to interact with different browser sessions on the same machine&mdash;the fixed port design assumes one active session per working directory. Multi-session parallelism would require dynamic port allocation with per-session port registration, which is straightforward to add but was not yet needed in our usage.</p>
+<p>Wave-based parallelism with dependency enforcement is a standard technique in build systems [4]. Our application differs in that the dependency graph is constructed by the agent from task descriptions rather than derived mechanically from file dependency analysis, making false-parallel errors possible in ways that build-system parallelism is not.</p>
 
-<h3>8.2 Vector Search Index Size</h3>
-<p class="first">The flat vector index scales to medium codebases (tens of thousands of files) without issue but becomes slow for very large monorepos. An approximate nearest-neighbor index (e.g., HNSW) would be the natural next step, trading some recall for a logarithmic rather than linear query time. The nomic-embed-text-v1.5 model was chosen for its code retrieval performance; we have not systematically compared alternatives.</p>
+<p>The background memorize sub-agent pattern is related to the actor model [5]: the main agent and the memory agent are concurrent processes communicating by message, with no shared mutable state. The memory agent&rsquo;s output is durable (disk) while the main agent&rsquo;s context is ephemeral (conversation window), which motivates the separation.</p>
 
-<h3>8.3 Cascade Pipeline Failure Modes</h3>
-<p class="first">The cascade pipeline has two known failure modes. First, if the <code>PUBLISHER_TOKEN</code> secret is absent from any upstream repo, the cascade silently fails to trigger. Second, the <code>cargo update</code> step always pulls the latest git dependency hashes; if an upstream repo has a broken HEAD, the next cascade build fails until the upstream is fixed. Both are operational concerns rather than architectural ones, and both are visible in CI logs.</p>
+<h2>9. Conclusion</h2>
 
-<h3>8.4 Observability Mandate Scope</h3>
-<p class="first">The mandate requires permanent queryable structures but does not specify the query protocol. In our implementation, server-side inspection is HTTP-over-localhost; client-side inspection is browser console access to <code>window.__debug</code>. A more rigorous approach would define a structured inspection protocol (e.g., a JSON-RPC debug API) that tools can consume programmatically. The current approach is sufficient for interactive debugging but not for automated monitoring.</p>
+<p class="first">We have described four advances to the agentic discipline of the <em>gm</em> orchestrator: a minimum-two-word codebase search protocol with four-attempt iteration requirements, a four-step resolution order that defers code authorship to last resort, a structural parallelism discipline requiring dependency verification before concurrent execution, and a permanent observability mandate that treats unqueryable internal state as a planning-phase defect. These advances tighten the behavioral envelope within which the gm state machine operates, addressing failure modes that the lifecycle enforcement of the first paper left unaddressed.</p>
 
-<h2>9. Related Work</h2>
-
-<p class="first">Browser automation for testing and scraping is well-studied [2, 3], but its application to agent isolation&mdash;where the agent is the user and session leakage is the failure mode&mdash;is less documented. Playwright [2] provides the session isolation primitives we use; our contribution is the management layer that makes them automatic and transparent to the agent.</p>
-
-<p>Hybrid dense-sparse retrieval [4] is established in information retrieval; our application combines BM25 with a quantized code-specific embedding model in a single search call, with a structured four-section output format designed for LLM consumption rather than ranked-list presentation. Git commit indexing as a search dimension is, to our knowledge, novel in this context.</p>
-
-<p>Cascade deployment pipelines using GitHub Actions <code>workflow_dispatch</code> are standard CI/CD practice. Our contribution is the specific wiring that makes a single-repo code change propagate automatically through Rust binary builds, plugin packaging, and agent cache invalidation without manual version management.</p>
-
-<p>The observability mandate draws on the structured logging and observability-as-code literature [5], but applies it specifically to LLM agent systems where the &ldquo;operator&rdquo; is the agent itself and the &ldquo;system under observation&rdquo; includes the agent&rsquo;s own task state.</p>
-
-<h2>10. Conclusion</h2>
-
-<p class="first">We have described a set of runtime infrastructure advances for the <em>gm</em> LLM coding agent orchestrator: a deterministic managed-browser runtime with per-session isolation and automatic process cleanup; a hybrid search backend combining BM25, vector embeddings, and git commit indexing; and a fully automated cascade deployment pipeline that propagates Rust library changes through binary builds to running agents without human intervention.</p>
-
-<p>These advances address the operational layer below the behavioral envelope described in our earlier work. Lifecycle control rules are only as effective as the infrastructure that executes them. An agent with perfect planning discipline that cannot reliably launch a browser, search a codebase semantically, or run current code is still unreliable in practice. The infrastructure described here is the substrate on which behavioral correctness properties are expressed.</p>
+<p>Our experience suggests that agent reliability depends not only on what the agent is permitted to do&mdash;the subject of the first paper&mdash;but on the discipline with which it performs the permitted actions. A well-structured lifecycle is necessary but not sufficient. The advances described here address the sufficiency gap.</p>
 
 <div class="references">
   <h2>References</h2>
   <ol>
     <li>AnEntrypoint, &ldquo;Toward Structured Lifecycle Control in LLM Coding Agents,&rdquo; March 2026.</li>
-    <li>Microsoft, &ldquo;Playwright: Fast and Reliable End-to-End Testing for Modern Web Apps,&rdquo; <em>github.com/microsoft/playwright</em>, 2020&ndash;present.</li>
-    <li>G. Puppeteer Team, &ldquo;Puppeteer: Headless Chrome Node.js API,&rdquo; <em>github.com/puppeteer/puppeteer</em>, 2017&ndash;present.</li>
-    <li>K. Formal et al., &ldquo;A Replication Study of Dense Passage Retrieval,&rdquo; <em>arXiv:2104.05740</em>, 2021.</li>
+    <li>W3C TAG, &ldquo;The Principle of Least Power,&rdquo; <em>w3.org/2001/tag/doc/leastPower</em>, 2006.</li>
     <li>C. Richardson, &ldquo;Observability Patterns for Microservices,&rdquo; <em>microservices.io/patterns/observability</em>, 2018.</li>
+    <li>D. McIlroy and J. Emer, &ldquo;Engineering a Sort Function,&rdquo; <em>Software&mdash;Practice and Experience</em>, 1993. (Build parallelism context.)</li>
+    <li>C. Hewitt, P. Bishop, and R. Steiger, &ldquo;A Universal Modular ACTOR Formalism for Artificial Intelligence,&rdquo; <em>IJCAI</em>, 1973.</li>
     <li>S. Yao et al., &ldquo;ReAct: Synergizing Reasoning and Acting in Language Models,&rdquo; <em>ICLR</em>, 2023.</li>
   </ol>
 </div>
