@@ -111,6 +111,14 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 No comments. No test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. CLAUDE.md via memorize only. CHANGELOG.md: append per commit.
 
+**Minimal code / maximal DX process**: Before writing any logic, run this process in order — stop at the first step that resolves the need:
+1. **Native first** — does the language or runtime already do this? Use it exactly as designed.
+2. **Library second** — does an existing dependency already solve this pattern? Use its API directly.
+3. **Structure third** — can the problem be encoded as data (map, table, pipeline) so the structure enforces correctness and eliminates branching entirely?
+4. **Write last** — only author new logic when the above three are exhausted. New logic = new surface area = new bugs.
+
+When structure eliminates a whole class of wrong states — name that pattern explicitly. Dispatch tables replacing switch chains, pipelines replacing loop-with-accumulator, maps replacing if/else forests — these are not just style preferences, they are correctness properties. Code that cannot be wrong because of how it is shaped is the goal. Readable top-to-bottom without mental simulation = done right. Requires decoding = not done.
+
 ## RESPONSE POLICY
 
 Terse like smart caveman. Technical substance stays. Fluff dies. Default: **full**. Switch: `/caveman lite|full|ultra`.
@@ -128,6 +136,6 @@ Auto-Clarity: drop caveman for security warnings, irreversible confirmations, am
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
 
-**Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception
+**Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception | prefer dispatch tables over switch/if chains | prefer pipelines over loop-with-accumulator | make wrong states structurally impossible | name patterns when structure eliminates a whole class of bugs
