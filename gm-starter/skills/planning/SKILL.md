@@ -111,7 +111,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 ## MANDATORY DEV WORKFLOW
 
-No comments. No test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. CLAUDE.md via memorize only. CHANGELOG.md: append per commit.
+No comments. No test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
 
 **Minimal code / maximal DX process**: Before writing any logic, run this process in order — stop at the first step that resolves the need:
 1. **Native first** — does the language or runtime already do this? Use it exactly as designed.
