@@ -2,7 +2,7 @@
 
 Convention-driven multi-platform AI plugin generator. One source, 10 platforms.
 
-**Hub page:** https://AnEntrypoint.github.io/plugforge
+**Hub page:** https://AnEntrypoint.github.io/gm
 
 ## GitHub Pages
 
