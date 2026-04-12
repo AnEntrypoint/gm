@@ -44,7 +44,7 @@ function NavBar() {
         h('a', { href: './paper.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper I'),
         h('a', { href: './paper2.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper II'),
         h('a', {
-          href: 'https://github.com/AnEntrypoint/plugforge',
+          href: 'https://github.com/AnEntrypoint/gm',
           target: '_blank', rel: 'noopener',
           class: 'flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm'
         }, GITHUB_ICON, 'Source')
@@ -69,7 +69,7 @@ function Hero() {
       h('div', { class: 'flex gap-4 justify-center' },
         h('a', { href: './paper.html', class: 'btn btn-primary' }, 'Read the Paper'),
         h('a', {
-          href: 'https://github.com/AnEntrypoint/plugforge',
+          href: 'https://github.com/AnEntrypoint/gm',
           target: '_blank', rel: 'noopener',
           class: 'btn btn-outline flex items-center gap-2'
         }, GITHUB_ICON, 'Source')
@@ -169,7 +169,7 @@ function Footer() {
   return h('footer', { class: 'border-t border-gray-800 py-8 px-4 text-center text-gray-500 text-sm' },
     h('p', null,
       'Built with ',
-      h('a', { href: 'https://github.com/AnEntrypoint/plugforge', target: '_blank', rel: 'noopener', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'plugforge'),
+      h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'gm'),
       ' · ',
       h('a', { href: './paper.html', class: 'text-indigo-400 hover:text-indigo-300 transition-colors' }, 'Read the paper')
     )
