@@ -1,0 +1,65 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Validate package.json
+        run: |
+          if [ ! -f package.json ]; then
+            echo "❌ package.json not found"
+            exit 1
+          fi
+          VERSION=$(jq -r '.version' package.json)
+          PACKAGE=$(jq -r '.name' package.json)
+          if [ -z "$VERSION" ] || [ -z "$PACKAGE" ]; then
+            echo "❌ Invalid package.json: missing version or name"
+            exit 1
+          fi
+          echo "Package: $PACKAGE"
+          echo "Version: $VERSION"
+
+      - name: Check version availability
+        env:
+          PACKAGE: ${{ env.PACKAGE }}
+          VERSION: ${{ env.VERSION }}
+        run: |
+          PACKAGE=$(jq -r '.name' package.json)
+          VERSION=$(jq -r '.version' package.json)
+          echo "Checking if $PACKAGE@$VERSION is already published..."
+          if npm view "$PACKAGE@$VERSION" 2>/dev/null | grep -q "time"; then
+            echo "✅ Version $VERSION already published - skipping"
+            echo "SKIP_PUBLISH=true" >> $GITHUB_ENV
+          else
+            echo "ℹ️  Version $VERSION not yet published - will publish"
+            echo "SKIP_PUBLISH=false" >> $GITHUB_ENV
+          fi
+
+      - name: Publish to npm
+        if: env.SKIP_PUBLISH != 'true'
+        run: |
+          npm publish --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
+          if [ "$EXIT" != "0" ]; then
+            if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
+              echo "⚠️  Version already published, skipping"
+            else
+              exit "$EXIT"
+            fi
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
