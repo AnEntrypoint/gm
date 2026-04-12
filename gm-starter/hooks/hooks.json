@@ -1,0 +1,58 @@
+{
+  "description": "Hooks for gm Claude Code plugin",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook pre-tool-use",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook session-start",
+            "timeout": 180000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook stop",
+            "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook stop-git",
+            "timeout": 180000
+          }
+        ]
+      }
+    ]
+  }
+}
