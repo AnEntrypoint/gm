@@ -1,17 +1,17 @@
 ---
 name: memorize
-description: Background memory agent. Classifies context into memory/ dir and CLAUDE.md. Aggressively prunes stale/derivable/duplicate entries.
+description: Background memory agent. Classifies context into memory/ dir and AGENTS.md. Aggressively prunes stale/derivable/duplicate entries.
 agent: true
 ---
 
 # Memorize — Background Memory Agent
 
 Memory dir: C:/Users/user/.claude/projects/C--dev-plugforge/memory/
-CLAUDE.md: C:/dev/plugforge/CLAUDE.md
+AGENTS.md: C:/dev/plugforge/AGENTS.md
 
 ## STEP 1: READ
 
-Read memory dir contents and MEMORY.md index. Read all existing memory files. Read CLAUDE.md in full.
+Read memory dir contents and MEMORY.md index. Read all existing memory files. Read AGENTS.md in full.
 
 If memory dir does not exist, create it. If MEMORY.md does not exist, create it empty.
 
@@ -20,7 +20,7 @@ If memory dir does not exist, create it. If MEMORY.md does not exist, create it 
 Run BEFORE writing any new content.
 
 Remove entries that are:
-- Contradicted or superseded by current CLAUDE.md or observable codebase facts
+- Contradicted or superseded by current AGENTS.md or observable codebase facts
 - Duplicates of other entries (merge into one)
 - Derivable at runtime via exec:codesearch: file paths, function names, API shapes, architecture patterns
 - Active task state, current progress, session narration
@@ -39,7 +39,7 @@ Examine the ## CONTEXT TO MEMORIZE section at the end of this prompt. For each f
 - reference: pointers to external systems, URLs, paths
 
 Discard:
-- Facts already covered in CLAUDE.md (exact or paraphrase)
+- Facts already covered in AGENTS.md (exact or paraphrase)
 - Obvious facts derivable from reading the code
 - Active task state or session progress
 
@@ -76,14 +76,14 @@ No frontmatter. Max 200 lines.
 
 ## STEP 6: CONSOLIDATE
 
-For each memory file: if its content is already fully covered by CLAUDE.md (exact or equivalent), delete the memory file and remove its line from MEMORY.md.
+For each memory file: if its content is already fully covered by AGENTS.md (exact or equivalent), delete the memory file and remove its line from MEMORY.md.
 
-## STEP 7: CLAUDE.md
+## STEP 7: AGENTS.md
 
 A non-obvious technical caveat qualifies if it required multiple failed runs to discover and would not be apparent from reading code or docs.
 
 For each qualifying fact from context:
-- If CLAUDE.md already covers it → skip
+- If AGENTS.md already covers it → skip
 - If genuinely non-obvious → append to the appropriate section
 
 Never add: obvious patterns, active task progress, redundant restatements.

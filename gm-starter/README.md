@@ -60,7 +60,7 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 **prompt-submit** - reminds the agent to use gm subagent for everything. reinforcement on every turn.
 
-**pre-tool-use** - blocks find and glob in favor of code-search. blocks .md file creation (except CLAUDE.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
+**pre-tool-use** - blocks find and glob in favor of code-search. blocks .md file creation (except AGENTS.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
 
 **stop (.prd)** - checks .prd file. if items remain, blocks session end. this is the looping mechanism - more refined than wiggum looping, includes native planning behaviors with better tooling preferences and a revision loop.
 
