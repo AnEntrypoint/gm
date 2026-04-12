@@ -8,7 +8,7 @@ const REPOS = {
   'rs-codeinsight':'AnEntrypoint/rs-codeinsight',
   'rs-search':     'AnEntrypoint/rs-search',
   'rs-plugkit':    'AnEntrypoint/rs-plugkit',
-  'plugforge':     'AnEntrypoint/plugforge',
+  'gm':            'AnEntrypoint/gm',
   'gm-cc':         'AnEntrypoint/gm-cc',
 };
 
@@ -103,7 +103,7 @@ async function main() {
   const triggerTime = Date.now();
 
   console.log('\n=== Cascade Watcher ===');
-  console.log('Monitoring full pipeline: rs-{exec,codeinsight,search} → rs-plugkit → plugforge → gm-cc\n');
+  console.log('Monitoring full pipeline: rs-{exec,codeinsight,search} → rs-plugkit → gm → gm-cc\n');
 
   console.log('[1] Baseline');
   const baseGmCcSha = getGmCcSha();
@@ -125,19 +125,19 @@ async function main() {
     return `v${v}`;
   });
 
-  validate('plugforge-starter/gm.json plugkitVersion', () => {
+  validate('gm-starter/gm.json plugkitVersion', () => {
     const fs = require('fs');
-    const p = 'C:/dev/plugforge/plugforge-starter/gm.json';
+    const p = 'C:/dev/plugforge/gm-starter/gm.json';
     if (!fs.existsSync(p)) throw new Error('file not found');
     const j = JSON.parse(fs.readFileSync(p, 'utf8'));
     return `v${j.plugkitVersion}`;
   });
 
-  console.log('\n[4] plugforge Build & Publish run');
+  console.log('\n[4] gm Build & Publish run');
   const afterPlugkit = Date.now();
-  const pfRun = await waitForNewRun('AnEntrypoint/plugforge', 'plugforge Build & Publish', afterPlugkit - 3 * 60 * 1000);
+  const pfRun = await waitForNewRun('AnEntrypoint/gm', 'Build & Publish Plugins', afterPlugkit - 3 * 60 * 1000);
   console.log(`  Run #${pfRun.databaseId} "${pfRun.name}" on ${pfRun.headBranch}`);
-  await watchRun('AnEntrypoint/plugforge', pfRun.databaseId, 'plugforge Build & Publish');
+  await watchRun('AnEntrypoint/gm', pfRun.databaseId, 'Build & Publish Plugins');
 
   console.log('\n[5] Validate gm-cc updated');
   const newGmCcSha = getGmCcSha();

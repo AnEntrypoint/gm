@@ -36,7 +36,7 @@ Witness which files changed. Identify doc-sensitive changes: new skills, new sta
 exec:nodejs
 const fs = require('fs');
 ['README.md', 'CLAUDE.md', 'docs/index.html',
- 'plugforge-starter/agents/gm.md'].forEach(f => {
+ 'gm-starter/agents/gm.md'].forEach(f => {
   try { console.log(`=== ${f} ===\n` + fs.readFileSync(f, 'utf8')); }
   catch(e) { console.log(`MISSING: ${f}`); }
 });
@@ -54,7 +54,7 @@ Write only sections that changed. Do not rewrite unchanged content. Rules per fi
 
 **docs/index.html**: `PHASES` array matches current skill state machine phases. Platform lists match `platforms/` directory. State machine diagram updated if new phases added.
 
-**plugforge-starter/agents/gm.md**: Skill chain on the `gm skill →` line updated if new skills were added.
+**gm-starter/agents/gm.md**: Skill chain on the `gm skill →` line updated if new skills were added.
 
 ```
 exec:nodejs
@@ -77,7 +77,7 @@ Witness each written file from disk. Any variance from expected content → fix 
 
 ```
 exec:bash
-git add README.md docs/index.html plugforge-starter/agents/gm.md
+git add README.md docs/index.html gm-starter/agents/gm.md
 git diff --cached --stat
 ```
 

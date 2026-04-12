@@ -30,7 +30,7 @@ jobs:
             MAX_NPM=$(printf '%s\n' "$V" "$MAX_NPM" | sort -V | tail -1)
           done
           NPM_VERSION="$MAX_NPM"
-          CURRENT_VERSION=$(jq -r '.version' plugforge-starter/gm.json)
+          CURRENT_VERSION=$(jq -r '.version' gm-starter/gm.json)
 
           echo "npm max across all packages: $NPM_VERSION"
           echo "current: $CURRENT_VERSION"
@@ -46,12 +46,12 @@ jobs:
             NEW_PATCH=$((NPM_PATCH + 1))
             NEW_VERSION="$NPM_MAJOR.$NPM_MINOR.$NEW_PATCH"
             echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-            jq --arg v "$NEW_VERSION" '.version = $v' plugforge-starter/gm.json > /tmp/gm.json.tmp
-            mv /tmp/gm.json.tmp plugforge-starter/gm.json
+            jq --arg v "$NEW_VERSION" '.version = $v' gm-starter/gm.json > /tmp/gm.json.tmp
+            mv /tmp/gm.json.tmp gm-starter/gm.json
 
             git config --global user.email "noreply@github.com"
-            git config --global user.name "plugforge-bot"
-            git add plugforge-starter/gm.json
+            git config --global user.name "gm-bot"
+            git add gm-starter/gm.json
             git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             git push origin main
             echo "Version bumped and pushed"
@@ -61,7 +61,7 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(jq -r '.version' plugforge-starter/gm.json)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '.version' gm-starter/gm.json)" >> $GITHUB_OUTPUT
 
   build-and-publish:
     needs: prepare
@@ -93,7 +93,7 @@ jobs:
           node-version: '22'
 
       - name: Build ${{ matrix.name }}
-        run: node cli.js plugforge-starter ./build
+        run: node cli.js gm-starter ./build
 
       - name: Validate build output
         run: |
@@ -109,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: |
           git config --global user.email "noreply@github.com"
-          git config --global user.name "plugforge-bot"
+          git config --global user.name "gm-bot"
           git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
       - name: Publish to GitHub
@@ -160,7 +160,7 @@ jobs:
           # Only commit if there are actual changes
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "Auto-build: ${NAME} plugin from plugforge"
+            git commit -m "Auto-build: ${NAME} plugin from gm"
             git push origin main
           else
             echo "✅ No changes to commit for $NAME"
