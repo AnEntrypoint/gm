@@ -118,7 +118,7 @@ gh run view <run_id> --log-failed
 
 5. All runs must reach `conclusion: success` before advancing. A failed CI run is a KNOWN mutable that blocks completion — never ignore it.
 
-**Cascade awareness**: pushes to this repo may trigger downstream workflows (see CLAUDE.md Rust Binary Update Pipeline). After local CI passes, check downstream repos for triggered runs:
+**Cascade awareness**: pushes to this repo may trigger downstream workflows (see AGENTS.md Rust Binary Update Pipeline). After local CI passes, check downstream repos for triggered runs:
 ```
 exec:bash
 gh run list --repo AnEntrypoint/<downstream-repo> --limit 3 --json databaseId,name,status,conclusion
