@@ -1,6 +1,6 @@
 # Architecture & Philosophy
 
-plugforge generates 10 platform implementations from a single convention-driven source.
+gm generates 10 platform implementations from a single convention-driven source.
 
 ## Documentation Policy
 
@@ -13,14 +13,14 @@ Only record non-obvious technical caveats that cost multiple runs to discover. R
 ## Build
 
 ```
-node cli.js plugforge-starter ./build
+node cli.js gm-starter ./build
 ```
 
 10 outputs in `build/gm-{cc,gc,oc,kilo,codex,copilot-cli,vscode,cursor,zed,jetbrains}`.
 
 ## Known Gotchas
 
-**npm publish E403 race condition**: Plugforge's `publish.yml` pushes to downstream repos AND publishes to npm. The push triggers the downstream repo's own `publish-npm.yml`, which tries to publish the same version again → E403. Both `lib/template-builder.js:generatePublishNpmWorkflow()` and `plugforge-starter/.github/workflows/publish-npm.yml` must tolerate "cannot publish over previously published versions" by grepping the error output instead of failing.
+**npm publish E403 race condition**: gm's `publish.yml` pushes to downstream repos AND publishes to npm. The push triggers the downstream repo's own `publish-npm.yml`, which tries to publish the same version again → E403. Both `lib/template-builder.js:generatePublishNpmWorkflow()` and `gm-starter/.github/workflows/publish-npm.yml` must tolerate "cannot publish over previously published versions" by grepping the error output instead of failing.
 
 **Adding a new platform**: update `PLATFORM_META` in `lib/page-generator.js` — this is the single registration point, not obvious from the adapter structure.
 
@@ -57,8 +57,8 @@ rs-exec / rs-codeinsight / rs-search
   → .github/workflows/cascade.yml triggers rs-plugkit workflow_dispatch
   → rs-plugkit release.yml runs: cargo update (picks up latest git deps), builds all 6 binaries
   → auto-bumps rs-plugkit patch version in Cargo.toml + commits [skip ci]
-  → publish-binaries job: copies binaries + updates plugkitVersion in plugforge/plugforge-starter/gm.json
-  → that commit (no [skip ci]) triggers plugforge publish.yml
+  → publish-binaries job: copies binaries + updates plugkitVersion in plugforge/gm-starter/gm.json
+  → that commit (no [skip ci]) triggers gm publish.yml
   → publish.yml builds and pushes to AnEntrypoint/gm-cc
   → /plugin detects new gm-cc HEAD → updates cache → bootstrap.js downloads new binary
 ```
@@ -68,7 +68,7 @@ rs-exec / rs-codeinsight / rs-search
 - `AnEntrypoint/rs-codeinsight` — code search backend
 - `AnEntrypoint/rs-search` — file search backend
 - `AnEntrypoint/rs-plugkit` — binary entry point, hook dispatcher; version source of truth in `Cargo.toml`
-- `AnEntrypoint/plugforge` — `plugforge-starter/gm.json` holds `plugkitVersion`; CI publishes to gm-cc
+- `AnEntrypoint/gm` — `gm-starter/gm.json` holds `plugkitVersion`; CI publishes to gm-cc
 - `AnEntrypoint/gm-cc` — Claude Code plugin package; HEAD hash is what `/plugin` tracks
 
 **To update anything**: push to the relevant repo. No manual version bumps, no local cargo builds.
@@ -79,7 +79,7 @@ rs-exec / rs-codeinsight / rs-search
 
 **rs-plugkit CI builds**: Never run `cargo update` or `cargo build` locally. Push changes and let CI build. The `cargo update` step in CI always pulls latest git dep hashes — no Cargo.lock hash management needed locally.
 
-**rs-plugkit release.yml binary commit**: The publish-binaries job runs `git add gm-build-latest/gm-cc/bin/`. This fails silently (exit 1) because `gm-build-latest/` is listed in plugforge's `.gitignore`. Must use `git add -f gm-build-latest/gm-cc/bin/` to force-add past the ignore rule.
+**rs-plugkit release.yml binary commit**: The publish-binaries job runs `git add gm-build-latest/gm-cc/bin/`. This fails silently (exit 1) because `gm-build-latest/` is listed in gm's `.gitignore`. Must use `git add -f gm-build-latest/gm-cc/bin/` to force-add past the ignore rule.
 
 **exec-process-mode orphan accumulation**: On runner restart the in-memory active PID map is lost, leaving `--exec-process-mode` child processes with no cleanup path. Fix: call `reap_orphaned_exec_processes()` at server startup in `rs-exec/src/runner.rs` — uses sysinfo to find exec-process-mode procs whose parent is not a live runner-mode proc (5-second age guard) and kills them via `kill_tree`. Without this, orphans accumulate across restarts (300+ procs, ~5.9GB RAM observed).
 
