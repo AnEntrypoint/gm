@@ -1,5 +1,5 @@
 {
-  "name": "plugforge-site",
+  "name": "gm-site",
   "private": true,
   "scripts": {
     "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node node_modules/@tailwindcss/cli/dist/index.mjs -i input.css -o ../docs/styles.css --minify && cp index.html ../docs/index.html"
