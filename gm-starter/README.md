@@ -73,16 +73,16 @@ https://github.com/remorses/playwriter
 
 note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references `agent-browser` skill throughout the charter system for browser integration.
 
-## plugforge
+## gm build system
 
-this plugin is built by plugforge, a build system that generates 9 platform implementations from a single source directory:
+this plugin is built by gm, a build system that generates 9 platform implementations from a single source directory:
 
 - 5 CLI platforms: claude code, gemini cli, opencode, codex, github copilot cli
 - 4 IDE extensions: vs code, cursor, zed, jetbrains
 
-one source in plugforge-starter/ (gm.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
+one source in gm-starter/ (gm.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
 
-repo: https://github.com/AnEntrypoint/plugforge
+repo: https://github.com/AnEntrypoint/gm
 
 ## what doesn't work yet
 
