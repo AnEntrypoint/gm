@@ -7,7 +7,7 @@
     "gm-builder": "./cli.js"
   },
   "scripts": {
-    "build": "node cli.js plugforge-starter ./build",
+    "build": "node cli.js gm-starter ./build",
     "test": "node cli.js test",
     "verify": "node cli.js verify all"
   },
