@@ -139,8 +139,9 @@ Before declaring complete, sweep the entire codebase for violations:
 8. **Fallback/demo modes** → remove, fail loud instead
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
-11. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
-12. **Deploy/publish** → if deployable, deploy. If npm package, publish.
+11. **Observability gaps** → every server subsystem added this session exposes a `/debug/<subsystem>` endpoint; every client module added this session registers into `window.__debug` by key. Ad-hoc console.log is not observability — permanent queryable structures are. Any gap found → fix before advancing.
+12. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
+13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
 
 Any violation found = fix immediately before advancing.
 
