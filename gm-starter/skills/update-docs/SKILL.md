@@ -1,6 +1,6 @@
 ---
 name: update-docs
-description: UPDATE-DOCS phase. Refresh README.md, CLAUDE.md, and docs/index.html to reflect changes made this session. Commits and pushes doc updates. Terminal phase — declares COMPLETE.
+description: UPDATE-DOCS phase. Refresh README.md, AGENTS.md, and docs/index.html to reflect changes made this session. Commits and pushes doc updates. Terminal phase — declares COMPLETE.
 ---
 
 # GM UPDATE-DOCS — Documentation Refresh
@@ -35,7 +35,7 @@ Witness which files changed. Identify doc-sensitive changes: new skills, new sta
 ```
 exec:nodejs
 const fs = require('fs');
-['README.md', 'CLAUDE.md', 'docs/index.html',
+['README.md', 'AGENTS.md', 'docs/index.html',
  'gm-starter/agents/gm.md'].forEach(f => {
   try { console.log(`=== ${f} ===\n` + fs.readFileSync(f, 'utf8')); }
   catch(e) { console.log(`MISSING: ${f}`); }
@@ -50,7 +50,7 @@ Write only sections that changed. Do not rewrite unchanged content. Rules per fi
 
 **README.md**: platform count matches adapters in `platforms/`, skill tree diagram matches current state machine, quick start commands work.
 
-**CLAUDE.md**: Launch memorize sub-agent in background with session learnings. Do not inline-edit CLAUDE.md — the memorize agent handles extraction, deduplication, and writing. Use: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
+**AGENTS.md**: Launch memorize sub-agent in background with session learnings. Do not inline-edit AGENTS.md — the memorize agent handles extraction, deduplication, and writing. Use: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
 
 **docs/index.html**: `PHASES` array matches current skill state machine phases. Platform lists match `platforms/` directory. State machine diagram updated if new phases added.
 

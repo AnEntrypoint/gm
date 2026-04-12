@@ -127,6 +127,7 @@ function install() {
   try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'CLAUDE.md'), path.join(codexDir, 'CLAUDE.md')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'AGENTS.md'), path.join(codexDir, 'AGENTS.md')); } catch {}
 }
 
 install();
@@ -329,7 +330,7 @@ function createCodexCliScript() {
       ['.agents', '.agents'], ['.codex-plugin', '.codex-plugin'],
       ['assets', 'assets'], ['.app.json', '.app.json'],
       ['.mcp.json', '.mcp.json'], ['plugin.json', 'plugin.json'], ['gm.json', 'gm.json'],
-      ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md']
+      ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md'], ['AGENTS.md', 'AGENTS.md']
     ],
     restartMsg: 'Restart Codex to activate.'
   });
@@ -605,9 +606,9 @@ function pluginMjsSource(pluginFile) {
     "        const base = basename(fp).toLowerCase();",
     "        const ext = extname(fp);",
     "        const blocked = FORBIDDEN_FILE_RE.some(re => re.test(base)) || FORBIDDEN_PATH_RE.some(p => fp.includes(p))",
-    "          || (DOC_BLOCK_RE.test(ext) && !base.startsWith('claude') && !base.startsWith('readme') && !fp.includes('/skills/'));",
+    "          || (DOC_BLOCK_RE.test(ext) && !base.startsWith('claude') && !base.startsWith('agents') && !base.startsWith('readme') && !fp.includes('/skills/'));",
     "        if (blocked) {",
-    "          throw new Error('Cannot create test/doc files. Use .prd for task notes, CLAUDE.md for permanent notes.');",
+    "          throw new Error('Cannot create test/doc files. Use .prd for task notes, AGENTS.md for permanent notes.');",
     "        }",
     "      }",
     "      if (input.tool !== 'bash' && input.tool !== 'Bash') return;",
@@ -638,7 +639,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license,
       ...repoFields('gm-cc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-cc': './cli.js', 'gm-install': './install.js' },
-      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'gm.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'gm.json', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md', 'AGENTS.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' },
       scripts: pluginSpec.scripts, ...extraFields
@@ -646,7 +647,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', '.github/', '.mcp.json', '.claude-plugin/', 'plugin.json', 'cli.js', 'install.js', 'README.md', 'LICENSE', '.gitignore', '.editorconfig', 'CONTRIBUTING.md', 'CLAUDE.md', 'AGENTS.md'],
       keywords: ['claude-code', 'agent', 'state-machine', 'mcp', 'automation', 'gm'],
       peerDependencies: { '@anthropic-ai/claude-code': '*' }
     };
@@ -947,8 +948,8 @@ const run = () => {
       const inSkillsDir = file_path.includes('/skills/');
       const base = path.basename(file_path).toLowerCase();
       if ((ext === '.md' || ext === '.txt' || base.startsWith('features_list')) &&
-          !base.startsWith('claude') && !base.startsWith('readme') && !inSkillsDir) {
-        return { deny: true, reason: 'Cannot create documentation files. Only CLAUDE.md and readme.md are maintained.' };
+          !base.startsWith('claude') && !base.startsWith('agents') && !base.startsWith('readme') && !inSkillsDir) {
+        return { deny: true, reason: 'Cannot create documentation files. Only AGENTS.md, CLAUDE.md and readme.md are maintained.' };
       }
       if (/\\.(test|spec)\\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
           file_path.includes('/__tests__/') || file_path.includes('/test/') ||
@@ -1184,7 +1185,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
       ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
@@ -1194,7 +1195,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
@@ -1561,7 +1562,7 @@ function createQwenInstallerScript() {
     destDir: `path.join(homeDir, '.qwen', 'extensions', 'gm-qwen')`,
     filesToCopy: [
       ['agents', 'agents'], ['hooks', 'hooks'], ['scripts', 'scripts'], ['skills', 'skills'],
-      ['bin', 'bin'], ['gm.json', 'gm.json'], ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md']
+      ['bin', 'bin'], ['gm.json', 'gm.json'], ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md'], ['AGENTS.md', 'AGENTS.md']
     ],
     restartMsg: 'Restart Qwen Code to activate.',
     extraSetup: `
@@ -1586,7 +1587,7 @@ const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
   },
   getPackageJsonFields() {
     return {
-      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'gm.json', 'cli.js', 'install.js', 'README.md', 'CLAUDE.md', '.gitignore', 'CONTRIBUTING.md'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'gm.json', 'cli.js', 'install.js', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.gitignore', 'CONTRIBUTING.md'],
       keywords: ['qwen-code', 'agent', 'state-machine', 'automation', 'gm'],
       peerDependencies: { '@qwen-code/qwen-code': '*' }
     };
