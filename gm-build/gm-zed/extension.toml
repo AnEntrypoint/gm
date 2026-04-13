@@ -1,7 +1,7 @@
 id = "gm"
 name = "GM"
 description = "State machine agent with hooks, skills, and automated git enforcement"
-version = "2.0.457"
+version = "2.0.458"
 schema_version = 1
 authors = ["AnEntrypoint"]
 repository = "https://github.com/AnEntrypoint/gm-zed"

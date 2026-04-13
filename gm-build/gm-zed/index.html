@@ -18,7 +18,7 @@
 <script type="module">
 import { createElement as h, applyDiff, Fragment } from "webjsx";
 const PLATFORM_NAME="Zed",PLATFORM_TYPE="IDE Extension",PLATFORM_TYPE_COLOR="#8b5cf6";
-const DESCRIPTION="State machine agent with hooks, skills, and automated git enforcement",VERSION="2.0.457";
+const DESCRIPTION="State machine agent with hooks, skills, and automated git enforcement",VERSION="2.0.458";
 const GITHUB_URL="https://github.com/AnEntrypoint/gm-zed",BADGE_LABEL="zed";
 const FEATURES=[{"title":"State Machine","desc":"Immutable PLAN→EXECUTE→EMIT→VERIFY→COMPLETE phases with full mutable tracking"},{"title":"Semantic Search","desc":"Natural language codebase exploration via codesearch skill — no grep needed"},{"title":"Hooks","desc":"Pre-tool, session-start, prompt-submit, and stop hooks for full lifecycle control"},{"title":"Agents","desc":"gm, codesearch, and websearch agents pre-configured and ready to use"},{"title":"MCP Integration","desc":"Model Context Protocol server support built in"},{"title":"Auto-Recovery","desc":"Supervisor hierarchy ensures the system never crashes"}],INSTALL_STEPS=[{"desc":"Build from source","cmd":"git clone https://github.com/AnEntrypoint/gm-zed && cd gm-zed && cargo build --release"},{"desc":"Copy to extensions dir","cmd":"cp target/release/libgm.so ~/.config/zed/extensions/gm/"},{"desc":"Restart Zed — activates automatically"}];
 const CURRENT_PLATFORM="gm-zed";

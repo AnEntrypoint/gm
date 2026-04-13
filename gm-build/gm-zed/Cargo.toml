@@ -1,6 +1,6 @@
 [package]
 name = "gm-zed"
-version = "2.0.457"
+version = "2.0.458"
 edition = "2021"
 authors = ["AnEntrypoint"]
 license = "MIT"
