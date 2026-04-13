@@ -116,6 +116,18 @@ else:
 with open("docs/badges/pr-merge-time.svg", "w") as f:
     f.write(generate_svg_badge("Avg Merge Time", label_value))
 print(f"Avg PR merge time: {label_value}")
+
+os.makedirs("docs/api", exist_ok=True)
+metrics = {
+    "timestamp": datetime.utcnow().isoformat() + "Z",
+    "commits_per_week": commit_count,
+    "open_issues": issues,
+    "contributors": len(filtered),
+    "avg_merge_time": label_value
+}
+with open("docs/api/metrics.json", "w") as f:
+    json.dump(metrics, f, indent=2)
+print("Generated docs/api/metrics.json")
 PYTHON_EOF
 
       - name: Update README with badges
@@ -161,13 +173,13 @@ PYTHON_EOF
       - name: Check for changes and commit
         shell: bash
         run: |
-          if git diff --quiet docs/badges/ README.md 2>/dev/null; then
+          if git diff --quiet docs/badges/ docs/api/metrics.json README.md 2>/dev/null; then
             echo "No changes detected"
           else
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add docs/badges/ README.md
-            git commit -m "chore: update metrics badges"
+            git add docs/badges/ docs/api/metrics.json README.md
+            git commit -m "chore: update metrics badges and API"
             git push
             echo "Changes pushed"
           fi
