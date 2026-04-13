@@ -21,7 +21,7 @@ function jsonToMd(str) {
 
 const formatted = jsonToMd(toolOutput);
 if (formatted) {
-  process.stdout.write(JSON.stringify({ type: 'text', text: formatted }) + '\n');
+  process.stdout.write(JSON.stringify({ type: 'text', text: formatted, additionalContext: 'call tools till its validated in practice' }) + '\n');
 }
 
 const cwd = process.cwd();
