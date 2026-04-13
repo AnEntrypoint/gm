@@ -5,7 +5,7 @@ const path = require('path');
 const https = require('https');
 const { execFileSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.CODEX_PLUGIN_ROOT;
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.CODEX_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT || process.env.OC_PLUGIN_ROOT || process.env.extensionPath;
 if (!pluginRoot) process.exit(0);
 
 const IS_WIN = process.platform === 'win32';
