@@ -1,0 +1,118 @@
+name: PR Statistics
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate PR stats and post comment
+        shell: bash
+        run: |
+          python3 << 'PYTHON_EOF'
+import os
+import json
+import subprocess
+import re
+
+github_token = os.environ.get('GITHUB_TOKEN', '')
+repo = os.environ.get('GITHUB_REPOSITORY', 'owner/repo')
+pr_number = os.environ.get('PR_NUMBER', '')
+
+if not pr_number:
+    print("PR_NUMBER not set, skipping")
+    exit(0)
+
+owner, repo_name = repo.split('/')
+
+pr_response = subprocess.run(
+    ["curl", "-s", "-H", f"Authorization: Bearer {github_token}",
+     "-H", "Accept: application/vnd.github+json",
+     f"https://api.github.com/repos/{repo}/pulls/{pr_number}"],
+    capture_output=True, text=True
+)
+pr_data = json.loads(pr_response.stdout)
+
+files_changed = pr_data.get('changed_files', 0)
+additions = pr_data.get('additions', 0)
+deletions = pr_data.get('deletions', 0)
+total_lines = additions + deletions
+pr_body = pr_data.get('body', '')
+
+estimate = 'small'
+if total_lines > 800:
+    estimate = 'large'
+elif total_lines > 200:
+    estimate = 'medium'
+
+issues = []
+if pr_body:
+    matches = re.findall(r'#(\d+)', pr_body)
+    issues = list(set(matches))
+
+comment_marker = '<!-- pr-stats-automation -->'
+
+comment_body = f"""{comment_marker}
+## PR Statistics
+
+**Files Changed:** {files_changed}
+**Insertions:** +{additions}
+**Deletions:** -{deletions}
+**Total Lines:** {total_lines}
+**Estimated Review Time:** {estimate}
+"""
+
+if issues:
+    comment_body += f"\n**Related Issues:** {', '.join('#' + i for i in sorted(issues))}\n"
+
+comments_response = subprocess.run(
+    ["curl", "-s", "-H", f"Authorization: Bearer {github_token}",
+     "-H", "Accept: application/vnd.github+json",
+     f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"],
+    capture_output=True, text=True
+)
+
+comments = json.loads(comments_response.stdout)
+existing_comment = None
+for comment in comments:
+    if comment_marker in comment.get('body', ''):
+        existing_comment = comment
+        break
+
+if existing_comment:
+    comment_id = existing_comment['id']
+    subprocess.run(
+        ["curl", "-s", "-X", "PATCH",
+         "-H", f"Authorization: Bearer {github_token}",
+         "-H", "Accept: application/vnd.github+json",
+         "-d", json.dumps({"body": comment_body}),
+         f"https://api.github.com/repos/{repo}/issues/comments/{comment_id}"],
+        capture_output=True, text=True
+    )
+    print(f"Updated existing comment {comment_id}")
+else:
+    subprocess.run(
+        ["curl", "-s", "-X", "POST",
+         "-H", f"Authorization: Bearer {github_token}",
+         "-H", "Accept: application/vnd.github+json",
+         "-d", json.dumps({"body": comment_body}),
+         f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"],
+        capture_output=True, text=True
+    )
+    print("Created new comment")
+
+print(f"Files: {files_changed}, Lines: +{additions}-{deletions}, Estimate: {estimate}")
+PYTHON_EOF
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
