@@ -14,6 +14,7 @@ site/platforms-out.json
 site/package-lock.json
 docs/bundle.js
 docs/styles.css
+docs/badges/
 *.tgz
 .plugkit-browser-profile/
 tmp/
