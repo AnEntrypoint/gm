@@ -1,0 +1,115 @@
+name: Notify on Workflow Failures
+
+on:
+  workflow_run:
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  discussions: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Extract failure info
+        id: extract
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+          CREATED_AT="${{ github.event.workflow_run.created_at }}"
+          ACTOR="${{ github.event.workflow_run.actor.login }}"
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          REPO="${{ github.repository }}"
+
+          SHORT_SHA="${HEAD_SHA:0:7}"
+
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "workflow_name=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
+          echo "created_at=$CREATED_AT" >> $GITHUB_OUTPUT
+          echo "actor=$ACTOR" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+
+      - name: Fetch job details and logs
+        id: logs
+        run: |
+          RUN_ID="${{ steps.extract.outputs.run_id }}"
+          REPO="${{ github.repository }}"
+          TOKEN="${{ github.token }}"
+          JOBS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/$REPO/actions/runs/$RUN_ID/jobs")
+          FAILED_JOB=$(echo "$JOBS" | jq -r '.jobs[] | select(.conclusion=="failure") | .name' | head -1)
+          FAILED_STEP=$(echo "$JOBS" | jq -r '.jobs[] | select(.conclusion=="failure") | .steps[] | select(.conclusion=="failure") | .name' | head -1)
+          ERROR_EXCERPT=$(echo "$JOBS" | jq -r '.jobs[] | select(.conclusion=="failure") | .steps[] | select(.conclusion=="failure") | .output.summary' | head -1 | cut -c1-300)
+          echo "failed_job=${FAILED_JOB:-Unknown job}" >> $GITHUB_OUTPUT
+          echo "failed_step=${FAILED_STEP:-Unknown step}" >> $GITHUB_OUTPUT
+          echo "error_excerpt=${ERROR_EXCERPT:-(See full logs in run)}" >> $GITHUB_OUTPUT
+
+      - name: Search and format
+        id: search
+        run: |
+          REPO="${{ github.repository }}"
+          TOKEN="${{ github.token }}"
+          WORKFLOW_NAME="${{ steps.extract.outputs.workflow_name }}"
+          CREATED_AT="${{ steps.extract.outputs.created_at }}"
+          RUN_ID="${{ steps.extract.outputs.run_id }}"
+          ACTOR="${{ steps.extract.outputs.actor }}"
+          SHORT_SHA="${{ steps.extract.outputs.short_sha }}"
+          FAILED_JOB="${{ steps.logs.outputs.failed_job }}"
+          FAILED_STEP="${{ steps.logs.outputs.failed_step }}"
+          ERROR_EXCERPT="${{ steps.logs.outputs.error_excerpt }}"
+
+          ISSUES=$(curl -s -H "Authorization: Bearer $TOKEN" \
+            "https://api.github.com/repos/$REPO/issues?labels=workflow-failure&state=open&sort=created&per_page=5")
+          DUPLICATE=$(echo "$ISSUES" | jq -r ".[] | select(.title | contains(\"$WORKFLOW_NAME\")) | .number" | head -1)
+
+          TITLE="Workflow failure: $WORKFLOW_NAME"
+          BODY="## Failure Report
+**Job**: $FAILED_JOB | **Step**: $FAILED_STEP
+**Actor**: $ACTOR | **Commit**: $SHORT_SHA | **Time**: $CREATED_AT
+\`\`\`
+$ERROR_EXCERPT
+\`\`\`
+[View run](https://github.com/$REPO/actions/runs/$RUN_ID)"
+
+          if [ -n "$DUPLICATE" ] && [ "$DUPLICATE" != "null" ]; then
+            echo "duplicate_issue=$DUPLICATE" >> $GITHUB_OUTPUT
+            echo "is_duplicate=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_duplicate=false" >> $GITHUB_OUTPUT
+          fi
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post notification
+        run: |
+          REPO="${{ github.repository }}"
+          TOKEN="${{ github.token }}"
+          IS_DUP="${{ steps.search.outputs.is_duplicate }}"
+          DUP_ISSUE="${{ steps.search.outputs.duplicate_issue }}"
+          TITLE="${{ steps.search.outputs.title }}"
+          BODY="${{ steps.search.outputs.body }}"
+
+          if [ "$IS_DUP" == "true" ]; then
+            curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"body\":\"**New failure**: $BODY\"}" \
+              "https://api.github.com/repos/$REPO/issues/$DUP_ISSUE/comments" > /dev/null
+            echo "✓ Posted to issue #$DUP_ISSUE"
+          else
+            RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"title\":\"$TITLE\",\"body\":\"$BODY\",\"labels\":[\"workflow-failure\"]}" \
+              "https://api.github.com/repos/$REPO/issues")
+            NUM=$(echo "$RESP" | jq -r '.number // empty')
+            if [ -n "$NUM" ]; then
+              echo "✓ Created issue #$NUM"
+            else
+              echo "✗ Failed: $(echo "$RESP" | jq -r '.message')"
+              exit 1
+            fi
+          fi
