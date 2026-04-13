@@ -68,10 +68,26 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 ### browser access
 
-for client-side coding and browser automation, the recommended approach is playwriter:
-https://github.com/remorses/playwriter
+for client-side coding and browser automation, use the `browser` skill:
 
-note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references `agent-browser` skill throughout the charter system for browser integration.
+```
+gm:browser
+```
+
+the browser skill supports two pathways:
+- **exec:browser** — direct page automation via javascript
+- **browser:** — multi-step session management via playwriter CLI
+
+setup: install the claude code browser plugin first. see `skills/browser/SKILL.md` for complete installation instructions and troubleshooting.
+
+optional: for advanced session workflows, install playwriter:
+```bash
+bun add -g playwriter
+```
+
+references:
+- https://github.com/remorses/playwriter (playwriter CLI)
+- see `skills/browser/patterns.md` for advanced automation patterns
 
 ## gm build system
 
