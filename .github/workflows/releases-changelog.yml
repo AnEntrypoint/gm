@@ -1,0 +1,151 @@
+name: Generate Changelog on Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag and previous tag
+        id: tags
+        run: |
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+          echo "current_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null || echo "")
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "is_first_release=true" >> $GITHUB_OUTPUT
+            echo "Release: $CURRENT_TAG (first release)"
+          else
+            echo "is_first_release=false" >> $GITHUB_OUTPUT
+            echo "Release: $CURRENT_TAG (previous: $PREVIOUS_TAG)"
+          fi
+
+      - name: Extract commits and build changelog
+        id: build-changelog
+        run: |
+          CURRENT_TAG="${{ steps.tags.outputs.current_tag }}"
+          PREVIOUS_TAG="${{ steps.tags.outputs.previous_tag }}"
+          IS_FIRST="${{ steps.tags.outputs.is_first_release }}"
+
+          if [ "$IS_FIRST" == "true" ]; then
+            COMMITS=$(git log "$CURRENT_TAG" --pretty=format:"%H %s" | grep -E "^[a-f0-9]+ (feat|fix|docs|perf|refactor|chore)(\(.+\))?:" || true)
+          else
+            COMMITS=$(git log "$PREVIOUS_TAG..$CURRENT_TAG" --pretty=format:"%H %s" | grep -E "^[a-f0-9]+ (feat|fix|docs|perf|refactor|chore)(\(.+\))?:" || true)
+          fi
+
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Parse and group commits
+        id: parse-commits
+        run: |
+          COMMITS="${{ steps.build-changelog.outputs.commits }}"
+
+          FEAT=""
+          FIX=""
+          DOCS=""
+          PERF=""
+          REFACTOR=""
+          CHORE=""
+          BREAKING=""
+
+          while IFS= read -r line; do
+            if [ -z "$line" ]; then continue; fi
+
+            HASH=$(echo "$line" | cut -d' ' -f1)
+            REST=$(echo "$line" | cut -d' ' -f2-)
+
+            if [[ "$REST" =~ ^feat(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              FEAT="$FEAT- $SUBJECT ($HASH)"$'\n'
+            elif [[ "$REST" =~ ^fix(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              FIX="$FIX- $SUBJECT ($HASH)"$'\n'
+            elif [[ "$REST" =~ ^docs(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              DOCS="$DOCS- $SUBJECT ($HASH)"$'\n'
+            elif [[ "$REST" =~ ^perf(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              PERF="$PERF- $SUBJECT ($HASH)"$'\n'
+            elif [[ "$REST" =~ ^refactor(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              REFACTOR="$REFACTOR- $SUBJECT ($HASH)"$'\n'
+            elif [[ "$REST" =~ ^chore(\(.+\))?:\ (.+)$ ]]; then
+              SUBJECT="${BASH_REMATCH[2]}"
+              CHORE="$CHORE- $SUBJECT ($HASH)"$'\n'
+            fi
+          done <<< "$COMMITS"
+
+          CHANGELOG_ENTRY="## ${{ steps.tags.outputs.current_tag }} - $(date -u +%Y-%m-%d)"$'\n\n'
+
+          if [ -n "$FEAT" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Features"$'\n\n'"$FEAT"$'\n'
+          fi
+
+          if [ -n "$FIX" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Fixes"$'\n\n'"$FIX"$'\n'
+          fi
+
+          if [ -n "$DOCS" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Documentation"$'\n\n'"$DOCS"$'\n'
+          fi
+
+          if [ -n "$PERF" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Performance"$'\n\n'"$PERF"$'\n'
+          fi
+
+          if [ -n "$REFACTOR" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Refactoring"$'\n\n'"$REFACTOR"$'\n'
+          fi
+
+          if [ -n "$CHORE" ]; then
+            CHANGELOG_ENTRY="$CHANGELOG_ENTRY### Chores"$'\n\n'"$CHORE"$'\n'
+          fi
+
+          echo "entry<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG.md
+        run: |
+          CHANGELOG_FILE="CHANGELOG.md"
+          ENTRY="${{ steps.parse-commits.outputs.entry }}"
+
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "$ENTRY" > "$CHANGELOG_FILE"
+          else
+            TEMP_FILE=$(mktemp)
+            echo "$ENTRY" > "$TEMP_FILE"
+            cat "$CHANGELOG_FILE" >> "$TEMP_FILE"
+            mv "$TEMP_FILE" "$CHANGELOG_FILE"
+          fi
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit CHANGELOG update
+        run: |
+          if git diff --quiet CHANGELOG.md 2>/dev/null; then
+            echo "No CHANGELOG changes, skipping commit"
+          else
+            git add CHANGELOG.md
+            git commit -m "chore: release ${{ steps.tags.outputs.current_tag }}"
+            git push
+          fi
