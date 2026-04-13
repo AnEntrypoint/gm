@@ -1,6 +1,6 @@
 {
   "name": "gm-cursor",
-  "version": "2.0.457",
+  "version": "2.0.458",
   "publisher": "gm",
   "displayName": "GM - GM State Machine",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
