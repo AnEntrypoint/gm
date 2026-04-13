@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>plugforge — Stats & Metrics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+    header { background: #1e293b; padding: 2rem; text-align: center; border-bottom: 1px solid #334155; }
+    header h1 { font-size: 2rem; font-weight: 600; }
+    main { max-width: 1400px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem; }
+    section { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem; }
+    section h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #f1f5f9; }
+    section.loading::after { content: 'Loading…'; display: block; text-align: center; color: #64748b; font-style: italic; }
+    #summary { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+    #summary .card { background: #0f172a; border: 1px solid #334155; padding: 1rem; border-radius: 6px; text-align: center; }
+    #summary .card .label { font-size: 0.875rem; color: #94a3b8; }
+    #summary .card .value { font-size: 2rem; font-weight: 700; color: #60a5fa; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    table th { background: #0f172a; padding: 0.75rem; text-align: left; font-weight: 600; border-bottom: 1px solid #334155; }
+    table td { padding: 0.75rem; border-bottom: 1px solid #1e293b; }
+    table tr:hover { background: #0f172a; }
+    canvas { max-height: 300px; }
+    footer { background: #1e293b; padding: 1.5rem; text-align: center; border-top: 1px solid #334155; color: #94a3b8; font-size: 0.875rem; }
+    .error { color: #f87171; background: #7f1d1d; padding: 1rem; border-radius: 6px; margin: 1rem 0; }
+    .controls { margin-bottom: 1rem; display: flex; gap: 0.5rem; }
+    button { background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    button:hover { background: #2563eb; }
+    #releases { grid-column: 1 / -1; }
+    .release-item { padding: 1rem; border-bottom: 1px solid #334155; }
+    .release-item:last-child { border-bottom: none; }
+    .release-tag { font-family: monospace; font-size: 0.75rem; background: #0f172a; padding: 0.25rem 0.5rem; border-radius: 3px; color: #60a5fa; }
+    .release-date { color: #94a3b8; font-size: 0.875rem; }
+    .release-name { font-weight: 500; margin: 0.5rem 0; }
+    .release-link { color: #60a5fa; text-decoration: none; }
+    .release-link:hover { text-decoration: underline; }
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      #summary { grid-template-columns: repeat(2, 1fr); }
+      section { padding: 1rem; }
+      header h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 plugforge — Metrics Dashboard</h1>
+    <p style="color: #94a3b8; margin-top: 0.5rem;">Live GitHub stats & community insights</p>
+  </header>
+
+  <main>
+    <section id="stars">
+      <h2>⭐ Star Trend</h2>
+      <canvas id="starsChart"></canvas>
+    </section>
+
+    <section id="commits">
+      <h2>📈 Commits/Week</h2>
+      <canvas id="commitsChart"></canvas>
+    </section>
+
+    <section id="contributors">
+      <h2>👥 Top Reviewers</h2>
+      <table>
+        <thead><tr><th>Reviewer</th><th>Reviews</th></tr></thead>
+        <tbody id="contributorsTable"></tbody>
+      </table>
+    </section>
+
+    <section id="files">
+      <h2>📝 Most Changed Files</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Changes</th></tr></thead>
+        <tbody id="filesTable"></tbody>
+      </table>
+    </section>
+
+    <section id="velocity">
+      <h2>🚀 Velocity Trend</h2>
+      <table>
+        <thead><tr><th>Week</th><th>PRs Merged</th></tr></thead>
+        <tbody id="velocityTable"></tbody>
+      </table>
+    </section>
+
+    <section id="summary">
+      <div class="card">
+        <div class="label">Open Issues</div>
+        <div class="value" id="openIssues">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Commits/Week</div>
+        <div class="value" id="commitsPerWeek">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Contributors</div>
+        <div class="value" id="contributors">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Avg Merge Time</div>
+        <div class="value" id="avgMergeTime">—</div>
+      </div>
+    </section>
+
+    <section id="releases">
+      <h2>🏷️ Recent Releases</h2>
+      <div id="releasesList"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="updated">Loading…</div>
+    <div style="margin-top: 0.5rem;">
+      <button onclick="refreshData()">🔄 Refresh Now</button>
+      <label style="margin-left: 1rem;">
+        <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
+        Auto-refresh every 5 min
+      </label>
+    </div>
+  </footer>
+
+  <script>
+    let chartInstances = {};
+    let apiData = {};
+    let autoRefreshId = null;
+
+    window.__debug = {
+      dashboard: {
+        fetchState: { error: null },
+        charts: {},
+        lastUpdate: null,
+        apiResponses: {}
+      }
+    };
+
+    const API_BASE = '/docs/api';
+    const ENDPOINTS = {
+      stars: `${API_BASE}/stars.json`,
+      metrics: `${API_BASE}/metrics.json`,
+      insights: `${API_BASE}/insights.json`,
+      releases: `${API_BASE}/releases.json`
+    };
+
+    async function fetchAllData() {
+      try {
+        window.__debug.dashboard.fetchState = { error: null };
+        showLoading(true);
+
+        const responses = await Promise.allSettled([
+          fetch(ENDPOINTS.stars).then(r => r.json()).catch(e => { throw new Error(`stars: ${e.message}`); }),
+          fetch(ENDPOINTS.metrics).then(r => r.json()).catch(e => { throw new Error(`metrics: ${e.message}`); }),
+          fetch(ENDPOINTS.insights).then(r => r.json()).catch(e => { throw new Error(`insights: ${e.message}`); }),
+          fetch(ENDPOINTS.releases).then(r => r.json()).catch(e => { throw new Error(`releases: ${e.message}`); })
+        ]);
+
+        let hasErrors = false;
+        const errors = [];
+
+        if (responses[0].status === 'fulfilled') {
+          apiData.stars = responses[0].value;
+          window.__debug.dashboard.apiResponses.stars = responses[0].value;
+        } else {
+          errors.push(responses[0].reason.message);
+          hasErrors = true;
+        }
+
+        if (responses[1].status === 'fulfilled') {
+          apiData.metrics = responses[1].value;
+          window.__debug.dashboard.apiResponses.metrics = responses[1].value;
+        } else {
+          errors.push(responses[1].reason.message);
+          hasErrors = true;
+        }
+
+        if (responses[2].status === 'fulfilled') {
+          apiData.insights = responses[2].value;
+          window.__debug.dashboard.apiResponses.insights = responses[2].value;
+        } else {
+          errors.push(responses[2].reason.message);
+          hasErrors = true;
+        }
+
+        if (responses[3].status === 'fulfilled') {
+          apiData.releases = responses[3].value;
+          window.__debug.dashboard.apiResponses.releases = responses[3].value;
+        } else {
+          errors.push(responses[3].reason.message);
+          hasErrors = true;
+        }
+
+        if (hasErrors) {
+          window.__debug.dashboard.fetchState.error = errors.join('; ');
+          showError(errors);
+        }
+
+        window.__debug.dashboard.lastUpdate = new Date().toISOString();
+        showLoading(false);
+        renderAll();
+      } catch (err) {
+        window.__debug.dashboard.fetchState.error = err.message;
+        showLoading(false);
+        showError([err.message]);
+      }
+    }
+
+    function showLoading(show) {
+      document.querySelectorAll('section').forEach(s => {
+        if (show) s.classList.add('loading');
+        else s.classList.remove('loading');
+      });
+    }
+
+    function showError(errors) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error';
+      errorDiv.innerHTML = '<strong>Error loading data:</strong><br>' + errors.map(e => `• ${e}`).join('<br>');
+      const main = document.querySelector('main');
+      const existing = main.querySelector('.error');
+      if (existing) existing.remove();
+      main.insertBefore(errorDiv, main.firstChild);
+    }
+
+    function renderAll() {
+      if (apiData.stars) renderStarsChart();
+      if (apiData.metrics) renderMetricsChart();
+      if (apiData.insights) {
+        renderContributorsTable();
+        renderFilesTable();
+        renderVelocityTable();
+      }
+      if (apiData.metrics) renderSummaryCards();
+      if (apiData.releases) renderReleases();
+      updateTimestamp();
+    }
+
+    function renderStarsChart() {
+      const ctx = document.getElementById('starsChart');
+      if (!ctx) return;
+
+      if (chartInstances.stars) chartInstances.stars.destroy();
+
+      const data = apiData.stars || [];
+      chartInstances.stars = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(d => d.date),
+          datasets: [{
+            label: 'Stars',
+            data: data.map(d => d.count),
+            borderColor: '#60a5fa',
+            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+      window.__debug.dashboard.charts.stars = chartInstances.stars;
+    }
+
+    function renderMetricsChart() {
+      const ctx = document.getElementById('commitsChart');
+      if (!ctx) return;
+
+      if (chartInstances.metrics) chartInstances.metrics.destroy();
+
+      const count = apiData.metrics.commits_per_week || 0;
+      chartInstances.metrics = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['This Week'],
+          datasets: [{
+            label: 'Commits',
+            data: [count],
+            backgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+      window.__debug.dashboard.charts.metrics = chartInstances.metrics;
+    }
+
+    function renderContributorsTable() {
+      const tbody = document.getElementById('contributorsTable');
+      const data = apiData.insights?.top_reviewers || [];
+      tbody.innerHTML = data.slice(0, 5).map(r => `
+        <tr>
+          <td><strong>${r.login}</strong></td>
+          <td>${r.reviews}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+    }
+
+    function renderFilesTable() {
+      const tbody = document.getElementById('filesTable');
+      const data = apiData.insights?.top_files || [];
+      tbody.innerHTML = data.slice(0, 5).map(f => `
+        <tr>
+          <td><code style="color:#60a5fa;font-size:0.75rem;">${f.path.slice(-50)}</code></td>
+          <td>${f.changes}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+    }
+
+    function renderVelocityTable() {
+      const tbody = document.getElementById('velocityTable');
+      const data = apiData.insights?.velocity || [];
+      tbody.innerHTML = data.slice(0, 5).map(v => `
+        <tr>
+          <td>${v.week}</td>
+          <td><strong>${v.merged}</strong></td>
+        </tr>
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+    }
+
+    function renderSummaryCards() {
+      document.getElementById('openIssues').textContent = apiData.metrics?.open_issues ?? '—';
+      document.getElementById('commitsPerWeek').textContent = apiData.metrics?.commits_per_week ?? '—';
+      document.getElementById('contributors').textContent = apiData.metrics?.contributors ?? '—';
+      document.getElementById('avgMergeTime').textContent = apiData.metrics?.avg_merge_time ?? '—';
+    }
+
+    function renderReleases() {
+      const container = document.getElementById('releasesList');
+      const releases = apiData.releases?.releases || [];
+      container.innerHTML = releases.slice(0, 10).map(r => `
+        <div class="release-item">
+          <div style="display:flex;gap:1rem;align-items:center;">
+            <span class="release-tag">${r.tag}</span>
+            <span class="release-date">${r.date}</span>
+          </div>
+          <div class="release-name">${r.name}</div>
+          <a href="${r.url}" target="_blank" class="release-link">View on GitHub →</a>
+        </div>
+      `).join('') || '<div style="text-align:center;color:#64748b;">No releases</div>';
+    }
+
+    function updateTimestamp() {
+      const lastGen = apiData.insights?.generated || apiData.metrics?.timestamp || apiData.releases?.timestamp || new Date().toISOString();
+      const lastFetch = window.__debug.dashboard.lastUpdate || new Date().toISOString();
+      const date = new Date(lastFetch);
+      document.getElementById('updated').textContent = `Last updated: ${date.toLocaleString()} (API: ${new Date(lastGen).toLocaleString()})`;
+    }
+
+    function refreshData() {
+      fetchAllData();
+    }
+
+    function toggleAutoRefresh() {
+      const checkbox = document.getElementById('autoRefresh');
+      if (checkbox.checked) {
+        autoRefreshId = setInterval(fetchAllData, 5 * 60 * 1000);
+      } else {
+        clearInterval(autoRefreshId);
+      }
+    }
+
+    fetchAllData();
+    toggleAutoRefresh();
+  </script>
+</body>
+</html>
