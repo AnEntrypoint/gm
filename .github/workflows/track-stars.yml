@@ -35,7 +35,7 @@ jobs:
 
       - name: Initialize or read stars.json
         run: |
-          STARS_FILE="docs/stars.json"
+          STARS_FILE="docs/api/stars.json"
 
           if [ ! -f "$STARS_FILE" ]; then
             echo "[]" > "$STARS_FILE"
@@ -44,7 +44,7 @@ jobs:
       - name: Append new star count to JSON
         id: append-data
         run: |
-          STARS_FILE="docs/stars.json"
+          STARS_FILE="docs/api/stars.json"
           NEW_DATE=$(date -u +%Y-%m-%d)
           NEW_COUNT=${{ steps.fetch-stars.outputs.count }}
 

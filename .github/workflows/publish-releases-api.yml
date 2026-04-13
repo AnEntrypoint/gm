@@ -1,0 +1,90 @@
+name: Publish Releases API
+
+on:
+  push:
+    tags:
+      - 'v*'
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch releases and generate releases.json
+        shell: bash
+        run: |
+          mkdir -p docs/api
+          
+          python3 << 'PYTHON_EOF'
+import json
+import subprocess
+from datetime import datetime
+
+# Fetch all tags and convert to release info
+result = subprocess.run(['git', 'tag', '--list', '--sort=-version:refname', '--format=%(refname:short)|%(creatordate:short)'], 
+                       capture_output=True, text=True)
+
+releases = []
+for line in result.stdout.strip().split('\n'):
+    if not line:
+        continue
+    parts = line.split('|')
+    tag = parts[0]
+    date = parts[1] if len(parts) > 1 else ''
+    
+    # Get commit message as release name
+    try:
+        msg = subprocess.run(['git', 'log', '-1', '--format=%s', tag], 
+                            capture_output=True, text=True).stdout.strip()
+    except:
+        msg = tag
+    
+    # Build GitHub release URL
+    repo = 'AnEntrypoint/gm'
+    url = f'https://github.com/{repo}/releases/tag/{tag}'
+    
+    releases.append({
+        'tag': tag,
+        'name': msg or tag,
+        'date': date,
+        'url': url
+    })
+
+output = {
+    'timestamp': datetime.utcnow().isoformat() + 'Z',
+    'releases': releases
+}
+
+with open('docs/api/releases.json', 'w') as f:
+    json.dump(output, f, indent=2)
+
+print(f'Generated docs/api/releases.json with {len(releases)} releases')
+print(json.dumps(output, indent=2))
+PYTHON_EOF
+
+      - name: Check for changes and commit
+        shell: bash
+        run: |
+          if git diff --quiet docs/api/releases.json 2>/dev/null; then
+            echo "No changes detected in docs/api/releases.json"
+          else
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add docs/api/releases.json
+            git commit -m "chore: update releases API"
+            git push
+            echo "✓ Pushed releases.json changes"
+          fi
