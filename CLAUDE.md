@@ -101,6 +101,8 @@ rs-exec / rs-codeinsight / rs-search
 
 **ocw PromptInput schema**: `SessionPrompt.prompt` (opencode-core.js) requires `{ sessionID: string, parts: [{type:"text", text: string}], model?: {providerID: string, modelID: string} }` — NOT a flat `{ content, provider, model }` shape. The `api.js` fetch interceptor must transform the flat body from `ui-chat.js` into this shape before calling `SessionPrompt.prompt`.
 
+**rs-exec RPC session isolation (FIXED)**: All task RPC methods in `rs-exec/src/rpc.rs` (`getTask`, `deleteTask`, `listTasks`, `getAndClearOutput`, `waitForOutput`, `appendOutput`, `sendStdin`, `pm2list`) previously lacked session ID validation, allowing any client to access/modify tasks from other sessions. `listTasks()` returned all tasks in the system instead of filtering by session. This prevented Claude Code agent sessions from being isolated. Fixed in commit AnEntrypoint/rs-exec 7247f83 — all methods now require `sessionId` validation and enforce task ownership. The fix auto-cascades via CI to the installed plugkit binary.
+
 ## GitHub Automation Workflows
 
 **7 fully-automated GitHub Actions workflows publish metrics to docs/api/ JSON endpoints:**
