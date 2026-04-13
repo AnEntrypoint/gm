@@ -8,189 +8,93 @@ allowed-tools: Bash(browser:*), Bash(exec:browser*)
 
 **Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
 
+## Installation & Setup
 
-## Two Pathways
+Browser automation requires:
+- **Claude Code** — web app, CLI, or desktop (not IDE extensions yet)
+- **Bun** — fast package runner (`curl -fsSL https://bun.sh/install | bash`)
+- **Browser plugin** — installed in Claude Code
 
-**Session commands** (`browser:` prefix) — manage multi-step sessions via playwriter CLI. Each `browser:` block runs its commands sequentially.
+### Step 1: Install Browser Plugin in Claude Code
 
-**JS execution** (`exec:browser`) — run JavaScript directly against `page`. State persists across calls via `state` global.
+**Web app (claude.ai/code)**: Settings → Plugins → Marketplace → Search "browser" → Install → Activate
 
-**CRITICAL**: Never mix these two pathways. Each `browser:` block is a separate Bash call. Each `exec:browser` block is a separate Bash call.
+**CLI**: `claude plugin install browser`
 
-## 15-Second Ceiling — How It Works
+**Desktop**: Settings → Extensions → Browser
 
-Every `exec:browser` call has a 15s live window. During that window, all stdout/stderr is streamed to you in real time. After 15s the task backgrounds and you receive:
-- All output produced so far (live drain)
-- A task ID with `plugkit sleep/status/close` instructions
-
-**The task keeps running.** Every subsequent plugkit interaction automatically drains all running browser tasks — you will see new output without asking.
-
-**Never use `await new Promise(r => setTimeout(r, N))` with N > 10000.** Use short poll loops instead (see patterns below).
-
-**"Assertion failed: UV_HANDLE_CLOSING" in output** means the call exceeded 15s and was cut off — ignore the assertion noise, look at the output before it. The task was backgrounded normally.
-
-## Session Pathway (`browser:`)
-
-Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):
-
-```
-browser:
-playwriter session new --direct
-```
-
-Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent calls. **Each command must be a separate Bash call:**
-
-```
-browser:
-playwriter -s 1 -e 'await page.goto("http://example.com")'
-```
-
-```
-browser:
-playwriter -s 1 -e 'await snapshot({ page })'
-```
-
-```
-browser:
-playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
-```
-
-State persists across session calls:
-
-```
-browser:
-playwriter -s 1 -e 'state.x = 1'
-```
-
-```
-browser:
-playwriter -s 1 -e 'console.log(state.x)'
-```
-
-
-**RULE**: The `-e` argument must use single quotes. The JS inside must use double quotes for strings.
-
-**RULE**: Never chain multiple `playwriter` commands in one `browser:` block — run one command per block.
-
-## JS Execution Pathway (`exec:browser`)
-
-For direct page access, DOM queries, and data extraction. The runtime provides `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state` as globals.
+### Step 2: Verify Installation
 
 ```
 exec:browser
 await page.goto('https://example.com')
-await snapshot({ page })
+console.log('✓ Browser plugin is ready')
 ```
+
+If you get "Failed to run downloader" error, the browser plugin is not installed. Retry Step 1.
+
+### Step 3: Optional — Install Playwriter Locally
+
+For advanced session management (multi-step workflows, persistent state):
+
+```bash
+bun add -g playwriter
+```
+
+Then use `browser:` prefix commands.
+
+## Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Failed to run downloader` | Browser plugin not installed | Install via plugin marketplace |
+| `No such file or directory` | Missing bun | `curl -fsSL https://bun.sh/install \| bash` |
+| `ECONNREFUSED` | Browser engine not running | Restart Claude Code |
+| `timeout` | Page load too slow | Add retry loop (see patterns.md) |
+| `Cannot find playwriter` | playwriter not installed | `bun add -g playwriter` (optional) |
+
+## Platform-Specific Notes
+
+**macOS**: If playwriter installation fails, use Homebrew: `brew install playwright`
+
+**Windows**: Use PowerShell (not cmd). Ensure bun.exe is in PATH.
+
+**Linux**: Most distros work out-of-the-box. Check Claude Code version is up-to-date if browser plugin fails to load.
+
+## Quick Start
+
+Once installed, browser automation is ready:
 
 ```
 exec:browser
+await page.goto('https://example.com')
 const title = await page.title()
-console.log(title)
+console.log('✓ Page loaded:', title)
 ```
 
-Never add shell quoting — write plain JavaScript directly.
+## Two Pathways
 
-## Core Workflow
+**Session commands** (`browser:` prefix) — manage multi-step sessions via playwriter CLI. Each `browser:` block runs one command sequentially.
 
-1. **Navigate**: `exec:browser\nawait page.goto('url')` — session auto-created on first call
-2. **Snapshot**: `exec:browser\nawait snapshot({ page })`
-3. **Interact**: click, fill, type in subsequent `exec:browser` calls
-4. **Extract data**: `exec:browser\nconsole.log(await page.evaluate(() => document.title))`
+**JS execution** (`exec:browser`) — run JavaScript directly against `page`. State persists across calls via `state` global.
 
-## Long-Running Operations — Poll Pattern
-
-For operations that take >10s (model loading, network fetches, animations):
-
-**Step 1** — set up listener and kick off the operation:
-```
-exec:browser
-state.done = false
-state.result = null
-page.on('console', msg => {
-  const t = msg.text()
-  if (t.includes('loaded') || t.includes('ready')) { state.done = true; state.result = t }
-})
-await page.click('#start-button')
-console.log('started, waiting...')
-```
-
-**Step 2** — poll in short bursts (this will background after 15s and keep draining):
-```
-exec:browser
-const start = Date.now()
-while (!state.done && Date.now() - start < 12000) {
-  await new Promise(r => setTimeout(r, 500))
-}
-console.log('done:', state.done, 'result:', state.result)
-```
-
-If step 2 backgrounds (takes >15s), every subsequent plugkit call will drain its output automatically. When you see the result in the drain log, close the task:
-```
-exec:close
-task_N
-```
-
-## Common Patterns
-
-
-
-### Data Extraction
-
-```
-exec:browser
-const items = await page.$$eval('.product-title', els => els.map(e => e.textContent))
-console.log(JSON.stringify(items))
-```
-
-
-### Console Monitoring — set up listener first, then poll
-
-```
-exec:browser
-state.logs = []
-state.errors = []
-page.on('console', msg => state.logs.push({ type: msg.type(), text: msg.text() }))
-page.on('pageerror', e => state.errors.push(e.message))
-console.log('listeners attached')
-```
-
-```
-exec:browser
-console.log('logs so far:', JSON.stringify(state.logs.slice(-20)))
-console.log('errors:', JSON.stringify(state.errors))
-```
-
-```
-exec:browser
-if (page.workers().length > 0) {
-  const r = await page.workers()[0].evaluate(() => JSON.stringify({ type: 'worker alive' }))
-  console.log(r)
-}
-```
-
-exec:browser
-const result = await page.evaluate(() => JSON.stringify({
-  entityCount: window.debug?.scene?.children?.length,
-  playerId: window.debug?.client?.playerId
-}))
-console.log(result)
-```
-
-exec:browser
-const start = Date.now()
-while (Date.now() - start < 12000) {
-  const el = await page.$('#status')
-  if (el) { console.log('found:', await el.textContent()); break }
-  await new Promise(r => setTimeout(r, 300))
-}
-```
+**CRITICAL**: Never mix these two pathways in the same Bash call.
 
 ## Key Rules
 
 - `browser:` prefix → playwriter session management (one command per block)
-- `exec:browser` → JS in page context (multi-line JS allowed, 15s live window)
+- `exec:browser` → JS in page context (15s live window, then backgrounds)
 - Never mix pathways in the same Bash call
-- `-e` argument: single quotes on outside, double quotes inside for JS strings
-- One `playwriter` command per `browser:` block
-- Never `await setTimeout(N)` with N > 10000 — use short poll loops instead
-- All running browser tasks drain automatically on every plugkit interaction
+- `-e` argument: single quotes outside, double quotes inside
+- Never `await setTimeout(N)` with N > 10000 — use short poll loops
+- All running browser tasks drain automatically on plugkit interactions
+
+## Advanced Patterns
+
+See **patterns.md** for detailed examples:
+- Long-running operations & poll patterns
+- Data extraction
+- Console monitoring
+- Worker inspection
+- State inspection
+- Element wait loops
