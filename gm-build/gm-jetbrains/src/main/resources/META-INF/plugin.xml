@@ -2,7 +2,7 @@
 <idea-plugin url="https://github.com/AnEntrypoint/gm-jetbrains">
   <id>com.gm.intellij</id>
   <name>GM - GM State Machine</name>
-  <version>2.0.455</version>
+  <version>2.0.456</version>
   <vendor email="gm@anthropic.ai" url="https://github.com/AnEntrypoint">GM</vendor>
   <description>State machine agent with hooks, skills, and automated git enforcement</description>
   <category>AI</category>
