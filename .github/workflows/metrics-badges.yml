@@ -26,6 +26,7 @@ jobs:
 
       - name: Generate commits per week badge
         id: commits-badge
+        shell: bash
         run: |
           generate_badge() {
             local label="$1"
@@ -74,6 +75,7 @@ EOF
 
       - name: Generate open issues badge
         id: issues-badge
+        shell: bash
         run: |
           generate_badge() {
             local label="$1"
@@ -128,6 +130,7 @@ EOF
 
       - name: Generate contributors badge
         id: contributors-badge
+        shell: bash
         run: |
           generate_badge() {
             local label="$1"
@@ -189,6 +192,7 @@ EOF
 
       - name: Generate PR merge time badge
         id: merge-time-badge
+        shell: bash
         run: |
           generate_badge() {
             local label="$1"
@@ -266,12 +270,13 @@ EOF
 
       - name: Update README with badges
         id: update-readme
+        shell: bash
         run: |
           README_FILE="README.md"
           TEMP_FILE=$(mktemp)
 
           if grep -q "## Metrics" "$README_FILE"; then
-            grep -v "^## Metrics" "$README_FILE" | sed '/^[![/d; /^$/N' > "$TEMP_FILE"
+            sed '/^## Metrics/,/^$/d' "$README_FILE" > "$TEMP_FILE"
           else
             cp "$README_FILE" "$TEMP_FILE"
           fi
@@ -280,15 +285,17 @@ EOF
           INSERTED=0
 
           while IFS= read -r line; do
-            if [[ $line =~ ^##\ ]] && [ $INSERTED -eq 0 ]; then
-              echo "## Metrics" >> "$FINAL_FILE"
-              echo "" >> "$FINAL_FILE"
-              echo "[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)" >> "$FINAL_FILE"
-              echo "[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)" >> "$FINAL_FILE"
-              echo "[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)" >> "$FINAL_FILE"
-              echo "[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)" >> "$FINAL_FILE"
-              echo "" >> "$FINAL_FILE"
-              INSERTED=1
+            if echo "$line" | grep -q "^## "; then
+              if [ $INSERTED -eq 0 ]; then
+                echo "## Metrics" >> "$FINAL_FILE"
+                echo "" >> "$FINAL_FILE"
+                echo "[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)" >> "$FINAL_FILE"
+                echo "[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)" >> "$FINAL_FILE"
+                echo "[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)" >> "$FINAL_FILE"
+                echo "[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)" >> "$FINAL_FILE"
+                echo "" >> "$FINAL_FILE"
+                INSERTED=1
+              fi
             fi
             echo "$line" >> "$FINAL_FILE"
           done < "$TEMP_FILE"
@@ -309,6 +316,7 @@ EOF
 
       - name: Check for changes
         id: check-diff
+        shell: bash
         run: |
           if git diff --quiet docs/badges/ README.md 2>/dev/null; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -326,6 +334,7 @@ EOF
 
       - name: Commit and push changes
         if: steps.check-diff.outputs.has_changes == 'true'
+        shell: bash
         run: |
           git add docs/badges/ README.md
           git commit -m "chore: update metrics badges"
