@@ -1,6 +1,6 @@
 {
   "name": "gm-cc",
-  "version": "2.0.337",
+  "version": "2.0.455",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -39,7 +39,8 @@
     ".gitignore",
     ".editorconfig",
     "CONTRIBUTING.md",
-    "CLAUDE.md"
+    "CLAUDE.md",
+    "AGENTS.md"
   ],
   "keywords": [
     "claude-code",

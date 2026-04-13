@@ -5,6 +5,9 @@ description: Run shell commands on remote SSH hosts via exec:ssh. Reads targets 
 
 # exec:ssh — Remote SSH Execution
 
+**Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
+
+
 Runs shell commands on a remote host over SSH. No shell open, no manual connection — just write the command.
 
 ## Setup

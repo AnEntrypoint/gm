@@ -102,19 +102,17 @@ function install() {
   safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(kiloDir, 'skills'));
   safeCopyFile(path.join(sourceDir, 'kilocode.json'), path.join(kiloDir, 'kilocode.json'));
   safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(kiloDir, '.mcp.json'));
-  safeCopyFile(path.join(sourceDir, 'gm.mjs'), path.join(kiloDir, 'gm.mjs'));
-  safeCopyFile(path.join(sourceDir, 'index.mjs'), path.join(kiloDir, 'index.mjs'));
+  safeCopyFile(path.join(sourceDir, 'gm-kilo.mjs'), path.join(kiloDir, 'plugins', 'gm-kilo.mjs'));
+  safeCopyFile(path.join(sourceDir, 'gm.json'), path.join(kiloDir, 'gm.json'));
   safeCopyFile(path.join(sourceDir, 'README.md'), path.join(kiloDir, 'README.md'));
   safeCopyFile(path.join(sourceDir, 'LICENSE'), path.join(kiloDir, 'LICENSE'));
   safeCopyFile(path.join(sourceDir, 'CONTRIBUTING.md'), path.join(kiloDir, 'CONTRIBUTING.md'));
   safeCopyFile(path.join(sourceDir, '.gitignore'), path.join(kiloDir, '.gitignore'));
   safeCopyFile(path.join(sourceDir, '.editorconfig'), path.join(kiloDir, '.editorconfig'));
 
-  const pluginDir = path.join(kiloDir, 'plugin');
-  if (!fs.existsSync(pluginDir)) fs.mkdirSync(pluginDir, { recursive: true });
-  const gmMjsSrc = path.join(sourceDir, 'gm.mjs');
-  if (fs.existsSync(gmMjsSrc)) safeCopyFile(gmMjsSrc, path.join(pluginDir, 'gm.mjs'));
-  fs.writeFileSync(path.join(pluginDir, 'index.js'), "export { default } from './gm.mjs';\n", 'utf-8');
+  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(kiloDir, 'skills'));
+  safeCopyDirectory(path.join(sourceDir, 'lang'), path.join(kiloDir, 'lang'));
+  safeCopyDirectory(path.join(sourceDir, 'bin'), path.join(kiloDir, 'bin'));
 
   updateGitignore(projectRoot);
 

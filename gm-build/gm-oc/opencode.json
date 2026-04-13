@@ -1,4 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "gm"
+  "default_agent": "gm",
+  "agent": {
+    "gm": {
+      "mode": "primary",
+      "description": "GM state machine agent — PLAN→EXECUTE→EMIT→VERIFY→COMPLETE",
+      "prompt": "{file:./agents/gm.md}"
+    }
+  }
 }

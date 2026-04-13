@@ -5,6 +5,9 @@ description: Create a lang/ plugin that wires any CLI tool or language runtime i
 
 # CREATE LANG PLUGIN
 
+**Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
+
+
 A lang plugin is a single CommonJS file at `<projectDir>/lang/<id>.js`. gm-cc's hooks auto-discover it — no hook editing, no settings changes. The plugin gets three integration points: **exec dispatch**, **LSP diagnostics**, and **context injection**.
 
 ## PLUGIN SHAPE

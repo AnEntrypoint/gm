@@ -1,6 +1,6 @@
 {
   "name": "gm-codex",
-  "version": "2.0.337",
+  "version": "2.0.455",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
@@ -34,6 +34,7 @@
     ".codex-plugin/",
     "README.md",
     "CLAUDE.md",
+    "AGENTS.md",
     ".mcp.json",
     ".app.json",
     "plugin.json",
