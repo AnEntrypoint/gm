@@ -6,26 +6,43 @@ allowed-tools: Bash(browser:*), Bash(exec:browser*)
 
 # Browser Automation with playwriter
 
+**Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
+
+
 ## Two Pathways
 
-**Session commands** — use `browser:` prefix via Bash for all browser control.
+**Session commands** (`browser:` prefix) — manage multi-step sessions via playwriter CLI. Each `browser:` block runs its commands sequentially.
 
-Create a session first, then run commands against it. Use `--direct` for CDP mode (no extension needed — requires Chrome with remote debugging):
+**JS execution** (`exec:browser`) — run JavaScript directly against `page`. State persists across calls via `state` global.
+
+**CRITICAL**: Never mix these two pathways. Each `browser:` block is a separate Bash call. Each `exec:browser` block is a separate Bash call.
+
+## 15-Second Ceiling — How It Works
+
+Every `exec:browser` call has a 15s live window. During that window, all stdout/stderr is streamed to you in real time. After 15s the task backgrounds and you receive:
+- All output produced so far (live drain)
+- A task ID with `plugkit sleep/status/close` instructions
+
+**The task keeps running.** Every subsequent plugkit interaction automatically drains all running browser tasks — you will see new output without asking.
+
+**Never use `await new Promise(r => setTimeout(r, N))` with N > 10000.** Use short poll loops instead (see patterns below).
+
+**"Assertion failed: UV_HANDLE_CLOSING" in output** means the call exceeded 15s and was cut off — ignore the assertion noise, look at the output before it. The task was backgrounded normally.
+
+## Session Pathway (`browser:`)
+
+Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):
 
 ```
 browser:
 playwriter session new --direct
 ```
 
-Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent commands.
-
-If `--direct` fails, the user needs Chrome running with debugging enabled:
-- Open `chrome://inspect/#remote-debugging` in Chrome, OR
-- Launch Chrome with `chrome --remote-debugging-port=9222`
+Returns a numeric session ID (e.g. `1`). Use that ID for all subsequent calls. **Each command must be a separate Bash call:**
 
 ```
 browser:
-playwriter -s 1 -e 'await page.goto("https://example.com")'
+playwriter -s 1 -e 'await page.goto("http://example.com")'
 ```
 
 ```
@@ -38,7 +55,7 @@ browser:
 playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
 ```
 
-State persists across calls within a session:
+State persists across session calls:
 
 ```
 browser:
@@ -50,14 +67,14 @@ browser:
 playwriter -s 1 -e 'console.log(state.x)'
 ```
 
-List active sessions:
 
-```
-browser:
-playwriter session list
-```
+**RULE**: The `-e` argument must use single quotes. The JS inside must use double quotes for strings.
 
-**JS eval in browser** — use `exec:browser` via Bash when you need to run JavaScript in the page context directly.
+**RULE**: Never chain multiple `playwriter` commands in one `browser:` block — run one command per block.
+
+## JS Execution Pathway (`exec:browser`)
+
+For direct page access, DOM queries, and data extraction. The runtime provides `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state` as globals.
 
 ```
 exec:browser
@@ -71,105 +88,109 @@ const title = await page.title()
 console.log(title)
 ```
 
-Always use single quotes for the `-e` argument to avoid shell quoting issues.
+Never add shell quoting — write plain JavaScript directly.
 
 ## Core Workflow
 
-Every browser automation follows this pattern:
+1. **Navigate**: `exec:browser\nawait page.goto('url')` — session auto-created on first call
+2. **Snapshot**: `exec:browser\nawait snapshot({ page })`
+3. **Interact**: click, fill, type in subsequent `exec:browser` calls
+4. **Extract data**: `exec:browser\nconsole.log(await page.evaluate(() => document.title))`
 
-1. **Create session**: `playwriter session new` (note the returned ID)
-2. **Navigate**: `playwriter -s <id> -e 'await page.goto("https://example.com")'`
-3. **Snapshot**: `playwriter -s <id> -e 'await snapshot({ page })'`
-4. **Interact**: click, fill, type via JS expressions
-5. **Re-snapshot**: after navigation or DOM changes
+## Long-Running Operations — Poll Pattern
 
+For operations that take >10s (model loading, network fetches, animations):
+
+**Step 1** — set up listener and kick off the operation:
 ```
-browser:
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://example.com/form")'
-playwriter -s 1 -e 'await snapshot({ page })'
-playwriter -s 1 -e 'await page.fill("[name=email]", "user@example.com")'
-playwriter -s 1 -e 'await page.click("[type=submit]")'
-playwriter -s 1 -e 'await page.waitForLoadState("networkidle")'
-playwriter -s 1 -e 'await snapshot({ page })'
+exec:browser
+state.done = false
+state.result = null
+page.on('console', msg => {
+  const t = msg.text()
+  if (t.includes('loaded') || t.includes('ready')) { state.done = true; state.result = t }
+})
+await page.click('#start-button')
+console.log('started, waiting...')
+```
+
+**Step 2** — poll in short bursts (this will background after 15s and keep draining):
+```
+exec:browser
+const start = Date.now()
+while (!state.done && Date.now() - start < 12000) {
+  await new Promise(r => setTimeout(r, 500))
+}
+console.log('done:', state.done, 'result:', state.result)
+```
+
+If step 2 backgrounds (takes >15s), every subsequent plugkit call will drain its output automatically. When you see the result in the drain log, close the task:
+```
+exec:close
+task_N
 ```
 
 ## Common Patterns
 
-### Navigation and Snapshot
 
-```
-browser:
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://example.com")'
-playwriter -s 1 -e 'await snapshot({ page })'
-```
-
-### Screenshot with Accessibility Labels
-
-```
-browser:
-playwriter -s 1 -e 'await screenshotWithAccessibilityLabels({ page })'
-```
 
 ### Data Extraction
 
 ```
 exec:browser
-await page.goto('https://example.com/products')
 const items = await page.$$eval('.product-title', els => els.map(e => e.textContent))
 console.log(JSON.stringify(items))
 ```
 
-### Persistent State Across Steps
 
-```
-browser:
-playwriter -s 1 -e 'state.loginDone = false'
-playwriter -s 1 -e 'await page.goto("https://app.example.com/login")'
-playwriter -s 1 -e 'await page.fill("[name=user]", "admin")'
-playwriter -s 1 -e 'await page.fill("[name=pass]", "secret")'
-playwriter -s 1 -e 'await page.click("[type=submit]")'
-playwriter -s 1 -e 'state.loginDone = true'
-```
-
-### Multiple Sessions
-
-```
-browser:
-playwriter session new
-playwriter session new
-playwriter -s 1 -e 'await page.goto("https://site-a.com")'
-playwriter -s 2 -e 'await page.goto("https://site-b.com")'
-playwriter session list
-```
-
-## JavaScript Evaluation (exec pathway)
-
-Use `exec:browser` via Bash when you need direct page access. The body is plain JavaScript executed in the browser context.
+### Console Monitoring — set up listener first, then poll
 
 ```
 exec:browser
-await page.goto('https://example.com')
-await snapshot({ page })
+state.logs = []
+state.errors = []
+page.on('console', msg => state.logs.push({ type: msg.type(), text: msg.text() }))
+page.on('pageerror', e => state.errors.push(e.message))
+console.log('listeners attached')
 ```
 
 ```
 exec:browser
-const links = await page.$$eval('a', els => els.map(e => e.href))
-console.log(JSON.stringify(links))
+console.log('logs so far:', JSON.stringify(state.logs.slice(-20)))
+console.log('errors:', JSON.stringify(state.errors))
 ```
 
-Never add shell quoting or escaping to the exec body — write plain JavaScript directly.
+```
+exec:browser
+if (page.workers().length > 0) {
+  const r = await page.workers()[0].evaluate(() => JSON.stringify({ type: 'worker alive' }))
+  console.log(r)
+}
+```
 
-## Key Patterns for Agents
+exec:browser
+const result = await page.evaluate(() => JSON.stringify({
+  entityCount: window.debug?.scene?.children?.length,
+  playerId: window.debug?.client?.playerId
+}))
+console.log(result)
+```
 
-**Which pathway to use**:
-- Multi-step session workflows → `browser:` prefix with `playwriter -s <id> -e '...'`
-- Quick JS eval or data extraction → `exec:browser` with plain JS body
+exec:browser
+const start = Date.now()
+while (Date.now() - start < 12000) {
+  const el = await page.$('#status')
+  if (el) { console.log('found:', await el.textContent()); break }
+  await new Promise(r => setTimeout(r, 300))
+}
+```
 
-**Always use single quotes** for the `-e` argument to playwriter to avoid shell interpretation.
+## Key Rules
 
-**Session IDs are numeric**: `playwriter session new` returns `1`, `2`, etc. Use the exact returned value.
-
-**Snapshot before interacting**: always call `await snapshot({ page })` to understand current page state before clicking or filling.
+- `browser:` prefix → playwriter session management (one command per block)
+- `exec:browser` → JS in page context (multi-line JS allowed, 15s live window)
+- Never mix pathways in the same Bash call
+- `-e` argument: single quotes on outside, double quotes inside for JS strings
+- One `playwriter` command per `browser:` block
+- Never `await setTimeout(N)` with N > 10000 — use short poll loops instead
+- All running browser tasks drain automatically on every plugkit interaction

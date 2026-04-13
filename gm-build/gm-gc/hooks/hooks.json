@@ -1,31 +1,57 @@
 {
   "description": "Hooks for gm Gemini CLI extension",
   "hooks": {
-    "BeforeTool": {
-      "type": "command",
-      "command": "${extensionPath}/bin/plugkit hook pre-tool-use",
-      "timeout": 3600
-    },
-    "SessionStart": {
-      "type": "command",
-      "command": "${extensionPath}/bin/plugkit hook session-start",
-      "timeout": 180000
-    },
-    "BeforeAgent": {
-      "type": "command",
-      "command": "${extensionPath}/bin/plugkit hook prompt-submit",
-      "timeout": 60000
-    },
+    "BeforeTool": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/pre-tool-use-hook.js",
+            "timeout": 3600
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/session-start-hook.js",
+            "timeout": 180000
+          }
+        ]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/prompt-submit-hook.js",
+            "timeout": 60000
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
-        "type": "command",
-        "command": "${extensionPath}/bin/plugkit hook stop",
-        "timeout": 300000
-      },
-      {
-        "type": "command",
-        "command": "${extensionPath}/bin/plugkit hook stop-git",
-        "timeout": 60000
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/stop-hook.js",
+            "timeout": 300000
+          },
+          {
+            "type": "command",
+            "command": "node ${extensionPath}/hooks/stop-hook-git.js",
+            "timeout": 60000
+          }
+        ]
       }
     ]
   }

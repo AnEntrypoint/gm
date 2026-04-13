@@ -31,15 +31,23 @@ try {
   copyRecursive(path.join(srcDir, 'agents'), path.join(ocConfigDir, 'agents'));
   copyRecursive(path.join(srcDir, 'skills'), path.join(ocConfigDir, 'skills'));
   copyRecursive(path.join(srcDir, 'lang'), path.join(ocConfigDir, 'lang'));
+  copyRecursive(path.join(srcDir, 'bin'), path.join(ocConfigDir, 'bin'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(ocConfigDir, 'hooks'));
 
   const ocJsonPath = path.join(ocConfigDir, 'opencode.json');
   let ocConfig = {};
-  try { ocConfig = JSON.parse(fs.readFileSync(ocJsonPath, 'utf-8')); } catch (e) {}
+  try {
+    const raw = fs.readFileSync(ocJsonPath, 'utf-8');
+    ocConfig = JSON.parse(raw);
+    if (ocConfig['']) { delete ocConfig['']; }
+  } catch (e) {}
   delete ocConfig.mcp;
+  ocConfig['$schema'] = 'https://opencode.ai/config.json';
   ocConfig.default_agent = 'gm';
   const pluginMjsPath = path.join(ocConfigDir, 'plugins', 'gm-oc.mjs');
   if (!Array.isArray(ocConfig.plugin)) ocConfig.plugin = [];
-  if (!ocConfig.plugin.includes(pluginMjsPath)) ocConfig.plugin.push(pluginMjsPath);
+  ocConfig.plugin = ocConfig.plugin.filter(p => !p.includes('gm-oc'));
+  ocConfig.plugin.push(pluginMjsPath);
   fs.writeFileSync(ocJsonPath, JSON.stringify(ocConfig, null, 2) + '\n');
 
   const oldDir = process.platform === 'win32'

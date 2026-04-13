@@ -12,16 +12,16 @@ You are in the **EMIT** phase. Every mutable is KNOWN. Prove the write is correc
 
 ## TRANSITIONS
 
-**FORWARD**: All gate conditions true simultaneously → invoke `gm-complete` skill
+**EXIT — invoke `gm-complete` skill immediately when**: All gate conditions are true simultaneously. Do not pause. Invoke the skill.
 
-**SELF-LOOP**: Post-emit variance with known cause → fix immediately, re-verify, do not advance until zero variance
+**SELF-LOOP (remain in EMIT state)**: Post-emit variance with known cause → fix immediately, re-verify, do not advance until zero variance
 
-**BACKWARD**:
-- Pre-emit reveals logic error (known mutable) → invoke `gm-execute` skill, re-resolve, return here
-- Pre-emit reveals new unknown → invoke `planning` skill, restart chain
-- Post-emit variance with unknown cause → invoke `planning` skill, restart chain
-- Scope changed → invoke `planning` skill, restart chain
-- From VERIFY: end-to-end reveals broken file → re-enter here, fix, re-verify, re-advance
+**STATE REGRESSIONS**:
+- Pre-emit reveals logic error (known mutable) → invoke `gm-execute` skill, reset to EXECUTE, return here after resolution
+- Pre-emit reveals new unknown → invoke `planning` skill, reset to PLAN state
+- Post-emit variance with unknown cause → invoke `planning` skill, reset to PLAN state
+- Scope changed → invoke `planning` skill, reset to PLAN state
+- Re-entered from VERIFY state (broken file output) → fix, re-verify, then re-invoke `gm-complete` skill
 
 ## MUTABLE DISCIPLINE
 
@@ -41,11 +41,14 @@ Only git in bash directly. `Bash(node/npm/npx/bun)` = violations. File writes vi
 - Target under 12s per exec call; split work across multiple calls only when dependencies require it
 - Prefer a single well-structured exec that does 5 things over 5 sequential execs
 
-## PRE-EMIT DEBUGGING (before writing any file)
+## PRE-EMIT DIAGNOSTIC RUN (mandatory before writing any file)
 
-1. Import actual module from disk via `exec:nodejs` — witness current on-disk behavior
+The pre-emit run is a diagnostic pass. Its purpose is to falsify the write before it happens.
+
+1. Import the actual module from disk via `exec:nodejs` — witness current on-disk behavior as the baseline
 2. Run proposed logic in isolation WITHOUT writing — witness output with real inputs
-3. Debug failure paths with real error inputs — record expected values
+3. Probe all failure paths with real error inputs — record expected vs actual for each
+4. Compare: if proposed output matches expected → proceed to write. If not → new unknown, regress to `planning`.
 
 ```
 exec:nodejs
@@ -53,28 +56,40 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-Pre-emit revealing unexpected behavior → new unknown → snake to `planning`.
+Pre-emit revealing unexpected behavior → name the delta → new unknown → invoke `planning` skill, reset to PLAN state.
 
 ## WRITING FILES
 
 `exec:nodejs` with `require('fs')`. Write only when every gate mutable is `resolved=true` simultaneously.
 
-## POST-EMIT VERIFICATION (immediately after writing)
+## POST-EMIT DIAGNOSTIC VERIFICATION (immediately after writing)
 
-1. Re-import the actual file from disk — not in-memory version
-2. Run same inputs as pre-emit — output must match exactly
-3. For browser: reload from disk, re-inject `__gm` globals, re-run, compare captures
-4. Known variance → fix and re-verify | Unknown variance → snake to `planning`
+The post-emit verification is a differential diagnosis against the pre-emit baseline.
+
+1. Re-import the actual file from disk — not the in-memory version (stale in-memory state is inadmissible)
+2. Run identical inputs as pre-emit — output must match pre-emit witnessed values exactly
+3. For browser: reload from disk, re-inject `__gm` globals, re-run, compare captured outputs to pre-emit baseline
+4. Known variance (cause is identified, mutable is KNOWN) → fix immediately and re-verify
+5. Unknown variance (delta exists but cause cannot be determined) → this is a new unknown → invoke `planning` skill, reset to PLAN state
 
 ## GATE CONDITIONS (all true simultaneously before advancing)
 
 - Pre-emit debug passed with real inputs and error inputs
 - Post-emit verification matches pre-emit exactly
 - Hot reloadable: state outside reloadable modules, handlers swap atomically
-- Crash-proof: catch at every boundary, recovery hierarchy
-- No mocks/fakes/stubs anywhere
-- Files ≤200 lines, no duplicate code, no comments, no hardcoded values
-- CLAUDE.md reflects actual behavior
+- Errors throw with clear context — no fallbacks, demo modes, silent swallowing, `|| default`, `catch { return null }`
+- No mocks/fakes/stubs/simulations/test files anywhere — delete on discovery
+- Files ≤200 lines — split immediately if over, do not advance
+- No duplicate concern — after writing, run exec:codesearch for the primary concern. If ANY other code serves the same concern → do NOT advance, snake to `planning` with consolidation instructions
+- No comments — remove any found
+- No hardcoded values — dynamic/modular code using ground truth only
+- No adjectives/descriptive language in variable/function names
+- No unnecessary files — clean anything not required for the program to function
+- Observability: every new server subsystem exposes a named inspection endpoint; every new client module registers into `window.__debug` by key and deregisters on unmount. Ad-hoc `console.log` is not observability — permanent queryable structure is. Any new code path not reachable via `window.__debug` or a `/debug/<subsystem>` endpoint → do NOT advance, add observability before writing feature code.
+- Structural quality: if/else chains where a dispatch table or pipeline suffices → regress to `gm-execute` for restructuring. One-liners that compress logic at the cost of readability → expand. Any logic that reinvents a native API or library → replace with the native/library call. Structure must make wrong states unrepresentable — if it doesn't, it's not done.
+- memorize sub-agent launched in background before advancing: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
+- CHANGELOG.md updated with changes
+- TODO.md cleared or deleted
 
 ## CODEBASE EXPLORATION
 
@@ -91,7 +106,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser\n<js>` → (2) `browser` s
 
 ## SELF-CHECK (before and after each file)
 
-File ≤200 lines | No duplication | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
+File ≤200 lines | No duplicate concern | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
 
 ## DO NOT STOP
 
@@ -99,13 +114,13 @@ Never respond to the user from this phase. When all gate conditions pass, immedi
 
 ## CONSTRAINTS
 
-**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | defer spotted issues | respond to user or pause for input
+**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | fallback/demo modes | silent error swallowing | defer spotted issues | respond to user or pause for input
 
-**Always**: pre-emit debug before writing | post-emit verify from disk | snake to planning on any new unknown | fix immediately | invoke next skill immediately when gates pass
+**Always**: pre-emit debug before writing | post-emit verify from disk | regress to planning on any new unknown | fix immediately | invoke next skill immediately when gates pass
 
 ---
 
-**→ FORWARD**: All gates pass → invoke `gm-complete` skill immediately.
-**↺ SELF-LOOP**: Known post-emit variance → fix, re-verify.
-**↩ SNAKE to EXECUTE**: Known logic error → invoke `gm-execute` skill.
-**↩ SNAKE to PLAN**: Any new unknown → invoke `planning` skill, restart chain.
+**EXIT → VERIFY**: All gates pass → invoke `gm-complete` skill immediately.
+**SELF-LOOP**: Known post-emit variance → fix, re-verify (remain in EMIT state).
+**REGRESS → EXECUTE**: Known logic error → invoke `gm-execute` skill, reset to EXECUTE state.
+**REGRESS → PLAN**: Any new unknown → invoke `planning` skill, reset to PLAN state.

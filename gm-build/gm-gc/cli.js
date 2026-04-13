@@ -4,9 +4,7 @@ const path = require('path');
 const os = require('os');
 
 const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
-const destDir = process.platform === 'win32'
-  ? path.join(homeDir, 'AppData', 'Roaming', 'gemini', 'extensions', 'gm')
-  : path.join(homeDir, '.gemini', 'extensions', 'gm');
+const destDir = path.join(homeDir, '.gemini', 'extensions', 'gm');
 
 const srcDir = __dirname;
 const isUpgrade = fs.existsSync(destDir);

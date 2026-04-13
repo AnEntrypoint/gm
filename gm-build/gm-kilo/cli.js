@@ -31,6 +31,8 @@ try {
   copyRecursive(path.join(srcDir, 'agents'), path.join(kiloConfigDir, 'agents'));
   copyRecursive(path.join(srcDir, 'skills'), path.join(kiloConfigDir, 'skills'));
   copyRecursive(path.join(srcDir, 'lang'), path.join(kiloConfigDir, 'lang'));
+  copyRecursive(path.join(srcDir, 'bin'), path.join(kiloConfigDir, 'bin'));
+  copyRecursive(path.join(srcDir, 'hooks'), path.join(kiloConfigDir, 'hooks'));
 
   const kiloJsonPath = path.join(kiloConfigDir, 'kilocode.json');
   let kiloConfig = {};

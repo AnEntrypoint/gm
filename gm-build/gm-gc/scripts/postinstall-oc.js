@@ -104,18 +104,17 @@ function install() {
   safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(ocDir, 'skills'));
   safeCopyFile(path.join(sourceDir, 'opencode.json'), path.join(ocDir, 'opencode.json'));
   safeCopyFile(path.join(sourceDir, '.mcp.json'), path.join(ocDir, '.mcp.json'));
-  safeCopyFile(path.join(sourceDir, 'gm.mjs'), path.join(ocDir, 'gm.mjs'));
-  safeCopyFile(path.join(sourceDir, 'index.mjs'), path.join(ocDir, 'index.mjs'));
+  safeCopyFile(path.join(sourceDir, 'gm-oc.mjs'), path.join(ocDir, 'plugins', 'gm-oc.mjs'));
+  safeCopyFile(path.join(sourceDir, 'gm.json'), path.join(ocDir, 'gm.json'));
   safeCopyFile(path.join(sourceDir, 'README.md'), path.join(ocDir, 'README.md'));
   safeCopyFile(path.join(sourceDir, 'LICENSE'), path.join(ocDir, 'LICENSE'));
   safeCopyFile(path.join(sourceDir, 'CONTRIBUTING.md'), path.join(ocDir, 'CONTRIBUTING.md'));
   safeCopyFile(path.join(sourceDir, '.gitignore'), path.join(ocDir, '.gitignore'));
   safeCopyFile(path.join(sourceDir, '.editorconfig'), path.join(ocDir, '.editorconfig'));
 
-  const pluginsDir = path.join(ocDir, 'plugins');
-  if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
-  const gmMjsSrc = path.join(sourceDir, 'gm.mjs');
-  if (fs.existsSync(gmMjsSrc)) safeCopyFile(gmMjsSrc, path.join(pluginsDir, 'gm-oc.mjs'));
+  safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(ocDir, 'skills'));
+  safeCopyDirectory(path.join(sourceDir, 'lang'), path.join(ocDir, 'lang'));
+  safeCopyDirectory(path.join(sourceDir, 'bin'), path.join(ocDir, 'bin'));
 
   updateGitignore(projectRoot);
 

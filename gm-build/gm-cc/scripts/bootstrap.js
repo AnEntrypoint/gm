@@ -5,7 +5,7 @@ const path = require('path');
 const https = require('https');
 const { execFileSync } = require('child_process');
 
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.CODEX_PLUGIN_ROOT;
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.CODEX_PLUGIN_ROOT || process.env.KILO_PLUGIN_ROOT || process.env.OC_PLUGIN_ROOT || process.env.extensionPath;
 if (!pluginRoot) process.exit(0);
 
 const IS_WIN = process.platform === 'win32';
@@ -34,13 +34,17 @@ function killDaemon() {
 function applyPending() {
   if (!fs.existsSync(pendingPath)) return;
   killDaemon();
+  const oldPath = binPath + '.old';
+  try { fs.unlinkSync(oldPath); } catch {}
+  try { fs.renameSync(binPath, oldPath); } catch {}
   try {
-    if (fs.existsSync(binPath)) fs.unlinkSync(binPath);
     fs.renameSync(pendingPath, binPath);
     if (fs.existsSync(pendingVersionFile)) {
       try { fs.renameSync(pendingVersionFile, versionFile); } catch {}
     }
-  } catch {}
+  } catch {
+    try { if (!fs.existsSync(binPath)) fs.renameSync(oldPath, binPath); } catch {}
+  }
 }
 
 applyPending();
