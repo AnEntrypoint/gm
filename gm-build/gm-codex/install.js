@@ -48,6 +48,7 @@ function install() {
   try { fs.copyFileSync(path.join(sourceDir, 'gm.json'), path.join(codexDir, 'gm.json')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'CLAUDE.md'), path.join(codexDir, 'CLAUDE.md')); } catch {}
+  try { fs.copyFileSync(path.join(sourceDir, 'AGENTS.md'), path.join(codexDir, 'AGENTS.md')); } catch {}
 }
 
 install();
