@@ -1,0 +1,94 @@
+name: Track Repository Stars
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  track-stars:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch star count from GitHub API
+        id: fetch-stars
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            https://api.github.com/repos/AnEntrypoint/gm)
+          STAR_COUNT=$(echo "$RESPONSE" | jq '.stargazers_count')
+
+          if [ -z "$STAR_COUNT" ] || [ "$STAR_COUNT" == "null" ]; then
+            echo "Error: Failed to fetch star count"
+            echo "$RESPONSE" | jq '.'
+            exit 1
+          fi
+
+          echo "count=$STAR_COUNT" >> $GITHUB_OUTPUT
+          echo "Fetched star count: $STAR_COUNT"
+
+      - name: Initialize or read stars.json
+        run: |
+          STARS_FILE="docs/stars.json"
+
+          if [ ! -f "$STARS_FILE" ]; then
+            echo "[]" > "$STARS_FILE"
+          fi
+
+      - name: Append new star count to JSON
+        id: append-data
+        run: |
+          STARS_FILE="docs/stars.json"
+          NEW_DATE=$(date -u +%Y-%m-%d)
+          NEW_COUNT=${{ steps.fetch-stars.outputs.count }}
+
+          CURRENT_DATA=$(cat "$STARS_FILE")
+          LAST_ENTRY=$(echo "$CURRENT_DATA" | jq '.[-1] // empty')
+
+          if [ -z "$LAST_ENTRY" ]; then
+            NEW_DATA=$(jq -n --arg date "$NEW_DATE" --arg count "$NEW_COUNT" '[{"date":$date,"count":($count|tonumber)}]')
+          else
+            LAST_DATE=$(echo "$LAST_ENTRY" | jq -r '.date')
+
+            if [ "$LAST_DATE" == "$NEW_DATE" ]; then
+              echo "Data for today already exists (date: $NEW_DATE)"
+              echo "skip_commit=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            NEW_DATA=$(echo "$CURRENT_DATA" | jq --arg date "$NEW_DATE" --arg count "$NEW_COUNT" '.+[{"date":$date,"count":($count|tonumber)}]')
+          fi
+
+          echo "$NEW_DATA" > "$STARS_FILE"
+          echo "skip_commit=false" >> $GITHUB_OUTPUT
+          echo "Appended new entry: date=$NEW_DATE, count=$NEW_COUNT"
+
+      - name: Check for changes
+        id: check-diff
+        run: |
+          if git diff --quiet docs/stars.json; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in docs/stars.json"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected, will commit"
+          fi
+
+      - name: Configure git
+        if: steps.check-diff.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit and push changes
+        if: steps.check-diff.outputs.has_changes == 'true'
+        run: |
+          git add docs/stars.json
+          git commit -m "chore: update star count"
+          git push
