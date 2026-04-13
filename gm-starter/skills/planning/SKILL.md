@@ -59,12 +59,21 @@ During every planning pass, enumerate every possible aspect of the app's runtime
 
 ## .PRD FORMAT
 
-Path: `./.prd`. JSON array via `exec:nodejs`. Delete when empty — never leave empty file.
+Path: `./.prd`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Delete when empty — never leave empty file.
 
-```json
-[{ "id": "kebab-id", "subject": "Imperative verb phrase", "status": "pending",
-   "description": "Precise criterion", "effort": "small|medium|large", "category": "feature|bug|refactor|infra",
-   "blocking": [], "blockedBy": [], "acceptance": ["binary criterion"], "edge_cases": ["failure mode"] }]
+```yaml
+- id: kebab-id
+  subject: Imperative verb phrase
+  status: pending
+  description: Precise criterion
+  effort: small|medium|large
+  category: feature|bug|refactor|infra
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - binary criterion
+  edge_cases:
+    - failure mode
 ```
 
 Status: `pending` → `in_progress` → `completed` (remove completed items). Effort: small <15min | medium <45min | large >1h.
@@ -73,7 +82,7 @@ Status: `pending` → `in_progress` → `completed` (remove completed items). Ef
 
 After .prd written, launch ≤3 parallel `gm:gm` subagents for all independent items simultaneously. Never sequential.
 
-`Agent(subagent_type="gm:gm", prompt="Work on .prd item: <id>. .prd path: <path>. Item: <full JSON>.")`
+`Agent(subagent_type="gm:gm", prompt="Work on .prd item: <id>. .prd path: <path>. Item: <full YAML>.")`
 
 After each wave: read .prd, find newly unblocked items, launch next wave. Exception: browser tasks serialize.
 
