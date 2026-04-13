@@ -70,10 +70,11 @@ with open("docs/badges/commits-per-week.svg", "w") as f:
     f.write(generate_svg_badge("Commits/Week", str(commit_count)))
 print(f"Commits per week: {commit_count}")
 
+repo_url = f"https://api.github.com/repos/{os.environ.get('GITHUB_REPOSITORY', 'AnEntrypoint/gm')}"
 repo_response = subprocess.run(
     ["curl", "-s", "-H", "Accept: application/vnd.github+json",
      "-H", f"Authorization: Bearer {os.environ.get('GITHUB_TOKEN', '')}",
-     "https://api.github.com/repos/${{ github.repository }}"],
+     repo_url],
     capture_output=True, text=True
 )
 issues = json.loads(repo_response.stdout).get("open_issues_count", 0)
@@ -90,10 +91,11 @@ with open("docs/badges/contributors.svg", "w") as f:
 print(f"Contributors: {len(filtered)} (from {len(contributors)} total)")
 
 four_weeks_ago = (datetime.utcnow() - timedelta(days=28)).isoformat() + "Z"
+prs_url = f"https://api.github.com/repos/{os.environ.get('GITHUB_REPOSITORY', 'AnEntrypoint/gm')}/pulls?state=closed&per_page=100&sort=updated&direction=desc"
 prs_response = subprocess.run(
     ["curl", "-s", "-H", "Accept: application/vnd.github+json",
      "-H", f"Authorization: Bearer {os.environ.get('GITHUB_TOKEN', '')}",
-     "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&per_page=100&sort=updated&direction=desc"],
+     prs_url],
     capture_output=True, text=True
 )
 prs = json.loads(prs_response.stdout)
