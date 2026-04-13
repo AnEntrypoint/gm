@@ -20,322 +20,152 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create badges directory
-        run: |
-          mkdir -p docs/badges
-
-      - name: Generate commits per week badge
-        id: commits-badge
+      - name: Generate SVG badges
         shell: bash
         run: |
-          generate_badge() {
-            local label="$1"
-            local value="$2"
-            local output_file="$3"
-            local width=200
-            local height=20
-            local x1=70
-            local label_x=$((x1 / 2))
-            local label_len=$((x1 - 4))
-            local value_x=$((x1 + (width - x1) / 2))
-            local value_len=$((width - x1 - 4))
+          python3 << 'PYTHON_EOF'
+import os
+import json
+import subprocess
+from datetime import datetime, timedelta
 
-            cat > "$output_file" << EOF
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="$width" height="$height" role="img" aria-label="$label: $value">
-  <title>$label: $value</title>
+os.makedirs("docs/badges", exist_ok=True)
+
+def generate_svg_badge(label, value):
+    width = 200
+    height = 20
+    x1 = 70
+    label_x = x1 // 2
+    label_len = x1 - 4
+    value_x = x1 + (width - x1) // 2
+    value_len = width - x1 - 4
+
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{width}" height="{height}" role="img" aria-label="{label}: {value}">
+  <title>{label}: {value}</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb"/>
     <stop offset="1" stop-color="#999"/>
   </linearGradient>
   <clipPath id="r">
-    <rect width="$width" height="$height" rx="3" fill="#fff"/>
+    <rect width="{width}" height="{height}" rx="3" fill="#fff"/>
   </clipPath>
   <g clip-path="url(#r)">
-    <rect width="$x1" height="$height" fill="#555"/>
-    <rect x="$x1" width="$((width - x1))" height="$height" fill="#4c1"/>
-    <rect width="$width" height="$height" fill="url(#s)"/>
+    <rect width="{x1}" height="{height}" fill="#555"/>
+    <rect x="{x1}" width="{width - x1}" height="{height}" fill="#4c1"/>
+    <rect width="{width}" height="{height}" fill="url(#s)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
-    <text aria-hidden="true" x="$label_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((label_len * 10))">$label</text>
-    <text x="$label_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((label_len * 10))">$label</text>
-    <text aria-hidden="true" x="$value_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((value_len * 10))">$value</text>
-    <text x="$value_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((value_len * 10))">$value</text>
+    <text aria-hidden="true" x="{label_x}" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{label_len * 10}">{label}</text>
+    <text x="{label_x}" y="14" transform="scale(.1)" fill="#fff" textLength="{label_len * 10}">{label}</text>
+    <text aria-hidden="true" x="{value_x}" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{value_len * 10}">{value}</text>
+    <text x="{value_x}" y="14" transform="scale(.1)" fill="#fff" textLength="{value_len * 10}">{value}</text>
   </g>
-</svg>
-EOF
-          }
+</svg>'''
 
-          SINCE_DATE=$(date -u -d "7 days ago" +%Y-%m-%d)
-          COMMIT_COUNT=$(git log --since="$SINCE_DATE" --oneline | wc -l)
+since_date = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+result = subprocess.run(["git", "log", f"--since={since_date}", "--oneline"], capture_output=True, text=True)
+commit_count = len(result.stdout.strip().split('\n')) if result.stdout.strip() else 0
 
-          BADGE_FILE="docs/badges/commits-per-week.svg"
-          generate_badge "Commits/Week" "$COMMIT_COUNT" "$BADGE_FILE"
-          echo "file=$BADGE_FILE" >> $GITHUB_OUTPUT
-          echo "Commits per week: $COMMIT_COUNT"
+with open("docs/badges/commits-per-week.svg", "w") as f:
+    f.write(generate_svg_badge("Commits/Week", str(commit_count)))
+print(f"Commits per week: {commit_count}")
 
-      - name: Generate open issues badge
-        id: issues-badge
-        shell: bash
-        run: |
-          generate_badge() {
-            local label="$1"
-            local value="$2"
-            local output_file="$3"
-            local width=200
-            local height=20
-            local x1=70
-            local label_x=$((x1 / 2))
-            local label_len=$((x1 - 4))
-            local value_x=$((x1 + (width - x1) / 2))
-            local value_len=$((width - x1 - 4))
+repo_response = subprocess.run(
+    ["curl", "-s", "-H", "Accept: application/vnd.github+json",
+     "-H", f"Authorization: Bearer {os.environ.get('GITHUB_TOKEN', '')}",
+     "https://api.github.com/repos/${{ github.repository }}"],
+    capture_output=True, text=True
+)
+issues = json.loads(repo_response.stdout).get("open_issues_count", 0)
+with open("docs/badges/open-issues.svg", "w") as f:
+    f.write(generate_svg_badge("Open Issues", str(issues)))
+print(f"Open issues: {issues}")
 
-            cat > "$output_file" << EOF
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="$width" height="$height" role="img" aria-label="$label: $value">
-  <title>$label: $value</title>
-  <linearGradient id="s" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb"/>
-    <stop offset="1" stop-color="#999"/>
-  </linearGradient>
-  <clipPath id="r">
-    <rect width="$width" height="$height" rx="3" fill="#fff"/>
-  </clipPath>
-  <g clip-path="url(#r)">
-    <rect width="$x1" height="$height" fill="#555"/>
-    <rect x="$x1" width="$((width - x1))" height="$height" fill="#4c1"/>
-    <rect width="$width" height="$height" fill="url(#s)"/>
-  </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
-    <text aria-hidden="true" x="$label_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((label_len * 10))">$label</text>
-    <text x="$label_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((label_len * 10))">$label</text>
-    <text aria-hidden="true" x="$value_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((value_len * 10))">$value</text>
-    <text x="$value_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((value_len * 10))">$value</text>
-  </g>
-</svg>
-EOF
-          }
+result = subprocess.run(["git", "log", "--all", "--format=%an"], capture_output=True, text=True)
+contributors = list(set(result.stdout.strip().split('\n')))
+bot_patterns = ["dependabot", "github-actions", "renovate", "snyk", "bot"]
+filtered = [c for c in contributors if not any(p in c.lower() for p in bot_patterns)]
+with open("docs/badges/contributors.svg", "w") as f:
+    f.write(generate_svg_badge("Contributors", str(len(filtered))))
+print(f"Contributors: {len(filtered)} (from {len(contributors)} total)")
 
-          ISSUES=$(curl -s -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            "https://api.github.com/repos/${{ github.repository }}" \
-            | jq '.open_issues_count // 0')
+four_weeks_ago = (datetime.utcnow() - timedelta(days=28)).isoformat() + "Z"
+prs_response = subprocess.run(
+    ["curl", "-s", "-H", "Accept: application/vnd.github+json",
+     "-H", f"Authorization: Bearer {os.environ.get('GITHUB_TOKEN', '')}",
+     "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&per_page=100&sort=updated&direction=desc"],
+    capture_output=True, text=True
+)
+prs = json.loads(prs_response.stdout)
+merge_times = []
+for pr in prs:
+    if pr.get("merged_at") and pr["merged_at"] > four_weeks_ago:
+        created = datetime.fromisoformat(pr["created_at"].replace("Z", "+00:00"))
+        merged = datetime.fromisoformat(pr["merged_at"].replace("Z", "+00:00"))
+        diff_days = int((merged - created).total_seconds() / 86400)
+        merge_times.append(diff_days)
 
-          if [ -z "$ISSUES" ] || [ "$ISSUES" == "null" ]; then
-            ISSUES="0"
-          fi
+if merge_times:
+    avg_time = sum(merge_times) // len(merge_times)
+    label_value = f"{avg_time}d"
+else:
+    label_value = "N/A"
 
-          BADGE_FILE="docs/badges/open-issues.svg"
-          generate_badge "Open Issues" "$ISSUES" "$BADGE_FILE"
-          echo "file=$BADGE_FILE" >> $GITHUB_OUTPUT
-          echo "Open issues: $ISSUES"
-
-      - name: Generate contributors badge
-        id: contributors-badge
-        shell: bash
-        run: |
-          generate_badge() {
-            local label="$1"
-            local value="$2"
-            local output_file="$3"
-            local width=200
-            local height=20
-            local x1=70
-            local label_x=$((x1 / 2))
-            local label_len=$((x1 - 4))
-            local value_x=$((x1 + (width - x1) / 2))
-            local value_len=$((width - x1 - 4))
-
-            cat > "$output_file" << EOF
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="$width" height="$height" role="img" aria-label="$label: $value">
-  <title>$label: $value</title>
-  <linearGradient id="s" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb"/>
-    <stop offset="1" stop-color="#999"/>
-  </linearGradient>
-  <clipPath id="r">
-    <rect width="$width" height="$height" rx="3" fill="#fff"/>
-  </clipPath>
-  <g clip-path="url(#r)">
-    <rect width="$x1" height="$height" fill="#555"/>
-    <rect x="$x1" width="$((width - x1))" height="$height" fill="#4c1"/>
-    <rect width="$width" height="$height" fill="url(#s)"/>
-  </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
-    <text aria-hidden="true" x="$label_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((label_len * 10))">$label</text>
-    <text x="$label_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((label_len * 10))">$label</text>
-    <text aria-hidden="true" x="$value_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((value_len * 10))">$value</text>
-    <text x="$value_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((value_len * 10))">$value</text>
-  </g>
-</svg>
-EOF
-          }
-
-          CONTRIBUTORS=$(git log --all --format=%an | sort -u | wc -l)
-
-          BOT_PATTERNS=("dependabot" "github-actions" "renovate" "snyk" "bot")
-          FILTERED=$(git log --all --format=%an | sort -u | while read author; do
-            skip=0
-            for pattern in "${BOT_PATTERNS[@]}"; do
-              if [[ "${author,,}" == *"$pattern"* ]]; then
-                skip=1
-                break
-              fi
-            done
-            if [ $skip -eq 0 ]; then
-              echo "$author"
-            fi
-          done | wc -l)
-
-          BADGE_FILE="docs/badges/contributors.svg"
-          generate_badge "Contributors" "$FILTERED" "$BADGE_FILE"
-          echo "file=$BADGE_FILE" >> $GITHUB_OUTPUT
-          echo "Total contributors: $CONTRIBUTORS, filtered: $FILTERED"
-
-      - name: Generate PR merge time badge
-        id: merge-time-badge
-        shell: bash
-        run: |
-          generate_badge() {
-            local label="$1"
-            local value="$2"
-            local output_file="$3"
-            local width=200
-            local height=20
-            local x1=70
-            local label_x=$((x1 / 2))
-            local label_len=$((x1 - 4))
-            local value_x=$((x1 + (width - x1) / 2))
-            local value_len=$((width - x1 - 4))
-
-            cat > "$output_file" << EOF
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="$width" height="$height" role="img" aria-label="$label: $value">
-  <title>$label: $value</title>
-  <linearGradient id="s" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb"/>
-    <stop offset="1" stop-color="#999"/>
-  </linearGradient>
-  <clipPath id="r">
-    <rect width="$width" height="$height" rx="3" fill="#fff"/>
-  </clipPath>
-  <g clip-path="url(#r)">
-    <rect width="$x1" height="$height" fill="#555"/>
-    <rect x="$x1" width="$((width - x1))" height="$height" fill="#4c1"/>
-    <rect width="$width" height="$height" fill="url(#s)"/>
-  </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
-    <text aria-hidden="true" x="$label_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((label_len * 10))">$label</text>
-    <text x="$label_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((label_len * 10))">$label</text>
-    <text aria-hidden="true" x="$value_x" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="$((value_len * 10))">$value</text>
-    <text x="$value_x" y="14" transform="scale(.1)" fill="#fff" textLength="$((value_len * 10))">$value</text>
-  </g>
-</svg>
-EOF
-          }
-
-          FOUR_WEEKS_AGO=$(date -u -d "28 days ago" +%Y-%m-%dT%H:%M:%SZ)
-
-          MERGE_TIMES=$(curl -s -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&per_page=100&sort=updated&direction=desc" \
-            | jq -r ".[] | select(.merged_at != null and .merged_at > \"$FOUR_WEEKS_AGO\") | .merged_at as \$merged | .created_at as \$created | (\$merged | fromdateiso8601) - (\$created | fromdateiso8601) | . / 86400 | floor" \
-            2>/dev/null | head -100)
-
-          if [ -z "$MERGE_TIMES" ]; then
-            AVG_MERGE_TIME="N/A"
-          else
-            TOTAL_DAYS=0
-            COUNT=0
-            while IFS= read -r days; do
-              if [ ! -z "$days" ] && [ "$days" != "null" ]; then
-                TOTAL_DAYS=$((TOTAL_DAYS + days))
-                COUNT=$((COUNT + 1))
-              fi
-            done <<< "$MERGE_TIMES"
-
-            if [ $COUNT -eq 0 ]; then
-              AVG_MERGE_TIME="N/A"
-            else
-              AVG_MERGE_TIME=$((TOTAL_DAYS / COUNT))
-              AVG_MERGE_TIME="${AVG_MERGE_TIME}d"
-            fi
-          fi
-
-          BADGE_FILE="docs/badges/pr-merge-time.svg"
-          if [ "$AVG_MERGE_TIME" == "N/A" ]; then
-            generate_badge "Avg Merge Time" "N/A" "$BADGE_FILE"
-          else
-            generate_badge "Avg Merge Time" "$AVG_MERGE_TIME" "$BADGE_FILE"
-          fi
-          echo "file=$BADGE_FILE" >> $GITHUB_OUTPUT
-          echo "Average PR merge time: $AVG_MERGE_TIME"
+with open("docs/badges/pr-merge-time.svg", "w") as f:
+    f.write(generate_svg_badge("Avg Merge Time", label_value))
+print(f"Avg PR merge time: {label_value}")
+PYTHON_EOF
 
       - name: Update README with badges
-        id: update-readme
         shell: bash
         run: |
-          README_FILE="README.md"
-          TEMP_FILE=$(mktemp)
+          python3 << 'PYTHON_EOF'
+import re
 
-          if grep -q "## Metrics" "$README_FILE"; then
-            sed '/^## Metrics/,/^$/d' "$README_FILE" > "$TEMP_FILE"
-          else
-            cp "$README_FILE" "$TEMP_FILE"
-          fi
+readme_file = "README.md"
+with open(readme_file, "r") as f:
+    content = f.read()
 
-          FINAL_FILE=$(mktemp)
-          INSERTED=0
+metrics_section = """## Metrics
 
-          while IFS= read -r line; do
-            if echo "$line" | grep -q "^## "; then
-              if [ $INSERTED -eq 0 ]; then
-                echo "## Metrics" >> "$FINAL_FILE"
-                echo "" >> "$FINAL_FILE"
-                echo "[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)" >> "$FINAL_FILE"
-                echo "[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)" >> "$FINAL_FILE"
-                echo "[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)" >> "$FINAL_FILE"
-                echo "[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)" >> "$FINAL_FILE"
-                echo "" >> "$FINAL_FILE"
-                INSERTED=1
-              fi
-            fi
-            echo "$line" >> "$FINAL_FILE"
-          done < "$TEMP_FILE"
+[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)
+[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)
+[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)
+[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)
+"""
 
-          if [ $INSERTED -eq 0 ]; then
-            echo "" >> "$FINAL_FILE"
-            echo "## Metrics" >> "$FINAL_FILE"
-            echo "" >> "$FINAL_FILE"
-            echo "[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)" >> "$FINAL_FILE"
-            echo "[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)" >> "$FINAL_FILE"
-            echo "[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)" >> "$FINAL_FILE"
-            echo "[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)" >> "$FINAL_FILE"
-          fi
+if "## Metrics" in content:
+    content = re.sub(r"## Metrics\n\n.*?\n(?=##|\Z)", metrics_section + "\n", content, flags=re.DOTALL)
+else:
+    lines = content.split('\n')
+    inserted = False
+    new_lines = []
+    for line in lines:
+        if line.startswith("## ") and not inserted:
+            new_lines.append(metrics_section)
+            new_lines.append("")
+            inserted = True
+        new_lines.append(line)
+    if not inserted:
+        new_lines.append("")
+        new_lines.append(metrics_section)
+    content = '\n'.join(new_lines)
 
-          mv "$FINAL_FILE" "$README_FILE"
-          rm -f "$TEMP_FILE"
-          echo "README updated with badges"
+with open(readme_file, "w") as f:
+    f.write(content)
+print("README updated with badges")
+PYTHON_EOF
 
-      - name: Check for changes
-        id: check-diff
+      - name: Check for changes and commit
         shell: bash
         run: |
           if git diff --quiet docs/badges/ README.md 2>/dev/null; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected in badges or README"
+            echo "No changes detected"
           else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected, will commit"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add docs/badges/ README.md
+            git commit -m "chore: update metrics badges"
+            git push
+            echo "Changes pushed"
           fi
-
-      - name: Configure git
-        if: steps.check-diff.outputs.has_changes == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Commit and push changes
-        if: steps.check-diff.outputs.has_changes == 'true'
-        shell: bash
-        run: |
-          git add docs/badges/ README.md
-          git commit -m "chore: update metrics badges"
-          git push
