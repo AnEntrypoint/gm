@@ -9,6 +9,11 @@
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook pre-tool-use",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use-hook.js",
+            "timeout": 2000
           }
         ]
       }
@@ -33,6 +38,18 @@
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit",
             "timeout": 60000
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-compact-hook.js",
+            "timeout": 5000
           }
         ]
       }
