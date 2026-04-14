@@ -1019,12 +1019,12 @@ const run = () => {
         const plugkitJs = path.join(pluginRoot, 'bin', 'plugkit.js');
         let result;
         if (rawLang === 'browser') {
-          result = spawnSync('node', [plugkitJs, 'exec', 'browser'], { input: code, encoding: 'utf-8', timeout: 300000 });
+          result = spawnSync('node', [plugkitJs, 'exec', '--lang', 'browser', code], { encoding: 'utf-8', timeout: 300000 });
         } else if (rawLang === 'codesearch') {
           const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
           result = spawnSync('node', [plugkitJs, 'search', '--path', projectDir, code], { encoding: 'utf-8', timeout: 60000 });
         } else {
-          result = spawnSync('node', [plugkitJs, 'exec', rawLang], { input: code, encoding: 'utf-8', timeout: 120000 });
+          result = spawnSync('node', [plugkitJs, 'exec', '--lang', rawLang, code], { encoding: 'utf-8', timeout: 120000 });
         }
         const output = (result.stdout || '') + (result.stderr || '');
         return { deny: true, reason: 'exec:' + rawLang + ' output:\\n\\n' + output };
