@@ -40,7 +40,7 @@ function NavBar() {
       h('span', { class: 'text-white font-bold text-lg tracking-tight' }, 'gm'),
       h('div', { class: 'flex items-center gap-4' },
         h('a', { href: '#principles', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Principles'),
-        h('a', { href: '#state-machine', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'State Machine'),
+        h('a', { href: '#process', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Process'),
         h('a', { href: './paper.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper I'),
         h('a', { href: './paper2.html', class: 'text-gray-400 hover:text-white transition-colors text-sm' }, 'Paper II'),
         h('a', {
@@ -97,10 +97,10 @@ function PrinciplesSection() {
   );
 }
 
-function StateMachineSection() {
-  return h('section', { id: 'state-machine', class: 'py-20 px-4 bg-gray-900/40' },
+function ProcessSection() {
+  return h('section', { id: 'process', class: 'py-20 px-4 bg-gray-900/40' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'The State Machine'),
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, 'The Process'),
       h('p', { class: 'text-gray-400 text-center mb-10 text-sm max-w-2xl mx-auto' },
         'Every task progresses through five mandatory phases. New unknowns at any phase trigger a backward transition to PLAN.'
       ),
@@ -178,7 +178,7 @@ function Footer() {
 
 window.__debug = { PHASES, PRINCIPLES, PLATFORMS };
 
-const sections = [NavBar(), Hero(), PrinciplesSection(), StateMachineSection(), MutableSection(), PlatformsSection(), Footer()];
+const sections = [NavBar(), Hero(), PrinciplesSection(), ProcessSection(), MutableSection(), PlatformsSection(), Footer()];
 for (const vnode of sections) {
   const el = createDOMElement(vnode);
   if (el) document.body.appendChild(el);
