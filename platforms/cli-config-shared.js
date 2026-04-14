@@ -653,7 +653,18 @@ function pluginMjsSource(pluginFile) {
      "      }",
      "      const result = runExecSync(m[1]||'', m[2], output.args.workdir || directory);",
      "      output.args = { ...output.args, command: safePrintf('exec:'+(m[1]||'nodejs')+' output:\\n\\n'+result) };",
-    "    }",
+    "    },",
+    "    'message.updated': async (input, output) => {",
+    "      try {",
+    "        const role = input && input.message && input.message.info && input.message.info.role;",
+    "        if (role !== 'user') return;",
+    "        runPlugkit(['hook', 'prompt-submit']);",
+    "      } catch(e) {}",
+    "    },",
+    "    'session.closing': async (input, output) => {",
+    "      try { runPlugkit(['hook', 'stop']); } catch(e) {}",
+    "      try { runPlugkit(['hook', 'stop-git']); } catch(e) {}",
+    "    },",
     "  };",
     "}",
   ];
@@ -994,6 +1005,26 @@ const run = () => {
       const isGit = /^(git |gh )/.test(command);
       if (!isExec && !isGit) {
         return { deny: true, reason: 'run_shell_command requires exec:<lang> format with a NEWLINE between the lang and code. Example: exec:bash\\nnpm --version\\n(newline after exec:bash, not a space). Allowed: exec:nodejs, exec:bash, exec:python, exec:typescript, git, gh.' };
+      }
+      if (isExec) {
+        const newline = command.indexOf('\\n');
+        if (newline === -1) return { allow: true };
+        const rawLang = command.substring(5, newline);
+        const code = command.substring(newline + 1);
+        const { spawnSync } = require('child_process');
+        const pluginRoot = path.join(__dirname, '..');
+        const plugkitJs = path.join(pluginRoot, 'bin', 'plugkit.js');
+        let result;
+        if (rawLang === 'browser') {
+          result = spawnSync('node', [plugkitJs, 'exec', 'browser'], { input: code, encoding: 'utf-8', timeout: 300000 });
+        } else if (rawLang === 'codesearch') {
+          const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
+          result = spawnSync('node', [plugkitJs, 'search', '--path', projectDir, code], { encoding: 'utf-8', timeout: 60000 });
+        } else {
+          result = spawnSync('node', [plugkitJs, 'exec', rawLang], { input: code, encoding: 'utf-8', timeout: 120000 });
+        }
+        const output = (result.stdout || '') + (result.stderr || '');
+        return { deny: true, reason: 'exec:' + rawLang + ' output:\\n\\n' + output };
       }
     }
     return { allow: true };
