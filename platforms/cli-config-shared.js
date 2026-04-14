@@ -627,7 +627,7 @@ function pluginMjsSource(pluginFile) {
     "          throw new Error('The search/explore skill is blocked. Use exec:codesearch instead.\\n\\nexec:codesearch\\n<natural language description>');",
     "        }",
     "      }",
-    "      if (input.tool === 'write' || input.tool === 'Write' || input.tool === 'edit') {",
+    "      if (input.tool === 'write' || input.tool === 'Write' || input.tool === 'edit' || input.tool === 'Edit') {",
     "        const fp = (output.args && output.args.file_path) || (input.args && input.args.file_path) || '';",
     "        const base = basename(fp).toLowerCase();",
     "        const ext = extname(fp);",
@@ -973,7 +973,7 @@ function createGcPreToolUseHook() {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const writeTools = ['write_file'];
+const writeTools = ['write_file', 'edit_file'];
 const forbiddenTools = ['find', 'Find', 'Glob', 'Grep', 'glob', 'search_file_content'];
 const run = () => {
   try {
@@ -994,8 +994,11 @@ const run = () => {
         return { deny: true, reason: 'Cannot create documentation files. Only AGENTS.md, CLAUDE.md and readme.md are maintained.' };
       }
       if (/\\.(test|spec)\\.(js|ts|jsx|tsx|mjs|cjs)$/.test(base) ||
+          /^(jest|vitest|mocha|ava|jasmine|tap)\\.(config|setup)/.test(base) ||
+          /\\.(snap|stub|mock|fixture)\\.(js|ts|json)$/.test(base) ||
           file_path.includes('/__tests__/') || file_path.includes('/test/') ||
-          file_path.includes('/tests/') || file_path.includes('/__mocks__/')) {
+          file_path.includes('/tests/') || file_path.includes('/fixtures/') ||
+          file_path.includes('/test-data/') || file_path.includes('/__mocks__/')) {
         return { deny: true, reason: 'Test files forbidden on disk. Use real services for all testing.' };
       }
     }
@@ -1049,44 +1052,42 @@ function createGcPromptSubmitHook() {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const pluginRoot = process.env.GEMINI_PROJECT_DIR ? path.join(__dirname, '..') : (process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..'));
+const plugkitBin = path.join(pluginRoot, 'bin', 'plugkit.js');
 const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
 const readStdinPrompt = () => {
   try { return JSON.parse(fs.readFileSync(0, 'utf-8')).prompt || ''; } catch (e) { return ''; }
 };
-const readGmAgent = () => {
-  try { return fs.readFileSync(path.join(pluginRoot, 'agents/gm.md'), 'utf-8'); } catch (e) { return ''; }
-};
-const runMcpThorns = () => {
+const runCodeinsight = () => {
   if (!projectDir || !fs.existsSync(projectDir)) return '';
   try {
-    const out = execSync('plugkit codeinsight ' + JSON.stringify(projectDir), { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 });
-    if (!out || out.startsWith('Error')) return '';
-    return '=== This is your initial insight of the repository, look at every possible aspect of this for initial opinionation and to offset the need for code exploration ===\\n' + out;
+    const r = spawnSync('node', [plugkitBin, 'codeinsight', projectDir], { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 10000 });
+    const out = (r.stdout || '').trim();
+    if (!out || out.startsWith('Error') || r.status !== 0) return '';
+    return out;
   } catch (e) { return ''; }
 };
-const runCodeSearch = (query) => {
+const runSearch = (query) => {
   if (!query || !projectDir) return '';
   try {
-    const q = query.replace(/"/g, '\\\\"').substring(0, 200);
-    let out;
-    try { out = execSync(\`bun x codebasesearch "\${q}"\`, { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 }); }
-    catch (e) { out = execSync(\`npx -y codebasesearch "\${q}"\`, { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 55000 }); }
-    const lines = out.split('\\n');
-    const start = lines.findIndex(l => l.includes('Searching for:'));
-    return start >= 0 ? lines.slice(start).join('\\n').trim() : out.trim();
+    const r = spawnSync('node', [plugkitBin, 'search', '--path', projectDir, query.substring(0, 200)], { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 5000 });
+    const out = (r.stdout || '').trim();
+    if (!out || r.status !== 0) return '';
+    return out;
   } catch (e) { return ''; }
 };
 try {
   const prompt = readStdinPrompt();
-  const parts = [];
-  const gm = readGmAgent();
-  if (gm) parts.push(gm);
-  parts.push('use gm agent | ref: TOOL_INVARIANTS | codesearch for exploration | exec: for execution');
-  console.log(JSON.stringify({ systemMessage: parts.join('\\n\\n') }, null, 2));
+  const insight = runCodeinsight();
+  const search = runSearch(prompt);
+  const sections = ['Invoke the gm skill to begin. DO NOT use EnterPlanMode.'];
+  if (insight) sections.push('=== codeinsight ===\\n' + insight);
+  if (search) sections.push('=== search ===\\n' + search);
+  const injection = '<system-reminder>\\n' + sections.join('\\n\\n') + '\\n</system-reminder>';
+  console.log(JSON.stringify({ decision: 'deny', reason: injection }, null, 2));
 } catch (e) {
-  console.log(JSON.stringify({ systemMessage: 'use gm agent' }, null, 2));
+  console.log(JSON.stringify({ decision: 'deny', reason: '<system-reminder>\\nInvoke the gm skill to begin. DO NOT use EnterPlanMode.\\n</system-reminder>' }, null, 2));
 }
 `;
 }
