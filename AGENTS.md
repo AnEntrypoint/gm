@@ -125,6 +125,10 @@ Infrastructure: `docs/api/` holds 4 JSON endpoints (stars.json, metrics.json, in
 - All workflows idempotent — only commit if data changed. Scheduled workflows run even on unchanged data; compare new vs existing before committing to avoid noise.
 - All workflows use pure bash/Python (no npm), github.token for auth, env vars for config, no hardcoded values. Bot filtering list: dependabot, renovate, github-actions, snyk, etc.
 
+**pm2list / daemon pid-check hang (FIXED)**: `daemon::is_alive()` in `rs-exec/src/daemon.rs` called `refresh_processes(All, false)` — a full system process scan — once per `.pid` file. On Windows this takes 1–5s per call, causing `pm2list` to consistently exceed the 15s exec window and background as a dangling task. Fixed in rs-exec commit `06459cc` — now uses `ProcessesToUpdate::Some(&[pid_val])` to check only the target PID. Auto-cascades via CI.
+
+**Runner port file**: The runner TCP port is written to `$TMPDIR/glootie-runner.port` (not `plugkit-runner.port`). The RPC path is `/rpc`, body `{ method, params }`, response `{ result }`. Session ID must be provided for all task/process queries or runner returns empty results.
+
 ## Made with gm Page
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array in that file whenever a new notable project is added to the org — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Data is static (no runtime API calls). The file is standalone HTML, not bundled.
