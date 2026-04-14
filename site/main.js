@@ -24,6 +24,7 @@ const PLATFORMS = [
   { id: 'gm-kilo', label: 'Kilo Code', type: 'CLI' },
   { id: 'gm-codex', label: 'Codex', type: 'CLI' },
   { id: 'gm-copilot-cli', label: 'Copilot CLI', type: 'CLI' },
+  { id: 'gm-qwen', label: 'Qwen Code', type: 'CLI' },
   { id: 'gm-vscode', label: 'VS Code', type: 'IDE' },
   { id: 'gm-cursor', label: 'Cursor', type: 'IDE' },
   { id: 'gm-zed', label: 'Zed', type: 'IDE' },
@@ -62,7 +63,7 @@ function Hero() {
         'Ship code that works.', h('br', null), h('span', { class: 'text-indigo-400' }, 'Every time.')
       ),
       h('p', { class: 'text-lg text-gray-300 max-w-2xl mx-auto mb-4' },
-        'gm is a state machine that enforces a strict work cycle — plan, execute, emit, verify, complete — on every task, across 10 platforms.'
+        'gm is a state machine that enforces a strict work cycle — plan, execute, emit, verify, complete — on every task, across 11 platforms.'
       ),
       h('p', { class: 'text-gray-500 max-w-xl mx-auto mb-10 text-sm' },
         'Each unknown is named and resolved by code, not guesswork. Work cannot end while anything is unresolved.'
@@ -152,7 +153,7 @@ function MutableSection() {
 function PlatformsSection() {
   return h('section', { class: 'py-20 px-4 bg-gray-900/40' },
     h('div', { class: 'max-w-5xl mx-auto' },
-      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, '10 Platforms'),
+      h('h2', { class: 'text-2xl font-bold text-white mb-3 text-center' }, '11 Platforms'),
       h('p', { class: 'text-gray-400 text-center mb-10 text-sm' }, 'One state machine, every major coding tool.'),
       h('div', { class: 'flex flex-wrap justify-center gap-3' },
         ...PLATFORMS.map(p => h('a', {
