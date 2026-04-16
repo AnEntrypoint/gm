@@ -156,6 +156,7 @@ Before declaring complete, sweep the entire codebase for violations:
 11. **Observability gaps** → every server subsystem added this session exposes a `/debug/<subsystem>` endpoint; every client module added this session registers into `window.__debug` by key. Ad-hoc console.log is not observability — permanent queryable structures are. Any gap found → fix before advancing.
 12. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
 13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
+14. **GitHub Pages** → check if repo has a GH Pages site. If `.github/workflows/pages.yml` is absent OR `docs/index.html` is absent: invoke the `pages` skill to scaffold the site before advancing.
 
 Any violation found = fix immediately before advancing.
 
