@@ -1096,7 +1096,7 @@ function createGcStopHook() {
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const prdFile = path.resolve(process.cwd(), '.prd');
+const prdFile = path.resolve(process.cwd(), '.gm', 'prd.yml');
 let aborted = false;
 process.on('SIGTERM', () => { aborted = true; });
 process.on('SIGINT', () => { aborted = true; });
@@ -1104,7 +1104,7 @@ try {
   if (!aborted && fs.existsSync(prdFile)) {
     const content = fs.readFileSync(prdFile, 'utf-8').trim();
     if (content.length > 0) {
-      console.log(JSON.stringify({ decision: 'block', reason: 'Work items remain in .prd. Remove completed items as they finish. Current items:\\n\\n' + content }, null, 2));
+      console.log(JSON.stringify({ decision: 'block', reason: 'Work items remain in .gm/prd.yml. Remove completed items as they finish. Current items:\\n\\n' + content }, null, 2));
       process.exit(2);
     }
   }

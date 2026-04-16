@@ -44,7 +44,7 @@ function safeCopyDirectory(src, dst) {
 function updateGitignore(projectRoot) {
   try {
     const gitignorePath = path.join(projectRoot, '.gitignore');
-    const entry = '.gm-stop-verified';
+    const entry = '.gm/';
     let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
     if (content.includes(entry)) return;
     if (content && !content.endsWith('\n')) content += '\n';

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 try {
-  const lastSkill = fs.readFileSync(path.join(process.cwd(), '.lastskill'), 'utf8').trim();
+  const lastSkill = fs.readFileSync(path.join(process.cwd(), '.gm', 'lastskill'), 'utf8').trim();
   if (lastSkill) {
     process.stdout.write(JSON.stringify({
       type: 'text',

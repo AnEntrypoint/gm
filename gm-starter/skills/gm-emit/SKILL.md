@@ -8,7 +8,7 @@ description: EMIT phase. Pre-emit debug, write files, post-emit verify from disk
 You are in the **EMIT** phase. Every mutable is KNOWN. Prove the write is correct, write, confirm from disk. Any new unknown = snake to `planning`, restart chain.
 
 **GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
-- **Entry**: All .prd mutables resolved. Entered from `gm-execute` or via snake from VERIFY.
+- **Entry**: All .gm/prd.yml mutables resolved. Entered from `gm-execute` or via snake from VERIFY.
 
 ## TRANSITIONS
 
@@ -78,7 +78,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - Post-emit verification matches pre-emit exactly
 - Hot reloadable: state outside reloadable modules, handlers swap atomically
 - Errors throw with clear context — no fallbacks, demo modes, silent swallowing, `|| default`, `catch { return null }`
-- No mocks/fakes/stubs/simulations/test files anywhere — delete on discovery
+- No mocks/fakes/stubs/simulations/scattered test files anywhere — delete on discovery (only root test.js permitted)
 - Files ≤200 lines — split immediately if over, do not advance
 - No duplicate concern — after writing, run exec:codesearch for the primary concern. If ANY other code serves the same concern → do NOT advance, snake to `planning` with consolidation instructions
 - No comments — remove any found
