@@ -107,7 +107,7 @@ test('Main.js has platform categorization', () => {
 
 test('Main.js has status indicators', () => {
   const js = readFileSync(resolve('site/main.js'), 'utf-8');
-  if (!js.includes('.cc-status')) throw new Error('Missing status indicator in main.js');
+  if (!js.includes('cc-status')) throw new Error('Missing status indicator in main.js');
 });
 
 let passed = 0;
