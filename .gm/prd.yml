@@ -67,7 +67,7 @@
 
 - id: message-component-enhancement
   subject: Redesign message components with TUI-style borders and better visual hierarchy
-  status: pending
+  status: completed
   description: Upgrade .cc-msg cards with double-line borders, better spacing, icon indicators. Add type badges (exec:codesearch, exec:bash, etc).
   effort: medium
   category: design
@@ -82,7 +82,7 @@
 
 - id: button-redesign
   subject: Redesign buttons with TUI borders and better visual feedback
-  status: pending
+  status: completed
   description: Primary buttons: colored border + background. Ghost buttons: border-only with hover effects. Disabled state visual feedback.
   effort: small
   category: design
@@ -97,7 +97,7 @@
 
 - id: form-inputs-redesign
   subject: Add new TUI-style form input components with borders
-  status: pending
+  status: completed
   description: Create input, textarea, select components with box-drawing borders. Label styling. Focus states. Placeholder text. Required indicators.
   effort: medium
   category: feature
@@ -116,7 +116,7 @@
 
 - id: card-redesign
   subject: Upgrade card components with double borders and better hierarchy
-  status: pending
+  status: completed
   description: Apply box-drawing borders (double-line style). Padding adjustments. Better title/description contrast. Hover effects.
   effort: small
   category: design
@@ -131,7 +131,7 @@
 
 - id: badge-redesign
   subject: Redesign platform/type badges with better visual distinction
-  status: pending
+  status: completed
   description: Add subtle borders, better contrast, icon glyphs for CLI vs IDE. Consider multi-option display (grid or flex wrap).
   effort: small
   category: design
@@ -161,7 +161,7 @@
 
 - id: status-indicators
   subject: Add status indicators with semantic colors (success/warning/error/info)
-  status: pending
+  status: completed
   description: Create status badge components (● green/yellow/red) and status indicators. Use in phase visualization, process state, tool output.
   effort: small
   category: feature
@@ -190,7 +190,7 @@
 
 - id: component-library-expansion
   subject: Create reusable component library (.cc-* classes)
-  status: pending
+  status: completed
   description: Document and expand .cc-* class library. New components: progress bar, spinner, toast, modal, table. All TUI-styled.
   effort: large
   category: feature
@@ -223,7 +223,7 @@
 
 - id: section-dividers
   subject: Redesign section borders with box-drawing characters
-  status: pending
+  status: completed
   description: Replace simple border-top with styled dividers using box-drawing. Consider decorative separator styles.
   effort: small
   category: design
