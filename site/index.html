@@ -19,182 +19,303 @@
   <meta name="twitter:description" content="A state machine that keeps coding sessions on track. Plan unknowns, execute against real services, verify output, complete clean. 11 platforms.">
   <meta name="twitter:image" content="https://anentrypoint.github.io/plugforge/og-image.png">
   <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#1a1a2e">
   <link rel="stylesheet" href="./styles.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #0a0a0a;
-      color: #b0b0b0;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
-      font-size: 14px;
-      line-height: 1.6;
+      background: #1a1a2e;
+      color: #c8c8d4;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
       min-height: 100vh;
-      overflow-x: hidden;
     }
-    ::selection { background: #33ff33; color: #0a0a0a; }
+    code, pre, .mono {
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+      font-size: 13px;
+    }
+    ::selection { background: #d4845e; color: #1a1a2e; }
     a { color: inherit; text-decoration: none; }
 
-    .tui-nav {
-      border-bottom: 1px solid #333;
-      padding: 8px 0;
+    .cc-nav {
+      border-bottom: 1px solid #2a2a40;
+      padding: 10px 0;
       position: sticky;
       top: 0;
-      background: #0a0a0a;
+      background: #16162a;
       z-index: 10;
+      backdrop-filter: blur(8px);
     }
-    .tui-nav-inner {
-      max-width: 900px;
+    .cc-nav-inner {
+      max-width: 840px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
+      justify-content: space-between;
     }
-    .tui-prompt {
-      color: #33ff33;
-      white-space: nowrap;
+    .cc-logo {
+      color: #d4845e;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.5px;
     }
-    .tui-prompt-sm { color: #33ff33; margin-right: 4px; }
-    .tui-nav-links {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .tui-link { color: #5599ff; }
-    .tui-link:hover { color: #88bbff; text-decoration: underline; }
+    .cc-nav-links { display: flex; gap: 20px; }
+    .cc-nav-link { color: #8888a0; font-size: 14px; transition: color 0.15s; }
+    .cc-nav-link:hover { color: #d4845e; }
 
-    .tui-hero {
-      max-width: 900px;
+    .cc-wrap {
+      max-width: 840px;
       margin: 0 auto;
-      padding: 48px 20px 32px;
-      border-bottom: 1px solid #333;
-    }
-    .tui-ascii {
-      color: #33ff33;
-      font-size: 13px;
-      line-height: 1.2;
-      margin-bottom: 20px;
-      overflow-x: auto;
-    }
-    .tui-hero-text { margin-bottom: 20px; }
-    .tui-hero-text p { margin-bottom: 4px; }
-    .tui-hero-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .tui-cmd {
-      color: #e0e0e0;
-      padding: 2px 8px;
-      border: 1px solid #444;
-      background: #1a1a1a;
-    }
-    .tui-cmd:hover { background: #222; border-color: #33ff33; color: #33ff33; }
-    .tui-sep { color: #555; }
-
-    .tui-green { color: #33ff33; }
-    .tui-amber { color: #ffaa00; }
-    .tui-dim { color: #777; }
-    .tui-bold { font-weight: bold; }
-
-    .tui-section {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 32px 20px;
+      padding: 0 24px;
     }
 
-    .tui-box {
-      border: 1px solid #444;
-      background: #0e0e0e;
+    .cc-hero {
+      padding: 64px 0 48px;
+      border-bottom: 1px solid #2a2a40;
+    }
+    .cc-hero h1 {
+      font-size: 42px;
+      font-weight: 700;
+      color: #ededf0;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      line-height: 1.15;
+    }
+    .cc-hero h1 span { color: #d4845e; }
+    .cc-hero-sub {
+      color: #8888a0;
+      font-size: 17px;
+      max-width: 560px;
+      margin-bottom: 28px;
+    }
+    .cc-hero-actions { display: flex; gap: 12px; }
+    .cc-btn-primary {
+      background: #d4845e;
+      color: #1a1a2e;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+    .cc-btn-primary:hover { background: #e8927c; }
+    .cc-btn-ghost {
+      border: 1px solid #3a3a50;
+      color: #c8c8d4;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: border-color 0.15s;
+    }
+    .cc-btn-ghost:hover { border-color: #d4845e; color: #d4845e; }
+
+    .cc-section { padding: 48px 0; }
+    .cc-section + .cc-section { border-top: 1px solid #2a2a40; }
+    .cc-section-title {
+      color: #ededf0;
+      font-size: 22px;
+      font-weight: 600;
       margin-bottom: 8px;
     }
-    .tui-box-title {
-      color: #33ff33;
-      padding: 6px 12px;
-      border-bottom: 1px solid #333;
-      font-weight: bold;
+    .cc-section-sub {
+      color: #6a6a80;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    .cc-msg {
+      background: #222240;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      border: 1px solid #2a2a45;
+    }
+    .cc-msg-user {
+      background: #1e1e38;
+      border-left: 3px solid #d4845e;
+    }
+    .cc-msg-assistant {
+      background: #222240;
+      border-left: 3px solid #6366f1;
+    }
+    .cc-msg-tool {
+      background: #1c2a1c;
+      border-left: 3px solid #4ade80;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
     }
-    .tui-box-body { padding: 12px; }
-
-    .tui-grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 640px) {
-      .tui-grid-2 { grid-template-columns: 1fr; }
-    }
-
-    .tui-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px;
-      border-left: 2px solid #333;
-    }
-    .tui-item:hover { border-left-color: #33ff33; }
-
-    .tui-process {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    @media (min-width: 768px) {
-      .tui-process { flex-direction: row; align-items: stretch; }
-    }
-    .tui-phase {
-      flex: 1;
-      border: 1px solid #333;
-      padding: 10px;
-      background: #111;
-    }
-    .tui-phase:hover { border-color: #33ff33; }
-    .tui-phase-header {
-      display: flex;
-      gap: 8px;
+    .cc-msg-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       margin-bottom: 6px;
     }
-    .tui-phase-desc { font-size: 12px; }
-    .tui-arrow {
-      display: none;
-      color: #33ff33;
-      align-self: center;
-      font-size: 11px;
-      white-space: nowrap;
+    .cc-msg-label-user { color: #d4845e; }
+    .cc-msg-label-assistant { color: #6366f1; }
+    .cc-msg-label-tool { color: #4ade80; }
+
+    .cc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
-    @media (min-width: 768px) {
-      .tui-arrow { display: flex; align-items: center; }
+    @media (max-width: 640px) { .cc-grid { grid-template-columns: 1fr; } }
+
+    .cc-card {
+      background: #222240;
+      border: 1px solid #2a2a45;
+      border-radius: 10px;
+      padding: 16px 18px;
+      transition: border-color 0.15s;
+    }
+    .cc-card:hover { border-color: #d4845e; }
+    .cc-card-title {
+      color: #ededf0;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .cc-card-desc {
+      color: #8888a0;
+      font-size: 13px;
+      line-height: 1.5;
     }
 
-    .tui-platforms { display: flex; flex-direction: column; gap: 8px; }
-    .tui-platform-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    .tui-platform-link {
-      color: #5599ff;
-      padding: 2px 6px;
-      border: 1px solid #333;
-    }
-    .tui-platform-link:hover { border-color: #5599ff; background: #111; }
-
-    .tui-footer {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 24px 20px;
-      text-align: center;
+    .cc-process {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      gap: 0;
+    }
+    .cc-phase {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid #2a2a40;
+    }
+    .cc-phase:last-child { border-bottom: none; }
+    .cc-phase-num {
+      color: #d4845e;
+      font-weight: 700;
+      font-size: 13px;
+      min-width: 24px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cc-phase-name {
+      color: #ededf0;
+      font-weight: 600;
+      font-size: 14px;
+      min-width: 80px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cc-phase-desc { color: #8888a0; font-size: 13px; }
+    .cc-phase-arrow {
+      color: #3a3a50;
+      font-size: 12px;
+      padding: 4px 0;
+      text-align: center;
+      font-family: monospace;
+    }
+
+    .cc-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .cc-badge-cli {
+      background: #2a2a45;
+      color: #d4845e;
+      border: 1px solid #3a3a50;
+    }
+    .cc-badge-cli:hover { border-color: #d4845e; background: #2e2845; }
+    .cc-badge-ide {
+      background: #2a2a45;
+      color: #6366f1;
+      border: 1px solid #3a3a50;
+    }
+    .cc-badge-ide:hover { border-color: #6366f1; background: #282845; }
+
+    .cc-platforms-grid {
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
     }
 
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-    .tui-prompt::after {
-      content: '█';
-      animation: blink 1s step-end infinite;
-      margin-left: 4px;
+    .cc-thinking {
+      color: #6a6a80;
+      font-style: italic;
+      font-size: 13px;
+      padding: 8px 0;
     }
+
+    .cc-prompt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #222240;
+      border-radius: 10px;
+      border: 1px solid #2a2a45;
+      margin-top: 20px;
+    }
+    .cc-prompt-caret {
+      color: #d4845e;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .cc-prompt-text {
+      color: #6a6a80;
+      font-size: 14px;
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+    .cc-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #d4845e;
+      animation: blink 1s step-end infinite;
+      vertical-align: text-bottom;
+      margin-left: 2px;
+    }
+
+    .cc-footer {
+      border-top: 1px solid #2a2a40;
+      padding: 32px 0;
+      text-align: center;
+      color: #5a5a70;
+      font-size: 13px;
+    }
+    .cc-footer a { color: #d4845e; }
+    .cc-footer a:hover { text-decoration: underline; }
+
+    .cc-install {
+      background: #16162a;
+      border: 1px solid #2a2a45;
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #c8c8d4;
+      margin-top: 28px;
+      position: relative;
+    }
+    .cc-install-label {
+      color: #6a6a80;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .cc-install-line { margin: 2px 0; }
+    .cc-install-line::before { content: '$ '; color: #d4845e; }
+    .cc-install-comment { color: #4a4a60; }
   </style>
 </head>
 <body>
