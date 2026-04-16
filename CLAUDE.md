@@ -37,3 +37,5 @@ TUI-inspired dark theme with semantic color tokens and accessible components.
 - Border radius: `--border-radius` (8px), `--border-radius-sm` (6px)
 
 **Build**: esbuild bundles `site/main.js` → `docs/bundle.js`. Tailwind processes `site/input.css` → `docs/styles.css`.
+
+**Testing Without Build**: Design system can be verified without compilation by: (1) checking CSS variable definitions in input.css, (2) scanning for 100+ .cc-* class definitions, (3) verifying grid background CSS in body::before, (4) counting var(--) references (100+ indicates full adoption). This enables quick validation during development without waiting for build artifacts.
