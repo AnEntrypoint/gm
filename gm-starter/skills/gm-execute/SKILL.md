@@ -117,7 +117,7 @@ Invoke `browser` skill. Exhaust each level before advancing to next:
 
 ## GROUND TRUTH ENFORCEMENT
 
-Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
+Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No scattered test files (.test.js, .spec.js, __tests__/) — delete on discovery. All test coverage belongs in the single root `test.js`. If `test.js` does not exist, create it. Every behavior change updates `test.js`. Every bug fix adds a regression case. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
 
 **SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, regress to `planning` with restructuring instructions instead of continuing.
 
@@ -139,9 +139,9 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | test files | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
 
-**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/test files on discovery | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
+**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/scattered test files on discovery | consolidate test coverage into root test.js | add regression case to test.js for every bug fix | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
 
 ---
 

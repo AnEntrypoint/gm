@@ -12,9 +12,9 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 
 ## TRANSITIONS
 
-**EXIT — .prd items remain**: Verified items completed, .prd still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
+**EXIT — .gm/prd.yml items remain**: Verified items completed, .gm/prd.yml still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
 
-**EXIT — COMPLETE**: .prd empty + all work pushed + CI green → invoke `update-docs` skill.
+**EXIT — COMPLETE**: .gm/prd.yml empty + test.js passes + all work pushed + CI green → invoke `update-docs` skill.
 
 **STATE REGRESSIONS**:
 - Verification reveals broken file output → invoke `gm-emit` skill, reset to EMIT state, re-verify on return
@@ -32,7 +32,7 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 - `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
 - `git_pushed=UNKNOWN` until `git log origin/main..HEAD --oneline` returns empty
 - `ci_passed=UNKNOWN` until all GitHub Actions runs triggered by the push reach `conclusion: success`
-- `prd_empty=UNKNOWN` until .prd file is deleted (not just empty — file must not exist)
+- `prd_empty=UNKNOWN` until `.gm/prd.yml` is deleted (not just empty — file must not exist)
 
 All five must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
@@ -56,6 +56,20 @@ console.log(await fn(realInput));
 5. Never fix a symptom without identifying and fixing the root cause
 
 For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser diagnostics. After every success: enumerate what remains — never stop at first green. First green is not COMPLETE.
+
+## INTEGRATION TEST GATE
+
+Before git enforcement, run the project's `test.js` if it exists:
+
+```
+exec:nodejs
+const { execSync } = require('child_process');
+try { execSync('node test.js', { stdio: 'inherit', timeout: 30000 }); console.log('test.js: PASS'); } catch (e) { console.error('test.js: FAIL'); process.exit(1); }
+```
+
+Failure = regression to `gm-execute`. Do not proceed to git enforcement with failing tests.
+
+If `test.js` does not exist and the project has testable surface, regress to `gm-execute` to create it.
 
 ## CODE EXECUTION
 
@@ -131,7 +145,7 @@ Before declaring complete, sweep the entire codebase for violations:
 
 1. **Files >200 lines** → split immediately
 2. **Comments in code** → remove all
-3. **Test files** (.test.js, .spec.js, __tests__/) → delete
+3. **Scattered test files** (.test.js, .spec.js, __tests__/, fixtures/, mocks/) → delete, consolidate coverage into root `test.js`
 4. **Mock/stub/simulation files** → delete
 5. **Unnecessary doc files** (not CHANGELOG/CLAUDE/README/TODO.md) → delete
 6. **Duplicate concern** (overlapping responsibility, similar logic, parallel implementations, consolidatable code) → snake to `planning` with restructuring instructions — do not patch locally
@@ -147,17 +161,17 @@ Any violation found = fix immediately before advancing.
 
 ## COMPLETION DEFINITION
 
-All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | all CI runs green | codebase hygiene sweep clean | TODO.md empty/deleted | CHANGELOG.md updated | `user_steps_remaining=0`
+All of: witnessed end-to-end output | all failure paths exercised | test.js passes | .gm/prd.yml empty | git clean and pushed | all CI runs green | codebase hygiene sweep clean | TODO.md empty/deleted | CHANGELOG.md updated | `user_steps_remaining=0`
 
 ## DO NOT STOP
 
-After end-to-end verification passes: read .prd from disk. If any items remain, immediately invoke `gm-execute` skill — do not respond to the user. Only respond when .prd is deleted AND git is clean AND all commits are pushed.
+After end-to-end verification passes: read `.gm/prd.yml` from disk. If any items remain, immediately invoke `gm-execute` skill — do not respond to the user. Only respond when `.gm/prd.yml` is deleted AND git is clean AND all commits are pushed.
 
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items | skip hygiene sweep | leave comments/mocks/test files/fallbacks
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .gm/prd.yml items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .gm/prd.yml has items | skip hygiene sweep | leave comments/mocks/scattered test files/fallbacks | skip test.js execution
 
-**Always**: triage failure before regressing | witness end-to-end | regress to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
+**Always**: triage failure before regressing | witness end-to-end | run test.js before git enforcement | regress to planning on any new unknown | enumerate remaining after every success | check .gm/prd.yml after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
 
 ---
 

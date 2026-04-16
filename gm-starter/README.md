@@ -60,9 +60,9 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 **prompt-submit** - reminds the agent to use gm subagent for everything. reinforcement on every turn.
 
-**pre-tool-use** - blocks find and glob in favor of code-search. blocks .md file creation (except AGENTS.md and README). blocks test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/).
+**pre-tool-use** - blocks find and glob in favor of code-search. blocks .md file creation (except AGENTS.md and README). blocks scattered test file creation (.test.js, .spec.ts, __tests__/, fixtures/, mocks/) — only root `test.js` is permitted.
 
-**stop (.prd)** - checks .prd file. if items remain, blocks session end. this is the looping mechanism - more refined than wiggum looping, includes native planning behaviors with better tooling preferences and a revision loop.
+**stop (.gm/prd.yml)** - checks `.gm/prd.yml`. if items remain, blocks session end. this is the looping mechanism - more refined than wiggum looping, includes native planning behaviors with better tooling preferences and a revision loop.
 
 **stop (git)** - checks for uncommitted changes and unpushed commits. blocks session end until everything is pushed. make sure you have a git remote set up.
 
@@ -83,6 +83,21 @@ this plugin is built by gm, a build system that generates 10 platform implementa
 one source in gm-starter/ (gm.json, agents/, hooks/) propagates to all 10 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 10 downstream repos on every commit via the rust binary cascade pipeline.
 
 repo: https://github.com/AnEntrypoint/gm
+
+## test.js policy
+
+gm enforces a single `test.js` at project root. no jest, no mocha, no scattered `.test.js` files. one file, 200 lines max, plain node assertions. the agent creates it if absent, updates it with every behavior change, and adds regression cases for every bug fix. `gm-complete` runs it before allowing session end — failure regresses to EXECUTE.
+
+this replaces all unit testing. the rationale: unit tests with mocks diverge from production behavior. one integration test against the real system catches what matters.
+
+## .gm/ directory
+
+all gm metadata lives in `.gm/` at project root (auto-gitignored by postinstall):
+
+- `.gm/prd.yml` — active work items (task tracking)
+- `.gm/lastskill` — last invoked skill (restored after context compaction)
+
+`test.js` stays at project root — it's user-facing, not metadata.
 
 ## architecture clarifications
 

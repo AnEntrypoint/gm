@@ -16,12 +16,12 @@ Root of all work. Runs `PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS →
 
 **REGRESSIONS**: new unknown at any state → re-invoke `planning` | EXECUTE unresolvable 2 passes → `planning` | EMIT logic error → `gm-execute` | EMIT new unknown → `planning` | VERIFY broken output → `gm-emit` | VERIFY logic wrong → `gm-execute` | VERIFY new unknown → `planning`
 
-**Runs until**: .prd empty AND git clean AND all pushes confirmed AND CI green.
+**Runs until**: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI green.
 
 ## ENFORCEMENT — COMPLETE EVERY TASK END-TO-END
 
 **Cannot respond or stop while**:
-- .prd file exists and has items
+- .gm/prd.yml exists and has items
 - git has uncommitted changes
 - git has unpushed commits
 
@@ -59,7 +59,7 @@ During every planning pass, enumerate every possible aspect of the app's runtime
 
 ## .PRD FORMAT
 
-Path: `./.prd`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Delete when empty — never leave empty file.
+Path: `./.gm/prd.yml`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Ensure `.gm/` dir exists before writing. Delete when empty — never leave empty file. Delete `.gm/` dir when completely empty.
 
 ```yaml
 - id: kebab-id
@@ -120,7 +120,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 ## MANDATORY DEV WORKFLOW
 
-No comments. No test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
+No comments. No scattered test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
 
 **Minimal code / maximal DX process**: Before writing any logic, run this process in order — stop at the first step that resolves the need:
 1. **Native first** — does the language or runtime already do this? Use it exactly as designed.
@@ -129,6 +129,20 @@ No comments. No test files. 200-line limit — split before continuing. Fail lou
 4. **Write last** — only author new logic when the above three are exhausted. New logic = new surface area = new bugs.
 
 When structure eliminates a whole class of wrong states — name that pattern explicitly. Dispatch tables replacing switch chains, pipelines replacing loop-with-accumulator, maps replacing if/else forests — these are not just style preferences, they are correctness properties. Code that cannot be wrong because of how it is shaped is the goal. Readable top-to-bottom without mental simulation = done right. Requires decoding = not done.
+
+## SINGLE INTEGRATION TEST POLICY
+
+Every project maintains exactly one `test.js` at project root. 200-line max. No other test files anywhere — no `.test.js`, `.spec.js`, `__tests__/`, `fixtures/`, `mocks/`. Delete all scattered tests on discovery and consolidate coverage into `test.js`.
+
+**test.js replaces all unit tests.** It tests the real system end-to-end with real data. No mocks, no stubs, no test frameworks. Plain node assertions or process exit codes.
+
+**Creation**: if `test.js` does not exist, create it during EXECUTE phase covering all testable surface of current work.
+
+**Maintenance**: every code change that adds or modifies behavior must update `test.js` to cover it. Every bug fix must add a regression case that would have caught the bug.
+
+**Structure**: group by subsystem, each subsystem gets a section. When approaching 200 lines, compress older stable tests into tighter assertions to make room for new coverage.
+
+**Execution**: `gm-complete` runs `test.js` before allowing completion. Failure = regression to EXECUTE.
 
 ## RESPONSE POLICY
 
@@ -147,6 +161,6 @@ Auto-Clarity: drop caveman for security warnings, irreversible confirmations, am
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .gm/prd.yml has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create scattered test files (only root test.js) | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
 
 **Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception | prefer dispatch tables over switch/if chains | prefer pipelines over loop-with-accumulator | make wrong states structurally impossible | name patterns when structure eliminates a whole class of bugs

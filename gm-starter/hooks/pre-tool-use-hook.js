@@ -9,6 +9,8 @@ const toolInput = input.tool_input || input.tool_use?.input || {};
 
 if (toolName === 'Skill' && toolInput.skill) {
   try {
-    fs.writeFileSync(path.join(process.cwd(), '.lastskill'), toolInput.skill, 'utf8');
+    const gmDir = path.join(process.cwd(), '.gm');
+    if (!fs.existsSync(gmDir)) fs.mkdirSync(gmDir, { recursive: true });
+    fs.writeFileSync(path.join(gmDir, 'lastskill'), toolInput.skill, 'utf8');
   } catch (_) {}
 }
