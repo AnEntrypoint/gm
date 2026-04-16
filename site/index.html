@@ -19,14 +19,182 @@
   <meta name="twitter:description" content="A state machine that keeps coding sessions on track. Plan unknowns, execute against real services, verify output, complete clean. 11 platforms.">
   <meta name="twitter:image" content="https://anentrypoint.github.io/plugforge/og-image.png">
   <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#6366f1">
+  <meta name="theme-color" content="#0a0a0a">
   <link rel="stylesheet" href="./styles.css">
   <style>
-    body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; margin: 0; }
-    .gradient-hero { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); }
-    .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
-    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
-    .phase-arrow { color: #6366f1; font-size: 1.25rem; align-self: center; flex-shrink: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      color: #b0b0b0;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    ::selection { background: #33ff33; color: #0a0a0a; }
+    a { color: inherit; text-decoration: none; }
+
+    .tui-nav {
+      border-bottom: 1px solid #333;
+      padding: 8px 0;
+      position: sticky;
+      top: 0;
+      background: #0a0a0a;
+      z-index: 10;
+    }
+    .tui-nav-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .tui-prompt {
+      color: #33ff33;
+      white-space: nowrap;
+    }
+    .tui-prompt-sm { color: #33ff33; margin-right: 4px; }
+    .tui-nav-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .tui-link { color: #5599ff; }
+    .tui-link:hover { color: #88bbff; text-decoration: underline; }
+
+    .tui-hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 20px 32px;
+      border-bottom: 1px solid #333;
+    }
+    .tui-ascii {
+      color: #33ff33;
+      font-size: 13px;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .tui-hero-text { margin-bottom: 20px; }
+    .tui-hero-text p { margin-bottom: 4px; }
+    .tui-hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tui-cmd {
+      color: #e0e0e0;
+      padding: 2px 8px;
+      border: 1px solid #444;
+      background: #1a1a1a;
+    }
+    .tui-cmd:hover { background: #222; border-color: #33ff33; color: #33ff33; }
+    .tui-sep { color: #555; }
+
+    .tui-green { color: #33ff33; }
+    .tui-amber { color: #ffaa00; }
+    .tui-dim { color: #777; }
+    .tui-bold { font-weight: bold; }
+
+    .tui-section {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    .tui-box {
+      border: 1px solid #444;
+      background: #0e0e0e;
+      margin-bottom: 8px;
+    }
+    .tui-box-title {
+      color: #33ff33;
+      padding: 6px 12px;
+      border-bottom: 1px solid #333;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .tui-box-body { padding: 12px; }
+
+    .tui-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .tui-grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .tui-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+      border-left: 2px solid #333;
+    }
+    .tui-item:hover { border-left-color: #33ff33; }
+
+    .tui-process {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    @media (min-width: 768px) {
+      .tui-process { flex-direction: row; align-items: stretch; }
+    }
+    .tui-phase {
+      flex: 1;
+      border: 1px solid #333;
+      padding: 10px;
+      background: #111;
+    }
+    .tui-phase:hover { border-color: #33ff33; }
+    .tui-phase-header {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .tui-phase-desc { font-size: 12px; }
+    .tui-arrow {
+      display: none;
+      color: #33ff33;
+      align-self: center;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .tui-arrow { display: flex; align-items: center; }
+    }
+
+    .tui-platforms { display: flex; flex-direction: column; gap: 8px; }
+    .tui-platform-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tui-platform-link {
+      color: #5599ff;
+      padding: 2px 6px;
+      border: 1px solid #333;
+    }
+    .tui-platform-link:hover { border-color: #5599ff; background: #111; }
+
+    .tui-footer {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+    .tui-prompt::after {
+      content: '█';
+      animation: blink 1s step-end infinite;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
