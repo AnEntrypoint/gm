@@ -29,6 +29,40 @@ Every `exec:browser` call has a 15s live window. During that window, all stdout/
 
 **"Assertion failed: UV_HANDLE_CLOSING" in output** means the call exceeded 15s and was cut off — ignore the assertion noise, look at the output before it. The task was backgrounded normally.
 
+## Idle Timeout & Session Reaper — CRITICAL
+
+Playwriter kills idle browser sessions after 5-15 minutes of inactivity. When a session dies:
+1. Playwriter silently closes the browser connection
+2. Subsequent `exec:browser` calls don't detect the dead session
+3. Tool tries to use stale session → opens new tabs repeatedly
+4. Browser accumulates zombie tabs until manually closed
+
+**Fix: Always reset on first use after idle.**
+
+Pattern for long-idle projects:
+```
+exec:browser
+if (!state.resetDone) {
+  try { await mcp__playwriter_latest__reset(); } catch (e) { }
+  state.resetDone = true;
+}
+await page.goto('https://example.com')
+```
+
+Or, if experiencing zombie tabs:
+```
+exec:close
+task_N
+```
+
+Then restart:
+```
+exec:browser
+await page.goto('https://example.com')
+```
+
+**Rule**: After any gap >5 minutes without browser interaction, manually invoke `exec:close` on the task ID, then start a fresh `exec:browser` block. Never leave idle sessions running.
+
 ## Session Pathway (`browser:`)
 
 Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):
