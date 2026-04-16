@@ -1,0 +1,315 @@
+- id: research-complete-phase-1
+  subject: Document all TUI design inspiration sources
+  status: completed
+  description: Researched WebTUI, Nord/Catppuccin/Gruvbox themes, Linear/Zed design patterns, terminal UI components
+  effort: small
+  category: research
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - All sources documented with links
+    - Design patterns catalogued
+    - Color palettes identified
+
+- id: border-system-design
+  subject: Implement semantic border system with box-drawing characters
+  status: pending
+  description: Add box-drawing glyphs (┌─┐│└┘╔╗╚╝) for TUI authenticity. Support single/double/rounded border styles. Apply to cards, sections, input fields.
+  effort: medium
+  category: feature
+  blocking: ['component-library-expansion', 'card-redesign', 'form-inputs-redesign']
+  blockedBy: []
+  acceptance:
+    - Border variants: single-line, double-line, rounded, ASCII-only
+    - Borders apply to .cc-card, .cc-section, .cc-msg, inputs
+    - No layout shift - borders part of existing padding
+    - Works in all modern browsers (fallback to solid for incomplete support)
+    - CSS custom properties for border colors
+  edge_cases:
+    - Box-drawing chars not supported in very old browsers - graceful fallback to solid line
+    - Corner characters must align perfectly with horizontal/vertical lines
+
+- id: color-palette-upgrade
+  subject: Adopt semantic color palette inspired by Nord/Catppuccin
+  status: pending
+  description: Define complete color system: primary, secondary, success, warning, danger, info with proper contrast ratios. Map existing colors to semantic tokens.
+  effort: medium
+  category: design
+  blocking: ['badge-redesign', 'message-type-colors', 'status-indicators']
+  blockedBy: []
+  acceptance:
+    - CSS variables for all semantic colors (--color-primary, --color-success, etc)
+    - WCAG AA contrast ratio minimum for all color pairs
+    - Nord-inspired cool palette OR Catppuccin warm palette (decide during EXECUTE)
+    - Applied to buttons, badges, messages, status indicators
+    - Color scheme switchable via data-theme attribute
+  edge_cases:
+    - Must work in dark AND light modes if adding light variant later
+    - Some users may have high-contrast mode enabled
+
+- id: grid-background-pattern
+  subject: Add subtle animated grid background pattern
+  status: pending
+  description: Implement grid pattern inspired by Linear.app/Zed. Use SVG or CSS grid for subtle structure without overwhelming content. Optional animated pulsing nodes.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - Grid visible but subtle (low opacity ~0.03)
+    - Fixed background, content scrolls normally
+    - SVG or CSS-based, no performance impact
+    - Accent color nodes at intersections (optional animation)
+    - Respects prefers-reduced-motion
+  edge_cases:
+    - Performance on low-end devices - may need to disable on mobile
+    - Must not interfere with text readability
+
+- id: message-component-enhancement
+  subject: Redesign message components with TUI-style borders and better visual hierarchy
+  status: pending
+  description: Upgrade .cc-msg cards with double-line borders, better spacing, icon indicators. Add type badges (exec:codesearch, exec:bash, etc).
+  effort: medium
+  category: design
+  blocking: ['form-inputs-redesign']
+  blockedBy: ['border-system-design', 'color-palette-upgrade']
+  acceptance:
+    - All message types have distinct colored borders (user/assistant/tool)
+    - Type labels styled as badges with semantic colors
+    - Icons/glyphs for message types (> for user, ◇ for assistant, ⚙ for tool)
+    - Better vertical spacing between messages
+    - Code snippets highlighted with syntax colors
+
+- id: button-redesign
+  subject: Redesign buttons with TUI borders and better visual feedback
+  status: pending
+  description: Primary buttons: colored border + background. Ghost buttons: border-only with hover effects. Disabled state visual feedback.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: ['border-system-design', 'color-palette-upgrade']
+  acceptance:
+    - Primary button: solid bg + colored border (2px), hover darkens bg
+    - Ghost button: border-only (1px), hover lights border color
+    - Disabled: grayed out with dashed border
+    - Monospace font option for button text
+    - Clear focus state for keyboard navigation
+
+- id: form-inputs-redesign
+  subject: Add new TUI-style form input components with borders
+  status: pending
+  description: Create input, textarea, select components with box-drawing borders. Label styling. Focus states. Placeholder text. Required indicators.
+  effort: medium
+  category: feature
+  blocking: []
+  blockedBy: ['border-system-design', 'color-palette-upgrade']
+  acceptance:
+    - Input/textarea components with borders on all 4 sides
+    - Focus state changes border color to accent
+    - Labels positioned above inputs with semantic color
+    - Placeholder text lighter than input text
+    - Required indicator (*) in label
+    - CSS-only, no JavaScript needed
+  edge_cases:
+    - Ensure proper touch target sizes on mobile (min 44px height)
+    - Browser autocomplete styling must not break layout
+
+- id: card-redesign
+  subject: Upgrade card components with double borders and better hierarchy
+  status: pending
+  description: Apply box-drawing borders (double-line style). Padding adjustments. Better title/description contrast. Hover effects.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: ['border-system-design', 'color-palette-upgrade']
+  acceptance:
+    - Cards use double-line borders (╔╗╚╝═║)
+    - Title color increased contrast vs description
+    - Padding consistent: 20px on all sides
+    - Hover effect: border color shifts to accent, not full background change
+    - No shadow effects - borders only
+
+- id: badge-redesign
+  subject: Redesign platform/type badges with better visual distinction
+  status: pending
+  description: Add subtle borders, better contrast, icon glyphs for CLI vs IDE. Consider multi-option display (grid or flex wrap).
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: ['border-system-design', 'color-palette-upgrade']
+  acceptance:
+    - Badges have borders (1px, colored per type)
+    - CLI badges: CLI icon glyph (❯ or ▶) + label
+    - IDE badges: IDE icon glyph (◇ or ▢) + label
+    - Hover effect: border brightens, slight background lift
+    - Better spacing in flex grid container
+
+- id: typography-hierarchy
+  subject: Define clear typography system with semantic scale
+  status: pending
+  description: Establish font sizes, weights, line-heights. Consider monospace for more elements. Heading hierarchy consistency.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - H1 sizes defined for hero, others for sections
+    - Line-height adjusted for readability (1.6-1.8 for body, 1.2 for headings)
+    - Monospace used for: code, commands, type labels, badges
+    - Sans-serif used for: body text, descriptions, headings
+    - Font weight scale: 400 (normal), 500 (semibold), 600 (bold), 700 (heavy)
+
+- id: status-indicators
+  subject: Add status indicators with semantic colors (success/warning/error/info)
+  status: pending
+  description: Create status badge components (● green/yellow/red) and status indicators. Use in phase visualization, process state, tool output.
+  effort: small
+  category: feature
+  blocking: []
+  blockedBy: ['color-palette-upgrade']
+  acceptance:
+    - Status colors: green (success), yellow (warning), red (error), blue (info)
+    - Colored circle glyph (●) + label text format
+    - Applied to process phases, tool responses, state indicators
+    - Accessible: also use icons/text labels, not color-only
+
+- id: animation-system
+  subject: Define subtle TUI-style animations and transitions
+  status: pending
+  description: Cursor blink, border color transitions, hover effects, fade-ins. Respects prefers-reduced-motion. Durations: 150-300ms.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - Existing cursor blink animation kept (1s step-end)
+    - Color transitions: 150ms cubic-bezier for smooth color changes
+    - Hover effects: slight background shift or border color change
+    - Fade-ins for messages: 200ms ease-in
+    - All animations respect prefers-reduced-motion query
+
+- id: component-library-expansion
+  subject: Create reusable component library (.cc-* classes)
+  status: pending
+  description: Document and expand .cc-* class library. New components: progress bar, spinner, toast, modal, table. All TUI-styled.
+  effort: large
+  category: feature
+  blocking: []
+  blockedBy: ['border-system-design', 'color-palette-upgrade', 'button-redesign', 'form-inputs-redesign', 'message-component-enhancement']
+  acceptance:
+    - Progress bar component with animated fill
+    - Spinner/loader component with animation
+    - Toast notification component (top/bottom positioning)
+    - Modal dialog with backdrop and close button
+    - Table component with borders, striped rows, sortable headers
+    - All components use semantic colors
+    - All components have .cc-* class prefix
+    - All components documented with usage examples
+
+- id: phase-visualization
+  subject: Enhance process phase visualization with status indicators
+  status: pending
+  description: Show current phase with visual indicator. Add status circles (pending/in-progress/complete). Better alignment and spacing.
+  effort: medium
+  category: design
+  blocking: []
+  blockedBy: ['status-indicators', 'border-system-design']
+  acceptance:
+    - Each phase gets status indicator dot (●)
+    - Current phase highlighted with accent color
+    - Completed phases get checkmark (✓)
+    - Better vertical alignment and padding
+    - Optional: connect phases with lines/arrows
+
+- id: section-dividers
+  subject: Redesign section borders with box-drawing characters
+  status: pending
+  description: Replace simple border-top with styled dividers using box-drawing. Consider decorative separator styles.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: ['border-system-design']
+  acceptance:
+    - Dividers use box-drawing: ─────┼───── style
+    - Optional: ornamental center glyph (◆ or ※)
+    - Divider color matches section theme
+    - No height changes - pseudo-element or border styling
+
+- id: platform-showcase-redesign
+  subject: Redesign platforms grid with better visual distinction
+  status: pending
+  description: Show platforms in categorized grid (CLI vs IDE rows). Better badge styling. Optional: platform logos/icons.
+  effort: medium
+  category: design
+  blocking: []
+  blockedBy: ['badge-redesign']
+  acceptance:
+    - Separate sections: CLI platforms and IDE platforms
+    - Section headers with visual styling
+    - Improved platform badges with borders and hover effects
+    - Better spacing and grid alignment
+    - Optional: platform category icons
+
+- id: responsive-design-check
+  subject: Audit responsive design for mobile and tablet
+  status: pending
+  description: Ensure all new TUI components work on small screens. Test touch targets, text readability, grid layouts.
+  effort: small
+  category: design
+  blocking: []
+  blockedBy: ['component-library-expansion', 'form-inputs-redesign', 'button-redesign']
+  acceptance:
+    - Mobile: all buttons/inputs min 44px touch target
+    - Mobile: text sizes remain readable (min 14px)
+    - Mobile: single-column layout for cards/grids
+    - Tablet: 2-column where appropriate
+    - No horizontal scrolling on any viewport
+    - Tested on: iPhone SE, iPad, Android devices
+
+- id: accessibility-audit
+  subject: Audit accessibility: contrast, labels, keyboard nav
+  status: pending
+  description: WCAG AA compliance: color contrast, ARIA labels, keyboard focus states, screen reader support.
+  effort: medium
+  category: refactor
+  blocking: []
+  blockedBy: ['color-palette-upgrade', 'form-inputs-redesign']
+  acceptance:
+    - All colors meet WCAG AA contrast ratio (4.5:1 for text)
+    - All form inputs have associated labels
+    - All interactive elements keyboard focusable
+    - Clear focus indicators (border or outline)
+    - Semantic HTML: headings, nav, main, footer
+    - ARIA labels for icon-only buttons
+    - Form error messages linked to inputs via aria-describedby
+
+- id: build-and-test
+  subject: Build CSS bundles and test all new components
+  status: pending
+  description: Run site/build.js, verify bundle.js output, test in browser across browsers, verify no regressions.
+  effort: medium
+  category: infra
+  blocking: []
+  blockedBy: ['component-library-expansion', 'accessibility-audit']
+  acceptance:
+    - site/build.js runs without errors
+    - docs/bundle.js generated and minified
+    - docs/styles.css generated from input.css + Tailwind
+    - Manual browser testing: Chrome, Firefox, Safari
+    - No console errors or warnings
+    - Existing functionality preserved (no regressions)
+
+- id: docs-update
+  subject: Document design system in README or new docs file
+  status: pending
+  description: Create component documentation, color palette reference, typography scale. Usage examples for each component.
+  effort: small
+  category: docs
+  blocking: []
+  blockedBy: ['component-library-expansion']
+  acceptance:
+    - Component library documented with class names
+    - Color palette reference with hex/RGB values
+    - Typography scale documented
+    - HTML usage examples for each component
+    - Accessibility guidelines documented
