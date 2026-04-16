@@ -34,34 +34,26 @@ const PLATFORMS = [
 const RULES = [
   { title: 'Name every unknown', desc: 'apiShape=UNKNOWN, fileExists=UNKNOWN. Named unknowns get resolved; unnamed ones cause bugs.' },
   { title: 'Witnessed execution only', desc: 'A mutable closes when real code runs and produces real output. Inference doesn\'t count.' },
-  { title: 'Two-pass limit', desc: 'Still open after two attempts → fresh unknown → session resets to PLAN.' },
-  { title: 'Divergence → replan', desc: 'Output differs from expectation → new mutable → replanning before any further edits.' },
+  { title: 'Two-pass limit', desc: 'Still open after two attempts \u2192 fresh unknown \u2192 session resets to PLAN.' },
+  { title: 'Divergence \u2192 replan', desc: 'Output differs from expectation \u2192 new mutable \u2192 replanning before any further edits.' },
 ];
-
-function box(title, content, width) {
-  const w = width || 'w-full';
-  return h('div', { class: `tui-box ${w}` },
-    title ? h('div', { class: 'tui-box-title' }, `[ ${title} ]`) : null,
-    h('div', { class: 'tui-box-body' }, content)
-  );
-}
 
 function NavBar() {
   const links = [
     ['#principles', 'Principles'],
     ['#process', 'Process'],
     ['./stats.html', 'Stats'],
-    ['./made-with.html', 'Made with gm'],
+    ['./made-with.html', 'Showcase'],
     ['./paper.html', 'Paper I'],
     ['./paper2.html', 'Paper II'],
-    ['https://github.com/AnEntrypoint/gm', 'Source'],
+    ['https://github.com/AnEntrypoint/gm', 'GitHub'],
   ];
-  return h('nav', { class: 'tui-nav' },
-    h('div', { class: 'tui-nav-inner' },
-      h('span', { class: 'tui-prompt' }, 'gm@main:~$'),
-      h('div', { class: 'tui-nav-links' },
+  return h('nav', { class: 'cc-nav' },
+    h('div', { class: 'cc-nav-inner' },
+      h('a', { href: '#', class: 'cc-logo' }, 'gm'),
+      h('div', { class: 'cc-nav-links' },
         ...links.map(([href, label]) =>
-          h('a', { href, class: 'tui-link', ...(href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {}) }, label)
+          h('a', { href, class: 'cc-nav-link', ...(href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {}) }, label)
         )
       )
     )
@@ -69,36 +61,72 @@ function NavBar() {
 }
 
 function Hero() {
-  return h('section', { class: 'tui-hero' },
-    h('pre', { class: 'tui-ascii' },
-`                     ___
-  __ _ _ __ ___     / _ \\_ __ ___
- / _\` | '_ \` _ \\   | | | '_ \` _ \\
-| (_| | | | | | |  | |_| | | | | |
- \\__, |_| |_| |_|   \\___/|_| |_| |_|
- |___/`),
-    h('div', { class: 'tui-hero-text' },
-      h('p', { class: 'tui-green' }, 'State machine for coding agents.'),
-      h('p', { class: 'tui-dim' }, 'Enforces PLAN → EXECUTE → EMIT → VERIFY → COMPLETE across 11 platforms.'),
-      h('p', { class: 'tui-dim' }, 'Each unknown is named and resolved by code, not guesswork.'),
-    ),
-    h('div', { class: 'tui-hero-actions' },
-      h('span', { class: 'tui-prompt-sm' }, '$'),
-      h('a', { href: './paper.html', class: 'tui-cmd' }, 'cat paper.md'),
-      h('span', { class: 'tui-sep' }, '|'),
-      h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'tui-cmd' }, 'git clone gm'),
+  return h('section', { class: 'cc-hero' },
+    h('div', { class: 'cc-wrap' },
+      h('h1', null, 'Ship code that works.', h('br'), h('span', null, 'Every time.')),
+      h('p', { class: 'cc-hero-sub' },
+        'A state machine that enforces plan \u2192 execute \u2192 emit \u2192 verify \u2192 complete on every task, across 11 platforms. Each unknown is named and resolved by code.'
+      ),
+      h('div', { class: 'cc-hero-actions' },
+        h('a', { href: './paper.html', class: 'cc-btn-primary' }, 'Read the Paper'),
+        h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'cc-btn-ghost' }, 'View Source'),
+      ),
+      h('div', { class: 'cc-install' },
+        h('div', { class: 'cc-install-label' }, 'Install'),
+        h('div', { class: 'cc-install-line' }, 'claude plugin marketplace add AnEntrypoint/gm'),
+        h('div', { class: 'cc-install-line' }, 'claude plugin install -s user gm@gm'),
+      )
+    )
+  );
+}
+
+function ConversationDemo() {
+  return h('section', { class: 'cc-section' },
+    h('div', { class: 'cc-wrap' },
+      h('h2', { class: 'cc-section-title' }, 'How a session looks'),
+      h('p', { class: 'cc-section-sub' }, 'gm intercepts every prompt and enforces the state machine.'),
+
+      h('div', { class: 'cc-msg cc-msg-user' },
+        h('div', { class: 'cc-msg-label cc-msg-label-user' }, 'You'),
+        h('p', null, 'add dark mode to the settings page')
+      ),
+
+      h('div', { class: 'cc-thinking' }, 'Invoking planning skill...'),
+
+      h('div', { class: 'cc-msg cc-msg-assistant' },
+        h('div', { class: 'cc-msg-label cc-msg-label-assistant' }, 'gm'),
+        h('p', null, 'Writing .gm/prd.yml with 3 items: discover current theme system, implement toggle, verify persistence. Launching exec:codesearch to resolve existingImpl=UNKNOWN.')
+      ),
+
+      h('div', { class: 'cc-msg cc-msg-tool' },
+        h('div', { class: 'cc-msg-label cc-msg-label-tool' }, 'exec:codesearch'),
+        h('p', null, 'theme toggle settings \u2192 src/settings.js:42 ThemeProvider')
+      ),
+
+      h('div', { class: 'cc-msg cc-msg-assistant' },
+        h('div', { class: 'cc-msg-label cc-msg-label-assistant' }, 'gm'),
+        h('p', null, 'All mutables KNOWN. Invoking gm-emit \u2192 writing files \u2192 gm-complete \u2192 test.js passes \u2192 committed and pushed.')
+      ),
+
+      h('div', { class: 'cc-prompt' },
+        h('span', { class: 'cc-prompt-caret' }, '>'),
+        h('span', { class: 'cc-prompt-text' }, 'What would you like to work on?'),
+        h('span', { class: 'cc-cursor' }),
+      )
     )
   );
 }
 
 function PrinciplesSection() {
-  return h('section', { id: 'principles', class: 'tui-section' },
-    box('HOW IT WORKS',
-      h('div', { class: 'tui-grid-2' },
-        ...PRINCIPLES.map((p, i) =>
-          h('div', { class: 'tui-item' },
-            h('span', { class: 'tui-green' }, `[${i + 1}] ${p.title}`),
-            h('span', { class: 'tui-dim' }, p.desc)
+  return h('section', { id: 'principles', class: 'cc-section' },
+    h('div', { class: 'cc-wrap' },
+      h('h2', { class: 'cc-section-title' }, 'How It Works'),
+      h('p', { class: 'cc-section-sub' }, 'Six mechanisms that keep coding sessions on track.'),
+      h('div', { class: 'cc-grid' },
+        ...PRINCIPLES.map(p =>
+          h('div', { class: 'cc-card' },
+            h('div', { class: 'cc-card-title' }, p.title),
+            h('div', { class: 'cc-card-desc' }, p.desc)
           )
         )
       )
@@ -107,35 +135,33 @@ function PrinciplesSection() {
 }
 
 function ProcessSection() {
-  return h('section', { id: 'process', class: 'tui-section' },
-    box('THE PROCESS',
-      h('div', { class: 'tui-process' },
-        ...PHASES.flatMap((phase, i) => {
-          const node = h('div', { class: 'tui-phase' },
-            h('div', { class: 'tui-phase-header' },
-              h('span', { class: 'tui-amber' }, `0${i + 1}`),
-              h('span', { class: 'tui-green tui-bold' }, phase.name),
-            ),
-            h('div', { class: 'tui-dim tui-phase-desc' }, phase.desc)
-          );
-          if (i < PHASES.length - 1) {
-            return [node, h('div', { class: 'tui-arrow' }, '───▶')];
-          }
-          return [node];
-        })
+  return h('section', { id: 'process', class: 'cc-section' },
+    h('div', { class: 'cc-wrap' },
+      h('h2', { class: 'cc-section-title' }, 'The Process'),
+      h('p', { class: 'cc-section-sub' }, 'Five phases, in order. Any new unknown sends the session back to PLAN.'),
+      h('div', { class: 'cc-process' },
+        ...PHASES.map((phase, i) =>
+          h('div', { class: 'cc-phase' },
+            h('span', { class: 'cc-phase-num' }, `0${i + 1}`),
+            h('span', { class: 'cc-phase-name' }, phase.name),
+            h('span', { class: 'cc-phase-desc' }, phase.desc),
+          )
+        )
       )
     )
   );
 }
 
 function MutableSection() {
-  return h('section', { class: 'tui-section' },
-    box('MUTABLE DISCIPLINE',
-      h('div', { class: 'tui-grid-2' },
-        ...RULES.map((r, i) =>
-          h('div', { class: 'tui-item' },
-            h('span', { class: 'tui-amber' }, `▸ ${r.title}`),
-            h('span', { class: 'tui-dim' }, r.desc)
+  return h('section', { class: 'cc-section' },
+    h('div', { class: 'cc-wrap' },
+      h('h2', { class: 'cc-section-title' }, 'Mutable Discipline'),
+      h('p', { class: 'cc-section-sub' }, 'Every assumption is tracked. Each one closes only via witnessed execution.'),
+      h('div', { class: 'cc-grid' },
+        ...RULES.map(r =>
+          h('div', { class: 'cc-card' },
+            h('div', { class: 'cc-card-title' }, r.title),
+            h('div', { class: 'cc-card-desc' }, r.desc)
           )
         )
       )
@@ -144,24 +170,17 @@ function MutableSection() {
 }
 
 function PlatformsSection() {
-  return h('section', { class: 'tui-section' },
-    box('PLATFORMS',
-      h('div', { class: 'tui-platforms' },
-        h('div', { class: 'tui-platform-row' },
-          h('span', { class: 'tui-dim' }, 'CLI  '),
-          ...PLATFORMS.filter(p => p.type === 'CLI').map(p =>
-            h('a', { href: `https://AnEntrypoint.github.io/${p.id}`, target: '_blank', rel: 'noopener', class: 'tui-platform-link' },
-              `[${p.label}]`
-            )
-          )
-        ),
-        h('div', { class: 'tui-platform-row' },
-          h('span', { class: 'tui-dim' }, 'IDE  '),
-          ...PLATFORMS.filter(p => p.type === 'IDE').map(p =>
-            h('a', { href: `https://AnEntrypoint.github.io/${p.id}`, target: '_blank', rel: 'noopener', class: 'tui-platform-link' },
-              `[${p.label}]`
-            )
-          )
+  return h('section', { class: 'cc-section' },
+    h('div', { class: 'cc-wrap' },
+      h('h2', { class: 'cc-section-title' }, '11 Platforms'),
+      h('p', { class: 'cc-section-sub' }, 'One state machine, every major coding tool.'),
+      h('div', { class: 'cc-platforms-grid' },
+        ...PLATFORMS.map(p =>
+          h('a', {
+            href: `https://AnEntrypoint.github.io/${p.id}`,
+            target: '_blank', rel: 'noopener',
+            class: `cc-badge ${p.type === 'CLI' ? 'cc-badge-cli' : 'cc-badge-ide'}`
+          }, p.label)
         )
       )
     )
@@ -169,21 +188,21 @@ function PlatformsSection() {
 }
 
 function Footer() {
-  return h('footer', { class: 'tui-footer' },
-    h('span', { class: 'tui-dim' }, '─'.repeat(60)),
-    h('p', { class: 'tui-dim' },
-      'Built with ',
-      h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'tui-link' }, 'gm'),
-      ' · ',
-      h('a', { href: './paper.html', class: 'tui-link' }, 'Read the paper')
-    ),
-    h('span', { class: 'tui-dim' }, '─'.repeat(60)),
+  return h('footer', { class: 'cc-footer' },
+    h('div', { class: 'cc-wrap' },
+      h('p', null,
+        'Built with ',
+        h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener' }, 'gm'),
+        ' \u00b7 ',
+        h('a', { href: './paper.html' }, 'Read the paper'),
+      )
+    )
   );
 }
 
 window.__debug = { PHASES, PRINCIPLES, PLATFORMS, RULES };
 
-const sections = [NavBar(), Hero(), PrinciplesSection(), ProcessSection(), MutableSection(), PlatformsSection(), Footer()];
+const sections = [NavBar(), Hero(), ConversationDemo(), PrinciplesSection(), ProcessSection(), MutableSection(), PlatformsSection(), Footer()];
 for (const vnode of sections) {
   const el = createDOMElement(vnode);
   if (el) document.body.appendChild(el);
