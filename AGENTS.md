@@ -41,6 +41,8 @@ node cli.js gm-starter ./build
 **bash_banned_tool blocking**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere.
 
 
+**rs-exec browser cleanup on session end (FIXED)**: When a Claude Code session ends via idle timeout, the spawned browser process was left running, causing zombie tabs on reconnect. Fixed in rs-exec commit `d9e15a3` — `SessionCleanup` command now calls `runtime::kill_session_browser()` to clean up the browser process and port mapping when the session ends. This cascades to all downstream tools via CI.
+
 **rs-exec session-cleanup subcommand**: `rs-plugkit/src/session_end.rs` spawns `plugkit session-cleanup --session=<id>`. This subcommand must exist in `rs-exec`'s `main.rs` `Cmd` enum or session-end cleanup silently fails — clap exits with an error but null stdio hides it.
 
 **rs-exec mod declarations**: After extracting `rpc.rs` and `kill.rs`, `main.rs` must have `mod rpc; mod kill;` alongside the other `mod` declarations. Missing these causes compile errors on `crate::rpc` and `crate::kill` references in `runner.rs`. Additionally, `lib.rs` must have `pub mod rpc;` — without it the library crate cannot expose rpc to dependents (distinct failure from the main.rs requirement).
