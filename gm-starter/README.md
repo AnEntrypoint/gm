@@ -75,14 +75,26 @@ note: playwriter uses a browser plugin - grab and activate that too to get brows
 
 ## gm build system
 
-this plugin is built by gm, a build system that generates 9 platform implementations from a single source directory:
+this plugin is built by gm, a build system that generates 10 platform implementations from a single source directory:
 
-- 5 CLI platforms: claude code, gemini cli, opencode, codex, github copilot cli
+- 6 CLI platforms: claude code, gemini cli, opencode, kilocode, codex, github copilot cli
 - 4 IDE extensions: vs code, cursor, zed, jetbrains
 
-one source in gm-starter/ (gm.json, agents/, hooks/) propagates to all 9 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 9 repos on every commit.
+one source in gm-starter/ (gm.json, agents/, hooks/) propagates to all 10 outputs. adding a hook or changing the agent automatically appears everywhere. github actions handles publishing to all 10 downstream repos on every commit via the rust binary cascade pipeline.
 
 repo: https://github.com/AnEntrypoint/gm
+
+## architecture clarifications
+
+**gm is a build system, not a monorepo of plugins.** the `gm` repo contains a single source (`gm-starter/`) and a builder (`cli.js`) that generates 10 platform-specific outputs. the downstream repos (`gm-cc`, `gm-gc`, `gm-oc`, etc.) are build artifacts published by CI — not independent projects. there is nothing to consolidate.
+
+**state enforcement is programmatic, not advisory.** the skill chain (`planning` → `gm-execute` → `gm-emit` → `gm-complete` → `update-docs`) is invoked via hooks at session start and prompt submit. the `.prd` file is the state tracker — the stop hook reads it and blocks session end while items remain. tool-use hooks block writes before planning completes. this is not "claude voluntarily following markdown."
+
+**validation exists.** `validate/probe.js` runs 14 scenarios against hook scripts across platforms. `lib/strict-validator.js` validates build output structure. the project does not use test files by design — the validation harness tests hook behavior end-to-end against real inputs.
+
+**security enforcement is hook-based.** `pre-tool-use-hook.js` blocks dangerous tool patterns (find, glob, test file creation, unauthorized .md writes). the rust plugkit binary (`rs-plugkit`) enforces command blocklists at the binary level. hooks fail loud — silent degradation is a bug, not a feature.
+
+**naming is frozen.** the project is "gm" (glootius maximus). previous names (mcp-repl, mcp-glootie, glootie-cc) are archived. all redirects point here.
 
 ## what doesn't work yet
 
