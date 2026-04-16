@@ -142,7 +142,9 @@ function ProcessSection() {
       h('div', { class: 'cc-process' },
         ...PHASES.map((phase, i) =>
           h('div', { class: 'cc-phase' },
-            h('span', { class: 'cc-phase-num' }, `0${i + 1}`),
+            h('span', { class: 'cc-status cc-status-info', style: 'min-width:24px;' },
+              h('span', { class: 'cc-status-dot' }, '◇')
+            ),
             h('span', { class: 'cc-phase-name' }, phase.name),
             h('span', { class: 'cc-phase-desc' }, phase.desc),
           )
@@ -170,17 +172,35 @@ function MutableSection() {
 }
 
 function PlatformsSection() {
+  const cliPlatforms = PLATFORMS.filter(p => p.type === 'CLI');
+  const idePlatforms = PLATFORMS.filter(p => p.type === 'IDE');
+
   return h('section', { class: 'cc-section' },
     h('div', { class: 'cc-wrap' },
       h('h2', { class: 'cc-section-title' }, '11 Platforms'),
       h('p', { class: 'cc-section-sub' }, 'One state machine, every major coding tool.'),
-      h('div', { class: 'cc-platforms-grid' },
-        ...PLATFORMS.map(p =>
-          h('a', {
-            href: `https://AnEntrypoint.github.io/${p.id}`,
-            target: '_blank', rel: 'noopener',
-            class: `cc-badge ${p.type === 'CLI' ? 'cc-badge-cli' : 'cc-badge-ide'}`
-          }, p.label)
+
+      h('div', null,
+        h('h3', { style: 'font-size:14px;color:#8888a0;font-weight:600;margin:20px 0 12px;text-transform:uppercase;letter-spacing:0.8px;' }, 'CLI Tools'),
+        h('div', { class: 'cc-platforms-grid', style: 'margin-bottom:24px;' },
+          ...cliPlatforms.map(p =>
+            h('a', {
+              href: `https://AnEntrypoint.github.io/${p.id}`,
+              target: '_blank', rel: 'noopener',
+              class: 'cc-badge cc-badge-cli'
+            }, p.label)
+          )
+        ),
+
+        h('h3', { style: 'font-size:14px;color:#8888a0;font-weight:600;margin:20px 0 12px;text-transform:uppercase;letter-spacing:0.8px;' }, 'IDE Extensions'),
+        h('div', { class: 'cc-platforms-grid' },
+          ...idePlatforms.map(p =>
+            h('a', {
+              href: `https://AnEntrypoint.github.io/${p.id}`,
+              target: '_blank', rel: 'noopener',
+              class: 'cc-badge cc-badge-ide'
+            }, p.label)
+          )
         )
       )
     )
