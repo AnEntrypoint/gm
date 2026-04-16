@@ -13,7 +13,7 @@
 
 - id: border-system-design
   subject: Implement semantic border system with box-drawing characters
-  status: pending
+  status: completed
   description: Add box-drawing glyphs (┌─┐│└┘╔╗╚╝) for TUI authenticity. Support single/double/rounded border styles. Apply to cards, sections, input fields.
   effort: medium
   category: feature
@@ -31,7 +31,7 @@
 
 - id: color-palette-upgrade
   subject: Adopt semantic color palette inspired by Nord/Catppuccin
-  status: pending
+  status: completed
   description: Define complete color system: primary, secondary, success, warning, danger, info with proper contrast ratios. Map existing colors to semantic tokens.
   effort: medium
   category: design
@@ -49,7 +49,7 @@
 
 - id: grid-background-pattern
   subject: Add subtle animated grid background pattern
-  status: pending
+  status: completed
   description: Implement grid pattern inspired by Linear.app/Zed. Use SVG or CSS grid for subtle structure without overwhelming content. Optional animated pulsing nodes.
   effort: small
   category: design
@@ -146,7 +146,7 @@
 
 - id: typography-hierarchy
   subject: Define clear typography system with semantic scale
-  status: pending
+  status: completed
   description: Establish font sizes, weights, line-heights. Consider monospace for more elements. Heading hierarchy consistency.
   effort: small
   category: design
@@ -175,7 +175,7 @@
 
 - id: animation-system
   subject: Define subtle TUI-style animations and transitions
-  status: pending
+  status: completed
   description: Cursor blink, border color transitions, hover effects, fade-ins. Respects prefers-reduced-motion. Durations: 150-300ms.
   effort: small
   category: design
