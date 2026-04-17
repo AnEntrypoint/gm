@@ -1,3 +1,8 @@
+## 2026-04-17 - PDF search across skills
+
+- Propagated "PDFs searchable as code" capability through skills: code-search, planning, gm-execute, gm-emit, gm-complete.
+- AGENTS.md: new caveat documenting rs-search PDF ingestion (pdf-extract crate, pdf-cache dir, ignore.rs changes).
+
 # Changelog
 
 ## [Unreleased]

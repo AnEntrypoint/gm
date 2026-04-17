@@ -92,6 +92,8 @@ exec:codesearch
 <natural language description>
 ```
 
+PDFs in the repo are part of the same index — when verifying a change conforms to a published spec, search the spec PDF directly and cite `doc.pdf:<page>` as evidence. A verification that references a PDF without having searched it is unwitnessed.
+
 ## GIT ENFORCEMENT
 
 ```

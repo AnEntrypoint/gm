@@ -37,7 +37,7 @@ Planning = exhaustive fault-surface enumeration. For every aspect of the task:
 
 **Fault surfaces**: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency hazards | integration seams | backwards compatibility | rollback paths | deployment steps | CI/CD correctness
 
-**MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation task, not addition.
+**MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation task, not addition. `exec:codesearch` indexes PDFs page-by-page alongside source — spec PDFs, papers, vendor manuals, and RFCs are searchable as code. When planning against a protocol, hardware, or compliance requirement, search the PDF corpus the same way you search source: two words, iterate. A constraint the PRD is missing because it only lives in a PDF is a fault surface — enumerate doc PDFs as scan targets during mutable discovery.
 
 **EXIT PLAN**: zero new unknowns in last pass AND all .prd items have explicit acceptance criteria AND all dependencies mapped → launch subagents or invoke `gm-execute`.
 

@@ -69,6 +69,8 @@ exec:codesearch
 <two-word query to start>
 ```
 
+`exec:codesearch` indexes PDFs the same way it indexes source — spec PDFs, datasheets, papers, and RFCs return as first-class hits with `file:page` citations. When resolving a mutable that depends on external specification (protocol field, register layout, compliance text), search the PDF corpus before reimplementing or assuming. Unwitnessed assumption from a doc you did not search is an UNKNOWN.
+
 **Mandatory search protocol** for codesearch (from `code-search` skill):
 1. Start with exactly **two words** — never one, never a sentence
 2. No results → change one word (synonym or related term)
