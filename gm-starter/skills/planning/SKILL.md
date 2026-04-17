@@ -43,7 +43,18 @@ Planning = exhaustive fault-surface enumeration. For every aspect of the task:
 
 **SELF-LOOP**: new items discovered → add to .prd → plan again.
 
-**Skip planning entirely** if: task is single-step, trivially bounded, zero unknowns, under 5 minutes.
+**Skip planning entirely** (this is the DEFAULT for small work) if ANY of these apply:
+- Single-file, single-concern edit
+- Task is trivially bounded and under ~5 minutes
+- User gave explicit surgical instructions ("change X to Y")
+- Bug fix where root cause is already identified
+- Zero unknowns / no mutables to resolve
+
+Heavy ceremony (PRD + parallel subagents) is for multi-file architectural work or genuinely unknown fault surfaces. Writing a 7-item PRD for a 3-line change is waste. Err toward skipping — if a new unknown surfaces mid-work, THAT is when you regress to planning, not preemptively.
+
+**Contrast examples:**
+- "Fix the hold-detect logic at apcKey25.cpp:163" → SKIP planning. Read, edit, done.
+- "Add drift correction and watchdog and observability across the USB audio path" → DO plan. Multi-file, multiple unknowns.
 
 ## OBSERVABILITY ENUMERATION — MANDATORY EVERY PASS
 
