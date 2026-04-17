@@ -487,7 +487,7 @@ function pluginMjsSource(pluginFile) {
     "  const bin = join(__dirname, '..', 'bin', 'plugkit.js');",
     "  if (!existsSync(bin)) return '';",
     "  try {",
-    "    const r = spawnSync('node', [bin, ...args], { encoding: 'utf-8', timeout: 15000 });",
+    "    const r = spawnSync('node', [bin, ...args], { encoding: 'utf-8', timeout: 15000, windowsHide: true });",
     "    return (r.stdout || '').trim() || (r.stderr || '').trim();",
     "  } catch(e) { return ''; }",
     "}",
@@ -517,7 +517,7 @@ function pluginMjsSource(pluginFile) {
     "",
     "function runExecSync(rawLang, code, cwd) {",
     "  const lang = LANG_ALIASES[rawLang] || rawLang || 'nodejs';",
-    "  const opts = { encoding: 'utf-8', timeout: 30000, ...(cwd && { cwd }) };",
+    "  const opts = { encoding: 'utf-8', timeout: 30000, windowsHide: true, ...(cwd && { cwd }) };",
     "  const out = (r) => { const o = (r.stdout||'').trimEnd(), e = stripFooter(r.stderr||'').trimEnd(); return o && e ? o+'\\n[stderr]\\n'+e : o||e||'(no output)'; };",
     "  if (lang === 'codesearch' || lang === 'search') return runPlugkit(['search', '--path', cwd || process.cwd(), code.trim()]);",
     "  if (lang === 'runner') return runPlugkit(['runner', code.trim()]);",
@@ -1019,12 +1019,12 @@ const run = () => {
         const plugkitJs = path.join(pluginRoot, 'bin', 'plugkit.js');
         let result;
         if (rawLang === 'browser') {
-          result = spawnSync('node', [plugkitJs, 'exec', '--lang', 'browser', code], { encoding: 'utf-8', timeout: 300000 });
+          result = spawnSync('node', [plugkitJs, 'exec', '--lang', 'browser', code], { encoding: 'utf-8', timeout: 300000, windowsHide: true });
         } else if (rawLang === 'codesearch') {
           const projectDir = process.env.GEMINI_PROJECT_DIR || process.cwd();
-          result = spawnSync('node', [plugkitJs, 'search', '--path', projectDir, code], { encoding: 'utf-8', timeout: 60000 });
+          result = spawnSync('node', [plugkitJs, 'search', '--path', projectDir, code], { encoding: 'utf-8', timeout: 60000, windowsHide: true });
         } else {
-          result = spawnSync('node', [plugkitJs, 'exec', '--lang', rawLang, code], { encoding: 'utf-8', timeout: 120000 });
+          result = spawnSync('node', [plugkitJs, 'exec', '--lang', rawLang, code], { encoding: 'utf-8', timeout: 120000, windowsHide: true });
         }
         const output = (result.stdout || '') + (result.stderr || '');
         return { deny: true, reason: 'exec:' + rawLang + ' output:\\n\\n' + output };
@@ -1062,7 +1062,7 @@ const readStdinPrompt = () => {
 const runCodeinsight = () => {
   if (!projectDir || !fs.existsSync(projectDir)) return '';
   try {
-    const r = spawnSync('node', [plugkitBin, 'codeinsight', projectDir], { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 10000 });
+    const r = spawnSync('node', [plugkitBin, 'codeinsight', projectDir], { encoding: 'utf-8', stdio: 'pipe', windowsHide: true, cwd: projectDir, timeout: 10000 });
     const out = (r.stdout || '').trim();
     if (!out || out.startsWith('Error') || r.status !== 0) return '';
     return out;
@@ -1071,7 +1071,7 @@ const runCodeinsight = () => {
 const runSearch = (query) => {
   if (!query || !projectDir) return '';
   try {
-    const r = spawnSync('node', [plugkitBin, 'search', '--path', projectDir, query.substring(0, 200)], { encoding: 'utf-8', stdio: 'pipe', cwd: projectDir, timeout: 5000 });
+    const r = spawnSync('node', [plugkitBin, 'search', '--path', projectDir, query.substring(0, 200)], { encoding: 'utf-8', stdio: 'pipe', windowsHide: true, cwd: projectDir, timeout: 5000 });
     const out = (r.stdout || '').trim();
     if (!out || r.status !== 0) return '';
     return out;
