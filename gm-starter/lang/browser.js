@@ -24,7 +24,7 @@ module.exports = {
       try {
         fsSync.writeFileSync(tmp, code, 'utf-8');
         const plugkit = findPlugkit();
-        const opts = { encoding: 'utf-8', timeout: 120000, ...(cwd && { cwd }) };
+        const opts = { encoding: 'utf-8', timeout: 120000, windowsHide: true, ...(cwd && { cwd }) };
         const r = spawnSync(plugkit, ['exec', '--lang', 'browser', '--file', tmp], opts);
         const out = (r.stdout || '').trimEnd();
         const err = (r.stderr || '').trimEnd();
