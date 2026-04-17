@@ -10,96 +10,98 @@
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Times New Roman', 'CMU Serif', Times, serif;
-  font-size: 10pt;
-  line-height: 1.4;
-  color: #000;
-  max-width: 7.5in;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 17px;
+  line-height: 1.75;
+  color: #1a1a1a;
+  max-width: 740px;
   margin: 0 auto;
-  padding: 0.75in;
-  column-count: 2;
-  column-gap: 0.3in;
-  column-rule: none;
-  text-align: justify;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  padding: 3rem 2rem 5rem;
+  background: #fff;
 }
 
 .title-block {
-  column-span: all;
   text-align: center;
-  margin-bottom: 1.2em;
-  padding-top: 0.5in;
+  margin-bottom: 2.5rem;
+  padding-top: 2rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 2rem;
 }
 .title-block h1 {
-  font-size: 17pt;
+  font-size: 2rem;
   font-weight: bold;
-  line-height: 1.2;
-  margin-bottom: 0.3em;
+  line-height: 1.25;
+  margin-bottom: 0.6rem;
+  color: #111;
 }
 .title-block .subtitle {
-  font-size: 14pt;
+  font-size: 1.2rem;
   font-weight: bold;
-  margin-bottom: 0.6em;
+  margin-bottom: 0.8rem;
+  color: #444;
 }
 .title-block .author {
-  font-size: 11pt;
-  margin-bottom: 0.1em;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: #555;
 }
 .title-block .date {
-  font-size: 10pt;
-  color: #333;
-  margin-bottom: 0.8em;
+  font-size: 0.9rem;
+  color: #777;
 }
 
 .abstract-block {
-  column-span: all;
-  margin: 0 2em 1.5em 2em;
+  background: #f8f8f8;
+  border-left: 4px solid #ccc;
+  padding: 1.25rem 1.5rem;
+  margin: 2rem 0 2.5rem;
+  border-radius: 0 4px 4px 0;
 }
 .abstract-block .abstract-title {
-  text-align: center;
   font-weight: bold;
-  font-size: 10pt;
-  margin-bottom: 0.4em;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+  margin-bottom: 0.6rem;
 }
 .abstract-block .abstract-text {
-  font-size: 9.5pt;
-  text-align: justify;
-  line-height: 1.35;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #333;
 }
 
 h2 {
-  font-size: 12pt;
+  font-size: 1.3rem;
   font-weight: bold;
-  margin-top: 0.9em;
-  margin-bottom: 0.35em;
-  break-after: avoid;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  color: #111;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.3rem;
 }
 h3 {
-  font-size: 10.5pt;
+  font-size: 1.05rem;
   font-weight: bold;
-  margin-top: 0.65em;
-  margin-bottom: 0.25em;
-  break-after: avoid;
+  margin-top: 1.5rem;
+  margin-bottom: 0.4rem;
+  color: #222;
 }
 p {
-  text-indent: 1.5em;
-  margin-bottom: 0.25em;
-  orphans: 3;
-  widows: 3;
+  margin-bottom: 1rem;
 }
 p.first, p.no-indent {
-  text-indent: 0;
+  margin-top: 0;
 }
 ul, ol {
-  margin: 0.25em 0 0.25em 1.8em;
+  margin: 0.5rem 0 1rem 2rem;
   padding: 0;
 }
 li {
-  margin-bottom: 0.15em;
+  margin-bottom: 0.4rem;
 }
 dl {
-  margin: 0.25em 0;
+  margin: 0.5rem 0 1rem;
 }
 dt {
   font-weight: bold;
@@ -112,51 +114,57 @@ dd {
 dd::after {
   content: "";
   display: block;
-  margin-bottom: 0.2em;
+  margin-bottom: 0.5rem;
 }
 code {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 9pt;
-  background: #f5f5f5;
-  padding: 0 2px;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+  font-size: 0.87em;
+  background: #f0f0f0;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
 }
 em { font-style: italic; }
 strong { font-weight: bold; }
 
 .theorem {
-  column-span: all;
-  margin: 0.6em 0;
-  padding: 0.4em 0;
-  border-top: 0.5pt solid #ccc;
-  border-bottom: 0.5pt solid #ccc;
+  background: #fffbf0;
+  border: 1px solid #e8d87a;
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
 }
 
 .references {
-  column-span: all;
-  margin-top: 1em;
-  padding-top: 0.5em;
-  border-top: 0.5pt solid #ccc;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid #e0e0e0;
 }
 .references h2 {
   margin-top: 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 .references ol {
-  font-size: 9pt;
-  line-height: 1.3;
-  margin-left: 2em;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-left: 1.5rem;
 }
 .references li {
-  margin-bottom: 0.25em;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  body { padding: 1.5rem 1rem 3rem; font-size: 16px; }
+  .title-block h1 { font-size: 1.5rem; }
 }
 
 @media print {
-  body {
-    padding: 0;
-    max-width: none;
-  }
-  .title-block {
-    padding-top: 0;
-  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .title-block { padding-top: 0; }
+  h2 { break-after: avoid; }
+  h3 { break-after: avoid; }
 }
 </style>
 </head>
