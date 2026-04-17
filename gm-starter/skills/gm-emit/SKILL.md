@@ -98,7 +98,7 @@ exec:codesearch
 <natural language description>
 ```
 
-Alias: `exec:search`. **Glob, Grep, Read, Explore are hook-blocked** — use `exec:codesearch` exclusively.
+Alias: `exec:search`. **Glob, Grep, Read, Explore are hook-blocked** — use `exec:codesearch` exclusively. PDF pages are in the same index as source files; when verifying that emitted code matches a spec, search the PDF directly (e.g. `exec:codesearch\nregister layout`) and cite `doc.pdf:<page>` in the pre-emit comparison.
 
 ## BROWSER DEBUGGING
 
