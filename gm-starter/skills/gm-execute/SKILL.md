@@ -62,19 +62,26 @@ start|stop|status
 
 ## CODEBASE EXPLORATION
 
-`exec:codesearch` is the only way to search. **Glob, Grep, Read, Explore, WebSearch are hook-blocked.**
+`exec:codesearch` is the preferred semantic search. **Glob, Explore, WebSearch are hook-blocked. Grep/Read ARE available — use them for exact-match or direct reads.**
 
 ```
 exec:codesearch
 <two-word query to start>
 ```
 
-**Mandatory search protocol** (from `code-search` skill):
+**Mandatory search protocol** for codesearch (from `code-search` skill):
 1. Start with exactly **two words** — never one, never a sentence
 2. No results → change one word (synonym or related term)
 3. Still no results → add a third word to narrow scope
 4. Keep changing or adding words each pass until content is found
 5. Minimum 4 attempts before concluding content is absent
+
+**When codesearch is the wrong tool:**
+- Exact symbol / string / regex match: use `Grep` tool directly, or `exec:nodejs` with `execSync("rg -n 'PATTERN'")`.
+- Known file path: use `Read` tool directly.
+- Find files by name pattern: hook-blocked `Glob` would help; use `exec:nodejs + fs.readdirSync` or `exec:nodejs + execSync("rg --files | rg PATTERN")`.
+
+**Platform note — exec:bash on Windows:** runs real bash (git-bash) when installed, falls back to PowerShell otherwise. If you see a POSIX-syntax parse error (`[ -n ...]`, `&&`, `if/then/fi`), bash wasn't found — either install git-bash or rewrite in `exec:nodejs`.
 
 ## DIAGNOSTIC PROTOCOL — IMPORT-BASED EXECUTION
 
@@ -139,7 +146,7 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | Glob/Explore (hook-blocked — use exec:codesearch, Grep or Read) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
 
 **Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/scattered test files on discovery | consolidate test coverage into root test.js | add regression case to test.js for every bug fix | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
 
