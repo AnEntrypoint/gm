@@ -1,7 +1,7 @@
 const CLIAdapter = require('../lib/cli-adapter');
-const { cc: ccConfig, gc: gcConfig, oc: ocConfig, codex: codexConfig, kilo: kiloConfig, qwen: qwenConfig } = require('./cli-config-shared');
+const { cc: ccConfig, gc: gcConfig, oc: ocConfig, codex: codexConfig, kilo: kiloConfig, qwen: qwenConfig, hermes: hermesConfig } = require('./cli-config-shared');
 
-const config = [ccConfig, gcConfig, ocConfig, codexConfig, kiloConfig, qwenConfig];
+const config = [ccConfig, gcConfig, ocConfig, codexConfig, kiloConfig, qwenConfig, hermesConfig];
 
 function createAdapterClass(cfg) {
   class DynamicCLIAdapter extends CLIAdapter {
