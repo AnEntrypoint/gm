@@ -1703,4 +1703,98 @@ Installs the gm state machine agent (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE) 
   }
 });
 
-module.exports = { cc, gc, codex, oc, kilo, qwen };
+function createHermesInstallerScript() {
+  return createCliInstaller({
+    pkg: 'gm-hermes',
+    label: 'Hermes Agent',
+    destDir: `path.join(homeDir, '.hermes', 'skills', 'gm')`,
+    filesToCopy: [
+      ['skills', 'skills'], ['README.md', 'README.md']
+    ],
+    restartMsg: 'Restart Hermes to activate skills.'
+  });
+}
+
+const hermes = factory('hermes', 'Hermes Agent', 'hermes-skill.json', 'AGENTS.md', {
+  generatePackageJson: null,
+  getPackageJsonFields() {
+    return {
+      files: ['skills/', 'cli.js', 'README.md', 'AGENTS.md', 'hermes-skill.json', 'index.html'],
+      keywords: ['hermes-agent', 'hermes', 'agent', 'state-machine', 'automation', 'gm']
+    };
+  },
+  formatConfigJson(config) {
+    return JSON.stringify({
+      name: config.name,
+      version: config.version,
+      description: config.description,
+      author: config.author,
+      homepage: config.homepage,
+      skills: './skills',
+      category: 'software-development'
+    }, null, 2);
+  },
+  getAdditionalFiles(spec) {
+    return {
+      'hermes-skill.json': JSON.stringify({
+        name: spec.name,
+        version: spec.version,
+        description: spec.description,
+        author: spec.author,
+        homepage: spec.homepage,
+        skills: './skills',
+        category: 'software-development'
+      }, null, 2),
+      'cli.js': createHermesInstallerScript()
+    };
+  },
+  buildHooksMap() {
+    return {};
+  },
+  loadSkillsFromSource(sourceDir) {
+    const fs = require('fs');
+    const path = require('path');
+    const skillsDir = path.join(sourceDir, 'skills');
+    const result = {};
+    if (!fs.existsSync(skillsDir)) return result;
+    try {
+      fs.readdirSync(skillsDir).forEach(skillName => {
+        const skillPath = path.join(skillsDir, skillName);
+        if (!fs.statSync(skillPath).isDirectory()) return;
+        const skillMdPath = path.join(skillPath, 'SKILL.md');
+        if (!fs.existsSync(skillMdPath)) return;
+        const raw = fs.readFileSync(skillMdPath, 'utf-8');
+        const hasFrontmatter = raw.startsWith('---');
+        const content = hasFrontmatter ? raw : `---\nname: ${skillName}\ndescription: ${skillName} skill for gm state machine\nversion: 1.0.0\nauthor: gm\nlicense: MIT\nmetadata:\n  hermes:\n    tags: [gm, state-machine, software-development]\n---\n\n${raw}`;
+        result[`skills/software-development/${skillName}/SKILL.md`] = content;
+      });
+    } catch (e) {}
+    return result;
+  },
+  generateReadme(spec) {
+    return `# gm-hermes for Hermes Agent
+
+## Installation
+
+\`\`\`bash
+npm install -g gm-hermes
+\`\`\`
+
+Or install directly:
+
+\`\`\`bash
+npx gm-hermes
+\`\`\`
+
+Restart Hermes Agent to activate skills.
+
+## What it does
+
+Installs the gm state machine skills (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE) into Hermes Agent under \`~/.hermes/skills/gm/skills/software-development/\`.
+
+Use \`/gm\` or invoke skills by name in Hermes to access the full state machine workflow.
+`;
+  }
+});
+
+module.exports = { cc, gc, codex, oc, kilo, qwen, hermes };
