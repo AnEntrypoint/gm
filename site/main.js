@@ -25,6 +25,7 @@ const PLATFORMS = [
   { id: 'gm-codex', label: 'Codex', type: 'CLI' },
   { id: 'gm-copilot-cli', label: 'Copilot CLI', type: 'CLI' },
   { id: 'gm-qwen', label: 'Qwen Code', type: 'CLI' },
+  { id: 'gm-hermes', label: 'Hermes Agent', type: 'CLI' },
   { id: 'gm-vscode', label: 'VS Code', type: 'IDE' },
   { id: 'gm-cursor', label: 'Cursor', type: 'IDE' },
   { id: 'gm-zed', label: 'Zed', type: 'IDE' },
@@ -172,7 +173,7 @@ function MutableSection() {
 function PlatformsSection() {
   return h('section', { class: 'cc-section' },
     h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, '11 Platforms'),
+      h('h2', { class: 'cc-section-title' }, '12 Platforms'),
       h('p', { class: 'cc-section-sub' }, 'One state machine, every major coding tool.'),
       h('div', { class: 'cc-platforms-grid' },
         ...PLATFORMS.map(p =>
