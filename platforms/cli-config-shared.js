@@ -118,6 +118,7 @@ function install() {
   safeCopyDirectory(path.join(sourceDir, 'hooks'), path.join(codexDir, 'hooks'));
   safeCopyDirectory(path.join(sourceDir, 'scripts'), path.join(codexDir, 'scripts'));
   safeCopyDirectory(path.join(sourceDir, 'skills'), path.join(codexDir, 'skills'));
+  safeCopyDirectory(path.join(sourceDir, 'bin'), path.join(codexDir, 'bin'));
   safeCopyDirectory(path.join(sourceDir, '.agents'), path.join(codexDir, '.agents'));
   safeCopyDirectory(path.join(sourceDir, '.codex-plugin'), path.join(codexDir, '.codex-plugin'));
   safeCopyDirectory(path.join(sourceDir, 'assets'), path.join(codexDir, 'assets'));
@@ -327,6 +328,7 @@ function createCodexCliScript() {
     destDir: `path.join(homeDir, '.codex', 'plugins', 'gm-codex')`,
     filesToCopy: [
       ['agents', 'agents'], ['hooks', 'hooks'], ['scripts', 'scripts'], ['skills', 'skills'],
+      ['bin', 'bin'],
       ['.agents', '.agents'], ['.codex-plugin', '.codex-plugin'],
       ['assets', 'assets'], ['.app.json', '.app.json'],
       ['.mcp.json', '.mcp.json'], ['plugin.json', 'plugin.json'], ['gm.json', 'gm.json'],
