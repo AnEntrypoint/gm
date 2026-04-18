@@ -1240,7 +1240,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
 
 const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   formatConfigJson(config) {
-    return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' }, hooks: './hooks/hooks.json' });
+    return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' }, hooks: './hooks/hooks.json', skills: './skills', mcpServers: {} });
   },
   generatePackageJson(pluginSpec, extraFields = {}) {
     return makePackageJson({
@@ -1248,7 +1248,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
       author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
       ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
@@ -1258,7 +1258,7 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return {
       main: 'plugin.json',
       bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      files: ['hooks/', 'agents/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'pre-tool-use-hook.js', 'session-start-hook.js', 'prompt-submit-hook.js', 'stop-hook.js', 'stop-hook-git.js'],
+      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
