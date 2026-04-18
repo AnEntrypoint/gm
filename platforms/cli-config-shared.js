@@ -1709,9 +1709,9 @@ function createHermesInstallerScript() {
     label: 'Hermes Agent',
     destDir: `path.join(homeDir, '.hermes', 'skills', 'gm')`,
     filesToCopy: [
-      ['skills', 'skills'], ['README.md', 'README.md']
+      ['skills', '.'], ['README.md', 'README.md']
     ],
-    restartMsg: 'Restart Hermes to activate skills.'
+    restartMsg: 'Restart Hermes to activate skills. Invoke via /gm or /planning.'
   });
 }
 
@@ -1766,7 +1766,7 @@ const hermes = factory('hermes', 'Hermes Agent', 'hermes-skill.json', 'AGENTS.md
         const raw = fs.readFileSync(skillMdPath, 'utf-8');
         const hasFrontmatter = raw.startsWith('---');
         const content = hasFrontmatter ? raw : `---\nname: ${skillName}\ndescription: ${skillName} skill for gm state machine\nversion: 1.0.0\nauthor: gm\nlicense: MIT\nmetadata:\n  hermes:\n    tags: [gm, state-machine, software-development]\n---\n\n${raw}`;
-        result[`skills/software-development/${skillName}/SKILL.md`] = content;
+        result[`skills/${skillName}/SKILL.md`] = content;
       });
     } catch (e) {}
     return result;
