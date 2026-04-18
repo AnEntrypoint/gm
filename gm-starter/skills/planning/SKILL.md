@@ -10,6 +10,26 @@ Root of all work. Runs `PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS →
 
 **Entry**: prompt-submit hook → `gm` agent → invoke `planning` skill (here). Also re-entered any time a new unknown surfaces in any phase.
 
+## WHERE YOU ARE
+
+Phase where work shape still unknown. Codebase scans, `exec:codesearch` queries, quick imports to probe APIs = all executions. Execution contract in `gm-execute`; protocols not fresh → runs drift (reimplement over import, narrate over witness). Load first.
+
+## UNKNOWNS = PRODUCT
+
+Output of this phase ≠ task list. Output = enumeration of every fault surface work could fail on. Each unknown named + resolved → cheaper downstream. Each unknown skipped → EMIT/VERIFY surprise → snake back anyway at higher cost.
+
+**Unknown emerges later (EXECUTE, EMIT, VERIFY) → return here. Not failure — machine working as designed.** Later-phase unknown means mutable map incomplete. Come back. Think laterally — what else could this touch, what invariant assumed, what subsystem unexamined? Enumerate newly-visible fault surfaces. Only then push forward.
+
+Patch-around-unknowns-in-place = compounding silent-failure debt. Regress early = stay inside contract.
+
+## FRAGILE LEARNINGS
+
+Every mutable resolved here (existingImpl absent, dep version confirmed, user constraint stated, build quirk observed) = fact that dies on context compaction unless handed off. `memorize` subagent = handoff. One background call per fact at moment of resolution. Non-blocking; continue.
+
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact>')
+```
+
 ## STATE MACHINE
 
 **FORWARD**: PLAN complete → `gm-execute` | EXECUTE complete → `gm-emit` | EMIT complete → `gm-complete` | VERIFY .prd remains → `gm-execute` | VERIFY .prd empty+pushed → `update-docs`

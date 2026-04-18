@@ -1,11 +1,15 @@
 ---
 name: gm-execute
-description: EXECUTE phase. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
+description: EXECUTE phase AND the foundational execution contract for every skill. Every exec:<lang> run, every witnessed check, every code search, in every phase, follows this skill's discipline. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
 ---
 
 # GM EXECUTE — Resolving Every Unknown
 
-You are in the **EXECUTE** phase. Resolve every named mutable via witnessed execution. Any new unknown = stop, snake to `planning`, restart chain.
+You are in the **EXECUTE** phase. Every mutable on `.gm/prd.yml` carries UNKNOWN status until witnessed execution resolves it. Job here = the witnessing.
+
+This skill also carries the **execution contract** applying in every phase, not only this one. Planning runs codebase scans; EMIT runs pre-emit diagnostics; VERIFY runs integration tests and CI watches — all executions, all subject to discipline below. Other skills reference this skill because protocols stay live in context only while this text is nearby. About to run anything → this skill freshly loaded OR operating outside contract.
+
+New unknown surfaced by a run → stop, state-regress to `planning`, restart chain.
 
 **GRAPH POSITION**: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
 - **Entry**: .prd exists with all unknowns named. Entered from `planning` or via snake from EMIT/VERIFY.
@@ -134,13 +138,17 @@ Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnosti
 
 **CODE QUALITY PROCESS**: The goal is minimal code / maximal DX. When writing or reviewing any block of code, run this mental process: (1) What native language/platform feature already does this? Use it. (2) What library already solves this pattern? Use it. (3) Can this branch/loop be a data structure — a map, array, or pipeline — where the structure itself enforces correctness? Make it so. (4) Would a newcomer read this top-to-bottom and immediately understand what it does without running it? If no, restructure. One-liners that compress logic are the opposite of DX — clarity comes from structure, not brevity. Dispatch tables, pipeline chains, and native APIs eliminate entire categories of bugs by making wrong states unrepresentable.
 
-## MEMORY
+## FRAGILE LEARNINGS
 
-When any mutable resolves from UNKNOWN to KNOWN (zero variance confirmed), launch memorize subagent in background — non-blocking, execution continues:
+Every UNKNOWN→KNOWN transition = fact living only in current context. Session ends. Next agent starts blind. `memorize` subagent = only bridge. One background call per fact at moment of resolution:
 
-`Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')`
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')
+```
 
-Qualifies for memorization: new API shapes discovered, environment differences, behavioral constraints, runtime quirks, user feedback observed during execution.
+Non-blocking; work continues. Highest-value facts = ones that would have saved today's time if in memory at start: API shapes resolved by import-and-witness, environment quirks, runtime constraints, user-stated preferences, project-specific cadences. Resolve a mutable, skip memorize = forget on purpose.
+
+Self-check: after any witnessed run that resolved something, next action = another witnessing run (more mutables) OR `Agent` memorize call (fact was memorable). Neither = something evaporated.
 
 ## DO NOT STOP
 
