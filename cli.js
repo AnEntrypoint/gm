@@ -34,6 +34,7 @@ Description:
   - Zed (zed)
   - JetBrains (jetbrains)
   - Copilot CLI (copilot-cli)
+  - Hermes Agent (hermes)
 
 Plugin Directory Structure:
   plugin/
