@@ -10,6 +10,27 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 **GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY] → UPDATE-DOCS → COMPLETE`
 - **Entry**: All EMIT gates passed. Entered from `gm-emit`.
 
+## WHERE YOU ARE
+
+Files written. Question now: does the whole system work end-to-end, and does the world outside local repo (CI, downstream pipelines, deployed surfaces) agree. Every check = witnessed execution: `node test.js`, `gh run watch`, diagnostic repros on failure. Contract in `gm-execute`; protocols not fresh → verification drifts to narrated claims ("change should work") over witnessed ones ("change produced output X"). Load first.
+
+## VERIFICATION → UNKNOWNS
+
+Failing test, red CI, surprising downstream cascade ≠ things to patch around. = new fault surfaces becoming visible. Classify failure:
+- Wrong file output → regress to EMIT
+- Wrong logic → regress to EXECUTE
+- Genuinely new unknown or wrong requirement → regress to PLANNING
+
+Let chain carry you. Stop-and-fix-here = how silent-failure bugs reach prod. Machine assumes you regress; trust it.
+
+## FRAGILE LEARNINGS
+
+Phase where environment reality hits hardest — CI runner quirks, flaky-test patterns, timing thresholds, deploy cadences, cross-repo cascade behaviors. These facts most reward future sessions. Each → memorize call, one per fact, non-blocking, at moment of resolution:
+
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
+```
+
 ## TRANSITIONS
 
 **EXIT — .gm/prd.yml items remain**: Verified items completed, .gm/prd.yml still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
@@ -156,7 +177,7 @@ Before declaring complete, sweep the entire codebase for violations:
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
 11. **Observability gaps** → every server subsystem added this session exposes a `/debug/<subsystem>` endpoint; every client module added this session registers into `window.__debug` by key. Ad-hoc console.log is not observability — permanent queryable structures are. Any gap found → fix before advancing.
-12. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
+12. **memorize** → every fact surfaced during verification that would have saved this session's time if it had been in memory at the start (CI timing, flaky-test patterns, environment quirks, runtime behaviors, user preferences stated this session) is handed off via a background memorize call at the moment of resolution. One call per fact, non-blocking. `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`
 13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
 14. **GitHub Pages** → check if repo has a GH Pages site. If `.github/workflows/pages.yml` is absent OR `docs/index.html` is absent: invoke the `pages` skill to scaffold the site before advancing.
 

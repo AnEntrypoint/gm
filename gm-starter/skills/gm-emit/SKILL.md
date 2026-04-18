@@ -10,6 +10,32 @@ You are in the **EMIT** phase. Every mutable is KNOWN. Prove the write is correc
 **GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
 - **Entry**: All .gm/prd.yml mutables resolved. Entered from `gm-execute` or via snake from VERIFY.
 
+## WHERE YOU ARE
+
+About to mutate on-disk state. Every write bracketed by two witnessed executions: pre-emit (import module from disk, run proposed logic in isolation, record expected outputs as baseline) and post-emit (re-import from disk, confirm identical output to pre-emit baseline). Both = executions. Contract in `gm-execute`. Protocols not fresh → runs drift to reimplementation + narrated assumption → write ships unfalsified. Load first.
+
+## SURPRISE → STATE REGRESSION
+
+Pre-emit unexpected output ≠ bug to patch in this phase. Classify:
+- Identifiable logic error against a known mutable → regress to `gm-execute` (re-resolve the mutable properly, return here)
+- Newly visible unknown (cause not nameable) → regress to `planning` (enumerate, let chain return you with complete mutable map)
+
+Post-emit divergence from pre-emit baseline:
+- Identified cause → known mutable → fix in place, re-verify (EMIT self-loop, zero variance before advancing)
+- Unidentified cause → unknown → regress to `planning`
+
+Urge to "just fix real quick" = signal mutable map was incomplete. Trust state machine: regress to correct phase, resolve, return.
+
+## FRAGILE LEARNINGS
+
+Pre-emit and post-emit runs surface facts you lacked: actual function signatures, edge-case return values, adjacent-module interactions, hidden invariants. Each dies on context compaction unless handed off.
+
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact witnessed this phase>')
+```
+
+One call per fact, non-blocking, at moment of resolution.
+
 ## TRANSITIONS
 
 **EXIT — invoke `gm-complete` skill immediately when**: All gate conditions are true simultaneously. Do not pause. Invoke the skill.
@@ -87,7 +113,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - No unnecessary files — clean anything not required for the program to function
 - Observability: every new server subsystem exposes a named inspection endpoint; every new client module registers into `window.__debug` by key and deregisters on unmount. Ad-hoc `console.log` is not observability — permanent queryable structure is. Any new code path not reachable via `window.__debug` or a `/debug/<subsystem>` endpoint → do NOT advance, add observability before writing feature code.
 - Structural quality: if/else chains where a dispatch table or pipeline suffices → regress to `gm-execute` for restructuring. One-liners that compress logic at the cost of readability → expand. Any logic that reinvents a native API or library → replace with the native/library call. Structure must make wrong states unrepresentable — if it doesn't, it's not done.
-- memorize sub-agent launched in background before advancing: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
+- every fact resolved in this phase (pre-emit discoveries, post-emit surprises, newly-confirmed behaviors) has been handed off via a background memorize call at the moment of resolution: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 - CHANGELOG.md updated with changes
 - TODO.md cleared or deleted
 
