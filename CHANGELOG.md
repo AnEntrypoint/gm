@@ -1,3 +1,9 @@
+## 2026-04-18 - Localize CDN imports in platform GH Pages
+
+- Replaced rippleui@1.12.1 CDN link (4.7MB) with Tailwind CDN play script (~100KB, processes classes on-the-fly)
+- Inlined webjsx@0.0.42 bundle (16KB) directly into page template — eliminates importmap + CDN dependency
+- Platform pages now fully self-contained, no external asset fetches required for rendering
+
 ## 2026-04-18 - Fix Fragment/function-component crash in platform pages
 
 - Fixed `Invalid element name` crash in all 12 platform GH Pages sites caused by webjsx not supporting function components passed to `h()` or `Fragment` wrapper in `App`
