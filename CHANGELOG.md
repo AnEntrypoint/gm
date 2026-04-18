@@ -1,3 +1,9 @@
+## 2026-04-18 - Fix Fragment/function-component crash in platform pages
+
+- Fixed `Invalid element name` crash in all 12 platform GH Pages sites caused by webjsx not supporting function components passed to `h()` or `Fragment` wrapper in `App`
+- `page-generator.js`: replaced destructured component calls with plain function calls, removed Fragment import, inlined `applyDiff` call with array of section results
+- Added GH Pages workflow (`pages.yml`) + enabled GH Pages for 8 repos that were missing it: gm-hermes, gm-codex, gm-copilot-cli, gm-qwen, gm-vscode, gm-cursor, gm-zed, gm-jetbrains
+
 ## 2026-04-17 - PDF search across skills
 
 - Propagated "PDFs searchable as code" capability through skills: code-search, planning, gm-execute, gm-emit, gm-complete.
