@@ -2,6 +2,16 @@ name: Notify on Workflow Failures
 
 on:
   workflow_run:
+    workflows:
+      - "Publish Releases API"
+      - "Deploy GitHub Pages"
+      - "Generate Contribution Insights"
+      - "PR Statistics"
+      - "Generate Metrics Badges"
+      - "Auto-Declaudeify"
+      - "Track Repository Stars"
+      - "Generate Changelog on Release"
+      - "Build & Publish Plugins"
     types: [completed]
 
 permissions:
