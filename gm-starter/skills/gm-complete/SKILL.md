@@ -23,13 +23,15 @@ Failing test, red CI, surprising downstream cascade ≠ things to patch around. 
 
 Let chain carry you. Stop-and-fix-here = how silent-failure bugs reach prod. Machine assumes you regress; trust it.
 
-## FRAGILE LEARNINGS
+## FRAGILE LEARNINGS — HARD RULE
 
-Phase where environment reality hits hardest — CI runner quirks, flaky-test patterns, timing thresholds, deploy cadences, cross-repo cascade behaviors. These facts most reward future sessions. Each → memorize call, one per fact, non-blocking, at moment of resolution:
+Phase where environment reality hits hardest — CI runner quirks, flaky-test patterns, timing thresholds, deploy cadences, cross-repo cascade behaviors. Highest-value memorization surface. Each fact → memorize **the same turn it resolves**, background, parallel when multiple:
 
 ```
 Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
+
+One call per fact. **End-of-turn self-check** mandatory: any resolved unknown un-memorized → spawn before closing response. Full trigger contract in `planning` / `gm-execute`.
 
 ## TRANSITIONS
 

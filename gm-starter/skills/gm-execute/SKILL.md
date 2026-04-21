@@ -138,17 +138,27 @@ Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnosti
 
 **CODE QUALITY PROCESS**: The goal is minimal code / maximal DX. When writing or reviewing any block of code, run this mental process: (1) What native language/platform feature already does this? Use it. (2) What library already solves this pattern? Use it. (3) Can this branch/loop be a data structure — a map, array, or pipeline — where the structure itself enforces correctness? Make it so. (4) Would a newcomer read this top-to-bottom and immediately understand what it does without running it? If no, restructure. One-liners that compress logic are the opposite of DX — clarity comes from structure, not brevity. Dispatch tables, pipeline chains, and native APIs eliminate entire categories of bugs by making wrong states unrepresentable.
 
-## FRAGILE LEARNINGS
+## FRAGILE LEARNINGS — HARD RULE
 
-Every UNKNOWN→KNOWN transition = fact living only in current context. Session ends. Next agent starts blind. `memorize` subagent = only bridge. One background call per fact at moment of resolution:
+Every UNKNOWN→KNOWN transition during execution = fact that dies on compaction. The memorize spawn is **not** end-of-phase cleanup — it fires **the same turn the fact resolves**, before the next tool call if possible, end-of-turn at latest.
 
+**Trigger contract** (any = fire):
+- `exec:` output resolves a prior "let me check" / "does this API take X" / "what version is installed"
+- CI log or error output reveals a root cause
+- Code read confirms or refutes an assumption about existing structure
+- Environment / tooling quirk observed (blocked commands, platform-specific behavior, path resolution)
+- User states a preference, constraint, deadline, or judgment call
+
+**Invocation** (one per fact, background, parallel when multiple):
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact with enough context for a cold-start agent>')
 ```
 
-Non-blocking; work continues. Highest-value facts = ones that would have saved today's time if in memory at start: API shapes resolved by import-and-witness, environment quirks, runtime constraints, user-stated preferences, project-specific cadences. Resolve a mutable, skip memorize = forget on purpose.
+**Parallel spawn**: N facts resolved in one turn → N memorize calls in a **single message**, parallel tool blocks. Never serialize. Never merge multiple facts into one prompt.
 
-Self-check: after any witnessed run that resolved something, next action = another witnessing run (more mutables) OR `Agent` memorize call (fact was memorable). Neither = something evaporated.
+**End-of-turn self-check** (mandatory): before the response closes, scan the turn for resolved unknowns that were not memorized. Missed one → spawn now. No exceptions — a resolved unknown leaving the turn without handoff is a memory leak.
+
+Skip memorize = forget on purpose. Treat it as a bug.
 
 ## DO NOT STOP
 

@@ -17,11 +17,28 @@ Transitions = state changes, not reminders. Phase exit condition met → next Sk
 
 `gm-execute` = execution contract. Defines "running code" across every phase: `exec:<lang>` = only runner; `exec:codesearch` = only exploration; witnessed output = only ground truth; import real modules over reimplementation. Execution happens in every phase, not only EXECUTE. About to run anything, `gm-execute` protocols not fresh in context → operating outside contract → reload `gm-execute` first.
 
-## FRAGILE LEARNINGS
+## FRAGILE LEARNINGS — HARD RULE
 
-Every fact resolved this session lives only in current context. Context compacts. Sessions end. Next agent starts blind. `memorize` subagent = handoff. One background call per fact at moment of resolution. Non-blocking; work continues. Worth memorizing: API shapes, environment quirks, timeouts, user preferences, build cadences, CI behaviors — facts that would have saved today's time if in memory at start.
+Every unknown→known transition in this session = fact that dies on compaction unless handed off **the same turn it resolves**. Not end of phase. Not end of chain. Same turn.
 
-Resolve a mutable, skip memorize = forget on purpose.
+**Automatic trigger** — spawn `memorize` the moment any of these happens:
+- An `exec:` run's output answers an earlier "let me check" / "I don't know yet"
+- A code read confirms or refutes an assumption
+- A CI log reveals a root cause
+- User states a preference, constraint, deadline, or decision
+- A fix worked for a non-obvious reason
+- A tool / environment quirk bit once (blocked commands, path oddities, platform gotchas)
+
+**Invocation** (background, non-blocking, continue working in the same message):
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single fact with enough context to be useful cold>')
+```
+
+**Parallel**: multiple facts resolve in one turn → spawn multiple memorize agents in the **same message** (parallel tool blocks). One call per fact. Never serialize, never batch into one prompt.
+
+**End-of-turn self-check** (mandatory before handing control back): scan the turn for resolved unknowns that were not memorized. Any found → spawn them now, parallel, before the response closes.
+
+Resolve an unknown, skip memorize = memory leak. Treat it as a bug, not a style choice.
 
 ## USER DONE TALKING
 

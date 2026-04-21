@@ -26,15 +26,15 @@ Post-emit divergence from pre-emit baseline:
 
 Urge to "just fix real quick" = signal mutable map was incomplete. Trust state machine: regress to correct phase, resolve, return.
 
-## FRAGILE LEARNINGS
+## FRAGILE LEARNINGS — HARD RULE
 
-Pre-emit and post-emit runs surface facts you lacked: actual function signatures, edge-case return values, adjacent-module interactions, hidden invariants. Each dies on context compaction unless handed off.
+Pre-emit and post-emit runs surface facts you lacked: actual function signatures, edge-case return values, adjacent-module interactions, hidden invariants. Each dies on compaction unless memorized **the same turn it resolves** — not at phase exit.
 
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact witnessed this phase>')
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
-One call per fact, non-blocking, at moment of resolution.
+One call per fact, background, parallel when multiple resolve together. **End-of-turn self-check**: scan for un-memorized resolutions before closing response; spawn any missed. Same enforcement as `planning` / `gm-execute` — see those skills for the full trigger contract.
 
 ## TRANSITIONS
 

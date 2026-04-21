@@ -22,13 +22,31 @@ Output of this phase ≠ task list. Output = enumeration of every fault surface 
 
 Patch-around-unknowns-in-place = compounding silent-failure debt. Regress early = stay inside contract.
 
-## FRAGILE LEARNINGS
+## FRAGILE LEARNINGS — MEMORIZE ON RESOLUTION (HARD RULE)
 
-Every mutable resolved here (existingImpl absent, dep version confirmed, user constraint stated, build quirk observed) = fact that dies on context compaction unless handed off. `memorize` subagent = handoff. One background call per fact at moment of resolution. Non-blocking; continue.
+Every unknown resolved in any phase (existingImpl absent, dep version confirmed, API shape witnessed, env quirk observed, CI failure root-caused, build flag required, user preference stated) = fact that dies on context compaction unless handed off. Not optional. Not batched at end. **Memorize at the moment of resolution, before the next tool call.**
 
+**Trigger contract — memorize fires when ANY of these occur**:
+- An `exec:` run produces output that answers a prior "I don't know" / "let me check"
+- A code read confirms or refutes an assumption about existing structure
+- A CI log reveals the root cause of a failure
+- User states a preference, constraint, deadline, or decision
+- A fix works and the reason it worked is non-obvious (would be forgotten next session)
+- An environment / tooling quirk bites once (blocked tools, path oddities, platform differences)
+
+**Enforcement**:
+- Regardless of phase, a resolved unknown → spawn `memorize` subagent **in the same turn** as the resolution. Do not wait for phase end. Do not batch across multiple facts — one call per fact keeps classification clean.
+- Run in background (`run_in_background=true`). Non-blocking. Continue work in the same message.
+- If you notice at end of turn that an unknown resolved earlier was not memorized, spawn it now. Catching up is allowed. Skipping is not.
+
+**Invocation (copy verbatim, substitute the fact)**:
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact>')
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact with enough context for a cold-start agent to use it>')
 ```
+
+**Parallelization**: multiple unknowns resolved in one turn → spawn multiple memorize agents in the **same message** (parallel tool blocks). Never serialize them.
+
+**Violations = memory leak**. If you leave the turn with a resolved unknown un-memorized, the fact is gone on next compaction. That is the failure mode this rule prevents. Treat every exit from a turn without memorize-catch-up as a bug.
 
 ## STATE MACHINE
 
@@ -192,6 +210,6 @@ Auto-Clarity: drop caveman for security warnings, irreversible confirmations, am
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .gm/prd.yml has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create scattered test files (only root test.js) | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .gm/prd.yml has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create scattered test files (only root test.js) | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists | **leave a resolved unknown un-memorized** | batch memorize calls until end of turn | serialize parallel memorize spawns
 
-**Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception | prefer dispatch tables over switch/if chains | prefer pipelines over loop-with-accumulator | make wrong states structurally impossible | name patterns when structure eliminates a whole class of bugs
+**Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception | prefer dispatch tables over switch/if chains | prefer pipelines over loop-with-accumulator | make wrong states structurally impossible | name patterns when structure eliminates a whole class of bugs | **spawn `memorize` the same turn an unknown resolves** | parallel-spawn one memorize per fact when multiple resolve together | end-of-turn self-check: any resolved unknowns un-memorized? → spawn now before handing control back
