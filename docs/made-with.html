@@ -1,36 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Made with gm</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
-    nav { background: #0f172a; border-bottom: 1px solid rgba(99,102,241,0.2); padding: 0 1rem; }
-    nav .inner { max-width: 80rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 3.5rem; }
-    nav .brand { color: white; font-weight: 700; font-size: 1.125rem; text-decoration: none; }
-    nav .links { display: flex; gap: 1rem; }
-    nav .links a { color: #9ca3af; font-size: 0.875rem; text-decoration: none; transition: color 0.15s; }
-    nav .links a:hover { color: white; }
-    header { padding: 4rem 1rem 2rem; text-align: center; }
-    header h1 { font-size: 2.5rem; font-weight: 700; color: white; margin-bottom: 0.75rem; }
-    header p { color: #94a3b8; max-width: 36rem; margin: 0 auto; font-size: 1rem; }
-    main { max-width: 72rem; margin: 0 auto; padding: 2rem 1rem 4rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0.75rem; transition: border-color 0.15s, transform 0.15s; }
-    .card:hover { border-color: #6366f1; transform: translateY(-2px); }
-    .card-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-    .repo-name { font-family: monospace; font-size: 0.95rem; font-weight: 600; color: #60a5fa; }
-    .stars { font-size: 0.8rem; color: #f59e0b; white-space: nowrap; }
-    .desc { font-size: 0.875rem; color: #cbd5e1; flex: 1; }
-    .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    footer { text-align: center; padding: 2rem; border-top: 1px solid #1e293b; color: #475569; font-size: 0.875rem; }
-    footer a { color: #6366f1; text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-    @media (max-width: 640px) { main { grid-template-columns: 1fr; } header h1 { font-size: 1.75rem; } }
-  </style>
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>showcase · made with gm</title>
+<meta name="description" content="projects from AnEntrypoint built using the gm workflow.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+
+<style>
+body > main { max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--space-5) var(--space-8) var(--space-5); display: flex; flex-direction: column; }
+body > header:not(.app-top), body > nav:not(.app-top) { display: none !important; }
+main > a { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--ink); color: var(--ink); text-decoration: none; transition: background var(--dur-snap) var(--ease); }
+main > a:last-child { border-bottom: 1px solid var(--ink); }
+main > a:hover { background: var(--ink); color: var(--paper); }
+main > a::before { content: '›'; font-family: var(--ff-mono); color: var(--fg-3); }
+main > a:hover::before { color: var(--paper); }
+main > a h2, main > a h3 { font-family: var(--ff-mono); font-size: var(--fs-body); text-transform: uppercase; letter-spacing: var(--tr-label); font-weight: 600; margin: 0; }
+main > a p { font-family: var(--ff-mono); font-size: var(--fs-xs); color: var(--fg-3); margin: 0; }
+main > a:hover p { color: var(--paper); }
+</style>
 </head>
 <body>
+<header class="app-top">
+  <span class="brand">247420<span class="slash">/</span>gm</span>
+  <nav>
+    <a href="./index.html">← home</a>
+    <a href="./index.html#principles">principles</a>
+    <a href="./index.html#process">process</a>
+    <a href="./stats.html">stats</a>
+    <a href="./made-with.html">showcase</a>
+    <a href="./paper.html">paper I</a>
+    <a href="./paper2.html">paper II</a>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+</header>
+<div class="dateline">
+  <span class="t-micro">247420 / anentrypoint</span>
+  <span class="t-micro">showcase</span>
+  <span class="t-micro">2026-04-21</span>
+  <span class="t-micro">probably emerging 🌀</span>
+</div>
+
+
   <nav>
     <div class="inner">
       <a href="./index.html" class="brand">gm</a>
@@ -217,5 +231,13 @@
   <script>
     window.__debug = { madeWith: { projects: [{"name":"gm-exec","stars":123,"tags":["exec","runtime"]},{"name":"hyper-nat","stars":75,"tags":["networking","p2p"]},{"name":"agentgui","stars":10,"tags":["gui","agents"]},{"name":"vexify","stars":6,"tags":["database","embeddings"]},{"name":"codebasesearch","stars":4,"tags":["search","MCP"]},{"name":"codemode-agent","stars":4,"tags":["agents","MCP"]},{"name":"acpreact","stars":3,"tags":["react","frontend"]},{"name":"mcp-thorns","stars":3,"tags":["MCP","tools"]},{"name":"zellous","stars":3,"tags":["audio","WebRTC"]},{"name":"audit-cc-tail","stars":2,"tags":["claude","diagnostics"]},{"name":"thebird","stars":0,"tags":["bridge","streaming"]},{"name":"wasivst","stars":0,"tags":["audio","WASM"]},{"name":"floosie","stars":0,"tags":["streams","pipeline"]},{"name":"diagen","stars":1,"tags":["TTS","animation"]},{"name":"busybase","stars":1,"tags":["database","sqlite"]},{"name":"godot-kit","stars":1,"tags":["godot","gamedev"]},{"name":"ancient-anguish","stars":0,"tags":["game","multiplayer"]},{"name":"baremetal-plugs","stars":0,"tags":["audio","embedded"]},{"name":"jit-render","stars":0,"tags":["UI","framework"]},{"name":"milkvid","stars":1,"tags":["video","audio"]}] } };
   </script>
-</body>
-</html>
+
+
+<footer class="app-foot">
+  <div class="foot-row">
+    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
+    <span class="t-micro">probably emerging 🌀</span>
+  </div>
+</footer>
+
+</body></html>

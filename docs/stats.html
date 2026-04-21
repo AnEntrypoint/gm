@@ -1,50 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>gm — Stats & Metrics</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
-    header { background: #1e293b; padding: 2rem; text-align: center; border-bottom: 1px solid #334155; }
-    header h1 { font-size: 2rem; font-weight: 600; }
-    main { max-width: 1400px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem; }
-    section { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem; }
-    section h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #f1f5f9; }
-    section.loading::after { content: 'Loading…'; display: block; text-align: center; color: #64748b; font-style: italic; }
-    #summary { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
-    #summary .card { background: #0f172a; border: 1px solid #334155; padding: 1rem; border-radius: 6px; text-align: center; }
-    #summary .card .label { font-size: 0.875rem; color: #94a3b8; }
-    #summary .card .value { font-size: 2rem; font-weight: 700; color: #60a5fa; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    table th { background: #0f172a; padding: 0.75rem; text-align: left; font-weight: 600; border-bottom: 1px solid #334155; }
-    table td { padding: 0.75rem; border-bottom: 1px solid #1e293b; }
-    table tr:hover { background: #0f172a; }
-    canvas { max-height: 300px; }
-    footer { background: #1e293b; padding: 1.5rem; text-align: center; border-top: 1px solid #334155; color: #94a3b8; font-size: 0.875rem; }
-    .error { color: #f87171; background: #7f1d1d; padding: 1rem; border-radius: 6px; margin: 1rem 0; }
-    .controls { margin-bottom: 1rem; display: flex; gap: 0.5rem; }
-    button { background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
-    button:hover { background: #2563eb; }
-    #releases { grid-column: 1 / -1; }
-    .release-item { padding: 1rem; border-bottom: 1px solid #334155; }
-    .release-item:last-child { border-bottom: none; }
-    .release-tag { font-family: monospace; font-size: 0.75rem; background: #0f172a; padding: 0.25rem 0.5rem; border-radius: 3px; color: #60a5fa; }
-    .release-date { color: #94a3b8; font-size: 0.875rem; }
-    .release-name { font-weight: 500; margin: 0.5rem 0; }
-    .release-link { color: #60a5fa; text-decoration: none; }
-    .release-link:hover { text-decoration: underline; }
-    @media (max-width: 768px) {
-      main { grid-template-columns: 1fr; }
-      #summary { grid-template-columns: repeat(2, 1fr); }
-      section { padding: 1rem; }
-      header h1 { font-size: 1.5rem; }
-    }
-  </style>
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>stats · gm</title>
+<meta name="description" content="live github metrics for the gm repository.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body > main { max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--space-5) var(--space-8) var(--space-5); }
+body > header:not(.app-top), body > nav { display: none !important; }
+main section { border-top: 1px solid var(--ink); padding: var(--space-6) 0; }
+main section h2 { font-family: var(--ff-display); font-size: var(--fs-h2); text-transform: lowercase; letter-spacing: var(--tr-tight); margin-bottom: var(--space-4); }
+main section canvas { background: var(--paper); max-width: 100%; }
+main table { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); }
+main table th, main table td { text-align: left; padding: var(--space-2) var(--space-3); border-top: 1px solid var(--ink); }
+main table th { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); font-weight: 500; }
+main table tr:last-child td { border-bottom: 1px solid var(--ink); }
+</style>
 </head>
 <body>
+<header class="app-top">
+  <span class="brand">247420<span class="slash">/</span>gm</span>
+  <nav>
+    <a href="./index.html">← home</a>
+    <a href="./index.html#principles">principles</a>
+    <a href="./index.html#process">process</a>
+    <a href="./stats.html">stats</a>
+    <a href="./made-with.html">showcase</a>
+    <a href="./paper.html">paper I</a>
+    <a href="./paper2.html">paper II</a>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+</header>
+<div class="dateline">
+  <span class="t-micro">247420 / anentrypoint</span>
+  <span class="t-micro">stats</span>
+  <span class="t-micro">2026-04-21</span>
+  <span class="t-micro">probably emerging 🌀</span>
+</div>
+
+
   <header>
     <h1>gm — Metrics</h1>
     <p style="color: #94a3b8; margin-top: 0.5rem;">Live GitHub stats</p>
@@ -376,5 +375,13 @@
     fetchAllData();
     toggleAutoRefresh();
   </script>
-</body>
-</html>
+
+
+<footer class="app-foot">
+  <div class="foot-row">
+    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
+    <span class="t-micro">probably emerging 🌀</span>
+  </div>
+</footer>
+
+</body></html>

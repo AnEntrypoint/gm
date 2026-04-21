@@ -1,0 +1,432 @@
+
+
+/* Rows: no separators, hover surface tint instead */
+.row { background: transparent; transition: background var(--dur-snap) var(--ease); }
+.row:hover { background: var(--surface-2); }
+[data-theme="ink"] .row:hover { background: var(--surface-ink-2); }
+
+body {
+  background: var(--panel-0);
+  color: var(--panel-text);
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================================
+   Semantic type classes
+   ============================================================ */
+
+/* Hero — project name, once per page. Archivo Black territory. */
+.t-hero, h1.hero {
+  font-family: var(--ff-display);
+  font-size: clamp(64px, 12vw, var(--fs-hero));
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  font-weight: 800;
+  margin: 0;
+}
+
+/* h1 — page title */
+.t-h1, h1 {
+  font-family: var(--ff-display);
+  font-size: clamp(40px, 6vw, var(--fs-h1));
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  font-weight: 700;
+  margin: 0;
+}
+
+/* h2 — section */
+.t-h2, h2 {
+  font-family: var(--ff-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-tight);
+  font-weight: 700;
+  margin: 0;
+}
+
+/* h3 — subsection (mono, colorful-eligible) */
+.t-h3, h3 {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+  letter-spacing: 0;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* h4 */
+.t-h4, h4 {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-h4);
+  line-height: var(--lh-snug);
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Body UI — mono, the default UI voice */
+.t-body {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+}
+
+/* Long-form prose — SANS, not serif. Space Grotesk. */
+.t-prose, .prose p {
+  font-family: var(--ff-body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-long);
+  max-width: var(--measure);
+  text-wrap: pretty;
+  font-weight: 400;
+}
+.prose p { margin: 0 0 var(--space-4) 0; }
+
+/* Label — mono caps, terminal voice */
+.t-label {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-label);
+  font-weight: 500;
+}
+
+/* Meta — mono, small, dim */
+.t-meta {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--fg-3);
+}
+
+/* Micro — smallest, datelines */
+.t-micro {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* Pull — display, for section intros and callouts */
+.t-pull {
+  font-family: var(--ff-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  font-weight: 600;
+  max-width: 20ch;
+  letter-spacing: var(--tr-tight);
+}
+
+/* Code */
+code, .t-code {
+  font-family: var(--ff-mono);
+  font-size: 0.9em;
+  background: var(--bg-2);
+  padding: 0.15em 0.5em;
+  
+  border-radius: var(--r-1);
+}
+
+/* ============================================================
+   COLORFUL MONO — the signature treatment
+   Mono is the UI voice. We don't leave it grey. Every mono block
+   is allowed — encouraged — to carry a canonical hue per token.
+   ============================================================ */
+
+/* Hue utilities — apply to mono runs to tint them */
+.mono-green   { color: var(--mono-1); }
+.mono-purple  { color: var(--mono-2); }
+.mono-mascot  { color: var(--mono-3); }
+.mono-sun     { color: var(--mono-4); }
+.mono-flame   { color: var(--mono-5); }
+.mono-sky     { color: var(--mono-6); }
+.mono-ink     { color: var(--fg); }
+.mono-dim     { color: var(--fg-3); }
+
+/* Highlight block — a mono run on a tinted bg with dark text */
+.hl-green   { background: var(--green);   color: var(--green-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-purple  { background: var(--purple);  color: var(--purple-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-mascot  { background: var(--mascot);  color: var(--mascot-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-sun     { background: var(--sun);     color: var(--ink); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-flame   { background: var(--flame);   color: var(--paper); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-sky     { background: var(--sky);     color: var(--paper); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+
+/* Role-colored mono spans — semantic, self-documenting */
+.m-k     { color: var(--mono-2); font-weight: 500; }  /* keyword */
+.m-s     { color: var(--mono-4); }                    /* string */
+.m-n     { color: var(--mono-1); }                    /* number / live */
+.m-c     { color: var(--fg-3); font-style: italic; }  /* comment */
+.m-tag   { color: var(--mono-3); }                    /* tag / mention */
+.m-op    { color: var(--mono-5); }                    /* operator / punct */
+.m-ref   { color: var(--mono-6); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Links in prose */
+.prose a, a.t-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.prose a:hover, a.t-link:hover {
+  background: var(--link);
+  color: var(--paper);
+  text-decoration: none;
+}
+
+/* ============================================================
+   Primitives — rules, stamps, buttons
+   ============================================================ */
+
+.rule       {   margin: 0; }
+.rule-double{    height: var(--bw-rule); margin: 0; }
+.rule-dotted{   margin: 0; }
+.rule-green {   margin: 0; }
+.rule-purple{   margin: 0; }
+.rule-mascot{   margin: 0; }
+
+/* The 247420 stamp */
+.stamp {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  
+  border-radius: var(--r-pill);
+  color: var(--fg);
+  background: transparent;
+  font-family: var(--ff-mono);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  font-weight: 600;
+  transform: rotate(-2deg);
+}
+.stamp.ink     { background: var(--fg);     color: var(--bg); }
+.stamp.green   { background: var(--green);  color: var(--green-fg);   }
+.stamp.purple  { background: var(--purple); color: var(--purple-fg);  }
+.stamp.mascot  { background: var(--mascot); color: var(--mascot-fg);  }
+.stamp.sun     { background: var(--sun);    color: var(--ink);        }
+.stamp.flame   { background: var(--flame);  color: var(--paper);      }
+
+/* Legacy alias — .stamp.acid now means green */
+.stamp.acid    { background: var(--green);  color: var(--green-fg);   }
+
+/* The "stamp button" */
+.btn-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--fg);
+  color: var(--bg);
+  
+  border-radius: var(--r-2);
+  box-shadow: 4px 4px 0 var(--fg);
+  font-family: var(--ff-mono);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--dur-snap) var(--ease), box-shadow var(--dur-snap) var(--ease);
+}
+.btn-stamp:hover  { transform: translate(1px, 1px); box-shadow: 3px 3px 0 var(--fg); }
+.btn-stamp:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--fg); }
+
+.btn-stamp.green  { background: var(--green);  color: var(--green-fg);   box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.purple { background: var(--purple); color: var(--purple-fg);  box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.mascot { background: var(--mascot); color: var(--mascot-fg);  box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.sun    { background: var(--sun);    color: var(--ink);        box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.flame  { background: var(--flame);  color: var(--paper);      box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.acid   { background: var(--green);  color: var(--green-fg);   box-shadow: 4px 4px 0 var(--ink); } /* legacy */
+
+/* Plain button — default */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  color: var(--fg);
+  
+  border-radius: var(--r-2);
+  font-family: var(--ff-mono);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-snap) var(--ease), color var(--dur-snap) var(--ease);
+}
+.btn:hover  { background: var(--fg); color: var(--bg); }
+.btn:active { background: var(--green); color: var(--green-fg);  }
+
+/* Ghost/link button */
+.btn-ghost {
+  background: transparent;
+  
+  color: var(--fg);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.btn-ghost:hover { color: var(--green-fg); background: var(--green); }
+
+/* Input — softened: full border, rounded, 2px default */
+.input {
+  width: 100%;
+  background: var(--bg);
+  
+  border-radius: var(--r-2);
+  padding: var(--space-3) var(--space-3);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  
+  transition: border-color var(--dur-snap) var(--ease), box-shadow var(--dur-snap) var(--ease);
+}
+.input:focus {
+  
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--green) 25%, transparent);
+}
+.input::placeholder { color: var(--fg-3); }
+
+/* ============================================================
+   Layout scaffolds
+   ============================================================ */
+
+.page { min-height: 100vh; padding: var(--space-5); }
+
+.dateline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-bottom: var(--space-2);
+  
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-label);
+}
+.dateline > * { white-space: nowrap; }
+.dateline .spread { flex: 1;  align-self: center; }
+
+/* Index-card row — soft card with breathing room */
+.row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  
+  border-radius: var(--r-3);
+  background: var(--bg);
+  align-items: baseline;
+  margin-bottom: calc(var(--bw-hair) * -1);
+  transition: background var(--dur-snap) var(--ease), color var(--dur-snap) var(--ease), transform var(--dur-snap) var(--ease);
+}
+.row + .row { margin-top: var(--space-2); margin-bottom: 0; }
+.row .row-code  { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--mono-1); }
+.row .row-title { font-family: var(--ff-display); font-weight: 700; font-size: var(--fs-h3); line-height: var(--lh-snug); letter-spacing: var(--tr-tight); }
+.row .row-meta  { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-3); }
+.row:hover { background: var(--green); color: var(--green-fg); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.row:hover .row-code { color: var(--sun); }
+.row:hover .row-meta { color: var(--green-fg); }
+
+/* Soft card — the generic container */
+.card {
+  
+  border-radius: var(--r-3);
+  background: var(--bg);
+  padding: var(--space-5);
+}
+.card.chunk {  }
+
+/* ============================================================
+   Selection
+   ============================================================ */
+::selection { background: var(--mascot); color: var(--mascot-fg); }
+
+
+/* ============================================================
+   Panel surface tokens — VS-Code-inspired layered chrome
+   Light default. Dark via prefers-color-scheme or [data-theme="dark"].
+   ============================================================ */
+:root {
+  --panel-0:       #f4f5f7;   /* canvas */
+  --panel-1:       #ffffff;   /* elevated card */
+  --panel-2:       #e7e9ec;   /* chrome (topbar, tabbar) */
+  --panel-3:       #d8dbe0;   /* deepest */
+  --panel-hover:   #ecedf0;
+  --panel-select:  #dbe3f5;
+  --panel-text:    #1f2328;
+  --panel-text-2:  #59636e;
+  --panel-text-3:  #8b949e;
+  --panel-accent:  var(--green);
+  --panel-accent-2:var(--green-deep);
+  --panel-shadow:  0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04);
+  --panel-shadow-top: 0 1px 0 rgba(0,0,0,0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --panel-0:       #181a1f;
+    --panel-1:       #21252b;
+    --panel-2:       #2c313a;
+    --panel-3:       #383e48;
+    --panel-hover:   #2a3038;
+    --panel-select:  #3a4050;
+    --panel-text:    #e4e6eb;
+    --panel-text-2:  #9aa3b2;
+    --panel-text-3:  #6d7685;
+    --panel-accent:  var(--green-2);
+    --panel-accent-2:var(--green-2);
+    --panel-shadow:  0 1px 2px rgba(0,0,0,0.3), 0 1px 6px rgba(0,0,0,0.25);
+    --panel-shadow-top: 0 1px 0 rgba(255,255,255,0.04);
+  }
+}
+
+[data-theme="dark"] {
+  --panel-0:       #181a1f;
+  --panel-1:       #21252b;
+  --panel-2:       #2c313a;
+  --panel-3:       #383e48;
+  --panel-hover:   #2a3038;
+  --panel-select:  #3a4050;
+  --panel-text:    #e4e6eb;
+  --panel-text-2:  #9aa3b2;
+  --panel-text-3:  #6d7685;
+  --panel-accent:  var(--green-2);
+  --panel-accent-2:var(--green-2);
+  --panel-shadow:  0 1px 2px rgba(0,0,0,0.3), 0 1px 6px rgba(0,0,0,0.25);
+  --panel-shadow-top: 0 1px 0 rgba(255,255,255,0.04);
+}
+
+[data-theme="light"] {
+  --panel-0:       #f4f5f7;
+  --panel-1:       #ffffff;
+  --panel-2:       #e7e9ec;
+  --panel-3:       #d8dbe0;
+  --panel-hover:   #ecedf0;
+  --panel-select:  #dbe3f5;
+  --panel-text:    #1f2328;
+  --panel-text-2:  #59636e;
+  --panel-text-3:  #8b949e;
+  --panel-accent:  var(--green);
+  --panel-accent-2:var(--green-deep);
+}
+
+/* Universal reset — no borders, no outlines except :focus-visible */
+*, *::before, *::after { box-sizing: border-box; border: 0 !important; outline: 0 !important; }
+:focus-visible { outline: 2px solid var(--panel-accent) !important; outline-offset: 2px; }
+html, body { margin: 0; padding: 0; }

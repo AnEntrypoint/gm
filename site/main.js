@@ -1,210 +1,221 @@
 import { createElement as h, createDOMElement } from "webjsx";
 
 const PHASES = [
-  { name: 'PLAN', desc: 'List every unknown. Write .gm/prd.yml with acceptance criteria. Nothing runs without a plan.' },
-  { name: 'EXECUTE', desc: 'Run code against real services. Hypotheses resolved by output, not docs.' },
-  { name: 'EMIT', desc: 'Write files only after pre-emit checks pass. Verify from disk.' },
-  { name: 'VERIFY', desc: 'End-to-end execution. Real services, real data, real timing.' },
-  { name: 'COMPLETE', desc: '.gm/prd.yml empty, test.js passes, git clean, pushed.' },
+  { name: 'plan', desc: 'list every unknown. write .gm/prd.yml with acceptance criteria. nothing runs without a plan.' },
+  { name: 'execute', desc: 'run code against real services. hypotheses resolved by output, not docs.' },
+  { name: 'emit', desc: 'write files only after pre-emit checks pass. verify from disk.' },
+  { name: 'verify', desc: 'end-to-end execution. real services, real data, real timing.' },
+  { name: 'complete', desc: '.gm/prd.yml empty, test.js passes, git clean, pushed.' },
 ];
 
 const PRINCIPLES = [
-  { title: 'JIT Execution', desc: 'Shell calls intercepted, languages auto-detected, long tasks backgrounded. Code runs in managed lifecycle.' },
-  { title: '1-Shot Overviews', desc: 'AST parsing delivers codebase structure, complexity metrics, and caveats before first prompt.' },
-  { title: 'Semantic Search', desc: 'Local vector search finds code by intent. Compact results fit in context without summarization.' },
-  { title: 'Single Test Policy', desc: 'One test.js at project root, 200L max. Bug fixes become regression cases. Replaces all unit tests.' },
-  { title: 'Lang Plugins', desc: 'A CommonJS file at lang/<id>.js wires any runtime into exec dispatch, LSP diagnostics, and context injection.' },
-  { title: 'Context Reduction', desc: 'Install only what the project needs. Skill tree routes agent through proven steps.' },
+  { title: 'jit execution', desc: 'shell calls intercepted, languages auto-detected, long tasks backgrounded. code runs in managed lifecycle.' },
+  { title: '1-shot overviews', desc: 'ast parsing delivers codebase structure, complexity metrics, and caveats before first prompt.' },
+  { title: 'semantic search', desc: 'local vector search finds code by intent. compact results fit in context without summarization.' },
+  { title: 'single test policy', desc: 'one test.js at project root, 200L max. bug fixes become regression cases. replaces all unit tests.' },
+  { title: 'lang plugins', desc: 'a commonjs file at lang/<id>.js wires any runtime into exec dispatch, lsp diagnostics, and context injection.' },
+  { title: 'context reduction', desc: 'install only what the project needs. skill tree routes agent through proven steps.' },
 ];
 
 const PLATFORMS = [
-  { id: 'gm-cc', label: 'Claude Code', type: 'CLI' },
-  { id: 'gm-gc', label: 'Gemini CLI', type: 'CLI' },
-  { id: 'gm-oc', label: 'OpenCode', type: 'CLI' },
-  { id: 'gm-kilo', label: 'Kilo Code', type: 'CLI' },
-  { id: 'gm-codex', label: 'Codex', type: 'CLI' },
-  { id: 'gm-copilot-cli', label: 'Copilot CLI', type: 'CLI' },
-  { id: 'gm-qwen', label: 'Qwen Code', type: 'CLI' },
-  { id: 'gm-hermes', label: 'Hermes Agent', type: 'CLI' },
-  { id: 'gm-vscode', label: 'VS Code', type: 'IDE' },
-  { id: 'gm-cursor', label: 'Cursor', type: 'IDE' },
-  { id: 'gm-zed', label: 'Zed', type: 'IDE' },
-  { id: 'gm-jetbrains', label: 'JetBrains', type: 'IDE' },
+  { id: 'gm-cc', label: 'Claude Code', type: 'cli' },
+  { id: 'gm-gc', label: 'Gemini CLI', type: 'cli' },
+  { id: 'gm-oc', label: 'OpenCode', type: 'cli' },
+  { id: 'gm-kilo', label: 'Kilo Code', type: 'cli' },
+  { id: 'gm-codex', label: 'Codex', type: 'cli' },
+  { id: 'gm-copilot-cli', label: 'Copilot CLI', type: 'cli' },
+  { id: 'gm-qwen', label: 'Qwen Code', type: 'cli' },
+  { id: 'gm-hermes', label: 'Hermes Agent', type: 'cli' },
+  { id: 'gm-vscode', label: 'VS Code', type: 'ide' },
+  { id: 'gm-cursor', label: 'Cursor', type: 'ide' },
+  { id: 'gm-zed', label: 'Zed', type: 'ide' },
+  { id: 'gm-jetbrains', label: 'JetBrains', type: 'ide' },
 ];
 
 const RULES = [
-  { title: 'Name every unknown', desc: 'apiShape=UNKNOWN, fileExists=UNKNOWN. Named unknowns get resolved; unnamed ones cause bugs.' },
-  { title: 'Witnessed execution only', desc: 'A mutable closes when real code runs and produces real output. Inference doesn\'t count.' },
-  { title: 'Two-pass limit', desc: 'Still open after two attempts \u2192 fresh unknown \u2192 session resets to PLAN.' },
-  { title: 'Divergence \u2192 replan', desc: 'Output differs from expectation \u2192 new mutable \u2192 replanning before any further edits.' },
+  { title: 'name every unknown', desc: 'apiShape=UNKNOWN, fileExists=UNKNOWN. named unknowns get resolved; unnamed ones cause bugs.' },
+  { title: 'witnessed execution only', desc: "a mutable closes when real code runs and produces real output. inference doesn't count." },
+  { title: 'two-pass limit', desc: 'still open after two attempts → fresh unknown → session resets to plan.' },
+  { title: 'divergence → replan', desc: 'output differs from expectation → new mutable → replanning before any further edits.' },
 ];
 
-function NavBar() {
+function Topbar() {
   const links = [
-    ['#principles', 'Principles'],
-    ['#process', 'Process'],
-    ['./stats.html', 'Stats'],
-    ['./made-with.html', 'Showcase'],
-    ['./paper.html', 'Paper I'],
-    ['./paper2.html', 'Paper II'],
-    ['https://github.com/AnEntrypoint/gm', 'GitHub'],
+    ['#principles', 'principles'],
+    ['#process', 'process'],
+    ['./stats.html', 'stats'],
+    ['./made-with.html', 'showcase'],
+    ['./paper.html', 'paper I'],
+    ['./paper2.html', 'paper II'],
+    ['https://github.com/AnEntrypoint/gm', 'source ↗'],
   ];
-  return h('nav', { class: 'cc-nav' },
-    h('div', { class: 'cc-nav-inner' },
-      h('a', { href: '#', class: 'cc-logo' }, 'gm'),
-      h('div', { class: 'cc-nav-links' },
-        ...links.map(([href, label]) =>
-          h('a', { href, class: 'cc-nav-link', ...(href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {}) }, label)
-        )
-      )
-    )
+  return h('header', { class: 'app-top' },
+    h('span', { class: 'brand' }, '247420', h('span', { class: 'slash' }, '/'), 'gm'),
+    h('nav', {}, ...links.map(([href, label]) =>
+      h('a', { href, ...(href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {}) }, label)
+    ))
+  );
+}
+
+function Dateline() {
+  const today = new Date().toISOString().slice(0, 10);
+  return h('div', { class: 'dateline' },
+    h('span', { class: 't-micro' }, '247420 / anentrypoint'),
+    h('span', { class: 't-micro' }, 'gm — state machine'),
+    h('span', { class: 't-micro' }, today),
+    h('span', { class: 't-micro' }, 'probably emerging \u{1F300}'),
   );
 }
 
 function Hero() {
-  return h('section', { class: 'cc-hero' },
-    h('div', { class: 'cc-wrap' },
-      h('h1', null, 'Ship code that works.', h('br'), h('span', null, 'Every time.')),
-      h('p', { class: 'cc-hero-sub' },
-        'A state machine that enforces plan \u2192 execute \u2192 emit \u2192 verify \u2192 complete on every task, across 11 platforms. Each unknown is named and resolved by code.'
-      ),
-      h('div', { class: 'cc-hero-actions' },
-        h('a', { href: './paper.html', class: 'cc-btn-primary' }, 'Read the Paper'),
-        h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'cc-btn-ghost' }, 'View Source'),
-      ),
-      h('div', { class: 'cc-install' },
-        h('div', { class: 'cc-install-label' }, 'Install'),
-        h('div', { class: 'cc-install-line' }, 'claude plugin marketplace add AnEntrypoint/gm'),
-        h('div', { class: 'cc-install-line' }, 'claude plugin install -s user gm@gm'),
-      )
+  return h('section', { class: 'hero' },
+    h('span', { class: 'stamp ink' }, 'state machine'),
+    h('h1', { class: 't-hero' }, 'gm', h('span', { class: 'slash' }, '/'), 'ship code that works.'),
+    h('p', { class: 't-prose lede' }, 'a state machine that enforces plan → execute → emit → verify → complete on every task, across 12 platforms. each unknown is named and resolved by witnessed execution.'),
+    h('div', { class: 'hero-cta' },
+      h('a', { href: './paper.html', class: 'btn-stamp' }, 'read the paper'),
+      h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener', class: 'btn-ghost' }, 'source ↗'),
+    ),
+    h('div', { class: 'hero-install' },
+      h('span', { class: 't-label' }, 'install'),
+      h('span', { class: 'cmd' }, 'claude plugin marketplace add AnEntrypoint/gm'),
+      h('span', { class: 'cmd' }, 'claude plugin install -s user gm@gm'),
     )
   );
 }
 
 function ConversationDemo() {
-  return h('section', { class: 'cc-section' },
-    h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, 'How a session looks'),
-      h('p', { class: 'cc-section-sub' }, 'gm intercepts every prompt and enforces the state machine.'),
-
-      h('div', { class: 'cc-msg cc-msg-user' },
-        h('div', { class: 'cc-msg-label cc-msg-label-user' }, 'You'),
-        h('p', null, 'add dark mode to the settings page')
+  return h('section', { class: 'section' },
+    h('div', { class: 'section-head' },
+      h('span', { class: 't-label' }, '§ how a session looks'),
+      h('hr', { class: 'rule' })
+    ),
+    h('p', { class: 't-prose section-lede' }, 'gm intercepts every prompt and enforces the state machine.'),
+    h('div', {},
+      h('div', { class: 'msg' },
+        h('span', { class: 'msg-role user' }, 'you'),
+        h('p', { class: 'msg-body' }, 'add dark mode to the settings page'),
       ),
-
-      h('div', { class: 'cc-thinking' }, 'Invoking planning skill...'),
-
-      h('div', { class: 'cc-msg cc-msg-assistant' },
-        h('div', { class: 'cc-msg-label cc-msg-label-assistant' }, 'gm'),
-        h('p', null, 'Writing .gm/prd.yml with 3 items: discover current theme system, implement toggle, verify persistence. Launching exec:codesearch to resolve existingImpl=UNKNOWN.')
+      h('div', { class: 'msg' },
+        h('span', { class: 'msg-role thinking' }, '· thinking'),
+        h('p', { class: 'msg-body thinking' }, 'invoking planning skill…'),
       ),
-
-      h('div', { class: 'cc-msg cc-msg-tool' },
-        h('div', { class: 'cc-msg-label cc-msg-label-tool' }, 'exec:codesearch'),
-        h('p', null, 'theme toggle settings \u2192 src/settings.js:42 ThemeProvider')
+      h('div', { class: 'msg' },
+        h('span', { class: 'msg-role gm' }, 'gm'),
+        h('p', { class: 'msg-body' }, 'writing .gm/prd.yml with 3 items: discover current theme system, implement toggle, verify persistence. launching exec:codesearch to resolve existingImpl=UNKNOWN.'),
       ),
-
-      h('div', { class: 'cc-msg cc-msg-assistant' },
-        h('div', { class: 'cc-msg-label cc-msg-label-assistant' }, 'gm'),
-        h('p', null, 'All mutables KNOWN. Invoking gm-emit \u2192 writing files \u2192 gm-complete \u2192 test.js passes \u2192 committed and pushed.')
+      h('div', { class: 'msg' },
+        h('span', { class: 'msg-role tool' }, 'exec:codesearch'),
+        h('p', { class: 'msg-body tool' }, 'theme toggle settings → src/settings.js:42 ThemeProvider'),
       ),
-
-      h('div', { class: 'cc-prompt' },
-        h('span', { class: 'cc-prompt-caret' }, '>'),
-        h('span', { class: 'cc-prompt-text' }, 'What would you like to work on?'),
-        h('span', { class: 'cc-cursor' }),
-      )
+      h('div', { class: 'msg' },
+        h('span', { class: 'msg-role gm' }, 'gm'),
+        h('p', { class: 'msg-body' }, 'all mutables KNOWN. invoking gm-emit → writing files → gm-complete → test.js passes → committed and pushed.'),
+      ),
+      h('div', { class: 'prompt-row' },
+        h('span', { class: 'caret' }, '>'),
+        h('span', { class: 'ptext' }, 'what would you like to work on?'),
+        h('span', { class: 'cursor' }),
+      ),
     )
   );
 }
 
-function PrinciplesSection() {
-  return h('section', { id: 'principles', class: 'cc-section' },
-    h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, 'How It Works'),
-      h('p', { class: 'cc-section-sub' }, 'Six mechanisms that keep coding sessions on track.'),
-      h('div', { class: 'cc-grid' },
-        ...PRINCIPLES.map(p =>
-          h('div', { class: 'cc-card' },
-            h('div', { class: 'cc-card-title' }, p.title),
-            h('div', { class: 'cc-card-desc' }, p.desc)
-          )
-        )
-      )
+function Principles() {
+  return h('section', { id: 'principles', class: 'section' },
+    h('div', { class: 'section-head' },
+      h('span', { class: 't-label' }, '§ how it works'),
+      h('hr', { class: 'rule' })
+    ),
+    h('p', { class: 't-prose section-lede' }, 'six mechanisms that keep coding sessions on track.'),
+    h('div', { class: 'grid-2' },
+      ...PRINCIPLES.map(p => h('div', { class: 'card' },
+        h('div', { class: 'card-title' }, p.title),
+        h('div', { class: 'card-desc' }, p.desc),
+      ))
     )
   );
 }
 
-function ProcessSection() {
-  return h('section', { id: 'process', class: 'cc-section' },
-    h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, 'The Process'),
-      h('p', { class: 'cc-section-sub' }, 'Five phases, in order. Any new unknown sends the session back to PLAN.'),
-      h('div', { class: 'cc-process' },
-        ...PHASES.map((phase, i) =>
-          h('div', { class: 'cc-phase' },
-            h('span', { class: 'cc-phase-num' }, `0${i + 1}`),
-            h('span', { class: 'cc-phase-name' }, phase.name),
-            h('span', { class: 'cc-phase-desc' }, phase.desc),
-          )
-        )
-      )
+function Process() {
+  return h('section', { id: 'process', class: 'section' },
+    h('div', { class: 'section-head' },
+      h('span', { class: 't-label' }, '§ the process'),
+      h('hr', { class: 'rule' })
+    ),
+    h('p', { class: 't-prose section-lede' }, 'five phases, in order. any new unknown sends the session back to plan.'),
+    h('ol', { class: 'phase-list' },
+      ...PHASES.map((p, i) => h('li', { class: 'phase-row' },
+        h('span', { class: 't-label' }, `${String(i + 1).padStart(2, '0')} ${p.name}`),
+        h('span', { class: 't-body' }, p.desc),
+      ))
     )
   );
 }
 
-function MutableSection() {
-  return h('section', { class: 'cc-section' },
-    h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, 'Mutable Discipline'),
-      h('p', { class: 'cc-section-sub' }, 'Every assumption is tracked. Each one closes only via witnessed execution.'),
-      h('div', { class: 'cc-grid' },
-        ...RULES.map(r =>
-          h('div', { class: 'cc-card' },
-            h('div', { class: 'cc-card-title' }, r.title),
-            h('div', { class: 'cc-card-desc' }, r.desc)
-          )
-        )
-      )
+function Mutable() {
+  return h('section', { class: 'section' },
+    h('div', { class: 'section-head' },
+      h('span', { class: 't-label' }, '§ mutable discipline'),
+      h('hr', { class: 'rule' })
+    ),
+    h('p', { class: 't-prose section-lede' }, 'every assumption is tracked. each one closes only via witnessed execution.'),
+    h('div', { class: 'grid-2' },
+      ...RULES.map(r => h('div', { class: 'card' },
+        h('div', { class: 'card-title' }, r.title),
+        h('div', { class: 'card-desc' }, r.desc),
+      ))
     )
   );
 }
 
 function PlatformsSection() {
-  return h('section', { class: 'cc-section' },
-    h('div', { class: 'cc-wrap' },
-      h('h2', { class: 'cc-section-title' }, '12 Platforms'),
-      h('p', { class: 'cc-section-sub' }, 'One state machine, every major coding tool.'),
-      h('div', { class: 'cc-platforms-grid' },
-        ...PLATFORMS.map(p =>
-          h('a', {
-            href: `https://AnEntrypoint.github.io/${p.id}`,
-            target: '_blank', rel: 'noopener',
-            class: `cc-badge ${p.type === 'CLI' ? 'cc-badge-cli' : 'cc-badge-ide'}`
-          }, p.label)
-        )
-      )
+  return h('section', { class: 'section' },
+    h('div', { class: 'section-head' },
+      h('span', { class: 't-label' }, '§ 12 platforms'),
+      h('hr', { class: 'rule' })
+    ),
+    h('p', { class: 't-prose section-lede' }, 'one state machine, every major coding tool.'),
+    h('div', { class: 'idx-list' },
+      ...PLATFORMS.map(p => h('a', {
+        href: `https://AnEntrypoint.github.io/${p.id}`,
+        target: '_blank', rel: 'noopener',
+        class: 'idx-row'
+      },
+        h('span', { class: 'idx-mark' }, '›'),
+        h('span', { class: 'idx-label' }, p.label.toLowerCase()),
+        h('span', { class: 'idx-type' }, p.type),
+        h('span', { class: 'idx-tag' }, p.id),
+      ))
     )
   );
 }
 
 function Footer() {
-  return h('footer', { class: 'cc-footer' },
-    h('div', { class: 'cc-wrap' },
-      h('p', null,
-        'Built with ',
-        h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener' }, 'gm'),
-        ' \u00b7 ',
-        h('a', { href: './paper.html' }, 'Read the paper'),
-      )
+  return h('footer', { class: 'app-foot' },
+    h('div', { class: 'foot-row' },
+      h('span', { class: 't-micro' }, 'built with gm — ',
+        h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener' }, 'source ↗'),
+        ' · ',
+        h('a', { href: './paper.html' }, 'paper')
+      ),
+      h('span', { class: 't-micro' }, 'probably emerging \u{1F300}'),
     )
   );
 }
 
-window.__debug = { PHASES, PRINCIPLES, PLATFORMS, RULES };
+window.__debug = {
+  site: {
+    get PHASES() { return PHASES; },
+    get PRINCIPLES() { return PRINCIPLES; },
+    get PLATFORMS() { return PLATFORMS; },
+    get RULES() { return RULES; },
+  }
+};
 
-const sections = [NavBar(), Hero(), ConversationDemo(), PrinciplesSection(), ProcessSection(), MutableSection(), PlatformsSection(), Footer()];
-for (const vnode of sections) {
+const root = document.getElementById('root') || document.body;
+const vnodes = [Topbar(), Dateline(), h('main', { class: 'page' }, Hero(), ConversationDemo(), Principles(), Process(), Mutable(), PlatformsSection()), Footer()];
+for (const vnode of vnodes) {
   const el = createDOMElement(vnode);
-  if (el) document.body.appendChild(el);
+  if (el) root.appendChild(el);
 }

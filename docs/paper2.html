@@ -1,168 +1,59 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+<!doctype html>
+<html lang="en"><head>
 <meta charset="utf-8">
-<title>Advances in Agentic Discipline for Coding Agents</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>paper II — advances in agentic discipline for coding agents · gm</title>
+<meta name="description" content="paper II: advances in agentic discipline.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+
 <style>
-@page {
-  size: letter;
-  margin: 0.75in 0.75in 1in 0.75in;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 17px;
-  line-height: 1.75;
-  color: #1a1a1a;
-  max-width: 740px;
-  margin: 0 auto;
-  padding: 3rem 2rem 5rem;
-  background: #fff;
-}
-
-.title-block {
-  text-align: center;
-  margin-bottom: 2.5rem;
-  padding-top: 2rem;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 2rem;
-}
-.title-block h1 {
-  font-size: 2rem;
-  font-weight: bold;
-  line-height: 1.25;
-  margin-bottom: 0.6rem;
-  color: #111;
-}
-.title-block .author {
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
-  color: #555;
-}
-.title-block .date {
-  font-size: 0.9rem;
-  color: #777;
-}
-
-.abstract-block {
-  background: #f8f8f8;
-  border-left: 4px solid #ccc;
-  padding: 1.25rem 1.5rem;
-  margin: 2rem 0 2.5rem;
-  border-radius: 0 4px 4px 0;
-}
-.abstract-block .abstract-title {
-  font-weight: bold;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #666;
-  margin-bottom: 0.6rem;
-}
-.abstract-block .abstract-text {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #333;
-}
-
-h2 {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-top: 2.5rem;
-  margin-bottom: 0.75rem;
-  color: #111;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 0.3rem;
-}
-h3 {
-  font-size: 1.05rem;
-  font-weight: bold;
-  margin-top: 1.5rem;
-  margin-bottom: 0.4rem;
-  color: #222;
-}
-p {
-  margin-bottom: 1rem;
-}
-p.first, p.no-indent {
-  margin-top: 0;
-}
-ul, ol {
-  margin: 0.5rem 0 1rem 2rem;
-  padding: 0;
-}
-li {
-  margin-bottom: 0.4rem;
-}
-dl {
-  margin: 0.5rem 0 1rem;
-}
-dt {
-  font-weight: bold;
-  display: inline;
-}
-dd {
-  display: inline;
-  margin: 0;
-}
-dd::after {
-  content: "";
-  display: block;
-  margin-bottom: 0.5rem;
-}
-code {
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
-  font-size: 0.87em;
-  background: #f0f0f0;
-  padding: 0.1em 0.35em;
-  border-radius: 3px;
-  border: 1px solid #e0e0e0;
-}
-em { font-style: italic; }
-strong { font-weight: bold; }
-
-.theorem {
-  background: #fffbf0;
-  border: 1px solid #e8d87a;
-  border-radius: 4px;
-  padding: 1rem 1.25rem;
-  margin: 1.5rem 0;
-  font-size: 0.95rem;
-}
-
-.references {
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 2px solid #e0e0e0;
-}
-.references h2 {
-  margin-top: 0;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.references ol {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin-left: 1.5rem;
-}
-.references li {
-  margin-bottom: 0.5rem;
-}
-
-@media (max-width: 600px) {
-  body { padding: 1.5rem 1rem 3rem; font-size: 16px; }
-  .title-block h1 { font-size: 1.5rem; }
-}
-
-@media print {
-  body { max-width: none; padding: 0; font-size: 11pt; }
-  .title-block { padding-top: 0; }
-  h2 { break-after: avoid; }
-  h3 { break-after: avoid; }
-}
+body > main, body > article, body > div.title-block ~ * { max-width: var(--measure); margin-left: auto; margin-right: auto; padding: 0 var(--space-5); }
+.title-block { max-width:var(--measure); margin:var(--space-7) auto var(--space-6) auto; padding: 0 var(--space-5); }
+.title-block h1 { font-family: var(--ff-display); font-size: var(--fs-h1); font-weight: 800; letter-spacing: var(--tr-tight); line-height: var(--lh-tight); text-transform: lowercase; }
+.title-block .author, .title-block .date { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); margin-top: var(--space-2); }
+.abstract-block { max-width:var(--measure); margin: var(--space-6) auto; padding: var(--space-4) var(--space-5); border: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 94%, var(--ink)); }
+.abstract-title { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); margin-bottom: var(--space-2); }
+.abstract-text { font-family: var(--ff-body); font-size: var(--fs-lg); line-height: var(--lh-long); }
+article, .section-body, body > h1, body > h2, body > h3, body > p, body > ol, body > ul, body > blockquote, body > pre, body > hr, body > figure { max-width: var(--measure); margin-left: auto; margin-right: auto; padding-left: var(--space-5); padding-right: var(--space-5); }
+article h1, article h2 { font-family: var(--ff-display); letter-spacing: var(--tr-tight); text-transform: lowercase; margin-top: var(--space-7); }
+article h2 { font-size: var(--fs-h2); border-top: 1px solid var(--ink); padding-top: var(--space-5); }
+article h3 { font-family: var(--ff-mono); font-size: var(--fs-h3); text-transform: uppercase; letter-spacing: var(--tr-label); margin-top: var(--space-5); }
+article p, article li { font-family: var(--ff-body); font-size: var(--fs-lg); line-height: var(--lh-long); }
+article pre, article code { font-family: var(--ff-mono); font-size: var(--fs-body); }
+article pre { background: var(--ink); color: var(--acid); padding: var(--space-3) var(--space-4); overflow-x: auto; }
+article code { padding: 0 4px; background: color-mix(in srgb, var(--paper) 90%, var(--ink)); }
+article pre code { background: transparent; color: inherit; padding: 0; }
+article a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+article blockquote { border-left: 3px solid var(--ink); margin: var(--space-5) 0; padding: 0 var(--space-5); color: var(--fg-2); font-family: var(--ff-body); }
+body > header:not(.app-top), body > nav:not(.app-top) { display: none !important; }
 </style>
 </head>
 <body>
+<header class="app-top">
+  <span class="brand">247420<span class="slash">/</span>gm</span>
+  <nav>
+    <a href="./index.html">← home</a>
+    <a href="./index.html#principles">principles</a>
+    <a href="./index.html#process">process</a>
+    <a href="./stats.html">stats</a>
+    <a href="./made-with.html">showcase</a>
+    <a href="./paper.html">paper I</a>
+    <a href="./paper2.html">paper II</a>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+</header>
+<div class="dateline">
+  <span class="t-micro">247420 / anentrypoint</span>
+  <span class="t-micro">paper II</span>
+  <span class="t-micro">2026-04-21</span>
+  <span class="t-micro">probably emerging 🌀</span>
+</div>
+
+
 
 <div class="title-block">
   <h1>Advances in Agentic Discipline<br>for Coding Agents</h1>
@@ -337,5 +228,13 @@ strong { font-weight: bold; }
   </ol>
 </div>
 
-</body>
-</html>
+
+
+<footer class="app-foot">
+  <div class="foot-row">
+    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
+    <span class="t-micro">probably emerging 🌀</span>
+  </div>
+</footer>
+
+</body></html>
