@@ -82,31 +82,37 @@ jobs:
             echo "title=Workflow failure: $WORKFLOW_NAME" >> $GITHUB_OUTPUT
           fi
 
-          BODY_JSON=$(jq -n --arg job "$FAILED_JOB" --arg step "$FAILED_STEP" --arg actor "$ACTOR" --arg sha "$SHORT_SHA" --arg err "$ERROR_EXCERPT" --arg repo "$REPO" --arg rid "$RUN_ID" '
-            "## Failure: " + $job + " - " + $step + "\n**Actor**: " + $actor + " | **Commit**: " + $sha + "\n```\n" + $err + "\n```\n[View run](https://github.com/" + $repo + "/actions/runs/" + $rid + ")"
-          ')
-          echo "body=$BODY_JSON" >> $GITHUB_OUTPUT
+          jq -n --arg job "$FAILED_JOB" --arg step "$FAILED_STEP" --arg actor "$ACTOR" --arg sha "$SHORT_SHA" --arg err "$ERROR_EXCERPT" --arg repo "$REPO" --arg rid "$RUN_ID" '
+            "## Failure: " + $job + " - " + $step + "\n**Actor**: " + $actor + " | **Commit**: " + $sha + "\n\n" + $err + "\n\n[View run](https://github.com/" + $repo + "/actions/runs/" + $rid + ")"
+          ' > /tmp/notify-body.txt
 
       - name: Post notification
         run: |
           REPO="${{ github.repository }}"
           TOKEN="${{ github.token }}"
           IS_DUP="${{ steps.search.outputs.is_duplicate }}"
-          BODY="${{ steps.search.outputs.body }}"
+          WORKFLOW_NAME="${{ steps.extract.outputs.workflow_name }}"
 
           if [ "$IS_DUP" == "true" ]; then
             DUP="${{ steps.search.outputs.duplicate_issue }}"
+            PAYLOAD=$(jq -n --rawfile b /tmp/notify-body.txt '{body:("**New failure**: "+$b)}')
             curl -s -X POST -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{\"body\":\"**New failure**: $BODY\"}" \
+              -d "$PAYLOAD" \
               "https://api.github.com/repos/$REPO/issues/$DUP/comments"
-            echo "✓ Posted comment to issue #$DUP"
+            echo "Posted comment to issue #$DUP"
           else
-            TITLE="${{ steps.search.outputs.title }}"
+            TITLE="Workflow failure: $WORKFLOW_NAME"
+            PAYLOAD=$(jq -n --arg t "$TITLE" --rawfile b /tmp/notify-body.txt '{title:$t,body:$b,labels:["workflow-failure"]}')
             RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{\"title\":\"$TITLE\",\"body\":\"$BODY\",\"labels\":[\"workflow-failure\"]}" \
+              -d "$PAYLOAD" \
               "https://api.github.com/repos/$REPO/issues")
             NUM=$(echo "$RESP" | jq -r '.number // empty')
-            [ -n "$NUM" ] && echo "✓ Created issue #$NUM" || (echo "✗ Failed" && exit 1)
+            if [ -n "$NUM" ]; then
+              echo "Created issue #$NUM"
+            else
+              echo "Failed to create issue: $RESP"
+              exit 1
+            fi
           fi
