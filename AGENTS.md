@@ -38,8 +38,7 @@ node cli.js gm-starter ./build
 
 **import.meta.dir vs new URL(import.meta.url).pathname on Windows**: `new URL(import.meta.url).pathname` returns `/C:/dev/...` (leading slash makes it an invalid path). Use `import.meta.dir` instead for resolving sibling file paths (e.g. worker spawn paths). Bun-specific; applies anywhere a Bun script needs its own directory.
 
-**bash_banned_tool blocking**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere.
-
+**bash_banned_tool blocking & gh CLI wrapping**: plugkit blocks grep/find/rg/glob even in pipes (e.g., `| grep foo`). This is intentional security behavior but overly restrictive. Workaround: avoid these tools in pipes. Fix requires updating `rs-plugkit/src/hook/pre_tool_use.rs` to only block if command *starts with* the tool name, not when present anywhere. Additionally, `gh` CLI commands (e.g., `gh run list`, `gh run view`) are not in the whitelist and must be wrapped in `exec:bash` — direct invocation via Bash tool returns "only accepts these exact formats" error. This applies to all session harnesses using the plugkit hook (gm, rs-exec, rs-search, rs-codeinsight, rs-plugkit repos).
 
 **rs-exec browser cleanup on session end (FIXED)**: When a Claude Code session ends via idle timeout, the spawned browser process was left running, causing zombie tabs on reconnect. Fixed in rs-exec commit `d9e15a3` — `SessionCleanup` command now calls `runtime::kill_session_browser()` to clean up the browser process and port mapping when the session ends. This cascades to all downstream tools via CI.
 
