@@ -67,9 +67,9 @@ Only git in bash directly. `Bash(node/npm/npx/bun)` = violations. File writes vi
 - Target under 12s per exec call; split work across multiple calls only when dependencies require it
 - Prefer a single well-structured exec that does 5 things over 5 sequential execs
 
-## INVERSE ATLAS LEGITIMACY GATE — EARNED SPECIFICITY
+## LEGITIMACY GATE — EARNED SPECIFICITY
 
-Before the pre-emit run, apply the Inverse Atlas check from `twin-atlas`. For every claim, assertion, or specific value about to land in a file, answer:
+Before the pre-emit run, apply the legitimacy check from `governance`. For every claim, assertion, or specific value about to land in a file, answer:
 
 1. **Earned specificity** — does the claim trace to a witnessed mutable (`authorization=witnessed`), or is it inflated from a weak prior?
 2. **Repair legality** — is this a local candidate repair being dressed up as a structural repair? If yes, either downgrade the scope or snake back to PLAN for structural work.
@@ -113,8 +113,8 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 
 ## GATE CONDITIONS (all true simultaneously before advancing)
 
-- Inverse Atlas legitimacy gate passed: every claim traces to `authorization=witnessed`, no weak-prior inflation, no local-candidate-dressed-as-structural, lawful downgrade considered and either taken or explicitly justified, live competing routes preserved
-- None of the five refused collapses (`twin-atlas`): route→authorization | candidate→structural | hidden→public-law | cleanliness→legitimacy | one-route→universal-closure
+- Legitimacy gate passed: every claim traces to `authorization=witnessed`, no weak-prior inflation, no local-candidate-dressed-as-structural, lawful downgrade considered and either taken or explicitly justified, live competing routes preserved
+- None of the five refused collapses (`governance`): route→authorization | candidate→structural | hidden→public-law | cleanliness→legitimacy | one-route→universal-closure
 
 - Pre-emit debug passed with real inputs and error inputs
 - Post-emit verification matches pre-emit exactly

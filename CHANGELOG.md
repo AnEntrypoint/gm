@@ -1,9 +1,9 @@
-## 2026-04-22 - Twin Atlas governance layer in skill chain
+## 2026-04-22 - Governance layer in skill chain
 
-- New `twin-atlas` skill: governance reference encoding Forward Atlas (7 route families), Bridge (weak-prior discipline), Inverse Atlas (earned-specificity / lawful-downgrade), 16-failure taxonomy, 4 state planes (route_fit / authorization / repair_legality / hidden_decision_posture), ΔS/λ/ε/Coverage quality metrics, and 8-case governance stress suite (M1/F1/C1/H1/S1/B1/A1/D1). Adapted from WFGY 4.0 Twin Atlas.
+- New `governance` skill: encodes route discovery (7 route families), weak-prior bridge, legitimacy gate (earned specificity / lawful downgrade), 16-failure taxonomy, 4 state planes (route_fit / authorization / repair_legality / hidden_decision_posture), ΔS/λ/ε/Coverage quality metrics, and 8-case governance stress suite (M1/F1/C1/H1/S1/B1/A1/D1).
 - `planning` skill: route_family tagging + failure-mode mapping required on `.prd` items with emission impact; .prd YAML schema gains `route_family`, `failure_modes`, `route_fit`, `authorization`; competing routes kept live until witnessed dominance.
-- `gm-execute` skill: Bridge discipline — hypotheses from PLAN arrive as weak priors, never as authorization; witnessed probe required before `authorization=witnessed`. Quality metrics ΔS=0 / λ≥2 / ε intact / Coverage≥0.70 gate UNKNOWN→KNOWN transition.
-- `gm-emit` skill: Inverse Atlas legitimacy gate prior to pre-emit — earned specificity, repair legality, lawful downgrade preferred over forced closure, live-alternative preservation. Five refused collapses enumerated in gate conditions.
+- `gm-execute` skill: weak-prior bridge — hypotheses from PLAN arrive as weak priors, never as authorization; witnessed probe required before `authorization=witnessed`. Quality metrics ΔS=0 / λ≥2 / ε intact / Coverage≥0.70 gate UNKNOWN→KNOWN transition.
+- `gm-emit` skill: legitimacy gate prior to pre-emit — earned specificity, repair legality, lawful downgrade preferred over forced closure, live-alternative preservation. Five refused collapses enumerated in gate conditions.
 - `gm-complete` skill: `stress_suite_clear` + `hidden_decision_posture=closed` added as completion mutables; hygiene sweep step 15 walks finished change through the 8 stress cases.
 - Built to all 10 platforms (gm-cc/gc/oc/codex/kilo/qwen/hermes/vscode/cursor/copilot-cli/jetbrains).
 

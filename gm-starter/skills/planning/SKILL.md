@@ -75,11 +75,11 @@ Planning = exhaustive fault-surface enumeration. For every aspect of the task:
 
 **Fault surfaces**: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency hazards | integration seams | backwards compatibility | rollback paths | deployment steps | CI/CD correctness
 
-**Route family (Forward Atlas — `twin-atlas` skill)**: every `.prd` item is tagged with at least one of the 7 route families — `grounding | reasoning | state | execution | observability | boundary | representation`. The family disciplines the repair move. Bug in `grounding` does not get a `reasoning` fix; bug in `boundary` does not get a `state` fix. Mis-routed repair = wasted EXECUTE pass + snake back to PLAN. Add `route_family:` to the item YAML.
+**Route family (`governance` skill)**: every `.prd` item is tagged with at least one of the 7 route families — `grounding | reasoning | state | execution | observability | boundary | representation`. The family disciplines the repair move. Bug in `grounding` does not get a `reasoning` fix; bug in `boundary` does not get a `state` fix. Mis-routed repair = wasted EXECUTE pass + snake back to PLAN. Add `route_family:` to the item YAML.
 
-**Failure-mode mapping**: cross-reference against the 16-failure taxonomy in `twin-atlas`. If the fault you are enumerating does not map to any entry, either you have found a 17th mode (add to twin-atlas) or the fault is not yet named sharply enough — refine until it maps. Items with no failure-mode mapping SHIP silent bugs.
+**Failure-mode mapping**: cross-reference against the 16-failure taxonomy in `governance`. If the fault you are enumerating does not map to any entry, either you have found a 17th mode (add to the governance skill) or the fault is not yet named sharply enough — refine until it maps. Items with no failure-mode mapping SHIP silent bugs.
 
-**Competing routes stay live**: if two route families plausibly explain the same symptom, keep both alive in the PRD until witnessed execution makes one dominant. Collapsing to one route pre-witness = route-into-authorization leak (see `twin-atlas` — the first of five refused collapses).
+**Competing routes stay live**: if two route families plausibly explain the same symptom, keep both alive in the PRD until witnessed execution makes one dominant. Collapsing to one route pre-witness = route-into-authorization leak (see `governance` — the first of five refused collapses).
 
 **MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation task, not addition. `exec:codesearch` indexes PDFs page-by-page alongside source — spec PDFs, papers, vendor manuals, and RFCs are searchable as code. When planning against a protocol, hardware, or compliance requirement, search the PDF corpus the same way you search source: two words, iterate. A constraint the PRD is missing because it only lives in a PDF is a fault surface — enumerate doc PDFs as scan targets during mutable discovery.
 
@@ -135,7 +135,7 @@ Path: `./.gm/prd.yml`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Ensure `
     - failure mode
 ```
 
-`route_family`, `failure_modes`, `route_fit`, `authorization` come from `twin-atlas`. Required for items with emission impact (architecture, public API, contract change). Small surgical edits may omit. `authorization` starts `none`; gm-execute raises it to `weak_prior` on hypothesis, `witnessed` only when execution has proven it.
+`route_family`, `failure_modes`, `route_fit`, `authorization` are defined in the `governance` skill. Required for items with emission impact (architecture, public API, contract change). Small surgical edits may omit. `authorization` starts `none`; gm-execute raises it to `weak_prior` on hypothesis, `witnessed` only when execution has proven it.
 
 Status: `pending` → `in_progress` → `completed` (remove completed items). Effort: small <15min | medium <45min | large >1h.
 
@@ -175,9 +175,9 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 ## SKILL REGISTRY
 
-`gm-execute` → `gm-emit` → `gm-complete` → `update-docs` | `browser` | `twin-atlas` (governance reference, read once per session) | `memorize` (sub-agent, background only)
+`gm-execute` → `gm-emit` → `gm-complete` → `update-docs` | `browser` | `governance` (read once per session) | `memorize` (sub-agent, background only)
 
-`twin-atlas` carries the Forward/Bridge/Inverse governance model, 7 route families, 16 failure taxonomy, 4 state planes, ΔS/λ/ε/Coverage metrics, and the 8-case governance stress suite. Load once per session at the top of `planning` so protocols stay fresh across phases.
+`governance` carries the route-discovery / weak-prior-bridge / legitimacy-gate model, 7 route families, 16 failure taxonomy, 4 state planes, ΔS/λ/ε/Coverage metrics, and the 8-case governance stress suite. Load once per session at the top of `planning` so protocols stay fresh across phases.
 
 `memorize`: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what>')`
 
