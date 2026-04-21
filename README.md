@@ -11,7 +11,6 @@ Convention-driven multi-platform AI plugin generator. One source, 10 platforms.
 [![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)
 [![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)
 
-
 ## GitHub Pages
 
 ### CLI Tools
