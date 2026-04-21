@@ -4,6 +4,14 @@ Convention-driven multi-platform AI plugin generator. One source, 10 platforms.
 
 **Hub page:** https://AnEntrypoint.github.io/gm
 
+## Metrics
+
+[![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)
+[![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)
+[![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)
+[![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)
+
+
 ## GitHub Pages
 
 ### CLI Tools
