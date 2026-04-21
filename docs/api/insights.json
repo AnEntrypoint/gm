@@ -1,7 +1,17 @@
 {
-  "generated": "2026-04-13T14:13:34.217Z",
+  "generated": "2026-04-21T22:30:17.353838+00:00",
   "period_weeks": 4,
   "top_reviewers": [],
-  "top_files": [],
-  "velocity": []
+  "top_files": [
+    {
+      "path": "platforms/cli-config-shared.js",
+      "changes": 1
+    }
+  ],
+  "velocity": [
+    {
+      "week": "2026-04-20",
+      "merged": 1
+    }
+  ]
 }
