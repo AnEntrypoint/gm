@@ -64,6 +64,39 @@ exec:runner
 start|stop|status
 ```
 
+## GIT PUSH = CI WATCH — MANDATORY EVERY TIME
+
+A `git push` that is not immediately followed by a CI watch is an unwitnessed execution and a violation of this contract. The push triggers GitHub Actions workflows; those workflows are remote execution whose results are ground truth. Every push — intermediate commits during EXECUTE, doc pushes during UPDATE-DOCS, every push — triggers this same protocol:
+
+1. Immediately after `git push` succeeds, list the runs the push triggered:
+```
+exec:bash
+gh run list --limit 5 --json databaseId,name,status,conclusion,headBranch,event,createdAt
+```
+
+2. For every run with `status` = `queued` or `in_progress` (from this push), watch until terminal:
+```
+exec:bash
+gh run watch <run_id> --exit-status
+```
+
+3. On failure, inspect logs and decide:
+```
+exec:bash
+gh run view <run_id> --log-failed
+```
+- Caused by your change → regress to the appropriate phase (emit for file issues, execute for logic, planning for new unknowns), fix, re-push, re-watch.
+- Pre-existing (not introduced by this session) → document as a known issue in CLAUDE.md with the failing workflow name and reason, then continue. A pre-existing failure is still a KNOWN mutable, just resolved differently.
+
+4. Cascade: a push may trigger downstream repo workflows (see AGENTS.md pipeline notes). After local CI reaches terminal state, check downstream:
+```
+exec:bash
+gh run list --repo AnEntrypoint/<downstream> --limit 3 --json databaseId,name,status,conclusion
+```
+Watch and triage the same way.
+
+**Zero silent pushes.** Not watching a CI run you triggered = operating outside this contract. This rule supersedes any implicit assumption that CI can be "checked later in gm-complete" — if you are about to push, you are about to execute code remotely, so the watch happens now.
+
 ## CODEBASE EXPLORATION
 
 `exec:codesearch` is the preferred semantic search. **Glob, Explore, WebSearch are hook-blocked. Grep/Read ARE available — use them for exact-match or direct reads.**
