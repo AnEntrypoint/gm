@@ -1681,6 +1681,7 @@ const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
       PreToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook pre-tool-use`, timeout: 3600 }] }],
       SessionStart: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook session-start`, timeout: 180000 }] }],
       UserPromptSubmit: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook prompt-submit`, timeout: 60000 }] }],
+      PreCompact: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook pre-compact`, timeout: 30000 }] }],
       Stop: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop`, timeout: 300000 }] }, { matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop-git`, timeout: 60000 }] }]
     };
   },
