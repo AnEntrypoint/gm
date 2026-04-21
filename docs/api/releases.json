@@ -1,4 +1,11 @@
 {
-  "generated": "2026-04-13T14:13:34.217Z",
-  "releases": []
+  "timestamp": "2026-04-21T22:24:11.924639Z",
+  "releases": [
+    {
+      "tag": "v2.1.0",
+      "name": "feat: Add repository installation mode to glootie-cc v2.1.0",
+      "date": "2026-02-05",
+      "url": "https://github.com/AnEntrypoint/gm/releases/tag/v2.1.0"
+    }
+  ]
 }
