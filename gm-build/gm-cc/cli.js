@@ -29,7 +29,9 @@ try {
   filesToCopy.forEach(([src, dst]) => copyRecursive(path.join(srcDir, src), path.join(destDir, dst)));
 
   const { execSync: exec } = require('child_process');
-  const run = (cmd) => { try { return exec(cmd, { stdio: 'inherit', env: { ...process.env, CLAUDECODE: '' } }); } catch (e) { console.warn('Warning:', e.message); } };
+  const sep = process.platform === 'win32' ? ';' : ':';
+  const sanitizedPath = (process.env.PATH || '').split(sep).filter(p => !/[\\/]node_modules[\\/]\.bin$/.test(p.replace(/[\\/]+$/, ''))).join(sep);
+  const run = (cmd) => { try { return exec(cmd, { stdio: 'inherit', env: { ...process.env, PATH: sanitizedPath, CLAUDECODE: '' } }); } catch (e) { console.warn('Warning:', e.message); } };
 
   const gmccHookFiles = ['post-tool-use-hook.js','pre-tool-use-hook.js','prompt-submit-hook.js','session-start-hook.js','stop-hook-git.js','stop-hook.js'];
   const gmccAgentFiles = ['gm.md'];
@@ -55,13 +57,12 @@ try {
   run('claude plugin install gm@gm-cc --scope user');
   const knownMarketplacesPath = path.join(homeDir, '.claude', 'plugins', 'known_marketplaces.json');
   try {
-    let km = {};
-    try { km = JSON.parse(fs.readFileSync(knownMarketplacesPath, 'utf-8')); } catch (e) {}
-    if (!km['gm-cc']) km['gm-cc'] = {};
-    km['gm-cc'].autoUpdate = true;
-    km['gm-cc'].lastUpdated = new Date().toISOString();
-    fs.mkdirSync(path.dirname(knownMarketplacesPath), { recursive: true });
-    fs.writeFileSync(knownMarketplacesPath, JSON.stringify(km, null, 2) + '\n');
+    const km = JSON.parse(fs.readFileSync(knownMarketplacesPath, 'utf-8'));
+    if (km && km['gm-cc'] && km['gm-cc'].source && km['gm-cc'].installLocation) {
+      km['gm-cc'].autoUpdate = true;
+      km['gm-cc'].lastUpdated = new Date().toISOString();
+      fs.writeFileSync(knownMarketplacesPath, JSON.stringify(km, null, 2) + '\n');
+    }
   } catch (e) {}
 
   const destPath = process.platform === 'win32' ? destDir.replace(/\\/g, '/') : destDir;

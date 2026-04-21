@@ -2,15 +2,11 @@
   "name": "gm-site",
   "private": true,
   "scripts": {
-    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node node_modules/@tailwindcss/cli/dist/index.mjs -i input.css -o ../docs/styles.css --minify && cp index.html ../docs/index.html"
+    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node -e \"require('fs').copyFileSync('input.css','../docs/styles.css')\" && cp index.html ../docs/index.html"
   },
   "dependencies": {
     "esbuild": "^0.28.0",
     "flatspace": "^1.0.11",
-    "rippleui": "^1.12.1",
     "webjsx": "0.0.70"
-  },
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.2.2"
   }
 }

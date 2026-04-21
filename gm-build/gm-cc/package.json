@@ -52,5 +52,10 @@
   ],
   "peerDependencies": {
     "@anthropic-ai/claude-code": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/claude-code": {
+      "optional": true
+    }
   }
 }
