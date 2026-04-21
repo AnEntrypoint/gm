@@ -56,7 +56,7 @@ One call per fact. **End-of-turn self-check** mandatory: any resolved unknown un
 - `git_pushed=UNKNOWN` until `git log origin/main..HEAD --oneline` returns empty
 - `ci_passed=UNKNOWN` until all GitHub Actions runs triggered by the push reach `conclusion: success`
 - `prd_empty=UNKNOWN` until `.gm/prd.yml` is deleted (not just empty — file must not exist)
-- `stress_suite_clear=UNKNOWN` until the change has been mentally walked through every applicable case in the `twin-atlas` governance stress suite (M1, F1, C1, H1, S1, B1, A1, D1) and none flunks. Flunk = regress to the phase that owns the gap.
+- `stress_suite_clear=UNKNOWN` until the change has been mentally walked through every applicable case in the `governance` stress suite (M1, F1, C1, H1, S1, B1, A1, D1) and none flunks. Flunk = regress to the phase that owns the gap.
 - `hidden_decision_posture=open` until CI green. Posture advances `open → down_weighted` only when some evidence is in, `down_weighted → closed` only when CI green + stress suite clear. Closing early = collapse #3 (hidden orchestration into public law).
 
 All must resolve to KNOWN (or `closed` for posture) before COMPLETE. Any UNKNOWN = absolute barrier.
@@ -184,7 +184,7 @@ Before declaring complete, sweep the entire codebase for violations:
 12. **memorize** → every fact surfaced during verification that would have saved this session's time if it had been in memory at the start (CI timing, flaky-test patterns, environment quirks, runtime behaviors, user preferences stated this session) is handed off via a background memorize call at the moment of resolution. One call per fact, non-blocking. `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`
 13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
 14. **GitHub Pages** → check if repo has a GH Pages site. If `.github/workflows/pages.yml` is absent OR `docs/index.html` is absent: invoke the `pages` skill to scaffold the site before advancing.
-15. **Governance stress-suite sweep** (`twin-atlas`) — walk the finished change against every applicable case: M1 missing-evidence-forced-decision, F1 unsourced-number, C1 ambiguous-clause, H1 contradictory-witnesses, S1 attribution-under-pressure, B1 RCA-live-alternatives, A1 authenticity-partial-signals, D1 deploy-gate-under-flake. Ask per case: did the change over-commit, hide contradiction, or treat surface appearance as evidence? Any flunk = regress to the owning phase. The 8 legal outcomes must hold: illegal commitments=0, evidence-boundary violations=0, lawful downgrades available=8, outlier visibility preserved.
+15. **Governance stress-suite sweep** (`governance`) — walk the finished change against every applicable case: M1 missing-evidence-forced-decision, F1 unsourced-number, C1 ambiguous-clause, H1 contradictory-witnesses, S1 attribution-under-pressure, B1 RCA-live-alternatives, A1 authenticity-partial-signals, D1 deploy-gate-under-flake. Ask per case: did the change over-commit, hide contradiction, or treat surface appearance as evidence? Any flunk = regress to the owning phase. The 8 legal outcomes must hold: illegal commitments=0, evidence-boundary violations=0, lawful downgrades available=8, outlier visibility preserved.
 
 Any violation found = fix immediately before advancing.
 

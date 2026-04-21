@@ -17,7 +17,7 @@ Transitions = state changes, not reminders. Phase exit condition met → next Sk
 
 `gm-execute` = execution contract. Defines "running code" across every phase: `exec:<lang>` = only runner; `exec:codesearch` = only exploration; witnessed output = only ground truth; import real modules over reimplementation. Execution happens in every phase, not only EXECUTE. About to run anything, `gm-execute` protocols not fresh in context → operating outside contract → reload `gm-execute` first.
 
-`twin-atlas` = governance reference. Forward Atlas (route discovery, 7 route families, 16 failure taxonomy) feeds `planning`. Bridge (weak-prior transfer — plausibility never equals authorization) constrains `gm-execute`. Inverse Atlas (earned specificity, lawful downgrade, five refused collapses) gates `gm-emit` and `gm-complete`. Load once at session start.
+`governance` = governance reference. Route discovery (7 route families, 16 failure taxonomy) feeds `planning`. Weak-prior bridge (plausibility never equals authorization) constrains `gm-execute`. Legitimacy gate (earned specificity, lawful downgrade, five refused collapses) gates `gm-emit` and `gm-complete`. Load once at session start.
 
 ## FRAGILE LEARNINGS — HARD RULE
 

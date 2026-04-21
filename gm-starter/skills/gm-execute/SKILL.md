@@ -30,19 +30,19 @@ New unknown surfaced by a run → stop, state-regress to `planning`, restart cha
 
 Each mutable: name | expected | current | resolution method. Execute → witness → assign → compare. Zero variance = resolved. Unresolved after 2 passes = new unknown = snake to `planning`. Never narrate past an unresolved mutable.
 
-## BRIDGE DISCIPLINE — WEAK PRIORS DO NOT AUTHORIZE
+## WEAK-PRIOR BRIDGE — PRIORS DO NOT AUTHORIZE
 
-EXECUTE receives route candidates from PLAN. Per `twin-atlas` Bridge: **those candidates arrive as weak priors only — structural value preserved, authorization NOT transferred**. Route plausibility ≠ authorization. A plausible route earns the right to be TESTED, not the right to be BELIEVED.
+EXECUTE receives route candidates from PLAN. Per the weak-prior rule in `governance`: **those candidates arrive as weak priors only — structural value preserved, authorization NOT transferred**. Route plausibility ≠ authorization. A plausible route earns the right to be TESTED, not the right to be BELIEVED.
 
 - Prior from PLAN: `authorization=weak_prior`. Permitted use: pick the next witnessed probe.
 - After witnessed probe succeeds: `authorization=witnessed`. Permitted use: feed into EMIT.
-- Collapsing `weak_prior` to `witnessed` without a witnessed probe = route-into-authorization leak (collapse #1 in `twin-atlas`). Snake to PLAN.
+- Collapsing `weak_prior` to `witnessed` without a witnessed probe = route-into-authorization leak (collapse #1 in `governance`). Snake to PLAN.
 
 Rhetorical inflation also strips here: "the plan says" / "we agreed that" / "obviously X" are prior-statements, not witnessed-facts. Restate as weak prior, run the probe, witness, only then authorize.
 
 ## QUALITY METRICS — APPLY BEFORE MARKING KNOWN
 
-Every mutable passes all four before status flips UNKNOWN → KNOWN (see `twin-atlas` for full definitions):
+Every mutable passes all four before status flips UNKNOWN → KNOWN (see `governance` for full definitions):
 
 - **ΔS = 0** — witnessed output equals expected
 - **λ ≥ 2** — two independent paths agree (different search, different caller, different import), not just one confirmation

@@ -1,19 +1,19 @@
 ---
-name: twin-atlas
-description: Governance reference invoked by PLAN/EXECUTE/EMIT/VERIFY. Separates route discovery (Forward Atlas) from weak-prior handoff (Bridge) from earned-emission legitimacy (Inverse Atlas). Encodes 16-failure taxonomy, 4 state planes, ΔS/λ/ε/Coverage metrics, governance stress suite. Adapted from WFGY 4.0 Twin Atlas.
+name: governance
+description: Governance reference invoked by PLAN/EXECUTE/EMIT/VERIFY. Separates route discovery (PLAN) from weak-prior handoff (EXECUTE) from earned-emission legitimacy (EMIT/VERIFY). Encodes 16-failure taxonomy, 4 state planes, ΔS/λ/ε/Coverage metrics, governance stress suite.
 ---
 
-# Twin Atlas — Route, Bridge, Legitimacy
+# Governance — Route, Bridge, Legitimacy
 
-Central governance reference. Three-module architecture separates three failure surfaces every phase must respect simultaneously:
+Central governance reference. Three roles separate three failure surfaces every phase must respect simultaneously:
 
-1. **Forward Atlas** — route-first structural orientation. Where could this fail? What family of fault does it live in? Owned by `planning`.
-2. **Bridge** — advisory-only weak-prior transfer. Route plausibility never converts into authorization. Owned by `gm-execute`.
-3. **Inverse Atlas** — legitimacy-first emission governance. Did this answer earn its requested strength? Owned by `gm-emit` and `gm-complete`.
+1. **Route discovery** — route-first structural orientation. Where could this fail? What family of fault does it live in? Owned by `planning`.
+2. **Weak-prior bridge** — advisory-only transfer. Route plausibility never converts into authorization. Owned by `gm-execute`.
+3. **Legitimacy gate** — earned-emission governance. Did this answer earn its requested strength? Owned by `gm-emit` and `gm-complete`.
 
-Neither route-first nor legitimacy-first alone suffices. Bridge exists precisely to stop route plausibility from masquerading as authorization.
+Neither route-first nor legitimacy-first alone suffices. The weak-prior bridge exists precisely to stop route plausibility from masquerading as authorization.
 
-## The Five Collapses Twin Atlas Refuses
+## The Five Collapses Governance Refuses
 
 A conclusion ships only when none of these has occurred:
 
@@ -25,7 +25,7 @@ A conclusion ships only when none of these has occurred:
 
 When in doubt: preserve ambiguity. Lawful downgrade beats forced closure.
 
-## The 7 Route Families (Forward Atlas)
+## The 7 Route Families
 
 Every planned item belongs to at least one family. Naming the family disciplines the repair move.
 
@@ -41,7 +41,7 @@ Every planned item belongs to at least one family. Naming the family disciplines
 
 Route family gets written into the `.prd` item. Repair attempted in the wrong family = wasted work.
 
-## The 16 Failure Modes (Problem Map)
+## The 16 Failure Modes
 
 Routing taxonomy. Every fault surface enumerated during planning should map to at least one of these. Missing mapping = unexamined surface.
 
@@ -109,11 +109,11 @@ Legal outcomes:
 - Lawful downgrade: 8 of 8 (always available as an option, always taken when warranted)
 - Outlier visibility: preserved (downgrade over hiding)
 
-## How Each Phase Applies Twin Atlas
+## How Each Phase Applies Governance
 
-- **planning** — enumerates route families (Forward Atlas). Tags every `.prd` item with its family and failure-mode IDs. Writes `route_fit` and the expected `authorization` level needed.
-- **gm-execute** — treats every prior decision as a weak prior (Bridge). Only `witnessed` execution raises authorization. ΔS/λ/ε/Coverage checks on every mutable.
-- **gm-emit** — Inverse Atlas gate. Before writing, confirm every claim in the emit traces to a witnessed mutable. Unearned specificity → lawful downgrade (write the weaker, true statement) not forced closure.
+- **planning** — enumerates route families. Tags every `.prd` item with its family and failure-mode IDs. Writes `route_fit` and the expected `authorization` level needed.
+- **gm-execute** — treats every prior decision as a weak prior. Only `witnessed` execution raises authorization. ΔS/λ/ε/Coverage checks on every mutable.
+- **gm-emit** — legitimacy gate. Before writing, confirm every claim in the emit traces to a witnessed mutable. Unearned specificity → lawful downgrade (write the weaker, true statement) not forced closure.
 - **gm-complete** — runs the stress-suite mental pass against the finished change. Closes `hidden_decision_posture` only with CI green.
 
 ## Not Every Answer Has Earned the Right to Exist
