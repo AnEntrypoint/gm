@@ -18,5 +18,5 @@ if (platform === 'win32') {
   bin = path.join(dir, arch === 'arm64' || arch === 'aarch64' ? 'plugkit-linux-arm64' : 'plugkit-linux-x64');
 }
 
-const result = spawnSync(bin, process.argv.slice(2), { stdio: 'inherit' });
+const result = spawnSync(bin, process.argv.slice(2), { stdio: 'inherit', windowsHide: true });
 process.exit(result.status ?? 1);

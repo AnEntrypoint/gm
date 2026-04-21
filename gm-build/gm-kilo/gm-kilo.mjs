@@ -15,7 +15,7 @@ function runPlugkit(args) {
   const bin = join(__dirname, '..', 'bin', 'plugkit.js');
   if (!existsSync(bin)) return '';
   try {
-    const r = spawnSync('node', [bin, ...args], { encoding: 'utf-8', timeout: 15000 });
+    const r = spawnSync('node', [bin, ...args], { encoding: 'utf-8', timeout: 15000, windowsHide: true });
     return (r.stdout || '').trim() || (r.stderr || '').trim();
   } catch(e) { return ''; }
 }
@@ -45,7 +45,7 @@ function tryLangPlugin(lang, code, cwd) {
 
 function runExecSync(rawLang, code, cwd) {
   const lang = LANG_ALIASES[rawLang] || rawLang || 'nodejs';
-  const opts = { encoding: 'utf-8', timeout: 30000, ...(cwd && { cwd }) };
+  const opts = { encoding: 'utf-8', timeout: 30000, windowsHide: true, ...(cwd && { cwd }) };
   const out = (r) => { const o = (r.stdout||'').trimEnd(), e = stripFooter(r.stderr||'').trimEnd(); return o && e ? o+'\n[stderr]\n'+e : o||e||'(no output)'; };
   if (lang === 'codesearch' || lang === 'search') return runPlugkit(['search', '--path', cwd || process.cwd(), code.trim()]);
   if (lang === 'runner') return runPlugkit(['runner', code.trim()]);
@@ -154,7 +154,7 @@ export async function GmPlugin({ directory }) {
           throw new Error('The search/explore skill is blocked. Use exec:codesearch instead.\n\nexec:codesearch\n<natural language description>');
         }
       }
-      if (input.tool === 'write' || input.tool === 'Write' || input.tool === 'edit') {
+      if (input.tool === 'write' || input.tool === 'Write' || input.tool === 'edit' || input.tool === 'Edit') {
         const fp = (output.args && output.args.file_path) || (input.args && input.args.file_path) || '';
         const base = basename(fp).toLowerCase();
         const ext = extname(fp);
@@ -180,6 +180,17 @@ export async function GmPlugin({ directory }) {
       }
       const result = runExecSync(m[1]||'', m[2], output.args.workdir || directory);
       output.args = { ...output.args, command: safePrintf('exec:'+(m[1]||'nodejs')+' output:\n\n'+result) };
-    }
+    },
+    'message.updated': async (input, output) => {
+      try {
+        const role = input && input.message && input.message.info && input.message.info.role;
+        if (role !== 'user') return;
+        runPlugkit(['hook', 'prompt-submit']);
+      } catch(e) {}
+    },
+    'session.closing': async (input, output) => {
+      try { runPlugkit(['hook', 'stop']); } catch(e) {}
+      try { runPlugkit(['hook', 'stop-git']); } catch(e) {}
+    },
   };
 }

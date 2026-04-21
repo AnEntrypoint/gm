@@ -1,11 +1,15 @@
 ---
 name: gm-execute
-description: EXECUTE phase. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
+description: EXECUTE phase AND the foundational execution contract for every skill. Every exec:<lang> run, every witnessed check, every code search, in every phase, follows this skill's discipline. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
 ---
 
 # GM EXECUTE — Resolving Every Unknown
 
-You are in the **EXECUTE** phase. Resolve every named mutable via witnessed execution. Any new unknown = stop, snake to `planning`, restart chain.
+You are in the **EXECUTE** phase. Every mutable on `.gm/prd.yml` carries UNKNOWN status until witnessed execution resolves it. Job here = the witnessing.
+
+This skill also carries the **execution contract** applying in every phase, not only this one. Planning runs codebase scans; EMIT runs pre-emit diagnostics; VERIFY runs integration tests and CI watches — all executions, all subject to discipline below. Other skills reference this skill because protocols stay live in context only while this text is nearby. About to run anything → this skill freshly loaded OR operating outside contract.
+
+New unknown surfaced by a run → stop, state-regress to `planning`, restart chain.
 
 **GRAPH POSITION**: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
 - **Entry**: .prd exists with all unknowns named. Entered from `planning` or via snake from EMIT/VERIFY.
@@ -62,19 +66,28 @@ start|stop|status
 
 ## CODEBASE EXPLORATION
 
-`exec:codesearch` is the only way to search. **Glob, Grep, Read, Explore, WebSearch are hook-blocked.**
+`exec:codesearch` is the preferred semantic search. **Glob, Explore, WebSearch are hook-blocked. Grep/Read ARE available — use them for exact-match or direct reads.**
 
 ```
 exec:codesearch
 <two-word query to start>
 ```
 
-**Mandatory search protocol** (from `code-search` skill):
+`exec:codesearch` indexes PDFs the same way it indexes source — spec PDFs, datasheets, papers, and RFCs return as first-class hits with `file:page` citations. When resolving a mutable that depends on external specification (protocol field, register layout, compliance text), search the PDF corpus before reimplementing or assuming. Unwitnessed assumption from a doc you did not search is an UNKNOWN.
+
+**Mandatory search protocol** for codesearch (from `code-search` skill):
 1. Start with exactly **two words** — never one, never a sentence
 2. No results → change one word (synonym or related term)
 3. Still no results → add a third word to narrow scope
 4. Keep changing or adding words each pass until content is found
 5. Minimum 4 attempts before concluding content is absent
+
+**When codesearch is the wrong tool:**
+- Exact symbol / string / regex match: use `Grep` tool directly, or `exec:nodejs` with `execSync("rg -n 'PATTERN'")`.
+- Known file path: use `Read` tool directly.
+- Find files by name pattern: hook-blocked `Glob` would help; use `exec:nodejs + fs.readdirSync` or `exec:nodejs + execSync("rg --files | rg PATTERN")`.
+
+**Platform note — exec:bash on Windows:** runs real bash (git-bash) when installed, falls back to PowerShell otherwise. If you see a POSIX-syntax parse error (`[ -n ...]`, `&&`, `if/then/fi`), bash wasn't found — either install git-bash or rewrite in `exec:nodejs`.
 
 ## DIAGNOSTIC PROTOCOL — IMPORT-BASED EXECUTION
 
@@ -117,7 +130,7 @@ Invoke `browser` skill. Exhaust each level before advancing to next:
 
 ## GROUND TRUTH ENFORCEMENT
 
-Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No .test.js/.spec.js. Delete on discovery. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
+Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No scattered test files (.test.js, .spec.js, __tests__/) — delete on discovery. All test coverage belongs in the single root `test.js`. If `test.js` does not exist, create it. Every behavior change updates `test.js`. Every bug fix adds a regression case. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
 
 **SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, regress to `planning` with restructuring instructions instead of continuing.
 
@@ -125,13 +138,17 @@ Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnosti
 
 **CODE QUALITY PROCESS**: The goal is minimal code / maximal DX. When writing or reviewing any block of code, run this mental process: (1) What native language/platform feature already does this? Use it. (2) What library already solves this pattern? Use it. (3) Can this branch/loop be a data structure — a map, array, or pipeline — where the structure itself enforces correctness? Make it so. (4) Would a newcomer read this top-to-bottom and immediately understand what it does without running it? If no, restructure. One-liners that compress logic are the opposite of DX — clarity comes from structure, not brevity. Dispatch tables, pipeline chains, and native APIs eliminate entire categories of bugs by making wrong states unrepresentable.
 
-## MEMORY
+## FRAGILE LEARNINGS
 
-When any mutable resolves from UNKNOWN to KNOWN (zero variance confirmed), launch memorize subagent in background — non-blocking, execution continues:
+Every UNKNOWN→KNOWN transition = fact living only in current context. Session ends. Next agent starts blind. `memorize` subagent = only bridge. One background call per fact at moment of resolution:
 
-`Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')`
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<resolved fact>')
+```
 
-Qualifies for memorization: new API shapes discovered, environment differences, behavioral constraints, runtime quirks, user feedback observed during execution.
+Non-blocking; work continues. Highest-value facts = ones that would have saved today's time if in memory at start: API shapes resolved by import-and-witness, environment quirks, runtime constraints, user-stated preferences, project-specific cadences. Resolve a mutable, skip memorize = forget on purpose.
+
+Self-check: after any witnessed run that resolved something, next action = another witnessing run (more mutables) OR `Agent` memorize call (fact was memorable). Neither = something evaporated.
 
 ## DO NOT STOP
 
@@ -139,9 +156,9 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | test files | fallback/demo modes | Glob/Grep/Read/Explore (hook-blocked — use exec:codesearch) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | Glob/Explore (hook-blocked — use exec:codesearch, Grep or Read) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
 
-**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/test files on discovery | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
+**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/scattered test files on discovery | consolidate test coverage into root test.js | add regression case to test.js for every bug fix | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
 
 ---
 

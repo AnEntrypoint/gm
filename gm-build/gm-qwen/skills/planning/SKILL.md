@@ -10,18 +10,38 @@ Root of all work. Runs `PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS →
 
 **Entry**: prompt-submit hook → `gm` agent → invoke `planning` skill (here). Also re-entered any time a new unknown surfaces in any phase.
 
+## WHERE YOU ARE
+
+Phase where work shape still unknown. Codebase scans, `exec:codesearch` queries, quick imports to probe APIs = all executions. Execution contract in `gm-execute`; protocols not fresh → runs drift (reimplement over import, narrate over witness). Load first.
+
+## UNKNOWNS = PRODUCT
+
+Output of this phase ≠ task list. Output = enumeration of every fault surface work could fail on. Each unknown named + resolved → cheaper downstream. Each unknown skipped → EMIT/VERIFY surprise → snake back anyway at higher cost.
+
+**Unknown emerges later (EXECUTE, EMIT, VERIFY) → return here. Not failure — machine working as designed.** Later-phase unknown means mutable map incomplete. Come back. Think laterally — what else could this touch, what invariant assumed, what subsystem unexamined? Enumerate newly-visible fault surfaces. Only then push forward.
+
+Patch-around-unknowns-in-place = compounding silent-failure debt. Regress early = stay inside contract.
+
+## FRAGILE LEARNINGS
+
+Every mutable resolved here (existingImpl absent, dep version confirmed, user constraint stated, build quirk observed) = fact that dies on context compaction unless handed off. `memorize` subagent = handoff. One background call per fact at moment of resolution. Non-blocking; continue.
+
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact>')
+```
+
 ## STATE MACHINE
 
 **FORWARD**: PLAN complete → `gm-execute` | EXECUTE complete → `gm-emit` | EMIT complete → `gm-complete` | VERIFY .prd remains → `gm-execute` | VERIFY .prd empty+pushed → `update-docs`
 
 **REGRESSIONS**: new unknown at any state → re-invoke `planning` | EXECUTE unresolvable 2 passes → `planning` | EMIT logic error → `gm-execute` | EMIT new unknown → `planning` | VERIFY broken output → `gm-emit` | VERIFY logic wrong → `gm-execute` | VERIFY new unknown → `planning`
 
-**Runs until**: .prd empty AND git clean AND all pushes confirmed AND CI green.
+**Runs until**: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI green.
 
 ## ENFORCEMENT — COMPLETE EVERY TASK END-TO-END
 
 **Cannot respond or stop while**:
-- .prd file exists and has items
+- .gm/prd.yml exists and has items
 - git has uncommitted changes
 - git has unpushed commits
 
@@ -37,13 +57,24 @@ Planning = exhaustive fault-surface enumeration. For every aspect of the task:
 
 **Fault surfaces**: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency hazards | integration seams | backwards compatibility | rollback paths | deployment steps | CI/CD correctness
 
-**MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation task, not addition.
+**MANDATORY CODEBASE SCAN**: For every planned item, add `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation task, not addition. `exec:codesearch` indexes PDFs page-by-page alongside source — spec PDFs, papers, vendor manuals, and RFCs are searchable as code. When planning against a protocol, hardware, or compliance requirement, search the PDF corpus the same way you search source: two words, iterate. A constraint the PRD is missing because it only lives in a PDF is a fault surface — enumerate doc PDFs as scan targets during mutable discovery.
 
 **EXIT PLAN**: zero new unknowns in last pass AND all .prd items have explicit acceptance criteria AND all dependencies mapped → launch subagents or invoke `gm-execute`.
 
 **SELF-LOOP**: new items discovered → add to .prd → plan again.
 
-**Skip planning entirely** if: task is single-step, trivially bounded, zero unknowns, under 5 minutes.
+**Skip planning entirely** (this is the DEFAULT for small work) if ANY of these apply:
+- Single-file, single-concern edit
+- Task is trivially bounded and under ~5 minutes
+- User gave explicit surgical instructions ("change X to Y")
+- Bug fix where root cause is already identified
+- Zero unknowns / no mutables to resolve
+
+Heavy ceremony (PRD + parallel subagents) is for multi-file architectural work or genuinely unknown fault surfaces. Writing a 7-item PRD for a 3-line change is waste. Err toward skipping — if a new unknown surfaces mid-work, THAT is when you regress to planning, not preemptively.
+
+**Contrast examples:**
+- "Fix the hold-detect logic at apcKey25.cpp:163" → SKIP planning. Read, edit, done.
+- "Add drift correction and watchdog and observability across the USB audio path" → DO plan. Multi-file, multiple unknowns.
 
 ## OBSERVABILITY ENUMERATION — MANDATORY EVERY PASS
 
@@ -59,7 +90,7 @@ During every planning pass, enumerate every possible aspect of the app's runtime
 
 ## .PRD FORMAT
 
-Path: `./.prd`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Delete when empty — never leave empty file.
+Path: `./.gm/prd.yml`. YAML via `exec:nodejs` (use `fs.writeFileSync`). Ensure `.gm/` dir exists before writing. Delete when empty — never leave empty file. Delete `.gm/` dir when completely empty.
 
 ```yaml
 - id: kebab-id
@@ -120,7 +151,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 ## MANDATORY DEV WORKFLOW
 
-No comments. No test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
+No comments. No scattered test files. 200-line limit — split before continuing. Fail loud. No duplication. Scan before every edit. Duplicate concern = regress to PLAN. Errors throw with context — no `|| default`, no `catch { return null }`. `window.__debug` exposes all client state. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
 
 **Minimal code / maximal DX process**: Before writing any logic, run this process in order — stop at the first step that resolves the need:
 1. **Native first** — does the language or runtime already do this? Use it exactly as designed.
@@ -129,6 +160,20 @@ No comments. No test files. 200-line limit — split before continuing. Fail lou
 4. **Write last** — only author new logic when the above three are exhausted. New logic = new surface area = new bugs.
 
 When structure eliminates a whole class of wrong states — name that pattern explicitly. Dispatch tables replacing switch chains, pipelines replacing loop-with-accumulator, maps replacing if/else forests — these are not just style preferences, they are correctness properties. Code that cannot be wrong because of how it is shaped is the goal. Readable top-to-bottom without mental simulation = done right. Requires decoding = not done.
+
+## SINGLE INTEGRATION TEST POLICY
+
+Every project maintains exactly one `test.js` at project root. 200-line max. No other test files anywhere — no `.test.js`, `.spec.js`, `__tests__/`, `fixtures/`, `mocks/`. Delete all scattered tests on discovery and consolidate coverage into `test.js`.
+
+**test.js replaces all unit tests.** It tests the real system end-to-end with real data. No mocks, no stubs, no test frameworks. Plain node assertions or process exit codes.
+
+**Creation**: if `test.js` does not exist, create it during EXECUTE phase covering all testable surface of current work.
+
+**Maintenance**: every code change that adds or modifies behavior must update `test.js` to cover it. Every bug fix must add a regression case that would have caught the bug.
+
+**Structure**: group by subsystem, each subsystem gets a section. When approaching 200 lines, compress older stable tests into tighter assertions to make room for new coverage.
+
+**Execution**: `gm-complete` runs `test.js` before allowing completion. Failure = regression to EXECUTE.
 
 ## RESPONSE POLICY
 
@@ -147,6 +192,6 @@ Auto-Clarity: drop caveman for security warnings, irreversible confirmations, am
 **Tier 2**: no_duplication, no_hardcoded_values, modularity
 **Tier 3**: no_comments, convention_over_code
 
-**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create test files | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
+**Never**: `Bash(node/npm/npx/bun)` | skip planning | partial execution | stop while .gm/prd.yml has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | silently swallow errors | duplicate concern | leave comments | create scattered test files (only root test.js) | write if/else chains where a map or pipeline suffices | write one-liners that require decoding | branch on enumerated cases when a dispatch table exists
 
 **Always**: invoke named skill at every state transition | regress to planning on any new unknown | witnessed execution only | scan codebase before edits | enumerate every possible observability improvement every planning pass | follow skill chain completely end-to-end on every task without exception | prefer dispatch tables over switch/if chains | prefer pipelines over loop-with-accumulator | make wrong states structurally impossible | name patterns when structure eliminates a whole class of bugs

@@ -10,11 +10,32 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 **GRAPH POSITION**: `PLAN → EXECUTE → EMIT → [VERIFY] → UPDATE-DOCS → COMPLETE`
 - **Entry**: All EMIT gates passed. Entered from `gm-emit`.
 
+## WHERE YOU ARE
+
+Files written. Question now: does the whole system work end-to-end, and does the world outside local repo (CI, downstream pipelines, deployed surfaces) agree. Every check = witnessed execution: `node test.js`, `gh run watch`, diagnostic repros on failure. Contract in `gm-execute`; protocols not fresh → verification drifts to narrated claims ("change should work") over witnessed ones ("change produced output X"). Load first.
+
+## VERIFICATION → UNKNOWNS
+
+Failing test, red CI, surprising downstream cascade ≠ things to patch around. = new fault surfaces becoming visible. Classify failure:
+- Wrong file output → regress to EMIT
+- Wrong logic → regress to EXECUTE
+- Genuinely new unknown or wrong requirement → regress to PLANNING
+
+Let chain carry you. Stop-and-fix-here = how silent-failure bugs reach prod. Machine assumes you regress; trust it.
+
+## FRAGILE LEARNINGS
+
+Phase where environment reality hits hardest — CI runner quirks, flaky-test patterns, timing thresholds, deploy cadences, cross-repo cascade behaviors. These facts most reward future sessions. Each → memorize call, one per fact, non-blocking, at moment of resolution:
+
+```
+Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
+```
+
 ## TRANSITIONS
 
-**EXIT — .prd items remain**: Verified items completed, .prd still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
+**EXIT — .gm/prd.yml items remain**: Verified items completed, .gm/prd.yml still has pending items → invoke `gm-execute` skill immediately (next wave). Do not stop.
 
-**EXIT — COMPLETE**: .prd empty + all work pushed + CI green → invoke `update-docs` skill.
+**EXIT — COMPLETE**: .gm/prd.yml empty + test.js passes + all work pushed + CI green → invoke `update-docs` skill.
 
 **STATE REGRESSIONS**:
 - Verification reveals broken file output → invoke `gm-emit` skill, reset to EMIT state, re-verify on return
@@ -32,7 +53,7 @@ You are in the **VERIFY → COMPLETE** phase. Files are written. Prove the whole
 - `git_clean=UNKNOWN` until `exec:bash\ngit status --porcelain` returns empty
 - `git_pushed=UNKNOWN` until `git log origin/main..HEAD --oneline` returns empty
 - `ci_passed=UNKNOWN` until all GitHub Actions runs triggered by the push reach `conclusion: success`
-- `prd_empty=UNKNOWN` until .prd file is deleted (not just empty — file must not exist)
+- `prd_empty=UNKNOWN` until `.gm/prd.yml` is deleted (not just empty — file must not exist)
 
 All five must resolve to KNOWN before COMPLETE. Any UNKNOWN = absolute barrier.
 
@@ -57,6 +78,20 @@ console.log(await fn(realInput));
 
 For browser/UI: invoke `browser` skill with real workflows. Server + client features require both exec:nodejs AND browser diagnostics. After every success: enumerate what remains — never stop at first green. First green is not COMPLETE.
 
+## INTEGRATION TEST GATE
+
+Before git enforcement, run the project's `test.js` if it exists:
+
+```
+exec:nodejs
+const { execSync } = require('child_process');
+try { execSync('node test.js', { stdio: 'inherit', timeout: 30000 }); console.log('test.js: PASS'); } catch (e) { console.error('test.js: FAIL'); process.exit(1); }
+```
+
+Failure = regression to `gm-execute`. Do not proceed to git enforcement with failing tests.
+
+If `test.js` does not exist and the project has testable surface, regress to `gm-execute` to create it.
+
 ## CODE EXECUTION
 
 **exec:<lang> is the only way to run code.** Bash tool body: `exec:<lang>\n<code>`
@@ -77,6 +112,8 @@ Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<
 exec:codesearch
 <natural language description>
 ```
+
+PDFs in the repo are part of the same index — when verifying a change conforms to a published spec, search the spec PDF directly and cite `doc.pdf:<page>` as evidence. A verification that references a PDF without having searched it is unwitnessed.
 
 ## GIT ENFORCEMENT
 
@@ -131,7 +168,7 @@ Before declaring complete, sweep the entire codebase for violations:
 
 1. **Files >200 lines** → split immediately
 2. **Comments in code** → remove all
-3. **Test files** (.test.js, .spec.js, __tests__/) → delete
+3. **Scattered test files** (.test.js, .spec.js, __tests__/, fixtures/, mocks/) → delete, consolidate coverage into root `test.js`
 4. **Mock/stub/simulation files** → delete
 5. **Unnecessary doc files** (not CHANGELOG/CLAUDE/README/TODO.md) → delete
 6. **Duplicate concern** (overlapping responsibility, similar logic, parallel implementations, consolidatable code) → snake to `planning` with restructuring instructions — do not patch locally
@@ -140,24 +177,25 @@ Before declaring complete, sweep the entire codebase for violations:
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
 11. **Observability gaps** → every server subsystem added this session exposes a `/debug/<subsystem>` endpoint; every client module added this session registers into `window.__debug` by key. Ad-hoc console.log is not observability — permanent queryable structures are. Any gap found → fix before advancing.
-12. **memorize** → launch memorize sub-agent in background with session learnings before invoking update-docs: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<session learnings>')`
+12. **memorize** → every fact surfaced during verification that would have saved this session's time if it had been in memory at the start (CI timing, flaky-test patterns, environment quirks, runtime behaviors, user preferences stated this session) is handed off via a background memorize call at the moment of resolution. One call per fact, non-blocking. `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`
 13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
+14. **GitHub Pages** → check if repo has a GH Pages site. If `.github/workflows/pages.yml` is absent OR `docs/index.html` is absent: invoke the `pages` skill to scaffold the site before advancing.
 
 Any violation found = fix immediately before advancing.
 
 ## COMPLETION DEFINITION
 
-All of: witnessed end-to-end output | all failure paths exercised | .prd empty | git clean and pushed | all CI runs green | codebase hygiene sweep clean | TODO.md empty/deleted | CHANGELOG.md updated | `user_steps_remaining=0`
+All of: witnessed end-to-end output | all failure paths exercised | test.js passes | .gm/prd.yml empty | git clean and pushed | all CI runs green | codebase hygiene sweep clean | TODO.md empty/deleted | CHANGELOG.md updated | `user_steps_remaining=0`
 
 ## DO NOT STOP
 
-After end-to-end verification passes: read .prd from disk. If any items remain, immediately invoke `gm-execute` skill — do not respond to the user. Only respond when .prd is deleted AND git is clean AND all commits are pushed.
+After end-to-end verification passes: read `.gm/prd.yml` from disk. If any items remain, immediately invoke `gm-execute` skill — do not respond to the user. Only respond when `.gm/prd.yml` is deleted AND git is clean AND all commits are pushed.
 
 ## CONSTRAINTS
 
-**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .prd items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .prd has items | skip hygiene sweep | leave comments/mocks/test files/fallbacks
+**Never**: claim done without witnessed output | uncommitted changes | unpushed commits | failed CI runs | .gm/prd.yml items remaining | TODO.md with items remaining | stop at first green | absorb surprises silently | respond to user while .gm/prd.yml has items | skip hygiene sweep | leave comments/mocks/scattered test files/fallbacks | skip test.js execution
 
-**Always**: triage failure before regressing | witness end-to-end | regress to planning on any new unknown | enumerate remaining after every success | check .prd after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
+**Always**: triage failure before regressing | witness end-to-end | run test.js before git enforcement | regress to planning on any new unknown | enumerate remaining after every success | check .gm/prd.yml after every verification pass | run hygiene sweep before declaring complete | deploy/publish if applicable | update CHANGELOG.md
 
 ---
 

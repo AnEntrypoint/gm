@@ -29,6 +29,12 @@ Every `exec:browser` call has a 15s live window. During that window, all stdout/
 
 **"Assertion failed: UV_HANDLE_CLOSING" in output** means the call exceeded 15s and was cut off — ignore the assertion noise, look at the output before it. The task was backgrounded normally.
 
+## Idle Timeout & Session Reaper
+
+Playwriter kills idle browser sessions after 5-15 minutes of inactivity. The rs-exec tooling now automatically cleans up the spawned browser process when the Claude Code session ends, preventing zombie tabs.
+
+**Historical note**: Earlier versions left the browser running after session end, causing repeated tabs on reconnect. This is now fixed — the browser will be killed when your session idles and closes.
+
 ## Session Pathway (`browser:`)
 
 Create a session first, use `--direct` for CDP mode (requires Chrome with remote debugging):

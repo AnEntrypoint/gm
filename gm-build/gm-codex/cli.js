@@ -14,7 +14,7 @@ console.log(isUpgrade ? 'Upgrading gm-codex...' : 'Installing gm-codex...');
 try {
   fs.mkdirSync(destDir, { recursive: true });
 
-  const filesToCopy = [["agents","agents"],["hooks","hooks"],["scripts","scripts"],["skills","skills"],[".agents",".agents"],[".codex-plugin",".codex-plugin"],["assets","assets"],[".app.json",".app.json"],[".mcp.json",".mcp.json"],["plugin.json","plugin.json"],["gm.json","gm.json"],["README.md","README.md"],["CLAUDE.md","CLAUDE.md"],["AGENTS.md","AGENTS.md"]];
+  const filesToCopy = [["agents","agents"],["hooks","hooks"],["scripts","scripts"],["skills","skills"],["bin","bin"],[".agents",".agents"],[".codex-plugin",".codex-plugin"],["assets","assets"],[".app.json",".app.json"],[".mcp.json",".mcp.json"],["plugin.json","plugin.json"],["gm.json","gm.json"],["README.md","README.md"],["CLAUDE.md","CLAUDE.md"],["AGENTS.md","AGENTS.md"]];
 
   function copyRecursive(src, dst) {
     if (!fs.existsSync(src)) return;

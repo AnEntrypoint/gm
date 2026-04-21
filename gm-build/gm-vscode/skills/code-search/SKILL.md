@@ -10,6 +10,8 @@ description: Mandatory codebase search workflow. Use whenever you need to find a
 
 `exec:codesearch` is the only way to search the codebase. Glob, Grep, Find, Explore are hook-blocked.
 
+**PDFs are indexed like code.** Any `.pdf` in the repository — specs, papers, manuals, RFCs, datasheets, design docs — is extracted page-by-page at scan time and enters the BM25 + vector index alongside source files. Treat PDF hits as first-class search results. A PDF chunk reports `line_start = line_end = page_number`; cite as `path/to/doc.pdf:<page>`. Unscanned digital PDFs are a search gap — if you know a doc exists and it isn't returning, check it is not under an ignored dir and that extraction succeeded (encrypted / image-only PDFs yield empty chunks silently).
+
 ## Syntax
 
 ```
@@ -58,3 +60,10 @@ exec:codesearch
 plugin config array
 ```
 → found.
+
+Finding content inside a spec PDF:
+```
+exec:codesearch
+usb descriptor endpoint
+```
+→ returns `docs/usb-spec.pdf:42` — cite page, open via Read if you need the surrounding page text.
