@@ -127,10 +127,6 @@ State in \`~/.gh/extensions/gm/state.json\`.
     return super.getHookSourcePaths(hook);
   }
 
-  buildBootstrapCommand() {
-    return `node \${COPILOT_EXTENSION_DIR}/scripts/bootstrap.js`;
-  }
-
   buildHookCommand(hookEvent) {
     const hookEventMap = { 'stop': 'session-end', 'stop-git': 'session-end-git' };
     const mappedEvent = hookEventMap[hookEvent] || hookEvent;

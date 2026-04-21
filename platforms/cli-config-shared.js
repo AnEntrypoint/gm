@@ -1323,7 +1323,7 @@ plugins/gm-codex/
 ## Runtime Behavior
 
 - Hooks call \`bin/plugkit\` through \`\${CODEX_PLUGIN_ROOT}\`.
-- \`scripts/bootstrap.js\` provisions the Rust plugkit binary from \`rs-plugkit\` releases when needed.
+- \`plugkit\` binaries are bundled in \`bin/\` for every supported platform; the plugin ships ready-to-run.
 - \`plugkit\` uses:
   - \`rs-exec\` for execution/runtime process management
   - \`rs-codeinsight\` for AST/project analysis
@@ -1361,9 +1361,7 @@ npx ${repoName}-install
 
 ### Hooks run but \`plugkit\` is missing
 
-- Trigger any prompt submit/session start event to run bootstrap.
-- Verify \`scripts/bootstrap.js\` exists in the plugin directory.
-- Ensure network access to GitHub Releases for \`rs-plugkit\`.
+- Reinstall the plugin; \`plugkit\` binaries are shipped in \`bin/\` via CI and should not need to be downloaded.
 
 ### Hook path issues
 
