@@ -21,113 +21,113 @@ jobs:
         shell: bash
         run: |
           python3 << 'PYTHON_EOF'
-import os
-import json
-import subprocess
-import re
-from datetime import datetime, timedelta, timezone
+          import os
+          import json
+          import subprocess
+          import re
+          from datetime import datetime, timedelta, timezone
 
-def run_git_cmd(cmd):
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    return result.stdout.strip()
+          def run_git_cmd(cmd):
+              result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+              return result.stdout.strip()
 
-def fetch_github_api(endpoint, token):
-    cmd = f'curl -s -H "Authorization: Bearer {token}" "https://api.github.com{endpoint}"'
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return None
+          def fetch_github_api(endpoint, token):
+              cmd = f'curl -s -H "Authorization: Bearer {token}" "https://api.github.com{endpoint}"'
+              result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+              try:
+                  return json.loads(result.stdout)
+              except json.JSONDecodeError:
+                  return None
 
-repo = os.environ.get('GITHUB_REPOSITORY', 'AnEntrypoint/gm')
-token = os.environ.get('GITHUB_TOKEN', '')
+          repo = os.environ.get('GITHUB_REPOSITORY', 'AnEntrypoint/gm')
+          token = os.environ.get('GITHUB_TOKEN', '')
 
-now_utc = datetime.now(timezone.utc)
-four_weeks_ago = now_utc - timedelta(days=28)
-four_weeks_iso = four_weeks_ago.isoformat() + 'Z'
+          now_utc = datetime.now(timezone.utc)
+          four_weeks_ago = now_utc - timedelta(days=28)
+          four_weeks_iso = four_weeks_ago.isoformat() + 'Z'
 
-bot_patterns = ['dependabot', 'renovate', 'github-actions', 'snyk', 'bot', '[bot]']
+          bot_patterns = ['dependabot', 'renovate', 'github-actions', 'snyk', 'bot', '[bot]']
 
-def is_bot(login):
-    if not login:
-        return False
-    login_lower = login.lower()
-    return any(pattern in login_lower for pattern in bot_patterns)
+          def is_bot(login):
+              if not login:
+                  return False
+              login_lower = login.lower()
+              return any(pattern in login_lower for pattern in bot_patterns)
 
-def is_binary_file(path):
-    binary_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bin', '.exe', '.dll', '.so',
-                   '.dylib', '.pdf', '.zip', '.tar', '.gz', '.whl', '.pyc', '.o',
-                   '.a', '.lib', '.class', '.jar', '.min.js', '.min.css'}
-    _, ext = os.path.splitext(path.lower())
-    return ext in binary_exts
+          def is_binary_file(path):
+              binary_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bin', '.exe', '.dll', '.so',
+                             '.dylib', '.pdf', '.zip', '.tar', '.gz', '.whl', '.pyc', '.o',
+                             '.a', '.lib', '.class', '.jar', '.min.js', '.min.css'}
+              _, ext = os.path.splitext(path.lower())
+              return ext in binary_exts
 
-page = 1
-all_prs = []
-while True:
-    prs_endpoint = f'/repos/{repo}/pulls?state=closed&per_page=100&page={page}&sort=updated&direction=desc'
-    prs_data = fetch_github_api(prs_endpoint, token)
+          page = 1
+          all_prs = []
+          while True:
+              prs_endpoint = f'/repos/{repo}/pulls?state=closed&per_page=100&page={page}&sort=updated&direction=desc'
+              prs_data = fetch_github_api(prs_endpoint, token)
 
-    if not prs_data or len(prs_data) == 0:
-        break
+              if not prs_data or len(prs_data) == 0:
+                  break
 
-    all_prs.extend(prs_data)
-    page += 1
+              all_prs.extend(prs_data)
+              page += 1
 
-filtered_prs = [pr for pr in all_prs
-                if pr.get('merged_at') and pr['merged_at'] > four_weeks_iso]
+          filtered_prs = [pr for pr in all_prs
+                          if pr.get('merged_at') and pr['merged_at'] > four_weeks_iso]
 
-reviewers = {}
-changed_files = {}
-weekly_merges = {}
+          reviewers = {}
+          changed_files = {}
+          weekly_merges = {}
 
-for pr in filtered_prs:
-    pr_number = pr.get('number')
-    merged_at = pr.get('merged_at')
+          for pr in filtered_prs:
+              pr_number = pr.get('number')
+              merged_at = pr.get('merged_at')
 
-    if merged_at:
-        merged_dt = datetime.fromisoformat(merged_at.replace('Z', '+00:00'))
-        week_start = merged_dt - timedelta(days=merged_dt.weekday())
-        week_key = week_start.strftime('%Y-%m-%d')
-        weekly_merges[week_key] = weekly_merges.get(week_key, 0) + 1
+              if merged_at:
+                  merged_dt = datetime.fromisoformat(merged_at.replace('Z', '+00:00'))
+                  week_start = merged_dt - timedelta(days=merged_dt.weekday())
+                  week_key = week_start.strftime('%Y-%m-%d')
+                  weekly_merges[week_key] = weekly_merges.get(week_key, 0) + 1
 
-    reviews_endpoint = f'/repos/{repo}/pulls/{pr_number}/reviews?per_page=100'
-    reviews_data = fetch_github_api(reviews_endpoint, token)
+              reviews_endpoint = f'/repos/{repo}/pulls/{pr_number}/reviews?per_page=100'
+              reviews_data = fetch_github_api(reviews_endpoint, token)
 
-    if reviews_data:
-        for review in reviews_data:
-            if review.get('state') in ['APPROVED', 'COMMENTED']:
-                user = review.get('user', {}).get('login')
-                if user and not is_bot(user):
-                    reviewers[user] = reviewers.get(user, 0) + 1
+              if reviews_data:
+                  for review in reviews_data:
+                      if review.get('state') in ['APPROVED', 'COMMENTED']:
+                          user = review.get('user', {}).get('login')
+                          if user and not is_bot(user):
+                              reviewers[user] = reviewers.get(user, 0) + 1
 
-    files_endpoint = f'/repos/{repo}/pulls/{pr_number}/files?per_page=100'
-    files_data = fetch_github_api(files_endpoint, token)
+              files_endpoint = f'/repos/{repo}/pulls/{pr_number}/files?per_page=100'
+              files_data = fetch_github_api(files_endpoint, token)
 
-    if files_data:
-        for file_info in files_data:
-            path = file_info.get('filename', '')
-            if path and not is_binary_file(path):
-                changed_files[path] = changed_files.get(path, 0) + 1
+              if files_data:
+                  for file_info in files_data:
+                      path = file_info.get('filename', '')
+                      if path and not is_binary_file(path):
+                          changed_files[path] = changed_files.get(path, 0) + 1
 
-top_reviewers = sorted(reviewers.items(), key=lambda x: x[1], reverse=True)[:5]
-top_files = sorted(changed_files.items(), key=lambda x: x[1], reverse=True)[:5]
-velocity_sorted = sorted(weekly_merges.items())
+          top_reviewers = sorted(reviewers.items(), key=lambda x: x[1], reverse=True)[:5]
+          top_files = sorted(changed_files.items(), key=lambda x: x[1], reverse=True)[:5]
+          velocity_sorted = sorted(weekly_merges.items())
 
-insights = {
-    'generated': now_utc.isoformat(),
-    'period_weeks': 4,
-    'top_reviewers': [{'login': login, 'reviews': count} for login, count in top_reviewers],
-    'top_files': [{'path': path, 'changes': count} for path, count in top_files],
-    'velocity': [{'week': week, 'merged': count} for week, count in velocity_sorted]
-}
+          insights = {
+              'generated': now_utc.isoformat(),
+              'period_weeks': 4,
+              'top_reviewers': [{'login': login, 'reviews': count} for login, count in top_reviewers],
+              'top_files': [{'path': path, 'changes': count} for path, count in top_files],
+              'velocity': [{'week': week, 'merged': count} for week, count in velocity_sorted]
+          }
 
-os.makedirs('docs/api', exist_ok=True)
-with open('docs/api/insights.json', 'w') as f:
-    json.dump(insights, f, indent=2)
+          os.makedirs('docs/api', exist_ok=True)
+          with open('docs/api/insights.json', 'w') as f:
+              json.dump(insights, f, indent=2)
 
-print(json.dumps(insights, indent=2))
-print('✓ Generated docs/api/insights.json')
-PYTHON_EOF
+          print(json.dumps(insights, indent=2))
+          print('✓ Generated docs/api/insights.json')
+          PYTHON_EOF
 
       - name: Check for changes and commit
         shell: bash
