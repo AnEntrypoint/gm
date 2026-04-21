@@ -19,6 +19,8 @@ jobs:
 
       - name: Generate insights and output JSON
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 << 'PYTHON_EOF'
           import os
@@ -140,6 +142,8 @@ jobs:
             git config --local user.name "GitHub Action"
             git add docs/api/insights.json
             git commit -m "chore: update contribution insights"
-            git push
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push && break || sleep $((RANDOM % 10 + 5))
+            done
             echo "✓ Pushed changes to docs/api/insights.json"
           fi

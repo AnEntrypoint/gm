@@ -84,6 +84,8 @@ jobs:
             git config --local user.name "GitHub Action"
             git add docs/api/releases.json
             git commit -m "chore: update releases API"
-            git push
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push && break || sleep $((RANDOM % 10 + 5))
+            done
             echo "✓ Pushed releases.json changes"
           fi
