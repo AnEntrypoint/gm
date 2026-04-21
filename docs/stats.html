@@ -2,32 +2,33 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>stats · gm</title>
+<title>stats · gm · 247420</title>
 <meta name="description" content="live github metrics for the gm repository.">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#EFE9DD">
-<link rel="icon" type="image/svg+xml" href="./favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./design/favicon.svg">
+<link rel="stylesheet" href="./design/vendor/fonts.css">
+<link rel="stylesheet" href="./design/colors_and_type.css">
+<link rel="stylesheet" href="./design/app-shell.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body > main { max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--space-5) var(--space-8) var(--space-5); }
-body > header:not(.app-top), body > nav { display: none !important; }
-main section { border-top: 1px solid var(--ink); padding: var(--space-6) 0; }
-main section h2 { font-family: var(--ff-display); font-size: var(--fs-h2); text-transform: lowercase; letter-spacing: var(--tr-tight); margin-bottom: var(--space-4); }
-main section canvas { background: var(--paper); max-width: 100%; }
-main table { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); }
-main table th, main table td { text-align: left; padding: var(--space-2) var(--space-3); border-top: 1px solid var(--ink); }
-main table th { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); font-weight: 500; }
-main table tr:last-child td { border-bottom: 1px solid var(--ink); }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar) { display: none !important; }
+body > main, main.stats-main { max-width: 1100px; margin: 0 auto; padding: 24px 32px 64px 32px; width: 100%; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+main section { background: var(--panel-1); border-radius: 8px; margin: 12px 0; padding: 16px 20px; box-shadow: var(--panel-shadow); }
+main section h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: var(--panel-text); letter-spacing: -0.005em; }
+main canvas { background: var(--panel-1); max-width: 100%; }
+main table { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); font-size: 13px; }
+main table th { text-align: left; padding: 8px 12px; color: var(--panel-text-2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; box-shadow: inset 0 -1px 0 var(--panel-3); }
+main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); box-shadow: inset 0 -1px 0 var(--panel-hover); }
 </style>
 </head>
-<body>
-<header class="app-top">
-  <span class="brand">247420<span class="slash">/</span>gm</span>
+<body data-screen-label="gm / stats">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm</span>
   <nav>
     <a href="./index.html">← home</a>
-    <a href="./index.html#principles">principles</a>
     <a href="./index.html#process">process</a>
     <a href="./stats.html">stats</a>
     <a href="./made-with.html">showcase</a>
@@ -36,12 +37,10 @@ main table tr:last-child td { border-bottom: 1px solid var(--ink); }
     <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
   </nav>
 </header>
-<div class="dateline">
-  <span class="t-micro">247420 / anentrypoint</span>
-  <span class="t-micro">stats</span>
-  <span class="t-micro">2026-04-21</span>
-  <span class="t-micro">probably emerging 🌀</span>
-</div>
+<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">stats</span></div>
+
+
+
 
 
   <header>
@@ -377,11 +376,12 @@ main table tr:last-child td { border-bottom: 1px solid var(--ink); }
   </script>
 
 
-<footer class="app-foot">
-  <div class="foot-row">
-    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
-    <span class="t-micro">probably emerging 🌀</span>
-  </div>
+
+
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>probably emerging 🌀</span>
 </footer>
 
 </body></html>

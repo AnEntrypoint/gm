@@ -2,42 +2,45 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>paper I — toward structured lifecycle control in coding agents · gm</title>
+<title>paper I · gm · 247420</title>
 <meta name="description" content="paper I: structured lifecycle control for coding agents.">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#EFE9DD">
-<link rel="icon" type="image/svg+xml" href="./favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./design/favicon.svg">
+<link rel="stylesheet" href="./design/vendor/fonts.css">
+<link rel="stylesheet" href="./design/colors_and_type.css">
+<link rel="stylesheet" href="./design/app-shell.css">
 
 <style>
-body > main, body > article, body > div.title-block ~ * { max-width: var(--measure); margin-left: auto; margin-right: auto; padding: 0 var(--space-5); }
-.title-block { max-width:var(--measure); margin:var(--space-7) auto var(--space-6) auto; padding: 0 var(--space-5); }
-.title-block h1 { font-family: var(--ff-display); font-size: var(--fs-h1); font-weight: 800; letter-spacing: var(--tr-tight); line-height: var(--lh-tight); text-transform: lowercase; }
-.title-block .author, .title-block .date { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); margin-top: var(--space-2); }
-.abstract-block { max-width:var(--measure); margin: var(--space-6) auto; padding: var(--space-4) var(--space-5); border: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 94%, var(--ink)); }
-.abstract-title { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-2); margin-bottom: var(--space-2); }
-.abstract-text { font-family: var(--ff-body); font-size: var(--fs-lg); line-height: var(--lh-long); }
-article, .section-body, body > h1, body > h2, body > h3, body > p, body > ol, body > ul, body > blockquote, body > pre, body > hr, body > figure { max-width: var(--measure); margin-left: auto; margin-right: auto; padding-left: var(--space-5); padding-right: var(--space-5); }
-article h1, article h2 { font-family: var(--ff-display); letter-spacing: var(--tr-tight); text-transform: lowercase; margin-top: var(--space-7); }
-article h2 { font-size: var(--fs-h2); border-top: 1px solid var(--ink); padding-top: var(--space-5); }
-article h3 { font-family: var(--ff-mono); font-size: var(--fs-h3); text-transform: uppercase; letter-spacing: var(--tr-label); margin-top: var(--space-5); }
-article p, article li { font-family: var(--ff-body); font-size: var(--fs-lg); line-height: var(--lh-long); }
-article pre, article code { font-family: var(--ff-mono); font-size: var(--fs-body); }
-article pre { background: var(--ink); color: var(--acid); padding: var(--space-3) var(--space-4); overflow-x: auto; }
-article code { padding: 0 4px; background: color-mix(in srgb, var(--paper) 90%, var(--ink)); }
-article pre code { background: transparent; color: inherit; padding: 0; }
-article a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
-article blockquote { border-left: 3px solid var(--ink); margin: var(--space-5) 0; padding: 0 var(--space-5); color: var(--fg-2); font-family: var(--ff-body); }
-body > header:not(.app-top), body > nav:not(.app-top) { display: none !important; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar), body > main > header, body > main > nav { display: none !important; }
+body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap { max-width: 72ch; margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; color: var(--panel-text); margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h1, article h2 { font-size: 22px; font-weight: 600; color: var(--panel-text); margin: 32px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); }
+article pre code { padding: 0; background: transparent; }
+article a { color: var(--panel-accent); text-decoration: underline; text-underline-offset: 3px; }
+article a:hover { color: var(--panel-accent-2); }
+article blockquote { margin: 12px 0; padding: 8px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); color: var(--panel-text-2); font-style: italic; }
+article ul, article ol { padding-left: 24px; }
+article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0; }
 </style>
 </head>
-<body>
-<header class="app-top">
-  <span class="brand">247420<span class="slash">/</span>gm</span>
+<body data-screen-label="gm / paper I">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm</span>
   <nav>
     <a href="./index.html">← home</a>
-    <a href="./index.html#principles">principles</a>
     <a href="./index.html#process">process</a>
     <a href="./stats.html">stats</a>
     <a href="./made-with.html">showcase</a>
@@ -46,12 +49,10 @@ body > header:not(.app-top), body > nav:not(.app-top) { display: none !important
     <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
   </nav>
 </header>
-<div class="dateline">
-  <span class="t-micro">247420 / anentrypoint</span>
-  <span class="t-micro">paper I</span>
-  <span class="t-micro">2026-04-21</span>
-  <span class="t-micro">probably emerging 🌀</span>
-</div>
+<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">paper I</span></div>
+
+
+
 
 
 
@@ -296,11 +297,12 @@ body > header:not(.app-top), body > nav:not(.app-top) { display: none !important
 
 
 
-<footer class="app-foot">
-  <div class="foot-row">
-    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
-    <span class="t-micro">probably emerging 🌀</span>
-  </div>
+
+
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>probably emerging 🌀</span>
 </footer>
 
 </body></html>

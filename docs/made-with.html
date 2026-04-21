@@ -2,33 +2,31 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>showcase · made with gm</title>
+<title>showcase · gm · 247420</title>
 <meta name="description" content="projects from AnEntrypoint built using the gm workflow.">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#EFE9DD">
-<link rel="icon" type="image/svg+xml" href="./favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./design/favicon.svg">
+<link rel="stylesheet" href="./design/vendor/fonts.css">
+<link rel="stylesheet" href="./design/colors_and_type.css">
+<link rel="stylesheet" href="./design/app-shell.css">
 
 <style>
-body > main { max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--space-5) var(--space-8) var(--space-5); display: flex; flex-direction: column; }
-body > header:not(.app-top), body > nav:not(.app-top) { display: none !important; }
-main > a { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--ink); color: var(--ink); text-decoration: none; transition: background var(--dur-snap) var(--ease); }
-main > a:last-child { border-bottom: 1px solid var(--ink); }
-main > a:hover { background: var(--ink); color: var(--paper); }
-main > a::before { content: '›'; font-family: var(--ff-mono); color: var(--fg-3); }
-main > a:hover::before { color: var(--paper); }
-main > a h2, main > a h3 { font-family: var(--ff-mono); font-size: var(--fs-body); text-transform: uppercase; letter-spacing: var(--tr-label); font-weight: 600; margin: 0; }
-main > a p { font-family: var(--ff-mono); font-size: var(--fs-xs); color: var(--fg-3); margin: 0; }
-main > a:hover p { color: var(--paper); }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar) { display: none !important; }
+body > main, main.showcase-main { max-width: 1100px; margin: 0 auto; padding: 24px 32px 64px 32px; width: 100%; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); display: flex; flex-direction: column; gap: 6px; }
+main > a { display: grid; grid-template-columns: 180px 1fr auto; gap: 16px; padding: 12px 16px; background: var(--panel-1); border-radius: 6px; color: var(--panel-text); text-decoration: none; align-items: baseline; font-size: 13px; box-shadow: var(--panel-shadow); }
+main > a:hover { background: var(--panel-hover); text-decoration: none; }
+main > a h2, main > a h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--panel-text); }
+main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height: 1.5; }
 </style>
 </head>
-<body>
-<header class="app-top">
-  <span class="brand">247420<span class="slash">/</span>gm</span>
+<body data-screen-label="gm / showcase">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm</span>
   <nav>
     <a href="./index.html">← home</a>
-    <a href="./index.html#principles">principles</a>
     <a href="./index.html#process">process</a>
     <a href="./stats.html">stats</a>
     <a href="./made-with.html">showcase</a>
@@ -37,12 +35,10 @@ main > a:hover p { color: var(--paper); }
     <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
   </nav>
 </header>
-<div class="dateline">
-  <span class="t-micro">247420 / anentrypoint</span>
-  <span class="t-micro">showcase</span>
-  <span class="t-micro">2026-04-21</span>
-  <span class="t-micro">probably emerging 🌀</span>
-</div>
+<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">showcase</span></div>
+
+
+
 
 
   <nav>
@@ -233,11 +229,12 @@ main > a:hover p { color: var(--paper); }
   </script>
 
 
-<footer class="app-foot">
-  <div class="foot-row">
-    <span class="t-micro">built with gm — <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a> · <a href="./paper.html">paper</a></span>
-    <span class="t-micro">probably emerging 🌀</span>
-  </div>
+
+
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>probably emerging 🌀</span>
 </footer>
 
 </body></html>
