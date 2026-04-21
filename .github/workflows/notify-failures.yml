@@ -83,7 +83,7 @@ jobs:
           fi
 
           BODY_JSON=$(jq -n --arg job "$FAILED_JOB" --arg step "$FAILED_STEP" --arg actor "$ACTOR" --arg sha "$SHORT_SHA" --arg err "$ERROR_EXCERPT" --arg repo "$REPO" --arg rid "$RUN_ID" '
-            "## Failure: " + $job + " - " + $step + "\n**Actor**: " + $actor + " | **Commit**: " + $sha + "\n\`\`\`\n" + $err + "\n\`\`\`\n[View run](https://github.com/" + $repo + "/actions/runs/" + $rid + ")"
+            "## Failure: " + $job + " - " + $step + "\n**Actor**: " + $actor + " | **Commit**: " + $sha + "\n```\n" + $err + "\n```\n[View run](https://github.com/" + $repo + "/actions/runs/" + $rid + ")"
           ')
           echo "body=$BODY_JSON" >> $GITHUB_OUTPUT
 
