@@ -185,7 +185,7 @@ jobs:
           else
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add docs/badges/ docs/api/metrics.json README.md
+            git add -f docs/badges/ docs/api/metrics.json README.md
             git commit -m "chore: update metrics badges and API"
             for i in 1 2 3 4 5; do
               git pull --rebase origin main && git push && break || sleep $((RANDOM % 10 + 5))
