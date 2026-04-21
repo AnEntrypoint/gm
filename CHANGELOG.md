@@ -1,3 +1,8 @@
+## 2026-04-22 - Paper III published
+
+- New `docs/paper3.html` — "Governance, Earned Emission, and the Remote-Execution Boundary" — covers 197 commits since paper II (2026-04-12): the governance layer (7 route families, 4 state planes, 16-mode taxonomy, ΔS/λ/ε/Coverage metrics, 8-case stress suite, 5 refused collapses); `git push` as remote-execution event with mandatory CI watch; catalogue of 4+1 parse-time CI failure modes (block-scalar heredoc indentation, missing token env, concurrent-push races, gitignored outputs, multiline output expansion); same-turn memorize discipline with end-of-turn self-check.
+- Added paper3 nav links across paper.html, paper2.html, made-with.html, stats.html, site/main.js.
+
 ## 2026-04-22 - Governance layer in skill chain
 
 - New `governance` skill: encodes route discovery (7 route families), weak-prior bridge, legitimacy gate (earned specificity / lawful downgrade), 16-failure taxonomy, 4 state planes (route_fit / authorization / repair_legality / hidden_decision_posture), ΔS/λ/ε/Coverage quality metrics, and 8-case governance stress suite (M1/F1/C1/H1/S1/B1/A1/D1).

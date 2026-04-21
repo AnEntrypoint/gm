@@ -46,6 +46,7 @@ const NAV = [
   ['./made-with.html', 'showcase'],
   ['./paper.html', 'paper I'],
   ['./paper2.html', 'paper II'],
+  ['./paper3.html', 'paper III'],
   ['https://github.com/AnEntrypoint/gm', 'source ↗'],
 ];
 
