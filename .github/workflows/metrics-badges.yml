@@ -22,6 +22,8 @@ jobs:
 
       - name: Generate SVG badges
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 << 'PYTHON_EOF'
           import os
@@ -98,7 +100,12 @@ jobs:
                prs_url],
               capture_output=True, text=True
           )
-          prs = json.loads(prs_response.stdout)
+          try:
+              prs = json.loads(prs_response.stdout)
+          except Exception:
+              prs = []
+          if not isinstance(prs, list):
+              prs = []
           merge_times = []
           for pr in prs:
               if pr.get("merged_at") and pr["merged_at"] > four_weeks_ago:
@@ -180,6 +187,8 @@ jobs:
             git config --local user.name "GitHub Action"
             git add docs/badges/ docs/api/metrics.json README.md
             git commit -m "chore: update metrics badges and API"
-            git push
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push && break || sleep $((RANDOM % 10 + 5))
+            done
             echo "Changes pushed"
           fi
