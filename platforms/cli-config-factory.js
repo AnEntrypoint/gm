@@ -1,6 +1,6 @@
 const factory = (name, label, configFile, contextFile, overrides = {}) => {
   const hookEvents = {
-    cc: { sessionStart: 'SessionStart', preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
+    cc: { sessionStart: 'SessionStart', preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', preCompact: 'PreCompact', stop: 'Stop' },
     gc: { sessionStart: 'SessionStart', preTool: 'BeforeTool', promptSubmit: 'BeforeAgent', stop: 'SessionEnd' },
     codex: { sessionStart: 'SessionStart', preTool: 'PreToolUse', promptSubmit: 'UserPromptSubmit', stop: 'Stop' },
     oc: { sessionStart: 'session.created', preTool: 'tool.execute.before', promptSubmit: 'message.updated', stop: 'session.closing' },
