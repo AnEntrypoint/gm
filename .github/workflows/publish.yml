@@ -154,9 +154,19 @@ jobs:
           # Ensure we're on main branch
           git checkout main 2>/dev/null || git checkout -b main
 
+          # Copy prebuilt binaries from gm-build-latest into the fresh build output
+          PREBUILT_BIN="${SOURCE_ROOT}/gm-build-latest/gm-${PLATFORM}/bin"
+          if [ -d "$PREBUILT_BIN" ]; then
+            mkdir -p "${SOURCE_ROOT}/${BUILD_DIR}/bin"
+            cp -a "$PREBUILT_BIN"/. "${SOURCE_ROOT}/${BUILD_DIR}/bin/"
+            echo "✅ Copied prebuilt binaries from $PREBUILT_BIN"
+          else
+            echo "ℹ️  No prebuilt binaries at $PREBUILT_BIN (platform has no binary bundle)"
+          fi
+
           # Sync build output with complete replacement
           # Use --no-times to prevent timestamp preservation issues with git change detection
-          rsync -av --delete --exclude='.git' --exclude='bin/' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ .
+          rsync -av --delete --exclude='.git' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ .
 
           # Only commit if there are actual changes
           git add -A
