@@ -1,6 +1,6 @@
 {
   "name": "gm",
-  "version": "2.0.561",
+  "version": "2.0.562",
   "description": "State machine agent with hooks, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
