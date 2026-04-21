@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>paper III · gm · 247420</title>
+<meta name="description" content="paper III: governance, earned emission, and remote execution boundaries.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./design/favicon.svg">
+<link rel="stylesheet" href="./design/vendor/fonts.css">
+<link rel="stylesheet" href="./design/colors_and_type.css">
+<link rel="stylesheet" href="./design/app-shell.css">
+
+<style>
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar), body > main > header, body > main > nav { display: none !important; }
+body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap { max-width: 72ch; margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; color: var(--panel-text); margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h1, article h2 { font-size: 22px; font-weight: 600; color: var(--panel-text); margin: 32px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); }
+article pre code { padding: 0; background: transparent; }
+article a { color: var(--panel-accent); text-decoration: underline; text-underline-offset: 3px; }
+article a:hover { color: var(--panel-accent-2); }
+article blockquote { margin: 12px 0; padding: 8px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); color: var(--panel-text-2); font-style: italic; }
+article ul, article ol { padding-left: 24px; }
+article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0; }
+.theorem { margin: 16px 0; padding: 12px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); }
+.references { margin-top: 32px; }
+dl { margin: 12px 0; }
+dt { font-weight: 600; margin-top: 8px; }
+dd { margin-left: 24px; margin-bottom: 4px; }
+</style>
+</head>
+<body data-screen-label="gm / paper III">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm</span>
+  <nav>
+    <a href="./index.html">← home</a>
+    <a href="./index.html#process">process</a>
+    <a href="./stats.html">stats</a>
+    <a href="./made-with.html">showcase</a>
+    <a href="./paper.html">paper I</a>
+    <a href="./paper2.html">paper II</a>
+    <a href="./paper3.html">paper III</a>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+</header>
+<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">paper III</span></div>
+
+<div class="title-block">
+  <h1>Governance, Earned Emission,<br>and the Remote-Execution Boundary</h1>
+  <div class="author">AnEntrypoint</div>
+  <div class="date">April 2026</div>
+</div>
+
+<div class="abstract-block">
+  <div class="abstract-title">Abstract</div>
+  <div class="abstract-text">
+    We describe four further advances to the <em>gm</em> orchestrator, extending the lifecycle control of [1] and the in-phase discipline of [2]. First, we introduce a governance layer that separates route discovery, weak-prior handoff, and emission legitimacy into three distinct responsibilities with orthogonal state planes; the layer encodes a sixteen-mode failure taxonomy, an eight-case stress suite, and quality metrics (&Delta;S, &lambda;, &epsilon;, coverage) that gate the UNKNOWN&rarr;KNOWN transition. Second, we reclassify <code>git push</code> as a remote-execution event: every push triggers continuous-integration workflows whose results are ground truth, and a push not followed by a CI watch is an unwitnessed execution in violation of the mutable contract. Third, we document a class of chronic zero-job CI failures rooted in silent YAML validation, and the remediation patterns for four common shapes. Fourth, we strengthen fact persistence: the memorize handoff fires at the moment an unknown resolves, not at phase exit, with an end-of-turn self-check for missed resolutions. Together these advances close gaps between agent narrative and ground truth.
+  </div>
+</div>
+
+<h2>1. Introduction</h2>
+
+<p class="first">Paper I [1] introduced the phase-gated state machine; paper II [2] addressed the quality of work within phases. Both assumed that an agent operating within the prescribed envelope would produce correct results. Experience shows this assumption fails in four distinguishable ways:</p>
+
+<ol>
+  <li><strong>Plausibility-as-authorization:</strong> An agent that has successfully enumerated routes through a problem space treats the most plausible route as authorization to emit a solution. Plausibility is weaker than witnessing; treating it as stronger produces confident but unearned output.</li>
+  <li><strong>Silent remote execution:</strong> Every <code>git push</code> triggers GitHub Actions workflows that run real code against real state. An agent that pushes and does not observe the resulting workflow is executing code remotely without witnessing the execution&mdash;a category violation of the mutable contract.</li>
+  <li><strong>Parse-time CI failures:</strong> Workflow files can be syntactically valid YAML while still failing GitHub&rsquo;s stricter validation, producing runs that complete in zero seconds with zero jobs dispatched and no logs. Every push registers the same failure; no job ever runs; the agent may believe it has deployed something.</li>
+  <li><strong>Compaction-era forgetting:</strong> Facts resolved mid-session die on context compaction unless persisted. Deferring the memorize handoff to phase end leaves a window in which resolved unknowns evaporate and must be re-discovered.</li>
+</ol>
+
+<p>This paper describes the discipline advances addressing each. &sect;2 introduces the governance layer; &sect;3 addresses the remote-execution boundary; &sect;4 catalogues CI failure modes; &sect;5 tightens fact persistence; &sect;6&ndash;8 discuss related work, limitations, and conclusions.</p>
+
+<h2>2. The Governance Layer</h2>
+
+<h3>2.1 Three Responsibilities, Not One</h3>
+
+<p class="first">Earlier work [1, 2] treated each phase of the state machine as owning a single responsibility: PLAN enumerates, EXECUTE witnesses, EMIT writes, VERIFY confirms. In practice, three distinct failure surfaces coexist at every phase and must be respected simultaneously:</p>
+
+<dl>
+  <dt>Route discovery:</dt><dd> Where could this fail? What family of fault does the work live in? Owned by PLAN but referenced throughout.</dd>
+  <dt>Weak-prior bridge:</dt><dd> Information flowing forward from earlier phases arrives as weak prior, not authorization. Owned by EXECUTE.</dd>
+  <dt>Legitimacy gate:</dt><dd> Did this answer earn its requested strength? Owned by EMIT and VERIFY.</dd>
+</dl>
+
+<p>Neither route-first nor legitimacy-first alone suffices. The weak-prior bridge exists precisely to prevent route plausibility from silently converting into authorization as the agent advances through phases.</p>
+
+<h3>2.2 Seven Route Families</h3>
+
+<p class="first">Every planned item is classified into at least one of seven route families:</p>
+
+<table style="border-collapse:collapse; width:100%; margin:12px 0;">
+<thead><tr><th style="text-align:left; padding:6px; border-bottom:1px solid var(--panel-3);">Family</th><th style="text-align:left; padding:6px; border-bottom:1px solid var(--panel-3);">What breaks here</th></tr></thead>
+<tbody>
+<tr><td style="padding:6px;"><code>grounding</code></td><td style="padding:6px;">Retrieval, lookup, fact anchor</td></tr>
+<tr><td style="padding:6px;"><code>reasoning</code></td><td style="padding:6px;">Inference chain, logic, derivation</td></tr>
+<tr><td style="padding:6px;"><code>state</code></td><td style="padding:6px;">Memory, persistence, session continuity</td></tr>
+<tr><td style="padding:6px;"><code>execution</code></td><td style="padding:6px;">Runtime, scheduling, process lifecycle</td></tr>
+<tr><td style="padding:6px;"><code>observability</code></td><td style="padding:6px;">Inspection, tracing, debuggability</td></tr>
+<tr><td style="padding:6px;"><code>boundary</code></td><td style="padding:6px;">Interfaces, contracts, subsystem seams</td></tr>
+<tr><td style="padding:6px;"><code>representation</code></td><td style="padding:6px;">Data shape, schema, type</td></tr>
+</tbody>
+</table>
+
+<p>The family is recorded in the <code>.prd</code> item. Its purpose is to discipline the repair move: a fault in the <code>grounding</code> family does not accept a <code>reasoning</code> fix; a fault in <code>boundary</code> does not accept a <code>state</code> fix. Mis-routed repair wastes an EXECUTE pass and forces regression to PLAN.</p>
+
+<h3>2.3 Four State Planes</h3>
+
+<p class="first">Any in-flight item occupies four orthogonal state planes simultaneously. Advancement on one plane does not advance any other:</p>
+
+<ul>
+  <li><code>route_fit</code>: <code>unexamined &rarr; examined &rarr; dominant</code>. Examined is not dominant. Dominant is not authorized.</li>
+  <li><code>authorization</code>: <code>none &rarr; weak_prior &rarr; witnessed</code>. Only <code>witnessed</code> permits emission.</li>
+  <li><code>repair_legality</code>: <code>unverified &rarr; local_candidate &rarr; structural</code>. Local candidate cannot ship as structural repair.</li>
+  <li><code>hidden_decision_posture</code>: <code>open &rarr; down_weighted &rarr; closed</code>. Closing before CI green is illegal.</li>
+</ul>
+
+<p>Orthogonality is the point. An item may have <code>route_fit=dominant</code> and still have <code>authorization=weak_prior</code>. Collapsing these planes&mdash;treating a dominant route as an authorized conclusion&mdash;is the primary governance failure.</p>
+
+<h3>2.4 Five Refused Collapses</h3>
+
+<p class="first">A conclusion ships only when none of the following has occurred:</p>
+
+<ol>
+  <li>Route collapsed into authorization (&ldquo;the plan looks good&rdquo; became &ldquo;the code is right&rdquo;).</li>
+  <li>Candidate repair collapsed into structural repair (local patch presented as architectural fix).</li>
+  <li>Hidden orchestration collapsed into public law (internal convenience shipped as contract).</li>
+  <li>Cleanliness collapsed into legitimacy (code-compiles treated as evidence-supports).</li>
+  <li>One strong route collapsed into universal closure (best available answer treated as only possible answer).</li>
+</ol>
+
+<p>These are not general rhetorical hazards&mdash;they are the specific failure shapes the governance layer is designed to refuse. Each corresponds to a plane of collapse between the four state planes.</p>
+
+<h3>2.5 Quality Metrics</h3>
+
+<p class="first">Before a mutable&rsquo;s status flips UNKNOWN&rarr;KNOWN, four quality metrics are applied:</p>
+
+<ul>
+  <li><strong>&Delta;S (drift):</strong> semantic delta between expectation and witnessed output. <code>&Delta;S &ne; 0</code> means the mutable remains open, regardless of narrative framing.</li>
+  <li><strong>&lambda; (convergence):</strong> have two independent paths (different search, different import, different caller) reached the same answer? <code>&lambda; = 1</code> is single-witness; the mutable is still unknown.</li>
+  <li><strong>&epsilon; (harmony):</strong> do adjacent invariants still hold&mdash;neighboring callers, types, tests? <code>&epsilon;</code> violated is local fix with side effect.</li>
+  <li><strong>Coverage &ge; 0.70:</strong> for retrieval mutables, fraction of relevant corpus inspected. Below threshold, grounding has not been earned.</li>
+</ul>
+
+<p>These are verbal checks, not machine-evaluated numbers. Their purpose is to give the agent a vocabulary for why a mutable is not yet resolved, so the narrative cannot silently skip the check.</p>
+
+<h3>2.6 The Sixteen-Mode Failure Taxonomy</h3>
+
+<p class="first">Every fault surface enumerated during planning is mapped against a sixteen-mode taxonomy: hallucination &amp; chunk drift, interpretation collapse, long reasoning drift, bluffing, semantic-embedding mismatch, logic collapse requiring reset, cross-session memory breaks, debugging black box, entropy collapse, creative freeze, symbolic collapse, philosophical recursion, multi-agent chaos, bootstrap ordering, deployment deadlock, and pre-deploy collapse. A fault surface that maps to none of the sixteen is either a seventeenth mode (and the taxonomy must be extended) or the surface is not yet named sharply enough. Items with no taxonomy mapping ship silent bugs.</p>
+
+<h3>2.7 Governance Stress Suite</h3>
+
+<p class="first">Before declaring a non-trivial task complete, the proposed change is mentally walked through an eight-case stress suite that exercises forced-closure pressures: missing evidence, unsourced figures, ambiguous clauses, contradictory witnesses, attribution under time pressure, root-cause analysis with live alternatives, authenticity assessment from partial signals, and deploy-gate decisions under CI flake. The legal outcomes are: illegal commitments = 0; evidence-boundary violations = 0; lawful downgrades available = 8; outlier visibility preserved. A case the change flunks blocks completion.</p>
+
+<div class="theorem">
+  <strong>Principle (Earned emission).</strong> <em>A plausible-looking answer that has not cleared route_fit, authorization, repair_legality, and the stress suite is not eligible for emission. Lawful downgrade&mdash;writing a weaker, true statement in place of a stronger, unearned one&mdash;is always available; forced closure never is.</em>
+</div>
+
+<h2>3. The Remote-Execution Boundary</h2>
+
+<h3>3.1 Git Push as Unwitnessed Execution</h3>
+
+<p class="first">Every <code>git push</code> triggers GitHub Actions workflows. Those workflows build binaries, publish packages to npm, deploy GitHub Pages sites, trigger downstream repository updates, and commit artifacts back to the repository. Each is execution of real code against real infrastructure. The agent that pushes and does not observe the resulting workflow is executing code without witnessing the execution&mdash;which is the precise failure the mutable contract forbids.</p>
+
+<p>The reclassification is: <code>git push</code> is not a local operation. It is a remote-execution event. Every push requires a CI watch the same way every local hypothesis requires a witnessed probe. The watch is not an optional verification step deferred to the completion phase&mdash;it is the execution contract applied to remote actions.</p>
+
+<h3>3.2 Watch Protocol</h3>
+
+<p class="first">Every push is followed immediately by:</p>
+
+<ol>
+  <li>Enumerate the runs the push triggered: <code>gh run list --limit 5 --json databaseId,name,status,conclusion</code>.</li>
+  <li>For each run in <code>queued</code> or <code>in_progress</code>, watch until terminal: <code>gh run watch &lt;id&gt; --exit-status</code>.</li>
+  <li>On failure, inspect: <code>gh run view &lt;id&gt; --log-failed</code>. Classify the cause: file output wrong, logic wrong, or new unknown. Regress to the owning phase.</li>
+  <li>Check downstream cascade: pushes to this repository may trigger workflows in downstream repositories. Each downstream cascade is watched the same way.</li>
+</ol>
+
+<p>A push without a matching watch cycle is a contract violation. This rule supersedes the earlier expectation that CI could be reviewed at the completion phase&mdash;by completion, the downstream cascade has already happened.</p>
+
+<h3>3.3 The Cascade</h3>
+
+<p class="first">A push to one repository is a local operation; a push that triggers cascading deployments is a multi-repository remote execution. Our particular case: a push to the orchestrator triggers plugin-repository builds across twelve downstream repositories, each of which may in turn publish a package to npm, deploy a site, and commit artifacts back to its own default branch. A failure at any stage of this cascade is a failure introduced by the original push.</p>
+
+<p>The cascade motivates the strict version of the watch protocol. The window in which the agent can still fix a bad push narrows as artifacts propagate. An agent that notices a failure only at the completion phase has already shipped artifacts to twelve repositories and, in some cases, public package registries.</p>
+
+<h2>4. Parse-Time CI Failures</h2>
+
+<h3>4.1 The Zero-Job Failure Signature</h3>
+
+<p class="first">A specific class of GitHub Actions failure manifests as: workflow run created, status <code>completed</code>, conclusion <code>failure</code>, duration zero seconds, zero jobs dispatched, no logs available. The <code>gh api</code> workflow registry shows the workflow&rsquo;s <code>name</code> field as the file path rather than the declared name, indicating that GitHub&rsquo;s validator never successfully parsed the file&rsquo;s top-level <code>name:</code> directive despite the file being syntactically valid YAML to local parsers.</p>
+
+<p>This failure shape is silent in practice: every push produces the same zero-second failure, the workflow never actually runs, and an agent checking only that &ldquo;all workflows completed&rdquo; can believe its changes have been deployed when no job has executed in weeks.</p>
+
+<h3>4.2 Four Root Causes Catalogued</h3>
+
+<p class="first">During a single debugging session we resolved four distinct shapes of this failure. Each is reproducible and remediable:</p>
+
+<h3>4.2.1 Block-scalar Indentation of Heredoc Content</h3>
+
+<p>A <code>run: |</code> block scalar with nested heredoc content has a subtle indentation requirement. The heredoc marker sits at the block-scalar base indent, but heredoc body lines in the source file must maintain at least that indent. If the body is at column zero (natural Python source), the YAML parser accepts the file as valid at top level but fails inside the block-scalar content, producing the zero-job failure. Remediation: indent the heredoc body to the block-scalar base indent. The wrapping <code>run</code> step strips that indent before invoking the shell, so the invoked <code>python3</code> sees correctly column-aligned code.</p>
+
+<h3>4.2.2 Missing Token Environment Variable</h3>
+
+<p>Workflow steps that invoke <code>curl</code> against the GitHub API without passing <code>GITHUB_TOKEN</code> receive anonymous rate-limited responses. A rate-limited response is a JSON error object, not the expected list; downstream Python that iterates over the response crashes with an <code>AttributeError</code>. The fix is a step-level <code>env: GITHUB_TOKEN: ${{ github.token }}</code> plus an <code>isinstance</code> guard on the parsed response. Both are required; omitting either produces an intermittent failure that correlates with API rate-limit windows.</p>
+
+<h3>4.2.3 Concurrent-Push Races</h3>
+
+<p>Multiple scheduled workflows that commit to the same branch on every run will race when triggered by the same push. The first workflow wins; the rest receive <code>! [rejected] main -&gt; main (fetch first)</code>. The generalized remediation is a retry loop around <code>git push</code> with jittered backoff and <code>git pull --rebase</code> between attempts:</p>
+
+<pre><code>for i in 1 2 3 4 5; do
+  git pull --rebase origin main && git push && break \
+    || sleep $((RANDOM % 10 + 5))
+done</code></pre>
+
+<p>This is not specific to this project. It is the pattern for any CI-committed artifact on a shared branch.</p>
+
+<h3>4.2.4 Gitignored Output Paths</h3>
+
+<p>Workflows that generate artifacts into a gitignored directory fail silently: <code>git add path/</code> returns exit 1 against an ignored path, and with <code>pipefail</code> enabled the step aborts. The remediation is <code>git add -f</code> for the specific path. Keeping the output in <code>.gitignore</code> prevents local developers from accidentally committing the artifact; force-adding in CI lets the workflow commit it when it is the authoritative producer.</p>
+
+<h3>4.3 A Fifth: Multiline Output Expansion</h3>
+
+<p class="first">A separate failure shape arises when one step&rsquo;s multiline output is expanded via <code>${{ steps.X.outputs.Y }}</code> into a subsequent step&rsquo;s shell script. If the output contains unescaped backticks, parentheses, or command substitutions, the expansion produces a bash syntax error at runtime. Remediation: write multiline content to a file, read it in the consuming step via <code>jq --rawfile</code>, and let <code>jq</code> handle JSON escaping. This pattern generalizes to any CI step that produces structured content for a later step.</p>
+
+<div class="theorem">
+  <strong>Observation (Parse-time opacity).</strong> <em>YAML validity in local parsers is not sufficient evidence of CI validity. The workflow registry&rsquo;s handling of the <code>name</code> field is a witnessed probe of whether GitHub has accepted the file: when the registry shows the file path in place of the declared name, the file has failed GitHub&rsquo;s validator and every run will fail at zero seconds until the file is changed.</em>
+</div>
+
+<h2>5. Same-Turn Fact Persistence</h2>
+
+<h3>5.1 The Compaction Window</h3>
+
+<p class="first">An agent session accumulates context across many turns. When the context approaches its limit, earlier turns are summarized and replaced with the summary. Facts resolved in a turn but not persisted in durable storage before compaction are lost, and must be re-discovered in a later session. The background <code>memorize</code> sub-agent introduced in [2] handles persistence, but its invocation timing was previously loose: facts could be handed off at phase end rather than at resolution time.</p>
+
+<p>In practice, the window between resolution and phase end is wide enough to lose facts to unrelated work: the agent resolves an unknown, moves to other tasks, accumulates context, and hits compaction before the phase exit at which the handoff was scheduled.</p>
+
+<h3>5.2 Same-Turn Handoff</h3>
+
+<p class="first">The strengthened discipline is: the moment an unknown resolves, the memorize handoff fires in the same turn, before the next tool call where possible, end-of-turn at latest. The trigger contract enumerates the resolution events:</p>
+
+<ul>
+  <li>An <code>exec:</code> run&rsquo;s output answers a prior &ldquo;let me check&rdquo;.</li>
+  <li>A code read confirms or refutes an assumption.</li>
+  <li>A CI log reveals a root cause.</li>
+  <li>The user states a preference, constraint, deadline, or decision.</li>
+  <li>A fix works for a non-obvious reason.</li>
+  <li>A tool or environment quirk bites once.</li>
+</ul>
+
+<p>Each event fires a separate <code>memorize</code> call, in parallel when multiple events resolve in the same turn, never serialized. Every exit from a turn includes a self-check: any resolved unknown un-handed-off is handed off before the response closes.</p>
+
+<h3>5.3 Specification Documents as Code</h3>
+
+<p class="first">A related advance concerns the search index. The <code>exec:codesearch</code> tool was previously limited to source files. Specification PDFs&mdash;protocol specs, datasheets, RFCs, compliance texts&mdash;are now indexed page by page alongside source. A constraint that appears only in a PDF is therefore a witnessable fact, not an unsourced assumption. A recommendation or emission that references a PDF constraint without a <code>doc.pdf:&lt;page&gt;</code> citation is classified as unwitnessed and must regress to EXECUTE.</p>
+
+<p>This closes a common failure mode: the agent reading source code and reimplementing a protocol field based on an in-file comment or adjacent usage, when the authoritative definition was in a PDF the agent never searched.</p>
+
+<h2>6. Relationship to Earlier Work</h2>
+
+<p class="first">The governance layer extends the mutable discipline of [1] orthogonally. Mutables are fact-level: an expected value, a current value, a resolution method. The four state planes are item-level: an item may have all its mutables resolved while still lacking authorization for emission. The separation handles the case where every individual fact is witnessed but their aggregate has not earned the strength of the conclusion being drawn from them.</p>
+
+<p>The remote-execution boundary in &sect;3 extends the witnessed-execution principle of [1] to actions that cross the machine boundary. Paper I described witnessed execution for local code; this paper extends the same contract to any action whose consequences happen elsewhere and whose correctness is knowable only through the feedback channel. <code>git push</code> is one such action; a future extension covers <code>npm publish</code>, package registry operations, and cross-repository API calls.</p>
+
+<p>The same-turn memorize discipline in &sect;5 tightens the timing of a mechanism introduced in [2]. The earlier paper established the background sub-agent; this paper establishes that its invocation cannot be deferred to phase end without accepting a loss window during compaction.</p>
+
+<p>The CI failure taxonomy in &sect;4 is a concrete instance of the governance layer&rsquo;s insistence on naming the failure mode before applying a fix. Each of the four shapes has a name, a signature (the zero-job failure with <code>name</code> shown as path), and a reproducible remediation. Absent the naming, each instance appears as an idiosyncratic bug; with the naming, they are members of a single class of parse-time opacity failures addressable by a common protocol.</p>
+
+<h2>7. Limitations</h2>
+
+<ol>
+  <li><strong>Governance as cognitive discipline:</strong> The four state planes and five refused collapses are enforced by agent self-discipline rather than mechanical gates. An agent that narrates past a plane collapse can still ship an emission. The stress-suite walk-through is likewise mental; it has no automated execution.</li>
+  <li><strong>CI watch cost:</strong> Watching every push serializes the agent against CI runtime. For long-running workflows, the agent is blocked; for cascade pushes, the blocking multiplies across downstream repositories. We accept this cost; a faster CI substrate would reduce but not eliminate it.</li>
+  <li><strong>Parse-time failures are not all catalogued:</strong> The four shapes in &sect;4 were uncovered during a single debugging session. The underlying phenomenon&mdash;YAML files valid to permissive parsers but invalid to GitHub&rsquo;s stricter validator&mdash;is not fully bounded. Additional shapes almost certainly exist and will require similar witnessed diagnosis.</li>
+  <li><strong>Memorize self-check:</strong> The end-of-turn self-check depends on the agent noticing un-handed-off resolutions. An agent whose attention is elsewhere at turn exit can still miss a resolution. The discipline reduces but does not eliminate the loss window.</li>
+  <li><strong>Sixteen-mode taxonomy is not closed:</strong> The taxonomy is adapted from external prior work and extended as new modes are encountered. Any fault surface the agent encounters and cannot map is presumptive evidence of a seventeenth mode rather than sufficient reason to emit without classification.</li>
+</ol>
+
+<h2>8. Related Work</h2>
+
+<p class="first">The governance layer&rsquo;s separation of route discovery, weak-prior transfer, and legitimacy gating is adapted from constitutional runtime architectures for AI reasoning systems [6], which distinguish plausibility (what seems right) from authorization (what has earned public emission). Our contribution is the operationalization of this separation in a coding-agent state machine, with specific state planes, metrics, and stress cases rather than the general constitutional framing.</p>
+
+<p>The sixteen-mode failure taxonomy is likewise adapted from prior work on LLM system failure categorization [6], with route-family tags added to discipline repair moves. The quality metrics &Delta;S, &lambda;, &epsilon; and coverage threshold are drawn from the same source.</p>
+
+<p>The remote-execution boundary echoes the principle of observable effects [7]: any action whose consequences extend beyond the invoking process is an effect whose correctness must be observed externally. CI-as-remote-execution is a specific instance for push-driven build systems, where the workflow runner is the external observation point.</p>
+
+<p>The parse-time CI failure catalogue has analogues in the compiler-error hierarchy [8]: errors at tokenization, parsing, type-checking, and linking are structurally distinct and require different remediations. YAML validity, CI-validator validity, step execution, and artifact production are four stages at which a workflow can fail silently; our catalogue is an empirical taxonomy of failures at the parsing boundary specifically.</p>
+
+<h2>9. Conclusion</h2>
+
+<p class="first">We have described four advances: a governance layer separating route discovery, weak-prior handoff, and emission legitimacy into three responsibilities with four orthogonal state planes; a reclassification of <code>git push</code> as a remote-execution event with mandatory CI watch; a catalogue of four plus one parse-time CI failure modes with remediation patterns; and a strengthened same-turn memorize discipline with end-of-turn self-check.</p>
+
+<p>These advances address failures that earlier work left unaddressed: not failures of phase order (paper I) nor failures of in-phase discipline (paper II), but failures of the agent&rsquo;s understanding of its own authority to emit conclusions, and of the boundary between the agent&rsquo;s local actions and their remote consequences. A well-structured lifecycle with disciplined in-phase work is still necessary and still not sufficient. The sufficiency gap remaining at the end of paper II was earned-emission and boundary-awareness. This paper addresses that gap.</p>
+
+<p>Our experience suggests that agent reliability improves monotonically with the refusal to collapse plausibility into authorization. The governance layer is structurally equivalent to the mutable discipline of paper I applied one level up: individual facts are witnessed into KNOWN by execution; individual conclusions are witnessed into emittable by the governance layer&rsquo;s plane advancements. The same principle, operating at a higher level of abstraction.</p>
+
+<div class="references">
+  <h2>References</h2>
+  <ol>
+    <li>AnEntrypoint, &ldquo;Toward Structured Lifecycle Control in LLM Coding Agents,&rdquo; March 2026.</li>
+    <li>AnEntrypoint, &ldquo;Advances in Agentic Discipline for Coding Agents,&rdquo; April 2026.</li>
+    <li>W3C TAG, &ldquo;The Principle of Least Power,&rdquo; <em>w3.org/2001/tag/doc/leastPower</em>, 2006.</li>
+    <li>C. Richardson, &ldquo;Observability Patterns for Microservices,&rdquo; <em>microservices.io/patterns/observability</em>, 2018.</li>
+    <li>C. Hewitt, P. Bishop, and R. Steiger, &ldquo;A Universal Modular ACTOR Formalism for Artificial Intelligence,&rdquo; <em>IJCAI</em>, 1973.</li>
+    <li>OneStarDao, &ldquo;WFGY 4.0 Problem Map and Twin Atlas Runtime Constitution,&rdquo; 2025.</li>
+    <li>P. Wadler, &ldquo;The Essence of Functional Programming,&rdquo; <em>POPL</em>, 1992. (Effect-awareness context.)</li>
+    <li>A. Aho, M. Lam, R. Sethi, and J. Ullman, <em>Compilers: Principles, Techniques, and Tools</em>, 2nd ed., 2006.</li>
+  </ol>
+</div>
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper I</a> · <a href="./paper2.html" style="color:var(--panel-text-2)">paper II</a></span>
+<span>probably emerging 🌀</span>
+</footer>
+
+</body></html>
