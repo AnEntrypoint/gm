@@ -2,7 +2,7 @@
   "name": "gm-site",
   "private": true,
   "scripts": {
-    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node -e \"require('fs').copyFileSync('input.css','../docs/styles.css')\" && cp index.html ../docs/index.html"
+    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node -e \"const fs=require('fs'),path=require('path');fs.copyFileSync('input.css','../docs/styles.css');fs.copyFileSync('index.html','../docs/index.html');function cp(s,d){fs.mkdirSync(d,{recursive:true});for(const e of fs.readdirSync(s,{withFileTypes:true})){const ss=path.join(s,e.name),dd=path.join(d,e.name);if(e.isDirectory())cp(ss,dd);else fs.copyFileSync(ss,dd);}}cp('../vendor/design','../docs/design');\""
   },
   "dependencies": {
     "esbuild": "^0.28.0",

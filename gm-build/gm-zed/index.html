@@ -2,175 +2,999 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zed · gm</title>
+<title>Zed · gm · 247420</title>
 <meta name="description" content="State machine agent with hooks, skills, and automated git enforcement">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#EFE9DD">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-@font-face{font-family:'Archivo';src:local('Archivo');}
-:root{
-  --paper:#EFE9DD;--ink:#0B0B09;--acid:#B8FF00;--link:#1F4DFF;--warn:#FF3B1F;--live:#00A86B;
-  --fg:var(--ink);--bg:var(--paper);--fg-2:#3a3a36;--fg-3:#6b6b64;
-  --ff-display:'Archivo','Archivo Narrow',ui-sans-serif,sans-serif;
-  --ff-mono:'JetBrains Mono','ui-monospace',Menlo,Consolas,monospace;
-  --ff-body:'Space Grotesk','Archivo',ui-sans-serif,sans-serif;
-  --fs-hero:clamp(64px,12vw,144px);--fs-h1:clamp(40px,6vw,72px);--fs-h2:28px;--fs-h3:18px;--fs-h4:15px;
-  --fs-body:14px;--fs-lg:17px;--fs-xs:11px;--fs-micro:10px;
-  --lh-tight:1.02;--lh-snug:1.18;--lh-base:1.5;--lh-long:1.6;
-  --tr-tight:-0.02em;--tr-label:0.08em;
-  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;
-  --measure:64ch;
-  --dur-snap:80ms;--dur-base:160ms;--ease:cubic-bezier(0.2,0,0,1);
+
+/* Rows: no separators, hover surface tint instead */
+.row { background: transparent; transition: background var(--dur-snap) var(--ease); }
+.row:hover { background: var(--surface-2); }
+[data-theme="ink"] .row:hover { background: var(--surface-ink-2); }
+
+body {
+  background: var(--panel-0);
+  color: var(--panel-text);
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
-*,*::before,*::after{box-sizing:border-box;border:0;outline:0;border-radius:0;}
-html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--ff-mono);font-size:var(--fs-body);line-height:var(--lh-base);-webkit-font-smoothing:antialiased;}
-a{color:inherit;text-decoration:none;}
-a:hover{text-decoration:underline;text-underline-offset:3px;}
-.rule{border-top:1px solid var(--ink);height:0;margin:0;flex:1;}
-.rule-double{border-top:3px double var(--ink);height:0;margin:0;}
-.t-hero{font-family:var(--ff-display);font-size:var(--fs-hero);line-height:var(--lh-tight);letter-spacing:var(--tr-tight);font-weight:800;margin:0;text-transform:lowercase;}
-.t-hero .slash{color:var(--fg-3);font-weight:400;margin:0 0.05em;}
-h1,h2,h3{margin:0;font-family:var(--ff-display);}
-.t-h2,h2{font-size:var(--fs-h2);line-height:var(--lh-snug);font-weight:700;letter-spacing:var(--tr-tight);}
-.t-body{font-family:var(--ff-mono);font-size:var(--fs-body);line-height:var(--lh-base);}
-.t-prose{font-family:var(--ff-body);font-size:var(--fs-lg);line-height:var(--lh-long);max-width:var(--measure);}
-.t-label{font-family:var(--ff-mono);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-label);font-weight:500;color:var(--fg-2);}
-.t-micro{font-family:var(--ff-mono);font-size:var(--fs-micro);letter-spacing:var(--tr-label);text-transform:uppercase;color:var(--fg-3);}
-.t-meta{font-family:var(--ff-mono);font-size:var(--fs-xs);color:var(--fg-3);}
 
-.stamp{display:inline-block;padding:var(--space-1) var(--space-3);font-family:var(--ff-mono);font-size:var(--fs-xs);letter-spacing:var(--tr-label);text-transform:uppercase;font-weight:600;transform:rotate(-2deg);}
-.stamp.ink{background:var(--ink);color:var(--paper);}
-.stamp.acid{background:var(--acid);color:var(--ink);}
+/* ============================================================
+   Semantic type classes
+   ============================================================ */
 
-.btn-stamp{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);background:var(--ink);color:var(--paper);box-shadow:4px 4px 0 var(--ink);font-family:var(--ff-mono);font-weight:600;font-size:var(--fs-body);text-transform:uppercase;letter-spacing:var(--tr-label);cursor:pointer;transition:transform var(--dur-snap) var(--ease),box-shadow var(--dur-snap) var(--ease);}
-.btn-stamp:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--ink);text-decoration:none;}
-.btn-stamp:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink);}
+/* Hero — project name, once per page. Archivo Black territory. */
+.t-hero, h1.hero {
+  font-family: var(--ff-display);
+  font-size: clamp(64px, 12vw, var(--fs-hero));
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  font-weight: 800;
+  margin: 0;
+}
 
-.app-top{position:sticky;top:0;z-index:10;background:var(--paper);display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-5);border-bottom:1px solid var(--ink);}
-.app-top .brand{font-family:var(--ff-mono);font-weight:700;text-transform:uppercase;letter-spacing:var(--tr-label);}
-.app-top .brand .slash{color:var(--fg-3);margin:0 var(--space-1);}
-.app-top nav{margin-left:auto;display:flex;gap:var(--space-4);font-family:var(--ff-mono);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:var(--tr-label);}
+/* h1 — page title */
+.t-h1, h1 {
+  font-family: var(--ff-display);
+  font-size: clamp(40px, 6vw, var(--fs-h1));
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  font-weight: 700;
+  margin: 0;
+}
 
-.dateline{display:flex;gap:var(--space-5);flex-wrap:wrap;padding:var(--space-2) var(--space-5);border-bottom:1px solid var(--ink);background:var(--paper);}
-.page{max-width:1100px;margin:0 auto;padding:0 var(--space-5);}
-.hero{padding:var(--space-8) 0 var(--space-7) 0;}
-.hero .stamp{margin-bottom:var(--space-4);}
-.hero .lede{margin-top:var(--space-4);color:var(--fg-2);}
-.hero-cta{margin-top:var(--space-6);}
+/* h2 — section */
+.t-h2, h2 {
+  font-family: var(--ff-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-tight);
+  font-weight: 700;
+  margin: 0;
+}
 
-.section{padding:var(--space-7) 0;border-top:1px solid var(--ink);}
-.section-head{display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5);}
-.section-lede{margin-bottom:var(--space-5);color:var(--fg-2);}
+/* h3 — subsection (mono, colorful-eligible) */
+.t-h3, h3 {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+  letter-spacing: 0;
+  font-weight: 600;
+  margin: 0;
+}
 
-.receipt{border:1px solid var(--ink);background:color-mix(in srgb,var(--paper) 94%,var(--ink));}
-.receipt-row{display:grid;grid-template-columns:48px 1fr;gap:var(--space-4);padding:var(--space-4);border-bottom:1px dashed var(--ink);}
-.receipt-row:last-child{border-bottom:0;}
-.receipt-row .num{align-self:start;padding-top:2px;}
-.receipt-cmd{font-family:var(--ff-mono);font-size:var(--fs-body);background:var(--ink);color:var(--acid);padding:var(--space-3);margin:var(--space-2) 0 0 0;overflow-x:auto;}
-.receipt-cmd code{background:transparent;color:inherit;}
+/* h4 */
+.t-h4, h4 {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-h4);
+  line-height: var(--lh-snug);
+  font-weight: 500;
+  margin: 0;
+}
 
-.feat-list,.phase-list,.idx-list{list-style:none;margin:0;padding:0;}
-.feat-row,.phase-row{display:grid;grid-template-columns:180px 1fr;gap:var(--space-4);padding:var(--space-3) 0;border-top:1px solid var(--ink);}
-.feat-row:last-child,.phase-row:last-child{border-bottom:1px solid var(--ink);}
-.feat-tag,.phase-name{padding-top:2px;}
+/* Body UI — mono, the default UI voice */
+.t-body {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+}
 
-.platform-cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);}
-@media (max-width:720px){.platform-cols{grid-template-columns:1fr;}.feat-row,.phase-row,.receipt-row{grid-template-columns:1fr;gap:var(--space-1);}.receipt-row{grid-template-columns:48px 1fr;}}
-.col-head{margin-bottom:var(--space-3);color:var(--fg-2);}
-.idx-row{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-top:1px solid var(--ink);color:var(--ink);text-decoration:none;transition:background var(--dur-snap) var(--ease);}
-.idx-row:last-child{border-bottom:1px solid var(--ink);}
-.idx-row:hover{background:var(--ink);color:var(--paper);text-decoration:none;}
-.idx-row:hover .idx-tag{color:var(--paper);}
-.idx-active{background:var(--acid);color:var(--ink);}
-.idx-active:hover{background:var(--acid);color:var(--ink);}
-.idx-mark{font-family:var(--ff-mono);color:var(--fg-3);}
-.idx-label{font-family:var(--ff-mono);text-transform:uppercase;letter-spacing:var(--tr-label);font-size:var(--fs-body);}
-.idx-tag{font-family:var(--ff-mono);}
+/* Long-form prose — SANS, not serif. Space Grotesk. */
+.t-prose, .prose p {
+  font-family: var(--ff-body);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-long);
+  max-width: var(--measure);
+  text-wrap: pretty;
+  font-weight: 400;
+}
+.prose p { margin: 0 0 var(--space-4) 0; }
 
-.app-foot{margin-top:var(--space-8);padding:var(--space-5) var(--space-5) var(--space-7) var(--space-5);}
-.foot-row{display:flex;justify-content:space-between;gap:var(--space-4);padding-top:var(--space-3);}
+/* Label — mono caps, terminal voice */
+.t-label {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-label);
+  font-weight: 500;
+}
+
+/* Meta — mono, small, dim */
+.t-meta {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  color: var(--fg-3);
+}
+
+/* Micro — smallest, datelines */
+.t-micro {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* Pull — display, for section intros and callouts */
+.t-pull {
+  font-family: var(--ff-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  font-weight: 600;
+  max-width: 20ch;
+  letter-spacing: var(--tr-tight);
+}
+
+/* Code */
+code, .t-code {
+  font-family: var(--ff-mono);
+  font-size: 0.9em;
+  background: var(--bg-2);
+  padding: 0.15em 0.5em;
+  
+  border-radius: var(--r-1);
+}
+
+/* ============================================================
+   COLORFUL MONO — the signature treatment
+   Mono is the UI voice. We don't leave it grey. Every mono block
+   is allowed — encouraged — to carry a canonical hue per token.
+   ============================================================ */
+
+/* Hue utilities — apply to mono runs to tint them */
+.mono-green   { color: var(--mono-1); }
+.mono-purple  { color: var(--mono-2); }
+.mono-mascot  { color: var(--mono-3); }
+.mono-sun     { color: var(--mono-4); }
+.mono-flame   { color: var(--mono-5); }
+.mono-sky     { color: var(--mono-6); }
+.mono-ink     { color: var(--fg); }
+.mono-dim     { color: var(--fg-3); }
+
+/* Highlight block — a mono run on a tinted bg with dark text */
+.hl-green   { background: var(--green);   color: var(--green-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-purple  { background: var(--purple);  color: var(--purple-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-mascot  { background: var(--mascot);  color: var(--mascot-fg); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-sun     { background: var(--sun);     color: var(--ink); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-flame   { background: var(--flame);   color: var(--paper); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+.hl-sky     { background: var(--sky);     color: var(--paper); padding: 0.08em 0.4em; border-radius: var(--r-1); }
+
+/* Role-colored mono spans — semantic, self-documenting */
+.m-k     { color: var(--mono-2); font-weight: 500; }  /* keyword */
+.m-s     { color: var(--mono-4); }                    /* string */
+.m-n     { color: var(--mono-1); }                    /* number / live */
+.m-c     { color: var(--fg-3); font-style: italic; }  /* comment */
+.m-tag   { color: var(--mono-3); }                    /* tag / mention */
+.m-op    { color: var(--mono-5); }                    /* operator / punct */
+.m-ref   { color: var(--mono-6); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Links in prose */
+.prose a, a.t-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.prose a:hover, a.t-link:hover {
+  background: var(--link);
+  color: var(--paper);
+  text-decoration: none;
+}
+
+/* ============================================================
+   Primitives — rules, stamps, buttons
+   ============================================================ */
+
+.rule       {   margin: 0; }
+.rule-double{    height: var(--bw-rule); margin: 0; }
+.rule-dotted{   margin: 0; }
+.rule-green {   margin: 0; }
+.rule-purple{   margin: 0; }
+.rule-mascot{   margin: 0; }
+
+/* The 247420 stamp */
+.stamp {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  
+  border-radius: var(--r-pill);
+  color: var(--fg);
+  background: transparent;
+  font-family: var(--ff-mono);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--tr-label);
+  text-transform: uppercase;
+  font-weight: 600;
+  transform: rotate(-2deg);
+}
+.stamp.ink     { background: var(--fg);     color: var(--bg); }
+.stamp.green   { background: var(--green);  color: var(--green-fg);   }
+.stamp.purple  { background: var(--purple); color: var(--purple-fg);  }
+.stamp.mascot  { background: var(--mascot); color: var(--mascot-fg);  }
+.stamp.sun     { background: var(--sun);    color: var(--ink);        }
+.stamp.flame   { background: var(--flame);  color: var(--paper);      }
+
+/* Legacy alias — .stamp.acid now means green */
+.stamp.acid    { background: var(--green);  color: var(--green-fg);   }
+
+/* The "stamp button" */
+.btn-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--fg);
+  color: var(--bg);
+  
+  border-radius: var(--r-2);
+  box-shadow: 4px 4px 0 var(--fg);
+  font-family: var(--ff-mono);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--dur-snap) var(--ease), box-shadow var(--dur-snap) var(--ease);
+}
+.btn-stamp:hover  { transform: translate(1px, 1px); box-shadow: 3px 3px 0 var(--fg); }
+.btn-stamp:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--fg); }
+
+.btn-stamp.green  { background: var(--green);  color: var(--green-fg);   box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.purple { background: var(--purple); color: var(--purple-fg);  box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.mascot { background: var(--mascot); color: var(--mascot-fg);  box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.sun    { background: var(--sun);    color: var(--ink);        box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.flame  { background: var(--flame);  color: var(--paper);      box-shadow: 4px 4px 0 var(--ink); }
+.btn-stamp.acid   { background: var(--green);  color: var(--green-fg);   box-shadow: 4px 4px 0 var(--ink); } /* legacy */
+
+/* Plain button — default */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  color: var(--fg);
+  
+  border-radius: var(--r-2);
+  font-family: var(--ff-mono);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-snap) var(--ease), color var(--dur-snap) var(--ease);
+}
+.btn:hover  { background: var(--fg); color: var(--bg); }
+.btn:active { background: var(--green); color: var(--green-fg);  }
+
+/* Ghost/link button */
+.btn-ghost {
+  background: transparent;
+  
+  color: var(--fg);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-caps);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.btn-ghost:hover { color: var(--green-fg); background: var(--green); }
+
+/* Input — softened: full border, rounded, 2px default */
+.input {
+  width: 100%;
+  background: var(--bg);
+  
+  border-radius: var(--r-2);
+  padding: var(--space-3) var(--space-3);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-body);
+  color: var(--fg);
+  
+  transition: border-color var(--dur-snap) var(--ease), box-shadow var(--dur-snap) var(--ease);
+}
+.input:focus {
+  
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--green) 25%, transparent);
+}
+.input::placeholder { color: var(--fg-3); }
+
+/* ============================================================
+   Layout scaffolds
+   ============================================================ */
+
+.page { min-height: 100vh; padding: var(--space-5); }
+
+.dateline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding-bottom: var(--space-2);
+  
+  font-family: var(--ff-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-label);
+}
+.dateline > * { white-space: nowrap; }
+.dateline .spread { flex: 1;  align-self: center; }
+
+/* Index-card row — soft card with breathing room */
+.row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  
+  border-radius: var(--r-3);
+  background: var(--bg);
+  align-items: baseline;
+  margin-bottom: calc(var(--bw-hair) * -1);
+  transition: background var(--dur-snap) var(--ease), color var(--dur-snap) var(--ease), transform var(--dur-snap) var(--ease);
+}
+.row + .row { margin-top: var(--space-2); margin-bottom: 0; }
+.row .row-code  { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--mono-1); }
+.row .row-title { font-family: var(--ff-display); font-weight: 700; font-size: var(--fs-h3); line-height: var(--lh-snug); letter-spacing: var(--tr-tight); }
+.row .row-meta  { font-family: var(--ff-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tr-label); color: var(--fg-3); }
+.row:hover { background: var(--green); color: var(--green-fg); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.row:hover .row-code { color: var(--sun); }
+.row:hover .row-meta { color: var(--green-fg); }
+
+/* Soft card — the generic container */
+.card {
+  
+  border-radius: var(--r-3);
+  background: var(--bg);
+  padding: var(--space-5);
+}
+.card.chunk {  }
+
+/* ============================================================
+   Selection
+   ============================================================ */
+::selection { background: var(--mascot); color: var(--mascot-fg); }
+
+
+/* ============================================================
+   Panel surface tokens — VS-Code-inspired layered chrome
+   Light default. Dark via prefers-color-scheme or [data-theme="dark"].
+   ============================================================ */
+:root {
+  --panel-0:       #f4f5f7;   /* canvas */
+  --panel-1:       #ffffff;   /* elevated card */
+  --panel-2:       #e7e9ec;   /* chrome (topbar, tabbar) */
+  --panel-3:       #d8dbe0;   /* deepest */
+  --panel-hover:   #ecedf0;
+  --panel-select:  #dbe3f5;
+  --panel-text:    #1f2328;
+  --panel-text-2:  #59636e;
+  --panel-text-3:  #8b949e;
+  --panel-accent:  var(--green);
+  --panel-accent-2:var(--green-deep);
+  --panel-shadow:  0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04);
+  --panel-shadow-top: 0 1px 0 rgba(0,0,0,0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --panel-0:       #181a1f;
+    --panel-1:       #21252b;
+    --panel-2:       #2c313a;
+    --panel-3:       #383e48;
+    --panel-hover:   #2a3038;
+    --panel-select:  #3a4050;
+    --panel-text:    #e4e6eb;
+    --panel-text-2:  #9aa3b2;
+    --panel-text-3:  #6d7685;
+    --panel-accent:  var(--green-2);
+    --panel-accent-2:var(--green-2);
+    --panel-shadow:  0 1px 2px rgba(0,0,0,0.3), 0 1px 6px rgba(0,0,0,0.25);
+    --panel-shadow-top: 0 1px 0 rgba(255,255,255,0.04);
+  }
+}
+
+[data-theme="dark"] {
+  --panel-0:       #181a1f;
+  --panel-1:       #21252b;
+  --panel-2:       #2c313a;
+  --panel-3:       #383e48;
+  --panel-hover:   #2a3038;
+  --panel-select:  #3a4050;
+  --panel-text:    #e4e6eb;
+  --panel-text-2:  #9aa3b2;
+  --panel-text-3:  #6d7685;
+  --panel-accent:  var(--green-2);
+  --panel-accent-2:var(--green-2);
+  --panel-shadow:  0 1px 2px rgba(0,0,0,0.3), 0 1px 6px rgba(0,0,0,0.25);
+  --panel-shadow-top: 0 1px 0 rgba(255,255,255,0.04);
+}
+
+[data-theme="light"] {
+  --panel-0:       #f4f5f7;
+  --panel-1:       #ffffff;
+  --panel-2:       #e7e9ec;
+  --panel-3:       #d8dbe0;
+  --panel-hover:   #ecedf0;
+  --panel-select:  #dbe3f5;
+  --panel-text:    #1f2328;
+  --panel-text-2:  #59636e;
+  --panel-text-3:  #8b949e;
+  --panel-accent:  var(--green);
+  --panel-accent-2:var(--green-deep);
+}
+
+/* Universal reset — no borders, no outlines except :focus-visible */
+*, *::before, *::after { box-sizing: border-box; border: 0 !important; outline: 0 !important; }
+:focus-visible { outline: 2px solid var(--panel-accent) !important; outline-offset: 2px; }
+html, body { margin: 0; padding: 0; }
+
+/* ============================================================
+   App shell — IDE-modern density patterns
+   Consumed by landing, ui_kits/*, docs, blog, slides
+   Light default · dark via prefers-color-scheme or [data-theme=dark]
+   ============================================================ */
+
+html, body {
+    background: var(--panel-0);
+    color: var(--panel-text);
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-0);
+}
+
+/* Top bar — sticky chrome, elevated via shadow so content doesn't bleed under */
+.app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 40px;
+    background: var(--panel-2);
+    color: var(--panel-text);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    font-size: 13px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.06), var(--panel-shadow);
+}
+.app-topbar .brand {
+    font-weight: 600;
+    color: var(--panel-text);
+    display: inline-flex;
+    align-items: center;
+}
+.app-topbar .brand .slash { color: var(--panel-text-3); margin: 0 6px; font-weight: 400; }
+.app-topbar nav {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+    align-items: center;
+}
+.app-topbar nav a {
+    color: var(--panel-text-2);
+    text-decoration: none;
+    padding: 7px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    line-height: 1;
+}
+.app-topbar nav a:hover { background: var(--panel-hover); color: var(--panel-text); }
+.app-topbar nav a.active { color: #ffffff; background: var(--panel-accent); }
+
+/* Breadcrumb — under topbar */
+.app-crumb {
+    position: sticky;
+    top: 40px;
+    z-index: 99;
+    background: var(--panel-1);
+    padding: 8px 20px;
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    color: var(--panel-text-2);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+.app-crumb .sep { color: var(--panel-text-3); }
+.app-crumb .leaf { color: var(--panel-text); }
+
+/* Shell body — optional sidebar + main */
+.app-body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    flex: 1;
+    min-height: 0;
+    background: var(--panel-0);
+}
+.app-body.no-side { grid-template-columns: 1fr; }
+
+/* Sidebar */
+.app-side {
+    background: var(--panel-1);
+    padding: 12px 0;
+    overflow-y: auto;
+    box-shadow: inset -1px 0 0 rgba(0,0,0,0.05);
+}
+.app-side .group {
+    padding: 12px 16px 4px 16px;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--panel-text-2);
+    font-weight: 600;
+}
+.app-side a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 16px 5px 24px;
+    color: var(--panel-text);
+    text-decoration: none;
+    font-size: 13px;
+}
+.app-side a:hover { background: var(--panel-hover); }
+.app-side a.active { background: var(--panel-select); color: var(--panel-text); font-weight: 500; }
+.app-side a .glyph { color: var(--panel-text-2); font-family: var(--ff-mono); width: 14px; flex-shrink: 0; }
+.app-side a.active .glyph { color: var(--panel-accent); }
+
+/* Main content area */
+.app-main {
+    background: var(--panel-0);
+    padding: 24px 32px 64px 32px;
+    overflow-y: auto;
+}
+.app-main.narrow { max-width: 820px; }
+.app-main.centered { margin: 0 auto; }
+
+.app-main h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 4px 0 4px 0;
+    color: var(--panel-text);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+.app-main h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 32px 0 8px 0;
+    color: var(--panel-text);
+    letter-spacing: -0.005em;
+}
+.app-main h3 {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    font-weight: 600;
+    margin: 24px 0 8px 0;
+    color: var(--panel-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.app-main p {
+    margin: 0 0 12px 0;
+    max-width: 72ch;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--panel-text);
+}
+.app-main .lede {
+    font-size: 15px;
+    color: var(--panel-text-2);
+    margin: 0 0 24px 0;
+    max-width: 60ch;
+}
+.app-main a {
+    color: var(--panel-accent);
+    text-decoration: none;
+}
+.app-main a:hover { text-decoration: underline; text-underline-offset: 2px; }
+.app-main code {
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    background: var(--panel-1);
+    padding: 1px 6px;
+    border-radius: 6px;
+    color: var(--panel-text);
+    box-shadow: var(--panel-shadow);
+}
+.app-main pre {
+    background: var(--panel-1);
+    padding: 14px 16px;
+    font-family: var(--ff-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--panel-text);
+    overflow-x: auto;
+    margin: 12px 0;
+    border-radius: 8px;
+    box-shadow: var(--panel-shadow);
+}
+.app-main pre code { background: transparent; padding: 0; box-shadow: none; }
+.app-main pre .c { color: var(--panel-text-2); }
+.app-main pre .k { color: var(--panel-accent); }
+.app-main pre .s { color: #ce9178; }
+
+/* Panel — grouped content block, elevated */
+.panel {
+    background: var(--panel-1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    box-shadow: var(--panel-shadow);
+}
+.panel-head {
+    padding: 10px 16px;
+    background: var(--panel-2);
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--panel-text-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.05);
+}
+.panel-body { padding: 0; background: var(--panel-1); }
+
+/* Row — dense list item */
+.row {
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 12px;
+    padding: 8px 16px;
+    align-items: baseline;
+    color: var(--panel-text);
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    background: transparent;
+}
+.row:hover { background: var(--panel-hover); }
+.row.active { background: var(--panel-select); }
+.row .code {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--panel-text-2);
+    letter-spacing: 0.04em;
+}
+.row .title { color: var(--panel-text); font-weight: 500; }
+.row .sub { color: var(--panel-text-2); font-size: 12px; margin-left: 8px; font-weight: 400; }
+.row .meta { color: var(--panel-text-2); font-size: 11px; text-align: right; font-family: var(--ff-mono); }
+
+/* CLI install block */
+.cli {
+    display: flex;
+    align-items: stretch;
+    background: var(--panel-1);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: var(--ff-mono);
+    font-size: 13px;
+    max-width: 640px;
+    margin: 12px 0;
+    box-shadow: var(--panel-shadow);
+}
+.cli .prompt { padding: 10px 14px; color: var(--panel-accent); font-weight: 600; }
+.cli .cmd { flex: 1; padding: 10px 0; color: var(--panel-text); }
+.cli .copy {
+    padding: 0 16px;
+    background: var(--panel-2);
+    color: var(--panel-text-2);
+    cursor: pointer;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+}
+.cli .copy:hover { background: var(--panel-3); color: var(--panel-text); }
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--panel-2);
+    color: var(--panel-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 80ms ease;
+    box-shadow: var(--panel-shadow);
+}
+.btn:hover { background: var(--panel-3); }
+.btn:active { background: var(--panel-hover); }
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--panel-accent);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: filter 80ms ease;
+    box-shadow: var(--panel-shadow);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:active { filter: brightness(0.94); }
+
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--panel-text-2);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 80ms ease;
+}
+.btn-ghost:hover { background: var(--panel-hover); color: var(--panel-text); }
+
+/* Tag / chip */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--panel-2);
+    color: var(--panel-text);
+}
+.chip.accent { background: var(--panel-accent); color: #ffffff; }
+.chip.dim { color: var(--panel-text-2); background: var(--panel-1); }
+
+/* Status bar — accent-colored footer */
+.app-status {
+    height: 24px;
+    background: var(--panel-accent);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 14px;
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+.app-status .spread { flex: 1; }
+.app-status .item { display: flex; align-items: center; gap: 4px; }
+.app-status a { color: #ffffff; text-decoration: none; }
+
+/* Key-value table */
+.kv {
+    width: 100%;
+    max-width: 640px;
+    background: var(--panel-1);
+    border-radius: 8px;
+    overflow: hidden;
+    border-collapse: collapse;
+    box-shadow: var(--panel-shadow);
+    margin: 12px 0;
+}
+.kv td { padding: 8px 16px; font-size: 13px; }
+.kv tr:nth-child(even) { background: var(--panel-2); }
+.kv td:first-child {
+    color: var(--panel-text-2);
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    width: 160px;
+}
+.kv td:last-child { color: var(--panel-text); }
+
+/* Card grid — landing index */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    margin: 12px 0 24px 0;
+}
+.card-item {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 10px;
+    padding: 14px 16px;
+    background: var(--panel-1);
+    color: var(--panel-text);
+    text-decoration: none;
+    align-items: baseline;
+    border-radius: 8px;
+    box-shadow: var(--panel-shadow);
+    transition: background 80ms ease, transform 80ms ease;
+}
+.card-item:hover { background: var(--panel-hover); transform: translateY(-1px); }
+.card-item .code {
+    font-family: var(--ff-mono);
+    font-size: 11px;
+    color: var(--panel-accent);
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.card-item .name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--panel-text);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--panel-3); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--panel-hover); }
+::-webkit-scrollbar-track { background: transparent; }
+
+
+body { display: flex; flex-direction: column; min-height: 100vh; }
+.app-main { max-width: 1100px; margin: 0 auto; width: 100%; padding: 24px 32px 64px 32px; }
+.gm-hero { padding: 32px 0 24px 0; }
+.gm-hero h1 { font-size: 36px; font-weight: 600; margin: 0 0 6px 0; color: var(--panel-text); letter-spacing: -0.01em; line-height: 1.15; }
+.gm-hero .lede { font-size: 14px; line-height: 1.55; color: var(--panel-text-2); max-width: 64ch; margin: 0 0 20px 0; }
+.gm-hero .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--panel-accent); color: var(--panel-1); border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; }
+.gm-btn:hover { background: var(--panel-accent-2); text-decoration: none; }
+.gm-btn.ghost { background: transparent; color: var(--panel-text); box-shadow: inset 0 0 0 1px var(--panel-3); }
+.gm-btn.ghost:hover { background: var(--panel-hover); }
+.gm-section-label { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 32px 0 8px 0; }
+.gm-section-label .slash { color: var(--panel-text-3); margin-right: 6px; }
+.panel-row-link { display: grid; grid-template-columns: 80px 1fr auto; gap: 12px; padding: 8px 16px; align-items: baseline; color: var(--panel-text); text-decoration: none; font-size: 13px; }
+.panel-row-link:hover { background: var(--panel-hover); text-decoration: none; }
+.panel-row-link .code { font-family: var(--ff-mono); font-size: 11px; color: var(--panel-text-2); letter-spacing: 0.04em; }
+.panel-row-link .title { color: var(--panel-text); font-weight: 500; }
+.panel-row-link .sub { color: var(--panel-text-2); font-size: 12px; margin-left: 8px; font-weight: 400; }
+.panel-row-link .meta { color: var(--panel-text-2); font-size: 11px; text-align: right; font-family: var(--ff-mono); }
+.gm-install { background: var(--panel-1); border-radius: 8px; margin: 12px 0; box-shadow: var(--panel-shadow); overflow: hidden; }
+.gm-install .head { padding: 10px 16px; background: var(--panel-2); font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); display: flex; justify-content: space-between; }
+.gm-install-step { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 10px 16px; font-family: var(--ff-mono); font-size: 13px; color: var(--panel-text); }
+.gm-install-step:not(:last-child) { box-shadow: inset 0 -1px 0 rgba(0,0,0,0.04); }
+.gm-install-step .n { font-size: 11px; color: var(--panel-text-2); padding-top: 1px; }
+.gm-install-step .d { color: var(--panel-text); font-family: 'Inter','Segoe UI',sans-serif; }
+.gm-install-step pre { margin: 6px 0 0 0; padding: 6px 10px; background: var(--panel-2); border-radius: 4px; font-size: 12px; overflow-x: auto; }
+.gm-install-step pre code { color: var(--panel-accent); font-family: var(--ff-mono); }
+.gm-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 720px) { .gm-cards { grid-template-columns: 1fr; } }
+.gm-card { background: var(--panel-1); border-radius: 6px; padding: 14px 16px; box-shadow: var(--panel-shadow); }
+.gm-card .t { font-weight: 600; font-size: 13px; color: var(--panel-text); margin-bottom: 4px; }
+.gm-card .d { font-size: 12px; color: var(--panel-text-2); line-height: 1.55; }
+.gm-footer { padding: 12px 20px; font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-3); display: flex; justify-content: space-between; background: var(--panel-1); box-shadow: inset 0 1px 0 rgba(0,0,0,0.04); flex-wrap: wrap; gap: 12px; }
+.gm-footer a { color: var(--panel-text-2); }
+.gm-footer a:hover { color: var(--panel-text); }
 </style>
 </head>
-<body>
-<header class="app-top">
-  <span class="brand">247420<span class="slash">/</span>gm<span class="slash">/</span>zed</span>
+<body data-screen-label="gm / zed">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm<span class="slash"> / </span>zed</span>
   <nav>
-    <a href="https://anentrypoint.github.io/gm">← all platforms</a>
-    <a href="https://github.com/AnEntrypoint/gm-zed">source ↗</a>
+    <a href="https://anentrypoint.github.io/gm/">← all platforms</a>
+    <a href="https://github.com/AnEntrypoint/gm-zed" target="_blank" rel="noopener">source ↗</a>
   </nav>
 </header>
-<div class="dateline">
-  <span class="t-micro">247420 / anentrypoint</span>
-  <span class="t-micro">Zed</span>
-  <span class="t-micro">v2.0.527</span>
-  <span class="t-micro">2026-04-21</span>
-  <span class="t-micro">probably emerging 🌀</span>
+<div class="app-crumb">
+  <span>247420</span><span class="sep">›</span>
+  <span>gm</span><span class="sep">›</span>
+  <span class="leaf">zed</span>
 </div>
-<main class="page">
-<section class="hero">
-  <span class="stamp ink">ide ext</span>
-  <h1 class="t-hero">gm <span class="slash">/</span> zed</h1>
-  <p class="t-prose lede">State machine agent with hooks, skills, and automated git enforcement</p>
-  <div class="hero-cta">
-    <a class="btn-stamp" href="https://github.com/AnEntrypoint/gm-zed">source ↗</a>
+<main class="app-main">
+<section class="gm-hero">
+  <h1>gm · zed</h1>
+  <p class="lede">State machine agent with hooks, skills, and automated git enforcement</p>
+  <div class="actions">
+    <a class="gm-btn" href="https://github.com/AnEntrypoint/gm-zed" target="_blank" rel="noopener">view on github</a>
+    <a class="gm-btn ghost" href="#install">install ↓</a>
   </div>
 </section>
-<section class="section">
-  <div class="section-head"><span class="t-label">§ install</span><hr class="rule"/></div>
-  <div class="receipt"><div class="receipt-row"><span class="t-label num">01</span><div class="receipt-body"><p class="t-body">build from source</p><pre class="receipt-cmd"><code>git clone https://github.com/AnEntrypoint/gm-zed &amp;&amp; cd gm-zed &amp;&amp; cargo build --release</code></pre></div></div>
-<div class="receipt-row"><span class="t-label num">02</span><div class="receipt-body"><p class="t-body">copy to extensions dir</p><pre class="receipt-cmd"><code>cp target/release/libgm.so ~/.config/zed/extensions/gm/</code></pre></div></div>
-<div class="receipt-row"><span class="t-label num">03</span><div class="receipt-body"><p class="t-body">restart Zed — activates automatically</p></div></div></div>
-</section>
-<section class="section">
-  <div class="section-head"><span class="t-label">§ features</span><hr class="rule"/></div>
-  <ul class="feat-list"><li class="feat-row"><span class="t-label feat-tag">state machine</span><span class="t-body feat-desc">immutable PLAN→EXECUTE→EMIT→VERIFY→COMPLETE phases with full mutable tracking</span></li>
-<li class="feat-row"><span class="t-label feat-tag">semantic search</span><span class="t-body feat-desc">natural language codebase exploration via codesearch skill — no grep needed</span></li>
-<li class="feat-row"><span class="t-label feat-tag">hooks</span><span class="t-body feat-desc">pre-tool, session-start, prompt-submit, and stop hooks for full lifecycle control</span></li>
-<li class="feat-row"><span class="t-label feat-tag">agents</span><span class="t-body feat-desc">gm, codesearch, and websearch agents pre-configured and ready to use</span></li>
-<li class="feat-row"><span class="t-label feat-tag">mcp integration</span><span class="t-body feat-desc">model context protocol server support built in</span></li>
-<li class="feat-row"><span class="t-label feat-tag">auto-recovery</span><span class="t-body feat-desc">supervisor hierarchy ensures the system never crashes</span></li></ul>
-</section>
-<section class="section">
-  <div class="section-head"><span class="t-label">§ state machine</span><hr class="rule"/></div>
-  <p class="t-prose section-lede">every task follows the same five-phase cycle — no skipping, no shortcuts.</p>
-  <ol class="phase-list"><li class="phase-row"><span class="t-label phase-name">01 plan</span><span class="t-body phase-desc">write .gm/prd.yml with every unknown named before any work begins</span></li>
-<li class="phase-row"><span class="t-label phase-name">02 execute</span><span class="t-body phase-desc">prove every hypothesis via witnessed execution, import real modules</span></li>
-<li class="phase-row"><span class="t-label phase-name">03 emit</span><span class="t-body phase-desc">write files only after all tests pass — pre- and post-emit gates</span></li>
-<li class="phase-row"><span class="t-label phase-name">04 verify</span><span class="t-body phase-desc">end-to-end execution confirms all changes work in real context</span></li>
-<li class="phase-row"><span class="t-label phase-name">05 complete</span><span class="t-body phase-desc">.prd empty, git clean, all output pushed</span></li></ol>
-</section>
-<section class="section">
-  <div class="section-head"><span class="t-label">§ also available</span><hr class="rule"/></div>
-  <div class="platform-cols">
-    <div class="platform-col">
-      <p class="t-label col-head">cli tools</p>
-      <div class="idx-list"><a class="idx-row" href="https://anentrypoint.github.io/gm-cc"><span class="idx-mark">›</span><span class="idx-label">claude code</span><span class="idx-tag t-meta">gm-cc</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-gc"><span class="idx-mark">›</span><span class="idx-label">gemini cli</span><span class="idx-tag t-meta">gm-gc</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-oc"><span class="idx-mark">›</span><span class="idx-label">opencode</span><span class="idx-tag t-meta">gm-oc</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-kilo"><span class="idx-mark">›</span><span class="idx-label">kilo code</span><span class="idx-tag t-meta">gm-kilo</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-codex"><span class="idx-mark">›</span><span class="idx-label">codex</span><span class="idx-tag t-meta">gm-codex</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-copilot-cli"><span class="idx-mark">›</span><span class="idx-label">copilot cli</span><span class="idx-tag t-meta">gm-copilot-cli</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-qwen"><span class="idx-mark">›</span><span class="idx-label">qwen code</span><span class="idx-tag t-meta">gm-qwen</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-hermes"><span class="idx-mark">›</span><span class="idx-label">hermes agent</span><span class="idx-tag t-meta">gm-hermes</span></a></div>
+<section>
+  <div class="gm-section-label"><span class="slash">//</span>status</div>
+  <div class="panel">
+    <div class="panel-head"><span>release · v2.0.527</span><span>probably emerging</span></div>
+    <div class="panel-body">
+      <div class="row">
+        <span class="code"><span style="color:var(--panel-accent)">●</span></span>
+        <span class="title">Zed<span class="sub">part of the gm family</span></span>
+        <span class="meta">live</span>
+      </div>
     </div>
-    <div class="platform-col">
-      <p class="t-label col-head">ide extensions</p>
-      <div class="idx-list"><a class="idx-row" href="https://anentrypoint.github.io/gm-vscode"><span class="idx-mark">›</span><span class="idx-label">vs code</span><span class="idx-tag t-meta">gm-vscode</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-cursor"><span class="idx-mark">›</span><span class="idx-label">cursor</span><span class="idx-tag t-meta">gm-cursor</span></a>
-<a class="idx-row idx-active" href="#"><span class="idx-mark">◆</span><span class="idx-label">zed</span><span class="idx-tag t-meta">gm-zed</span></a>
-<a class="idx-row" href="https://anentrypoint.github.io/gm-jetbrains"><span class="idx-mark">›</span><span class="idx-label">jetbrains</span><span class="idx-tag t-meta">gm-jetbrains</span></a></div>
+  </div>
+</section>
+<section id="install">
+  <div class="gm-section-label"><span class="slash">//</span>install</div>
+  <div class="gm-install">
+    <div class="head"><span>install · 3 steps</span><span>shell</span></div>
+    <div class="gm-install-step"><span class="n">01</span><div><div class="d">build from source</div><pre><code>git clone https://github.com/AnEntrypoint/gm-zed &amp;&amp; cd gm-zed &amp;&amp; cargo build --release</code></pre></div></div>
+<div class="gm-install-step"><span class="n">02</span><div><div class="d">copy to extensions dir</div><pre><code>cp target/release/libgm.so ~/.config/zed/extensions/gm/</code></pre></div></div>
+<div class="gm-install-step"><span class="n">03</span><div><div class="d">restart Zed</div></div></div>
+  </div>
+</section>
+<section>
+  <div class="gm-section-label"><span class="slash">//</span>features</div>
+  <div class="gm-cards">
+    <div class="gm-card"><div class="t">state machine</div><div class="d">immutable PLAN→EXECUTE→EMIT→VERIFY→COMPLETE phases with full mutable tracking</div></div>
+    <div class="gm-card"><div class="t">semantic search</div><div class="d">natural language codebase exploration via codesearch skill</div></div>
+    <div class="gm-card"><div class="t">hooks</div><div class="d">pre-tool, session-start, prompt-submit, and stop hooks for full lifecycle control</div></div>
+    <div class="gm-card"><div class="t">agents</div><div class="d">gm, codesearch, and websearch agents pre-configured</div></div>
+    <div class="gm-card"><div class="t">mcp integration</div><div class="d">model context protocol server support built in</div></div>
+    <div class="gm-card"><div class="t">auto-recovery</div><div class="d">supervisor hierarchy ensures the system never crashes</div></div>
+  </div>
+</section>
+<section>
+  <div class="gm-section-label"><span class="slash">//</span>state machine</div>
+  <div class="panel">
+    <div class="panel-head"><span>5 phases · any new unknown → plan</span><span>strict order</span></div>
+    <div class="panel-body">
+      <div class="row"><span class="code">001</span><span class="title">plan<span class="sub">write the unknowns down</span></span><span class="meta">.gm/prd.yml</span></div>
+      <div class="row"><span class="code">002</span><span class="title">execute<span class="sub">run code against real services</span></span><span class="meta">exec:&lt;lang&gt;</span></div>
+      <div class="row"><span class="code">003</span><span class="title">emit<span class="sub">write files after checks pass</span></span><span class="meta">pre + post gates</span></div>
+      <div class="row"><span class="code">004</span><span class="title">verify<span class="sub">end-to-end, real data</span></span><span class="meta">no mocks</span></div>
+      <div class="row"><span class="code">005</span><span class="title">complete<span class="sub">.prd empty, git clean, pushed</span></span><span class="meta">test.js</span></div>
+    </div>
+  </div>
+</section>
+<section>
+  <div class="gm-section-label"><span class="slash">//</span>also available</div>
+  <div class="panel">
+    <div class="panel-head"><span>platforms · 12</span><span>one state machine</span></div>
+    <div class="panel-body">
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-cc" target="_blank" rel="noopener"><span class="code">001</span><span class="title">claude code<span class="sub">gm-cc</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-gc" target="_blank" rel="noopener"><span class="code">002</span><span class="title">gemini cli<span class="sub">gm-gc</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-oc" target="_blank" rel="noopener"><span class="code">003</span><span class="title">opencode<span class="sub">gm-oc</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-kilo" target="_blank" rel="noopener"><span class="code">004</span><span class="title">kilo code<span class="sub">gm-kilo</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-codex" target="_blank" rel="noopener"><span class="code">005</span><span class="title">codex<span class="sub">gm-codex</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-copilot-cli" target="_blank" rel="noopener"><span class="code">006</span><span class="title">copilot cli<span class="sub">gm-copilot-cli</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-vscode" target="_blank" rel="noopener"><span class="code">007</span><span class="title">vs code<span class="sub">gm-vscode</span></span><span class="meta">ide · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-cursor" target="_blank" rel="noopener"><span class="code">008</span><span class="title">cursor<span class="sub">gm-cursor</span></span><span class="meta">ide · live</span></a>
+      <a class="panel-row-link" href="#"><span class="code">009</span><span class="title">zed<span class="sub">gm-zed</span></span><span class="meta">ide · here</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-jetbrains" target="_blank" rel="noopener"><span class="code">010</span><span class="title">jetbrains<span class="sub">gm-jetbrains</span></span><span class="meta">ide · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-qwen" target="_blank" rel="noopener"><span class="code">011</span><span class="title">qwen code<span class="sub">gm-qwen</span></span><span class="meta">cli · live</span></a>
+      <a class="panel-row-link" href="https://anentrypoint.github.io/gm-hermes" target="_blank" rel="noopener"><span class="code">012</span><span class="title">hermes agent<span class="sub">gm-hermes</span></span><span class="meta">cli · live</span></a>
     </div>
   </div>
 </section>
 </main>
-<footer class="app-foot">
-  <hr class="rule-double"/>
-  <div class="foot-row">
-    <span class="t-micro">generated by gm — convention-driven multi-platform plugin generator</span>
-    <span class="t-micro">probably emerging 🌀</span>
-  </div>
+<footer class="gm-footer">
+  <span>zed · part of <a href="https://anentrypoint.github.io/gm/">gm</a> · <a href="https://github.com/AnEntrypoint" target="_blank" rel="noopener">anentrypoint</a></span>
+  <span>probably emerging 🌀</span>
 </footer>
 </body></html>
