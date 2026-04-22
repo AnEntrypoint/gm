@@ -61,7 +61,7 @@ All work coordination, planning, execution, and verification happens through the
 
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
 
-**Every `git push` is a remote code execution. Watch the triggered GitHub Actions runs immediately — `gh run list` to enumerate, `gh run watch <id> --exit-status` per run, `gh run view --log-failed` on failure. Silent pushes are contract violations. Full protocol in `gm-execute`.**
+**Every `git push` triggers GitHub Actions. CI is auto-watched by the Stop hook — outcomes (green / failed / still-running) appear in next-turn context. No manual `gh run watch` needed. `gh run view <id> --log-failed` is for on-demand failure diagnosis only. Full behaviour in `gm-execute`.**
 
 Do not use `EnterPlanMode`. Do not run code directly via Bash. Invoke `planning` skill first.
 

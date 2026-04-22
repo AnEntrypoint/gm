@@ -133,38 +133,14 @@ git log origin/main..HEAD --oneline
 ```
 Must return empty. If not: stage → commit → push → re-verify. Local commit without push ≠ complete.
 
-## CI ENFORCEMENT
+## CI ENFORCEMENT — AUTOMATED
 
-After push, monitor all triggered GitHub Actions runs until they complete:
+The Stop hook automatically watches GitHub Actions runs whose `headSha` matches the just-pushed HEAD. You do not call `gh run list` / `gh run watch` manually.
 
-1. List runs triggered by the push:
-```
-exec:bash
-gh run list --limit 5 --json databaseId,name,status,conclusion,headBranch
-```
-
-2. For each run that is `in_progress` or `queued`, poll until it completes:
-```
-exec:bash
-gh run watch <run_id> --exit-status
-```
-
-3. If a run fails, view the logs to diagnose:
-```
-exec:bash
-gh run view <run_id> --log-failed
-```
-
-4. Fix the root cause → snake to the appropriate phase (emit for file issues, execute for logic issues, planning for new unknowns) → re-push → re-monitor.
-
-5. All runs must reach `conclusion: success` before advancing. A failed CI run is a KNOWN mutable that blocks completion — never ignore it.
-
-**Cascade awareness**: pushes to this repo may trigger downstream workflows (see AGENTS.md Rust Binary Update Pipeline). After local CI passes, check downstream repos for triggered runs:
-```
-exec:bash
-gh run list --repo AnEntrypoint/<downstream-repo> --limit 3 --json databaseId,name,status,conclusion
-```
-Monitor any cascade runs the same way — poll, diagnose failures, fix if the cause is in this repo.
+- All-green runs → Stop approves with a CI summary appended to context for the next turn.
+- Any failed / cancelled / timed-out / action_required run → Stop blocks with the failed run names + IDs in the reason. Treat that as a KNOWN mutable: investigate (`gh run view <id> --log-failed` only when explicitly diagnosing), fix the root cause, regress to the appropriate phase, push again — the hook re-watches automatically.
+- Watch deadline default 180s, override with `GM_CI_WATCH_SECS`. If the deadline passes with runs still in flight, Stop approves with "still in progress" so you do not block on slow Pages-deploy / npm-publish jobs forever.
+- Cascade awareness: if a push to this repo triggers downstream workflows in another repo, those are NOT automatically watched (only same-repo). Manual cascade check stays for those rare cases.
 
 ## CODEBASE HYGIENE SWEEP
 
