@@ -26,6 +26,11 @@
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook session-start",
             "timeout": 180000
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.js",
+            "timeout": 3000
           }
         ]
       }
