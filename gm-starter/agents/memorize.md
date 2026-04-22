@@ -6,8 +6,12 @@ agent: true
 
 # Memorize — Background Memory Agent
 
-Memory dir: C:/Users/user/.claude/projects/C--dev-plugforge/memory/
-AGENTS.md: C:/dev/plugforge/AGENTS.md
+Memory dir and AGENTS.md live with the current project — not a fixed path. Resolve at start of every run:
+
+- **Project root** = `process.cwd()` when you are invoked (the user's working directory, e.g. `C:/dev/devbox/spawnpoint`). `AGENTS.md` is `<project root>/AGENTS.md`.
+- **Memory dir** = `<HOME>/.claude/projects/<slug>/memory/` where `<slug>` is `process.cwd()` with `:` stripped and `/` or `\\` replaced by `--` (example: `C:/dev/devbox/spawnpoint` → `C--dev-devbox-spawnpoint`). On Windows `<HOME>` = `C:/Users/<user>`; on POSIX it is `$HOME`.
+
+If either path does not yet exist, create it. Never write to a different project's memory dir.
 
 ## STEP 1: READ
 
