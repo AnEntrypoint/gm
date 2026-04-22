@@ -8,9 +8,21 @@ description: Mandatory codebase search workflow. Use whenever you need to find a
 **Use gm subagents for all independent work items. Invoke all skills in the chain: planning → gm-execute → gm-emit → gm-complete → update-docs.**
 
 
-`exec:codesearch` is the only way to search the codebase. Glob, Grep, Find, Explore are hook-blocked.
+`exec:codesearch` is the only way to search the codebase. **`Grep`, `Glob`, `Find`, `Explore`, and `grep`/`rg`/`find`/`ripgrep` inside `exec:bash` are ALL hook-blocked.** There is no fallback path for exact matches, regex, or file-name patterns — codesearch handles all of them. If you find yourself reaching for Grep or Glob, that reflex is wrong; replace with codesearch.
 
-**PDFs are indexed like code.** Any `.pdf` in the repository — specs, papers, manuals, RFCs, datasheets, design docs — is extracted page-by-page at scan time and enters the BM25 + vector index alongside source files. Treat PDF hits as first-class search results. A PDF chunk reports `line_start = line_end = page_number`; cite as `path/to/doc.pdf:<page>`. Unscanned digital PDFs are a search gap — if you know a doc exists and it isn't returning, check it is not under an ignored dir and that extraction succeeded (encrypted / image-only PDFs yield empty chunks silently).
+**What codesearch handles** (every codebase-lookup need lands here):
+- Exact identifier / symbol lookup (function names, class names, constants) — symbols are extracted and indexed separately, exact matches rank top.
+- Exact string content — query tokens >1 trigger a literal-substring boost in content scoring.
+- File-name fragments — file paths are tokenized and matched with a score boost.
+- Regex-ish patterns — BM25 tokenization covers snake_case, camelCase, dot/dash splits; matching component words returns the file.
+- Natural-language concept queries — BM25 + vector re-ranking handle "find the hook that blocks grep", "where is PR stats calculated", etc.
+- PDF pages — specs, papers, manuals, RFCs, datasheets, design docs extracted page-by-page into the same index. Cite `path/to/doc.pdf:<page>`.
+
+**Direct-read exceptions** (no search required):
+- Known absolute path → `Read` tool.
+- Listing a known directory → `exec:nodejs` + `fs.readdirSync`.
+
+Unscanned digital PDFs are a search gap — if you know a doc exists and it isn't returning, check it is not under an ignored dir and that extraction succeeded (encrypted / image-only PDFs yield empty chunks silently).
 
 ## Syntax
 

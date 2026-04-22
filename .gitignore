@@ -20,3 +20,6 @@ docs/badges/
 tmp/
 plugforge-starter/skills/caveman/
 .claude/scheduled_tasks.lock
+.plugkit-browser-profile-*/
+.plugkit-agent-worktree/
+*.stackdump

@@ -118,28 +118,30 @@ Watch and triage the same way.
 
 **Zero silent pushes.** Not watching a CI run you triggered = operating outside this contract. This rule supersedes any implicit assumption that CI can be "checked later in gm-complete" — if you are about to push, you are about to execute code remotely, so the watch happens now.
 
-## CODEBASE EXPLORATION
+## CODEBASE EXPLORATION — exec:codesearch ONLY
 
-`exec:codesearch` is the preferred semantic search. **Glob, Explore, WebSearch are hook-blocked. Grep/Read ARE available — use them for exact-match or direct reads.**
+**Grep, Glob, Find, Explore, WebSearch, and `grep`/`rg`/`find` inside `exec:bash` are ALL hook-blocked.** Attempting them returns a redirect error. The hook is not a suggestion — it is enforced. `Read` is available for known absolute paths.
+
+Default reflex for "I need to find X in the codebase" = `exec:codesearch`. No exceptions. Not even for exact strings, not even for regex, not even for "just one quick check". If you find yourself reaching for Grep or Glob, that reflex is wrong — replace with codesearch.
 
 ```
 exec:codesearch
 <two-word query to start>
 ```
 
-`exec:codesearch` indexes PDFs the same way it indexes source — spec PDFs, datasheets, papers, and RFCs return as first-class hits with `file:page` citations. When resolving a mutable that depends on external specification (protocol field, register layout, compliance text), search the PDF corpus before reimplementing or assuming. Unwitnessed assumption from a doc you did not search is an UNKNOWN.
+`exec:codesearch` handles exact strings, symbols, regex-ish patterns, file-name fragments, and PDF pages (indexed page-by-page with `file:page` citations). Two words in, iterate by changing or adding one word per pass, minimum four attempts before concluding absent. Full protocol in `code-search` skill.
 
-**Mandatory search protocol** for codesearch (from `code-search` skill):
-1. Start with exactly **two words** — never one, never a sentence
-2. No results → change one word (synonym or related term)
-3. Still no results → add a third word to narrow scope
-4. Keep changing or adding words each pass until content is found
-5. Minimum 4 attempts before concluding content is absent
+**Direct-read exceptions** (no search needed):
+- Known absolute path → `Read` tool.
+- Directory listing at known path → `exec:nodejs` + `fs.readdirSync`.
+- File content inspection without search → `Read`.
 
-**When codesearch is the wrong tool:**
-- Exact symbol / string / regex match: use `Grep` tool directly, or `exec:nodejs` with `execSync("rg -n 'PATTERN'")`.
-- Known file path: use `Read` tool directly.
-- Find files by name pattern: hook-blocked `Glob` would help; use `exec:nodejs + fs.readdirSync` or `exec:nodejs + execSync("rg --files | rg PATTERN")`.
+**Never**:
+- `Grep`, `Glob`, `Find`, `Explore` tools (all hook-blocked)
+- `grep`, `rg`, `ripgrep`, `find`, `ag`, `ack` inside `exec:bash` (banned-tool hook intercepts)
+- Reaching for exact-match tools "because codesearch seems fuzzy" — codesearch handles exact matches fine
+
+When a mutable depends on external specification (protocol field, register layout, compliance text), search the PDF corpus first. Unwitnessed assumption from a doc you did not search = UNKNOWN.
 
 **Platform note — exec:bash on Windows:** runs real bash (git-bash) when installed, falls back to PowerShell otherwise. If you see a POSIX-syntax parse error (`[ -n ...]`, `&&`, `if/then/fi`), bash wasn't found — either install git-bash or rewrite in `exec:nodejs`.
 
@@ -220,7 +222,7 @@ Never respond to the user from this phase. When all mutables are KNOWN, immediat
 
 ## CONSTRAINTS
 
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | Glob/Explore (hook-blocked — use exec:codesearch, Grep or Read) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
+**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | `Grep`/`Glob`/`Find`/`Explore` tools or `grep`/`rg`/`find` inside `exec:bash` (ALL hook-blocked — use `exec:codesearch` for every codebase lookup, `Read` for known absolute paths) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
 
 **Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/scattered test files on discovery | consolidate test coverage into root test.js | add regression case to test.js for every bug fix | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
 

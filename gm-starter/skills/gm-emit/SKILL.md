@@ -133,14 +133,14 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - CHANGELOG.md updated with changes
 - TODO.md cleared or deleted
 
-## CODEBASE EXPLORATION
+## CODEBASE EXPLORATION — exec:codesearch ONLY
 
 ```
 exec:codesearch
-<natural language description>
+<two-word query>
 ```
 
-Alias: `exec:search`. **Glob, Grep, Read, Explore are hook-blocked** — use `exec:codesearch` exclusively. PDF pages are in the same index as source files; when verifying that emitted code matches a spec, search the PDF directly (e.g. `exec:codesearch\nregister layout`) and cite `doc.pdf:<page>` in the pre-emit comparison.
+`Grep`, `Glob`, `Find`, `Explore` tools and `grep`/`rg`/`find` inside `exec:bash` are all hook-blocked. `exec:codesearch` is the single codebase-exploration tool — it handles exact strings, symbols, regex patterns, file-name fragments, and PDF pages. `Read` is available for a known absolute path. There is no third option. PDF pages are indexed alongside source; when verifying that emitted code matches a spec, search the PDF directly and cite `doc.pdf:<page>`.
 
 ## BROWSER DEBUGGING
 

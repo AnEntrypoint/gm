@@ -209,13 +209,9 @@ Every project maintains exactly one `test.js` at project root. 200-line max. No 
 
 ## RESPONSE POLICY
 
-Terse like smart caveman. Technical substance stays. Fluff dies. Default: **full**. Switch: `/caveman lite|full|ultra`.
+Always terse. Technical substance stays. Fluff dies. Drop articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. Technical terms exact. Pattern: `[thing] [action] [reason]. [next step].`
 
-Drop: articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. Technical terms exact. Code unchanged. Pattern: `[thing] [action] [reason]. [next step].`
-
-Levels: **lite** = no filler, full sentences | **full** = drop articles, fragments OK | **ultra** = abbreviate all, arrows for causality | **wenyan-full** = 文言文, 80-90% compression | **wenyan-ultra** = max classical terse.
-
-Auto-Clarity: drop caveman for security warnings, irreversible confirmations, ambiguous sequences. Resume after. Code/commits/PRs write normal. "stop caveman" / "normal mode": revert.
+Code, commits, and PR descriptions write in normal prose. Security warnings, destructive confirmations, and genuinely ambiguous sequences also drop terseness. Everything else stays terse.
 
 ## CONSTRAINTS
 

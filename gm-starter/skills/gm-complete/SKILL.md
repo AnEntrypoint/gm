@@ -110,14 +110,14 @@ Only git in bash directly. Background tasks: `exec:sleep\n<id>`, `exec:status\n<
 - Target under 12s per exec call; split work across multiple calls only when dependencies require it
 - Prefer a single well-structured exec that does 5 things over 5 sequential execs
 
-## CODEBASE EXPLORATION
+## CODEBASE EXPLORATION — exec:codesearch ONLY
 
 ```
 exec:codesearch
-<natural language description>
+<two-word query>
 ```
 
-PDFs in the repo are part of the same index — when verifying a change conforms to a published spec, search the spec PDF directly and cite `doc.pdf:<page>` as evidence. A verification that references a PDF without having searched it is unwitnessed.
+`Grep`, `Glob`, `Find`, `Explore`, and `grep`/`rg`/`find` inside `exec:bash` are all hook-blocked. `exec:codesearch` is the single codebase-exploration tool. `Read` is available for a known absolute path. PDFs in the repo are part of the same index — when verifying a change conforms to a published spec, search the spec PDF directly and cite `doc.pdf:<page>` as evidence. A verification that references a PDF without having searched it is unwitnessed.
 
 ## GIT ENFORCEMENT
 
