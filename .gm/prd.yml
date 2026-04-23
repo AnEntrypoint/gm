@@ -8,17 +8,6 @@ fsm_docs:
 
 items:
 
-  - id: cc-tail-history-replay
-    subject: cc-tail 1.0.7 JsonlReplayer + sessionId fallback + user-text events + CLI
-    status: completed
-    repo: AnEntrypoint/cc-tail
-    acceptance:
-      - npm view @lanmower/cc-tail version == 1.0.7 or later
-      - JsonlReplayer.replay({since}) emits streaming_progress for historical events
-      - user text prompts appear as { role: 'user', block: { type: 'text' } }
-      - events without top-level sessionId routed using filename-derived sid
-      - cc-tail CLI accepts --since 12d --grep X --role Y --json
-
   - id: rs-exec-stdout-isolation
     subject: Per-task OwnedPipe stdout isolation to stop background-task leakage
     status: pending
@@ -73,27 +62,6 @@ items:
       - port-bind branch visible in plugkit --version --deps
       - 3 rapid crashes trigger DAEMON_FLAPPING cooldown
       - stale port file does not cause cascading failures
-
-  - id: rs-plugkit-bash-banned-pipe-fix
-    subject: bash_banned_tool blocks only when command starts with tool name
-    status: completed
-    repo: AnEntrypoint/rs-plugkit
-    description: |
-      Update src/hook/pre_tool_use.rs: block grep/find/rg/glob only when command
-      starts with that token (modulo leading whitespace), not when present anywhere.
-      This un-breaks common pipe patterns like `foo | grep bar`.
-    acceptance:
-      - `echo x | grep y` not blocked
-      - `grep y file.txt` still blocked (use Grep tool)
-      - unit test in pre_tool_use.rs covers both cases
-
-  - id: rs-plugkit-whitelist-gh-cli
-    subject: Whitelist gh CLI commands in pre-tool-use
-    status: completed
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - `gh run list`, `gh pr create`, `gh run view` accepted via Bash tool
-      - no need to wrap in exec:bash
 
   - id: rs-plugkit-version-deps
     subject: plugkit --version --deps prints embedded rs-exec/rs-search/rs-codeinsight SHAs
@@ -261,40 +229,6 @@ items:
       - Runtime backend probe: CUDA / DirectML / CPU fallback, cached
       - Cross-OS: Windows, Linux, macOS builds green
 
-  - id: rs-search-gguf-tensor-alias
-    subject: Alias token_embd.weight → embeddings.word_embeddings.weight at GGUF load
-    status: completed
-    repo: AnEntrypoint/rs-search
-    description: |
-      NomicBertModel::load panics on Q4_K_M GGUF because llama.cpp naming
-      differs from HF naming. Fix in embed.rs before calling candle's loader.
-    acceptance:
-      - rs-search query against test corpus returns vector-ranked results
-      - test validating both tensor-name conventions
-
-  - id: rs-search-loud-embed-fail
-    subject: Embed init failure errors loudly instead of silently wiping rerank
-    status: completed
-    repo: AnEntrypoint/rs-search
-    acceptance:
-      - embed init failure surfaces via stderr + non-zero exit
-      - BM25 results preserved on rerank failure (unwrap_or)
-
-  - id: rs-search-version-flag
-    subject: Add --version to rs-search CLI
-    status: completed
-    repo: AnEntrypoint/rs-search
-    acceptance:
-      - `rs-search --version` prints version + enabled features
-
-  - id: rs-search-help-features
-    subject: --help lists enabled feature flags
-    status: completed
-    repo: AnEntrypoint/rs-search
-    acceptance:
-      - `rs-search --help` after_help points to --features
-      - `rs-search --features` prints vector/perf/pdf enabled flags
-
   - id: rs-search-temp-cleanup
     subject: Clean up $TMPDIR/rs-exec-code-*.txt on session end
     status: pending
@@ -388,6 +322,7 @@ items:
     subject: Apply rebase-retry push pattern to release.yml binary commit step
     status: pending
     repo: AnEntrypoint/rs-plugkit
+
 
 stop_hook_reminder: |
   If this PRD has any item with status != completed, finish it before ending turn.
