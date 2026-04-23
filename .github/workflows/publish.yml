@@ -133,28 +133,10 @@ jobs:
 
           gh repo create AnEntrypoint/${REPO_NAME} --public 2>/dev/null || true
 
-          # Complete fresh clone every time - no history preservation
           rm -rf "$WORK_DIR"
           mkdir -p "$WORK_DIR"
           cd "$WORK_DIR"
 
-          # Clone fresh and reset to origin if it exists
-          git clone "https://github.com/AnEntrypoint/${REPO_NAME}.git" . 2>/dev/null || {
-            git init
-            git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
-          }
-
-          # Completely overwrite everything - no history, no mercy
-          git reset --hard origin/main 2>/dev/null || true
-          git clean -fdx
-
-          # Get latest from remote if it exists
-          git fetch origin main 2>/dev/null || true
-
-          # Ensure we're on main branch
-          git checkout main 2>/dev/null || git checkout -b main
-
-          # Copy prebuilt binaries from gm-build-latest into the fresh build output
           PREBUILT_BIN="${SOURCE_ROOT}/gm-build-latest/gm-${PLATFORM}/bin"
           if [ -d "$PREBUILT_BIN" ]; then
             mkdir -p "${SOURCE_ROOT}/${BUILD_DIR}/bin"
@@ -164,18 +146,34 @@ jobs:
             echo "ℹ️  No prebuilt binaries at $PREBUILT_BIN (platform has no binary bundle)"
           fi
 
-          # Sync build output with complete replacement
-          # Use --no-times to prevent timestamp preservation issues with git change detection
-          rsync -av --delete --exclude='.git' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ .
-
-          # Only commit if there are actual changes
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto-build: ${NAME} plugin from gm"
-            git push origin main
-          else
-            echo "✅ No changes to commit for $NAME"
+          REMOTE_HEAD=$(git ls-remote "https://github.com/AnEntrypoint/${REPO_NAME}.git" main 2>/dev/null | awk '{print $1}' || true)
+          NEED_COMPARE=0
+          if [ -n "$REMOTE_HEAD" ]; then
+            git clone --depth 1 "https://github.com/AnEntrypoint/${REPO_NAME}.git" compare-src 2>/dev/null && NEED_COMPARE=1 || true
           fi
+
+          git init -q --initial-branch=main fresh
+          cd fresh
+          git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
+          rsync -a --exclude='.git' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ ./
+
+          CHANGED=1
+          if [ "$NEED_COMPARE" = "1" ]; then
+            if diff -rq --no-dereference ../compare-src ./ \
+                 --exclude='.git' >/dev/null 2>&1; then
+              CHANGED=0
+            fi
+          fi
+
+          if [ "$CHANGED" = "0" ]; then
+            echo "✅ No changes to publish for $NAME"
+            exit 0
+          fi
+
+          git add -A
+          git commit -q -m "Auto-build: ${NAME} plugin from gm (v${{ needs.prepare.outputs.version }})"
+          git push --force origin main
+          echo "✅ Force-pushed single-commit history to $REPO_NAME"
 
       - name: Publish to npm
         if: matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes'
