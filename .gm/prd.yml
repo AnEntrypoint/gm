@@ -63,14 +63,6 @@ items:
       - 3 rapid crashes trigger DAEMON_FLAPPING cooldown
       - stale port file does not cause cascading failures
 
-  - id: rs-exec-session-cleanup-compile-guard
-    subject: session-cleanup subcommand as compile-time clap enum variant
-    status: pending
-    repo: AnEntrypoint/rs-exec
-    description: |
-      Currently a removal of session-cleanup fails silently at runtime. Make
-      it a required enum variant so its absence is a compile error.
-
   - id: rs-exec-msys-path-audit
     subject: Audit all cwd normalization paths for MSYS vs Windows
     status: pending
