@@ -52,6 +52,8 @@ node cli.js gm-starter ./build
 
 **memorize sub-agent manages CLAUDE.md**: Do not inline-edit CLAUDE.md directly. The `memorize` sub-agent (haiku model, run_in_background=true) reads context, extracts non-obvious caveats, deduplicates against existing entries, and writes. Invocation: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
+**ccsniff compliance audit**: ccsniff (npm package) returns full conversation history as NDJSON with fields: ts, sid, cwd, role, type, text. A 54-message sample (24h window) across recent assistant messages found 98% compliance with gm skillset rules (49/50 conformant). One violation detected: missing Skill() invocation at a phase boundary. Remediation is agent training (user preferencing), not ccsniff tooling modification. Future enhancement: ccsniff could add optional linting rules for gm discipline to auto-detect violations.
+
 ## Rust Binary Update Pipeline
 
 Every change to any Rust library auto-cascades all the way to the installed binary. The chain:
