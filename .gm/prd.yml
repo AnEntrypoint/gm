@@ -234,30 +234,10 @@ items:
     status: pending
     repo: AnEntrypoint/rs-exec
 
-  - id: rs-search-file-size-configurable
-    subject: File-size limit via env var / config
-    status: pending
-    repo: AnEntrypoint/rs-search
-
   - id: rs-search-plugkit-version-pin
     subject: Fix rs-plugkit → rs-search version mismatch in Cargo.toml
     status: pending
     repo: AnEntrypoint/rs-plugkit
-
-  - id: rs-search-msvc-nightly-docs
-    subject: CONTRIBUTING.md documents MSVC + nightly rustup + onig_sys setup
-    status: pending
-    repo: AnEntrypoint/rs-search
-
-  - id: rs-search-local-install-shortcut
-    subject: Document `cargo install --git` shortcut
-    status: pending
-    repo: AnEntrypoint/rs-search
-
-  - id: rs-search-choco-rustc-warning
-    subject: Detect chocolatey rustc shim and error with actionable fix
-    status: pending
-    repo: AnEntrypoint/rs-search
 
   - id: ci-ps-and-operator-rewrite
     subject: Pre-tool hook auto-wraps `&&` commands with bash -lc on Windows
