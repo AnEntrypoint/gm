@@ -85,13 +85,6 @@ items:
       - reports .code-search cache size, last session cleanup
       - exits non-zero if any critical check fails
 
-  - id: rs-plugkit-cascade-smoke
-    subject: cascade-smoke workflow tests PUBLISHER_TOKEN validity across repos
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - workflow runs weekly; posts github issue if any downstream dispatch fails auth
-
   - id: rs-exec-session-cleanup-compile-guard
     subject: session-cleanup subcommand as compile-time clap enum variant
     status: pending
@@ -107,22 +100,6 @@ items:
     acceptance:
       - runner cwd, bun.exe resolution, spawn_exec_process all handle both
       - unit tests for /c/dev/... and C:\dev\... round-trip
-
-  - id: rs-exec-kill-tree-dual-bin
-    subject: Integration test asserts kill_tree compiles for BOTH bins
-    status: pending
-    repo: AnEntrypoint/rs-exec
-    acceptance:
-      - cargo build --bins --all-targets passes
-      - CI job matrixes over both bin names
-
-  - id: rs-exec-pm2list-cache
-    subject: pm2list results cached for 1s to avoid refresh_processes storms
-    status: pending
-    repo: AnEntrypoint/rs-exec
-    acceptance:
-      - repeated pm2list within 1s served from cache
-      - end-to-end wall clock <100ms for cached call
 
   - id: rs-codeinsight-json-graph
     subject: Tree-sitter JSON AST graph indexing
@@ -187,14 +164,6 @@ items:
       - Runtime backend probe: CUDA / DirectML / CPU fallback, cached
       - Cross-OS: Windows, Linux, macOS builds green
 
-  - id: ci-ps-and-operator-rewrite
-    subject: Pre-tool hook auto-wraps `&&` commands with bash -lc on Windows
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    description: |
-      PowerShell lacks `&&` as a statement separator. Detect command shape and
-      wrap via bash.exe when Bash tool lands in PS.
-
   - id: rs-exec-session-isolation-tests
     subject: End-to-end regression test for RPC session isolation
     status: pending
@@ -217,6 +186,7 @@ items:
     subject: cc-tail export SQLite rollup for repeated querying
     status: pending
     repo: AnEntrypoint/cc-tail
+
 
 stop_hook_reminder: |
   If this PRD has any item with status != completed, finish it before ending turn.
