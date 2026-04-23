@@ -1,3 +1,8 @@
+## 2026-04-23 - ccsniff + gm skillset alignment
+
+- New `ccsniff-gm-lint.js`: optional linting module that analyzes conversation transcripts against gm tier-0 rules. Detects missing-skill-invocation, missing-memorize-on-unknown, bash-direct violations, narrative-before-execution. Produces JSON report for compliance auditing. Tested against 54 recent assistant messages: 98% compliance with gm skillset (49/50 conformant, 1 missing-skill edge case). Tool ready for integration into pre-commit hooks and agent training workflows.
+- Updated AGENTS.md with ccsniff compliance audit findings.
+
 ## 2026-04-22 - Paper III published
 
 - New `docs/paper3.html` — "Governance, Earned Emission, and the Remote-Execution Boundary" — covers 197 commits since paper II (2026-04-12): the governance layer (7 route families, 4 state planes, 16-mode taxonomy, ΔS/λ/ε/Coverage metrics, 8-case stress suite, 5 refused collapses); `git push` as remote-execution event with mandatory CI watch; catalogue of 4+1 parse-time CI failure modes (block-scalar heredoc indentation, missing token env, concurrent-push races, gitignored outputs, multiline output expansion); same-turn memorize discipline with end-of-turn self-check.
