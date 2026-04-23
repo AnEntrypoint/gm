@@ -62,11 +62,27 @@ rs-exec / rs-codeinsight / rs-search
   → .github/workflows/cascade.yml triggers rs-plugkit workflow_dispatch
   → rs-plugkit release.yml runs: cargo update (picks up latest git deps), builds all 6 binaries
   → auto-bumps rs-plugkit patch version in Cargo.toml + commits [skip ci]
-  → publish-binaries job: copies binaries + updates plugkitVersion in plugforge/gm-starter/gm.json
-  → that commit (no [skip ci]) triggers gm publish.yml
-  → publish.yml builds and pushes to AnEntrypoint/gm-cc
+  → publish-binaries job:
+      - copies binaries into BOTH gm-build-latest/gm-cc/bin/ AND gm-starter/bin/
+      - copies plugkit-win32-x64.exe → plugkit.exe (Windows default)
+      - updates plugkitVersion in plugforge/gm-starter/gm.json
+      - soft-resets one commit if prior commit was another binary update
+        (message starts with "chore: update plugkit binaries")
+      - git add -f (forces past gm's .gitignore for gm-build-latest/)
+      - force-push-with-lease → keeps gm history from ballooning
+  → that commit triggers gm publish.yml
+  → publish.yml 12-platform matrix:
+      - node cli.js gm-starter ./build (regenerates configs, NOT binaries)
+      - copies gm-build-latest/gm-<platform>/bin/ into build/gm-<platform>/bin/
+      - git init fresh empty dir (NO clone of downstream — orphan history)
+      - rsync build output in
+      - git add -A + git add -f bin/ (forces past generated .gitignore)
+      - diff --depth 1 clone of downstream to detect no-op
+      - git push --force origin main → downstream at 1-commit orphan history
   → /plugin detects new gm-cc HEAD → updates cache → bootstrap.js downloads new binary
 ```
+
+**Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-vscode, gm-cursor, gm-zed, gm-jetbrains)** are reset to a single orphan commit on every publish. This keeps clones small forever (~<1MB) regardless of release count. Validated 2026-04-23: gm-cc clone = 3s, .git = 148K, 1 commit.
 
 **Repos involved (push to any triggers cascade):**
 - `AnEntrypoint/rs-exec` — exec runner, browser sessions, idle cleanup
@@ -85,6 +101,10 @@ rs-exec / rs-codeinsight / rs-search
 **rs-plugkit CI builds**: Never run `cargo update` or `cargo build` locally. Push changes and let CI build. The `cargo update` step in CI always pulls latest git dep hashes — no Cargo.lock hash management needed locally.
 
 **rs-plugkit release.yml binary commit**: The publish-binaries job runs `git add gm-build-latest/gm-cc/bin/`. This fails silently (exit 1) because `gm-build-latest/` is listed in gm's `.gitignore`. Must use `git add -f gm-build-latest/gm-cc/bin/` to force-add past the ignore rule.
+
+**gm publish.yml force-add bin/**: Generated output contains a `.gitignore` with `bin/` entry (from `lib/template-builder.js:generateGitignore`). The orphan-publish step therefore needs `git add -f bin/` after `git add -A`, otherwise binaries silently drop from the downstream push and users get a plugin without plugkit binaries. Symptom: `claude plugin marketplace` refresh succeeds but bootstrap fails with "binary not found" at first hook invocation.
+
+**Downstream orphan-commit publishing**: gm's `publish.yml` does NOT clone the downstream repo to append a commit — it `git init`s a fresh directory, rsyncs build output in, and `git push --force origin main`. Each publish replaces history entirely. No-op detection: `git clone --depth 1` the current downstream into a sibling dir and `diff -rq --exclude=.git`. If identical, skip the push. This avoids force-pushing identical trees (cosmetic churn in GitHub UI).
 
 **exec-process-mode orphan accumulation**: On runner restart the in-memory active PID map is lost, leaving `--exec-process-mode` child processes with no cleanup path. Fix: call `reap_orphaned_exec_processes()` at server startup in `rs-exec/src/runner.rs` — uses sysinfo to find exec-process-mode procs whose parent is not a live runner-mode proc (5-second age guard) and kills them via `kill_tree`. Without this, orphans accumulate across restarts (300+ procs, ~5.9GB RAM observed).
 
