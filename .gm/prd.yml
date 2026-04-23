@@ -177,16 +177,6 @@ items:
     status: pending
     repo: AnEntrypoint/rs-plugkit
 
-  - id: cc-tail-subagent-linkage
-    subject: cc-tail links subagent jsonl to parent conversation
-    status: pending
-    repo: AnEntrypoint/cc-tail
-
-  - id: cc-tail-sqlite-rollup
-    subject: cc-tail export SQLite rollup for repeated querying
-    status: pending
-    repo: AnEntrypoint/cc-tail
-
 
 stop_hook_reminder: |
   If this PRD has any item with status != completed, finish it before ending turn.
