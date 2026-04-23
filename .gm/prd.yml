@@ -75,24 +75,6 @@ items:
       - `plugkit --version --deps` outputs rs-exec=<sha> rs-search=<sha> rs-codeinsight=<sha>
       - doctor subcommand includes same info
 
-  - id: rs-plugkit-hook-block-reason-surface
-    subject: Surface real hook-block reason to Claude Code instead of 'Sibling tool call errored'
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    description: |
-      Emit structured JSON {decision:'deny', reason, category} on stderr AND
-      include full reason in the block response so Claude Code renders it.
-    acceptance:
-      - blocked tool call shows actual reason, not generic sibling error
-
-  - id: rs-plugkit-banned-tool-message
-    subject: Improve banned-tool denial message with allowlist pointers
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - denial message names the allowed file types (CLAUDE.md/readme.md/AGENTS.md/CHANGELOG.md)
-      - points to AGENTS.md for override procedure
-
   - id: rs-plugkit-doctor
     subject: plugkit doctor unified diagnostic subcommand
     status: pending
@@ -109,14 +91,6 @@ items:
     repo: AnEntrypoint/rs-plugkit
     acceptance:
       - workflow runs weekly; posts github issue if any downstream dispatch fails auth
-
-  - id: rs-plugkit-install-broken-pipe-export
-    subject: Export install_broken_pipe_handler properly in lib.rs
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - rs-plugkit builds without E0425 on install_broken_pipe_handler
-      - add CI target covering this regression
 
   - id: rs-plugkit-gh-push-rebase-retry
     subject: All publish/release workflows use rebase-retry push to kill E-rejected loops
