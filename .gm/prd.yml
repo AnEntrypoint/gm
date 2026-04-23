@@ -63,14 +63,6 @@ items:
       - 3 rapid crashes trigger DAEMON_FLAPPING cooldown
       - stale port file does not cause cascading failures
 
-  - id: rs-exec-msys-path-audit
-    subject: Audit all cwd normalization paths for MSYS vs Windows
-    status: pending
-    repo: AnEntrypoint/rs-exec
-    acceptance:
-      - runner cwd, bun.exe resolution, spawn_exec_process all handle both
-      - unit tests for /c/dev/... and C:\dev\... round-trip
-
   - id: rs-codeinsight-json-graph
     subject: Tree-sitter JSON AST graph indexing
     status: pending
