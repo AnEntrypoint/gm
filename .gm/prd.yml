@@ -63,28 +63,6 @@ items:
       - 3 rapid crashes trigger DAEMON_FLAPPING cooldown
       - stale port file does not cause cascading failures
 
-  - id: rs-plugkit-version-deps
-    subject: plugkit --version --deps prints embedded rs-exec/rs-search/rs-codeinsight SHAs
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    description: |
-      Eliminates "which rs-exec did this binary build against?" confusion that
-      cost multiple sessions. SHAs captured at build time via build.rs reading
-      Cargo.lock.
-    acceptance:
-      - `plugkit --version --deps` outputs rs-exec=<sha> rs-search=<sha> rs-codeinsight=<sha>
-      - doctor subcommand includes same info
-
-  - id: rs-plugkit-doctor
-    subject: plugkit doctor unified diagnostic subcommand
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - reports runner port + bind branch
-      - lists orphan exec-process-mode + zombie chrome counts
-      - reports .code-search cache size, last session cleanup
-      - exits non-zero if any critical check fails
-
   - id: rs-exec-session-cleanup-compile-guard
     subject: session-cleanup subcommand as compile-time clap enum variant
     status: pending
