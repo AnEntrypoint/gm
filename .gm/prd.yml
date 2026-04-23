@@ -92,14 +92,6 @@ items:
     acceptance:
       - workflow runs weekly; posts github issue if any downstream dispatch fails auth
 
-  - id: rs-plugkit-gh-push-rebase-retry
-    subject: All publish/release workflows use rebase-retry push to kill E-rejected loops
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-    acceptance:
-      - publish.yml and release.yml handle concurrent pushes without failing
-      - concurrency group prevents duplicate runs
-
   - id: rs-exec-eisdir-guard
     subject: Guard fs reads against EISDIR
     status: pending
@@ -208,11 +200,6 @@ items:
     status: pending
     repo: AnEntrypoint/rs-exec
 
-  - id: rs-search-plugkit-version-pin
-    subject: Fix rs-plugkit → rs-search version mismatch in Cargo.toml
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
-
   - id: ci-ps-and-operator-rewrite
     subject: Pre-tool hook auto-wraps `&&` commands with bash -lc on Windows
     status: pending
@@ -244,19 +231,6 @@ items:
     status: pending
     repo: AnEntrypoint/cc-tail
 
-  - id: ci-follow-up-automation
-    subject: Every push followed by gh run watch; failures trigger immediate fix loop
-    status: in_progress
-    repo: meta
-    acceptance:
-      - no push left unmonitored
-      - cascade to rs-plugkit binary verified after each rs-* push
-
-  - id: cascade-verification
-    subject: After each rs-* push, verify gm-cc HEAD binary contains expected SHA
-    status: pending
-    repo: meta
-
   - id: rs-exec-daemon-crash-log
     subject: Daemon writes crash reason to file before exit
     status: pending
@@ -271,11 +245,6 @@ items:
     subject: Emit structured browser FSM transition events for observability
     status: pending
     repo: AnEntrypoint/rs-exec
-
-  - id: rs-plugkit-release-push-rebase
-    subject: Apply rebase-retry push pattern to release.yml binary commit step
-    status: pending
-    repo: AnEntrypoint/rs-plugkit
 
 
 stop_hook_reminder: |
