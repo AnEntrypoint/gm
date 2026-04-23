@@ -291,6 +291,9 @@ items:
     subject: --help lists enabled feature flags
     status: completed
     repo: AnEntrypoint/rs-search
+    acceptance:
+      - `rs-search --help` after_help points to --features
+      - `rs-search --features` prints vector/perf/pdf enabled flags
 
   - id: rs-search-temp-cleanup
     subject: Clean up $TMPDIR/rs-exec-code-*.txt on session end
