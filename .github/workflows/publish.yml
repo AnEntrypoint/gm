@@ -171,6 +171,7 @@ jobs:
           fi
 
           git add -A
+          if [ -d bin ]; then git add -f bin/; fi
           git commit -q -m "Auto-build: ${NAME} plugin from gm (v${{ needs.prepare.outputs.version }})"
           git push --force origin main
           echo "✅ Force-pushed single-commit history to $REPO_NAME"
