@@ -10,6 +10,8 @@ Only record non-obvious technical caveats that cost multiple runs to discover. R
 
 **No comments in code.** No inline, block, or JSDoc comments anywhere — source, generated output, hooks, scripts.
 
+**Skill SKILL.md files:** Strip all explanatory prose ("how it works", "why this matters", mechanism descriptions). Keep ONLY invocation syntax, transition arrows, gate conditions, constraint lists, and code examples showing exact usage. Skill docs are usage instructions for agents, not implementation references. Removes ~60% token overhead from verbose prior versions.
+
 ## Build
 
 ```
