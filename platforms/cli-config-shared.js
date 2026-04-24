@@ -775,7 +775,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       SessionStart: wrap(hook('session-start', 180000)),
       UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
       PreCompact: wrap(hook('pre-compact', 30000)),
-      Stop: wrap([hook('stop', 15000), hook('stop-git', 180000)]),
+      Stop: wrap([hook('stop', 15000), hook('stop-git', 210000)]),
     };
   },
   generateReadme(spec) {
