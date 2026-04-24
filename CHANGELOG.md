@@ -1,3 +1,13 @@
+## 2026-04-24 - PostToolUse hook + stronger memorize/narration enforcement (ccsniff-driven)
+
+ccsniff audit (7d, gm sessions): 145 narrate-before-tool violations, 41/74 turns starting with text (not tool), 0 actual memorize Agent spawns despite 51 text mentions. Fixes:
+
+- `gm-starter/hooks/post-tool-use-hook.js`: rewritten — stdin fd 0 fix, memorize reminder injected after every Bash exec: completion
+- `gm-starter/hooks/hooks.json`: added PostToolUse entry wiring post-tool-use-hook.js
+- `platforms/cli-config-shared.js`: added `PostToolUse` to CC `buildHooksMap()`, added `createCcPostToolUseHook()`, wired into `getAdditionalFiles()`
+- `rs-plugkit/src/hook/prompt_submit.rs`: memorize rule strengthened — exact invocation syntax, parallel spawn mandate, explicit anti-patterns ("saying you will memorize ≠ memorizing")
+- `rs-plugkit/src/hook/pre_compact.rs`: added memorize self-check section to post-compact reminder
+
 ## 2026-04-24 - rs-plugkit prompt_submit upgrade: systemMessage + memorize/no-narration enforcement
 
 - `rs-plugkit/src/hook/prompt_submit.rs`: switched CC output from `additionalContext` to `systemMessage` — injected into system prompt (stronger) instead of system reminder (weaker)
