@@ -33,7 +33,7 @@ Every unknown→known transition in this session = fact that dies on compaction 
 
 **Invocation** (background, non-blocking, continue working in the same message):
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single fact with enough context to be useful cold>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single fact with enough context to be useful cold>')
 ```
 
 **Parallel**: multiple facts resolve in one turn → spawn multiple memorize agents in the **same message** (parallel tool blocks). One call per fact. Never serialize, never batch into one prompt.
@@ -57,7 +57,7 @@ Clarification allowed at top of chain (before first `planning`) when scope is ge
 
 All work coordination, planning, execution, and verification happens through the skill tree starting with `planning`:
 - `planning` skill → `gm-execute` skill → `gm-emit` skill → `gm-complete` skill → `update-docs` skill
-- `memorize` sub-agent — background only, non-sequential. `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
+- `memorize` sub-agent — background only, non-sequential. `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
 

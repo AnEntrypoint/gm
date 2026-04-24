@@ -186,7 +186,7 @@ Every UNKNOWN→KNOWN transition during execution = fact that dies on compaction
 
 **Invocation** (one per fact, background, parallel when multiple):
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact with enough context for a cold-start agent>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact with enough context for a cold-start agent>')
 ```
 
 **Parallel spawn**: N facts resolved in one turn → N memorize calls in a **single message**, parallel tool blocks. Never serialize. Never merge multiple facts into one prompt.
