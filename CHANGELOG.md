@@ -1,3 +1,10 @@
+## 2026-04-24 - gm-first enforcement + state machine phase guards
+
+- New `hooks/prompt-submit-hook.js` (CC): writes `.gm/needs-gm` sentinel on every prompt; injects systemMessage demanding gm invocation and subagent parallelism as the first action.
+- Updated `hooks/pre-tool-use-hook.js` (CC + gm-starter): blocks any non-Skill tool if `.gm/needs-gm` exists; clears sentinel when `Skill(gm)` is invoked; blocks `Write`/`Edit`/`NotebookEdit` in `gm-complete` and `update-docs` phases (prevents file mutations after emission).
+- CC `buildHooksMap` override in `platforms/cli-config-shared.js`: generates hooks.json with plugkit binary + JS hook for both `UserPromptSubmit` and `PreToolUse`; fixes `Stop` timeouts (stop=15s, stop-git=180s — was inverted 300s/60s causing 3m20s session-end hang).
+- ccsniff 48h analysis: 57% compliance across 23,746 messages; dominant violation = `missing-memorize-on-unknown` (agent finds/fixes facts but doesn't spawn memorize in same turn); secondary = `narrative-before-execution` (agent describes intent before running tool). Both are now actively enforced via hooks.
+
 ## 2026-04-23 - ccsniff + gm skillset alignment
 
 - New `ccsniff-gm-lint.js`: optional linting module that analyzes conversation transcripts against gm tier-0 rules. Detects missing-skill-invocation, missing-memorize-on-unknown, bash-direct violations, narrative-before-execution. Produces JSON report for compliance auditing. Tested against 54 recent assistant messages: 98% compliance with gm skillset (49/50 conformant, 1 missing-skill edge case). Tool ready for integration into pre-commit hooks and agent training workflows.
