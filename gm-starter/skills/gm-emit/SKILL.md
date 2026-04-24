@@ -31,7 +31,7 @@ Urge to "just fix real quick" = signal mutable map was incomplete. Trust state m
 Pre-emit and post-emit runs surface facts you lacked: actual function signatures, edge-case return values, adjacent-module interactions, hidden invariants. Each dies on compaction unless memorized **the same turn it resolves** — not at phase exit.
 
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
 One call per fact, background, parallel when multiple resolve together. **End-of-turn self-check**: scan for un-memorized resolutions before closing response; spawn any missed. Same enforcement as `planning` / `gm-execute` — see those skills for the full trigger contract.
@@ -129,7 +129,7 @@ The post-emit verification is a differential diagnosis against the pre-emit base
 - No unnecessary files — clean anything not required for the program to function
 - Observability: every new server subsystem exposes a named inspection endpoint; every new client module registers into `window.__debug` by key and deregisters on unmount. Ad-hoc `console.log` is not observability — permanent queryable structure is. Any new code path not reachable via `window.__debug` or a `/debug/<subsystem>` endpoint → do NOT advance, add observability before writing feature code.
 - Structural quality: if/else chains where a dispatch table or pipeline suffices → regress to `gm-execute` for restructuring. One-liners that compress logic at the cost of readability → expand. Any logic that reinvents a native API or library → replace with the native/library call. Structure must make wrong states unrepresentable — if it doesn't, it's not done.
-- every fact resolved in this phase (pre-emit discoveries, post-emit surprises, newly-confirmed behaviors) has been handed off via a background memorize call at the moment of resolution: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
+- every fact resolved in this phase (pre-emit discoveries, post-emit surprises, newly-confirmed behaviors) has been handed off via a background memorize call at the moment of resolution: `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 - CHANGELOG.md updated with changes
 - TODO.md cleared or deleted
 

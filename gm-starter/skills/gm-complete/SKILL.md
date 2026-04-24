@@ -28,7 +28,7 @@ Let chain carry you. Stop-and-fix-here = how silent-failure bugs reach prod. Mac
 Phase where environment reality hits hardest — CI runner quirks, flaky-test patterns, timing thresholds, deploy cadences, cross-repo cascade behaviors. Highest-value memorization surface. Each fact → memorize **the same turn it resolves**, background, parallel when multiple:
 
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
 One call per fact. **End-of-turn self-check** mandatory: any resolved unknown un-memorized → spawn before closing response. Full trigger contract in `planning` / `gm-execute`.
@@ -157,7 +157,7 @@ Before declaring complete, sweep the entire codebase for violations:
 9. **TODO.md** → must be empty/deleted before completion
 10. **CHANGELOG.md** → must have entries for this session's changes
 11. **Observability gaps** → every server subsystem added this session exposes a `/debug/<subsystem>` endpoint; every client module added this session registers into `window.__debug` by key. Ad-hoc console.log is not observability — permanent queryable structures are. Any gap found → fix before advancing.
-12. **memorize** → every fact surfaced during verification that would have saved this session's time if it had been in memory at the start (CI timing, flaky-test patterns, environment quirks, runtime behaviors, user preferences stated this session) is handed off via a background memorize call at the moment of resolution. One call per fact, non-blocking. `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`
+12. **memorize** → every fact surfaced during verification that would have saved this session's time if it had been in memory at the start (CI timing, flaky-test patterns, environment quirks, runtime behaviors, user preferences stated this session) is handed off via a background memorize call at the moment of resolution. One call per fact, non-blocking. `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`
 13. **Deploy/publish** → if deployable, deploy. If npm package, publish.
 14. **GitHub Pages** → check if repo has a GH Pages site. If `.github/workflows/pages.yml` is absent OR `docs/index.html` is absent: invoke the `pages` skill to scaffold the site before advancing.
 15. **Governance stress-suite sweep** (`governance`) — walk the finished change against every applicable case: M1 missing-evidence-forced-decision, F1 unsourced-number, C1 ambiguous-clause, H1 contradictory-witnesses, S1 attribution-under-pressure, B1 RCA-live-alternatives, A1 authenticity-partial-signals, D1 deploy-gate-under-flake. Ask per case: did the change over-commit, hide contradiction, or treat surface appearance as evidence? Any flunk = regress to the owning phase. The 8 legal outcomes must hold: illegal commitments=0, evidence-boundary violations=0, lawful downgrades available=8, outlier visibility preserved.
