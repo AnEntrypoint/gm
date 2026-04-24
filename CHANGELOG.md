@@ -1,3 +1,10 @@
+## 2026-04-24 - rs-plugkit prompt_submit upgrade: systemMessage + memorize/no-narration enforcement
+
+- `rs-plugkit/src/hook/prompt_submit.rs`: switched CC output from `additionalContext` to `systemMessage` — injected into system prompt (stronger) instead of system reminder (weaker)
+- Added memorize-on-resolution rule to prompt_submit message: explicit trigger contract, `Agent(subagent_type='gm:memorize')` invocation pattern, end-of-turn self-check mandate; directly targets `missing-memorize-on-unknown` as dominant ccsniff violation (57% compliance → fix)
+- Added no-narration-before-execution rule: blocks describe-then-do pattern; directly targets `narrative-before-execution` as secondary ccsniff violation
+- CI cascade: rs-plugkit push → binary rebuild → gm publish → all 12 downstream plugins updated automatically
+
 ## 2026-04-24 - gm-first enforcement + state machine phase guards
 
 - New `hooks/prompt-submit-hook.js` (CC): writes `.gm/needs-gm` sentinel on every prompt; injects systemMessage demanding gm invocation and subagent parallelism as the first action.
