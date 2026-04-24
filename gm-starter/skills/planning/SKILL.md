@@ -41,7 +41,7 @@ Every unknown resolved in any phase (existingImpl absent, dep version confirmed,
 
 **Invocation (copy verbatim, substitute the fact)**:
 ```
-Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact with enough context for a cold-start agent to use it>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<single resolved fact with enough context for a cold-start agent to use it>')
 ```
 
 **Parallelization**: multiple unknowns resolved in one turn → spawn multiple memorize agents in the **same message** (parallel tool blocks). Never serialize them.
@@ -179,7 +179,7 @@ Invoke `browser` skill. Escalation: (1) `exec:browser <js>` → (2) browser skil
 
 `governance` carries the route-discovery / weak-prior-bridge / legitimacy-gate model, 7 route families, 16 failure taxonomy, 4 state planes, ΔS/λ/ε/Coverage metrics, and the 8-case governance stress suite. Load once per session at the top of `planning` so protocols stay fresh across phases.
 
-`memorize`: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what>')`
+`memorize`: `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what>')`
 
 ## MANDATORY DEV WORKFLOW
 
