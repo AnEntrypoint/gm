@@ -690,6 +690,21 @@ process.stdout.write(JSON.stringify(response));
 `;
 }
 
+function createCcPostToolUseHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+let raw = '';
+try { raw = fs.readFileSync(0, 'utf8'); } catch (_) {}
+if (!raw.trim()) raw = process.env.CLAUDE_HOOK_INPUT || '{}';
+const input = JSON.parse(raw);
+const toolName = input.tool_name || input.tool_use?.name || '';
+const toolOutput = input.tool_result || input.output || '';
+if ((toolName === 'Bash') && toolOutput && typeof toolOutput === 'string' && toolOutput.length > 20) {
+  process.stdout.write(JSON.stringify({ systemMessage: 'exec: run completed. MEMORIZE CHECK: did this output resolve any prior unknown (API shape, version, behavior, env quirk, root cause, user preference)? If YES → spawn Agent(subagent_type=\\'memorize\\', model=\\'haiku\\', run_in_background=true, prompt=\\'## CONTEXT TO MEMORIZE\\\\n<fact>\\') NOW before your next tool call. One call per fact. Skipping = memory leak = bug.' }));
+}
+`;
+}
+
 function createCcPreToolUseHook() {
   return `#!/usr/bin/env node
 const fs = require('fs');
@@ -762,6 +777,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       'install.js': createClaudeCodeInstallScript(),
       'hooks/prompt-submit-hook.js': createCcPromptSubmitHook(),
       'hooks/pre-tool-use-hook.js': createCcPreToolUseHook(),
+      'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
     };
   },
   buildHooksMap() {
@@ -772,6 +788,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
     return {
       PreToolUse: wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
+      PostToolUse: wrap(jsHook('post-tool-use-hook.js', 3000)),
       SessionStart: wrap(hook('session-start', 180000)),
       UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
       PreCompact: wrap(hook('pre-compact', 30000)),
