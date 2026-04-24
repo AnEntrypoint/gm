@@ -1,3 +1,16 @@
+## 2026-04-24 - ccsniff compliance audit + stop-hook isMeta fix
+
+ccsniff audit across 6 sessions (rs-learn, agentgui, guru-gcs, thebird, diagen, voice):
+
+**Root causes identified:**
+- Dominant violation (87% of non-compliant turns): stop-hook feedback messages have isMeta:true, bypassing UserPromptSubmit hook. Pre-tool-use sentinel never written → model responds with Bash directly.
+- Secondary (8%): Skill(gm:planning) called directly instead of Skill(gm) — already blocked by pre-tool-use (only gm/gm:gm clears needs-gm).
+- Minor (5%): compaction/session-continued messages similarly bypass hook.
+
+**Fix (rs-plugkit):** write_needs_gm() called before every block decision in run_stop(), run_stop_git(), and run_stop(). Also write_needs_gm() in pre_compact run(). Pre-tool-use hook then enforces gm-first even for isMeta-triggered responses.
+
+**True compliance rate (excluding isMeta/hook/compact):** ~80-85% across sessions.
+
 ## 2026-04-24 - PostToolUse hook + stronger memorize/narration enforcement (ccsniff-driven)
 
 ccsniff audit (7d, gm sessions): 145 narrate-before-tool violations, 41/74 turns starting with text (not tool), 0 actual memorize Agent spawns despite 51 text mentions. Fixes:
