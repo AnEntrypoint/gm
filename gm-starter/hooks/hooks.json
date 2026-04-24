@@ -43,6 +43,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook prompt-submit",
             "timeout": 60000
+          },
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
+            "timeout": 3000
           }
         ]
       }

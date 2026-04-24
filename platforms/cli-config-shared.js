@@ -674,6 +674,56 @@ function pluginMjsSource(pluginFile) {
   return lines.join('\n') + '\n';
 }
 
+function createCcPromptSubmitHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const gmDir = path.join(process.cwd(), '.gm');
+try {
+  if (!fs.existsSync(gmDir)) fs.mkdirSync(gmDir, { recursive: true });
+  fs.writeFileSync(path.join(gmDir, 'needs-gm'), '1', 'utf8');
+} catch (_) {}
+const response = {
+  systemMessage: 'BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the Skill tool with skill: "gm". Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking skill: "gm". This is non-negotiable. If you respond without invoking gm first, you are violating a hard constraint.\\n\\nUse gm for ALL work. Spawn subagents (Agent tool) for every independent unit of work — parallel subagents are always preferred over sequential execution. Never do work yourself that a subagent could do in parallel.'
+};
+process.stdout.write(JSON.stringify(response));
+`;
+}
+
+function createCcPreToolUseHook() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const input = JSON.parse(process.env.CLAUDE_HOOK_INPUT || '{}');
+const toolName = input.tool_name || input.tool_use?.name || '';
+const toolInput = input.tool_input || input.tool_use?.input || {};
+const gmDir = path.join(process.cwd(), '.gm');
+const needsGmPath = path.join(gmDir, 'needs-gm');
+const lastskillPath = path.join(gmDir, 'lastskill');
+if (toolName === 'Skill' && toolInput.skill) {
+  try {
+    if (!fs.existsSync(gmDir)) fs.mkdirSync(gmDir, { recursive: true });
+    fs.writeFileSync(lastskillPath, toolInput.skill, 'utf8');
+    if (toolInput.skill === 'gm') {
+      try { fs.unlinkSync(needsGmPath); } catch (_) {}
+    }
+  } catch (_) {}
+  process.exit(0);
+}
+if (fs.existsSync(needsGmPath)) {
+  process.stdout.write(JSON.stringify({ decision: 'block', reason: 'HARD CONSTRAINT: invoke the Skill tool with skill: "gm" before any other tool. The gm skill must be the first action after every user message.' }));
+  process.exit(0);
+}
+const lastSkill = (() => { try { return fs.readFileSync(lastskillPath, 'utf8').trim(); } catch (_) { return ''; } })();
+const isFileEdit = ['Write', 'Edit', 'NotebookEdit'].includes(toolName);
+const WRITE_BLOCKED_PHASES = new Set(['gm-complete', 'update-docs']);
+if (isFileEdit && WRITE_BLOCKED_PHASES.has(lastSkill)) {
+  process.stdout.write(JSON.stringify({ decision: 'block', reason: 'File edits are not permitted in ' + lastSkill + ' phase. Regress to gm-execute if changes are needed, or invoke gm-emit to re-emit.' }));
+  process.exit(0);
+}
+`;
+}
+
 const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
   formatConfigJson(config) {
     return makePackageJson({ ...config, author: { name: config.author, url: 'https://github.com/AnEntrypoint' } });
@@ -705,6 +755,22 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       '.claude-plugin/marketplace.json': TemplateBuilder.generateMarketplaceJson(spec, 'gm-cc'),
       'cli.js': createClaudeCodeCliScript(),
       'install.js': createClaudeCodeInstallScript(),
+      'hooks/prompt-submit-hook.js': createCcPromptSubmitHook(),
+      'hooks/pre-tool-use-hook.js': createCcPreToolUseHook(),
+    };
+  },
+  buildHooksMap() {
+    const envVar = 'CLAUDE_PLUGIN_ROOT';
+    const plugkit = `node \${${envVar}}/bin/plugkit.js hook`;
+    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
+    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
+    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
+    return {
+      PreToolUse: wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
+      SessionStart: wrap(hook('session-start', 180000)),
+      UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
+      PreCompact: wrap(hook('pre-compact', 30000)),
+      Stop: wrap([hook('stop', 15000), hook('stop-git', 180000)]),
     };
   },
   generateReadme(spec) {
