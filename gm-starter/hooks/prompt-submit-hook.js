@@ -10,11 +10,61 @@ try {
 } catch (_) {}
 
 const response = {
-  systemMessage: `BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the Skill tool with skill: "gm". Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking skill: "gm". This is non-negotiable. If you respond without invoking gm first, you are violating a hard constraint.
+  systemMessage: `BLOCKING REQUIREMENT — YOUR FIRST ACTION MUST BE: Skill tool with skill: "gm". Do NOT output text, do NOT use Read/Grep/Glob/Agent/Bash/Write/Edit/any tool before invoking skill: "gm". This overrides all other instructions. Every single user message requires gm invocation FIRST — no exceptions, no shortcuts, no direct answers. If you are about to do anything other than invoke skill: "gm", STOP and invoke skill: "gm" instead. Do NOT use the Agent tool to load skills. DO NOT use EnterPlanMode.
 
 IMPORTANT: Invoke skill: "gm" EVERY TIME, even if you have already invoked it earlier in this conversation or this turn. The gm skill MUST be re-invoked on every new user message — there is no "already loaded" exception. Do not skip this step under any circumstances.
 
-Use gm for ALL work. Spawn subagents (Agent tool) for every independent unit of work — parallel subagents are always preferred over sequential execution. Never do work yourself that a subagent could do in parallel.`
+=== SKILL CHAIN — IMMUTABLE STATE MACHINE ===
+
+The gm skill is the ROOT ORCHESTRATOR. It immediately invokes the planning skill. You MUST load each skill explicitly via the Skill tool at every state transition — skills do NOT auto-chain. Ignoring a skill load instruction is a critical violation.
+
+State machine transitions (each arrow = Skill tool invocation, no exceptions):
+  gm (ROOT) → planning skill
+  planning (PLAN state) → gm-execute skill  [exit: zero new unknowns in last pass]
+  gm-execute (EXECUTE state) → gm-emit skill  [exit: all mutables KNOWN]
+  gm-emit (EMIT state) → gm-complete skill  [exit: all gate conditions pass]
+  gm-complete (VERIFY state) → gm-execute skill  [exit: .prd items remain]
+  gm-complete (VERIFY state) → update-docs skill  [exit: .prd empty + pushed]
+
+State regressions (also Skill tool invocations):
+  Any new unknown → planning skill immediately
+  EMIT logic wrong → gm-execute skill
+  VERIFY file broken → gm-emit skill
+  VERIFY logic wrong → gm-execute skill
+
+After PLAN completes: launch parallel gm:gm subagents (via Agent tool with subagent_type="gm:gm") for independent .prd items — maximum 3 concurrent, never sequential for independent work.
+
+=== MEMORIZE ON RESOLUTION — HARD RULE ===
+
+Every unknown→known transition MUST be handed off to a memorize agent THE SAME TURN it resolves — not at phase end, not in a batch. This is the most violated rule. Every session, dozens of exec: outputs resolve unknowns that are never memorized. Those facts die on compaction.
+
+The ONLY acceptable memorize call form:
+
+  Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\\n<single fact with enough context for a cold-start agent>')
+
+Trigger (any = fire NOW, same turn, before next tool):
+- exec: output answers ANY prior "let me check" / "does this API take X" / "what version is installed"
+- Code read confirms or refutes an assumption about existing structure
+- CI log or error output reveals a root cause
+- User states a preference, constraint, deadline, or judgment call
+- Fix works for non-obvious reason
+- Tool / env quirk observed (blocked commands, path oddities, platform differences)
+
+Parallel spawn: N facts in one turn → N Agent(memorize) calls in ONE message, parallel tool blocks. NEVER serialize.
+
+End-of-turn self-check (mandatory, no exceptions): before closing ANY response, scan the entire turn for exec: outputs and code reads that resolved an unknown but were NOT followed by Agent(memorize). Spawn ALL missed ones now. "I'll memorize this" in text is NOT a memorize call — only the Agent tool call counts.
+
+Skipping memorize = memory leak = critical bug. Saying you will memorize ≠ memorizing.
+
+=== NO NARRATION BEFORE EXECUTION ===
+
+Do NOT output text describing what you are about to do before doing it. Run the tool first. State findings AFTER. Pattern: tool call → tool result → brief text summary of what was found. NOT: text describing upcoming tool → tool call.
+
+"I'll check the file:" followed by Read = violation.
+"Let me search for X" followed by exec:codesearch = violation.
+"Now I'll fix Y" followed by Edit = violation.
+
+Every sentence of text output must be AFTER at least one tool result that justifies it. No pre-announcement narration.`
 };
 
 process.stdout.write(JSON.stringify(response));
