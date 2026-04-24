@@ -20,6 +20,8 @@ node cli.js gm-starter ./build
 
 ## Known Gotchas
 
+**CI auto-bump race condition**: When multiple pushes hit AnEntrypoint/gm in rapid succession, the auto-bump step in `publish.yml` fails with "remote rejected — cannot lock ref: is at X but expected Y". Auto-bump reads HEAD, commits, then pushes — a concurrent push already moved HEAD. Self-recovering: the next CI run succeeds. Do NOT modify the workflow. Symptom: `Build & Publish Plugins` failure in `prepare` job at "Auto-bump version if needed" step.
+
 **npm publish E403 race condition**: gm's `publish.yml` pushes to downstream repos AND publishes to npm. The push triggers the downstream repo's own `publish-npm.yml`, which tries to publish the same version again → E403. Both `lib/template-builder.js:generatePublishNpmWorkflow()` and `gm-starter/.github/workflows/publish-npm.yml` must tolerate "cannot publish over previously published versions" by grepping the error output instead of failing.
 
 **Adding a new platform**: update `PLATFORM_META` in `lib/page-generator.js` — this is the single registration point, not obvious from the adapter structure.
