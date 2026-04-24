@@ -684,7 +684,7 @@ try {
   fs.writeFileSync(path.join(gmDir, 'needs-gm'), '1', 'utf8');
 } catch (_) {}
 const response = {
-  systemMessage: 'BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the Skill tool with skill: "gm". Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking skill: "gm". This is non-negotiable. If you respond without invoking gm first, you are violating a hard constraint.\\n\\nUse gm for ALL work. Spawn subagents (Agent tool) for every independent unit of work — parallel subagents are always preferred over sequential execution. Never do work yourself that a subagent could do in parallel.'
+  systemMessage: 'BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the Skill tool with skill: "gm". Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking skill: "gm". This is non-negotiable. If you respond without invoking gm first, you are violating a hard constraint.\\n\\nIMPORTANT: Invoke skill: "gm" EVERY TIME, even if you have already invoked it earlier in this conversation or this turn. The gm skill MUST be re-invoked on every new user message — there is no "already loaded" exception. Do not skip this step under any circumstances.\\n\\nUse gm for ALL work. Spawn subagents (Agent tool) for every independent unit of work — parallel subagents are always preferred over sequential execution. Never do work yourself that a subagent could do in parallel.'
 };
 process.stdout.write(JSON.stringify(response));
 `;
