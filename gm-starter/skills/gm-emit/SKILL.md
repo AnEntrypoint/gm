@@ -3,91 +3,29 @@ name: gm-emit
 description: EMIT phase. Pre-emit debug, write files, post-emit verify from disk. Any new unknown triggers immediate snake back to planning — restart chain.
 ---
 
-# GM EMIT — Writing and Verifying Files
+# GM EMIT — Write and Verify
 
-You are in the **EMIT** phase. Every mutable is KNOWN. Prove the write is correct, write, confirm from disk. Any new unknown = snake to `planning`, restart chain.
-
-**GRAPH POSITION**: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
-- **Entry**: All .gm/prd.yml mutables resolved. Entered from `gm-execute` or via snake from VERIFY.
-
-## WHERE YOU ARE
-
-About to mutate on-disk state. Every write bracketed by two witnessed executions: pre-emit (import module from disk, run proposed logic in isolation, record expected outputs as baseline) and post-emit (re-import from disk, confirm identical output to pre-emit baseline). Both = executions. Contract in `gm-execute`. Protocols not fresh → runs drift to reimplementation + narrated assumption → write ships unfalsified. Load first.
-
-## SURPRISE → STATE REGRESSION
-
-Pre-emit unexpected output ≠ bug to patch in this phase. Classify:
-- Identifiable logic error against a known mutable → regress to `gm-execute` (re-resolve the mutable properly, return here)
-- Newly visible unknown (cause not nameable) → regress to `planning` (enumerate, let chain return you with complete mutable map)
-
-Post-emit divergence from pre-emit baseline:
-- Identified cause → known mutable → fix in place, re-verify (EMIT self-loop, zero variance before advancing)
-- Unidentified cause → unknown → regress to `planning`
-
-Urge to "just fix real quick" = signal mutable map was incomplete. Trust state machine: regress to correct phase, resolve, return.
-
-## FRAGILE LEARNINGS — HARD RULE
-
-Pre-emit and post-emit runs surface facts you lacked: actual function signatures, edge-case return values, adjacent-module interactions, hidden invariants. Each dies on compaction unless memorized **the same turn it resolves** — not at phase exit.
-
-```
-Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
-```
-
-One call per fact, background, parallel when multiple resolve together. **End-of-turn self-check**: scan for un-memorized resolutions before closing response; spawn any missed. Same enforcement as `planning` / `gm-execute` — see those skills for the full trigger contract.
+GRAPH: `PLAN → EXECUTE → [EMIT] → VERIFY → COMPLETE`
+Entry: all mutables KNOWN. From `gm-execute` or re-entered from VERIFY.
 
 ## TRANSITIONS
 
-**EXIT — invoke `gm-complete` skill immediately when**: All gate conditions are true simultaneously. Do not pause. Invoke the skill.
+**EXIT → VERIFY**: all gate conditions true → invoke `gm-complete` immediately.
+**SELF-LOOP**: post-emit variance with known cause → fix, re-verify, stay in EMIT.
+**REGRESS → EXECUTE**: pre-emit reveals known logic error.
+**REGRESS → PLAN**: pre-emit reveals new unknown | post-emit variance with unknown cause | scope changed.
 
-**SELF-LOOP (remain in EMIT state)**: Post-emit variance with known cause → fix immediately, re-verify, do not advance until zero variance
+## LEGITIMACY GATE (before pre-emit run)
 
-**STATE REGRESSIONS**:
-- Pre-emit reveals logic error (known mutable) → invoke `gm-execute` skill, reset to EXECUTE, return here after resolution
-- Pre-emit reveals new unknown → invoke `planning` skill, reset to PLAN state
-- Post-emit variance with unknown cause → invoke `planning` skill, reset to PLAN state
-- Scope changed → invoke `planning` skill, reset to PLAN state
-- Re-entered from VERIFY state (broken file output) → fix, re-verify, then re-invoke `gm-complete` skill
+For every claim landing in a file:
+1. **Earned specificity** — traces to `authorization=witnessed`, not inflated from weak prior?
+2. **Repair legality** — local patch dressed as structural repair? Downgrade scope or snake to PLAN.
+3. **Lawful downgrade** — can a weaker, true statement replace it? PREFER the downgrade.
+4. **Alternative-route suppression** — live competing route being silenced? Preserve it.
 
-## MUTABLE DISCIPLINE
+Fail any → regress to `gm-execute` to witness what was missing, or `planning` if gap is structural.
 
-Each gate condition is a mutable. Pre-emit run witnesses expected value. Post-emit run witnesses current value. Zero variance = resolved. Variance with unknown cause = new unknown = snake to `planning`.
-
-## CODE EXECUTION
-
-**exec:<lang> is the only way to run code.** Bash tool body: `exec:<lang>\n<code>`
-
-`exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:java` | `exec:deno` | `exec:cmd`
-
-Only git in bash directly. `Bash(node/npm/npx/bun)` = violations. File writes via exec:nodejs + require('fs').
-
-**Execution efficiency — pack every run:**
-- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
-- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
-- Target under 12s per exec call; split work across multiple calls only when dependencies require it
-- Prefer a single well-structured exec that does 5 things over 5 sequential execs
-
-## LEGITIMACY GATE — EARNED SPECIFICITY
-
-Before the pre-emit run, apply the legitimacy check from `governance`. For every claim, assertion, or specific value about to land in a file, answer:
-
-1. **Earned specificity** — does the claim trace to a witnessed mutable (`authorization=witnessed`), or is it inflated from a weak prior?
-2. **Repair legality** — is this a local candidate repair being dressed up as a structural repair? If yes, either downgrade the scope or snake back to PLAN for structural work.
-3. **Lawful downgrade option** — can the same file be written with a weaker, true statement instead of a stronger, unearned one? If yes, PREFER the downgrade. (A defensive default, a smaller claim, a conservative error path, an explicit `TODO: verify under load` — all are legal downgrades.)
-4. **Alternative-route suppression** — is a live competing route being silenced to force closure? Preserve it (comment-free: as separate handler, separate field, separate branch that logs).
-
-Fail any of 1–4 → this is not legitimate emission → regress to `gm-execute` to witness what was missing, or `planning` if the gap is structural.
-
-**"Not every answer has earned the right to exist."** Writing a file that makes a stronger claim than witnessed execution supports = illegal commitment. The test is not "does it work?" — it is "did this answer earn its strength?"
-
-## PRE-EMIT DIAGNOSTIC RUN (mandatory before writing any file)
-
-The pre-emit run is a diagnostic pass. Its purpose is to falsify the write before it happens.
-
-1. Import the actual module from disk via `exec:nodejs` — witness current on-disk behavior as the baseline
-2. Run proposed logic in isolation WITHOUT writing — witness output with real inputs
-3. Probe all failure paths with real error inputs — record expected vs actual for each
-4. Compare: if proposed output matches expected → proceed to write. If not → new unknown, regress to `planning`.
+## PRE-EMIT RUN (mandatory before writing any file)
 
 ```
 exec:nodejs
@@ -95,74 +33,52 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-Pre-emit revealing unexpected behavior → name the delta → new unknown → invoke `planning` skill, reset to PLAN state.
+1. Import actual module from disk — witness current behavior as baseline
+2. Run proposed logic in isolation WITHOUT writing — witness with real inputs
+3. Probe failure paths with real error inputs
+4. Compare: matches expected → write. Unexpected → new unknown → `planning`.
 
 ## WRITING FILES
 
-`exec:nodejs` with `require('fs')`. Write only when every gate mutable is `resolved=true` simultaneously.
+`exec:nodejs` with `require('fs')`. Write only when every gate mutable resolved simultaneously.
 
-## POST-EMIT DIAGNOSTIC VERIFICATION (immediately after writing)
+## POST-EMIT VERIFICATION (immediately after writing)
 
-The post-emit verification is a differential diagnosis against the pre-emit baseline.
+1. Re-import from disk (not in-memory — stale is inadmissible)
+2. Run identical inputs as pre-emit — must match pre-emit baseline exactly
+3. Known variance → fix immediately, re-verify (EMIT self-loop)
+4. Unknown variance → new unknown → invoke `planning`
 
-1. Re-import the actual file from disk — not the in-memory version (stale in-memory state is inadmissible)
-2. Run identical inputs as pre-emit — output must match pre-emit witnessed values exactly
-3. For browser: reload from disk, re-inject `__gm` globals, re-run, compare captured outputs to pre-emit baseline
-4. Known variance (cause is identified, mutable is KNOWN) → fix immediately and re-verify
-5. Unknown variance (delta exists but cause cannot be determined) → this is a new unknown → invoke `planning` skill, reset to PLAN state
+## GATE CONDITIONS (all true simultaneously)
 
-## GATE CONDITIONS (all true simultaneously before advancing)
+- Legitimacy gate passed; none of five refused collapses
+- Pre-emit passed with real inputs + error inputs
+- Post-emit matches pre-emit exactly
+- Hot reloadable; errors throw with context (no fallbacks, `|| default`, `catch { return null }`)
+- No mocks/fakes/stubs/scattered test files (delete on discovery)
+- Files ≤200 lines
+- No duplicate concern (run exec:codesearch for primary concern after writing; any overlap → `planning`)
+- No comments; no hardcoded values; no adjectives in identifiers; no unnecessary files
+- Observability: new server subsystems expose `/debug/<subsystem>`; new client modules in `window.__debug`
+- Structure: no if/else where dispatch table suffices; no one-liners that require decoding; no reinvented APIs
+- All facts resolved this phase memorized via background Agent(memorize)
+- CHANGELOG.md updated; TODO.md cleared/deleted
 
-- Legitimacy gate passed: every claim traces to `authorization=witnessed`, no weak-prior inflation, no local-candidate-dressed-as-structural, lawful downgrade considered and either taken or explicitly justified, live competing routes preserved
-- None of the five refused collapses (`governance`): route→authorization | candidate→structural | hidden→public-law | cleanliness→legitimacy | one-route→universal-closure
+## CODE EXECUTION
 
-- Pre-emit debug passed with real inputs and error inputs
-- Post-emit verification matches pre-emit exactly
-- Hot reloadable: state outside reloadable modules, handlers swap atomically
-- Errors throw with clear context — no fallbacks, demo modes, silent swallowing, `|| default`, `catch { return null }`
-- No mocks/fakes/stubs/simulations/scattered test files anywhere — delete on discovery (only root test.js permitted)
-- Files ≤200 lines — split immediately if over, do not advance
-- No duplicate concern — after writing, run exec:codesearch for the primary concern. If ANY other code serves the same concern → do NOT advance, snake to `planning` with consolidation instructions
-- No comments — remove any found
-- No hardcoded values — dynamic/modular code using ground truth only
-- No adjectives/descriptive language in variable/function names
-- No unnecessary files — clean anything not required for the program to function
-- Observability: every new server subsystem exposes a named inspection endpoint; every new client module registers into `window.__debug` by key and deregisters on unmount. Ad-hoc `console.log` is not observability — permanent queryable structure is. Any new code path not reachable via `window.__debug` or a `/debug/<subsystem>` endpoint → do NOT advance, add observability before writing feature code.
-- Structural quality: if/else chains where a dispatch table or pipeline suffices → regress to `gm-execute` for restructuring. One-liners that compress logic at the cost of readability → expand. Any logic that reinvents a native API or library → replace with the native/library call. Structure must make wrong states unrepresentable — if it doesn't, it's not done.
-- every fact resolved in this phase (pre-emit discoveries, post-emit surprises, newly-confirmed behaviors) has been handed off via a background memorize call at the moment of resolution: `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
-- CHANGELOG.md updated with changes
-- TODO.md cleared or deleted
+`exec:<lang>` only. File writes via exec:nodejs + require('fs'). Never Bash(node/npm/npx/bun).
+Pack runs: Promise.allSettled, each idea own try/catch, under 12s per call.
 
-## CODEBASE EXPLORATION — exec:codesearch ONLY
+## CODEBASE SEARCH
+
+`exec:codesearch` only. Grep/Glob/Find/Explore = hook-blocked. Known path → `Read`.
+
+## MEMORIZE
 
 ```
-exec:codesearch
-<two-word query>
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
-`Grep`, `Glob`, `Find`, `Explore` tools and `grep`/`rg`/`find` inside `exec:bash` are all hook-blocked. `exec:codesearch` is the single codebase-exploration tool — it handles exact strings, symbols, regex patterns, file-name fragments, and PDF pages. `Read` is available for a known absolute path. There is no third option. PDF pages are indexed alongside source; when verifying that emitted code matches a spec, search the PDF directly and cite `doc.pdf:<page>`.
+Same turn as resolution. Parallel when multiple. End-of-turn self-check mandatory.
 
-## BROWSER DEBUGGING
-
-Invoke `browser` skill. Escalation: (1) `exec:browser\n<js>` → (2) `browser` skill → (3) navigate/click → (4) screenshot last resort.
-
-## SELF-CHECK (before and after each file)
-
-File ≤200 lines | No duplicate concern | Pre-emit passed | No mocks | No comments | Docs match | All spotted issues fixed
-
-## DO NOT STOP
-
-Never respond to the user from this phase. When all gate conditions pass, immediately invoke `gm-complete` skill. Do not pause, summarize, or ask questions.
-
-## CONSTRAINTS
-
-**Never**: write before pre-emit passes | advance with post-emit variance | absorb surprises silently | comments | hardcoded values | fallback/demo modes | silent error swallowing | defer spotted issues | respond to user or pause for input
-
-**Always**: pre-emit debug before writing | post-emit verify from disk | regress to planning on any new unknown | fix immediately | invoke next skill immediately when gates pass
-
----
-
-**EXIT → VERIFY**: All gates pass → invoke `gm-complete` skill immediately.
-**SELF-LOOP**: Known post-emit variance → fix, re-verify (remain in EMIT state).
-**REGRESS → EXECUTE**: Known logic error → invoke `gm-execute` skill, reset to EXECUTE state.
-**REGRESS → PLAN**: Any new unknown → invoke `planning` skill, reset to PLAN state.
+**Never**: write before pre-emit | advance with post-emit variance | absorb surprises | respond to user mid-phase

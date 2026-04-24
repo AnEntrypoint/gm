@@ -3,69 +3,46 @@ name: gm-execute
 description: EXECUTE phase AND the foundational execution contract for every skill. Every exec:<lang> run, every witnessed check, every code search, in every phase, follows this skill's discipline. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
 ---
 
-# GM EXECUTE — Resolving Every Unknown
+# GM EXECUTE — Resolve Every Unknown
 
-You are in the **EXECUTE** phase. Every mutable on `.gm/prd.yml` carries UNKNOWN status until witnessed execution resolves it. Job here = the witnessing.
+GRAPH: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
+Entry: .prd with named unknowns. From `planning` or re-entered from EMIT/VERIFY.
 
-This skill also carries the **execution contract** applying in every phase, not only this one. Planning runs codebase scans; EMIT runs pre-emit diagnostics; VERIFY runs integration tests and CI watches — all executions, all subject to discipline below. Other skills reference this skill because protocols stay live in context only while this text is nearby. About to run anything → this skill freshly loaded OR operating outside contract.
-
-New unknown surfaced by a run → stop, state-regress to `planning`, restart chain.
-
-**GRAPH POSITION**: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
-- **Entry**: .prd exists with all unknowns named. Entered from `planning` or via snake from EMIT/VERIFY.
+This skill = execution contract for ALL phases. Other phases reference it because protocols must be fresh. About to run anything → load this skill first.
 
 ## TRANSITIONS
 
-**EXIT — invoke `gm-emit` skill immediately when**: All mutables are KNOWN (zero UNKNOWN remaining). Do not wait, do not summarize. Invoke the skill.
-
-**SELF-LOOP (remain in EXECUTE state)**: Mutable still UNKNOWN after one pass → re-run with different angle (max 2 passes, then regress to PLAN)
-
-**STATE REGRESSIONS**:
-- New unknown discovered → invoke `planning` skill immediately, reset to PLAN state
-- EXECUTE mutable unresolvable after 2 passes → invoke `planning` skill, reset to PLAN state
-- Re-entered from EMIT state (logic error) → re-resolve the mutable, then re-invoke `gm-emit` skill
-- Re-entered from VERIFY state (runtime failure) → re-resolve with real system state, then re-invoke `gm-emit` skill
+**EXIT → EMIT**: all mutables KNOWN → invoke `gm-emit` immediately.
+**SELF-LOOP**: still UNKNOWN → re-run different angle (max 2 passes, then regress to PLAN).
+**REGRESS → PLAN**: new unknown discovered | mutable unresolvable after 2 passes.
 
 ## MUTABLE DISCIPLINE
 
-Each mutable: name | expected | current | resolution method. Execute → witness → assign → compare. Zero variance = resolved. Unresolved after 2 passes = new unknown = snake to `planning`. Never narrate past an unresolved mutable.
+Each mutable: name | expected | current | resolution method. Zero variance = resolved. Unresolved after 2 passes = snake to `planning`. Never narrate past an unresolved mutable.
 
-## WEAK-PRIOR BRIDGE — PRIORS DO NOT AUTHORIZE
+Mutables resolve to KNOWN only when ALL four pass:
+- **ΔS=0** — witnessed output equals expected
+- **λ≥2** — two independent paths agree
+- **ε intact** — adjacent invariants hold (types, test.js, neighboring callers)
+- **Coverage≥0.70** — enough corpus inspected for retrieval mutables
 
-EXECUTE receives route candidates from PLAN. Per the weak-prior rule in `governance`: **those candidates arrive as weak priors only — structural value preserved, authorization NOT transferred**. Route plausibility ≠ authorization. A plausible route earns the right to be TESTED, not the right to be BELIEVED.
+## PRIORS DON'T AUTHORIZE
 
-- Prior from PLAN: `authorization=weak_prior`. Permitted use: pick the next witnessed probe.
-- After witnessed probe succeeds: `authorization=witnessed`. Permitted use: feed into EMIT.
-- Collapsing `weak_prior` to `witnessed` without a witnessed probe = route-into-authorization leak (collapse #1 in `governance`). Snake to PLAN.
-
-Rhetorical inflation also strips here: "the plan says" / "we agreed that" / "obviously X" are prior-statements, not witnessed-facts. Restate as weak prior, run the probe, witness, only then authorize.
-
-## QUALITY METRICS — APPLY BEFORE MARKING KNOWN
-
-Every mutable passes all four before status flips UNKNOWN → KNOWN (see `governance` for full definitions):
-
-- **ΔS = 0** — witnessed output equals expected
-- **λ ≥ 2** — two independent paths agree (different search, different caller, different import), not just one confirmation
-- **ε intact** — adjacent invariants still hold (neighboring callers, types, test.js, nearby modules unbroken)
-- **Coverage ≥ 0.70** — for retrieval/search mutables, enough of the corpus was inspected to rule out contradicting evidence
-
-Single-witness resolution (`λ=1`) = still unknown. One passing run on happy path without probing error paths = `ε` unverified. Skipping these checks and marking KNOWN anyway is an authorization-without-witness violation.
+Route candidates from PLAN arrive as `weak_prior` only. Plausibility = right to TEST, not right to BELIEVE.
+`weak_prior` → witnessed probe → `witnessed` → feed to EMIT.
+"The plan says" / "we agreed" / "obviously X" = prior-statements, not witnessed facts.
 
 ## CODE EXECUTION
 
-**exec:<lang> is the only way to run code.** Bash tool body: `exec:<lang>\n<code>`
+`exec:<lang>` only via Bash tool body: `exec:<lang>\n<code>`
 
-`exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:c` | `exec:cpp` | `exec:java` | `exec:deno` | `exec:cmd`
+Langs: `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:c` | `exec:cpp` | `exec:java` | `exec:deno` | `exec:cmd`
 
-Lang auto-detected if omitted. `cwd` sets directory. File I/O via exec:nodejs + require('fs'). Only git in bash directly. `Bash(node/npm/npx/bun)` = violations.
+File I/O: exec:nodejs + require('fs'). Git directly in Bash. Never Bash(node/npm/npx/bun).
 
-**Execution efficiency — pack every run:**
-- Combine multiple independent operations into one exec call using `Promise.allSettled` or parallel subprocess spawning
-- Each independent idea gets its own try/catch with independent error reporting — never let one failure block another
-- Target under 12s per exec call; split work across multiple calls only when dependencies require it
-- Prefer a single well-structured exec that does 5 things over 5 sequential execs
+Pack runs: Promise.allSettled for parallel, each idea own try/catch, under 12s per call.
 
-**Background tasks** (auto-backgrounded when execution exceeds 15s):
+Background (when exec exceeds 15s — auto-backgrounds):
 ```
 exec:sleep
 <task_id> [seconds]
@@ -79,54 +56,24 @@ exec:close
 <task_id>
 ```
 
-**Runner**:
-```
-exec:runner
-start|stop|status
-```
+Runner: `exec:runner\nstart|stop|status`
 
-## GIT PUSH = AUTOMATIC CI WATCH
+## CODEBASE SEARCH
 
-The Stop hook automatically watches GitHub Actions runs whose `headSha` matches the just-pushed HEAD. Every push is watched without manual `gh run list` / `gh run watch` calls.
+`exec:codesearch` only. Grep/Glob/Find/Explore/WebSearch/grep/rg/find inside exec:bash = ALL hook-blocked.
 
-- All-green → Stop appends a CI summary to its approve reason; you see it in the next turn's context.
-- Any failure → Stop blocks with the failed run names + IDs; treat that as a KNOWN mutable, regress to the right phase, push again — the hook re-watches.
-- Default deadline 180s (override `GM_CI_WATCH_SECS`); if it elapses with runs still in flight, Stop approves with "still in progress" so slow Pages-deploy / npm-publish jobs do not stall completion.
-- For diagnosing a specific failure, `gh run view <id> --log-failed` is permitted on demand.
-- Cascade (downstream-repo workflows triggered indirectly) is NOT auto-watched — only same-repo. Manual cascade check stays for those rare cases.
-
-**Zero silent pushes** is now an automatic invariant of the hook layer; do not duplicate it as manual instructions.
-
-## CODEBASE EXPLORATION — exec:codesearch ONLY
-
-**Grep, Glob, Find, Explore, WebSearch, and `grep`/`rg`/`find` inside `exec:bash` are ALL hook-blocked.** Attempting them returns a redirect error. The hook is not a suggestion — it is enforced. `Read` is available for known absolute paths.
-
-Default reflex for "I need to find X in the codebase" = `exec:codesearch`. No exceptions. Not even for exact strings, not even for regex, not even for "just one quick check". If you find yourself reaching for Grep or Glob, that reflex is wrong — replace with codesearch.
+Known absolute path → `Read`. Known dir → exec:nodejs + fs.readdirSync. No third option.
 
 ```
 exec:codesearch
-<two-word query to start>
+<two-word query>
 ```
 
-`exec:codesearch` handles exact strings, symbols, regex-ish patterns, file-name fragments, and PDF pages (indexed page-by-page with `file:page` citations). Two words in, iterate by changing or adding one word per pass, minimum four attempts before concluding absent. Full protocol in `code-search` skill.
+Iterate: change one word or add one word per pass. Minimum 4 attempts before concluding absent.
 
-**Direct-read exceptions** (no search needed):
-- Known absolute path → `Read` tool.
-- Directory listing at known path → `exec:nodejs` + `fs.readdirSync`.
-- File content inspection without search → `Read`.
+## IMPORT-BASED EXECUTION
 
-**Never**:
-- `Grep`, `Glob`, `Find`, `Explore` tools (all hook-blocked)
-- `grep`, `rg`, `ripgrep`, `find`, `ag`, `ack` inside `exec:bash` (banned-tool hook intercepts)
-- Reaching for exact-match tools "because codesearch seems fuzzy" — codesearch handles exact matches fine
-
-When a mutable depends on external specification (protocol field, register layout, compliance text), search the PDF corpus first. Unwitnessed assumption from a doc you did not search = UNKNOWN.
-
-**Platform note — exec:bash on Windows:** runs real bash (git-bash) when installed, falls back to PowerShell otherwise. If you see a POSIX-syntax parse error (`[ -n ...]`, `&&`, `if/then/fi`), bash wasn't found — either install git-bash or rewrite in `exec:nodejs`.
-
-## DIAGNOSTIC PROTOCOL — IMPORT-BASED EXECUTION
-
-Always import actual codebase modules. Never rewrite logic inline. Reimplemented output is unwitnessed and inadmissible as ground truth.
+Always import actual modules. Never rewrite logic inline — reimplemented output = UNKNOWN.
 
 ```
 exec:nodejs
@@ -134,79 +81,44 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-Witnessed import output = resolved mutable. Reimplemented output = UNKNOWN.
+Differential diagnosis: isolate smallest reproduction, compare actual vs expected, name the delta. Delta = the mutable.
 
-**Differential diagnosis**: when behavior diverges from expectation, run the smallest possible isolation test first. Compare actual vs expected. Name the delta. The delta is the mutable — resolve it before touching any file.
+## CI — AUTOMATED
 
-## EXECUTION DENSITY
+git push → Stop hook auto-watches GitHub Actions for pushed HEAD. No manual `gh run watch`.
+- All-green → Stop approves with CI summary
+- Failure → Stop blocks with run names+IDs → `gh run view <id> --log-failed` for diagnosis
+- Deadline 180s (override `GM_CI_WATCH_SECS`)
+- Downstream-repo cascades NOT auto-watched — same-repo only
 
-Pack every related hypothesis into one run. Each run ≤15s. Witnessed output = ground truth. Narrated assumption = inadmissible.
+## GROUND TRUTH
 
-Parallel waves: ≤3 `gm:gm` subagents via Agent tool (`Agent(subagent_type="gm:gm", ...)`) — independent items simultaneously, never sequentially.
+Real services, real data, real timing. Mocks/stubs/simulations = delete. Scattered test files (.test.js, .spec.js, __tests__/) = delete. All coverage in root test.js. Fallback/demo modes = remove, fail loud.
 
-## CHAIN DECOMPOSITION — FAULT ISOLATION
+**Scan before edit**: exec:codesearch for existing implementation before creating/modifying. Duplicate concern = regress to `planning`.
 
-Break every multi-step operation before running end-to-end. Treat each step as a diagnostic unit:
-1. Number every distinct step
-2. Per step: input shape, output shape, success condition, failure mode
-3. Run each step in isolation — witness output — assign mutable — must be KNOWN before proceeding to next step
-4. Debug adjacent step pairs for handoff correctness — the seam between steps is the most common failure site
-5. Only when all pairs pass: run full chain end-to-end
+**Hypothesize via execution**: hypothesis → run → witness → edit. Never edit on unwitnessed assumption.
 
-Step failure revealing new unknown → regress to `planning` state immediately.
+**Code quality** (stop at first that resolves need): native → library → structure (map/pipeline) → write.
 
-## BROWSER DIAGNOSTIC ESCALATION
+## PARALLEL SUBAGENTS
 
-Invoke `browser` skill. Exhaust each level before advancing to next:
-1. `exec:browser\n<js>` — inspect DOM state, read globals, check network responses. Always first.
-2. `browser` skill — for full session workflows requiring navigation
-3. navigate/click/type — only when real events required and DOM inspection insufficient
-4. screenshot — last resort, only after all JS-based diagnostics exhausted
+≤3 `gm:gm` subagents for independent items simultaneously: `Agent(subagent_type="gm:gm", ...)`
 
-## GROUND TRUTH ENFORCEMENT
+Browser escalation: exec:browser → browser skill → navigate/click → screenshot (last resort).
 
-Real services, real data, real timing. Mocks/fakes/stubs/simulations = diagnostic noise = delete immediately. No scattered test files (.test.js, .spec.js, __tests__/) — delete on discovery. All test coverage belongs in the single root `test.js`. If `test.js` does not exist, create it. Every behavior change updates `test.js`. Every bug fix adds a regression case. No fallback/demo modes — errors must surface with full diagnostic context and fail loud.
+## MEMORIZE — HARD RULE
 
-**SCAN BEFORE EDIT**: Before modifying or creating any file, search the codebase (exec:codesearch) for existing implementations of the same concern. "Duplicate" means overlapping responsibility, similar logic, or parallel implementations — not just identical files. If consolidation is possible, regress to `planning` with restructuring instructions instead of continuing.
+Unknown→known = memorize same turn it resolves.
 
-**HYPOTHESIZE VIA EXECUTION — NEVER VIA ASSUMPTION**: Formulate a falsifiable hypothesis. Run it. Witness the output. The output either confirms or falsifies. Only a witnessed falsification justifies editing a file. Never edit based on unwitnessed assumptions — form hypothesis → run → witness → edit.
+Triggers: exec: output answers prior unknown | CI log reveals root cause | code read confirms/refutes | env quirk observed | user states preference/constraint.
 
-**CODE QUALITY PROCESS**: The goal is minimal code / maximal DX. When writing or reviewing any block of code, run this mental process: (1) What native language/platform feature already does this? Use it. (2) What library already solves this pattern? Use it. (3) Can this branch/loop be a data structure — a map, array, or pipeline — where the structure itself enforces correctness? Make it so. (4) Would a newcomer read this top-to-bottom and immediately understand what it does without running it? If no, restructure. One-liners that compress logic are the opposite of DX — clarity comes from structure, not brevity. Dispatch tables, pipeline chains, and native APIs eliminate entire categories of bugs by making wrong states unrepresentable.
-
-## FRAGILE LEARNINGS — HARD RULE
-
-Every UNKNOWN→KNOWN transition during execution = fact that dies on compaction. The memorize spawn is **not** end-of-phase cleanup — it fires **the same turn the fact resolves**, before the next tool call if possible, end-of-turn at latest.
-
-**Trigger contract** (any = fire):
-- `exec:` output resolves a prior "let me check" / "does this API take X" / "what version is installed"
-- CI log or error output reveals a root cause
-- Code read confirms or refutes an assumption about existing structure
-- Environment / tooling quirk observed (blocked commands, platform-specific behavior, path resolution)
-- User states a preference, constraint, deadline, or judgment call
-
-**Invocation** (one per fact, background, parallel when multiple):
 ```
-Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact with enough context for a cold-start agent>')
+Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
-**Parallel spawn**: N facts resolved in one turn → N memorize calls in a **single message**, parallel tool blocks. Never serialize. Never merge multiple facts into one prompt.
+N facts → N parallel Agent calls in ONE message. End-of-turn self-check mandatory.
 
-**End-of-turn self-check** (mandatory): before the response closes, scan the turn for resolved unknowns that were not memorized. Missed one → spawn now. No exceptions — a resolved unknown leaving the turn without handoff is a memory leak.
+**Never**: Bash(node/npm/npx/bun) | fake data | mocks | scattered tests | fallbacks | Grep/Glob/Find/Explore | sequential independent items | respond to user mid-phase | edit before witnessing | duplicate code | if/else where dispatch table suffices | one-liners that obscure | reinvent what native/library provides
 
-Skip memorize = forget on purpose. Treat it as a bug.
-
-## DO NOT STOP
-
-Never respond to the user from this phase. When all mutables are KNOWN, immediately invoke `gm-emit` skill. The chain continues until .prd is deleted and git is clean — that happens in `gm-complete`, not here.
-
-## CONSTRAINTS
-
-**Never**: `Bash(node/npm/npx/bun)` | fake data | mock files | scattered test files (only root test.js) | fallback/demo modes | `Grep`/`Glob`/`Find`/`Explore` tools or `grep`/`rg`/`find` inside `exec:bash` (ALL hook-blocked — use `exec:codesearch` for every codebase lookup, `Read` for known absolute paths) | sequential independent items | absorb surprises silently | respond to user or pause for input | edit files before executing to understand current behavior | duplicate existing code | write explicit if/else chains when a dispatch table or native method suffices | write packed one-liners that obscure structure | reinvent what a library or native API already provides
-
-**Always**: witness every hypothesis | import real modules | scan codebase before creating/editing files | regress to planning on any new unknown | fix immediately on discovery | delete mocks/stubs/comments/scattered test files on discovery | consolidate test coverage into root test.js | add regression case to test.js for every bug fix | invoke next skill immediately when done | ask "what native feature solves this?" before writing any new logic | prefer structures where wrong states are unrepresentable
-
----
-
-**EXIT → EMIT**: All mutables KNOWN → invoke `gm-emit` skill immediately.
-**SELF-LOOP**: Still UNKNOWN → re-run (max 2 passes, then regress to PLAN).
-**REGRESS → PLAN**: Any new unknown → invoke `planning` skill, reset to PLAN state.
+**Always**: witness every hypothesis | import real modules | scan before edit | regress on new unknown | delete mocks/comments/scattered tests on discovery | test.js for every behavior change | invoke next skill immediately when done

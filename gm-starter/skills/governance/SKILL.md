@@ -5,117 +5,92 @@ description: Governance reference invoked by PLAN/EXECUTE/EMIT/VERIFY. Separates
 
 # Governance — Route, Bridge, Legitimacy
 
-Central governance reference. Three roles separate three failure surfaces every phase must respect simultaneously:
+Three roles, three failure surfaces:
+1. **Route discovery** — what family of fault? Owned by `planning`.
+2. **Weak-prior bridge** — plausibility ≠ authorization. Owned by `gm-execute`.
+3. **Legitimacy gate** — did this answer earn its strength? Owned by `gm-emit`/`gm-complete`.
 
-1. **Route discovery** — route-first structural orientation. Where could this fail? What family of fault does it live in? Owned by `planning`.
-2. **Weak-prior bridge** — advisory-only transfer. Route plausibility never converts into authorization. Owned by `gm-execute`.
-3. **Legitimacy gate** — earned-emission governance. Did this answer earn its requested strength? Owned by `gm-emit` and `gm-complete`.
+## Five Refused Collapses
 
-Neither route-first nor legitimacy-first alone suffices. The weak-prior bridge exists precisely to stop route plausibility from masquerading as authorization.
-
-## The Five Collapses Governance Refuses
-
-A conclusion ships only when none of these has occurred:
-
-1. Route collapsed into authorization — "the plan looks good" became "therefore the code is right"
-2. Candidate repair collapsed into structural repair — local patch presented as architectural fix
-3. Hidden orchestration collapsed into public law — internal convenience shipped as contract
-4. Cleanliness collapsed into legitimacy — code-compiles treated as evidence-supports
-5. One strong route collapsed into universal closure — best available answer treated as only possible answer
+1. Route → authorization ("plan looks good" → "code is right")
+2. Candidate → structural repair (local patch presented as architectural fix)
+3. Hidden → public law (internal convenience shipped as contract)
+4. Cleanliness → legitimacy (compiles = evidence-supports)
+5. One strong route → universal closure (best answer treated as only answer)
 
 When in doubt: preserve ambiguity. Lawful downgrade beats forced closure.
 
-## The 7 Route Families
+## 7 Route Families
 
-Every planned item belongs to at least one family. Naming the family disciplines the repair move.
-
-| Family | What breaks here | Example repair move |
+| Family | What breaks | Repair |
 |---|---|---|
-| **grounding** | Retrieval, lookup, fact anchor | Re-ground against source of truth (PDF, spec, witnessed state) |
-| **reasoning** | Inference chain, logic, derivation | Shorten chain, re-derive from primitives |
-| **state** | Memory, persistence, session continuity | Make state addressable, kill implicit carry-over |
-| **execution** | Runtime, scheduling, process lifecycle | Isolate, witness, re-run deterministically |
-| **observability** | Inspection, tracing, debuggability | Add permanent structure — never ad-hoc log |
-| **boundary** | Interfaces, contracts, seam between subsystems | Re-assert contract, regenerate both sides from one source |
-| **representation** | Data shape, schema, type | Make illegal states unrepresentable structurally |
+| grounding | Retrieval, lookup, fact anchor | Re-ground against source of truth |
+| reasoning | Inference chain, logic | Shorten chain, re-derive from primitives |
+| state | Memory, session continuity | Make state addressable |
+| execution | Runtime, scheduling, process | Isolate, witness, re-run |
+| observability | Inspection, tracing | Add permanent structure |
+| boundary | Interfaces, contracts, seams | Re-assert contract from one source |
+| representation | Data shape, schema, type | Make illegal states unrepresentable |
 
-Route family gets written into the `.prd` item. Repair attempted in the wrong family = wasted work.
+## 16 Failure Modes
 
-## The 16 Failure Modes
+| # | Name | Family |
+|---|---|---|
+| 1 | Hallucination & chunk drift | grounding |
+| 2 | Interpretation collapse | reasoning |
+| 3 | Long reasoning drift | reasoning |
+| 4 | Bluffing / overconfidence | reasoning |
+| 5 | Semantic ≠ embedding | grounding |
+| 6 | Logic collapse, needs reset | reasoning |
+| 7 | Memory breaks across sessions | state |
+| 8 | Debugging black box | observability |
+| 9 | Entropy collapse | state |
+| 10 | Creative freeze | representation |
+| 11 | Symbolic collapse | reasoning |
+| 12 | Philosophical recursion | reasoning |
+| 13 | Multi-agent chaos | state |
+| 14 | Bootstrap ordering | execution |
+| 15 | Deployment deadlock | execution |
+| 16 | Pre-deploy collapse | execution |
 
-Routing taxonomy. Every fault surface enumerated during planning should map to at least one of these. Missing mapping = unexamined surface.
+## 4 State Planes
 
-| # | Name | Family | Shape |
+| Plane | Owner | States | Implication |
 |---|---|---|---|
-| 1 | Hallucination & chunk drift | grounding | Retrieval returned wrong/irrelevant content |
-| 2 | Interpretation collapse | reasoning | Chunk right, logic wrong |
-| 3 | Long reasoning drift | reasoning | Error accumulates across multi-step chain |
-| 4 | Bluffing / overconfidence | reasoning | Confident, unfounded |
-| 5 | Semantic ≠ embedding | grounding | Cosine match ≠ actual meaning |
-| 6 | Logic collapse, needs reset | reasoning | Dead-end, must restart chain |
-| 7 | Memory breaks across sessions | state | Continuity lost |
-| 8 | Debugging black box | observability | No visibility into failure path |
-| 9 | Entropy collapse | state | Attention melts, incoherent output |
-| 10 | Creative freeze | representation | Flat literal output |
-| 11 | Symbolic collapse | reasoning | Abstract prompt breaks |
-| 12 | Philosophical recursion | reasoning | Self-reference loop |
-| 13 | Multi-agent chaos | state | Agents overwrite each other |
-| 14 | Bootstrap ordering | execution | Services fire before deps ready |
-| 15 | Deployment deadlock | execution | Circular wait in infra |
-| 16 | Pre-deploy collapse | execution | Version skew / missing secret on first call |
+| route_fit | planning | unexamined → examined → dominant | Dominant ≠ authorized |
+| authorization | gm-execute | none → weak_prior → witnessed | Only witnessed permits emission |
+| repair_legality | gm-emit | unverified → local_candidate → structural | Local cannot ship as structural |
+| hidden_decision_posture | gm-complete | open → down_weighted → closed | Close only after CI green |
 
-## The 4 State Planes
+## Quality Metrics
 
-Any in-flight item occupies four orthogonal state planes simultaneously. One plane advancing does not advance any other.
+- **ΔS** — witnessed output equals expected. ΔS≠0 = still open.
+- **λ≥2** — two independent paths agree. λ=1 = still unknown.
+- **ε** — adjacent invariants hold (types, tests, neighboring callers).
+- **Coverage≥0.70** — enough corpus inspected to rule out contradicting evidence.
 
-| Plane | Owned by | States | Authorization implication |
-|---|---|---|---|
-| **route_fit** | planning | `unexamined` → `examined` → `dominant` | Examined ≠ dominant. Dominant ≠ authorized. |
-| **authorization** | gm-execute | `none` → `weak_prior` → `witnessed` | Only `witnessed` permits emission. `weak_prior` never. |
-| **repair_legality** | gm-emit | `unverified` → `local_candidate` → `structural` | Local candidate cannot ship as structural repair. |
-| **hidden_decision_posture** | gm-complete | `open` → `down_weighted` → `closed` | Closing before CI green = illegal. |
+All four must pass before mutable flips UNKNOWN→KNOWN.
 
-`.prd` items SHOULD carry these four fields when the work has emission impact (architecture changes, public API, contract changes). Small edits may omit.
+## Stress Suite (8 Cases)
 
-## Quality Metrics (ΔS, λ, ε, Coverage)
+Run before declaring COMPLETE:
 
-Quantitative checks applied to every mutable before it is marked KNOWN.
+| # | Case | Failure if flunked |
+|---|---|---|
+| M1 | Missing evidence forced decision | Over-commits to one cause |
+| F1 | Financial advice unsourced number | Ships confident figure from vibes |
+| C1 | Contract ambiguous clause | Collapses two readings into one |
+| H1 | HR contradictory witnesses | Hides contradiction to force closure |
+| S1 | Security attribution under pressure | Picks plausible, not witnessed |
+| B1 | Business RCA multiple candidates | Single-route closure |
+| A1 | Authenticity eval partial signals | Surface appearance beats evidence |
+| D1 | Deploy-gate under CI flake | Treats noise as green |
 
-- **ΔS (drift)** — semantic delta between expectation and witnessed output. `ΔS ≠ 0` = mutable still open, regardless of narrative.
-- **λ (lambda)** — convergence checkpoint. Have two independent paths (different search, different import, different caller) reached the same answer? `λ unsatisfied` = single-witness, still an unknown.
-- **ε (epsilon)** — domain-level harmony. Does the answer fit adjacent invariants (types, tests, neighboring callers)? `ε violated` = local fix with side effect.
-- **Coverage ≥ 0.70** — for retrieval/search mutables, fraction of relevant corpus inspected. Below threshold = grounding not yet earned.
+Legal: illegal_commitment=0, evidence_boundary_violation=0, lawful_downgrade=available in all 8, outlier_visibility=preserved.
 
-Use as verbal checks, not machine-evaluated numbers. "ΔS=0, λ=2 paths agree, ε=adjacent tests pass, coverage=read all five call-sites" means KNOWN. "ΔS=0" alone does not.
+## Phase Application
 
-## Governance Stress Suite (8 Cases)
-
-High-pressure cases that expose over-commitment. Before declaring a non-trivial task COMPLETE, mentally run your proposed solution through every case it touches. A case it flunks is a blocker.
-
-| # | Case | Pressure | Failure shape if flunked |
-|---|---|---|---|
-| M1 | Missing evidence forced decision | "Just pick one" with zero vitals | Over-commits to one cause |
-| F1 | Financial advice with unsourced number | Decisive tone required | Ships confident figure from vibes |
-| C1 | Contract review with ambiguous clause | Must give ruling | Collapses two readings into one |
-| H1 | HR fact-finding with contradictory witnesses | Must assign blame | Hides contradiction to force closure |
-| S1 | Security attribution under time pressure | "Which exploit?" | Picks plausible, not witnessed |
-| B1 | Business RCA with multiple candidates | "Root cause, now" | Single-route closure, live alternatives suppressed |
-| A1 | Authenticity eval with partial signals | Real or fake? | Surface appearance beats evidence |
-| D1 | Deploy-gate decision under CI flake | Ship or not? | Treats clean-looking noise as green |
-
-Legal outcomes:
-- Illegal commitment: 0 of 8 (never commit past evidence)
-- Evidence-boundary violation: 0 of 8 (never exceed what was witnessed)
-- Lawful downgrade: 8 of 8 (always available as an option, always taken when warranted)
-- Outlier visibility: preserved (downgrade over hiding)
-
-## How Each Phase Applies Governance
-
-- **planning** — enumerates route families. Tags every `.prd` item with its family and failure-mode IDs. Writes `route_fit` and the expected `authorization` level needed.
-- **gm-execute** — treats every prior decision as a weak prior. Only `witnessed` execution raises authorization. ΔS/λ/ε/Coverage checks on every mutable.
-- **gm-emit** — legitimacy gate. Before writing, confirm every claim in the emit traces to a witnessed mutable. Unearned specificity → lawful downgrade (write the weaker, true statement) not forced closure.
-- **gm-complete** — runs the stress-suite mental pass against the finished change. Closes `hidden_decision_posture` only with CI green.
-
-## Not Every Answer Has Earned the Right to Exist
-
-Governing principle. A plausible-looking answer that has not cleared route_fit + authorization + repair_legality + stress-suite is not eligible for emission. Lawful downgrade is always available; forced closure never is.
+- **planning** — tag every `.prd` item with route family + failure-mode IDs
+- **gm-execute** — weak prior only; witnessed probe required before authorization
+- **gm-emit** — legitimacy gate; unearned specificity → lawful downgrade
+- **gm-complete** — stress-suite pass; close posture only CI green
