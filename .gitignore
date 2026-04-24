@@ -24,3 +24,4 @@ plugforge-starter/skills/caveman/
 .plugkit-agent-worktree/
 *.stackdump
 .gm/prd-state.json
+.gm/
