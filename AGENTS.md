@@ -6,6 +6,8 @@ gm generates 10 platform implementations from a single convention-driven source.
 
 Only record non-obvious technical caveats that cost multiple runs to discover. Remove anything that no longer applies. Never document what is already obvious from reading the code.
 
+**No changelog history in AGENTS.md.** Every entry is a present-tense rule about what must or must-not be the case in code now. Forbidden: `(FIXED)` markers, commit hashes ("fixed in commit abc123"), dated audit entries ("Run 2026-04-25: ..."), `## Learning audit` sections, "(added 2026-04-DD)" annotations, "Validated 2026-04-DD: X" one-time results, "we used to X, now we Y" phrasing. Historical framing belongs in `git log` and `CHANGELOG.md`. The memorize sub-agent's classifier rejects changelog-shaped facts from AGENTS.md ingestion (rs-learn store still accepts them).
+
 ## Coding Style
 
 **No comments in code.** No inline, block, or JSDoc comments anywhere — source, generated output, hooks, scripts.
@@ -101,6 +103,8 @@ rs-exec / rs-codeinsight / rs-search
 ```
 
 **Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-vscode, gm-cursor, gm-zed, gm-jetbrains)** are reset to a single orphan commit on every publish. This keeps clones small forever (~<1MB) regardless of release count.
+
+
 
 **Repos involved (push to any triggers cascade):**
 - `AnEntrypoint/rs-exec` — exec runner, browser sessions, idle cleanup
