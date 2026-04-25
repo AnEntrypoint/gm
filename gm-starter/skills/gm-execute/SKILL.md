@@ -32,9 +32,11 @@ Unresolved after 2 passes = regress to `planning`. Never narrate past an unresol
 Route candidates from PLAN = `weak_prior` only. Plausibility = right to TEST, not BELIEVE.
 weak_prior → witnessed probe → witnessed → feed to EMIT. "The plan says" / "obviously X" = prior, not fact.
 
-## LOAD-WEIGHTED VERIFICATION
+Claims in response prose stand or fall by their last witness. A claim with no witness in this session is a hypothesis, not a finding — say so when you state it, and say what would settle it. The next reader (you, next turn) needs to know which lines were earned and which were carried forward.
 
-Budget: spend on `.prd` items in descending order of `load × (1 − tier_confidence)`. Items with `load>0.75` MUST reach `confirmed` tier before EMIT. Items with `load>0.50` need a downgrade plan recorded.
+## VERIFICATION BUDGET
+
+Spend on `.prd` items in descending order of consequence-if-wrong × distance-from-witnessed. Items whose failure would collapse the headline finding must reach witnessed status before EMIT; items with sub-argument-level consequence need at minimum a stated fallback path.
 
 ## CODE EXECUTION
 
