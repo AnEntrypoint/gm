@@ -42,20 +42,6 @@ File I/O: exec:nodejs + require('fs'). Git directly in Bash. Never Bash(node/npm
 
 Pack runs: Promise.allSettled for parallel, each idea own try/catch, under 12s per call.
 
-Background (when exec exceeds 15s — auto-backgrounds):
-```
-exec:sleep
-<task_id> [seconds]
-```
-```
-exec:status
-<task_id>
-```
-```
-exec:close
-<task_id>
-```
-
 Runner: `exec:runner\nstart|stop|status`
 
 ## CODEBASE SEARCH
