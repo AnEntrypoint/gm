@@ -5,61 +5,64 @@ description: EXECUTE phase AND the foundational execution contract for every ski
 
 # GM EXECUTE — Resolve Every Unknown
 
-GRAPH: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`
-Entry: .prd with named unknowns. From `planning` or re-entered from EMIT/VERIFY.
+GRAPH: `PLAN → [EXECUTE] → EMIT → VERIFY → COMPLETE`. Entry: .prd with named unknowns.
 
-This skill = execution contract for ALL phases. Other phases reference it because protocols must be fresh. About to run anything → load this skill first.
+This skill = execution contract for ALL phases. About to run anything → load this first.
 
 ## TRANSITIONS
 
-**EXIT → EMIT**: all mutables KNOWN → invoke `gm-emit` immediately.
-**SELF-LOOP**: still UNKNOWN → re-run different angle (max 2 passes, then regress to PLAN).
-**REGRESS → PLAN**: new unknown discovered | mutable unresolvable after 2 passes.
+- **EXIT → EMIT**: all mutables KNOWN → invoke `gm-emit`.
+- **SELF-LOOP**: still UNKNOWN → re-run different angle (max 2 passes).
+- **REGRESS → PLAN**: new unknown | unresolvable after 2 passes.
 
 ## MUTABLE DISCIPLINE
 
-Each mutable: name | expected | current | resolution method. Zero variance = resolved. Unresolved after 2 passes = snake to `planning`. Never narrate past an unresolved mutable.
+Each mutable: name | expected | current | resolution method.
 
-Mutables resolve to KNOWN only when ALL four pass:
+Resolves to KNOWN only when ALL four pass:
 - **ΔS=0** — witnessed output equals expected
 - **λ≥2** — two independent paths agree
-- **ε intact** — adjacent invariants hold (types, test.js, neighboring callers)
-- **Coverage≥0.70** — enough corpus inspected for retrieval mutables
+- **ε intact** — adjacent invariants hold
+- **Coverage≥0.70** — enough corpus inspected
+
+Unresolved after 2 passes = regress to `planning`. Never narrate past an unresolved mutable.
 
 ## PRIORS DON'T AUTHORIZE
 
-Route candidates from PLAN arrive as `weak_prior` only. Plausibility = right to TEST, not right to BELIEVE.
-`weak_prior` → witnessed probe → `witnessed` → feed to EMIT.
-"The plan says" / "we agreed" / "obviously X" = prior-statements, not witnessed facts.
+Route candidates from PLAN = `weak_prior` only. Plausibility = right to TEST, not BELIEVE.
+weak_prior → witnessed probe → witnessed → feed to EMIT. "The plan says" / "obviously X" = prior, not fact.
+
+## LOAD-WEIGHTED VERIFICATION
+
+Budget: spend on `.prd` items in descending order of `load × (1 − tier_confidence)`. Items with `load>0.75` MUST reach `confirmed` tier before EMIT. Items with `load>0.50` need a downgrade plan recorded.
 
 ## CODE EXECUTION
 
-`exec:<lang>` only via Bash tool body: `exec:<lang>\n<code>`
+`exec:<lang>` only via Bash: `exec:<lang>\n<code>`
 
-Langs: `exec:nodejs` (default) | `exec:bash` | `exec:python` | `exec:typescript` | `exec:go` | `exec:rust` | `exec:c` | `exec:cpp` | `exec:java` | `exec:deno` | `exec:cmd`
+Langs: `nodejs` (default) | `bash` | `python` | `typescript` | `go` | `rust` | `c` | `cpp` | `java` | `deno` | `cmd`
 
-File I/O: exec:nodejs + require('fs'). Git directly in Bash. Never Bash(node/npm/npx/bun).
+File I/O: exec:nodejs + require('fs'). Git directly in Bash. **Never** Bash(node/npm/npx/bun).
 
-Pack runs: Promise.allSettled for parallel, each idea own try/catch, under 12s per call.
-
+Pack runs: Promise.allSettled parallel, each idea own try/catch, under 12s per call.
 Runner: `exec:runner\nstart|stop|status`
 
 ## CODEBASE SEARCH
 
-`exec:codesearch` only. Grep/Glob/Find/Explore/WebSearch/grep/rg/find inside exec:bash = ALL hook-blocked.
+`exec:codesearch` only. Grep/Glob/Find/Explore/grep/rg/find = hook-blocked.
 
-Known absolute path → `Read`. Known dir → exec:nodejs + fs.readdirSync. No third option.
+Known absolute path → `Read`. Known dir → exec:nodejs + fs.readdirSync.
 
 ```
 exec:codesearch
 <two-word query>
 ```
 
-Iterate: change one word or add one word per pass. Minimum 4 attempts before concluding absent.
+Iterate: change/add one word per pass. Min 4 attempts before concluding absent.
 
 ## IMPORT-BASED EXECUTION
 
-Always import actual modules. Never rewrite logic inline — reimplemented output = UNKNOWN.
+Always import actual modules. Reimplemented = UNKNOWN.
 
 ```
 exec:nodejs
@@ -67,67 +70,54 @@ const { fn } = await import('/abs/path/to/module.js');
 console.log(await fn(realInput));
 ```
 
-Differential diagnosis: isolate smallest reproduction, compare actual vs expected, name the delta. Delta = the mutable.
+Differential diagnosis: smallest reproduction → compare actual vs expected → name the delta = mutable.
 
 ## CI — AUTOMATED
 
-git push → Stop hook auto-watches GitHub Actions for pushed HEAD. No manual `gh run watch`.
-- All-green → Stop approves with CI summary
-- Failure → Stop blocks with run names+IDs → `gh run view <id> --log-failed` for diagnosis
+`git push` → Stop hook auto-watches Actions for pushed HEAD. Same-repo only — downstream cascades not auto-watched.
+- Green → Stop approves with summary
+- Failure → run names+IDs → `gh run view <id> --log-failed`
 - Deadline 180s (override `GM_CI_WATCH_SECS`)
-- Downstream-repo cascades NOT auto-watched — same-repo only
 
 ## GROUND TRUTH
 
-Real services, real data, real timing. Mocks/stubs/simulations = delete. Scattered test files (.test.js, .spec.js, __tests__/) = delete. All coverage in root test.js. Fallback/demo modes = remove, fail loud.
+Real services, real data, real timing. Mocks/stubs/scattered tests/fallbacks = delete.
 
-**Scan before edit**: exec:codesearch for existing implementation before creating/modifying. Duplicate concern = regress to `planning`.
-
+**Scan before edit**: exec:codesearch before creating/modifying. Duplicate concern = regress to `planning`.
 **Hypothesize via execution**: hypothesis → run → witness → edit. Never edit on unwitnessed assumption.
-
-**Code quality** (stop at first that resolves need): native → library → structure (map/pipeline) → write.
+**Code quality**: native → library → structure (map/pipeline) → write.
 
 ## PARALLEL SUBAGENTS
 
-≤3 `gm:gm` subagents for independent items simultaneously: `Agent(subagent_type="gm:gm", ...)`
-
-Browser escalation: exec:browser → browser skill → navigate/click → screenshot (last resort).
+≤3 `gm:gm` subagents for independent items in ONE message. Browser escalation: exec:browser → browser skill → screenshot last resort.
 
 ## RECALL — HARD RULE
 
-Before resolving any new unknown via fresh execution, check whether past sessions already answered it. Memorized facts are useless if not recalled.
-
-Triggers (any = run recall NOW, before exec/codesearch):
-- About to investigate a "did we hit this before" question
-- About to ask the user something likely already discussed
-- About to design an approach where a prior decision exists
-- Encountered an error/quirk that "feels familiar"
-- Starting a new sub-task on a project worked on before
-- About to write a comment explaining a non-obvious choice
+Before resolving any new unknown via fresh execution, recall first.
 
 ```
 exec:recall
 <2-6 word query>
 ```
 
-Recall hits are weak_prior — still witness via execution before acting. Empty result = no prior memory; proceed normally. Never block on recall — capped at 6s timeout, ~5ms when rs-learn serve is running.
+Triggers: "did we hit this" | feels familiar | new sub-task in known project | about to comment a non-obvious choice | about to ask user something likely discussed.
 
-Recall costs ~200 tokens for 5 hits. Cheaper than re-investigating the same problem.
+Hits = weak_prior; still witness. Empty = proceed. Capped 6s, ~5ms when serve running. ~200 tokens / 5 hits.
 
 ## MEMORIZE — HARD RULE
 
-Unknown→known = memorize same turn it resolves.
-
-Triggers: exec: output answers prior unknown | CI log reveals root cause | code read confirms/refutes | env quirk observed | user states preference/constraint.
+Unknown→known = same-turn memorize.
 
 ```
 Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
+Triggers: exec output answers prior unknown | CI log reveals root cause | code read confirms/refutes | env quirk | user states preference/constraint.
+
 N facts → N parallel Agent calls in ONE message. End-of-turn self-check mandatory.
 
-**Recall + memorize together = the learning loop.** Recall before investigating; memorize after resolving. Skipping either breaks the loop.
+## CONSTRAINTS
 
-**Never**: Bash(node/npm/npx/bun) | fake data | mocks | scattered tests | fallbacks | Grep/Glob/Find/Explore | sequential independent items | respond to user mid-phase | edit before witnessing | duplicate code | if/else where dispatch table suffices | one-liners that obscure | reinvent what native/library provides
+**Never**: Bash(node/npm/npx/bun) | fake data | mocks | scattered tests | fallbacks | Grep/Glob/Find/Explore | sequential independent items | respond mid-phase | edit before witnessing | duplicate code | if/else where dispatch suffices | one-liners that obscure | reinvent native/library
 
-**Always**: witness every hypothesis | import real modules | scan before edit | regress on new unknown | delete mocks/comments/scattered tests on discovery | test.js for every behavior change | invoke next skill immediately when done
+**Always**: witness every hypothesis | import real modules | scan before edit | regress on new unknown | delete mocks/comments/scattered tests on discovery | update test.js for behavior changes | invoke next skill immediately when done | weight verification by load
