@@ -182,6 +182,10 @@ Infrastructure: `docs/api/` holds 4 JSON endpoints (stars.json, metrics.json, in
 
 **Runner port file**: The runner TCP port is written to `$TMPDIR/glootie-runner.port` (not `plugkit-runner.port`). The RPC path is `/rpc`, body `{ method, params }`, response `{ result }`. Session ID must be provided for all task/process queries or runner returns empty results.
 
+**.gitignore re-include past parent-dir ignore is impossible**: Per the gitignore manual: "It is not possible to re-include a file if a parent directory of that file is excluded." If `.gm/` is ignored and you write `!.gm/rs-learn.db` after it, the negation has no effect and the file remains untracked. Workaround: enumerate the `.gm/*` files and subdirs to ignore individually instead of ignoring the whole directory. Applied in gm and rs-learn `.gitignore` so `.gm/rs-learn.db` (cross-session memory) can be tracked. Symptom of the bug: `git check-ignore -v .gm/rs-learn.db` returns `.gitignore:N:.gm/` (the parent rule wins).
+
+**rs-learn DB path resolution unified**: `src/db_path.rs::resolve_db_path()` is the single source — checks `RS_LEARN_DB_PATH` env, otherwise prefers `<cwd>/.gm/rs-learn.db`, migrates legacy `<cwd>/rs-learn.db` via rename when `.gm/` is creatable, falls back to root path on read-only checkouts. Both `src/main.rs::open_graph()` (used by add/search/query) and `src/orchestrator/mod.rs::Orchestrator::new_default()` (used by query ACP path) now call it. Previously only orchestrator had the migration; main.rs hardcoded `./rs-learn.db`, so add/search wrote to project root while query wrote to `.gm/`.
+
 ## Learning audit
 
 Run 2026-04-25: 5 queries sampled from AGENTS.md. Recall rate: 2/5 (40%). Newly ingested facts (turn-state-sentinel, exec-counter, benchmark-gate) all recalled. Older stable caveats (tailwind v4, ocw provider, rs-search PDF) not yet in store — pending next session mention. No items removed (store coverage building). Store ingest quality: 3/3 new facts successfully memorized with exact recall on follow-up queries.
