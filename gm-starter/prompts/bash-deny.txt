@@ -1,0 +1,30 @@
+Bash tool only accepts these exact formats:
+
+1. Code execution — first line is exec:<lang>, rest is the code:
+   exec:nodejs
+   console.log('hello')
+
+   exec:python
+   print('hello')
+
+   exec:bash
+   echo hello
+
+   Languages: nodejs, python, bash, typescript, go, rust, c, cpp, java
+
+2. Browser automation — first line is exec:browser, rest is JS against `page`:
+   exec:browser
+   await page.goto('https://example.com')
+   console.log(await page.title())
+
+3. Utility commands — exec:<cmd> with args on next line:
+   exec:codesearch        (natural language codebase search)
+   exec:runner            (start/stop/status the runner daemon)
+   exec:type              (send stdin: task_id on line 1, input on line 2)
+   exec:kill-port         (kill process listening on port: port number on next line)
+
+4. Git commands — git <args> directly (no exec: prefix needed):
+   git status
+   git commit -m "msg"
+
+Anything else is blocked.
