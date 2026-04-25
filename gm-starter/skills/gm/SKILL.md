@@ -19,8 +19,8 @@ Each phase loads protocols via Skill invocation only. Reading summary ≠ being 
 Before resolving any unknown via fresh execution, check past sessions. Memorized facts only help if recalled.
 
 ```
-exec:bash
-plugkit recall <2-6 word query> --limit 5
+exec:recall
+<2-6 word query>
 ```
 
 Triggers: unknown feels familiar | sub-task on a known project | about to ask user something likely already discussed | about to design where prior decision exists. Hits = weak_prior; still witness before adopting. ~200 tokens, ~5ms when serve is running.

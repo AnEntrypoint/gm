@@ -106,8 +106,8 @@ Triggers (any = run recall NOW, before exec/codesearch):
 - About to write a comment explaining a non-obvious choice
 
 ```
-exec:bash
-plugkit recall <2-6 word query> --limit 5
+exec:recall
+<2-6 word query>
 ```
 
 Recall hits are weak_prior — still witness via execution before acting. Empty result = no prior memory; proceed normally. Never block on recall — capped at 6s timeout, ~5ms when rs-learn serve is running.
