@@ -22,10 +22,9 @@ plugforge-starter/skills/caveman/
 .plugkit-browser-profile-*/
 .plugkit-agent-worktree/
 *.stackdump
-.gm/prd-state.json
-.gm/
 # >>> gm managed (do not edit between markers)
 .gm-stop-verified
+.gm/prd-state.json
 .gm/rslearn-counter.json
 .gm/git-block-counter.json
 .gm/learning-state.md
@@ -33,5 +32,8 @@ plugforge-starter/skills/caveman/
 .gm/ingest-drafts/
 .gm/needs-gm
 .gm/lastskill
-# tracked: .gm/rs-learn.db, .gm/code-search/, AGENTS.md, .gm/prd.yml
+.gm/turn-state.json
+.gm/no-memorize-this-turn
+.gm/prd.paused.yml
+# tracked: .gm/rs-learn.db, .gm/code-search/, .gm/prd.yml
 # <<< gm managed
