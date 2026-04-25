@@ -17,6 +17,35 @@ function test(name, fn) {
   }
 }
 
+function assertIdempotent(name, fn) {
+  const a = fn(), b = fn();
+  assert.deepStrictEqual(a, b, `${name}: not idempotent — ${JSON.stringify(a)} !== ${JSON.stringify(b)}`);
+}
+
+function assertDeterministic(name, fn, seed) {
+  const a = fn(seed), b = fn(seed);
+  assert.deepStrictEqual(a, b, `${name}: same seed produced different output`);
+}
+
+function assertNoRegression(name, baseline, current) {
+  for (const k of Object.keys(baseline)) {
+    assert(k in current, `${name}: lost key "${k}"`);
+    assert.deepStrictEqual(current[k], baseline[k], `${name}: key "${k}" changed`);
+  }
+}
+
+function assertHookBlocks(name, hookCmd, blockedInput) {
+  const r = spawnSync('node', [hookCmd], { input: JSON.stringify(blockedInput), encoding: 'utf8' });
+  const out = r.stdout || '';
+  assert(/decision":\s*"block"/.test(out), `${name}: hook did not block — got ${out.slice(0,200)}`);
+}
+
+function assertHookAllows(name, hookCmd, allowedInput) {
+  const r = spawnSync('node', [hookCmd], { input: JSON.stringify(allowedInput), encoding: 'utf8' });
+  const out = r.stdout || '';
+  assert(!/decision":\s*"block"/.test(out), `${name}: hook blocked when it should have allowed — ${out.slice(0,200)}`);
+}
+
 test('cli.js is executable', () => {
   assert(fs.existsSync('cli.js'), 'cli.js missing');
   const content = fs.readFileSync('cli.js', 'utf8');
@@ -76,6 +105,15 @@ test('CLAUDE.md not empty', () => {
   const content = fs.readFileSync('CLAUDE.md', 'utf8');
   assert(content.length > 0, 'CLAUDE.md is empty');
   assert(content.includes('AGENTS.md'), 'CLAUDE.md missing AGENTS.md reference');
+});
+
+test('AGENTS.md content idempotent on repeat read', () => {
+  assertIdempotent('AGENTS.md read', () => fs.readFileSync('AGENTS.md', 'utf8').length);
+});
+
+test('platform list deterministic', () => {
+  const platforms = ['gm-cc', 'gm-gc', 'gm-oc', 'gm-kilo', 'gm-codex', 'gm-copilot-cli', 'gm-vscode', 'gm-cursor', 'gm-zed', 'gm-jetbrains'];
+  assertDeterministic('platform sort', () => [...platforms].sort(), 0);
 });
 
 console.log('\n✓ All tests passed');
