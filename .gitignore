@@ -7,7 +7,6 @@ gm-build-sync/
 .codeinsight
 
 .code-search/
-.gm-stop-verified
 loggedin/
 site/node_modules/
 site/platforms-out.json
@@ -25,3 +24,14 @@ plugforge-starter/skills/caveman/
 *.stackdump
 .gm/prd-state.json
 .gm/
+# >>> gm managed (do not edit between markers)
+.gm-stop-verified
+.gm/rslearn-counter.json
+.gm/git-block-counter.json
+.gm/learning-state.md
+.gm/trajectory-drafts/
+.gm/ingest-drafts/
+.gm/needs-gm
+.gm/lastskill
+# tracked: .gm/rs-learn.db, .gm/code-search/, AGENTS.md, .gm/prd.yml
+# <<< gm managed
