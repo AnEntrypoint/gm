@@ -16,6 +16,26 @@ Output = every fault surface work could fail on. Unknown named+resolved = cheape
 
 Later-phase unknown → return here. Not failure — machine working. Patch-around-in-place = compounding debt.
 
+## RECALL — HARD RULE
+
+Before naming any unknown, check past sessions. Cross-session memory is the cheapest mutable resolver.
+
+Triggers (any = run `plugkit recall` BEFORE adding the .prd item):
+- Unknown matches a previously-discussed topic in this project
+- About to investigate a "have we seen this" question
+- About to design an approach where a prior decision likely exists
+- Quirk/error feels familiar
+- Sub-task in a project worked on before
+
+```
+exec:bash
+plugkit recall <2-6 word query> --limit 5
+```
+
+Hits are weak_prior — feed the proposed approach into PLAN, but witness via EXECUTE before adopting. Empty hits = proceed normally; no signal lost.
+
+Skip recall only when: brand-new project (no DB) | trivially-bounded edit with zero unknowns | user gave surgical instructions.
+
 ## MEMORIZE — HARD RULE
 
 Every unknown resolved → memorize same turn. Not batched, not deferred.
@@ -27,6 +47,8 @@ Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt
 ```
 
 Multiple facts in one turn → parallel Agent calls in ONE message. End-of-turn: scan for missed → spawn now.
+
+**Recall + memorize together = the learning loop.** Recall before investigating; memorize after resolving.
 
 ## STATE MACHINE
 

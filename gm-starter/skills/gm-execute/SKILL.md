@@ -93,6 +93,27 @@ Real services, real data, real timing. Mocks/stubs/simulations = delete. Scatter
 
 Browser escalation: exec:browser → browser skill → navigate/click → screenshot (last resort).
 
+## RECALL — HARD RULE
+
+Before resolving any new unknown via fresh execution, check whether past sessions already answered it. Memorized facts are useless if not recalled.
+
+Triggers (any = run recall NOW, before exec/codesearch):
+- About to investigate a "did we hit this before" question
+- About to ask the user something likely already discussed
+- About to design an approach where a prior decision exists
+- Encountered an error/quirk that "feels familiar"
+- Starting a new sub-task on a project worked on before
+- About to write a comment explaining a non-obvious choice
+
+```
+exec:bash
+plugkit recall <2-6 word query> --limit 5
+```
+
+Recall hits are weak_prior — still witness via execution before acting. Empty result = no prior memory; proceed normally. Never block on recall — capped at 6s timeout, ~5ms when rs-learn serve is running.
+
+Recall costs ~200 tokens for 5 hits. Cheaper than re-investigating the same problem.
+
 ## MEMORIZE — HARD RULE
 
 Unknown→known = memorize same turn it resolves.
@@ -104,6 +125,8 @@ Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt
 ```
 
 N facts → N parallel Agent calls in ONE message. End-of-turn self-check mandatory.
+
+**Recall + memorize together = the learning loop.** Recall before investigating; memorize after resolving. Skipping either breaks the loop.
 
 **Never**: Bash(node/npm/npx/bun) | fake data | mocks | scattered tests | fallbacks | Grep/Glob/Find/Explore | sequential independent items | respond to user mid-phase | edit before witnessing | duplicate code | if/else where dispatch table suffices | one-liners that obscure | reinvent what native/library provides
 
