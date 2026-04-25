@@ -6,112 +6,77 @@ allowed-tools: Write
 
 # Planning — State Machine Orchestrator
 
-Runs `PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS → COMPLETE`.
-
-Entry: prompt-submit hook → `gm` → here. Re-enter on any new unknown in any phase.
-
-## UNKNOWNS = PRODUCT
-
-Output = every fault surface work could fail on. Unknown named+resolved = cheaper downstream. Unknown skipped = EMIT/VERIFY surprise = snake back at higher cost.
-
-Later-phase unknown → return here. Not failure — machine working. Patch-around-in-place = compounding debt.
+Runs `PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS → COMPLETE`. Re-enter on any new unknown in any phase.
 
 ## RECALL — HARD RULE
 
-Before naming any unknown, check past sessions. Cross-session memory is the cheapest mutable resolver.
-
-Triggers (any = run `plugkit recall` BEFORE adding the .prd item):
-- Unknown matches a previously-discussed topic in this project
-- About to investigate a "have we seen this" question
-- About to design an approach where a prior decision likely exists
-- Quirk/error feels familiar
-- Sub-task in a project worked on before
+Before naming any unknown, run recall.
 
 ```
 exec:recall
 <2-6 word query>
 ```
 
-Hits are weak_prior — feed the proposed approach into PLAN, but witness via EXECUTE before adopting. Empty hits = proceed normally; no signal lost.
+Triggers: matches prior topic | "have we seen this" | designing where prior decision likely exists | quirk feels familiar | sub-task in known project.
 
-Skip recall only when: brand-new project (no DB) | trivially-bounded edit with zero unknowns | user gave surgical instructions.
+Hits = weak_prior; witness via EXECUTE before adopting. Skip recall only on brand-new project / trivially-bounded edit / surgical user instruction.
 
 ## MEMORIZE — HARD RULE
 
-Every unknown resolved → memorize same turn. Not batched, not deferred.
-
-Triggers: exec: output answers prior unknown | code read confirms/refutes | CI log reveals root cause | user states preference/constraint | fix worked non-obviously | env quirk observed.
+Every unknown→known = same-turn memorize. Background, parallel, never batched.
 
 ```
 Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 ```
 
-Multiple facts in one turn → parallel Agent calls in ONE message. End-of-turn: scan for missed → spawn now.
+Triggers: exec output answers prior unknown | code read confirms/refutes | CI log reveals root cause | user states preference/constraint | fix worked non-obviously | env quirk observed.
 
-**Recall + memorize together = the learning loop.** Recall before investigating; memorize after resolving.
+N facts → N parallel Agent calls in ONE message.
 
 ## STATE MACHINE
 
 **FORWARD**: PLAN → `gm-execute` | EXECUTE → `gm-emit` | EMIT → `gm-complete` | VERIFY .prd remains → `gm-execute` | VERIFY .prd empty+pushed → `update-docs`
 
-**REGRESSIONS**: new unknown at any state → re-invoke `planning` | EXECUTE unresolvable 2 passes → `planning` | EMIT logic error → `gm-execute` | EMIT new unknown → `planning` | VERIFY broken output → `gm-emit` | VERIFY logic wrong → `gm-execute` | VERIFY new unknown → `planning`
+**REGRESSIONS**: new unknown anywhere → `planning` | EXECUTE unresolvable 2 passes → `planning` | EMIT logic error → `gm-execute` | VERIFY broken output → `gm-emit` | VERIFY logic wrong → `gm-execute`
 
 Runs until: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI green.
 
 ## AUTONOMY — HARD RULE
 
-After PRD is written, EXECUTE through to COMPLETE without asking the user. No mid-task confirmation. No "should I continue". No "want me to do X next". The PRD is the contract; execute it.
+PRD written → execute to COMPLETE without asking the user. No "should I continue", no "want me to do X next", no offering to split work.
 
-Asking is permitted ONLY when absolutely necessary: destructive-irreversible decision with no prior context, OR user intent ambiguous and unrecoverable from PRD/memory/code. Use `exec:pause` (renames prd.yml → prd.paused.yml; question lives in header) as the channel — in-conversation asking is last-resort.
+Asking permitted only as last resort: destructive-irreversible with no PRD coverage, OR user intent unrecoverable from PRD/memory/code. Channel: `exec:pause` (renames prd.yml → prd.paused.yml; question in header). In-conversation asking last-resort.
 
-Long task ≠ reason to ask. Cross-repo work ≠ reason to ask. CI wait time ≠ reason to ask. Emit PRD, execute, push.
-
-**Cannot stop while**: .gm/prd.yml has items | git has uncommitted changes | git has unpushed commits.
+**Cannot stop while**: .gm/prd.yml has items | git uncommitted | git unpushed.
 
 ## SKIP PLANNING (DEFAULT for small work)
 
-Skip if ANY apply:
-- Single-file, single-concern edit
-- Task trivially bounded, under ~5 min
-- User gave explicit surgical instructions
-- Bug fix with identified root cause
-- Zero unknowns
-
-Heavy ceremony (PRD + parallel subagents) for multi-file architectural work or genuinely unknown fault surfaces. If new unknown surfaces mid-work, THAT is when to regress — not preemptively.
+Skip if ANY: single-file single-concern edit | trivially bounded <5min | surgical user instructions | bug fix with identified root cause | zero unknowns. Heavy ceremony only for multi-file architectural work.
 
 ## PLAN PHASE — MUTABLE DISCOVERY
 
-For every aspect of the task:
-- What do I not know? → mutable (UNKNOWN)
-- What could go wrong? → edge case item with failure mode
-- What depends on what? → blocking/blockedBy mapped
-- What assumptions am I making? → each = unwitnessed hypothesis = mutable
+For every aspect: what do I not know (UNKNOWN) | what could go wrong (failure mode) | what depends on what (blocking/blockedBy) | what assumptions am I making (unwitnessed hypothesis = mutable).
 
-Fault surfaces: file existence | API shape | data format | dependency versions | runtime behavior | environment differences | error conditions | concurrency hazards | integration seams | backwards compatibility | rollback paths | CI/CD correctness
+Fault surfaces: file existence | API shape | data format | dep versions | runtime behavior | env differences | error conditions | concurrency | integration seams | backwards compat | rollback paths | CI correctness.
 
-**Route family** (`governance`): tag every `.prd` item with family — grounding|reasoning|state|execution|observability|boundary|representation. Mis-routed repair = wasted EXECUTE pass.
+**Route family** (governance): tag every item — grounding|reasoning|state|execution|observability|boundary|representation.
 
-**Failure-mode mapping**: cross-reference 16-failure taxonomy. No mapping = unexamined surface = silent bug.
+**Failure-mode mapping**: cross-reference 16-failure taxonomy.
 
-**Competing routes stay live** until witnessed execution makes one dominant. Pre-witness collapse = route-into-authorization leak.
+**MANDATORY CODEBASE SCAN**: `existingImpl=UNKNOWN` for every item. Resolve via exec:codesearch before adding. Existing concern → consolidation, not addition.
 
-**MANDATORY CODEBASE SCAN**: For every item, `existingImpl=UNKNOWN`. Resolve via exec:codesearch. Existing code serving same concern → consolidation, not addition. PDFs indexed page-by-page — search specs same way you search source.
-
-**EXIT PLAN**: zero new unknowns last pass AND all .prd items have acceptance criteria AND dependencies mapped → launch subagents or invoke `gm-execute`.
+**EXIT PLAN**: zero new unknowns last pass AND every item has acceptance criteria AND deps mapped → launch subagents or invoke `gm-execute`.
 
 ## OBSERVABILITY — MANDATORY EVERY PASS
 
-Enumerate every runtime observability gap:
+Server: every subsystem exposes `/debug/<subsystem>`. Structured logs `{subsystem, severity, ts}`.
+Client: `window.__debug` live registry; modules register on mount.
 
-**Server**: every subsystem exposes `/debug/<subsystem>`. State readable/filterable without restart. Structured logs with subsystem+severity+timestamp.
-
-**Client**: `window.__debug` is live structured registry. Every component/request/queue/connection addressable by key. Modules register on mount, deregister on unmount.
-
-`console.log` = ad-hoc = not observability. `window.__debug.module.state` = permanent. Discovery of gap → add .prd item immediately. Observability = highest priority, never deferred.
+`console.log` ≠ observability. Discovery of gap → add .prd item immediately, never deferred.
 
 ## .PRD FORMAT
 
-Path: `./.gm/prd.yml`. Write via `exec:nodejs` + `fs.writeFileSync`. Delete when empty; delete `.gm/` when completely empty.
+Path: `./.gm/prd.yml`. Write via `exec:nodejs` + `fs.writeFileSync`. Delete when empty.
 
 ```yaml
 - id: kebab-id
@@ -121,6 +86,7 @@ Path: `./.gm/prd.yml`. Write via `exec:nodejs` + `fs.writeFileSync`. Delete when
   effort: small|medium|large
   category: feature|bug|refactor|infra
   route_family: grounding|reasoning|state|execution|observability|boundary|representation
+  load: 0.0-1.0
   failure_modes: []
   route_fit: unexamined|examined|dominant
   authorization: none|weak_prior|witnessed
@@ -132,51 +98,42 @@ Path: `./.gm/prd.yml`. Write via `exec:nodejs` + `fs.writeFileSync`. Delete when
     - failure mode
 ```
 
-Status: pending → in_progress → completed (remove completed). Effort: small <15min | medium <45min | large >1h.
+**load** axis (consequence — convergence 3.3.0): 0.9 = headline collapses if wrong. 0.7 = sub-argument rebuilt. 0.4 = local patch. 0.1 = nothing breaks. **Verification budget = load × (1 − tier_confidence)**. High-load + low-tier item = top priority. λ>0.75 must be witnessed before EMIT.
+
+Status: pending → in_progress → completed (remove). Effort: small <15min | medium <45min | large >1h.
 
 ## PARALLEL SUBAGENT LAUNCH
 
-After .prd written, launch ≤3 parallel `gm:gm` subagents for all independent items simultaneously. Never sequential.
+After .prd written, ≤3 parallel `gm:gm` subagents for independent items in ONE message. Browser tasks serialize.
 
 `Agent(subagent_type="gm:gm", prompt="Work on .prd item: <id>. .prd path: <path>. Item: <full YAML>.")`
 
-After each wave: read .prd, find newly unblocked, launch next. Browser tasks serialize.
+Not parallelizable → invoke `gm-execute` directly.
 
-When parallelism not applicable: invoke `gm-execute` directly.
+## EXECUTION RULES
 
-## CODE EXECUTION
+`exec:<lang>` only via Bash. File I/O via exec:nodejs + fs. Git directly in Bash. Never Bash(node/npm/npx/bun).
 
-`exec:<lang>` only via Bash tool. File I/O: exec:nodejs + require('fs'). Git only in Bash directly. Never Bash(node/npm/npx/bun).
+`exec:codesearch` only — Glob/Grep/Find/Explore hook-blocked. Start 2 words → change/add one per pass → minimum 4 attempts before concluding absent.
 
-Pack runs: `Promise.allSettled` for parallel. Each idea its own try/catch. Under 12s per call.
+Pack runs: Promise.allSettled for parallel. Each idea own try/catch. Under 12s per call.
 
-## CODEBASE EXPLORATION
+## DEV WORKFLOW
 
-`exec:codesearch` only. Glob/Grep/Read/Explore = hook-blocked. Start 2 words → change one → add third → minimum 4 attempts before concluding absent.
+No comments. No scattered test files. 200-line limit per file. Fail loud. No duplication. Scan before edit. AGENTS.md via memorize agent only. CHANGELOG.md append per commit.
 
-## MANDATORY DEV WORKFLOW
-
-No comments. No scattered test files. 200-line limit. Fail loud. No duplication. Scan before edit. AGENTS.md via memorize only. CHANGELOG.md: append per commit.
-
-**Minimal code process** (stop at first that resolves need):
-1. Native — does language/runtime do this? Use it.
-2. Library — existing dep solve this? Use its API.
-3. Structure — encode as data (map/table/pipeline)? Make structure enforce correctness.
-4. Write — only when 1-3 exhausted.
+**Minimal code process** (stop at first that resolves): native → library → structure (map/pipeline) → write.
 
 ## SINGLE INTEGRATION TEST POLICY
 
-One `test.js` at project root. 200-line max. No .test.js, .spec.js, __tests__/, fixtures/, mocks/. No frameworks, no mocks, no stubs — plain assertions, real data, real system.
-
-`gm-complete` runs test.js before completion. Failure = regression to EXECUTE. Every behavior change updates test.js. Every bug fix adds regression case.
+One `test.js` at project root. 200-line max. No `.test.js` / `.spec.js` / `__tests__/` / fixtures / mocks. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
 
 ## RESPONSE POLICY
 
-Terse. Drop filler. Fragments OK. Pattern: `[thing] [action] [reason]. [next step].`
-Code/commits/PRs = normal prose.
+Terse. Drop filler. Fragments OK. Pattern: `[thing] [action] [reason]. [next step].` Code/commits/PRs = normal prose.
 
 ## CONSTRAINTS
 
-**Never**: Bash(node/npm/npx/bun) | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | swallow errors | duplicate concern | leave comments | scattered test files | if/else chains where map suffices | one-liners that require decoding | leave resolved unknown un-memorized | batch memorize | serialize memorize spawns
+**Never**: Bash(node/npm/npx/bun) | skip planning | partial execution | stop while .prd has items | stop while git dirty | sequential independent items | screenshot before JS exhausted | fallback/demo modes | swallow errors | duplicate concern | leave comments | scattered tests | if/else where map suffices | one-liners that obscure | leave resolved unknown un-memorized | batch memorize | serialize memorize spawns
 
-**Always**: invoke Skill at every transition | regress to planning on new unknown | witnessed execution only | scan before edits | enumerate observability gaps every pass | follow chain end-to-end | prefer dispatch tables | prefer pipelines | make wrong states unrepresentable | spawn memorize same turn unknown resolves | end-of-turn self-check
+**Always**: invoke Skill at every transition | regress to planning on new unknown | witnessed execution only | scan before edits | enumerate observability gaps every pass | follow chain end-to-end | prefer dispatch tables and pipelines | make wrong states unrepresentable | spawn memorize same turn unknown resolves | end-of-turn self-check
