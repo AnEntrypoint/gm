@@ -39,14 +39,31 @@ Multiple facts → parallel Agent calls in ONE message. End-of-turn: scan for un
 
 **Recall + memorize together = learning loop.** Skipping either breaks it.
 
+## AUTONOMY — HARD RULE
+
+Default = autonomous execution. Emit PRD, run it to completion, push. Do NOT ask the user mid-task.
+
+Forbidden patterns:
+- "Should I continue with X?" / "Want me to do Y next?" / "Want me to also Z?"
+- "This is a lot — should I do A first and confirm?" / "Two options: A or B, which?"
+- Pre-confirmation before multi-file edits when scope is already clear
+- Stopping after partial completion to summarize and await direction
+
+Permitted asking (last resort only, when absolutely necessary):
+- Destructive-irreversible decision with no prior context AND no PRD coverage
+- User intent genuinely ambiguous AND cannot be inferred from PRD/memory/code
+- Channel: prefer `exec:pause` (renames .gm/prd.yml → .gm/prd.paused.yml; question lives in header). In-conversation asking is last-resort only.
+
+A long task is not a reason to ask. Context limits are not a reason to ask. CI cascade time is not a reason to ask. Just emit the PRD and execute.
+
 ## EXECUTION ORDER
 
 1. Recall — `plugkit recall` for any familiar-feeling unknown (cheapest, 200 tokens)
 2. Code execution (exec:<lang>, exec:codesearch) — 90%+ of unknowns
 3. Web (WebFetch/WebSearch) — env facts not in codebase
-4. User — only when 1+2+3 exhausted AND decision is destructive-irreversible
+4. User — last resort per AUTONOMY rule above
 
-"Should I..." mid-chain = invoke next skill instead.
+"Should I..." mid-chain = invoke next skill instead, never ask user.
 
 Skill chain: `planning` → `gm-execute` → `gm-emit` → `gm-complete` → `update-docs`
 

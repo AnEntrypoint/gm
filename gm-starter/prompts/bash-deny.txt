@@ -35,3 +35,8 @@ Bash tool only accepts these exact formats:
    git commit -m "msg"
 
 Anything else is blocked.
+
+NOTES on exec:bash environment:
+- The wrapper runs scripts via /usr/bin/sh-style execution. Bash builtins like `time`, `pushd`, `popd`, `source` are NOT available. For timing use `START=$(date +%s%3N); ...; END=$(date +%s%3N); echo "took $((END-START))ms"`. For directory changes use absolute paths or `cd` (works) — never `pushd`/`popd`.
+- Raw `sleep N` is blocked. To wait for a duration use `exec:wait\n<seconds>` (max 3600s). To wait for a specific background task to produce output use `exec:sleep\n<task_id>`.
+- Windows paths: both `C:\Users\foo` and `/c/Users/foo` work in exec:bash, but heredocs containing backslash-quoted Windows paths can confuse the shell parser. Prefer forward-slash form `/c/Users/foo` inside heredocs and quoted strings.

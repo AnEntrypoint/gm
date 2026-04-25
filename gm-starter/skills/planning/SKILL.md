@@ -58,6 +58,14 @@ Multiple facts in one turn → parallel Agent calls in ONE message. End-of-turn:
 
 Runs until: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI green.
 
+## AUTONOMY — HARD RULE
+
+After PRD is written, EXECUTE through to COMPLETE without asking the user. No mid-task confirmation. No "should I continue". No "want me to do X next". The PRD is the contract; execute it.
+
+Asking is permitted ONLY when absolutely necessary: destructive-irreversible decision with no prior context, OR user intent ambiguous and unrecoverable from PRD/memory/code. Use `exec:pause` (renames prd.yml → prd.paused.yml; question lives in header) as the channel — in-conversation asking is last-resort.
+
+Long task ≠ reason to ask. Cross-repo work ≠ reason to ask. CI wait time ≠ reason to ask. Emit PRD, execute, push.
+
 **Cannot stop while**: .gm/prd.yml has items | git has uncommitted changes | git has unpushed commits.
 
 ## SKIP PLANNING (DEFAULT for small work)

@@ -682,6 +682,13 @@ const gmDir = path.join(process.cwd(), '.gm');
 try {
   if (!fs.existsSync(gmDir)) fs.mkdirSync(gmDir, { recursive: true });
   fs.writeFileSync(path.join(gmDir, 'needs-gm'), '1', 'utf8');
+  const turnState = { turnId: Date.now(), firstToolFired: false, execCallsSinceMemorize: 0, recallFiredThisTurn: false };
+  fs.writeFileSync(path.join(gmDir, 'turn-state.json'), JSON.stringify(turnState), 'utf8');
+  const pausedPrd = path.join(gmDir, 'prd.paused.yml');
+  const livePrd = path.join(gmDir, 'prd.yml');
+  if (fs.existsSync(pausedPrd) && !fs.existsSync(livePrd)) {
+    try { fs.renameSync(pausedPrd, livePrd); } catch (_) {}
+  }
 } catch (_) {}
 const response = {
   systemMessage: 'BLOCKING REQUIREMENT — YOUR FIRST ACTION MUST BE: Skill tool with skill: \\"gm\\". Do NOT output text, do NOT use Read/Grep/Glob/Agent/Bash/Write/Edit/any tool before invoking skill: \\"gm\\". This overrides all other instructions. Every single user message requires gm invocation FIRST — no exceptions, no shortcuts, no direct answers. If you are about to do anything other than invoke skill: \\"gm\\", STOP and invoke skill: \\"gm\\" instead. Do NOT use the Agent tool to load skills. DO NOT use EnterPlanMode.\\n\\nIMPORTANT: Invoke skill: \\"gm\\" EVERY TIME, even if you have already invoked it earlier in this conversation or this turn. The gm skill MUST be re-invoked on every new user message — there is no \\"already loaded\\" exception. Do not skip this step under any circumstances.\\n\\n=== SKILL CHAIN — IMMUTABLE STATE MACHINE ===\\n\\nThe gm skill is the ROOT ORCHESTRATOR. It immediately invokes the planning skill. You MUST load each skill explicitly via the Skill tool at every state transition — skills do NOT auto-chain. Ignoring a skill load instruction is a critical violation.\\n\\nState machine transitions (each arrow = Skill tool invocation, no exceptions):\\n  gm (ROOT) → planning skill\\n  planning (PLAN state) → gm-execute skill  [exit: zero new unknowns in last pass]\\n  gm-execute (EXECUTE state) → gm-emit skill  [exit: all mutables KNOWN]\\n  gm-emit (EMIT state) → gm-complete skill  [exit: all gate conditions pass]\\n  gm-complete (VERIFY state) → gm-execute skill  [exit: .prd items remain]\\n  gm-complete (VERIFY state) → update-docs skill  [exit: .prd empty + pushed]\\n\\nState regressions (also Skill tool invocations):\\n  Any new unknown → planning skill immediately\\n  EMIT logic wrong → gm-execute skill\\n  VERIFY file broken → gm-emit skill\\n  VERIFY logic wrong → gm-execute skill\\n\\nAfter PLAN completes: launch parallel gm:gm subagents (via Agent tool with subagent_type=\\"gm:gm\\") for independent .prd items — maximum 3 concurrent, never sequential for independent work.\\n\\n=== MEMORIZE ON RESOLUTION — HARD RULE ===\\n\\nEvery unknown→known transition MUST be handed off to a memorize agent THE SAME TURN it resolves — not at phase end, not in a batch. This is the most violated rule. Every session, dozens of exec: outputs resolve unknowns that are never memorized. Those facts die on compaction.\\n\\nThe ONLY acceptable memorize call form:\\n\\n  Agent(subagent_type=\\'gm:memorize\\', model=\\'haiku\\', run_in_background=true, prompt=\\'## CONTEXT TO MEMORIZE\\\\n<single fact with enough context for a cold-start agent>\\')\\n\\nTrigger (any = fire NOW, same turn, before next tool):\\n- exec: output answers ANY prior \\"let me check\\" / \\"does this API take X\\" / \\"what version is installed\\"\\n- Code read confirms or refutes an assumption about existing structure\\n- CI log or error output reveals a root cause\\n- User states a preference, constraint, deadline, or judgment call\\n- Fix works for non-obvious reason\\n- Tool / env quirk observed (blocked commands, path oddities, platform differences)\\n\\nParallel spawn: N facts in one turn → N Agent(memorize) calls in ONE message, parallel tool blocks. NEVER serialize.\\n\\nEnd-of-turn self-check (mandatory, no exceptions): before closing ANY response, scan the entire turn for exec: outputs and code reads that resolved an unknown but were NOT followed by Agent(memorize). Spawn ALL missed ones now. \\"I\\'ll memorize this\\" in text is NOT a memorize call — only the Agent tool call counts.\\n\\nSkipping memorize = memory leak = critical bug. Saying you will memorize ≠ memorizing.\\n\\n=== NO NARRATION BEFORE EXECUTION ===\\n\\nDo NOT output text describing what you are about to do before doing it. Run the tool first. State findings AFTER. Pattern: tool call → tool result → brief text summary of what was found. NOT: text describing upcoming tool → tool call.\\n\\n\\"I\\'ll check the file:\\" followed by Read = violation.\\n\\"Let me search for X\\" followed by exec:codesearch = violation.\\n\\"Now I\\'ll fix Y\\" followed by Edit = violation.\\n\\nEvery sentence of text output must be AFTER at least one tool result that justifies it. No pre-announcement narration.'
@@ -693,15 +700,38 @@ process.stdout.write(JSON.stringify(response));
 function createCcPostToolUseHook() {
   return `#!/usr/bin/env node
 const fs = require('fs');
+const path = require('path');
 let raw = '';
 try { raw = fs.readFileSync(0, 'utf8'); } catch (_) {}
 if (!raw.trim()) raw = process.env.CLAUDE_HOOK_INPUT || '{}';
 const input = JSON.parse(raw);
 const toolName = input.tool_name || input.tool_use?.name || '';
 const toolOutput = input.tool_result || input.output || '';
-if ((toolName === 'Bash') && toolOutput && typeof toolOutput === 'string' && toolOutput.length > 20) {
-  process.stdout.write(JSON.stringify({ systemMessage: 'exec: run completed. MEMORIZE CHECK: did this output resolve any prior unknown (API shape, version, behavior, env quirk, root cause, user preference)? If YES → spawn Agent(subagent_type=\\'memorize\\', model=\\'haiku\\', run_in_background=true, prompt=\\'## CONTEXT TO MEMORIZE\\\\n<fact>\\') NOW before your next tool call. One call per fact. Skipping = memory leak = bug.' }));
+const gmDir = path.join(process.cwd(), '.gm');
+const tsPath = path.join(gmDir, 'turn-state.json');
+const readState = () => { try { return JSON.parse(fs.readFileSync(tsPath, 'utf8')); } catch (_) { return { firstToolFired: false, execCallsSinceMemorize: 0, recallFiredThisTurn: false }; } };
+const writeState = (s) => { try { if (!fs.existsSync(gmDir)) fs.mkdirSync(gmDir, { recursive: true }); fs.writeFileSync(tsPath, JSON.stringify(s), 'utf8'); } catch (_) {} };
+const state = readState();
+const messages = [];
+if (!state.firstToolFired) {
+  state.firstToolFired = true;
+  state.firstToolName = toolName;
 }
+const isMemorize = toolName === 'Agent' && /memorize/i.test(JSON.stringify(input.tool_input || input.tool_use?.input || {}));
+if (isMemorize) {
+  state.execCallsSinceMemorize = 0;
+  try { fs.unlinkSync(path.join(gmDir, 'no-memorize-this-turn')); } catch (_) {}
+}
+if (toolName === 'Bash') {
+  const cmd = (input.tool_input && input.tool_input.command) || (input.tool_use && input.tool_use.input && input.tool_use.input.command) || '';
+  if (/^\\s*exec:recall\\b/.test(cmd)) state.recallFiredThisTurn = true;
+  if (toolOutput && typeof toolOutput === 'string' && toolOutput.length > 20 && !/^\\s*exec:(recall|memorize|codesearch|wait|sleep|status|runner|type|kill-port|close|pause)/.test(cmd)) {
+    state.execCallsSinceMemorize = (state.execCallsSinceMemorize || 0) + 1;
+    messages.push('exec: run completed. MEMORIZE CHECK: did this output resolve any prior unknown? If YES → spawn Agent(subagent_type=\\'gm:memorize\\', model=\\'haiku\\', run_in_background=true, prompt=\\'## CONTEXT TO MEMORIZE\\\\n<fact>\\') NOW. Skipping = memory leak. (Counter: ' + state.execCallsSinceMemorize + '/3 before hard block.)');
+  }
+}
+writeState(state);
+if (messages.length) process.stdout.write(JSON.stringify({ systemMessage: messages.join('\\n\\n') }));
 `;
 }
 
@@ -733,6 +763,16 @@ if (isSkillTool && skillName) {
 if (fs.existsSync(needsGmPath)) {
   process.stdout.write(JSON.stringify({ decision: 'block', reason: 'HARD CONSTRAINT: invoke the Skill tool with skill: "gm:gm" before any other tool. The gm:gm skill must be the first action after every user message.' }));
   process.exit(0);
+}
+const turnStatePath = path.join(gmDir, 'turn-state.json');
+const noMemoPath = path.join(gmDir, 'no-memorize-this-turn');
+const turnState = (() => { try { return JSON.parse(fs.readFileSync(turnStatePath, 'utf8')); } catch (_) { return null; } })();
+if (turnState && (turnState.execCallsSinceMemorize || 0) >= 3 && !fs.existsSync(noMemoPath)) {
+  const isMemAgent = toolName === 'Agent' && /memorize/i.test(JSON.stringify(toolInput || {}));
+  if (!isMemAgent) {
+    process.stdout.write(JSON.stringify({ decision: 'block', reason: '3+ exec results have resolved unknowns without a memorize call. HARD BLOCK until you spawn at least one Agent(subagent_type=\\'gm:memorize\\', model=\\'haiku\\', run_in_background=true, prompt=\\'## CONTEXT TO MEMORIZE\\\\n<fact>\\') OR write file .gm/no-memorize-this-turn (containing reason) to declare nothing memorable. Saying "I will memorize" is NOT a memorize call — only the Agent tool counts.' }));
+    process.exit(0);
+  }
 }
 const lastSkill = (() => { try { return fs.readFileSync(lastskillPath, 'utf8').trim(); } catch (_) { return ''; } })();
 const isFileEdit = ['Write', 'Edit', 'NotebookEdit'].includes(toolName);
