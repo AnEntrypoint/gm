@@ -731,7 +731,7 @@ if (isSkillTool && skillName) {
   process.exit(0);
 }
 if (fs.existsSync(needsGmPath)) {
-  process.stdout.write(JSON.stringify({ decision: 'block', reason: 'HARD CONSTRAINT: invoke the Skill tool with skill: "gm" before any other tool. The gm skill must be the first action after every user message.' }));
+  process.stdout.write(JSON.stringify({ decision: 'block', reason: 'HARD CONSTRAINT: invoke the Skill tool with skill: "gm:gm" before any other tool. The gm:gm skill must be the first action after every user message.' }));
   process.exit(0);
 }
 const lastSkill = (() => { try { return fs.readFileSync(lastskillPath, 'utf8').trim(); } catch (_) { return ''; } })();
