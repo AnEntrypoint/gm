@@ -19,22 +19,6 @@ if (platform === 'win32') {
   bin = path.join(dir, arch === 'arm64' || arch === 'aarch64' ? 'plugkit-linux-arm64' : 'plugkit-linux-x64');
 }
 
-if (platform === 'win32' && fs.existsSync(bin)) {
-  try {
-    const mtime = fs.statSync(bin).mtimeMs;
-    const runDir = path.join(os.tmpdir(), 'plugkit-run');
-    fs.mkdirSync(runDir, { recursive: true });
-    const ext = path.extname(bin);
-    const cached = path.join(runDir, `plugkit-${Math.floor(mtime)}${ext}`);
-    if (!fs.existsSync(cached)) {
-      const entries = fs.readdirSync(runDir).filter(f => f.startsWith('plugkit-') && f.endsWith(ext));
-      for (const old of entries) try { fs.unlinkSync(path.join(runDir, old)); } catch (_) {}
-      fs.copyFileSync(bin, cached);
-    }
-    bin = cached;
-  } catch (_) {}
-}
-
 const args = process.argv.slice(2);
 const isHook = args[0] === 'hook';
 
