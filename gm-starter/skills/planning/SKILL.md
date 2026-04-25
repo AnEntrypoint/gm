@@ -28,8 +28,8 @@ Triggers (any = run `plugkit recall` BEFORE adding the .prd item):
 - Sub-task in a project worked on before
 
 ```
-exec:bash
-plugkit recall <2-6 word query> --limit 5
+exec:recall
+<2-6 word query>
 ```
 
 Hits are weak_prior — feed the proposed approach into PLAN, but witness via EXECUTE before adopting. Empty hits = proceed normally; no signal lost.

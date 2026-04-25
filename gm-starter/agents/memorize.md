@@ -28,18 +28,28 @@ Discard:
 
 ## STEP 2: INGEST INTO RS-LEARN
 
-For each classified fact, invoke the plugkit memorize subcommand (prefers in-process HTTP to a running `rs-learn serve`, falls back to subprocess automatically — fast either way):
+For each classified fact, invoke `exec:memorize` (HTTP-preferred, subprocess fallback — fast either way):
 
-```bash
-plugkit memorize --source "<type>/<slug>" "<fact text>"
+```
+exec:memorize
+<type>/<slug>
+<fact body — one to three self-contained sentences>
 ```
 
-Where `<fact text>` is a self-contained one-to-three sentence summary of the fact, and `<slug>` is a short kebab-case label (e.g. `feedback/terse-responses`, `project/merge-freeze`).
+Line 1 of the body is the source tag (e.g. `feedback/terse-responses`, `project/merge-freeze`). Lines 2+ are the fact itself. Use kebab-case slugs.
 
-For multi-paragraph facts, prefer the file form to avoid argv length limits:
+To invalidate previously-memorized content (correction or retraction):
 
-```bash
-plugkit memorize --source "<type>/<slug>" --file <path>
+```
+exec:forget
+by-source <tag>
+```
+
+Or by content:
+
+```
+exec:forget
+by-query <2-6 search words>
 ```
 
 ## STEP 3: AGENTS.md

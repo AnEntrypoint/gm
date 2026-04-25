@@ -22,6 +22,9 @@ Bash tool only accepts these exact formats:
    exec:runner            (start/stop/status the runner daemon)
    exec:type              (send stdin: task_id on line 1, input on line 2)
    exec:kill-port         (kill process listening on port: port number on next line)
+   exec:recall            (cross-session memory — query rs-learn episodes)
+   exec:memorize          (line 1 = source-tag, rest = fact body) — fast ingest into rs-learn
+   exec:forget            (by-source <tag> | by-query <terms> | by-id <uuid>) — invalidate memory
 
 4. Git commands — git <args> directly (no exec: prefix needed):
    git status
