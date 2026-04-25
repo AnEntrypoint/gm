@@ -83,7 +83,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook stop",
-            "timeout": 15000
+            "timeout": 30000
           },
           {
             "type": "command",
