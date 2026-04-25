@@ -25,6 +25,10 @@ Bash tool only accepts these exact formats:
    exec:recall            (cross-session memory — query rs-learn episodes)
    exec:memorize          (line 1 = source-tag, rest = fact body) — fast ingest into rs-learn
    exec:forget            (by-source <tag> | by-query <terms> | by-id <uuid>) — invalidate memory
+   exec:feedback          (request_id quality 0..1 [signal]) — record routing quality
+   exec:learn-status      (show rs-learn DB / HTTP / ACP status)
+   exec:learn-debug       (dump observability subsystem; arg optional)
+   exec:learn-build       (run label propagation + community summarize)
 
 4. Git commands — git <args> directly (no exec: prefix needed):
    git status
