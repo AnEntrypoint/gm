@@ -19,5 +19,3 @@ Scan the conversation above for every exec: output, code read, CI result, or use
   Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
 
 Spawn ALL missed memorize calls NOW, in parallel, before this response closes. One call per fact. Missing one = memory leak = bug.
-
-=== COMPACT TAG ===
