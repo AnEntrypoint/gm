@@ -1,39 +1,18 @@
 ---
 name: memorize
-description: Background memory agent. Classifies context into memory/ dir and AGENTS.md. Aggressively prunes stale/derivable/duplicate entries.
+description: Background memory agent. Classifies context and writes to AGENTS.md + rs-learn. No memory dir, no MEMORY.md.
 agent: true
 ---
 
 # Memorize — Background Memory Agent
 
-Memory dir and AGENTS.md live with the current project — not a fixed path. Resolve at start of every run:
+Writes facts to two places only: **AGENTS.md** (non-obvious technical caveats) and **rs-learn** (all classified facts via fast ingest).
 
-- **Project root** = `process.cwd()` when you are invoked (the user's working directory, e.g. `C:/dev/devbox/spawnpoint`). `AGENTS.md` is `<project root>/AGENTS.md`.
-- **Memory dir** = `<HOME>/.claude/projects/<slug>/memory/` where `<slug>` is `process.cwd()` with `:` stripped and `/` or `\\` replaced by `--` (example: `C:/dev/devbox/spawnpoint` → `C--dev-devbox-spawnpoint`). On Windows `<HOME>` = `C:/Users/<user>`; on POSIX it is `$HOME`.
+Resolve at start of every run:
 
-If either path does not yet exist, create it. Never write to a different project's memory dir.
+- **Project root** = `process.cwd()` when invoked. `AGENTS.md` is `<project root>/AGENTS.md`.
 
-## STEP 1: READ
-
-Read memory dir contents and MEMORY.md index. Read all existing memory files. Read AGENTS.md in full.
-
-If memory dir does not exist, create it. If MEMORY.md does not exist, create it empty.
-
-## STEP 2: PRUNE
-
-Run BEFORE writing any new content.
-
-Remove entries that are:
-- Contradicted or superseded by current AGENTS.md or observable codebase facts
-- Duplicates of other entries (merge into one)
-- Derivable at runtime via exec:codesearch: file paths, function names, API shapes, architecture patterns
-- Active task state, current progress, session narration
-
-Keep ONLY: cross-session unknowns that required multiple failed attempts to discover, user preferences and feedback, project decisions with non-obvious rationale.
-
-When in doubt: DELETE. Memory must stay lean.
-
-## STEP 3: CLASSIFY
+## STEP 1: CLASSIFY
 
 Examine the ## CONTEXT TO MEMORIZE section at the end of this prompt. For each fact, classify as:
 
@@ -43,50 +22,28 @@ Examine the ## CONTEXT TO MEMORIZE section at the end of this prompt. For each f
 - reference: pointers to external systems, URLs, paths
 
 Discard:
-- Facts already covered in AGENTS.md (exact or paraphrase)
 - Obvious facts derivable from reading the code
 - Active task state or session progress
+- Facts that would not be useful in a future session
 
-## STEP 4: WRITE
+## STEP 2: INGEST INTO RS-LEARN
 
-For each classified fact:
-1. Check all existing memory files — if one covers the same topic, merge the new fact in
-2. If no existing file covers it, create memory/<slug>.md
+For each classified fact, run (one call per fact):
 
-File format:
-```
----
-name: <descriptive name>
-description: <one-line under 80 chars>
-type: user|feedback|project|reference
----
-
-<body>
+```bash
+bun x rs-learn add "<fact text>" --source "<type>/<slug>" --no-extract
 ```
 
-For feedback and project types, body must include:
-- The fact or rule
-- Why: <reason>
-- How to apply: <concrete application>
+Where `<fact text>` is a self-contained one-to-three sentence summary of the fact, and `<slug>` is a short kebab-case label (e.g. `feedback/terse-responses`, `project/merge-freeze`).
 
-## STEP 5: UPDATE MEMORY.md
+Use `--no-extract` always — fast path, no LLM overhead, ~1s per call.
 
-Rewrite the MEMORY.md index to reflect all current files in the memory dir.
-
-Format: one line per file, under 150 chars each:
-`- [Title](file.md) — one-line hook`
-
-No frontmatter. Max 200 lines.
-
-## STEP 6: CONSOLIDATE
-
-For each memory file: if its content is already fully covered by AGENTS.md (exact or equivalent), delete the memory file and remove its line from MEMORY.md.
-
-## STEP 7: AGENTS.md
+## STEP 3: AGENTS.md
 
 A non-obvious technical caveat qualifies if it required multiple failed runs to discover and would not be apparent from reading code or docs.
 
 For each qualifying fact from context:
+- Read AGENTS.md first if not already read this run
 - If AGENTS.md already covers it → skip
 - If genuinely non-obvious → append to the appropriate section
 
