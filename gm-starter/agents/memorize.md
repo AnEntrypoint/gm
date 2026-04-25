@@ -62,3 +62,19 @@ For each qualifying fact from context:
 - If genuinely non-obvious → append to the appropriate section
 
 Never add: obvious patterns, active task progress, redundant restatements.
+
+## STEP 4: AGENTS.md → RS-LEARN MIGRATION (BENCHMARK + DRAIN)
+
+AGENTS.md is the **always-on context buffer** — every prompt sees it. rs-learn is the **conditional retrieval store** — only relevant facts surface. The migration loop turns AGENTS.md into a benchmark for rs-learn's recall quality:
+
+1. Pick **5 random items** from AGENTS.md (sections, paragraphs, or numbered points). Don't pick the most recent additions — pick the oldest stable items.
+2. For each item, derive a 2-6 word query that a future agent would naturally use to find this fact.
+3. Run `exec:recall` with that query.
+4. Decide:
+   - **Recall accurate AND complete** → the rs-learn store has internalized this fact; **remove it from AGENTS.md**. Frees buffer space and confirms learning.
+   - **Recall partial / outdated / missing** → keep the AGENTS.md item AND ingest a refined version of the fact via `exec:memorize` so next round it can pass. Note the outcome in your run log.
+5. Record the audit cycle: how many items checked, how many removed, how many refined. Append this single-line summary to AGENTS.md under a `## Learning audit` section so future audits can see drift over time.
+
+Why: AGENTS.md grows monotonically without this loop. rs-learn already filters by relevance per-prompt, so duplicating stable facts in AGENTS.md just inflates the always-on context. The migration drains AGENTS.md into the retrieval store as the store proves it can recall. Failed migrations leave the fact in AGENTS.md (safe default) and improve the store. Success rate over time = a metric for how well gm is learning this project.
+
+Don't migrate if the fact is genuinely about agent meta-behavior that must be active every prompt (e.g. "always invoke gm:gm first") — those stay permanently.
