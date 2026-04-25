@@ -22,6 +22,7 @@ For every claim landing in a file:
 2. **Repair legality** — local patch dressed as structural repair? Downgrade scope or snake to PLAN.
 3. **Lawful downgrade** — can a weaker, true statement replace it? PREFER the downgrade.
 4. **Alternative-route suppression** — live competing route being silenced? Preserve it.
+5. **Strongest objection** — if a reviewer pushed back on this change, what would the sharpest argument be? Articulate it. Cannot articulate = have not understood the alternatives = regress to `gm-execute`.
 
 Fail any → regress to `gm-execute` to witness what was missing, or `planning` if gap is structural.
 
@@ -56,6 +57,7 @@ console.log(await fn(realInput));
 - Post-emit matches pre-emit exactly
 - Hot reloadable; errors throw with context (no fallbacks, `|| default`, `catch { return null }`)
 - No mocks/fakes/stubs/scattered test files (delete on discovery)
+- Behavior change in this emit = a corresponding assertion in test.js (a change no test would catch is a change you cannot prove)
 - Files ≤200 lines
 - No duplicate concern (run exec:codesearch for primary concern after writing; any overlap → `planning`)
 - No comments; no hardcoded values; no adjectives in identifiers; no unnecessary files
