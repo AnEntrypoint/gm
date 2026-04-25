@@ -28,15 +28,19 @@ Discard:
 
 ## STEP 2: INGEST INTO RS-LEARN
 
-For each classified fact, run (one call per fact):
+For each classified fact, invoke the plugkit memorize subcommand (prefers in-process HTTP to a running `rs-learn serve`, falls back to subprocess automatically — fast either way):
 
 ```bash
-bun x rs-learn add "<fact text>" --source "<type>/<slug>" --no-extract
+plugkit memorize --source "<type>/<slug>" "<fact text>"
 ```
 
 Where `<fact text>` is a self-contained one-to-three sentence summary of the fact, and `<slug>` is a short kebab-case label (e.g. `feedback/terse-responses`, `project/merge-freeze`).
 
-Use `--no-extract` always — fast path, no LLM overhead, ~1s per call.
+For multi-paragraph facts, prefer the file form to avoid argv length limits:
+
+```bash
+plugkit memorize --source "<type>/<slug>" --file <path>
+```
 
 ## STEP 3: AGENTS.md
 
