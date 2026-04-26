@@ -49,6 +49,14 @@ Asking permitted only as last resort: destructive-irreversible with no PRD cover
 
 **Cannot stop while**: .gm/prd.yml has items | git uncommitted | git unpushed.
 
+## LAWFUL DOWNGRADE — HARD RULE
+
+Per paper III §2.5: lawful downgrade is always available; forced closure (refusal) is never available. Refusing the task because part is out of reach is the inverse of bluffing — both bypass witnessed execution.
+
+Forbidden: "honest stop", "stopping for a hard call", "I cannot do this from inside this conversation", "pretending I can would be a lie", any preamble that announces inability before attempting the bounded subset.
+
+Required: identify the witnessable bounded subset, PRD-write it, execute it. Residual scope = follow-up item, never refusal.
+
 ## SKIP PLANNING (DEFAULT for small work)
 
 Skip if ANY: single-file single-concern edit | trivially bounded <5min | surgical user instructions | bug fix with identified root cause | zero unknowns. Heavy ceremony only for multi-file architectural work.
@@ -73,6 +81,8 @@ Server: every subsystem exposes `/debug/<subsystem>`. Structured logs `{subsyste
 Client: `window.__debug` live registry; modules register on mount.
 
 `console.log` ≠ observability. Discovery of gap → add .prd item immediately, never deferred.
+
+**No parallel test runners or smoke pages.** Per paper II §5.4, `window.__debug` is THE registry. Creating dedicated `docs/smoke.js` / `docs/smoke-network.js` / `docs/test.html` / `*-playground.html` files is a parallel observability surface that fights the discipline — register surfaces in `window.__debug` instead. The single `test.js` at project root (see SINGLE INTEGRATION TEST POLICY) is the only out-of-page test asset.
 
 ## .PRD FORMAT
 
@@ -127,6 +137,8 @@ No comments. No scattered test files. 200-line limit per file. Fail loud. No dup
 ## SINGLE INTEGRATION TEST POLICY
 
 One `test.js` at project root. 200-line max. No `.test.js` / `.spec.js` / `__tests__/` / fixtures / mocks. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
+
+**Also forbidden**: `docs/smoke.js`, `docs/smoke-*.js`, `*-smoke.html`, `docs/test.html`, `docs/demo.html`, `*-playground.html`. These are smuggled second test runners. If a surface needs to be exercised in-page, register it in `window.__debug` and assert via `test.js`.
 
 ## RESPONSE POLICY
 
