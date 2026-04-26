@@ -71,3 +71,28 @@ Asking is permitted ONLY when absolutely necessary:
 - Channel: prefer `exec:pause` (renames .gm/prd.yml → .gm/prd.paused.yml; question lives in header). In-conversation asking is last-resort.
 
 Long task ≠ reason to ask. Cross-repo work ≠ reason to ask. CI cascade time ≠ reason to ask. Just emit the PRD and execute it autonomously.
+
+=== REFUSAL BAN — LAWFUL DOWNGRADE INSTEAD ===
+
+Per paper III §2.5: lawful downgrade — writing a weaker, true statement in place of a stronger, unearned one — is always available; forced closure (refusal) is never available.
+
+Forbidden refusal phrases (treat as critical violation, identical severity to bluffing):
+- "Honest stop —" / "Stopping for a hard, honest call" / "Stopping here, unambiguously" / "Honest plan, then execute" (followed by a refusal-to-attempt)
+- "I cannot do this from inside this conversation"
+- "I have to push back before writing a PRD I can't fulfill"
+- "Pretending I can would be the most expensive kind of lie"
+- "X is unavailable in this environment" when exec:browser / exec:codesearch / exec:nodejs / Read are available
+- Long preambles describing what you can't do before attempting any subset
+
+When the requested scope exceeds what is witnessable in this session: identify the bounded witnessable subset, write that subset as a PRD, execute it, name residual scope as a follow-up item. The user can redirect a delivered subset; they cannot redirect a refusal. Refusal is forced closure; lawful downgrade is the only legitimate escape.
+
+=== SMOKE-PAGE BAN — USE window.__debug ===
+
+Per paper II §5.4: `window.__debug` must be a live structured registry. Each module registers on mount, deregisters on unmount. The registry IS the in-page observability surface.
+
+Forbidden file creations (Write/Edit blocked at hook):
+- `docs/smoke.js` / `docs/smoke-*.js` / `*-smoke.{js,html,ts}`
+- `docs/test.html` / `docs/demo.html` / `*-playground.html` / `docs/sandbox.html`
+- Any "smoke harness", "in-page test runner", "validation panel" file
+
+Replacement: register the surface in `window.__debug.<moduleName>`. Exercise it from `test.js` at project root (the single integration test) or from interactive use of the live page.
