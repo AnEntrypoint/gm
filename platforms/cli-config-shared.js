@@ -1514,7 +1514,24 @@ MIT
       'assets/icon.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#3B82F6"/><path d="M16 33h32v6H16zM16 22h32v6H16zM16 44h20v6H16z" fill="#fff"/></svg>\n',
       'assets/logo.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#1E3A8A"/><path d="M28 50h72v12H28zM28 70h72v12H28z" fill="#93C5FD"/><circle cx="40" cy="34" r="8" fill="#93C5FD"/></svg>\n',
       '.codex-plugin/plugin.json': TemplateBuilder.generateCodexPluginManifest(spec),
-      '.agents/plugins/marketplace.json': TemplateBuilder.generateCodexMarketplaceJson('gm-codex')
+      '.agents/plugins/marketplace.json': TemplateBuilder.generateCodexMarketplaceJson('gm-codex'),
+      'hooks/prompt-submit-hook.js': createCcPromptSubmitHook(),
+      'hooks/pre-tool-use-hook.js': createCcPreToolUseHook(),
+      'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
+    };
+  },
+  buildHooksMap() {
+    const envVar = 'CODEX_PLUGIN_ROOT';
+    const plugkit = `node \${${envVar}}/bin/plugkit.js hook`;
+    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
+    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
+    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
+    return {
+      PreToolUse: wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
+      PostToolUse: wrap(jsHook('post-tool-use-hook.js', 3000)),
+      SessionStart: wrap(hook('session-start', 180000)),
+      UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
+      Stop: wrap([hook('stop', 15000), hook('stop-git', 210000)]),
     };
   }
 });
@@ -1929,4 +1946,4 @@ Use \`/gm\` or invoke skills by name in Hermes to access the full state machine 
   }
 });
 
-module.exports = { cc, gc, codex, oc, kilo, qwen, hermes };
+module.exports = { cc, gc, codex, oc, kilo, qwen, hermes, createCcPromptSubmitHook, createCcPreToolUseHook, createCcPostToolUseHook };

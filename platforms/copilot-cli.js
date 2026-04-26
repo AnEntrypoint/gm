@@ -1,5 +1,6 @@
 const CLIAdapter = require('../lib/cli-adapter');
 const gen = require('./copilot-cli-gen');
+const { createCcPromptSubmitHook, createCcPreToolUseHook, createCcPostToolUseHook } = require('./cli-config-shared');
 
 class CopilotCLIAdapter extends CLIAdapter {
   constructor() {
@@ -40,8 +41,12 @@ class CopilotCLIAdapter extends CLIAdapter {
       '.mcp.json': this.generateMcpJson(pluginSpec),
       'hooks/hooks.json': this.generateHooksJson(pluginSpec),
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
+      'agents/memorize.md': readFile(this.getAgentSourcePaths('memorize')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
+      'hooks/prompt-submit-hook.js': createCcPromptSubmitHook(),
+      'hooks/pre-tool-use-hook.js': createCcPreToolUseHook(),
+      'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
       'cli.js': gen.generateCliJs(),
       'README.md': gen.generateReadme(),
       'index.html': require('../lib/template-builder').generateGitHubPage(require('../lib/template-builder').getPlatformPageConfig('copilot-cli', pluginSpec))
@@ -131,6 +136,20 @@ State in \`~/.gh/extensions/gm/state.json\`.
     const hookEventMap = { 'stop': 'session-end', 'stop-git': 'session-end-git' };
     const mappedEvent = hookEventMap[hookEvent] || hookEvent;
     return `\${COPILOT_EXTENSION_DIR}/bin/plugkit hook ${mappedEvent}`;
+  }
+
+  buildHooksMap() {
+    const envVar = 'COPILOT_EXTENSION_DIR';
+    const plugkit = `\${${envVar}}/bin/plugkit hook`;
+    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
+    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
+    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
+    return {
+      'tool:invoke': wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
+      'session:start': wrap(hook('session-start', 180000)),
+      'prompt:submit': wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
+      'session:end': wrap([hook('session-end', 15000), hook('session-end-git', 210000)]),
+    };
   }
 }
 
