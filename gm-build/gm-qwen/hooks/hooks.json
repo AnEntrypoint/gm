@@ -37,6 +37,18 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/bin/plugkit.js hook pre-compact",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "*",

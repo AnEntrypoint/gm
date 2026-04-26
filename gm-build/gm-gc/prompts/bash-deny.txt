@@ -1,0 +1,42 @@
+Bash tool only accepts these exact formats:
+
+1. Code execution — first line is exec:<lang>, rest is the code:
+   exec:nodejs
+   console.log('hello')
+
+   exec:python
+   print('hello')
+
+   exec:bash
+   echo hello
+
+   Languages: nodejs, python, bash, typescript, go, rust, c, cpp, java
+
+2. Browser automation — first line is exec:browser, rest is JS against `page`:
+   exec:browser
+   await page.goto('https://example.com')
+   console.log(await page.title())
+
+3. Utility commands — exec:<cmd> with args on next line:
+   exec:codesearch        (natural language codebase search)
+   exec:runner            (start/stop/status the runner daemon)
+   exec:type              (send stdin: task_id on line 1, input on line 2)
+   exec:kill-port         (kill process listening on port: port number on next line)
+   exec:recall            (cross-session memory — query rs-learn episodes)
+   exec:memorize          (line 1 = source-tag, rest = fact body) — fast ingest into rs-learn
+   exec:forget            (by-source <tag> | by-query <terms> | by-id <uuid>) — invalidate memory
+   exec:feedback          (request_id quality 0..1 [signal]) — record routing quality
+   exec:learn-status      (show rs-learn DB / HTTP / ACP status)
+   exec:learn-debug       (dump observability subsystem; arg optional)
+   exec:learn-build       (run label propagation + community summarize)
+
+4. Git commands — git <args> directly (no exec: prefix needed):
+   git status
+   git commit -m "msg"
+
+Anything else is blocked.
+
+NOTES on exec:bash environment:
+- The wrapper runs scripts via /usr/bin/sh-style execution. Bash builtins like `time`, `pushd`, `popd`, `source` are NOT available. For timing use `START=$(date +%s%3N); ...; END=$(date +%s%3N); echo "took $((END-START))ms"`. For directory changes use absolute paths or `cd` (works) — never `pushd`/`popd`.
+- Raw `sleep N` is blocked. To wait for a duration use `exec:wait\n<seconds>` (max 3600s). To wait for a specific background task to produce output use `exec:sleep\n<task_id>`.
+- Windows paths: both `C:\Users\foo` and `/c/Users/foo` work in exec:bash, but heredocs containing backslash-quoted Windows paths can confuse the shell parser. Prefer forward-slash form `/c/Users/foo` inside heredocs and quoted strings.

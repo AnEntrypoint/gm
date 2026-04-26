@@ -2,7 +2,12 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 case "$(uname -s)" in
   Darwin) OS=darwin ;;
-  *)      OS=linux  ;;
+  MINGW*|MSYS*|CYGWIN*)
+    case "$(uname -m)" in
+      arm64|aarch64) exec "$DIR/plugkit-win32-arm64.exe" "$@" ;;
+      *)             exec "$DIR/plugkit-win32-x64.exe" "$@" ;;
+    esac ;;
+  *) OS=linux ;;
 esac
 case "$(uname -m)" in
   arm64|aarch64) ARCH=arm64 ;;

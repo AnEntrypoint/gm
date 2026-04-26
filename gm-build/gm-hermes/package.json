@@ -1,0 +1,33 @@
+{
+  "name": "gm-hermes",
+  "version": "2.0.681",
+  "description": "State machine agent with hooks, skills, and automated git enforcement",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "keywords": [
+    "hermes-agent",
+    "hermes",
+    "agent",
+    "state-machine",
+    "automation",
+    "gm"
+  ],
+  "homepage": "https://github.com/AnEntrypoint/gm-hermes#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm-hermes/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "skills/",
+    "cli.js",
+    "README.md",
+    "AGENTS.md",
+    "hermes-skill.json",
+    "index.html"
+  ]
+}
