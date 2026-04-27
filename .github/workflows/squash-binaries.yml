@@ -78,7 +78,12 @@ jobs:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: |
           set -e
-          # filter-repo strips remotes by design; re-add and force-push.
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          # filter-repo may leave origin from --mirror clone; reset URL idempotently.
+          REMOTE_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git remote | grep -q '^origin$'; then
+            git remote set-url origin "$REMOTE_URL"
+          else
+            git remote add origin "$REMOTE_URL"
+          fi
           git push --force --mirror origin
           echo "Force-pushed rewritten mirror to origin."
