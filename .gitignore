@@ -6,7 +6,6 @@ gm-build-latest/
 gm-build-sync/
 .codeinsight
 
-.code-search/
 loggedin/
 site/node_modules/
 site/platforms-out.json
