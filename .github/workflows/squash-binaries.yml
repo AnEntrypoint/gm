@@ -1,0 +1,84 @@
+name: Squash Binaries From History
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "REWRITE" to confirm history rewrite of main'
+        required: true
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  squash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Verify confirmation token
+        run: |
+          if [ "${{ inputs.confirm }}" != "REWRITE" ]; then
+            echo "Refusing to run: confirm input must be exactly 'REWRITE'."
+            exit 1
+          fi
+
+      - name: Install git-filter-repo
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y git-filter-repo
+
+      - name: Mirror clone (server-side, fast)
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          git clone --mirror "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" repo.git
+          du -sh repo.git
+          echo "BEFORE_BYTES=$(du -sb repo.git | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Write filter-repo path list
+        run: |
+          cat > paths.txt <<'EOF'
+          gm-build-latest/
+          gm-build/
+          gm-starter/bin/plugkit
+          gm-starter/bin/plugkit.exe
+          gm-starter/bin/plugkit-linux-x64
+          gm-starter/bin/plugkit-linux-arm64
+          gm-starter/bin/plugkit-darwin-x64
+          gm-starter/bin/plugkit-darwin-arm64
+          gm-starter/bin/plugkit-win32-x64.exe
+          gm-starter/bin/plugkit-win32-arm64.exe
+          EOF
+          cat paths.txt
+
+      - name: Run git-filter-repo (strip historical binary paths)
+        working-directory: repo.git
+        run: |
+          set -e
+          git filter-repo \
+            --paths-from-file ../paths.txt \
+            --invert-paths \
+            --force
+          git reflog expire --expire=now --all
+          git gc --prune=now --aggressive
+          du -sh .
+          echo "AFTER_BYTES=$(du -sb . | awk '{print $1}')" >> "$GITHUB_ENV"
+
+      - name: Show size delta
+        run: |
+          echo "Before: $((BEFORE_BYTES / 1024 / 1024)) MiB"
+          echo "After:  $((AFTER_BYTES / 1024 / 1024)) MiB"
+          echo "Saved:  $(((BEFORE_BYTES - AFTER_BYTES) / 1024 / 1024)) MiB"
+
+      - name: Re-add origin and force-push rewritten history
+        working-directory: repo.git
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          # filter-repo strips remotes by design; re-add and force-push.
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force --mirror origin
+          echo "Force-pushed rewritten mirror to origin."
