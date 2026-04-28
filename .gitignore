@@ -36,7 +36,3 @@ plugforge-starter/skills/caveman/
 .gm/prd.paused.yml
 # tracked: .gm/rs-learn.db, .gm/code-search/, AGENTS.md, .gm/prd.yml
 # <<< gm managed
-dist/
-.gm/
-.codeinsight/
-rs-learn.db
