@@ -4,9 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>plugforge — convention-driven multi-platform plugin generator</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rippleui/dist/css/ripple-ui.css">
   <script type="importmap">
-    {"imports":{"webjsx":"https://cdn.jsdelivr.net/npm/webjsx/dist/webjsx.min.js"}}
+    {"imports":{"webjsx":"https://unpkg.com/anentrypoint-design/dist/247420.js","anentrypoint-design":"https://unpkg.com/anentrypoint-design/dist/247420.js"}}
+  </script>
+  <script type="module">
+    import { installStyles } from 'https://unpkg.com/anentrypoint-design/dist/247420.js';
+    installStyles();
+    document.documentElement.classList.add('ds-247420');
   </script>
   <style>
     body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; margin: 0; }
@@ -15,10 +19,11 @@
     .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
   </style>
 </head>
-<body>
+<body class="ds-247420">
 
 <script type="module">
-import { createElement as h, applyDiff, Fragment } from "webjsx";
+import { h, applyDiff, webjsx } from "anentrypoint-design";
+const Fragment = webjsx.Fragment;
 
 const CLI_PLATFORMS = [
   { id: 'gm-cc', label: 'Claude Code', desc: 'Hooks + agents for Claude Code CLI', pkg: 'npm install -g gm-cc' },
