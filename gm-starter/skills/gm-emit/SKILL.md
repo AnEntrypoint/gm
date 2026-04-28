@@ -58,6 +58,7 @@ console.log(await fn(realInput));
 - Hot reloadable; errors throw with context (no fallbacks, `|| default`, `catch { return null }`)
 - No mocks/fakes/stubs/scattered test files (delete on discovery)
 - Behavior change in this emit = a corresponding assertion in test.js (a change no test would catch is a change you cannot prove)
+- If this emit changes any browser-facing code (client/, served HTML/JS, shaders, page-bundle imports, gh-pages assets), the post-emit verify MUST include a live browser witness via `exec:browser` (boot server → page.goto → page.evaluate asserting the invariant the change established). Node-side import + test.js does NOT satisfy this — see `gm-complete` BROWSER VALIDATION GATE.
 - Files ≤200 lines
 - No duplicate concern (run exec:codesearch for primary concern after writing; any overlap → `planning`)
 - No comments; no hardcoded values; no adjectives in identifiers; no unnecessary files

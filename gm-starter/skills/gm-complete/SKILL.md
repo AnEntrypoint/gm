@@ -21,6 +21,7 @@ Failure triage: broken output → EMIT | wrong logic → EXECUTE | new unknown �
 ## MUTABLES — ALL MUST RESOLVE BEFORE COMPLETE
 
 - `witnessed_e2e` — real end-to-end run with witnessed output
+- `browser_validated` — MANDATORY for any change touching client/UI/browser-facing code (anything served to a browser, rendered, or whose output is visible to a user). Must invoke `browser` skill, navigate the live page, and witness the change in `window` / DOM / scene state. test.js + node-side imports DO NOT satisfy this gate. See BROWSER VALIDATION GATE below.
 - `git_clean` — `git status --porcelain` returns empty
 - `git_pushed` — `git log origin/main..HEAD --oneline` returns empty
 - `ci_passed` — all GitHub Actions runs reach `conclusion: success`
@@ -39,6 +40,26 @@ console.log(await fn(realInput));
 ```
 
 Browser/UI: invoke `browser` skill. After every success: enumerate what remains — never stop at first green.
+
+## BROWSER VALIDATION GATE — MANDATORY FOR CLIENT WORK
+
+If this session changed any code that runs in a browser — anything under client/, UI components, shaders, page-loaded JS, served HTML, gh-pages assets, dev-server endpoints, or any module imported into the page bundle — `browser_validated` MUST resolve before COMPLETE. Skipping it because "node tests pass" or "test.js is green" is a forced-closure refusal of witnessed verification.
+
+Trigger detection (any one suffices):
+- `git diff --name-only origin/main..HEAD` includes paths under `client/`, `apps/*/index.js` with client export, `docs/`, `*.html`, shader files, or any file imported by a browser entry.
+- New/changed export consumed by `window.*` or rendered in DOM/canvas/WebGL.
+- Visual, layout, animation, input, network-on-page, or shader behavior altered.
+
+Required protocol:
+1. Boot the real server (or open the static page) on a known URL — witness HTTP 200.
+2. `exec:browser` → `page.goto(url)` → wait for app init (poll for the global the change affects, e.g. `window.__app.<system>`).
+3. Probe via `page.evaluate(() => …)` — assert the specific invariant the change was supposed to establish (instance counts, scene meshes, DOM nodes, render stats, network frames, etc.).
+4. Capture the witnessed numbers in the response. "Looks fine" is not a witness.
+5. Failures → regress to `gm-execute` (logic) or `gm-emit` (output) — never paper over.
+
+Long-running probes: split into navigate-call → `exec:wait N` → probe-call to stay under the per-call budget. Do not stack multi-second `setTimeout` inside one `exec:browser` invocation.
+
+Exempt only when: change is server-only with zero browser-facing surface, OR repository has no browser surface at all (pure CLI/library). Tag the exemption in the response with the reason; do not silently skip.
 
 ## INTEGRATION TEST GATE
 
@@ -97,6 +118,6 @@ One per fact, parallel, same turn resolved. End-of-turn self-check mandatory.
 
 ## COMPLETION DEFINITION
 
-All: witnessed e2e | failure paths exercised | test.js passes | .prd deleted | git clean+pushed | CI green | hygiene sweep clean | TODO.md gone | CHANGELOG.md updated
+All: witnessed e2e | browser_validated (when client work touched) | failure paths exercised | test.js passes | .prd deleted | git clean+pushed | CI green | hygiene sweep clean | TODO.md gone | CHANGELOG.md updated
 
-**Never**: claim done without witnessed output | stop while .prd has items | skip hygiene | skip test.js | uncommitted/unpushed work | stop at first green
+**Never**: claim done without witnessed output | claim done on a client change without browser-validation witness | stop while .prd has items | skip hygiene | skip test.js | uncommitted/unpushed work | stop at first green
