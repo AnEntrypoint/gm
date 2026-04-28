@@ -217,3 +217,7 @@ Infrastructure: `docs/api/` holds 4 JSON endpoints (stars.json, metrics.json, in
 ## Learning audit
 
 2026-04-28: 5 items tested (windows conhost, clean build, orphaned exec, ocw rippleui, site esbuild). 2 accurate recalls → confirmed store internalized. 3 no/partial match → kept in AGENTS.md; will refine and re-ingest next cycle. Store recall quality improving; text-based queries effective for core infrastructure items.
+
+2026-04-28: 9 rs-exec facts ingested (browser cleanup, session-cleanup cmd, mod declarations, multi-bin roots, process-mode flag, orphan reap, RPC isolation, daemon pid-check, runner port file). Recall test on 5 stable items (Tailwind v4, skills bundled, GitHub Pages deploy, PDF extraction, plugkit fetch) failed — rs-learn service unavailable in environment. Safe default: retained all facts in AGENTS.md. 0 items removed, 0 refined. Audit pending rs-learn availability.
+
+2026-04-28: 5 GitHub automation facts ingested (github-pages-build-esbuild, github-workflows-metrics-api, jq-backtick-no-escape, workflow-run-explicit-workflows-list, github-workflow-env-context-parse-time). Migration audit: 5 recall queries tested (GitHub Pages Actions, workflow_run trigger, ocw rippleui, orphaned exec, pm2list). 0/5 accurate recalls — rs-learn not internalizing these infrastructure caveats yet. Kept all 5 items in AGENTS.md. Refined ingest candidates have query-specific metadata to improve future recall paths.
