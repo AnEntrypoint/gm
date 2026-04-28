@@ -42,6 +42,7 @@ jobs:
           cat > paths.txt <<'EOF'
           gm-build-latest/
           gm-build/
+          gm-build-sync/
           gm-starter/bin/plugkit
           gm-starter/bin/plugkit.exe
           gm-starter/bin/plugkit-linux-x64
@@ -50,6 +51,14 @@ jobs:
           gm-starter/bin/plugkit-darwin-arm64
           gm-starter/bin/plugkit-win32-x64.exe
           gm-starter/bin/plugkit-win32-arm64.exe
+          plugforge-starter/bin/plugkit
+          plugforge-starter/bin/plugkit.exe
+          plugforge-starter/bin/plugkit-linux-x64
+          plugforge-starter/bin/plugkit-linux-arm64
+          plugforge-starter/bin/plugkit-darwin-x64
+          plugforge-starter/bin/plugkit-darwin-arm64
+          plugforge-starter/bin/plugkit-win32-x64.exe
+          plugforge-starter/bin/plugkit-win32-arm64.exe
           EOF
           cat paths.txt
 
