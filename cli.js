@@ -35,6 +35,7 @@ Description:
   - JetBrains (jetbrains)
   - Copilot CLI (copilot-cli)
   - Hermes Agent (hermes)
+  - Antigravity (antigravity)
 
 Plugin Directory Structure:
   plugin/

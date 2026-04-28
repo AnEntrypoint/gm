@@ -48,5 +48,10 @@
     "filename": "gm-jetbrains",
     "label": "JetBrains",
     "type": "IDE"
+  },
+  {
+    "filename": "gm-antigravity",
+    "label": "Antigravity",
+    "type": "IDE"
   }
 ]

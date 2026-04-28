@@ -90,9 +90,49 @@ const jetbrainsPluginXml = (pluginSpec) => `<?xml version="1.0" encoding="UTF-8"
   <depends>com.intellij.modules.platform</depends>
 </idea-plugin>`;
 
+const antigravityManifest = (pluginSpec) => JSON.stringify({
+  name: 'gm-antigravity',
+  version: pluginSpec.version,
+  publisher: 'gm',
+  displayName: 'GM - GM State Machine',
+  description: pluginSpec.description || 'AI-powered state machine for Google Antigravity IDE',
+  author: pluginSpec.author || 'GM',
+  license: pluginSpec.license || 'MIT',
+  repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-antigravity.git' },
+  bugs: { url: 'https://github.com/AnEntrypoint/gm-antigravity/issues' },
+  engines: { vscode: '^1.85.0' },
+  categories: ['AI', 'Other'],
+  activationEvents: ['*'],
+  contributes: {
+    views: {
+      'gm-explorer': [
+        { id: 'gm.state', name: 'State Machine' },
+        { id: 'gm.agents', name: 'Agents' }
+      ]
+    },
+    commands: [
+      { command: 'gm.activate', title: 'GM: Activate' },
+      { command: 'gm.deactivate', title: 'GM: Deactivate' },
+      { command: 'gm.showState', title: 'GM: Show State' }
+    ],
+    configuration: {
+      title: 'GM',
+      properties: {
+        'gm.enabled': { type: 'boolean', default: true, description: 'Enable GM extension' },
+        'gm.logLevel': { type: 'string', enum: ['debug', 'info', 'warn', 'error'], default: 'info' },
+        'gm.autoActivate': { type: 'boolean', default: true, description: 'Auto-activate on startup' }
+      }
+    }
+  },
+  keywords: ['ai', 'state-machine', 'gm', 'antigravity', 'gemini', 'agentic'],
+  main: './extension.js',
+  files: ['extension.js', 'agents/', 'README.md']
+}, null, 2);
+
 module.exports = {
   vscodeManifest,
   cursorManifest,
   zedManifest,
-  jetbrainsPluginXml
+  jetbrainsPluginXml,
+  antigravityManifest
 };
