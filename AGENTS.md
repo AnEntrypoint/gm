@@ -213,3 +213,7 @@ Infrastructure: `docs/api/` holds 4 JSON endpoints (stars.json, metrics.json, in
 ## Made with gm Page
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array in that file whenever a new notable project is added to the org — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Data is static (no runtime API calls). The file is standalone HTML, not bundled.
+
+## Learning audit
+
+2026-04-28: 5 items tested (windows conhost, clean build, orphaned exec, ocw rippleui, site esbuild). 2 accurate recalls → confirmed store internalized. 3 no/partial match → kept in AGENTS.md; will refine and re-ingest next cycle. Store recall quality improving; text-based queries effective for core infrastructure items.
