@@ -1,0 +1,45 @@
+name: Audit Largest Blobs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Mirror clone
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          git clone --mirror "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" repo.git
+          cd repo.git && du -sh .
+
+      - name: Top 50 largest blobs in history
+        working-directory: repo.git
+        run: |
+          git rev-list --objects --all \
+            | git cat-file --batch-check='%(objecttype) %(objectsize) %(objectname) %(rest)' \
+            | awk '$1=="blob" {print $2, $3, $4}' \
+            | sort -nr \
+            | head -50 \
+            | awk '{ printf "%10.2f MiB  %s  %s\n", $1/1024/1024, $2, $3 }'
+
+      - name: Total size by path prefix
+        working-directory: repo.git
+        run: |
+          git rev-list --objects --all \
+            | git cat-file --batch-check='%(objecttype) %(objectsize) %(objectname) %(rest)' \
+            | awk '$1=="blob" && NF>=4 {
+                split($4, parts, "/")
+                key = parts[1]
+                if (parts[2]) key = key "/" parts[2]
+                if (parts[3]) key = key "/" parts[3]
+                size[key] += $2
+              } END { for (k in size) printf "%d %s\n", size[k], k }' \
+            | sort -nr | head -30 \
+            | awk '{ printf "%10.2f MiB  %s\n", $1/1024/1024, $2 }'
+
+      - name: Pack stats
+        working-directory: repo.git
+        run: git count-objects -vH
