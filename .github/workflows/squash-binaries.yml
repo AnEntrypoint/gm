@@ -61,7 +61,6 @@ jobs:
             --paths-from-file ../paths.txt \
             --invert-paths \
             --force
-          # Drop refs/replace/* that filter-repo creates — GitHub rejects them on push
           git for-each-ref --format='delete %(refname)' refs/replace/ | git update-ref --stdin || true
           git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin || true
           git reflog expire --expire=now --all
@@ -82,16 +81,12 @@ jobs:
         run: |
           set -e
           REMOTE_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          if git remote | grep -q '^origin
-          echo "Force-pushed rewritten branches+tags to origin."
-; then
+          if git remote | grep -q '^origin$'; then
             git remote set-url origin "$REMOTE_URL"
           else
             git remote add origin "$REMOTE_URL"
           fi
-          # --mirror clone sets remote.origin.mirror=true which forbids explicit refspecs. Unset it.
           git config --unset remote.origin.mirror || true
-          # Push branches and tags explicitly; avoid --mirror so refs/replace/* and other server-managed refs aren't pushed
           git push --force origin 'refs/heads/*:refs/heads/*'
           git push --force origin 'refs/tags/*:refs/tags/*'
           echo "Force-pushed rewritten branches+tags to origin."
