@@ -42,7 +42,7 @@ class PlatformAdapter {
   }
 
   getGenericFilesToUse() {
-    return TemplateBuilder.getGenericFiles();
+    return TemplateBuilder.getCliGenericFiles();
   }
 
   createFileStructure(pluginSpec, sourceDir) {
