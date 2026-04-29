@@ -1,5 +1,21 @@
 links:
+  - label: home
+    href: ./
+  - label: paper I
+    href: ./paper/
+  - label: paper II
+    href: ./paper2/
+  - label: paper III
+    href: ./paper3/
+  - label: paper IV
+    href: ./paper4/
+  - label: distribution
+    href: ./distribution/
+  - label: showcase
+    href: ./made-with/
+  - label: stats
+    href: ./stats/
+  - label: GitHub
+    href: https://github.com/AnEntrypoint/gm
   - label: 247420
     href: https://247420.xyz
-  - label: GitHub
-    href: https://github.com/AnEntrypoint

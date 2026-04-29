@@ -1,0 +1,5 @@
+id: distribution
+title: distribution
+description: gm's SQLite-style turnkey-binary distribution model.
+layout: article
+source: ../docs/distribution.html
