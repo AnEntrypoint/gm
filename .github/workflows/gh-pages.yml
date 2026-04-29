@@ -23,6 +23,17 @@ jobs:
           node-version: '20'
       - name: Build with flatspace
         run: npx --yes flatspace@latest build
+      - name: Promote rich root page over flatspace landing
+        run: |
+          set -e
+          # Move flatspace landing aside so the rich SDK page becomes site root.
+          if [ -f dist/index.html ] && [ -f index.html ]; then
+            mv dist/index.html dist/home.html
+          fi
+          # Copy repo-root static files used by the rich index.
+          for f in index.html .nojekyll favicon.ico favicon.svg robots.txt sitemap.xml; do
+            [ -e "$f" ] && cp -f "$f" dist/ || true
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
