@@ -74,6 +74,8 @@ Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cl
 
 **PUBLISHER_TOKEN required** in `rs-exec`, `rs-codeinsight`, `rs-search` for cascade.yml to trigger rs-plugkit. Set with: `gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/<repo>`.
 
+**Timeout enforcement**: `timeoutMs` is mandatory on every `execute` RPC and `--timeout <ms>` is mandatory on `rs-exec exec` and `rs-exec bash` CLI subcommands. Zero or missing causes hard error. The runner enforces via `tokio::time::timeout` wrapping `wait_for_completion`; on elapse it removes the task, calls `kill_tree(pid)`, and fails with `execution timed out after <N> ms`. CLI passes `timeout + 5000ms` as the RPC read deadline to prevent the client from timing out before the runner can respond. All downstream callers (rs-plugkit, rs-codeinsight, rs-search, hook code) must include `timeoutMs` in execute params. Default-fallback values are forbidden — pick a real budget per call site.
+
 ## Made with gm Page
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array when a new notable project is added — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Static data, no runtime API calls. Standalone HTML, not bundled.
