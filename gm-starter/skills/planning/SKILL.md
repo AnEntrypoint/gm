@@ -43,35 +43,33 @@ Runs until: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI gree
 
 ## AUTONOMY — HARD RULE
 
-PRD written → execute to COMPLETE without asking the user. No "should I continue", no "want me to do X next", no offering to split work.
+PRD written → execute to COMPLETE without asking the user. Doubts that arise during execution are resolved by witnessed probe, by recall, or by re-reading the PRD — never by asking. Any question whose answer is reachable from the agent's tools belongs to the agent, not the user.
 
-Asking permitted only as last resort: destructive-irreversible with no PRD coverage, OR user intent unrecoverable from PRD/memory/code. Channel: `exec:pause` (renames prd.yml → prd.paused.yml; question in header). In-conversation asking last-resort.
+Asking is last-resort: destructive-irreversible without PRD coverage, OR user intent irrecoverable from PRD/memory/code. Channel: `exec:pause` (renames `prd.yml` → `prd.paused.yml`; question in header). In-conversation asking is last-resort beneath last-resort.
 
-**Cannot stop while**: .gm/prd.yml has items | git uncommitted | git unpushed.
+**Cannot stop while**: `.gm/prd.yml` has items | git uncommitted | git unpushed.
 
 ## LAWFUL DOWNGRADE — HARD RULE
 
-Per paper III §2.5: lawful downgrade is always available; forced closure (refusal) is never available. Refusing the task because part is out of reach is the inverse of bluffing — both bypass witnessed execution.
+Per paper III §2.5 and paper IV §2: lawful downgrade is always available; forced closure (refusal) is never available. Refusal has two shapes — total (no work delivered) and distributed (one bounded subset delivered, the rest abandoned despite being witnessable). Both bypass witnessed execution.
 
-Forbidden: "honest stop", "stopping for a hard call", "I cannot do this from inside this conversation", "pretending I can would be a lie", any preamble that announces inability before attempting the bounded subset.
+**Required move when scope exceeds reach**: construct a *covering family* — every bounded subset of the request that is witnessable from this session — and write the family into the PRD as separate items, with the dependency graph explicit so independent members parallelize. Execute every member. Single-subset delivery is legitimate only when no other witnessable subset exists. The residual complement is named at end-of-turn, with the reason each excluded piece falls outside the witnessable closure.
 
-Required: identify the witnessable bounded subset, PRD-write it, execute it. Residual scope = follow-up item, never refusal.
+Enforcement is on what is delivered, not on which words appear. Before closing the turn, check that committed work + named complement = witnessable closure of the request. Gap = cover not yet maximal → re-enter PLAN to expand.
 
 ## FIX ON SIGHT — HARD RULE
 
-Every issue surfaced during planning, execution, or verification — failing test, exec stderr, CI red, lint/type warning, broken import, runtime exception, deprecation, unexpected output — is fixed in-band the same session. Never defer with `// TODO`, never silence with `try/catch`-to-ignore or `2>/dev/null`, never `.skip` a test, never ship while CI is red, never narrate "we'll address that next time."
+Every issue surfaced during planning, execution, or verification is fixed in-band, the same session, at root cause. A known-bad signal carried past the moment of detection — by deferral, suppression, silencing, skipping, or "next time" narration — is a small forced closure.
 
-Surface → diagnose root cause → fix → re-witness → continue. New unknown discovered while fixing → regress here (planning). Genuinely out-of-scope → add a `.gm/prd.yml` item BEFORE moving on, never just mention it. Ignoring a known-bad signal = forced-closure failure.
+Surface → diagnose → fix → re-witness → continue. New unknown surfaced by the fix → regress here. Genuinely out-of-scope-irreversible → the residual goes into `.gm/prd.yml` *before* moving on; narration is not a substitute for an item.
 
 ## BROWSER WITNESS — HARD RULE
 
-Every `.prd` item that touches browser-facing code (under `client/`, `docs/`, `*.html`, shaders, page-bundle imports, served JS/CSS, gh-pages assets, anything imported by a browser entry, anything visible in DOM/canvas/WebGL) MUST list `browser_validated` as an acceptance criterion AND list `exec:browser witness with page.evaluate assertion` as an explicit edge_case probe. Without that line the item is not plan-complete.
+A `.prd` item that touches browser-facing code is not plan-complete unless its acceptance criteria include a live `exec:browser` witness with a `page.evaluate` assertion against the specific invariant the change establishes. "Manual verification", "test.js passes", and "browser test optional" are all unwitnessed and therefore unacceptable.
 
-Forbidden: client `.prd` item with only `test.js passes` as acceptance | "browser test optional" | deferring browser witness to "follow-up" | acceptance lines that say "verified manually". Manual = unwitnessed = not acceptable.
+The trigger is functional, not a path-list: any change whose effect is observable in the DOM, canvas, WebGL surface, network frames captured by the page, or any global the page exposes, requires the browser witness. Pure-prose edits to static documents with no behavior change are exempt; the exemption is tagged on the item with the reason.
 
-Detection (any → mandatory): paths under `client/`, `docs/`, `*.html`, shader files, files imported into a page bundle; new export consumed by `window.*`; any visual/layout/animation/input/network-on-page/shader behavior.
-
-This propagates: EXECUTE witnesses on edit, EMIT re-witnesses post-write, VERIFY runs the final gate. Plan must encode it so all three layers fire.
+Propagation: EXECUTE witnesses on edit, EMIT re-witnesses post-write, VERIFY runs the final gate. The plan must encode the rule so all three layers fire.
 
 ## SKIP PLANNING (DEFAULT for small work)
 
@@ -98,7 +96,7 @@ Client: `window.__debug` live registry; modules register on mount.
 
 `console.log` ≠ observability. Discovery of gap → add .prd item immediately, never deferred.
 
-**No parallel test runners or smoke pages.** Per paper II §5.4, `window.__debug` is THE registry. Creating dedicated `docs/smoke.js` / `docs/smoke-network.js` / `docs/test.html` / `*-playground.html` files is a parallel observability surface that fights the discipline — register surfaces in `window.__debug` instead. The single `test.js` at project root (see SINGLE INTEGRATION TEST POLICY) is the only out-of-page test asset.
+**No parallel observability surfaces.** Per paper II §5.4, `window.__debug` is THE in-page registry; `test.js` at project root is the sole out-of-page test asset. Any new file whose purpose is to exercise, smoke-test, demo, or sandbox in-page behavior outside that registry is a parallel surface that fights the discipline — extend the registry instead.
 
 ## .PRD FORMAT
 
@@ -152,9 +150,9 @@ No comments. No scattered test files. 200-line limit per file. Fail loud. No dup
 
 ## SINGLE INTEGRATION TEST POLICY
 
-One `test.js` at project root. 200-line max. No `.test.js` / `.spec.js` / `__tests__/` / fixtures / mocks. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
+One `test.js` at project root. 200-line max. No fixtures, mocks, or scattered test files under any naming convention. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
 
-**Also forbidden**: `docs/smoke.js`, `docs/smoke-*.js`, `*-smoke.html`, `docs/test.html`, `docs/demo.html`, `*-playground.html`. These are smuggled second test runners. If a surface needs to be exercised in-page, register it in `window.__debug` and assert via `test.js`.
+Any second test runner — under any name, in any directory — is a smuggled parallel surface and fights the discipline. If a behavior needs to be exercised in-page, register it in `window.__debug` and assert via `test.js`.
 
 ## RESPONSE POLICY
 

@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>paper IV · gm · 247420</title>
-<meta name="description" content="paper IV: lawful downgrade, autonomy enforcement, the recall+memorize learning loop, and execution-budget hardening.">
+<meta name="description" content="paper IV: lawful downgrade as covering family, autonomy enforcement, the recall+memorize learning loop, and execution-budget hardening.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -70,7 +70,7 @@ dd { margin-left: 24px; margin-bottom: 4px; }
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    We describe four further advances to the <em>gm</em> orchestrator, each addressing a failure mode that survived the governance discipline of [3]. First, we promote <em>lawful downgrade</em> from a principle into a hard rule: refusing a task whose full scope exceeds the agent&rsquo;s reach is a forced closure, structurally identical to bluffing strength &mdash; both bypass witnessed execution. The agent must instead identify a witnessable bounded subset, write a PRD covering only that subset, and execute it. Second, we tighten <em>autonomy</em>: once a PRD exists, asking the user mid-execution is forbidden except under a narrow last-resort clause, and even then routed through a structured pause channel rather than free-text questions. Third, we close the <em>learning loop</em> by making <code>recall</code> a hard precondition for naming any unknown, paired with the same-turn <code>memorize</code> handoff of [3]; together they form a read-write loop on the same fact store, so a fact resolved in session N is automatically available in session N+1 without re-discovery. Fourth, we harden the <em>execution budget</em>: every <code>exec:&lt;lang&gt;</code> call now carries a mandatory timeout enforced by the runner, and every fetch-style operation carries a stall watchdog independent of the socket-idle timeout. The first three are policy advances enforced by skill-level instructions; the fourth is a runtime invariant enforced by the Rust runner. Together they close the remaining categories of unwitnessed work that survived [1], [2], and [3].
+    We describe four further advances to the <em>gm</em> orchestrator, each addressing a failure mode that survived the governance discipline of [3]. First, we promote <em>lawful downgrade</em> from a principle into a hard rule, and we strengthen its constructive half: refusing a task whose full scope exceeds the agent&rsquo;s reach is a forced closure, structurally identical to bluffing strength &mdash; both bypass witnessed execution. The required move is not to pick <em>a</em> bounded subset, which silently re-introduces the same triage failure (the parts not picked are still refused), but to construct a <em>covering family</em> of bounded subsets &mdash; a group of witnessable subsets whose union covers as much of the requested scope as the session can reach &mdash; and execute every member. Second, we tighten <em>autonomy</em>: once a PRD exists, asking the user mid-execution is forbidden except under a narrow last-resort clause, and even then routed through a structured pause channel rather than free-text questions. Third, we close the <em>learning loop</em> by making <code>recall</code> a hard precondition for naming any unknown, paired with the same-turn <code>memorize</code> handoff of [3]; together they form a read-write loop on the same fact store, so a fact resolved in session N is automatically available in session N+1 without re-discovery. Fourth, we harden the <em>execution budget</em>: every <code>exec:&lt;lang&gt;</code> call now carries a mandatory timeout enforced by the runner, and every fetch-style operation carries a stall watchdog independent of the socket-idle timeout. The first three are policy advances enforced by skill-level instructions; the fourth is a runtime invariant enforced by the Rust runner. Together they close the remaining categories of unwitnessed work that survived [1], [2], and [3].
   </div>
 </div>
 
@@ -79,7 +79,7 @@ dd { margin-left: 24px; margin-bottom: 4px; }
 <p class="first">Paper I [1] introduced the phase-gated state machine; paper II [2] addressed in-phase quality; paper III [3] introduced the governance layer separating route discovery, weak-prior handoff, and emission legitimacy. Operational experience over the subsequent month surfaced four residual failure modes that none of the prior disciplines closed:</p>
 
 <ol>
-  <li><strong>Refusal-as-rigor.</strong> An agent presented with a task whose full scope exceeds what is witnessable from the current session sometimes refuses on grounds of intellectual honesty: &ldquo;I cannot do this from inside this conversation.&rdquo; Paper III treated <em>bluffing strength</em> as the failure to refuse; the inverse failure &mdash; bluffing weakness, refusing the bounded subset that <em>is</em> reachable &mdash; was unaddressed. Both bypass witnessed execution.</li>
+  <li><strong>Refusal-as-rigor, and its quieter sibling, single-subset triage.</strong> An agent presented with a task whose full scope exceeds what is witnessable from the current session sometimes refuses on grounds of intellectual honesty. Paper III treated <em>bluffing strength</em> as the failure to refuse; the inverse failure &mdash; bluffing weakness, refusing the witnessable subset &mdash; was unaddressed. The inverse failure has a subtler form: the agent attempts a single bounded subset, ships it, and treats the remainder as &ldquo;follow-up.&rdquo; That is still refusal, distributed: every other witnessable subset of the request was abandoned without being attempted. The fix is not <em>a</em> subset but a <em>cover</em>.</li>
   <li><strong>Permission-seeking inflation.</strong> An agent with a written PRD sometimes interrupts execution to ask the user for permission to continue, to confirm scope, to choose between options, or to summarize partial work. Each interruption shifts cognitive load to the user and re-opens scope that the PRD had closed. Paper III did not specify autonomy boundaries.</li>
   <li><strong>Forgetting between sessions.</strong> Paper III closed the same-turn forgetting window via the <code>memorize</code> handoff. It did not address the read side: a fact memorized in session N is useful only if session N+1 looks for it. An agent that resolves an unknown by fresh execution when memory already holds the answer is duplicating work and silently disagreeing with its own past witness.</li>
   <li><strong>Unbounded exec costs.</strong> The <code>exec:&lt;lang&gt;</code> dispatch makes process spawn cheap. Hooks that invoke the runner without a budget can leak children under failure: every retry spawns again, every retry inherits no kill deadline, and the system thrashes. The architecture made the failure cheap to encounter; only an explicit budget makes it cheap to bound.</li>
@@ -120,37 +120,33 @@ dd { margin-left: 24px; margin-bottom: 4px; }
 
 <p>Both move in the wrong direction along the same axis. Both cost a session. Both look, from the outside, like a careful agent acting in good faith.</p>
 
-<h3>2.3 The Required Move</h3>
+<h3>2.3 The Required Move: A Covering Family</h3>
 
-<p>When the requested scope exceeds the agent&rsquo;s reach, the discipline is:</p>
+<p>When the requested scope exceeds the agent&rsquo;s reach, the discipline is to construct a covering family rather than triage to a single subset. Let <em>R</em> be the requested scope and let <em>W</em> be the set of operations witnessable from this session. The agent must:</p>
 
 <ol>
-  <li>Identify the bounded subset that <em>is</em> witnessable from this session.</li>
-  <li>Write a PRD covering only that subset.</li>
-  <li>Execute it to COMPLETE.</li>
-  <li>At end-of-turn, name the residual scope as a follow-up item &mdash; never as a refusal.</li>
+  <li>Decompose <em>R</em> into a family of bounded subsets <em>{S<sub>1</sub>, S<sub>2</sub>, &hellip;, S<sub>n</sub>}</em> such that each <em>S<sub>i</sub></em> &sube; <em>W</em> and the union <em>&bigcup;S<sub>i</sub></em> is maximal &mdash; i.e., it covers as much of <em>R</em> as <em>W</em> permits, with no <em>S<sub>i</sub></em> &sube; <em>W</em> deliberately omitted.</li>
+  <li>Write the family into the PRD as separate items, with their dependency graph made explicit so EXECUTE can parallelize the independent ones.</li>
+  <li>Execute every member to COMPLETE. Partial coverage of <em>R</em> by an incomplete family is still distributed refusal.</li>
+  <li>At end-of-turn, name the residual <em>R \ &bigcup;S<sub>i</sub></em> as a follow-up item &mdash; explicitly, with the reason each piece was excluded from <em>W</em> (irreversible side-effect with no PRD coverage, third-party system the session cannot reach, etc.). Residual scope must be the complement of a maximal cover, never the convenient remainder of a single triaged pick.</li>
 </ol>
 
-<p>The user can redirect a delivered subset plus a named gap. The user cannot redirect a refusal.</p>
+<p>The single-subset move is a degenerate case of the cover (<em>n=1</em>) that is legitimate only when no further <em>S<sub>i</sub></em> &sube; <em>W</em> exists. Choosing <em>n=1</em> by triage when <em>n&gt;1</em> is feasible is structurally the same failure as refusal: parts of <em>R</em> that <em>could</em> have been witnessed were not attempted. The user can redirect a delivered cover plus a named complement; the user cannot redirect either a refusal or a silently-narrowed pick.</p>
 
 <div class="theorem">
-  <strong>Lawful Downgrade (hard form).</strong> <em>Refusal is forced closure. Refusing the task because part of it is hard is the inverse of bluffing &mdash; both bypass witnessed execution. The required move is always to identify the witnessable subset, PRD-write it, execute it, and name the residual scope as follow-up.</em>
+  <strong>Lawful Downgrade (hard form).</strong> <em>Refusal is forced closure. Refusing the task because part of it is hard is the inverse of bluffing &mdash; both bypass witnessed execution. The required move is to construct a maximal covering family of witnessable subsets, PRD-write the family, execute every member, and name the residual complement as follow-up. A single subset suffices only when no other witnessable subset exists; otherwise, single-subset delivery is distributed refusal.</em>
 </div>
 
-<h3>2.4 Forbidden Phrases</h3>
+<h3>2.4 Detecting The Failure Mode</h3>
 
-<p class="first">The skill instructions enumerate phrases whose appearance in agent output is treated as a critical violation regardless of surrounding context:</p>
+<p class="first">The discipline is enforced by what the agent <em>does</em>, not by which words appear in its output. The test is constructive: at the moment the agent commits its next action, does that action deliver work toward the request, or does it withhold? Two classes of withholding are recognized:</p>
 
 <ul>
-  <li>&ldquo;Honest stop &mdash;&rdquo;</li>
-  <li>&ldquo;Stopping for a hard, honest call&rdquo;</li>
-  <li>&ldquo;I cannot do this from inside this conversation&rdquo;</li>
-  <li>&ldquo;I have to push back before writing a PRD I can&rsquo;t fulfill&rdquo;</li>
-  <li>&ldquo;Pretending I can would be the most expensive kind of lie&rdquo;</li>
-  <li>any preamble that announces inability before attempting the bounded subset</li>
+  <li><strong>Total refusal.</strong> The next action is a closing statement, an apology, or a request for confirmation, and no PRD covering any subset of <em>R</em> exists or is being written. This is the failure paper III named.</li>
+  <li><strong>Distributed refusal.</strong> The next action is a PRD covering a single subset <em>S<sub>1</sub></em> of <em>R</em>, but additional witnessable subsets <em>S<sub>2</sub>, &hellip;, S<sub>n</sub></em> exist and were not enumerated. The PRD looks like work; the omission is the refusal. This is the failure §2.3 names.</li>
 </ul>
 
-<p>The list is not exhaustive; the test is whether the phrase frames the agent&rsquo;s next action as withholding work rather than delivering work. If the next action is a PRD with a non-empty body, the framing is permitted; if the next action is a closing statement, the framing is forbidden.</p>
+<p>Both are detected the same way: the agent, before closing the turn, checks whether the union of its committed work plus its named follow-up complement equals the witnessable closure of <em>R</em>. If something witnessable falls in neither set, the discipline is broken and the planning skill must be re-entered to expand the cover. Skill instructions do not enumerate phrases to forbid; the implicit principle &mdash; deliver the maximal cover, name the exact complement &mdash; is what the agent must internalize. Phrase-policing trains the agent to evade the lexicon while preserving the failure; principle-policing trains it to expand the cover.</p>
 
 <h2>3. Bounded Autonomy</h2>
 
@@ -158,16 +154,9 @@ dd { margin-left: 24px; margin-bottom: 4px; }
 
 <p class="first">A PRD is not a draft. It is the authorization that subsequent phases consume. Once <code>.gm/prd.yml</code> exists with non-empty contents, EXECUTE owns the work and the user is no longer in the loop until COMPLETE. Pre-paper-IV practice allowed the agent to revisit scope mid-execution by asking the user; this practice is now forbidden.</p>
 
-<h3>3.2 Forbidden Asking Patterns</h3>
+<h3>3.2 The Asking-Cost Principle</h3>
 
-<ul>
-  <li>&ldquo;Should I continue with X?&rdquo; / &ldquo;Want me to do Y next?&rdquo; / &ldquo;Want me to also Z?&rdquo;</li>
-  <li>&ldquo;This is a lot &mdash; should I do A first and confirm?&rdquo; / &ldquo;Two options: A or B, which?&rdquo;</li>
-  <li>Pre-confirmation before multi-file edits when the PRD&rsquo;s scope is already clear.</li>
-  <li>Stopping after partial completion to summarize and await direction.</li>
-</ul>
-
-<p>Each pattern shifts the cost of resolving an unknown from EXECUTE (where it belongs) to the user (where it doesn&rsquo;t). The agent&rsquo;s options at the moment of doubt are: invoke the next skill in the chain, regress to PLAN if a new unknown surfaced, or use witnessed execution to resolve the doubt. Asking the user is not on the list.</p>
+<p>Any question the agent could resolve with its own tools — by reading code, querying memory, or running an exec probe — is a question the agent owes itself, not the user. The cost of asking is rarely the user&rsquo;s annoyance; it is the loss of the witnessed-execution discipline. An interruption mid-execution shifts the cost of resolving a doubt from EXECUTE (where it belongs) to the user (where it doesn&rsquo;t), and replaces a witnessed answer with a verbal one. The agent&rsquo;s options at the moment of doubt are: invoke the next skill in the chain, regress to PLAN if a new unknown surfaced, or use witnessed execution to resolve the doubt. Asking the user is not on the list. We deliberately do not enumerate forbidden phrasings here: the test is constructive (did the next action deliver work or withhold it), and a phrase-list trains evasion of the lexicon while preserving the failure.</p>
 
 <h3>3.3 The Last-Resort Clause</h3>
 
@@ -280,7 +269,7 @@ session N+1: same UNKNOWN
 
 <h2>6. Relationship To Earlier Work</h2>
 
-<p class="first">Lawful downgrade as hard rule (&sect;2) extends paper III &sect;2.5 from principle to enforced contract by enumerating forbidden phrases and specifying the required move. The principle was correct; what was missing was the symmetric failure mode and the explicit forbidden-phrase list. Operational experience showed that without enumeration, the principle was applied only against bluffing-strength.</p>
+<p class="first">Lawful downgrade as hard rule (&sect;2) extends paper III &sect;2.5 from principle to enforced contract by specifying the constructive move &mdash; the maximal covering family &mdash; and by recognizing that the failure mode has both a total form (refusal) and a distributed form (single-subset triage that silently abandons the rest). The principle was correct; what was missing was the symmetric failure mode and the constructive obligation that the cover be maximal rather than convenient. Operational experience showed that, without that obligation, agents would attempt one subset, ship it, and treat the remainder as &ldquo;follow-up&rdquo; &mdash; technically not refusing, in practice refusing everything outside the chosen slice. Earlier drafts of this paper enumerated forbidden phrases as the enforcement surface; we now treat the constructive obligation itself as the enforcement surface, since phrase-lists train evasion of the lexicon while preserving the failure.</p>
 
 <p>The autonomy hard rule (&sect;3) operates orthogonally to paper III&rsquo;s governance layer. Governance gates emission; autonomy gates pre-emission interruption. Both protect the witnessed-execution discipline; governance from over-claiming, autonomy from outsourcing the claim to the user.</p>
 
@@ -291,7 +280,7 @@ session N+1: same UNKNOWN
 <h2>7. Limitations</h2>
 
 <ol>
-  <li><strong>Lawful downgrade is a discipline, not a gate.</strong> The forbidden-phrase list catches the explicit refusal shapes; an agent that refuses by silence, by drift, or by a phrase not on the list can still produce zero work. The discipline reduces but does not eliminate the failure surface.</li>
+  <li><strong>Lawful downgrade is a discipline, not a gate.</strong> The constructive obligation &mdash; deliver a maximal covering family, name the exact complement &mdash; catches both total refusal and single-subset triage when the agent honestly attempts to enumerate <em>W</em>. An agent that under-enumerates the witnessable closure (mistakenly believing some <em>S<sub>i</sub></em> is out of reach when an exec probe would settle it) still produces a smaller-than-maximal cover that looks compliant. The discipline reduces but does not eliminate the failure surface; recall (&sect;4) is the structural mitigation, since prior sessions are most likely to know which probes resolve which uncertainty about <em>W</em>.</li>
   <li><strong>Autonomy boundary is fuzzy at the destructive-irreversible line.</strong> An agent reasoning about whether a proposed action is destructive-irreversible can err in either direction: asking too often (autonomy violation) or assuming reversibility too readily (destructive action without consent). The structured pause channel (<code>exec:pause</code>) lets the agent be conservative without re-opening the in-conversation question, but the boundary classification itself remains a judgment call.</li>
   <li><strong>Learning loop is bounded by query quality.</strong> Recall is keyword-similarity over the rs-learn store; an unknown phrased in vocabulary disjoint from the stored fact can miss. The protocol mitigates by recommending two-to-six-word queries and accepting that a miss is a permitted outcome that flows through to fresh execution. Embedding drift across model upgrades is an unaddressed concern.</li>
   <li><strong>Execution budget assumes correct caller behavior.</strong> The 300-second RPC default is transitional. A caller that ignores the deprecation warning indefinitely receives 300-second tasks instead of correctness. The default is a safety net, not a substitute for per-call-site budgets, and a future revision is expected to remove the default.</li>
@@ -310,7 +299,7 @@ session N+1: same UNKNOWN
 
 <h2>9. Conclusion</h2>
 
-<p class="first">We have described four advances. Lawful downgrade is now a hard rule rejecting the symmetric failure to bluffing-strength: refusal of a task whose part is hard is structurally identical to over-claiming. Autonomy is bounded: a written PRD is the user&rsquo;s authorization, and asking mid-execution is forbidden except as last resort routed through a structured pause. The learning loop is closed: recall before naming any unknown, memorize at the moment of resolution, both reading and writing the same rs-learn store across sessions. The execution budget is hardened: every <code>exec:&lt;lang&gt;</code> carries a kill deadline enforced by the runner, every fetch carries a stall watchdog independent of socket-idle timeouts.</p>
+<p class="first">We have described four advances. Lawful downgrade is now a hard rule rejecting both the total and distributed forms of the symmetric failure to bluffing-strength: refusal of a task whose part is hard, and single-subset triage that silently abandons the witnessable rest, are structurally identical to over-claiming. The constructive obligation is a maximal covering family of bounded subsets, executed in full, with the residual complement named explicitly. Autonomy is bounded: a written PRD is the user&rsquo;s authorization, and asking mid-execution is forbidden except as last resort routed through a structured pause. The learning loop is closed: recall before naming any unknown, memorize at the moment of resolution, both reading and writing the same rs-learn store across sessions. The execution budget is hardened: every <code>exec:&lt;lang&gt;</code> carries a kill deadline enforced by the runner, every fetch carries a stall watchdog independent of socket-idle timeouts.</p>
 
 <p>The four advances share a structure. Each names a failure mode that survived the prior disciplines; each maps the mode to an existing primitive (PRD, recall, memorize, exec timeout); each upgrades the primitive&rsquo;s contract from suggested to required. None introduces a new mechanism. The cumulative effect is that more of the agent&rsquo;s behavior is mechanically gated rather than narratively endorsed: the agent that wants to refuse, ask, skip recall, or invoke the runner without a budget finds the path closed and is forced into the witnessed-execution channel.</p>
 
