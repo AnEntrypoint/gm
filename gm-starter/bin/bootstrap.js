@@ -9,10 +9,11 @@ const crypto = require('crypto');
 const { URL } = require('url');
 
 const RELEASE_REPO = 'AnEntrypoint/plugkit-bin';
-const ATTEMPT_TIMEOUT_MS = 30 * 60 * 1000;
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [5000, 30000, 120000];
-const LOCK_STALE_MS = 45 * 60 * 1000;
+const ATTEMPT_TIMEOUT_MS = 60 * 1000;
+const STALL_TIMEOUT_MS = 20 * 1000;
+const MAX_ATTEMPTS = 5;
+const BACKOFF_MS = [2000, 5000, 15000, 30000];
+const LOCK_STALE_MS = 5 * 60 * 1000;
 
 function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
@@ -147,8 +148,16 @@ function fetchToFile(url, destPath, expectedTotal) {
       const out = fs.createWriteStream(destPath, { flags: append ? 'a' : 'w' });
       let bytes = append ? existing : 0;
       let lastLog = Date.now();
+      let lastByte = Date.now();
+      const stallTimer = setInterval(() => {
+        if (Date.now() - lastByte > STALL_TIMEOUT_MS) {
+          clearInterval(stallTimer);
+          req.destroy(new Error(`stalled: no bytes for ${STALL_TIMEOUT_MS}ms`));
+        }
+      }, 2000);
       res.on('data', c => {
         bytes += c.length;
+        lastByte = Date.now();
         if (Date.now() - lastLog > 5000) {
           const pct = expectedTotal ? ` ${Math.floor(bytes / expectedTotal * 100)}%` : '';
           log(`downloading: ${(bytes / 1048576).toFixed(1)} MiB${pct}`);
@@ -156,9 +165,10 @@ function fetchToFile(url, destPath, expectedTotal) {
         }
       });
       res.pipe(out);
-      out.on('finish', () => out.close(() => resolve(bytes)));
-      out.on('error', reject);
-      res.on('error', reject);
+      out.on('finish', () => { clearInterval(stallTimer); out.close(() => resolve(bytes)); });
+      out.on('error', err => { clearInterval(stallTimer); reject(err); });
+      res.on('error', err => { clearInterval(stallTimer); reject(err); });
+      res.on('end', () => clearInterval(stallTimer));
     });
     req.on('timeout', () => { req.destroy(new Error(`timeout after ${ATTEMPT_TIMEOUT_MS}ms`)); });
     req.on('error', reject);
