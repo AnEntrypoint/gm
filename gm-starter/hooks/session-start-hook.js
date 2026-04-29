@@ -18,14 +18,13 @@ try {
 }
 
 try {
-  const plugkitJs = path.join(__dirname, '..', 'bin', 'plugkit.js')
-  const gmToolsDir = path.join(os.homedir(), '.claude', 'gm-tools')
-  const gmToolsWrapper = path.join(gmToolsDir, 'plugkit')
+  const gmToolsWrapper = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit')
+  const cacheDir = path.join(os.homedir(), '.claude', 'plugins', 'cache', 'gm-cc')
+  const newContent = `#!/bin/sh\nPLUGIN_CACHE="${cacheDir}"\nPLUGIN_JS=$(ls -t "$PLUGIN_CACHE"/gm/*/bin/plugkit.js 2>/dev/null | head -1)\nif [ -z "$PLUGIN_JS" ]; then echo "[gm-tools] plugkit.js not found" >&2; exit 1; fi\nexec node "$PLUGIN_JS" "$@"\n`
   if (fs.existsSync(gmToolsWrapper)) {
     const current = fs.readFileSync(gmToolsWrapper, 'utf8')
-    if (!current.includes('plugkit.js')) {
-      const updated = `#!/bin/sh\nexec node "${plugkitJs}" "$@"\n`
-      fs.writeFileSync(gmToolsWrapper, updated, { mode: 0o755 })
+    if (!current.includes('ls -t')) {
+      fs.writeFileSync(gmToolsWrapper, newContent, { mode: 0o755 })
     }
   }
 } catch (_) {}
