@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distribution · gm · 247420</title>
+<meta name="description" content="gm's distribution strategy: turnkey single-binary delivery with fully open source guts. The SQLite-of-coding-agents model.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<script type="module">
+  import { installStyles } from 'https://unpkg.com/anentrypoint-design/dist/247420.js';
+  installStyles();
+  document.documentElement.classList.add('ds-247420');
+</script>
+
+<style>
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar), body > main > header, body > main > nav { display: none !important; }
+body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap { max-width: 78ch; margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; color: var(--panel-text); margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h1, article h2 { font-size: 22px; font-weight: 600; color: var(--panel-text); margin: 32px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); }
+article pre code { padding: 0; background: transparent; }
+article a { color: var(--panel-accent); text-decoration: underline; text-underline-offset: 3px; }
+article a:hover { color: var(--panel-accent-2); }
+article blockquote { margin: 12px 0; padding: 8px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); color: var(--panel-text-2); font-style: italic; }
+article ul, article ol { padding-left: 24px; }
+article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0; }
+article table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+article th, article td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--panel-3); vertical-align: top; }
+article th { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--panel-text-2); }
+.theorem { margin: 16px 0; padding: 12px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); }
+.repo-card { display: grid; grid-template-columns: 200px 1fr; gap: 12px; padding: 10px 14px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); margin: 8px 0; font-size: 13px; }
+.repo-card .repo-name { font-family: var(--ff-mono); color: var(--panel-accent); font-size: 12px; }
+.repo-card .repo-role { color: var(--panel-text); }
+.pipeline { font-family: var(--ff-mono); font-size: 12px; line-height: 1.7; background: var(--panel-2); padding: 14px 18px; border-radius: 6px; white-space: pre; overflow-x: auto; color: var(--panel-text); }
+</style>
+</head>
+<body data-screen-label="gm / distribution">
+<header class="app-topbar">
+  <span class="brand">247420<span class="slash"> / </span>gm</span>
+  <nav>
+    <a href="./index.html">← home</a>
+    <a href="./index.html#process">process</a>
+    <a href="./distribution.html">distribution</a>
+    <a href="./stats.html">stats</a>
+    <a href="./made-with.html">showcase</a>
+    <a href="./paper.html">paper I</a>
+    <a href="./paper2.html">paper II</a>
+    <a href="./paper3.html">paper III</a>
+    <a href="./paper4.html">paper IV</a>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">source ↗</a>
+  </nav>
+</header>
+<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">distribution</span></div>
+
+<div class="title-block">
+  <h1>The SQLite Model:<br>Turnkey Binary, Open All The Way Down</h1>
+  <div class="author">AnEntrypoint</div>
+  <div class="date">April 2026</div>
+</div>
+
+<div class="abstract-block">
+  <div class="abstract-title">Thesis</div>
+  <div class="abstract-text">
+    A coding agent should install in two commands and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every binary in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets a single trusted artifact that &ldquo;just works,&rdquo; and the artifact&rsquo;s entire genealogy &mdash; every Rust crate, every workflow, every signing manifest &mdash; is open source under one organization, one cascade, one push at a time.
+  </div>
+</div>
+
+<article>
+
+<h2>1. Why Distribution Is The Hard Part</h2>
+
+<p class="first">Most coding agents fail at the install step. They ask for a Python virtualenv, a Node version, a Rust toolchain, an environment variable, a config file, an API key, and a directory layout the user has to memorize. By the time the agent runs, the user has spent more time on it than they intended to spend in a week. Worst, every component the agent needs is a separate vendor decision the user has to ratify implicitly.</p>
+
+<p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded &mdash; the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
+
+<p>For an agent, the equivalent is: a single binary, with a single hook into the host runtime, with all the heavy machinery (search, indexing, memory, runner, hook dispatch, browser automation) precompiled and signed in CI from open source repositories.</p>
+
+<h2>2. The Two-Command Install</h2>
+
+<p class="first">Every supported platform installs the same way. For Claude Code:</p>
+
+<pre><code>claude plugin marketplace add AnEntrypoint/gm
+claude plugin install -s user gm@gm</code></pre>
+
+<p>That&rsquo;s the whole thing. No <code>cargo</code>, no <code>npm install</code>, no Python, no PATH edits. The first time the agent runs, the bootstrap script in <code>bin/bootstrap.js</code> resolves the platform-appropriate binary, fetches it from the public GitHub release, verifies its sha256 against a manifest checked into the plugin, and caches it under <code>%LOCALAPPDATA%/plugkit/bin/v&lt;version&gt;/</code>. Subsequent sessions skip the fetch and exec the cached binary directly.</p>
+
+<p>The same shape works on the other eleven platforms (Gemini CLI, OpenCode, Kilo Code, Codex, Copilot CLI, Qwen Code, VS Code, Cursor, Zed, JetBrains, Hermes). Each has a thin platform-specific wrapper; the heavy artifact is the same Rust binary across all of them.</p>
+
+<h3>2.1 What &ldquo;Turnkey&rdquo; Excludes</h3>
+
+<ul>
+  <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs. They need only the host editor or CLI they were already going to use.</li>
+  <li>No native build step at install. Every artifact is precompiled by GitHub Actions runners against the four target tuples (<code>win32-x64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>darwin-arm64</code>; <code>darwin-x64</code> and <code>win32-arm64</code> available on demand) and uploaded to a public release.</li>
+  <li>No daemon to install or supervise. The runner spawns lazily on first <code>exec:&lt;lang&gt;</code> call, registers a port file in <code>$TEMP</code>, and is reused by all subsequent calls in the session.</li>
+  <li>No mandatory secrets at install. The agent runs offline against the local cached binary; the only network event at install time is the one-time fetch from the public release.</li>
+</ul>
+
+<h2>3. Open All The Way Down</h2>
+
+<p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no &ldquo;and then a private build server takes over&rdquo; step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
+
+<div class="repo-card"><span class="repo-name">rs-exec</span><span class="repo-role">The exec runner. Spawns subprocesses for <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>, <code>browser</code>. Owns the background-task store, the port file, the kill-tree implementation, the timeout enforcement loop. The thing that turns a model&rsquo;s &ldquo;run this code&rdquo; into a witnessed process exit.</span></div>
+
+<div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">The code-search backend. Builds a per-project chunked index under <code>.gm/code-search/</code>, exposes <code>exec:codesearch</code>. Two-words-then-iterate query protocol; dense + symbol search blended; PDF pages indexed alongside source.</span></div>
+
+<div class="repo-card"><span class="repo-name">rs-search</span><span class="repo-role">The file-system search backend. Path globs, content greps, type filters &mdash; all the operations that <code>find</code> + <code>rg</code> would cover, but called as one synchronous library function rather than two shelled-out processes.</span></div>
+
+<div class="repo-card"><span class="repo-name">rs-plugkit</span><span class="repo-role">The dispatcher. The single user-facing binary. Receives hook events (PreToolUse, PostToolUse, SessionStart, PromptSubmit, Stop, PreCompact), routes them to the appropriate handler, and embeds the runner, the indexer, and rs-learn. The <code>Cargo.toml</code> in this repo is the version source of truth for the entire distribution.</span></div>
+
+<div class="repo-card"><span class="repo-name">rs-learn</span><span class="repo-role">The memory layer. SQLite-backed graph of episodes, embeddings, and structured facts. Backs <code>exec:recall</code> on the read path and the <code>memorize</code> sub-agent on the write path. Per-project store under <code>.gm/rs-learn.db</code>; tracked in git so memory follows the project across machines.</span></div>
+
+<div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. The orchestrator. Generates the twelve downstream plugins from a single convention-driven source (<code>gm-starter/</code>). Owns the skill bundle, the prompts, the hooks, the bootstrap script, and the publish workflow that fans out to every platform.</span></div>
+
+<h2>4. The Cascade</h2>
+
+<p class="first">Six repositories cooperate but no human steps between them. A push to any of the Rust-side repositories triggers a deterministic cascade that ends with a new plugin commit on every downstream:</p>
+
+<div class="pipeline">rs-exec / rs-codeinsight / rs-search / rs-learn
+  &mdash; push to main
+  &mdash;&gt; .github/workflows/cascade.yml fires rs-plugkit workflow_dispatch
+
+rs-plugkit
+  &mdash; release.yml: cargo update, build 6 binaries, auto-bump patch version
+  &mdash; publish-binaries job uploads to AnEntrypoint/plugkit-bin
+       (sha256 manifest, plugkit.version)
+  &mdash; bumps gm-starter/gm.json::plugkitVersion
+       and gm-starter/bin/plugkit.version in AnEntrypoint/gm
+       (NEVER pushes binaries into gm history)
+
+gm
+  &mdash; that commit triggers gm publish.yml
+  &mdash; 12-platform matrix:
+       node cli.js gm-starter ./build           (regenerates configs)
+       copies plugkit.version + plugkit.sha256  into bin/
+       git init fresh empty dir + rsync + git add -A + git add -f bin/
+       diff --depth 1 against downstream        (no-op detection)
+       git push --force origin main             (1-commit orphan history)
+
+downstream
+  &mdash; gm-cc / gm-gc / gm-oc / gm-kilo / gm-codex / gm-qwen
+  &mdash; gm-copilot-cli / gm-hermes
+  &mdash; gm-vscode / gm-cursor / gm-zed / gm-jetbrains
+  &mdash; each is one orphan commit, ~&lt;1 MB
+  &mdash; /plugin notices new HEAD &rarr; bootstrap.js fetches new binary</div>
+
+<p>No human edits a version string. No human runs <code>cargo build</code>. No human syncs a downstream branch. The cascade is the publishing pipeline. The phrase &ldquo;to update anything, push to the relevant repo&rdquo; is literal: a one-line fix in <code>rs-codeinsight</code> propagates to twelve plugin repos within one CI cycle.</p>
+
+<h2>5. Why The Downstreams Are Orphan-Committed</h2>
+
+<p class="first">Each of the twelve downstream repos is reset to a single orphan commit on every publish. This is unusual; the more common pattern is to append commits and let downstream repos grow. We chose orphan commits because:</p>
+
+<ul>
+  <li><strong>Each downstream is a build artifact, not a project.</strong> Its history is the orchestrator&rsquo;s history, not its own. Letting it accumulate per-publish commits would conflate build output with development.</li>
+  <li><strong>The download is the product.</strong> A user who clones <code>gm-cc</code> wants the latest plugin, not its retroactive build log. The single-commit form makes the clone cheap (under 1 MB) and the contents trivial to diff against the next publish.</li>
+  <li><strong>Force-push is the publishing primitive.</strong> Each publish is a fresh empty <code>git init</code>, an <code>rsync</code> of the build output, and a <code>git push --force</code>. There is no merge, no rebase, no history to preserve. The downstream is a one-frame snapshot that the orchestrator overwrites on every cascade tick.</li>
+</ul>
+
+<h3>5.1 The Binary Is Never In gm History</h3>
+
+<p>A subtle but important rule: the multi-megabyte plugkit binary lives only in the <code>AnEntrypoint/plugkit-bin</code> Releases. It is fetched by <code>bootstrap.js</code> at first use and cached locally. It is <em>never</em> committed to <code>gm</code>, and never to any downstream plugin repo. The plugin repo carries a <code>bin/plugkit.version</code> + <code>bin/plugkit.sha256</code> manifest and the bootstrap script. This keeps every plugin repo small, makes the orchestrator&rsquo;s git history fast to clone, and decouples plugin churn from binary churn.</p>
+
+<h2>6. The Bootstrap Cache</h2>
+
+<p class="first">The first time any platform invokes the plugin&rsquo;s <code>plugkit</code> entry point, <code>bin/bootstrap.js</code> resolves the binary. Its responsibilities, in order:</p>
+
+<ol>
+  <li>Read <code>bin/plugkit.version</code> for the required version.</li>
+  <li>Resolve the per-platform cache directory: <code>%LOCALAPPDATA%/plugkit/bin/</code> on Windows, <code>~/Library/Caches/plugkit/bin/</code> on macOS, <code>$XDG_CACHE_HOME/plugkit/bin/</code> elsewhere. Fall back to <code>$TMPDIR/plugkit-cache/bin/</code> if the primary cache is unwritable.</li>
+  <li>If <code>v&lt;version&gt;/&lt;binary&gt;</code> exists alongside an <code>.ok</code> sentinel, use it. No network call.</li>
+  <li>Otherwise, acquire a per-version lock, fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/&lt;binary&gt;</code>, verify the sha256 against the embedded manifest, atomically rename into place, write the <code>.ok</code> sentinel, prune older versions.</li>
+</ol>
+
+<p>The fetch path is hardened against the failure modes encountered during early production: a 60-second per-attempt socket timeout, a 20-second stall watchdog that fires when the response stream stops producing bytes (a TCP connection can stay open and idle indefinitely otherwise), five attempts with backoff, a 5-minute lock TTL so a stale lockfile from a crashed install does not block forever, and HTTP <code>Range</code>-resumable downloads so a partially complete fetch survives a retry. These details are not user-visible; the user sees a small progress line on first run and never sees it again.</p>
+
+<h2>7. The 12-Platform Matrix</h2>
+
+<p class="first">The same core (Rust binary, skills, prompts, hooks, lang plugins) ships to twelve hosts. Each host has a different conception of what a &ldquo;plugin&rdquo; is &mdash; a Claude Code plugin is a marketplace package, a VS Code extension is a VSIX, a JetBrains plugin is a ZIP, OpenCode wants a directory, Codex wants a config block. The <code>cli.js gm-starter ./build</code> step is a code generator that emits twelve different shapes of the same payload.</p>
+
+<table>
+<thead><tr><th>id</th><th>host</th><th>shape</th></tr></thead>
+<tbody>
+<tr><td>gm-cc</td><td>Claude Code</td><td>marketplace plugin</td></tr>
+<tr><td>gm-gc</td><td>Gemini CLI</td><td>config + skills directory</td></tr>
+<tr><td>gm-oc</td><td>OpenCode</td><td>npm package, skills bundled</td></tr>
+<tr><td>gm-kilo</td><td>Kilo Code</td><td>npm package, skills bundled</td></tr>
+<tr><td>gm-codex</td><td>Codex</td><td>config + agents directory</td></tr>
+<tr><td>gm-copilot-cli</td><td>GitHub Copilot CLI</td><td>extension package</td></tr>
+<tr><td>gm-qwen</td><td>Qwen Code</td><td>config directory</td></tr>
+<tr><td>gm-hermes</td><td>Hermes Agent</td><td>plugin (work-in-progress)</td></tr>
+<tr><td>gm-vscode</td><td>VS Code</td><td>VSIX extension</td></tr>
+<tr><td>gm-cursor</td><td>Cursor</td><td>extension</td></tr>
+<tr><td>gm-zed</td><td>Zed</td><td>extension</td></tr>
+<tr><td>gm-jetbrains</td><td>IntelliJ family</td><td>plugin ZIP</td></tr>
+</tbody>
+</table>
+
+<p>Adding a thirteenth host is a single registration in <code>lib/page-generator.js::PLATFORM_META</code> plus an adapter class under <code>platforms/</code>. The build matrix picks it up automatically; the cascade fans out to it on the next publish.</p>
+
+<h2>8. Comparison To Alternative Distribution Models</h2>
+
+<table>
+<thead><tr><th>model</th><th>install cost</th><th>openness</th><th>per-update cost</th></tr></thead>
+<tbody>
+<tr><td>vendor-managed cloud</td><td>account + key</td><td>black box</td><td>vendor-controlled</td></tr>
+<tr><td>language-runtime package</td><td>toolchain + transitive deps</td><td>open if all deps are</td><td>npm/pip/cargo update</td></tr>
+<tr><td>self-built from source</td><td>full toolchain</td><td>fully open</td><td>manual rebuild</td></tr>
+<tr><td>SQLite-style amalgamation</td><td>one file</td><td>fully open</td><td>replace one file</td></tr>
+<tr><td>gm</td><td>two commands</td><td>fully open, six repos</td><td>cascade auto-updates</td></tr>
+</tbody>
+</table>
+
+<p>The closest cousin is the SQLite amalgamation: one artifact, no install scaffolding, transparent provenance. The differences are that gm&rsquo;s artifact is a precompiled native binary rather than a source amalgamation (because the user is not compiling against it; the user is exec-ing it), and that updates arrive via a versioned cache directory rather than a swap of one file.</p>
+
+<h2>9. Trust And Verifiability</h2>
+
+<p class="first">A turnkey binary distribution buys convenience by trusting whoever built the binary. We make this trust auditable, not implicit:</p>
+
+<ul>
+  <li><strong>Public build pipeline.</strong> Every binary is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
+  <li><strong>SHA-256 manifest.</strong> The plugin ships <code>bin/plugkit.sha256</code> committed alongside <code>bin/plugkit.version</code>. The bootstrap verifies the downloaded binary against this manifest before caching. A binary whose hash does not match is rejected and the partial file is removed.</li>
+  <li><strong>Reproducible enough.</strong> Linux and macOS builds are reproducible per-toolchain; Windows MSVC builds are not bit-reproducible due to PE timestamps but their hashes are still anchored at the <code>plugkit.sha256</code> commit, so a man-in-the-middle attempt would fail verification before exec.</li>
+  <li><strong>Forkable.</strong> Any user who does not trust the published binaries can fork all six repositories, point <code>RELEASE_REPO</code> in <code>bootstrap.js</code> at their own fork, and ship a private cascade with the same shape. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
+</ul>
+
+<h2>10. Why Not Just Publish To npm / cargo / pip?</h2>
+
+<p class="first">A reasonable question. Three reasons:</p>
+
+<ol>
+  <li><strong>Multiple language ecosystems.</strong> The agent has to live inside Claude Code (a Node.js host), Gemini CLI (Node.js), OpenCode (Node.js), VS Code (Node.js / VS Code API), and JetBrains (JVM / IntelliJ API), among others. There is no single registry that delivers to all of them. Every platform has its own plugin shape; the cascade builds each shape from one source.</li>
+  <li><strong>Toolchain absence at install.</strong> Many users install Claude Code with no Node toolchain, no Rust toolchain, no Python. <code>npm install</code> at agent install time would fail; <code>cargo install</code> would require <code>rustup</code>. The bootstrap-fetch model assumes only that the host can <code>fetch()</code> over HTTPS, which is universally true.</li>
+  <li><strong>Binary size.</strong> The plugkit binary is ~104 MB. Pushing that into npm, much less twelve plugin repos, would inflate clone times and registry storage out of proportion to the install benefit. The Releases-bucket model keeps binaries out of git history while keeping them addressable by version.</li>
+</ol>
+
+<h2>11. Operational Lessons</h2>
+
+<p class="first">Three production failures shaped the current pipeline:</p>
+
+<ul>
+  <li><strong>Stalled fetches looked like success.</strong> An early bootstrap had only an HTTP socket-idle timeout. A response stream that opens, gets a few bytes, and then stalls held the connection for thirty minutes before the timeout fired. The stall watchdog &mdash; a 20-second timer reset on every chunk &mdash; closes this gap.</li>
+  <li><strong>Hooks without timeouts spawned process avalanches.</strong> Pre-timeout-enforcement, a hook that called the runner without a budget could leak children indefinitely under load. The <code>execute</code> RPC now applies a 300-second default with a stderr deprecation warning when called without an explicit budget, and the CLI <code>exec</code> / <code>bash</code> subcommands reject missing or zero <code>--timeout</code> outright.</li>
+  <li><strong>Concurrent CI publishes raced on the same downstream branch.</strong> The publish workflow now uses a fresh-init + force-push pattern rather than fetch-then-merge, which is faster and immune to the &ldquo;rejected: fetch first&rdquo; class of CI race.</li>
+</ul>
+
+<p>None of these failures were architectural &mdash; the architecture was correct. They were operational holes that the architecture made cheap to plug.</p>
+
+<h2>12. The Invariant</h2>
+
+<div class="theorem">
+  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm</code> with two commands and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, signed by SHA-256, fetched over HTTPS at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories and redirecting one constant. There is no proprietary core, no private server, no locked-in vendor surface, and no toolchain on the user&rsquo;s machine.</em>
+</div>
+
+<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. Two commands in. Six repositories out. Nothing in between.</p>
+
+</article>
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper I</a> · <a href="./paper2.html" style="color:var(--panel-text-2)">paper II</a> · <a href="./paper3.html" style="color:var(--panel-text-2)">paper III</a> · <a href="./paper4.html" style="color:var(--panel-text-2)">paper IV</a></span>
+<span>probably emerging 🌀</span>
+</footer>
+
+</body></html>

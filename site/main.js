@@ -42,11 +42,13 @@ const RULES = [
 const NAV = [
   ['#works', 'works'],
   ['#process', 'process'],
+  ['./distribution.html', 'distribution'],
   ['./stats.html', 'stats'],
   ['./made-with.html', 'showcase'],
   ['./paper.html', 'paper I'],
   ['./paper2.html', 'paper II'],
   ['./paper3.html', 'paper III'],
+  ['./paper4.html', 'paper IV'],
   ['https://github.com/AnEntrypoint/gm', 'source ↗'],
 ];
 
@@ -75,7 +77,8 @@ function Hero() {
       h('span', { class: 'accent' }, 'humor is load-bearing.'),
     ),
     h('div', { class: 'actions' },
-      h('a', { class: 'gm-btn', href: './paper.html' }, 'read the paper'),
+      h('a', { class: 'gm-btn', href: './distribution.html' }, 'distribution'),
+      h('a', { class: 'gm-btn ghost', href: './paper4.html' }, 'paper IV'),
       h('a', { class: 'gm-btn ghost', href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener' }, 'source ↗'),
     ),
     h('div', { class: 'gm-install' },
