@@ -34,12 +34,8 @@ function createAdapterClass(cfg) {
       return cfg.generatePackageJson ? cfg.generatePackageJson(pluginSpec, extraFields) : super.generatePackageJson(pluginSpec, extraFields);
     }
 
-    buildHookCommand(hookFile) {
-      return cfg.buildHookCommand ? cfg.buildHookCommand(hookFile) : null;
-    }
-
-    buildHooksMap(pluginSpec) {
-      return cfg.buildHooksMap ? cfg.buildHooksMap.call(this, pluginSpec) : super.buildHooksMap(pluginSpec);
+    buildHookSpec(pluginSpec) {
+      return cfg.buildHookSpec ? cfg.buildHookSpec.call(this, pluginSpec) : super.buildHookSpec(pluginSpec);
     }
 
     loadSkillsFromSource(sourceDir) {

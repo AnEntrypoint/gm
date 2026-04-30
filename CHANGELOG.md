@@ -1,3 +1,11 @@
+## 2026-04-30 - hook-spec lifted into per-repo hooks/hooks.spec.json
+
+Each generated CLI repo (gm-cc, gm-gc, gm-codex, gm-oc, gm-kilo, gm-qwen, gm-copilot-cli) now ships its own `hooks/hooks.spec.json` next to the rendered `hooks.json`. The spec is the canonical configuration; hooks.json is the platform-targeted render that buildHooksJson(spec) produces. Downstream tooling can read the spec to introspect this repo's plugkit setup without parsing platform-specific hooks.json shapes.
+
+Spec format: `{schemaVersion: 1, description, envVar, plugkitInvoker?, events: [{eventKey, wrapMode?, commands: [{kind:'plugkit'|'js', subcommand|file, timeout, subcommandRename?}]}]}`. Renamed every platform's `buildHooksMap()` override to `buildHookSpec()` returning the spec object directly. cli-adapter.generateHooksJson runs buildHooksJson(spec).hooks for the rendered output and emits the spec verbatim as hooks.spec.json.
+
+test.js now asserts spec presence and roundtrip equality (spec → buildHooksJson → must match hooks.json bytes) for all 7 platforms; future drift between spec and rendered output fails CI.
+
 ## 2026-04-30 - hook-spec descriptor unification
 
 7 platforms (cc, gc, codex, oc, kilo, qwen, copilot-cli) had drifted into 7 hand-written `buildHooksMap()` overrides spread across `platforms/cli-config-shared.js` and `platforms/copilot-cli.js`, plus a coexisting `TemplateBuilder.buildHooksMap` and `lib/hook-builder.js::buildHooksMapCustom` that were no longer the source of any output. Adding a platform required learning every dimension by reading the existing examples.

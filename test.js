@@ -116,4 +116,25 @@ test('platform list deterministic', () => {
   assertDeterministic('platform sort', () => [...platforms].sort(), 0);
 });
 
+test('hooks.spec.json present and roundtrips to hooks.json', () => {
+  const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gm-spec-'));
+  const r = spawnSync('node', ['cli.js', 'gm-starter', tmp], { encoding: 'utf8', timeout: 120000 });
+  assert(r.status === 0, `cli.js failed: ${(r.stderr || '').slice(-500)}`);
+  const { buildHooksJson } = require('./lib/hook-spec');
+  const cliPlatforms = ['gm-cc', 'gm-gc', 'gm-codex', 'gm-oc', 'gm-kilo', 'gm-qwen', 'gm-copilot-cli'];
+  for (const p of cliPlatforms) {
+    const specPath = path.join(tmp, p, 'hooks', 'hooks.spec.json');
+    const jsonPath = path.join(tmp, p, 'hooks', 'hooks.json');
+    assert(fs.existsSync(specPath), `${specPath} missing`);
+    assert(fs.existsSync(jsonPath), `${jsonPath} missing`);
+    const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+    assert(spec.schemaVersion === 1, `${p}: schemaVersion != 1`);
+    assert(Array.isArray(spec.events), `${p}: events not array`);
+    const json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const reHooks = buildHooksJson({ envVar: spec.envVar, plugkitInvoker: spec.plugkitInvoker, events: spec.events }).hooks;
+    assert.deepStrictEqual(reHooks, json.hooks, `${p}: spec roundtrip differs from hooks.json`);
+  }
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 console.log('\n✓ All tests passed');

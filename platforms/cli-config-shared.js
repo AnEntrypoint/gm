@@ -1,6 +1,5 @@
 const factory = require('./cli-config-factory');
 const TemplateBuilder = require('../lib/template-builder');
-const { buildHooksJson } = require('../lib/hook-spec');
 
 // Shared boilerplate embedded in generated install scripts (postinstall / npm install path)
 const NODE_MODULES_HELPERS = `
@@ -899,8 +898,8 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
       'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
     };
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'CLAUDE_PLUGIN_ROOT',
       plugkitInvoker: 'node',
       events: [
@@ -927,7 +926,7 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
           { kind: 'plugkit', subcommand: 'stop-git', timeout: 210000 }
         ]}
       ]
-    }).hooks;
+    };
   },
   generateReadme(spec) {
     const repoName = 'gm-cc';
@@ -1449,8 +1448,8 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       'hooks/session-start-hook.js': createGcSessionStartHook(),
     };
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'extensionPath',
       events: [
         { eventKey: 'BeforeTool', commands: [{ kind: 'js', file: 'pre-tool-use-hook.js', timeout: 3600 }] },
@@ -1461,7 +1460,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
           { kind: 'js', file: 'stop-hook-git.js', timeout: 60000 }
         ]}
       ]
-    }).hooks;
+    };
   },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
@@ -1617,8 +1616,8 @@ MIT
       'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
     };
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'CODEX_PLUGIN_ROOT',
       plugkitInvoker: 'node',
       events: [
@@ -1641,7 +1640,7 @@ MIT
           { kind: 'plugkit', subcommand: 'stop-git', timeout: 210000 }
         ]}
       ]
-    }).hooks;
+    };
   }
 });
 
@@ -1687,8 +1686,8 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
       }
     });
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'OC_PLUGIN_ROOT',
       plugkitInvoker: 'node',
       events: [
@@ -1700,7 +1699,7 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
           { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
         ]}
       ]
-    }).hooks;
+    };
   },
   getAdditionalFiles(spec) {
     return {
@@ -1758,8 +1757,8 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
       }
     });
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'KILO_PLUGIN_ROOT',
       plugkitInvoker: 'node',
       events: [
@@ -1771,7 +1770,7 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
           { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
         ]}
       ]
-    }).hooks;
+    };
   },
   getAdditionalFiles(spec) {
     return {
@@ -1939,8 +1938,8 @@ const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
       'cli.js': createQwenInstallerScript(),
     };
   },
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'CLAUDE_PLUGIN_ROOT',
       plugkitInvoker: 'node',
       events: [
@@ -1953,7 +1952,7 @@ const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
           { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
         ]}
       ]
-    }).hooks;
+    };
   },
   generateReadme(spec) {
     return `# gm-qwen for Qwen Code

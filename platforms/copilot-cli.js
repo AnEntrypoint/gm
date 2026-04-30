@@ -1,7 +1,6 @@
 const CLIAdapter = require('../lib/cli-adapter');
 const gen = require('./copilot-cli-gen');
 const { createCcPromptSubmitHook, createCcPreToolUseHook, createCcPostToolUseHook } = require('./cli-config-shared');
-const { buildHooksJson } = require('../lib/hook-spec');
 
 class CopilotCLIAdapter extends CLIAdapter {
   constructor() {
@@ -41,6 +40,7 @@ class CopilotCLIAdapter extends CLIAdapter {
       'package.json': this.generatePackageJson(pluginSpec, this.getPackageJsonFields()),
       '.mcp.json': this.generateMcpJson(pluginSpec),
       'hooks/hooks.json': this.generateHooksJson(pluginSpec),
+      'hooks/hooks.spec.json': this.generateHookSpecJson(),
       'agents/gm.md': readFile(this.getAgentSourcePaths('gm')),
       'agents/memorize.md': readFile(this.getAgentSourcePaths('memorize')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
@@ -133,8 +133,8 @@ State in \`~/.gh/extensions/gm/state.json\`.
     return super.getHookSourcePaths(hook);
   }
 
-  buildHooksMap() {
-    return buildHooksJson({
+  buildHookSpec() {
+    return {
       envVar: 'COPILOT_EXTENSION_DIR',
       plugkitInvoker: 'binary',
       events: [
@@ -154,7 +154,7 @@ State in \`~/.gh/extensions/gm/state.json\`.
           { kind: 'plugkit', subcommand: 'stop-git', subcommandRename: 'session-end-git', timeout: 210000 }
         ]}
       ]
-    }).hooks;
+    };
   }
 }
 
