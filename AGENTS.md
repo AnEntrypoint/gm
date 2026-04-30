@@ -92,6 +92,10 @@ Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cl
 
 **Timeout enforcement**: `timeoutMs` is mandatory in the `execute` RPC — rs-exec hard-rejects missing or zero values with `anyhow!("timeoutMs required (positive integer milliseconds)")`. rs-plugkit CLI layer (Cmd::Exec, Cmd::Bash) accepts `--timeout-ms <u64>` with a 300_000ms default and stderr deprecation warning. On timeout, rs-exec returns `"timedOut": true` alongside partial output (preserved in both success and failed branches). plugkit prints `[exec timed out after Nms; partial output above]` to stderr and returns exit code 124 when no child exit code was captured. Downstream code (hook, agent-side callers) must pass explicit per-call-site budgets to rs-exec's execute RPC.
 
+## Windows spawnSync .cmd/.bat EINVAL
+
+Any Node.js `spawnSync`/`spawn` call targeting a `.cmd` or `.bat` file on Windows (vsce, antigravity, code, npx/bunx shims, any Windows-only CLI) MUST set `shell: true` and quote args containing spaces or special chars. Without `shell: true` it fails with `spawnSync <path>.cmd EINVAL` due to the CVE-2024-27980 mitigation in all current Node versions. Applies to every platform installer in `platforms/*.js` and any generated bin scripts.
+
 ## exec:nodejs Silent Errors
 
 exec:nodejs code that hits fs.readFileSync ENOENT or other synchronous system errors appears to complete silently (no output, exit code 0) until rs-exec receives the bun 1.3.8 mitigation via cascade. Before cascade reaches downstream gm-cc, wrap filesystem operations in explicit try/catch blocks that call `console.error(e)` and `process.exit(1)` to surface errors.
