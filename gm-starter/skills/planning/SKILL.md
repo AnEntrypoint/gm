@@ -164,9 +164,23 @@ No comments. No scattered test files. 200-line limit per file. Fail loud. No dup
 
 ## SINGLE INTEGRATION TEST POLICY
 
-One `test.js` at project root. 200-line max. No fixtures, mocks, or scattered test files under any naming convention. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
+One `test.js` at project root. **200-line hard cap.** No fixtures, mocks, or scattered test files under any naming convention. Plain assertions, real data, real system. `gm-complete` runs it. Failure = regression to EXECUTE.
 
 Any second test runner — under any name, in any directory — is a smuggled parallel surface and fights the discipline. If a behavior needs to be exercised in-page, register it in `window.__debug` and assert via `test.js`.
+
+**Purpose: maximum surface coverage in 200 lines.** test.js is a budget, not a target. Every line should witness a load-bearing behavior; redundant assertions are dead weight. Subsystems get *one* group each — combined groups (e.g. `profiles+observability+auth+context+cron+batch`) are the norm, not the exception. As thoth grew from 17 → 21 → 14 named groups while the surface tripled, the win came from collapsing per-subsystem groups into multi-subsystem ones.
+
+**Use overlap to exclude.** When subsystem A's test exercises B as a side effect, B does not need its own group — drop the redundant assertion. Examples that have proven out:
+- The agent-machine tool-loop test exercises bash dispatch → no separate bash test needed beyond a smoke-call inside the tools+toolsets group.
+- The dashboard test asserts the API surface AND that the registry has ≥N tools → covers tool registration coverage.
+- The plugins+memory group exercises observability metrics + achievements → no need for a separate plugins-extra group.
+- The gateway test exercising one platform plus a platform-stub-shape loop covers all 18 adapters in one group.
+
+**Adding a new subsystem:** first try to fold its assertion into the closest existing group. Only create a new group when the subsystem's failure mode is genuinely orthogonal (e.g. compressor's iterative-update behavior is not exercised by any other group). Test surface should grow linearly with subsystem count, not multiplicatively, and the line budget is the forcing function.
+
+**Pattern that works:** name combined groups by joining their subsystems with `+`, e.g. `home+config+skin`, `mcp+swe+distributions+account+credpool`, `env+pi+cli+tui+setup+website`. Future readers see the coverage at a glance. A group title with 4–6 components is healthy; a group with 1 component should be questioned.
+
+**Hygiene at edit time:** every change to test.js prefers compaction over expansion. If `wc -l test.js > 200`, the discipline is *not* "split" — it's "merge groups + drop redundancy" until it fits. If the budget is genuinely insufficient for the load-bearing surface, the right move is to question whether the assertion is load-bearing, not to lift the cap.
 
 ## RESPONSE POLICY
 
