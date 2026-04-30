@@ -1,5 +1,6 @@
 const factory = require('./cli-config-factory');
 const TemplateBuilder = require('../lib/template-builder');
+const { buildHooksJson } = require('../lib/hook-spec');
 
 // Shared boilerplate embedded in generated install scripts (postinstall / npm install path)
 const NODE_MODULES_HELPERS = `
@@ -899,19 +900,34 @@ const cc = factory('cc', 'Claude Code', 'CLAUDE.md', 'CLAUDE.md', {
     };
   },
   buildHooksMap() {
-    const envVar = 'CLAUDE_PLUGIN_ROOT';
-    const plugkit = `node \${${envVar}}/bin/plugkit.js hook`;
-    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
-    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
-    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
-    return {
-      PreToolUse: wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
-      PostToolUse: wrap(jsHook('post-tool-use-hook.js', 3000)),
-      SessionStart: wrap([hook('session-start', 180000), jsHook('session-start-hook.js', 3000)]),
-      UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
-      PreCompact: wrap(hook('pre-compact', 30000)),
-      Stop: wrap([hook('stop', 15000), hook('stop-git', 210000)]),
-    };
+    return buildHooksJson({
+      envVar: 'CLAUDE_PLUGIN_ROOT',
+      plugkitInvoker: 'node',
+      events: [
+        { eventKey: 'PreToolUse', commands: [
+          { kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 },
+          { kind: 'js', file: 'pre-tool-use-hook.js', timeout: 2000 }
+        ]},
+        { eventKey: 'PostToolUse', commands: [
+          { kind: 'js', file: 'post-tool-use-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'SessionStart', commands: [
+          { kind: 'plugkit', subcommand: 'session-start', timeout: 180000 },
+          { kind: 'js', file: 'session-start-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'UserPromptSubmit', commands: [
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 },
+          { kind: 'js', file: 'prompt-submit-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'PreCompact', commands: [
+          { kind: 'plugkit', subcommand: 'pre-compact', timeout: 30000 }
+        ]},
+        { eventKey: 'Stop', commands: [
+          { kind: 'plugkit', subcommand: 'stop', timeout: 15000 },
+          { kind: 'plugkit', subcommand: 'stop-git', timeout: 210000 }
+        ]}
+      ]
+    }).hooks;
   },
   generateReadme(spec) {
     const repoName = 'gm-cc';
@@ -1434,15 +1450,18 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     };
   },
   buildHooksMap() {
-    return {
-      BeforeTool: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/pre-tool-use-hook.js', timeout: 3600 }] }],
-      SessionStart: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/session-start-hook.js', timeout: 180000 }] }],
-      BeforeAgent: [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${extensionPath}/hooks/prompt-submit-hook.js', timeout: 60000 }] }],
-      SessionEnd: [{ matcher: '*', hooks: [
-        { type: 'command', command: 'node ${extensionPath}/hooks/stop-hook.js', timeout: 300000 },
-        { type: 'command', command: 'node ${extensionPath}/hooks/stop-hook-git.js', timeout: 60000 }
-      ] }]
-    };
+    return buildHooksJson({
+      envVar: 'extensionPath',
+      events: [
+        { eventKey: 'BeforeTool', commands: [{ kind: 'js', file: 'pre-tool-use-hook.js', timeout: 3600 }] },
+        { eventKey: 'SessionStart', commands: [{ kind: 'js', file: 'session-start-hook.js', timeout: 180000 }] },
+        { eventKey: 'BeforeAgent', commands: [{ kind: 'js', file: 'prompt-submit-hook.js', timeout: 60000 }] },
+        { eventKey: 'SessionEnd', commands: [
+          { kind: 'js', file: 'stop-hook.js', timeout: 300000 },
+          { kind: 'js', file: 'stop-hook-git.js', timeout: 60000 }
+        ]}
+      ]
+    }).hooks;
   },
   generateReadme(spec) {
     return `# ${spec.name} for Gemini CLI\n\n## Installation\n\n**Windows and Unix:**\n\`\`\`bash\ngit clone https://github.com/AnEntrypoint/gm-gc ~/.gemini/extensions/${spec.name}\n\`\`\`\n\n**Windows PowerShell:**\n\`\`\`powershell\ngit clone https://github.com/AnEntrypoint/gm-gc \"\\$env:APPDATA\\gemini\\extensions\\${spec.name}\"\n\`\`\`\n\n## Automatic Path Resolution\n\nHooks automatically use \`\${extensionPath}\` for path resolution. No manual environment variable setup required. The extension is fully portable.\n\n## Features\n\n- MCP tools for code execution and search\n- State machine agent policy (gm)\n- Stop hook verification loop\n- Git enforcement on session end\n- AST analysis via thorns at session start\n\nThe extension activates automatically on session start.\n`;
@@ -1599,18 +1618,30 @@ MIT
     };
   },
   buildHooksMap() {
-    const envVar = 'CODEX_PLUGIN_ROOT';
-    const plugkit = `node \${${envVar}}/bin/plugkit.js hook`;
-    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
-    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
-    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
-    return {
-      PreToolUse: wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
-      PostToolUse: wrap(jsHook('post-tool-use-hook.js', 3000)),
-      SessionStart: wrap(hook('session-start', 180000)),
-      UserPromptSubmit: wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
-      Stop: wrap([hook('stop', 15000), hook('stop-git', 210000)]),
-    };
+    return buildHooksJson({
+      envVar: 'CODEX_PLUGIN_ROOT',
+      plugkitInvoker: 'node',
+      events: [
+        { eventKey: 'PreToolUse', commands: [
+          { kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 },
+          { kind: 'js', file: 'pre-tool-use-hook.js', timeout: 2000 }
+        ]},
+        { eventKey: 'PostToolUse', commands: [
+          { kind: 'js', file: 'post-tool-use-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'SessionStart', commands: [
+          { kind: 'plugkit', subcommand: 'session-start', timeout: 180000 }
+        ]},
+        { eventKey: 'UserPromptSubmit', commands: [
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 },
+          { kind: 'js', file: 'prompt-submit-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'Stop', commands: [
+          { kind: 'plugkit', subcommand: 'stop', timeout: 15000 },
+          { kind: 'plugkit', subcommand: 'stop-git', timeout: 210000 }
+        ]}
+      ]
+    }).hooks;
   }
 });
 
@@ -1657,13 +1688,19 @@ const oc = factory('oc', 'OpenCode', 'opencode.json', 'GM.md', {
     });
   },
   buildHooksMap() {
-    const hooks = {};
-    hooks['message.updated'] = [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit', timeout: 60000 }] }];
-    hooks['session.closing'] = [{ matcher: '*', hooks: [
-      { type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook stop', timeout: 300000 },
-      { type: 'command', command: 'node ${OC_PLUGIN_ROOT}/bin/plugkit.js hook stop-git', timeout: 60000 }
-    ] }];
-    return hooks;
+    return buildHooksJson({
+      envVar: 'OC_PLUGIN_ROOT',
+      plugkitInvoker: 'node',
+      events: [
+        { eventKey: 'message.updated', commands: [
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 }
+        ]},
+        { eventKey: 'session.closing', commands: [
+          { kind: 'plugkit', subcommand: 'stop', timeout: 300000 },
+          { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
+        ]}
+      ]
+    }).hooks;
   },
   getAdditionalFiles(spec) {
     return {
@@ -1722,13 +1759,19 @@ const kilo = factory('kilo', 'Kilo CLI', 'kilocode.json', 'KILO.md', {
     });
   },
   buildHooksMap() {
-    const hooks = {};
-    hooks['message.updated'] = [{ matcher: '*', hooks: [{ type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook prompt-submit', timeout: 60000 }] }];
-    hooks['session.closing'] = [{ matcher: '*', hooks: [
-      { type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook stop', timeout: 300000 },
-      { type: 'command', command: 'node ${KILO_PLUGIN_ROOT}/bin/plugkit.js hook stop-git', timeout: 60000 }
-    ] }];
-    return hooks;
+    return buildHooksJson({
+      envVar: 'KILO_PLUGIN_ROOT',
+      plugkitInvoker: 'node',
+      events: [
+        { eventKey: 'message.updated', commands: [
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 }
+        ]},
+        { eventKey: 'session.closing', commands: [
+          { kind: 'plugkit', subcommand: 'stop', timeout: 300000 },
+          { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
+        ]}
+      ]
+    }).hooks;
   },
   getAdditionalFiles(spec) {
     return {
@@ -1897,14 +1940,20 @@ const qwen = factory('qwen', 'Qwen Code', 'qwen-extension.json', 'CLAUDE.md', {
     };
   },
   buildHooksMap() {
-    const root = '${CLAUDE_PLUGIN_ROOT}';
-    return {
-      PreToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook pre-tool-use`, timeout: 3600 }] }],
-      SessionStart: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook session-start`, timeout: 180000 }] }],
-      UserPromptSubmit: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook prompt-submit`, timeout: 60000 }] }],
-      PreCompact: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook pre-compact`, timeout: 30000 }] }],
-      Stop: [{ matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop`, timeout: 300000 }] }, { matcher: '*', hooks: [{ type: 'command', command: `node ${root}/bin/plugkit.js hook stop-git`, timeout: 60000 }] }]
-    };
+    return buildHooksJson({
+      envVar: 'CLAUDE_PLUGIN_ROOT',
+      plugkitInvoker: 'node',
+      events: [
+        { eventKey: 'PreToolUse', commands: [{ kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 }] },
+        { eventKey: 'SessionStart', commands: [{ kind: 'plugkit', subcommand: 'session-start', timeout: 180000 }] },
+        { eventKey: 'UserPromptSubmit', commands: [{ kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 }] },
+        { eventKey: 'PreCompact', commands: [{ kind: 'plugkit', subcommand: 'pre-compact', timeout: 30000 }] },
+        { eventKey: 'Stop', wrapMode: 'flat-matchers', commands: [
+          { kind: 'plugkit', subcommand: 'stop', timeout: 300000 },
+          { kind: 'plugkit', subcommand: 'stop-git', timeout: 60000 }
+        ]}
+      ]
+    }).hooks;
   },
   generateReadme(spec) {
     return `# gm-qwen for Qwen Code

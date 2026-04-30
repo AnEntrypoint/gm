@@ -1,6 +1,7 @@
 const CLIAdapter = require('../lib/cli-adapter');
 const gen = require('./copilot-cli-gen');
 const { createCcPromptSubmitHook, createCcPreToolUseHook, createCcPostToolUseHook } = require('./cli-config-shared');
+const { buildHooksJson } = require('../lib/hook-spec');
 
 class CopilotCLIAdapter extends CLIAdapter {
   constructor() {
@@ -132,24 +133,28 @@ State in \`~/.gh/extensions/gm/state.json\`.
     return super.getHookSourcePaths(hook);
   }
 
-  buildHookCommand(hookEvent) {
-    const hookEventMap = { 'stop': 'session-end', 'stop-git': 'session-end-git' };
-    const mappedEvent = hookEventMap[hookEvent] || hookEvent;
-    return `\${COPILOT_EXTENSION_DIR}/bin/plugkit hook ${mappedEvent}`;
-  }
-
   buildHooksMap() {
-    const envVar = 'COPILOT_EXTENSION_DIR';
-    const plugkit = `\${${envVar}}/bin/plugkit hook`;
-    const hook = (h, t) => ({ type: 'command', command: `${plugkit} ${h}`, timeout: t });
-    const jsHook = (f, t) => ({ type: 'command', command: `node \${${envVar}}/hooks/${f}`, timeout: t });
-    const wrap = (cmds) => [{ matcher: '*', hooks: Array.isArray(cmds) ? cmds : [cmds] }];
-    return {
-      'tool:invoke': wrap([hook('pre-tool-use', 3600), jsHook('pre-tool-use-hook.js', 2000)]),
-      'session:start': wrap(hook('session-start', 180000)),
-      'prompt:submit': wrap([hook('prompt-submit', 60000), jsHook('prompt-submit-hook.js', 3000)]),
-      'session:end': wrap([hook('session-end', 15000), hook('session-end-git', 210000)]),
-    };
+    return buildHooksJson({
+      envVar: 'COPILOT_EXTENSION_DIR',
+      plugkitInvoker: 'binary',
+      events: [
+        { eventKey: 'tool:invoke', commands: [
+          { kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 },
+          { kind: 'js', file: 'pre-tool-use-hook.js', timeout: 2000 }
+        ]},
+        { eventKey: 'session:start', commands: [
+          { kind: 'plugkit', subcommand: 'session-start', timeout: 180000 }
+        ]},
+        { eventKey: 'prompt:submit', commands: [
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 },
+          { kind: 'js', file: 'prompt-submit-hook.js', timeout: 3000 }
+        ]},
+        { eventKey: 'session:end', commands: [
+          { kind: 'plugkit', subcommand: 'stop', subcommandRename: 'session-end', timeout: 15000 },
+          { kind: 'plugkit', subcommand: 'stop-git', subcommandRename: 'session-end-git', timeout: 210000 }
+        ]}
+      ]
+    }).hooks;
   }
 }
 
