@@ -138,6 +138,10 @@ Not parallelizable → invoke `gm-execute` directly.
 
 `exec:<lang>` only via Bash. File I/O via exec:nodejs + fs. Git directly in Bash. Never Bash(node/npm/npx/bun).
 
+File paths in `exec:nodejs` are platform-literal — node's `fs` does not auto-resolve POSIX shortcuts like `/tmp`. Use `os.tmpdir()` and `path.join` for portable temp paths; reserve `/tmp/...` for `exec:bash` heredocs where the shell rewrites the prefix.
+
+Every `exec:<lang>` and `exec:bash` call should pass `--timeout-ms <ms>` (mandatory at the rs-exec RPC layer; the CLI emits a transitional warning when omitted). On timeout, partial streamed output is preserved and the runner emits `[exec timed out after Nms; partial output above]` — treat the marker as authoritative truncation and re-issue with a higher budget rather than retrying blindly.
+
 `exec:codesearch` only — Glob/Grep/Find/Explore hook-blocked. Start 2 words → change/add one per pass → minimum 4 attempts before concluding absent.
 
 Pack runs: Promise.allSettled for parallel. Each idea own try/catch. Under 12s per call.

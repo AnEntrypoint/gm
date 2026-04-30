@@ -1,6 +1,12 @@
 links:
   - label: home
     href: ./
+  - label: glootie
+    href: ./mascot/
+  - label: crates
+    href: ./crates/
+  - label: skills
+    href: ./skills/
   - label: paper I
     href: ./paper/
   - label: paper II

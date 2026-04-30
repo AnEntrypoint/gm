@@ -1,0 +1,119 @@
+# Tooling deviation cover — observed via bunx ccsniff --since 1h + this-session probes
+# All members are witnessable from this session via local rs-exec/rs-plugkit edits + push-to-CI.
+
+- id: rsexec-mandatory-timeout-rpc
+  subject: rs-exec rpc.rs make timeoutMs mandatory; reject missing/zero with clear error; remove 300s default + deprecation-warning fallback
+  status: pending
+  description: rpc.rs:21-28 currently applies a 300_000ms default with stderr deprecation warning when timeoutMs is missing or 0. User policy is mandatory. Replace with hard error: handle_rpc returns Err("timeoutMs required (positive integer milliseconds)") when params["timeoutMs"] is missing or <= 0. Update tests/timeout_required.rs to assert the error (currently asserts the OPPOSITE — that missing timeoutMs is allowed).
+  effort: small
+  category: bug
+  route_family: execution
+  load: 0.7
+  failure_modes: [unbounded-execution, silent-default-divergence]
+  route_fit: examined
+  authorization: witnessed
+  blocking: [plugkit-pass-timeout]
+  blockedBy: []
+  acceptance:
+    - rpc.rs handle_rpc("execute") returns Err with "timeoutMs required" for missing or zero timeoutMs
+    - tests/timeout_required.rs renamed/rewritten to assert mandatory behavior
+    - cargo test passes locally before push
+  edge_cases:
+    - existing callers without timeoutMs will start failing — that is intended (hard policy upgrade)
+
+- id: plugkit-pass-timeout
+  subject: rs-plugkit run_code passes explicit timeoutMs to execute RPC; CLI exposes --timeout flag
+  status: pending
+  description: rs-plugkit src/main.rs:284-309 run_code builds exec_params without timeoutMs, then calls rpc_call("execute", ...) — relying on rs-exec default that we're about to remove. Add timeout: u64 parameter to run_code; thread through to exec_params. Add #[arg(long)] timeout_ms: Option<u64> to Cmd::Exec and Cmd::Bash; default to 300_000 at the CLI layer (transitional, with stderr warning). Future hardening: drop the CLI default once gm-starter hooks all pass --timeout-ms.
+  effort: small
+  category: bug
+  route_family: execution
+  load: 0.7
+  failure_modes: [silent-timeout-divergence]
+  route_fit: examined
+  authorization: witnessed
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - run_code signature includes timeout_ms; passes "timeoutMs" key in exec_params
+    - clap Cmd::Exec and Cmd::Bash have --timeout-ms flag
+    - exec:nodejs from this session works after rebuild (no "timeoutMs required" error)
+  edge_cases:
+    - hook code that shells out via plugkit exec needs to pass --timeout-ms; otherwise gets the transitional default with warning
+
+- id: rsexec-timeout-includes-output
+  subject: rs-exec rpc.rs returns timedOut=true and preserves streamed output on timeout; fail_task signals timeout cleanly
+  status: pending
+  description: When tokio::time::timeout fires (rpc.rs:41), kill_tree runs and fail_task writes a TaskResult with empty stdout/stderr. The streamed output array IS still drained (line 50 path applies in Failed branch too), but there's no explicit "timedOut": true field — clients have to string-match on the error message. Add explicit "timedOut": true to the JSON returned in the timeout path. Update plugkit run_code to surface the timeout marker visibly to the user (stderr line: "[exec timed out after Nms; partial output above]") rather than just printing the error string.
+  effort: small
+  category: feature
+  route_family: execution
+  load: 0.5
+  failure_modes: [silent-truncation, ambiguous-completion]
+  route_fit: examined
+  authorization: witnessed
+  blocking: []
+  blockedBy: [plugkit-pass-timeout]
+  acceptance:
+    - rpc.rs returns "timedOut": true in the JSON result when the wrapper fires
+    - plugkit run_code prints "[exec timed out after Nms; partial output above]" to stderr when timedOut=true is observed
+    - a witnessed test (long-running script + 2s timeout) shows partial chunks + the marker line
+  edge_cases:
+    - already-completed task between timeout-fire and status-read: the timedOut flag should reflect the wrapper firing, not whether kill actually killed anything
+
+- id: bun-eval-throw-wrapper
+  subject: rs-exec runtime.rs wraps nodejs eval body in try/catch with explicit stderr on synchronous throws (bun -e swallows ENOENT etc.)
+  status: pending
+  description: WITNESSED — bun 1.3.8 silently swallows fs.readFileSync ENOENT throws under "bun -e": exits 0, prints nothing. Other throws ("throw 'B'") DO print. This is a bun upstream bug. Mitigate in rs-exec runtime.rs:228 by wrapping the eval body in a try/catch that explicitly prints to process.stderr and sets process.exitCode=1. Form: ["bun","-e", "try{" + code + "}catch(e){console.error(e&&e.stack||e);process.exitCode=1}"]. Same wrap for typescript runtime (same path). Skip wrap if user already includes top-level try (heuristic: starts with "try" or contains "process.on('uncaughtException'") — keep it simple: always wrap, double-wrap is harmless.
+  effort: small
+  category: bug
+  route_family: execution
+  load: 0.8
+  failure_modes: [silent-throw-swallow, runtime-divergence]
+  route_fit: dominant
+  authorization: witnessed
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - runtime.rs nodejs/typescript branch wraps user code in try/catch with console.error
+    - re-witness: exec:nodejs require('fs').readFileSync('/nope') surfaces ENOENT and exits 1
+  edge_cases:
+    - user code with top-level await: wrapping with try/catch on the outer arrow shouldn't break — bun -e accepts async iife. Test with a Promise.reject case.
+    - already-thrown printable errors (like "throw 'B'"): both bun's native print and our wrapper would print — acceptable noise.
+
+- id: ccsniff-lint-cover-paper4
+  subject: ccsniff-gm-lint.js add asking-user-mid-chain rule and distributed-refusal heuristic per paper IV §2.4
+  status: pending
+  description: The four existing rules cover paper-III-era policy. Paper IV §2.4 promotes "distributed refusal" (single bounded subset shipped while other witnessable subsets exist) and "asking-cost principle" to first-class failures. Add: (a) asking-user-mid-chain — assistant text contains question-mark-trailing line that maps to "should I…", "want me to…", "two options…" patterns; (b) distributed-refusal heuristic — assistant text contains "follow-up" / "next session" / "out of scope" / "exempt for now" near closing-statement context (last 200 chars of message). Both rules treat the discipline test as constructive — flag when work was withheld with no exec:codesearch / Read / Edit in same message.
+  effort: small
+  category: feature
+  route_family: observability
+  load: 0.4
+  failure_modes: [stale-audit-rules]
+  route_fit: examined
+  authorization: witnessed
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - ccsniff-gm-lint.js has 6 rules (was 4); both new rules emit per_rule entries
+    - lint script run on /tmp/ccsniff-raw.jsonl produces a JSON report with the 6 rules, no parse errors
+  edge_cases:
+    - false positives on the new rules in long technical answers — keep heuristics narrow
+
+- id: skill-md-tmpdir-note
+  subject: planning/SKILL.md add one-line implicit note about exec:nodejs file paths
+  status: pending
+  description: Witnessed quirk: exec:nodejs sees Windows paths only — POSIX "/tmp/..." literal does NOT auto-resolve to os.tmpdir() in fs APIs. Add a single line to planning SKILL.md EXECUTION RULES section: "File I/O paths in exec:nodejs are platform-literal — use os.tmpdir() and path.join, not POSIX shortcuts like /tmp." Implicit principle, not enumeration.
+  effort: small
+  category: docs
+  route_family: representation
+  load: 0.2
+  failure_modes: [agent-platform-confusion]
+  route_fit: examined
+  authorization: witnessed
+  blocking: []
+  blockedBy: []
+  acceptance:
+    - planning/SKILL.md EXECUTION RULES has the one-line note
+    - exempt from browser witness (text edit, no JS surface)
+  edge_cases: []

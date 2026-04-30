@@ -1,6 +1,6 @@
 title: "gm"
-tagline: "convinces agents they are a state machine"
-description: "gm doesn't add a state machine to your agent — it convinces the agent that it already is one. PLAN → EXECUTE → EMIT → VERIFY. the model self-disciplines into determinism. every gm port inherits this trick."
+tagline: "more coushin' for the puhin'"
+description: "glootius maximus — gm convinces your coding agent it already is a deterministic state machine. PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. the cushion is the discipline that lets the agent finally sit down and finish the work. mascot: Glootie, buff variant, approval rate 17%."
 repo: "https://github.com/AnEntrypoint/gm"
 url: "https://anentrypoint.github.io/gm"
 year: 2026

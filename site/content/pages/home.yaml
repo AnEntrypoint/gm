@@ -1,28 +1,53 @@
 id: home
-title: Home
+title: gm
 hero:
-  heading: "gm"
-  subheading: "convinces agents they are a state machine"
-  body: "gm doesn't add a state machine to your agent — it convinces the agent that it already is one. PLAN → EXECUTE → EMIT → VERIFY. the model self-disciplines into determinism. every gm port inherits this trick."
+  heading: "glootius maximus"
+  subheading: "more coushin' for the puhin'"
+  body: "gm convinces your coding agent that it already is a deterministic state machine. PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. it cushions the seat your agent has to sit on to actually finish the job. Glootie himself approves — and Glootie does not approve of much."
   badges:
     - { label: "PLAN→EXECUTE→EMIT→VERIFY" }
-    - { label: "10 platforms" }
-    - { label: "convention-driven" }
+    - { label: "12 platforms, one source" }
+    - { label: "rust-backed, no daemons in your face" }
+    - { label: "covering family of bounded subsets" }
+    - { label: "no mocks, no skips, no excuses" }
   ctas:
     - { label: "GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
-    - { label: "Install", href: "https://github.com/AnEntrypoint/gm#installation" }
-    - { label: "part of 247420", href: "https://247420.xyz" }
+    - { label: "Install", href: "https://github.com/AnEntrypoint/gm#install" }
+    - { label: "meet Glootie", href: "./mascot/" }
+    - { label: "rust crates", href: "./crates/" }
+    - { label: "skills", href: "./skills/" }
 features:
-  heading: "Why gm"
+  heading: "what you get when you sit down"
   items:
-    - { name: "state-machine discipline", desc: "the agent treats itself as a deterministic state machine: PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. no skipped phases, no half-finished work, no asking the user mid-chain." }
-    - { name: "witnessed execution", desc: "every unknown is resolved by running code, not by guessing. exec:<lang>, exec:codesearch, and rs-learn recall replace speculation with evidence before any edit lands." }
-    - { name: "10 platforms, one source", desc: "a single convention-driven build emits Claude Code, Gemini CLI, OpenCode, Codex, Copilot CLI, Kilo, Cursor, Zed, JetBrains, and VSCode plugins — all inheriting the same discipline." }
+    - name: "the agent thinks it's a state machine"
+      desc: "PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. there is no skip button. there is no 'just this once'. the agent learns the rhythm by being the rhythm. a written PRD is the user's authorization — the agent stops asking and starts doing."
+    - name: "witnessed execution or it didn't happen"
+      desc: "every unknown is resolved by running code, not by guessing. exec:<lang> for proofs, exec:codesearch for whereabouts, exec:recall for what we already learned. the words 'I think this should work' are physically blocked at the hook layer."
+    - name: "covering family of bounded subsets"
+      desc: "when a request exceeds reach, the agent does not pick one piece and call the rest 'follow-up'. it enumerates every witnessable subset of the ask, executes each, and names the residual complement explicitly. partial delivery dressed up as triage is refusal in disguise — and we don't refuse."
+    - name: "12 platforms, one source"
+      desc: "claude code, gemini cli, opencode, kilo, codex, copilot cli, qwen, hermes, vscode, cursor, zed, jetbrains. one gm-starter directory; CI fans the build out to twelve downstream repos as single-commit orphan histories. add a hook once, it shows up everywhere — like a really persistent subscription you actually want."
+    - name: "rust-backed runtime"
+      desc: "rs-exec is the runner. rs-codeinsight is the AST x-ray. rs-search is the fast file finder. rs-learn is the memory store. rs-plugkit is the binary that ties it together. every push to any of them auto-cascades to the binary in your plugin within minutes — no manual cargo build, no version jujitsu."
+    - name: "ccsniff says you're 100% compliant"
+      desc: "a built-in compliance auditor reads your conversation log and grades whether you behaved like the state machine claims you did. distributed refusal is now a flagged failure. the lint runs in seconds and tells you exactly which turn you cheated on."
 quickstart:
-  heading: Quick start
+  heading: sit down
   lines:
-    - { kind: "cmt", text: "# install" }
+    - { kind: "cmt", text: "# claude code" }
+    - { kind: "cmd", text: "claude plugin marketplace add AnEntrypoint/gm && claude plugin install -s user gm@gm" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# everywhere else" }
     - { kind: "cmd", text: "npx gm" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# source" }
-    - { kind: "cmd", text: "git clone https://github.com/AnEntrypoint/gm.git" }
+    - { kind: "cmt", text: "# update (it auto-bumps daily, but force it)" }
+    - { kind: "cmd", text: "claude plugin marketplace update gm && claude plugin update gm@gm" }
+examples:
+  heading: read further
+  items:
+    - { name: "meet Glootie", desc: "the mascot, the lore, the cushion theory of agent productivity", cta: "open lore", href: "./mascot/" }
+    - { name: "every rust crate", desc: "rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit — what each does, why it exists, what it kills if it misbehaves", cta: "open crates", href: "./crates/" }
+    - { name: "every skill", desc: "12 skills in the chain — gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, plus the memorize sub-agent", cta: "open skills", href: "./skills/" }
+    - { name: "paper IV", desc: "lawful downgrade as covering family, bounded autonomy, the recall+memorize loop, mandatory exec budgets", cta: "open paper IV", href: "./paper4/" }
+    - { name: "paper III", desc: "governance, earned emission, the remote-execution boundary", cta: "open paper III", href: "./paper3/" }
+    - { name: "distribution", desc: "the cascade pipeline that puts a fresh binary in your plugin every time anyone touches a rust crate", cta: "open distribution", href: "./distribution/" }

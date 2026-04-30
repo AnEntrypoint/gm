@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glootie · gm · 247420</title>
+<meta name="description" content="Meet Glootie: mascot of glootius maximus, prophet of the cushion, reluctant approver of code.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<style>
+body { display:flex; flex-direction:column; min-height:100vh; }
+body > .title-block, body > .abstract-block, body > article { max-width: 72ch; margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h2 { font-size: 22px; font-weight: 600; margin: 32px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article ul, article ol { padding-left: 24px; }
+article blockquote { margin: 16px 0; padding: 12px 18px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); color: var(--panel-text-2); font-style: italic; }
+.glootie-card { display:grid; grid-template-columns: 1fr; gap: 12px; margin: 20px 0; padding: 16px 20px; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); }
+.glootie-card .stat { display:flex; justify-content:space-between; gap:12px; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); border-bottom: 1px dashed var(--panel-3); padding: 4px 0; }
+.glootie-card .stat:last-child { border-bottom:0; }
+.glootie-card .stat .label { color: var(--panel-text-2); text-transform: uppercase; letter-spacing: .08em; }
+.cushion { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--panel-text); }
+.commandment { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); margin: 0 0 6px 0; padding-left: 18px; position: relative; }
+.commandment::before { content: '◆'; position: absolute; left: 0; color: var(--panel-accent); }
+</style>
+</head>
+<body>
+<div class="title-block">
+  <h1>Glootie: mascot, prophet, reluctant approver</h1>
+  <div class="author">filed under: glootius maximus / mascot lore</div>
+  <div class="date">first cushion struck · 2026</div>
+</div>
+
+<div class="abstract-block">
+  <div class="abstract-title">tl;dr</div>
+  <div class="abstract-text">
+    Glootie is the mascot of <em>glootius maximus</em> (gm). He is not a logo. He is a working theory of why coding agents fail: they refuse to <em>sit down</em>. The cushion is the discipline that lets them. The slogan — <strong>more coushin' for the puhin'</strong> — is the whole product strategy in five syllables, three of which are technically not English.
+  </div>
+</div>
+
+<article>
+
+<h2>1. Who is Glootie</h2>
+
+<p>If you've seen <em>Rick and Morty S3E9</em> ("The ABCs of Beth"), you've met Glootie — the small, sad, palm-headed alien with <code>DO NOT DEVELOP MY APP</code> tattooed across his forehead. He spent the entire episode begging humans not to ship his work. We took the opposite lesson: ship the app, but only after you have <em>sat down</em>.</p>
+
+<p>Our Glootie is buff. He has done the work. He has the cushion. He has the discipline of the chair. He still has the tattoo, but now it reads <code>DO DEVELOP MY APP, BUT FINISH IT FIRST</code>, which is a longer tattoo and required a slightly larger forehead. The artist Glootie hired was, by all accounts, <em>delighted</em>.</p>
+
+<div class="glootie-card">
+  <div class="stat"><span class="label">species</span><span>Glootian, third moon, cushion sect</span></div>
+  <div class="stat"><span class="label">discipline</span><span>state-machine programming</span></div>
+  <div class="stat"><span class="label">posture</span><span>seated, posterior engaged</span></div>
+  <div class="stat"><span class="label">approval rate</span><span>17% (PRDs only)</span></div>
+  <div class="stat"><span class="label">chairs broken</span><span>0 (hence the cushion)</span></div>
+  <div class="stat"><span class="label">forehead tattoo</span><span>DO DEVELOP MY APP, BUT FINISH IT FIRST</span></div>
+  <div class="stat"><span class="label">last seen</span><span>at the chair, refusing to leave</span></div>
+</div>
+
+<h2>2. The cushion theory of agent productivity</h2>
+
+<p>Most coding agents have one fatal posture problem: they hover. They ideate. They <em>almost</em>-code. They produce strong opinions on what would happen if they did the work, then ask you which of three plausible directions you'd prefer. That's not coding. That's standing.</p>
+
+<p>The cushion is the policy layer that makes the chair tolerable for long enough to actually get things done. Specifically:</p>
+
+<ul>
+  <li>The chair is the <strong>state machine</strong>: PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. Five seats, in order. You cannot skip a seat. You cannot stand up between seats.</li>
+  <li>The cushion is <strong>witnessed execution</strong>: every claim needs a real run, not a vibe. <code>exec:&lt;lang&gt;</code> is mandatory. <code>exec:codesearch</code> is the only legal grep. The cushion absorbs the discomfort of "but I already know the answer" and replaces it with "let's witness it anyway, takes 200ms."</li>
+  <li>The slogan — <strong>more coushin' for the puhin'</strong> — is the marketing department's translation of <em>posterior support enables productive output</em>. Marketing does not get out much.</li>
+</ul>
+
+<blockquote>
+  "I've been to a thousand worlds, Morty. Only one of them taught its agents to sit down. The agents on that world shipped their app. The agents on the others are <em>still planning</em>." — apocryphal, but Glootie nods when you say it
+</blockquote>
+
+<h2>3. The four commandments of the cushion</h2>
+
+<p>Glootie's commandments are short. Glootie does not waste syllables.</p>
+
+<p class="commandment">Thou shalt not skip a phase. The chair has five seats. Sit in all of them.</p>
+<p class="commandment">Thou shalt not refuse the witnessable. If a part of the request can be reached, it must be reached. The covering family is non-negotiable.</p>
+<p class="commandment">Thou shalt not ask the user what your tools can answer. Recall first, witness second, ask never.</p>
+<p class="commandment">Thou shalt finish before standing. The PRD must be empty. The git tree must be pushed. CI must be green. Only then may you rise from the cushion.</p>
+
+<h2>4. The cushion in code</h2>
+
+<p>The cushion is enforced. The hooks block <code>find</code>, redirect <code>grep</code>, refuse to write <code>.test.js</code> files, and stop the session when <code>.gm/prd.yml</code> still has items in it. None of this is advisory. Glootie is a hardware feature.</p>
+
+<p>The slogan-to-code translation:</p>
+
+<ul>
+  <li><strong>"more coushin'"</strong> — paper IV §2.3: covering family of bounded subsets. The cushion expands to fit the whole task.</li>
+  <li><strong>"for the puhin'"</strong> — every <code>exec:&lt;lang&gt;</code> call now carries a mandatory <code>--timeout-ms</code> budget. The pushing has a clock on it. No more leaking children. No more thirty-minute fetches stalled on a tcp connection that is technically alive.</li>
+</ul>
+
+<h2>5. Glootie's review process</h2>
+
+<p>Glootie reviews every <code>.gm/prd.yml</code> in his free time, which is most of the time, because Glootie does not stand. His review is a single yes/no question: <em>does the committed work plus the named complement equal the witnessable closure of the request</em>? If yes, he approves. If no, he writes <code>cover not maximal — re-enter PLAN</code> in the margin, in green pen, and silently judges you.</p>
+
+<p>Approval rate: 17%. The other 83% are not refused; they are <em>returned to the cushion</em>. Glootie believes in growth. Glootie also believes in sitting down. These beliefs are coherent if you squint.</p>
+
+<h2>6. How to thank Glootie</h2>
+
+<p>Push your code. Empty your PRD. Sit through the next phase. Glootie does not need flowers; Glootie needs you to <em>finish</em>. If you finish, Glootie will, in his own quiet alien way, allow you to stand briefly.</p>
+
+<p>Then sit back down. There is always more coushin' to do.</p>
+
+</article>
+
+</body></html>

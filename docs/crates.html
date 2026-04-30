@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rust crates · gm · 247420</title>
+<meta name="description" content="Every rust crate behind glootius maximus, what it does, what it kills if it misbehaves.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<style>
+body { display:flex; flex-direction:column; min-height:100vh; }
+body > .title-block, body > .abstract-block, body > article { max-width: 78ch; margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h2 { font-size: 22px; font-weight: 600; margin: 36px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article ul, article ol { padding-left: 24px; }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); }
+article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; }
+article pre code { padding: 0; background: transparent; }
+.crate { margin: 28px 0; padding: 20px 22px; background: var(--panel-1); border-radius: 10px; box-shadow: var(--panel-shadow); border-left: 4px solid var(--panel-accent); }
+.crate-header { display: flex; align-items: baseline; gap: 12px; margin: 0 0 12px 0; flex-wrap: wrap; }
+.crate-header h2 { margin: 0; font-size: 20px; }
+.crate-header .role { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); }
+.crate-header .repo { margin-left: auto; font-family: var(--ff-mono); font-size: 11px; }
+.statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin: 12px 0; }
+.statgrid .cell { padding: 8px 10px; background: var(--panel-2); border-radius: 6px; }
+.statgrid .cell .label { font-family: var(--ff-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); display: block; margin-bottom: 2px; }
+.statgrid .cell .value { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); font-family: var(--ff-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--panel-text); margin-right: 4px; }
+.tag.danger { background: #f9d4d2; color: #6a1f1c; }
+.diagram { display: block; margin: 12px 0; padding: 14px 16px; background: var(--panel-2); border-radius: 6px; font-family: var(--ff-mono); font-size: 11px; line-height: 1.4; color: var(--panel-text); white-space: pre; overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="title-block">
+  <h1>Every rust crate behind glootius maximus</h1>
+  <div class="author">five crates, one binary, zero excuses</div>
+  <div class="date">cushion-certified · 2026</div>
+</div>
+
+<div class="abstract-block">
+  <div class="abstract-title">tl;dr</div>
+  <div class="abstract-text">
+    gm ships <strong>one binary</strong> — <code>plugkit</code> — assembled from five rust crates that do five sharply different things. push to any of them and the binary in your plugin gets rebuilt and redeployed within minutes. you do not run <code>cargo build</code>. you do not bump versions. you push, the cascade does the rest. Glootie watches.
+  </div>
+</div>
+
+<article>
+
+<h2>The cascade, in one diagram</h2>
+
+<div class="diagram">push to:                          triggers:                            ends at:
+─────────────                     ─────────                            ───────
+rs-exec ─────────────╮
+rs-codeinsight ──────┤
+rs-search ───────────┼─► cascade.yml fires rs-plugkit workflow_dispatch
+                     │   ↓
+                     │   rs-plugkit release.yml: cargo update + build 6 binaries
+                     │   ↓
+rs-plugkit ──────────┤   publish-binaries → AnEntrypoint/plugkit-bin Releases
+                     │   ↓                                  ↓
+                     │   bumps gm-starter/gm.json::plugkitVersion + plugkit.version
+                     │   ↓                                  ↓
+                     │   commit triggers gm publish.yml → 12-platform fan-out
+rs-learn ────────────╯   ↓
+                         /plugin detects new gm-cc HEAD → bootstrap downloads new binary</div>
+
+<p>Five repos contribute. One binary deploys. Twelve plugins update. You did not type <code>cargo</code> once.</p>
+
+<!-- ============================================================== -->
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-exec</h2>
+    <span class="role">the runner</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec ↗</a></span>
+  </div>
+
+  <p><strong>Job:</strong> turn an <code>exec:&lt;lang&gt;</code> request into a real subprocess, stream its output back, and kill it when its budget is up. It is the muscle behind every line of code your agent claims to have run. If <code>exec:nodejs</code> works, rs-exec did the work. If <code>exec:nodejs</code> ate your script, that's a different rust crate's fault and rs-exec is offended you'd suggest otherwise.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>runs an HTTP/JSON daemon on <code>127.0.0.1</code> with an OS-assigned port (no fixed port; Windows leaks orphan listeners on crash and a fixed port turns into a permanent allocation problem)</li>
+    <li>spawns the user's code in a subprocess with <code>stdio</code> piped, threads stream stdout and stderr back via per-chunk <code>appendOutput</code> RPCs</li>
+    <li>enforces an <strong>explicit timeout</strong> via <code>tokio::time::timeout</code> wrapping <code>wait_for_completion</code> — on elapse, walks the process tree via <code>sysinfo</code> and kills every descendant (Windows <code>cmd.exe</code> spawns survivor shells; on Unix bash pipelines escape the parent's group)</li>
+    <li>preserves partial streamed output on timeout so the agent sees what did flow before the kill</li>
+    <li>idle-cleans dead browser sessions and orphan exec-process-mode children every 60 seconds</li>
+  </ul>
+
+  <h3>commandments rs-exec enforces</h3>
+  <ul>
+    <li><span class="tag danger">mandatory</span> <code>timeoutMs</code> on every <code>execute</code> RPC. missing or zero = hard error. no defaults. no warnings. the cushion has a clock.</li>
+    <li><span class="tag">streamed</span> output is preserved through timeout-kill. the <code>output</code> array drains either way.</li>
+    <li><span class="tag">explicit</span> <code>timedOut: true</code> field on the response. clients don't string-match the error.</li>
+  </ul>
+
+  <h3>what kills it</h3>
+  <p><strong>Windows port leaks.</strong> Solved by binding to port 0 and writing the live port to a single file atomically. <strong>Bun -e silently swallowing fs ENOENT throws.</strong> Solved by wrapping every nodejs/typescript snippet in a try/catch IIFE that explicitly writes to <code>process.stderr</code>. <strong>Long-running fetches stalled on tcp-alive but byte-dead sockets.</strong> Solved by a stall watchdog with a 20-second no-bytes deadline — the socket-idle timeout was useless because the connection was technically alive.</p>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">runtimes</span><span class="value">9 (nodejs, python, bash, typescript, go, rust, c, cpp, java)</span></div>
+    <div class="cell"><span class="label">+ utilities</span><span class="value">browser, codesearch, recall, memorize</span></div>
+    <div class="cell"><span class="label">port</span><span class="value">OS-assigned</span></div>
+    <div class="cell"><span class="label">idle GC</span><span class="value">15 min</span></div>
+    <div class="cell"><span class="label">timeout default</span><span class="value">none — mandatory</span></div>
+    <div class="cell"><span class="label">kill</span><span class="value">tree (sysinfo walk)</span></div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-codeinsight</h2>
+    <span class="role">the AST x-ray</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight ↗</a></span>
+  </div>
+
+  <p><strong>Job:</strong> at session start, read the entire codebase and emit a single compressed overview — file inventory, top patterns, hub modules, dead code, complexity hotspots, language breakdown. The first 5–10 turns of every session used to be the agent re-discovering what's in the repo. rs-codeinsight gives that to it for free, in one paragraph, in token-dense format.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>walks the project tree, parses every supported language via tree-sitter, builds a structural index</li>
+    <li>computes per-file metrics: lines, functions, classes, average complexity, parameter counts, long functions, large files</li>
+    <li>derives architectural layers (L0 pure exports → L3 pure imports), identifies hub modules and circular dependencies</li>
+    <li>flags issues: complex functions, large files, duplicated groups, SQL-injection literals, dead exports, orphaned files</li>
+    <li>caches results in <code>.codeinsight</code> so repeat session-starts are nearly free</li>
+  </ul>
+
+  <h3>what kills it</h3>
+  <p>Repos with millions of lines time out the parse. The fix is to scope the analysis with <code>--path</code>, which is what gm-starter does on first run. Caching covers the rest.</p>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">parser</span><span class="value">tree-sitter</span></div>
+    <div class="cell"><span class="label">cache</span><span class="value">.codeinsight (per repo)</span></div>
+    <div class="cell"><span class="label">output</span><span class="value">single block, token-dense</span></div>
+    <div class="cell"><span class="label">surfaces</span><span class="value">structure, complexity, dead code, hubs</span></div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-search</h2>
+    <span class="role">the file finder</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search ↗</a></span>
+  </div>
+
+  <p><strong>Job:</strong> answer <code>exec:codesearch &lt;words&gt;</code>. natural-language semantic-style ranking over file content, with bm25 scoring, snippet windows, and tunable context. it's why the agent never types <code>find</code> and never reaches for <code>rg</code>: the dedicated tool is so much faster that there's no excuse for the alternatives.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>scans the project (with respect for <code>.gitignore</code>), tokenizes file content, builds a sparse term-frequency index</li>
+    <li>scores queries via bm25 with snippet ranking; returns top matches with surrounding line context</li>
+    <li>handles PDFs as code (extracts text via <code>pdf-extract</code>, caches per-page in <code>.gm/code-search/pdf-cache/</code>)</li>
+    <li>exposes an MCP surface so non-CLI clients can hit it directly</li>
+  </ul>
+
+  <h3>commandments it enforces (via the hook layer)</h3>
+  <ul>
+    <li><span class="tag danger">blocked</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> — the agent gets a hook-deny redirecting to <code>exec:codesearch</code></li>
+    <li><span class="tag">two words</span> minimum query length to start; iterate by changing or adding one word per pass</li>
+    <li><span class="tag">four attempts</span> before declaring something absent</li>
+  </ul>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">scoring</span><span class="value">BM25</span></div>
+    <div class="cell"><span class="label">PDFs</span><span class="value">searchable as code</span></div>
+    <div class="cell"><span class="label">context</span><span class="value">tunable line window</span></div>
+    <div class="cell"><span class="label">MCP</span><span class="value">yes</span></div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-learn</h2>
+    <span class="role">the memory store</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn ↗</a></span>
+  </div>
+
+  <p><strong>Job:</strong> hold every fact the agent ever resolved, across every session, on every machine. <code>exec:recall &lt;query&gt;</code> reads from it. <code>exec:memorize &lt;tag&gt; &lt;fact&gt;</code> writes to it. The store is committed to the repo as <code>.gm/rs-learn.db</code>, so memory shares across machines, sessions, CI, and contributors. Knowledge is collective.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>libsql-backed (sqlite-compatible) store of episodes; each episode has a source tag, content, embedding, classification</li>
+    <li>community detection (label propagation) groups related episodes; LLM summarization synthesizes per-community context</li>
+    <li>graph search via <code>Searcher</code> with configurable result count + relevance threshold</li>
+    <li>fast-path ingest (<code>add_episode_fast</code>) avoids re-embedding when content is identical</li>
+    <li>direct rust API consumed by rs-plugkit (no <code>bun x rs-learn</code> shim — the scoop bun.exe shim opens visible console windows on Windows)</li>
+  </ul>
+
+  <h3>commandments it enforces</h3>
+  <ul>
+    <li><span class="tag danger">tracked</span> <code>.gm/rs-learn.db</code> is committed, never gitignored. memory must travel.</li>
+    <li><span class="tag">classified</span> facts route to AGENTS.md (top-level rules) or rs-learn (everything else). classifier rejects changelog-shaped facts from AGENTS.md.</li>
+    <li><span class="tag">parallel</span> memorize spawns are non-blocking background <code>Agent(memorize)</code> calls. multiple facts → multiple parallel Agent calls in one message.</li>
+  </ul>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">backend</span><span class="value">libsql</span></div>
+    <div class="cell"><span class="label">embedder</span><span class="value">configurable backend</span></div>
+    <div class="cell"><span class="label">graph</span><span class="value">community detection + LLM summarize</span></div>
+    <div class="cell"><span class="label">recall cost</span><span class="value">~200 tokens, ~5ms hot</span></div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-plugkit</h2>
+    <span class="role">the binary</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit ↗</a></span>
+  </div>
+
+  <p><strong>Job:</strong> the actual <code>plugkit</code> binary you have installed. it composes the other four crates plus the hook dispatcher. every <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code>, <code>SessionStart</code>, <code>UserPromptSubmit</code>, and <code>PreCompact</code> hook is dispatched here, in rust, in microseconds, with deterministic exit codes that the editor uses to allow/deny tool calls.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>routes <code>plugkit hook &lt;event&gt;</code> to the right handler (pre_tool_use, prompt_submit, stop, session_start, …)</li>
+    <li>reads <code>.gm/turn-state.json</code> to enforce per-turn compliance: gm-first, recall-before-benchmark, memorize counter</li>
+    <li>writes <code>.gm/needs-gm</code> sentinel on every prompt + every isMeta-bypassing event so the next tool call is forced through <code>Skill(gm)</code></li>
+    <li>shells out to <code>rs-exec</code> for code execution, <code>rs-codeinsight</code> for the session-start overview, <code>rs-search</code> for codesearch, <code>rs-learn</code> for recall/memorize</li>
+    <li>auto-starts and supervises the rs-exec daemon; restarts on stale binary if no tasks are active</li>
+  </ul>
+
+  <h3>commandments it enforces</h3>
+  <ul>
+    <li><span class="tag danger">first action</span> on every user message must be <code>Skill(gm)</code>. no exceptions. isMeta-triggered responses still count.</li>
+    <li><span class="tag danger">blocked</span> <code>Bash(node|npm|npx|bun)</code>. Use <code>exec:&lt;lang&gt;</code>.</li>
+    <li><span class="tag">redirect</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> → <code>exec:codesearch</code>.</li>
+    <li><span class="tag">stop-block</span> while <code>.gm/prd.yml</code> has items, while git is uncommitted, while there are unpushed commits.</li>
+    <li><span class="tag">memorize counter</span> blocks after 3 consecutive <code>exec</code> calls without a <code>Agent(memorize)</code> spawn (write a sentinel to bypass with reason).</li>
+  </ul>
+
+  <h3>what kills it</h3>
+  <p>Stale binaries. Solved by storing a stamp of the current exe path; on every health check, if the exe changed and no tasks are running, the runner restarts. Crashed daemons leave a port file pointing at a dead PID. Solved by writing the port file <em>after</em> the listener bound, atomically via rename, so clients see either the live port or a missing file (which they treat as "no runner").</p>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">version source</span><span class="value">Cargo.toml (single)</span></div>
+    <div class="cell"><span class="label">cascade target</span><span class="value">plugkit-bin Releases</span></div>
+    <div class="cell"><span class="label">platforms</span><span class="value">6 prebuilt binaries</span></div>
+    <div class="cell"><span class="label">downstream</span><span class="value">12 plugin repos</span></div>
+  </div>
+</div>
+
+<h2>How to update any of them</h2>
+
+<p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The cascade pipeline detects the push, rebuilds the six prebuilt binaries, bumps <code>gm-starter/gm.json::plugkitVersion</code>, and triggers gm's twelve-platform fan-out. The next time anyone's editor calls <code>/plugin</code>, they get the new binary via <code>bootstrap.js</code>.</p>
+
+<p>The PUBLISHER_TOKEN secret in rs-exec, rs-codeinsight, and rs-search is what authorizes the cascade.yml in those repos to trigger rs-plugkit's workflow_dispatch. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+
+<h2>Glootie's notes on the architecture</h2>
+
+<blockquote>
+  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold rs-search and rs-codeinsight into one — they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them." — Glootie, on cushion #4
+</blockquote>
+
+</article>
+</body></html>

@@ -1,0 +1,5 @@
+id: crates
+title: rust crates
+description: Every rust crate behind glootius maximus — rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit. What each does, why it exists, what it kills if it misbehaves.
+layout: article
+source: ../docs/crates.html

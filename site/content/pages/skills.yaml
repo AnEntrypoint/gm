@@ -1,0 +1,5 @@
+id: skills
+title: skills
+description: Every skill in the gm chain — gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, plus the memorize sub-agent.
+layout: article
+source: ../docs/skills.html

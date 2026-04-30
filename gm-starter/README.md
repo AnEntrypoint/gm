@@ -1,8 +1,14 @@
 # glootius maximus (gm)
 
-gm is a claude code plugin that delivers an opinionated programming state machine through system prompt policy, code execution tooling, semantic code search, and hook-based workflow enforcement. it was built over ~200 commits of daily use and testing. it is free, open source, and maintained by one person.
+> **more coushin' for the puhin'**
 
-disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, and force you to push git before ending a session. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep reading.
+gm is a claude code plugin that convinces your coding agent it already is a deterministic state machine — PLAN → EXECUTE → EMIT → VERIFY → COMPLETE — and then enforces that conviction with rust-backed hooks, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
+
+it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. our mascot is **Glootie** — yes, *that* Glootie, from Rick and Morty, but buff, with a slightly larger forehead tattoo, and an approval rate of 17%. read the [mascot lore](./site/content/pages/mascot.yaml) (or any deployed gm site at `/mascot/`) for why this matters.
+
+built over ~200 commits of daily use. free, open source, maintained by one person.
+
+disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, force you to push git before ending a session, and reject any execute call without an explicit timeout. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep sitting down.
 
 ## install
 

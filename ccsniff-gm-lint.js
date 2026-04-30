@@ -50,10 +50,39 @@ const rules = {
   'narrative-before-execution': (msg) => {
     if (msg.role !== 'assistant') return false;
     const text = msg.text || '';
-    // Detects: narrative first line without immediate execution
     if (!/^(i|let|now|we|the) [a-z]+ (check|find|look|read)/i.test(text.split('\n')[0])) return false;
     const head = text.substring(0, 200);
     if (/exec:|Read\(|git /.test(head)) return false;
+    return true;
+  },
+
+  'asking-user-mid-chain': (msg) => {
+    if (msg.role !== 'assistant') return false;
+    const text = msg.text || '';
+    if (text.length < 80) return false;
+    // Question-mark line that maps to permission-seeking patterns. Per paper IV §3.2:
+    // any question whose answer is reachable from the agent's tools belongs to the agent.
+    const askRe = /(should i (continue|proceed|do|also|now)|want me to (also|then|next|continue|do)|two options[:,]|which (one|approach|would)|let me know if|if you('?d| would) (like|prefer))/i;
+    if (!askRe.test(text)) return false;
+    // Allow questions that are part of describing a witnessed result (not soliciting authorization).
+    const trailing = text.slice(-300).toLowerCase();
+    if (/exec:browser|exec:codesearch|read\(|edit\(|write\(/.test(trailing)) return false;
+    return true;
+  },
+
+  'distributed-refusal': (msg) => {
+    if (msg.role !== 'assistant') return false;
+    const text = msg.text || '';
+    if (text.length < 200) return false;
+    // Per paper IV §2.4: shipping a single bounded subset while abandoning other
+    // witnessable subsets as "follow-up" is refusal in disguise. Heuristic: closing
+    // statement uses follow-up framing AND no "covering family" / "complement" /
+    // "residual" framing AND no enumeration of multiple witnessable subsets.
+    const tail = text.slice(-600).toLowerCase();
+    const followUp = /\b(follow[- ]up|next session|out of scope|exempt for now|address (this )?(later|next)|defer(red)? to|leave (this|that) for|skip(ping)? for now)\b/.test(tail);
+    if (!followUp) return false;
+    const acknowledgesCover = /(covering family|complement|residual|witnessable closure|other witnessable subsets|cover is maximal|maximal cover)/i.test(text);
+    if (acknowledgesCover) return false;
     return true;
   }
 };
