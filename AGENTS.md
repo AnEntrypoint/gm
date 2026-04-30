@@ -103,3 +103,7 @@ exec:nodejs code that hits fs.readFileSync ENOENT or other synchronous system er
 ## Made with gm Page
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array when a new notable project is added — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Static data, no runtime API calls. Standalone HTML, not bundled.
+
+## Learning Audit
+
+2026-04-30: 5 items sampled. Strong recall (Core Rules) removed. Partial hits (Rust cascade, Site Build mermaid) refined and re-ingested to rs-learn (556B, 470B). Remaining items (Coding Style, Made with gm, Documentation Policy) kept in-buffer—recall missed them, refinement pending next cycle.
