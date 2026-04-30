@@ -137,4 +137,30 @@ test('hooks.spec.json present and roundtrips to hooks.json', () => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test('codex installer wires config.toml idempotent + reversible', () => {
+  const os = require('os');
+  const merger = require('./lib/codex-config-merger');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-codex-merge-'));
+  const cfg = path.join(tmp, 'config.toml');
+  const root = path.resolve('gm-build/gm-codex');
+  assert(fs.existsSync(root), 'gm-build/gm-codex missing — run build first');
+  merger.mergeIntoConfigToml(cfg, root);
+  const a = fs.readFileSync(cfg, 'utf8');
+  assert(/codex_hooks\s*=\s*true/.test(a), 'codex_hooks not enabled');
+  assert(a.includes('[[hooks.PreToolUse]]'), 'PreToolUse hook not registered');
+  assert(a.includes('[[skills.config]]'), 'skills.config entries missing');
+  assert(!a.includes('${CODEX_PLUGIN_ROOT}'), 'unexpanded placeholder leaked');
+  merger.mergeIntoConfigToml(cfg, root);
+  const b = fs.readFileSync(cfg, 'utf8');
+  assert.strictEqual(a, b, 'merge not idempotent');
+  const userPrefix = 'model = "gpt-5"\n\n[profiles.work]\nx=1\n';
+  fs.writeFileSync(cfg, userPrefix);
+  merger.mergeIntoConfigToml(cfg, root);
+  const c = fs.readFileSync(cfg, 'utf8');
+  assert(c.startsWith('model = "gpt-5"'), 'user content lost');
+  merger.uninstallFromConfigToml(cfg);
+  assert.strictEqual(fs.readFileSync(cfg, 'utf8'), userPrefix, 'uninstall failed to restore user content');
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 console.log('\n✓ All tests passed');

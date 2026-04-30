@@ -101,6 +101,7 @@ install();
 }
 
 function createCodexInstallScript() {
+  const merger = codexMergerInline('codexDir', `path.join(projectRoot, '.codex', 'config.toml')`);
   return `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
@@ -128,6 +129,7 @@ function install() {
   try { fs.copyFileSync(path.join(sourceDir, 'README.md'), path.join(codexDir, 'README.md')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'CLAUDE.md'), path.join(codexDir, 'CLAUDE.md')); } catch {}
   try { fs.copyFileSync(path.join(sourceDir, 'AGENTS.md'), path.join(codexDir, 'AGENTS.md')); } catch {}
+${merger}
 }
 
 install();
@@ -322,7 +324,140 @@ function createClaudeCodeCliScript() {
   });
 }
 
+function codexMergerInline(pluginRootExpr, configPathExpr) {
+  return `
+  const SENTINEL_START = '# >>> gm-codex managed (do not edit between sentinels)';
+  const SENTINEL_END = '# <<< gm-codex managed';
+  const tomlString = (s) => '"' + String(s).replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"') + '"';
+  const expand = (cmd, root) => String(cmd).split('\${CODEX_PLUGIN_ROOT}').join(root);
+  function buildHooksToml(hooksJson, root) {
+    const hooks = (hooksJson && hooksJson.hooks) || {};
+    const lines = [];
+    for (const event of Object.keys(hooks)) {
+      for (const group of (hooks[event] || [])) {
+        const matcher = group.matcher || '*';
+        const entries = group.hooks || [];
+        if (!entries.length) continue;
+        lines.push('', '[[hooks.' + event + ']]', 'matcher = ' + tomlString(matcher));
+        for (const e of entries) {
+          lines.push('', '[[hooks.' + event + '.hooks]]');
+          lines.push('type = ' + tomlString(e.type || 'command'));
+          lines.push('command = ' + tomlString(expand(e.command, root)));
+          const t = typeof e.timeout === 'number' ? Math.max(1, Math.round(e.timeout / 1000)) : 60;
+          lines.push('timeout = ' + t);
+        }
+      }
+    }
+    return lines.join('\\n');
+  }
+  function buildMcpToml(mcpJson) {
+    const servers = (mcpJson && mcpJson.mcpServers) || {};
+    const lines = [];
+    for (const id of Object.keys(servers)) {
+      const s = servers[id];
+      lines.push('', '[mcp_servers.' + id + ']');
+      if (s.command) lines.push('command = ' + tomlString(s.command));
+      if (Array.isArray(s.args)) lines.push('args = [' + s.args.map(tomlString).join(', ') + ']');
+      if (s.cwd) lines.push('cwd = ' + tomlString(s.cwd));
+      if (s.url) lines.push('url = ' + tomlString(s.url));
+      if (s.env && typeof s.env === 'object') {
+        lines.push('', '[mcp_servers.' + id + '.env]');
+        for (const k of Object.keys(s.env)) lines.push(k + ' = ' + tomlString(s.env[k]));
+      }
+    }
+    return lines.join('\\n');
+  }
+  function buildSkillsToml(skillsDir) {
+    if (!fs.existsSync(skillsDir)) return '';
+    const lines = [];
+    for (const ent of fs.readdirSync(skillsDir, { withFileTypes: true })) {
+      if (!ent.isDirectory()) continue;
+      const sp = path.join(skillsDir, ent.name);
+      if (!fs.existsSync(path.join(sp, 'SKILL.md'))) continue;
+      lines.push('', '[[skills.config]]', 'path = ' + tomlString(sp), 'enabled = true');
+    }
+    return lines.join('\\n');
+  }
+  function stripManagedBlock(content) {
+    if (!content) return '';
+    const i = content.indexOf(SENTINEL_START);
+    if (i === -1) return content;
+    const j = content.indexOf(SENTINEL_END, i);
+    if (j === -1) return content;
+    return (content.slice(0, i).replace(/\\n*$/, '\\n') + content.slice(j + SENTINEL_END.length).replace(/^\\n+/, '')).replace(/\\n{3,}/g, '\\n\\n');
+  }
+  function buildBlock(root) {
+    const hooksJson = fs.existsSync(path.join(root, 'hooks', 'hooks.json')) ? JSON.parse(fs.readFileSync(path.join(root, 'hooks', 'hooks.json'), 'utf8')) : { hooks: {} };
+    const mcpJson = fs.existsSync(path.join(root, '.mcp.json')) ? JSON.parse(fs.readFileSync(path.join(root, '.mcp.json'), 'utf8')) : { mcpServers: {} };
+    const parts = [SENTINEL_START, '', '[features]', 'codex_hooks = true', buildHooksToml(hooksJson, root), buildMcpToml(mcpJson), buildSkillsToml(path.join(root, 'skills')), '', SENTINEL_END];
+    return parts.filter(p => p !== '').join('\\n').replace(/\\n{3,}/g, '\\n\\n') + '\\n';
+  }
+  function mergeCodexToml(configPath, root) {
+    const existing = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+    const stripped = stripManagedBlock(existing).replace(/\\s+$/, '');
+    const block = buildBlock(root);
+    const next = stripped ? stripped + '\\n\\n' + block : block;
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, next);
+  }
+  try {
+    mergeCodexToml(${configPathExpr}, ${pluginRootExpr});
+    console.log('✓ wired ~/.codex/config.toml (managed block)');
+  } catch (e) {
+    console.warn('Warning: failed to wire codex config.toml:', e.message);
+  }
+`;
+}
+
+function createCodexUninstallScript() {
+  return `#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const homeDir = process.env.HOME || process.env.USERPROFILE || os.homedir();
+const pluginDir = path.join(homeDir, '.codex', 'plugins', 'gm-codex');
+const configPath = path.join(homeDir, '.codex', 'config.toml');
+const SENTINEL_START = '# >>> gm-codex managed (do not edit between sentinels)';
+const SENTINEL_END = '# <<< gm-codex managed';
+
+function stripManagedBlock(content) {
+  if (!content) return '';
+  const i = content.indexOf(SENTINEL_START);
+  if (i === -1) return content;
+  const j = content.indexOf(SENTINEL_END, i);
+  if (j === -1) return content;
+  return (content.slice(0, i).replace(/\\n*$/, '\\n') + content.slice(j + SENTINEL_END.length).replace(/^\\n+/, '')).replace(/\\n{3,}/g, '\\n\\n');
+}
+
+try {
+  if (fs.existsSync(pluginDir)) {
+    fs.rmSync(pluginDir, { recursive: true, force: true });
+    console.log('✓ removed ' + pluginDir);
+  }
+  if (fs.existsSync(configPath)) {
+    const before = fs.readFileSync(configPath, 'utf8');
+    const after = stripManagedBlock(before);
+    if (after !== before) {
+      if (after.trim() === '') {
+        fs.unlinkSync(configPath);
+        console.log('✓ removed empty ' + configPath);
+      } else {
+        fs.writeFileSync(configPath, after);
+        console.log('✓ stripped managed block from ' + configPath);
+      }
+    }
+  }
+  console.log('gm-codex uninstalled.');
+} catch (e) {
+  console.error('Uninstall failed:', e.message);
+  process.exit(1);
+}
+`;
+}
+
 function createCodexCliScript() {
+  const extraSetup = codexMergerInline('destDir', `path.join(homeDir, '.codex', 'config.toml')`);
   return createCliInstaller({
     pkg: 'gm-codex',
     label: 'Codex',
@@ -335,9 +470,11 @@ function createCodexCliScript() {
       ['.mcp.json', '.mcp.json'], ['plugin.json', 'plugin.json'], ['gm.json', 'gm.json'],
       ['README.md', 'README.md'], ['CLAUDE.md', 'CLAUDE.md'], ['AGENTS.md', 'AGENTS.md']
     ],
+    extraSetup,
     restartMsg: 'Restart Codex to activate.'
   });
 }
+
 
 function createOpenCodeInstallerScript() {
   return `#!/usr/bin/env node
@@ -1475,9 +1612,9 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
     return makePackageJson({
       name: 'gm-codex', version: pluginSpec.version, description: pluginSpec.description,
       author: pluginSpec.author, license: pluginSpec.license, main: 'plugin.json',
-      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
+      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js', 'gm-codex-uninstall': './uninstall.js' },
       ...repoFields('gm-codex'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
-      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js'],
+      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js', 'uninstall.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
@@ -1486,8 +1623,8 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
   getPackageJsonFields() {
     return {
       main: 'plugin.json',
-      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js' },
-      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js'],
+      bin: { 'gm-codex': './cli.js', 'gm-codex-install': './install.js', 'gm-codex-uninstall': './uninstall.js' },
+      files: ['hooks/', 'agents/', 'bin/', 'scripts/', 'skills/', 'assets/', '.github/', '.agents/', '.codex-plugin/', 'README.md', 'CLAUDE.md', 'AGENTS.md', '.mcp.json', '.app.json', 'plugin.json', 'gm.json', 'cli.js', 'install.js', 'uninstall.js'],
       keywords: ['codex', 'claude-code', 'wfgy', 'mcp', 'automation', 'gm']
     };
   },
@@ -1503,7 +1640,18 @@ const codex = factory('codex', 'Codex', 'plugin.json', 'CLAUDE.md', {
 bun x ${repoName}@latest
 \`\`\`
 
-This installs or upgrades the plugin into your user Codex plugins directory and keeps the package layout consistent across platforms.
+Installs the plugin to \`~/.codex/plugins/gm-codex\` AND wires \`~/.codex/config.toml\` so Codex auto-loads hooks, MCP servers, and skills on next start. No manual TOML editing required. Idempotent — re-run to upgrade.
+
+### What gets registered in \`config.toml\`
+
+Inside a managed block fenced by \`# >>> gm-codex managed\` / \`# <<< gm-codex managed\` sentinels:
+
+- \`[features].codex_hooks = true\`
+- \`[[hooks.<Event>]]\` blocks for \`PreToolUse\`, \`PostToolUse\`, \`SessionStart\`, \`UserPromptSubmit\`, \`Stop\` — pointing at the bundled \`plugkit\` and node hook scripts under the install dir
+- \`[mcp_servers.<id>]\` for any MCP servers declared in bundled \`.mcp.json\`
+- \`[[skills.config]]\` entries for every bundled skill folder
+
+Content outside the managed block is preserved verbatim. The installer never edits user-authored sections.
 
 ### Repository Installation (Project-Specific)
 
@@ -1513,7 +1661,15 @@ npm install ${repoName}
 npx ${repoName}-install
 \`\`\`
 
-The installer copies plugin assets into \`.codex/plugins/gm-codex\` in your project and is useful for local customization.
+Copies plugin assets into \`<project>/.codex/plugins/gm-codex\` and writes the same managed block into \`<project>/.codex/config.toml\` (project-trusted layer).
+
+### Uninstall
+
+\`\`\`bash
+npx ${repoName}-uninstall
+\`\`\`
+
+Removes the plugin directory and strips the managed block from \`config.toml\`, leaving any user-authored content untouched.
 
 ### Manual Installation
 
@@ -1606,6 +1762,7 @@ MIT
     return {
       'cli.js': createCodexCliScript(),
       'install.js': createCodexInstallScript(),
+      'uninstall.js': createCodexUninstallScript(),
       '.app.json': JSON.stringify({}, null, 2),
       'assets/icon.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#3B82F6"/><path d="M16 33h32v6H16zM16 22h32v6H16zM16 44h20v6H16z" fill="#fff"/></svg>\n',
       'assets/logo.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#1E3A8A"/><path d="M28 50h72v12H28zM28 70h72v12H28z" fill="#93C5FD"/><circle cx="40" cy="34" r="8" fill="#93C5FD"/></svg>\n',
