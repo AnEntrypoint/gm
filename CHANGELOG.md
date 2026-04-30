@@ -1,3 +1,11 @@
+## 2026-04-30 - hook-spec descriptor unification
+
+7 platforms (cc, gc, codex, oc, kilo, qwen, copilot-cli) had drifted into 7 hand-written `buildHooksMap()` overrides spread across `platforms/cli-config-shared.js` and `platforms/copilot-cli.js`, plus a coexisting `TemplateBuilder.buildHooksMap` and `lib/hook-builder.js::buildHooksMapCustom` that were no longer the source of any output. Adding a platform required learning every dimension by reading the existing examples.
+
+Collapsed into one `lib/hook-spec.js::buildHooksJson(spec)` (51L). Each platform now declares `{envVar, plugkitInvoker: 'node'|'binary', wrapMode: 'wrapped'|'flat-matchers', events: [{eventKey, commands: [{kind:'plugkit'|'js', subcommand|file, timeout, subcommandRename?, wrapMode?}]}]}`. Substitutes env-var placeholders, picks plugkit prefix shape (cc/codex/oc/kilo/qwen use `node ${env}/bin/plugkit.js hook`, copilot uses bare-binary `${env}/bin/plugkit hook`), and emits the matcher wrapper. qwen's per-command flat-matcher quirk and copilot's stop→session-end / stop-git→session-end-git renames are encoded as data, not code.
+
+All 7 generated `hooks.json` byte-identical to baseline. Deleted: `lib/hook-builder.js`, `TemplateBuilder.buildHooksMap`, `TemplateBuilder.createCommand`, `TemplateBuilder.buildHookCommandWithEnv`, `CLIAdapter.buildHookCommand`, `CLIAdapter.createCustomCommand`. New platform = one `buildHooksMap()` override returning `buildHooksJson(spec).hooks`.
+
 ## 2026-04-24 - ccsniff compliance audit + stop-hook isMeta fix
 
 ccsniff audit across 6 sessions (rs-learn, agentgui, guru-gcs, thebird, diagen, voice):
