@@ -45,7 +45,9 @@ Runs until: .gm/prd.yml empty AND git clean AND all pushes confirmed AND CI gree
 
 PRD written → execute to COMPLETE without asking the user. Doubts that arise during execution are resolved by witnessed probe, by recall, or by re-reading the PRD — never by asking. Any question whose answer is reachable from the agent's tools belongs to the agent, not the user.
 
-Asking is last-resort: destructive-irreversible without PRD coverage, OR user intent irrecoverable from PRD/memory/code. Channel: `exec:pause` (renames `prd.yml` → `prd.paused.yml`; question in header). In-conversation asking is last-resort beneath last-resort.
+Asking is last-resort: destructive-irreversible without PRD coverage, OR user intent irrecoverable from PRD/memory/code/web. Channel: `exec:pause` (renames `prd.yml` → `prd.paused.yml`; question in header). In-conversation asking is last-resort beneath last-resort.
+
+**WEB-SEARCH BEFORE PAUSE — HARD RULE.** Before `exec:pause` for any blocking question whose answer could plausibly exist on the public web — missing artifact, unknown library/API, prebuilt binary, version compatibility, build recipe, upstream status — fire `WebSearch` and at least one `WebFetch` first. Only after the web pass returns empty (or returns options the agent then witnesses and rejects) is `exec:pause` legitimate. Pausing on a question the web could have answered is forced closure dressed up as humility — fix on sight by re-entering planning, web-searching, and resuming. The only questions that genuinely require user-ask are ones the public web cannot answer: private credentials, intent/preference between viable options the agent has *already surfaced*, destructive-irreversible authorization.
 
 **Cannot stop while**: `.gm/prd.yml` has items | git uncommitted | git unpushed.
 
