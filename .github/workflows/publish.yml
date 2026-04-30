@@ -203,7 +203,7 @@ jobs:
           echo "✅ Force-pushed single-commit history to $REPO_NAME"
 
       - name: Publish to npm
-        if: matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes' || matrix.platform == 'antigravity'
+        if: matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes' || matrix.platform == 'antigravity' || matrix.platform == 'codex'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
