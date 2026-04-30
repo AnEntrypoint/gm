@@ -51,7 +51,7 @@ Asking is last-resort: destructive-irreversible without PRD coverage, OR user in
 
 ## MAXIMAL COVER — HARD RULE
 
-Per paper IV §2 (renamed from paper III §2.5 "lawful downgrade" — that phrase undersold the constructive obligation): the obligation when scope exceeds reach is to *expand the cover*, not to refuse and not to ship a single slice. Refusal is forced closure. Distributed refusal — one bounded subset delivered, the rest abandoned despite being witnessable — is the same failure dressed up as triage.
+When scope exceeds reach, expand the cover. Don't refuse. Don't ship one slice with the rest abandoned as "follow-up" — that's distributed refusal: the same failure dressed up as triage.
 
 **Required move when scope exceeds reach**: construct a *covering family* — every bounded subset of the request that is witnessable from this session — and write the family into the PRD as separate items, with the dependency graph explicit so independent members parallelize. Execute every member. Single-subset delivery is legitimate only when no other witnessable subset exists. The residual complement is named at end-of-turn, with the reason each excluded piece falls outside the witnessable closure.
 
@@ -71,21 +71,13 @@ The trigger is functional, not a path-list: any change whose effect is observabl
 
 Propagation: EXECUTE witnesses on edit, EMIT re-witnesses post-write, VERIFY runs the final gate. The plan must encode the rule so all three layers fire.
 
-## ORIENT — HARD RULE (before naming any unknown)
+## ORIENT — HARD RULE
 
-Every planning entry begins with ORIENT: a parallel pack of recalls and codesearches that loads what the store already knows about the request. Do this BEFORE you name a single mutable.
+Open every plan with a parallel pack of `exec:recall` and `exec:codesearch` against the request's nouns. Hits land as `weak_prior`; misses confirm the unknown is fresh. The pack runs in one message — never serially. The agent that skips orient pays the same cost in fresh probes a turn later, plus the price of disagreeing with its own prior witness.
 
-Pack: 3–5 `exec:recall <2-6 word query>` calls + 3–5 `exec:codesearch <two words>` calls, fired in one message (parallel). Queries derive from each major noun in the request and each named entity. Hits become `weak_prior`; misses confirm the unknown is genuinely fresh.
+## PRD — HARD RULE
 
-Cost rationale: orient is free relative to skipping it. The agent that skips orient pays the same cost in fresh-execution rounds resolving things the store already had — plus the cost of the duplicate work, plus the risk of disagreeing with prior witness. Orient runs in parallel and completes in <1s when the rs-learn HTTP serve is hot. Skipping orient is forced closure.
-
-Exempt only when: literal one-line edit AND user instruction is fully self-contained AND zero recall-able context exists. Tag the exemption explicitly.
-
-## PRD MANDATORY — HARD RULE
-
-Writing `./.gm/prd.yml` is **non-negotiable** for every task whose scope exceeds a literal single-file single-line edit. The PRD captures the covering family (paper IV §2.3 Maximal Cover), the residual complement, the dependency graph for parallelization, and the acceptance criteria. Skipping the PRD costs the same as writing it (the agent enumerates the work mentally either way) and loses three things that are not free to recover: durable trace across compaction, resumability after reboot, and the cover-maximality check.
-
-Exempt only when: literal single-line typo fix OR pure-comment edit OR user-issued one-shot command (e.g., `git status`). Anything multi-step, multi-file, or multi-concern emits a PRD before EXECUTE fires.
+`./.gm/prd.yml` is the authorization. It is written before EXECUTE fires for any task that touches more than one line in one file. The cost of writing it equals the cost of skipping it; what the file buys is durable trace, resumability, and the cover-maximality check.
 
 ## PLAN PHASE — MUTABLE DISCOVERY
 
@@ -108,7 +100,7 @@ Client: `window.__debug` live registry; modules register on mount.
 
 `console.log` ≠ observability. Discovery of gap → add .prd item immediately, never deferred.
 
-**No parallel observability surfaces.** Per paper II §5.4, `window.__debug` is THE in-page registry; `test.js` at project root is the sole out-of-page test asset. Any new file whose purpose is to exercise, smoke-test, demo, or sandbox in-page behavior outside that registry is a parallel surface that fights the discipline — extend the registry instead.
+**No parallel observability surfaces.** `window.__debug` is THE in-page registry; `test.js` at project root is the sole out-of-page test asset. Any new file whose purpose is to exercise, smoke-test, demo, or sandbox in-page behavior outside that registry fights the discipline — extend the registry instead.
 
 ## .PRD FORMAT
 

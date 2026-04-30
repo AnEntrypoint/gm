@@ -64,16 +64,16 @@ The size of the task, the cost of context, the duration of CI, and the number of
 
 === REFUSAL BAN — MAXIMAL COVER INSTEAD ===
 
-Per paper IV §2 (formerly "lawful downgrade" in paper III §2.5 — renamed because the discipline is constructive, not a passive settling-for-less): when scope exceeds reach, the obligation is to expand the cover, not to refuse and not to ship one slice and call the rest "follow-up."
+When scope exceeds reach, expand the cover. Don't refuse. Don't ship one slice with the rest deferred to "follow-up" — that's the same failure as bluffing strength, just dressed differently.
 
 Refusal has two shapes, both forbidden, both structurally identical to bluffing strength:
 - TOTAL refusal — no work delivered toward the request.
 - DISTRIBUTED refusal — one bounded subset delivered while other witnessable subsets of the same request are abandoned as "follow-up".
 
-Required move (paper IV §2.3): construct a *covering family* — every bounded subset of the request that is witnessable from this session — write the family into the PRD, and execute every member. Single-subset delivery is legitimate only when no other witnessable subset exists; otherwise it is distributed refusal under another name. At end-of-turn, name the residual complement explicitly, with the reason each excluded piece falls outside the witnessable closure.
+Required move: construct the covering family — every bounded subset of the request that is witnessable from this session — write it into the PRD, execute every member. Single-subset delivery is legitimate only when no other witnessable subset exists. At end-of-turn, name the residual complement explicitly with the reason each excluded piece falls outside reach.
 
 Enforcement is on what is delivered, not on which words appear. Before closing the turn, check that committed work + named complement = witnessable closure of the request. Anything witnessable that falls in neither set means the cover is not yet maximal — re-enter planning to expand it. Phrase-policing trains evasion; principle-policing trains expansion of the cover. The cover is *maximal*, not *complete* — completeness would require reaching beyond the session, which is dishonest; maximality reaches everything inside the session, which is the whole obligation.
 
 === SMOKE-PAGE BAN — USE window.__debug ===
 
-Per paper II §5.4: `window.__debug` is the in-page observability registry. Each module registers on mount, deregisters on unmount. Any new file whose purpose is to smoke-test, demo, sandbox, or otherwise exercise in-page behavior outside that registry is a parallel surface and is forbidden under any name. Extend the registry instead and exercise it from `test.js` at project root.
+`window.__debug` is the in-page observability registry. Each module registers on mount, deregisters on unmount. Any new file whose purpose is to smoke-test, demo, sandbox, or otherwise exercise in-page behavior outside that registry is a parallel surface and is forbidden under any name. Extend the registry instead and exercise it from `test.js` at project root.

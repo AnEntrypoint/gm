@@ -384,6 +384,32 @@ flowchart TD
 
 <p>The execution-budget invariant is a specific instance of <em>resource-bounded computation</em> [12]: every operation carries a deadline; deadlines propagate through composition; the system enforces them at the lowest layer. The <code>tokio::time::timeout</code> wrapper plus kill-tree is the standard implementation; the contribution here is the three-layer (CLI, RPC, runner) policy that ensures the budget is present at every entry point.</p>
 
+<h2>8.5 Sync-Before-Emit, Auto-Recall, ORIENT, And The Implicit-Skill Principle</h2>
+
+<h3>8.5.1 Staleness as forced closure</h3>
+
+<p class="first">A class of forced-closure failure not enumerated in &sect;2 is the silent serving of a stale snapshot. Codeinsight and search outputs that are produced by reading a cached blob without verifying its freshness against the live filesystem are operationally indistinguishable from any other unwitnessed claim &mdash; the agent reads them as ground truth and acts on a state that no longer exists. The remediation is a digest gate: every cache read recomputes a freshness digest (file-mtime sum + git HEAD sha + dirty-tree marker) and serves the cached blob only on exact match; on mismatch the cache auto-refreshes before emitting. For the search side, scan + embed + sweep complete before the first result is printed and an explicit <code>[index fully synced: &hellip;]</code> line precedes the result block so freshness is visible to the consuming agent.</p>
+
+<h3>8.5.2 Auto-recall on prompt-submit</h3>
+
+<p>Paper III &sect;5 closed the same-turn write window for memory; the read window had been closed only for the planning phase. Operational evidence showed agents arriving at every new turn without prior context loaded, then re-discovering facts a previous turn had already memorized. The remediation is to fire <code>recall</code> on every prompt-submit with the user's prompt as the query, in parallel with the existing session-start auto-search, and to inject the hits as part of the system message before the agent's first action. The cost is bounded (single embedding lookup over the rs-learn store, &lt;200 ms hot) and the read-side of the loop now closes per-prompt rather than per-session.</p>
+
+<h3>8.5.3 ORIENT before naming any unknown</h3>
+
+<p>The constructive corollary of auto-recall at the planning layer is ORIENT: a parallel pack of recalls and codesearches against the request's nouns, fired before any mutable is named. Hits become weak prior; misses confirm the unknown is genuinely fresh. The cost equals the cost of skipping orient (the agent that skips it pays the same in fresh probes a turn later, plus the price of disagreeing with its own prior witness), which makes the discipline cost-neutral at worst.</p>
+
+<h3>8.5.4 PRD as non-negotiable</h3>
+
+<p>The PRD is the user's authorization (per &sect;3.1). The pre-paper-IV practice allowed agents to skip the PRD for &ldquo;small work,&rdquo; on the assumption that the file's overhead exceeded its benefit. Operational evidence reversed the calculation: the agent that skips the PRD enumerates the work mentally anyway, pays the same cost, and loses three things that are not free to recover &mdash; durable trace across compaction, resumability after reboot, and the cover-maximality check. Writing the PRD is now non-negotiable for any task whose scope exceeds a literal single-line edit.</p>
+
+<h3>8.5.5 Implicit, not explicit, in skill prose</h3>
+
+<p>A separate failure shape governs how the skill files themselves are written. Skill prose elicits behavior; it does not describe it. Numbered procedures (&ldquo;1. agent runs N parallel calls 2. then writes 3. then&hellip;&rdquo;) and citations into the documentation site (&ldquo;see paper IV &sect;2.3&rdquo;) read like a manual; the model imitates them as a script and breaks at the first edge case. The corrective rule, codified in <code>AGENTS.md</code> Coding Style, is that skill prose must be terse imperative principles whose phrasing triggers the model's already-learned dispositions, never multi-step recipes and never references into the docs. The papers and the site are <em>outputs</em> of the discipline, not <em>inputs</em> to it; cross-cutting rules that need a citation belong in <code>AGENTS.md</code>, not in skills.</p>
+
+<h3>8.5.6 CLAUDE.md as a pure pointer</h3>
+
+<p>A small but operationally significant rule: in projects where both <code>CLAUDE.md</code> and <code>AGENTS.md</code> exist, the two files inevitably drift, and the agent has to choose which to trust. The session-start hook now enforces a single-source-of-truth invariant: <code>CLAUDE.md</code> is rewritten to exactly <code>@AGENTS.md</code> on every session boot, with any pre-existing non-pointer content folded into <code>.gm/imported-claude-md-&lt;ts&gt;.md</code> for human review. The redirect makes the agent's loading path unambiguous and prevents a class of contradicting-instruction-source failures.</p>
+
 <h2>9. Conclusion</h2>
 
 <p class="first">We have described four advances. <strong>Maximal Cover</strong> &mdash; renamed and strengthened from paper III&rsquo;s &ldquo;lawful downgrade&rdquo; &mdash; is now a hard rule rejecting both the total and distributed forms of the symmetric failure to bluffing-strength: refusal of a task whose part is hard, and single-subset triage that silently abandons the witnessable rest, are structurally identical to over-claiming. The constructive obligation is a maximal covering family of bounded subsets, executed in full, with the residual complement named explicitly. Autonomy is bounded: a written PRD is the user&rsquo;s authorization, and asking mid-execution is forbidden except as last resort routed through a structured pause. The learning loop is closed: recall before naming any unknown, memorize at the moment of resolution, both reading and writing the same rs-learn store across sessions. The execution budget is hardened: every <code>exec:&lt;lang&gt;</code> carries a kill deadline enforced by the runner, with timeouts mandatory at the rs-exec RPC layer and a transitional default in the plugkit CLI; every fetch carries a stall watchdog independent of socket-idle timeouts; partial streamed output is preserved on timeout-kill and surfaced to the caller with an explicit timeout marker.</p>

@@ -107,13 +107,13 @@ stateDiagram-v2
 <div class="skill">
   <div class="skill-header">
     <h2>planning</h2>
-    <span class="role">state machine + PRD constructor</span>
+    <span class="role">orient · cover · PRD</span>
     <span class="phase">PLAN</span>
   </div>
-  <div class="row"><span class="k">role</span><span>Discover every mutable, write the <code>.gm/prd.yml</code> covering family, route-tag every item per governance, exit when zero new unknowns remain in the last pass.</span></div>
+  <div class="row"><span class="k">role</span><span>ORIENT first (a parallel pack of recalls and codesearches against the request's nouns), then enumerate the covering family, then write the PRD. The PRD is non-negotiable for any task beyond a single-line edit.</span></div>
   <div class="row"><span class="k">fires when</span><span>After <code>gm</code>. Re-fires on any new unknown surfaced in any later phase (regression).</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">single-subset triage</span> when other witnessable subsets exist (paper IV §2.3 — distributed refusal). Skipping the codebase scan. Adding items without acceptance criteria. Forgetting to map dependencies.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>If the cushion is the discipline, the PRD is the seat-belt. Once written, the user is no longer in the loop until COMPLETE — the agent honors it without asking.</span></div>
+  <div class="row"><span class="k">forbids</span><span><span class="tag danger">naming an unknown before ORIENT</span>. <span class="tag danger">single-subset triage</span> when other witnessable subsets exist (distributed refusal). Skipping the PRD on multi-step work. Items without acceptance criteria. Reading from a stale codeinsight or search cache instead of a freshly-synced index.</span></div>
+  <div class="row"><span class="k">why it exists</span><span>If the cushion is the discipline, ORIENT is sitting down and the PRD is the seat-belt. Skipping ORIENT or skipping the PRD pays the same cost in fresh probes a turn later — plus the duplicated discovery, plus the risk of disagreeing with the agent's own prior witness.</span></div>
 </div>
 
 <!-- =========== gm-execute =========== -->

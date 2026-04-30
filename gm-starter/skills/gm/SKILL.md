@@ -51,7 +51,7 @@ The size of the task, the cost of context, and the duration of CI are never grou
 
 ## MAXIMAL COVER — HARD RULE
 
-Per paper IV §2 (formerly "lawful downgrade" in paper III §2.5 — renamed because the discipline is *constructive*, not a passive settling-for-less): the obligation when scope exceeds reach is to construct a *maximal cover* of the request, not to refuse it and not to ship one slice and call the rest "follow-up."
+When scope exceeds reach, construct a maximal cover of the request — not a refusal, not one slice with the rest deferred to "follow-up."
 
 Refusal is forced closure. So is *distributed* refusal — shipping a single bounded subset while other witnessable subsets exist. Both bypass witnessed execution.
 
