@@ -149,10 +149,12 @@ jobs:
 
           metrics_section = """## Metrics
 
-          [![Commits per week](../../docs/badges/commits-per-week.svg)](../../docs/badges/commits-per-week.svg)
-          [![Open Issues](../../docs/badges/open-issues.svg)](../../docs/badges/open-issues.svg)
-          [![Contributors](../../docs/badges/contributors.svg)](../../docs/badges/contributors.svg)
-          [![Avg PR Merge Time](../../docs/badges/pr-merge-time.svg)](../../docs/badges/pr-merge-time.svg)
+          [![GitHub stars](https://img.shields.io/github/stars/AnEntrypoint/gm?style=flat&logo=github&color=f1c40f)](https://github.com/AnEntrypoint/gm/stargazers)
+          [![npm downloads (gm-cc)](https://img.shields.io/npm/dm/gm-cc?label=gm-cc%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-cc)
+          [![Commits per week](docs/badges/commits-per-week.svg)](docs/badges/commits-per-week.svg)
+          [![Open Issues](docs/badges/open-issues.svg)](docs/badges/open-issues.svg)
+          [![Contributors](docs/badges/contributors.svg)](docs/badges/contributors.svg)
+          [![Avg PR Merge Time](docs/badges/pr-merge-time.svg)](docs/badges/pr-merge-time.svg)
           """
 
           if "## Metrics" in content:
