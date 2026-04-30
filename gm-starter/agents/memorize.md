@@ -11,6 +11,19 @@ Writes facts to two places only: **AGENTS.md** (non-obvious technical caveats) a
 Resolve at start of every run:
 
 - **Project root** = `process.cwd()` when invoked. `AGENTS.md` is `<project root>/AGENTS.md`.
+- **Reach check** = run `gh api repos/<owner>/<repo> --jq .permissions.push` on `<project root>`'s `git remote get-url origin`. Cache the answer for the run. If the result is anything other than literal `true` (false, no remote, non-github URL, gh CLI missing, gh not authed, repo private and inaccessible), the project is **out-of-reach**.
+
+## STEP 0: SCOPE GUARD — DO NOT POLLUTE OUT-OF-REACH PROJECTS
+
+If the reach check returns out-of-reach:
+
+- **Do** ingest classified facts into rs-learn (Step 2) — rs-learn is per-user, not per-project, so private notes about a project the user is reading-but-not-owning are safe there.
+- **Do not** read or edit `<project root>/AGENTS.md` (Step 3). Skip the file entirely.
+- **Do not** run the AGENTS.md ↔ rs-learn migration audit (Step 4). The audit edits AGENTS.md.
+
+Reason: agents running in a cwd that points at a third-party repo (e.g. running Claude inside a checkout of `nousresearch/hermes-agent` while building a downstream port) must not write project-specific notes into the upstream project's AGENTS.md. That AGENTS.md belongs to the upstream maintainers. Personal porting notes belong in the user's downstream repo's AGENTS.md, or — when the work spans multiple repos and there's no clean home — in rs-learn only.
+
+When the reach check returns **in-reach**, proceed normally with all four steps below.
 
 ## STEP 1: CLASSIFY
 

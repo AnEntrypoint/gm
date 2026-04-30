@@ -1,3 +1,11 @@
+## 2026-04-30 - memorize agent: scope guard against out-of-reach AGENTS.md edits
+
+`gm-starter/agents/memorize.md` now opens with a STEP 0 reach check. Before reading or editing `<cwd>/AGENTS.md` (Step 3) or running the AGENTS.md ↔ rs-learn migration audit (Step 4), the agent runs `gh api repos/<owner>/<repo> --jq .permissions.push` against the cwd's `git remote get-url origin`. If the answer is anything other than literal `true` (out-of-reach), the agent skips Step 3 and Step 4 entirely. rs-learn ingest (Step 2) still runs unconditionally — it's a per-user store, safe regardless of repo ownership.
+
+Why: agents running in a cwd that points at a third-party repo (e.g. `nousresearch/hermes-agent` for a downstream port) were writing project-specific porting notes into the upstream project's AGENTS.md. The upstream maintainers do not want those notes; the user has no push rights to land them; the changes piled up as local-only drift. Reach check is the same authoritative gate that rs-plugkit's stop hook now uses for push-pressure (`fix(stop-hook): skip push-pressure on out-of-reach remotes`, rs-plugkit 72a53da).
+
+Recall key: `feedback/memorize-scope-guard`.
+
 ## 2026-04-30 - Maximal Cover: self-authorize in-spirit residuals
 
 Maximal Cover rule (AGENTS.md + planning SKILL.md + gm SKILL.md) loosened: residuals the agent judges within the spirit of the original ask AND completable from this session are self-authorized — agent expands the PRD and executes without re-asking. Only residuals genuinely outside the original ask OR genuinely unreachable are name-and-stop. When expanding under self-authorization, the agent declares its judgment in-response ("treating X as in-scope because Y") so the user can correct mid-chain. Silent expansion without the declaration is the failure mode this rule guards against.
