@@ -122,9 +122,21 @@ function GmTopbar() {
 
 function Hero() {
   if (!page || !page.hero) return null;
+  const stats = page.hero.stats;
   return C.Panel({
     style: 'margin:8px',
     children: h('div', { style: 'padding:24px 22px' },
+      stats ? h('a', {
+        href: './stats/',
+        style: 'display:inline-flex;align-items:center;gap:10px;padding:8px 14px;margin:0 0 14px 0;background:var(--panel-2);border:1px solid var(--panel-3);border-radius:999px;text-decoration:none;font-family:var(--ff-mono);font-size:12px;color:var(--panel-text-2)',
+        title: 'live stats — click for full dashboard',
+      },
+        h('span', {}, '⭐ ', h('strong', { style: 'color:var(--panel-text)' }, stats.stars || '—'), ' stars'),
+        h('span', { style: 'opacity:.4' }, ' · '),
+        h('span', {}, '📦 ', h('strong', { style: 'color:var(--panel-text)' }, stats.npm || '—'), ' npm / 30d'),
+        h('span', { style: 'opacity:.4' }, ' · '),
+        h('span', {}, '🛠️ ', h('strong', { style: 'color:var(--panel-text)' }, '12'), ' platforms'),
+      ) : null,
       C.Heading({ level: 1, style: 'margin:0 0 8px 0', children: page.hero.heading || site.title }),
       page.hero.subheading ? C.Lede({ children: page.hero.subheading }) : null,
       page.hero.body ? h('p', { style: 'margin:8px 0 16px 0;color:var(--panel-text-2);max-width:64ch' }, page.hero.body) : null,
@@ -308,11 +320,38 @@ export default {
     const docs = ctx.read('pages').docs;
     if (!docs.length) throw new Error('no pages found in site/content/pages');
 
+    const formatStat = n => {
+      if (n == null || isNaN(n)) return null;
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      return String(n);
+    };
+    const readJson = rel => {
+      try {
+        const p = resolve(THIS_DIR, '..', rel);
+        if (!existsSync(p)) return null;
+        return JSON.parse(readFileSync(p, 'utf8'));
+      } catch { return null; }
+    };
+    const starsJson = readJson('docs/api/stars.json');
+    const npmJson = readJson('docs/api/npm-downloads.json');
+    const liveStats = {
+      stars: (() => {
+        const arr = Array.isArray(starsJson) ? starsJson : (starsJson && starsJson.stars) || [];
+        const last = arr[arr.length - 1];
+        return formatStat(last && last.count);
+      })(),
+      npm: formatStat(npmJson && npmJson.total_30d),
+    };
+
     const outputs = [];
     for (const doc of docs) {
       const id = doc.id;
       if (!id) throw new Error('page missing id: ' + JSON.stringify(doc).slice(0, 100));
       const path = id === 'home' ? 'index.html' : `${id}/index.html`;
+      if (id === 'home' && doc.hero) {
+        doc.hero = { ...doc.hero, stats: liveStats };
+      }
 
       if (doc.layout === 'article') {
         if (!doc.source) throw new Error(`article page ${id} missing source`);

@@ -11,8 +11,9 @@ hero:
     - { label: "covering family of bounded subsets" }
     - { label: "no mocks, no skips, no excuses" }
   ctas:
-    - { label: "GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
+    - { label: "⭐ Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
     - { label: "Install", href: "https://github.com/AnEntrypoint/gm#install" }
+    - { label: "live stats", href: "./stats/" }
     - { label: "meet Glootie", href: "./mascot/" }
     - { label: "rust crates", href: "./crates/" }
     - { label: "skills", href: "./skills/" }
