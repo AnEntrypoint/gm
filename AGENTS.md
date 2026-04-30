@@ -38,6 +38,8 @@ node cli.js gm-starter ./build
 
 **Skills bundled in OC and Kilo**: gm-oc and gm-kilo bundle skills directly in the npm package. gc still uses external skills — its `loadSkillsFromSource()` returns `{}` intentionally.
 
+**VS Code-family adapters: never ship `.vscodeignore` alongside `package.json::files`**. vsce hard-rejects with "Both a .vscodeignore file and a 'files' property in package.json were found. VSCE does not support combining both strategies." Adapters in `platforms/{antigravity,vscode,cursor}.js` must pick one — gm uses the `files` array, so `createFileStructure` must not emit `.vscodeignore`. Package with `npx @vscode/vsce package --allow-star-activation --skip-license --no-dependencies`.
+
 **memorize sub-agent manages CLAUDE.md / AGENTS.md**: Do not inline-edit. Invocation: `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`. Classifier rejects changelog-shaped facts from AGENTS.md ingestion (rs-learn store still accepts them).
 
 **Autonomy**: Once a PRD is written, agents EXECUTE through to COMPLETE without asking. Asking permitted only as last resort for destructive-irreversible decisions or genuinely ambiguous user intent — prefer `exec:pause` over in-conversation asking.
