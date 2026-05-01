@@ -175,7 +175,8 @@ function fetchToFile(url, destPath, expectedTotal) {
       let lastStderr = Date.now();
       let lastByte = Date.now();
       const fetchStart = Date.now();
-      obsEvent('bootstrap', 'fetch.start', { url, resume_from: existing, status: res.statusCode });
+      const safeUrl = (() => { try { const p = new URL(url); return p.hostname + p.pathname; } catch(_) { return url.split('?')[0]; } })();
+      obsEvent('bootstrap', 'fetch.start', { url: safeUrl, resume_from: existing, status: res.statusCode });
       const stallTimer = setInterval(() => {
         if (Date.now() - lastByte > STALL_TIMEOUT_MS) {
           clearInterval(stallTimer);
@@ -194,10 +195,10 @@ function fetchToFile(url, destPath, expectedTotal) {
       res.pipe(out);
       out.on('finish', () => {
         clearInterval(stallTimer);
-        obsEvent('bootstrap', 'fetch.end', { url, bytes, dur_ms: Date.now() - fetchStart, ok: true });
+        obsEvent('bootstrap', 'fetch.end', { url: safeUrl, bytes, dur_ms: Date.now() - fetchStart, ok: true });
         out.close(() => resolve(bytes));
       });
-      out.on('error', err => { clearInterval(stallTimer); obsEvent('bootstrap', 'fetch.end', { url, bytes, dur_ms: Date.now() - fetchStart, ok: false, err: String(err.message || err) }); reject(err); });
+      out.on('error', err => { clearInterval(stallTimer); obsEvent('bootstrap', 'fetch.end', { url: safeUrl, bytes, dur_ms: Date.now() - fetchStart, ok: false, err: String(err.message || err) }); reject(err); });
       res.on('error', err => { clearInterval(stallTimer); reject(err); });
       res.on('end', () => clearInterval(stallTimer));
     });
