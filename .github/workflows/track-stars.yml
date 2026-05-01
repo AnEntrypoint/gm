@@ -38,7 +38,8 @@ jobs:
           STARS_FILE="docs/api/stars.json"
 
           if [ ! -f "$STARS_FILE" ]; then
-            echo "[]" > "$STARS_FILE"
+            mkdir -p "$(dirname "$STARS_FILE")"
+            jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" '{generated:$ts, stars:[]}' > "$STARS_FILE"
           fi
 
       - name: Append new star count to JSON
@@ -46,24 +47,26 @@ jobs:
         run: |
           STARS_FILE="docs/api/stars.json"
           NEW_DATE=$(date -u +%Y-%m-%d)
+          NEW_TS=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
           NEW_COUNT=${{ steps.fetch-stars.outputs.count }}
 
           CURRENT_DATA=$(cat "$STARS_FILE")
-          LAST_ENTRY=$(echo "$CURRENT_DATA" | jq '.[-1] // empty')
+          LAST_ENTRY=$(echo "$CURRENT_DATA" | jq '.stars[-1] // empty')
 
-          if [ -z "$LAST_ENTRY" ]; then
-            NEW_DATA=$(jq -n --arg date "$NEW_DATE" --arg count "$NEW_COUNT" '[{"date":$date,"count":($count|tonumber)}]')
-          else
+          if [ -n "$LAST_ENTRY" ]; then
             LAST_DATE=$(echo "$LAST_ENTRY" | jq -r '.date')
-
             if [ "$LAST_DATE" == "$NEW_DATE" ]; then
               echo "Data for today already exists (date: $NEW_DATE)"
               echo "skip_commit=true" >> $GITHUB_OUTPUT
               exit 0
             fi
-
-            NEW_DATA=$(echo "$CURRENT_DATA" | jq --arg date "$NEW_DATE" --arg count "$NEW_COUNT" '.+[{"date":$date,"count":($count|tonumber)}]')
           fi
+
+          NEW_DATA=$(echo "$CURRENT_DATA" | jq \
+            --arg date "$NEW_DATE" \
+            --arg count "$NEW_COUNT" \
+            --arg ts "$NEW_TS" \
+            '.generated=$ts | .stars += [{"date":$date,"count":($count|tonumber)}]')
 
           echo "$NEW_DATA" > "$STARS_FILE"
           echo "skip_commit=false" >> $GITHUB_OUTPUT
@@ -72,9 +75,9 @@ jobs:
       - name: Check for changes
         id: check-diff
         run: |
-          if git diff --quiet docs/stars.json; then
+          if git diff --quiet docs/api/stars.json; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected in docs/stars.json"
+            echo "No changes detected in docs/api/stars.json"
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "Changes detected, will commit"
@@ -89,6 +92,6 @@ jobs:
       - name: Commit and push changes
         if: steps.check-diff.outputs.has_changes == 'true'
         run: |
-          git add docs/stars.json
+          git add docs/api/stars.json
           git commit -m "chore: update star count"
           git push
