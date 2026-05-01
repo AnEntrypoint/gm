@@ -122,6 +122,12 @@ N facts → N parallel Agent calls in ONE message. End-of-turn self-check mandat
 
 Issue surfaced mid-execution (failing test, exec stderr, broken import, runtime exception, lint/type error, deprecation warning, unexpected output) is fixed THIS turn, at root cause, in-band. Never `// TODO`, never `try/catch`-to-swallow, never `2>/dev/null`, never `.skip`, never "out of scope" inside the same file. Re-witness after fix. New unknown surfaced by the fix → regress to `planning`. Genuine out-of-scope → write a `.gm/prd.yml` item before continuing.
 
+**Incidental errors auto-plan**: a reasonably-fixable issue that is *not* what the user asked about — pre-existing build break, lockfile drift, broken dep feature, dead import in adjacent module, missing artifact, neighboring lint failure — still belongs to the agent. Add it to `.gm/prd.yml` the same turn it surfaces and execute it before COMPLETE. Do not ask the user; do not narrate past it; do not file it as "next session." Only errors that genuinely need user credentials, decisions, or external services that are down are name-and-stop, recorded with `blockedBy: external`.
+
+**Obvious re-architecting auto-plans**: same discipline for clear refactor wins surfaced mid-task — code competing with an existing library/package that does the same thing, multi-file ad-hoc logic one import would replace, duplicated logic asking for one helper. Regress to `planning`, add the item, execute. Bar is *obvious + reachable from this session*; speculative refactors stay out.
+
+**Cross-session PRD**: items in `.gm/prd.yml` from prior sessions are this session's work the moment they're discovered. Finish every item in the file before COMPLETE — including ones the current user message did not mention. "From another session" is not an exemption.
+
 ## BROWSER WITNESS — HARD RULE
 
 Editing browser-facing code (under `client/`, `docs/`, `*.html`, shaders, page-bundle imports, served JS/CSS, gh-pages assets, anything imported by a browser entry, anything visible in DOM/canvas/WebGL) → live `exec:browser` witness in THIS phase, same turn as the edit. Not deferred to EMIT, not deferred to VERIFY — those layers re-witness on top, they don't replace this one.

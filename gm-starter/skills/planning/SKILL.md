@@ -67,6 +67,12 @@ Every issue surfaced during planning, execution, or verification is fixed in-ban
 
 Surface → diagnose → fix → re-witness → continue. New unknown surfaced by the fix → regress here. Genuinely out-of-scope-irreversible → the residual goes into `.gm/prd.yml` *before* moving on; narration is not a substitute for an item.
 
+**Auto-plan incidental errors**: any fixable error encountered while working on the user's task — even one unrelated to the original ask (pre-existing build break, neighboring lint failure, lockfile drift, broken dep, stale generated file) — is added to `.gm/prd.yml` as a new item the same turn it surfaces and executed before COMPLETE. The user does not have to notice it or ask. Closing a turn with a known-bad signal still emitting is forced closure. Only errors needing external credentials, product decisions, or down services are name-and-stop with `blockedBy: external`.
+
+**Auto-plan obvious re-architecting**: same rule for clear refactor wins surfaced mid-task — hand-rolled code competing with a known library that does the same thing cleaner, multi-file ad-hoc system one import would replace, duplicated logic crying out for one helper. Re-enter PLAN, add the item, execute. Bar is *obvious + reachable from this session*; speculative or aesthetic changes stay out.
+
+**Cross-session PRD continuity**: `.gm/prd.yml` is durable. Items left over from previous sessions are this session's work as soon as they're seen. Finish every item before COMPLETE — including ones the current user message did not mention. "From another session" is never a reason to skip.
+
 ## BROWSER WITNESS — HARD RULE
 
 A `.prd` item that touches browser-facing code is not plan-complete unless its acceptance criteria include a live `exec:browser` witness with a `page.evaluate` assertion against the specific invariant the change establishes. "Manual verification", "test.js passes", and "browser test optional" are all unwitnessed and therefore unacceptable.
