@@ -1,6 +1,5 @@
 const CLIAdapter = require('../lib/cli-adapter');
 const gen = require('./copilot-cli-gen');
-const { createCcPromptSubmitHook, createCcPreToolUseHook, createCcPostToolUseHook } = require('./cli-config-shared');
 
 class CopilotCLIAdapter extends CLIAdapter {
   constructor() {
@@ -45,9 +44,6 @@ class CopilotCLIAdapter extends CLIAdapter {
       'agents/memorize.md': readFile(this.getAgentSourcePaths('memorize')),
       'agents/codesearch.md': readFile(this.getAgentSourcePaths('codesearch')),
       'agents/websearch.md': readFile(this.getAgentSourcePaths('websearch')),
-      'hooks/prompt-submit-hook.js': createCcPromptSubmitHook(),
-      'hooks/pre-tool-use-hook.js': createCcPreToolUseHook(),
-      'hooks/post-tool-use-hook.js': createCcPostToolUseHook(),
       'cli.js': gen.generateCliJs(),
       'README.md': gen.generateReadme(),
       'index.html': require('../lib/template-builder').generateGitHubPage(require('../lib/template-builder').getPlatformPageConfig('copilot-cli', pluginSpec))
@@ -139,15 +135,16 @@ State in \`~/.gh/extensions/gm/state.json\`.
       plugkitInvoker: 'binary',
       events: [
         { eventKey: 'tool:invoke', commands: [
-          { kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 },
-          { kind: 'js', file: 'pre-tool-use-hook.js', timeout: 2000 }
+          { kind: 'plugkit', subcommand: 'pre-tool-use', timeout: 3600 }
+        ]},
+        { eventKey: 'tool:result', commands: [
+          { kind: 'plugkit', subcommand: 'post-tool-use', timeout: 5000 }
         ]},
         { eventKey: 'session:start', commands: [
           { kind: 'plugkit', subcommand: 'session-start', timeout: 180000 }
         ]},
         { eventKey: 'prompt:submit', commands: [
-          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 },
-          { kind: 'js', file: 'prompt-submit-hook.js', timeout: 3000 }
+          { kind: 'plugkit', subcommand: 'prompt-submit', timeout: 60000 }
         ]},
         { eventKey: 'session:end', commands: [
           { kind: 'plugkit', subcommand: 'stop', subcommandRename: 'session-end', timeout: 15000 },

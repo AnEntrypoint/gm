@@ -9,11 +9,6 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook pre-tool-use",
             "timeout": 5000
-          },
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use-hook.js",
-            "timeout": 2000
           }
         ]
       }
@@ -26,11 +21,6 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook session-start",
             "timeout": 180000
-          },
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.js",
-            "timeout": 3000
           }
         ]
       }
@@ -43,11 +33,6 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook prompt-submit",
             "timeout": 60000
-          },
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit-hook.js",
-            "timeout": 3000
           }
         ]
       }
@@ -58,8 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-hook.js",
-            "timeout": 3000
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook post-tool-use",
+            "timeout": 5000
           }
         ]
       }
@@ -70,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-compact-hook.js",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/plugkit hook post-compact",
             "timeout": 5000
           }
         ]
