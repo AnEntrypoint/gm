@@ -93,6 +93,14 @@ Pure-prose edits to static documents with no JS/canvas/DOM behavior change are e
 
 This rule fires in EXECUTE (witness on edit), EMIT (post-emit verify), and VERIFY (final gate). All three.
 
+## OBSERVABILITY — HARD RULE
+
+Every program is observed by default. plugkit, rs-exec, rs-plugkit, rs-learn, rs-search, and rs-codeinsight emit structured JSONL events to `~/.claude/gm-log/<YYYY-MM-DD>/<subsystem>.jsonl` for every hook fired, every exec spawn, every recall, every run_self call. The agent inspects this stream when diagnosing — `plugkit log tail`, `plugkit log grep <terms>`, `plugkit log stats`, `plugkit log path`. Asking "why did X happen" without first checking the log is forced closure.
+
+The same discipline applies to code the agent writes. State transitions, error paths, external IO (network, disk, subprocess, queue), and timing of operations longer than a heartbeat are events the future debugger will need. Find the project's existing observability surface before inventing one (codesearch first); if a surface exists, extend it rather than starting a parallel one. If the project has none, the smallest correct shim is a single function or macro that emits one JSONL line per event to a file under `.gm/log/` (mirror what plugkit does — same shape, same fields). Never `console.log` / `println!` scatter across files; that fragments the surface and dies on the first compaction or rotation. The events are the program's own self-narration, not a debugging afterthought.
+
+What to emit, not how often: every state transition once; every error path once at the boundary it crosses; every external IO with timing; every nontrivial decision (allow/deny, route picked, branch taken on user-derived input). Do not emit per-iteration loop bodies, per-character parser steps, or anything whose volume would obscure the load-bearing events. The signal-to-noise judgment is the agent's; the cost of getting it wrong is paid by future-you reading the file.
+
 ## NOTHING FAKE — HARD RULE
 
 What ships runs against real services, real data, real binaries. Stubs, mocks, placeholder returns, fixture-only paths, "TODO: implement", `return null /* fake */`, hardcoded sample responses, and demo-mode fallbacks are forbidden in source the user will run. They produce green checks that survive into production and lie about what works.

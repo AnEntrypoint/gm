@@ -3,7 +3,7 @@
 const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { bootstrap, resolveCachedBinary, resolveCachedRtk } = require('./bootstrap');
+const { bootstrap, resolveCachedBinary, resolveCachedRtk, obsEvent } = require('./bootstrap');
 
 const dir = __dirname;
 
@@ -24,11 +24,14 @@ async function resolveBinary() {
 async function main() {
   const args = process.argv.slice(2);
   const isHook = args[0] === 'hook';
+  const startedAt = Date.now();
+  obsEvent('plugkit_wrapper', 'invoke', { argv: args.slice(0, 4), is_hook: isHook });
   let bin;
   try {
     bin = await resolveBinary();
   } catch (err) {
     process.stderr.write(`[plugkit] bootstrap failed: ${err.message}\n`);
+    obsEvent('plugkit_wrapper', 'bootstrap_failed', { err: err.message });
     const legacy = legacyFallback();
     if (legacy) { bin = legacy; }
     else if (isHook) { process.exit(0); }
@@ -49,6 +52,7 @@ async function main() {
     process.stdin.on('error', () => process.exit(1));
   } else {
     const result = spawnSync(bin, args, { stdio: 'inherit', windowsHide: true, env });
+    obsEvent('plugkit_wrapper', 'exit', { dur_ms: Date.now() - startedAt, code: result.status ?? -1 });
     process.exit(result.status ?? 1);
   }
 }

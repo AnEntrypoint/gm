@@ -17,6 +17,27 @@ const LOCK_STALE_MS = 5 * 60 * 1000;
 
 function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
+  try { obsEvent('bootstrap', 'log', { msg }); } catch (_) {}
+}
+
+function obsEvent(subsystem, event, fields) {
+  if (process.env.GM_LOG_DISABLE) return;
+  try {
+    const root = process.env.GM_LOG_DIR
+      || path.join(os.homedir(), '.claude', 'gm-log');
+    const day = new Date().toISOString().slice(0, 10);
+    const dir = path.join(root, day);
+    fs.mkdirSync(dir, { recursive: true });
+    const line = JSON.stringify({
+      ts: new Date().toISOString(),
+      sub: subsystem,
+      event,
+      pid: process.pid,
+      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      ...fields,
+    });
+    fs.appendFileSync(path.join(dir, `${subsystem}.jsonl`), line + '\n');
+  } catch (_) {}
 }
 
 function platformKey() {
@@ -352,7 +373,7 @@ function resolveCachedBinary(opts) {
   return null;
 }
 
-module.exports = { bootstrap, resolveCachedBinary, resolveCachedRtk, platformKey, binaryName, rtkBinaryName, cacheRoot };
+module.exports = { bootstrap, resolveCachedBinary, resolveCachedRtk, platformKey, binaryName, rtkBinaryName, cacheRoot, obsEvent };
 
 if (require.main === module) {
   bootstrap({ silent: false })
