@@ -229,6 +229,16 @@ async function downloadWithRetry(url, destPath) {
   throw lastErr;
 }
 
+function isLockStale(lockPath) {
+  try {
+    const st = fs.statSync(lockPath);
+    if (Date.now() - st.mtimeMs > LOCK_STALE_MS) return true;
+    const owner = parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
+    if (Number.isFinite(owner) && !pidAlive(owner)) return true;
+  } catch (_) { return true; }
+  return false;
+}
+
 function pruneOldVersions(root, keepVersion) {
   try {
     const entries = fs.readdirSync(root);
@@ -237,7 +247,8 @@ function pruneOldVersions(root, keepVersion) {
       if (e === `v${keepVersion}`) continue;
       const dir = path.join(root, e);
       const lock = path.join(dir, '.lock');
-      if (fs.existsSync(lock)) continue;
+      if (fs.existsSync(lock) && !isLockStale(lock)) continue;
+      if (fs.existsSync(lock)) { try { fs.unlinkSync(lock); } catch (_) {} }
       try {
         fs.rmSync(dir, { recursive: true, force: true });
         log(`pruned ${dir}`);
@@ -279,6 +290,15 @@ async function bootstrap(opts) {
     }
 
     const tmpPath = `${finalPath}.partial`;
+    if (fs.existsSync(tmpPath)) {
+      try {
+        const st = fs.statSync(tmpPath);
+        if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+          fs.unlinkSync(tmpPath);
+          log(`cleared stale partial: ${tmpPath}`);
+        }
+      } catch (_) {}
+    }
     const url = `https://github.com/${RELEASE_REPO}/releases/download/v${version}/${binName}`;
     await downloadWithRetry(url, tmpPath);
 
