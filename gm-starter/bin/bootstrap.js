@@ -17,7 +17,6 @@ const LOCK_STALE_MS = 5 * 60 * 1000;
 
 function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
-  try { obsEvent('bootstrap', 'log', { msg }); } catch (_) {}
 }
 
 function obsEvent(subsystem, event, fields) {
@@ -218,6 +217,7 @@ async function downloadWithRetry(url, destPath) {
     } catch (err) {
       lastErr = err;
       log(`attempt ${attempt} failed: ${err.message}`);
+      obsEvent('bootstrap', 'fetch.attempt_failed', { url, attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
       if (attempt < MAX_ATTEMPTS) {
         const wait = BACKOFF_MS[attempt - 1] || 120000;
         log(`backing off ${wait}ms`);
@@ -306,6 +306,7 @@ async function bootstrap(opts) {
 
     fs.writeFileSync(okSentinel, new Date().toISOString());
     log(`installed ${finalPath}`);
+    obsEvent('bootstrap', 'install.done', { path: finalPath, version, kind: 'plugkit' });
     pruneOldVersions(root, version);
     // Best-effort rtk fetch: failures here never block plugkit usage
     try { await bootstrapRtk(verDir, version, wrapperDir, opts.silent); }
@@ -346,6 +347,7 @@ async function bootstrapRtk(verDir, version, wrapperDir, silent) {
   if (os.platform() !== 'win32') { try { fs.chmodSync(rtkPath, 0o755); } catch (_) {} }
   fs.writeFileSync(rtkOk, new Date().toISOString());
   log(`installed ${rtkPath}`);
+  obsEvent('bootstrap', 'install.done', { path: rtkPath, version, kind: 'rtk' });
   return rtkPath;
 }
 
@@ -384,5 +386,5 @@ module.exports = { bootstrap, resolveCachedBinary, resolveCachedRtk, platformKey
 if (require.main === module) {
   bootstrap({ silent: false })
     .then(p => { process.stdout.write(p + '\n'); process.exit(0); })
-    .catch(err => { log(`FATAL: ${err.message}`); process.exit(1); });
+    .catch(err => { log(`FATAL: ${err.message}`); obsEvent('bootstrap', 'fatal', { err: String(err.message || err) }); process.exit(1); });
 }

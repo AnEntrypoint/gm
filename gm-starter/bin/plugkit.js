@@ -31,7 +31,7 @@ async function main() {
     bin = await resolveBinary();
   } catch (err) {
     process.stderr.write(`[plugkit] bootstrap failed: ${err.message}\n`);
-    obsEvent('plugkit_wrapper', 'bootstrap_failed', { err: err.message });
+    obsEvent('plugkit_wrapper', 'bootstrap_failed', { err: err.message, dur_ms: Date.now() - startedAt, argv: args.slice(0, 4), is_hook: isHook });
     const legacy = legacyFallback();
     if (legacy) { bin = legacy; }
     else if (isHook) { process.exit(0); }
