@@ -127,17 +127,3 @@ exec:nodejs code that hits fs.readFileSync ENOENT or other synchronous system er
 ## Made with gm Page
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array when a new notable project is added — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Static data, no runtime API calls. Standalone HTML, not bundled.
-
-## Learning Audit
-
-2026-04-30: 5 items sampled. Strong recall (Core Rules) removed. Partial hits (Rust cascade, Site Build mermaid) refined and re-ingested to rs-learn (556B, 470B). Remaining items (Coding Style, Made with gm, Documentation Policy) kept in-buffer—recall missed them, refinement pending next cycle.
-
-2026-04-30 (second cycle): 5 items sampled (code comments, clean build, mermaid, made-with-gm, skill files). 0 recalls succeeded. All 5 correctly remain in AGENTS.md as top-level repository policy rules (not detail-heavy implementation caveats per documentation policy).
-
-2026-04-30 (Codex integration cycle): 6 codex-specific facts ingested to rs-learn (install location, hook registration format, event types, sentinel pattern, placeholder expansion, test location). 5 AGENTS.md items audited: 1 strong recall removed (Nothing fake in source), 1 refined (PRD mandatory), 3 kept in-buffer (Skills OC/Kilo, Clean build, Platform registration).
-
-2026-05-01 (observability fixes cycle): 5 facts ingested to rs-learn (rs-exec JSONL corruption, bootstrap token redaction, recall query field, ingest_fast observability, pre_tool_use outcome field). 5 AGENTS.md items sampled (Coding Style, Clean build, Platform registration, Skills bundled, VS Code adapter). 0 recalls succeeded. All 5 correctly remain in-buffer as architecture rules.
-
-2026-05-01 (recall query fix cycle): 2 facts ingested to rs-learn (recall query embedding signal fix, short_recall_query pattern). 5 AGENTS.md items sampled (Coding Style, Clean build, Platform registration, Skill prose style, Made with gm). 0 recalls succeeded. All 5 correctly remain in-buffer as top-level repository policy rules.
-
-2026-05-02 (plugkit timeout finalization cycle): 2 facts ingested to rs-learn (timeout warning removal, double-timeout-flag-in-exec-bash). Updated AGENTS.md "Timeout enforcement" section to reflect warning removal and add exec:bash caveat. 5 items audited (Coding Style, Clean build, Skill prose, Platform registration, Skills bundled). 0 recalls. All remain in-buffer as architecture rules.
