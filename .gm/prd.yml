@@ -1,0 +1,140 @@
+- id: enforce-gm-subagent-on-hooks
+  subject: Route prompt-submit and session-start to gm subagent instead of gm skill
+  status: completed
+  description: User wants gm subagent (lighter, re-courses agent) on hook submissions instead of gm skill. Modify rs-plugkit prompt_submit and session_start hooks to spawn Agent(subagent_type='gm:gm', ...) instead of loading gm skill. Affects rs-plugkit/src/hook/prompt_submit.rs and session_start.rs.
+  effort: small
+  category: infra
+  route_family: execution
+  load: 0.95
+  failure_modes:
+    - subagent spawn fails
+    - agent loses context
+    - incompatible prompt structure
+  route_fit: dominant
+  authorization: witnessed
+  blocking:
+    - validate-cascade-ci
+  blockedBy: []
+  acceptance:
+    - hook invokes Agent with subagent_type='gm:gm'
+    - PRD and workspace context passed correctly
+    - agent executes work autonomously
+    - hook captures result without re-asking
+  edge_cases:
+    - agent timeout during long operations
+    - cross-session PRD continuity
+- id: complete-rs-search-mtime-filter
+  subject: Add mtime-recency filtering to rs-search scanner
+  status: completed
+  description: Modify scan_repository return to sort chunks by mtime descending and truncate to max_chunks() when corpus exceeds limit. Prevents O(n×tokens) index rebuild on 100K+ chunk repos. Target 80s→5s latency.
+  effort: small
+  category: refactor
+  route_family: state
+  load: 0.8
+  failure_modes:
+    - wrong sort order
+    - off-by-one truncation
+    - lost chunks
+  route_fit: dominant
+  authorization: witnessed
+  blocking:
+    - commit-push-rs-search
+  blockedBy: []
+  acceptance:
+    - chunks.len() > max_chunks() triggers sort + truncate
+    - sort is mtime descending
+    - output size = max_chunks()
+    - small repos untouched
+  edge_cases:
+    - zero mtime values
+    - identical mtimes
+    - all chunks older than epoch
+- id: commit-push-rs-search
+  subject: Commit rs-search refactor and push
+  status: completed
+  description: Commit complete-rs-search-mtime-filter changes, push to main. Cascade CI rebuilds rs-plugkit binary.
+  effort: small
+  category: infra
+  route_family: execution
+  load: 0.5
+  failure_modes:
+    - push fails
+    - CI red
+  route_fit: dominant
+  authorization: witnessed
+  blocking:
+    - validate-cascade-ci
+    - audit-gm-log
+  blockedBy:
+    - complete-rs-search-mtime-filter
+  acceptance:
+    - git log shows new commit on main
+    - push succeeds
+    - cascade.yml runs in CI
+  edge_cases: []
+- id: validate-cascade-ci
+  subject: Monitor cascade CI until rs-plugkit binary deployed
+  status: completed
+  description: Wait for cascade.yml → rs-plugkit release.yml → publish.yml. Binary deployed when publish completes.
+  effort: small
+  category: infra
+  route_family: execution
+  load: 0.6
+  failure_modes:
+    - CI timeout
+    - cargo build fails
+    - binary not deployed
+  route_fit: dominant
+  authorization: witnessed
+  blocking:
+    - audit-gm-log
+  blockedBy:
+    - enforce-gm-subagent-on-hooks
+  acceptance:
+    - cascade.yml completes successfully
+    - rs-plugkit binary deployed
+    - gm-cc HEAD updated
+  edge_cases: []
+- id: audit-gm-log
+  subject: Audit gm-log for rs-search latency + ccsniff
+  status: completed
+  description: Inspect ~/.claude/gm-log 1h window after cascade. Measure rs_search query duration vs 81s baseline. Run bun x ccsniff. Document findings.
+  effort: medium
+  category: observability
+  route_family: observability
+  load: 0.7
+  failure_modes:
+    - no improvement visible
+    - latency regressed
+    - ccsniff violations
+  route_fit: dominant
+  authorization: witnessed
+  blocking:
+    - continue-loop
+  blockedBy:
+    - validate-cascade-ci
+  acceptance:
+    - query latency measured for 100K+ chunk repos ✓ (62215ms median, 34 queries >50K chunks)
+    - improvement quantified vs 81s baseline ✓ (23.2% improvement)
+    - ccsniff clean on samples ✓ (zero code violations across 2026-05-02 window)
+    - findings logged to rs-learn ✓ (via memorize)
+  edge_cases:
+    - no 100K+ chunk repos in window
+- id: continue-loop
+  subject: Continue hourly observability loop
+  status: pending
+  description: Schedule next iteration via ScheduleWakeup with 1h delay, re-run gm-log audit.
+  effort: small
+  category: infra
+  route_family: execution
+  load: 0.3
+  failure_modes: []
+  route_fit: dominant
+  authorization: witnessed
+  blocking: []
+  blockedBy:
+    - audit-gm-log
+  acceptance:
+    - ScheduleWakeup called with 1h delay
+    - prompt set to original /loop input
+  edge_cases: []
