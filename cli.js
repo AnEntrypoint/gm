@@ -9,7 +9,7 @@ const main = async () => {
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     console.log(`
-gm-builder - Convention-driven multi-platform plugin builder
+gm-builder - Build gm-skill canonical universal harness
 
 Usage:
   gm-builder <plugin-dir> [output-dir]
@@ -19,30 +19,24 @@ Arguments:
   output-dir    Output directory (default: ./gm-build)
 
 Examples:
-  gm-builder ./my-plugin
-  gm-builder ./my-plugin /tmp/build
+  gm-builder ./gm-starter
+  gm-builder ./gm-starter /tmp/build
 
 Description:
-  Generates a single gm-skill package — the canonical universal harness.
-  Plugkit serves all phase instructions, state, mutables, and guardrails
-  on demand via the spool. Invokable from any harness.
+  Generates the single gm-skill npm package — the canonical universal
+  harness. Plugkit serves all phase instructions, state, mutables, and
+  guardrails on demand via the spool. Invokable from any AI coding host.
 
 Plugin Directory Structure:
   plugin/
-  ├── gm.json          # Single truth source
-  ├── agents/               # Auto-detected
-  │   ├── gm.md
-  │   ├── codesearch.md
-  │   └── websearch.md
-  ├── hooks/                # Unified platform-agnostic
-  │   ├── session-start.js
-  │   ├── pre-tool.js
-  │   ├── prompt-submit.js
-  │   ├── stop.js
-  │   └── stop-git.js
-  └── lib/                  # Optional utilities
-
-Zero configuration required. Just create the plugin structure and run!
+  ├── gm.json     # Single truth source
+  ├── agents/     # Agent markdown definitions
+  ├── skills/     # Skill SKILL.md definitions
+  ├── prompts/    # Prompt text files
+  ├── scripts/    # Helper scripts
+  ├── lang/       # Language plugins
+  ├── lib/        # Runtime utilities
+  └── gm-plugkit/ # Spool watcher + WASM wrapper
 `);
     process.exit(0);
   }

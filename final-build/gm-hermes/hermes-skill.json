@@ -1,9 +1,0 @@
-{
-  "name": "gm",
-  "version": "2.0.1067",
-  "description": "Spool-dispatch orchestration engine with unified state machine, skills, and automated git enforcement",
-  "author": "AnEntrypoint",
-  "homepage": "https://github.com/AnEntrypoint/gm",
-  "skills": "./skills",
-  "category": "software-development"
-}

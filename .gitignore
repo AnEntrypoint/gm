@@ -37,9 +37,9 @@ plugforge-starter/skills/caveman/
 .gm/prd.paused.yml
 .gm/rs-learn.db-shm
 .gm/rs-learn.db-wal
-.gm/exec-spool.in
-.gm/exec-spool.out
-.gm/exec-spool.started
+.gm/exec-spool/in
+.gm/exec-spool/out
+.gm/exec-spool/started
 # tracked: .gm/rs-learn.db, .gm/code-search/, AGENTS.md, .gm/prd.yml
 # <<< gm managed
 
