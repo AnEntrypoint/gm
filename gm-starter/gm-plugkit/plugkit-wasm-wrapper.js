@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import crypto from 'crypto';
 import { watch } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 
@@ -23,14 +24,64 @@ function cosineSim(a, b) {
 const browserSessions = new Map();
 let nextBrowserSessionId = 1;
 
-function createWasiShim() {
-  return new Proxy({}, {
+function createWasiShim(instanceRef) {
+  const getMemory = () => instanceRef.value.exports.memory.buffer;
+  const shim = {
+    proc_exit: (code) => process.exit(code),
+    fd_write: (fd, iovs_ptr, iovs_len, nwritten_ptr) => {
+      try {
+        const buf = getMemory();
+        const dv = new DataView(buf);
+        const chunks = [];
+        let total = 0;
+        for (let i = 0; i < iovs_len; i++) {
+          const base = iovs_ptr + i * 8;
+          const ptr = dv.getUint32(base, true);
+          const len = dv.getUint32(base + 4, true);
+          if (len > 0) {
+            chunks.push(new Uint8Array(buf, ptr, len).slice());
+            total += len;
+          }
+        }
+        const merged = new Uint8Array(total);
+        let off = 0;
+        for (const c of chunks) { merged.set(c, off); off += c.length; }
+        const text = new TextDecoder('utf-8').decode(merged);
+        if (fd === 2) process.stderr.write(text);
+        else process.stdout.write(text);
+        new DataView(getMemory()).setUint32(nwritten_ptr, total, true);
+        return 0;
+      } catch (e) {
+        return 28;
+      }
+    },
+    random_get: (buf_ptr, buf_len) => {
+      try {
+        crypto.randomFillSync(new Uint8Array(getMemory(), buf_ptr, buf_len));
+        return 0;
+      } catch (e) {
+        return 28;
+      }
+    },
+    clock_time_get: (clock_id, precision, time_ptr) => {
+      try {
+        const ns = BigInt(Date.now()) * 1000000n;
+        new DataView(getMemory()).setBigUint64(time_ptr, ns, true);
+        return 0;
+      } catch (e) {
+        return 28;
+      }
+    },
+    environ_get: () => 0,
+    environ_sizes_get: () => 0,
+  };
+  return new Proxy(shim, {
     get(target, prop) {
-      if (prop === 'proc_exit') return (code) => process.exit(code);
-      if (prop === 'fd_write') return () => 0;
-      if (prop === 'environ_get') return () => 0;
-      if (prop === 'environ_sizes_get') return () => 0;
-      return () => 0;
+      if (prop in target) return target[prop];
+      return (...args) => {
+        console.error(`[plugkit-wasm] unimplemented WASI call: ${String(prop)} args=${args.length}`);
+        return 52;
+      };
     }
   });
 }
@@ -374,6 +425,42 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(inDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
+  const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
+  function acquireLock() {
+    try {
+      if (fs.existsSync(LOCK_PATH)) {
+        const content = fs.readFileSync(LOCK_PATH, 'utf-8').trim();
+        const [pidStr, tsStr] = content.split('|');
+        const lockTs = parseInt(tsStr, 10);
+        const age = Date.now() - lockTs;
+        if (age < 15000) {
+          console.error(`[plugkit-wasm] another watcher active (pid=${pidStr}, age=${age}ms); refusing to start`);
+          process.exit(1);
+        }
+        console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
+      }
+      fs.writeFileSync(LOCK_PATH, `${process.pid}|${Date.now()}`);
+    } catch (e) {
+      console.error(`[plugkit-wasm] lock acquire failed: ${e.message}`);
+      process.exit(1);
+    }
+  }
+  function refreshLock() {
+    try { fs.writeFileSync(LOCK_PATH, `${process.pid}|${Date.now()}`); } catch (_) {}
+  }
+  function releaseLock() {
+    try {
+      const content = fs.readFileSync(LOCK_PATH, 'utf-8').trim();
+      const [pidStr] = content.split('|');
+      if (pidStr === String(process.pid)) fs.unlinkSync(LOCK_PATH);
+    } catch (_) {}
+  }
+  acquireLock();
+  setInterval(refreshLock, 5000);
+  process.on('SIGINT', () => { releaseLock(); process.exit(0); });
+  process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
+  process.on('exit', releaseLock);
+
   console.log(`[plugkit-wasm] plugkit v${resolveVersion(instance)} (wasm)`);
   console.log(`[plugkit-wasm] watching ${inDir}`);
 
@@ -549,7 +636,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
     const importObject = {
       env: hostFunctions,
-      wasi_snapshot_preview1: createWasiShim(),
+      wasi_snapshot_preview1: createWasiShim(instanceRef),
     };
 
     const instance = new WebAssembly.Instance(wasmModule, importObject);
