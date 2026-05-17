@@ -15,10 +15,7 @@ const BOOTSTRAP_ERROR_FILE = path.join(os.homedir(), '.gm', 'bootstrap-error.jso
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
 
 function getPlugkitPath() {
-  if (fs.existsSync(PLUGKIT_WASM_WRAPPER) && fs.existsSync(PLUGKIT_WASM_PATH)) {
-    return PLUGKIT_WASM_WRAPPER;
-  }
-  throw new Error(`plugkit WASM not found at ${PLUGKIT_WASM_PATH}`);
+  return PLUGKIT_WASM_PATH;
 }
 
 function emitBootstrapEvent(severity, message, details) {
@@ -254,34 +251,15 @@ function ensureManagedGitignore(cwd) {
 async function downloadPlugkitBinary(version) {
   const binaryName = 'plugkit.wasm';
   const url = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}/${binaryName}`;
-
   emitBootstrapEvent('info', 'Starting WASM download', { version, url });
-
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, { timeout: 30000 }, (res) => {
-        if (res.statusCode === 404) {
-          reject(new Error(`WASM not found: v${version}`));
-          return;
-        }
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode} downloading plugkit.wasm`));
-          return;
-        }
-
-        const chunks = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => {
-          const data = Buffer.concat(chunks);
-          emitBootstrapEvent('info', 'WASM download complete', { bytes: data.length });
-          resolve(data);
-        });
-      })
-      .on('error', (e) => {
-        emitBootstrapEvent('error', 'Download failed', { error: e.message });
-        reject(e);
-      });
-  });
+  try {
+    const buf = await httpGet(url, 30000);
+    emitBootstrapEvent('info', 'WASM download complete', { bytes: buf.length });
+    return buf;
+  } catch (e) {
+    emitBootstrapEvent('error', 'Download failed', { error: e.message });
+    throw e;
+  }
 }
 
 function findPlugkitWasmPids() {
