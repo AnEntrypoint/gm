@@ -660,9 +660,13 @@ async function runSpoolWatcher(instance, spoolDir) {
       const dir = path.dirname(relPath);
       const verb = dir === '.' ? path.basename(filePath, path.extname(filePath)) : dir;
       const body = content.trim() || '{}';
+      const taskBase = path.basename(filePath, path.extname(filePath));
 
       const verbBytes = new TextEncoder().encode(verb);
       const bodyBytes = new TextEncoder().encode(body);
+
+      const t0 = Date.now();
+      console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
 
       const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
       const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
@@ -676,9 +680,9 @@ async function runSpoolWatcher(instance, spoolDir) {
       const resultBytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
       const resultStr = new TextDecoder().decode(resultBytes);
 
-      const taskBase = path.basename(filePath, path.extname(filePath));
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
       fs.writeFileSync(path.join(outDir, outName), resultStr);
+      console.log(`[dispatch] ← verb=${verb} task=${taskBase} ms=${Date.now() - t0} out=${resultStr.length}b`);
 
       try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
@@ -742,19 +746,22 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(() => {
     try {
       const cutoff = Date.now() - 3600_000;
+      let swept = 0;
       for (const entry of fs.readdirSync(outDir)) {
         try {
           const fp = path.join(outDir, entry);
           const s = fs.statSync(fp);
-          if (s.mtimeMs < cutoff) fs.unlinkSync(fp);
-        } catch (_) {}
+          if (s.mtimeMs < cutoff) { fs.unlinkSync(fp); swept++; }
+        } catch (e) { console.error(`[retention] failed to sweep ${entry}: ${e.message}`); }
       }
-    } catch (_) {}
+      if (swept > 0) console.log(`[retention] swept ${swept} out/ files older than 1h`);
+    } catch (e) { console.error(`[retention] sweep error: ${e.message}`); }
   }, 60_000);
 
   setInterval(() => {
     try {
       const cutoff = Date.now() - 600_000;
+      let stale = 0;
       const walk = (dir) => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
           const fp = path.join(dir, entry.name);
@@ -768,14 +775,16 @@ async function runSpoolWatcher(instance, spoolDir) {
               const outName = verbDir === '.' ? `${base}.json` : `${verbDir}-${base}.json`;
               try {
                 fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: 'stale input — never dispatched or watcher crash mid-flight' }));
-              } catch (_) {}
-              try { fs.unlinkSync(fp); } catch (_) {}
+              } catch (e) { console.error(`[stale-sweep] failed to write error for ${rel}: ${e.message}`); }
+              try { fs.unlinkSync(fp); stale++; } catch (e) { console.error(`[stale-sweep] failed to unlink ${rel}: ${e.message}`); }
+              console.error(`[stale-sweep] auto-failed ${rel} (age >${600}s)`);
             }
           }
         }
       };
       walk(inDir);
-    } catch (_) {}
+      if (stale > 0) console.log(`[stale-sweep] failed ${stale} orphaned inputs`);
+    } catch (e) { console.error(`[stale-sweep] sweep error: ${e.message}`); }
   }, 300_000);
 
   const existing = walkDir(inDir);

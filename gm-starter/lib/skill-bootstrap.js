@@ -232,6 +232,24 @@ async function verifyBinaryHealth(filePath) {
   }
 }
 
+function openWatcherLog(projectDir) {
+  const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
+  fs.mkdirSync(spoolDir, { recursive: true });
+  const logPath = path.join(spoolDir, '.watcher.log');
+  try {
+    const stat = fs.statSync(logPath);
+    if (stat.size > 10 * 1024 * 1024) {
+      const rotated = path.join(spoolDir, '.watcher.log.1');
+      try { fs.unlinkSync(rotated); } catch (_) {}
+      fs.renameSync(logPath, rotated);
+    }
+  } catch (_) {}
+  const fd = fs.openSync(logPath, 'a');
+  const header = `\n--- watcher boot ${new Date().toISOString()} pid=${process.pid} ---\n`;
+  try { fs.writeSync(fd, header); } catch (_) {}
+  return fd;
+}
+
 async function spawnPlugkitWatcher(wasmPath) {
   try {
     emitBootstrapEvent('info', 'Spawning plugkit WASM watcher daemon');
@@ -249,18 +267,23 @@ async function spawnPlugkitWatcher(wasmPath) {
       throw new Error(`WASM wrapper not found at ${wrapperPath}`);
     }
 
+    const projectDir = process.cwd();
+    const logFd = openWatcherLog(projectDir);
+
     const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
     const proc = spawn(runtime, [wrapperPath, 'spool'], {
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', logFd, logFd],
       windowsHide: true,
-      env: { ...process.env, CLAUDE_PROJECT_DIR: process.cwd() },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
     });
+
+    try { fs.closeSync(logFd); } catch (_) {}
 
     const pid = proc.pid;
     proc.unref();
 
-    emitBootstrapEvent('info', 'Plugkit WASM watcher spawned', { pid });
+    emitBootstrapEvent('info', 'Plugkit WASM watcher spawned', { pid, logPath: path.join(projectDir, '.gm', 'exec-spool', '.watcher.log') });
     return pid;
   } catch (e) {
     emitBootstrapEvent('error', 'Failed to spawn plugkit WASM watcher', { error: e.message });
