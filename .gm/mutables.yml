@@ -1,23 +1,5 @@
-- id: rs-plugkit-orchestrator-module-shape
-  claim: rs-plugkit/src/orchestrator/ exists with mod.rs/state.rs/transitions.rs/mutables.rs/memorize.rs plus residual.rs/recall.rs and an admin-verb allowlist
-  witness_method: codesearch + Read
-  witness_evidence: "Confirmed by subagent reports during migration: src/orchestrator/{mod,state,transitions,mutables,memorize,residual,recall}.rs all present per gate-denials subagent commit c9099ff. mod.rs has is_orchestrator_verb() dispatch."
-  status: witnessed
-
-- id: skill-source-current-count
-  claim: gm-starter/skills/ currently has 15 directories - 14 to delete + gm-skill to keep
-  witness_method: ls gm-starter/skills
-  witness_evidence: "Per earlier orient: dirs are browser/, code-search/, create-lang-plugin/, gm/, gm-complete/, gm-emit/, gm-execute/, gm-skill/, governance/, pages/, planning/, research/, ssh/, textprocessing/, update-docs/ = 15 total. Phase 2 sub-agent already deleted the 10 gm-<platform> wrappers in an earlier commit."
-  status: witnessed
-
-- id: existing-skill-md-prose-volume
-  claim: Total prose in 7 skill SKILL.md files (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, gm-skill) was restored to dispositional form in commit c38b33d3 - sum ~265 lines
-  witness_method: Read each + line count
-  witness_evidence: "Disposition restoration subagent report - gm 24 + planning 42 + gm-execute 37 + gm-emit 37 + gm-complete 35 + update-docs 47 + gm-skill 43 = 265 lines total. This is the prose corpus to migrate into Rust instruction tables."
-  status: witnessed
-
-- id: cascade-still-functional
-  claim: rs-plugkit push to main triggers release.yml which bumps gm-starter/gm.json plugkitVersion which triggers gm publish.yml which republishes AnEntrypoint/gm-skill
-  witness_method: Prior session witness
-  witness_evidence: "Migration phase 1 commit ace80224 produced publish.yml run 25987992987 success which landed AnEntrypoint/gm-skill at d6e09bc3. Phase 2 commit fc069ae8 ran 25988127703 success. Phase 3 commit 9dfc1ee0 ran 25988239724 success. Cascade is healthy."
+- id: website-deploys-cleanly-after-redesign
+  claim: gh-pages workflow produces a working /paper/ /distribution/ /crates/ /skills/ site that uses anentrypoint-design pro-rata with no custom CSS overrides and content matches current single-skill architecture
+  witness_method: after edits push to main, watch gh-pages action complete, fetch live URLs, inspect
+  witness_evidence: 'Deploy run 25997927971 success. Live site https://anentrypoint.github.io/gm/ serves class=''ds-247420'' data-theme=''light'', loads 247420.css from unpkg, badge reads ''one skill, every harness'', tagline ''pushin'' (typo fixed). /crates/ returns 200. site/input.css + main.js + build.js + index.html deleted via 09c45563. theme.mjs reduced 399→240 LOC, uses C.AppShell/Topbar/Crumb/Status/Hero/Section/Panel/RowLink/Btn/Chip. Articles rewritten in e6987d9d: paper.html + distribution.html + skills.html + crates.html all stale-ref-free.'
   status: witnessed
