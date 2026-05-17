@@ -6,6 +6,10 @@ import https from 'https';
 import { watch } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 import net from 'net';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const KV_DIR = path.join(os.homedir(), '.claude', 'gm-tools', 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
@@ -632,6 +636,24 @@ async function runSpoolWatcher(instance, spoolDir) {
   process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
   process.on('exit', releaseLock);
 
+  try {
+    const wrapperDst = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+    if (path.resolve(__filename) !== path.resolve(wrapperDst)) {
+      let same = false;
+      if (fs.existsSync(wrapperDst)) {
+        try {
+          const a = fs.readFileSync(__filename);
+          const b = fs.readFileSync(wrapperDst);
+          if (a.length === b.length && crypto.createHash('sha256').update(a).digest('hex') === crypto.createHash('sha256').update(b).digest('hex')) same = true;
+        } catch (_) {}
+      }
+      if (!same) {
+        fs.copyFileSync(__filename, wrapperDst);
+        console.log(`[plugkit-wasm] installed wrapper at ${wrapperDst}`);
+      }
+    }
+  } catch (e) { console.error(`[plugkit-wasm] wrapper self-install failed: ${e.message}`); }
+
   console.log(`[plugkit-wasm] plugkit v${resolveVersion(instance)} (wasm)`);
   console.log(`[plugkit-wasm] watching ${inDir}`);
 
@@ -853,27 +875,140 @@ async function runSpoolWatcher(instance, spoolDir) {
   await new Promise(() => {});
 }
 
+async function selfHealFromGithubReleases() {
+  return new Promise((resolve, reject) => {
+    const fetchJson = (url) => new Promise((res, rej) => {
+      const req = https.get(url, { timeout: 5000, headers: { 'user-agent': 'plugkit-wasm-wrapper', 'accept': 'application/json' } }, (r) => {
+        if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+          r.resume(); fetchJson(r.headers.location).then(res, rej); return;
+        }
+        if (r.statusCode !== 200) { r.resume(); rej(new Error(`HTTP ${r.statusCode} ${url}`)); return; }
+        const chunks = []; r.on('data', c => chunks.push(c));
+        r.on('end', () => { try { res(JSON.parse(Buffer.concat(chunks).toString('utf-8'))); } catch (e) { rej(e); } });
+        r.on('error', rej);
+      });
+      req.on('timeout', () => req.destroy(new Error('timeout')));
+      req.on('error', rej);
+    });
+    const fetchBuf = (url) => new Promise((res, rej) => {
+      const req = https.get(url, { timeout: 30000, headers: { 'user-agent': 'plugkit-wasm-wrapper' } }, (r) => {
+        if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+          r.resume(); fetchBuf(r.headers.location).then(res, rej); return;
+        }
+        if (r.statusCode !== 200) { r.resume(); rej(new Error(`HTTP ${r.statusCode} ${url}`)); return; }
+        const chunks = []; r.on('data', c => chunks.push(c));
+        r.on('end', () => res(Buffer.concat(chunks)));
+        r.on('error', rej);
+      });
+      req.on('timeout', () => req.destroy(new Error('timeout')));
+      req.on('error', rej);
+    });
+    (async () => {
+      try {
+        const rel = await fetchJson('https://api.github.com/repos/AnEntrypoint/plugkit-bin/releases/latest');
+        const tag = rel.tag_name;
+        if (!tag) throw new Error('no tag_name from GH Releases');
+        const version = tag.replace(/^v/, '');
+        const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/${tag}`;
+        const [wasm, sha] = await Promise.all([
+          fetchBuf(`${base}/plugkit.wasm`),
+          fetchBuf(`${base}/plugkit.wasm.sha256`).then(b => b.toString('utf-8').trim().split(/\s+/)[0]).catch(() => ''),
+        ]);
+        if (sha) {
+          const got = crypto.createHash('sha256').update(wasm).digest('hex');
+          if (got !== sha) throw new Error(`sha mismatch: got ${got}, expected ${sha}`);
+        }
+        const toolsDir = path.join(os.homedir(), '.claude', 'gm-tools');
+        fs.mkdirSync(toolsDir, { recursive: true });
+        fs.writeFileSync(path.join(toolsDir, 'plugkit.wasm'), wasm);
+        fs.writeFileSync(path.join(toolsDir, 'plugkit.version'), version);
+        const wrapperSrc = __filename;
+        const wrapperDst = path.join(toolsDir, 'plugkit-wasm-wrapper.js');
+        if (path.resolve(wrapperSrc) !== path.resolve(wrapperDst) && fs.existsSync(wrapperSrc)) {
+          try { fs.copyFileSync(wrapperSrc, wrapperDst); } catch (_) {}
+        }
+        resolve({ ok: true, version, sha });
+      } catch (e) { reject(e); }
+    })();
+  });
+}
+
+async function selfHeal(reason) {
+  console.error(`[plugkit-wasm] self-heal: ${reason}`);
+  try {
+    const r = await selfHealFromGithubReleases();
+    console.error(`[plugkit-wasm] self-heal: installed v${r.version} from GH Releases`);
+    return true;
+  } catch (e) {
+    console.error(`[plugkit-wasm] self-heal GH fetch failed: ${e.message}`);
+  }
+  console.error('[plugkit-wasm] self-heal: run `bun x gm-plugkit@latest spool` to recover manually');
+  return false;
+}
+
+async function tryInstantiate(wasmPath) {
+  const wasmBuffer = fs.readFileSync(wasmPath);
+  const wasmModule = new WebAssembly.Module(wasmBuffer);
+  const instanceRef = { value: null };
+  const hostFunctions = makeHostFunctions(instanceRef);
+  const importObject = {
+    env: hostFunctions,
+    wasi_snapshot_preview1: createWasiShim(instanceRef),
+  };
+  const instance = new WebAssembly.Instance(wasmModule, importObject);
+  instanceRef.value = instance;
+  return { instance, instanceRef };
+}
+
 (async () => {
   try {
     const wasmPath = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit.wasm');
-    const wasmBuffer = fs.readFileSync(wasmPath);
-    const wasmModule = new WebAssembly.Module(wasmBuffer);
 
-    const instanceRef = { value: null };
-    const hostFunctions = makeHostFunctions(instanceRef);
-
-    const importObject = {
-      env: hostFunctions,
-      wasi_snapshot_preview1: createWasiShim(instanceRef),
-    };
-
-    const instance = new WebAssembly.Instance(wasmModule, importObject);
-    instanceRef.value = instance;
+    let instance, instanceRef;
+    if (!fs.existsSync(wasmPath)) {
+      const healed = await selfHeal('wasm not installed');
+      if (!healed) process.exit(1);
+    }
+    try {
+      ({ instance, instanceRef } = await tryInstantiate(wasmPath));
+    } catch (e) {
+      const isLink = e && (e.name === 'LinkError' || /Import/i.test(e.message || ''));
+      const isCompile = e && (e.name === 'CompileError' || /WebAssembly/i.test(e.message || ''));
+      if (isLink || isCompile) {
+        const healed = await selfHeal(`${e.name || 'instantiate'}: ${e.message}`);
+        if (!healed) {
+          console.error('[plugkit-wasm] wrapper/wasm version skew — run: bun x gm-plugkit@latest spool');
+          process.exit(1);
+        }
+        ({ instance, instanceRef } = await tryInstantiate(wasmPath));
+      } else {
+        throw e;
+      }
+    }
 
     const args = process.argv.slice(2);
     if (args.includes('--version')) {
       console.log(`plugkit v${resolveVersion(instance)} (wasm)`);
       process.exit(0);
+    }
+
+    if (args[0] === 'bootstrap' || args.includes('--ensure-latest')) {
+      try {
+        const bootstrapPath = path.join(__dirname, 'bootstrap.js');
+        if (fs.existsSync(bootstrapPath)) {
+          const bootstrap = await import('file://' + bootstrapPath.replace(/\\/g, '/'));
+          if (bootstrap && typeof bootstrap.ensureReady === 'function') {
+            const r = await bootstrap.ensureReady({ forceLatest: true });
+            console.log(JSON.stringify(r || { ok: true }));
+            process.exit(0);
+          }
+        }
+        console.error('bootstrap.js not callable');
+        process.exit(1);
+      } catch (e) {
+        console.error('bootstrap error:', e.message);
+        process.exit(1);
+      }
     }
 
     if (args[0] === 'spool') {

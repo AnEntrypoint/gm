@@ -10,9 +10,13 @@ The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher 
 
 ## Boot the spool watcher (first turn only)
 
-Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old:
+Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old, boot via the npm package — `bun x gm-plugkit@latest spool` fetches the freshest plugkit (wasm + wrapper), copies them into `~/.claude/gm-tools/`, then enters spool mode:
 
-`node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool > /dev/null 2>&1 &`
+```
+bun x gm-plugkit@latest spool > /dev/null 2>&1 &
+```
+
+If `bun` is not available, fall back to `npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` or to the local wrapper if it's already installed: `node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool > /dev/null 2>&1 &`. The wrapper has a self-heal: if it detects a `LinkError` or missing wasm at instantiation, it re-runs bootstrap automatically and retries.
 
 Wait 2 seconds, verify `.status.json` is fresh. Then proceed.
 

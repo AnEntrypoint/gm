@@ -597,22 +597,31 @@ function copyWasmToGmTools(wasmPath, version) {
   const dst = gmToolsDir();
   fs.mkdirSync(dst, { recursive: true });
   const target = path.join(dst, 'plugkit.wasm');
+  const wrapperSrc = path.join(__dirname, 'plugkit-wasm-wrapper.js');
+  const wrapperDst = path.join(dst, 'plugkit-wasm-wrapper.js');
 
+  let wasmFresh = false;
   if (fs.existsSync(target)) {
-    let needsRefresh = true;
     try {
       const cur = sha256OfFileSync(target);
       const src = sha256OfFileSync(wasmPath);
-      if (cur === src) needsRefresh = false;
+      if (cur === src) wasmFresh = true;
     } catch (_) {}
-    if (!needsRefresh) {
-      try { fs.writeFileSync(path.join(dst, 'plugkit.version'), version); } catch (_) {}
-      return;
-    }
   }
-
-  fs.copyFileSync(wasmPath, target);
+  if (!wasmFresh) fs.copyFileSync(wasmPath, target);
   fs.writeFileSync(path.join(dst, 'plugkit.version'), version);
+
+  if (fs.existsSync(wrapperSrc)) {
+    let wrapperFresh = false;
+    if (fs.existsSync(wrapperDst)) {
+      try {
+        const cur = sha256OfFileSync(wrapperDst);
+        const src = sha256OfFileSync(wrapperSrc);
+        if (cur === src) wrapperFresh = true;
+      } catch (_) {}
+    }
+    if (!wrapperFresh) fs.copyFileSync(wrapperSrc, wrapperDst);
+  }
 }
 
 function getWasmPath() {
