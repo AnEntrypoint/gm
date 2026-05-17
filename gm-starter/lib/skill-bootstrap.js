@@ -10,6 +10,9 @@ const PLUGKIT_TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const PLUGKIT_VERSION_FILE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.version');
 const PLUGKIT_WASM_PATH = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.wasm');
 const PLUGKIT_WASM_WRAPPER = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-wasm-wrapper.js');
+const PLUGKIT_LATEST_CACHE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-latest.json');
+const PLUGKIT_LATEST_TTL_MS = 60 * 60 * 1000;
+const NPM_PACKAGE = '@anentrypoint/plugkit-wasm';
 const BOOTSTRAP_STATUS_FILE = path.join(os.homedir(), '.gm', 'bootstrap-status.json');
 const BOOTSTRAP_ERROR_FILE = path.join(os.homedir(), '.gm', 'bootstrap-error.json');
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
@@ -98,6 +101,172 @@ function getInstalledVersion() {
 function computeFileHash(filePath) {
   const content = fs.readFileSync(filePath);
   return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+function httpGet(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { timeout: timeoutMs, headers: { 'accept': 'application/json', 'user-agent': 'gm-skill-bootstrap' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        httpGet(res.headers.location, timeoutMs).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`HTTP ${res.statusCode} ${url}`));
+        return;
+      }
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+    req.on('timeout', () => { req.destroy(new Error(`timeout ${timeoutMs}ms ${url}`)); });
+    req.on('error', reject);
+  });
+}
+
+async function getLatestRemoteVersion() {
+  try {
+    const stat = fs.statSync(PLUGKIT_LATEST_CACHE);
+    if (Date.now() - stat.mtimeMs < PLUGKIT_LATEST_TTL_MS) {
+      const cached = JSON.parse(fs.readFileSync(PLUGKIT_LATEST_CACHE, 'utf-8'));
+      if (cached && cached.version) {
+        emitBootstrapEvent('info', 'Using cached latest version', { version: cached.version, ageMs: Date.now() - stat.mtimeMs });
+        return cached;
+      }
+    }
+  } catch (_) {}
+  let version = null;
+  let source = null;
+  try {
+    const buf = await httpGet('https://api.github.com/repos/AnEntrypoint/plugkit-bin/releases/latest', 3000);
+    const rel = JSON.parse(buf.toString('utf-8'));
+    const tag = rel && rel.tag_name;
+    if (tag) {
+      version = tag.replace(/^v/, '');
+      source = 'github-releases';
+    }
+  } catch (e) {
+    emitBootstrapEvent('warn', 'GitHub Releases lookup failed', { error: e.message });
+  }
+  if (!version) {
+    try {
+      const buf = await httpGet('https://registry.npmjs.org/gm-plugkit/latest', 3000);
+      const pkg = JSON.parse(buf.toString('utf-8'));
+      if (pkg && pkg.plugkitVersion) {
+        version = pkg.plugkitVersion;
+        source = 'npm-gm-plugkit';
+      } else if (pkg && pkg.version) {
+        version = pkg.version;
+        source = 'npm-gm-plugkit-fallback';
+      }
+    } catch (e) {
+      emitBootstrapEvent('warn', 'npm fallback lookup failed', { error: e.message });
+    }
+  }
+  if (!version) {
+    emitBootstrapEvent('warn', 'All latest-version lookups failed; falling back to manifest');
+    return null;
+  }
+  let sha = '';
+  try {
+    const shaBuf = await httpGet(`https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}/plugkit.wasm.sha256`, 3000);
+    sha = shaBuf.toString('utf-8').trim().split(/\s+/)[0];
+  } catch (e) {
+    emitBootstrapEvent('warn', 'sha fetch failed; will verify after download', { error: e.message, version });
+  }
+  const payload = { version, sha, source, fetchedAt: Date.now() };
+  try {
+    fs.mkdirSync(PLUGKIT_TOOLS_DIR, { recursive: true });
+    fs.writeFileSync(PLUGKIT_LATEST_CACHE, JSON.stringify(payload, null, 2));
+  } catch (_) {}
+  emitBootstrapEvent('info', 'Resolved latest plugkit version', { version, source, hasSha: Boolean(sha) });
+  return payload;
+}
+
+function gitignorePath(cwd) { return path.join(cwd, '.gitignore'); }
+
+function getManagedGitignoreEntries() {
+  return [
+    '.gm/exec-spool/',
+    '.gm/gm-fired-*',
+    '.gm/needs-gm',
+    '.gm/lastskill',
+    '.gm/turn-state.json',
+    '.gm/turn-state.json.corrupted-*',
+    '.gm/residual-check-fired',
+    '.gm/bootstrap-status.json',
+    '.gm/bootstrap-error.json',
+    '.gm/rslearn-counter.json',
+    '.gm/trajectory-drafts/',
+    '.gm/ingest-drafts/',
+    '.gm/prd-state.json',
+    '.gm/subagent-*.json',
+    '.plugkit-browser-profile/',
+    '.plugkit-browser-profile-*/',
+  ];
+}
+
+function getMustStayTracked() {
+  return [
+    '.gm/rs-learn.db',
+    '.gm/code-search/',
+    '.gm/disciplines/',
+    '.gm/prd.yml',
+    '.gm/mutables.yml',
+    'gm-data/rs-learn.db',
+    'gm-data/code-search/',
+    'gm-data/disciplines/',
+  ];
+}
+
+function ensureManagedGitignore(cwd) {
+  try {
+    const gi = gitignorePath(cwd);
+    let content = '';
+    try { content = fs.readFileSync(gi, 'utf-8'); } catch (_) {}
+    const START = '# >>> plugkit managed';
+    const END = '# <<< plugkit managed';
+    const entries = getManagedGitignoreEntries();
+    const block = [START, ...entries, END].join('\n');
+    const startIdx = content.indexOf(START);
+    const endIdx = content.indexOf(END);
+    let cleaned;
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      const before = content.slice(0, startIdx).replace(/\n+$/, '');
+      const after = content.slice(endIdx + END.length).replace(/^\n+/, '');
+      cleaned = [before, block, after].filter(Boolean).join('\n');
+    } else {
+      cleaned = content.replace(/\n+$/, '');
+      cleaned = cleaned ? `${cleaned}\n\n${block}` : block;
+    }
+    if (!cleaned.endsWith('\n')) cleaned += '\n';
+    if (cleaned !== content) {
+      fs.writeFileSync(gi, cleaned);
+      emitBootstrapEvent('info', 'Managed .gitignore block updated', { path: gi, entries: entries.length });
+    }
+    const mustTrack = getMustStayTracked();
+    const lines = cleaned.split(/\r?\n/);
+    const inManaged = (idx) => {
+      let inside = false;
+      for (let i = 0; i <= idx; i++) {
+        if (lines[i] === START) inside = true;
+        else if (lines[i] === END) inside = false;
+      }
+      return inside;
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (!t || t.startsWith('#')) continue;
+      if (inManaged(i)) continue;
+      if (mustTrack.includes(t)) {
+        emitBootstrapEvent('warn', 'Hostile .gitignore entry — must stay tracked', { entry: t, line: i + 1 });
+      }
+    }
+  } catch (e) {
+    emitBootstrapEvent('warn', 'ensureManagedGitignore failed', { error: e.message });
+  }
 }
 
 async function downloadPlugkitBinary(version) {
@@ -297,11 +466,20 @@ async function bootstrapPlugkit(sessionId) {
   try {
     emitBootstrapEvent('info', 'Bootstrap started');
 
-    const { version: manifestVersion, expectedHash } = readManifest();
+    ensureManagedGitignore(process.cwd());
+
+    const manifest = readManifest();
+    const latest = await getLatestRemoteVersion();
+    const targetVersion = (latest && latest.version) || manifest.version;
+    const expectedHash = (latest && latest.sha) || manifest.expectedHash;
+    if (latest && latest.version !== manifest.version) {
+      emitBootstrapEvent('info', 'Latest plugkit newer than manifest pin', { latest: latest.version, manifest: manifest.version });
+    }
     const installedVersion = getInstalledVersion();
     const plugkitPath = getPlugkitPath();
 
-    const versionMismatch = installedVersion !== manifestVersion;
+    const manifestVersion = targetVersion;
+    const versionMismatch = installedVersion !== targetVersion;
     const binaryMissing = !fs.existsSync(plugkitPath);
 
     if (!binaryMissing && !versionMismatch) {
@@ -347,8 +525,11 @@ async function bootstrapPlugkit(sessionId) {
 
       if (binaryData) {
         const downloadedHash = crypto.createHash('sha256').update(binaryData).digest('hex');
-        if (downloadedHash !== expectedHash) {
+        if (expectedHash && downloadedHash !== expectedHash) {
           throw new Error(`Hash mismatch: got ${downloadedHash}, expected ${expectedHash}`);
+        }
+        if (!expectedHash) {
+          emitBootstrapEvent('warn', 'No expected hash; trusting npm-resolved download', { sha: downloadedHash, version: manifestVersion });
         }
 
         killExistingPlugkit();
