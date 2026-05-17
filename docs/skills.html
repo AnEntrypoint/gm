@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skills · gm · 247420</title>
-<meta name="description" content="Every skill in the gm chain — what it does, when it fires, what it forbids.">
+<meta name="description" content="One skill, every verb — how gm-skill dispatches phase prose, orchestrator verbs, and host verbs through the wasm spool.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -54,15 +54,15 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 </head>
 <body>
 <div class="title-block">
-  <h1>Every skill in the gm chain</h1>
-  <div class="author">thirteen skills, one chair, no skipping</div>
-  <div class="date">cushion-certified · 2026</div>
+  <h1>One skill, every verb</h1>
+  <div class="author">one skill body, one wasm orchestrator, every phase served on demand</div>
+  <div class="date">cushion-certified &middot; 2026</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    Skills are how the agent moves between phases of the chair. The state machine — <strong>PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS → COMPLETE</strong> — is enforced by skill invocations, one per transition. There is no auto-chaining. Each step is an explicit <code>Skill(...)</code> call. Below: every skill in the standard chain, plus the supporting skills (browser, ssh, code-search, governance, pages, create-lang-plugin) and the memorize sub-agent.
+    There is exactly one shipped skill: <code>gm-skill</code>. Its <code>SKILL.md</code> is roughly twelve lines and contains no phase prose. The state machine &mdash; <strong>PLAN &rarr; EXECUTE &rarr; EMIT &rarr; VERIFY &rarr; COMPLETE</strong> &mdash; lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
@@ -73,216 +73,135 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <pre class="mermaid">
 stateDiagram-v2
   direction TB
-  [*] --> gm: user message
-  gm --> planning: Skill(gm)
-  planning --> gm_execute: Skill(planning)
-  gm_execute --> gm_emit: Skill(gm-execute)
-  gm_emit --> gm_complete: Skill(gm-emit)
-  gm_complete --> update_docs: Skill(gm-complete)
-  update_docs --> [*]: Skill(update-docs)
+  [*] --> PLAN: user message
+  PLAN --> EXECUTE: zero new unknowns last pass
+  EXECUTE --> EMIT: every mutable witnessed
+  EMIT --> VERIFY: post-emit matches pre-emit
+  VERIFY --> COMPLETE: prd empty AND git clean AND CI green
+  COMPLETE --> [*]
 
-  gm_execute --> planning: new unknown
-  gm_emit --> planning: new unknown
-  gm_complete --> planning: new unknown
-  gm_emit --> gm_execute: logic wrong
-  gm_complete --> gm_emit: broken output
-  gm_complete --> gm_execute: logic wrong
+  EXECUTE --> PLAN: new unknown
+  EMIT --> PLAN: new unknown
+  VERIFY --> PLAN: new unknown
+  EMIT --> EXECUTE: logic wrong
+  VERIFY --> EMIT: broken output
+  VERIFY --> EXECUTE: logic wrong
 </pre>
+
+<p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target, and the orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"There is no skip button. There is no &lsquo;just this once.&rsquo; The arrows are arrows. The cushion is the cushion. Sit."</div>
 
-<!-- =========== gm =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>gm</h2>
-    <span class="role">root orchestrator</span>
-    <span class="phase">always first</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>State-machine entrypoint. Loads policy: recall, memorize, autonomy, lawful-downgrade, fix-on-sight, browser-witness. Immediately invokes <code>planning</code>.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Every user message. The hook layer writes <code>.gm/needs-gm</code> on every prompt — the next non-Skill tool call is denied until <code>Skill(gm)</code> clears it.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Skipping invocation. Loading skills via the Agent tool. Direct phase invocation without going through <code>gm → planning</code>.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Without a forced first action, agents drift into "let me just check…" patterns that bypass the state machine. <code>gm</code> is the cushion you sit on before you do anything else.</span></div>
-</div>
+<h2>How the one skill works</h2>
 
-<!-- =========== planning =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>planning</h2>
-    <span class="role">orient · cover · PRD</span>
-    <span class="phase">PLAN</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>ORIENT first (a parallel pack of recalls and codesearches against the request's nouns), then enumerate the covering family, then write the PRD. The PRD is non-negotiable for any task beyond a single-line edit.</span></div>
-  <div class="row"><span class="k">fires when</span><span>After <code>gm</code>. Re-fires on any new unknown surfaced in any later phase (regression).</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">naming an unknown before ORIENT</span>. <span class="tag danger">single-subset triage</span> when other witnessable subsets exist (distributed refusal). Skipping the PRD on multi-step work. Items without acceptance criteria. Reading from a stale codeinsight or search cache instead of a freshly-synced index.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>If the cushion is the discipline, ORIENT is sitting down and the PRD is the seat-belt. Skipping ORIENT or skipping the PRD pays the same cost in fresh probes a turn later — plus the duplicated discovery, plus the risk of disagreeing with the agent's own prior witness.</span></div>
-</div>
+<p>The <code>gm-skill</code> SKILL.md body says, in essence: <em>on every turn, dispatch the <code>instruction</code> verb through the spool; obey what it returns.</em> It contains no phase prose, no checklists, no transition diagrams &mdash; those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator with the current FSM state, the current PRD, the current mutables, and the current residual-scan state baked in.</p>
 
-<!-- =========== gm-execute =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>gm-execute</h2>
-    <span class="role">execution contract for every phase</span>
-    <span class="phase">EXECUTE (and shared)</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Resolve every mutable from PLAN by witnessed execution. Mutables become KNOWN only when ΔS=0 (witnessed equals expected), λ≥2 (two independent paths agree), ε intact (adjacent invariants hold), Coverage≥0.70 (enough corpus inspected).</span></div>
-  <div class="row"><span class="k">fires when</span><span>After PLAN exits. Also: about to run <em>anything</em> in any phase — load this skill first as the execution contract.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">unwitnessed claims</span>. <code>Bash(node|npm|npx|bun)</code>. Mocks, stubs, fallbacks, swallowed errors. Editing before witnessing. Reimplementing a module you should have imported.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Plausibility is not authorization. <code>gm-execute</code> downgrades every prior to <code>weak_prior</code> until a witnessed probe upgrades it.</span></div>
-</div>
+<p>This collapses what used to be a chain of fourteen skill files (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing) into a single dispatch surface. The behaviors those files used to elicit are now properties of the orchestrator&rsquo;s response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
 
-<!-- =========== gm-emit =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>gm-emit</h2>
-    <span class="role">file writer + post-emit verifier</span>
-    <span class="phase">EMIT</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Pre-emit debug check (legitimacy gate per governance: earned specificity, repair legality, lawful downgrade preferred over forced closure). Write files. Post-emit verify from disk: read what you wrote, re-witness invariants. New unknown surfaced → snake back to <code>planning</code>.</span></div>
-  <div class="row"><span class="k">fires when</span><span>EXECUTE has driven all mutables to KNOWN.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Five refused collapses (governance §legitimacy). Writing without a post-emit verify. Treating compile-success as behavior-witness.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>The moment of writing is the moment of risk. Most regressions land here. <code>gm-emit</code> insists on reading back what you just wrote.</span></div>
-</div>
+<h2>The orchestrator verbs</h2>
 
-<!-- =========== gm-complete =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>gm-complete</h2>
-    <span class="role">end-to-end verify + git enforcement</span>
-    <span class="phase">VERIFY</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Run the single <code>test.js</code> at project root. Walk the 8-case governance stress suite (M1/F1/C1/H1/S1/B1/A1/D1). Check git: nothing uncommitted, nothing unpushed, CI green for the pushed HEAD. New unknown → snake back to PLAN.</span></div>
-  <div class="row"><span class="k">fires when</span><span>EMIT completes its writes and post-emit verifies pass.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">stopping while .prd has items</span>. <span class="tag danger">stopping while git is dirty or unpushed</span>. Treating a green local test as substitute for green CI. Marker-files-as-completion ("I created done.txt" is not done).</span></div>
-  <div class="row"><span class="k">why it exists</span><span>The chair is not done until the seat is empty AND the work is shared with the world. <code>git push</code> is part of "done."</span></div>
-</div>
+<p>These are the verbs the agent uses to drive the state machine. Each is dispatched the same way: write a request body to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, read the response from <code>.gm/exec-spool/out/&lt;verb&gt;-&lt;N&gt;.json</code>.</p>
 
-<!-- =========== update-docs =========== -->
 <div class="skill">
-  <div class="skill-header">
-    <h2>update-docs</h2>
-    <span class="role">README / AGENTS.md / docs refresher</span>
-    <span class="phase">UPDATE-DOCS (terminal)</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Update README.md, AGENTS.md, docs/index.html (and any other reference surface) to reflect what changed this session. Commit and push the doc updates. Declare COMPLETE.</span></div>
-  <div class="row"><span class="k">fires when</span><span>VERIFY passes and <code>.gm/prd.yml</code> is empty.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Updating docs that lie. Adding changelog history to AGENTS.md (it lives in <code>git log</code> and <code>CHANGELOG.md</code>). Inventing facts the codebase doesn't support.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>If the docs drift, the next agent in the next session learns the wrong shape. <code>update-docs</code> is the cushion's gift to your future self.</span></div>
-</div>
-
-<!-- =========== governance =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>governance</h2>
-    <span class="role">route discovery + emission legitimacy reference</span>
-    <span class="phase">PLAN / EXECUTE / EMIT / VERIFY (loaded once)</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Encodes the 7 route families (grounding, reasoning, state, execution, observability, boundary, representation), the 16-failure taxonomy, the 4 state planes, the ΔS/λ/ε/Coverage metrics, and the 8-case stress suite.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Loaded once at session start as a reference. Consulted by PLAN (route tagging), EXECUTE (weak-prior bridge), EMIT (legitimacy gate), VERIFY (stress suite).</span></div>
-  <div class="row"><span class="k">forbids</span><span>Emission without route_fit examined. Crossing the remote-execution boundary (git push, deploy, message-send) without authorization tier upgrade.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Separates route discovery from emission legitimacy. Without it, "plausible plan" silently authorizes "unearned conclusion."</span></div>
-</div>
-
-<!-- =========== code-search =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>code-search</h2>
-    <span class="role">mandatory codebase lookup workflow</span>
-    <span class="phase">any</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Wraps <code>exec:codesearch</code>. Two-word query → change/add one word per pass → minimum four attempts before declaring absent. PDFs included.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Any time the agent needs to find anything in the codebase.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span>. All hook-blocked. There is no alternative path.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Native search is fast. Native search is also a tar pit — agents emit huge regexes, get drowned, and lose their place. The constrained API is faster <em>because</em> it's narrow.</span></div>
-</div>
-
-<!-- =========== browser =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>browser</h2>
-    <span class="role">live page witness</span>
-    <span class="phase">EXECUTE / EMIT / VERIFY</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Wraps <code>exec:browser</code> (playwriter under the hood). Boots the real surface, navigates, polls for the affected global, asserts the invariant via <code>page.evaluate</code>. Captures witnessed numbers.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Any edit to code that runs in a browser — <code>client/</code>, <code>docs/</code>, <code>*.html</code>, shaders, page-bundle imports, served JS/CSS, anything visible in the DOM/canvas/WebGL.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">screenshot without page.evaluate</span>. <span class="tag danger">"node test.js passes"</span> as substitute. Deferring witness to a later phase. Silent skip on actual behavior change.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>The DOM is the truth. A test that doesn't open the page can't confirm the page works. Browser witness is the cushion's <em>own</em> seat-belt.</span></div>
-</div>
-
-<!-- =========== ssh =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>ssh</h2>
-    <span class="role">remote shell witness</span>
-    <span class="phase">EXECUTE</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Wraps <code>exec:ssh</code>. Reads target hosts from <code>~/.claude/ssh-targets.json</code>. Runs witnessed commands on remote machines for deploy, monitor, and remote-control workflows.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Anything that has to happen on a not-this machine.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Running remote without an explicit target name. Treating remote success as local witness.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Remote operations are the most common source of forced closure ("I can't reach that machine from here"). With ssh-as-skill, the agent can reach it from here.</span></div>
-</div>
-
-<!-- =========== pages =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>pages</h2>
-    <span class="role">GitHub Pages site scaffolder</span>
-    <span class="phase">EXECUTE / EMIT</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Buildless in-browser site (webjsx + rippleui via CDN), flatspace content aggregation built during GH Actions. The site you're reading is built by this skill.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Creating or updating a GH Pages site for any project.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Bundling. Build steps the user has to run manually. Static-site generators with their own DSLs.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Most "static" sites are static + a build pipeline + a generator + an asset bundler. <code>pages</code> is actually static, in the browser, with the smallest possible runtime.</span></div>
-</div>
-
-<!-- =========== create-lang-plugin =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>create-lang-plugin</h2>
-    <span class="role">CLI/runtime adapter generator</span>
-    <span class="phase">EXECUTE / EMIT</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Wires any CLI tool or language runtime into gm-cc as a <code>lang/</code> plugin. Adds <code>exec:&lt;id&gt;</code> dispatch, optional LSP diagnostics, optional prompt-context injection. Zero hook configuration required from the user.</span></div>
-  <div class="row"><span class="k">fires when</span><span>You want to add a new <code>exec:</code> verb (e.g. <code>exec:zig</code>, <code>exec:elixir</code>, <code>exec:custom-cli</code>).</span></div>
-  <div class="row"><span class="k">forbids</span><span>Adding runtimes by manually editing the dispatcher. Bypassing the plugin convention.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Extension should be a one-skill operation, not a five-file refactor.</span></div>
-</div>
-
-<!-- =========== memorize =========== -->
-<div class="skill">
-  <div class="skill-header">
-    <h2>textprocessing <span class="tag special">sub-agent</span></h2>
-    <span class="role">semantic routing layer</span>
-    <span class="phase">PLAN · EXECUTE · EMIT — wherever meaning is involved</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Any task whose correctness depends on understanding language — summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same — routes here via <code>Agent(subagent_type='gm:textprocessing', model='haiku', ...)</code>. One subagent per item, N items in N parallel calls in one message.</span></div>
-  <div class="row"><span class="k">fires when</span><span>The agent is about to write a keyword list, regex, or hand-rolled scoring loop to answer a semantic question. That code path is the stub; the haiku call is the real surface.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">batching</span> multiple items into one call (dilutes signal). <span class="tag danger">keyword-list semantics</span> dressed as deterministic logic. Code path that "looks like classification" but never asks the model.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Code does mechanics well and meaning badly. A keyword-list loop deciding semantic questions ships a green check that lies — the value terminates and looks right but is unrelated to what the user asked. The split between mechanics and meaning is the boundary this skill enforces.</span></div>
+  <div class="skill-header"><h2>instruction</h2><span class="role">phase prose, generated per call</span><span class="phase">every turn</span></div>
+  <div class="row"><span class="k">role</span><span>Return the current phase&rsquo;s imperative body, with the live FSM state, PRD summary, mutables status, residual-scan state, and recall pack already woven in. Replaces the bodies of the former gm / planning / gm-execute / gm-emit / gm-complete / update-docs / governance / code-search skill files.</span></div>
+  <div class="row"><span class="k">forbids</span><span>Treating the response as static. The body changes every call as state advances.</span></div>
 </div>
 
 <div class="skill">
-  <div class="skill-header">
-    <h2>memorize <span class="tag special">sub-agent</span></h2>
-    <span class="role">background memory writer</span>
-    <span class="phase">always — every turn</span>
-  </div>
-  <div class="row"><span class="k">role</span><span>Classifies a fact and writes it to <code>AGENTS.md</code> (top-level rules, gm-the-repo scope) and/or <code>rs-learn</code> (everything classified). Background, non-blocking, parallel.</span></div>
-  <div class="row"><span class="k">fires when</span><span>Any unknown→known transition the same turn it resolves. Triggers: exec output answers a prior unknown, code read confirms/refutes an assumption, CI log reveals a root cause, user states a preference, fix worked for a non-obvious reason, env quirk observed.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">batched memorize</span> at end-of-turn. <span class="tag danger">serializing</span> parallel spawns. Saying "I'll memorize this" without firing the Agent call. Saying it ≠ doing it.</span></div>
-  <div class="row"><span class="k">why it exists</span><span>Without same-turn memorize, every fact dies on context compaction. Without it, every session re-discovers what the previous session already learned. Memory is the difference between an agent and a goldfish with a keyboard.</span></div>
+  <div class="skill-header"><h2>transition</h2><span class="role">phase advance / regress</span><span class="phase">phase gate</span></div>
+  <div class="row"><span class="k">role</span><span>Request a forward transition (ladder) or backward transition (snake). Orchestrator validates against the four state planes (epistemic, operational, relational, temporal). Returns the new phase&rsquo;s instruction body on success, or a refusal naming the unmet gate.</span></div>
 </div>
 
-<h2>notes on the skill chain</h2>
+<div class="skill">
+  <div class="skill-header"><h2>phase-status</h2><span class="role">read current FSM state</span><span class="phase">any</span></div>
+  <div class="row"><span class="k">role</span><span>One-shot probe of where the orchestrator thinks the agent is. Used by the harness to render breadcrumbs and by the residual-scan gate to decide whether to fire.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">PLAN, EXECUTE, COMPLETE</span></div>
+  <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd.yml</code>; the orchestrator owns the serializer so concurrent dispatch from parallel <code>exec_js</code> calls cannot corrupt it.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">PLAN, EXECUTE</span></div>
+  <div class="row"><span class="k">role</span><span>Every unknown surfaced during PLAN lands here with <code>status: unknown</code>; <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">EXECUTE, EMIT</span></div>
+  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or rs-learn (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
+  <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>residual-scan</h2><span class="role">stop-gate challenge</span><span class="phase">COMPLETE</span></div>
+  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no open browser sessions AND no running tasks. Agent either expands the PRD with in-spirit residuals and re-enters EXECUTE, or explicitly states &ldquo;residual scan: none reachable in-spirit.&rdquo; Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>auto-recall</h2><span class="role">prompt-submit recall injection</span><span class="phase">every prompt</span></div>
+  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2&ndash;6 word recall query from the user prompt, calls rs-learn, and emits a &ldquo;## Recall for this prompt&rdquo; block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this ensures every turn begins with prior memory loaded.</span></div>
+</div>
+
+<h2>The host verbs</h2>
+
+<p>Side-effecting capabilities the agent uses inside a phase. All dispatched through the same spool surface; all serviced by the wasm host.</p>
+
+<div class="skill">
+  <div class="skill-header"><h2>exec_js</h2><span class="role">synchronous code execution</span></div>
+  <div class="row"><span class="k">role</span><span>Run a snippet in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, or <code>java</code>. Synchronous under wasm: the host runs the subprocess via <code>child_process.spawnSync</code> and blocks the watcher for the duration. Every call requires a positive <code>timeoutMs</code>; missing or zero is a hard error. Partial output preserved on timeout.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>codesearch</h2><span class="role">project-local search</span></div>
+  <div class="row"><span class="k">role</span><span>BM25 + embedding fusion over the project tree, plus tree-sitter symbol layer. Two-words-then-iterate query protocol; minimum four attempts before declaring absent. Emits <code>[index fully synced: &hellip;]</code> so freshness is visible.</span></div>
+  <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span> &mdash; the Bash gate denies these in favour of codesearch.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>recall / memorize</h2><span class="role">read/write memory</span></div>
+  <div class="row"><span class="k">role</span><span>Backed by <code>.gm/rs-learn.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>browser</h2><span class="role">live-page witness</span></div>
+  <div class="row"><span class="k">role</span><span>Wraps playwriter under the wasm host. Boot the surface, navigate, <code>page.evaluate</code> the invariant, capture witnessed values. Required for any edit to code that runs in a browser.</span></div>
+  <div class="row"><span class="k">forbids</span><span><span class="tag danger">screenshot without page.evaluate</span>. Treating &ldquo;node test.js passes&rdquo; as substitute for a live witness.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>fs_read / fs_write / fs_stat / fs_readdir</h2><span class="role">file-system access</span></div>
+  <div class="row"><span class="k">role</span><span>Wasm-host filesystem verbs. Used by the orchestrator and by user-side dispatch for any read/write that does not go through Edit/Write.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>kv_get / kv_put / kv_query</h2><span class="role">project-scoped KV store</span></div>
+  <div class="row"><span class="k">role</span><span>Backed by rs-learn. Used by the orchestrator for residual-scan markers, gm-fired sentinels, mutables/PRD serialization, and any project-state the agent needs to survive context compaction.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>fetch</h2><span class="role">HTTPS GET/POST</span></div>
+  <div class="row"><span class="k">role</span><span>Routed through localhost <code>acptoapi</code> on <code>127.0.0.1:4800</code> for embedding/LLM calls; direct egress otherwise. <code>acptoapi</code> spawns on first need via <code>bun x acptoapi@latest</code> and is non-fatal on spawn failure.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>health</h2><span class="role">one-shot system probe</span></div>
+  <div class="row"><span class="k">role</span><span>Returns plugkit version + pin-match, watcher liveness, runner state, rs-learn status, cache dirs, inbox/outbox counts, recent dispatch fires, recent errors. Use before assuming any component is broken.</span></div>
+</div>
+
+<h2>notes on the verb surface</h2>
 
 <blockquote>
-  "The chain is thirteen skills because the work has thirteen shapes. You will be tempted to merge planning into execute, or emit into complete, or browser into execute, or textprocessing into something that calls a regex. Don't. Each skill is a different posture on the cushion. Merging them is how you end up <em>standing</em> again." — from the gm field guide
+  "Every skill that was once a SKILL.md file is now an <code>instruction</code> response that knows the current state of the world. The behavior the file used to elicit is now woven into a string that the orchestrator generates in milliseconds, freshly, from the phase, the PRD, the mutables, and the recall pack. The chair is the same chair. The cushion is now part of the floor." &mdash; from the gm field guide
 </blockquote>
 
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec · rs-codeinsight · rs-search · rs-learn · rs-plugkit</span></a>
-  <a href="./skills.html"><strong>skills</strong><span>13 skills, one chain, no skipping</span></a>
-  </div>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec &middot; rs-codeinsight &middot; rs-search &middot; rs-learn &middot; rs-plugkit</span></a>
+  <a href="./distribution.html"><strong>distribution</strong><span>one skill, one wasm</span></a>
+  <a href="./paper.html"><strong>paper</strong><span>the complete discipline</span></a>
+</div>
 
 </body></html>

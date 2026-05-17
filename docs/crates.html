@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rust crates · gm · 247420</title>
-<meta name="description" content="Every rust crate behind glootius maximus, what it does, what it kills if it misbehaves.">
+<meta name="description" content="The five wasm-only Rust crates behind gm-skill: rs-plugkit (orchestrator), rs-exec (host helpers), rs-learn (memory), rs-search (file search), rs-codeinsight (code structure).">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -57,15 +57,15 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 </head>
 <body>
 <div class="title-block">
-  <h1>Every rust crate behind glootius maximus</h1>
-  <div class="author">five crates, one binary, zero excuses</div>
-  <div class="date">cushion-certified · 2026</div>
+  <h1>Every rust crate behind gm-skill</h1>
+  <div class="author">five wasm cdylibs, one orchestrator, zero native binaries</div>
+  <div class="date">cushion-certified &middot; 2026</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm ships <strong>one binary</strong> — <code>plugkit</code> — assembled from five rust crates that do five sharply different things. push to any of them and the binary in your plugin gets rebuilt and redeployed within minutes. you do not run <code>cargo build</code>. you do not bump versions. you push, the cascade does the rest.
+    gm ships <strong>one wasm artifact</strong> &mdash; <code>plugkit.wasm</code> &mdash; assembled from five Rust crates that each target <code>wasm32-wasip1</code> as a <code>cdylib</code>. Push to any of them and a new <code>gm-skill</code> publishes to npm within minutes. You do not run <code>cargo build</code>. You do not bump versions. You push, the cascade does the rest.
   </div>
 </div>
 
@@ -77,223 +77,204 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 sequenceDiagram
   autonumber
   participant Dev as Developer push
-  participant RsExec as rs-exec / rs-codeinsight / rs-search
+  participant Sib as rs-exec / rs-codeinsight / rs-search / rs-learn
   participant Plugkit as rs-plugkit
-  participant Bin as plugkit-bin Releases
+  participant Bin as plugkit-bin Releases + npm @anentrypoint/plugkit-wasm
   participant GM as gm
-  participant Plug as 15 plugin repos
-  participant User as /plugin user
+  participant Npm as npm gm-skill
 
-  Dev->>RsExec: git push main
-  RsExec->>Plugkit: cascade.yml triggers workflow_dispatch
-  Plugkit->>Plugkit: cargo update + build 6 binaries + bump patch
-  Plugkit->>Bin: publish-binaries (sha256 manifest, plugkit.version)
-  Plugkit->>GM: bump gm-starter/gm.json::plugkitVersion
-  GM->>Plug: publish.yml fans out 12-platform matrix
-  Plug->>User: bootstrap.js downloads new binary on next /plugin
+  Dev->>Sib: git push main
+  Sib->>Plugkit: cascade.yml -> gh workflow run release.yml
+  Plugkit->>Plugkit: build plugkit.wasm (wasm32-wasip1)
+  Plugkit->>Bin: publish wasm + sha256
+  Plugkit->>GM: bump plugkitVersion + plugkit.wasm.sha256
+  GM->>Npm: publish.yml runs cli.js gm-starter ./build
+  Npm->>Dev: bun add -g gm-skill picks up new version
 </pre>
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"You did not type cargo once. You did not bump a version. You pushed and the cushion did the rest. This is the correct order of operations."</div>
 
-<p>Five repos contribute. One binary deploys. Fifteen plugins update.</p>
+<p>Five crates contribute. One wasm deploys. One npm package updates.</p>
 
-<!-- ============================================================== -->
+<div class="crate">
+  <div class="crate-header">
+    <h2>rs-plugkit</h2>
+    <span class="role">the orchestrator</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit &uarr;</a></span>
+  </div>
+
+  <p><strong>Job:</strong> own the PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm module that loads into the Node host; the other four crates are its imports.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>compiles to a single <code>plugkit.wasm</code> targeting <code>wasm32-wasip1</code>; bundled in the <code>gm-plugkit</code> npm package as <code>@anentrypoint/plugkit-wasm</code></li>
+    <li>exposes the <code>dispatch_verb</code> wasm export &mdash; one entry point, every verb</li>
+    <li>owns the FSM in <code>src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>; the agent never advances state directly, it dispatches <code>transition</code> and the orchestrator validates against the four state planes</li>
+    <li>services orchestrator verbs natively: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code>, <code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code></li>
+    <li>routes host verbs (<code>fs_*</code>, <code>kv_*</code>, <code>fetch</code>, <code>exec_js</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>browser</code>, <code>health</code>) to the imported host functions</li>
+    <li>watches <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, writes responses to <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root)</li>
+  </ul>
+
+  <h3>commandments it enforces</h3>
+  <ul>
+    <li><span class="tag danger">blocked</span> direct Bash for <code>node|npm|npx|bun</code> &mdash; use <code>exec_js</code> via the spool</li>
+    <li><span class="tag">redirect</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> &rarr; <code>codesearch</code></li>
+    <li><span class="tag">stop-block</span> while <code>.gm/prd.yml</code> has items, while <code>.gm/mutables.yml</code> has unwitnessed rows, while git is uncommitted or unpushed</li>
+    <li><span class="tag">residual-scan</span> one-shot challenge at COMPLETE before allowing stop</li>
+  </ul>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">plugkit.wasm (~&lt;200 KB)</span></div>
+    <div class="cell"><span class="label">cascade target</span><span class="value">plugkit-bin Releases + npm</span></div>
+    <div class="cell"><span class="label">version source</span><span class="value">Cargo.toml (single)</span></div>
+  </div>
+</div>
 
 <div class="crate">
   <div class="crate-header">
     <h2>rs-exec</h2>
-    <span class="role">the runner</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec ↗</a></span>
+    <span class="role">wasm host helpers</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec &uarr;</a></span>
   </div>
 
-  <p><strong>Job:</strong> turn an <code>exec:&lt;lang&gt;</code> request into a real subprocess, stream its output back, and kill it when its budget is up. It is the muscle behind every line of code your agent claims to have run. If <code>exec:nodejs</code> works, rs-exec did the work. If <code>exec:nodejs</code> ate your script, that's a different rust crate's fault and rs-exec is offended you'd suggest otherwise.</p>
+  <p><strong>Job:</strong> provide the host-side machinery that plugkit&rsquo;s wasm imports use to actually touch the world. Code execution, browser sessions, file-system glue, idle cleanup. Formerly a native exec daemon with its own port and rpc; now a wasm-only utility crate published as <code>@anentrypoint/rs-exec-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
-    <li>runs an HTTP/JSON daemon on <code>127.0.0.1</code> with an OS-assigned port (no fixed port; Windows leaks orphan listeners on crash and a fixed port turns into a permanent allocation problem)</li>
-    <li>spawns the user's code in a subprocess with <code>stdio</code> piped, threads stream stdout and stderr back via per-chunk <code>appendOutput</code> RPCs</li>
-    <li>enforces an <strong>explicit timeout</strong> via <code>tokio::time::timeout</code> wrapping <code>wait_for_completion</code> — on elapse, walks the process tree via <code>sysinfo</code> and kills every descendant (Windows <code>cmd.exe</code> spawns survivor shells; on Unix bash pipelines escape the parent's group)</li>
-    <li>preserves partial streamed output on timeout so the agent sees what did flow before the kill</li>
-    <li>idle-cleans dead browser sessions and orphan exec-process-mode children every 60 seconds</li>
+    <li>implements <code>exec_js</code> as a synchronous <code>child_process.spawnSync</code> call from the wasm host &mdash; the watcher blocks for the duration; long subprocesses are not supported under wasm</li>
+    <li>spawns the user&rsquo;s code in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></li>
+    <li>enforces an explicit <code>timeoutMs</code> per call; missing or zero is a hard error</li>
+    <li>preserves partial streamed output on timeout; emits <code>timedOut: true</code> on the response</li>
+    <li>manages project-scoped playwriter browser sessions for the <code>browser</code> verb; idle-cleans dead sessions on a 60-second tick</li>
   </ul>
 
-  <h3>commandments rs-exec enforces</h3>
+  <h3>commandments it enforces</h3>
   <ul>
-    <li><span class="tag danger">mandatory</span> <code>timeoutMs</code> on every <code>execute</code> RPC. missing or zero = hard error. no defaults. no warnings. the cushion has a clock.</li>
-    <li><span class="tag">streamed</span> output is preserved through timeout-kill. the <code>output</code> array drains either way.</li>
-    <li><span class="tag">explicit</span> <code>timedOut: true</code> field on the response. clients don't string-match the error.</li>
+    <li><span class="tag danger">mandatory</span> <code>timeoutMs</code> on every <code>exec_js</code> dispatch &mdash; the host treats missing or zero as a hard error</li>
+    <li><span class="tag">explicit</span> <code>timedOut</code> field on the response; clients do not string-match the error</li>
+    <li><span class="tag">streamed</span> output preserved through timeout-kill; the <code>output</code> array drains either way</li>
   </ul>
-
-  <h3>what kills it</h3>
-  <p><strong>Windows port leaks.</strong> Solved by binding to port 0 and writing the live port to a single file atomically. <strong>Bun -e silently swallowing fs ENOENT throws.</strong> Solved by wrapping every nodejs/typescript snippet in a try/catch IIFE that explicitly writes to <code>process.stderr</code>. <strong>Long-running fetches stalled on tcp-alive but byte-dead sockets.</strong> Solved by a stall watchdog with a 20-second no-bytes deadline — the socket-idle timeout was useless because the connection was technically alive.</p>
 
   <div class="statgrid">
-    <div class="cell"><span class="label">runtimes</span><span class="value">9 (nodejs, python, bash, typescript, go, rust, c, cpp, java)</span></div>
-    <div class="cell"><span class="label">+ utilities</span><span class="value">browser, codesearch, recall, memorize</span></div>
-    <div class="cell"><span class="label">port</span><span class="value">OS-assigned</span></div>
-    <div class="cell"><span class="label">idle GC</span><span class="value">15 min</span></div>
-    <div class="cell"><span class="label">timeout default</span><span class="value">none — mandatory</span></div>
-    <div class="cell"><span class="label">kill</span><span class="value">tree (sysinfo walk)</span></div>
+    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-exec-wasm</span></div>
+    <div class="cell"><span class="label">runtimes</span><span class="value">10 language verbs + browser</span></div>
+    <div class="cell"><span class="label">daemon</span><span class="value">none &mdash; wasm-only</span></div>
   </div>
 </div>
-
-<!-- ============================================================== -->
 
 <div class="crate">
   <div class="crate-header">
     <h2>rs-codeinsight</h2>
     <span class="role">the AST x-ray</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight ↗</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight &uarr;</a></span>
   </div>
 
-  <p><strong>Job:</strong> at session start, read the entire codebase and emit a single compressed overview — file inventory, top patterns, hub modules, dead code, complexity hotspots, language breakdown. The first 5–10 turns of every session used to be the agent re-discovering what's in the repo. rs-codeinsight gives that to it for free, in one paragraph, in token-dense format.</p>
+  <p><strong>Job:</strong> tree-sitter-based code structure analysis. Powers the symbol layer of <code>codesearch</code> and the session-start architectural overview that lands in the agent&rsquo;s opening context. Published as <code>@anentrypoint/rs-codeinsight-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
     <li>walks the project tree, parses every supported language via tree-sitter, builds a structural index</li>
     <li>computes per-file metrics: lines, functions, classes, average complexity, parameter counts, long functions, large files</li>
-    <li>derives architectural layers (L0 pure exports → L3 pure imports), identifies hub modules and circular dependencies</li>
-    <li>flags issues: complex functions, large files, duplicated groups, SQL-injection literals, dead exports, orphaned files</li>
-    <li>caches results in <code>.codeinsight</code> so repeat session-starts are nearly free</li>
+    <li>derives architectural layers (L0 pure exports &rarr; L3 pure imports), identifies hub modules and circular dependencies</li>
+    <li>flags issues: complex functions, large files, duplicated groups, dead exports, orphaned files</li>
+    <li>caches results in <code>.codeinsight</code> with a digest of (mtime sum + git HEAD + dirty-tree marker); default invocation always runs fresh, <code>--read-cache</code> permitted only on exact digest match</li>
   </ul>
 
-  <h3>what kills it</h3>
-  <p>Repos with millions of lines time out the parse. The fix is to scope the analysis with <code>--path</code>, which is what gm-starter does on first run. Caching covers the rest.</p>
-
   <div class="statgrid">
+    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-codeinsight-wasm</span></div>
     <div class="cell"><span class="label">parser</span><span class="value">tree-sitter</span></div>
-    <div class="cell"><span class="label">cache</span><span class="value">.codeinsight (per repo)</span></div>
-    <div class="cell"><span class="label">output</span><span class="value">single block, token-dense</span></div>
-    <div class="cell"><span class="label">surfaces</span><span class="value">structure, complexity, dead code, hubs</span></div>
+    <div class="cell"><span class="label">cache</span><span class="value">.codeinsight (digest-gated)</span></div>
   </div>
 </div>
-
-<!-- ============================================================== -->
 
 <div class="crate">
   <div class="crate-header">
     <h2>rs-search</h2>
     <span class="role">the file finder</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search ↗</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search &uarr;</a></span>
   </div>
 
-  <p><strong>Job:</strong> answer <code>exec:codesearch &lt;words&gt;</code>. natural-language semantic-style ranking over file content, with bm25 scoring, snippet windows, and tunable context. it's why the agent never types <code>find</code> and never reaches for <code>rg</code>: the dedicated tool is so much faster that there's no excuse for the alternatives.</p>
+  <p><strong>Job:</strong> answer <code>codesearch &lt;words&gt;</code>. BM25 plus embedding fusion over file content, scan-embed-sweep pipeline, with snippet windows and tunable context. Published as <code>@anentrypoint/rs-search-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
-    <li>scans the project (with respect for <code>.gitignore</code>), tokenizes file content, builds a sparse term-frequency index</li>
-    <li>scores queries via bm25 with snippet ranking; returns top matches with surrounding line context</li>
-    <li>handles PDFs as code (extracts text via <code>pdf-extract</code>, caches per-page in <code>.gm/code-search/pdf-cache/</code>)</li>
-    <li>exposes an MCP surface so non-CLI clients can hit it directly</li>
+    <li>scans the project (respecting <code>.gitignore</code>), tokenizes file content, builds a sparse term-frequency index plus a dense embedding index</li>
+    <li>fuses BM25 with embedding cosine; reranks with a sweep pass; returns top matches with surrounding line context</li>
+    <li>indexes PDFs as code (extracts text via <code>pdf-extract</code>, caches per-page under <code>.gm/code-search/pdf-cache/</code>)</li>
+    <li>emits an <code>[index fully synced: &hellip;]</code> line before the first result so freshness is visible</li>
+    <li>tracks the index under <code>.gm/code-search/</code> &mdash; committed to git so the index travels with the project</li>
   </ul>
 
-  <h3>commandments it enforces (via the hook layer)</h3>
+  <h3>commandments it enforces</h3>
   <ul>
-    <li><span class="tag danger">blocked</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> — the agent gets a hook-deny redirecting to <code>exec:codesearch</code></li>
+    <li><span class="tag danger">blocked</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> &mdash; the Bash gate denies these in favour of <code>codesearch</code></li>
     <li><span class="tag">two words</span> minimum query length to start; iterate by changing or adding one word per pass</li>
     <li><span class="tag">four attempts</span> before declaring something absent</li>
   </ul>
 
   <div class="statgrid">
-    <div class="cell"><span class="label">scoring</span><span class="value">BM25</span></div>
+    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-search-wasm</span></div>
+    <div class="cell"><span class="label">scoring</span><span class="value">BM25 + embedding fusion</span></div>
     <div class="cell"><span class="label">PDFs</span><span class="value">searchable as code</span></div>
-    <div class="cell"><span class="label">context</span><span class="value">tunable line window</span></div>
-    <div class="cell"><span class="label">MCP</span><span class="value">yes</span></div>
   </div>
 </div>
-
-<!-- ============================================================== -->
 
 <div class="crate">
   <div class="crate-header">
     <h2>rs-learn</h2>
     <span class="role">the memory store</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn ↗</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn &uarr;</a></span>
   </div>
 
-  <p><strong>Job:</strong> hold every fact the agent ever resolved, across every session, on every machine. <code>exec:recall &lt;query&gt;</code> reads from it. <code>exec:memorize &lt;tag&gt; &lt;fact&gt;</code> writes to it. The store is committed to the repo as <code>.gm/rs-learn.db</code>, so memory shares across machines, sessions, CI, and contributors. Knowledge is collective.</p>
+  <p><strong>Job:</strong> hold every fact the agent ever resolved, across every session, on every machine. The <code>recall</code> verb reads from it. The <code>memorize-fire</code> orchestrator verb writes to it. The store is committed to the repo as <code>.gm/rs-learn.db</code>, so memory shares across machines, sessions, CI, and contributors. Published as <code>@anentrypoint/rs-learn-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
-    <li>libsql-backed (sqlite-compatible) store of episodes; each episode has a source tag, content, embedding, classification</li>
+    <li>KV plus vec store backing <code>recall</code>, <code>memorize</code>, and the <code>kv_*</code> host verbs that the orchestrator uses for its own state</li>
+    <li>each episode has a source tag, content, embedding, classification</li>
     <li>community detection (label propagation) groups related episodes; LLM summarization synthesizes per-community context</li>
-    <li>graph search via <code>Searcher</code> with configurable result count + relevance threshold</li>
-    <li>fast-path ingest (<code>add_episode_fast</code>) avoids re-embedding when content is identical</li>
-    <li>direct rust API consumed by rs-plugkit (no <code>bun x rs-learn</code> shim — the scoop bun.exe shim opens visible console windows on Windows)</li>
+    <li>graph search via <code>Searcher</code> with configurable result count plus relevance threshold</li>
+    <li>fast-path ingest avoids re-embedding when content is identical</li>
+    <li>called directly from the orchestrator&rsquo;s wasm imports &mdash; no rpc, no daemon, no <code>bun x rs-learn</code> shim</li>
   </ul>
 
   <h3>commandments it enforces</h3>
   <ul>
-    <li><span class="tag danger">tracked</span> <code>.gm/rs-learn.db</code> is committed, never gitignored. memory must travel.</li>
-    <li><span class="tag">classified</span> facts route to AGENTS.md (top-level rules) or rs-learn (everything else). classifier rejects changelog-shaped facts from AGENTS.md.</li>
-    <li><span class="tag">parallel</span> memorize spawns are non-blocking background <code>Agent(memorize)</code> calls. multiple facts → multiple parallel Agent calls in one message.</li>
+    <li><span class="tag danger">tracked</span> <code>.gm/rs-learn.db</code> is committed, never gitignored &mdash; memory must travel</li>
+    <li><span class="tag">classified</span> facts route to AGENTS.md (top-level rules) or rs-learn (everything else); the classifier rejects changelog-shaped facts from AGENTS.md ingestion</li>
+    <li><span class="tag">isolated</span> per-discipline stores at <code>.gm/disciplines/&lt;name&gt;/rs-learn.db</code>; the <code>@&lt;name&gt;</code> sigil in a request scopes reads and writes</li>
   </ul>
 
   <div class="statgrid">
-    <div class="cell"><span class="label">backend</span><span class="value">libsql</span></div>
-    <div class="cell"><span class="label">embedder</span><span class="value">configurable backend</span></div>
+    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-learn-wasm</span></div>
+    <div class="cell"><span class="label">store</span><span class="value">KV + vec</span></div>
     <div class="cell"><span class="label">graph</span><span class="value">community detection + LLM summarize</span></div>
-    <div class="cell"><span class="label">recall cost</span><span class="value">~200 tokens, ~5ms hot</span></div>
-  </div>
-</div>
-
-<!-- ============================================================== -->
-
-<div class="crate">
-  <div class="crate-header">
-    <h2>rs-plugkit</h2>
-    <span class="role">the binary</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit ↗</a></span>
-  </div>
-
-  <p><strong>Job:</strong> the actual <code>plugkit</code> binary you have installed. it composes the other four crates plus the hook dispatcher. every <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code>, <code>SessionStart</code>, <code>UserPromptSubmit</code>, and <code>PreCompact</code> hook is dispatched here, in rust, in microseconds, with deterministic exit codes that the editor uses to allow/deny tool calls.</p>
-
-  <h3>what it actually does</h3>
-  <ul>
-    <li>routes <code>plugkit hook &lt;event&gt;</code> to the right handler (pre_tool_use, prompt_submit, stop, session_start, …)</li>
-    <li>reads <code>.gm/turn-state.json</code> to enforce per-turn compliance: gm-first, recall-before-benchmark, memorize counter</li>
-    <li>writes <code>.gm/needs-gm</code> sentinel on every prompt + every isMeta-bypassing event so the next tool call is forced through <code>Skill(gm)</code></li>
-    <li>shells out to <code>rs-exec</code> for code execution, <code>rs-codeinsight</code> for the session-start overview, <code>rs-search</code> for codesearch, <code>rs-learn</code> for recall/memorize</li>
-    <li>auto-starts and supervises the rs-exec daemon; restarts on stale binary if no tasks are active</li>
-  </ul>
-
-  <h3>commandments it enforces</h3>
-  <ul>
-    <li><span class="tag danger">first action</span> on every user message must be <code>Skill(gm)</code>. no exceptions. isMeta-triggered responses still count.</li>
-    <li><span class="tag danger">blocked</span> <code>Bash(node|npm|npx|bun)</code>. Use <code>exec:&lt;lang&gt;</code>.</li>
-    <li><span class="tag">redirect</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> → <code>exec:codesearch</code>.</li>
-    <li><span class="tag">stop-block</span> while <code>.gm/prd.yml</code> has items, while git is uncommitted, while there are unpushed commits.</li>
-    <li><span class="tag">memorize counter</span> blocks after 3 consecutive <code>exec</code> calls without a <code>Agent(memorize)</code> spawn (write a sentinel to bypass with reason).</li>
-  </ul>
-
-  <h3>what kills it</h3>
-  <p>Stale binaries. Solved by storing a stamp of the current exe path; on every health check, if the exe changed and no tasks are running, the runner restarts. Crashed daemons leave a port file pointing at a dead PID. Solved by writing the port file <em>after</em> the listener bound, atomically via rename, so clients see either the live port or a missing file (which they treat as "no runner").</p>
-
-  <div class="statgrid">
-    <div class="cell"><span class="label">version source</span><span class="value">Cargo.toml (single)</span></div>
-    <div class="cell"><span class="label">cascade target</span><span class="value">plugkit-bin Releases</span></div>
-    <div class="cell"><span class="label">platforms</span><span class="value">6 prebuilt binaries</span></div>
-    <div class="cell"><span class="label">downstream</span><span class="value">15 plugin repos</span></div>
   </div>
 </div>
 
 <h2>How to update any of them</h2>
 
-<p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The cascade pipeline detects the push, rebuilds the six prebuilt binaries, bumps <code>gm-starter/gm.json::plugkitVersion</code>, and triggers gm's fifteen-platform fan-out. The next time anyone's editor calls <code>/plugin</code>, they get the new binary via <code>bootstrap.js</code>.</p>
+<p><strong>Push to the relevant repo. That&rsquo;s it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, <code>rs-learn</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>&rsquo;s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
 
-<p>The PUBLISHER_TOKEN secret in rs-exec, rs-codeinsight, and rs-search is what authorizes the cascade.yml in those repos to trigger rs-plugkit's workflow_dispatch. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, and <code>rs-learn</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>&rsquo;s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
 
 <h2>notes on the architecture</h2>
 
 <blockquote>
-  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold rs-search and rs-codeinsight into one — they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them." — from the gm field guide
+  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one &mdash; they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don&rsquo;t merge them." &mdash; from the gm field guide
 </blockquote>
 
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec · rs-codeinsight · rs-search · rs-learn · rs-plugkit</span></a>
-  <a href="./skills.html"><strong>skills</strong><span>13 skills, one chain, no skipping</span></a>
-  </div>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit &middot; rs-exec &middot; rs-learn &middot; rs-search &middot; rs-codeinsight</span></a>
+  <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
+  <a href="./distribution.html"><strong>distribution</strong><span>one skill, one wasm</span></a>
+</div>
 
 </body></html>

@@ -118,7 +118,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. This paper consolidates the gm discipline into a single document. We describe the phase-gated state machine (PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic routing through a haiku-backed text-processing agent. Together these form a complete behavioral envelope for coding agents deployed across 15 platforms.
+    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. This paper consolidates the gm discipline into a single document. We describe the phase-gated state machine (PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic routing through a haiku-backed text-processing agent. Together these form a complete behavioral envelope for coding agents, packaged as a single wasm-backed skill shipped on npm.
   </div>
 </div>
 
@@ -171,7 +171,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 
 <h2 id="s1">1. Introduction</h2>
 
-<p>LLM-based coding agents&mdash;systems that autonomously write, test, and deploy software&mdash;have become increasingly capable, but their reliability remains uneven. In our experience maintaining a multi-platform agent system across 15 IDE and CLI platforms, we have observed three primary failure categories:</p>
+<p>LLM-based coding agents&mdash;systems that autonomously write, test, and deploy software&mdash;have become increasingly capable, but their reliability remains uneven. In our experience maintaining a single-skill agent harness (<code>gm-skill</code>, npm-published, wasm-backed) loaded across every Claude-style skill host, we have observed three primary failure categories:</p>
 
 <ol>
   <li><strong>Assumption propagation:</strong> Agents narrate hypotheses about code behavior without verifying them, producing cascading errors when assumptions prove false.</li>
@@ -179,7 +179,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
   <li><strong>Premature closure:</strong> Agents declare work done before conditions are met, ship placeholders as results, skip verification steps, or stop short of the full scope of a request.</li>
 </ol>
 
-<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts. External behavioral enforcement&mdash;hooks below the agent&rsquo;s decision layer, stop barriers, phase gates, and hard rules encoded in the skill chain&mdash;is the only reliable mitigation.</p>
+<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts. External behavioral enforcement&mdash;the spool-dispatch gate below the agent&rsquo;s decision layer, marker-file stop barriers, orchestrator-enforced phase transitions, and hard rules served by the wasm <code>instruction</code> verb&mdash;is the only reliable mitigation.</p>
 
 <p>This paper is the complete reference for the gm discipline as it stands in production. Sections 2&ndash;8 cover the lifecycle model. Sections 9&ndash;12 cover the in-phase quality discipline. Sections 13&ndash;16 cover the governance layer. Sections 17&ndash;20 cover the autonomy and scope rules. Sections 21&ndash;29 cover operational hard rules. Sections 30&ndash;37 cover the dispatch-boundary rules that move the discipline out of the agent's context window and onto disk and into hooks.</p>
 
@@ -209,7 +209,7 @@ stateDiagram-v2
 <h3>2.1 Phases</h3>
 <p>The framework defines five phases with forward-only progression under normal conditions. <strong>PLAN</strong> discovers all unknowns (exits when a full pass adds zero new unknowns). <strong>EXECUTE</strong> resolves unknowns via witnessed execution (exits when all mutables are KNOWN). <strong>EMIT</strong> writes files to disk (exits when post-emit matches pre-emit exactly). <strong>VERIFY</strong> performs end-to-end witnessed validation (exits when .prd is empty, git is clean and pushed, and CI is green). <strong>COMPLETE</strong> updates documentation and closes the session.</p>
 
-<p>Each phase is implemented as a discrete skill&mdash;a self-contained prompt with explicit tool permissions, enforcement level, and transition rules. Skills are invoked through a dedicated dispatch mechanism, never through general-purpose agent spawning, ensuring phase identity is preserved.</p>
+<p>Each phase&rsquo;s imperative body is served on demand by the <code>instruction</code> verb in the wasm orchestrator (<code>rs-plugkit/src/orchestrator/</code>). The body is generated per call with the current FSM state, PRD, mutables, and recall pack baked in, so the prose can never drift relative to the live state of the project. There are no per-phase SKILL.md files anymore; the shipped skill (<code>gm-skill</code>) is a single ~12-line body that tells the agent to dispatch <code>instruction</code> on every turn and obey what it returns.</p>
 
 <h3>2.2 Forward Transitions (Ladders)</h3>
 <p>A phase advances only when its exit condition is satisfied. Conditions are conjunctive: every sub-condition must hold simultaneously. This prevents partial advancement where code is written before unknowns are resolved.</p>
@@ -297,25 +297,25 @@ stateDiagram-v2
 
 <h2 id="s6">6. Implementation: The gm Orchestrator</h2>
 
-<h3>6.1 Skill-Based Architecture</h3>
-<p>Each phase is implemented as a skill with YAML frontmatter specifying name, description, enforcement level, and allowed tools. The skill chain is: <code>gm &rarr; planning &rarr; gm-execute &rarr; gm-emit &rarr; gm-complete &rarr; update-docs</code>. Skills are invoked through a dedicated Skill tool ensuring phase identity is explicit and tool permissions are scoped per phase.</p>
+<h3>6.1 Single-Skill Architecture</h3>
+<p>There is one published skill: <code>gm-skill</code>. Its <code>SKILL.md</code> body is roughly twelve lines and contains no phase prose; it instructs the agent to dispatch the <code>instruction</code> verb through the spool on every turn. Every phase&rsquo;s imperative content is generated by the orchestrator at call time. The earlier multi-skill chain (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing) is gone &mdash; its behaviors are now properties of the <code>instruction</code> response and the verb dispatch surface.</p>
 
-<h3>6.2 Hook Lifecycle</h3>
-<p>Four hooks enforce the state machine below the agent&rsquo;s decision layer:</p>
+<h3>6.2 Spool Dispatch and Marker Gates</h3>
+<p>State-machine enforcement runs through the file-spool plus marker files in <code>.gm/</code>:</p>
 <dl>
-  <dt>session-start:</dt><dd>Tool installation, agent context injection, codebase analysis</dd>
-  <dt>prompt-submit:</dt><dd>Routes all user messages through the gm skill chain; injects recall results</dd>
-  <dt>pre-tool-use:</dt><dd>Blocks forbidden tools, dispatches <code>exec:&lt;lang&gt;</code> execution, enforces standards</dd>
-  <dt>stop:</dt><dd>Blocks session end if .prd has remaining items, git is dirty, or git is unpushed</dd>
+  <dt>session-start (bootstrap):</dt><dd>The skill bootstrap (<code>gm-plugkit/lib/skill-bootstrap.js</code>) ensures the wasm artifact is present, instantiates it, and records status to <code>.gm/exec-spool/.bootstrap-status.json</code>.</dd>
+  <dt>prompt-submit (orchestrator):</dt><dd>The orchestrator&rsquo;s <code>auto-recall</code> verb derives a 2&ndash;6 word recall query from the user prompt, calls rs-learn, and injects &ldquo;## Recall for this prompt&rdquo; into the next <code>instruction</code> body.</dd>
+  <dt>pre-tool-use (Bash gate):</dt><dd><code>lib/spool-dispatch.js::checkDispatchGates(sessionId, operation)</code> reads marker files (<code>.gm/prd.yml</code>, <code>.gm/mutables.yml</code>, <code>.gm/needs-gm</code>, <code>.gm/gm-fired-&lt;sessionId&gt;</code>) and blocks tool use, writes, and git operations on gate violation. Denials throw with a reason naming the violated gate; they never mutate the call.</dd>
+  <dt>stop:</dt><dd>Blocks session end if <code>.gm/prd.yml</code> has remaining items, <code>.gm/mutables.yml</code> has unwitnessed rows, git is dirty or unpushed, or the residual-scan one-shot challenge has not yet been answered.</dd>
 </dl>
 
-<p>Hooks are implemented entirely in Rust (rs-plugkit). No JS hook files are generated. The agent cannot bypass hook enforcement through reasoning.</p>
+<p>All gate logic is implemented in the wasm orchestrator plus a small JS shim in <code>gm-plugkit</code>. The agent cannot bypass enforcement through reasoning: the markers live on disk and the gate reads them independently of the agent&rsquo;s in-context state.</p>
 
 <h3>6.3 Unified Code Execution</h3>
-<p>All code execution passes through <code>exec:&lt;lang&gt;</code> dispatch. The pre-tool-use hook intercepts shell calls, detects the prefix, routes to the appropriate runtime, and manages background tasks. Supported languages: Node.js, Python, Go, Rust, TypeScript, browser (managed Chromium), and extensible language plugins via a project-local <code>lang/</code> directory.</p>
+<p>All code execution passes through the <code>exec_js</code> host verb. The dispatch path: agent writes <code>.gm/exec-spool/in/&lt;lang&gt;/&lt;N&gt;.txt</code>, the wasm watcher reads it, the host runs <code>child_process.spawnSync</code> with the appropriate runtime, output streams to <code>out/&lt;N&gt;.out</code>/<code>.err</code>, metadata to <code>out/&lt;N&gt;.json</code>. Supported language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>, plus the <code>browser</code> verb for live-page work.</p>
 
-<h3>6.4 Cross-Platform Deployment</h3>
-<p>The gm orchestrator deploys across 15 platforms via a single convention-driven source generating platform-specific implementations: 8 CLI platforms (Claude Code, Gemini CLI, OpenCode, Kilo, Codex, Copilot CLI, Qwen Code, Hermes) and 7 IDE platforms (VS Code, Cursor, Zed, JetBrains, Windsurf, Antigravity, Thebird). A fully automated cascade pipeline links all five Rust repositories; a push to any rs-* repo triggers binary builds for all 6 targets and downstream publication with no manual steps.</p>
+<h3>6.4 Single-Package Deployment</h3>
+<p>The orchestrator deploys as one npm package &mdash; <code>gm-skill</code> &mdash; loadable by any Claude-style skill host. The companion <code>gm-plugkit</code> npm package wraps the wasm and the bootstrap shim. A cascade pipeline links five wasm-only Rust repositories (<code>rs-plugkit</code>, <code>rs-exec</code>, <code>rs-learn</code>, <code>rs-search</code>, <code>rs-codeinsight</code>); a push to any of them triggers the relevant publishes and a fresh <code>gm-skill</code> on npm with no manual steps.</p>
 
 <hr>
 
@@ -388,11 +388,12 @@ stateDiagram-v2
 
 <h2 id="s12">12. The Memorize Sub-Agent</h2>
 
-<p>Every unknown-to-known transition triggers a background memorize invocation in the same turn it resolves. The sub-agent pattern:</p>
-<pre><code>Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true,
-      prompt='## CONTEXT TO MEMORIZE\n&lt;fact&gt;')</code></pre>
+<p>Every unknown-to-known transition triggers a background memorize dispatch in the same turn it resolves. The pattern is a spool verb dispatch:</p>
+<pre><code>write .gm/exec-spool/in/memorize-fire/&lt;N&gt;.txt
+  body: "&lt;fact&gt;"
+read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
-<p>Multiple facts resolved in one turn spawn multiple parallel Agent calls in a single message. End-of-turn self-check: scan for un-memorized resolutions and spawn immediately. Batching memorize calls is prohibited (facts memorized together are classified together, losing semantic separation). The sub-agent also manages <code>AGENTS.md</code> and <code>CLAUDE.md</code>; inline edits to those files by the main agent are prohibited.</p>
+<p>Multiple facts resolved in one turn spawn multiple parallel dispatches in a single message. End-of-turn self-check: scan for un-memorized resolutions and dispatch immediately. Batching memorize calls is prohibited (facts memorized together are classified together, losing semantic separation). The <code>memorize-fire</code> verb is the only mechanism that edits <code>AGENTS.md</code> and <code>CLAUDE.md</code>; inline edits to those files by the agent are prohibited. The classifier rejects changelog-shaped facts from AGENTS.md ingestion (rs-learn still accepts them).</p>
 
 <p>Recall and memorize together form the learning loop. Skipping either half breaks it.</p>
 
@@ -546,25 +547,24 @@ stateDiagram-v2
 <p>Triggers: unknown feels familiar | sub-task on a known project | about to ask user something likely already discussed | about to design where a prior decision likely exists. Hits become <code>weak_prior</code>; still witness before adopting. Cost: ~200 tokens, ~5ms.</p>
 
 <h3>19.2 Memorize (Write)</h3>
-<p>Every unknown&rarr;known transition triggers a background memorize invocation the same turn it resolves. Multiple facts &rarr; multiple parallel Agent calls in one message. Skipping memorize breaks the loop: subsequent sessions will rediscover what this session solved, paying the full discovery cost again.</p>
+<p>Every unknown&rarr;known transition triggers a background <code>memorize-fire</code> dispatch the same turn it resolves. Multiple facts &rarr; multiple parallel spool writes in one message. Skipping memorize breaks the loop: subsequent sessions will rediscover what this session solved, paying the full discovery cost again.</p>
 
 <h3>19.3 rs-learn Backend</h3>
-<p>Both operations run against the rs-learn SQLite database at <code>.gm/rs-learn.db</code>. The database is committed to git so memory and index state share across machines, sessions, and CI. The <code>Searcher</code> is called directly from the prompt-submit hook via the shared tokio Runtime, injecting recall results as &ldquo;## Recall for this prompt&rdquo; into the systemMessage before the agent sees the user turn.</p>
+<p>Both operations run against the rs-learn KV+vec store at <code>.gm/rs-learn.db</code>. The database is committed to git so memory and index state share across machines, sessions, and CI. The orchestrator&rsquo;s <code>auto-recall</code> verb calls rs-learn directly from inside the wasm module and emits a &ldquo;## Recall for this prompt&rdquo; block into the next <code>instruction</code> body before the agent sees the user turn.</p>
 
 <hr>
 
 <h2 id="s20">20. Execution Budget Model</h2>
 
-<p>Every <code>exec:&lt;lang&gt;</code> invocation operates within a three-layer budget:</p>
+<p>Every <code>exec_js</code> dispatch operates within a two-layer budget:</p>
 <ol>
-  <li><strong>CLI layer:</strong> <code>--timeout-ms &lt;u64&gt;</code> flag; defaults to 300,000 ms if omitted</li>
-  <li><strong>RPC layer:</strong> <code>timeoutMs</code> field mandatory in the execute RPC; rs-exec hard-rejects missing or zero values</li>
-  <li><strong>Runner layer:</strong> partial output is preserved on timeout; rs-exec returns <code>"timedOut": true</code> alongside output; plugkit exits 124</li>
+  <li><strong>Dispatch layer:</strong> <code>timeoutMs</code> field mandatory in the request body; the wasm host hard-rejects missing or zero values</li>
+  <li><strong>Host layer:</strong> <code>child_process.spawnSync</code> with a timeout argument; on timeout, partial streamed output is preserved and <code>timedOut: true</code> lands on the response sidecar</li>
 </ol>
 
 <p>On timeout, the agent treats the <code>[exec timed out after Nms; partial output above]</code> marker as authoritative truncation and re-issues with a higher budget. Retrying the same call after a timeout without increasing the budget is a fixed-cost infinite loop.</p>
 
-<p>The stall watchdog: if an exec task produces no output for more than 60 seconds, the agent checks whether the process is alive and kills the tree if not. Orphan accumulation from abandoned tasks was observed to reach 300+ processes and 5.9 GB RAM in production before the watchdog was added.</p>
+<p>Because <code>exec_js</code> is synchronous under wasm, long-running subprocesses block the spool watcher for the duration of the call. Orphaned background work is not supported. Callers that need long-lived workloads must pass a real per-call timeout and accept that the watcher is unavailable to other dispatchers while the call runs.</p>
 
 <hr>
 
@@ -694,15 +694,15 @@ stateDiagram-v2
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT · VERIFY]</span></div>
-  <p>Code execution and every utility verb both write a file to <code>.gm/exec-spool/in/&lt;lang-or-verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>. Languages live under <code>in/nodejs/</code>, <code>in/python/</code>, <code>in/bash/</code>, plus typescript, go, rust, c, cpp, java, deno. Verbs live under <code>in/codesearch/</code>, <code>in/recall/</code>, <code>in/memorize/</code>, plus wait, sleep, status, close, browser, runner, type, kill-port, forget, feedback, learn-status, learn-debug, learn-build, discipline, pause, health.</p>
-  <p>Only <code>git</code> and <code>gh</code> run directly via the Bash tool. Inline tool args, JSON-form dispatch, and <code>Bash(exec:&lt;anything&gt;)</code> are all denied at the hook layer.</p>
+  <p>Code execution and every utility verb both write a file to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>. Language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>. Host verbs: <code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>browser</code>, <code>health</code>. Orchestrator verbs: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>/<code>prd-resolve</code>/<code>prd-list</code>, <code>mutable-add</code>/<code>mutable-resolve</code>/<code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>. Output lands at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> for nested verbs and <code>out/&lt;N&gt;.json</code> for root verbs.</p>
+  <p>Only <code>git</code> and <code>gh</code> run directly via the Bash tool. Inline tool args, JSON-form dispatch, and any attempt to bypass the spool (e.g. <code>Bash(node script.js)</code>, <code>Bash(python -c &hellip;)</code>) are denied at the Bash gate.</p>
 </div>
 
 <p>The spool exists because tool args are ephemeral and inline. They live for the duration of one call, do not survive compaction, are not replayable, and cannot be inspected without re-running the agent. A file-based surface inverts every one of these properties: the request lives on disk before the watcher reads it, the watcher is detached from the agent process, and the output triplet (<code>.out</code>, <code>.err</code>, <code>.json</code>) is auditable after the fact by any tool that can read a directory.</p>
 
 <p>The three-file output shape maps to the agent&rsquo;s three needs. <code>.out</code> is the live stdout stream, written line-by-line as the task runs. <code>.err</code> is the separate stderr channel&mdash;mixing them collapses the distinction between &ldquo;result&rdquo; and &ldquo;diagnostic,&rdquo; which leads to ambiguous downstream parsing. <code>.json</code> is the metadata sidecar written once at completion: <code>exitCode</code>, <code>durationMs</code>, <code>timedOut</code>, <code>startedAt</code>, <code>endedAt</code>. The metadata file is what tells the agent whether the task ended cleanly, was killed for budget, or is still running; the streams alone cannot answer that.</p>
 
-<p>The boundary is enforced at the Bash hook. An agent that tries to run <code>node script.js</code> or <code>exec:nodejs ...</code> directly through Bash receives a denial that <em>throws</em> rather than mutates&mdash;the error names the spool path the agent should have written to. This is the only execution surface the discipline recognizes; everything else is a guess about whether the call happened.</p>
+<p>The boundary is enforced at the Bash gate. An agent that tries to run <code>node script.js</code> or any non-spool execution directly through Bash receives a denial that <em>throws</em> rather than mutates&mdash;the error names the spool path the agent should have written to. This is the only execution surface the discipline recognizes; everything else is a guess about whether the call happened.</p>
 
 <div class="gm-callout">
   <span class="who">from the gm field guide</span>
@@ -736,18 +736,18 @@ stateDiagram-v2
 
 <hr>
 
-<h2 id="s33">33. Daemonize-by-Default Execution Contract</h2>
+<h2 id="s33">33. Synchronous-Under-Wasm Execution Contract</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Every Exec Daemonizes <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT]</span></div>
-  <p>The spool watcher returns a task_id immediately and the hook tails the task logfile up to 30 seconds of wall-clock time before returning. Short tasks complete inside the window and look synchronous; long tasks return the task_id with partial output and continue running. The agent never re-spawns a long task to check on it&mdash;that orphans the first one.</p>
+  <div class="rule-title">Hard Rule: Every Exec Carries A Real Timeout <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE &middot; EMIT]</span></div>
+  <p><code>exec_js</code> is synchronous under the wasm host: the orchestrator runs the user subprocess via <code>child_process.spawnSync</code> and blocks the watcher for the duration. Every dispatch carries a positive <code>timeoutMs</code>; missing or zero is a hard error. On timeout, partial streamed output is preserved and <code>timedOut: true</code> lands on the response sidecar.</p>
 </div>
 
-<p>The 30-second window sits where it does because it is the boundary between &ldquo;the agent waits for an answer&rdquo; and &ldquo;the agent moves on with what it has.&rdquo; A pure synchronous-with-timeout contract would either truncate output for tasks that need longer (the timeout fires, the task is killed, partial work is lost) or freeze the agent for tasks that need shorter (the timeout is generous, the agent stares at a completed task for 25 seconds before noticing). Daemonize-by-default decouples completion from return: the task keeps running, the agent gets whatever was streamed in the window, and the task_id is the handle for everything that comes after.</p>
+<p>The synchronous-under-wasm contract is a consequence of wasm itself. There is no thread the orchestrator can detach the subprocess into, no way to keep a long-running process associated with the wasm instance after the dispatch returns, and no port for an external observer to attach to. The host runs the subprocess, waits up to <code>timeoutMs</code>, and returns. Long subprocesses block the watcher for the duration; orphaned background work is not supported under this surface.</p>
 
-<p>After the window, the agent rejoins via a small grammar of resumption verbs. <code>tail</code> drains additional output without blocking. <code>watch</code> blocks until a regex matches in the logfile or a timeout elapses&mdash;the match-or-timeout primitive. <code>wait</code> is a pure timer. <code>sleep</code> blocks on a specific task&rsquo;s output stream. <code>close</code> terminates the task. The grammar exists because the agent&rsquo;s questions after spawn are not all the same shape: sometimes the question is &ldquo;is it done yet,&rdquo; sometimes &ldquo;did it print this string,&rdquo; sometimes &ldquo;forget it, kill it.&rdquo; One verb per question keeps the hook&rsquo;s response cheap.</p>
+<p>This is a deliberate trade. The earlier generation of this project ran <code>rs-exec</code> as a native daemon with a port file, a task store, and a grammar of resumption verbs (<code>tail</code>, <code>watch</code>, <code>wait</code>, <code>sleep</code>, <code>close</code>). It was more flexible and also a fountain of operational pain: dead PIDs, port-leak races on Windows, idle-cleanup tuning, kill-tree edge cases on bash pipelines that escaped the parent group. The wasm-only surface gives up the long-task affordance and gets back operational simplicity: no daemon to supervise, no port to leak, no orphan-process accounting.</p>
 
-<p>Session-task accounting is what keeps background spawns from leaking. Every RPC response carries a top-level <code>running_task_ids</code> field for the calling session; the hook surfaces this in the system message so the agent sees its outstanding work on every turn. Session-end (clear, logout, prompt_input_exit) kills the session&rsquo;s tasks; compaction and handoff preserve them, because the agent expects to resume from where it left off.</p>
+<p>Browser sessions are the one exception. <code>exec:browser</code> opens a playwriter session that the wasm host holds open between dispatches (the host-side state lives outside the wasm instance, in the Node process that hosts it). Browser sessions persist across turn-stops and are reaped only on real-exit reasons (clear, logout, prompt_input_exit). The <code>running_task_ids</code> field on every dispatch response surfaces outstanding browser sessions so the agent sees them on every turn.</p>
 
 <hr>
 
@@ -768,14 +768,14 @@ stateDiagram-v2
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT · VERIFY]</span></div>
-  <p>For the Rust crates in this org (<code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, <code>rs-learn</code>, <code>rs-plugkit</code>) and the gm publish chain, <code>git push</code> triggers the build matrix. <code>cargo build</code> and <code>cargo test</code> are not run locally. Toolchain mismatches, rustc version skew, and missing system dependencies never block a push&mdash;push, watch CI via the stop hook, fix on red.</p>
+  <p>For the Rust crates in this org (<code>rs-plugkit</code>, <code>rs-exec</code>, <code>rs-learn</code>, <code>rs-search</code>, <code>rs-codeinsight</code>) and the gm publish chain, <code>git push</code> triggers the build pipeline. <code>cargo build</code> and <code>cargo test</code> are not run locally. Toolchain mismatches, rustc version skew, and missing system dependencies never block a push&mdash;push, watch CI via the stop hook, fix on red.</p>
 </div>
 
-<p>The principle is that the witness for a Rust crate is the green CI run on the pushed HEAD, not the green local build. CI runs across the matrix of target platforms (Linux x64, Linux arm64, macOS x64, macOS arm64, Windows x64, Windows arm64) that the binary actually has to work on; a local build covers exactly one of them and proves nothing about the other five. Pausing for a local build wall on a single platform is forced closure dressed as caution&mdash;the agent has stopped to verify a thing the verification cannot establish.</p>
+<p>The principle is that the witness for a Rust crate is the green CI run on the pushed HEAD, not the green local build. Every crate compiles to <code>wasm32-wasip1</code> as a <code>cdylib</code>; the wasm artifact is what the user actually loads. A local cargo build proves nothing about whether the wasm import surface matches the host&rsquo;s expectations or whether the published npm tarball has the right contents.</p>
 
-<p>The cascade is the witnessing infrastructure. A push to any crate triggers <code>release.yml</code> in <code>rs-plugkit</code>, which rebuilds all six platform binaries, signs them, and publishes them to the <code>plugkit-bin</code> Releases page. The same job bumps <code>plugkitVersion</code> in <code>gm-starter/gm.json</code>, which triggers the <code>publish.yml</code> matrix in <code>gm</code>, which fans the generated configs to all 15 downstream platform repos as single-commit orphan histories. The witness lands at the leaf of that tree, not the root.</p>
+<p>The cascade is the witnessing infrastructure. A push to any sibling crate fires its <code>cascade.yml</code>, which uses <code>gh workflow run</code> with <code>PUBLISHER_TOKEN</code> to trigger <code>release.yml</code> in <code>rs-plugkit</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it to <code>plugkit-bin</code> Releases and to npm as <code>@anentrypoint/plugkit-wasm</code>, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and publishes a fresh <code>gm-skill</code> npm tag. The witness lands at the leaf of that tree, not the root.</p>
 
-<p>This pairs with §23 Browser Witness: same witnessing principle, different execution boundary. The browser witness uses <code>exec:browser</code> to assert a behavior in a real Chromium; the CI witness uses GitHub Actions to assert a binary builds on real machines across the matrix. In both cases, the witness lives outside the agent&rsquo;s local environment because the agent&rsquo;s local environment cannot answer the question.</p>
+<p>This pairs with §23 Browser Witness: same witnessing principle, different execution boundary. The browser witness uses <code>exec:browser</code> to assert a behavior in a real Chromium; the CI witness uses GitHub Actions to assert a wasm builds and the npm tarball publishes cleanly. In both cases, the witness lives outside the agent&rsquo;s local environment because the agent&rsquo;s local environment cannot answer the question.</p>
 
 <hr>
 
@@ -794,18 +794,18 @@ stateDiagram-v2
 
 <hr>
 
-<h2 id="s37">37. Meaning Through Haiku, Mechanics Through Code</h2>
+<h2 id="s37">37. Meaning Through fetch, Mechanics Through Code</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Semantic Work Routes to textprocessing <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT]</span></div>
-  <p>Any task whose correctness depends on understanding&mdash;summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same&mdash;routes through <code>Agent(subagent_type='gm:textprocessing', model='haiku', ...)</code>. One subagent per item, N items in N parallel calls in one message.</p>
+  <div class="rule-title">Hard Rule: Semantic Work Routes Through fetch <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE &middot; EMIT]</span></div>
+  <p>Any task whose correctness depends on understanding&mdash;summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same&mdash;routes through a haiku-class model call dispatched via the <code>fetch</code> host verb against the local <code>acptoapi</code> proxy on <code>127.0.0.1:4800</code>. One call per item, N items in N parallel spool dispatches in one message.</p>
 </div>
 
 <p>The split is between mechanics and meaning. Mechanics are operations whose correctness can be decided by a deterministic procedure: parse this JSON, sort these strings, hash this file, count occurrences of a regex. Meaning is operations whose correctness depends on the model&rsquo;s understanding of language: does this commit message describe a bug fix or a feature, does this docstring contradict its function&rsquo;s behavior, are these two error messages saying the same thing in different words.</p>
 
-<p>Code does mechanics well and meaning badly. A keyword-list or regex-on-meaning-phrases loop deciding semantic questions is a stub of the textprocessing skill&mdash;it ships a green check that lies, in the same way §24 Nothing Fake ships a green check that lies. The deterministic procedure looks right because it terminates and returns a value; the value is unrelated to the question the user actually asked.</p>
+<p>Code does mechanics well and meaning badly. A keyword-list or regex-on-meaning-phrases loop deciding semantic questions ships a green check that lies, in the same way §24 Nothing Fake ships a green check that lies. The deterministic procedure looks right because it terminates and returns a value; the value is unrelated to the question the user actually asked.</p>
 
-<p>Parallelism is the second half of the discipline. N items go to N parallel calls in one message; batching them into a single call dilutes the signal because the model averages over the batch instead of attending to each item. The cost difference is negligible&mdash;haiku calls are cheap&mdash;and the quality difference is large. This pairs with §12 Memorize Sub-Agent, which uses the same fan-out shape for the same reason: one fact per call, parallel by default.</p>
+<p>Parallelism is the second half of the discipline. N items go to N parallel dispatches in one message; batching them into a single call dilutes the signal because the model averages over the batch instead of attending to each item. The cost difference is negligible&mdash;haiku calls are cheap&mdash;and the quality difference is large. This pairs with §12 memorize-fire dispatch, which uses the same fan-out shape for the same reason: one fact per call, parallel by default.</p>
 
 <hr>
 
@@ -818,7 +818,7 @@ stateDiagram-v2
 <p>There is a loose analogy to TDD: both emphasize verification before completion. The difference is that verifications in this system are not persisted as a test suite during EXECUTE&mdash;they exist as witnessed execution. The single integration test (§26) is the COMPLETE-phase residual of this witnessing. The 200-line budget trades regression depth for context-window economy.</p>
 
 <h3>38.3 External vs. Self-Regulation</h3>
-<p>A recurring design choice is external enforcement over self-regulation. Hooks enforce phase gates because the same model that reasons through a problem also reasons through the justification for shortcuts. The agent cannot bypass a stop hook by deciding it has already verified; the hook runs independently of the agent&rsquo;s judgment. The hard rules in §§21&ndash;37 are externally enforced in the same sense: they are in the skill chain, not in the agent&rsquo;s in-context reasoning.</p>
+<p>A recurring design choice is external enforcement over self-regulation. Hooks enforce phase gates because the same model that reasons through a problem also reasons through the justification for shortcuts. The agent cannot bypass a stop hook by deciding it has already verified; the hook runs independently of the agent&rsquo;s judgment. The hard rules in §§21&ndash;37 are externally enforced in the same sense: they live in the wasm orchestrator&rsquo;s <code>instruction</code> output and in the marker-file gates, not in the agent&rsquo;s in-context reasoning.</p>
 
 <h3>38.4 Overhead vs. Benefit</h3>
 <p>Every backward transition introduces overhead: discovering a new unknown during EMIT discards partial work and requires re-planning and re-executing. In production, this cost is offset by reduced late-stage rework. The snake-back mechanism surfaces problems early when their scope is still bounded; problems discovered at COMPLETE have compounded across all subsequent work.</p>
@@ -838,9 +838,9 @@ stateDiagram-v2
 
 <p>We have described the complete gm discipline: a phase-gated lifecycle model, a mutable-naming and witnessed-execution framework, an in-phase quality discipline, a governance layer with seven route families and four state planes, second-generation rules for autonomy and scope, operational hard rules that close gaps the earlier model left open, and a third generation of dispatch-boundary rules that move the discipline out of the agent&rsquo;s context window and onto disk and into hooks.</p>
 
-<p>The discipline is not a set of aspirational guidelines. Every rule in this document is enforced either by hooks running below the agent&rsquo;s decision layer, by file-based state the hooks read independently of the agent, or by hard-rule encoding in the skill chain that the agent cannot reason its way around. The agent&rsquo;s job is to execute within the envelope; the envelope&rsquo;s job is to prevent the agent from collapsing the discipline under the pressure of local optimality.</p>
+<p>The discipline is not a set of aspirational guidelines. Every rule in this document is enforced either by the spool-dispatch gate running below the agent&rsquo;s decision layer, by file-based state the gate reads independently of the agent, or by hard-rule encoding in the orchestrator&rsquo;s <code>instruction</code> response that the agent cannot reason its way around. The agent&rsquo;s job is to execute within the envelope; the envelope&rsquo;s job is to prevent the agent from collapsing the discipline under the pressure of local optimality.</p>
 
-<p>Our experience across 15 platforms suggests that agent reliability depends substantially on lifecycle control&mdash;not just model capability. The third-generation rules in particular suggest that reliability also depends on moving discipline-state out of the agent&rsquo;s memory and into externally-readable artifacts: a spool file, a mutables row, a stop-hook marker, a CI run. The agent is a participant in the discipline, not the keeper of it. We offer this body of work as a practical engineering artifact rather than a theoretical claim.</p>
+<p>Our experience operating a single-skill harness across every Claude-style host that can load a skill folder suggests that agent reliability depends substantially on lifecycle control&mdash;not just model capability. The third-generation rules in particular suggest that reliability also depends on moving discipline-state out of the agent&rsquo;s memory and into externally-readable artifacts: a spool file, a mutables row, a stop-hook marker, a CI run. The agent is a participant in the discipline, not the keeper of it. We offer this body of work as a practical engineering artifact rather than a theoretical claim.</p>
 
 <div class="references">
   <h2>References</h2>

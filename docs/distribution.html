@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>distribution · gm · 247420</title>
-<meta name="description" content="gm's distribution strategy: turnkey single-binary delivery with fully open source guts. The SQLite-of-coding-agents model.">
+<meta name="description" content="gm's distribution: one npm package (gm-skill), one wasm artifact (gm-plugkit), fully open across six Rust repositories.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -58,7 +58,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 .gm-topbar nav a:hover, .gm-topbar nav .gm-dd > summary:hover{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd{position:relative}
 .gm-topbar nav .gm-dd > summary::-webkit-details-marker{display:none}
-.gm-topbar nav .gm-dd > summary::after{content:'▾';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
+.gm-topbar nav .gm-dd > summary::after{content:'\25be';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
 .gm-topbar nav .gm-dd[open] > summary::after{transform:rotate(180deg)}
 .gm-topbar nav .gm-dd[open] > summary{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
@@ -86,18 +86,18 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
     </div></details>
   </nav>
 </header>
-<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">distribution</span></div>
+<div class="app-crumb"><span>247420</span><span class="sep">&rsaquo;</span><span>gm</span><span class="sep">&rsaquo;</span><span class="leaf">distribution</span></div>
 
 <div class="title-block">
-  <h1>The SQLite Model:<br>Turnkey Binary, Open All The Way Down</h1>
+  <h1>The SQLite Model:<br>One Skill, One Wasm, Open All The Way Down</h1>
   <div class="author">AnEntrypoint</div>
-  <div class="date">April 2026</div>
+  <div class="date">May 2026</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">Thesis</div>
   <div class="abstract-text">
-    A coding agent should install in two commands and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every binary in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets a single trusted artifact that &ldquo;just works,&rdquo; and the artifact&rsquo;s entire genealogy &mdash; every Rust crate, every workflow, every signing manifest &mdash; is open source under one organization, one cascade, one push at a time.
+    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets one npm package &mdash; <code>gm-skill</code> &mdash; whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The artifact&rsquo;s entire genealogy &mdash; every Rust crate, every workflow, every published wasm &mdash; is open source under one organization, one cascade, one push at a time.
   </div>
 </div>
 
@@ -109,141 +109,107 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded &mdash; the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
 
-<p>For an agent, the equivalent is: a single binary, with a single hook into the host runtime, with all the heavy machinery (search, indexing, memory, runner, hook dispatch, browser automation) precompiled and signed in CI from open source repositories.</p>
+<p>For an agent, the equivalent is: one published skill package, with a single hook into the host harness, with all the heavy machinery (search, indexing, memory, code execution, browser automation, phase orchestration) compiled into one wasm module and served on demand through a file-spool dispatch surface.</p>
 
-<h2>2. The Two-Command Install</h2>
+<h2>2. The One-Command Install</h2>
 
-<p class="first">Every supported platform installs the same way. For Claude Code:</p>
+<p class="first"><code>gm-skill</code> is one npm package. Any harness that can resolve a Claude-style skill folder installs it the same way:</p>
 
-<pre><code>claude plugin marketplace add AnEntrypoint/gm
-claude plugin install -s user gm@gm</code></pre>
+<pre><code>bun add -g gm-skill            # global skill registry
+# or, project-local
+npx gm-skill install ./.claude/skills/</code></pre>
 
-<p>That&rsquo;s the whole thing. No <code>cargo</code>, no <code>npm install</code>, no Python, no PATH edits. The first time the agent runs, the bootstrap script in <code>bin/bootstrap.js</code> resolves the platform-appropriate binary, fetches it from the public GitHub release, verifies its sha256 against a manifest checked into the plugin, and caches it under <code>%LOCALAPPDATA%/plugkit/bin/v&lt;version&gt;/</code>. Subsequent sessions skip the fetch and exec the cached binary directly.</p>
-
-<p>The same shape works on the other eleven platforms (Gemini CLI, OpenCode, Kilo Code, Codex, Copilot CLI, Qwen Code, VS Code, Cursor, Zed, JetBrains, Hermes). Each has a thin platform-specific wrapper; the heavy artifact is the same Rust binary across all of them.</p>
+<p>That&rsquo;s the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/@anentrypoint/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
 
 <h3>2.1 What &ldquo;Turnkey&rdquo; Excludes</h3>
 
 <ul>
-  <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs. They need only the host editor or CLI they were already going to use.</li>
-  <li>No native build step at install. Every artifact is precompiled by GitHub Actions runners against the four target tuples (<code>win32-x64</code>, <code>linux-x64</code>, <code>linux-arm64</code>, <code>darwin-arm64</code>; <code>darwin-x64</code> and <code>win32-arm64</code> available on demand) and uploaded to a public release.</li>
-  <li>No daemon to install or supervise. The runner spawns lazily on first <code>exec:&lt;lang&gt;</code> call, registers a port file in <code>$TEMP</code>, and is reused by all subsequent calls in the session.</li>
-  <li>No mandatory secrets at install. The agent runs offline against the local cached binary; the only network event at install time is the one-time fetch from the public release.</li>
+  <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs.</li>
+  <li>No native build step at install. The single wasm artifact runs everywhere a Node 20+ WASI host runs &mdash; one binary for every OS and every CPU.</li>
+  <li>No daemon to install or supervise. The watcher and host run inside the same wasm instance as the orchestrator. There is no port, no rpc daemon, no <code>kill -9</code> story.</li>
+  <li>No mandatory secrets at install. The only optional outbound is <code>acptoapi</code> (a localhost embedding/LLM proxy auto-launched on first need); offline use is the default.</li>
 </ul>
 
 <h2>3. Open All The Way Down</h2>
 
 <p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no &ldquo;and then a private build server takes over&rdquo; step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
 
-<div class="repo-card"><span class="repo-name">rs-exec</span><span class="repo-role">The exec runner. Spawns subprocesses for <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>, <code>browser</code>. Owns the background-task store, the port file, the kill-tree implementation, the timeout enforcement loop. The thing that turns a model&rsquo;s &ldquo;run this code&rdquo; into a witnessed process exit.</span></div>
+<div class="repo-card"><span class="repo-name">rs-exec</span><span class="repo-role">Wasm host helpers. Compiled to <code>wasm32-wasip1</code>. Provides <code>exec_js</code>, browser session management, file-system glue, and the spool-watcher loop that the orchestrator imports. No daemon, no port; runs inside the wasm host process.</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">The code-search backend. Builds a per-project chunked index under <code>.gm/code-search/</code>, exposes <code>exec:codesearch</code>. Two-words-then-iterate query protocol; dense + symbol search blended; PDF pages indexed alongside source.</span></div>
+<div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">Code structure analysis via tree-sitter. Compiled to wasm. Powers the <code>codesearch</code> verb&rsquo;s symbol layer and session-start architectural overviews.</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-search</span><span class="repo-role">The file-system search backend. Path globs, content greps, type filters &mdash; all the operations that <code>find</code> + <code>rg</code> would cover, but called as one synchronous library function rather than two shelled-out processes.</span></div>
+<div class="repo-card"><span class="repo-name">rs-search</span><span class="repo-role">File-content search. BM25 plus embedding fusion, scan-embed-sweep pipeline. Compiled to wasm. The codebase index lives under <code>.gm/code-search/</code> (tracked in git so the index travels).</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-plugkit</span><span class="repo-role">The dispatcher. The single user-facing binary. Receives hook events (PreToolUse, PostToolUse, SessionStart, PromptSubmit, Stop, PreCompact), routes them to the appropriate handler, and embeds the runner, the indexer, and rs-learn. The <code>Cargo.toml</code> in this repo is the version source of truth for the entire distribution.</span></div>
+<div class="repo-card"><span class="repo-name">rs-plugkit</span><span class="repo-role">The orchestrator. Compiled to wasm. Owns the PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE state machine in <code>src/orchestrator/</code>, exposes the <code>dispatch_verb</code> wasm export, services every orchestrator verb (<code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>mutable-resolve</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>) and routes host verbs to the imported helpers. The <code>Cargo.toml</code> here is the version source of truth.</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-learn</span><span class="repo-role">The memory layer. SQLite-backed graph of episodes, embeddings, and structured facts. Backs <code>exec:recall</code> on the read path and the <code>memorize</code> sub-agent on the write path. Per-project store under <code>.gm/rs-learn.db</code>; tracked in git so memory follows the project across machines.</span></div>
+<div class="repo-card"><span class="repo-name">rs-learn</span><span class="repo-role">Memory layer. KV plus vec store backing <code>recall</code> and <code>memorize</code>. Compiled to wasm. Per-project store under <code>.gm/rs-learn.db</code>, tracked in git so memory follows the project across machines.</span></div>
 
-<div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. The orchestrator. Generates the fifteen downstream plugins from a single convention-driven source (<code>gm-starter/</code>). Owns the skill bundle, the prompts, the hooks, the bootstrap script, and the publish workflow that fans out to every platform.</span></div>
+<div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. Builds <code>gm-skill</code> via <code>node cli.js gm-starter ./build</code>. Publishes the npm package on every cascade tick. Holds the canonical SKILL.md, the bootstrap shim, and the version pins in <code>gm-starter/gm.json</code>.</span></div>
 
 <h2>4. The Cascade</h2>
 
-<p class="first">Six repositories cooperate but no human steps between them. A push to any of the Rust-side repositories triggers a deterministic cascade that ends with a new plugin commit on every downstream:</p>
+<p class="first">Six repositories cooperate but no human steps between them. A push to any of the sibling Rust repos triggers a deterministic cascade that ends with a fresh <code>gm-skill</code> publish on npm:</p>
 
 <div class="pipeline">rs-exec / rs-codeinsight / rs-search / rs-learn
   &mdash; push to main
-  &mdash;&gt; .github/workflows/cascade.yml fires rs-plugkit workflow_dispatch
+  &mdash;&gt; .github/workflows/cascade.yml fires rs-plugkit release.yml
+       via gh workflow run + PUBLISHER_TOKEN
+  (siblings publish their own @anentrypoint/&lt;name&gt;-wasm artifacts
+   independently; the cascade does NOT recompile their source
+   into rs-plugkit)
 
 rs-plugkit
-  &mdash; release.yml: cargo update, build 6 binaries, auto-bump patch version
-  &mdash; publish-binaries job uploads to AnEntrypoint/plugkit-bin
-       (sha256 manifest, plugkit.version)
-  &mdash; bumps gm-starter/gm.json::plugkitVersion
-       and gm-starter/bin/plugkit.version in AnEntrypoint/gm
-       (NEVER pushes binaries into gm history)
+  &mdash; release.yml: build plugkit.wasm (wasm32-wasip1, ~&lt;200 KB)
+  &mdash; publish plugkit-bin Releases + npm @anentrypoint/plugkit-wasm
+  &mdash; bump gm-starter/gm.json::plugkitVersion and
+       gm-starter/bin/plugkit.wasm.sha256 in AnEntrypoint/gm
 
 gm
-  &mdash; that commit triggers gm publish.yml
-  &mdash; 15-platform matrix:
-       node cli.js gm-starter ./build           (regenerates configs)
-       copies plugkit.version + plugkit.sha256  into bin/
-       git init fresh empty dir + rsync + git add -A + git add -f bin/
-       diff --depth 1 against downstream        (no-op detection)
-       git push --force origin main             (1-commit orphan history)
+  &mdash; that bump commit triggers publish.yml
+  &mdash; node cli.js gm-starter ./build         (regenerates skill body)
+  &mdash; npm publish build/gm-skill              (one package, one tag)
 
-downstream
-  &mdash; gm-cc / gm-gc / gm-oc / gm-kilo / gm-codex / gm-qwen
-  &mdash; gm-copilot-cli / gm-hermes
-  &mdash; gm-vscode / gm-cursor / gm-zed / gm-jetbrains / gm-antigravity / gm-windsurf
-  &mdash; each is one orphan commit, ~&lt;1 MB
-  &mdash; /plugin notices new HEAD &rarr; bootstrap.js fetches new binary</div>
+users
+  &mdash; bun add -g gm-skill   (or harness-local install)
+  &mdash; on first dispatch, gm-plugkit ensures plugkit.wasm is present
+  &mdash; every subsequent verb is a local wasm call</div>
 
-<p>No human edits a version string. No human runs <code>cargo build</code>. No human syncs a downstream branch. The cascade is the publishing pipeline. The phrase &ldquo;to update anything, push to the relevant repo&rdquo; is literal: a one-line fix in <code>rs-codeinsight</code> propagates to fifteen plugin repos within one CI cycle.</p>
+<p>No human edits a version string. No human runs <code>cargo build</code>. The cascade is the publishing pipeline. The phrase &ldquo;to update anything, push to the relevant repo&rdquo; is literal: a one-line fix in <code>rs-search</code> propagates to a new <code>gm-skill</code> on npm within one CI cycle.</p>
 
-<h2>5. Why The Downstreams Are Orphan-Committed</h2>
+<h2>5. One Skill Replaces Fifteen Plugin Repos</h2>
 
-<p class="first">Each of the fifteen downstream repos is reset to a single orphan commit on every publish. This is unusual; the more common pattern is to append commits and let downstream repos grow. We chose orphan commits because:</p>
+<p class="first">An earlier generation of this project fanned out fifteen downstream plugin repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), one per host editor or CLI, each holding its own bootstrap shim and per-platform native binary. Those repos are now archived; they hold only a redirect README pointing at <code>gm-skill</code>.</p>
 
-<ul>
-  <li><strong>Each downstream is a build artifact, not a project.</strong> Its history is the orchestrator&rsquo;s history, not its own. Letting it accumulate per-publish commits would conflate build output with development.</li>
-  <li><strong>The download is the product.</strong> A user who clones <code>gm-cc</code> wants the latest plugin, not its retroactive build log. The single-commit form makes the clone cheap (under 1 MB) and the contents trivial to diff against the next publish.</li>
-  <li><strong>Force-push is the publishing primitive.</strong> Each publish is a fresh empty <code>git init</code>, an <code>rsync</code> of the build output, and a <code>git push --force</code>. There is no merge, no rebase, no history to preserve. The downstream is a one-frame snapshot that the orchestrator overwrites on every cascade tick.</li>
-</ul>
+<p>The fan-out existed because every host had a different conception of what a &ldquo;plugin&rdquo; was. Once every host gained the ability to load a Claude-style skill directory, the fan-out became dead weight: fifteen pieces of orchestration around a payload that wanted to be one package. Skills are the universal harness; <code>gm-skill</code> is the universal payload.</p>
 
-<h3>5.1 The Binary Is Never In gm History</h3>
+<h2>6. The Bootstrap, In One File</h2>
 
-<p>A subtle but important rule: the multi-megabyte plugkit binary lives only in the <code>AnEntrypoint/plugkit-bin</code> Releases. It is fetched by <code>bootstrap.js</code> at first use and cached locally. It is <em>never</em> committed to <code>gm</code>, and never to any downstream plugin repo. The plugin repo carries a <code>bin/plugkit.version</code> + <code>bin/plugkit.sha256</code> manifest and the bootstrap script. This keeps every plugin repo small, makes the orchestrator&rsquo;s git history fast to clone, and decouples plugin churn from binary churn.</p>
-
-<h2>6. The Bootstrap Cache</h2>
-
-<p class="first">The first time any platform invokes the plugin&rsquo;s <code>plugkit</code> entry point, <code>bin/bootstrap.js</code> resolves the binary. Its responsibilities, in order:</p>
+<p class="first">On first dispatch, <code>gm-plugkit/lib/skill-bootstrap.js</code> runs once per session:</p>
 
 <ol>
-  <li>Read <code>bin/plugkit.version</code> for the required version.</li>
-  <li>Resolve the per-platform cache directory: <code>%LOCALAPPDATA%/plugkit/bin/</code> on Windows, <code>~/Library/Caches/plugkit/bin/</code> on macOS, <code>$XDG_CACHE_HOME/plugkit/bin/</code> elsewhere. Fall back to <code>$TMPDIR/plugkit-cache/bin/</code> if the primary cache is unwritable.</li>
-  <li>If <code>v&lt;version&gt;/&lt;binary&gt;</code> exists alongside an <code>.ok</code> sentinel, use it. No network call.</li>
-  <li>Otherwise, acquire a per-version lock, fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/&lt;binary&gt;</code>, verify the sha256 against the embedded manifest, atomically rename into place, write the <code>.ok</code> sentinel, prune older versions.</li>
+  <li>Resolve <code>plugkit.wasm</code> via the bundled <code>@anentrypoint/plugkit-wasm</code> npm dependency. If absent (rare; npm install was offline), fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/plugkit.wasm</code>, verify against the <code>bin/plugkit.wasm.sha256</code> pinned in the skill.</li>
+  <li>Atomically write the artifact under <code>.gm/plugkit.wasm</code>. Atomic-write is sufficient under wasm; there is no running daemon to kill.</li>
+  <li>Instantiate the wasm module with the Node WASI imports plus the host-fn imports for <code>exec_js</code>, <code>fetch</code>, <code>kv_*</code>, <code>fs_*</code>, <code>browser</code>, etc.</li>
+  <li>Record bootstrap status under <code>.gm/exec-spool/.bootstrap-status.json</code> for spool awareness; record any error under <code>.bootstrap-error.json</code>.</li>
+  <li>Return; the spool watcher inside the wasm instance services every subsequent dispatch.</li>
 </ol>
 
-<p>The fetch path is hardened against the failure modes encountered during early production: a 60-second per-attempt socket timeout, a 20-second stall watchdog that fires when the response stream stops producing bytes (a TCP connection can stay open and idle indefinitely otherwise), five attempts with backoff, a 5-minute lock TTL so a stale lockfile from a crashed install does not block forever, and HTTP <code>Range</code>-resumable downloads so a partially complete fetch survives a retry. These details are not user-visible; the user sees a small progress line on first run and never sees it again.</p>
+<p>Bootstrap failure is non-fatal. A failed wasm fetch leaves a documented error in <code>.bootstrap-error.json</code>; the skill body degrades to surfacing the error string to the agent rather than to a stack trace.</p>
 
-<h2>7. The 15-Platform Matrix</h2>
+<h2>7. The Verb Surface</h2>
 
-<p class="first">The same core (Rust binary, skills, prompts, hooks, lang plugins) ships to fifteen hosts. Each host has a different conception of what a &ldquo;plugin&rdquo; is &mdash; a Claude Code plugin is a marketplace package, a VS Code extension is a VSIX, a JetBrains plugin is a ZIP, OpenCode wants a directory, Codex wants a config block. The <code>cli.js gm-starter ./build</code> step is a code generator that emits fifteen different shapes of the same payload.</p>
+<p class="first">Distribution is not just &ldquo;getting bits onto the user&rsquo;s disk&rdquo; &mdash; it is also the verb surface that the agent talks to once the bits are there. Every capability the harness exposes is a verb dispatched through the file-spool at <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>, with output landing at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root). Three families:</p>
 
 <table>
-<thead><tr><th>id</th><th>host</th><th>shape</th><th>binary</th></tr></thead>
+<thead><tr><th>family</th><th>examples</th><th>serviced by</th></tr></thead>
 <tbody>
-<tr><td>gm-cc</td><td>Claude Code</td><td>marketplace plugin</td><td>native OS binary</td></tr>
-<tr><td>gm-gc</td><td>Gemini CLI</td><td>config + skills directory</td><td>native OS binary</td></tr>
-<tr><td>gm-oc</td><td>OpenCode</td><td>npm package, skills bundled</td><td>native OS binary</td></tr>
-<tr><td>gm-kilo</td><td>Kilo Code</td><td>npm package, skills bundled</td><td>native OS binary</td></tr>
-<tr><td>gm-codex</td><td>Codex</td><td>config + agents directory</td><td>native OS binary</td></tr>
-<tr><td>gm-copilot-cli</td><td>GitHub Copilot CLI</td><td>extension package</td><td>native OS binary</td></tr>
-<tr><td>gm-qwen</td><td>Qwen Code</td><td>config directory</td><td>native OS binary</td></tr>
-<tr><td>gm-hermes</td><td>Hermes Agent</td><td>plugin (work-in-progress)</td><td>native OS binary</td></tr>
-<tr><td>gm-vscode</td><td>VS Code</td><td>VSIX extension</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-cursor</td><td>Cursor</td><td>extension</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-zed</td><td>Zed</td><td>extension</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-jetbrains</td><td>IntelliJ family</td><td>plugin ZIP</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-antigravity</td><td>Antigravity</td><td>VS Code extension</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-windsurf</td><td>Windsurf</td><td>extension</td><td>WASM polymorphic</td></tr>
-<tr><td>gm-thebird</td><td>thebird</td><td>extension</td><td>WASM polymorphic</td></tr>
+<tr><td>orchestrator verbs</td><td><code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code>, <code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code></td><td>rs-plugkit orchestrator (<code>src/orchestrator/</code>)</td></tr>
+<tr><td>host verbs</td><td><code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>health</code>, <code>browser</code></td><td>wasm host imports (rs-exec, rs-learn, rs-search, rs-codeinsight)</td></tr>
+<tr><td>language verbs</td><td><code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></td><td><code>exec_js</code> with the matching runtime probe</td></tr>
 </tbody>
 </table>
 
-<p>Adding a sixteenth host is a single registration in <code>lib/page-generator.js::PLATFORM_META</code> plus an adapter class under <code>platforms/</code>. The build matrix picks it up automatically; the cascade fans out to it on the next publish.</p>
-
-<h2>7.1 WASM Polymorphism for IDE and Browser Platforms</h2>
-
-<p class="first">Seven of the fifteen platforms (VS Code, Cursor, Zed, JetBrains, Antigravity, Windsurf, thebird) use WASM polymorphism instead of OS-specific native binaries. This enables a single <code>plugkit.wasm</code> binary to run on Windows, macOS, and Linux without separate platform builds. The WASM binary is loaded into a Node.js WASM host that implements all ABI imports for filesystem, KV store, fetch, vector search, browser control, and code execution.</p>
-
-<p><strong>Why WASM for IDE platforms:</strong> IDE extensions ship to users globally without knowing their OS in advance. A single artifact per platform (one VSIX, one ZIP) that runs everywhere is operationally simpler than bundling 4&ndash;6 OS-specific binaries per extension. The WASM host delegates to Node.js built-ins (<code>fs</code>, <code>child_process</code>, <code>fetch</code>, <code>WebAssembly.instantiate</code>), so there is no added complexity or performance cost relative to the native binary path.</p>
-
-<p><strong>Why native binaries for CLI platforms:</strong> CLI tools like Claude Code, Gemini CLI, and Copilot CLI resolve their OS at runtime via <code>process.platform</code> and download the appropriate binary directly. For these, distributing one pre-compiled native binary per OS is simpler and gives slightly better performance than WASM interpretation.</p>
-
-<p><strong>Distribution:</strong> The <code>plugkit.wasm</code> binary is built alongside native binaries by <code>rs-plugkit</code> CI (targeting <code>wasm32-wasip1</code> for Node.js 20 WASI compatibility). Both are published to <code>AnEntrypoint/plugkit-bin</code> Releases. WASM-preferred platforms&rsquo; bootstrap scripts fetch <code>plugkit.wasm</code> unconditionally; CLI platforms fetch the OS-specific binary. The choice is registered at build time in <code>lib/page-generator.js::PLATFORM_META</code> so the correct binary is vendored for each platform.</p>
+<p>Adding a verb is a single Rust function plus a row in the dispatcher; the surface to the agent is identical for every verb. No per-platform binary, no per-host adapter, no shape-shifting payload.</p>
 
 <h2>8. Comparison To Alternative Distribution Models</h2>
 
@@ -254,31 +220,30 @@ downstream
 <tr><td>language-runtime package</td><td>toolchain + transitive deps</td><td>open if all deps are</td><td>npm/pip/cargo update</td></tr>
 <tr><td>self-built from source</td><td>full toolchain</td><td>fully open</td><td>manual rebuild</td></tr>
 <tr><td>SQLite-style amalgamation</td><td>one file</td><td>fully open</td><td>replace one file</td></tr>
-<tr><td>gm</td><td>two commands</td><td>fully open, six repos</td><td>cascade auto-updates</td></tr>
+<tr><td>gm</td><td>one npm install</td><td>fully open, six repos</td><td>npm cache invalidates</td></tr>
 </tbody>
 </table>
 
-<p>The closest cousin is the SQLite amalgamation: one artifact, no install scaffolding, transparent provenance. The differences are that gm&rsquo;s artifact is a precompiled native binary rather than a source amalgamation (because the user is not compiling against it; the user is exec-ing it), and that updates arrive via a versioned cache directory rather than a swap of one file.</p>
+<p>The closest cousin is the SQLite amalgamation: one artifact, no install scaffolding, transparent provenance. The differences are that gm&rsquo;s artifact is a wasm module (because the user is not compiling against it; the host is loading it), and updates arrive via npm tags rather than a swap of one C file.</p>
 
 <h2>9. Trust And Verifiability</h2>
 
-<p class="first">A turnkey binary distribution buys convenience by trusting whoever built the binary. We make this trust auditable, not implicit:</p>
+<p class="first">A turnkey wasm distribution buys convenience by trusting whoever built the wasm. We make this trust auditable, not implicit:</p>
 
 <ul>
-  <li><strong>Public build pipeline.</strong> Every binary is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
-  <li><strong>SHA-256 manifest.</strong> The plugin ships <code>bin/plugkit.sha256</code> committed alongside <code>bin/plugkit.version</code>. The bootstrap verifies the downloaded binary against this manifest before caching. A binary whose hash does not match is rejected and the partial file is removed.</li>
-  <li><strong>Reproducible enough.</strong> Linux and macOS builds are reproducible per-toolchain; Windows MSVC builds are not bit-reproducible due to PE timestamps but their hashes are still anchored at the <code>plugkit.sha256</code> commit, so a man-in-the-middle attempt would fail verification before exec.</li>
-  <li><strong>Forkable.</strong> Any user who does not trust the published binaries can fork all six repositories, point <code>RELEASE_REPO</code> in <code>bootstrap.js</code> at their own fork, and ship a private cascade with the same shape. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
+  <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>@anentrypoint/plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
+  <li><strong>SHA-256 manifest.</strong> The skill ships <code>bin/plugkit.wasm.sha256</code> pinned next to <code>gm-starter/gm.json::plugkitVersion</code>. The bootstrap verifies the wasm against this hash before instantiation; mismatch is fatal-soft (recorded to <code>.bootstrap-error.json</code> rather than thrown into the agent).</li>
+  <li><strong>One target.</strong> <code>wasm32-wasip1</code> is reproducible from Cargo across Linux and macOS runners; mismatch between runs is a CI red, not silent drift.</li>
+  <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all six repositories and point their skill at their own fork&rsquo;s npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
 </ul>
 
-<h2>10. Why Not Just Publish To npm / cargo / pip?</h2>
+<h2>10. Why Not Just Publish To cargo / pip?</h2>
 
-<p class="first">A reasonable question. Three reasons:</p>
+<p class="first">Two reasons:</p>
 
 <ol>
-  <li><strong>Multiple language ecosystems.</strong> The agent has to live inside Claude Code (a Node.js host), Gemini CLI (Node.js), OpenCode (Node.js), VS Code (Node.js / VS Code API), and JetBrains (JVM / IntelliJ API), among others. There is no single registry that delivers to all of them. Every platform has its own plugin shape; the cascade builds each shape from one source.</li>
-  <li><strong>Toolchain absence at install.</strong> Many users install Claude Code with no Node toolchain, no Rust toolchain, no Python. <code>npm install</code> at agent install time would fail; <code>cargo install</code> would require <code>rustup</code>. The bootstrap-fetch model assumes only that the host can <code>fetch()</code> over HTTPS, which is universally true.</li>
-  <li><strong>Binary size.</strong> The plugkit binary is ~104 MB. Pushing that into npm, much less fifteen plugin repos, would inflate clone times and registry storage out of proportion to the install benefit. The Releases-bucket model keeps binaries out of git history while keeping them addressable by version.</li>
+  <li><strong>The host is Node.</strong> Every harness that loads a skill loads it inside a Node-capable runtime. Publishing to crates.io or PyPI would force every host to bridge Rust or Python at install time, which is exactly the toolchain dependency the SQLite model exists to avoid. npm is the lowest-common-denominator registry for skill-loading hosts.</li>
+  <li><strong>The wasm is the binary.</strong> A cargo install would require <code>rustup</code>; a pip install would require Python. The npm tarball ships the precompiled wasm and the JS wrapper together &mdash; no transpilation, no native build, no postinstall script.</li>
 </ol>
 
 <h2>11. Operational Lessons</h2>
@@ -286,26 +251,24 @@ downstream
 <p class="first">Three production failures shaped the current pipeline:</p>
 
 <ul>
-  <li><strong>Stalled fetches looked like success.</strong> An early bootstrap had only an HTTP socket-idle timeout. A response stream that opens, gets a few bytes, and then stalls held the connection for thirty minutes before the timeout fired. The stall watchdog &mdash; a 20-second timer reset on every chunk &mdash; closes this gap.</li>
-  <li><strong>Hooks without timeouts spawned process avalanches.</strong> Pre-timeout-enforcement, a hook that called the runner without a budget could leak children indefinitely under load. The <code>execute</code> RPC now applies a 300-second default with a stderr deprecation warning when called without an explicit budget, and the CLI <code>exec</code> / <code>bash</code> subcommands reject missing or zero <code>--timeout</code> outright.</li>
-  <li><strong>Concurrent CI publishes raced on the same downstream branch.</strong> The publish workflow now uses a fresh-init + force-push pattern rather than fetch-then-merge, which is faster and immune to the &ldquo;rejected: fetch first&rdquo; class of CI race.</li>
+  <li><strong>Native-binary fan-out doubled CI duration linearly with platform count.</strong> Building six platform binaries on every push, then signing them, then uploading them, then bumping fifteen downstream repos, took 18&ndash;25 minutes per cascade tick. The wasm-only model collapses this to one build, one publish, one npm tag &mdash; under four minutes.</li>
+  <li><strong>Stale binaries pinned to dead PIDs.</strong> The previous daemonized <code>rs-exec</code> wrote a port file then sometimes died, leaving clients pointing at a port nothing listened on. The wasm model has no port and no daemon &mdash; <code>exec_js</code> is a synchronous wasm host call via <code>child_process.spawnSync</code>, alive only for the duration of the call.</li>
+  <li><strong>Concurrent CI publishes raced on downstream branches.</strong> Resolved by collapsing fifteen downstream branches into one npm publish.</li>
 </ul>
-
-<p>None of these failures were architectural &mdash; the architecture was correct. They were operational holes that the architecture made cheap to plug.</p>
 
 <h2>12. The Invariant</h2>
 
 <div class="theorem">
-  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm</code> with two commands and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, signed by SHA-256, fetched over HTTPS at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories and redirecting one constant. There is no proprietary core, no private server, no locked-in vendor surface, and no toolchain on the user&rsquo;s machine.</em>
+  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user&rsquo;s machine.</em>
 </div>
 
-<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. Two commands in. Six repositories out. Nothing in between.</p>
+<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. One npm install in. Six repositories out. One wasm in between.</p>
 
 </article>
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
-<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
-<span>probably emerging 🌀</span>
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> &middot; <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>probably emerging</span>
 </footer>
 
 </body></html>
