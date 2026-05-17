@@ -220,7 +220,7 @@ users
 <tr><td>language-runtime package</td><td>toolchain + transitive deps</td><td>open if all deps are</td><td>npm/pip/cargo update</td></tr>
 <tr><td>self-built from source</td><td>full toolchain</td><td>fully open</td><td>manual rebuild</td></tr>
 <tr><td>SQLite-style amalgamation</td><td>one file</td><td>fully open</td><td>replace one file</td></tr>
-<tr><td>gm</td><td>one npm install</td><td>fully open, six repos</td><td>npm cache invalidates</td></tr>
+<tr><td>gm</td><td>one npm install</td><td>fully open, seven repos</td><td>npm cache invalidates</td></tr>
 </tbody>
 </table>
 
@@ -234,7 +234,7 @@ users
   <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>@anentrypoint/plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
   <li><strong>SHA-256 manifest.</strong> The skill ships <code>bin/plugkit.wasm.sha256</code> pinned next to <code>gm-starter/gm.json::plugkitVersion</code>. The bootstrap verifies the wasm against this hash before instantiation; mismatch is fatal-soft (recorded to <code>.bootstrap-error.json</code> rather than thrown into the agent).</li>
   <li><strong>One target.</strong> <code>wasm32-wasip1</code> is reproducible from Cargo across Linux and macOS runners; mismatch between runs is a CI red, not silent drift.</li>
-  <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all six repositories and point their skill at their own fork&rsquo;s npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
+  <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all seven repositories and point their skill at their own fork&rsquo;s npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
 </ul>
 
 <h2>10. Why Not Just Publish To cargo / pip?</h2>
@@ -262,7 +262,7 @@ users
   <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user&rsquo;s machine.</em>
 </div>
 
-<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. One npm install in. Six repositories out. One wasm in between.</p>
+<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. One npm install in. Seven repositories out (gm, rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn, plugkit-bin). One wasm in between.</p>
 
 </article>
 

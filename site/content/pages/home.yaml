@@ -25,23 +25,21 @@ features:
     - name: "the agent thinks it's a state machine — because plugkit is one"
       desc: "PLAN → EXECUTE → EMIT → VERIFY → COMPLETE lives in rs-plugkit/src/orchestrator/ as native rust. four verbs — transition, mutable-resolve, memorize-fire, phase-status — drive the agent. the harness does not reimplement the state machine; it asks plugkit what phase it's in and what's still unknown. there is no skip button. there is no 'just this once'. a written PRD is the user's authorization — the agent stops asking and starts doing."
     - name: "one harness body, every platform"
-      desc: "gm-starter/skills/gm-skill/SKILL.md is the canonical universal harness. the ten platform skills (cc, gc, oc, codex, kilo, copilot-cli, vscode, cursor, zed, jetbrains) are thin re-export wrappers — zero divergent orchestration prose, no platform-specific drift. adding behavior happens once. the platforms inherit it on the next build."
+      desc: "gm-starter/skills/gm-skill/SKILL.md is the canonical universal harness — the single skill shipped as the gm-skill npm package. install it into whatever harness loads claude-style skill directories: claude code, gemini cli, opencode, codex, kilo, copilot cli, vscode, cursor, zed, jetbrains, antigravity, windsurf — same skill, same orchestration, zero per-platform drift. adding behavior happens once in gm-starter/skills/gm-skill/ and every harness inherits it on the next install."
     - name: "plugkit-only tool surface"
-      desc: "every skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. if a capability is missing, it becomes a plugkit verb — not a skill-side escape hatch."
+      desc: "gm-skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. if a capability is missing, it becomes a plugkit verb — not a skill-side escape hatch."
     - name: "witnessed execution or it didn't happen"
       desc: "every unknown is resolved by running code, not by guessing. exec:<lang> for proofs, exec:codesearch for whereabouts, exec:recall for what we already learned. the words 'I think this should work' are physically blocked at the hook layer."
     - name: "covering family of bounded subsets"
       desc: "when a request exceeds reach, the agent does not pick one piece and call the rest 'follow-up'. it enumerates every witnessable subset of the ask, executes each, and names the residual complement explicitly. partial delivery dressed up as triage is refusal in disguise — and we don't refuse."
-    - name: "15 platforms, one source"
-      desc: "claude code, gemini cli, opencode, kilo, codex, copilot cli, qwen, hermes, vscode, cursor, zed, jetbrains, copilot-cli, antigravity, windsurf. one gm-starter directory; CI fans the build out to fifteen downstream repos as single-commit orphan histories. add a hook once, it shows up everywhere — like a really persistent subscription you actually want."
-    - name: "WASM polymorphism for IDE plugins"
-      desc: "seven platforms (vs code, cursor, zed, jetbrains, antigravity, windsurf, thebird) ship a single plugkit.wasm binary that runs natively on all operating systems. no platform-specific builds, no multi-megabyte bundles per architecture. the wasm host delegates to node.js for filesystem, subprocess, and fetch — same performance profile as the native binary, simpler distribution."
+    - name: "every harness, one package"
+      desc: "an earlier generation fanned fifteen downstream plugin repos — gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf — each with its own bootstrap shim and per-platform native binary. those repos are archived. one gm-starter directory now produces one gm-skill npm package; every harness that loads claude-style skill directories installs the same payload. add a hook once, it shows up everywhere — no fanout, no orphan histories, no per-host drift."
+    - name: "WASM polymorphism for every host"
+      desc: "gm-skill ships a single plugkit.wasm (~<200KB) that runs natively on every operating system through node/bun. no platform-specific builds, no multi-megabyte bundles per architecture. the wasm host delegates to node for filesystem, subprocess, and fetch — same performance profile as a native binary, one artifact to ship."
     - name: "rust-backed runtime"
-      desc: "rs-exec is the runner. rs-codeinsight is the AST x-ray. rs-search is the fast file finder. rs-learn is the memory store. rs-plugkit is the binary that ties it together. every push to any of them auto-cascades to the binary in your plugin within minutes — no manual cargo build, no version jujitsu."
-    - name: "ccsniff says you're 100% compliant"
-      desc: "a built-in compliance auditor reads your conversation log and grades whether you behaved like the state machine claims you did. distributed refusal is now a flagged failure. the lint runs in seconds and tells you exactly which turn you cheated on."
+      desc: "rs-exec is the runner. rs-codeinsight is the AST x-ray. rs-search is the fast file finder. rs-learn is the memory store. rs-plugkit is the wasm module that ties it together. every push to any of them auto-cascades to a fresh gm-skill on npm within minutes — no manual cargo build, no version jujitsu."
     - name: "one spool folder, every dispatch"
-      desc: "code AND every utility verb write a file to .gm/exec-spool/in/<lang-or-verb>/<N>.<ext>. the watcher streams stdout, stderr, and a metadata sidecar back. tool args are ephemeral; a file on disk is auditable, replayable, and survives compaction. the Bash tool accepts only git — everything else routes through the folder or gets denied at the hook."
+      desc: "every verb — orchestrator, host, language — writes a file to .gm/exec-spool/in/<verb>/<N>.<ext>. the wasm watcher reads the request, services it, and writes the response to out/<verb>-<N>.json. tool args are ephemeral; a file on disk is auditable, replayable, and survives compaction. the gm-skill tool surface is reduced to Skill, Read, Write — Write exists only for spool dispatch. everything else routes through plugkit verbs."
     - name: "the mutables file refuses to forget"
       desc: ".gm/mutables.yml lives alongside the PRD. every unknown is a row; status flips to 'witnessed' only when the row carries concrete proof. writes, commits, pushes, and the stop hook are all hard-blocked while any row says 'unknown' — the discipline lives on disk, not in the agent's context window."
     - name: "disciplines keep memory honest"
@@ -49,18 +47,18 @@ features:
 quickstart:
   heading: sit down
   lines:
-    - { kind: "cmt", text: "# claude code" }
-    - { kind: "cmd", text: "claude plugin marketplace add AnEntrypoint/gm && claude plugin install -s user gm@gm" }
+    - { kind: "cmt", text: "# install the one skill, every harness" }
+    - { kind: "cmd", text: "npm install -g gm-skill" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# everywhere else" }
-    - { kind: "cmd", text: "npx gm" }
+    - { kind: "cmt", text: "# or run on-demand without a global install" }
+    - { kind: "cmd", text: "npx gm-skill" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# update (it auto-bumps daily, but force it)" }
-    - { kind: "cmd", text: "claude plugin marketplace update gm && claude plugin update gm@gm" }
+    - { kind: "cmt", text: "# update to the latest cascade build" }
+    - { kind: "cmd", text: "npm install -g gm-skill@latest" }
 examples:
   heading: read further
   items:
     - { name: "the complete discipline", desc: "lifecycle control, governance, and operational hard rules — one paper, every rule the agent runs under", cta: "open paper", href: "./paper/" }
     - { name: "every rust crate", desc: "rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit — what each does, why it exists, what it kills if it misbehaves", cta: "open crates", href: "./crates/" }
-    - { name: "every skill", desc: "fourteen skills in the chain — gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, research, textprocessing, plus the memorize and research-worker sub-agents", cta: "open skills", href: "./skills/" }
-    - { name: "distribution", desc: "the cascade pipeline that puts a fresh binary in your plugin every time anyone touches a rust crate", cta: "open distribution", href: "./distribution/" }
+    - { name: "the one skill", desc: "gm-skill is the single shipped skill — a ~12-line entry point. every phase, every instruction, every guardrail is served on demand by plugkit's instruction verb over the spool. what used to be fourteen separate skill files is now one dispatch surface.", cta: "open skills", href: "./skills/" }
+    - { name: "distribution", desc: "the cascade pipeline that puts a fresh gm-skill on npm every time anyone touches a rust crate", cta: "open distribution", href: "./distribution/" }

@@ -33,8 +33,8 @@ function extractArticle(html) {
 }
 
 function rewriteLegacyLinks(html, basePath) {
-  const slugs = ['index', 'paper', 'paper2', 'paper3', 'paper4', 'paper5', 'distribution', 'made-with', 'stats', 'crates', 'skills'];
-  const slugToPath = { index: '/', paper: '/paper/', paper2: '/paper/', paper3: '/paper/', paper4: '/paper/', paper5: '/paper/', distribution: '/distribution/', 'made-with': '/made-with/', stats: '/stats/', crates: '/crates/', skills: '/skills/' };
+  const slugs = ['index', 'paper', 'distribution', 'made-with', 'stats', 'crates', 'skills'];
+  const slugToPath = { index: '/', paper: '/paper/', distribution: '/distribution/', 'made-with': '/made-with/', stats: '/stats/', crates: '/crates/', skills: '/skills/' };
   return html.replace(/href="([^"]+)"/g, (full, hrefRaw) => {
     const href = hrefRaw.trim();
     if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('/')) return full;

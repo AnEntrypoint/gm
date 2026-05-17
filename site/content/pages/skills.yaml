@@ -1,5 +1,5 @@
 id: skills
 title: skills
-description: Every skill in the gm chain — gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, plus the memorize sub-agent.
+description: gm ships one skill — gm-skill. Phase prose, orchestration, and every guardrail are served on demand by plugkit's instruction verb. What used to be a fourteen-skill chain is now a single dispatch surface.
 layout: article
 source: ../docs/skills.html

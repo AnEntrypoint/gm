@@ -134,3 +134,26 @@
   effort: small
   category: feature
   status: completed
+- id: site-collapse-15-to-1
+  subject: Update gh-pages site content to reflect single gm-skill output
+  description: 'site/content/pages/home.yaml contains stale ''15 platforms one source'' / ''ten platform skills (cc, gc, oc, codex...)'' / ''seven platforms ship plugkit.wasm'' / ''fourteen skills in the chain'' claims that contradict the current single-skill model. Rewrite home.yaml features and examples to reflect: one gm-skill package, all instructions served via plugkit instruction verb, archived downstream repos. Verify distribution.html §5 (already framed historically — correct) and docs/skills.html line 99 (already ''used to be'' — correct) stay accurate. Update skills.yaml description (currently lists 14 skill names) to reflect single-skill reality.'
+  acceptance:
+  - site/content/pages/home.yaml has no '15 platforms one source' / 'ten platform skills' / 'seven platforms ship' / 'fourteen skills' lines
+  - skills.yaml description reflects single-skill model
+  - No new contradictions with AGENTS.md introduced
+  category: docs
+  effort: small
+  status: completed
+- id: site-deep-audit-pass
+  subject: Second-pass site/docs audit and cleanup
+  description: 'After the first home.yaml/skills.yaml pass, deep audit surfaced: paper.html cross-footer claimed ''13 skills, one chain''; made-with.html had stale duplicate inline nav listing dead anchors (Principles, Process) plus a duplicate footer; site/theme.mjs slug rewriter still listed paper2..paper5 routes that no longer exist; docs/plugkit-bin-migration.md and docs/rs-plugkit-release-yml-new.yml were completed-migration planning artifacts referencing gm-cc paths as if active; docs/api/npm-downloads.json carried 30 days of stale data for 12 archived packages while the harvester workflow already targets only gm-skill; platforms/skill.js (which generates the published gm-skill README on every cascade publish) still announced ''15 platform-specific gm-<platform> packages re-export this surface'' and listed 14 collapsed skills as still shipped — the worst stale-claim site in the repo.'
+  acceptance:
+  - paper.html cross-footer says 'one skill, every verb'
+  - made-with.html has single topbar and single footer
+  - site/theme.mjs slug list contains no paper2..paper5
+  - docs/_archive/ holds the two stale planning artifacts
+  - docs/api/npm-downloads.json contains only gm-skill series
+  - platforms/skill.js generateReadme reflects single-skill + archived-fanout reality
+  category: docs
+  effort: small
+  status: completed

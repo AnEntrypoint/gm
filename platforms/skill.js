@@ -145,19 +145,19 @@ class SkillAdapter extends PlatformAdapter {
   generateReadme(pluginSpec) {
     return `# gm-skill — Canonical Universal Harness
 
-The single canonical body of the gm skill-driven orchestration harness. All 15 platform-specific \`gm-<platform>\` packages re-export this surface; this is the source of truth.
+The single shipped skill for gm. Install into any harness that loads Claude-style skill directories — Claude Code, OpenCode, Cursor, Zed, VS Code, Codex, Kilo, JetBrains, Copilot CLI, Antigravity, Windsurf, Gemini CLI — and plugkit serves every phase instruction, mutables row, and guardrail on demand via the spool.
 
 ## What this is
 
-AI-native software engineering orchestrated as a continuous chain — PLAN → EXECUTE → EMIT → VERIFY → UPDATE-DOCS — bootstrapped on top of \`plugkit\` for task execution and session isolation. Spool-driven, daemonize-by-default, end-to-end chained.
+AI-native software engineering orchestrated as a state machine — PLAN → EXECUTE → EMIT → VERIFY → COMPLETE — backed by the \`plugkit\` WASM orchestrator. Spool-driven dispatch, no daemon, no native binaries.
 
 ## Install
 
 \`\`\`bash
-npm install gm-skill
+npm install -g gm-skill
 \`\`\`
 
-Then point your AI coding agent host (Claude Code, OpenCode, Cursor, Zed, VS Code, Codex, Kilo, JetBrains, Copilot CLI, Hermes, etc.) at the included \`skills/\` directory, or invoke the bootstrap directly:
+Then point your AI coding agent host at the included \`skills/\` directory, or invoke the bootstrap directly:
 
 \`\`\`bash
 npx gm-skill-bootstrap
@@ -165,15 +165,20 @@ npx gm-skill-bootstrap
 
 ## What's inside
 
-- \`skills/\` — every shared skill (gm, gm-execute, gm-emit, gm-complete, planning, update-docs, browser, code-search, create-lang-plugin, governance, pages, research, ssh, textprocessing, gm-skill itself)
-- \`bin/bootstrap.js\` — plugkit downloader + daemon launcher
-- \`gm-plugkit/\` — spool watcher and WASM wrapper
-- \`lib/\` — daemon-bootstrap, skill-bootstrap, spool-dispatch, git, codeinsight modules
-- \`agents/\`, \`prompts/\`, \`scripts/\`, \`lang/\` — supporting surface
+- \`skills/gm-skill/\` — the canonical universal harness (\`SKILL.md\` is the ~12-line entry point)
+- \`gm-plugkit/\` — WASM bootstrap and spool watcher wrapper
+- \`lib/\` — skill-bootstrap, spool-dispatch, daemon-bootstrap, git, codeinsight modules
+- \`bin/plugkit.wasm.sha256\` — pinned hash of the plugkit WASM artifact
+
+## Architecture
+
+All orchestration lives in \`rs-plugkit/src/orchestrator/\` as native Rust, compiled to a single \`plugkit.wasm\` (~<200KB). The agent dispatches verbs by writing to \`.gm/exec-spool/in/<verb>/<N>.txt\` and reading responses from \`.gm/exec-spool/out/\`. See [AGENTS.md](https://github.com/AnEntrypoint/gm/blob/main/AGENTS.md) for the full design.
+
+An earlier generation fanned out fifteen per-platform downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf). Those are archived; \`gm-skill\` is the single source of truth.
 
 ## Version
 
-\`${pluginSpec.version}\` — auto-bumped from the canonical \`gm\` repo. Every push to \`AnEntrypoint/gm\` republishes this package alongside all 15 platform packages.
+\`${pluginSpec.version}\` — auto-bumped from the canonical \`gm\` repo. Every push to \`AnEntrypoint/gm\` (or any cascading sibling crate) republishes this package.
 
 ## Source of truth
 
