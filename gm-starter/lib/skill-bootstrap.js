@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { execSync, spawn } = require('child_process');
+const { execSync, execFileSync, spawn } = require('child_process');
 const crypto = require('crypto');
 const os = require('os');
 const spool = require('./spool.js');
@@ -117,13 +117,11 @@ function findPlugkitWasmPids() {
   const pids = [];
   try {
     if (process.platform === 'win32') {
-      const output = execSync('wmic process where "Name=\'bun.exe\' or Name=\'node.exe\'" get ProcessId,CommandLine /FORMAT:CSV', { encoding: 'utf8' });
-      const lines = output.split('\n').filter(Boolean);
-      for (const line of lines) {
-        if (!line.includes('plugkit-wasm-wrapper.js')) continue;
-        const parts = line.split(',');
-        const pid = parts[parts.length - 1].trim();
-        if (/^\d+$/.test(pid)) pids.push(pid);
+      const ps = "Get-CimInstance Win32_Process -Filter \"Name='bun.exe' OR Name='node.exe'\" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | Select-Object -ExpandProperty ProcessId";
+      const output = execFileSync('powershell', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true });
+      for (const line of output.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (/^\d+$/.test(trimmed)) pids.push(trimmed);
       }
     } else {
       const output = execSync("ps -eo pid,args", { encoding: 'utf8' });
