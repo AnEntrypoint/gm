@@ -106,25 +106,9 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Skill-initiated bootstrap contract**: `gm-starter/lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
 
-## Rust Wasm Update Pipeline
+## Cascade pipeline
 
-Every change to any Rust library auto-cascades all the way to the installed wasm artifact:
-
-```
-rs-exec / rs-codeinsight / rs-search
-  → push to main
-  → .github/workflows/cascade.yml triggers rs-plugkit workflow_dispatch
-  → rs-plugkit release.yml: cargo update, builds plugkit.wasm (cdylib), auto-bumps patch version
-  → publish job uploads plugkit.wasm + sha256 manifest + plugkit.version to AnEntrypoint/plugkit-bin Releases
-      bumps gm-starter/gm.json::plugkitVersion + gm-starter/bin/plugkit.version in AnEntrypoint/gm
-      NEVER pushes wasm artifacts into gm history
-  → that commit triggers gm publish.yml
-  → publish.yml:
-      - node cli.js gm-starter ./build (regenerates the gm-skill package)
-      - copies plugkit.wasm + plugkit.version + plugkit.sha256 into build/gm-skill/bin/
-      - npm publish build/gm-skill
-  → users on npm pull gm-skill@latest → wrapper loads the bundled wasm
-```
+Push to any rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit rebuilds its own wasm, publishes to `plugkit-bin` Releases + npm `@anentrypoint/plugkit-wasm`, then auto-bumps `gm-starter/gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The cascade does NOT rebuild rs-plugkit using rs-* sibling Cargo source — siblings publish their own wasm artifacts independently (`@anentrypoint/rs-learn-wasm`, `@anentrypoint/rs-codeinsight-wasm`). The version bump commit on this repo triggers `publish.yml`, which runs `node cli.js gm-starter ./build` and `npm publish build/gm-skill`.
 
 There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
 

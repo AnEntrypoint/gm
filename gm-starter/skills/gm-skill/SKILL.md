@@ -1,12 +1,20 @@
 ---
 name: gm-skill
 description: AI-native software engineering harness. plugkit serves all instructions, state, guardrails via the spool.
-allowed-tools: Skill, Read, Write
+allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 ---
 
 # gm — single entry point
 
-The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. If `.gm/exec-spool/.status.json` is stale or absent, bootstrap has not seeded the watcher yet — re-invoke the skill or start it manually (`node plugkit-wasm-wrapper.js spool &`).
+The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it.
+
+## Boot the spool watcher (first turn only)
+
+Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old, run:
+
+`node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool > /dev/null 2>&1 &`
+
+Wait 2 seconds, verify `.status.json` is fresh. Then proceed with dispatch.
 
 ## Dispatch ABI
 
@@ -22,6 +30,10 @@ Dispatch `instruction` (empty body for current phase; `phase=<NAME>` line, `{"ph
 
 ## Host verbs
 
-`fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`.
+`fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `status`, `wait`, `sleep`, `close`, `kill-port`, `forget`, `feedback`, `learn-status`, `learn-debug`, `learn-build`, `discipline`, `pause`, `runner`, `inference`.
+
+## Language verbs
+
+`nodejs`, `python`, `bash`, `powershell`, `ssh`, `go`, `rust`, `c`, `cpp`, `java`, `deno` — write raw code as the request body.
 
 Plugkit serves what prior skills (`gm:planning`, `gm:gm-execute`) used to serve, on demand, per phase. There is no other skill.

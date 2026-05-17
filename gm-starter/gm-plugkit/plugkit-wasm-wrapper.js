@@ -21,9 +21,6 @@ function cosineSim(a, b) {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-const browserSessions = new Map();
-let nextBrowserSessionId = 1;
-
 function createWasiShim(instanceRef) {
   const getMemory = () => instanceRef.value.exports.memory.buffer;
   const shim = {
@@ -317,36 +314,6 @@ function makeHostFunctions(instanceRef) {
       }
     },
 
-    host_browser_spawn: (urlPtr, urlLen) => {
-      try {
-        const url = readWasmStr(instanceRef.value, urlPtr, urlLen);
-        const id = BigInt(nextBrowserSessionId++);
-        browserSessions.set(id, { url, opened_at: Date.now() });
-        return id;
-      } catch (e) {
-        return 0n;
-      }
-    },
-
-    host_browser_eval: (sessionId, codePtr, codeLen) => {
-      try {
-        const code = readWasmStr(instanceRef.value, codePtr, codeLen);
-        const session = browserSessions.get(BigInt(sessionId));
-        if (!session) return writeWasmJson(instanceRef.value, { error: 'session not found' });
-        return writeWasmJson(instanceRef.value, { ok: false, error: 'browser eval not implemented in JS host; route via spool browser verb' });
-      } catch (e) {
-        return writeWasmJson(instanceRef.value, { error: e.message });
-      }
-    },
-
-    host_browser_close: (sessionId) => {
-      try {
-        return browserSessions.delete(BigInt(sessionId)) ? 1 : 0;
-      } catch (e) {
-        return 0;
-      }
-    },
-
     host_exec_js: (codePtr, codeLen, optsPtr, optsLen) => {
       try {
         const code = readWasmStr(instanceRef.value, codePtr, codeLen);
@@ -549,10 +516,18 @@ async function runSpoolWatcher(instance, spoolDir) {
     return files;
   }
 
-  const heartbeatPath = path.join(spoolDir, '.watcher.heartbeat');
-  setInterval(() => {
-    try { fs.writeFileSync(heartbeatPath, String(Date.now())); } catch (_) {}
-  }, 5000);
+  const STATUS_PATH = path.join(spoolDir, '.status.json');
+  function writeStatus() {
+    try {
+      fs.writeFileSync(STATUS_PATH, JSON.stringify({
+        pid: process.pid,
+        ts: Date.now(),
+        version: resolveVersion(instance),
+      }));
+    } catch (_) {}
+  }
+  setInterval(writeStatus, 5000);
+  writeStatus();
 
   const pollInterval = setInterval(async () => {
     const existing = walkDir(inDir);
