@@ -80,6 +80,7 @@ jobs:
           - {platform: antigravity, name: "Antigravity"}
           - {platform: windsurf, name: "Windsurf"}
           - {platform: thebird, name: "thebird"}
+          - {platform: skill, name: "gm-skill canonical universal harness"}
 
     steps:
       - uses: actions/checkout@v4
@@ -202,7 +203,7 @@ jobs:
           echo "✅ Force-pushed single-commit history to $REPO_NAME"
 
       - name: Publish to npm
-        if: matrix.platform == 'cc' || matrix.platform == 'gc' || matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes' || matrix.platform == 'antigravity' || matrix.platform == 'codex' || matrix.platform == 'copilot-cli' || matrix.platform == 'thebird'
+        if: matrix.platform == 'cc' || matrix.platform == 'gc' || matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes' || matrix.platform == 'antigravity' || matrix.platform == 'codex' || matrix.platform == 'copilot-cli' || matrix.platform == 'thebird' || matrix.platform == 'skill'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
