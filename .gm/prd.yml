@@ -1,150 +1,94 @@
----
-title: "Maximum-Effort Architectural Consolidation: File-Spool-First, WASM-Only, Hook Elimination"
-created_at: "2026-05-16T15:08:00Z"
+- id: instruction-tables-in-plugkit
+  subject: Migrate all skill prose into rs-plugkit as instruction string tables
+  status: pending
+  description: Create rs-plugkit/src/orchestrator/instructions/ with one .rs file per phase containing the dispositional prose currently in skill SKILL.md bodies. Phases - orchestrator, plan, execute, emit, verify, complete, update_docs. Each module exports a pub const TEXT &str. Source content - read current gm-starter/skills/{gm,planning,gm-execute,gm-emit,gm-complete,update-docs,gm-skill}/SKILL.md, strip the frontmatter and dispatch boilerplate, keep the imperative principles. Adapt prose so it reads as "what the agent must do" rather than "what this skill is for" since served on-demand.
+  effort: large
+  category: feature
+  route_family: representation
+  load: 0.85
+  acceptance:
+    - rs-plugkit/src/orchestrator/instructions/mod.rs exists with submodules
+    - One pub const per phase containing the dispositional prose
+    - Total prose preserves paper §17-§37 imperatives verbatim
+  edge_cases:
+    - Prose that referenced "this skill" needs reframing
+    - end-to-end transition prose must reflect verb-loop, not Skill() chain
 
-description: |
-  Consolidate gm ecosystem to eliminate hooks entirely, unify on file-spool marker-driven dispatch,
-  replace all OS binaries with single WASM build per repo, validate full learning/ACP pipeline,
-  modernize website, achieve polymorphism across CLI/browser/tools with identical binaries.
+- id: instruction-verb-in-plugkit
+  subject: Add `instruction` verb that returns phase-appropriate prose
+  status: pending
+  description: New verb in rs-plugkit/src/orchestrator/. Reads current phase from .gm/turn-state.json (or input override). Returns JSON {phase, instruction_text, nextSkill, mutables_pending, prd_pending}. Agent dispatches instruction on every turn entry. The body of the response is the prose the agent should follow. Replaces the per-skill SKILL.md prose entirely.
+  effort: medium
+  category: feature
+  route_family: execution
+  load: 0.8
+  blockedBy: [instruction-tables-in-plugkit]
+  acceptance:
+    - in/instruction/<N>.txt with empty body returns current-phase instruction
+    - in/instruction/<N>.txt with body "phase=PLAN" returns PLAN instruction
+    - response is JSON with phase, body, nextSkill fields
 
-scope:
-  repos:
-    - C:\dev\rs-plugkit
-    - C:\dev\rs-exec
-    - C:\dev\rs-learn
-    - C:\dev\rs-codeinsight
-    - C:\dev\rs-search
-    - C:\dev\gm (gm-starter + 12 platforms)
-    - C:\dev\acptoapi
+- id: single-skill-md-collapse
+  subject: Collapse skills to single gm-skill SKILL.md
+  status: pending
+  description: gm-starter/skills/ reduces to one published skill - gm-skill. SKILL.md body becomes ~10 lines - "Dispatch instruction verb. Read body. Follow imperatively. Loop until phase=COMPLETE." Delete the other 14 skill dirs from gm-starter/skills/ (gm, gm-execute, gm-emit, gm-complete, planning, update-docs, browser, code-search, create-lang-plugin, governance, pages, research, ssh, textprocessing) - all their behavior now served by plugkit on demand.
+  effort: medium
+  category: refactor
+  route_family: representation
+  load: 0.7
+  blockedBy: [instruction-verb-in-plugkit]
+  acceptance:
+    - gm-starter/skills/ has only gm-skill/
+    - gm-skill/SKILL.md body is <15 lines
+    - node cli.js gm-starter ./build emits build/gm-skill/skills/ containing only gm-skill
 
-  platforms: 12
-    - gm-cc, gm-oc, gm-kilo, gm-codex
-    - gm-vscode, gm-cursor, gm-zed, gm-jetbrains
-    - gm-gc, gm-copilot-cli, gm-qwen, gm-hermes
+- id: rs-plugkit-cascade-push
+  subject: Push rs-plugkit changes and watch cascade
+  status: pending
+  description: After instruction tables and verb wired, push to AnEntrypoint/rs-plugkit main. Watch release.yml then cascade to gm publish.yml then AnEntrypoint/gm-skill HEAD update.
+  effort: small
+  category: infra
+  route_family: execution
+  load: 0.7
+  blockedBy: [instruction-verb-in-plugkit, single-skill-md-collapse]
+  acceptance:
+    - rs-plugkit commit pushed and green
+    - gm-skill repo HEAD updated with single SKILL.md
 
-mutable_work:
-  - id: "rs-plugkit-spool-first"
-    description: "Rewrite rs-plugkit: eliminate all 6 hooks (session_start, pre_tool_use, prompt_submit, post_tool_use, stop, session_end), replace with file-spool marker-driven state machine"
-    witness: "rs-plugkit main.rs has no hook modules, uses spool watcher for state transitions, marker files drive agent callbacks"
-    status: "unknown"
+- id: dead-skill-source-cleanup
+  subject: Delete 14 dead skill source dirs and stale platform adapters
+  status: pending
+  description: Remove gm-starter/skills/{gm,gm-execute,gm-emit,gm-complete,planning,update-docs,browser,code-search,create-lang-plugin,governance,pages,research,ssh,textprocessing}/. Also remove lib/platforms/{cc,gc,oc,codex,kilo,qwen,hermes,thebird,vscode,cursor,zed,jetbrains,copilot-cli,antigravity,windsurf}.js if any remain. Audit lib/auto-generator.js and lib/template-builder.js for stale references.
+  effort: medium
+  category: refactor
+  route_family: state
+  load: 0.4
+  blockedBy: [single-skill-md-collapse]
+  acceptance:
+    - gm-starter/skills/ has only gm-skill/
+    - lib/platforms/ has only skill.js
+    - build still green
 
-  - id: "rs-plugkit-wasm-only"
-    description: "Add wasm32-unknown-unknown target, single build output, eliminate os matrix in CI (win32/linux/darwin/aarch64)"
-    witness: "rs-plugkit release.yml builds only wasm, plugkit binary invoked via bun/node, sha256 matches across all invocations"
-    status: "unknown"
+- id: agents-md-final-update
+  subject: AGENTS.md reflects single-skill plugkit-serves-everything reality
+  status: pending
+  description: Update AGENTS.md so plugkit-as-brain section says all instructions/dispositions/guardrails served via instruction verb on demand. gm-skill canonical section says ONE skill exists. Remove references to the 14 collapsed skills. Acknowledge bun-x-skills install path.
+  effort: small
+  category: docs
+  route_family: representation
+  load: 0.3
+  blockedBy: [dead-skill-source-cleanup]
+  acceptance:
+    - AGENTS.md describes single-skill model
+    - No stale references to 14 phase skills as separate entities
 
-  - id: "rs-exec-spool-dispatch"
-    description: "Wire rs-exec as spool handler (in/runner, out/<N>), eliminate exec:bash override logic, no Bash tool rewrite"
-    witness: "Bash tool submits runner tasks to spool, rs-exec processes via out/<N>.json with exitCode/stdout/stderr, no plugkit bash interception"
-    status: "unknown"
-
-  - id: "rs-exec-wasm-only"
-    description: "Add wasm target, eliminate os matrix"
-    witness: "rs-exec runs identically via node/bun wasm as os binary"
-    status: "unknown"
-
-  - id: "rs-learn-acptoapi"
-    description: "Rewrite rs-learn provider to spawn acptoapi daemon locally, detect available ACP agents, use kilo/opencode/hermes as free fallbacks before Anthropic SDK"
-    witness: "rs-learn runs recall queries via kilo, then opencode on fallback, bun x acptoapi launches transparently, embeddings work with each provider"
-    status: "unknown"
-
-  - id: "rs-learn-wasm-only"
-    description: "Add wasm target, validate parity with os binary across all 4 providers"
-    witness: "rs-learn wasm recall results identical to os binary for kilo, opencode, hermes, Anthropic queries"
-    status: "unknown"
-
-  - id: "rs-codeinsight-wasm-only"
-    description: "Add wasm target, eliminate os matrix"
-    witness: "rs-codeinsight wasm digests code identically to os binary"
-    status: "unknown"
-
-  - id: "rs-search-wasm-only"
-    description: "Add wasm target, eliminate os matrix"
-    witness: "rs-search wasm indexes and queries identically to os binary"
-    status: "unknown"
-
-  - id: "gm-starter-spool-lib"
-    description: "Rewrite gm-starter/lib for spool-first: spool-dispatch.js, daemon-bootstrap.js, gates via marker files, no hook config generation"
-    witness: "gm-starter lib/ functions accept and write marker files, spool result callbacks replace hook prompts, gate logic checks .gm/ state"
-    status: "unknown"
-
-  - id: "gm-starter-platform-gen"
-    description: "Update platform generation: remove hooks.json, add spool bootstrap init, wasm binary download + sha256 verify"
-    witness: "Generated platform has no hooks/ dir, .gm/ init script runs on first use, wasm binaries download to ~/.claude/gm-tools/"
-    status: "unknown"
-
-  - id: "gm-starter-wasm-bootstrap"
-    description: "Add bin/bootstrap.js wasm variant: fetch, cache, sha256, invoke via bun/node with runner dispatch"
-    witness: "bootstrap.js downloads wasm plugkit to ~/.claude/gm-tools/plugkit.wasm, sha256 matches manifest, invokes via bun run or node"
-    status: "unknown"
-
-  - id: "acptoapi-validation"
-    description: "Validate acptoapi spawns all free agents (kilo, opencode) and paid agents (hermes, others) flawlessly, rs-learn integrates transparently"
-    witness: "acptoapi daemon spawns in background, kilo queries work, opencode fallback works, no agent detection failures"
-    status: "unknown"
-
-  - id: "website-spool-docs"
-    description: "Update docs to remove hook references, document spool-first dispatch, marker files, wasm polymorphism"
-    witness: "AGENTS.md, docs/*, landing page mention spool dispatch not hooks; no stale hook-specific instructions"
-    status: "unknown"
-
-  - id: "all-platforms-validated"
-    description: "Validate all 12 platforms initialize, run skill chain, create marker files, spawn daemons, use wasm binaries"
-    witness: "Each platform tested: gm-cc, gm-oc, gm-kilo, gm-codex, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-gc, gm-copilot-cli, gm-qwen, gm-hermes work identically via spool"
-    status: "unknown"
-
-current_state:
-  rs_plugkit:
-    hooks_exist: true
-    hook_modules: ["session_start.rs", "pre_tool_use.rs", "prompt_submit.rs", "post_tool_use.rs", "stop.rs", "session_end.rs"]
-    spool_watcher_implemented: true
-    wasm_feature_flag: true
-    wasm_dependencies_conditional: true
-    ci_matrix: ["win32", "linux", "darwin", "aarch64"]
-
-  gm_starter:
-    spool_dispatch_exists: true
-    hook_generation_in_platforms: true
-    lib_modules: ["spool-dispatch.js", "daemon-bootstrap.js", "git.js", "codeinsight.js", "learning.js", "browser.js"]
-
-  rs_learn:
-    provider_mechanism: "bun x acptoapi or npx"
-    acptoapi_local: false
-
-  acptoapi:
-    local_repo_exists: true
-    free_agents: ["kilo", "opencode"]
-
-  agentsmd:
-    hook_references: true
-    needs_spool_docs: true
-
-design_decisions:
-  marker_files:
-    - ".gm/prd.yml - current PRD, mutable witness, phase state"
-    - ".gm/session-{id}.json - per-session state, timestamp, stage tracking"
-    - ".gm/needs-gm - gate marker: PRD exists, gm must run"
-    - ".gm/gm-fired-{id} - gate marker: gm ran, tools permitted"
-    - ".gm/mutables.yml - mutable work items with witness evidence"
-    - ".gm/daemon-state.json - rs-learn/acptoapi daemon status"
-
-  spool_dispatch:
-    - "Bash tool → .gm/exec-spool/in/runner/<N>.txt → rs-exec processes → out/<N>.json"
-    - "No hook interception, direct spool handler execution"
-    - "Stdout/stderr streamed line-by-line to out/<N>.out + out/<N>.err"
-
-  acptoapi_fallback_chain:
-    1: "Local acptoapi (127.0.0.1:4800)"
-    2: "Spawn acptoapi via spool if unavailable"
-    3: "Try kilo (free, no auth)"
-    4: "Try opencode (free, no auth)"
-    5: "Fallback Anthropic SDK"
-
-  wasm_invocation:
-    - "Download from GitHub Releases to ~/.claude/gm-tools/plugkit.wasm"
-    - "Sha256 verify via manifest"
-    - "Invoke via: bun run plugkit.wasm OR node plugkit.wasm"
-    - "Single build per repo (wasm32-unknown-unknown target only)"
-
-next_step: "Execute PLAN phase: design marker schema, spool dispatcher, acptoapi integration"
-
+- id: archive-readmes-already-in-flight
+  subject: README install-command fix subagent already dispatched
+  status: in_progress
+  description: One subagent (a97b8f6e6664d9744) is fixing the 15 archive redirect READMEs. Not stopped because work is independent of skill collapse and still needed. Awaiting completion notification.
+  effort: small
+  category: docs
+  route_family: representation
+  load: 0.4
+  acceptance:
+    - 15 redirect READMEs show bun x skills add AnEntrypoint/gm-skill
