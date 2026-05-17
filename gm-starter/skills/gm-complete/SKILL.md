@@ -1,6 +1,7 @@
 ---
 name: gm-complete
 description: VERIFY and COMPLETE phase. End-to-end system verification and git enforcement. Any new unknown triggers immediate snake back to planning — restart chain.
+allowed-tools: Skill, Read, Write
 ---
 
 # gm-complete — VERIFY phase

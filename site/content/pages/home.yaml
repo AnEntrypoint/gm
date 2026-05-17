@@ -6,9 +6,10 @@ hero:
   body: "gm convinces your coding agent that it already is a deterministic state machine. PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. it cushions the seat your agent has to sit on to actually finish the job. named after glootius maximus — the muscle that holds you in the chair while you finish the work."
   badges:
     - { label: "PLAN→EXECUTE→EMIT→VERIFY" }
-    - { label: "15 platforms, one source" }
+    - { label: "one binary, one harness, 15 platforms" }
+    - { label: "plugkit is the brain — orchestrator in rust" }
+    - { label: "gm-skill is the canonical harness body" }
     - { label: "WASM polymorphism for IDEs" }
-    - { label: "rust-backed, no daemons in your face" }
     - { label: "covering family of bounded subsets" }
     - { label: "every dispatch through one spool folder" }
     - { label: "no mocks, no skips, no excuses" }
@@ -21,8 +22,12 @@ hero:
 features:
   heading: "what you get when you sit down"
   items:
-    - name: "the agent thinks it's a state machine"
-      desc: "PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. there is no skip button. there is no 'just this once'. the agent learns the rhythm by being the rhythm. a written PRD is the user's authorization — the agent stops asking and starts doing."
+    - name: "the agent thinks it's a state machine — because plugkit is one"
+      desc: "PLAN → EXECUTE → EMIT → VERIFY → COMPLETE lives in rs-plugkit/src/orchestrator/ as native rust. four verbs — transition, mutable-resolve, memorize-fire, phase-status — drive the agent. the harness does not reimplement the state machine; it asks plugkit what phase it's in and what's still unknown. there is no skip button. there is no 'just this once'. a written PRD is the user's authorization — the agent stops asking and starts doing."
+    - name: "one harness body, every platform"
+      desc: "gm-starter/skills/gm-skill/SKILL.md is the canonical universal harness. the ten platform skills (cc, gc, oc, codex, kilo, copilot-cli, vscode, cursor, zed, jetbrains) are thin re-export wrappers — zero divergent orchestration prose, no platform-specific drift. adding behavior happens once. the platforms inherit it on the next build."
+    - name: "plugkit-only tool surface"
+      desc: "every skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. if a capability is missing, it becomes a plugkit verb — not a skill-side escape hatch."
     - name: "witnessed execution or it didn't happen"
       desc: "every unknown is resolved by running code, not by guessing. exec:<lang> for proofs, exec:codesearch for whereabouts, exec:recall for what we already learned. the words 'I think this should work' are physically blocked at the hook layer."
     - name: "covering family of bounded subsets"

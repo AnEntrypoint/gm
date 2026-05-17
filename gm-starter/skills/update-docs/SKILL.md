@@ -1,6 +1,7 @@
 ---
 name: update-docs
 description: UPDATE-DOCS phase. Refresh README.md, AGENTS.md, and docs/index.html to reflect changes made this session. Commits and pushes doc updates. Terminal phase — declares COMPLETE.
+allowed-tools: Skill, Read, Write
 ---
 
 # update-docs — UPDATE-DOCS phase

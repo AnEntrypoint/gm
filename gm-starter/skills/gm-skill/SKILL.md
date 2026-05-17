@@ -1,7 +1,7 @@
 ---
 name: gm-skill
 description: Canonical universal harness — AI-native software engineering via skill-driven orchestration; bootstraps plugkit for task execution and session isolation
-allowed-tools: Skill, Bash, Read, Write, Edit, Grep, Glob
+allowed-tools: Skill, Read, Write
 ---
 
 # GM — Universal Skill Harness

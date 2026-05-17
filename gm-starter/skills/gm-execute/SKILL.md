@@ -1,6 +1,7 @@
 ---
 name: gm-execute
 description: EXECUTE phase AND the foundational execution contract for every skill. Every spool dispatch run, every witnessed check, every code search, in every phase, follows this skill's discipline. Resolve all mutables via witnessed execution. Any new unknown triggers immediate snake back to planning — restart chain from PLAN.
+allowed-tools: Skill, Read, Write
 ---
 
 # gm-execute — EXECUTE phase

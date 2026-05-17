@@ -1,6 +1,7 @@
 ---
 name: gm-emit
 description: EMIT phase. Pre-emit debug, write files, post-emit verify from disk. Any new unknown triggers immediate snake back to planning — restart chain.
+allowed-tools: Skill, Read, Write
 ---
 
 # gm-emit — EMIT phase

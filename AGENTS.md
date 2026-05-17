@@ -48,16 +48,17 @@ node cli.js gm-starter ./build
 
 15 outputs in `build/gm-{cc,gc,oc,codex,kilo,qwen,hermes,thebird,vscode,cursor,zed,jetbrains,copilot-cli,antigravity,windsurf}`.
 
-## Functional Parity: gm-skill vs gm-cc
+## plugkit is the brain
 
-Both `gm-skill` (skills-only harness) and `gm-cc` (spool-dispatch harness) implement identical orchestration logic with zero functional divergences. Parity is verified across:
+The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. The orchestrator owns phase tracking, mutables resolution, memorize firing, and transition legality. plugkit exposes four verbs over the binary surface: `transition` (advance phase, enforce gate), `mutable-resolve` (witness an unknown), `memorize-fire` (commit a fact to rs-learn), `phase-status` (read current state and pending mutables). All harnesses (gm-skill and every gm-<platform>) call these verbs; no harness reimplements the state machine.
 
-- **6 Core Skills**: gm, planning, gm-execute, gm-emit, gm-complete, update-docs (identical SKILL.md files across both paths)
-- **6 Required Modules**: spool-dispatch.js, daemon-bootstrap.js, learning.js, codeinsight.js, git.js, browser.js (identical exports and behavior)
-- **Daemon Bootstrap**: Both harnesses spawn rs-learn, rs-codeinsight, and acptoapi identically
-- **Skill Chain Protocol**: JSON-based state transitions (nextSkill, context, phase) uniform across both paths
+## gm-skill is the canonical universal harness
 
-See `PARITY_TEST_REPORT.md` for detailed verification evidence. All 15 downstream platforms (gm-oc, gm-kilo, gm-codex, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf, gm-gc, gm-cc) built from gm-starter inherit this parity guarantee.
+`gm-starter/skills/gm-skill/SKILL.md` is the single source of truth for harness behavior. Every `gm-<platform>` skill is a thin re-export wrapper that delegates to gm-skill — no platform-specific orchestration logic, no divergent SKILL.md prose. Adding behavior happens once in gm-skill; the 10 platform skills inherit it on the next build. Drift between a platform skill and gm-skill is a bug, never a feature.
+
+## Tool surface is plugkit-only
+
+Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `Write` is permitted exclusively for spool dispatch (writing into `.gm/exec-spool/in/<lang>/`). All other side effects — code execution, git, browser, recall, memorize, codesearch — route through the spool and are serviced by plugkit. The harness never reaches around plugkit; if a capability is missing, add it as a plugkit verb, not as a skill-side tool.
 
 ## Core Rules
 
