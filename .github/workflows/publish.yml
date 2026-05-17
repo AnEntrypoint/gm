@@ -66,20 +66,6 @@ jobs:
       matrix:
         include:
           - {platform: cc, name: "Claude Code"}
-          - {platform: gc, name: "Gemini CLI"}
-          - {platform: oc, name: "OpenCode"}
-          - {platform: vscode, name: "VS Code"}
-          - {platform: cursor, name: "Cursor"}
-          - {platform: codex, name: "Codex"}
-          - {platform: kilo, name: "Kilo CLI"}
-          - {platform: zed, name: "Zed"}
-          - {platform: jetbrains, name: "JetBrains"}
-          - {platform: qwen, name: "Qwen Code"}
-          - {platform: copilot-cli, name: "GitHub Copilot CLI"}
-          - {platform: hermes, name: "Hermes Agent"}
-          - {platform: antigravity, name: "Antigravity"}
-          - {platform: windsurf, name: "Windsurf"}
-          - {platform: thebird, name: "thebird"}
           - {platform: skill, name: "gm-skill canonical universal harness"}
 
     steps:
@@ -203,7 +189,7 @@ jobs:
           echo "✅ Force-pushed single-commit history to $REPO_NAME"
 
       - name: Publish to npm
-        if: matrix.platform == 'cc' || matrix.platform == 'gc' || matrix.platform == 'oc' || matrix.platform == 'kilo' || matrix.platform == 'qwen' || matrix.platform == 'hermes' || matrix.platform == 'antigravity' || matrix.platform == 'codex' || matrix.platform == 'copilot-cli' || matrix.platform == 'thebird' || matrix.platform == 'skill'
+        if: matrix.platform == 'cc' || matrix.platform == 'skill'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
