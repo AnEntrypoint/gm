@@ -13,22 +13,16 @@ disclaimer: this is extremely opinionated. it will block bash, redirect your too
 ## install
 
 ```
-claude plugin marketplace add AnEntrypoint/gm
-claude plugin install -s user gm@gm
+bun x skills add AnEntrypoint/gm-skill -y -g
 ```
 
-update:
+then add this line to your agent's global memory / system prompt:
+
 ```
-claude plugin marketplace update gm
-claude plugin update gm@gm
+always use the gm-skill skill for everything, always fan out subagents
 ```
 
-or set up an alias so you stop forgetting:
-```bash
-mkdir -p ~/.local/bin && echo -e '#!/bin/sh\nclaude plugin marketplace update gm' > ~/.local/bin/gmupdate && chmod +x ~/.local/bin/gmupdate && echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
-```
-
-it should just work. if you want to make sure the subagent always engages, add "gm everything" to your prompt. the gm agent is injected at session start and reinforced on every prompt submit, but explicitly calling it does help.
+you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 
 **note:** all tools use bun x for fast startup and automatic npm caching. mcp-thorns, codebasesearch, and mcp-gm run via bun x with no version suffix so bun's local module store is reused between sessions — adding `@latest` forces a registry round-trip every cold start. refresh manually with `bun pm cache rm` when you actually want a newer release. you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 

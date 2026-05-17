@@ -47,14 +47,11 @@ features:
 quickstart:
   heading: sit down
   lines:
-    - { kind: "cmt", text: "# install the one skill, every harness" }
-    - { kind: "cmd", text: "npm install -g gm-skill" }
+    - { kind: "cmt", text: "# install the one skill, globally, into your agent host" }
+    - { kind: "cmd", text: "bun x skills add AnEntrypoint/gm-skill -y -g" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# or run on-demand without a global install" }
-    - { kind: "cmd", text: "npx gm-skill" }
-    - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# update to the latest cascade build" }
-    - { kind: "cmd", text: "npm install -g gm-skill@latest" }
+    - { kind: "cmt", text: "# then add this line to your agent's global memory / system prompt:" }
+    - { kind: "cmt", text: "# always use the gm-skill skill for everything, always fan out subagents" }
 examples:
   heading: read further
   items:

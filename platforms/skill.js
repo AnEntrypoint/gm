@@ -154,14 +154,16 @@ AI-native software engineering orchestrated as a state machine — PLAN → EXEC
 ## Install
 
 \`\`\`bash
-npm install -g gm-skill
+bun x skills add AnEntrypoint/gm-skill -y -g
 \`\`\`
 
-Then point your AI coding agent host at the included \`skills/\` directory, or invoke the bootstrap directly:
+Then add this line to your agent's global memory / system prompt:
 
-\`\`\`bash
-npx gm-skill-bootstrap
 \`\`\`
+always use the gm-skill skill for everything, always fan out subagents
+\`\`\`
+
+You need bun installed: \`curl -fsSL https://bun.sh/install | bash\`
 
 ## What's inside
 

@@ -16,10 +16,16 @@ Convention-driven AI plugin generator. One source, one published artifact: the `
 ## Install
 
 ```
-npm install -g gm-skill
+bun x skills add AnEntrypoint/gm-skill -y -g
 ```
 
-Invoke from any harness that loads skills. Plugkit serves all phase instructions, state, mutables, and guardrails on demand via the spool.
+Then add this line to your agent's global memory / system prompt:
+
+```
+always use the gm-skill skill for everything, always fan out subagents
+```
+
+Plugkit serves all phase instructions, state, mutables, and guardrails on demand via the spool.
 
 ## Architecture
 

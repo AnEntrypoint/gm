@@ -115,9 +115,11 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p class="first"><code>gm-skill</code> is one npm package. Any harness that can resolve a Claude-style skill folder installs it the same way:</p>
 
-<pre><code>bun add -g gm-skill            # global skill registry
-# or, project-local
-npx gm-skill install ./.claude/skills/</code></pre>
+<pre><code>bun x skills add AnEntrypoint/gm-skill -y -g</code></pre>
+
+<p>Then add this line to your agent&rsquo;s global memory / system prompt:</p>
+
+<pre><code>always use the gm-skill skill for everything, always fan out subagents</code></pre>
 
 <p>That&rsquo;s the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/@anentrypoint/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
 
