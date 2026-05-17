@@ -90,12 +90,14 @@ function isProfileLocked(profileDir) {
 }
 
 function acquireProfileDir(cwd) {
-  const primary = path.join(cwd, '.plugkit-browser-profile');
-  ensureGitignored(cwd, '.plugkit-browser-profile/');
-  ensureGitignored(cwd, '.plugkit-browser-profile-*/');
+  const gmDir = path.join(cwd, '.gm');
+  try { fs.mkdirSync(gmDir, { recursive: true }); } catch (_) {}
+  const primary = path.join(gmDir, 'browser-profile');
+  ensureGitignored(cwd, '.gm/browser-profile/');
+  ensureGitignored(cwd, '.gm/browser-profile-*/');
   try { fs.mkdirSync(primary, { recursive: true }); } catch (_) {}
   if (!isProfileLocked(primary)) return primary;
-  const fallback = path.join(cwd, `.plugkit-browser-profile-${process.pid}`);
+  const fallback = path.join(gmDir, `browser-profile-${process.pid}`);
   try { fs.mkdirSync(fallback, { recursive: true }); } catch (_) {}
   return fallback;
 }

@@ -92,3 +92,45 @@
   load: 0.4
   acceptance:
   - 15 redirect READMEs show bun x skills add AnEntrypoint/gm-skill
+- id: browser-profile-into-gm
+  subject: Move browser profile from <cwd>/.plugkit-browser-profile into <cwd>/.gm/browser-profile
+  description: 'Per AGENTS.md ''.gm/ is the single managed root''. Edit gm-starter/gm-plugkit/plugkit-wasm-wrapper.js::acquireProfileDir to use path.join(cwd, ''.gm'', ''browser-profile''); fallback uses .gm/browser-profile-<pid>. ensureGitignored entries become ''.gm/browser-profile/'' and ''.gm/browser-profile-*/''. Old top-level .plugkit-browser-profile entries in skill-bootstrap.js managed list remain (back-compat: old dirs that already exist locally still ignored) and new .gm/browser-profile/ entries are NOT needed in gitignore because the parent .gm/ would be — but per AGENTS.md gitignore parent-reinclude caveat we ignore individual .gm/* entries one-by-one. Add .gm/browser-profile/ and .gm/browser-profile-*/ to getManagedGitignoreEntries().'
+  acceptance:
+  - plugkit-wasm-wrapper.js acquireProfileDir returns path under .gm/
+  - getManagedGitignoreEntries() includes .gm/browser-profile/ and .gm/browser-profile-*/
+  - existing .plugkit-browser-profile/ entries kept for back-compat
+  effort: small
+  category: refactor
+  status: completed
+- id: rs-codeinsight-skip-gm
+  subject: rs-codeinsight walkers skip .gm and browser-profile
+  description: rs-codeinsight/src/lib.rs::collect_files (line 128) filter_entry list adds '.gm' and updates '.plugkit-browser-profile' → broaden to skip any dir name starting with '.plugkit-browser-profile' or named '.gm'. Same fix in rs-codeinsight/src/models.rs::detect_data_layer (line 34). Push to AnEntrypoint/rs-codeinsight main — cascade triggers rs-plugkit rebuild and gm-skill republish.
+  acceptance:
+  - lib.rs filter_entry rejects .gm
+  - lib.rs filter_entry rejects any .plugkit-browser-profile* prefix
+  - models.rs filter_entry same
+  - cargo check passes locally? No — pushed; CI verifies
+  effort: small
+  category: feature
+  status: pending
+- id: build-tool-config-injector
+  subject: skill-bootstrap detects vite/astro/next/jest/webpack configs and injects .gm watch-ignore
+  description: 'Add ensureBuildToolIgnores(cwd) called from bootstrapPlugkit. Detects config files in cwd top level only: vite.config.{js,ts,mjs,cjs}, astro.config.{js,ts,mjs}, next.config.{js,ts,mjs,cjs}, jest.config.{js,ts,mjs,cjs,json}, webpack.config.{js,ts,cjs,mjs}, rollup.config.{js,ts,mjs}, vitest.config.{js,ts,mjs}. For each detected config: append a single-line comment + ignore rule in a managed block delimited by ''/* >>> plugkit managed */'' and ''/* <<< plugkit managed */'' (or # markers for JSON). Block writes a JS snippet that the dev opts into manually (we cannot safely mutate config object literals) — instead we DROP a sibling file ''.gm/build-tool-ignores.md'' that lists ALL detected configs with copy-paste-ready snippets per tool, and we emit a warn event listing them. Rationale: programmatic injection into vite.config etc is too fragile; a checked-in advisory file is safer and the .gitignore line is the universal mechanism actually enforced. The .gitignore ''.gm/'' entry serves vite/astro/next/webpack/jest automatically because all of them respect node_modules ignore patterns AND .gitignore.'
+  acceptance:
+  - .gm/build-tool-ignores.md generated when any matching config is present
+  - File lists each detected config with the canonical snippet for it
+  - bootstrap event emitted naming detected tools
+  - No mutation of user's config files
+  effort: medium
+  category: feature
+  status: completed
+- id: template-builder-gm-block
+  subject: Downstream-generated .gitignore includes the gm managed block
+  description: lib/template-builder.js::generateGitignore appends the same managed block (using getManagedGitignoreEntries() equivalent inlined) so downstream gm-skill installs in non-gm projects start with .gm-protective ignores even before first bootstrap. Block delimited '# >>> gm managed' / '# <<< gm managed' for downstream resync compatibility.
+  acceptance:
+  - build/gm-skill/.gitignore (output of node cli.js gm-starter ./build) contains the managed block
+  - Block uses '# >>> gm managed' markers
+  - Same entries as skill-bootstrap getManagedGitignoreEntries
+  effort: small
+  category: feature
+  status: completed

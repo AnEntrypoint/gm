@@ -182,6 +182,9 @@ function getManagedGitignoreEntries() {
     '.gm/ingest-drafts/',
     '.gm/prd-state.json',
     '.gm/subagent-*.json',
+    '.gm/browser-profile/',
+    '.gm/browser-profile-*/',
+    '.gm/build-tool-ignores.md',
     '.plugkit-browser-profile/',
     '.plugkit-browser-profile-*/',
   ];
@@ -198,6 +201,123 @@ function getMustStayTracked() {
     'gm-data/code-search/',
     'gm-data/disciplines/',
   ];
+}
+
+function detectBuildToolConfigs(cwd) {
+  const detectors = [
+    { tool: 'vite', patterns: ['vite.config.js', 'vite.config.ts', 'vite.config.mjs', 'vite.config.cjs'] },
+    { tool: 'vitest', patterns: ['vitest.config.js', 'vitest.config.ts', 'vitest.config.mjs'] },
+    { tool: 'astro', patterns: ['astro.config.js', 'astro.config.ts', 'astro.config.mjs'] },
+    { tool: 'next', patterns: ['next.config.js', 'next.config.ts', 'next.config.mjs', 'next.config.cjs'] },
+    { tool: 'jest', patterns: ['jest.config.js', 'jest.config.ts', 'jest.config.mjs', 'jest.config.cjs', 'jest.config.json'] },
+    { tool: 'webpack', patterns: ['webpack.config.js', 'webpack.config.ts', 'webpack.config.cjs', 'webpack.config.mjs'] },
+    { tool: 'rollup', patterns: ['rollup.config.js', 'rollup.config.ts', 'rollup.config.mjs'] },
+    { tool: 'nuxt', patterns: ['nuxt.config.js', 'nuxt.config.ts', 'nuxt.config.mjs'] },
+  ];
+  const found = [];
+  for (const d of detectors) {
+    for (const p of d.patterns) {
+      const fp = path.join(cwd, p);
+      if (fs.existsSync(fp)) {
+        found.push({ tool: d.tool, file: p, fullPath: fp });
+        break;
+      }
+    }
+  }
+  return found;
+}
+
+function patchJestJsonConfig(filePath) {
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  const cfg = JSON.parse(raw);
+  const want = '<rootDir>/.gm/';
+  const existing = Array.isArray(cfg.watchPathIgnorePatterns) ? cfg.watchPathIgnorePatterns : [];
+  if (existing.includes(want)) return false;
+  cfg.watchPathIgnorePatterns = [...existing, want];
+  fs.writeFileSync(filePath, JSON.stringify(cfg, null, 2) + '\n');
+  return true;
+}
+
+function patchPackageJsonJest(cwd) {
+  const pkgPath = path.join(cwd, 'package.json');
+  if (!fs.existsSync(pkgPath)) return null;
+  const raw = fs.readFileSync(pkgPath, 'utf-8');
+  let pkg;
+  try { pkg = JSON.parse(raw); } catch (_) { return null; }
+  if (!pkg.jest || typeof pkg.jest !== 'object') return null;
+  const want = '<rootDir>/.gm/';
+  const existing = Array.isArray(pkg.jest.watchPathIgnorePatterns) ? pkg.jest.watchPathIgnorePatterns : [];
+  if (existing.includes(want)) return false;
+  pkg.jest.watchPathIgnorePatterns = [...existing, want];
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  return true;
+}
+
+function ensureBuildToolIgnores(cwd) {
+  try {
+    const found = detectBuildToolConfigs(cwd);
+    const automated = [];
+    const advisory = [];
+
+    for (const f of found) {
+      if (f.tool === 'jest' && f.file.endsWith('.json')) {
+        try {
+          const changed = patchJestJsonConfig(f.fullPath);
+          automated.push({ tool: 'jest', file: f.file, changed });
+        } catch (e) {
+          advisory.push({ ...f, reason: `patch failed: ${e.message}` });
+        }
+      } else {
+        advisory.push(f);
+      }
+    }
+
+    try {
+      const pkgChanged = patchPackageJsonJest(cwd);
+      if (pkgChanged !== null) automated.push({ tool: 'jest', file: 'package.json#jest', changed: pkgChanged });
+    } catch (_) {}
+
+    const snippets = {
+      vite: "server: { watch: { ignored: ['**/.gm/**'] } }",
+      vitest: "test: { watchExclude: ['**/.gm/**'] }",
+      astro: "vite: { server: { watch: { ignored: ['**/.gm/**'] } } }",
+      next: "webpack: (config) => { config.watchOptions = { ...config.watchOptions, ignored: ['**/.gm/**', ...(config.watchOptions?.ignored || [])] }; return config; }",
+      jest: "watchPathIgnorePatterns: ['<rootDir>/.gm/']",
+      webpack: "watchOptions: { ignored: ['**/.gm/**', '**/node_modules/**'] }",
+      rollup: "watch: { exclude: ['.gm/**'] }",
+      nuxt: "vite: { server: { watch: { ignored: ['**/.gm/**'] } } }",
+    };
+
+    const gmDir = path.join(cwd, '.gm');
+    const advisoryPath = path.join(gmDir, 'build-tool-ignores.md');
+    if (advisory.length === 0) {
+      try { if (fs.existsSync(advisoryPath)) fs.unlinkSync(advisoryPath); } catch (_) {}
+    } else {
+      fs.mkdirSync(gmDir, { recursive: true });
+      const lines = [
+        '# Build-tool ignore advisories',
+        '',
+        '`.gitignore` already excludes `.gm/`. Tools whose watchers honor `.gitignore` (vite, vitest, astro, nuxt with chokidar defaults) need no further action.',
+        '',
+        'For watchers that do NOT honor `.gitignore` automatically, paste these snippets into the corresponding config file:',
+        '',
+      ];
+      for (const f of advisory) {
+        const snip = snippets[f.tool];
+        if (!snip) continue;
+        lines.push(`## ${f.tool} (\`${f.file}\`)`, '', '```', snip, '```', '');
+      }
+      lines.push('---', '', 'Regenerated each bootstrap. Delete after applying — file is gitignored.');
+      fs.writeFileSync(advisoryPath, lines.join('\n'));
+    }
+
+    emitBootstrapEvent('info', 'Build-tool ignore handling complete', {
+      automated: automated.map(a => ({ tool: a.tool, file: a.file, changed: a.changed })),
+      advisory: advisory.map(a => ({ tool: a.tool, file: a.file })),
+    });
+  } catch (e) {
+    emitBootstrapEvent('warn', 'ensureBuildToolIgnores failed', { error: e.message });
+  }
 }
 
 function ensureManagedGitignore(cwd) {
@@ -429,6 +549,7 @@ async function bootstrapPlugkit(sessionId, options) {
     emitBootstrapEvent('info', 'Bootstrap started', { forceLatest });
 
     ensureManagedGitignore(process.cwd());
+    ensureBuildToolIgnores(process.cwd());
 
     const manifest = readManifest();
     let targetVersion = manifest.version;
@@ -616,9 +737,12 @@ async function getSnapshot(sessionId, cwd) {
   }
 }
 
-module.exports = { 
+module.exports = {
   bootstrapPlugkit,
   bootstrapAcptoapi,
   getSnapshot,
-  checkPortReachable
+  checkPortReachable,
+  ensureBuildToolIgnores,
+  detectBuildToolConfigs,
+  ensureManagedGitignore,
 };

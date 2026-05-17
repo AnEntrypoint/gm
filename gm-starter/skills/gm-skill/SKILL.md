@@ -100,8 +100,8 @@ Stop when `next_phase_hint` is null or phase is `COMPLETE`.
 
 ### Browser
 
-Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The wrapper spawns Chrome (managed profile at `<cwd>/.plugkit-browser-profile/`) and runs the JS via playwriter. Globals available inside the body: `page` (playwright Page), `snapshot` (accessibility snapshot), `screenshotWithAccessibilityLabels` (screenshot helper), `state` (per-session state object).
+Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The wrapper spawns Chrome (managed profile at `<cwd>/.gm/browser-profile/`) and runs the JS via playwriter. Globals available inside the body: `page` (playwright Page), `snapshot` (accessibility snapshot), `screenshotWithAccessibilityLabels` (screenshot helper), `state` (per-session state object).
 
 Special commands (body starts with `session `): `session new`, `session list`, `session close <id>` pass through to playwriter directly.
 
-Chrome is detected from system install paths; profile dir is project-scoped so cookies/login persist per project. The wrapper auto-adds `.plugkit-browser-profile/` to `.gitignore`.
+Chrome is detected from system install paths; profile dir is project-scoped so cookies/login persist per project. The wrapper writes the managed gitignore block (which includes `.gm/browser-profile/`) on first launch.
