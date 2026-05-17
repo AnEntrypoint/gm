@@ -1,7 +1,6 @@
 #!/bin/sh
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT}}"
 [ -z "$PLUGIN_ROOT" ] && exit 0
-PLUGKIT="$PLUGIN_ROOT/bin/plugkit"
-[ -f "$PLUGIN_ROOT/bin/plugkit.exe" ] && PLUGKIT="$PLUGIN_ROOT/bin/plugkit.exe"
-[ ! -f "$PLUGKIT" ] && exit 0
-"$PLUGKIT" hook "$1"
+PLUGKIT_JS="$PLUGIN_ROOT/bin/plugkit.js"
+[ ! -f "$PLUGKIT_JS" ] && exit 0
+node "$PLUGKIT_JS" hook "$1"

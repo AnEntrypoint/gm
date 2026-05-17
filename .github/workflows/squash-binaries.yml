@@ -45,6 +45,7 @@ jobs:
           gm-build-sync/
           gm-starter/bin/plugkit
           gm-starter/bin/plugkit.exe
+          gm-starter/bin/plugkit.wasm
           gm-starter/bin/plugkit-linux-x64
           gm-starter/bin/plugkit-linux-arm64
           gm-starter/bin/plugkit-darwin-x64
@@ -53,6 +54,7 @@ jobs:
           gm-starter/bin/plugkit-win32-arm64.exe
           plugforge-starter/bin/plugkit
           plugforge-starter/bin/plugkit.exe
+          plugforge-starter/bin/plugkit.wasm
           plugforge-starter/bin/plugkit-linux-x64
           plugforge-starter/bin/plugkit-linux-arm64
           plugforge-starter/bin/plugkit-darwin-x64

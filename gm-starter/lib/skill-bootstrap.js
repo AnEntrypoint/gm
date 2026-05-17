@@ -113,39 +113,54 @@ async function downloadPlugkitBinary(version) {
   });
 }
 
-function isProcessRunning(pidOrName) {
+function findPlugkitWasmPids() {
+  const pids = [];
   try {
-    const plat = getPlatformKey();
-    if (plat === 'win32') {
-      const output = execSync('tasklist /FO CSV /NH', { encoding: 'utf8' });
+    if (process.platform === 'win32') {
+      const output = execSync('wmic process where "Name=\'bun.exe\' or Name=\'node.exe\'" get ProcessId,CommandLine /FORMAT:CSV', { encoding: 'utf8' });
       const lines = output.split('\n').filter(Boolean);
-      return lines.some(line => {
-        const parts = line.split(',').map(p => p.trim().replace(/^"/, '').replace(/"$/, ''));
-        return parts[0] === 'plugkit.exe' || parts[0] === pidOrName;
-      });
+      for (const line of lines) {
+        if (!line.includes('plugkit-wasm-wrapper.js')) continue;
+        const parts = line.split(',');
+        const pid = parts[parts.length - 1].trim();
+        if (/^\d+$/.test(pid)) pids.push(pid);
+      }
     } else {
-      try {
-        execSync(`ps -p ${pidOrName} > /dev/null 2>&1`);
-        return true;
-      } catch {
-        return false;
+      const output = execSync("ps -eo pid,args", { encoding: 'utf8' });
+      const lines = output.split('\n').filter(Boolean);
+      for (const line of lines) {
+        if (!line.includes('plugkit-wasm-wrapper')) continue;
+        const m = line.trim().match(/^(\d+)\s/);
+        if (m) pids.push(m[1]);
       }
     }
   } catch (e) {
-    return false;
   }
+  return pids;
+}
+
+function isProcessRunning() {
+  return findPlugkitWasmPids().length > 0;
 }
 
 function killExistingPlugkit() {
   try {
-    const plat = getPlatformKey();
-    if (plat === 'win32') {
-      execSync('taskkill /IM plugkit.exe /F 2>nul || true', { shell: true });
-      emitBootstrapEvent('info', 'Killed existing plugkit process on Windows');
-    } else {
-      execSync('pkill -f "plugkit" || true', { shell: true });
-      emitBootstrapEvent('info', 'Killed existing plugkit process on Unix');
+    const pids = findPlugkitWasmPids();
+    if (pids.length === 0) {
+      emitBootstrapEvent('info', 'No existing plugkit WASM watcher to kill');
+      return;
     }
+    for (const pid of pids) {
+      try {
+        if (process.platform === 'win32') {
+          execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+        } else {
+          execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+        }
+      } catch (e) {
+      }
+    }
+    emitBootstrapEvent('info', 'Killed existing plugkit WASM watcher', { pids });
   } catch (e) {
     emitBootstrapEvent('warn', 'Failed to kill existing plugkit', { error: e.message });
   }
@@ -235,7 +250,7 @@ async function spawnPlugkitWatcher(wasmPath) {
   }
 }
 
-async function bootstrapPlugkit() {
+async function bootstrapPlugkit(sessionId) {
   const startTime = Date.now();
 
   try {
@@ -251,18 +266,19 @@ async function bootstrapPlugkit() {
     if (!binaryMissing && !versionMismatch) {
       emitBootstrapEvent('info', 'Binary up-to-date', { version: installedVersion });
 
-      if (isProcessRunning('plugkit')) {
+      if (isProcessRunning()) {
         emitBootstrapEvent('info', 'Plugkit watcher already running');
         const statusPayload = {
           ok: true,
           version: installedVersion,
           status: 'running',
+          sessionId: sessionId || null,
           timestamp: new Date().toISOString(),
           durationMs: Date.now() - startTime,
         };
         fs.mkdirSync(path.dirname(BOOTSTRAP_STATUS_FILE), { recursive: true });
         fs.writeFileSync(BOOTSTRAP_STATUS_FILE, JSON.stringify(statusPayload, null, 2));
-        return { ok: true };
+        return { ok: true, binaryPath: PLUGKIT_WASM_PATH };
       }
     }
 
@@ -308,10 +324,10 @@ async function bootstrapPlugkit() {
       emitBootstrapEvent('warn', 'Binary health check failed, but proceeding');
     }
 
-    const watcherRunning = isProcessRunning('plugkit');
+    const watcherRunning = isProcessRunning();
     let watcherPid;
     if (!watcherRunning) {
-      watcherPid = await spawnPlugkitWatcher(plugkitPath);
+      watcherPid = await spawnPlugkitWatcher(PLUGKIT_WASM_PATH);
     } else {
       watcherPid = 'already-running';
       emitBootstrapEvent('info', 'Watcher already running');
@@ -322,6 +338,7 @@ async function bootstrapPlugkit() {
       ok: true,
       version: currentVersion,
       watcherPid,
+      sessionId: sessionId || null,
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - startTime,
     };
@@ -330,7 +347,7 @@ async function bootstrapPlugkit() {
     fs.writeFileSync(BOOTSTRAP_STATUS_FILE, JSON.stringify(statusPayload, null, 2));
 
     emitBootstrapEvent('info', 'Bootstrap completed successfully', statusPayload);
-    return { ok: true };
+    return { ok: true, binaryPath: PLUGKIT_WASM_PATH };
   } catch (err) {
     const errorPayload = {
       ok: false,
@@ -381,17 +398,12 @@ async function bootstrapAcptoapi() {
 }
 
 async function getSnapshot(sessionId, cwd) {
-  const plugkitPath = getPlugkitPath();
-  if (!fs.existsSync(plugkitPath)) {
-    return { git: { ok: false }, tasks: [], error: 'plugkit not found' };
-  }
-
   try {
     const sid = sessionId || process.env.CLAUDE_SESSION_ID || 'default';
     const c = cwd || process.cwd();
-    const cmd = `"${plugkitPath}" snapshot --session "${sid}" --cwd "${c}"`;
-    const output = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return JSON.parse(output);
+    const result = await spool.execSpool('snapshot', 'snapshot', { sessionId: sid, cwd: c, timeoutMs: 5000 });
+    if (result && typeof result === 'object') return result;
+    return { git: { ok: false }, tasks: [], error: 'no snapshot result' };
   } catch (e) {
     emitBootstrapEvent('warn', 'Failed to get snapshot', { error: e.message });
     return { git: { ok: false }, tasks: [], error: e.message };

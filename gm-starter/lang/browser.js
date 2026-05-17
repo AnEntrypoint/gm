@@ -1,27 +1,24 @@
 'use strict';
 const path = require('path');
 const os = require('os');
-const { spawnSync, execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fsSync = require('fs');
 
 function findPlugkit() {
   if (process.env.PLUGKIT_BIN && fsSync.existsSync(process.env.PLUGKIT_BIN)) return process.env.PLUGKIT_BIN;
   const home = os.homedir();
-  const isWin = process.platform === 'win32';
-  const exe = isWin ? 'plugkit.exe' : 'plugkit';
   const candidates = [
-    path.join(home, '.claude', 'gm-tools', exe),
-    path.join(home, '.local', 'bin', exe),
-    path.join(home, '.claude', 'plugins', 'marketplaces', 'gm-cc', 'bin', exe),
+    path.join(__dirname, '..', 'bin', 'plugkit.js'),
+    path.join(home, '.claude', 'gm-tools', 'plugkit.js'),
+    path.join(home, '.claude', 'plugins', 'marketplaces', 'gm-cc', 'bin', 'plugkit.js'),
   ];
   if (process.env.CLAUDE_PLUGIN_ROOT) {
-    candidates.push(path.join(process.env.CLAUDE_PLUGIN_ROOT, 'bin', exe));
+    candidates.push(path.join(process.env.CLAUDE_PLUGIN_ROOT, 'bin', 'plugkit.js'));
   }
   for (const p of candidates) {
     if (fsSync.existsSync(p)) return p;
   }
-  try { execSync('plugkit --version', { encoding: 'utf-8', timeout: 3000 }); return 'plugkit'; } catch (_) {}
-  return 'plugkit';
+  return null;
 }
 
 module.exports = {
@@ -32,8 +29,9 @@ module.exports = {
       try {
         fsSync.writeFileSync(tmp, code, 'utf-8');
         const plugkit = findPlugkit();
+        if (!plugkit) return '[plugkit wrapper not found]';
         const opts = { encoding: 'utf-8', timeout: 120000, windowsHide: true, ...(cwd && { cwd }) };
-        const r = spawnSync(plugkit, ['exec', '--lang', 'browser', '--file', tmp], opts);
+        const r = spawnSync(process.execPath, [plugkit, 'exec', '--lang', 'browser', '--file', tmp], opts);
         const out = (r.stdout || '').trimEnd();
         const err = (r.stderr || '').trimEnd();
         return out && err ? out + '\n[stderr]\n' + err : out || err || '(no output)';

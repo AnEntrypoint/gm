@@ -1,22 +1,11 @@
 #!/usr/bin/env node
 'use strict';
-// Hot path: spawnSync to ~/.claude/gm-tools/plugkit.exe with inherited stdio.
-// Cold path (session-start / prompt-submit OR missing binary): synchronously
-// ensure gm-tools/plugkit{.exe} matches the pinned version, then run hook.
-// Cache-aware: when local matches the pin (sha-checked), zero network calls.
-
 const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
 const wrapperDir = __dirname;
-
-function toolsBin() {
-  const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
-  const exe = process.platform === 'win32' ? 'plugkit.exe' : 'plugkit';
-  return path.join(home, '.claude', 'gm-tools', exe);
-}
 
 function sha256OfFileSync(filePath) {
   try {
@@ -30,14 +19,6 @@ function sha256OfFileSync(filePath) {
     } finally { fs.closeSync(fd); }
     return h.digest('hex');
   } catch (_) { return null; }
-}
-
-function platformAsset() {
-  const p = process.platform;
-  const a = process.arch;
-  if (p === 'win32') return a === 'arm64' ? 'plugkit-win32-arm64.exe' : 'plugkit-win32-x64.exe';
-  if (p === 'darwin') return a === 'arm64' ? 'plugkit-darwin-arm64' : 'plugkit-darwin-x64';
-  return (a === 'arm64' || a === 'aarch64') ? 'plugkit-linux-arm64' : 'plugkit-linux-x64';
 }
 
 function readPinnedVersion() {
