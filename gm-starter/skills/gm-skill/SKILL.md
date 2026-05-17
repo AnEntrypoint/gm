@@ -30,10 +30,18 @@ Dispatch `instruction` (empty body for current phase; `phase=<NAME>` line, `{"ph
 
 ## Host verbs
 
-`fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `status`, `wait`, `sleep`, `close`, `kill-port`, `forget`, `feedback`, `learn-status`, `learn-debug`, `learn-build`, `discipline`, `pause`, `runner`, `inference`.
+`fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `status`, `wait`, `sleep`, `close`, `kill-port`, `forget`, `feedback`, `learn-status`, `learn-debug`, `learn-build`, `discipline`, `pause`, `runner`, `inference`, `browser`.
 
 ## Language verbs
 
 `nodejs`, `python`, `bash`, `powershell`, `ssh`, `go`, `rust`, `c`, `cpp`, `java`, `deno` — write raw code as the request body.
+
+### Browser
+
+Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The wrapper spawns Chrome (managed profile at `<cwd>/.plugkit-browser-profile/`) and runs the JS via playwriter. Globals available inside the body: `page` (playwright Page), `snapshot` (accessibility snapshot), `screenshotWithAccessibilityLabels` (screenshot helper), `state` (per-session state object).
+
+Special commands (body starts with `session `): `session new`, `session list`, `session close <id>` pass through to playwriter directly.
+
+Chrome is detected from system install paths; profile dir is project-scoped so cookies/login persist per project. Add `.plugkit-browser-profile/` to your repo's `.gitignore` — the wrapper does this automatically.
 
 Plugkit serves what prior skills (`gm:planning`, `gm:gm-execute`) used to serve, on demand, per phase. There is no other skill.

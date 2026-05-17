@@ -4,9 +4,181 @@ import os from 'os';
 import crypto from 'crypto';
 import { watch } from 'fs';
 import { spawn, spawnSync } from 'child_process';
+import net from 'net';
 
 const KV_DIR = path.join(os.homedir(), '.claude', 'gm-tools', 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
+
+const TMP_DIR = os.tmpdir();
+const BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json');
+const BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
+
+function readJsonFile(fp, fallback) {
+  try { return JSON.parse(fs.readFileSync(fp, 'utf-8')); } catch (_) { return fallback; }
+}
+function writeJsonFile(fp, value) {
+  try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
+}
+
+function findChrome() {
+  if (process.platform === 'win32') {
+    const candidates = [
+      path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    ];
+    for (const c of candidates) { if (c && fs.existsSync(c)) return c; }
+    return null;
+  }
+  if (process.platform === 'darwin') {
+    const mac = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    if (fs.existsSync(mac)) return mac;
+    return null;
+  }
+  for (const bin of ['google-chrome', 'chromium', 'chromium-browser']) {
+    const r = spawnSync('which', [bin], { encoding: 'utf-8' });
+    if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
+  }
+  return null;
+}
+
+function findPlaywriter() {
+  const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true });
+  if (npmR.status === 0 && npmR.stdout.trim()) {
+    const root = npmR.stdout.trim().split(/\r?\n/).pop();
+    const binJs = path.join(root, 'playwriter', 'bin.js');
+    if (fs.existsSync(binJs)) return { cmd: process.execPath, baseArgs: [binJs], shell: false };
+  }
+  const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+  const r = spawnSync(whichCmd, ['playwriter'], { encoding: 'utf-8', shell: true });
+  if (r.status === 0 && r.stdout.trim()) {
+    const candidates = r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const cmd = candidates.find(c => c.toLowerCase().endsWith('.cmd')) || candidates.find(c => !c.toLowerCase().endsWith('.ps1')) || candidates[0];
+    if (cmd) return { cmd, baseArgs: [], shell: process.platform === 'win32' };
+  }
+  const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
+  if (bunR.status === 0 && bunR.stdout.trim()) {
+    return { cmd: 'bun', baseArgs: ['x', 'playwriter@latest'], shell: true };
+  }
+  const npxR = spawnSync(whichCmd, ['npx'], { encoding: 'utf-8', shell: true });
+  if (npxR.status === 0 && npxR.stdout.trim()) {
+    return { cmd: 'npx', baseArgs: ['-y', 'playwriter'], shell: true };
+  }
+  return null;
+}
+
+function ensureGitignored(cwd, entry) {
+  try {
+    const gi = path.join(cwd, '.gitignore');
+    let content = '';
+    if (fs.existsSync(gi)) content = fs.readFileSync(gi, 'utf-8');
+    const lines = content.split(/\r?\n/);
+    if (lines.some(l => l.trim() === entry)) return;
+    const updated = (content && !content.endsWith('\n') ? content + '\n' : content) + entry + '\n';
+    fs.writeFileSync(gi, updated);
+  } catch (_) {}
+}
+
+function isProfileLocked(profileDir) {
+  const lock = path.join(profileDir, 'SingletonLock');
+  return fs.existsSync(lock);
+}
+
+function acquireProfileDir(cwd) {
+  const primary = path.join(cwd, '.plugkit-browser-profile');
+  ensureGitignored(cwd, '.plugkit-browser-profile/');
+  ensureGitignored(cwd, '.plugkit-browser-profile-*/');
+  try { fs.mkdirSync(primary, { recursive: true }); } catch (_) {}
+  if (!isProfileLocked(primary)) return primary;
+  const fallback = path.join(cwd, `.plugkit-browser-profile-${process.pid}`);
+  try { fs.mkdirSync(fallback, { recursive: true }); } catch (_) {}
+  return fallback;
+}
+
+function findFreePortSync() {
+  const r = spawnSync(process.execPath, ['-e', `
+    const net = require('net');
+    const srv = net.createServer();
+    srv.listen(0, '127.0.0.1', () => { const p = srv.address().port; srv.close(() => { process.stdout.write(String(p)); }); });
+    srv.on('error', e => { process.stderr.write(e.message); process.exit(1); });
+  `], { encoding: 'utf-8', timeout: 5000 });
+  if (r.status !== 0) throw new Error('could not allocate free port');
+  return parseInt(r.stdout.trim(), 10);
+}
+
+function isPortAliveSync(port) {
+  const r = spawnSync(process.execPath, ['-e', `
+    const net = require('net');
+    const s = net.connect({ port: ${port}, host: '127.0.0.1' });
+    s.on('connect', () => { s.destroy(); process.exit(0); });
+    s.on('error', () => process.exit(1));
+    setTimeout(() => process.exit(1), 800);
+  `], { timeout: 2000 });
+  return r.status === 0;
+}
+
+function sleepSync(ms) {
+  spawnSync(process.execPath, ['-e', `setTimeout(()=>{}, ${ms})`], { timeout: ms + 2000 });
+}
+
+function runPlaywriter(pw, args, timeoutMs) {
+  return spawnSync(pw.cmd, [...pw.baseArgs, ...args], {
+    encoding: 'utf-8',
+    timeout: timeoutMs,
+    shell: pw.shell,
+    env: process.env,
+  });
+}
+
+function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
+  const ports = readJsonFile(BROWSER_PORTS_FILE, {});
+  const sessions = readJsonFile(BROWSER_SESSIONS_FILE, {});
+  const existing = ports[claudeSessionId];
+  if (existing && existing.port && isPortAliveSync(existing.port)) {
+    const pwIds = sessions[claudeSessionId] || [];
+    if (pwIds.length > 0) return pwIds[0];
+  }
+  const chrome = findChrome();
+  if (!chrome) throw new Error('Chrome not found. Please install Google Chrome.');
+  const profileDir = acquireProfileDir(cwd);
+  const port = findFreePortSync();
+  const chromeArgs = [
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-features=Translate',
+  ];
+  const child = spawn(chrome, chromeArgs, { detached: true, stdio: 'ignore' });
+  child.unref();
+  const deadline = Date.now() + 10000;
+  let alive = false;
+  while (Date.now() < deadline) {
+    if (isPortAliveSync(port)) { alive = true; break; }
+    sleepSync(300);
+  }
+  if (!alive) throw new Error(`Chrome failed to open debug port ${port}`);
+  const newR = runPlaywriter(pw, ['session', 'new', `--direct=localhost:${port}`], 30000);
+  if (newR.status !== 0) throw new Error(`playwriter session new failed: ${newR.stderr || newR.stdout || 'unknown'}`);
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const out = stripAnsi(newR.stdout || '').trim();
+  let pwSessionId = null;
+  const created = out.match(/Session\s+(\S+)\s+created/i);
+  if (created) pwSessionId = created[1];
+  if (!pwSessionId) {
+    const hex = out.match(/\b([a-f0-9-]{8,})\b/i);
+    if (hex) pwSessionId = hex[1];
+  }
+  if (!pwSessionId) {
+    try { const j = JSON.parse(out); pwSessionId = j.id || j.session_id || j.session; } catch (_) {}
+  }
+  if (!pwSessionId) throw new Error(`could not parse playwriter session id from: ${out}`);
+  ports[claudeSessionId] = { port, profileDir };
+  sessions[claudeSessionId] = [pwSessionId];
+  writeJsonFile(BROWSER_PORTS_FILE, ports);
+  writeJsonFile(BROWSER_SESSIONS_FILE, sessions);
+  return pwSessionId;
+}
 
 const ACPTOAPI_URL = process.env.ACPTOAPI_URL || 'http://127.0.0.1:4800';
 const VEC_K_DEFAULT = 10;
@@ -354,6 +526,37 @@ function makeHostFunctions(instanceRef) {
     },
 
     host_now_ms: () => BigInt(Date.now()),
+
+    host_browser_exec: (bodyPtr, bodyLen, cwdPtr, cwdLen, sidPtr, sidLen) => {
+      try {
+        const body = readWasmStr(instanceRef.value, bodyPtr, bodyLen);
+        const cwd = readWasmStr(instanceRef.value, cwdPtr, cwdLen) || process.cwd();
+        const sessionId = readWasmStr(instanceRef.value, sidPtr, sidLen) || 'default';
+        const pw = findPlaywriter();
+        if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'playwriter not found. Install via: npm i -g playwriter' });
+        if (body.startsWith('session ')) {
+          const parts = body.slice(8).trim().split(/\s+/);
+          const r = runPlaywriter(pw, ['session', ...parts], 30000);
+          return writeWasmJson(instanceRef.value, {
+            ok: r.status === 0,
+            stdout: r.stdout || '',
+            stderr: r.stderr || '',
+            exit_code: r.status === null ? -1 : r.status,
+          });
+        }
+        const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
+        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
+        return writeWasmJson(instanceRef.value, {
+          ok: r.status === 0,
+          stdout: r.stdout || '',
+          stderr: r.stderr || '',
+          exit_code: r.status === null ? -1 : r.status,
+          session_id: pwSessionId,
+        });
+      } catch (e) {
+        return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
+      }
+    },
 
     host_env_get: (keyPtr, keyLen) => {
       try {
