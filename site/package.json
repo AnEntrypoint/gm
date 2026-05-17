@@ -2,11 +2,10 @@
   "name": "gm-site",
   "private": true,
   "scripts": {
-    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json && node build.js && node -e \"const fs=require('fs');fs.copyFileSync('input.css','../docs/styles.css');fs.copyFileSync('index.html','../docs/index.html');\""
+    "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json"
   },
   "dependencies": {
-    "esbuild": "^0.28.0",
-    "flatspace": "^1.0.11",
-    "webjsx": "0.0.70"
+    "anentrypoint-design": "latest",
+    "flatspace": "^1.0.11"
   }
 }
