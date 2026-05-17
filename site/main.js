@@ -18,18 +18,7 @@ const PRINCIPLES = [
 ];
 
 const PLATFORMS = [
-  { code: '001', id: 'gm-cc',         label: 'claude code',    sub: 'anthropic cli',        meta: 'cli · live' },
-  { code: '002', id: 'gm-gc',         label: 'gemini cli',     sub: 'google cli',           meta: 'cli · live' },
-  { code: '003', id: 'gm-oc',         label: 'opencode',       sub: 'sst agent cli',        meta: 'cli · live' },
-  { code: '004', id: 'gm-kilo',       label: 'kilo code',      sub: 'agent cli',            meta: 'cli · live' },
-  { code: '005', id: 'gm-codex',      label: 'codex',          sub: 'openai cli',           meta: 'cli · live' },
-  { code: '006', id: 'gm-copilot-cli',label: 'copilot cli',    sub: 'github extension',     meta: 'cli · live' },
-  { code: '007', id: 'gm-qwen',       label: 'qwen code',      sub: 'alibaba cli',          meta: 'cli · live' },
-  { code: '008', id: 'gm-hermes',     label: 'hermes agent',   sub: 'cli · needs patch',    meta: 'cli · wip' },
-  { code: '009', id: 'gm-vscode',     label: 'vs code',        sub: 'microsoft ide',        meta: 'ide · live' },
-  { code: '010', id: 'gm-cursor',     label: 'cursor',         sub: 'ai-first ide',         meta: 'ide · live' },
-  { code: '011', id: 'gm-zed',        label: 'zed',            sub: 'rust ide',             meta: 'ide · live' },
-  { code: '012', id: 'gm-jetbrains',  label: 'jetbrains',      sub: 'intellij family',      meta: 'ide · live' },
+  { code: '001', id: 'gm-skill',      label: 'gm-skill',       sub: 'universal harness',    meta: 'skill · live' },
 ];
 
 const RULES = [

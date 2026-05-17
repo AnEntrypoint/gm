@@ -19,7 +19,7 @@ jobs:
         run: |
           mkdir -p docs/api
           OUT=docs/api/npm-downloads.json
-          PKGS=(gm-cc gm-gc gm-oc gm-kilo gm-codex gm-copilot-cli gm-qwen gm-hermes gm-vscode gm-cursor gm-zed gm-jetbrains)
+          PKGS=(gm-skill)
           END=$(date -u +%Y-%m-%d)
           START=$(date -u -d '29 days ago' +%Y-%m-%d)
           declare -A SERIES

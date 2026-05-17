@@ -23,19 +23,9 @@ Examples:
   gm-builder ./my-plugin /tmp/build
 
 Description:
-  Automatically generates 10 platform outputs from a single plugin directory:
-  - Claude Code (cc)
-  - Gemini CLI (gc)
-  - OpenCode (oc)
-  - Codex (codex)
-  - Kilo CLI (kilo)
-  - VS Code (vscode)
-  - Cursor (cursor)
-  - Zed (zed)
-  - JetBrains (jetbrains)
-  - Copilot CLI (copilot-cli)
-  - Hermes Agent (hermes)
-  - Antigravity (antigravity)
+  Generates a single gm-skill package — the canonical universal harness.
+  Plugkit serves all phase instructions, state, mutables, and guardrails
+  on demand via the spool. Invokable from any harness.
 
 Plugin Directory Structure:
   plugin/

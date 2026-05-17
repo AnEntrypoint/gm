@@ -1,41 +1,28 @@
 # gm
 
-Convention-driven multi-platform AI plugin generator. One source, 15 platforms.
+Convention-driven AI plugin generator. One source, one published artifact: the `gm-skill` universal harness.
 
 **Hub page:** https://AnEntrypoint.github.io/gm
 
 ## Metrics
 
 [![GitHub stars](https://img.shields.io/github/stars/AnEntrypoint/gm?style=flat&logo=github&color=f1c40f)](https://github.com/AnEntrypoint/gm/stargazers)
-[![npm downloads (gm-cc)](https://img.shields.io/npm/dm/gm-cc?label=gm-cc%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-cc)
+[![npm downloads (gm-skill)](https://img.shields.io/npm/dm/gm-skill?label=gm-skill%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-skill)
 [![Commits per week](docs/badges/commits-per-week.svg)](docs/badges/commits-per-week.svg)
 [![Open Issues](docs/badges/open-issues.svg)](docs/badges/open-issues.svg)
 [![Contributors](docs/badges/contributors.svg)](docs/badges/contributors.svg)
 [![Avg PR Merge Time](docs/badges/pr-merge-time.svg)](docs/badges/pr-merge-time.svg)
 
-## GitHub Pages
+## Install
 
-### CLI Tools
+```
+npm install -g gm-skill
+```
 
-| Platform | GitHub Pages | Repository |
-|---|---|---|
-| Claude Code | https://AnEntrypoint.github.io/gm-cc | https://github.com/AnEntrypoint/gm-cc |
-| Gemini CLI | https://AnEntrypoint.github.io/gm-gc | https://github.com/AnEntrypoint/gm-gc |
-| OpenCode | https://AnEntrypoint.github.io/gm-oc | https://github.com/AnEntrypoint/gm-oc |
-| Kilo CLI | https://AnEntrypoint.github.io/gm-kilo | https://github.com/AnEntrypoint/gm-kilo |
-| Codex | https://AnEntrypoint.github.io/gm-codex | https://github.com/AnEntrypoint/gm-codex |
-| GitHub Copilot CLI | https://AnEntrypoint.github.io/gm-copilot-cli | https://github.com/AnEntrypoint/gm-copilot-cli |
-| QwenCode | https://AnEntrypoint.github.io/gm-qwen | https://github.com/AnEntrypoint/gm-qwen |
-| Hermes | https://AnEntrypoint.github.io/gm-hermes | https://github.com/AnEntrypoint/gm-hermes |
+Invoke from any harness that loads skills. Plugkit serves all phase instructions, state, mutables, and guardrails on demand via the spool.
 
-### IDE Extensions
+## Architecture
 
-| Platform | GitHub Pages | Repository |
-|---|---|---|
-| VS Code | https://AnEntrypoint.github.io/gm-vscode | https://github.com/AnEntrypoint/gm-vscode |
-| Cursor IDE | https://AnEntrypoint.github.io/gm-cursor | https://github.com/AnEntrypoint/gm-cursor |
-| Zed Editor | https://AnEntrypoint.github.io/gm-zed | https://github.com/AnEntrypoint/gm-zed |
-| JetBrains IDEs | https://AnEntrypoint.github.io/gm-jetbrains | https://github.com/AnEntrypoint/gm-jetbrains |
-| Antigravity | https://AnEntrypoint.github.io/gm-antigravity | https://github.com/AnEntrypoint/gm-antigravity |
-| The Bird | https://AnEntrypoint.github.io/gm-thebird | https://github.com/AnEntrypoint/gm-thebird |
-| Windsurf | https://AnEntrypoint.github.io/gm-windsurf | https://github.com/AnEntrypoint/gm-windsurf |
+`gm-starter/skills/gm-skill/SKILL.md` is the single ~12-line entry point. All orchestration logic lives in `rs-plugkit/src/orchestrator/`. See [AGENTS.md](AGENTS.md) for the full design.
+
+The previous 15-platform fanout (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) has been retired; those downstream repositories are archived on GitHub.

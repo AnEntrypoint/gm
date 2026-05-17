@@ -10,9 +10,9 @@
                                        "authentication":  "ON_INSTALL"
                                    },
                         "category":  "Productivity",
-                        "name":  "gm-codex",
+                        "name":  "gm-skill",
                         "source":  {
-                                       "path":  "./plugins/gm-codex",
+                                       "path":  "./plugins/gm-skill",
                                        "source":  "local"
                                    }
                     }

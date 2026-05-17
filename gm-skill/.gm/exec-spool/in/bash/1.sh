@@ -1,1 +1,0 @@
-git log -100 --oneline

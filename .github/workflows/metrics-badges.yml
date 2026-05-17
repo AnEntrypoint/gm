@@ -150,7 +150,7 @@ jobs:
           metrics_section = """## Metrics
 
           [![GitHub stars](https://img.shields.io/github/stars/AnEntrypoint/gm?style=flat&logo=github&color=f1c40f)](https://github.com/AnEntrypoint/gm/stargazers)
-          [![npm downloads (gm-cc)](https://img.shields.io/npm/dm/gm-cc?label=gm-cc%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-cc)
+          [![npm downloads (gm-skill)](https://img.shields.io/npm/dm/gm-skill?label=gm-skill%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-skill)
           [![Commits per week](docs/badges/commits-per-week.svg)](docs/badges/commits-per-week.svg)
           [![Open Issues](docs/badges/open-issues.svg)](docs/badges/open-issues.svg)
           [![Contributors](docs/badges/contributors.svg)](docs/badges/contributors.svg)

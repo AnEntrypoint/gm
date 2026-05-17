@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-gm generates 15 platform implementations from a single convention-driven source.
+gm generates a single skill package (`gm-skill`) from a convention-driven source. The skill is a ~12-line entry point; all phase prose and orchestration logic live in rs-plugkit and are served on demand via the `instruction` verb.
 
 ## Documentation Policy
 
@@ -46,7 +46,7 @@ Only record non-obvious technical caveats that cost multiple runs to discover. R
 node cli.js gm-starter ./build
 ```
 
-15 outputs in `build/gm-{cc,gc,oc,codex,kilo,qwen,hermes,thebird,vscode,cursor,zed,jetbrains,copilot-cli,antigravity,windsurf}`.
+Single output: `build/gm-skill/` — the canonical universal harness. Published to npm as `gm-skill`.
 
 ## plugkit is the brain
 
@@ -54,7 +54,7 @@ The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives native
 
 ## gm-skill is the canonical universal harness
 
-`gm-starter/skills/gm-skill/SKILL.md` is the single source of truth for harness behavior. Every `gm-<platform>` skill is a thin re-export wrapper that delegates to gm-skill — no platform-specific orchestration logic, no divergent SKILL.md prose. Adding behavior happens once in gm-skill; the 10 platform skills inherit it on the next build. Drift between a platform skill and gm-skill is a bug, never a feature.
+`gm-starter/skills/gm-skill/SKILL.md` is the single source of truth for harness behavior. It is the only skill shipped — the legacy 15-platform fanout (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) is retired; those downstream repos are archived. Users install gm-skill directly into whatever harness they use.
 
 ## Tool surface is plugkit-only
 
@@ -66,17 +66,9 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Disciplines are isolated knowledge stores**: per-project, at `<project>/.gm/disciplines/<name>/{rs-learn.db, code-search/}`. Each discipline owns its own rs-learn DB and code-search index. When a `@<name>` sigil is present in the request, isolation is strict — cross-discipline reads are forbidden. Without a sigil, reads (recall/codesearch) fan across `default` plus every enabled discipline (one per line in `<project>/.gm/disciplines/enabled.txt`) and merge-rank results with `[discipline:<name>]` prefixes; writes (memorize/ingest/index) without a sigil go to `default` only. Disciplines are tracked in git, never ignored — `lib/template-builder.js::generateGitignore()` and the gm-managed gitignore markers in downstream repos must not list `.gm/disciplines` or any subpath. Skills (memorize, recall, code-search, research, planning, gm-execute) propagate the `@<name>` sigil verbatim through their dispatch chain.
 
-**Adding a new platform**: update `PLATFORM_META` in `lib/page-generator.js` — single registration point, not obvious from adapter structure.
-
 **Clean build required**: `cleanBuildDir()` must delete the entire output dir before regenerating. Skipping causes stale files to silently shadow new ones.
 
 **Nothing fake in source the user runs**: stubs, mocks, placeholder returns, fixture-only paths, demo-mode short-circuits, and "TODO: implement" bodies are forbidden in shipped code. Scaffolds and shims are permitted only when they delegate to real behavior (real upstream API, real subprocess, real disk). Before adding a shim, check whether a published library or tool already provides that surface — maintaining a local reimplementation of an upstream solution drifts and ages. Detection is behavioral, not by keyword: code that always succeeds, returns the same value regardless of input, or short-circuits a real call to satisfy a type signature is a stub. Acceptance is real input through real code into real output, witnessed; anything less leaves the mutable open.
-
-**Skills bundled in OC and Kilo**: gm-oc and gm-kilo bundle skills directly in the npm package. gc still uses external skills — its `loadSkillsFromSource()` returns `{}` intentionally.
-
-**SKILL.md dedup design**: Four core skills (gm, gm-execute, gm-emit, gm-complete) are duplicated identically across 8 bundled platforms (cc, oc, kilo, codex, copilot-cli, vscode, cursor, zed). Proposed TemplateBuilder inheritance chain: `selectBundledSkills(platforms)` gates which platforms load skills at build time; `loadSkillsWithMetadata(sourceDir, platform)` applies platform-specific overrides; `mergeSkillMetadata(source, platform)` merges selective metadata per platform. Phase 1 adds ~80 LOC to lib/template-builder.js; backward compat guaranteed. Build-time gm SKILL.md reduction (23.8%, 3720→2819 bytes) suggests preprocessing; investigate during implementation if pursued.
-
-**VS Code-family adapters: never ship `.vscodeignore` alongside `package.json::files`**. vsce hard-rejects with "Both a .vscodeignore file and a 'files' property in package.json were found. VSCE does not support combining both strategies." Adapters in `platforms/{antigravity,vscode,cursor}.js` must pick one — gm uses the `files` array, so `createFileStructure` must not emit `.vscodeignore`. Package with `npx @vscode/vsce package --allow-star-activation --skip-license --no-dependencies`.
 
 **Spool dispatch gates**: `lib/spool-dispatch.js` implements marker-file gate logic that controls tool use, writes, and git operations. `checkDispatchGates(sessionId, operation)` reads marker files (`.gm/prd.yml`, `.gm/mutables.yml`, `.gm/needs-gm`, `.gm/gm-fired-<id>`) and returns `{allowed: bool, reason: string}`. Gates are checked at the CLI/bootstrap layer before tools execute. Tool denials via gate checks report the reason text to the model so it can adjust behavior (e.g., resolve mutables before retrying). Gate denials never mutate command arguments — they surface policy as imperative instruction via reason string.
 
@@ -125,20 +117,18 @@ rs-exec / rs-codeinsight / rs-search
       bumps gm-starter/gm.json::plugkitVersion + gm-starter/bin/plugkit.version in AnEntrypoint/gm
       NEVER pushes binaries into gm history
   → that commit triggers gm publish.yml
-  → publish.yml 12-platform matrix:
-      - node cli.js gm-starter ./build (regenerates configs, NOT binaries)
-      - copies plugkit.version + plugkit.sha256 into build/gm-<platform>/bin/
-      - git init fresh empty dir + rsync + git add -A + git add -f bin/
-      - diff --depth 1 clone of downstream to detect no-op
-      - git push --force origin main → 1-commit orphan history (~<1MB)
-  → /plugin detects new gm-cc HEAD → bootstrap.js downloads new binary
+  → publish.yml single-platform matrix:
+      - node cli.js gm-starter ./build (regenerates the gm-skill package)
+      - copies plugkit.version + plugkit.sha256 into build/gm-skill/bin/
+      - npm publish build/gm-skill
+  → users on npm pull gm-skill@latest → bootstrap.js downloads new binary
 ```
 
-Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-vscode, gm-cursor, gm-zed, gm-jetbrains) reset to a single orphan commit on every publish. gm-gc is production-ready: all 9 validation mutables witnessed, feature parity with gm-cc confirmed, ready for 12-platform cascade.
+There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
 
 **acptoapi provider and ACP agent auto-spawn**: DaemonBootstrap (`lib/daemon-bootstrap.js`) checks if 127.0.0.1:4800 is reachable; if not, spawns `bun x acptoapi@latest` as a background daemon and auto-detects available ACP agents (opencode, kilo-code, codex, gemini-cli, qwen-code, hermes) to run invisibly as subprocesses. Binary detection uses `where` (Windows) / `which` (Unix); agents not found are skipped gracefully. Daemon and agent spawning runs in a detached thread to avoid blocking session_start. On Windows, agents spawn with DETACHED_PROCESS flag (0x08000000) and no console window. acptoapi is the primary LLM provider for all downstream repos (rs-learn, freddie, acptoapi itself); the Anthropic SDK serves as fallback only when acptoapi is unavailable. All agents run in ACP stdio mode (NDJSON JSON-RPC 2.0 over stdin/stdout). See rs-learn.db for per-agent binary paths, install methods, and invocation details.
 
-**gm-skill daemon-bootstrap integration**: Skill-driven daemon spawning via `gm-skill` package must invoke `daemon-bootstrap.js` (5 exported functions: checkState, spawn, waitForReady, getSocket, shutdown) through `gm-starter/lib/skill-bootstrap.js` synchronously to establish daemon processes before skill execution. Daemon state is verified per-session (127.0.0.1:4800 reachable check) and persisted in .gm/turn-state.json. All 15 downstream platforms (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) bundle gm-skill as devDependency and load daemon-bootstrap.js into skill loading pipeline. Bootstrap failures (unresponsive socket, spawn timeout) are logged to .gm/exec-spool/.bootstrap-error.json and treated as non-fatal (fallback to Anthropic SDK). Daemon processes are terminated on session_end via killSessionTasks RPC only on real-exit reasons (clear/logout/prompt_input_exit).
+**gm-skill daemon-bootstrap integration**: Skill-driven daemon spawning via the `gm-skill` package invokes `daemon-bootstrap.js` (5 exported functions: checkState, spawn, waitForReady, getSocket, shutdown) through `gm-starter/lib/skill-bootstrap.js` synchronously to establish daemon processes before skill execution. Daemon state is verified per-session (127.0.0.1:4800 reachable check) and persisted in .gm/turn-state.json. Bootstrap failures (unresponsive socket, spawn timeout) are logged to .gm/exec-spool/.bootstrap-error.json and treated as non-fatal (fallback to Anthropic SDK). Daemon processes are terminated on session_end via killSessionTasks RPC only on real-exit reasons (clear/logout/prompt_input_exit).
 
 **Repos involved (push to any triggers cascade):**
 - `AnEntrypoint/rs-exec` — exec runner, browser sessions, idle cleanup, session task isolation
@@ -146,8 +136,7 @@ Downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cl
 - `AnEntrypoint/rs-search` — file search backend, embedding and sweep
 - `AnEntrypoint/rs-plugkit` — CLI entry point, spool watcher dispatcher; version source of truth in `Cargo.toml`
 - `AnEntrypoint/rs-learn` — memory backend, recall/ingest via HTTP RPC
-- `AnEntrypoint/gm` — `gm-starter/gm.json` holds `plugkitVersion`; CI publishes to 15 downstream platforms
-- `AnEntrypoint/gm-cc`, `gm-gc`, `gm-oc`, `gm-codex`, `gm-kilo`, `gm-qwen`, `gm-hermes`, `gm-thebird`, `gm-vscode`, `gm-cursor`, `gm-zed`, `gm-jetbrains`, `gm-copilot-cli`, `gm-antigravity`, `gm-windsurf` — platform packages; HEAD hash is what `/plugin` and platform managers track
+- `AnEntrypoint/gm` — `gm-starter/gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
 
 **To update anything**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally — push and let CI build.
 
@@ -185,7 +174,7 @@ Every program in the gm stack writes structured JSONL to `~/.claude/gm-log/<YYYY
 
 ## exec:nodejs Silent Errors
 
-exec:nodejs code that hits fs.readFileSync ENOENT or other synchronous system errors appears to complete silently (no output, exit code 0) until rs-exec receives the bun 1.3.8 mitigation via cascade. Before cascade reaches downstream gm-cc, wrap filesystem operations in explicit try/catch blocks that call `console.error(e)` and `process.exit(1)` to surface errors.
+exec:nodejs code that hits fs.readFileSync ENOENT or other synchronous system errors appears to complete silently (no output, exit code 0) until rs-exec receives the bun 1.3.8 mitigation via cascade. Until cascade lands, wrap filesystem operations in explicit try/catch blocks that call `console.error(e)` and `process.exit(1)` to surface errors.
 
 ## Site Build & Documentation
 
