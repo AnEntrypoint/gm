@@ -12,12 +12,6 @@ const VEC_K_DEFAULT = 10;
 const EMBED_MODEL_DEFAULT = process.env.EMBED_MODEL || 'mistral/mistral-embed';
 const INFERENCE_MODEL_DEFAULT = process.env.INFERENCE_MODEL || 'groq/llama-3.3-70b-versatile';
 
-function failLoud(verb, status, detail) {
-  const msg = `[plugkit-wasm] ${verb} FAILED: ${detail}`;
-  console.error(msg);
-  return { ok: false, verb, error: detail, status: status || 0 };
-}
-
 function cosineSim(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
   let dot = 0, na = 0, nb = 0;
@@ -383,14 +377,25 @@ async function runSpoolWatcher(instance, spoolDir) {
   console.log(`[plugkit-wasm] plugkit v${resolveVersion(instance)} (wasm)`);
   console.log(`[plugkit-wasm] watching ${inDir}`);
 
-  const processed = new Set();
+  const PROCESSED_MAX = 10000;
+  const processed = new Map();
+  function markProcessed(key) {
+    processed.set(key, Date.now());
+    if (processed.size > PROCESSED_MAX) {
+      const oldest = processed.keys().next().value;
+      processed.delete(oldest);
+    }
+  }
+  function isProcessed(key) { return processed.has(key); }
+  function unmarkProcessed(key) { processed.delete(key); }
+
   const dispatch = instance.exports.dispatch_verb;
   if (!dispatch) throw new Error('dispatch_verb not exported');
 
   const processFile = async (filePath) => {
     const key = path.relative(inDir, filePath);
-    if (processed.has(key)) return;
-    processed.add(key);
+    if (isProcessed(key)) return;
+    markProcessed(key);
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');
@@ -423,7 +428,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
 
       try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
-      processed.delete(key);
+      unmarkProcessed(key);
     } catch (e) {
       console.error(`[plugkit-wasm] error processing ${key}: ${e.message}`);
       const taskBase = path.basename(filePath, path.extname(filePath));
@@ -435,7 +440,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: e.message }));
       } catch (_) {}
       try { fs.unlinkSync(filePath); } catch (_) {}
-      processed.delete(key);
+      unmarkProcessed(key);
     }
   };
 
@@ -462,12 +467,51 @@ async function runSpoolWatcher(instance, spoolDir) {
     try { fs.writeFileSync(heartbeatPath, String(Date.now())); } catch (_) {}
   }, 5000);
 
-  const pollDeadline = setInterval(async () => {
+  const pollInterval = setInterval(async () => {
     const existing = walkDir(inDir);
     for (const fullPath of existing) {
       await processFile(fullPath);
     }
-  }, 250);
+  }, 5000);
+
+  setInterval(() => {
+    try {
+      const cutoff = Date.now() - 3600_000;
+      for (const entry of fs.readdirSync(outDir)) {
+        try {
+          const fp = path.join(outDir, entry);
+          const s = fs.statSync(fp);
+          if (s.mtimeMs < cutoff) fs.unlinkSync(fp);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }, 60_000);
+
+  setInterval(() => {
+    try {
+      const cutoff = Date.now() - 600_000;
+      const walk = (dir) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const fp = path.join(dir, entry.name);
+          if (entry.isDirectory()) walk(fp);
+          else if (entry.isFile()) {
+            const s = fs.statSync(fp);
+            if (s.mtimeMs < cutoff) {
+              const rel = path.relative(inDir, fp);
+              const verbDir = path.dirname(rel);
+              const base = path.basename(fp, path.extname(fp));
+              const outName = verbDir === '.' ? `${base}.json` : `${verbDir}-${base}.json`;
+              try {
+                fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: 'stale input — never dispatched or watcher crash mid-flight' }));
+              } catch (_) {}
+              try { fs.unlinkSync(fp); } catch (_) {}
+            }
+          }
+        }
+      };
+      walk(inDir);
+    } catch (_) {}
+  }, 300_000);
 
   const existing = walkDir(inDir);
   for (const fullPath of existing) {
@@ -523,7 +567,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       await runSpoolWatcher(instance, spoolDir);
     } else if (args[0] === 'dispatch') {
       const verb = args[1] || '';
-      const body = args[2] || '{}';
+      const body = args.length >= 3 ? args[2] : '';
       const dispatch = instance.exports.dispatch_verb;
       const verbBytes = new TextEncoder().encode(verb);
       const bodyBytes = new TextEncoder().encode(body);
@@ -536,7 +580,10 @@ async function runSpoolWatcher(instance, spoolDir) {
       const len = Number(result >> 32n);
       const out = new TextDecoder().decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
       process.stdout.write(out);
-      process.exit(0);
+      let parsed;
+      try { parsed = JSON.parse(out); } catch (_) { parsed = null; }
+      const failed = parsed && parsed.ok === false;
+      process.exit(failed ? 2 : 0);
     } else {
       console.log('[plugkit-wasm] args:', args.join(' '));
       process.exit(0);

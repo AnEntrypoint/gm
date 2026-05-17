@@ -41,18 +41,38 @@ function emitBootstrapEvent(severity, message, details) {
   }
 }
 
+function resolveFromCandidates(candidates, requireResolveId) {
+  for (const c of candidates) {
+    if (c && fs.existsSync(c)) return c;
+  }
+  if (requireResolveId) {
+    try {
+      const resolved = require.resolve(requireResolveId);
+      if (fs.existsSync(resolved)) return resolved;
+    } catch (e) {
+    }
+  }
+  return null;
+}
+
 function readManifest() {
   try {
-    const gmJsonPath = path.join(process.cwd(), 'gm-starter', 'gm.json');
-    if (!fs.existsSync(gmJsonPath)) {
-      throw new Error('gm-starter/gm.json not found');
+    const gmJsonPath = resolveFromCandidates([
+      path.join(__dirname, '..', 'gm.json'),
+      path.join(__dirname, '..', '..', 'gm.json'),
+    ], 'gm-skill/gm.json');
+    if (!gmJsonPath) {
+      throw new Error('gm.json not found relative to skill-bootstrap.js');
     }
     const gm = JSON.parse(fs.readFileSync(gmJsonPath, 'utf8'));
     const version = gm.plugkitVersion;
 
-    const sha256Path = path.join(process.cwd(), 'gm-starter', 'bin', 'plugkit.wasm.sha256');
-    if (!fs.existsSync(sha256Path)) {
-      throw new Error('gm-starter/bin/plugkit.wasm.sha256 not found');
+    const sha256Path = resolveFromCandidates([
+      path.join(__dirname, '..', 'bin', 'plugkit.wasm.sha256'),
+      path.join(__dirname, '..', '..', 'bin', 'plugkit.wasm.sha256'),
+    ], 'gm-skill/bin/plugkit.wasm.sha256');
+    if (!sha256Path) {
+      throw new Error('bin/plugkit.wasm.sha256 not found relative to skill-bootstrap.js');
     }
     const sha256Content = fs.readFileSync(sha256Path, 'utf8').trim();
     const expectedHash = sha256Content.split(/\s+/)[0];
@@ -366,12 +386,26 @@ async function bootstrapPlugkit(sessionId) {
 }
 
 async function checkPortReachable(host, port, timeoutMs = 500) {
-  try {
-    const result = await spool.execSpool('health', 'health', { timeoutMs, sessionId: process.env.CLAUDE_SESSION_ID || 'unknown' });
-    return !!(result && result.ok);
-  } catch (e) {
-    return false;
-  }
+  const net = require('net');
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      try { socket.destroy(); } catch (e) {}
+      resolve(ok);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    try {
+      socket.connect(port, host);
+    } catch (e) {
+      finish(false);
+    }
+  });
 }
 
 async function bootstrapAcptoapi() {

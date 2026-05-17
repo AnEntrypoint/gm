@@ -24,6 +24,18 @@ Skills encode environment-specific constraints that override general knowledge.
 
 gm generates a single skill package (`gm-skill`) from a convention-driven source. The skill is a ~12-line entry point; all phase prose and orchestration logic live in rs-plugkit and are served on demand via the `instruction` verb.
 
+## WASM-only
+
+The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun. No native binaries are built, downloaded, or published. The wasm artifact is small (<200KB) and ships inside the `gm-skill` npm package; atomic write to disk is sufficient — no kill-before-rename mechanics apply.
+
+## Spool dispatch ABI
+
+Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request body) and reading the response from `.gm/exec-spool/out/<verb>-<N>.json` (nested verbs) or `.gm/exec-spool/out/<N>.json` (root verbs). The wasm orchestrator services every verb; the harness never executes side effects directly.
+
+**Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
+
+**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`.
+
 ## Documentation Policy
 
 Only record non-obvious technical caveats that cost multiple runs to discover. Remove anything that no longer applies. Never document what is already obvious from reading the code.
@@ -50,7 +62,7 @@ Single output: `build/gm-skill/` — the canonical universal harness. Published 
 
 ## plugkit is the brain
 
-The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. The orchestrator owns phase tracking, mutables resolution, memorize firing, and transition legality. plugkit exposes four verbs over the binary surface: `transition` (advance phase, enforce gate), `mutable-resolve` (witness an unknown), `memorize-fire` (commit a fact to rs-learn), `phase-status` (read current state and pending mutables). All harnesses (gm-skill and every gm-<platform>) call these verbs; no harness reimplements the state machine.
+The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. The orchestrator owns phase tracking, mutables resolution, memorize firing, and transition legality. plugkit exposes the orchestrator verbs over the wasm surface (see Spool dispatch ABI above): `transition`, `mutable-resolve`, `memorize-fire`, `phase-status`, `instruction`, `residual-scan`, `auto-recall`. The gm-skill harness calls these verbs; the harness never reimplements the state machine.
 
 ## gm-skill is the canonical universal harness
 
@@ -64,7 +76,7 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Shared memory & search index are tracked, never ignored**: `.gm/rs-learn.db` and `.gm/code-search/` are committed so memory and index state shares across machines, sessions, and CI. Tooling, scripts, and any agent editing `.gitignore` must NEVER add `.gm/`, `.gm/rs-learn.db`, `.gm/code-search/`, or legacy `.code-search/` to ignore rules. Per the gitignore parent-re-include caveat (re-including a path past an ignored parent dir is impossible), individual `.gm/*` entries (prd-state.json, lastskill, turn-state.json, trajectory-drafts/, ingest-drafts/, rslearn-counter.json) are listed one-by-one between `# >>> gm managed` markers, leaving `.gm/rs-learn.db` and `.gm/code-search/` un-ignored. Same rule for downstream repos: `lib/template-builder.js::generateGitignore()` must not emit any of those paths. Any project-local persistent state (chunk index, DB, embeddings) must write under `.gm/<name>/`, never to a top-level dotfile/dotdir.
 
-**Disciplines are isolated knowledge stores**: per-project, at `<project>/.gm/disciplines/<name>/{rs-learn.db, code-search/}`. Each discipline owns its own rs-learn DB and code-search index. When a `@<name>` sigil is present in the request, isolation is strict — cross-discipline reads are forbidden. Without a sigil, reads (recall/codesearch) fan across `default` plus every enabled discipline (one per line in `<project>/.gm/disciplines/enabled.txt`) and merge-rank results with `[discipline:<name>]` prefixes; writes (memorize/ingest/index) without a sigil go to `default` only. Disciplines are tracked in git, never ignored — `lib/template-builder.js::generateGitignore()` and the gm-managed gitignore markers in downstream repos must not list `.gm/disciplines` or any subpath. Skills (memorize, recall, code-search, research, planning, gm-execute) propagate the `@<name>` sigil verbatim through their dispatch chain.
+**Disciplines are isolated knowledge stores**: per-project, at `<project>/.gm/disciplines/<name>/{rs-learn.db, code-search/}`. Each discipline owns its own rs-learn DB and code-search index. When a `@<name>` sigil is present in the request, isolation is strict — cross-discipline reads are forbidden. Without a sigil, reads (recall/codesearch) fan across `default` plus every enabled discipline (one per line in `<project>/.gm/disciplines/enabled.txt`) and merge-rank results with `[discipline:<name>]` prefixes; writes (memorize/ingest/index) without a sigil go to `default` only. Disciplines are tracked in git, never ignored — `lib/template-builder.js::generateGitignore()` and the gm-managed gitignore markers in downstream repos must not list `.gm/disciplines` or any subpath. The gm-skill harness and every spool verb propagate the `@<name>` sigil verbatim through their dispatch chain.
 
 **Clean build required**: `cleanBuildDir()` must delete the entire output dir before regenerating. Skipping causes stale files to silently shadow new ones.
 
@@ -72,7 +84,7 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Spool dispatch gates**: `lib/spool-dispatch.js` implements marker-file gate logic that controls tool use, writes, and git operations. `checkDispatchGates(sessionId, operation)` reads marker files (`.gm/prd.yml`, `.gm/mutables.yml`, `.gm/needs-gm`, `.gm/gm-fired-<id>`) and returns `{allowed: bool, reason: string}`. Gates are checked at the CLI/bootstrap layer before tools execute. Tool denials via gate checks report the reason text to the model so it can adjust behavior (e.g., resolve mutables before retrying). Gate denials never mutate command arguments — they surface policy as imperative instruction via reason string.
 
-**memorize sub-agent manages CLAUDE.md / AGENTS.md**: Do not inline-edit. Invocation: `Agent(subagent_type='gm:memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')`. Classifier rejects changelog-shaped facts from AGENTS.md ingestion (rs-learn store still accepts them).
+**memorize dispatch manages CLAUDE.md / AGENTS.md**: Do not inline-edit. Dispatch via spool: write `.gm/exec-spool/in/memorize/<N>.txt` with the fact text; the wasm orchestrator embeds and persists it. Classifier rejects changelog-shaped facts from AGENTS.md ingestion (rs-learn store still accepts them).
 
 **Autonomy**: Once a PRD is written, agents EXECUTE through to COMPLETE without asking. Asking permitted only as last resort for destructive-irreversible decisions or genuinely ambiguous user intent — prefer `exec:pause` over in-conversation asking. **The user's first request IS the authorization** — re-asking "want me to do X?" or "shape A vs B?" after the user said "do X" is forced closure dressed as deference. When two viable approaches exist, pick the read matching the obvious meaning, declare the choice in one line so the user can interrupt mid-chain, and execute. Multi-repo scope, build cost, CI duration, and binary-size impact are NEVER grounds to re-confirm. "Which of two viable approaches" is not ambiguous intent.
 
@@ -81,8 +93,6 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 **Daemonize-by-default exec contract**: rs-exec `execute` returns task_id immediately and the spool watcher tails the task logfile (`~/.claude/gm-log/tasks/<session_id>/<task_id>.log`) for ≤30s wall-clock before returning. Short tasks complete inside the window and look synchronous; long tasks return the task_id with partial output and continue running. Continue with `exec:tail` (drain more output, bounded), `exec:watch` (resume blocking until text/regex match or timeout), or `exec:close` (terminate). `exec:wait` is a pure timer; `exec:sleep` blocks on a specific task's output; `exec:watch` is the match-or-timeout primitive over a task's logfile. Every rs-exec RPC response carries a top-level `running_task_ids: [{id, cmd, elapsedMs}]` field for the calling session — the CLI layer surfaces this so the agent never loses track of background work it spawned. New `spawn`/`tail`/`watch`/`wait`/`killSessionTasks` RPCs live alongside `execute` for back-compat.
 
 **Session-end cleanup**: rs-exec terminates session tasks only on real-exit reasons (`clear`, `logout`, `prompt_input_exit`). Compaction/handoff reasons leave session tasks alive — the agent expects to resume from where it left off.
-
-**gm subagent satisfies the gate equivalently to gm skill**: Both `Skill(skill="gm:gm")` AND `Agent(subagent_type="gm:gm")` clear the needs-gm gate by writing `.gm/gm-fired-<sessionId>` marker. Subagent form is preferred for sustained multi-turn work because it isolates the orchestration loop in its own context window; skill form remains valid for short turns.
 
 **Maximal Cover (covering-family obligation)**: When scope exceeds reach, enumerate all witnessable subsets and execute every member. Write the family into `.gm/prd.yml` as separate items with explicit dependency graph for parallelization. Residuals the agent judges within the spirit of the original ask AND completable from this session are self-authorized — expand the PRD with them and execute, do not stop to re-ask the user. Only residuals genuinely outside the original ask OR genuinely unreachable from this session are name-and-stop. When expanding under self-authorization, the agent declares its judgment in-response ("treating X as in-scope because Y") so the user can correct mid-chain. Silent expansion without the declaration is the failure mode this rule guards against. Detection: committed work + named out-of-spirit residuals must equal the witnessable closure; gap means cover is not yet maximal, re-enter PLAN.
 
@@ -94,34 +104,30 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **PRD MANDATORY**: writing `.gm/prd.yml` is non-negotiable for every task whose scope exceeds a literal single-file single-line edit. Skipping the PRD costs the same as writing it (the agent enumerates the work mentally either way) and loses durable trace, resumability, and the cover-maximality check.
 
-**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to hand off to the next skill in the chain that turn. Symptom: model writes a PRD then stops at `→ gm-execute` without invoking it — appears to be laziness but is actually a tool gate. Any new skill participating in the chain (especially those transitioning to gm:gm-execute or other downstream skills) MUST list `Skill` in `allowed-tools`, or omit the line to inherit the default full tool set.
+**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs any future skill that participates in a chain.
 
 **rs-exec RPC session isolation**: Every RPC handler touching per-task or per-session resources must require non-empty `sessionId` in params and verify the task's stored `session_id` matches before read/mutate. Empty sessionId always returns forbidden—never falls through. Applies to: tail, watch, getTask, deleteTask, appendOutput, getAndClearOutput, waitForOutput, sendStdin (task-scoped RPCs) and listSessionTasks, drainSessionOutput, killSessionTasks, deleteSessionTasks (session-scoped RPCs). Task-creating RPCs (spawn, execute) require non-empty sessionId to avoid orphaned tasks. Known gap: startTask/completeTask/failTask spawned-child callbacks lack sessionId verification. Browser sessions separately scoped via `browser_session_map_file()` keyed by `claude_session_id`.
 
-**Windows: kill before rmSync**: `fs.rmSync` of a directory hangs (does not error) when any process holds open handles to binaries inside it. Code that removes a versioned cache dir (bootstrap.js `pruneOldVersions` and similar) MUST terminate processes whose image paths live under that dir FIRST, then rmSync with `{maxRetries:1, retryDelay:50}` so residual EBUSY fails fast. Past bug: bootstrap startup-hang when stale `plugkit-win32-x64.exe` processes held v<old>/ handles — fixed by reordering all 5 cache-resolve branches to kill-first, prune-second.
+**Skill-initiated bootstrap contract**: `gm-starter/lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
 
-**Windows: kill before renameSync on long-lived binaries**: atomic in-place rename of `~/.claude/gm-tools/plugkit.exe` blocks with EBUSY/EPERM/EEXIST/EACCES when a concurrent plugkit invocation holds the file mapped. Bootstrap `copyToGmTools` MUST (1) sweep stale `plugkit*.new` orphans before writing new tmp file, (2) attempt `renameSync(tmp, target)` with retry+backoff, (3) on persistent busy signal enumerate processes via `wmic process list brief` whose ExecutablePath matches target and `taskkill /F /PID` them, then retry, (4) throw on exhausted retries so top-level `.catch` writes `.gm/exec-spool/.bootstrap-error.json`. Swallowing the rename failure silently causes the bootstrap-failed-every-turn defect: bootstrap returns ok, but `isReady()` sha-checks the live binary against the manifest, mismatches, and prompt-submit prints `[plugkit] bootstrap failed; aborting hook` on every turn for as long as a concurrent process holds the stale binary. Diagnosis signature: dangling `plugkit*.new` files plus `plugkit.exe` whose sha256 does not match the manifest. Applies to any future in-place binary swap under `~/.claude/gm-tools/` held open by other processes.
+## Rust Wasm Update Pipeline
 
-**Skill-initiated bootstrap contract**: `gm-starter/lib/skill-bootstrap.js` wraps `bootstrap.js` for skill-driven binary initialization without hook infrastructure. `bootstrapPlugkit(sessionId)` async function accepts optional SESSION_ID, calls `bootstrap(opts)` from bin/bootstrap.js directly (no reimplementation), and writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness. Binary download, sha256 verification, lock management, and stale process cleanup are delegated to `bootstrap.js`; skill layer handles only result marshaling and session threading. Used by skills (planning, gm-execute, update-docs) for daemon spawn without session_start hook. Return: `{ ok: true, binaryPath }` on success, `{ ok: false, error: message }` on failure.
-
-## Rust Binary Update Pipeline
-
-Every change to any Rust library auto-cascades all the way to the installed binary:
+Every change to any Rust library auto-cascades all the way to the installed wasm artifact:
 
 ```
 rs-exec / rs-codeinsight / rs-search
   → push to main
   → .github/workflows/cascade.yml triggers rs-plugkit workflow_dispatch
-  → rs-plugkit release.yml: cargo update, builds 6 binaries, auto-bumps patch version
-  → publish-binaries job uploads to AnEntrypoint/plugkit-bin Releases (sha256 manifest, plugkit.version)
+  → rs-plugkit release.yml: cargo update, builds plugkit.wasm (cdylib), auto-bumps patch version
+  → publish job uploads plugkit.wasm + sha256 manifest + plugkit.version to AnEntrypoint/plugkit-bin Releases
       bumps gm-starter/gm.json::plugkitVersion + gm-starter/bin/plugkit.version in AnEntrypoint/gm
-      NEVER pushes binaries into gm history
+      NEVER pushes wasm artifacts into gm history
   → that commit triggers gm publish.yml
-  → publish.yml single-platform matrix:
+  → publish.yml:
       - node cli.js gm-starter ./build (regenerates the gm-skill package)
-      - copies plugkit.version + plugkit.sha256 into build/gm-skill/bin/
+      - copies plugkit.wasm + plugkit.version + plugkit.sha256 into build/gm-skill/bin/
       - npm publish build/gm-skill
-  → users on npm pull gm-skill@latest → bootstrap.js downloads new binary
+  → users on npm pull gm-skill@latest → wrapper loads the bundled wasm
 ```
 
 There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
@@ -156,7 +162,7 @@ Orchestration state is tracked via marker files in `.gm/` instead of hook events
 
 **Gate enforcement**: CLI layer (plugkit, rs-exec, downstream platforms) calls `checkDispatchGates()` before tool execution. On denial, reason text surfaces to the model. Bootstrap (gm-starter/lib/skill-bootstrap.js) handles daemon initialization and marker setup. Marker-driven dispatch replaces hook event pump entirely — no session event callbacks needed.
 
-**gm:gm tool-use sequencing**: Skill(gm:gm) OR Agent(subagent_type="gm:gm") writes `.gm/gm-fired-<sessionId>` to clear the needs-gm gate. Agent clears the marker at turn start to reset the gate. Subagent form preferred for sustained multi-turn work (isolates orchestration loop); skill form valid for short turns.
+**gm-skill tool-use sequencing**: Invoking `Skill(skill="gm-skill")` writes `.gm/gm-fired-<sessionId>` to clear the needs-gm gate. The marker is cleared at turn start to reset the gate. There is one shipped skill; no subagent variant exists.
 
 **Session lifecycle**: Session-end kills background tasks via `killSessionTasks` RPC on real-exit reasons (clear/logout/prompt_input_exit). Browser sessions and background tasks persist across turn-stops — cleanup happens exclusively on real-exit reasons. Residual-scan fires when PRD is empty/missing AND no open browser sessions AND no running tasks; agent either expands PRD with in-spirit residuals or explicitly states none.
 
