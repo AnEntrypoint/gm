@@ -187,19 +187,24 @@ function makeHostFunctions(instanceRef) {
 
     host_vec_search: (qPtr, qLen, k) => {
       try {
-        const q = readWasmStr(instanceRef.value, qPtr, qLen);
-        if (!q) return writeWasmJson(instanceRef.value, []);
+        const raw = readWasmStr(instanceRef.value, qPtr, qLen);
+        if (!raw) return writeWasmJson(instanceRef.value, []);
+        let parsedQ;
+        try { parsedQ = JSON.parse(raw); } catch (_) { parsedQ = { query: raw }; }
+        const q = parsedQ.query || raw;
+        const scope = parsedQ.scope || 'all';
         const k_ = k > 0 ? k : VEC_K_DEFAULT;
-        const body = JSON.stringify({ query: q, limit: k_, scope: 'episodes' });
+        const body = JSON.stringify({ query: q, limit: k_, scope });
         const result = spawnSync(process.execPath, ['-e', `
           fetch('${RS_LEARN_URL}/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} })
             .then(r => r.text().then(t => process.stdout.write(t)))
-            .catch(e => process.stdout.write(JSON.stringify({ error: e.message, results: [] })));
+            .catch(e => process.stdout.write(JSON.stringify({ error: e.message })));
         `], { encoding: 'utf-8', timeout: 5000 });
         if (result.status !== 0 || !result.stdout) return writeWasmJson(instanceRef.value, []);
         try {
           const parsed = JSON.parse(result.stdout);
-          return writeWasmJson(instanceRef.value, parsed.results || parsed);
+          const hits = parsed.hits || parsed.results || parsed.episodes || [];
+          return writeWasmJson(instanceRef.value, hits);
         } catch (_) {
           return writeWasmJson(instanceRef.value, []);
         }
@@ -375,7 +380,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
 
-      fs.unlinkSync(filePath);
+      try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
       processed.delete(key);
     } catch (e) {
       console.error(`[plugkit-wasm] error processing ${key}: ${e.message}`);

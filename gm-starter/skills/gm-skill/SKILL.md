@@ -10,7 +10,7 @@ Plugkit owns every instruction, every phase transition, every guardrail. The ski
 
 ## The loop
 
-1. Write `.gm/exec-spool/in/instruction/<N>.txt` with empty body (or `phase=<override>` to force a phase). Read `.gm/exec-spool/out/<N>.json`.
+1. Write `.gm/exec-spool/in/instruction/<N>.txt` with empty body (or `phase=<override>` to force a phase). Read `.gm/exec-spool/out/instruction-<N>.json`.
 2. The response contains `phase`, `instruction` (prose to follow), `mutables_pending`, `prd_pending_count`, `next_phase_hint`.
 3. Follow the `instruction` body imperatively. Resolve mutables, execute work, dispatch other verbs (`recall`, `codesearch`, `memorize`, `mutable-resolve`, `transition`, all language stems) as the instruction directs.
 4. When the phase's exit condition is met, dispatch `in/transition/<N>.txt` to advance. Then re-enter step 1 with the new phase.
