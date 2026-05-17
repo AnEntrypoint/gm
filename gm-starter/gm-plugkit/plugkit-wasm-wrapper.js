@@ -7,8 +7,24 @@ import { spawn, spawnSync } from 'child_process';
 const KV_DIR = path.join(os.homedir(), '.claude', 'gm-tools', 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
 
-const RS_LEARN_URL = process.env.RS_LEARN_URL || 'http://127.0.0.1:8000';
+const ACPTOAPI_URL = process.env.ACPTOAPI_URL || 'http://127.0.0.1:4800';
 const VEC_K_DEFAULT = 10;
+const EMBED_MODEL_DEFAULT = process.env.EMBED_MODEL || 'mistral/mistral-embed';
+const INFERENCE_MODEL_DEFAULT = process.env.INFERENCE_MODEL || 'groq/llama-3.3-70b-versatile';
+
+function failLoud(verb, status, detail) {
+  const msg = `[plugkit-wasm] ${verb} FAILED: ${detail}`;
+  console.error(msg);
+  return { ok: false, verb, error: detail, status: status || 0 };
+}
+
+function cosineSim(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  if (na === 0 || nb === 0) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
 
 const browserSessions = new Map();
 let nextBrowserSessionId = 1;
@@ -192,23 +208,44 @@ function makeHostFunctions(instanceRef) {
         let parsedQ;
         try { parsedQ = JSON.parse(raw); } catch (_) { parsedQ = { query: raw }; }
         const q = parsedQ.query || raw;
-        const scope = parsedQ.scope || 'all';
+        const namespace = parsedQ.namespace || 'default';
+        const extractVec = (e) => {
+          if (Array.isArray(e)) return e;
+          if (Array.isArray(e?.data?.[0]?.embedding)) return e.data[0].embedding;
+          if (Array.isArray(e?.embedding)) return e.embedding;
+          return null;
+        };
+        const queryEmbedding = extractVec(parsedQ.embedding);
         const k_ = k > 0 ? k : VEC_K_DEFAULT;
-        const body = JSON.stringify({ query: q, limit: k_, scope });
-        const result = spawnSync(process.execPath, ['-e', `
-          fetch('${RS_LEARN_URL}/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} })
-            .then(r => r.text().then(t => process.stdout.write(t)))
-            .catch(e => process.stdout.write(JSON.stringify({ error: e.message })));
-        `], { encoding: 'utf-8', timeout: 5000 });
-        if (result.status !== 0 || !result.stdout) return writeWasmJson(instanceRef.value, []);
-        try {
-          const parsed = JSON.parse(result.stdout);
-          const hits = parsed.hits || parsed.results || parsed.episodes || [];
-          return writeWasmJson(instanceRef.value, hits);
-        } catch (_) {
+        if (!queryEmbedding) {
+          if (process.env.PLUGKIT_DEBUG) console.error('[plugkit-wasm] host_vec_search: no embedding in query, raw=', raw.slice(0, 200));
           return writeWasmJson(instanceRef.value, []);
         }
+        const vecDir = path.join(KV_DIR, `${namespace}-vec`.replace(/[^A-Za-z0-9._-]/g, '_'));
+        const dataDir = path.join(KV_DIR, namespace.replace(/[^A-Za-z0-9._-]/g, '_'));
+        if (!fs.existsSync(vecDir) || !fs.existsSync(dataDir)) {
+          return writeWasmJson(instanceRef.value, []);
+        }
+        const scored = [];
+        for (const f of fs.readdirSync(vecDir)) {
+          if (!f.endsWith('.json')) continue;
+          let emb;
+          try { emb = JSON.parse(fs.readFileSync(path.join(vecDir, f), 'utf-8')); }
+          catch (_) { continue; }
+          const vector = Array.isArray(emb?.data?.[0]?.embedding) ? emb.data[0].embedding
+                       : Array.isArray(emb?.embedding) ? emb.embedding
+                       : Array.isArray(emb) ? emb : null;
+          if (!vector) continue;
+          const score = cosineSim(queryEmbedding, vector);
+          const key = f.replace(/\.json$/, '');
+          const valuePath = path.join(dataDir, `${key}.json`);
+          const text = fs.existsSync(valuePath) ? fs.readFileSync(valuePath, 'utf-8') : '';
+          scored.push({ key, text, score });
+        }
+        scored.sort((a, b) => b.score - a.score);
+        return writeWasmJson(instanceRef.value, scored.slice(0, k_));
       } catch (e) {
+        console.error('[plugkit-wasm] host_vec_search error:', e.message);
         return writeWasmJson(instanceRef.value, []);
       }
     },
@@ -217,15 +254,20 @@ function makeHostFunctions(instanceRef) {
       try {
         const text = readWasmStr(instanceRef.value, textPtr, textLen);
         if (!text) return 0n;
-        const body = JSON.stringify({ text });
+        const body = JSON.stringify({ model: EMBED_MODEL_DEFAULT, input: text });
         const result = spawnSync(process.execPath, ['-e', `
-          fetch('${RS_LEARN_URL}/embed', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} })
-            .then(r => r.text().then(t => process.stdout.write(t)))
-            .catch(e => process.stdout.write(''));
-        `], { encoding: 'utf-8', timeout: 5000 });
-        if (result.status !== 0 || !result.stdout) return 0n;
+          fetch('${ACPTOAPI_URL}/v1/embeddings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+            .then(t => process.stdout.write(t))
+            .catch(e => { process.stderr.write('embed-error: ' + e.message); process.exit(2); });
+        `], { encoding: 'utf-8', timeout: 30000 });
+        if (result.status !== 0 || !result.stdout) {
+          console.error('[plugkit-wasm] host_vec_embed FAILED:', result.stderr || 'no response');
+          return 0n;
+        }
         return writeWasmStr(instanceRef.value, result.stdout);
       } catch (e) {
+        console.error('[plugkit-wasm] host_vec_embed exception:', e.message);
         return 0n;
       }
     },
