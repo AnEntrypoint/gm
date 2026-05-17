@@ -10,9 +10,6 @@ const PLUGKIT_TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const PLUGKIT_VERSION_FILE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.version');
 const PLUGKIT_WASM_PATH = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.wasm');
 const PLUGKIT_WASM_WRAPPER = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-wasm-wrapper.js');
-const PLUGKIT_LATEST_CACHE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-latest.json');
-const PLUGKIT_LATEST_TTL_MS = 60 * 60 * 1000;
-const NPM_PACKAGE = '@anentrypoint/plugkit-wasm';
 const BOOTSTRAP_STATUS_FILE = path.join(os.homedir(), '.gm', 'bootstrap-status.json');
 const BOOTSTRAP_ERROR_FILE = path.join(os.homedir(), '.gm', 'bootstrap-error.json');
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
@@ -127,16 +124,6 @@ function httpGet(url, timeoutMs) {
 }
 
 async function getLatestRemoteVersion() {
-  try {
-    const stat = fs.statSync(PLUGKIT_LATEST_CACHE);
-    if (Date.now() - stat.mtimeMs < PLUGKIT_LATEST_TTL_MS) {
-      const cached = JSON.parse(fs.readFileSync(PLUGKIT_LATEST_CACHE, 'utf-8'));
-      if (cached && cached.version) {
-        emitBootstrapEvent('info', 'Using cached latest version', { version: cached.version, ageMs: Date.now() - stat.mtimeMs });
-        return cached;
-      }
-    }
-  } catch (_) {}
   let version = null;
   let source = null;
   try {
@@ -176,13 +163,8 @@ async function getLatestRemoteVersion() {
   } catch (e) {
     emitBootstrapEvent('warn', 'sha fetch failed; will verify after download', { error: e.message, version });
   }
-  const payload = { version, sha, source, fetchedAt: Date.now() };
-  try {
-    fs.mkdirSync(PLUGKIT_TOOLS_DIR, { recursive: true });
-    fs.writeFileSync(PLUGKIT_LATEST_CACHE, JSON.stringify(payload, null, 2));
-  } catch (_) {}
   emitBootstrapEvent('info', 'Resolved latest plugkit version', { version, source, hasSha: Boolean(sha) });
-  return payload;
+  return { version, sha, source };
 }
 
 function gitignorePath(cwd) { return path.join(cwd, '.gitignore'); }
@@ -460,21 +442,31 @@ async function spawnPlugkitWatcher(wasmPath) {
   }
 }
 
-async function bootstrapPlugkit(sessionId) {
+async function bootstrapPlugkit(sessionId, options) {
   const startTime = Date.now();
+  const opts = options || {};
+  const forceLatest = Boolean(opts.latest);
 
   try {
-    emitBootstrapEvent('info', 'Bootstrap started');
+    emitBootstrapEvent('info', 'Bootstrap started', { forceLatest });
 
     ensureManagedGitignore(process.cwd());
 
     const manifest = readManifest();
-    const latest = await getLatestRemoteVersion();
-    const targetVersion = (latest && latest.version) || manifest.version;
-    const expectedHash = (latest && latest.sha) || manifest.expectedHash;
-    if (latest && latest.version !== manifest.version) {
-      emitBootstrapEvent('info', 'Latest plugkit newer than manifest pin', { latest: latest.version, manifest: manifest.version });
+    let targetVersion = manifest.version;
+    let expectedHash = manifest.expectedHash;
+
+    if (forceLatest) {
+      const latest = await getLatestRemoteVersion();
+      if (latest && latest.version) {
+        targetVersion = latest.version;
+        expectedHash = latest.sha || expectedHash;
+        if (latest.version !== manifest.version) {
+          emitBootstrapEvent('info', 'forceLatest: using newer remote version', { latest: latest.version, manifest: manifest.version });
+        }
+      }
     }
+
     const installedVersion = getInstalledVersion();
     const plugkitPath = getPlugkitPath();
 

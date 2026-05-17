@@ -16,6 +16,10 @@ Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old:
 
 Wait 2 seconds, verify `.status.json` is fresh. Then proceed.
 
+## Plugkit version updates
+
+The watcher checks GitHub Releases every 5 minutes for a newer plugkit. If drift is detected, it writes `.gm/exec-spool/.update-available.json` with `{installed, latest, instruction, update_url}`; if no drift, the file is removed. Read this file at session start (and occasionally afterward); if present, kill the current watcher, run `bootstrapPlugkit({latest: true})` once to fetch the new wasm, then restart the watcher. Default bootstrap never hits the network — only `{latest: true}` fetches the newest binary.
+
 ## Dispatch ABI
 
 Write request body to `.gm/exec-spool/in/<verb>/<N>.txt`. Read response from `.gm/exec-spool/out/<verb>-<N>.json` (nested verbs) or `out/<N>.json` (root verbs). Bodies are JSON, raw code, or a single phase name depending on the verb.

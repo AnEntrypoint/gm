@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
+import https from 'https';
 import { watch } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 import net from 'net';
@@ -735,6 +736,46 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   setInterval(writeStatus, 5000);
   writeStatus();
+
+  const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
+  const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  function checkForUpdate() {
+    const installed = resolveVersion(instance);
+    const req = https.get({
+      host: 'api.github.com',
+      path: '/repos/AnEntrypoint/plugkit-bin/releases/latest',
+      headers: { 'user-agent': 'plugkit-watcher', 'accept': 'application/json' },
+      timeout: 5000,
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); return; }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const rel = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+          const tag = rel && rel.tag_name;
+          if (!tag) return;
+          const latest = tag.replace(/^v/, '');
+          if (latest === installed) {
+            try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
+            return;
+          }
+          fs.writeFileSync(UPDATE_AVAILABLE_PATH, JSON.stringify({
+            installed,
+            latest,
+            checked_at_ms: Date.now(),
+            instruction: 'plugkit is out of date. To update, close the running watcher and re-bootstrap with the @latest flag, e.g. node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool & after running bootstrap with {latest: true}.',
+            update_url: `https://github.com/AnEntrypoint/plugkit-bin/releases/tag/v${latest}`,
+          }, null, 2));
+          console.log(`[update] available: installed=${installed} latest=${latest} → wrote ${UPDATE_AVAILABLE_PATH}`);
+        } catch (_) {}
+      });
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => {});
+  }
+  setTimeout(checkForUpdate, 10_000);
+  setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
 
   const pollInterval = setInterval(async () => {
     const existing = walkDir(inDir);
