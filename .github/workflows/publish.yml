@@ -65,7 +65,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {platform: cc, name: "Claude Code"}
           - {platform: skill, name: "gm-skill canonical universal harness"}
 
     steps:
@@ -189,7 +188,7 @@ jobs:
           echo "✅ Force-pushed single-commit history to $REPO_NAME"
 
       - name: Publish to npm
-        if: matrix.platform == 'cc' || matrix.platform == 'skill'
+        if: matrix.platform == 'skill'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
