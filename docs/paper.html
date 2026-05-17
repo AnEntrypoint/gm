@@ -164,6 +164,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
     <li><a href="#s37">Meaning Through Haiku, Mechanics Through Code</a></li>
     <li><a href="#s38">Discussion</a></li>
     <li><a href="#s39">Conclusion</a></li>
+    <li><a href="#refs">References</a></li>
   </ol>
 </div>
 
@@ -179,7 +180,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
   <li><strong>Premature closure:</strong> Agents declare work done before conditions are met, ship placeholders as results, skip verification steps, or stop short of the full scope of a request.</li>
 </ol>
 
-<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts. External behavioral enforcement&mdash;the spool-dispatch gate below the agent&rsquo;s decision layer, marker-file stop barriers, orchestrator-enforced phase transitions, and hard rules served by the wasm <code>instruction</code> verb&mdash;is the only reliable mitigation.</p>
+<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts. External behavioral enforcement&mdash;the spool-dispatch gate below the agent&rsquo;s decision layer, marker-file stop barriers, orchestrator-enforced phase transitions, and hard rules served by the wasm <code>instruction</code> verb&mdash;is the only reliable mitigation.<sup><a href="#r8">8</a>,<a href="#r9">9</a></sup> Recent empirical studies of agentic failure across multi-agent frameworks and tool-use benchmarks converge on the same diagnosis: premature termination, assumption propagation, and over-helpful substitution are dominant under unrestricted self-regulation, and constrained-pipeline alternatives outperform free-form agents on real software-engineering workloads.<sup><a href="#r7">7</a>,<a href="#r3">3</a></sup></p>
 
 <p>This paper is the complete reference for the gm discipline as it stands in production. Sections 2&ndash;8 cover the lifecycle model. Sections 9&ndash;12 cover the in-phase quality discipline. Sections 13&ndash;16 cover the governance layer. Sections 17&ndash;20 cover the autonomy and scope rules. Sections 21&ndash;29 cover operational hard rules. Sections 30&ndash;37 cover the dispatch-boundary rules that move the discipline out of the agent's context window and onto disk and into hooks.</p>
 
@@ -243,7 +244,7 @@ stateDiagram-v2
   <li>Examining source code (static analysis misses runtime behavior)</li>
 </ul>
 
-<p>Only witnessed output counts as ground truth. Before that, a value remains unknown regardless of how plausible a guess might be.</p>
+<p>Only witnessed output counts as ground truth. Before that, a value remains unknown regardless of how plausible a guess might be. This matches a growing body of work on code-generation hallucination: surveys and grounding-based mitigations show that reasoning-only verification systematically misses runtime-only failure modes, and iterative grounding against real APIs is what actually reduces fabrication.<sup><a href="#r10">10</a>,<a href="#r11">11</a></sup></p>
 
 <h3>3.3 The Two-Pass Rule</h3>
 <p>If a mutable remains unresolved after two execution passes, it is reclassified as a new unknown and the agent snakes back to PLAN. This prevents infinite loops where the agent repeatedly attempts the same failing resolution strategy.</p>
@@ -259,6 +260,8 @@ stateDiagram-v2
 <p>The system tracks work through a <code>.gm/prd.yml</code> file. Each item carries an id, imperative subject, status (pending &rarr; in_progress &rarr; completed), acceptance criteria, edge cases, bidirectional dependency links, effort estimates, route family tag, and load score (0.0&ndash;1.0: consequence weight). Writing the PRD is mandatory for any task touching more than one line in one file.</p>
 
 <p>The load score governs verification budget: <code>verification_budget = load × (1 − tier_confidence)</code>. Items with load &gt; 0.75 must be witnessed before EMIT.</p>
+
+<p>The mandatory-written-specification stance is under independent empirical study: a SANER 2026 registered report formalizes the hypothesis that specifications preceding code reduce errors, and the Agentless pipeline shows that a constrained three-phase localize/repair/validate decomposition beats free-form agentic loops on SWE-bench at lower cost.<sup><a href="#r16">16</a>,<a href="#r7">7</a></sup></p>
 
 <h3>4.2 Wave-Based Parallel Execution</h3>
 <p>The PRD&rsquo;s dependency graph enables parallel execution. Each wave identifies all pending items with satisfied dependencies, launches up to 3 concurrent subagents, and upon completion checks newly unblocked items for the next wave. Independent items are never executed sequentially.</p>
@@ -282,7 +285,7 @@ stateDiagram-v2
   <dt>reference:</dt><dd>Pointers to external systems&mdash;navigational knowledge</dd>
 </dl>
 
-<p>Each memory is stored as a Markdown file with YAML frontmatter, indexed in <code>MEMORY.md</code>. The index loads at conversation start; individual memories are read on demand.</p>
+<p>Each memory is stored as a Markdown file with YAML frontmatter, indexed in <code>MEMORY.md</code>. The index loads at conversation start; individual memories are read on demand. The pattern parallels recent agentic-memory architectures: A-MEM organizes notes Zettelkasten-style with embedding-indexed dynamic links, Mem0 builds a production-grade long-term store with consolidation and salience retrieval, and MemoryAgentBench shows that even strong RAG-augmented agents still trail humans on accurate retrieval, test-time learning, and selective forgetting&mdash;motivating per-turn auto-recall rather than session-scoped retrieval.<sup><a href="#r13">13</a>,<a href="#r14">14</a>,<a href="#r15">15</a></sup></p>
 
 <h3>5.2 Exclusion Principle</h3>
 <p>The system avoids storing information derivable from current project state: code patterns, architecture, file paths, git history, debugging solutions. Memory staleness&mdash;acting on outdated cached information&mdash;is among the more damaging failure modes.</p>
@@ -517,7 +520,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>Enforcement: committed work + named out-of-spirit residuals must equal the witnessable closure of the request. Gap = cover not maximal &rarr; re-enter planning.</p>
 </div>
 
-<p>The Maximal Cover obligation emerges from recognizing that scope-exceeds-reach is not a stopping condition; it is a planning condition. The covering family is the plan. Stopping at one slice is the same as refusing&mdash;both leave witnessable work unexecuted, both are forced closure.</p>
+<p>The Maximal Cover obligation emerges from recognizing that scope-exceeds-reach is not a stopping condition; it is a planning condition. The covering family is the plan. Stopping at one slice is the same as refusing&mdash;both leave witnessable work unexecuted, both are forced closure. Recent controlled experiments quantify the structural bias the rule corrects: LLMs systematically omit required sections, undershoot length requirements, and substitute minimum-viable outputs for the full ask&mdash;laziness is measurable, not anecdotal.<sup><a href="#r17">17</a></sup></p>
 
 <hr>
 
@@ -702,7 +705,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>The three-file output shape maps to the agent&rsquo;s three needs. <code>.out</code> is the live stdout stream, written line-by-line as the task runs. <code>.err</code> is the separate stderr channel&mdash;mixing them collapses the distinction between &ldquo;result&rdquo; and &ldquo;diagnostic,&rdquo; which leads to ambiguous downstream parsing. <code>.json</code> is the metadata sidecar written once at completion: <code>exitCode</code>, <code>durationMs</code>, <code>timedOut</code>, <code>startedAt</code>, <code>endedAt</code>. The metadata file is what tells the agent whether the task ended cleanly, was killed for budget, or is still running; the streams alone cannot answer that.</p>
 
-<p>The boundary is enforced at the Bash gate. An agent that tries to run <code>node script.js</code> or any non-spool execution directly through Bash receives a denial that <em>throws</em> rather than mutates&mdash;the error names the spool path the agent should have written to. This is the only execution surface the discipline recognizes; everything else is a guess about whether the call happened.</p>
+<p>The boundary is enforced at the Bash gate. An agent that tries to run <code>node script.js</code> or any non-spool execution directly through Bash receives a denial that <em>throws</em> rather than mutates&mdash;the error names the spool path the agent should have written to. This is the only execution surface the discipline recognizes; everything else is a guess about whether the call happened. The constrained-tool-surface bet has independent support: SWE-agent argues that a deliberately designed Agent-Computer Interface is the primary lever for reliability, and contemporary work on fault-tolerant agent sandboxing converges on policy-based interception plus transactional filesystem snapshots as the safe-execution baseline.<sup><a href="#r3">3</a>,<a href="#r12">12</a></sup></p>
 
 <div class="gm-callout">
   <span class="who">from the gm field guide</span>
@@ -745,7 +748,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>The synchronous-under-wasm contract is a consequence of wasm itself. There is no thread the orchestrator can detach the subprocess into, no way to keep a long-running process associated with the wasm instance after the dispatch returns, and no port for an external observer to attach to. The host runs the subprocess, waits up to <code>timeoutMs</code>, and returns. Long subprocesses block the watcher for the duration; orphaned background work is not supported under this surface.</p>
 
-<p>This is a deliberate trade. The earlier generation of this project ran <code>rs-exec</code> as a native daemon with a port file, a task store, and a grammar of resumption verbs (<code>tail</code>, <code>watch</code>, <code>wait</code>, <code>sleep</code>, <code>close</code>). It was more flexible and also a fountain of operational pain: dead PIDs, port-leak races on Windows, idle-cleanup tuning, kill-tree edge cases on bash pipelines that escaped the parent group. The wasm-only surface gives up the long-task affordance and gets back operational simplicity: no daemon to supervise, no port to leak, no orphan-process accounting.</p>
+<p>This is a deliberate trade. The earlier generation of this project ran <code>rs-exec</code> as a native daemon with a port file, a task store, and a grammar of resumption verbs (<code>tail</code>, <code>watch</code>, <code>wait</code>, <code>sleep</code>, <code>close</code>). It was more flexible and also a fountain of operational pain: dead PIDs, port-leak races on Windows, idle-cleanup tuning, kill-tree edge cases on bash pipelines that escaped the parent group. The wasm-only surface gives up the long-task affordance and gets back operational simplicity: no daemon to supervise, no port to leak, no orphan-process accounting. The wasm-for-agents pattern has converged in recent industry and academic work as well: NVIDIA Developer Blog argues for WebAssembly sandboxing of LLM-generated code, and MCP-SandboxScan formalizes a WASI sandbox for untrusted MCP tool execution.<sup><a href="#r20">20</a>,<a href="#r19">19</a></sup></p>
 
 <p>Browser sessions are the one exception. <code>exec:browser</code> opens a playwriter session that the wasm host holds open between dispatches (the host-side state lives outside the wasm instance, in the Node process that hosts it). Browser sessions persist across turn-stops and are reaped only on real-exit reasons (clear, logout, prompt_input_exit). The <code>running_task_ids</code> field on every dispatch response surfaces outstanding browser sessions so the agent sees them on every turn.</p>
 
@@ -843,14 +846,28 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>Our experience operating a single-skill harness across every Claude-style host that can load a skill folder suggests that agent reliability depends substantially on lifecycle control&mdash;not just model capability. The third-generation rules in particular suggest that reliability also depends on moving discipline-state out of the agent&rsquo;s memory and into externally-readable artifacts: a spool file, a mutables row, a stop-hook marker, a CI run. The agent is a participant in the discipline, not the keeper of it. We offer this body of work as a practical engineering artifact rather than a theoretical claim.</p>
 
 <div class="references">
-  <h2>References</h2>
+  <h2 id="refs">References</h2>
   <ol>
-    <li>S. Yao et al., &ldquo;ReAct: Synergizing Reasoning and Acting in Language Models,&rdquo; <em>ICLR</em>, 2023.</li>
-    <li>N. Shinn et al., &ldquo;Reflexion: Language Agents with Verbal Reinforcement Learning,&rdquo; <em>NeurIPS</em>, 2023.</li>
-    <li>J. Yang et al., &ldquo;SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering,&rdquo; <em>arXiv:2405.15793</em>, 2024.</li>
-    <li>J. Wei et al., &ldquo;Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,&rdquo; <em>NeurIPS</em>, 2022.</li>
-    <li>J.S. Park et al., &ldquo;Generative Agents: Interactive Simulacra of Human Behavior,&rdquo; <em>UIST</em>, 2023.</li>
-    <li>G. Wang et al., &ldquo;Voyager: An Open-Ended Embodied Agent with Large Language Models,&rdquo; <em>NeurIPS</em>, 2023.</li>
+    <li id="r1">S. Yao et al., &ldquo;ReAct: Synergizing Reasoning and Acting in Language Models,&rdquo; <em>ICLR</em>, 2023.</li>
+    <li id="r2">N. Shinn et al., &ldquo;Reflexion: Language Agents with Verbal Reinforcement Learning,&rdquo; <em>NeurIPS</em>, 2023. <a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener">arXiv:2303.11366</a></li>
+    <li id="r3">J. Yang et al., &ldquo;SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering,&rdquo; <em>NeurIPS</em>, 2024. <a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener">arXiv:2405.15793</a></li>
+    <li id="r4">J. Wei et al., &ldquo;Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,&rdquo; <em>NeurIPS</em>, 2022.</li>
+    <li id="r5">J.S. Park et al., &ldquo;Generative Agents: Interactive Simulacra of Human Behavior,&rdquo; <em>UIST</em>, 2023.</li>
+    <li id="r6">G. Wang et al., &ldquo;Voyager: An Open-Ended Embodied Agent with Large Language Models,&rdquo; <em>NeurIPS</em>, 2023.</li>
+    <li id="r7">C.S. Xia et al., &ldquo;Agentless: Demystifying LLM-based Software Engineering Agents,&rdquo; 2024. <a href="https://arxiv.org/abs/2407.01489" target="_blank" rel="noopener">arXiv:2407.01489</a> &mdash; demonstrates that a constrained three-phase localize/repair/validate pipeline beats free-form agents on SWE-bench at lower cost; empirical vindication of mandatory plan-before-execute.</li>
+    <li id="r8">M. Cemri et al., &ldquo;Why Do Multi-Agent LLM Systems Fail?,&rdquo; 2025. <a href="https://arxiv.org/abs/2503.13657" target="_blank" rel="noopener">arXiv:2503.13657</a> &mdash; grounded-theory taxonomy across 1600+ traces; premature termination and assumption propagation are dominant failures under self-regulation.</li>
+    <li id="r9">J.V. Roig, &ldquo;How Do LLMs Fail In Agentic Scenarios? A Qualitative Analysis,&rdquo; 2025. <a href="https://arxiv.org/abs/2512.07497" target="_blank" rel="noopener">arXiv:2512.07497</a> &mdash; identifies &ldquo;premature action without grounding&rdquo; and &ldquo;over-helpfulness substituting missing entities&rdquo; as recurring archetypes; direct empirical motivation for external phase enforcement.</li>
+    <li id="r10">A. Eghbali and M. Pradel, &ldquo;De-Hallucinator: Mitigating LLM Hallucinations in Code Generation Tasks via Iterative Grounding,&rdquo; 2024. <a href="https://arxiv.org/abs/2401.01701" target="_blank" rel="noopener">arXiv:2401.01701</a> &mdash; iterative grounding against real project APIs reduces hallucination; supports the &ldquo;witness, don&rsquo;t reason&rdquo; principle behind named mutables.</li>
+    <li id="r11">X. Lin et al., &ldquo;LLM-based Agents Suffer from Hallucinations: A Survey of Taxonomy, Methods, and Directions,&rdquo; 2025. <a href="https://arxiv.org/abs/2509.18970" target="_blank" rel="noopener">arXiv:2509.18970</a> &mdash; surveys why reasoning-only verification fails and why execution evidence is required.</li>
+    <li id="r12">B. Yan et al., &ldquo;Fault-Tolerant Sandboxing for AI Coding Agents: A Transactional Approach to Safe Autonomous Execution,&rdquo; 2025. <a href="https://arxiv.org/abs/2512.12806" target="_blank" rel="noopener">arXiv:2512.12806</a> &mdash; policy-based interception of agent tool calls plus transactional filesystem snapshots; mirrors the spool-dispatch gate.</li>
+    <li id="r13">W. Xu et al., &ldquo;A-MEM: Agentic Memory for LLM Agents,&rdquo; <em>NeurIPS</em>, 2025. <a href="https://arxiv.org/abs/2502.12110" target="_blank" rel="noopener">arXiv:2502.12110</a> &mdash; Zettelkasten-style dynamic memory with embedding-indexed notes; direct parallel to rs-learn&rsquo;s memorize/recall.</li>
+    <li id="r14">P. Chhikara et al., &ldquo;Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory,&rdquo; 2025. <a href="https://arxiv.org/abs/2504.19413" target="_blank" rel="noopener">arXiv:2504.19413</a> &mdash; production-grade long-term memory architecture; benchmarks the embedding-store memory pattern.</li>
+    <li id="r15">Y. Hu et al., &ldquo;Evaluating Memory in LLM Agents via Incremental Multi-Turn Interactions (MemoryAgentBench),&rdquo; 2025. <a href="https://arxiv.org/abs/2507.05257" target="_blank" rel="noopener">arXiv:2507.05257</a> &mdash; shows RAG-augmented memory still lags humans across retrieval, test-time learning, long-range understanding, and selective forgetting; motivates auto-recall on every turn.</li>
+    <li id="r16">G. Rosa et al., &ldquo;Understanding Specification-Driven Code Generation with LLMs: An Empirical Study Design,&rdquo; <em>SANER 2026 Stage-1 Registered Report</em>, 2026. <a href="https://arxiv.org/abs/2601.03878" target="_blank" rel="noopener">arXiv:2601.03878</a> &mdash; peer-reviewed protocol for measuring whether written specs preceding code reduce errors; the PRD-mandatory hypothesis under formal study.</li>
+    <li id="r17">Y. Ma and J.-H. Liu, &ldquo;Quantifying Laziness, Decoding Suboptimality, and Context Degradation in Large Language Models,&rdquo; 2025. <a href="https://arxiv.org/abs/2512.20662" target="_blank" rel="noopener">arXiv:2512.20662</a> &mdash; controlled experiments quantifying instruction-omission and length-undershoot; structural motivation for the covering-family obligation.</li>
+    <li id="r18">T. Joshi et al., &ldquo;SWE-Bench-CL: Continual Learning for Coding Agents,&rdquo; 2025. <a href="https://arxiv.org/abs/2507.00014" target="_blank" rel="noopener">arXiv:2507.00014</a> &mdash; extends SWE-bench with cross-session continual-learning evaluation; relevant to the cross-session memory claim.</li>
+    <li id="r19">Z. Tan et al., &ldquo;MCP-SandboxScan: WASM-based Secure Execution and Runtime Analysis for MCP Tools,&rdquo; 2026. <a href="https://arxiv.org/abs/2601.01241" target="_blank" rel="noopener">arXiv:2601.01241</a> &mdash; WebAssembly/WASI sandbox for untrusted tool execution in agent contexts; same architectural bet as plugkit.wasm.</li>
+    <li id="r20">J. Lucas, &ldquo;Sandboxing Agentic AI Workflows with WebAssembly,&rdquo; <em>NVIDIA Developer Blog</em>, 2024. <a href="https://developer.nvidia.com/blog/sandboxing-agentic-ai-workflows-with-webassembly/" target="_blank" rel="noopener">developer.nvidia.com</a> &mdash; influential industry technical report on the wasm-for-agents pattern.</li>
   </ol>
 </div>
 
