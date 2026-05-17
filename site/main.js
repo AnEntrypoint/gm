@@ -78,8 +78,8 @@ function SocialProof() {
     h('span', { class: 'sp-sep' }, '·'),
     h('span', { class: 'sp-item' },
       h('span', { class: 'sp-icon' }, '🛠️'),
-      h('span', { class: 'sp-num' }, '13'),
-      h('span', { class: 'sp-lbl' }, 'platforms'),
+      h('span', { class: 'sp-num' }, '∞'),
+      h('span', { class: 'sp-lbl' }, 'every harness'),
     ),
   );
 }
@@ -89,7 +89,7 @@ function Hero() {
     SocialProof(),
     h('h1', {}, 'a state machine that keeps coding sessions on track.'),
     h('p', { class: 'lede' },
-      'gm enforces plan → execute → emit → verify → complete on every task, across 13 platforms. each unknown is named and resolved by witnessed execution. ',
+      'gm enforces plan → execute → emit → verify → complete on every task, in every harness that supports skills or instructions. each unknown is named and resolved by witnessed execution. ',
       h('span', { class: 'accent' }, 'humor is load-bearing.'),
     ),
     h('div', { class: 'actions' },
@@ -141,7 +141,7 @@ function CurrentlyShipping() {
   return h('section', {},
     h('div', { class: 'gm-section-label' }, h('span', { class: 'slash' }, '//'), 'currently shipping'),
     h('div', { class: 'panel' },
-      h('div', { class: 'panel-head' }, h('span', {}, 'state machine · v2.0'), h('span', {}, '12 platforms')),
+      h('div', { class: 'panel-head' }, h('span', {}, 'state machine · v2.0'), h('span', {}, 'one skill')),
       h('div', { class: 'panel-body' },
         h('div', { class: 'row' },
           h('span', { class: 'code' }, h('span', { style: 'color:var(--panel-accent)' }, '●')),
@@ -165,9 +165,9 @@ function CurrentlyShipping() {
 
 function Works() {
   return h('section', { id: 'works' },
-    h('div', { class: 'gm-section-label' }, h('span', { class: 'slash' }, '//'), 'works · 12 platforms'),
+    h('div', { class: 'gm-section-label' }, h('span', { class: 'slash' }, '//'), 'works'),
     h('div', { class: 'panel' },
-      h('div', { class: 'panel-head' }, h('span', {}, 'platforms · all'), h('span', {}, '12')),
+      h('div', { class: 'panel-head' }, h('span', {}, 'works'), h('span', {}, '')),
       h('div', { class: 'panel-body' },
         ...PLATFORMS.map(p => h('a', {
           class: 'panel-row-link',
@@ -241,9 +241,9 @@ function MutableDiscipline() {
 
 function Footer() {
   return h('footer', { class: 'gm-footer' },
-    h('span', {}, 'main · 12 platforms · ',
+    h('span', {}, 'main · ',
       h('a', { href: 'https://github.com/AnEntrypoint/gm', target: '_blank', rel: 'noopener' }, 'source ↗'),
-      ' · ', h('a', { href: './paper.html' }, 'paper')
+      ' · ', h('a', { href: './paper/' }, 'paper')
     ),
     h('span', {}, 'probably emerging \u{1F300}'),
   );

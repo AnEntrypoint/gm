@@ -2,11 +2,11 @@ id: home
 title: gm
 hero:
   heading: "glootius maximus"
-  subheading: "more coushin' for the puhin'"
+  subheading: "more coushin' for the pushin'"
   body: "gm convinces your coding agent that it already is a deterministic state machine. PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. it cushions the seat your agent has to sit on to actually finish the job. named after glootius maximus — the muscle that holds you in the chair while you finish the work."
   badges:
     - { label: "PLAN→EXECUTE→EMIT→VERIFY" }
-    - { label: "one binary, one harness, 15 platforms" }
+    - { label: "one skill, every harness" }
     - { label: "plugkit is the brain — orchestrator in rust" }
     - { label: "gm-skill is the canonical harness body" }
     - { label: "WASM polymorphism for IDEs" }

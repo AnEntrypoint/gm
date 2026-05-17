@@ -190,6 +190,49 @@ async function extractNpmPackageWasm(destPath, version) {
   }
 }
 
+function httpGetBuffer(url, timeoutMs) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { timeout: timeoutMs || 30000, headers: { 'user-agent': 'gm-plugkit-bootstrap' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        httpGetBuffer(res.headers.location, timeoutMs).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`HTTP ${res.statusCode} ${url}`));
+        return;
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error(`timeout ${url}`)));
+    req.on('error', reject);
+  });
+}
+
+async function downloadFromGithubReleases(destPath, version) {
+  const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
+  log(`gh-releases download: ${base}/plugkit.wasm`);
+  const buf = await httpGetBuffer(`${base}/plugkit.wasm`, 60000);
+  if (!buf || buf.length < 1024) throw new Error(`gh-releases download too small: ${buf ? buf.length : 0} bytes`);
+  let remoteSha = '';
+  try {
+    const shaBuf = await httpGetBuffer(`${base}/plugkit.wasm.sha256`, 10000);
+    remoteSha = shaBuf.toString('utf-8').trim().split(/\s+/)[0];
+  } catch (e) { log(`gh-releases sha fetch failed: ${e.message}`); }
+  if (remoteSha) {
+    const got = require('crypto').createHash('sha256').update(buf).digest('hex');
+    if (got !== remoteSha) throw new Error(`gh-releases sha mismatch: got ${got}, expected ${remoteSha}`);
+    log(`gh-releases sha verified ${got.slice(0, 16)}...`);
+  }
+  fs.writeFileSync(destPath, buf);
+  log(`gh-releases wrote ${buf.length} bytes to ${destPath}`);
+}
+
 async function extractNpmPackageWithRetry(destPath, version) {
   let lastErr;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -547,12 +590,17 @@ async function bootstrap(opts) {
     try {
       await extractNpmPackageWithRetry(partialPath, version);
     } catch (extractErr) {
-      writeBootstrapError({
-        expected_version: version, cached_version: null,
-        error_phase: 'npm-extract',
-        error_message: extractErr && extractErr.message ? extractErr.message : String(extractErr),
-      });
-      throw extractErr;
+      log(`npm-extract failed (${extractErr.message || extractErr}); falling back to GitHub Releases`);
+      try {
+        await downloadFromGithubReleases(partialPath, version);
+      } catch (ghErr) {
+        writeBootstrapError({
+          expected_version: version, cached_version: null,
+          error_phase: 'npm-extract+gh-fallback',
+          error_message: `npm: ${extractErr.message}; gh: ${ghErr.message}`,
+        });
+        throw ghErr;
+      }
     }
 
     if (expectedSha) {
@@ -634,18 +682,143 @@ function isReady() {
   return fs.existsSync(wasm);
 }
 
-async function ensureReady() {
-  if (isReady()) {
-    return { ok: true, wasmPath: getWasmPath(), status: 'already-ready' };
+function ensureWrapperFresh() {
+  try {
+    const wrapperSrc = path.join(__dirname, 'plugkit-wasm-wrapper.js');
+    const wrapperDst = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
+    if (!fs.existsSync(wrapperSrc)) return false;
+    let same = false;
+    if (fs.existsSync(wrapperDst)) {
+      try {
+        const a = sha256OfFileSync(wrapperSrc);
+        const b = sha256OfFileSync(wrapperDst);
+        if (a === b) same = true;
+      } catch (_) {}
+    }
+    if (!same) {
+      fs.mkdirSync(gmToolsDir(), { recursive: true });
+      fs.copyFileSync(wrapperSrc, wrapperDst);
+      return true;
+    }
+    return false;
+  } catch (_) { return false; }
+}
+
+function installedVersionAtTools() {
+  try {
+    const p = path.join(gmToolsDir(), 'plugkit.version');
+    if (!fs.existsSync(p)) return null;
+    return fs.readFileSync(p, 'utf-8').trim();
+  } catch (_) { return null; }
+}
+
+async function resolveLatestRemoteVersion(timeoutMs) {
+  try {
+    const buf = await httpGetBuffer('https://api.github.com/repos/AnEntrypoint/plugkit-bin/releases?per_page=50', timeoutMs || 3000);
+    const releases = JSON.parse(buf.toString('utf-8'));
+    if (!Array.isArray(releases)) return null;
+    for (const rel of releases) {
+      const tag = rel && rel.tag_name;
+      if (!tag) continue;
+      const m = /^v(\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)$/.exec(tag);
+      if (!m) continue;
+      const hasPlugkitWasm = Array.isArray(rel.assets) && rel.assets.some(a => a && a.name === 'plugkit.wasm');
+      if (hasPlugkitWasm) return m[1];
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function ensureReady(opts) {
+  opts = opts || {};
+  const offline = opts.offline === true;
+  let pinnedVersion = null;
+  try { pinnedVersion = readVersionFile(); } catch (_) {}
+  let targetVersion = pinnedVersion;
+  if (!offline) {
+    const latest = await resolveLatestRemoteVersion(3000);
+    if (latest) targetVersion = latest;
   }
+  if (!targetVersion) targetVersion = pinnedVersion;
+
+  const installed = installedVersionAtTools();
+  const versionDrift = targetVersion && installed && installed !== targetVersion;
+
+  if (isReady() && !versionDrift) {
+    const wasmPath = getWasmPath();
+    const wrapperUpdated = ensureWrapperFresh();
+    return { ok: true, wasmPath, binaryPath: wasmPath, status: wrapperUpdated ? 'wrapper-refreshed' : 'already-ready', version: installed };
+  }
+  if (versionDrift) {
+    try { killRunningDaemons(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
+  }
+
+  if (targetVersion && targetVersion !== pinnedVersion) {
+    try {
+      const verFilePath = path.join(wrapperDir, 'plugkit.version');
+      fs.writeFileSync(verFilePath, targetVersion + '\n');
+      log(`overrode bundled plugkit.version: ${pinnedVersion} -> ${targetVersion} (remote latest)`);
+    } catch (e) { log(`could not override plugkit.version: ${e.message}`); }
+  }
+
   const wasmPath = await bootstrap();
-  return { ok: true, wasmPath, status: 'bootstrapped' };
+  ensureWrapperFresh();
+  return { ok: true, wasmPath, binaryPath: wasmPath, status: 'bootstrapped', version: targetVersion || installed };
+}
+
+function getBinaryPath() {
+  return getWasmPath();
+}
+
+function startSpoolDaemon() {
+  try {
+    const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
+    if (!fs.existsSync(wrapper)) {
+      return { ok: false, error: `wrapper not at ${wrapper} — ensureReady() must run first` };
+    }
+    const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
+    let cmd = runtime;
+    let args = [wrapper, 'spool'];
+    try {
+      require('child_process').execFileSync(runtime, ['--version'], { stdio: 'ignore' });
+    } catch (_) {
+      cmd = process.execPath;
+      args = [wrapper, 'spool'];
+    }
+    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
+    fs.mkdirSync(spoolDir, { recursive: true });
+    const logPath = path.join(spoolDir, '.watcher.log');
+    try {
+      const stat = fs.statSync(logPath);
+      if (stat.size > 10 * 1024 * 1024) {
+        try { fs.unlinkSync(path.join(spoolDir, '.watcher.log.1')); } catch (_) {}
+        fs.renameSync(logPath, path.join(spoolDir, '.watcher.log.1'));
+      }
+    } catch (_) {}
+    const logFd = fs.openSync(logPath, 'a');
+    try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
+    const child = require('child_process').spawn(cmd, args, {
+      detached: true,
+      stdio: ['ignore', logFd, logFd],
+      windowsHide: true,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+    });
+    try { fs.closeSync(logFd); } catch (_) {}
+    const pid = child.pid;
+    child.unref();
+    return { ok: true, pid, wrapper, runtime: cmd, logPath };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 module.exports = {
   bootstrap,
   ensureReady,
   getWasmPath,
+  getBinaryPath,
+  startSpoolDaemon,
   isReady,
   rtkBinaryName,
   cacheRoot,

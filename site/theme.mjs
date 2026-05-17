@@ -32,21 +32,21 @@ function extractArticle(html) {
 }
 
 function rewriteLegacyLinks(html, basePath) {
-  const map = {
-    './index.html': basePath + '/',
-    './paper.html': basePath + '/paper/',
-    './paper2.html': basePath + '/paper/',
-    './paper3.html': basePath + '/paper/',
-    './paper4.html': basePath + '/paper/',
-    './paper5.html': basePath + '/paper/',
-    './distribution.html': basePath + '/distribution/',
-    './made-with.html': basePath + '/made-with/',
-    './stats.html': basePath + '/stats/',
-  };
-  for (const [from, to] of Object.entries(map)) {
-    html = html.split(from).join(to);
-  }
-  return html;
+  const slugs = ['index', 'paper', 'paper2', 'paper3', 'paper4', 'paper5', 'distribution', 'made-with', 'stats', 'crates', 'skills'];
+  const slugToPath = { index: '/', paper: '/paper/', paper2: '/paper/', paper3: '/paper/', paper4: '/paper/', paper5: '/paper/', distribution: '/distribution/', 'made-with': '/made-with/', stats: '/stats/', crates: '/crates/', skills: '/skills/' };
+  return html.replace(/href="([^"]+)"/g, (full, hrefRaw) => {
+    const href = hrefRaw.trim();
+    if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('/')) return full;
+    let path = href;
+    let hash = '';
+    const hi = path.indexOf('#');
+    if (hi >= 0) { hash = path.slice(hi); path = path.slice(0, hi); }
+    path = path.replace(/^\.\//, '').replace(/\.html$/, '').replace(/\/$/, '');
+    if (slugs.includes(path)) {
+      return `href="${basePath}${slugToPath[path]}${hash}"`;
+    }
+    return full;
+  });
 }
 
 const ARTICLE_CSS = `
@@ -99,6 +99,16 @@ const landingClient = `
 import { h, applyDiff, installStyles, components as C } from 'anentrypoint-design';
 installStyles();
 document.documentElement.classList.add('ds-247420');
+function applyTheme() {
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (dark) document.documentElement.setAttribute('data-theme', 'ink');
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme();
+if (window.matchMedia) {
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mql.addEventListener) mql.addEventListener('change', applyTheme);
+}
 const data = JSON.parse(document.getElementById('__site__').textContent);
 const { site, nav, page } = data;
 
@@ -137,7 +147,7 @@ function Hero() {
         h('span', { style: 'opacity:.4' }, ' · '),
         h('span', {}, '📦 ', h('strong', { style: 'color:var(--panel-text)' }, stats.npm || '—'), ' npm / 30d'),
         h('span', { style: 'opacity:.4' }, ' · '),
-        h('span', {}, '🛠️ ', h('strong', { style: 'color:var(--panel-text)' }, '12'), ' platforms'),
+        h('span', {}, '🛠️ ', h('strong', { style: 'color:var(--panel-text)' }, '∞'), ' every harness'),
       ) : null,
       C.Heading({ level: 1, style: 'margin:0 0 8px 0', children: page.hero.heading || site.title }),
       page.hero.subheading ? C.Lede({ children: page.hero.subheading }) : null,
@@ -236,6 +246,16 @@ const articleClient = `
 import { h, applyDiff, installStyles, components as C } from 'anentrypoint-design';
 installStyles();
 document.documentElement.classList.add('ds-247420');
+function applyTheme() {
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (dark) document.documentElement.setAttribute('data-theme', 'ink');
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme();
+if (window.matchMedia) {
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mql.addEventListener) mql.addEventListener('change', applyTheme);
+}
 const data = JSON.parse(document.getElementById('__site__').textContent);
 const { site, nav, page } = data;
 

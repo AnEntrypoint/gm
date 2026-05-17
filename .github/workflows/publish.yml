@@ -234,10 +234,24 @@ jobs:
         run: |
           set -e
           VERSION="${{ needs.prepare.outputs.version }}"
+          PLUGKIT_VER=$(jq -r '.plugkitVersion // empty' gm-starter/gm.json)
+          if [ -z "$PLUGKIT_VER" ]; then
+            echo "::error::gm.json missing plugkitVersion"
+            exit 1
+          fi
 
           cd gm-starter/gm-plugkit
           jq --arg v "$VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
           mv /tmp/pkg.json.tmp package.json
+
+          echo "$PLUGKIT_VER" > plugkit.version
+          echo "✅ Synced bundled plugkit.version=${PLUGKIT_VER} into gm-plugkit package before publish"
+
+          if [ -f ../bin/plugkit.wasm.sha256 ]; then
+            SHA=$(awk '{print $1}' ../bin/plugkit.wasm.sha256)
+            echo "{\"plugkit.wasm\":\"${SHA}\"}" > plugkit.sha256
+            echo "✅ Synced bundled plugkit.sha256 manifest"
+          fi
 
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
 
@@ -249,4 +263,4 @@ jobs:
               exit "$EXIT"
             fi
           fi
-          echo "✅ Published gm-plugkit@${VERSION} to npm"
+          echo "✅ Published gm-plugkit@${VERSION} pinning plugkit v${PLUGKIT_VER}"
