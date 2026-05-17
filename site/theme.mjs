@@ -64,16 +64,6 @@ function flattenNav(nav) {
 
 const clientScript = `
 import { mount, h, components as C } from 'anentrypoint-design';
-function applyTheme() {
-  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  if (dark) document.documentElement.setAttribute('data-theme', 'ink');
-  else document.documentElement.setAttribute('data-theme', 'light');
-}
-applyTheme();
-if (window.matchMedia) {
-  const mql = window.matchMedia('(prefers-color-scheme: dark)');
-  if (mql.addEventListener) mql.addEventListener('change', applyTheme);
-}
 const data = JSON.parse(document.getElementById('__site__').textContent);
 const { site, navItems, page } = data;
 
@@ -139,7 +129,7 @@ const status = C.Status({
 
 let main;
 if (page.layout === 'article') {
-  main = h('div', { class: 'ds-prose', style: 'max-width:72ch;margin:0 auto;padding:24px 32px', innerHTML: page.articleHtml || '' });
+  main = h('div', { class: 'ds-prose', style: 'max-width:min(110ch,92vw);margin:0 auto;padding:24px clamp(16px, 4vw, 48px)', innerHTML: page.articleHtml || '' });
 } else {
   main = [renderHero(page.hero), renderFeatures(page.features), renderQuickstart(page.quickstart), renderExamples(page.examples)].filter(Boolean);
 }
@@ -164,7 +154,7 @@ mount(document.getElementById('app'), () => C.AppShell({
 `;
 
 const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
-<html lang="en" class="ds-247420" data-theme="light">
+<html lang="en" class="ds-247420" data-theme="auto">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
