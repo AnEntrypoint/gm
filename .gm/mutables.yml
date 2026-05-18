@@ -48,3 +48,33 @@
   witness_method: read updated residual.rs; cargo CI build via push
   witness_evidence: 'residual.rs lines 4-44: new status_is_open helper recognizes pending/in_progress/unknown/blocked as open. prd_empty_or_missing parses YAML, finds items either at root or under .items key, returns !any_open where any_open requires status be open AND blockedBy not contain ''external''. Local change committed; CI build will witness compilation.'
   status: witnessed
+- id: watcher-jsonl-witnessed
+  claim: plugkit-wasm-wrapper.js emits dispatch.start, dispatch.end, watcher.boot, sweep.* events as JSONL to ~/.claude/gm-log/<day>/plugkit.jsonl
+  witness_method: restart watcher, fire dispatches, cat plugkit.jsonl
+  witness_evidence: plugkit.jsonl shows {event:watcher.boot, version:0.1.412, pid:34204, in_dir, out_dir, spool_dir} + per-dispatch start/end pair with verb/task/dur_ms/body_bytes/out_bytes for instruction, phase-status verbs. Second watcher running in C:/dev/organ also emits to same log — observability is cross-project.
+  status: unknown
+- id: orchestrator-events-witnessed
+  claim: plugkit-wasm-wrapper.js emitOrchestratorEvents derives structured state-change events from orchestrator-verb responses
+  witness_method: trigger instruction + phase-status dispatches, grep plugkit.jsonl for derived events
+  witness_evidence: plugkit.jsonl contains {event:instruction.served, phase:EXECUTE, prd_pending:6, mutables_pending:0, next_phase_hint:EMIT} and {event:phase.status, phase:EXECUTE, last_skill:gm-emit} as siblings of the dispatch.end events for those calls. Derivation logic in plugkit-wasm-wrapper.js::emitOrchestratorEvents matches each orchestrator verb to its specific event shape.
+  status: unknown
+- id: deviations-witnessed
+  claim: lib/spool-dispatch.js logDeviation appends deviation.gate-deny / deviation.write-before-instruction / deviation.mutable-without-evidence to hook.jsonl with full residual payloads
+  witness_method: unit-test checkDispatchGates with stop/mutable-resolve/write ops, inspect hook.jsonl
+  witness_evidence: hook.jsonl tail shows {event:deviation.gate-deny, operation:stop, reason:stop-gate residuals, residuals:[PRD has open items, worktree dirty (11 files)], sess:test-observability-session} and {event:deviation.mutable-without-evidence, mutable_id:fake-mut}. checkDispatchGates exports logDeviation, markInstructionSeen, hasDispatchedInstruction helpers.
+  status: unknown
+- id: gmsniff-panels-witnessed
+  claim: gmsniff exposes Deviations + Sessions + Process Tree panels with backing /api/deviations, /api/sessions, /api/process-tree endpoints + matching GUI renderers and dev-badge
+  witness_method: in-process createServer + fetch all three endpoints + verify shape
+  witness_evidence: 'In-process witness: /api/snapshot returns total=345872, bySub.plugkit=1120, bySub.hook=329586. /api/deviations returns total=10, byKind={gate-deny:4, mutable-without-evidence:4, test-fire:2}. /api/sessions returns 2 sessions with phases_reached arrays. /api/process-tree for (no-session) returns 34 timeline nodes, 4 deviation gaps highlighted, phase_reached [false,true,false,false,false] showing EXECUTE only. GUI index.html has phase-walk CSS + renderPhaseWalk + nav links + dev-badge refresh on SSE deviation events and 10s timer.'
+  status: unknown
+- id: residual-pending-only-witnessed
+  claim: rs-plugkit residual.rs::prd_empty_or_missing treats all-completed items as empty for gate purposes
+  witness_method: 'rs-plugkit commit bef6612 (fix: treat all-completed PRD as empty for gate purposes) merged to main; cascade rebuilds wasm'
+  witness_evidence: 'git log on C:/dev/rs-plugkit shows commit bef6612 ''fix(residual): treat all-completed PRD as empty for gate purposes'' as HEAD. status_is_open helper added, prd_empty_or_missing now checks each item.status against open set {pending, in_progress, unknown, blocked} and respects blockedBy:external. Cascade currently rebuilding wasm; runtime witness deferred until next plugkit version arrives via cascade.'
+  status: unknown
+- id: residual-pending-only-witnessed
+  claim: rs-plugkit residual.rs::prd_empty_or_missing treats all-completed items as empty for gate purposes
+  witness_method: 'rs-plugkit commit bef6612 (fix: treat all-completed PRD as empty for gate purposes) merged to main; cascade rebuilds wasm'
+  witness_evidence: 'git log on C:/dev/rs-plugkit shows commit bef6612 ''fix(residual): treat all-completed PRD as empty for gate purposes'' as HEAD. status_is_open helper added, prd_empty_or_missing now checks each item.status against open set {pending, in_progress, unknown, blocked} and respects blockedBy:external. Cascade currently rebuilding wasm; runtime witness deferred until next plugkit version arrives via cascade.'
+  status: unknown
