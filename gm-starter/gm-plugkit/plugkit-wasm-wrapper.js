@@ -17,6 +17,38 @@ fs.mkdirSync(KV_DIR, { recursive: true });
 const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
 const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status', 'prd-add', 'prd-resolve', 'prd-list', 'mutable-add', 'mutable-resolve', 'mutable-list', 'memorize-fire', 'residual-scan', 'auto-recall']);
 
+const TURN_IDLE_MS = 30_000;
+const _turns = new Map();
+
+function turnTick(sess, verb, taskBase, phase) {
+  const key = sess || '(no-session)';
+  const now = Date.now();
+  let t = _turns.get(key);
+  if (verb === 'instruction') {
+    if (t && (now - t.lastTs) > TURN_IDLE_MS) {
+      logEvent('plugkit', 'turn.end', {
+        sess, turn_idx: t.idx, dur_ms: t.lastTs - t.startTs,
+        dispatches: t.dispatches, verbs: Object.fromEntries(t.verbs),
+        phases_walked: [...t.phases], deviations: t.deviations,
+        ended_in_phase: t.lastPhase || null,
+      });
+      t = null;
+    }
+    if (!t) {
+      const idx = ((_turns.get(key + ':lastIdx') || 0) + 1);
+      _turns.set(key + ':lastIdx', idx);
+      t = { idx, startTs: now, lastTs: now, dispatches: 0, verbs: new Map(), phases: new Set(), deviations: 0, lastPhase: phase };
+      _turns.set(key, t);
+      logEvent('plugkit', 'turn.start', { sess, turn_idx: idx, phase: phase || null });
+    }
+  }
+  if (!t) return;
+  t.lastTs = now;
+  t.dispatches++;
+  t.verbs.set(verb, (t.verbs.get(verb) || 0) + 1);
+  if (phase) { t.phases.add(phase); t.lastPhase = phase; }
+}
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -44,6 +76,8 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
     return;
   }
   const data = parsed.data || {};
+  const sess = process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  turnTick(sess, verb, taskBase, data.phase);
   switch (verb) {
     case 'transition':
       logEvent('plugkit', 'phase.transitioned', { task: taskBase, phase: data.phase, next_skill: data.nextSkill, recall_count: Array.isArray(data.recall_hits) ? data.recall_hits.length : 0 });

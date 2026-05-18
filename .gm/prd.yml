@@ -328,3 +328,70 @@
   effort: medium
   route_family: execution
   status: completed
+- id: gmsniff-cli-parity-with-ccsniff
+  subject: gmsniff gains full CLI surface matching ccsniff for filter/tail/stats/rollup
+  category: feature
+  description: 'Today gmsniff = GUI only. ccsniff has a rich CLI: --grep, --igrep, --invert, --cwd, --project, --sub (analog: --role), --event (analog: --type/--tool), --sess (analog: --session), --day, --since, --until, --ctx, --limit, --head, --tail-n, --reverse, --sort, --count, --stats, -f, --rollup, --json, --list-sessions. Agent uses Bash to invoke CLI — no browser. Implement: extend src/cli.js with a new query subcommand surface. Default invocation with filter flags = dump matching events; -f = live tail; --stats = breakdown by sub/event/sess/day; --list-sessions = per-session summary with phase-walk (text rendering of 5 squares); --list-deviations = recent deviation events grouped by kind. Reuse src/index.js GmLogWatcher + replayAll. Keep `gmsniff gui` as the existing GUI launcher.'
+  acceptance:
+  - gmsniff --grep <re> works, returns matching gm-log events
+  - gmsniff --sub plugkit --event dispatch.end --limit 20 works
+  - gmsniff --sess <id> --stats prints per-session breakdown
+  - gmsniff -f tails live with filters applied
+  - gmsniff --list-sessions prints session summary with phase indicators
+  - gmsniff gui still launches the existing browser GUI
+  - --help text discoverable, examples included
+  effort: large
+  route_family: representation
+  status: completed
+- id: strip-playwriter-from-build-dir-and-paper
+  subject: Eliminate every remaining playwriter/playwright mention from agent-facing artifacts
+  category: refactor
+  description: 'Re-audit found two leaks: (1) C:/dev/gm/build/gm-skill/skills/gm-skill/SKILL.md still contains the old browser section with playwriter+playwright Page mentions — this is the artifact published as the gm-skill npm package; until next build it ships the leak. Either regenerate build/ from source via node cli.js gm-starter ./build, or remove build/ from git tracking entirely (it''s a generated artifact). (2) docs/paper.html line 756 says ''exec:browser opens a playwriter session'' — the paper is academic but per user''s renewed emphasis ''any name like playwriter is not exposed'' applies here too. Rewrite to ''the browser verb opens a managed host-owned session'' without naming the implementation library.'
+  acceptance:
+  - grep -rn 'playwriter|playwright|agent-browser' across C:/dev/gm/{docs,build,gm-starter} returns zero hits
+  - build/gm-skill/skills/gm-skill/SKILL.md is regenerated from current source OR build/ is gitignored
+  - paper.html line 756 references managed host-owned browser session, not playwriter
+  effort: small
+  route_family: representation
+  status: completed
+- id: per-turn-metrics-events
+  subject: plugkit-wasm-wrapper emits turn.start/turn.end events with derived efficiency metrics
+  category: feature
+  description: 'Agents need to ask ''what was the dispatch:transition ratio in turn N'', ''how many retries did I burn'', ''how long did COMPLETE take''. Currently no event marks turn boundaries. Implement: in the watcher, treat instruction-verb dispatches as turn boundaries — first instruction dispatch in a >30s idle window = turn.start, next first instruction dispatch (or session-end indicators) = turn.end. Emit turn.start (sess, turn_idx, phase) and turn.end (sess, turn_idx, dur_ms, dispatch_count, verbs_used, phases_walked, deviations) to gm-log/<day>/plugkit.jsonl. Add Store.turnStats and /api/turn-stats in gmsniff server that aggregates these per session.'
+  acceptance:
+  - plugkit.jsonl shows turn.start/turn.end events with metrics
+  - gmsniff --stats includes a turn count per session in --list-sessions output
+  - gmsniff GUI Sessions panel surfaces avg turn duration + verbs/turn
+  - 'Witness: dispatch instruction twice with >30s gap, observe one turn.end emitted with non-zero dur_ms'
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - gmsniff-cli-parity-with-ccsniff
+  status: completed
+- id: xref-ccsniff-gmsniff-by-session
+  subject: gmsniff --xref <sess> joins gmsniff sess with ccsniff sid for unified timeline
+  category: feature
+  description: 'A single agent run produces events in BOTH ~/.claude/projects/**/*.jsonl (Claude Code transcript — ccsniff watches this) AND ~/.claude/gm-log/<day>/*.jsonl (plugkit + hook events — gmsniff watches this). The same CLAUDE_SESSION_ID threads both. Implement gmsniff --xref <sess> that: (1) reads gm-log events for that sess, (2) imports ccsniff JsonlReplayer from c:/dev/ccsniff if available (graceful skip if not installed), (3) collects ccsniff events for matching sid, (4) merges by ts and prints interleaved timeline showing tool calls, dispatches, transitions, deviations in one stream. Each row tagged [cc] or [gm]. Optional --grep / --since / --tool / --verb filters apply to both sides.'
+  acceptance:
+  - gmsniff --xref <sess> prints interleaved cc + gm events sorted by ts
+  - Each row prefixed [cc]/[gm] + ts + event/tool
+  - --grep filter applies to both surfaces
+  - Skipped gracefully with informative stderr when ccsniff not on path
+  effort: medium
+  route_family: representation
+  blockedBy:
+  - gmsniff-cli-parity-with-ccsniff
+  status: completed
+- id: gmsniff-rollup-and-export
+  subject: gmsniff --rollup and --unsloth export modes
+  category: feature
+  description: ccsniff exports filtered events to NDJSON / SQLite / Unsloth training format. gmsniff has no export. Implement gmsniff --rollup <out.ndjson> [--since 7d] that dumps filtered gm-log events one-per-line. Also gmsniff --efficiency <sess> as a focused subset that prints just the metrics (turn count, dispatch:transition ratio, deviation count, time-to-COMPLETE, verbs by frequency) for quick optimization passes.
+  acceptance:
+  - gmsniff --rollup out.ndjson dumps events with same filter flags applied
+  - gmsniff --efficiency <sess> prints terse stats summary
+  - Output is shell-pipeable (no ANSI codes when stdout is not a TTY, JSON when --json)
+  effort: medium
+  route_family: representation
+  blockedBy:
+  - gmsniff-cli-parity-with-ccsniff
+  status: completed
