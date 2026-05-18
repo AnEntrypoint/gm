@@ -1,6 +1,33 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawnSync } = require('child_process');
+
+function isWorktreeDirty(cwd) {
+  try {
+    const r = spawnSync('git', ['status', '--porcelain'], {
+      cwd: cwd || process.cwd(), encoding: 'utf8', timeout: 1500, windowsHide: true
+    });
+    if (r.status !== 0) return { dirty: false, files: [], available: false };
+    const lines = r.stdout.split('\n').filter(l => l.length > 0);
+    return { dirty: lines.length > 0, files: lines, available: true };
+  } catch (_) {
+    return { dirty: false, files: [], available: false };
+  }
+}
+
+function hasUnpushedCommits(cwd) {
+  try {
+    const r = spawnSync('git', ['log', '@{u}..HEAD', '--oneline'], {
+      cwd: cwd || process.cwd(), encoding: 'utf8', timeout: 1500, windowsHide: true
+    });
+    if (r.status !== 0) return { unpushed: false, count: 0, available: false };
+    const lines = r.stdout.split('\n').filter(l => l.length > 0);
+    return { unpushed: lines.length > 0, count: lines.length, available: true };
+  } catch (_) {
+    return { unpushed: false, count: 0, available: false };
+  }
+}
 
 async function dispatchSpool(cmd, lang, body, timeoutMs, sessionId) {
   const taskId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -73,11 +100,44 @@ async function pollForCompletion(jsonFile, timeoutMs, taskId) {
 }
 
 function checkDispatchGates(sessionId, operation) {
-  const gm = path.join(process.cwd(), '.gm');
+  const cwd = process.cwd();
+  const gm = path.join(cwd, '.gm');
   const prdPath = path.join(gm, 'prd.yml');
   const mutsPath = path.join(gm, 'mutables.yml');
   const needsGmPath = path.join(gm, 'needs-gm');
   const gmFiredPath = path.join(gm, `gm-fired-${sessionId}`);
+
+  if (['stop', 'complete'].includes(operation)) {
+    const residuals = [];
+    if (fs.existsSync(prdPath)) {
+      try {
+        const content = fs.readFileSync(prdPath, 'utf8');
+        if (content.includes('status: pending') || content.includes('status: in_progress')) {
+          residuals.push('PRD has open items — resolve or name-and-stop before declaring done');
+        }
+      } catch (_) {}
+    }
+    if (fs.existsSync(mutsPath)) {
+      try {
+        const content = fs.readFileSync(mutsPath, 'utf8');
+        if (content.includes('status: unknown')) {
+          residuals.push('unresolved mutables present — resolve with witness_evidence before declaring done');
+        }
+      } catch (_) {}
+    }
+    const dirty = isWorktreeDirty(cwd);
+    if (dirty.available && dirty.dirty) {
+      residuals.push(`worktree dirty (${dirty.files.length} file${dirty.files.length === 1 ? '' : 's'}) — commit and push before declaring done`);
+    }
+    const unpushed = hasUnpushedCommits(cwd);
+    if (unpushed.available && unpushed.unpushed) {
+      residuals.push(`${unpushed.count} unpushed commit${unpushed.count === 1 ? '' : 's'} — push to remote before declaring done`);
+    }
+    if (residuals.length > 0) {
+      return { allowed: false, reason: `stop-gate residuals: ${residuals.join('; ')}`, residuals };
+    }
+    return { allowed: true };
+  }
 
   if (!['write', 'edit', 'git'].includes(operation)) return { allowed: true };
 
@@ -97,4 +157,4 @@ function checkDispatchGates(sessionId, operation) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates };
+module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits };

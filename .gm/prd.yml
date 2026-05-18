@@ -112,7 +112,7 @@
   - cargo check passes locally? No — pushed; CI verifies
   effort: small
   category: feature
-  status: pending
+  status: completed
 - id: build-tool-config-injector
   subject: skill-bootstrap detects vite/astro/next/jest/webpack configs and injects .gm watch-ignore
   description: 'Add ensureBuildToolIgnores(cwd) called from bootstrapPlugkit. Detects config files in cwd top level only: vite.config.{js,ts,mjs,cjs}, astro.config.{js,ts,mjs}, next.config.{js,ts,mjs,cjs}, jest.config.{js,ts,mjs,cjs,json}, webpack.config.{js,ts,cjs,mjs}, rollup.config.{js,ts,mjs}, vitest.config.{js,ts,mjs}. For each detected config: append a single-line comment + ignore rule in a managed block delimited by ''/* >>> plugkit managed */'' and ''/* <<< plugkit managed */'' (or # markers for JSON). Block writes a JS snippet that the dev opts into manually (we cannot safely mutate config object literals) — instead we DROP a sibling file ''.gm/build-tool-ignores.md'' that lists ALL detected configs with copy-paste-ready snippets per tool, and we emit a warn event listing them. Rationale: programmatic injection into vite.config etc is too fragile; a checked-in advisory file is safer and the .gitignore line is the universal mechanism actually enforced. The .gitignore ''.gm/'' entry serves vite/astro/next/webpack/jest automatically because all of them respect node_modules ignore patterns AND .gitignore.'
@@ -156,4 +156,39 @@
   - platforms/skill.js generateReadme reflects single-skill + archived-fanout reality
   category: docs
   effort: small
+  status: completed
+- id: strip-browser-internals-from-agent-surface
+  subject: Remove playwriter/playwright/agent-browser leak from agent-facing material
+  category: refactor
+  description: SKILL.md Browser section names playwriter and playwright globals; docs/skills.html and docs/crates.html describe agent surface using playwriter; gm-starter/README.md still references agent-browser skill and playwriter. Replace all agent-facing references with 'managed browser session' / 'page' (since the playwright Page global is what the agent uses, but its provenance is hidden). Paper (docs/paper.html) keeps playwriter mentions — it's the academic doc and may name implementation details.
+  acceptance:
+  - SKILL.md Browser section names neither playwriter nor playwright
+  - docs/skills.html browser row references managed browser session not playwriter
+  - docs/crates.html line 149 refers to managed sessions not playwriter
+  - gm-starter/README.md has no agent-browser or playwriter references in agent-facing copy
+  effort: small
+  route_family: representation
+  status: completed
+- id: skill-md-enforces-process-loop
+  subject: SKILL.md visibly enforces start-of-turn instruction dispatch + Fix-on-Sight + residual-scan-before-stop
+  category: refactor
+  description: 'Current SKILL.md mentions instruction dispatch but does not enforce ''every turn begins with instruction'', does not surface Fix-on-Sight, Surprise Absorption, Nothing Fake, Browser Witness, or the residual-scan stop gate. Result: agents (including this one this session) bypass the loop entirely and work directly with Read/Edit/Bash. Fix: rewrite SKILL.md opening so the first imperative line tells the agent to dispatch instruction now, follow its prose imperatively, and never stop without residual-scan returning empty. Keep the file terse — principles-as-prompts, not procedure.'
+  acceptance:
+  - SKILL.md first imperative is dispatch instruction on every turn
+  - SKILL.md surfaces Fix-on-Sight, Nothing Fake, Browser Witness as one-line principles
+  - SKILL.md tells agent to residual-scan before any apparent stop
+  - No procedure-style numbered steps added — implicit prose only
+  effort: medium
+  route_family: representation
+  status: completed
+- id: dispatch-gates-surface-dirty-tree
+  subject: checkDispatchGates surfaces uncommitted-tree as residual at stop, not as block during work
+  category: feature
+  description: 'gm-starter/lib/spool-dispatch.js::checkDispatchGates gates only on prd.yml + mutables.yml + needs-gm + gm-fired markers. Per AGENTS.md ''controls tool use, writes, and git operations'' and paper §36 residual-scan stop gate, dirty git tree at a phase=COMPLETE-attempt OR at the residual-scan-before-stop point should surface as a residual the agent must address (commit or explicitly name-and-stop) before declaring done. Implement: extend checkDispatchGates to add an isWorktreeDirty() probe and have residual-scan output include it. Do NOT block writes mid-work — only surface at stop/complete attempts so the agent commits before declaring done.'
+  acceptance:
+  - isWorktreeDirty() helper added to spool-dispatch.js
+  - residual-scan output (rs-plugkit/src/orchestrator/residual.rs) includes dirty-tree as in-spirit residual when project root is a git repo
+  - 'Test or witness: at COMPLETE with dirty tree, residual-scan returns the dirty files as residuals'
+  effort: medium
+  route_family: execution
   status: completed

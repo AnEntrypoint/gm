@@ -6,6 +6,14 @@ allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 
 # gm — single entry point
 
+Every turn begins with `instruction`. Write `.gm/exec-spool/in/instruction/<N>.txt` (empty body) and read the response — its `instruction` field is the active phase prose, its `prd_items` is the live work plan, its `mutables_pending` is what blocks the EMIT gate, its `recall_hits` is the prior memory already loaded for you. Follow that prose imperatively until the phase's exit condition is met, then `transition`. The user's request is the authorization; the PRD is the receipt; the chain runs PLAN → EXECUTE → EMIT → VERIFY → COMPLETE without re-asking between phases.
+
+Direct Read/Edit/Bash before the first `instruction` dispatch is the failure mode this skill prevents. If you find yourself reaching for a tool to "just take a quick look", you have already dropped the loop — dispatch `instruction` first, then act on its prose.
+
+Fix on Sight. Every unexpected output, broken neighbor, lockfile drift, suppressed error, or stale generated file surfaced during work becomes a PRD item the same turn and is executed before COMPLETE. Surprise is a new mutable, not noise to absorb. Stubs, mocks, placeholder returns, fixture-only paths, and "always succeeds" code paths are forbidden in shipped material; acceptance is real input through real code into real output, witnessed. Edits to code that runs in a browser require a live `browser` verb witness in the same turn — Browser Witness is non-negotiable.
+
+Before any apparent stop, dispatch `residual-scan`. If it returns work that fits the spirit of the original ask and is reachable from this session, expand the PRD and execute; only residuals genuinely out-of-spirit or out-of-reach are name-and-stop. A turn that ends with uncommitted changes, an open PRD slice, or unresolved mutables has not actually stopped — it has stalled the chain.
+
 The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. The watcher's own stdout/stderr is appended to `.gm/exec-spool/.watcher.log` — Read it to see plugkit's internal trace, dispatch timings, sweep actions, errors.
 
 ## Boot the spool watcher (first turn only)
@@ -84,11 +92,11 @@ The log is rotated at 10MB (older content moves to `.watcher.log.1`).
 
 ## The loop
 
-Dispatch `instruction` with empty body to get current-phase guidance + full state snapshot. Follow the `instruction` prose imperatively. Add PRD items via `prd-add` (JSON body), resolve via `prd-resolve` (id as body). Add mutables via `mutable-add`, resolve via `mutable-resolve` once `witness_evidence` is filled. Every resolve auto-fires `memorize-fire` so the evidence becomes recall-able.
+Add PRD items via `prd-add` (JSON body), resolve via `prd-resolve` (id as body). Add mutables via `mutable-add`, resolve via `mutable-resolve` once `witness_evidence` is filled — narrative resolution is rejected; only file:line, codesearch hit, or exec output snippet counts. Every `mutable-resolve` auto-fires memorize so the witness becomes recall-able next session.
 
 Resolve every entry in `mutables_pending` before transitioning. When the phase's exit condition is met, dispatch `transition` with the next phase name (or empty for auto-advance). Each transition response embeds `recall_hits` automatically — relevant prior memos surface without you asking.
 
-Stop when `next_phase_hint` is null or phase is `COMPLETE`.
+Stop only when `phase` is `COMPLETE` AND `residual-scan` returns empty AND the worktree is clean AND CI is green. Any of those false means the chain has not finished.
 
 ## Orchestrator verbs
 
@@ -104,8 +112,8 @@ Stop when `next_phase_hint` is null or phase is `COMPLETE`.
 
 ### Browser
 
-Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The wrapper spawns Chrome (managed profile at `<cwd>/.gm/browser-profile/`) and runs the JS via playwriter. Globals available inside the body: `page` (playwright Page), `snapshot` (accessibility snapshot), `screenshotWithAccessibilityLabels` (screenshot helper), `state` (per-session state object).
+The `browser` verb is the only sanctioned way to drive a live page. Do not reach for any other browser tool, library, or skill — the host owns the managed session and a parallel surface fragments witness state. Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The host runs Chrome under a project-scoped profile at `<cwd>/.gm/browser-profile/` (cookies/login persist per project) and exposes the body to four globals: `page` (the live page handle — `await page.goto(...)`, `await page.evaluate(...)`, etc.), `snapshot` (accessibility-tree snapshot), `screenshotWithAccessibilityLabels` (annotated screenshot helper), and `state` (a per-session object that persists across dispatches within the same session).
 
-Special commands (body starts with `session `): `session new`, `session list`, `session close <id>` pass through to playwriter directly.
+Special commands (body starts with `session `): `session new`, `session list`, `session close <id>` manage session lifecycle.
 
-Chrome is detected from system install paths; profile dir is project-scoped so cookies/login persist per project. The wrapper writes the managed gitignore block (which includes `.gm/browser-profile/`) on first launch.
+Required for any edit to code that runs in a browser — Browser Witness is non-negotiable. A `node test.js passes` does not substitute for a live `page.evaluate` asserting the invariant the edit was supposed to change.

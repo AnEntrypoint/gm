@@ -68,10 +68,7 @@ the charter system was rewritten on feb 12 using concepts from WFGY research - 3
 
 ### browser access
 
-for client-side coding and browser automation, the recommended approach is playwriter:
-https://github.com/remorses/playwriter
-
-note: playwriter uses a browser plugin - grab and activate that too to get browser access. gm references `agent-browser` skill throughout the charter system for browser integration.
+client-side coding and browser automation route through the `browser` verb (dispatch raw JavaScript to `.gm/exec-spool/in/browser/<N>.txt`). The wasm host owns the managed Chrome session with a project-scoped profile at `<cwd>/.gm/browser-profile/` — cookies and login state persist per project. Inside the body the agent has `page`, `snapshot`, `screenshotWithAccessibilityLabels`, and `state`. Browser Witness is mandatory for any edit to code that runs in a browser; `node test.js passes` does not substitute for a live `page.evaluate` of the invariant. Do not reach for any other browser tool — the parallel surface fragments witness state.
 
 ## gm build system
 

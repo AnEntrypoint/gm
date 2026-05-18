@@ -146,7 +146,7 @@ sequenceDiagram
     <li>spawns the user&rsquo;s code in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></li>
     <li>enforces an explicit <code>timeoutMs</code> per call; missing or zero is a hard error</li>
     <li>preserves partial streamed output on timeout; emits <code>timedOut: true</code> on the response</li>
-    <li>manages project-scoped playwriter browser sessions for the <code>browser</code> verb; idle-cleans dead sessions on a 60-second tick</li>
+    <li>manages project-scoped browser sessions for the <code>browser</code> verb; idle-cleans dead sessions on a 60-second tick</li>
   </ul>
 
   <h3>commandments it enforces</h3>

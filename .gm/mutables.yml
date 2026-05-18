@@ -3,3 +3,23 @@
   witness_method: after edits push to main, watch gh-pages action complete, fetch live URLs, inspect
   witness_evidence: 'Deploy run 25997927971 success. Live site https://anentrypoint.github.io/gm/ serves class=''ds-247420'' data-theme=''light'', loads 247420.css from unpkg, badge reads ''one skill, every harness'', tagline ''pushin'' (typo fixed). /crates/ returns 200. site/input.css + main.js + build.js + index.html deleted via 09c45563. theme.mjs reduced 399→240 LOC, uses C.AppShell/Topbar/Crumb/Status/Hero/Section/Panel/RowLink/Btn/Chip. Articles rewritten in e6987d9d: paper.html + distribution.html + skills.html + crates.html all stale-ref-free.'
   status: witnessed
+- id: agent-surface-no-playwriter-leak
+  claim: No agent-facing material (SKILL.md, gm-starter/README.md, docs/skills.html, docs/crates.html) mentions playwriter, playwright, or agent-browser
+  witness_method: grep -rn 'playwriter|playwright|agent-browser' across SKILL.md, gm-starter/README.md, docs/skills.html, docs/crates.html
+  witness_evidence: Grep tool with pattern 'playwriter|playwright|agent-browser' across SKILL.md, README.md, skills.html, crates.html returned 'No matches found' after edits to all four files. paper.html still mentions playwriter once at line 756 — appropriate for academic doc per scope decision.
+  status: witnessed
+- id: skill-md-leads-with-instruction-dispatch
+  claim: SKILL.md opening enforces start-of-turn instruction dispatch + Fix-on-Sight + residual-scan-before-stop as prose principles
+  witness_method: read SKILL.md, verify opening paragraph before 'Boot the spool watcher' contains all three principles
+  witness_evidence: 'SKILL.md lines 9-15: opening reads ''Every turn begins with instruction. Write .gm/exec-spool/in/instruction/<N>.txt (empty body) and read the response...'' followed by ''Direct Read/Edit/Bash before the first instruction dispatch is the failure mode this skill prevents...'' followed by ''Fix on Sight. Every unexpected output ... becomes a PRD item the same turn...'' followed by ''Before any apparent stop, dispatch residual-scan...''. All three principles present as imperative prose, no numbered procedure.'
+  status: witnessed
+- id: skill-md-leads-with-instruction-dispatch
+  claim: SKILL.md opening enforces start-of-turn instruction dispatch + Fix-on-Sight + residual-scan-before-stop as prose principles
+  witness_method: read SKILL.md, verify opening paragraph before 'Boot the spool watcher' contains all three principles
+  witness_evidence: 'SKILL.md lines 9-15: opening reads ''Every turn begins with instruction. Write .gm/exec-spool/in/instruction/<N>.txt (empty body) and read the response...'' followed by ''Direct Read/Edit/Bash before the first instruction dispatch is the failure mode this skill prevents...'' followed by ''Fix on Sight. Every unexpected output ... becomes a PRD item the same turn...'' followed by ''Before any apparent stop, dispatch residual-scan...''. All three principles present as imperative prose, no numbered procedure.'
+  status: witnessed
+- id: dispatch-gates-detects-dirty-and-unpushed
+  claim: checkDispatchGates(sessionId, 'stop') returns allowed=false with residuals listing dirty tree and unpushed commits when present
+  witness_method: node -e require + call checkDispatchGates with operation=stop in C:/dev/gm cwd
+  witness_evidence: 'node -e invocation returned: allowed=false, reason=''stop-gate residuals: PRD has open items - resolve or name-and-stop before declaring done; worktree dirty (15 files) - commit and push before declaring done'', residuals array with 2 entries. checkDispatchGates with operation=write returned allowed=true (mid-work writes unaffected). isWorktreeDirty returned dirty=true with 15-file list. hasUnpushedCommits returned unpushed=false (HEAD is at remote).'
+  status: witnessed

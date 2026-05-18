@@ -166,7 +166,7 @@ stateDiagram-v2
 
 <div class="skill">
   <div class="skill-header"><h2>browser</h2><span class="role">live-page witness</span></div>
-  <div class="row"><span class="k">role</span><span>Wraps playwriter under the wasm host. Boot the surface, navigate, <code>page.evaluate</code> the invariant, capture witnessed values. Required for any edit to code that runs in a browser.</span></div>
+  <div class="row"><span class="k">role</span><span>The wasm host&rsquo;s managed browser session. Boot the surface, navigate, <code>page.evaluate</code> the invariant, capture witnessed values. Required for any edit to code that runs in a browser. The only sanctioned way to drive a live page; parallel browser tooling fragments witness state.</span></div>
   <div class="row"><span class="k">forbids</span><span><span class="tag danger">screenshot without page.evaluate</span>. Treating &ldquo;node test.js passes&rdquo; as substitute for a live witness.</span></div>
 </div>
 
