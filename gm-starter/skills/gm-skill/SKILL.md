@@ -18,7 +18,11 @@ bun x gm-plugkit@latest spool > /dev/null 2>&1 &
 
 If `bun` is not available, fall back to `npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` or to the local wrapper if it's already installed: `node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool > /dev/null 2>&1 &`. The wrapper has a self-heal: if it detects a `LinkError` or missing wasm at instantiation, it re-runs bootstrap automatically and retries.
 
-Wait 2 seconds, verify `.status.json` is fresh. Then proceed.
+Wait 2 seconds, then verify boot:
+
+- Read `.gm/exec-spool/.cli-status.json` — the launcher writes its phase here (`starting` → `bootstrapped` → `ready`). Present with `phase: "ready"` = good.
+- Read `.gm/exec-spool/.status.json` — the watcher writes its heartbeat here every 5s. Fresh `ts` (within 15s) = watcher alive.
+- If neither file exists or `.cli-status.json` is stuck at an earlier phase, read `.gm/exec-spool/.bootstrap-error.json` — the launcher writes `{error_phase, error_message, stack}` on any failure even when stdout/stderr were redirected to `/dev/null`. Also read `.gm/exec-spool/.watcher.log` for the post-spawn trace. Surface the error to the user; do not retry blindly.
 
 ## Plugkit version updates
 
