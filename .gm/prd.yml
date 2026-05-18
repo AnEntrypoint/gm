@@ -395,3 +395,108 @@
   blockedBy:
   - gmsniff-cli-parity-with-ccsniff
   status: completed
+- id: update-events-emit-jsonl
+  subject: checkForUpdate emits structured update.* events to plugkit.jsonl
+  category: feature
+  description: Today the update detector only console.logs and writes .update-available.json. No JSONL signal — gmsniff cannot show update history. Add logEvent('plugkit', 'update.available', {installed, latest, update_url}) when drift is first detected (transition from in-sync to drifted), 'update.cleared' when drift goes away (marker removed), 'update.check.error' when the GitHub API call fails (network, rate limit, 5xx). Track previous-known state in-process so events emit on transitions only (not every 5min tick).
+  acceptance:
+  - update.available emits exactly once per detected drift, not every tick
+  - update.cleared emits when latest catches up to installed
+  - update.check.error emits with the error class
+  - gmsniff --event update.available --since 7d shows the history of drifts
+  effort: small
+  route_family: execution
+  status: completed
+- id: instruction-response-surfaces-update
+  subject: instruction verb response includes update_available field when drift detected
+  category: feature
+  description: 'The instruction verb is loaded every turn and read every turn. Currently it returns phase/instruction/prd_items/mutables_pending/recall_hits/next_phase_hint. Add update_available: {installed, latest, instruction, update_url} | null by reading .gm/exec-spool/.update-available.json from inside the wasm orchestrator. When present, the agent sees it on every instruction dispatch and can act. This is the missing notification surface — the marker file existed but no one looked at it because nothing pointed there.'
+  acceptance:
+  - instruction response JSON adds update_available top-level field
+  - Field is null when marker absent, populated object when present
+  - Visible via gmsniff --event instruction.served --grep update --limit 1
+  - Field rendered in SKILL.md doc of instruction response shape
+  effort: medium
+  route_family: execution
+  status: completed
+- id: skill-md-update-imperative
+  subject: SKILL.md opening tells the agent to act on update_available immediately
+  category: refactor
+  description: 'Per the no-numbered-procedure rule, keep terse. One imperative line near the top: if the instruction response carries update_available, kill the watcher and rebootstrap before continuing — drift past one minor means newer fixes are sitting on disk unused. The current SKILL.md has a ''Plugkit version updates'' section deep in the file describing the mechanism but no entry-point imperative.'
+  acceptance:
+  - SKILL.md opening principles block contains one line tying update_available to immediate action
+  - No numbered procedure — implicit imperative prose
+  - Existing 'Plugkit version updates' section retained as the mechanism doc
+  effort: small
+  route_family: representation
+  status: completed
+- id: gmsniff-updates-cli-view
+  subject: gmsniff --updates surfaces current drift + history
+  category: feature
+  description: 'Add ''gmsniff --updates'' subcommand. Reads every .gm/exec-spool/.update-available.json under cwd''s subprojects (or just current cwd) for live state, plus replays update.available/cleared/error events from gm-log to show history. Output: installed vs latest, time-since-drift, error rate, last 10 transitions.'
+  acceptance:
+  - gmsniff --updates prints live drift state (installed=X latest=Y age=Zm) per project where .update-available.json exists
+  - Plus event history of update.* events from last 7d
+  - --json flag emits structured output for scripting
+  effort: small
+  route_family: representation
+  blockedBy:
+  - update-events-emit-jsonl
+  status: completed
+- id: gmsniff-updates-cli-view
+  subject: gmsniff --updates surfaces current drift + history
+  category: feature
+  description: 'Add ''gmsniff --updates'' subcommand. Reads every .gm/exec-spool/.update-available.json under cwd''s subprojects (or just current cwd) for live state, plus replays update.available/cleared/error events from gm-log to show history. Output: installed vs latest, time-since-drift, error rate, last 10 transitions.'
+  acceptance:
+  - gmsniff --updates prints live drift state (installed=X latest=Y age=Zm) per project where .update-available.json exists
+  - Plus event history of update.* events from last 7d
+  - --json flag emits structured output for scripting
+  effort: small
+  route_family: representation
+  blockedBy:
+  - update-events-emit-jsonl
+  status: completed
+- id: act-on-current-drift
+  subject: Update this machine's plugkit from 0.1.412 to 0.1.416 right now
+  category: infra
+  description: 'Fix-on-Sight: drift detected this turn. .update-available.json says installed 0.1.412, latest 0.1.416. Kill the running watcher (PID from .status.json), run bootstrapPlugkit with latest:true (or bun x gm-plugkit@latest which uses ensureReady with offline:false and lets remote latest override pinned version), restart watcher, verify .status.json reports v0.1.416, verify .update-available.json is removed.'
+  acceptance:
+  - .status.json shows version 0.1.416
+  - Old watcher PID is no longer alive
+  - .update-available.json is removed
+  effort: small
+  route_family: execution
+  status: completed
+- id: act-on-current-drift
+  subject: Update this machine's plugkit from 0.1.412 to 0.1.416 right now
+  category: infra
+  description: 'Fix-on-Sight: drift detected this turn. .update-available.json says installed 0.1.412, latest 0.1.416. Kill the running watcher (PID from .status.json), run bootstrapPlugkit with latest:true (or bun x gm-plugkit@latest which uses ensureReady with offline:false and lets remote latest override pinned version), restart watcher, verify .status.json reports v0.1.416, verify .update-available.json is removed.'
+  acceptance:
+  - .status.json shows version 0.1.416
+  - Old watcher PID is no longer alive
+  - .update-available.json is removed
+  effort: small
+  route_family: execution
+  status: completed
+- id: watcher-reinstantiate-after-update
+  subject: Watcher must re-instantiate wasm after bootstrap, not just trust resolveVersion file lookup
+  category: feature
+  description: 'Surfaced during PRD-44 update witness: bootstrap to v0.1.416 succeeded, ~/.claude/gm-tools/plugkit.version updated to 0.1.416, .status.json reports 0.1.416 (because resolveVersion reads the file), but a health dispatch returned version 0.1.411 — the running wasm instance is stale, only the on-disk version file refreshed. The current LinkError-triggered self-heal in the wrapper does not fire because the instance imports are still valid; the wasm just disagrees with the file. Fix: when checkForUpdate detects drift AND a new wasm file lands on disk (mtime check), the watcher should kill itself with a sentinel exit code so the next-boot spawn picks up the fresh binary. OR: detect the version mismatch between resolveVersion-from-file and a fresh plugkit_version() call from the instance, and trigger a re-instantiation by exiting and respawning. Simplest path: exit(0) with a stderr message; the daemon supervisor / bootstrap re-spawn handles relaunch.'
+  acceptance:
+  - After plugkit.version file updates AND the file mtime differs from the time we instantiated, the watcher exits cleanly so a fresh process loads the new wasm
+  - 'Witness: health verb returns same version as .status.json'
+  - No more split-brain between file-version and instance-version
+  effort: medium
+  route_family: execution
+  status: pending
+- id: watcher-reinstantiate-after-update
+  subject: Watcher must re-instantiate wasm after bootstrap, not just trust resolveVersion file lookup
+  category: feature
+  description: 'Surfaced during PRD-44 update witness: bootstrap to v0.1.416 succeeded, ~/.claude/gm-tools/plugkit.version updated to 0.1.416, .status.json reports 0.1.416 (because resolveVersion reads the file), but a health dispatch returned version 0.1.411 — the running wasm instance is stale, only the on-disk version file refreshed. The current LinkError-triggered self-heal in the wrapper does not fire because the instance imports are still valid; the wasm just disagrees with the file. Fix: when checkForUpdate detects drift AND a new wasm file lands on disk (mtime check), the watcher should kill itself with a sentinel exit code so the next-boot spawn picks up the fresh binary. OR: detect the version mismatch between resolveVersion-from-file and a fresh plugkit_version() call from the instance, and trigger a re-instantiation by exiting and respawning. Simplest path: exit(0) with a stderr message; the daemon supervisor / bootstrap re-spawn handles relaunch.'
+  acceptance:
+  - After plugkit.version file updates AND the file mtime differs from the time we instantiated, the watcher exits cleanly so a fresh process loads the new wasm
+  - 'Witness: health verb returns same version as .status.json'
+  - No more split-brain between file-version and instance-version
+  effort: medium
+  route_family: execution
+  status: pending

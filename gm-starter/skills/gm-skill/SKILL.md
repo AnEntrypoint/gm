@@ -16,6 +16,8 @@ Do not create documentation files the user did not ask for. No COMPLETED.md, no 
 
 Before any apparent stop, dispatch `residual-scan`. If it returns work that fits the spirit of the original ask and is reachable from this session, expand the PRD and execute; only residuals genuinely out-of-spirit or out-of-reach are name-and-stop. A turn that ends with uncommitted changes, an open PRD slice, or unresolved mutables has not actually stopped — it has stalled the chain.
 
+If the `instruction` response carries a non-null `update_available`, plugkit drift has been detected on disk and the running watcher is behind. Rebootstrap before continuing — newer fixes are sitting on disk unused, and every dispatch is wasted on stale code. `bun x gm-plugkit@latest` (or `npx -y gm-plugkit@latest`) is the one-shot: it fetches the new wasm, replaces the artifact, and the watcher reloads. Drift past one version is a deviation.
+
 The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. The watcher's own stdout/stderr is appended to `.gm/exec-spool/.watcher.log` — Read it to see plugkit's internal trace, dispatch timings, sweep actions, errors.
 
 ## Boot the spool watcher (first turn only)

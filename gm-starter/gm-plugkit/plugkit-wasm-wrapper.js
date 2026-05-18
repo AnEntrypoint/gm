@@ -871,6 +871,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
   const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
   const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  let _lastKnownDrift = null;
   function checkForUpdate() {
     const installed = resolveVersion(instance);
     const req = https.get({
@@ -879,7 +880,11 @@ async function runSpoolWatcher(instance, spoolDir) {
       headers: { 'user-agent': 'plugkit-watcher', 'accept': 'application/json' },
       timeout: 5000,
     }, (res) => {
-      if (res.statusCode !== 200) { res.resume(); return; }
+      if (res.statusCode !== 200) {
+        res.resume();
+        logEvent('plugkit', 'update.check.error', { installed, status: res.statusCode });
+        return;
+      }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
@@ -890,21 +895,32 @@ async function runSpoolWatcher(instance, spoolDir) {
           const latest = tag.replace(/^v/, '');
           if (latest === installed) {
             try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
+            if (_lastKnownDrift) {
+              logEvent('plugkit', 'update.cleared', { installed, was: _lastKnownDrift });
+              _lastKnownDrift = null;
+            }
             return;
           }
+          const update_url = `https://github.com/AnEntrypoint/plugkit-bin/releases/tag/v${latest}`;
           fs.writeFileSync(UPDATE_AVAILABLE_PATH, JSON.stringify({
             installed,
             latest,
             checked_at_ms: Date.now(),
             instruction: 'plugkit is out of date. To update, close the running watcher and re-bootstrap with the @latest flag, e.g. node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool & after running bootstrap with {latest: true}.',
-            update_url: `https://github.com/AnEntrypoint/plugkit-bin/releases/tag/v${latest}`,
+            update_url,
           }, null, 2));
           console.log(`[update] available: installed=${installed} latest=${latest} → wrote ${UPDATE_AVAILABLE_PATH}`);
-        } catch (_) {}
+          if (_lastKnownDrift !== latest) {
+            logEvent('plugkit', 'update.available', { installed, latest, update_url });
+            _lastKnownDrift = latest;
+          }
+        } catch (e) {
+          logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) });
+        }
       });
     });
-    req.on('timeout', () => req.destroy());
-    req.on('error', () => {});
+    req.on('timeout', () => { req.destroy(); logEvent('plugkit', 'update.check.error', { error: 'timeout' }); });
+    req.on('error', (e) => logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) }));
   }
   setTimeout(checkForUpdate, 10_000);
   setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);

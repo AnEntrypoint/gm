@@ -123,3 +123,28 @@
   witness_method: read plugkit-wasm-wrapper.js, verify _turns Map state + turnTick function + turn.end emit path
   witness_evidence: Added TURN_IDLE_MS=30000 constant, _turns Map keyed by sess (with key+':lastIdx' for monotonic counter), turnTick(sess, verb, taskBase, phase) function that on verb=='instruction' closes a previous turn if idle>30s by emitting turn.end with full payload then opens a new turn with turn.start, otherwise updates the current turn's lastTs, dispatches count, verbs frequency map, and phases set. Wired into emitOrchestratorEvents after parsed.ok check, passes process.env.CLAUDE_SESSION_ID || GM_SESSION_ID || '' as sess. New events visible to gmsniff CLI via --event turn.start / --event turn.end / --efficiency. Deployed wrapper PID 9496 still runs pre-change code; new turns emit only after next watcher boot.
   status: witnessed
+- id: update-events-emit
+  claim: plugkit-wasm-wrapper checkForUpdate emits update.available on transition, update.cleared when marker clears, update.check.error on network failure
+  witness_method: read wrapper, verify _lastKnownDrift state + three logEvent call sites
+  witness_evidence: 'plugkit-wasm-wrapper.js line 874-925 region: added _lastKnownDrift state, logEvent(''plugkit'', ''update.available'', {installed, latest, update_url}) fires only on transition (_lastKnownDrift !== latest), update.cleared fires when latest === installed AND _lastKnownDrift was non-null. update.check.error fires on res.statusCode!=200, JSON parse failure, timeout, req error. Deployed wrapper PID 35400 still runs pre-change code; new emits start after next cascade republish + watcher boot.'
+  status: witnessed
+- id: instruction-update-field
+  claim: rs-plugkit instruction handler reads .gm/exec-spool/.update-available.json and includes it as update_available in the response payload
+  witness_method: read orchestrator/instructions/mod.rs, verify read_update_available helper + update_available field in json! payload
+  witness_evidence: 'orchestrator/instructions/mod.rs added use crate::pkfs and read_update_available() helper that does pkfs::exists+read_to_string on .gm/exec-spool/.update-available.json, returns Value::Null when absent or parse-fails, else parsed object. handle_instruction''s final json! payload now includes update_available: read_update_available(). Witnessed via the new gmsniff --updates view which reads the same file directly: 8 projects have current drift markers.'
+  status: witnessed
+- id: skill-md-update-line
+  claim: SKILL.md opening principles block contains one-line imperative tying update_available to immediate rebootstrap
+  witness_method: read SKILL.md, verify paragraph follows residual-scan paragraph
+  witness_evidence: 'SKILL.md now contains: ''If the instruction response carries a non-null update_available, plugkit drift has been detected on disk and the running watcher is behind. Rebootstrap before continuing — newer fixes are sitting on disk unused, and every dispatch is wasted on stale code. bun x gm-plugkit@latest (or npx -y gm-plugkit@latest) is the one-shot: it fetches the new wasm, replaces the artifact, and the watcher reloads. Drift past one version is a deviation.'' Placed adjacent to residual-scan imperative.'
+  status: witnessed
+- id: gmsniff-updates-cli
+  claim: gmsniff --updates surfaces every project's drift state and event history
+  witness_method: node src/cli.js --updates on live state
+  witness_evidence: 'gmsniff --updates returned 8 projects with current .update-available.json markers: acptoapi, anentrypoint-design, freddie, gm, organ, plugsdk, test, thebird — all installed=0.1.412 latest=0.1.416, running version pulled from .status.json (organ still 0.1.412 unhealed, rest 0.1.416 self-healed). Plus update.* event history block (0 events today since the emit code is not yet deployed). One-shot remediation hint printed at bottom: ''bun x gm-plugkit@latest''. --json mode emits structured live+history for scripting.'
+  status: witnessed
+- id: drift-acted-on
+  claim: This machine's gm plugkit went from running 0.1.412 to running 0.1.416
+  witness_method: bun x gm-plugkit@latest in background, watch /tmp/gm-plugkit-update.log, read .status.json after
+  witness_evidence: 'Bootstrap log showed: npm.extract attempts 1-3 failed with spawnSync npx.cmd EINVAL (known Windows issue), GH-releases fallback downloaded plugkit.wasm v0.1.416 (12885019 bytes, sha verified 748ab8b58d5c09a4...), wrote to AppData\Local\plugkit\bin\v0.1.416, pruned v0.1.412 cache. New daemon spawned pid 35400. .status.json after: {pid:34204, version:0.1.416, ts:1779115513430} — original PID self-healed file lookup. Side finding: health verb returns version 0.1.411 (wasm instance hardcoded), creating split-brain with file-derived version. Captured as PRD-45 for follow-up.'
+  status: witnessed
