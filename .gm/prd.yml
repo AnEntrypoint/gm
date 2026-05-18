@@ -192,3 +192,14 @@
   effort: medium
   route_family: execution
   status: completed
+- id: residual-out-of-spirit-stale-docs
+  subject: Pre-existing untracked docs and modified README in C:/dev/gm
+  category: docs
+  description: 'Worktree contained README.md (modified) + DEPLOYMENT-COMPLETE.md, INSTALLATION.md, PUBLISHED.md, SIMPLIFIED.md, START-HERE.md, SUMMARY.txt, WEBSITE.md (untracked) when this session started. These files predate the session by hours and are unrelated to the auto-memorize / boot-observability / discipline-enforcement work the user requested. Name-and-stop: out-of-spirit, owner action required to decide whether to commit or discard.'
+  acceptance:
+  - Listed in PRD as out-of-spirit residual
+  - 'Status blockedBy: external (owner decision)'
+  effort: small
+  blockedBy:
+  - external
+  status: pending
