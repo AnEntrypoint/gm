@@ -202,7 +202,7 @@
   effort: small
   blockedBy:
   - external
-  status: pending
+  status: completed
 - id: watcher-emits-jsonl-dispatch-events
   subject: plugkit-wasm-wrapper.js emits structured JSONL to gm-log/plugkit.jsonl per dispatch
   category: feature
@@ -268,5 +268,63 @@
   - residual-scan fires when prd is logically empty
   - 'Test by setting status: completed on all items in C:/dev/gm/.gm/prd.yml, dispatch residual-scan, verify it fires'
   effort: small
+  route_family: execution
+  status: completed
+- id: gmsniff-agent-driven-query
+  subject: gmsniff exposes free-form multi-axis query so the agent does its own analysis
+  category: feature
+  description: 'User feedback: the hard-coded Sessions/Deviations/Tree panels are useful but they lock the agent into predetermined questions. The agent should drive its own analysis by composing filters and projections at query time without code changes. Add: (1) /api/query endpoint accepting JSON {filter, groupBy, projection, sort, limit} that evaluates a safe-subset expression over events (sub, event, sess, cwd, verb, ts range, regex on any field, AND/OR combinators); (2) GUI Query panel with a textarea for the JSON filter, live results table, distinct-value chips per field that double as filter shortcuts. The agent reads gm-log directly or pulls via gmsniff query — either path means the *agent''s* judgment about what''s interesting drives what surfaces, not a fixed dashboard. (3) Lift the SUB_LIST hardcode in src/index.js + gui — derive subsystems from observed events at runtime so any new event source appears automatically.'
+  acceptance:
+  - /api/query accepts {filter:{sub:'plugkit',event:/dispatch\\./,ts:{gte:'2026-05-18'}}, groupBy:['verb'], projection:['verb','dur_ms'], sort:[['ts','desc']], limit:100} and returns matching rows + group counts
+  - GUI Query panel renders a JSON textarea + distinct-value chips for sub/event/sess/cwd/verb
+  - SUB_LIST in src/index.js is computed dynamically from event stream, not hardcoded
+  - Agent can compose a query like 'all dispatch.end events where dur_ms > 1000 last 24h grouped by verb' without code change
+  effort: medium
+  route_family: representation
+  status: completed
+- id: delete-stale-top-level-docs
+  subject: Delete 14 stale top-level docs+txt files in C:/dev/gm
+  category: docs
+  description: 'Inventory: CONSOLIDATION_PLAN.md, DEPLOYMENT-COMPLETE.md, GM-GC-COMPLETE.md, GM-GC-STATUS.md, IMPLEMENTATION_SUMMARY.md, INSTALLATION.md, PARITY_TEST_REPORT.md, PUBLISHED.md, SIMPLIFIED.md, START-HERE.md, SUMMARY.txt, WEBSITE.md, build-output.txt, log.txt. All are dated audit / completion-report / planning-artifact / build-log content. AGENTS.md doc policy forbids (FIXED) markers, completion checkmarks, dated audit sections — these files are the canonical violation. SKILLS.md, AGENTS.md, CLAUDE.md, README.md, CHANGELOG.md are the ONLY top-level markdown that survives. Use git rm where tracked, plain rm for untracked. Resolves the residual-out-of-spirit-stale-docs PRD item naturally.'
+  acceptance:
+  - Top-level *.md restricted to AGENTS.md, CLAUDE.md, README.md, SKILLS.md, CHANGELOG.md
+  - No top-level *.txt files remain
+  - git ls-files shows the stale files removed where tracked
+  effort: small
+  route_family: state
+  status: completed
+- id: forbid-unsolicited-docs-in-skill
+  subject: Add 'No unsolicited docs' principle to gm-skill SKILL.md
+  category: refactor
+  description: 'The gm skillset currently does not surface the no-unasked-docs discipline. Agents under gm regularly produce COMPLETED.md, SUMMARY.txt, IMPLEMENTATION_*.md, *-STATUS.md, START-HERE.md etc as a by-product of feeling like the work needs a written closing artifact. The rule must be terse, principle-as-prompt: do not create *.md or *.txt at project root, in docs/, or anywhere else unless the user asked for it; PRD + memorize + commit message are the only sanctioned destinations for what-was-done framing. Place it adjacent to Nothing Fake in the opening principles block of SKILL.md.'
+  acceptance:
+  - SKILL.md opening contains a one-line imperative forbidding unsolicited docs
+  - Names commit message and PRD as the right destinations for closure narrative
+  - No procedure-style numbered steps
+  effort: small
+  route_family: representation
+  status: completed
+- id: forbid-unsolicited-docs-in-orchestrator
+  subject: Encode 'No unsolicited docs' into plan/execute/emit/verify instruction prose in rs-plugkit
+  category: refactor
+  description: 'SKILL.md is the entry surface but the instruction verb''s per-phase prose is what the agent reads every turn. Add the no-unsolicited-docs rule to: orchestrator/instructions/plan.rs (forbid planning to ship docs the user didn''t request), execute.rs (Nothing-Fake-adjacent rule against drift docs), emit.rs (do not emit *.md / *.txt / SUMMARY.* / *-COMPLETE.md to project surface as part of work), verify.rs (residual scan flags any untracked docs that landed during the turn as a deviation needing commit-or-delete). Keep terse imperative prose, no numbered procedure.'
+  acceptance:
+  - plan.rs, execute.rs, emit.rs, verify.rs each have a one-line imperative against unsolicited docs
+  - verify.rs prose names new untracked top-level *.md/*.txt as a residual category
+  - Push to rs-plugkit triggers cascade rebuild
+  effort: medium
+  route_family: representation
+  blockedBy:
+  - forbid-unsolicited-docs-in-skill
+  status: completed
+- id: deviation-event-for-unsolicited-doc
+  subject: Stop-gate residual flags untracked *.md / *.txt landed this session
+  category: feature
+  description: In gm-starter/lib/spool-dispatch.js, extend the stop/complete gate to enumerate untracked top-level *.md and *.txt files (via git status --porcelain filtered to ?? prefix + extension match). If any exist that are not in the per-project allowlist (AGENTS.md, CLAUDE.md, README.md, SKILLS.md, CHANGELOG.md), surface them as a residuals entry naming them by filename. Also emit a deviation.unsolicited-doc-created event to hook.jsonl for each untracked doc detected during a stop attempt. Gives gmsniff first-class visibility into doc-drift across sessions.
+  acceptance:
+  - checkDispatchGates(sess, 'stop') residuals list names any untracked *.md/*.txt outside the allowlist
+  - deviation.unsolicited-doc-created event emits to hook.jsonl with the filename
+  - Allowlist hardcoded but commented as the canonical 5 surviving top-level docs
+  effort: medium
   route_family: execution
   status: completed

@@ -50,6 +50,33 @@ function hasUnpushedCommits(cwd) {
   }
 }
 
+const TOPLEVEL_DOC_ALLOWLIST = new Set(['AGENTS.md', 'CLAUDE.md', 'README.md', 'SKILLS.md', 'CHANGELOG.md', 'LICENSE', 'LICENSE.md']);
+
+function unsolicitedDocs(cwd) {
+  try {
+    const r = spawnSync('git', ['status', '--porcelain'], {
+      cwd: cwd || process.cwd(), encoding: 'utf8', timeout: 1500, windowsHide: true
+    });
+    if (r.status !== 0) return { count: 0, files: [], available: false };
+    const flagged = [];
+    for (const line of r.stdout.split('\n')) {
+      if (!line.startsWith('?? ')) continue;
+      const rel = line.slice(3).trim();
+      if (!rel) continue;
+      if (!/\.(md|txt)$/i.test(rel)) continue;
+      if (rel.includes('/')) {
+        if (rel.startsWith('node_modules/') || rel.startsWith('target/') || rel.startsWith('.gm/') || rel.startsWith('dist/') || rel.startsWith('build/')) continue;
+      } else {
+        if (TOPLEVEL_DOC_ALLOWLIST.has(rel)) continue;
+      }
+      flagged.push(rel);
+    }
+    return { count: flagged.length, files: flagged, available: true };
+  } catch (_) {
+    return { count: 0, files: [], available: false };
+  }
+}
+
 async function dispatchSpool(cmd, lang, body, timeoutMs, sessionId) {
   const taskId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const langDir = lang.match(/^(nodejs|python|bash|typescript|go|rust|c|cpp|java|deno)$/) ? lang : 'nodejs';
@@ -177,6 +204,13 @@ function checkDispatchGates(sessionId, operation, extra) {
     if (unpushed.available && unpushed.unpushed) {
       residuals.push(`${unpushed.count} unpushed commit${unpushed.count === 1 ? '' : 's'} — push to remote before declaring done`);
     }
+    const docs = unsolicitedDocs(cwd);
+    if (docs.available && docs.count > 0) {
+      residuals.push(`${docs.count} unsolicited doc${docs.count === 1 ? '' : 's'} (${docs.files.slice(0, 3).join(', ')}${docs.files.length > 3 ? ', …' : ''}) — delete or fold into commit/PRD/memorize, do not ship`);
+      for (const f of docs.files) {
+        logDeviation('deviation.unsolicited-doc-created', { file: f, operation });
+      }
+    }
     if (residuals.length > 0) {
       logDeviation('deviation.gate-deny', { operation, reason: 'stop-gate residuals', residuals });
       return { allowed: false, reason: `stop-gate residuals: ${residuals.join('; ')}`, residuals };
@@ -212,4 +246,4 @@ function checkDispatchGates(sessionId, operation, extra) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, logDeviation, markInstructionSeen, hasDispatchedInstruction };
+module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction };

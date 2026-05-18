@@ -52,29 +52,59 @@
   claim: plugkit-wasm-wrapper.js emits dispatch.start, dispatch.end, watcher.boot, sweep.* events as JSONL to ~/.claude/gm-log/<day>/plugkit.jsonl
   witness_method: restart watcher, fire dispatches, cat plugkit.jsonl
   witness_evidence: plugkit.jsonl shows {event:watcher.boot, version:0.1.412, pid:34204, in_dir, out_dir, spool_dir} + per-dispatch start/end pair with verb/task/dur_ms/body_bytes/out_bytes for instruction, phase-status verbs. Second watcher running in C:/dev/organ also emits to same log — observability is cross-project.
-  status: unknown
+  status: witnessed
 - id: orchestrator-events-witnessed
   claim: plugkit-wasm-wrapper.js emitOrchestratorEvents derives structured state-change events from orchestrator-verb responses
   witness_method: trigger instruction + phase-status dispatches, grep plugkit.jsonl for derived events
   witness_evidence: plugkit.jsonl contains {event:instruction.served, phase:EXECUTE, prd_pending:6, mutables_pending:0, next_phase_hint:EMIT} and {event:phase.status, phase:EXECUTE, last_skill:gm-emit} as siblings of the dispatch.end events for those calls. Derivation logic in plugkit-wasm-wrapper.js::emitOrchestratorEvents matches each orchestrator verb to its specific event shape.
-  status: unknown
+  status: witnessed
 - id: deviations-witnessed
   claim: lib/spool-dispatch.js logDeviation appends deviation.gate-deny / deviation.write-before-instruction / deviation.mutable-without-evidence to hook.jsonl with full residual payloads
   witness_method: unit-test checkDispatchGates with stop/mutable-resolve/write ops, inspect hook.jsonl
   witness_evidence: hook.jsonl tail shows {event:deviation.gate-deny, operation:stop, reason:stop-gate residuals, residuals:[PRD has open items, worktree dirty (11 files)], sess:test-observability-session} and {event:deviation.mutable-without-evidence, mutable_id:fake-mut}. checkDispatchGates exports logDeviation, markInstructionSeen, hasDispatchedInstruction helpers.
-  status: unknown
+  status: witnessed
 - id: gmsniff-panels-witnessed
   claim: gmsniff exposes Deviations + Sessions + Process Tree panels with backing /api/deviations, /api/sessions, /api/process-tree endpoints + matching GUI renderers and dev-badge
   witness_method: in-process createServer + fetch all three endpoints + verify shape
   witness_evidence: 'In-process witness: /api/snapshot returns total=345872, bySub.plugkit=1120, bySub.hook=329586. /api/deviations returns total=10, byKind={gate-deny:4, mutable-without-evidence:4, test-fire:2}. /api/sessions returns 2 sessions with phases_reached arrays. /api/process-tree for (no-session) returns 34 timeline nodes, 4 deviation gaps highlighted, phase_reached [false,true,false,false,false] showing EXECUTE only. GUI index.html has phase-walk CSS + renderPhaseWalk + nav links + dev-badge refresh on SSE deviation events and 10s timer.'
-  status: unknown
+  status: witnessed
 - id: residual-pending-only-witnessed
   claim: rs-plugkit residual.rs::prd_empty_or_missing treats all-completed items as empty for gate purposes
   witness_method: 'rs-plugkit commit bef6612 (fix: treat all-completed PRD as empty for gate purposes) merged to main; cascade rebuilds wasm'
   witness_evidence: 'git log on C:/dev/rs-plugkit shows commit bef6612 ''fix(residual): treat all-completed PRD as empty for gate purposes'' as HEAD. status_is_open helper added, prd_empty_or_missing now checks each item.status against open set {pending, in_progress, unknown, blocked} and respects blockedBy:external. Cascade currently rebuilding wasm; runtime witness deferred until next plugkit version arrives via cascade.'
-  status: unknown
+  status: witnessed
 - id: residual-pending-only-witnessed
   claim: rs-plugkit residual.rs::prd_empty_or_missing treats all-completed items as empty for gate purposes
   witness_method: 'rs-plugkit commit bef6612 (fix: treat all-completed PRD as empty for gate purposes) merged to main; cascade rebuilds wasm'
   witness_evidence: 'git log on C:/dev/rs-plugkit shows commit bef6612 ''fix(residual): treat all-completed PRD as empty for gate purposes'' as HEAD. status_is_open helper added, prd_empty_or_missing now checks each item.status against open set {pending, in_progress, unknown, blocked} and respects blockedBy:external. Cascade currently rebuilding wasm; runtime witness deferred until next plugkit version arrives via cascade.'
-  status: unknown
+  status: witnessed
+- id: gmsniff-query-witnessed
+  claim: gmsniff exposes /api/query, /api/distinct, /api/observed-subsystems with filter/groupBy/projection/sort composition + GUI Query panel with templates and clickable distinct-value chips
+  witness_method: in-process createServer + POST /api/query with regex/range filters + GET /api/distinct + GET /api/observed-subsystems
+  witness_evidence: 'observed-subsystems returns 11 dynamically discovered subs (acp-launcher, bootstrap, exec, git, hook, learning, plugkit, plugkit_wrapper, rs_codeinsight, rs_learn, rs_search) — SUB_LIST hardcode in src/index.js + gui replaced by dynamic discovery. /api/distinct on field=event returns top events with counts. POST /api/query with {filter:{event:''dispatch.end'',dur_ms:{gt:100}},sort:[[''dur_ms'',''desc'']]} returns slow dispatches correctly sorted. {filter:{event:{regex:''^deviation\\.''}},groupBy:[''event'']} groups into 3 kinds with counts {gate-deny:6, mutable-without-evidence:4, test-fire:2}. {filter:{event:''instruction.served''},groupBy:[''phase'']} returns phase distribution {EXECUTE:4, VERIFY:2}. Filter operators verified: eq, gt, regex, top-level groupBy + projection + sort + limit.'
+  status: witnessed
+- id: stale-docs-deleted
+  claim: 14 stale top-level docs (CONSOLIDATION_PLAN.md, DEPLOYMENT-COMPLETE.md, GM-GC-COMPLETE.md, GM-GC-STATUS.md, IMPLEMENTATION_SUMMARY.md, INSTALLATION.md, PARITY_TEST_REPORT.md, PUBLISHED.md, SIMPLIFIED.md, START-HERE.md, SUMMARY.txt, WEBSITE.md, build-output.txt, log.txt) are removed; only AGENTS.md, CLAUDE.md, README.md, SKILLS.md, CHANGELOG.md remain
+  witness_method: ls *.md *.txt in C:/dev/gm after git rm + rm
+  witness_evidence: 'git rm output: rm ''CONSOLIDATION_PLAN.md'' rm ''GM-GC-COMPLETE.md'' rm ''GM-GC-STATUS.md'' rm ''IMPLEMENTATION_SUMMARY.md'' rm ''PARITY_TEST_REPORT.md''. Followed by rm -f of 9 untracked files. Subsequent ls *.md *.txt: AGENTS.md CHANGELOG.md CLAUDE.md README.md SKILLS.md, no .txt match. README.md restored via git checkout HEAD to the committed accurate version (the modified version referenced archived gm-cc/gm-gc fanout).'
+  status: witnessed
+- id: stale-docs-deleted
+  claim: 14 stale top-level docs (CONSOLIDATION_PLAN.md, DEPLOYMENT-COMPLETE.md, GM-GC-COMPLETE.md, GM-GC-STATUS.md, IMPLEMENTATION_SUMMARY.md, INSTALLATION.md, PARITY_TEST_REPORT.md, PUBLISHED.md, SIMPLIFIED.md, START-HERE.md, SUMMARY.txt, WEBSITE.md, build-output.txt, log.txt) are removed; only AGENTS.md, CLAUDE.md, README.md, SKILLS.md, CHANGELOG.md remain
+  witness_method: ls *.md *.txt in C:/dev/gm after git rm + rm
+  witness_evidence: 'git rm output: rm ''CONSOLIDATION_PLAN.md'' rm ''GM-GC-COMPLETE.md'' rm ''GM-GC-STATUS.md'' rm ''IMPLEMENTATION_SUMMARY.md'' rm ''PARITY_TEST_REPORT.md''. Followed by rm -f of 9 untracked files. Subsequent ls *.md *.txt: AGENTS.md CHANGELOG.md CLAUDE.md README.md SKILLS.md, no .txt match. README.md restored via git checkout HEAD to the committed accurate version (the modified version referenced archived gm-cc/gm-gc fanout).'
+  status: witnessed
+- id: skill-md-forbids-unsolicited-docs
+  claim: gm-starter/skills/gm-skill/SKILL.md opening contains a terse principle forbidding unsolicited *.md/*.txt creation and naming PRD/memorize-fire/commit message as the sanctioned destinations
+  witness_method: read updated SKILL.md, verify paragraph adjacent to Fix-on-Sight/Browser-Witness
+  witness_evidence: 'SKILL.md now contains: ''Do not create documentation files the user did not ask for. No COMPLETED.md, no SUMMARY.txt, no IMPLEMENTATION_NOTES.md, no START-HERE.md, no *-STATUS.md, no build-output.txt left behind, no new top-level .md or .txt of any kind. Closure narrative lives in the PRD (which plugkit owns), in memorize-fire (which becomes recallable next session), and in the commit message (which git log preserves) — those are the only sanctioned destinations. A new doc at project root, in docs/, or anywhere else is a residual the next stop-gate will flag.'' Placed adjacent to Browser Witness imperative.'
+  status: witnessed
+- id: rs-plugkit-instructions-forbid-unsolicited-docs
+  claim: plan.rs, execute.rs, emit.rs, verify.rs all carry the no-unsolicited-docs rule in their imperative prose
+  witness_method: read each modified file, verify the rule is present
+  witness_evidence: 'plan.rs: added ''No Unsolicited Docs'' section after ''PRD Mandatory'' — rejects PRD items proposing to write *.md/*.txt the user did not request. execute.rs: added ''No Unsolicited Docs'' section after ''Nothing Fake'' — frames closing-by-writing-a-doc as documentation analog of always-succeeds code. emit.rs: extended ''Write'' section — artifacts emitted are the ones the PRD names, .md or .txt not in PRD does not get written, closing narrative goes to commit message + memorize-fire. verify.rs: added ''Unsolicited-Doc Residual'' section before ''Residual-Scan Gate'' — delete-or-fold disposition, names SUMMARY.md/COMPLETED.md/etc as canonical examples that do not survive into the commit.'
+  status: witnessed
+- id: stop-gate-flags-unsolicited-docs
+  claim: checkDispatchGates(stop) names untracked *.md/*.txt outside the allowlist as a residual and emits deviation.unsolicited-doc-created per file
+  witness_method: touch UNAUTHORIZED-NOTES.md + UNAUTHORIZED-SUMMARY.txt, run node -e to invoke checkDispatchGates, tail hook.jsonl, delete and re-run
+  witness_evidence: 'unsolicitedDocs returned {count:2, files:[UNAUTHORIZED-NOTES.md, UNAUTHORIZED-SUMMARY.txt], available:true}. checkDispatchGates(stop) residuals list contained: ''2 unsolicited docs (UNAUTHORIZED-NOTES.md, UNAUTHORIZED-SUMMARY.txt) - delete or fold into commit/PRD/memorize, do not ship''. hook.jsonl tail showed deviation.unsolicited-doc-created with file=UNAUTHORIZED-SUMMARY.txt, operation=stop, sess=doc-test-session populated. After rm of both files, unsolicitedDocs returned {count:0, files:[]}. Allowlist hardcoded: AGENTS.md, CLAUDE.md, README.md, SKILLS.md, CHANGELOG.md, LICENSE, LICENSE.md. Subdirs node_modules/target/.gm/dist/build skipped.'
+  status: witnessed
