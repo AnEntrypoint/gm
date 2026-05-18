@@ -203,3 +203,70 @@
   blockedBy:
   - external
   status: pending
+- id: watcher-emits-jsonl-dispatch-events
+  subject: plugkit-wasm-wrapper.js emits structured JSONL to gm-log/plugkit.jsonl per dispatch
+  category: feature
+  description: 'Today the watcher writes flat console.log lines to .gm/exec-spool/.watcher.log. gmsniff cannot parse them; its plugkit and plugkit_wrapper panels are empty. Add a single helper logEvent(event, fields) that appends one JSON line to $HOME/.claude/gm-log/<YYYY-MM-DD>/plugkit.jsonl with {ts, sub:''plugkit'', event, pid, sess, cwd, ...fields}. Emit at: dispatch.start (verb, task, body_bytes), dispatch.end (verb, task, ms, out_bytes, ok), dispatch.error (verb, task, error), sweep.retention (count), sweep.stale (count), watcher.boot (version, wasm_path, pid), watcher.tick (status), update.available (installed, latest), update.applied (from, to). Cwd is process.cwd() at dispatch time. sess is CLAUDE_SESSION_ID env or empty. Keep the existing .watcher.log emit for humans; this is in addition, not replacement.'
+  acceptance:
+  - plugkit-wasm-wrapper.js exports a logEvent helper that mirrors obsEvent shape
+  - Every dispatch produces dispatch.start + dispatch.end pair in plugkit.jsonl
+  - Sweep cycles produce sweep.* events with counts
+  - Watcher boot produces watcher.boot event with version+pid
+  - Errors produce dispatch.error with the error string
+  effort: medium
+  route_family: execution
+  status: completed
+- id: orchestrator-emits-phase-and-state-events
+  subject: Watcher post-processes orchestrator-verb responses and emits state-change events
+  category: feature
+  description: 'After every dispatch_verb return, the wrapper knows the verb name. For orchestrator verbs (instruction, transition, phase-status, prd-add, prd-resolve, prd-list, mutable-add, mutable-resolve, mutable-list, memorize-fire, residual-scan, auto-recall), parse the response JSON and emit a structured event to plugkit.jsonl: phase.transitioned (from, to, sess), prd.added (id, subject, sess), prd.resolved (id, sess), mutable.added (id, claim, sess), mutable.resolved (id, witness_method, sess), residual.fired (sess), residual.skipped (reason, sess), memorize.fired (key, sess), auto_recall.hits (count, sess). This gives gmsniff a process-tree it can render as a timeline per sessionId.'
+  acceptance:
+  - phase.transitioned event emits when transition verb returns ok
+  - prd.* and mutable.* events emit for every orchestrator verb that mutates state
+  - residual.* events emit
+  - Each event includes sess so per-session reconstruction works
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - watcher-emits-jsonl-dispatch-events
+  status: completed
+- id: deviation-events-from-dispatch-gates
+  subject: checkDispatchGates emits deviation events when a gate denies
+  category: feature
+  description: In gm-starter/lib/spool-dispatch.js, every time checkDispatchGates returns allowed:false, append a deviation event to gm-log/<day>/hook.jsonl with {ts, sub:'hook', event:'deviation.gate-deny', operation, reason, residuals, sess, cwd, pid}. Also emit deviation.write-before-instruction when the dispatcher sees a write/edit before any instruction-verb dispatch has occurred in this session (track via .gm/exec-spool/.session-state.json or a simple in-memory map keyed by sess). Also emit deviation.mutable-without-evidence when mutable-resolve is called and the witness_evidence field is missing or empty.
+  acceptance:
+  - deviation.gate-deny emits on every gate denial with full residuals payload
+  - deviation.write-before-instruction emits when write/edit happens with no prior instruction dispatch this session
+  - deviation.mutable-without-evidence emits when mutable-resolve lacks witness_evidence
+  - gmsniff sees these in the hook subsystem
+  effort: medium
+  route_family: execution
+  status: completed
+- id: gmsniff-process-tree-and-deviations-panel
+  subject: 'gmsniff: new Process Tree, Sessions, and Deviations panels'
+  category: feature
+  description: 'Add three first-class panels to gmsniff. (1) Deviations: tail of every event matching ^deviation\. across all subsystems, sortable by ts desc, with one-line residual summary and ''open session'' link. Surface badge counts on dashboard. (2) Sessions: list of every sess seen, with first-ts, last-ts, event-count, phase-walk (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE squares per session), deviation count, dirty-on-stop flag. Click into a session for full chronological event list. (3) Process Tree: per-session reconstruction — phase transitions as nodes, prd-add/resolve/mutable events under each phase, residual-scan as the gate node, gap detection (phase exited without entering successor; instruction never dispatched; mutable resolved without evidence). Phase-walk gaps render in red.'
+  acceptance:
+  - gmsniff GUI shows Deviations, Sessions, Process Tree nav links
+  - Sessions panel lists sessionIds with phase-walk visualization
+  - Process Tree panel shows reconstructed walk per session with gap highlighting
+  - Dashboard has a deviation count badge
+  - Phase-walk SVG/HTML renders the five phases as boxes with reached/skipped indicators
+  effort: large
+  route_family: representation
+  blockedBy:
+  - watcher-emits-jsonl-dispatch-events
+  - orchestrator-emits-phase-and-state-events
+  - deviation-events-from-dispatch-gates
+  status: completed
+- id: residual-prd-counts-pending-only
+  subject: rs-plugkit residual.rs prd_empty_or_missing counts pending+in_progress only
+  category: feature
+  description: 'Surface noticed last turn: rs-plugkit/src/orchestrator/residual.rs::prd_empty_or_missing returns false whenever the items YAML array is non-empty, even when every item has status: completed. This breaks residual-scan''s gate behavior — it can never fire if any historical item exists in prd.yml. Fix: parse YAML, count items with status in {pending, in_progress, unknown}; treat ''empty'' as that count == 0.'
+  acceptance:
+  - 'residual.rs prd_empty_or_missing returns true when items exist but all are status: completed'
+  - residual-scan fires when prd is logically empty
+  - 'Test by setting status: completed on all items in C:/dev/gm/.gm/prd.yml, dispatch residual-scan, verify it fires'
+  effort: small
+  route_family: execution
+  status: completed

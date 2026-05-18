@@ -14,6 +14,73 @@ const __dirname = path.dirname(__filename);
 const KV_DIR = path.join(os.homedir(), '.claude', 'gm-tools', 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
 
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status', 'prd-add', 'prd-resolve', 'prd-list', 'mutable-add', 'mutable-resolve', 'mutable-list', 'memorize-fire', 'residual-scan', 'auto-recall']);
+
+function logEvent(sub, event, fields) {
+  if (process.env.GM_LOG_DISABLE) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const dir = path.join(GM_LOG_ROOT, day);
+    fs.mkdirSync(dir, { recursive: true });
+    const line = JSON.stringify({
+      ts: new Date().toISOString(),
+      sub,
+      event,
+      pid: process.pid,
+      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      ...fields,
+    });
+    fs.appendFileSync(path.join(dir, `${sub}.jsonl`), line + '\n');
+  } catch (_) {}
+}
+
+function emitOrchestratorEvents(verb, taskBase, resultStr) {
+  if (!ORCHESTRATOR_VERBS.has(verb)) return;
+  let parsed;
+  try { parsed = JSON.parse(resultStr); } catch (_) { return; }
+  if (!parsed || parsed.ok !== true) {
+    logEvent('plugkit', 'orchestrator.error', { verb, task: taskBase, error: parsed && parsed.error ? String(parsed.error) : 'unknown' });
+    return;
+  }
+  const data = parsed.data || {};
+  switch (verb) {
+    case 'transition':
+      logEvent('plugkit', 'phase.transitioned', { task: taskBase, phase: data.phase, next_skill: data.nextSkill, recall_count: Array.isArray(data.recall_hits) ? data.recall_hits.length : 0 });
+      break;
+    case 'instruction':
+      logEvent('plugkit', 'instruction.served', { task: taskBase, phase: data.phase, prd_pending: data.prd_pending_count, mutables_pending: Array.isArray(data.mutables_pending) ? data.mutables_pending.length : 0, next_phase_hint: data.next_phase_hint });
+      break;
+    case 'phase-status':
+      logEvent('plugkit', 'phase.status', { task: taskBase, phase: data.phase, last_skill: data.last_skill });
+      break;
+    case 'prd-add':
+      logEvent('plugkit', 'prd.added', { task: taskBase, id: data.added });
+      break;
+    case 'prd-resolve':
+      logEvent('plugkit', 'prd.resolved', { task: taskBase, id: data.resolved });
+      break;
+    case 'mutable-add':
+      logEvent('plugkit', 'mutable.added', { task: taskBase, id: data.added });
+      break;
+    case 'mutable-resolve':
+      logEvent('plugkit', 'mutable.resolved', { task: taskBase, id: data.resolved, memorize_spool: data.memorize_spool });
+      break;
+    case 'memorize-fire':
+      logEvent('plugkit', 'memorize.fired', { task: taskBase, key: data.key, namespace: data.namespace, bytes: data.bytes });
+      break;
+    case 'residual-scan':
+      if (data.scan === 'fired') logEvent('plugkit', 'residual.fired', { task: taskBase, marker: data.marker });
+      else logEvent('plugkit', 'residual.skipped', { task: taskBase, reason: data.reason });
+      break;
+    case 'auto-recall':
+      logEvent('plugkit', 'auto_recall.hits', { task: taskBase, count: Array.isArray(data.hits) ? data.hits.length : 0 });
+      break;
+    default:
+      break;
+  }
+}
+
 const TMP_DIR = os.tmpdir();
 const BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json');
 const BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
@@ -656,8 +723,10 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   } catch (e) { console.error(`[plugkit-wasm] wrapper self-install failed: ${e.message}`); }
 
-  console.log(`[plugkit-wasm] plugkit v${resolveVersion(instance)} (wasm)`);
+  const _bootVersion = resolveVersion(instance);
+  console.log(`[plugkit-wasm] plugkit v${_bootVersion} (wasm)`);
   console.log(`[plugkit-wasm] watching ${inDir}`);
+  logEvent('plugkit', 'watcher.boot', { version: _bootVersion, in_dir: inDir, out_dir: outDir, spool_dir: spoolDir });
 
   const PROCESSED_MAX = 10000;
   const processed = new Map();
@@ -692,6 +761,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       const t0 = Date.now();
       console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
+      logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
 
       const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
       const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
@@ -707,7 +777,10 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
       fs.writeFileSync(path.join(outDir, outName), resultStr);
-      console.log(`[dispatch] ← verb=${verb} task=${taskBase} ms=${Date.now() - t0} out=${resultStr.length}b`);
+      const dur_ms = Date.now() - t0;
+      console.log(`[dispatch] ← verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
+      logEvent('plugkit', 'dispatch.end', { verb, task: taskBase, dur_ms, out_bytes: resultStr.length });
+      emitOrchestratorEvents(verb, taskBase, resultStr);
 
       try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
@@ -727,6 +800,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) {}
       try { fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);
+      logEvent('plugkit', 'dispatch.error', { verb, task: taskBase, error: String(e && e.message || e) });
     }
   };
 
@@ -819,8 +893,14 @@ async function runSpoolWatcher(instance, spoolDir) {
           if (s.mtimeMs < cutoff) { fs.unlinkSync(fp); swept++; }
         } catch (e) { console.error(`[retention] failed to sweep ${entry}: ${e.message}`); }
       }
-      if (swept > 0) console.log(`[retention] swept ${swept} out/ files older than 1h`);
-    } catch (e) { console.error(`[retention] sweep error: ${e.message}`); }
+      if (swept > 0) {
+        console.log(`[retention] swept ${swept} out/ files older than 1h`);
+        logEvent('plugkit', 'sweep.retention', { swept });
+      }
+    } catch (e) {
+      console.error(`[retention] sweep error: ${e.message}`);
+      logEvent('plugkit', 'sweep.retention.error', { error: String(e.message || e) });
+    }
   }, 60_000);
 
   setInterval(() => {
@@ -848,8 +928,14 @@ async function runSpoolWatcher(instance, spoolDir) {
         }
       };
       walk(inDir);
-      if (stale > 0) console.log(`[stale-sweep] failed ${stale} orphaned inputs`);
-    } catch (e) { console.error(`[stale-sweep] sweep error: ${e.message}`); }
+      if (stale > 0) {
+        console.log(`[stale-sweep] failed ${stale} orphaned inputs`);
+        logEvent('plugkit', 'sweep.stale', { stale });
+      }
+    } catch (e) {
+      console.error(`[stale-sweep] sweep error: ${e.message}`);
+      logEvent('plugkit', 'sweep.stale.error', { error: String(e.message || e) });
+    }
   }, 300_000);
 
   const existing = walkDir(inDir);

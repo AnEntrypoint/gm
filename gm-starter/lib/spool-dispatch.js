@@ -3,6 +3,27 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+
+function logDeviation(event, fields) {
+  if (process.env.GM_LOG_DISABLE) return;
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    const dir = path.join(GM_LOG_ROOT, day);
+    fs.mkdirSync(dir, { recursive: true });
+    const line = JSON.stringify({
+      ts: new Date().toISOString(),
+      sub: 'hook',
+      event,
+      pid: process.pid,
+      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      cwd: process.cwd(),
+      ...fields,
+    });
+    fs.appendFileSync(path.join(dir, 'hook.jsonl'), line + '\n');
+  } catch (_) {}
+}
+
 function isWorktreeDirty(cwd) {
   try {
     const r = spawnSync('git', ['status', '--porcelain'], {
@@ -99,7 +120,30 @@ async function pollForCompletion(jsonFile, timeoutMs, taskId) {
   };
 }
 
-function checkDispatchGates(sessionId, operation) {
+function sessionMarkerPath(sessionId, kind) {
+  const cwd = process.cwd();
+  return path.join(cwd, '.gm', 'exec-spool', `.session-${kind}-${sessionId || 'anon'}`);
+}
+
+function hasDispatchedInstruction(sessionId) {
+  try {
+    const outDir = path.join(process.cwd(), '.gm', 'exec-spool', 'out');
+    if (!fs.existsSync(outDir)) return false;
+    for (const f of fs.readdirSync(outDir)) {
+      if (f.startsWith('instruction-')) return true;
+    }
+  } catch (_) {}
+  return fs.existsSync(sessionMarkerPath(sessionId, 'instruction-seen'));
+}
+
+function markInstructionSeen(sessionId) {
+  try {
+    fs.mkdirSync(path.dirname(sessionMarkerPath(sessionId, 'instruction-seen')), { recursive: true });
+    fs.writeFileSync(sessionMarkerPath(sessionId, 'instruction-seen'), String(Date.now()));
+  } catch (_) {}
+}
+
+function checkDispatchGates(sessionId, operation, extra) {
   const cwd = process.cwd();
   const gm = path.join(cwd, '.gm');
   const prdPath = path.join(gm, 'prd.yml');
@@ -134,14 +178,24 @@ function checkDispatchGates(sessionId, operation) {
       residuals.push(`${unpushed.count} unpushed commit${unpushed.count === 1 ? '' : 's'} — push to remote before declaring done`);
     }
     if (residuals.length > 0) {
+      logDeviation('deviation.gate-deny', { operation, reason: 'stop-gate residuals', residuals });
       return { allowed: false, reason: `stop-gate residuals: ${residuals.join('; ')}`, residuals };
     }
     return { allowed: true };
   }
 
+  if (['write', 'edit'].includes(operation) && !hasDispatchedInstruction(sessionId)) {
+    logDeviation('deviation.write-before-instruction', { operation, sessionId });
+  }
+
+  if (operation === 'mutable-resolve' && extra && (!extra.witness_evidence || String(extra.witness_evidence).trim() === '')) {
+    logDeviation('deviation.mutable-without-evidence', { mutable_id: extra.id || null });
+  }
+
   if (!['write', 'edit', 'git'].includes(operation)) return { allowed: true };
 
   if (fs.existsSync(prdPath) && fs.existsSync(needsGmPath) && !fs.existsSync(gmFiredPath)) {
+    logDeviation('deviation.gate-deny', { operation, reason: 'gm orchestration in progress' });
     return { allowed: false, reason: 'gm orchestration in progress; skills must complete work before tools execute' };
   }
 
@@ -149,6 +203,7 @@ function checkDispatchGates(sessionId, operation) {
     try {
       const content = fs.readFileSync(mutsPath, 'utf8');
       if (content.includes('status: unknown')) {
+        logDeviation('deviation.gate-deny', { operation, reason: 'unresolved mutables' });
         return { allowed: false, reason: 'unresolved mutables block tool execution; resolve all mutables before proceeding' };
       }
     } catch (_) {}
@@ -157,4 +212,4 @@ function checkDispatchGates(sessionId, operation) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits };
+module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, logDeviation, markInstructionSeen, hasDispatchedInstruction };

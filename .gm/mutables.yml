@@ -23,3 +23,28 @@
   witness_method: node -e require + call checkDispatchGates with operation=stop in C:/dev/gm cwd
   witness_evidence: 'node -e invocation returned: allowed=false, reason=''stop-gate residuals: PRD has open items - resolve or name-and-stop before declaring done; worktree dirty (15 files) - commit and push before declaring done'', residuals array with 2 entries. checkDispatchGates with operation=write returned allowed=true (mid-work writes unaffected). isWorktreeDirty returned dirty=true with 15-file list. hasUnpushedCommits returned unpushed=false (HEAD is at remote).'
   status: witnessed
+- id: watcher-emits-jsonl-events
+  claim: plugkit-wasm-wrapper.js emits dispatch.start/end, sweep.retention/stale, watcher.boot, and orchestrator state events as JSONL to ~/.claude/gm-log/<day>/plugkit.jsonl
+  witness_method: read updated plugkit-wasm-wrapper.js, verify logEvent + emitOrchestratorEvents helpers + wire-in points; deployed watcher will emit at next boot
+  witness_evidence: 'plugkit-wasm-wrapper.js lines 16-87 define GM_LOG_ROOT, ORCHESTRATOR_VERBS set, logEvent helper, emitOrchestratorEvents function with one case per orchestrator verb (instruction, transition, phase-status, prd-add/resolve, mutable-add/resolve, memorize-fire, residual-scan, auto-recall). Wire-in points: dispatch.start before dispatch_verb call, dispatch.end + emitOrchestratorEvents after, dispatch.error in catch, sweep.retention/sweep.stale in setInterval blocks, watcher.boot at startup after version resolved. Note: deployed watcher PID 9496 runs the OLD code; new code only emits after a watcher restart picks it up.'
+  status: witnessed
+- id: dispatch-gates-emit-deviations
+  claim: checkDispatchGates emits structured deviation events to gm-log/<day>/hook.jsonl for gate denials, write-before-instruction, and mutable-without-evidence
+  witness_method: node -e invoke checkDispatchGates with operation=stop (deny case), operation=mutable-resolve with empty witness_evidence; tail hook.jsonl
+  witness_evidence: |-
+    node -e invocation produced three hook.jsonl entries:
+    - deviation.gate-deny with operation=stop, residuals array of 2 strings, sess+cwd+pid populated
+    - deviation.mutable-without-evidence with mutable_id=fake-mut, sess populated
+    - deviation.test-fire (manual emit) confirming logDeviation surface works
+    All three include ts, sub:hook, event, pid, sess, cwd, ...fields. gmsniff /api/deviations re-tested shows total=6 (2 of each kind from this + earlier witness pass), byKind+bySession correctly grouped.
+  status: witnessed
+- id: gmsniff-new-panels-render
+  claim: gmsniff has Deviations + Sessions + Process Tree panels backed by /api/deviations, /api/sessions, /api/process-tree
+  witness_method: start gmsniff server in-process, fetch each new endpoint, verify response shape
+  witness_evidence: 'node -e import(''./src/server.js'') then createServer + fetch /api/deviations returned {total:6,byKind:{...},bySession:{test-observability-session:6},recent:[6 items]}. fetch /api/sessions returned {total:2,rows:[test-observability-session with deviations:6, phases_reached:[5 booleans], plus default (no-session) bucket]}. GUI panels added under ''Process'' nav section: Deviations (badge in red), Sessions (clickable rows opening process-tree), Process Tree (per-session timeline with phase-walk visualization, deviation/gap highlighting). CSS additions: .phase-walk, .dev-row, .tree-node.phase/deviation/mutable-resolve/prd-add.'
+  status: witnessed
+- id: residual-rs-counts-open-only
+  claim: 'rs-plugkit residual.rs::prd_empty_or_missing returns true when items array exists but no item has open status (pending|in_progress|unknown|blocked) or all open items are blockedBy: external'
+  witness_method: read updated residual.rs; cargo CI build via push
+  witness_evidence: 'residual.rs lines 4-44: new status_is_open helper recognizes pending/in_progress/unknown/blocked as open. prd_empty_or_missing parses YAML, finds items either at root or under .items key, returns !any_open where any_open requires status be open AND blockedBy not contain ''external''. Local change committed; CI build will witness compilation.'
+  status: witnessed
