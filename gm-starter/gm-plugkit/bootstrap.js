@@ -7,7 +7,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 
-const NPM_PACKAGE = '@anentrypoint/plugkit-wasm';
+const NPM_PACKAGE = 'plugkit-wasm';
 const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [5000, 15000];

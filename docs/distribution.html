@@ -121,7 +121,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <pre><code>always use the gm-skill skill for everything, always fan out subagents</code></pre>
 
-<p>That&rsquo;s the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/@anentrypoint/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
+<p>That&rsquo;s the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
 
 <h3>2.1 What &ldquo;Turnkey&rdquo; Excludes</h3>
 
@@ -162,7 +162,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 rs-plugkit
   &mdash; release.yml: build plugkit.wasm (wasm32-wasip1, ~&lt;200 KB)
-  &mdash; publish plugkit-bin Releases + npm @anentrypoint/plugkit-wasm
+  &mdash; publish plugkit-bin Releases + npm plugkit-wasm
   &mdash; bump gm-starter/gm.json::plugkitVersion and
        gm-starter/bin/plugkit.wasm.sha256 in AnEntrypoint/gm
 
@@ -189,7 +189,7 @@ users
 <p class="first">On first dispatch, <code>gm-plugkit/lib/skill-bootstrap.js</code> runs once per session:</p>
 
 <ol>
-  <li>Resolve <code>plugkit.wasm</code> via the bundled <code>@anentrypoint/plugkit-wasm</code> npm dependency. If absent (rare; npm install was offline), fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/plugkit.wasm</code>, verify against the <code>bin/plugkit.wasm.sha256</code> pinned in the skill.</li>
+  <li>Resolve <code>plugkit.wasm</code> via the bundled <code>plugkit-wasm</code> npm dependency. If absent (rare; npm install was offline), fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/plugkit.wasm</code>, verify against the <code>bin/plugkit.wasm.sha256</code> pinned in the skill.</li>
   <li>Atomically write the artifact under <code>.gm/plugkit.wasm</code>. Atomic-write is sufficient under wasm; there is no running daemon to kill.</li>
   <li>Instantiate the wasm module with the Node WASI imports plus the host-fn imports for <code>exec_js</code>, <code>fetch</code>, <code>kv_*</code>, <code>fs_*</code>, <code>browser</code>, etc.</li>
   <li>Record bootstrap status under <code>.gm/exec-spool/.bootstrap-status.json</code> for spool awareness; record any error under <code>.bootstrap-error.json</code>.</li>
@@ -233,7 +233,7 @@ users
 <p class="first">A turnkey wasm distribution buys convenience by trusting whoever built the wasm. We make this trust auditable, not implicit:</p>
 
 <ul>
-  <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>@anentrypoint/plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
+  <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
   <li><strong>SHA-256 manifest.</strong> The skill ships <code>bin/plugkit.wasm.sha256</code> pinned next to <code>gm-starter/gm.json::plugkitVersion</code>. The bootstrap verifies the wasm against this hash before instantiation; mismatch is fatal-soft (recorded to <code>.bootstrap-error.json</code> rather than thrown into the agent).</li>
   <li><strong>One target.</strong> <code>wasm32-wasip1</code> is reproducible from Cargo across Linux and macOS runners; mismatch between runs is a CI red, not silent drift.</li>
   <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all seven repositories and point their skill at their own fork&rsquo;s npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>

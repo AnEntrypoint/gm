@@ -79,7 +79,7 @@ sequenceDiagram
   participant Dev as Developer push
   participant Sib as rs-exec / rs-codeinsight / rs-search / rs-learn
   participant Plugkit as rs-plugkit
-  participant Bin as plugkit-bin Releases + npm @anentrypoint/plugkit-wasm
+  participant Bin as plugkit-bin Releases + npm plugkit-wasm
   participant GM as gm
   participant Npm as npm gm-skill
 
@@ -107,7 +107,7 @@ sequenceDiagram
 
   <h3>what it actually does</h3>
   <ul>
-    <li>compiles to a single <code>plugkit.wasm</code> targeting <code>wasm32-wasip1</code>; bundled in the <code>gm-plugkit</code> npm package as <code>@anentrypoint/plugkit-wasm</code></li>
+    <li>compiles to a single <code>plugkit.wasm</code> targeting <code>wasm32-wasip1</code>; bundled in the <code>gm-plugkit</code> npm package as <code>plugkit-wasm</code></li>
     <li>exposes the <code>dispatch_verb</code> wasm export &mdash; one entry point, every verb</li>
     <li>owns the FSM in <code>src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>; the agent never advances state directly, it dispatches <code>transition</code> and the orchestrator validates against the four state planes</li>
     <li>services orchestrator verbs natively: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code>, <code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code></li>

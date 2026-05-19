@@ -557,3 +557,14 @@
   - instruction response includes a one-line warning when this marker is present
   - Once watcher is restarted under supervisor, marker is cleared automatically
   route_family: execution
+- id: fix-bootstrap-npm-package-name
+  subject: Bootstrap fetches wrong npm name @anentrypoint/plugkit-wasm — published name is plugkit-wasm
+  category: bug
+  description: 'rs-plugkit release.yml publishes the wasm npm package as unscoped ''plugkit-wasm'' (line 159 of .github/workflows/release.yml). Both bootstrap files in gm-starter use NPM_PACKAGE=''@anentrypoint/plugkit-wasm''. Every npx extraction 404s and bootstrap falls back to GitHub Releases. Fix: change NPM_PACKAGE constant in gm-starter/gm-plugkit/bootstrap.js:10 and gm-starter/bin/bootstrap.js:10 from ''@anentrypoint/plugkit-wasm'' to ''plugkit-wasm''. Also update doc references (AGENTS.md cascade pipeline section, docs/paper.html, docs/crates.html, docs/distribution.html, CHANGELOG.md) so cascade docs match reality.'
+  acceptance:
+  - NPM_PACKAGE='plugkit-wasm' in gm-starter/gm-plugkit/bootstrap.js
+  - NPM_PACKAGE='plugkit-wasm' in gm-starter/bin/bootstrap.js
+  - AGENTS.md cascade section references plugkit-wasm not @anentrypoint/plugkit-wasm
+  - 'Witness: npx -y plugkit-wasm@latest resolves on npm registry'
+  effort: small
+  status: completed
