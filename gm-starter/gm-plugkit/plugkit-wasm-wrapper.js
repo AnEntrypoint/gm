@@ -932,6 +932,22 @@ function resolveVersion(instance) {
   return 'unknown';
 }
 
+function readFileVersionOnly() {
+  try { return fs.readFileSync(path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit.version'), 'utf8').trim(); } catch (_) { return null; }
+}
+
+function readInstanceVersion(instance) {
+  try {
+    const fn = instance && instance.exports && instance.exports.plugkit_version;
+    if (typeof fn !== 'function') return null;
+    const result = fn();
+    const ptr = Number(result & 0xffffffffn);
+    const len = Number(result >> 32n);
+    const bytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
+    return new TextDecoder().decode(bytes).trim();
+  } catch (_) { return null; }
+}
+
 async function runSpoolWatcher(instance, spoolDir) {
   const inDir = path.join(spoolDir, 'in');
   const outDir = path.join(spoolDir, 'out');
@@ -947,8 +963,11 @@ async function runSpoolWatcher(instance, spoolDir) {
         const lockTs = parseInt(tsStr, 10);
         const age = Date.now() - lockTs;
         if (age < 15000) {
-          console.error(`[plugkit-wasm] another watcher active (pid=${pidStr}, age=${age}ms); refusing to start`);
-          process.exit(1);
+          const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
+          console.error(`[plugkit-wasm] ${msg}; refusing to start`);
+          try { fs.writeFileSync(path.join(spoolDir, '.lock-rejection.json'), msg); } catch (_) {}
+          try { logEvent('plugkit', 'watcher.lock-rejected', { holder_pid: pidStr, lock_age_ms: age }); } catch (_) {}
+          process.exit(75);
         }
         console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
       }
@@ -1034,6 +1053,35 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(() => {
     try { reapTimedOutTasks(); } catch (_) {}
   }, 5000);
+
+  const _instanceVersionAtBoot = readInstanceVersion(instance);
+  setInterval(() => {
+    try {
+      const fileV = readFileVersionOnly();
+      const instV = _instanceVersionAtBoot;
+      if (!fileV || !instV || fileV === instV) return;
+      logEvent('plugkit', 'version.drift', {
+        instance_version: instV,
+        file_version: fileV,
+        action: 'exit-for-respawn',
+      });
+      console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} → exiting so supervisor reloads fresh wasm`);
+      try {
+        fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
+          reason: 'version-change',
+          ts: Date.now(),
+          pid: process.pid,
+          instance_version: instV,
+          file_version: fileV,
+        }));
+      } catch (_) {}
+      try { releaseLock(); } catch (_) {}
+      try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+      process.exit(0);
+    } catch (e) {
+      console.error(`[version-drift-check] error: ${e.message}`);
+    }
+  }, 60_000);
 
   setInterval(() => {
     try {

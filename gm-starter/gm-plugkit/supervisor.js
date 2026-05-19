@@ -130,27 +130,37 @@ function spawnWatcher(bootReason) {
     const shutdownReason = readShutdownReason();
     const reason = shutdownReason && shutdownReason.reason;
     const idleClean = reason === 'idle';
-    logEvent(idleClean ? 'supervisor.watcher-exited-idle' : 'supervisor.watcher-exited-unexpectedly', {
+    const plannedReasons = new Set(['idle', 'sigterm', 'version-change']);
+    const isPlanned = plannedReasons.has(reason);
+    const eventName = idleClean
+      ? 'supervisor.watcher-exited-idle'
+      : reason === 'version-change'
+        ? 'supervisor.watcher-exited-for-update'
+        : 'supervisor.watcher-exited-unexpectedly';
+    logEvent(eventName, {
       watcher_pid: currentChildPid,
       exit_code: code,
       signal,
       shutdown_reason: reason || null,
       had_shutdown_reason_file: shutdownReason !== null,
-      severity: idleClean ? 'info' : 'critical',
+      severity: isPlanned ? 'info' : 'critical',
       uptime_ms: Date.now() - lastSpawnedAt,
+      ...(shutdownReason || {}),
     });
     if (idleClean) {
       writeSupervisorStatus('exited-idle', { watcher_pid: currentChildPid });
       try { fs.unlinkSync(SUPERVISOR_PATH); } catch (_) {}
       process.exit(0);
     }
+    const respawnReason = reason === 'version-change' ? 'planned-restart-version-change' : 'unplanned-restart-after-exit';
     writeSupervisorStatus('restarting', {
       prior_watcher_pid: currentChildPid,
       prior_exit_code: code,
       prior_signal: signal,
       prior_shutdown_reason: reason || null,
+      respawn_reason: respawnReason,
     });
-    setTimeout(() => spawnWatcher('unplanned-restart-after-exit'), 1500);
+    setTimeout(() => spawnWatcher(respawnReason), 1500);
   });
 
   child.on('error', (err) => {

@@ -153,6 +153,23 @@ function sha256OfFile(filePath) {
   });
 }
 
+function resolveNpxJsCli() {
+  if (process.platform !== 'win32') return null;
+  const candidates = [];
+  if (process.env.npm_config_prefix) {
+    candidates.push(path.join(process.env.npm_config_prefix, 'node_modules', 'npm', 'bin', 'npx-cli.js'));
+  }
+  const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+  candidates.push(path.join(programFiles, 'nodejs', 'node_modules', 'npm', 'bin', 'npx-cli.js'));
+  candidates.push(path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js'));
+  const appdata = process.env.APPDATA;
+  if (appdata) candidates.push(path.join(appdata, 'npm', 'node_modules', 'npm', 'bin', 'npx-cli.js'));
+  for (const c of candidates) {
+    try { if (fs.existsSync(c)) return c; } catch (_) {}
+  }
+  return null;
+}
+
 async function extractNpmPackageWasm(destPath, version) {
   const tempDir = path.join(path.dirname(destPath), '.npm-extract-' + Date.now());
   try {
@@ -161,16 +178,28 @@ async function extractNpmPackageWasm(destPath, version) {
     log(`extracting npm package ${NPM_PACKAGE}@${version} to ${tempDir}`);
     obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
 
-    const result = spawnSync(
-      process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      [NPM_PACKAGE + '@' + version, '--prefix', tempDir],
-      {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: ATTEMPT_TIMEOUT_MS,
-        encoding: 'utf8',
-        windowsHide: true,
+    let cmd, args;
+    if (process.platform === 'win32') {
+      const npxCli = resolveNpxJsCli();
+      if (npxCli) {
+        cmd = process.execPath;
+        args = [npxCli, NPM_PACKAGE + '@' + version, '--prefix', tempDir];
+      } else {
+        cmd = 'npx.cmd';
+        args = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
       }
-    );
+    } else {
+      cmd = 'npx';
+      args = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
+    }
+
+    const result = spawnSync(cmd, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: ATTEMPT_TIMEOUT_MS,
+      encoding: 'utf8',
+      windowsHide: true,
+      shell: process.platform === 'win32' && cmd === 'npx.cmd',
+    });
 
     if (result.error) throw result.error;
     if (result.status !== 0) {
@@ -192,25 +221,37 @@ async function extractNpmPackageWasm(destPath, version) {
 
 function httpGetBuffer(url, timeoutMs) {
   const https = require('https');
+  const idleTimeoutMs = timeoutMs || 30000;
+  const totalDeadlineMs = (timeoutMs || 30000) * 2;
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: timeoutMs || 30000, headers: { 'user-agent': 'gm-plugkit-bootstrap' } }, (res) => {
+    let bytesReceived = 0;
+    let settled = false;
+    const settleReject = (err) => { if (!settled) { settled = true; reject(err); } };
+    const settleResolve = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const absTimer = setTimeout(() => {
+      try { req.destroy(new Error(`abs-deadline ${totalDeadlineMs}ms ${url} after ${bytesReceived} bytes`)); } catch (_) {}
+      settleReject(new Error(`abs-deadline ${totalDeadlineMs}ms ${url} after ${bytesReceived} bytes`));
+    }, totalDeadlineMs);
+    const req = https.get(url, { timeout: idleTimeoutMs, headers: { 'user-agent': 'gm-plugkit-bootstrap' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        httpGetBuffer(res.headers.location, timeoutMs).then(resolve, reject);
+        clearTimeout(absTimer);
+        httpGetBuffer(res.headers.location, timeoutMs).then(settleResolve, settleReject);
         return;
       }
       if (res.statusCode !== 200) {
         res.resume();
-        reject(new Error(`HTTP ${res.statusCode} ${url}`));
+        clearTimeout(absTimer);
+        settleReject(new Error(`HTTP ${res.statusCode} ${url}`));
         return;
       }
       const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-      res.on('error', reject);
+      res.on('data', c => { chunks.push(c); bytesReceived += c.length; });
+      res.on('end', () => { clearTimeout(absTimer); settleResolve(Buffer.concat(chunks)); });
+      res.on('error', (e) => { clearTimeout(absTimer); settleReject(e); });
     });
-    req.on('timeout', () => req.destroy(new Error(`timeout ${url}`)));
-    req.on('error', reject);
+    req.on('timeout', () => { try { req.destroy(new Error(`idle-timeout ${idleTimeoutMs}ms ${url}`)); } catch (_) {} settleReject(new Error(`idle-timeout ${idleTimeoutMs}ms ${url}`)); });
+    req.on('error', (e) => { clearTimeout(absTimer); settleReject(e); });
   });
 }
 

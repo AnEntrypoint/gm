@@ -488,7 +488,7 @@
   - No more split-brain between file-version and instance-version
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
 - id: watcher-reinstantiate-after-update
   subject: Watcher must re-instantiate wasm after bootstrap, not just trust resolveVersion file lookup
   category: feature
@@ -499,4 +499,61 @@
   - No more split-brain between file-version and instance-version
   effort: medium
   route_family: execution
+  status: completed
+- id: watcher-reinstantiate-on-version-drift
+  subject: Watcher exits when on-disk wasm version differs from running instance version, supervisor respawns
+  description: 'Witnessed: .status.json reports v0.1.417 (from file), health verb returns v0.1.411 (from running wasm instance). Three split-brain versions visible at once (file=0.1.417, instance=0.1.411, GitHub-latest=0.1.418). Update check writes new wasm to disk but running instance keeps executing pre-update code, so update_available/running_tasks/stuck_spool never reach the agent. Fix: in runSpoolWatcher, after the existing 5min update tick, also poll every 60s comparing resolveVersion(file) vs a fresh plugkit_version() call. On mismatch, log version.drift event with from/to/file_mtime, then process.exit(0). Supervisor''s child.on(''exit'') handler treats this as a reason=version-change planned exit (not unplanned-restart) and respawns under the fresh wasm. Witness: after fix, lands v0.1.418, .status.json and health verb agree, instruction response carries running_tasks/stuck_spool fields.'
+  category: feature
+  effort: medium
+  status: completed
+  acceptance:
+  - resolveVersion(file) and instance.exports.plugkit_version() are checked every 60s
+  - On mismatch, watcher writes shutdown-reason.json with reason=version-change and process.exit(0)
+  - Supervisor recognizes version-change as planned and respawns
+  - After respawn, health verb version == file version
+  - 'Witness on this machine: forced respawn loads 0.1.418, instruction response carries running_tasks field'
+  route_family: execution
+- id: bootstrap-npx-spawnSync-einval-windows
+  subject: Bootstrap's npm-extract path hits spawnSync npx.cmd EINVAL on Windows, every time
+  description: 'Witnessed running `bun x gm-plugkit@latest spool` on this Windows machine. Three retries of npm-extract all fail with `spawnSync npx.cmd EINVAL`. Root cause: spawning .cmd files on Windows requires shell:true or specific arg handling; the bootstrap path apparently passes args/flags that EINVAL on Windows when the runtime tries to invoke npx.cmd directly. Find the spawnSync call in gm-starter/gm-plugkit/bootstrap.js (the npm-extract code path) and fix it to either (a) use shell:true on Windows when target ends in .cmd/.bat, or (b) resolve the .cmd target to its underlying script and invoke node directly. Without this fix, every Windows bootstrap falls back to gh-releases path which adds latency and can also hang.'
+  category: bug
+  effort: small
+  status: completed
+  acceptance:
+  - bun x gm-plugkit@latest on Windows lands new wasm via npm-extract first try
+  - No more 'spawnSync npx.cmd EINVAL' in .relaunch.log
+  - Fallback to gh-releases only fires when npm path is genuinely unavailable
+  route_family: execution
+- id: bootstrap-gh-releases-hangs-silently
+  subject: GitHub Releases fallback download hangs >70s with no progress, no timeout, no error
+  description: 'Witnessed: after npm-extract path failed three times, the gh-releases fallback logged ''gh-releases download: https://github.com/AnEntrypoint/plugkit-bin/releases/download/v0.1.418/plugkit.wasm'' and then stalled. After 70 seconds, no further log lines, no .lock file (already cleared), nothing in v0.1.418 cache dir. Need: (1) the gh-releases download must enforce a real per-call timeout (curl --max-time, https.get timeout, etc.) so a hung TCP connection fails fast; (2) on timeout, log gh-releases.timeout event and either retry once or fail loudly with exit code so the caller sees the failure; (3) cumulative bootstrap budget so the whole `bun x gm-plugkit@latest spool` call returns with success-or-error in <30s, not silently wedged forever. Likely lives in gm-starter/gm-plugkit/bootstrap.js gh-releases code path.'
+  category: bug
+  effort: medium
+  status: completed
+  acceptance:
+  - gh-releases fetchBuf has explicit timeout that destroys the request on idle
+  - Bootstrap exits non-zero within 30s on download failure, never hangs forever
+  - Failure surfaces in .bootstrap-error.json with category and downloaded_bytes
+  route_family: execution
+- id: watcher-lock-rejection-leaves-zombies
+  subject: Watcher 'another active; refusing to start' exit leaves the bun-x shim parent alive — dozens of zombies accumulate
+  description: 'Witnessed via WMI query: 21 zombie processes running `bun.exe plugkit-wasm-wrapper.js spool` in pairs (shim + spawned bun), all instances of the runtime invocation that was rejected at the watcher.lock acquire step in plugkit-wasm-wrapper.js:721-724 (process.exit(1) on ''another watcher active''). The process.exit(1) terminates the wrapper but apparently does NOT propagate to the wrapping bun-x.cmd/bun.exe parent. Over time, every aborted `bun x gm-plugkit@latest spool` leaves an orphaned pair. Need: (1) on lock-rejection, the wrapper should print a parseable message and exit a sentinel code; (2) the bun-x/npx caller (the cli.js or bootstrap.js entry point) must detect this and itself exit; (3) optional — bootstrap should detect a zombie pair already running for this project and skip re-spawning entirely. Possibly also a Windows-specific orphan-parent problem because of conhost / job-object isolation.'
+  category: bug
+  effort: medium
+  status: completed
+  acceptance:
+  - After several bun x gm-plugkit@latest spool invocations on a watcher-already-running machine, no orphan bun/node pairs remain
+  - WMI count of 'plugkit-wasm-wrapper.js spool' processes equals the count of live watcher.lock holders
+  - Watcher-rejection path emits a clear .relaunch.log line and the caller exits
+  route_family: execution
+- id: existing-watcher-not-under-supervisor
+  subject: Pre-existing watchers run without the supervisor I just shipped, so unplanned-exit recovery doesn't fire
+  description: 'Witnessed: .supervisor.json absent for the currently-running watcher. Means it was started under old bootstrap that spawned the watcher directly, not via supervisor.js. So all the unplanned-restart-reporting and respawn-on-death machinery I shipped is dormant for this watcher. Need: a migration probe — on agent session start, if .status.json exists AND .supervisor.json does NOT exist, surface a warning (instruction response field or .pre-supervised-watcher.json marker) telling the agent the running watcher is unsupervised and should be migrated. Also: the bootstrap.js update-check path could detect this and respawn under supervisor on next update. Below criticality — the watcher works, just without the safety net.'
+  category: feature
+  effort: small
   status: pending
+  acceptance:
+  - bootstrap.js detects supervisor-less running watcher and writes .pre-supervised-watcher.json
+  - instruction response includes a one-line warning when this marker is present
+  - Once watcher is restarted under supervisor, marker is cleared automatically
+  route_family: execution
