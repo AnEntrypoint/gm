@@ -1289,8 +1289,10 @@ async function runSpoolWatcher(instance, spoolDir) {
     const files = [];
     try {
       for (const entry of fs.readdirSync(dir)) {
+        if (/\.tmp\.\d+(\.|$)/.test(entry)) continue;
         const fullPath = path.join(dir, entry);
-        const stat = fs.statSync(fullPath);
+        let stat;
+        try { stat = fs.statSync(fullPath); } catch (_) { continue; }
         if (stat.isFile()) {
           files.push(fullPath);
         } else if (stat.isDirectory()) {
@@ -1407,10 +1409,12 @@ async function runSpoolWatcher(instance, spoolDir) {
       let stale = 0;
       const walk = (dir) => {
         for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (/\.tmp\.\d+(\.|$)/.test(entry.name)) continue;
           const fp = path.join(dir, entry.name);
           if (entry.isDirectory()) walk(fp);
           else if (entry.isFile()) {
-            const s = fs.statSync(fp);
+            let s;
+            try { s = fs.statSync(fp); } catch (_) { continue; }
             if (s.mtimeMs < cutoff) {
               const rel = path.relative(inDir, fp);
               const verbDir = path.dirname(rel);
