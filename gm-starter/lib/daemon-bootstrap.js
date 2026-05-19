@@ -120,7 +120,7 @@ function computeIndexDigest(cwd = process.cwd()) {
   }
 }
 
-function writeStatusFile(daemonName, status, sessionId) {
+function writeStatusFile(daemonName, status, sessionId, childPid) {
   try {
     fs.mkdirSync(GM_STATE_DIR, { recursive: true });
     const statusFile = path.join(GM_STATE_DIR, `${daemonName}-status.json`);
@@ -129,7 +129,8 @@ function writeStatusFile(daemonName, status, sessionId) {
       status,
       sessionId,
       timestamp: new Date().toISOString(),
-      pid: process.pid,
+      pid: Number.isFinite(childPid) ? childPid : process.pid,
+      parent_pid: process.pid,
     };
     fs.writeFileSync(statusFile, JSON.stringify(payload, null, 2));
     emitDaemonEvent(daemonName, 'info', 'Status written', { file: statusFile });
@@ -220,7 +221,7 @@ async function ensureAcptoapiRunning() {
       });
       child.unref();
       emitDaemonEvent('acptoapi', 'info', 'Daemon spawned', { pid: child.pid, port, sessionId });
-      writeStatusFile('acptoapi', 'spawned', sessionId);
+      writeStatusFile('acptoapi', 'spawned', sessionId, child.pid);
       return { ok: true, message: 'acptoapi spawned', pid: child.pid };
     } catch (spawnErr) {
       emitDaemonEvent('acptoapi', 'warn', 'Spawn failed, fallback to SDK', {

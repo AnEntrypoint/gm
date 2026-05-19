@@ -20,6 +20,8 @@ If the `instruction` response carries a non-null `update_available`, plugkit dri
 
 The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. The watcher's own stdout/stderr is appended to `.gm/exec-spool/.watcher.log` — Read it to see plugkit's internal trace, dispatch timings, sweep actions, errors.
 
+The watcher self-shuts-down after 15 minutes idle (no spool I/O, no live browser session) and is restarted on next agent activity by a detached supervisor. `.gm/exec-spool/.unplanned-restart.json` is a critical-failure marker — present means a prior watcher died without a planned shutdown. Treat as a PRD-worthy incident on sight: diagnose via `.watcher.log` and `gm-log/<day>/plugkit.jsonl` events `supervisor.watcher-exited-unexpectedly` and `supervisor.heartbeat-stale` around the prior_status.ts timestamp, then delete the marker once root cause is named.
+
 ## Boot the spool watcher (first turn only)
 
 Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old, boot via the npm package — `bun x gm-plugkit@latest spool` fetches the freshest plugkit (wasm + wrapper), copies them into `~/.claude/gm-tools/`, then enters spool mode:

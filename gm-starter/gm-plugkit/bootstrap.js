@@ -777,14 +777,6 @@ function startSpoolDaemon() {
       return { ok: false, error: `wrapper not at ${wrapper} — ensureReady() must run first` };
     }
     const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
-    let cmd = runtime;
-    let args = [wrapper, 'spool'];
-    try {
-      require('child_process').execFileSync(runtime, ['--version'], { stdio: 'ignore' });
-    } catch (_) {
-      cmd = process.execPath;
-      args = [wrapper, 'spool'];
-    }
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
@@ -796,18 +788,43 @@ function startSpoolDaemon() {
         fs.renameSync(logPath, path.join(spoolDir, '.watcher.log.1'));
       }
     } catch (_) {}
+
+    const supervisor = path.join(__dirname, 'supervisor.js');
+    if (process.env.PLUGKIT_SKIP_SUPERVISOR === '1' || !fs.existsSync(supervisor)) {
+      let cmd = runtime;
+      let args = [wrapper, 'spool'];
+      try {
+        require('child_process').execFileSync(runtime, ['--version'], { stdio: 'ignore' });
+      } catch (_) {
+        cmd = process.execPath;
+        args = [wrapper, 'spool'];
+      }
+      const logFd = fs.openSync(logPath, 'a');
+      try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (no supervisor) ---\n`); } catch (_) {}
+      const child = require('child_process').spawn(cmd, args, {
+        detached: true,
+        stdio: ['ignore', logFd, logFd],
+        windowsHide: true,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_BOOT_REASON: 'direct-no-supervisor' },
+      });
+      try { fs.closeSync(logFd); } catch (_) {}
+      const pid = child.pid;
+      child.unref();
+      return { ok: true, pid, wrapper, runtime: cmd, logPath, supervised: false };
+    }
+
     const logFd = fs.openSync(logPath, 'a');
-    try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
-    const child = require('child_process').spawn(cmd, args, {
+    try { fs.writeSync(logFd, `\n--- supervisor spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
+    const child = require('child_process').spawn(process.execPath, [supervisor], {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
-      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_RUNTIME: runtime },
     });
     try { fs.closeSync(logFd); } catch (_) {}
     const pid = child.pid;
     child.unref();
-    return { ok: true, pid, wrapper, runtime: cmd, logPath };
+    return { ok: true, pid, wrapper, supervisor, runtime, logPath, supervised: true };
   } catch (e) {
     return { ok: false, error: e.message };
   }

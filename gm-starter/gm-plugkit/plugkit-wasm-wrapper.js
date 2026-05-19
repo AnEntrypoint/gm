@@ -123,8 +123,33 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
 }
 
 const TMP_DIR = os.tmpdir();
-const BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json');
-const BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
+const LEGACY_BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json');
+const LEGACY_BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
+
+function browserStateDir(cwd) {
+  const dir = path.join(cwd || process.cwd(), '.gm', 'exec-spool');
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
+  return dir;
+}
+function browserPortsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-ports.json'); }
+function browserSessionsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-sessions.json'); }
+
+function migrateLegacyBrowserState(cwd) {
+  const dst1 = browserPortsFile(cwd);
+  const dst2 = browserSessionsFile(cwd);
+  try {
+    if (!fs.existsSync(dst1) && fs.existsSync(LEGACY_BROWSER_PORTS_FILE)) {
+      const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_PORTS_FILE, 'utf-8'));
+      if (legacy && typeof legacy === 'object') fs.writeFileSync(dst1, JSON.stringify(legacy, null, 2));
+    }
+  } catch (_) {}
+  try {
+    if (!fs.existsSync(dst2) && fs.existsSync(LEGACY_BROWSER_SESSIONS_FILE)) {
+      const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_SESSIONS_FILE, 'utf-8'));
+      if (legacy && typeof legacy === 'object') fs.writeFileSync(dst2, JSON.stringify(legacy, null, 2));
+    }
+  } catch (_) {}
+}
 
 function readJsonFile(fp, fallback) {
   try { return JSON.parse(fs.readFileSync(fp, 'utf-8')); } catch (_) { return fallback; }
@@ -246,8 +271,11 @@ function runPlaywriter(pw, args, timeoutMs) {
 }
 
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
-  const ports = readJsonFile(BROWSER_PORTS_FILE, {});
-  const sessions = readJsonFile(BROWSER_SESSIONS_FILE, {});
+  migrateLegacyBrowserState(cwd);
+  const portsFile = browserPortsFile(cwd);
+  const sessionsFile = browserSessionsFile(cwd);
+  const ports = readJsonFile(portsFile, {});
+  const sessions = readJsonFile(sessionsFile, {});
   const existing = ports[claudeSessionId];
   if (existing && existing.port && isPortAliveSync(existing.port)) {
     const pwIds = sessions[claudeSessionId] || [];
@@ -265,6 +293,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     '--disable-features=Translate',
   ];
   const child = spawn(chrome, chromeArgs, { detached: true, stdio: 'ignore' });
+  const chromePid = child.pid;
   child.unref();
   const deadline = Date.now() + 10000;
   let alive = false;
@@ -288,10 +317,10 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     try { const j = JSON.parse(out); pwSessionId = j.id || j.session_id || j.session; } catch (_) {}
   }
   if (!pwSessionId) throw new Error(`could not parse playwriter session id from: ${out}`);
-  ports[claudeSessionId] = { port, profileDir };
+  ports[claudeSessionId] = { port, profileDir, pid: chromePid };
   sessions[claudeSessionId] = [pwSessionId];
-  writeJsonFile(BROWSER_PORTS_FILE, ports);
-  writeJsonFile(BROWSER_SESSIONS_FILE, sessions);
+  writeJsonFile(portsFile, ports);
+  writeJsonFile(sessionsFile, sessions);
   return pwSessionId;
 }
 
@@ -742,6 +771,83 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   acquireLock();
   setInterval(refreshLock, 5000);
+
+  const IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_IDLE_LIMIT_MS, 10) || 15 * 60 * 1000;
+  const IDLE_CHECK_MS = 60_000;
+  const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
+  const STATUS_PATH_FOR_TEARDOWN = path.join(spoolDir, '.status.json');
+  const ACPTOAPI_STATUS_PATH = path.join(process.cwd(), '.gm', 'acptoapi-status.json');
+  let lastActivityMs = Date.now();
+  function markActivity(source) {
+    lastActivityMs = Date.now();
+  }
+
+  function killPidQuiet(pid) {
+    if (!Number.isFinite(pid) || pid <= 0 || pid === process.pid) return false;
+    try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+    if (process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', timeout: 3000 }); } catch (_) {}
+    }
+    return true;
+  }
+
+  function teardownAll(reason) {
+    try {
+      logEvent('plugkit', 'watcher.teardown', { reason, idle_ms: Date.now() - lastActivityMs });
+      console.log(`[plugkit-wasm] teardown reason=${reason}`);
+    } catch (_) {}
+
+    try {
+      if (fs.existsSync(ACPTOAPI_STATUS_PATH)) {
+        const status = JSON.parse(fs.readFileSync(ACPTOAPI_STATUS_PATH, 'utf-8'));
+        if (status && Number.isFinite(status.pid)) killPidQuiet(status.pid);
+        try { fs.unlinkSync(ACPTOAPI_STATUS_PATH); } catch (_) {}
+      }
+    } catch (_) {}
+
+    try {
+      const portsFile = browserPortsFile(process.cwd());
+      const sessionsFile = browserSessionsFile(process.cwd());
+      const ports = readJsonFile(portsFile, {});
+      for (const [sid, entry] of Object.entries(ports)) {
+        if (entry && Number.isFinite(entry.pid)) killPidQuiet(entry.pid);
+      }
+      try { fs.unlinkSync(portsFile); } catch (_) {}
+      try { fs.unlinkSync(sessionsFile); } catch (_) {}
+    } catch (_) {}
+
+    try {
+      fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({
+        reason,
+        ts: Date.now(),
+        pid: process.pid,
+        idle_ms: Date.now() - lastActivityMs,
+      }));
+    } catch (_) {}
+
+    try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+    try { releaseLock(); } catch (_) {}
+    process.exit(0);
+  }
+
+  setInterval(() => {
+    try {
+      const idleMs = Date.now() - lastActivityMs;
+      if (idleMs < IDLE_LIMIT_MS) return;
+      try {
+        const ports = readJsonFile(browserPortsFile(process.cwd()), {});
+        let browserAlive = false;
+        for (const entry of Object.values(ports)) {
+          if (entry && Number.isFinite(entry.port) && isPortAliveSync(entry.port)) { browserAlive = true; break; }
+        }
+        if (browserAlive) { markActivity('browser-port-alive'); return; }
+      } catch (_) {}
+      teardownAll('idle');
+    } catch (e) {
+      console.error(`[idle-check] error: ${e.message}`);
+    }
+  }, IDLE_CHECK_MS);
+
   process.on('SIGINT', () => { releaseLock(); process.exit(0); });
   process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
   process.on('exit', releaseLock);
@@ -767,7 +873,49 @@ async function runSpoolWatcher(instance, spoolDir) {
   const _bootVersion = resolveVersion(instance);
   console.log(`[plugkit-wasm] plugkit v${_bootVersion} (wasm)`);
   console.log(`[plugkit-wasm] watching ${inDir}`);
-  logEvent('plugkit', 'watcher.boot', { version: _bootVersion, in_dir: inDir, out_dir: outDir, spool_dir: spoolDir });
+
+  let _priorShutdown = null;
+  let _priorStatus = null;
+  try { _priorShutdown = JSON.parse(fs.readFileSync(SHUTDOWN_REASON_PATH, 'utf-8')); } catch (_) {}
+  try { _priorStatus = JSON.parse(fs.readFileSync(STATUS_PATH_FOR_TEARDOWN, 'utf-8')); } catch (_) {}
+  const _bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
+  const _supervisorPid = parseInt(process.env.PLUGKIT_SUPERVISOR_PID, 10) || null;
+  const restartContext = {
+    boot_reason: _bootReason,
+    supervisor_pid: _supervisorPid,
+    prior_shutdown: _priorShutdown,
+    prior_status: _priorStatus,
+    prior_status_age_ms: _priorStatus && Number.isFinite(_priorStatus.ts) ? Date.now() - _priorStatus.ts : null,
+  };
+  const _isPlannedBoot = _priorShutdown && (_priorShutdown.reason === 'idle' || _priorShutdown.reason === 'sigterm' || _priorShutdown.reason === 'version-change');
+  const _isFirstBoot = !_priorShutdown && !_priorStatus;
+  const UNPLANNED_RESTART_MARKER = path.join(spoolDir, '.unplanned-restart.json');
+  if (!_isPlannedBoot && !_isFirstBoot) {
+    const incidentPayload = {
+      ts: Date.now(),
+      version: _bootVersion,
+      severity: 'critical',
+      ...restartContext,
+      log_tail_path: path.join(spoolDir, '.watcher.log'),
+      gm_log_dir: GM_LOG_ROOT,
+      instruction: 'Prior watcher died without a planned shutdown. This is treated as a critical failure. Inspect .watcher.log and gm-log/<day>/plugkit.jsonl events supervisor.watcher-exited-unexpectedly + supervisor.heartbeat-stale around the prior_status.ts timestamp to diagnose root cause.',
+    };
+    logEvent('plugkit', 'watcher.unplanned-restart', incidentPayload);
+    try {
+      let history = [];
+      try { history = JSON.parse(fs.readFileSync(UNPLANNED_RESTART_MARKER, 'utf-8')).history || []; } catch (_) {}
+      history.push(incidentPayload);
+      if (history.length > 20) history = history.slice(-20);
+      fs.writeFileSync(UNPLANNED_RESTART_MARKER, JSON.stringify({
+        latest: incidentPayload,
+        count: history.length,
+        history,
+      }, null, 2));
+    } catch (_) {}
+    console.error(`[plugkit-wasm] UNPLANNED RESTART detected — prior watcher died without writing .shutdown-reason.json. prior_status_age_ms=${restartContext.prior_status_age_ms} boot_reason=${_bootReason}`);
+  }
+  try { fs.unlinkSync(SHUTDOWN_REASON_PATH); } catch (_) {}
+  logEvent('plugkit', 'watcher.boot', { version: _bootVersion, in_dir: inDir, out_dir: outDir, spool_dir: spoolDir, ...restartContext });
 
   const PROCESSED_MAX = 10000;
   const processed = new Map();
@@ -934,6 +1082,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
   const pollInterval = setInterval(async () => {
     const existing = walkDir(inDir);
+    if (existing.length > 0) markActivity('poll');
     for (const fullPath of existing) {
       await processFile(fullPath);
     }
@@ -1004,6 +1153,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   watch(inDir, { recursive: true }, (eventType, filename) => {
     if (!filename) return;
     const fullPath = path.join(inDir, filename);
+    markActivity('watch');
 
     clearTimeout(debounce[fullPath]);
     debounce[fullPath] = setTimeout(async () => {
