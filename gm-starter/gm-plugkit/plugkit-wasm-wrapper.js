@@ -56,10 +56,11 @@ function turnTick(sess, verb, taskBase, phase) {
   if (phase) { t.phases.add(phase); t.lastPhase = phase; }
 }
 
-let __sessCache = { value: '', mtimeMs: 0, readAt: 0 };
+let __sessCache = { value: '', mtimeMs: 0, readAt: 0, srcMtimeMs: 0 };
 function readCurrentSess() {
   const now = Date.now();
   if (now - __sessCache.readAt < 1000) return __sessCache.value;
+  let found = '';
   try {
     const p = path.join(process.cwd(), '.gm', 'exec-spool', '.session-current');
     const st = fs.statSync(p);
@@ -67,9 +68,24 @@ function readCurrentSess() {
       __sessCache.value = fs.readFileSync(p, 'utf8').trim();
       __sessCache.mtimeMs = st.mtimeMs;
     }
+    found = __sessCache.value;
   } catch (_) {}
+  if (!found) {
+    try {
+      const sp = path.join(process.cwd(), '.gm', 'turn-state.json');
+      const st = fs.statSync(sp);
+      if (st.mtimeMs !== __sessCache.srcMtimeMs) {
+        const obj = JSON.parse(fs.readFileSync(sp, 'utf8'));
+        if (obj && typeof obj.session_id === 'string') found = obj.session_id;
+        __sessCache.srcMtimeMs = st.mtimeMs;
+      } else if (__sessCache.value) {
+        found = __sessCache.value;
+      }
+    } catch (_) {}
+  }
   __sessCache.readAt = now;
-  return __sessCache.value || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  __sessCache.value = found || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  return __sessCache.value;
 }
 
 function logEvent(sub, event, fields) {
