@@ -811,6 +811,37 @@ function getBinaryPath() {
   return getWasmPath();
 }
 
+function probeUnsupervisedWatcher(spoolDir) {
+  try {
+    const statusPath = path.join(spoolDir, '.status.json');
+    const supervisorPath = path.join(spoolDir, '.supervisor.json');
+    const markerPath = path.join(spoolDir, '.pre-supervised-watcher.json');
+    if (!fs.existsSync(statusPath)) {
+      try { fs.unlinkSync(markerPath); } catch (_) {}
+      return;
+    }
+    const status = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
+    const age = Date.now() - (status && status.ts || 0);
+    if (age > 30_000) {
+      try { fs.unlinkSync(markerPath); } catch (_) {}
+      return;
+    }
+    if (fs.existsSync(supervisorPath)) {
+      try { fs.unlinkSync(markerPath); } catch (_) {}
+      return;
+    }
+    const marker = {
+      ts: Date.now(),
+      reason: 'running-watcher-has-no-supervisor',
+      watcher_pid: status.pid,
+      watcher_version: status.version,
+      severity: 'warn',
+      instruction: 'A running watcher was started under an older bootstrap that did not spawn a supervisor. Unplanned-restart recovery and idle-teardown coordination are dormant. To migrate, stop the current watcher (taskkill /F /T /PID <watcher_pid> on Windows or kill <watcher_pid> on POSIX) and let the next bootstrap re-spawn it under supervisor.js.',
+    };
+    fs.writeFileSync(markerPath, JSON.stringify(marker, null, 2));
+  } catch (_) {}
+}
+
 function startSpoolDaemon() {
   try {
     const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
@@ -821,6 +852,7 @@ function startSpoolDaemon() {
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
+    probeUnsupervisedWatcher(spoolDir);
     const logPath = path.join(spoolDir, '.watcher.log');
     try {
       const stat = fs.statSync(logPath);

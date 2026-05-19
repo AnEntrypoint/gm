@@ -216,6 +216,7 @@ process.on('SIGTERM', () => {
 
 writeSupervisorStatus('starting', {});
 logEvent('supervisor.starting', { spool_dir: spoolDir });
+try { fs.unlinkSync(path.join(spoolDir, '.pre-supervised-watcher.json')); } catch (_) {}
 spawnWatcher('initial');
 setInterval(checkWatcherHealth, POLL_INTERVAL_MS);
 setInterval(() => writeSupervisorStatus('watching', { watcher_pid: currentChildPid, boot_reason: currentBootReason }), 10_000);

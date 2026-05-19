@@ -170,6 +170,25 @@ function markInstructionSeen(sessionId) {
   } catch (_) {}
 }
 
+const DEFER_MARKERS = [
+  'next pass', 'next session', 'next turn',
+  'defer to later', 'deferred to later', 'deferred for later',
+  'future pass', 'future session', 'future turn',
+  'address it next', 'address this next', 'leave for next',
+  'documented for next', 'documented for future',
+  'below criticality', 'skip for now', 'punt for now',
+  'do later', 'fix later', 'later pass',
+];
+
+function deferMarkerIn(text) {
+  if (!text) return null;
+  const lower = String(text).toLowerCase();
+  for (const m of DEFER_MARKERS) {
+    if (lower.includes(m)) return m;
+  }
+  return null;
+}
+
 function checkDispatchGates(sessionId, operation, extra) {
   const cwd = process.cwd();
   const gm = path.join(cwd, '.gm');
@@ -224,6 +243,17 @@ function checkDispatchGates(sessionId, operation, extra) {
 
   if (operation === 'mutable-resolve' && extra && (!extra.witness_evidence || String(extra.witness_evidence).trim() === '')) {
     logDeviation('deviation.mutable-without-evidence', { mutable_id: extra.id || null });
+  }
+
+  if (operation === 'git' && extra && extra.commit_message) {
+    const marker = deferMarkerIn(extra.commit_message);
+    if (marker) {
+      logDeviation('deviation.commit-message-defer', { marker, operation });
+      return {
+        allowed: false,
+        reason: `commit message rejected: deferral phrase '${marker}' detected. Per paper §22 Fix on Sight, defer markers are forced closure. Either inline-fix and re-witness, or split the deferred work as a separate PRD item with blockedBy: [external] before committing. Rewrite the commit message and retry.`,
+      };
+    }
   }
 
   if (!['write', 'edit', 'git'].includes(operation)) return { allowed: true };
