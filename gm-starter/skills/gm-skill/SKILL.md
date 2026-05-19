@@ -1,133 +1,23 @@
 ---
 name: gm-skill
-description: AI-native software engineering harness. plugkit owns all state and serves every instruction via the spool. The agent dispatches verbs; plugkit tracks phase, mutables, PRD, and recall.
+description: AI-native software engineering harness. Every action routes through plugkit via the spool. The agent dispatches verbs; plugkit owns phase, mutables, PRD, recall, instructions, and every other concern.
 allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 ---
 
-# gm — single entry point
+# gm — only plugkit
 
-Every turn begins with `instruction`. Write `.gm/exec-spool/in/instruction/<N>.txt` (empty body) and read the response — its `instruction` field is the active phase prose, its `prd_items` is the live work plan, its `mutables_pending` is what blocks the EMIT gate, its `recall_hits` is the prior memory already loaded for you. Follow that prose imperatively until the phase's exit condition is met, then `transition`. The user's request is the authorization; the PRD is the receipt; the chain runs PLAN → EXECUTE → EMIT → VERIFY → COMPLETE without re-asking between phases.
+Plugkit owns the discipline. Every turn, dispatch the `instruction` verb and follow the prose it returns. There is no other tool to reach for, no other source of policy to consult, no other surface to plan against. Read/Edit/Bash/Grep/Glob before the first `instruction` dispatch is the failure mode this skill prevents — every one of those is a step taken outside the loop, and the loop is the work.
 
-Direct Read/Edit/Bash before the first `instruction` dispatch is the failure mode this skill prevents. If you find yourself reaching for a tool to "just take a quick look", you have already dropped the loop — dispatch `instruction` first, then act on its prose.
-
-Fix on Sight. Every unexpected output, broken neighbor, lockfile drift, suppressed error, or stale generated file surfaced during work becomes a PRD item the same turn and is executed before COMPLETE. Surprise is a new mutable, not noise to absorb. Stubs, mocks, placeholder returns, fixture-only paths, and "always succeeds" code paths are forbidden in shipped material; acceptance is real input through real code into real output, witnessed. Edits to code that runs in a browser require a live `browser` verb witness in the same turn — Browser Witness is non-negotiable.
-
-When the question is how wide, how deep, how many phases, how destructive — the answer is wider, deeper, every phase, fully. The shape of the work is whatever the request admits at its outermost reach from this session. Half-measures, single-slice reads, narrow takes, and "do the minimum that satisfies" are forced closure wearing humility. The covering family is the default; the smaller cut is the exception, and the exception requires a named blocker. Larger always beats smaller when both are witnessable.
-
-Do not create documentation files the user did not ask for. No COMPLETED.md, no SUMMARY.txt, no IMPLEMENTATION_NOTES.md, no START-HERE.md, no *-STATUS.md, no build-output.txt left behind, no new top-level `.md` or `.txt` of any kind. Closure narrative lives in the PRD (which plugkit owns), in `memorize-fire` (which becomes recallable next session), and in the commit message (which `git log` preserves) — those are the only sanctioned destinations. A new doc at project root, in `docs/`, or anywhere else is a residual the next stop-gate will flag.
-
-Before any apparent stop, dispatch `residual-scan`. If it returns work that fits the spirit of the original ask and is reachable from this session, expand the PRD and execute; only residuals genuinely out-of-spirit or out-of-reach are name-and-stop. A turn that ends with uncommitted changes, an open PRD slice, or unresolved mutables has not actually stopped — it has stalled the chain.
-
-If the `instruction` response carries a non-null `update_available`, plugkit drift has been detected on disk and the running watcher is behind. Rebootstrap before continuing — newer fixes are sitting on disk unused, and every dispatch is wasted on stale code. `bun x gm-plugkit@latest` (or `npx -y gm-plugkit@latest`) is the one-shot: it fetches the new wasm, replaces the artifact, and the watcher reloads. Drift past one version is a deviation.
-
-If `running_tasks` is non-empty, you own them — every entry is a subprocess you started that's still consuming CPU/memory. Stop ones that have outlived their purpose with `task-stop` (write `.gm/exec-spool/in/task-stop/<N>.txt` with `{id: "t<n>"}`). The 15-min idle reaper is the last resort, not a substitute for hygiene. If `stuck_spool` is non-empty, dispatches are wedged — the watcher's host_exec_js is synchronous and a stuck body blocks every other verb until it returns. Diagnose via `.watcher.log` and consider rebootstrapping if it doesn't clear; spool bodies are Turing-complete and can loop forever. Long-running work goes through `task-spawn` (returns a `task_id` immediately, body runs detached), not through the sync `nodejs`/`bash`/`python` language verbs.
-
-If `should_residual_scan` is true, dispatch `residual-scan` before any text response that reads like a stop. The marker is one-shot per stopping window — re-checking after you've fired it is fine; firing it for the first time in a session that has pending work is non-negotiable. If `unsupervised_watcher` is non-null, the running watcher predates supervisor.js and has no unplanned-restart recovery; stop the named PID and let the next bootstrap re-spawn it under supervision.
-
-No deferral phrasing. "Next pass", "next session", "future work", "defer to later", "address it next", "below criticality", "do later", "fix later" are all forced closure dressed up. `prd-add` rejects items whose description/subject/notes contain these markers unless the item carries `blockedBy: [external]` or `blockedBy: [out-of-reach]`. The dispatch gate also rejects git commits whose message contains them. Per §22 Fix on Sight: in-spirit reachable work is executed this turn, not deferred. If the work is genuinely unreachable, declare it with blockedBy; that's an auditable refusal, not a defer.
-
-The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. The watcher's own stdout/stderr is appended to `.gm/exec-spool/.watcher.log` — Read it to see plugkit's internal trace, dispatch timings, sweep actions, errors.
-
-The watcher self-shuts-down after 15 minutes idle (no spool I/O, no live browser session) and is restarted on next agent activity by a detached supervisor. `.gm/exec-spool/.unplanned-restart.json` is a critical-failure marker — present means a prior watcher died without a planned shutdown. Treat as a PRD-worthy incident on sight: diagnose via `.watcher.log` and `gm-log/<day>/plugkit.jsonl` events `supervisor.watcher-exited-unexpectedly` and `supervisor.heartbeat-stale` around the prior_status.ts timestamp, then delete the marker once root cause is named.
-
-## Boot the spool watcher (first turn only)
-
-Check `.gm/exec-spool/.status.json`. If absent or `ts` > 15s old, boot via the npm package — `bun x gm-plugkit@latest spool` fetches the freshest plugkit (wasm + wrapper), copies them into `~/.claude/gm-tools/`, then enters spool mode:
+If `.gm/exec-spool/.status.json` is absent or its `ts` is older than 15s, boot the watcher first — that is the one thing this skill does directly, because nothing else can be served until the spool is alive:
 
 ```
 bun x gm-plugkit@latest spool > /dev/null 2>&1 &
 ```
 
-If `bun` is not available, fall back to `npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` or to the local wrapper if it's already installed: `node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool > /dev/null 2>&1 &`. The wrapper has a self-heal: if it detects a `LinkError` or missing wasm at instantiation, it re-runs bootstrap automatically and retries.
+(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` is missing.) Wait 2s, confirm `.status.json` heartbeat is fresh, then proceed.
 
-Wait 2 seconds, then verify boot:
+Now dispatch `instruction` by writing an empty body to `.gm/exec-spool/in/instruction/<N>.txt` and reading the response from `.gm/exec-spool/out/instruction-<N>.json`. The response carries the active phase prose, the PRD, the open mutables, prior recall, and every signal that should shape the next action. Follow that prose imperatively. When its exit condition is met, dispatch `transition`. The chain runs PLAN → EXECUTE → EMIT → VERIFY → COMPLETE under plugkit's direction; this skill does not duplicate that prose, does not enumerate verbs, does not describe the dispatch format — plugkit will, on demand, when you ask it.
 
-- Read `.gm/exec-spool/.cli-status.json` — the launcher writes its phase here (`starting` → `bootstrapped` → `ready`). Present with `phase: "ready"` = good.
-- Read `.gm/exec-spool/.status.json` — the watcher writes its heartbeat here every 5s. Fresh `ts` (within 15s) = watcher alive.
-- If neither file exists or `.cli-status.json` is stuck at an earlier phase, read `.gm/exec-spool/.bootstrap-error.json` — the launcher writes `{error_phase, error_message, stack}` on any failure even when stdout/stderr were redirected to `/dev/null`. Also read `.gm/exec-spool/.watcher.log` for the post-spawn trace. Surface the error to the user; do not retry blindly.
+Nothing else lives here. Every concern that feels like it belongs in this file — how to batch, what verbs exist, when to scan for residuals, how the browser surface works, where the watcher logs go, how updates land, when to stop — is served by `instruction` when the moment calls for it. Trying to remember it from this skill instead of asking plugkit is forced closure: the agent acts on a stale snapshot of policy instead of the live one plugkit holds.
 
-## Plugkit version updates
-
-The watcher checks GitHub Releases every 5 minutes for a newer plugkit. If drift is detected, it writes `.gm/exec-spool/.update-available.json` with `{installed, latest, instruction, update_url}`; if no drift, the file is removed. Read this file at session start (and occasionally afterward); if present, kill the current watcher, run `bootstrapPlugkit({latest: true})` once to fetch the new wasm, then restart the watcher. Default bootstrap never hits the network — only `{latest: true}` fetches the newest binary.
-
-## Dispatch ABI
-
-Write request body to `.gm/exec-spool/in/<verb>/<N>.txt`. Read response from `.gm/exec-spool/out/<verb>-<N>.json` (nested verbs) or `out/<N>.json` (root verbs). Bodies are JSON, raw code, or a single phase name depending on the verb.
-
-## Batch dispatch — never serial round-trips for independent verbs
-
-The watcher processes verbs sequentially internally, but the agent's bottleneck is round-trip latency, not the watcher. **Write N inputs in one message via parallel Write tool calls, then read N outputs in one message via parallel Read calls.** A 5-verb batch is one agent turn, not five.
-
-Example PLAN orient pack — 3 recalls + 3 codesearches in ONE message:
-```
-Write .gm/exec-spool/in/recall/1.txt        body: {"query":"<noun A>"}
-Write .gm/exec-spool/in/recall/2.txt        body: {"query":"<noun B>"}
-Write .gm/exec-spool/in/recall/3.txt        body: {"query":"<noun C>"}
-Write .gm/exec-spool/in/codesearch/1.txt    body: {"query":"<phrase X>"}
-Write .gm/exec-spool/in/codesearch/2.txt    body: {"query":"<phrase Y>"}
-Write .gm/exec-spool/in/codesearch/3.txt    body: {"query":"<phrase Z>"}
-```
-
-Then in the NEXT message, all 6 Reads in parallel.
-
-For dependent verbs (transition after instruction, prd-resolve after work), the agent must serialize — but only at the dependency boundary, not across independent dispatches.
-
-## State lives in plugkit, not in conversation context
-
-Never Read `.gm/prd.yml` or `.gm/mutables.yml` directly. Every `instruction` response carries the data you need:
-
-```
-{
-  phase,               // current phase
-  instruction,         // phase prose (the active discipline)
-  prd_items: [...],    // full PRD items with id, subject, status, fields
-  prd_pending_count,
-  mutables_pending: [{id, claim, witness_method, witness_evidence, status}, ...],
-  recall_hits: [...],  // auto-fired against phase + first pending PRD subject
-  next_phase_hint
-}
-```
-
-## Plugkit observability — read .watcher.log
-
-The watcher writes its own stdout + stderr (plus the wasm cdylib's `println!`/`eprintln!`) to `.gm/exec-spool/.watcher.log`. Useful when:
-
-- A dispatch returned an error you don't understand → tail the log for the stack
-- A verb seems slow → log shows `[dispatch] ← verb=X ms=N`
-- Sweep cleaned up something → log shows `[retention]` or `[stale-sweep]` lines
-- Watcher boot issues → `--- watcher boot ... ---` markers
-
-Read with `offset` to tail:
-```
-Read .gm/exec-spool/.watcher.log offset=<last-known-line>
-```
-
-The log is rotated at 10MB (older content moves to `.watcher.log.1`).
-
-## The loop
-
-Add PRD items via `prd-add` (JSON body), resolve via `prd-resolve` (id as body). Add mutables via `mutable-add`, resolve via `mutable-resolve` once `witness_evidence` is filled — narrative resolution is rejected; only file:line, codesearch hit, or exec output snippet counts. Every `mutable-resolve` auto-fires memorize so the witness becomes recall-able next session.
-
-Resolve every entry in `mutables_pending` before transitioning. When the phase's exit condition is met, dispatch `transition` with the next phase name (or empty for auto-advance). Each transition response embeds `recall_hits` automatically — relevant prior memos surface without you asking.
-
-Stop only when `phase` is `COMPLETE` AND `residual-scan` returns empty AND the worktree is clean AND CI is green. Any of those false means the chain has not finished.
-
-## Orchestrator verbs
-
-`instruction`, `transition`, `phase-status`, `prd-add`, `prd-resolve`, `prd-list`, `mutable-add`, `mutable-resolve`, `mutable-list`, `memorize-fire`, `residual-scan`, `auto-recall`, `task-spawn`, `task-list`, `task-stop`, `task-output`.
-
-## Host verbs
-
-`fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `status`, `wait`, `sleep`, `close`, `kill-port`, `forget`, `feedback`, `learn-status`, `learn-debug`, `learn-build`, `discipline`, `pause`, `runner`, `inference`, `browser`.
-
-## Language verbs
-
-`nodejs`, `python`, `bash`, `powershell`, `ssh`, `go`, `rust`, `c`, `cpp`, `java`, `deno` — write raw code as the request body.
-
-### Browser
-
-The `browser` verb is the only sanctioned way to drive a live page. Do not reach for any other browser tool, library, or skill — the host owns the managed session and a parallel surface fragments witness state. Dispatch `.gm/exec-spool/in/browser/<N>.txt` with raw JavaScript as the body. The host runs Chrome under a project-scoped profile at `<cwd>/.gm/browser-profile/` (cookies/login persist per project) and exposes the body to four globals: `page` (the live page handle — `await page.goto(...)`, `await page.evaluate(...)`, etc.), `snapshot` (accessibility-tree snapshot), `screenshotWithAccessibilityLabels` (annotated screenshot helper), and `state` (a per-session object that persists across dispatches within the same session).
-
-Special commands (body starts with `session `): `session new`, `session list`, `session close <id>` manage session lifecycle.
-
-Required for any edit to code that runs in a browser — Browser Witness is non-negotiable. A `node test.js passes` does not substitute for a live `page.evaluate` asserting the invariant the edit was supposed to change.
+Only plugkit.
