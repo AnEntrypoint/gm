@@ -4,9 +4,16 @@ import os from 'os';
 import crypto from 'crypto';
 import https from 'https';
 import { watch } from 'fs';
-import { spawn, spawnSync } from 'child_process';
+import { spawn as _rawSpawn, spawnSync as _rawSpawnSync } from 'child_process';
 import net from 'net';
 import { fileURLToPath } from 'url';
+
+function spawnSync(cmd, args, opts) {
+  return _rawSpawnSync(cmd, args, { windowsHide: true, ...(opts || {}) });
+}
+function spawn(cmd, args, opts) {
+  return _rawSpawn(cmd, args, { windowsHide: true, ...(opts || {}) });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
