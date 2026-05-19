@@ -178,27 +178,18 @@ async function extractNpmPackageWasm(destPath, version) {
     log(`extracting npm package ${NPM_PACKAGE}@${version} to ${tempDir}`);
     obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
 
-    let cmd, args;
-    if (process.platform === 'win32') {
-      const npxCli = resolveNpxJsCli();
-      if (npxCli) {
-        cmd = process.execPath;
-        args = [npxCli, NPM_PACKAGE + '@' + version, '--prefix', tempDir];
-      } else {
-        cmd = 'npx.cmd';
-        args = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
-      }
-    } else {
-      cmd = 'npx';
-      args = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
-    }
+    fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'plugkit-extract', version: '0.0.0', private: true }));
+
+    const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const args = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
 
     const result = spawnSync(cmd, args, {
+      cwd: tempDir,
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: ATTEMPT_TIMEOUT_MS,
       encoding: 'utf8',
       windowsHide: true,
-      shell: process.platform === 'win32' && cmd === 'npx.cmd',
+      shell: process.platform === 'win32',
     });
 
     if (result.error) throw result.error;
