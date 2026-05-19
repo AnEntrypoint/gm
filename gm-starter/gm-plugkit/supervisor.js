@@ -130,7 +130,7 @@ function spawnWatcher(bootReason) {
     const shutdownReason = readShutdownReason();
     const reason = shutdownReason && shutdownReason.reason;
     const idleClean = reason === 'idle';
-    const plannedReasons = new Set(['idle', 'sigterm', 'version-change']);
+    const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'external-planned']);
     const isPlanned = plannedReasons.has(reason);
     const eventName = idleClean
       ? 'supervisor.watcher-exited-idle'

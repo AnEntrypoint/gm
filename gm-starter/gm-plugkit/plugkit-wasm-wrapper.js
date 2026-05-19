@@ -1008,6 +1008,15 @@ async function runSpoolWatcher(instance, spoolDir) {
           if (_ownWrapperSha12 && holderSha && holderSha !== _ownWrapperSha12) {
             try { logEvent('plugkit', 'peer.stale-wrapper-takeover', { holder_pid: pidStr, holder_sha: holderSha, own_sha: _ownWrapperSha12, lock_age_ms: age }); } catch (_) {}
             console.error(`[plugkit-wasm] peer wrapper-sha mismatch (holder=${holderSha} own=${_ownWrapperSha12}); killing pid=${pidStr} and taking over`);
+            try {
+              fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
+                reason: 'peer-stale-takeover',
+                ts: Date.now(),
+                taker_pid: process.pid,
+                taker_sha: _ownWrapperSha12,
+                holder_sha: holderSha,
+              }));
+            } catch (_) {}
             try { process.kill(parseInt(pidStr, 10), 'SIGTERM'); } catch (_) {}
           } else {
             const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
@@ -1073,6 +1082,15 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) { continue; }
       logEvent('plugkit', 'peer.stale-wrapper-killed', { peer_cwd: peerCwd, peer_pid: peerPid, peer_sha: peerSha, own_sha: _ownWrapperSha12, lock_age_ms: age });
       console.error(`[plugkit-wasm] peer-sweep killing stale-wrapper watcher pid=${peerPid} cwd=${peerCwd} sha=${peerSha} (own=${_ownWrapperSha12})`);
+      try {
+        fs.writeFileSync(path.join(peerCwd, '.gm', 'exec-spool', '.shutdown-reason.json'), JSON.stringify({
+          reason: 'peer-stale-takeover',
+          ts: Date.now(),
+          killer_pid: process.pid,
+          killer_sha: _ownWrapperSha12,
+          peer_sha: peerSha,
+        }));
+      } catch (_) {}
       try { process.kill(peerPid, 'SIGTERM'); } catch (_) {}
     }
   }
