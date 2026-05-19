@@ -435,6 +435,192 @@ function kvFilePath(ns, key) {
   return path.join(dir, safeKey + '.json');
 }
 
+const __tasks = new Map();
+
+function tasksDir(cwd) {
+  const d = path.join(cwd || process.cwd(), '.gm', 'exec-spool', 'tasks');
+  try { fs.mkdirSync(d, { recursive: true }); } catch (_) {}
+  return d;
+}
+
+function taskMetaPath(cwd, id) { return path.join(tasksDir(cwd), `${id}.json`); }
+function taskOutPath(cwd, id, which) { return path.join(tasksDir(cwd), `${id}.${which}.log`); }
+
+function writeTaskMeta(cwd, id, meta) {
+  try { fs.writeFileSync(taskMetaPath(cwd, id), JSON.stringify(meta, null, 2)); } catch (_) {}
+}
+
+function nextTaskId(cwd) {
+  const counterPath = path.join(tasksDir(cwd), '.counter');
+  let n = 0;
+  try { n = parseInt(fs.readFileSync(counterPath, 'utf-8'), 10) || 0; } catch (_) {}
+  n += 1;
+  try { fs.writeFileSync(counterPath, String(n)); } catch (_) {}
+  return `t${n}`;
+}
+
+function langToCmd(lang, code) {
+  if (lang === 'nodejs' || lang === 'js' || lang === 'javascript' || lang === 'node') return { cmd: process.execPath, args: ['-e', code], stdinCode: null };
+  if (lang === 'python' || lang === 'py') return { cmd: 'python', args: ['-c', code], stdinCode: null };
+  if (lang === 'bash' || lang === 'sh' || lang === 'shell' || lang === 'zsh') return { cmd: 'bash', args: ['-c', code], stdinCode: null };
+  if (lang === 'powershell' || lang === 'ps1') return { cmd: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', code], stdinCode: null };
+  if (lang === 'deno') return { cmd: 'deno', args: ['eval', code], stdinCode: null };
+  return null;
+}
+
+function spawnTask({ cwd, lang, code, timeoutMs }) {
+  const id = nextTaskId(cwd);
+  const built = langToCmd(lang, code);
+  if (!built) return { ok: false, error: `unsupported lang: ${lang}` };
+  const outLog = taskOutPath(cwd, id, 'stdout');
+  const errLog = taskOutPath(cwd, id, 'stderr');
+  let outFd = null, errFd = null;
+  try { outFd = fs.openSync(outLog, 'a'); } catch (_) {}
+  try { errFd = fs.openSync(errLog, 'a'); } catch (_) {}
+  const startedMs = Date.now();
+  const isPosix = process.platform !== 'win32';
+  const child = spawn(built.cmd, built.args, {
+    cwd: cwd || process.cwd(),
+    detached: isPosix,
+    stdio: ['ignore', outFd || 'ignore', errFd || 'ignore'],
+    windowsHide: true,
+    env: process.env,
+  });
+  try { if (outFd !== null) fs.closeSync(outFd); } catch (_) {}
+  try { if (errFd !== null) fs.closeSync(errFd); } catch (_) {}
+  const meta = {
+    id,
+    pid: child.pid,
+    pgid: isPosix ? child.pid : null,
+    lang,
+    cmd: built.cmd,
+    cwd: cwd || process.cwd(),
+    started_ms: startedMs,
+    timeout_ms: timeoutMs,
+    deadline_ms: startedMs + timeoutMs,
+    status: 'running',
+    exit_code: null,
+    stdout_log: outLog,
+    stderr_log: errLog,
+  };
+  __tasks.set(id, { child, meta });
+  writeTaskMeta(cwd, id, meta);
+  child.on('exit', (code, signal) => {
+    meta.status = signal ? 'killed' : (code === 0 ? 'completed' : 'failed');
+    meta.exit_code = code;
+    meta.signal = signal;
+    meta.ended_ms = Date.now();
+    writeTaskMeta(meta.cwd, id, meta);
+  });
+  child.on('error', (err) => {
+    meta.status = 'error';
+    meta.error = err.message;
+    meta.ended_ms = Date.now();
+    writeTaskMeta(meta.cwd, id, meta);
+  });
+  logEvent('plugkit', 'task.spawn', { task_id: id, pid: child.pid, lang, timeout_ms: timeoutMs });
+  return { ok: true, task_id: id, pid: child.pid, started_ms: startedMs };
+}
+
+function stopTaskById(id) {
+  const entry = __tasks.get(id);
+  if (!entry) {
+    return { ok: false, error: 'unknown task_id', task_id: id };
+  }
+  const { child, meta } = entry;
+  if (meta.status !== 'running') return { ok: true, already: meta.status, task_id: id };
+  const pid = meta.pid;
+  const isPosix = process.platform !== 'win32';
+  try {
+    if (isPosix && meta.pgid) {
+      try { process.kill(-meta.pgid, 'SIGTERM'); } catch (_) {}
+    } else {
+      try { child.kill('SIGTERM'); } catch (_) {}
+    }
+  } catch (_) {}
+  const graceTimer = setTimeout(() => {
+    if (meta.status !== 'running') return;
+    if (isPosix && meta.pgid) {
+      try { process.kill(-meta.pgid, 'SIGKILL'); } catch (_) {}
+    } else if (process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', timeout: 3000 }); } catch (_) {}
+    } else {
+      try { child.kill('SIGKILL'); } catch (_) {}
+    }
+  }, 2000);
+  graceTimer.unref && graceTimer.unref();
+  logEvent('plugkit', 'task.stop', { task_id: id, pid });
+  return { ok: true, task_id: id, pid };
+}
+
+function tailFile(filePath, maxBytes) {
+  try {
+    const stat = fs.statSync(filePath);
+    if (stat.size <= maxBytes) return fs.readFileSync(filePath, 'utf-8');
+    const fd = fs.openSync(filePath, 'r');
+    try {
+      const buf = Buffer.alloc(maxBytes);
+      fs.readSync(fd, buf, 0, maxBytes, stat.size - maxBytes);
+      return buf.toString('utf-8');
+    } finally { try { fs.closeSync(fd); } catch (_) {} }
+  } catch (_) { return ''; }
+}
+
+function listTasks(cwd) {
+  const d = tasksDir(cwd);
+  const out = [];
+  try {
+    for (const entry of fs.readdirSync(d)) {
+      if (!entry.endsWith('.json') || entry.startsWith('.')) continue;
+      try {
+        const meta = JSON.parse(fs.readFileSync(path.join(d, entry), 'utf-8'));
+        out.push(meta);
+      } catch (_) {}
+    }
+  } catch (_) {}
+  return out;
+}
+
+function reapTimedOutTasks() {
+  const now = Date.now();
+  for (const [id, entry] of __tasks) {
+    const m = entry.meta;
+    if (m.status === 'running' && m.deadline_ms && now > m.deadline_ms) {
+      logEvent('plugkit', 'task.timeout', { task_id: id, pid: m.pid, deadline_ms: m.deadline_ms, now_ms: now });
+      stopTaskById(id);
+    }
+  }
+}
+
+function killAllTasks(reason) {
+  let killed = 0;
+  for (const [id, entry] of __tasks) {
+    if (entry.meta.status === 'running') {
+      stopTaskById(id);
+      killed += 1;
+    }
+  }
+  if (killed > 0) logEvent('plugkit', 'task.killAll', { reason, count: killed });
+  return killed;
+}
+
+function hostTaskProc(action, params) {
+  switch (action) {
+    case 'spawn': return spawnTask(params);
+    case 'stop': return stopTaskById(params.id || params.task_id);
+    case 'list': return { ok: true, tasks: listTasks(params.cwd) };
+    case 'output': return {
+      ok: true,
+      task_id: params.id || params.task_id,
+      stdout: tailFile(taskOutPath(params.cwd, params.id || params.task_id, 'stdout'), params.max_bytes || 65536),
+      stderr: tailFile(taskOutPath(params.cwd, params.id || params.task_id, 'stderr'), params.max_bytes || 65536),
+    };
+    case 'reap': { reapTimedOutTasks(); return { ok: true }; }
+    case 'killAll': { const n = killAllTasks(params.reason || 'host_task_proc'); return { ok: true, killed: n }; }
+    default: return { ok: false, error: `unknown action: ${action}` };
+  }
+}
+
 function makeHostFunctions(instanceRef) {
   return {
     host_fs_read: (pathPtr, pathLen) => {
@@ -713,6 +899,19 @@ function makeHostFunctions(instanceRef) {
         return 0n;
       }
     },
+
+    host_task_proc: (actionPtr, actionLen, paramsPtr, paramsLen) => {
+      try {
+        const action = readWasmStr(instanceRef.value, actionPtr, actionLen);
+        const paramsStr = readWasmStr(instanceRef.value, paramsPtr, paramsLen);
+        const params = paramsStr ? JSON.parse(paramsStr) : {};
+        if (!params.cwd) params.cwd = process.cwd();
+        const result = hostTaskProc(action, params);
+        return writeWasmJson(instanceRef.value, result);
+      } catch (e) {
+        return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
+      }
+    },
   };
 }
 
@@ -797,6 +996,8 @@ async function runSpoolWatcher(instance, spoolDir) {
       console.log(`[plugkit-wasm] teardown reason=${reason}`);
     } catch (_) {}
 
+    try { killAllTasks(`teardown:${reason}`); } catch (_) {}
+
     try {
       if (fs.existsSync(ACPTOAPI_STATUS_PATH)) {
         const status = JSON.parse(fs.readFileSync(ACPTOAPI_STATUS_PATH, 'utf-8'));
@@ -831,6 +1032,10 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
 
   setInterval(() => {
+    try { reapTimedOutTasks(); } catch (_) {}
+  }, 5000);
+
+  setInterval(() => {
     try {
       const idleMs = Date.now() - lastActivityMs;
       if (idleMs < IDLE_LIMIT_MS) return;
@@ -841,6 +1046,13 @@ async function runSpoolWatcher(instance, spoolDir) {
           if (entry && Number.isFinite(entry.port) && isPortAliveSync(entry.port)) { browserAlive = true; break; }
         }
         if (browserAlive) { markActivity('browser-port-alive'); return; }
+      } catch (_) {}
+      try {
+        let anyRunning = false;
+        for (const entry of __tasks.values()) {
+          if (entry.meta.status === 'running') { anyRunning = true; break; }
+        }
+        if (anyRunning) { markActivity('task-running'); return; }
       } catch (_) {}
       teardownAll('idle');
     } catch (e) {
