@@ -987,30 +987,47 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(outDir, { recursive: true });
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
+  let _ownWrapperSha12 = '';
+  try {
+    const _crypto = require('crypto');
+    const _wp = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+    _ownWrapperSha12 = _crypto.createHash('sha256').update(fs.readFileSync(_wp)).digest('hex').slice(0, 12);
+  } catch (_) {}
+  function lockBody() { return `${process.pid}|${Date.now()}|${_ownWrapperSha12}`; }
   function acquireLock() {
     try {
       if (fs.existsSync(LOCK_PATH)) {
         const content = fs.readFileSync(LOCK_PATH, 'utf-8').trim();
-        const [pidStr, tsStr] = content.split('|');
+        const parts = content.split('|');
+        const pidStr = parts[0];
+        const tsStr = parts[1];
+        const holderSha = parts[2] || '';
         const lockTs = parseInt(tsStr, 10);
         const age = Date.now() - lockTs;
         if (age < 15000) {
-          const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
-          console.error(`[plugkit-wasm] ${msg}; refusing to start`);
-          try { fs.writeFileSync(path.join(spoolDir, '.lock-rejection.json'), msg); } catch (_) {}
-          try { logEvent('plugkit', 'watcher.lock-rejected', { holder_pid: pidStr, lock_age_ms: age }); } catch (_) {}
-          process.exit(75);
+          if (_ownWrapperSha12 && holderSha && holderSha !== _ownWrapperSha12) {
+            try { logEvent('plugkit', 'peer.stale-wrapper-takeover', { holder_pid: pidStr, holder_sha: holderSha, own_sha: _ownWrapperSha12, lock_age_ms: age }); } catch (_) {}
+            console.error(`[plugkit-wasm] peer wrapper-sha mismatch (holder=${holderSha} own=${_ownWrapperSha12}); killing pid=${pidStr} and taking over`);
+            try { process.kill(parseInt(pidStr, 10), 'SIGTERM'); } catch (_) {}
+          } else {
+            const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
+            console.error(`[plugkit-wasm] ${msg}; refusing to start`);
+            try { fs.writeFileSync(path.join(spoolDir, '.lock-rejection.json'), msg); } catch (_) {}
+            try { logEvent('plugkit', 'watcher.lock-rejected', { holder_pid: pidStr, lock_age_ms: age }); } catch (_) {}
+            process.exit(75);
+          }
+        } else {
+          console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
         }
-        console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
       }
-      fs.writeFileSync(LOCK_PATH, `${process.pid}|${Date.now()}`);
+      fs.writeFileSync(LOCK_PATH, lockBody());
     } catch (e) {
       console.error(`[plugkit-wasm] lock acquire failed: ${e.message}`);
       process.exit(1);
     }
   }
   function refreshLock() {
-    try { fs.writeFileSync(LOCK_PATH, `${process.pid}|${Date.now()}`); } catch (_) {}
+    try { fs.writeFileSync(LOCK_PATH, lockBody()); } catch (_) {}
   }
   function releaseLock() {
     try {
