@@ -551,7 +551,7 @@
   description: 'Witnessed: .supervisor.json absent for the currently-running watcher. Means it was started under old bootstrap that spawned the watcher directly, not via supervisor.js. So all the unplanned-restart-reporting and respawn-on-death machinery I shipped is dormant for this watcher. Need: a migration probe — on agent session start, if .status.json exists AND .supervisor.json does NOT exist, surface a warning (instruction response field or .pre-supervised-watcher.json marker) telling the agent the running watcher is unsupervised and should be migrated. Also: the bootstrap.js update-check path could detect this and respawn under supervisor on next update. Below criticality — the watcher works, just without the safety net.'
   category: feature
   effort: small
-  status: pending
+  status: completed
   acceptance:
   - bootstrap.js detects supervisor-less running watcher and writes .pre-supervised-watcher.json
   - instruction response includes a one-line warning when this marker is present
