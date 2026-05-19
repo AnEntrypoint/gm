@@ -56,6 +56,22 @@ function turnTick(sess, verb, taskBase, phase) {
   if (phase) { t.phases.add(phase); t.lastPhase = phase; }
 }
 
+let __sessCache = { value: '', mtimeMs: 0, readAt: 0 };
+function readCurrentSess() {
+  const now = Date.now();
+  if (now - __sessCache.readAt < 1000) return __sessCache.value;
+  try {
+    const p = path.join(process.cwd(), '.gm', 'exec-spool', '.session-current');
+    const st = fs.statSync(p);
+    if (st.mtimeMs !== __sessCache.mtimeMs) {
+      __sessCache.value = fs.readFileSync(p, 'utf8').trim();
+      __sessCache.mtimeMs = st.mtimeMs;
+    }
+  } catch (_) {}
+  __sessCache.readAt = now;
+  return __sessCache.value || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+}
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -67,7 +83,7 @@ function logEvent(sub, event, fields) {
       sub,
       event,
       pid: process.pid,
-      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      sess: readCurrentSess(),
       ...fields,
     });
     fs.appendFileSync(path.join(dir, `${sub}.jsonl`), line + '\n');
@@ -83,7 +99,7 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
     return;
   }
   const data = parsed.data || {};
-  const sess = process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  const sess = readCurrentSess();
   turnTick(sess, verb, taskBase, data.phase);
   switch (verb) {
     case 'transition':

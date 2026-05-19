@@ -320,6 +320,16 @@ function ensureBuildToolIgnores(cwd) {
   }
 }
 
+function writeSessionSidecar(sessionId) {
+  try {
+    const sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+    if (!sess) return;
+    const spool = path.join(process.cwd(), '.gm', 'exec-spool');
+    fs.mkdirSync(spool, { recursive: true });
+    fs.writeFileSync(path.join(spool, '.session-current'), sess);
+  } catch (_) {}
+}
+
 function ensureManagedGitignore(cwd) {
   try {
     const gi = gitignorePath(cwd);
@@ -548,6 +558,7 @@ async function bootstrapPlugkit(sessionId, options) {
   try {
     emitBootstrapEvent('info', 'Bootstrap started', { forceLatest });
 
+    writeSessionSidecar(sessionId);
     ensureManagedGitignore(process.cwd());
     ensureBuildToolIgnores(process.cwd());
 
