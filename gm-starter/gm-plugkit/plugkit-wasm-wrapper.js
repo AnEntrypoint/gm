@@ -1039,6 +1039,46 @@ async function runSpoolWatcher(instance, spoolDir) {
   acquireLock();
   setInterval(refreshLock, 5000);
 
+  const PEER_REGISTRY_PATH = path.join(os.homedir(), '.claude', 'gm-tools', 'peer-registry.json');
+  function registerSelfAsPeer() {
+    try {
+      let reg = {};
+      try { reg = JSON.parse(fs.readFileSync(PEER_REGISTRY_PATH, 'utf-8')); } catch (_) {}
+      reg[process.cwd()] = { pid: process.pid, ts: Date.now(), sha: _ownWrapperSha12 };
+      fs.writeFileSync(PEER_REGISTRY_PATH, JSON.stringify(reg, null, 2));
+    } catch (_) {}
+  }
+  registerSelfAsPeer();
+  setInterval(registerSelfAsPeer, 30_000);
+
+  function sweepStalePeers() {
+    if (!_ownWrapperSha12) return;
+    let reg = {};
+    try { reg = JSON.parse(fs.readFileSync(PEER_REGISTRY_PATH, 'utf-8')); } catch (_) { return; }
+    for (const peerCwd of Object.keys(reg)) {
+      if (peerCwd === process.cwd()) continue;
+      const peerLock = path.join(peerCwd, '.gm', 'exec-spool', '.watcher.lock');
+      let content = '';
+      try { content = fs.readFileSync(peerLock, 'utf-8').trim(); } catch (_) { continue; }
+      const parts = content.split('|');
+      const peerPid = parseInt(parts[0], 10);
+      const peerTs = parseInt(parts[1], 10);
+      const peerSha = parts[2] || '';
+      if (!peerPid || !peerSha) continue;
+      const age = Date.now() - peerTs;
+      if (age > 15000) continue;
+      if (peerSha === _ownWrapperSha12) continue;
+      try {
+        process.kill(peerPid, 0);
+      } catch (_) { continue; }
+      logEvent('plugkit', 'peer.stale-wrapper-killed', { peer_cwd: peerCwd, peer_pid: peerPid, peer_sha: peerSha, own_sha: _ownWrapperSha12, lock_age_ms: age });
+      console.error(`[plugkit-wasm] peer-sweep killing stale-wrapper watcher pid=${peerPid} cwd=${peerCwd} sha=${peerSha} (own=${_ownWrapperSha12})`);
+      try { process.kill(peerPid, 'SIGTERM'); } catch (_) {}
+    }
+  }
+  setInterval(sweepStalePeers, 60_000);
+  setTimeout(sweepStalePeers, 5000);
+
   const IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_IDLE_LIMIT_MS, 10) || 15 * 60 * 1000;
   const IDLE_CHECK_MS = 60_000;
   const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
