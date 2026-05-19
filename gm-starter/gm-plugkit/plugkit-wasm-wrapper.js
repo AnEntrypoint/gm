@@ -1115,6 +1115,41 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
+  const _wrapperPathInstalled = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  let _wrapperShaAtBoot = '';
+  try {
+    const _crypto = require('crypto');
+    _wrapperShaAtBoot = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
+  } catch (_) {}
+  setInterval(() => {
+    try {
+      if (!_wrapperShaAtBoot) return;
+      const _crypto = require('crypto');
+      const cur = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
+      if (cur === _wrapperShaAtBoot) return;
+      logEvent('plugkit', 'wrapper.drift', {
+        boot_sha: _wrapperShaAtBoot.slice(0, 12),
+        file_sha: cur.slice(0, 12),
+        action: 'exit-for-respawn',
+      });
+      console.error(`[plugkit-wasm] wrapper.js drift detected → exiting so supervisor reloads fresh wrapper`);
+      try {
+        fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
+          reason: 'wrapper-change',
+          ts: Date.now(),
+          pid: process.pid,
+          boot_sha: _wrapperShaAtBoot.slice(0, 12),
+          file_sha: cur.slice(0, 12),
+        }));
+      } catch (_) {}
+      try { releaseLock(); } catch (_) {}
+      try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+      process.exit(0);
+    } catch (e) {
+      console.error(`[wrapper-drift-check] error: ${e.message}`);
+    }
+  }, 60_000);
+
   setInterval(() => {
     try {
       const idleMs = Date.now() - lastActivityMs;
