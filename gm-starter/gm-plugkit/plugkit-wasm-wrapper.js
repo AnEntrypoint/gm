@@ -1483,6 +1483,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   let debounce = {};
   watch(inDir, { recursive: true }, (eventType, filename) => {
     if (!filename) return;
+    if (/\.tmp\.\d+(\.|$)/.test(filename)) return;
     const fullPath = path.join(inDir, filename);
     markActivity('watch');
 
