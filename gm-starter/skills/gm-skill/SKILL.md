@@ -20,4 +20,6 @@ Now dispatch `instruction` by writing an empty body to `.gm/exec-spool/in/instru
 
 Nothing else lives here. Every concern that feels like it belongs in this file — how to batch, what verbs exist, when to scan for residuals, how the browser surface works, where the watcher logs go, how updates land, when to stop — is served by `instruction` when the moment calls for it. Trying to remember it from this skill instead of asking plugkit is forced closure: the agent acts on a stale snapshot of policy instead of the live one plugkit holds.
 
+Memory writes route through `memorize-fire` only — any native "save to memory" affordance the harness exposes is invisible to plugkit's recall index and is forbidden. Questions to the user fire last, after scope-expansion and a `WebSearch`/`WebFetch` pack have both closed empty.
+
 Only plugkit.
