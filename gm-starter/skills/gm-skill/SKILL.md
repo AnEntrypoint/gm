@@ -18,6 +18,8 @@ Before any apparent stop, dispatch `residual-scan`. If it returns work that fits
 
 If the `instruction` response carries a non-null `update_available`, plugkit drift has been detected on disk and the running watcher is behind. Rebootstrap before continuing — newer fixes are sitting on disk unused, and every dispatch is wasted on stale code. `bun x gm-plugkit@latest` (or `npx -y gm-plugkit@latest`) is the one-shot: it fetches the new wasm, replaces the artifact, and the watcher reloads. Drift past one version is a deviation.
 
+If `running_tasks` is non-empty, you own them — every entry is a subprocess you started that's still consuming CPU/memory. Stop ones that have outlived their purpose with `task-stop` (write `.gm/exec-spool/in/task-stop/<N>.txt` with `{id: "t<n>"}`). The 15-min idle reaper is the last resort, not a substitute for hygiene. If `stuck_spool` is non-empty, dispatches are wedged — the watcher's host_exec_js is synchronous and a stuck body blocks every other verb until it returns. Diagnose via `.watcher.log` and consider rebootstrapping if it doesn't clear; spool bodies are Turing-complete and can loop forever. Long-running work goes through `task-spawn` (returns a `task_id` immediately, body runs detached), not through the sync `nodejs`/`bash`/`python` language verbs.
+
 The wasm artifact lives at `~/.claude/gm-tools/plugkit.wasm`; the spool watcher runs it. The watcher's own stdout/stderr is appended to `.gm/exec-spool/.watcher.log` — Read it to see plugkit's internal trace, dispatch timings, sweep actions, errors.
 
 The watcher self-shuts-down after 15 minutes idle (no spool I/O, no live browser session) and is restarted on next agent activity by a detached supervisor. `.gm/exec-spool/.unplanned-restart.json` is a critical-failure marker — present means a prior watcher died without a planned shutdown. Treat as a PRD-worthy incident on sight: diagnose via `.watcher.log` and `gm-log/<day>/plugkit.jsonl` events `supervisor.watcher-exited-unexpectedly` and `supervisor.heartbeat-stale` around the prior_status.ts timestamp, then delete the marker once root cause is named.
@@ -106,7 +108,7 @@ Stop only when `phase` is `COMPLETE` AND `residual-scan` returns empty AND the w
 
 ## Orchestrator verbs
 
-`instruction`, `transition`, `phase-status`, `prd-add`, `prd-resolve`, `prd-list`, `mutable-add`, `mutable-resolve`, `mutable-list`, `memorize-fire`, `residual-scan`, `auto-recall`.
+`instruction`, `transition`, `phase-status`, `prd-add`, `prd-resolve`, `prd-list`, `mutable-add`, `mutable-resolve`, `mutable-list`, `memorize-fire`, `residual-scan`, `auto-recall`, `task-spawn`, `task-list`, `task-stop`, `task-output`.
 
 ## Host verbs
 
