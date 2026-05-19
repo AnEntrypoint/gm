@@ -27,7 +27,7 @@ function logEvent(event, fields) {
     const dir = path.join(GM_LOG_ROOT, day);
     fs.mkdirSync(dir, { recursive: true });
     const line = JSON.stringify({
-      ts: Date.now(),
+      ts: new Date().toISOString(),
       sub: 'plugkit',
       event,
       pid: process.pid,
