@@ -6,7 +6,7 @@
 
 **Goal.** Eliminate rs-learn's outbound LLM dependency (acptoapi at :4800). When memorize/recall hits an LLM-tier step (summarize, classify, distill, expand-query), rs-learn suspends the pipeline, hands the question back to the host Claude agent as a structured imperative, and finalizes deterministically once the agent returns a result.
 
-**Non-goals.** Embeddings (fastembed-rs / nomic-embed-text 768-dim) remain in-process and are NOT mediated by this protocol. SQL writes, dedup, FTS, ranking — all stay native and deterministic.
+**Non-goals.** Embeddings (nomic-embed-text 768-dim, baked Q4 weights, in-wasm inference) remain in-process and are NOT mediated by this protocol. SQL writes, dedup, FTS, ranking — all stay native and deterministic.
 
 ## 1. Verb pair
 
