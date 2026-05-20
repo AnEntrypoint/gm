@@ -22,6 +22,6 @@ Now dispatch `instruction` (empty body → `in/instruction/<N>.txt`). Response c
 
 Maturity-first invariant: emit the closure of the destructive transform the request admits, not a scaffold + "Phase 2 next session" IOU. Partial emits are non-monotonic, L3-rejected. If closure exceeds session reach, that's a Maximal Cover decomposition (PRD-DAG enumeration), never a TODO-launder.
 
-Memory writes route through `memorize-fire` only — native memory surfaces are invisible to recall and forbidden. Questions to user fire last, after the three layers, scope-expansion, and a `WebSearch`/`WebFetch` pack all close empty. `AskUserQuestion` mid-iteration to pick between viable approaches IS the L3 violation the filter rejects (low-cost narrative substituting for an audited mutation).
+Memory writes route through `memorize-fire` exclusively — surfaces outside it produce memos the recall index does not see. Questions to the user fire last, after the three layers, scope-expansion, and a `WebSearch`/`WebFetch` pack all close empty. Interactive-question tools admit destructive-irreversible-uncovered decisions only; their use to clarify already-authorized scope IS the L3 violation — narrative substituted for the audit tuple the orchestrator requires.
 
 Only plugkit.
