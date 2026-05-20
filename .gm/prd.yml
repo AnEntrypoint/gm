@@ -839,3 +839,15 @@
   - Body without @<name> passes through unchanged
   - 'Witness: dispatch recall with body ''@myproj how do mutables work'' returns matches from namespace myproj only'
   status: completed
+- id: libsql-wasi-fs-shim
+  subject: WASI fs shim incomplete — libsql file-backed open crashes watcher; need fd_prestat_get, path_open, fd_read/pread, fd_filestat_get
+  description: 'Reopened from rs-learn-db-not-persisted (which I prematurely closed). Witnessed 2026-05-20 ~08:23: gm watcher v0.1.434 crashed mid-memorize with ''unimplemented WASI call: fd_prestat_get args=2''. plugkit-wasm-wrapper.js createWasiShim only implements proc_exit, fd_write, random_get, clock_time_get, environ_get, environ_sizes_get; Proxy returns ENOSYS (52) for everything else. libsql_wasm needs the full WASI fs surface to back .gm/rs-learn.db. Until implemented, code_index.rs project_db_path() returns :memory: regardless of project_path. PROJECT-LOCAL MEMORY IS ALREADY DELIVERED via the JS-side host_kv_* routing at <cwd>/.gm/disciplines/<ns>/ (gm f202e78a); this PRD is specifically about the libsql vector-index ANN side. Required WASI calls per libsql-ffi on wasm32-wasi: fd_prestat_get, fd_prestat_dir_name, path_open, fd_close, fd_read, fd_pread, fd_pwrite, fd_filestat_get, fd_seek, fd_sync, path_filestat_get, path_unlink_file, fd_advise (optional). Implement against host fs in plugkit-wasm-wrapper.js with fd-table tracking. Witness: dispatch memorize {namespace, text, projectPath:''.''}, restart watcher, dispatch recall — get the memo back from libsql, not KV.'
+  category: bug
+  route_family: execution
+  effort: large
+  acceptance:
+  - plugkit-wasm-wrapper.js createWasiShim implements fd_prestat_get, fd_prestat_dir_name, path_open, fd_close, fd_read, fd_pread, fd_pwrite, fd_filestat_get, fd_seek, fd_sync against host fs
+  - Rust-side code_index.rs project_db_path can be re-enabled to return file path without watcher crash
+  - 'Witnessed: memorize→restart-watcher→recall round-trip via libsql returns the memo'
+  - No 'unimplemented WASI call' in .watcher.log under normal operation
+  status: pending
