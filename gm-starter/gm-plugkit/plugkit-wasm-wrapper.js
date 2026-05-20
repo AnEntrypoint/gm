@@ -49,7 +49,7 @@ const SPOOL_POLL_PATTERNS = [
   /\\b(?:test|Test-Path|tp)\\s+(?:-[A-Za-z]+\\s+)?['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
 ];
 
-const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the canonical way to inspect spool files is the Read tool. Use Read on .gm/exec-spool/out/<verb>-<N>.json directly. If the response file does not exist, the watcher is either dead (Read .gm/exec-spool/.status.json and check its mtime against now) or the verb is genuinely slow (Read .gm/exec-spool/.watcher.log for the dispatch trace). You are the state machine; plugkit serves the response the moment you write the request, and Read is how you observe the result.';
+const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the Read tool is the canonical way to inspect spool files. Specific replacements:\\n\\n- Instead of \`cat .gm/exec-spool/.status.json\` → use the Read tool: \`Read .gm/exec-spool/.status.json\`\\n- Instead of \`ls .gm/exec-spool/out/\` → check the specific response file you wrote, e.g. \`Read .gm/exec-spool/out/<verb>-<N>.json\`\\n- Instead of \`cat .gm/exec-spool/.watcher.log\` → use the Read tool with offset for tailing\\n- Instead of \`sleep N; cat .gm/exec-spool/<...>\` → just Read the response file directly; if it doesn\\'t exist yet, the watcher is dead (Read .gm/exec-spool/.status.json — fresh ts means alive) or the verb is slow (Read .gm/exec-spool/.watcher.log for the dispatch trace)\\n\\nYou are the state machine. Plugkit serves the response the moment you write the request file. If you find yourself thinking "let me just check whether the file is there yet" — use Read. If you find yourself thinking "the watcher might have died" — Read .gm/exec-spool/.status.json. Bash on .gm/exec-spool/ is wrong every single time.';
 
 function stripHeredocsAndStringLiterals(command) {
   let s = String(command);
@@ -282,11 +282,29 @@ function dispatchVerbToWasmInternal(instance, verb, body) {
   }
 }
 
-function tryAutoRecallForTurnEntry(instance, sess, cwd) {
+const AUTO_RECALL_STOPWORDS = new Set([
+  'the','a','an','and','or','but','if','then','else','for','of','to','in','on','at','by','with','from','as','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','should','could','can','may','might','must','shall',
+  'look','check','see','use','make','run','get','set','put','take','give','find','show','tell','let','keep','try','add','new','old','this','that','these','those','it','its','their','there','here','about','into','over','under','also','just','some','any','all','more','less','most','past','minutes','minute','hours','hour','seconds','second','days','day',
+]);
+
+function deriveFallbackQuery(prompt) {
   try {
-    const prompt = readUserPromptForRecall(cwd);
-    if (!prompt) return null;
-    const out = dispatchVerbToWasmInternal(instance, 'auto-recall', prompt);
+    const tokens = String(prompt).toLowerCase().split(/[^a-z0-9_]+/).filter(Boolean);
+    const freq = new Map();
+    for (const t of tokens) {
+      if (t.length < 4) continue;
+      if (AUTO_RECALL_STOPWORDS.has(t)) continue;
+      freq.set(t, (freq.get(t) || 0) + 1);
+    }
+    const ranked = Array.from(freq.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const top = ranked.slice(0, 3).map(([w]) => w);
+    return top.join(' ');
+  } catch (_) { return ''; }
+}
+
+function dispatchAutoRecall(instance, queryPrompt) {
+  try {
+    const out = dispatchVerbToWasmInternal(instance, 'auto-recall', queryPrompt);
     if (!out) return null;
     let parsed;
     try { parsed = JSON.parse(out); } catch (_) { return null; }
@@ -297,8 +315,42 @@ function tryAutoRecallForTurnEntry(instance, sess, cwd) {
     }
     if (!inner || typeof inner !== 'object') return null;
     const hits = Array.isArray(inner.results) ? inner.results : (Array.isArray(inner.hits) ? inner.hits : []);
-    const payload = { query: inner.query || '', hits, fired_at: new Date().toISOString(), turn_entry: true };
-    logEvent('plugkit', 'auto_recall.turn-entry', { sess, query: payload.query, count: hits.length });
+    return { query: inner.query || '', hits };
+  } catch (_) { return null; }
+}
+
+function tryAutoRecallForTurnEntry(instance, sess, cwd) {
+  try {
+    const prompt = readUserPromptForRecall(cwd);
+    if (!prompt) return null;
+    const primary = dispatchAutoRecall(instance, prompt);
+    const fallbackQuery = deriveFallbackQuery(prompt);
+    let fallback = null;
+    if (fallbackQuery && fallbackQuery !== (primary && primary.query)) {
+      fallback = dispatchAutoRecall(instance, fallbackQuery);
+    }
+    const seen = new Set();
+    const merged = [];
+    for (const src of [primary, fallback]) {
+      if (!src || !Array.isArray(src.hits)) continue;
+      for (const h of src.hits) {
+        const id = h && (h.id || h.hash || h.key || JSON.stringify(h));
+        if (id && seen.has(id)) continue;
+        if (id) seen.add(id);
+        merged.push(h);
+      }
+    }
+    const queries = [];
+    if (primary && primary.query) queries.push(primary.query);
+    if (fallback && fallback.query && !queries.includes(fallback.query)) queries.push(fallback.query);
+    const payload = {
+      query: (primary && primary.query) || '',
+      queries,
+      hits: merged.slice(0, 20),
+      fired_at: new Date().toISOString(),
+      turn_entry: true,
+    };
+    logEvent('plugkit', 'auto_recall.turn-entry', { sess, queries, count: merged.length });
     return payload;
   } catch (e) {
     logEvent('plugkit', 'auto_recall.error', { sess, error: String(e && e.message || e) });
