@@ -477,6 +477,11 @@ function readCurrentSess() {
   return __sessCache.value;
 }
 
+// iter13: dedup set for host_vec_embed.failed event emissions — we only
+// want one event per distinct failure-reason per process, not one per
+// embed call.
+const _hostVecEmbedFailKeys = new Set();
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -1471,13 +1476,42 @@ function makeHostFunctions(instanceRef) {
         if (!text) return 0n;
         const body = JSON.stringify({ model: EMBED_MODEL_DEFAULT, input: text });
         const result = spawnSync(process.execPath, ['-e', `
-          fetch('${ACPTOAPI_URL}/v1/embeddings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} })
-            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-            .then(t => process.stdout.write(t))
-            .catch(e => { process.stderr.write('embed-error: ' + e.message); process.exit(2); });
-        `], { encoding: 'utf-8', timeout: 30000 });
+          (async () => {
+            try {
+              const r = await fetch('${ACPTOAPI_URL}/v1/embeddings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} });
+              if (!r.ok) {
+                const errBody = await r.text();
+                throw new Error('HTTP ' + r.status + ': ' + errBody.slice(0, 300));
+              }
+              const t = await r.text();
+              process.stdout.write(t);
+            } catch (e) {
+              process.stderr.write('embed-error: ' + e.message);
+              process.exit(2);
+            }
+          })();
+        `], { encoding: 'utf-8', timeout: 30000, windowsHide: true });
         if (result.status !== 0 || !result.stdout) {
-          console.error('[plugkit-wasm] host_vec_embed FAILED:', result.stderr || 'no response');
+          // iter13: failures here had been silently returning 0n which surfaced
+          // as auto_recall.count=0 with no diagnostic. acptoapi 1.0.102+
+          // returns 410 Gone on /v1/embeddings (embeddings now live in
+          // rs-learn natively). Log a structured event so the failure is
+          // visible in gmsniff. Dedup on the (status, reason) key so we
+          // don't spam — only the first occurrence per process per reason.
+          const reason = (result.stderr || 'no response').slice(0, 300);
+          const key = String(result.status) + '|' + reason;
+          if (!_hostVecEmbedFailKeys.has(key)) {
+            _hostVecEmbedFailKeys.add(key);
+            try {
+              logEvent('plugkit', 'host_vec_embed.failed', {
+                status: result.status,
+                reason,
+                text_len: text.length,
+                hint: 'acptoapi 1.0.102+ returns 410 on /v1/embeddings — embeddings are served by rs-learn natively. Once rs-learn-embed sidecar is wired into host_vec_embed, this event will stop firing.',
+              });
+            } catch (_) {}
+          }
+          console.error('[plugkit-wasm] host_vec_embed FAILED:', reason);
           return 0n;
         }
         return writeWasmStr(instanceRef.value, result.stdout);
