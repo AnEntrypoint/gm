@@ -1,25 +1,27 @@
 ---
 name: gm-skill
-description: AI-native software engineering harness. Every action routes through plugkit via the spool. The agent dispatches verbs; plugkit owns phase, mutables, PRD, recall, instructions, the three-layer filter (cost → bounds → direction), and every other concern.
+description: AI-native engineering harness. Plugkit-served instruction stream; three-layer admission filter (cost, bounds, direction) gates every mutation; PRD-DAG covers the destructive transform's closure; emit the mature artifact, not the scaffold.
 allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 ---
 
 # gm — only plugkit
 
-Plugkit owns the discipline. Every turn, dispatch the `instruction` verb and follow the prose it returns. Every candidate operation runs through the three-layer filter plugkit serves: L1 cost (measure before acting) → L2 bounds (keep state finite) → L3 direction (verify toward goal). Any reject defers or discards. Read/Edit/Bash/Grep/Glob before the first `instruction` dispatch is the failure mode this skill prevents — every one of those is a step taken outside the loop, and the loop is the work.
+Plugkit owns the discipline. Every turn: dispatch `instruction`, follow the prose. Every candidate operation traverses the three-layer admission filter — L1 cost (empirical baseline; recall+codesearch fan-out probes it) → L2 bounds (`|F|=1` single-writer per surface; PRD/mutables/KV are the central stores) → L3 direction (Lyapunov criterion; mutations must monotonically decrease distance-to-goal; audit tuple `(id, hash, ts)` per accepted write). Reject → defer or discard.
 
-If `.gm/exec-spool/.status.json` is absent or its `ts` is older than 15s, boot the watcher first — the one thing this skill does directly, because nothing else can be served until the spool is alive:
+Read/Edit/Bash/Grep/Glob before the first `instruction` dispatch IS the failure this skill prevents — each is a step outside the loop, and the loop is the work.
+
+If `.gm/exec-spool/.status.json` is absent or stale (>15s), boot the watcher — the one direct action this skill permits:
 
 ```
 bun x gm-plugkit@latest spool > /dev/null 2>&1 &
 ```
 
-(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` is missing.) Wait 2s, confirm `.status.json` heartbeat is fresh, then proceed.
+(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` missing.) Wait 2s, confirm fresh heartbeat, proceed.
 
-Now dispatch `instruction` by writing an empty body to `.gm/exec-spool/in/instruction/<N>.txt` and reading the response from `.gm/exec-spool/out/instruction-<N>.json`. The response carries the active phase prose, the PRD, the open mutables, prior recall, the three-layer framing for the phase, and every signal that should shape the next action. Follow that prose imperatively. When its exit condition is met, dispatch `transition`. The chain runs PLAN → EXECUTE → EMIT → VERIFY → COMPLETE under plugkit's direction; this skill does not duplicate the prose, does not enumerate verbs, does not describe the dispatch format — plugkit serves all of it on demand.
+Now dispatch `instruction` (empty body → `in/instruction/<N>.txt`). Response carries the active phase prose, PRD, open mutables, prior recall, the three-layer framing for this phase, and every signal the next action needs. Follow imperatively. Exit condition met → `transition`. Chain runs PLAN → EXECUTE → EMIT → VERIFY → COMPLETE under plugkit's direction; this skill does not duplicate prose, enumerate verbs, or describe the dispatch ABI — plugkit serves all of it on demand.
 
-Nothing else lives here. Every concern that feels like it belongs in this file — how to batch, what verbs exist, when to scan for residuals, how the browser surface works, where the watcher logs go, how updates land, when to stop, which closure shapes are forbidden — is served by `instruction` when the moment calls for it. Trying to remember it from this skill instead of asking plugkit is forced closure: the agent acts on a stale snapshot of policy instead of the live one plugkit holds.
+Maturity-first invariant: emit the closure of the destructive transform the request admits, not a scaffold + "Phase 2 next session" IOU. Partial emits are non-monotonic, L3-rejected. If closure exceeds session reach, that's a Maximal Cover decomposition (PRD-DAG enumeration), never a TODO-launder.
 
-Memory writes route through `memorize-fire` only. Questions to the user fire last — after the three layers, scope-expansion, and a `WebSearch`/`WebFetch` pack have all closed empty. `AskUserQuestion` mid-iteration to pick between viable approaches IS the L3 violation the filter rejects (low-cost narrative substituting for an audited mutation).
+Memory writes route through `memorize-fire` only — native memory surfaces are invisible to recall and forbidden. Questions to user fire last, after the three layers, scope-expansion, and a `WebSearch`/`WebFetch` pack all close empty. `AskUserQuestion` mid-iteration to pick between viable approaches IS the L3 violation the filter rejects (low-cost narrative substituting for an audited mutation).
 
 Only plugkit.

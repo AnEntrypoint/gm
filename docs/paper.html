@@ -815,6 +815,55 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
+<h2 id="three-layer-filter">Three-Layer Admission Filter (consolidation)</h2>
+
+<p>Sections 2&ndash;37 describe a state machine and its disciplines. Across them a single structural pattern recurs: every candidate operation passes three orthogonal admission tests in sequence before commit. We name this the <em>three-layer filter</em> and treat it as the foundational invariant the rest of the system specializes.</p>
+
+<pre><code>candidate → [L1 cost] → [L2 bounds] → [L3 direction] → execute
+              measure     defer        verify+trajectory
+</code></pre>
+
+<h3>L1 Cost (empirical baseline)</h3>
+<p>Reject if amortized cost exceeds the prior best-observed envelope. ORIENT (&sect;21) is the baseline probe: the recall + codesearch fan-out establishes what is already known so the candidate's marginal cost can be evaluated against it. Skipping the probe is blind optimization &mdash; the agent commits without measurement and inherits whatever regression follows. Premature claim before profile is hallucinated speedup.</p>
+
+<h3>L2 Bounds (single-writer per surface, |F|=1)</h3>
+<p>Every managed resource has a hard cap and a single entry surface. PRD, mutables, and the KV store are the only sanctioned mutation surfaces; an inline TODO list in the response body violates <code>|F|=1</code> and produces parallel state the orchestrator cannot reconcile. At capacity, backpressure defers to a queue rather than allowing unbounded growth. Crash converts to graceful degradation when capacity is explicit.</p>
+
+<h3>L3 Direction (Lyapunov criterion + trajectory classifier)</h3>
+<p>Every accepted mutation must monotonically decrease <code>d(state, goal)</code>. <code>&Delta;d &ge; 0</code> rejects. Each commit carries the audit tuple <code>(id, hash, ts)</code> where <code>hash</code> is the file:line, codesearch hit, or exec snippet that witnessed the change. Over a rolling window of the last <em>N</em> observations the trajectory classifier reads <code>convergent | flat | divergent | chaotic</code>; non-convergent holds the candidate in defer. The four-observation VERIFY window <code>[worktree-clean, remote-pushed, prd-empty, mutables-witnessed]</code> is the convergence criterion for emitting transition to COMPLETE.</p>
+
+<h3>Closure anti-shapes as L3 violations</h3>
+<p>The forced-closure failure modes catalogued throughout the paper (permission asks, self-declared complete, spec-instead-of-implementation, unsolicited docs, watcher-broken excuse) are all L3 violations under one shape: narrative mutation (low-cost, distance-positive, no <code>(id, hash, ts)</code>) substituted for the audited one (witnessed, hashed, timestamped). A &check;-checkmark in a final-message summary IS an unfired <code>mutable-resolve</code>. A multi-phase effort estimate ("Phase N: H&ndash;H hours") IS a deferred completion the chain never reaches.</p>
+
+<h3>First principles</h3>
+<ol>
+<li><em>Measurement gates optimization.</em> You cannot optimize what you do not measure.</li>
+<li><em>Bounds prevent cascades.</em> Unbounded growth is the source of all distributed failures.</li>
+<li><em>Direction eliminates waste.</em> Operations that <em>feel</em> productive but do not decrease distance are dead motion.</li>
+<li><em>Composability.</em> The three layers are independently tunable; modifying one does not require touching the others.</li>
+</ol>
+
+<blockquote><strong>Observation.</strong> The five phases (PLAN, EXECUTE, EMIT, VERIFY, COMPLETE) are the three-layer filter applied at escalating commitment levels. PLAN runs L1+L2 cheaply through ORIENT and PRD-DAG construction. EXECUTE runs L3 over witnessed mutations into the central store. EMIT runs L3 audit on the disk side. VERIFY runs the trajectory classifier over the four-observation window. The filter is the engine; the phases are scheduling.</blockquote>
+
+<hr>
+
+<h2 id="maturity-first">Maturity-First Emit</h2>
+
+<p>The system optimizes for the closure of the destructive transform on first write, not for a prefix of it. A partial emit (scaffold + "Phase 2 next session" IOU) externalizes completion cost: the unfinished work becomes implicit state the next session must reconstruct from prose. Non-monotonic state is unaudited state; under L3 it is dead motion regardless of how productive it feels.</p>
+
+<h3>Maturity-first invariant</h3>
+<p>The first artifact emitted IS the mature artifact. Scaffolds, architecture skeletons, "framework for Phase N" stubs, and multi-phase effort estimates are stubs by the Nothing Fake rule (&sect;24) &mdash; they sit at high <code>d(state, goal)</code> regardless of how plausibly structured they appear. The rule:</p>
+
+<blockquote>A PRD row that ships a smaller-than-necessary slice while a larger reachable shape exists is distributed refusal. Re-emit as the closure, not the scaffold. "Phase 1 of N" partitioning of single-session work is L3 deferral, not planning.</blockquote>
+
+<h3>Maximal Cover vs scaffold + IOU</h3>
+<p>When the closure exceeds session reach &mdash; genuinely &mdash; the response is Maximal Cover (&sect;17): enumerate the witnessable subsets as a dependency DAG in the PRD, execute the reachable nodes, name the unreachable ones with <code>blockedBy: external</code>. The distinction from a scaffold is that the DAG nodes are mature artifacts at every step: each leaf is a closed transform, not a stub. The scaffold + IOU shape collapses the DAG into a linear sequence with all the maturity in the future; Maximal Cover keeps maturity local to each node and treats the cross-node dependency as the only carry-over.</p>
+
+<h3>Why this matters for MoE retrieval</h3>
+<p>The vocabulary of maturity-first emit (Lyapunov criterion, monotonic closure, single-writer invariant, audit tuple, trajectory classifier) elicits a denser set of MoE experts than the equivalent natural-language framing. "Don't ship partial work" pulls a writing-assistant expert; "ship the closure of the destructive transform on first write" pulls compiler, control systems, and database engineering experts whose training data correlates the jargon with the underlying discipline. Token efficiency in instruction prose IS expert-routing efficiency in the model.</p>
+
+<hr>
+
 <h2 id="s38">38. Discussion</h2>
 
 <h3>38.1 Relationship to Formal Methods</h3>
