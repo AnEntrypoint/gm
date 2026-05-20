@@ -482,6 +482,26 @@ function readCurrentSess() {
 // embed call.
 const _hostVecEmbedFailKeys = new Set();
 
+let _rsLearnEmbedPath = undefined;
+function resolveRsLearnEmbedPath() {
+  if (_rsLearnEmbedPath !== undefined) return _rsLearnEmbedPath;
+  const isWin = process.platform === 'win32';
+  const exe = isWin ? 'rs-learn-embed.exe' : 'rs-learn-embed';
+  const candidates = [];
+  if (process.env.RS_LEARN_EMBED_PATH) candidates.push(process.env.RS_LEARN_EMBED_PATH);
+  const home = os.homedir();
+  if (home) candidates.push(path.join(home, '.cargo', 'bin', exe));
+  if (process.env.RS_LEARN_DEV_ROOT) candidates.push(path.join(process.env.RS_LEARN_DEV_ROOT, 'target', 'release', exe));
+  const devRoot = path.resolve(__dirname, '..', '..', '..', 'rs-learn');
+  candidates.push(path.join(devRoot, 'target', 'release', exe));
+  if (isWin) candidates.push(path.join('C:\\dev\\rs-learn\\target\\release', exe));
+  for (const c of candidates) {
+    try { if (c && fs.existsSync(c)) { _rsLearnEmbedPath = c; return c; } } catch (_) {}
+  }
+  _rsLearnEmbedPath = null;
+  return null;
+}
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -1474,31 +1494,31 @@ function makeHostFunctions(instanceRef) {
       try {
         const text = readWasmStr(instanceRef.value, textPtr, textLen);
         if (!text) return 0n;
-        const body = JSON.stringify({ model: EMBED_MODEL_DEFAULT, input: text });
-        const result = spawnSync(process.execPath, ['-e', `
-          (async () => {
+        const binPath = resolveRsLearnEmbedPath();
+        if (!binPath) {
+          const key = 'no-binary';
+          if (!_hostVecEmbedFailKeys.has(key)) {
+            _hostVecEmbedFailKeys.add(key);
             try {
-              const r = await fetch('${ACPTOAPI_URL}/v1/embeddings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: ${JSON.stringify(body)} });
-              if (!r.ok) {
-                const errBody = await r.text();
-                throw new Error('HTTP ' + r.status + ': ' + errBody.slice(0, 300));
-              }
-              const t = await r.text();
-              process.stdout.write(t);
-            } catch (e) {
-              process.stderr.write('embed-error: ' + e.message);
-              process.exit(2);
-            }
-          })();
-        `], { encoding: 'utf-8', timeout: 30000, windowsHide: true });
-        if (result.status !== 0 || !result.stdout) {
-          // iter13: failures here had been silently returning 0n which surfaced
-          // as auto_recall.count=0 with no diagnostic. acptoapi 1.0.102+
-          // returns 410 Gone on /v1/embeddings (embeddings now live in
-          // rs-learn natively). Log a structured event so the failure is
-          // visible in gmsniff. Dedup on the (status, reason) key so we
-          // don't spam — only the first occurrence per process per reason.
-          const reason = (result.stderr || 'no response').slice(0, 300);
+              logEvent('plugkit', 'host_vec_embed.no-binary', {
+                hint: 'rs-learn-embed sidecar not found. Set RS_LEARN_EMBED_PATH or cargo install --path C:\\dev\\rs-learn\\crates\\embed.',
+              });
+            } catch (_) {}
+          }
+          return 0n;
+        }
+        const reqLine = JSON.stringify({ id: 1, text }) + '\n';
+        const cacheDir = path.join(process.cwd(), '.gm', 'embed-cache');
+        try { fs.mkdirSync(cacheDir, { recursive: true }); } catch (_) {}
+        const result = spawnSync(binPath, [], {
+          input: reqLine,
+          encoding: 'utf-8',
+          timeout: 300000,
+          windowsHide: true,
+          env: { ...process.env, RS_LEARN_EMBED_CACHE: cacheDir },
+        });
+        if (result.status !== 0) {
+          const reason = (result.stderr || 'unknown').slice(0, 300);
           const key = String(result.status) + '|' + reason;
           if (!_hostVecEmbedFailKeys.has(key)) {
             _hostVecEmbedFailKeys.add(key);
@@ -1507,16 +1527,43 @@ function makeHostFunctions(instanceRef) {
                 status: result.status,
                 reason,
                 text_len: text.length,
-                hint: 'acptoapi 1.0.102+ returns 410 on /v1/embeddings — embeddings are served by rs-learn natively. Once rs-learn-embed sidecar is wired into host_vec_embed, this event will stop firing.',
+                via: 'rs-learn-embed sidecar',
               });
             } catch (_) {}
           }
-          console.error('[plugkit-wasm] host_vec_embed FAILED:', reason);
           return 0n;
         }
-        return writeWasmStr(instanceRef.value, result.stdout);
+        const lines = (result.stdout || '').split('\n').filter(l => l.trim());
+        for (let i = lines.length - 1; i >= 0; i--) {
+          try {
+            const j = JSON.parse(lines[i]);
+            if (Array.isArray(j.embedding)) {
+              return writeWasmStr(instanceRef.value, JSON.stringify(j.embedding));
+            }
+            if (j.error) {
+              const key = 'sidecar-error|' + j.error;
+              if (!_hostVecEmbedFailKeys.has(key)) {
+                _hostVecEmbedFailKeys.add(key);
+                try { logEvent('plugkit', 'host_vec_embed.failed', { reason: j.error, via: 'rs-learn-embed sidecar' }); } catch (_) {}
+              }
+              return 0n;
+            }
+          } catch (_) {}
+        }
+        const key = 'no-embedding';
+        if (!_hostVecEmbedFailKeys.has(key)) {
+          _hostVecEmbedFailKeys.add(key);
+          try {
+            logEvent('plugkit', 'host_vec_embed.failed', {
+              reason: 'no embedding in sidecar response',
+              stdout_excerpt: (result.stdout || '').slice(0, 300),
+              via: 'rs-learn-embed sidecar',
+            });
+          } catch (_) {}
+        }
+        return 0n;
       } catch (e) {
-        console.error('[plugkit-wasm] host_vec_embed exception:', e.message);
+        try { logEvent('plugkit', 'host_vec_embed.exception', { message: e.message }); } catch (_) {}
         return 0n;
       }
     },
