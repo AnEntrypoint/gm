@@ -9,6 +9,33 @@
             "command": "node \"${CLAUDE_PROJECT_DIR}/gm-starter/lib/spool-poll-gate.js\""
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.gm/hooks/spool-poll-gate.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.gm/hooks/spool-poll-gate.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.gm/hooks/spool-poll-gate.js\""
+          }
+        ]
       }
     ]
   }

@@ -182,7 +182,7 @@ stateDiagram-v2
 
 <div class="skill">
   <div class="skill-header"><h2>fetch</h2><span class="role">HTTPS GET/POST</span></div>
-  <div class="row"><span class="k">role</span><span>Routed through localhost <code>acptoapi</code> on <code>127.0.0.1:4800</code> for embedding/LLM calls; direct egress otherwise. <code>acptoapi</code> spawns on first need via <code>bun x acptoapi@latest</code> and is non-fatal on spawn failure.</span></div>
+  <div class="row"><span class="k">role</span><span>Direct HTTPS egress. Embedding calls are serviced natively in-process by rs-learn (fastembed-rs); LLM-tier work is offloaded to the host agent via callback protocol.</span></div>
 </div>
 
 <div class="skill">

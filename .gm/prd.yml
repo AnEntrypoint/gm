@@ -851,3 +851,81 @@
   - 'Witnessed: memorize→restart-watcher→recall round-trip via libsql returns the memo'
   - No 'unimplemented WASI call' in .watcher.log under normal operation
   status: pending
+- id: browser-witness-gate
+  subject: Gate stop/complete on browser witness when browser-running files were edited
+  category: feature
+  description: Per paper §23, edits to *.html, *.htm, *.tsx, *.jsx, *.vue, *.svelte or files under src/, public/, site/ with script/style ext require live browser verb witness same turn. Implement in gm-starter/lib/spool-dispatch.js::checkDispatchGates new operation 'stop'/'verify-transition'. Track turn-scoped browser dispatch via .gm/exec-spool/.turn-browser-witnessed marker; clear at turn boundary. Track edits via similar marker .gm/exec-spool/.turn-browser-edits.json. Deny if edits set non-empty AND no witness marker.
+  acceptance:
+  - checkDispatchGates denies stop when .turn-browser-edits.json non-empty and .turn-browser-witnessed absent
+  - Allowed once browser verb fires (marker written)
+  - Markers cleared at idle>30s turn boundary
+  effort: medium
+  status: completed
+- id: wasm-timeout-validation
+  subject: Wasm host_exec_js hard-rejects missing/zero timeoutMs; JS wrapper pre-validates
+  category: feature
+  description: Per paper §20/§33, host_exec_js must reject missing or zero timeout_ms. Add validation in rs-plugkit host fn returning structured error {error:'missing timeoutMs',required:'positive integer milliseconds',paper_ref:'§20'}. Pre-validate same in plugkit-wasm-wrapper.js so wasm never gets called.
+  acceptance:
+  - rs-plugkit host_exec_js returns error on timeout_ms==0 or absent
+  - plugkit-wasm-wrapper.js exec_js pre-validates
+  - 'Witness: nodejs/python dispatch without timeoutMs returns error not hang'
+  effort: medium
+  status: completed
+- id: rs-plugkit-unit-test-scaffold
+  subject: Bootstrap unit-test scaffold in rs-plugkit for prd/mutables/residual/wasm_dispatch handlers
+  category: feature
+  status: completed
+  description: 'Iter6 audit flagged zero unit tests in rs-plugkit. Add inline #[cfg(test)] modules with happy+error paths for prd::handle_resolve, mutables::handle_resolve, residual::handle_scan, wasm_dispatch exec_js+shell_exec timeoutMs validation. Host cargo test currently broken by pre-existing wasm-only compile errors (wasm_dispatch refs from non-gated code, duplicate handle_fire, missing is_derivable_state) — tests land as scaffold for next iteration to wire up CI.'
+- id: misuse-probe-iter7
+  subject: Probe browser-witness gate revert loophole, timeoutMs floor, empty auto-recall query
+  category: feature
+  status: completed
+  description: 'Iter7 misuse audit: (1) agent edits .html, dispatches browser, reverts edit — gate satisfied but unwitnessed. (2) timeoutMs=1ms bypasses meaningful execution. (3) empty user prompt → empty auto-recall query response shape.'
+- subject: Build trigger fixtures for 3 zero-fire deviation detectors
+  description: Build standalone Node scripts to deliberately trigger residual-premature, browser-witness-hash-mismatch, browser-profile-collision and verify each emits its deviation event. Diagnose any wired-wrong detector and fix inline.
+  category: feature
+  effort: medium
+  acceptance:
+  - Fixture 1 residual-premature run, witness fire-or-fail
+  - Fixture 2 browser-witness-hash-mismatch run, witness fire-or-fail
+  - Fixture 3 browser-profile-collision run, witness fire-or-fail
+  - Any wired-wrong detector fixed and re-witnessed
+  - Conclusion documented
+  id: item-1779301717244
+  status: completed
+- subject: G1-audit-acptoapi-callsites
+  description: Catalog every place rs-learn, rs-plugkit, rs-exec, rs-search, rs-codeinsight, gm reference acptoapi (string match, HTTP fetch, env var, port 4800, bootstrap call). Produce a single text artifact listing file:line for each reference, tagged as either code/doc/memory/test. Feeds G6+G7.
+  id: item-1779310267899
+  status: pending
+- subject: G2-design-callback-protocol
+  description: 'Specify the deferred-step protocol shape. rs-learn responds to a memorize/recall request that needs an LLM op (summarize, classify, distill, query-expand) with {pending_step:{kind, id, payload}, partial_state_token}. Agent computes via its own intelligence (no external LLM), calls back with {pending_step_id, result, token}. Two new verbs: memorize-step-pending (returns a step) and memorize-step-continue (consumes result). State suspended in KV between calls.'
+  id: item-1779310272906
+  status: pending
+- subject: G3-implement-rs-learn-callback-surface
+  description: 'Implement the memorize-step-pending / memorize-step-continue verb pair in rs-learn (and proxied via rs-plugkit wasm_dispatch). Suspend pipeline state in KV keyed by step_id with TTL. Reject stale tokens. Witness: a memorize call that requires summarization parks, returns pending step, agent test-driver returns result, finalize succeeds and embedding lands.'
+  id: item-1779310272925
+  status: pending
+- subject: G4-rs-plugkit-callback-wiring
+  description: 'Wire the instruction phase machine to surface the pending step as part of the response body. New phase or sub-phase AWAIT-RESULT: when a verb returns {pending_step}, the next instruction body presents the step as an imperative to the agent. After the agent dispatches memorize-step-continue with the result, the chain resumes.'
+  id: item-1779310277919
+  status: pending
+- subject: G5-vector-768-everywhere
+  description: 'Bump every F32_BLOB(384) and equivalent to F32_BLOB(768) so Nomic Embed v1.5 vectors fit. Audit: rs-plugkit/src/code_index.rs (done locally, needs commit), rs-search schema, any test fixture or expected-dim const. Validate via grep that no 384 lingers in a vector-dim context. Witness: schema migration commit lands on each repo + cascade publish.'
+  id: item-1779310277936
+  status: pending
+- subject: G6-remove-acptoapi-from-source
+  description: 'Delete every acptoapi reference from running code: rs-plugkit/src/wasm_dispatch.rs LLM paths, gm-starter/lib/daemon-bootstrap.js bootstrapAcptoapi, gm-starter/lib/skill-bootstrap.js ensureAcptoapi, gm-starter/gm-plugkit/plugkit-wasm-wrapper.js inlined ensureAcptoapi block, any vec_embed HTTP fallback to localhost:4800, mutable yaml entries that reference acptoapi as a dependency. The sidecar (rs-learn-embed) is the only embedding path; the agent (via the G3/G4 callback protocol) is the only LLM-tier path.'
+  id: item-1779310282920
+  status: pending
+- subject: G7-remove-acptoapi-from-docs-memory
+  description: Strip acptoapi from AGENTS.md (the 'upstream embedding/LLM proxy' paragraph), docs/distribution.html, docs/paper.html, docs/skills.html, site content, memory files (.gm/memorize-now.md, .gm/mutables-acptoapi.yml — delete that file, .gm/last-prompt.txt content cleanup, .gm/mutables.yml), and the auto-memory store in ~/.claude/projects/C--dev-gm/memory if any entry exists. CHANGELOG history may retain past mentions but no forward-looking guidance should reference acptoapi.
+  id: item-1779310287911
+  status: pending
+- subject: G8-publish-cascade
+  description: 'Commit + push each repo in dependency order: rs-learn (schema if applicable + callback surface) → rs-search (768 dim) → rs-plugkit (wasm_dispatch cleanup + callback wiring + schema) → gm (bootstrap stripping + AGENTS.md edits + memory cleanup). Verify cascade.yml in each rs-* repo triggers rs-plugkit''s release.yml; verify rs-plugkit publish bumps gm.json plugkitVersion; verify gm publish.yml runs.'
+  id: item-1779310292909
+  status: pending
+- subject: G9-witness-end-to-end
+  description: 'After publish: cold-boot a fresh watcher; dispatch instruction with a real prompt that triggers a summarize step; verify the agent receives a pending_step in the instruction body; agent computes and calls memorize-step-continue; verify a memorize round-trip ends with a 768-dim embedding stored and a subsequent recall returns score>0 hits. Final grep confirms zero acptoapi mentions anywhere except CHANGELOG history.'
+  id: item-1779310292926
+  status: pending

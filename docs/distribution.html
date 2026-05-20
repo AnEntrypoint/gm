@@ -129,7 +129,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
   <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs.</li>
   <li>No native build step at install. The single wasm artifact runs everywhere a Node 20+ WASI host runs &mdash; one binary for every OS and every CPU.</li>
   <li>No daemon to install or supervise. The watcher and host run inside the same wasm instance as the orchestrator. There is no port, no rpc daemon, no <code>kill -9</code> story.</li>
-  <li>No mandatory secrets at install. The only optional outbound is <code>acptoapi</code> (a localhost embedding/LLM proxy auto-launched on first need); offline use is the default.</li>
+  <li>No mandatory secrets at install. Embeddings run natively in-process (fastembed-rs inside rs-learn); LLM-tier work is offloaded to the host agent via callback. Offline use is the default.</li>
 </ul>
 
 <h2>3. Open All The Way Down</h2>

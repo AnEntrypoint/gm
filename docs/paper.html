@@ -804,7 +804,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: Semantic Work Routes Through fetch <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE &middot; EMIT]</span></div>
-  <p>Any task whose correctness depends on understanding&mdash;summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same&mdash;routes through a haiku-class model call dispatched via the <code>fetch</code> host verb against the local <code>acptoapi</code> proxy on <code>127.0.0.1:4800</code>. One call per item, N items in N parallel spool dispatches in one message.</p>
+  <p>Any task whose correctness depends on understanding&mdash;summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same&mdash;routes through a haiku-class model call offloaded to the host agent via the LLM callback protocol. One call per item, N items in N parallel spool dispatches in one message.</p>
 </div>
 
 <p>The split is between mechanics and meaning. Mechanics are operations whose correctness can be decided by a deterministic procedure: parse this JSON, sort these strings, hash this file, count occurrences of a regex. Meaning is operations whose correctness depends on the model&rsquo;s understanding of language: does this commit message describe a bug fix or a feature, does this docstring contradict its function&rsquo;s behavior, are these two error messages saying the same thing in different words.</p>

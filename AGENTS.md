@@ -108,8 +108,6 @@ Push to any rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) tri
 
 There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
 
-**acptoapi is the upstream embedding/LLM proxy**: reachable at 127.0.0.1:4800. `bootstrapAcptoapi` (in `lib/daemon-bootstrap.js`) spawns `bun x acptoapi@latest` if the port is unreachable. The wasm host's `vec_embed` and `fetch` verbs route through it. Spawn failure is non-fatal — callers degrade.
-
 **Repos involved (push to any triggers cascade):**
 - `AnEntrypoint/rs-exec` — exec runner, browser sessions, idle cleanup, session task isolation
 - `AnEntrypoint/rs-codeinsight` — code search backend, symbol indexing
