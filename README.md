@@ -27,6 +27,24 @@ always use the gm-skill skill for everything, always fan out subagents
 
 Plugkit serves all phase instructions, state, mutables, and guardrails on demand via the spool.
 
+## Recommended Claude Code settings
+
+gm runs best with extended thinking off and the autocompact threshold raised so the orchestrator can keep PRD/mutables state in-context longer. Drop this into your `~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "62"
+  },
+  "alwaysThinkingEnabled": false,
+  "effortLevel": "low"
+}
+```
+
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: "62"` — defers autocompaction until 62% of the context window, so the PRD, mutables, and recall stay live longer.
+- `alwaysThinkingEnabled: false` — plugkit already drives deliberation through PLAN→EXECUTE→EMIT→VERIFY; extended thinking duplicates that work.
+- `effortLevel: "low"` — the state machine, not the model, is the reasoning surface. Low effort + spool dispatch is the intended operating point.
+
 ## Architecture
 
 `gm-starter/skills/gm-skill/SKILL.md` is the single ~12-line entry point. All orchestration logic lives in `rs-plugkit/src/orchestrator/`. See [AGENTS.md](AGENTS.md) for the full design.

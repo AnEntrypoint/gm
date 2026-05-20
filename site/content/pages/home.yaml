@@ -52,6 +52,13 @@ quickstart:
     - { kind: "cmt", text: "" }
     - { kind: "cmt", text: "# then add this line to your agent's global memory / system prompt:" }
     - { kind: "cmt", text: "# always use the gm-skill skill for everything, always fan out subagents" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# recommended ~/.claude/settings.json for claude code:" }
+    - { kind: "cmt", text: '# { "env": { "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "62" },' }
+    - { kind: "cmt", text: '#   "alwaysThinkingEnabled": false,' }
+    - { kind: "cmt", text: '#   "effortLevel": "low" }' }
+    - { kind: "cmt", text: "# autocompact at 62% keeps PRD + mutables in-context longer;" }
+    - { kind: "cmt", text: "# thinking off + low effort because plugkit is the reasoning surface." }
 examples:
   heading: read further
   items:

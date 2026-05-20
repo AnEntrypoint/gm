@@ -568,3 +568,223 @@
   - 'Witness: npx -y plugkit-wasm@latest resolves on npm registry'
   effort: small
   status: completed
+- id: normalize-jsonl-ts-format
+  subject: supervisor.js emits epoch-millis ts while rest of stack emits ISO; gmsniff CLI breaks
+  description: 'Witnessed: gmsniff --list-sessions and gmsniff --since 30m both crash with TypeError on .slice/.localeCompare against numeric ts. Root cause: gm-starter/gm-plugkit/supervisor.js::logEvent emits ts:Date.now() (number). All other emitters (bootstrap.jsonl, hook.jsonl, plugkit.jsonl watcher events) emit ISO strings. Fix both ends: (a) supervisor.js logEvent must emit new Date().toISOString() so the canonical schema is consistent; (b) gmsniff src/cli.js must defensively coerce numeric ts to ISO at read time so historical logs remain queryable. Push to AnEntrypoint/gm triggers cascade; gmsniff fix lands in C:/dev/gmsniff.'
+  category: bug
+  effort: small
+  acceptance:
+  - supervisor.js logEvent emits ISO string ts
+  - gmsniff CLI handles numeric ts without crash by normalizing on read
+  - gmsniff --list-sessions runs to completion on existing logs
+  - gmsniff --since 30m runs to completion
+  route_family: execution
+  status: completed
+- id: watcher-reads-session-sidecar
+  subject: Watcher emits sess:'' on every event — observability cannot per-session attribute
+  description: 'Witnessed: 311 plugkit events in last 30m all carry sess:''''. Root cause: gm-starter/gm-plugkit/plugkit-wasm-wrapper.js::logEvent reads process.env.CLAUDE_SESSION_ID once at watcher spawn — but the watcher is a long-lived background process spawned without inheriting the per-session env from the dispatching agent. Even if it inherited, the single watcher serves dispatches from many agent sessions, so its spawn-time sess can''t represent the current dispatcher. Effect: gmsniff --list-sessions shows only ''(no-session)''; xref with ccsniff impossible; turn metrics per session empty. Fix: watcher reads .gm/exec-spool/.session-current (a single-line file) at logEvent time, falling back to env. The dispatching library (gm-starter/lib/spool-dispatch.js or skill-bootstrap.js) writes that file once per agent-session start with CLAUDE_SESSION_ID. Cheap, single-file, no protocol change.'
+  category: bug
+  effort: medium
+  acceptance:
+  - plugkit-wasm-wrapper.js logEvent reads .gm/exec-spool/.session-current per call (cached briefly to avoid syscall storms)
+  - spool-dispatch.js or skill-bootstrap.js writes the file at session-start using CLAUDE_SESSION_ID
+  - 'After fix, gm-log events carry the agent''s sess, not '''' '
+  - gmsniff --list-sessions groups events by real session id
+  - gmsniff --xref <sess> joins gm + cc events for the same session
+  route_family: execution
+  status: completed
+- id: max-effort-implicit-prose
+  subject: Encode 'when in doubt, go wider' implicitly in skill + orchestrator + paper prose
+  description: 'User direction: every scope question — how many phases, how much work, how destructive — resolves to maximum effort. The discipline already exists (Maximize the scope; Maximal Cover; covering family) but the prose still reads as ''permitted with declaration''. Shift the disposition so the model *is* maximally-scoped rather than reading about when it may be. Touch: (a) gm-starter/skills/gm-skill/SKILL.md — one terse paragraph adjacent to Fix on Sight, no numbered procedure, no citation, elicits the disposition; (b) rs-plugkit/src/orchestrator/instructions/plan.rs — strengthen Maximal Cover prose so the default reads as wider/deeper/more destructive rather than ''when scope exceeds reach''; (c) rs-plugkit/src/orchestrator/instructions/execute.rs and emit.rs — drop one-line dispositional pulses that say wider beats smaller; (d) docs/paper.html executive-summary area — extend the existing Maximal Cover / autonomy paragraphs so the disposition reads as default-maximum, not default-bounded. Elicit, do not describe. No ''always do X'' procedural lists. No ''see §N''. No ''this rule says''. Prose that triggers the disposition the model already has.'
+  category: refactor
+  effort: medium
+  acceptance:
+  - SKILL.md gains one terse implicit paragraph; no procedure list
+  - rs-plugkit plan.rs Maximal Cover defaults to wider-deeper-more-destructive disposition
+  - rs-plugkit execute.rs and emit.rs each gain one dispositional pulse line
+  - docs/paper.html Maximal Cover / Autonomy paragraphs strengthened
+  - No new citations, no see-also pointers, no procedural step-lists
+  - Both repos pushed; cascade rebuilds gm-skill
+  route_family: representation
+  status: completed
+- id: only-plugkit-skill-collapse
+  subject: Collapse SKILL.md to bare bootstrap+dispatch; move mechanism into plugkit instruction prose
+  description: 'User direction: SKILL.md is the start-of-conversation primary directive that every agent carries the entire chain. It must hard-direct ''only plugkit'' — every other mechanism (boot howto, dispatch ABI, batch tactics, verb lists, observability, browser globals) belongs inside plugkit''s instruction prose, served on demand. Shrink SKILL.md to: boot the watcher if absent, dispatch instruction, follow its prose, never reach for any other tool. Move the displaced mechanism into rs-plugkit/src/orchestrator/instructions/entry.rs (batch dispatch, observability) and execute.rs (browser globals). Keep elicit-prose tone; no procedural lists.'
+  category: refactor
+  effort: medium
+  acceptance:
+  - SKILL.md is <=40 lines total
+  - 'SKILL.md contains only: boot-if-absent imperative, instruction-dispatch imperative, never-other-tool imperative'
+  - entry.rs gains batch-dispatch and observability paragraphs
+  - execute.rs gains the browser globals paragraph (page/snapshot/state/screenshotWithAccessibilityLabels)
+  - No verb lists in SKILL.md
+  - No dispatch ABI diagrams in SKILL.md
+  - Both repos pushed; cascade rebuilds gm-skill
+  route_family: representation
+  status: completed
+- id: rebootstrap-to-021-witness-sess
+  subject: Rebootstrap plugkit to 0.1.421 (carries prior session-sidecar + skill-collapse fixes); witness sess attribution restored
+  description: 'Witnessed in last 30m: 68 plugkit events still carry sess:''''. Root cause: running watcher is on 0.1.419 (.status.json), latest is 0.1.421 (.update-available.json). My session-sidecar fix and only-plugkit collapse are pushed and published but the watcher hasn''t reloaded. Action: rebootstrap to latest, write .session-current, dispatch one instruction, verify the new event carries the real sess. Also: prior turns transitioned PLAN→COMPLETE skipping EXECUTE/EMIT/VERIFY — this turn walks the full chain so the witnessable phase walk is intact.'
+  category: infra
+  effort: small
+  acceptance:
+  - status.json reports 0.1.421
+  - update-available.json removed
+  - .session-current contains a sess value
+  - Next plugkit.jsonl event after rebootstrap carries sess != ''
+  - This turn's phase walk shows PLAN→EXECUTE→EMIT→VERIFY→COMPLETE all filled
+  route_family: execution
+  status: completed
+- id: sess-from-turnstate-and-planned-kill
+  subject: Watcher reads sess from turn-state.json (more robust than sidecar); planned-shutdown verb for clean external kill
+  description: 'Two deviations witnessed in last 30m: (1) 184/210 plugkit events still carry sess:'''' because agents that dispatch via raw Write (the gm-skill harness itself, this very loop) don''t write the .session-current sidecar — only gm-starter/lib paths do. (2) .unplanned-restart.json fired with critical severity, but the prior watcher died because I Stop-Process -Force''d it from outside in the previous turn — a planned act misclassified as a crash because there''s no clean external-kill path. Fixes: (A) plugkit-wasm-wrapper.js::readCurrentSess gains a fallback that reads .gm/turn-state.json::session_id (orchestrator already persists it from JSON-body instruction dispatches with session_id field). This means any agent that ever dispatches instruction with a session_id automatically gets sess attribution on every subsequent event, no sidecar coordination needed. (B) Add a ''planned-shutdown'' or ''close-watcher'' verb the agent dispatches before killing the watcher — writes .shutdown-reason.json and exits cleanly so the next watcher boot doesn''t false-positive an unplanned-restart. (C) Clear current false-positive .unplanned-restart.json this turn.'
+  category: feature
+  effort: medium
+  acceptance:
+  - plugkit-wasm-wrapper.js readCurrentSess reads turn-state.json::session_id as a fallback
+  - 'After dispatching one instruction with body {session_id: ''X''}, subsequent plugkit.jsonl events carry sess: ''X'' even from non-gm dispatchers'
+  - Either a 'close-watcher' verb is added to rs-plugkit, OR the README/SKILL prose names the canonical clean-shutdown path
+  - Current .unplanned-restart.json is cleared this turn
+  - Pushed to AnEntrypoint/gm and AnEntrypoint/rs-plugkit
+  route_family: execution
+  status: completed
+- id: reload-watcher-witness-turnstate-fallback
+  subject: Reload watcher to gm-plugkit@2.0.1168; witness turn-state fallback live; walk full phase chain
+  description: 'gm-plugkit@2.0.1168 (published via cascade after e86c6dc9) carries the readCurrentSess turn-state.json fallback. Running watcher is on the pre-fix wrapper, so dispatches still show sess:'''' for raw-Write paths. Action: clear .session-current so the test is pure (forcing fallback), kill watcher, bun x gm-plugkit@latest spool, dispatch instruction with {session_id} JSON body (which now persists into turn-state.json), then dispatch a non-instruction verb and witness it carries the sess. Also: walk PLAN→EXECUTE→EMIT→VERIFY→COMPLETE in this turn so the phase-walk witness shows the full row, not the recurring shortcut I keep falling into.'
+  category: infra
+  effort: small
+  acceptance:
+  - 'watcher running gm-plugkit@2.0.1168 wrapper (witness: tail plugkit.jsonl after dispatch and see sess populated)'
+  - After clearing .session-current and dispatching instruction with session_id, subsequent non-instruction dispatch's plugkit.jsonl event carries sess from turn-state.json
+  - This turn's gmsniff --list-sessions shows phase walk all five filled
+  route_family: execution
+  status: completed
+- id: watcher-skips-tmp-files
+  subject: walkDir races against atomic-rename writers; ENOENT on .tmp.PID.HASH files
+  description: 'Witnessed: 2 dispatch.error events in last 30m on thebird project, both ENOENT opening files like .tmp.30852.f14960d48296 — temp files from an atomic-rename spool writer that disappear before the watcher reads them. The wrapper''s walkDir() in plugkit-wasm-wrapper.js (and the stale-sweep walker) returned every directory entry including .tmp.* files, then statSync/readFileSync would race the renamer. Fix: filter entries matching /\.tmp\.\d+(\.|$)/ in both walkers; harden statSync against ENOENT with try/continue so even a non-tmp file that vanishes between readdir and stat is skipped silently rather than logged as error.'
+  category: bug
+  effort: small
+  acceptance:
+  - plugkit-wasm-wrapper.js walkDir skips .tmp.<pid>(.<hash>) entries
+  - stale-sweep walker same
+  - Both walkers tolerate stat ENOENT silently
+  - No more dispatch.error events for .tmp.* paths after watcher reload
+  - Pushed; cascade republishes
+  route_family: execution
+  status: completed
+- subject: watcher respawns on wrapper.js drift
+  detail: Supervisor only watches plugkit.wasm version; wrapper.js updates don't trigger respawn. Compute wrapper.js sha and store alongside .status.json; on tick, if disk sha != running sha, exit-with-respawn so updated wrapper code loads.
+  id: item-1779205538307
+  status: completed
+- subject: fs.watch callback filters .tmp.PID files
+  detail: Iter8 walkDir filter only covered the 5s poll path. fs.watch handler (line 1484) sees every transient atomic-rename temp file and calls processFile directly, bypassing the filter. Same regex applied at the fs.watch entry. Witnessed 4x in last 30m across thebird/zellous/agentgui watchers despite iter8 fix being live.
+  id: item-1779207225687
+  status: completed
+- subject: harden plan/execute prose against next-session-deferral and greenlight-gate failures
+  detail: 'User showed two transcripts: zellous session did 1/10 turns and named 9 as next-session residuals; agentgui session locked plan and paused at EXECUTE gate awaiting green light. Both are forced-closure dressed as deference. Added explicit No-Next-Session-Deferral section to plan.rs and No-Greenlight-Gate section to execute.rs in rs-plugkit. Cascade republishes wasm; live agents pick up the new prose on next instruction dispatch.'
+  id: item-1779207389442
+  status: completed
+- id: item-1779207863928
+  status: completed
+- subject: hard-gate transition to COMPLETE on pending mutables/PRD; tighten residual-scan out-of-reach prose
+  detail: 'Failure mode shown in user transcript: agent declared phase=COMPLETE while 5 mutables remained pending — the COMPLETE gate in transitions.rs accepts unconditionally with no invariant check. On next turn, instruction served UPDATE-DOCS phase with 5 still-pending mutables — phantom-COMPLETE. Also: agent rationalized ''browser sessions belong to other projects — out-of-reach'' to license stop, which is forced closure dressed as humility (same machine same daemon = reachable). Fix: transitions.rs gates COMPLETE behind empty mutables_pending AND empty PRD; residual.rs imperative names the not-synonym-for-other-project anti-pattern.'
+  id: item-1779207864721
+  status: completed
+- subject: hard-gate COMPLETE on pending mutables/PRD; out-of-reach prose
+  detail: transitions.rs accepts COMPLETE unconditionally; residual.rs lets agents call other-project sessions out-of-reach. Both let phantom-COMPLETE pass invariants. Fixed in rs-plugkit.
+  id: item-1779207919248
+  status: completed
+- subject: hard-gate COMPLETE on pending mutables/PRD; out-of-reach prose
+  detail: transitions.rs accepts COMPLETE unconditionally; residual.rs lets agents call other-project sessions out-of-reach. Both let phantom-COMPLETE pass invariants. Fixed in rs-plugkit.
+  id: item-1779207919904
+  status: completed
+- subject: 'collapse instruction prose: predicament over enumeration'
+  detail: 'User insight: my last 3 iterations responded to forced-closure by adding more explicit anti-pattern sections (No Next-Session Deferral, No Greenlight Gate, Out-of-reach catalog). AGENTS.md already forbade this pattern: ''Implicit, not explicit, in skill prose. Write terse imperative principles whose phrasing triggers the model''s already-learned dispositions, not numbered procedures.'' The hard structural gate (transitions.rs COMPLETE-rejector from iter12) does the enforcement; the prose should elicit, not enumerate. Collapsed plan.rs, execute.rs, emit.rs, verify.rs, entry.rs, residual.rs imperative to terse imperative principles. Removed: ''X is forced closure dressed as Y'', ''the failure mode this guards against'', ''paused at green-light gate'', ''No Deferral Phrasing'' word lists. Kept: structural facts, dispatch grammar, the imperative shape of each phase. The predicament does the work.'
+  id: item-1779209266241
+  status: completed
+- subject: lock carries wrapper-sha; sha-mismatch fresh boot kills stale peer
+  detail: 'Past 30m: same .tmp.PID leak still firing from stuck old watchers across other projects (thebird/zellous, writer PIDs 15032/30852). Their wrapper.js predates iter9 wrapper-drift respawn AND iter10 fs.watch filter — they never self-heal because they keep refreshing their own lock. Fix: lock body now includes wrapper sha12. A new watcher reading an active lock with mismatching sha kills the holder PID and takes over, emitting peer.stale-wrapper-takeover. Predicament: stuck-on-old-code = stale = recyclable, automatically, no manual kill needed.'
+  id: item-1779209904070
+  status: completed
+- subject: alive watchers sweep peer registry, kill stale-wrapper peers cross-project
+  detail: 'Past 30m: 54 .tmp.PID leak events from stale watchers in thebird/zellous still firing as recently as 17:02. The iter14 fix triggers only on fresh boot, but stale watchers don''t release their lock so no fresh boot happens. Fix: each booting watcher registers cwd+pid+sha in ~/.claude/gm-tools/peer-registry.json; an interval sweep walks the registry, reads each peer''s .watcher.lock, and SIGTERMs any peer whose sha differs from own (with a sanity check that the pid is alive). The predicament: any one fresh watcher acts as immune system for the whole machine — stale peers get retired without manual kill, on a 60s tick.'
+  id: item-1779210214671
+  status: completed
+- subject: bootstrap uses npm install (extract) not npx (run)
+  detail: 'Past 30m: my own watcher running stale wrapper code; installed sha 08a900 vs source sha b4b905. Root cause: cli.js bootstrap path hits EINVAL ''npm error could not determine executable to run'' because plugkit-wasm npm package has no bin entry — npx can''t run it. The intent is extraction, not execution. Fix: bootstrap.js extractNpmPackageWasm now uses npm install --no-save --prefix <tempDir> which fetches and extracts without trying to find an executable. The wrapper.js installed alongside (from gm-plugkit __dirname) flows into ~/.claude/gm-tools/ when this works. Without this fix, fresh bootstrap silently degrades and watchers never pick up cascade-published wrappers.'
+  id: item-1779210851196
+  status: completed
+- subject: mutable-resolve fuzzy-match hint on unknown id
+  detail: '6+ iterations named as out-of-spirit residual: cross-project mutable-resolve hard-rejects with ''mutable id not found: X'' giving the agent no recovery path. Added levenshtein-3-nearest hint to mutables.rs handle_resolve. Failure now reads ''mutable id not found: X — did you mean one of: A, B, C'' so the agent can self-correct without giving up the chain.'
+  id: item-1779211686263
+  status: completed
+- subject: planned-shutdown allowlist + takeover writes shutdown-reason
+  detail: '6+ iterations named as out-of-spirit residual: clean external-shutdown classification. Three fixes land together. (1) supervisor.js plannedReasons set now includes wrapper-change, peer-stale-takeover, external-planned (was missing — iter9 wrapper-drift writes ''wrapper-change'' but supervisor classified it as unplanned). (2) lock-acquire takeover (iter14) now writes shutdown-reason.json with reason=peer-stale-takeover into own spoolDir before SIGTERM. (3) peer-sweep killer (iter15) writes the same marker into the killed peer''s spoolDir before SIGTERM. The predicament: any planned kill leaves a marker, supervisor classifies correctly, no false unplanned-restart events.'
+  id: item-1779211686295
+  status: completed
+- subject: mutable-resolve fuzzy-match hint on unknown id
+  detail: levenshtein-3-nearest hint replaces hard-reject
+  id: item-1779211701127
+  status: completed
+- subject: planned-shutdown allowlist + takeover markers
+  detail: supervisor allowlist gains wrapper-change/peer-stale-takeover/external-planned; both takeover paths now write shutdown-reason markers before SIGTERM
+  id: item-1779211702642
+  status: completed
+- id: loop-iter-rtk-404-on-current-version
+  subject: rtk download 404s for v0.1.426 — plugkit-bin release missing the rtk asset
+  description: 'Witnessed via gmsniff --since 30m: 3× rtk.download.attempt_failed events (04:10:14-34) with curl status 22 (HTTP error) downloading https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${plugkitVersion}/${rtkBinaryName()}, ending in bootstrap fatal at 04:10:34. wasm bootstrap succeeded so the spool watcher runs, but the rtk subprocess path failed loudly. Either (a) plugkit-bin release builder is not emitting the rtk binary for current versions — check release.yml in rs-plugkit and ensure rtk is part of the release asset set; or (b) rtk is no longer strictly required since wasm path is the canonical one and the entire bootstrapRtk codepath should be skipped/conditional. Determine which is true and fix at root rather than swallowing the failure.'
+  category: bug
+  effort: medium
+  route_family: execution
+  acceptance:
+  - gmsniff --since 7d --event rtk.download.attempt_failed returns zero new entries after fix
+  - Either plugkit-bin release contains the rtk asset for current version, OR bootstrapRtk is skipped when wasm path is canonical
+  - No bootstrap fatal events emitted from rtk path on next bun x gm-plugkit invocation
+  status: completed
+- id: loop-iter-session-current-not-seeded-on-detached-watcher
+  subject: Detached watcher started via bun x gm-plugkit@latest spool runs without .session-current, all events log sess:''
+  description: 'Witnessed: 106 plugkit events in past 30m on this machine all carry sess:'''' because watcher was launched directly via bun x gm-plugkit@latest spool (no CLAUDE_SESSION_ID in env) and .gm/exec-spool/.session-current was absent. spool-dispatch.js writes the file only when sessionId arg is passed, and skill-bootstrap.js writes only if CLAUDE_SESSION_ID is in env. When neither is true (every detached supervisor-restart), session attribution is lost permanently. Fix: the watcher itself should re-read .session-current on every logEvent (already does per PRD wat...trunc), AND skill-bootstrap or spool-dispatch should seed .session-current with a fallback identifier (cwd hash + boot ts) when no real session id is available, so gmsniff can still group by ''machine-session-X'' instead of all collapsing to ''''.'
+  category: bug
+  effort: small
+  route_family: execution
+  acceptance:
+  - After watcher restart with no CLAUDE_SESSION_ID, .gm/exec-spool/.session-current contains a non-empty fallback id
+  - gmsniff --list-sessions shows the fallback id grouping events instead of '(none)'
+  - Real CLAUDE_SESSION_ID still wins when present
+  status: completed
+- id: npm-token-cannot-publish-gm-plugkit
+  subject: gm CI 'Build & Publish Plugins' fails publishing gm-plugkit to npm with 404 — NODE_AUTH_TOKEN lacks publish rights
+  description: 'Witnessed on commits 712346ad and 11af49a2: ''publish-gm-plugkit'' step fails with ''npm error 404 Not Found - PUT https://registry.npmjs.org/gm-plugkit - Not found'' after successfully packaging gm-plugkit@2.0.1182. The package gm-plugkit@2.0.1180 IS on npm (npm view gm-plugkit). The 404-on-PUT is npm''s standard response when the auth token lacks publish rights to an existing package — either NODE_AUTH_TOKEN was rotated/expired, or the npm account that owns gm-plugkit changed. Effect: every gm push since the token broke is publishing wasm via rs-plugkit cascade (which goes to plugkit-wasm package on npm successfully) but the WRAPPER side (bootstrap.js, plugkit-wasm-wrapper.js) is stuck at gm-plugkit@2.0.1180. Bug fixes to gm-starter/lib/* and gm-starter/gm-plugkit/* (including this iteration''s rtk removal and session-current fallback) cannot reach user machines until the token is fixed. Out-of-spirit for /loop — needs user to refresh NODE_AUTH_TOKEN in AnEntrypoint/gm repo secrets.'
+  category: bug
+  effort: small
+  blockedBy:
+  - external
+  acceptance:
+  - NODE_AUTH_TOKEN refreshed in AnEntrypoint/gm repo secrets with publish rights to gm-plugkit
+  - Next gm push publishes gm-plugkit@2.0.1183+ successfully
+  - bun x gm-plugkit@latest fetches the new wrapper including rtk-removal + session-current fallback
+  status: pending
+- id: rs-plugkit-release-npm-swallow
+  subject: rs-plugkit release.yml swallowed npm publish failures with || echo
+  description: 'Witnessed: rs-plugkit Release CI ran green on 3945a57 while npm publish actually 404''d because NODE_AUTH_TOKEN lacks publish rights to plugkit-wasm. The ''Publish to npm'' step had continue-on-error:true PLUS ''|| echo failure-msg'' — failure was visible only in raw step logs, not in run status. Effect: every cascade since the token broke published a new GitHub Release but never updated npm, breaking downstream wrappers that try npx plugkit-wasm@latest first. Fixed in 36e532d: capture stderr, emit ::warning:: annotation with first 400 chars of error, keep step green so cascade continues (gh-releases remains canonical). Pushed to AnEntrypoint/rs-plugkit main; CI will validate next release run.'
+  category: ci
+  effort: small
+  route_family: representation
+  acceptance:
+  - 'release.yml ''Publish to npm'' step emits ::warning:: on failure instead of silent echo'
+  - Next rs-plugkit Release run shows yellow warning badge if NPM_TOKEN still broken
+  - Step remains green so cascade continues to Bump gm-starter metadata
+  - Committed at AnEntrypoint/rs-plugkit@36e532d
+  status: completed
+- id: execute-prose-tool-routing
+  subject: EXECUTE phase prose names Read/Glob/Grep over Bash+cat for inspection
+  description: 'Witnessed during /loop self-audit: agent produced 79+ Bash calls in a 30-min window with dozens of ''cat .gm/exec-spool/out/<verb>-N.json | head -c 500'' and ''sleep N; cat...'' polling chains — directly forbidden by host harness system prompt. EXECUTE phase prose (rs-plugkit/src/orchestrator/instructions/execute.rs) did not name the discipline so the agent had no in-loop signal. Fixed in AnEntrypoint/rs-plugkit@d1a25ee by adding one imperative paragraph naming Read/Glob/Grep for inspection, Bash for shell-only ops, dispatch instead of poll.'
+  category: docs
+  route_family: representation
+  effort: small
+  status: completed
+  acceptance:
+  - execute.rs TEXT const contains 'Inspect with the right tool' section
+  - Imperative names Read/Glob/Grep + forbids Bash for cat/ls/grep/head/tail
+  - No numbered procedure — terse imperative
+  - Committed at AnEntrypoint/rs-plugkit@d1a25ee, CI green
