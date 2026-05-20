@@ -735,11 +735,17 @@ async function spawnPlugkitWatcher(wasmPath) {
     const logFd = openWatcherLog(projectDir);
 
     const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
+    // CREATE_NO_WINDOW (0x08000000) | DETACHED_PROCESS (0x00000008) —
+    // inherited by all descendants so bun.exe → spool watcher → any
+    // downstream spawn never allocates a console window. Without this,
+    // windowsHide:true only hides the immediate bun.exe child while
+    // .cmd shims it later spawns each pop their own conhost.
     const proc = spawn(runtime, [wrapperPath, 'spool'], {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
       env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+      ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
     });
 
     try { fs.closeSync(logFd); } catch (_) {}
@@ -927,10 +933,14 @@ async function bootstrapAcptoapi() {
 
   emitBootstrapEvent('info', 'Spawning acptoapi daemon');
   try {
+    // CREATE_NO_WINDOW | DETACHED_PROCESS — see windows-spawn-cmd-shim-flash
+    // memory. acptoapi spawns 11 ACP sub-daemons via .cmd shims; without
+    // the inherited CREATE_NO_WINDOW flag each one pops a conhost window.
     const child = spawn('bun', ['x', 'acptoapi@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
+      ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
     });
     child.unref();
     emitBootstrapEvent('info', 'acptoapi spawned', { pid: child.pid });

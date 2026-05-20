@@ -913,7 +913,17 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     '--no-default-browser-check',
     '--disable-features=Translate',
   ];
-  const child = spawn(chrome, chromeArgs, { detached: true, stdio: 'ignore' });
+  // Chrome itself is GUI but its remote-debugging port creates conhost
+  // when launched from a console-attached parent. CREATE_NO_WINDOW
+  // (0x08000000) | DETACHED_PROCESS (0x00000008) prevents the helper
+  // processes (sandbox, GPU, network service) from allocating consoles.
+  // Inherited by the entire chrome subprocess tree on Windows.
+  const child = spawn(chrome, chromeArgs, {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+    ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
+  });
   const chromePid = child.pid;
   child.unref();
   const deadline = Date.now() + 10000;

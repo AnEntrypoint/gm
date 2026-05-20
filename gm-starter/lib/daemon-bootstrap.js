@@ -292,11 +292,12 @@ async function ensureRsCodeinsightDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
-    const proc = spawn('bun', ['x', 'rs-codeinsight@latest'], {
+    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-codeinsight@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      creationFlags: 0x08000000 | 0x00000008,
     });
 
     const pid = proc.pid;
@@ -337,11 +338,12 @@ async function ensureRsSearchDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
-    const proc = spawn('bun', ['x', 'rs-search@latest'], {
+    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-search@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      creationFlags: 0x08000000 | 0x00000008,
     });
 
     const pid = proc.pid;
