@@ -476,12 +476,38 @@ function writeWasmJson(instance, value) {
   return writeWasmStr(instance, JSON.stringify(value));
 }
 
+function safeName(s) { return String(s).replace(/[^A-Za-z0-9._-]/g, '_'); }
+
+function projectKvDir(ns) {
+  const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  return path.join(projectRoot, '.gm', 'disciplines', safeName(ns));
+}
+
+function legacyKvDir(ns) {
+  return path.join(KV_DIR, safeName(ns));
+}
+
 function kvFilePath(ns, key) {
-  const safeNs = String(ns).replace(/[^A-Za-z0-9._-]/g, '_');
-  const safeKey = String(key).replace(/[^A-Za-z0-9._-]/g, '_');
-  const dir = path.join(KV_DIR, safeNs);
+  const dir = projectKvDir(ns);
   fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, safeKey + '.json');
+  return path.join(dir, safeName(key) + '.json');
+}
+
+function kvReadResolve(ns, key) {
+  const fp = kvFilePath(ns, key);
+  if (fs.existsSync(fp)) return fp;
+  const legacy = path.join(legacyKvDir(ns), safeName(key) + '.json');
+  if (fs.existsSync(legacy)) return legacy;
+  return null;
+}
+
+function kvNamespaceDirs(ns) {
+  const out = [];
+  const proj = projectKvDir(ns);
+  if (fs.existsSync(proj)) out.push(proj);
+  const legacy = legacyKvDir(ns);
+  if (fs.existsSync(legacy)) out.push(legacy);
+  return out;
 }
 
 const __tasks = new Map();
@@ -751,8 +777,8 @@ function makeHostFunctions(instanceRef) {
         const ns = readWasmStr(instanceRef.value, nsPtr, nsLen);
         const key = readWasmStr(instanceRef.value, keyPtr, keyLen);
         if (!ns || !key) return 0n;
-        const fp = kvFilePath(ns, key);
-        if (!fs.existsSync(fp)) return 0n;
+        const fp = kvReadResolve(ns, key);
+        if (!fp) return 0n;
         const data = fs.readFileSync(fp, 'utf-8');
         return writeWasmStr(instanceRef.value, data);
       } catch (e) {
@@ -778,15 +804,21 @@ function makeHostFunctions(instanceRef) {
         const ns = readWasmStr(instanceRef.value, nsPtr, nsLen);
         const q = readWasmStr(instanceRef.value, qPtr, qLen);
         if (!ns) return 0n;
-        const dir = path.join(KV_DIR, String(ns).replace(/[^A-Za-z0-9._-]/g, '_'));
-        if (!fs.existsSync(dir)) return writeWasmJson(instanceRef.value, []);
+        const dirs = kvNamespaceDirs(ns);
+        if (dirs.length === 0) return writeWasmJson(instanceRef.value, []);
         const ql = q ? String(q).toLowerCase() : '';
+        const seen = new Set();
         const results = [];
-        for (const f of fs.readdirSync(dir)) {
-          if (!f.endsWith('.json')) continue;
-          const value = fs.readFileSync(path.join(dir, f), 'utf-8');
-          if (ql && !value.toLowerCase().includes(ql) && !f.toLowerCase().includes(ql)) continue;
-          results.push({ key: f.replace(/\.json$/, ''), value });
+        for (const dir of dirs) {
+          for (const f of fs.readdirSync(dir)) {
+            if (!f.endsWith('.json')) continue;
+            const key = f.replace(/\.json$/, '');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const value = fs.readFileSync(path.join(dir, f), 'utf-8');
+            if (ql && !value.toLowerCase().includes(ql) && !f.toLowerCase().includes(ql)) continue;
+            results.push({ key, value });
+          }
         }
         return writeWasmJson(instanceRef.value, results);
       } catch (e) {
@@ -814,26 +846,34 @@ function makeHostFunctions(instanceRef) {
           if (process.env.PLUGKIT_DEBUG) console.error('[plugkit-wasm] host_vec_search: no embedding in query, raw=', raw.slice(0, 200));
           return writeWasmJson(instanceRef.value, []);
         }
-        const vecDir = path.join(KV_DIR, `${namespace}-vec`.replace(/[^A-Za-z0-9._-]/g, '_'));
-        const dataDir = path.join(KV_DIR, namespace.replace(/[^A-Za-z0-9._-]/g, '_'));
-        if (!fs.existsSync(vecDir) || !fs.existsSync(dataDir)) {
+        const vecDirs = kvNamespaceDirs(`${namespace}-vec`);
+        const dataDirs = kvNamespaceDirs(namespace);
+        if (vecDirs.length === 0 || dataDirs.length === 0) {
           return writeWasmJson(instanceRef.value, []);
         }
         const scored = [];
-        for (const f of fs.readdirSync(vecDir)) {
-          if (!f.endsWith('.json')) continue;
-          let emb;
-          try { emb = JSON.parse(fs.readFileSync(path.join(vecDir, f), 'utf-8')); }
-          catch (_) { continue; }
-          const vector = Array.isArray(emb?.data?.[0]?.embedding) ? emb.data[0].embedding
-                       : Array.isArray(emb?.embedding) ? emb.embedding
-                       : Array.isArray(emb) ? emb : null;
-          if (!vector) continue;
-          const score = cosineSim(queryEmbedding, vector);
-          const key = f.replace(/\.json$/, '');
-          const valuePath = path.join(dataDir, `${key}.json`);
-          const text = fs.existsSync(valuePath) ? fs.readFileSync(valuePath, 'utf-8') : '';
-          scored.push({ key, text, score });
+        const seen = new Set();
+        for (const vecDir of vecDirs) {
+          for (const f of fs.readdirSync(vecDir)) {
+            if (!f.endsWith('.json')) continue;
+            const key = f.replace(/\.json$/, '');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            let emb;
+            try { emb = JSON.parse(fs.readFileSync(path.join(vecDir, f), 'utf-8')); }
+            catch (_) { continue; }
+            const vector = Array.isArray(emb?.data?.[0]?.embedding) ? emb.data[0].embedding
+                         : Array.isArray(emb?.embedding) ? emb.embedding
+                         : Array.isArray(emb) ? emb : null;
+            if (!vector) continue;
+            const score = cosineSim(queryEmbedding, vector);
+            let text = '';
+            for (const dataDir of dataDirs) {
+              const valuePath = path.join(dataDir, `${key}.json`);
+              if (fs.existsSync(valuePath)) { text = fs.readFileSync(valuePath, 'utf-8'); break; }
+            }
+            scored.push({ key, text, score });
+          }
         }
         scored.sort((a, b) => b.score - a.score);
         return writeWasmJson(instanceRef.value, scored.slice(0, k_));
