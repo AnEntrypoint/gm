@@ -44,11 +44,11 @@ const SPOOL_POLL_PATTERNS = [
   /\\bwhile\\b[^;]*?(?:!|-not)\\s*(?:-(?:f|e)\\s+|Test-Path\\s+)[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
   /\\buntil\\b[^;]*?(?:-f|-e|Test-Path)\\s+[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
   /\\bfor\\s+i\\s+in\\b[^;]*?;\\s*do\\b[^;]*?(?:sleep|Start-Sleep)[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
-  /\\b(?:cat|head|tail|less|more|type|Get-Content|gc)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
-  /\\b(?:ls|dir|Get-ChildItem|gci)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
-  /\\b(?:test|Test-Path|tp)\\s+(?:-[A-Za-z]+\\s+)?['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
+  /\\b(?:cat|head|tail|less|more|type|Get-Content|gc)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]\\.status\\.json\\b/i,
+  /\\b(?:cat|head|tail|less|more|type|Get-Content|gc)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]\\.watcher\\.log\\b/i,
+  /\\b(?:ls|dir|Get-ChildItem|gci)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)(?:[\\\\/](?:in|out)?)?[\\\\/]?['"]?\\s*(?:$|[|;&])/i,
+  /\\b(?:test|Test-Path|tp)\\s+(?:-[A-Za-z]+\\s+)?['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/](?:out|in)[\\\\/]/i,
   /\\bfind\\b[^|]*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)\\b/i,
-  /\\b(?:stat|file|wc|Get-Item|gi|Get-Acl|Resolve-Path|Select-String|sls)\\b[^|]*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]?/i,
   /\\b(?:xargs|parallel|fzf)\\b[^|]*\\.gm[\\\\/](?:exec-spool|spool)/i,
 ];
 
@@ -791,64 +791,6 @@ function isPortReachableSync(host, port, timeoutMs) {
   return r.status === 0;
 }
 
-let _acptoapiBoot = { spawned_at: 0, pid: null, last_check_ts: 0, last_check_ok: false };
-function ensureAcptoapi() {
-  const host = '127.0.0.1';
-  const port = 4800;
-  try {
-    // Two-strike port check: localhost connect can race against node cold-
-    // start on Windows. If the first check fails, retry once with a longer
-    // timeout before declaring the port dead. iter9 sniff reported 29
-    // bootstrap.acptoapi.spawned events in 30m despite acptoapi being alive
-    // on :4800 (HTTP 200) — the check flaked under heartbeat-tick load.
-    let reachable = isPortReachableSync(host, port, 1500);
-    if (!reachable) {
-      reachable = isPortReachableSync(host, port, 3000);
-    }
-    if (reachable) {
-      const wasDown = _acptoapiBoot.spawned_at > 0 || !_acptoapiBoot.last_check_ok;
-      _acptoapiBoot = { spawned_at: 0, pid: null, status: 'already-running', last_check_ts: Date.now(), last_check_ok: true };
-      // Only log on transitions (down → up) so the heartbeat doesn't spam
-      // bootstrap.jsonl every 60s with redundant "alive" events.
-      if (wasDown) {
-        logEvent('bootstrap', 'acptoapi.heartbeat-ok', { port, transition: 'down-to-up' });
-      }
-      return;
-    }
-    _acptoapiBoot.last_check_ok = false;
-    _acptoapiBoot.last_check_ts = Date.now();
-    if (_acptoapiBoot.spawned_at && Date.now() - _acptoapiBoot.spawned_at < 30000) {
-      return;
-    }
-    // Resolve `bun` to its actual .exe on Windows so the spawned daemon
-    // doesn't enter conhost via a bun.cmd shim. See
-    // [[windows-spawn-cmd-shim-flash]].
-    //
-    // Use CREATE_NO_WINDOW (0x08000000) | DETACHED_PROCESS (0x00000008)
-    // creationFlags so the suppression is INHERITED by every descendant
-    // bun-x downloads and launches (acptoapi itself spawns 11 ACP sub-
-    // daemons via .cmd shims; without this flag each one pops a conhost
-    // window). windowsHide:true alone only hides the immediate child.
-    const CREATE_NO_WINDOW = 0x08000000;
-    const DETACHED_PROCESS = 0x00000008;
-    const cmd = resolveWindowsExeLocal('bun');
-    const child = spawn(cmd, ['x', 'acptoapi@latest'], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      shell: false,
-      creationFlags: CREATE_NO_WINDOW | DETACHED_PROCESS,
-    });
-    child.unref();
-    _acptoapiBoot.spawned_at = Date.now();
-    _acptoapiBoot.pid = child.pid;
-    _acptoapiBoot.status = 'spawned';
-    logEvent('bootstrap', 'acptoapi.spawned', { pid: child.pid, port });
-  } catch (e) {
-    logEvent('bootstrap', 'acptoapi.spawn-failed', { error: e && e.message });
-  }
-}
-
 function findFreePortSync() {
   const r = spawnSync(process.execPath, ['-e', `
     const net = require('net');
@@ -980,7 +922,6 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   return pwSessionId;
 }
 
-const ACPTOAPI_URL = process.env.ACPTOAPI_URL || 'http://127.0.0.1:4800';
 const VEC_K_DEFAULT = 10;
 const EMBED_MODEL_DEFAULT = process.env.EMBED_MODEL || 'mistral/mistral-embed';
 const INFERENCE_MODEL_DEFAULT = process.env.INFERENCE_MODEL || 'groq/llama-3.3-70b-versatile';
@@ -1737,7 +1678,6 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(outDir, { recursive: true });
 
   try { ensureSpoolPollGate(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
-  try { ensureAcptoapi(); } catch (_) {}
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   let _ownWrapperSha12 = '';
@@ -1854,7 +1794,6 @@ async function runSpoolWatcher(instance, spoolDir) {
   const IDLE_CHECK_MS = 60_000;
   const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
   const STATUS_PATH_FOR_TEARDOWN = path.join(spoolDir, '.status.json');
-  const ACPTOAPI_STATUS_PATH = path.join(process.cwd(), '.gm', 'acptoapi-status.json');
   let lastActivityMs = Date.now();
   function markActivity(source) {
     lastActivityMs = Date.now();
@@ -1876,14 +1815,6 @@ async function runSpoolWatcher(instance, spoolDir) {
     } catch (_) {}
 
     try { killAllTasks(`teardown:${reason}`); } catch (_) {}
-
-    try {
-      if (fs.existsSync(ACPTOAPI_STATUS_PATH)) {
-        const status = JSON.parse(fs.readFileSync(ACPTOAPI_STATUS_PATH, 'utf-8'));
-        if (status && Number.isFinite(status.pid)) killPidQuiet(status.pid);
-        try { fs.unlinkSync(ACPTOAPI_STATUS_PATH); } catch (_) {}
-      }
-    } catch (_) {}
 
     try {
       const portsFile = browserPortsFile(process.cwd());
@@ -2244,7 +2175,6 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   setInterval(writeStatus, 5000);
   writeStatus();
-  setInterval(() => { try { ensureAcptoapi(); } catch (_) {} }, 60000);
 
   const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
   const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;

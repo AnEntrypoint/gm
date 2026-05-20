@@ -926,31 +926,6 @@ async function checkPortReachable(host, port, timeoutMs = 500) {
   });
 }
 
-async function bootstrapAcptoapi() {
-  const port = 4800;
-  const running = await checkPortReachable('127.0.0.1', port);
-  if (running) return { ok: true, status: 'already-running' };
-
-  emitBootstrapEvent('info', 'Spawning acptoapi daemon');
-  try {
-    // CREATE_NO_WINDOW | DETACHED_PROCESS — see windows-spawn-cmd-shim-flash
-    // memory. acptoapi spawns 11 ACP sub-daemons via .cmd shims; without
-    // the inherited CREATE_NO_WINDOW flag each one pops a conhost window.
-    const child = spawn('bun', ['x', 'acptoapi@latest'], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
-    });
-    child.unref();
-    emitBootstrapEvent('info', 'acptoapi spawned', { pid: child.pid });
-    return { ok: true, status: 'spawned', pid: child.pid };
-  } catch (e) {
-    emitBootstrapEvent('error', 'Failed to spawn acptoapi', { error: e.message });
-    return { ok: false, error: e.message };
-  }
-}
-
 async function getSnapshot(sessionId, cwd) {
   try {
     const sid = sessionId || process.env.CLAUDE_SESSION_ID || 'default';
@@ -966,7 +941,6 @@ async function getSnapshot(sessionId, cwd) {
 
 module.exports = {
   bootstrapPlugkit,
-  bootstrapAcptoapi,
   getSnapshot,
   checkPortReachable,
   ensureBuildToolIgnores,

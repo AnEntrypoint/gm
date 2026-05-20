@@ -216,62 +216,6 @@ async function ensureRsLearningDaemonRunning() {
   }
 }
 
-async function ensureAcptoapiRunning() {
-  const sessionId = getSessionId();
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const statusPath = path.join(projectDir, '.gm', 'acptoapi-status.json');
-
-  const host = '127.0.0.1';
-  const port = 4800;
-
-  try {
-    const reachable = await checkPortReachable(host, port);
-
-    if (reachable) {
-      emitDaemonEvent('acptoapi', 'info', 'Already running', { port, sessionId });
-      writeStatusFile('acptoapi', 'running', sessionId);
-      return { ok: true, message: 'acptoapi already running' };
-    }
-
-    emitDaemonEvent('acptoapi', 'info', 'Spawning daemon', { port, sessionId });
-
-    const env = Object.assign({}, process.env, {
-      CLAUDE_SESSION_ID: sessionId,
-    });
-
-    try {
-      // CREATE_NO_WINDOW | DETACHED_PROCESS — see ensureRsLearningDaemonRunning
-      // above. Inherited by acptoapi's 11 ACP sub-daemons so they don't pop
-      // conhost windows when bun-x launches their .cmd shims.
-      const child = spawn(resolveWindowsExe('bun'), ['x', 'acptoapi@latest'], {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
-        env,
-        creationFlags: 0x08000000 | 0x00000008,
-      });
-      child.unref();
-      emitDaemonEvent('acptoapi', 'info', 'Daemon spawned', { pid: child.pid, port, sessionId });
-      writeStatusFile('acptoapi', 'spawned', sessionId, child.pid);
-      return { ok: true, message: 'acptoapi spawned', pid: child.pid };
-    } catch (spawnErr) {
-      emitDaemonEvent('acptoapi', 'warn', 'Spawn failed, fallback to SDK', {
-        error: spawnErr.message,
-        sessionId,
-      });
-      writeStatusFile('acptoapi', 'spawn_failed', sessionId);
-      return { ok: false, message: 'acptoapi spawn failed, fallback to Anthropic SDK', error: spawnErr.message };
-    }
-  } catch (err) {
-    emitDaemonEvent('acptoapi', 'error', 'Check failed', {
-      error: err.message,
-      sessionId,
-    });
-    writeStatusFile('acptoapi', 'check_error', sessionId);
-    return { ok: false, message: 'acptoapi check failed, fallback to Anthropic SDK', error: err.message };
-  }
-}
-
 async function ensureRsCodeinsightDaemonRunning() {
   const daemonName = 'rs-codeinsight';
   const sessionId = getSessionId();
@@ -459,7 +403,6 @@ async function ensureBrowserReady(sessionId = getSessionId()) {
 }
 
 module.exports = {
-  ensureAcptoapiRunning,
   ensureRsCodeinsightDaemonRunning,
   ensureRsCodeinsightReady,
   ensureRsSearchDaemonRunning,
