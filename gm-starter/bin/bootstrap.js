@@ -17,6 +17,29 @@ function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
 }
 
+// Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
+// shim chains re-enter conhost (visible window flash) even with
+// windowsHide:true on the parent. Spawning the real .exe directly lets
+// CREATE_NO_WINDOW propagate. Falls back to .cmd or the original name when
+// no .exe is found. See [[windows-spawn-cmd-shim-flash]].
+function resolveWindowsExe(cmd) {
+  if (process.platform !== 'win32') return cmd;
+  try {
+    const r = spawnSync('where', [cmd], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+      timeout: 800,
+    });
+    if (r.status !== 0) return cmd;
+    const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const exe = lines.find(l => /\.exe$/i.test(l));
+    return exe || lines[0] || cmd;
+  } catch {
+    return cmd;
+  }
+}
+
 function probeBinaryVersion(binPath) {
   try {
     const { spawnSync } = require('child_process');
@@ -232,8 +255,9 @@ async function extractNpmPackageWasm(destPath, version) {
     log(`extracting npm package ${NPM_PACKAGE}@${version} to ${tempDir}`);
     obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
 
+    const npxResolved = resolveWindowsExe('npx');
     const result = spawnSync(
-      process.platform === 'win32' ? 'npx.cmd' : 'npx',
+      npxResolved,
       [NPM_PACKAGE + '@' + version, '--prefix', tempDir],
       {
         stdio: ['ignore', 'pipe', 'pipe'],

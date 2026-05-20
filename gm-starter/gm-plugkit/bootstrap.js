@@ -7,6 +7,28 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 
+// Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
+// shim chains re-enter conhost (visible window flash) even with
+// windowsHide:true on the parent. Spawning the real .exe directly lets
+// CREATE_NO_WINDOW propagate. See [[windows-spawn-cmd-shim-flash]].
+function resolveWindowsExe(cmd) {
+  if (process.platform !== 'win32') return cmd;
+  try {
+    const r = spawnSync('where', [cmd], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+      timeout: 800,
+    });
+    if (r.status !== 0) return cmd;
+    const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const exe = lines.find(l => /\.exe$/i.test(l));
+    return exe || lines[0] || cmd;
+  } catch {
+    return cmd;
+  }
+}
+
 const NPM_PACKAGE = 'plugkit-wasm';
 const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
@@ -180,7 +202,7 @@ async function extractNpmPackageWasm(destPath, version) {
 
     fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'plugkit-extract', version: '0.0.0', private: true }));
 
-    const cmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const cmd = resolveWindowsExe('npm');
     const args = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
 
     const result = spawnSync(cmd, args, {
@@ -189,7 +211,6 @@ async function extractNpmPackageWasm(destPath, version) {
       timeout: ATTEMPT_TIMEOUT_MS,
       encoding: 'utf8',
       windowsHide: true,
-      shell: process.platform === 'win32',
     });
 
     if (result.error) throw result.error;
