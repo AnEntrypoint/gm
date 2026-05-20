@@ -26,7 +26,6 @@ class WasmHost {
           host_kv_query: this.hostKvQuery.bind(this),
           host_fetch: this.hostFetch.bind(this),
           host_vec_search: this.hostVecSearch.bind(this),
-          host_vec_embed: this.hostVecEmbed.bind(this),
           host_browser_spawn: this.hostBrowserSpawn.bind(this),
           host_browser_eval: this.hostBrowserEval.bind(this),
           host_browser_close: this.hostBrowserClose.bind(this),
@@ -131,10 +130,6 @@ class WasmHost {
   }
 
   hostVecSearch(queryPtr, queryLen) {
-    return 0;
-  }
-
-  hostVecEmbed(textPtr, textLen) {
     return 0;
   }
 
