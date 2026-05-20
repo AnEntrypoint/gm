@@ -27,6 +27,23 @@ const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status',
 const TURN_IDLE_MS = 30_000;
 const _turns = new Map();
 
+function applyDisciplineSigil(rawBody) {
+  let parsed;
+  try { parsed = JSON.parse(rawBody); } catch (_) { return rawBody; }
+  if (!parsed || typeof parsed !== 'object') return rawBody;
+  const SIGIL = /^@([A-Za-z0-9][A-Za-z0-9_-]{0,63})\s+/;
+  for (const key of ['query', 'text']) {
+    const v = parsed[key];
+    if (typeof v !== 'string') continue;
+    const m = v.match(SIGIL);
+    if (!m) continue;
+    if (!parsed.namespace) parsed.namespace = m[1];
+    parsed[key] = v.slice(m[0].length);
+    break;
+  }
+  return JSON.stringify(parsed);
+}
+
 function turnTick(sess, verb, taskBase, phase) {
   const key = sess || '(no-session)';
   const now = Date.now();
@@ -1344,8 +1361,12 @@ async function runSpoolWatcher(instance, spoolDir) {
       const relPath = path.relative(inDir, filePath);
       const dir = path.dirname(relPath);
       const verb = dir === '.' ? path.basename(filePath, path.extname(filePath)) : dir;
-      const body = content.trim() || '{}';
+      let body = content.trim() || '{}';
       const taskBase = path.basename(filePath, path.extname(filePath));
+
+      if (verb === 'recall' || verb === 'memorize' || verb === 'codesearch' || verb === 'memorize-fire') {
+        body = applyDisciplineSigil(body);
+      }
 
       const verbBytes = new TextEncoder().encode(verb);
       const bodyBytes = new TextEncoder().encode(body);
