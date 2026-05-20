@@ -1223,7 +1223,17 @@ function makeHostFunctions(instanceRef) {
         const opts = optsStr ? JSON.parse(optsStr) : {};
         const lang = opts.lang || 'nodejs';
         const cwd = opts.cwd || process.cwd();
-        const timeoutMs = opts.timeoutMs || 30000;
+        const rawTimeout = opts.timeoutMs;
+        if (rawTimeout === undefined || rawTimeout === null || typeof rawTimeout !== 'number' || !Number.isFinite(rawTimeout) || rawTimeout <= 0 || !Number.isInteger(rawTimeout)) {
+          return writeWasmJson(instanceRef.value, {
+            ok: false,
+            error: 'missing timeoutMs',
+            required: 'positive integer milliseconds',
+            paper_ref: '§20',
+            received: rawTimeout === undefined ? null : rawTimeout,
+          });
+        }
+        const timeoutMs = rawTimeout;
         let cmd, args;
         if (lang === 'nodejs' || lang === 'js') { cmd = process.execPath; args = ['-e', code]; }
         else if (lang === 'python') { cmd = 'python'; args = ['-c', code]; }
@@ -1755,6 +1765,13 @@ async function runSpoolWatcher(instance, spoolDir) {
         const sessForRecall = readCurrentSess();
         if (isInstructionTurnStart(sessForRecall)) {
           autoRecallPayload = tryAutoRecallForTurnEntry(instance, sessForRecall, process.cwd());
+          try {
+            const _spoolDir = path.join(process.cwd(), '.gm', 'exec-spool');
+            for (const _f of ['.turn-browser-edits.json', '.turn-browser-witnessed']) {
+              const _p = path.join(_spoolDir, _f);
+              if (fs.existsSync(_p)) fs.unlinkSync(_p);
+            }
+          } catch (_) {}
         }
       }
 
@@ -1780,6 +1797,15 @@ async function runSpoolWatcher(instance, spoolDir) {
       console.log(`[dispatch] ← verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
       logEvent('plugkit', 'dispatch.end', { verb, task: taskBase, dur_ms, out_bytes: resultStr.length });
       emitOrchestratorEvents(verb, taskBase, resultStr);
+
+      if (verb === 'browser') {
+        try {
+          const witnessFile = path.join(process.cwd(), '.gm', 'exec-spool', '.turn-browser-witnessed');
+          fs.mkdirSync(path.dirname(witnessFile), { recursive: true });
+          fs.writeFileSync(witnessFile, JSON.stringify({ ts: Date.now(), task: taskBase, dur_ms }));
+          logEvent('plugkit', 'browser.witness-marked', { task: taskBase });
+        } catch (_) {}
+      }
 
       try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { isSpoolPollCommand, SPOOL_POLL_REASON, logDeviation } = require('./spool-dispatch.js');
+const { isSpoolPollCommand, SPOOL_POLL_REASON, logDeviation, recordBrowserEdit, isBrowserRunningFile } = require('./spool-dispatch.js');
 
 let raw = '';
 process.stdin.setEncoding('utf8');
@@ -9,6 +9,24 @@ process.stdin.on('end', () => {
   try { event = JSON.parse(raw || '{}'); } catch (_) { event = {}; }
   const tool = event.tool_name || event.tool || '';
   const input = event.tool_input || event.input || {};
+  const cwd = event.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+  if (tool === 'Write' || tool === 'Edit' || tool === 'MultiEdit') {
+    const fp = input.file_path || input.filePath || input.path || '';
+    if (fp && isBrowserRunningFile(require('path').relative(cwd, fp))) {
+      try { recordBrowserEdit(cwd, fp); } catch (_) {}
+      try {
+        logDeviation('browser-edit.recorded', {
+          operation: tool.toLowerCase(),
+          file: fp,
+          sess: event.session_id || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+        });
+      } catch (_) {}
+    }
+    process.stdout.write(JSON.stringify({ continue: true }));
+    process.exit(0);
+  }
+
   if (tool !== 'Bash') {
     process.stdout.write(JSON.stringify({ continue: true }));
     process.exit(0);

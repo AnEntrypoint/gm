@@ -59,6 +59,69 @@ function hasUnpushedCommits(cwd) {
 
 const TOPLEVEL_DOC_ALLOWLIST = new Set(['AGENTS.md', 'CLAUDE.md', 'README.md', 'SKILLS.md', 'CHANGELOG.md', 'LICENSE', 'LICENSE.md']);
 
+const BROWSER_FILE_EXT_RE = /\.(html?|tsx|jsx|vue|svelte|mjs|cjs|js|ts|css|scss|sass)$/i;
+const BROWSER_FILE_DIR_RE = /^(src|public|site|app|pages|components|client|web)[\\/]/i;
+
+function isBrowserRunningFile(rel) {
+  if (!rel) return false;
+  const norm = String(rel).replace(/\\/g, '/');
+  if (/\.(html?|tsx|jsx|vue|svelte)$/i.test(norm)) return true;
+  if (/\.(mjs|cjs|js|ts|css|scss|sass)$/i.test(norm) && BROWSER_FILE_DIR_RE.test(norm)) return true;
+  return false;
+}
+
+function browserEditsFile(cwd) {
+  return path.join(cwd || process.cwd(), '.gm', 'exec-spool', '.turn-browser-edits.json');
+}
+function browserWitnessFile(cwd) {
+  return path.join(cwd || process.cwd(), '.gm', 'exec-spool', '.turn-browser-witnessed');
+}
+
+function recordBrowserEdit(cwd, filePath) {
+  try {
+    const root = cwd || process.cwd();
+    let rel = filePath;
+    try { rel = path.relative(root, filePath); } catch (_) {}
+    if (!isBrowserRunningFile(rel)) return false;
+    const f = browserEditsFile(root);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    let list = [];
+    try { list = JSON.parse(fs.readFileSync(f, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
+    const entry = { file: rel.replace(/\\/g, '/'), ts: Date.now() };
+    if (!list.some(e => e && e.file === entry.file)) list.push(entry);
+    fs.writeFileSync(f, JSON.stringify(list));
+    return true;
+  } catch (_) { return false; }
+}
+
+function clearBrowserTurnMarkers(cwd) {
+  const root = cwd || process.cwd();
+  for (const p of [browserEditsFile(root), browserWitnessFile(root)]) {
+    try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (_) {}
+  }
+}
+
+function markBrowserWitnessed(cwd, meta) {
+  try {
+    const f = browserWitnessFile(cwd);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, JSON.stringify({ ts: Date.now(), ...(meta || {}) }));
+  } catch (_) {}
+}
+
+function readBrowserEdits(cwd) {
+  try {
+    const f = browserEditsFile(cwd);
+    if (!fs.existsSync(f)) return [];
+    const list = JSON.parse(fs.readFileSync(f, 'utf8'));
+    return Array.isArray(list) ? list : [];
+  } catch (_) { return []; }
+}
+
+function isBrowserWitnessed(cwd) {
+  try { return fs.existsSync(browserWitnessFile(cwd)); } catch (_) { return false; }
+}
+
 function unsolicitedDocs(cwd) {
   try {
     const r = spawnSync('git', ['status', '--porcelain'], {
@@ -285,6 +348,13 @@ function checkDispatchGates(sessionId, operation, extra) {
         logDeviation('deviation.unsolicited-doc-created', { file: f, operation });
       }
     }
+    const browserEdits = readBrowserEdits(cwd);
+    if (browserEdits.length > 0 && !isBrowserWitnessed(cwd)) {
+      const files = browserEdits.map(e => e.file);
+      const shown = files.slice(0, 5).join(', ') + (files.length > 5 ? `, +${files.length - 5} more` : '');
+      residuals.push(`Browser Witness required: you edited ${shown} without dispatching the browser verb to witness the change in a live page. Per paper §23 this is non-negotiable. Either dispatch browser to verify the edit works in-browser, or revert the changes.`);
+      logDeviation('deviation.browser-witness-missing', { files, operation });
+    }
     if (residuals.length > 0) {
       logDeviation('deviation.gate-deny', { operation, reason: 'stop-gate residuals', residuals });
       return { allowed: false, reason: `stop-gate residuals: ${residuals.join('; ')}`, residuals };
@@ -339,4 +409,4 @@ function checkDispatchGates(sessionId, operation, extra) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction, isSpoolPollCommand, SPOOL_POLL_REASON };
+module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction, isSpoolPollCommand, SPOOL_POLL_REASON, recordBrowserEdit, markBrowserWitnessed, clearBrowserTurnMarkers, isBrowserRunningFile, readBrowserEdits, isBrowserWitnessed };
