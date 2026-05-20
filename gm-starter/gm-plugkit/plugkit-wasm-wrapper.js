@@ -651,9 +651,48 @@ function ensureGitignored(cwd, entry) {
   } catch (_) {}
 }
 
+function isProcessAliveSync(pid) {
+  if (!pid || typeof pid !== 'number' || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e && e.code === 'EPERM';
+  }
+}
+
+function readSingletonLockPid(profileDir) {
+  const lock = path.join(profileDir, 'SingletonLock');
+  try {
+    let target;
+    try {
+      target = fs.readlinkSync(lock);
+    } catch (_) {
+      try { target = fs.readFileSync(lock, 'utf-8'); } catch (__) { return null; }
+    }
+    if (!target) return null;
+    const m = String(target).match(/-(\d+)\s*$/);
+    if (m) return parseInt(m[1], 10);
+    const m2 = String(target).match(/(\d+)/);
+    if (m2) return parseInt(m2[1], 10);
+  } catch (_) {}
+  return null;
+}
+
 function isProfileLocked(profileDir) {
   const lock = path.join(profileDir, 'SingletonLock');
-  return fs.existsSync(lock);
+  if (!fs.existsSync(lock)) return false;
+  const holderPid = readSingletonLockPid(profileDir);
+  if (holderPid != null && !isProcessAliveSync(holderPid)) {
+    try { fs.unlinkSync(lock); } catch (_) {}
+    try { fs.unlinkSync(path.join(profileDir, 'SingletonCookie')); } catch (_) {}
+    try { fs.unlinkSync(path.join(profileDir, 'SingletonSocket')); } catch (_) {}
+    logEvent('bootstrap', 'browser-profile.lock-cleared', {
+      profileDir, dead_pid: holderPid,
+    });
+    return false;
+  }
+  return true;
 }
 
 function acquireProfileDir(cwd) {
@@ -667,6 +706,31 @@ function acquireProfileDir(cwd) {
   const fallback = path.join(gmDir, `browser-profile-${process.pid}`);
   try { fs.mkdirSync(fallback, { recursive: true }); } catch (_) {}
   return fallback;
+}
+
+function cleanDeadProfileFragments(cwd) {
+  try {
+    const gmDir = path.join(cwd, '.gm');
+    if (!fs.existsSync(gmDir)) return { cleaned: 0 };
+    let cleaned = 0;
+    for (const name of fs.readdirSync(gmDir)) {
+      const m = name.match(/^browser-profile-(\d+)$/);
+      if (!m) continue;
+      const pid = parseInt(m[1], 10);
+      if (!isProcessAliveSync(pid)) {
+        try {
+          fs.rmSync(path.join(gmDir, name), { recursive: true, force: true });
+          cleaned++;
+        } catch (_) {}
+      }
+    }
+    if (cleaned > 0) {
+      logEvent('bootstrap', 'browser-profile.hygiene', { cwd, cleaned });
+    }
+    return { cleaned };
+  } catch (_) {
+    return { cleaned: 0 };
+  }
 }
 
 function findFreePortSync() {
@@ -722,10 +786,31 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   const ports = readJsonFile(portsFile, {});
   const sessions = readJsonFile(sessionsFile, {});
   const existing = ports[claudeSessionId];
-  if (existing && existing.port && isPortAliveSync(existing.port)) {
-    const pwIds = sessions[claudeSessionId] || [];
-    if (pwIds.length > 0) return pwIds[0];
+  if (existing && existing.port) {
+    const wantProfile = path.join(cwd, '.gm', 'browser-profile');
+    const pidOk = existing.pid && isProcessAliveSync(existing.pid);
+    const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(path.join(cwd, '.gm', 'browser-profile'));
+    const portOk = isPortAliveSync(existing.port);
+    if (pidOk && profileOk && portOk) {
+      const pwIds = sessions[claudeSessionId] || [];
+      if (pwIds.length > 0) return pwIds[0];
+    } else {
+      const reason = !pidOk ? 'pid-dead' : !profileOk ? 'profile-drift' : 'port-dead';
+      logEvent('hook', 'deviation.browser-profile-collision', {
+        sid: claudeSessionId,
+        stale_pid: existing.pid || null,
+        stale_port: existing.port || null,
+        stale_profile: existing.profileDir || null,
+        want_profile: wantProfile,
+        reason,
+      });
+      delete ports[claudeSessionId];
+      delete sessions[claudeSessionId];
+      try { writeJsonFile(portsFile, ports); } catch (_) {}
+      try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
+    }
   }
+  cleanDeadProfileFragments(cwd);
   const chrome = findChrome();
   if (!chrome) throw new Error('Chrome not found. Please install Google Chrome.');
   const profileDir = acquireProfileDir(cwd);
@@ -1385,7 +1470,12 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
-        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
+        const portsAfter = readJsonFile(browserPortsFile(cwd), {});
+        const livePort = portsAfter[sessionId] && portsAfter[sessionId].port;
+        const directArgs = (livePort && isPortAliveSync(livePort))
+          ? [`--direct=localhost:${livePort}`]
+          : [];
+        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', ...directArgs, '-e', body], 60000);
         return writeWasmJson(instanceRef.value, {
           ok: r.status === 0,
           stdout: scrubBrowserRunnerText(r.stdout || ''),
