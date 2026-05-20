@@ -1154,7 +1154,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(sweepStalePeers, 60_000);
   setTimeout(sweepStalePeers, 5000);
 
-  const IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_IDLE_LIMIT_MS, 10) || 15 * 60 * 1000;
+  const IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_IDLE_LIMIT_MS, 10) || 60 * 60 * 1000;
   const IDLE_CHECK_MS = 60_000;
   const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
   const STATUS_PATH_FOR_TEARDOWN = path.join(spoolDir, '.status.json');
