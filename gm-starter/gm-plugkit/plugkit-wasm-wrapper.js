@@ -1483,6 +1483,8 @@ async function runSpoolWatcher(instance, spoolDir) {
         pid: process.pid,
         ts: Date.now(),
         version: resolveVersion(instance),
+        wrapper_sha: _ownWrapperSha12 || null,
+        idle_limit_ms: IDLE_LIMIT_MS,
       }));
     } catch (_) {}
   }
