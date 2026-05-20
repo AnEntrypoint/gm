@@ -363,6 +363,32 @@ function isSpoolPollCommand(command) {
   return null;
 }
 
+function isBrowserRunningFileLocal(rel) {
+  if (!rel) return false;
+  const norm = String(rel).replace(/\\\\/g, '/');
+  if (/\\.(html?|tsx|jsx|vue|svelte)$/i.test(norm)) return true;
+  if (/\\.(mjs|cjs|js|ts|css|scss|sass)$/i.test(norm) && /^(src|public|site|app|pages|components|client|web)\\//i.test(norm)) return true;
+  return false;
+}
+
+function recordBrowserEditLocal(cwd, filePath) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    let rel = filePath;
+    try { rel = path.relative(cwd, filePath); } catch (_) {}
+    if (!isBrowserRunningFileLocal(rel)) return false;
+    const editsFile = path.join(cwd, '.gm', 'exec-spool', '.turn-browser-edits.json');
+    fs.mkdirSync(path.dirname(editsFile), { recursive: true });
+    let list = [];
+    try { list = JSON.parse(fs.readFileSync(editsFile, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
+    const entry = { file: rel.replace(/\\\\/g, '/'), ts: Date.now() };
+    if (!list.some(e => e && e.file === entry.file)) list.push(entry);
+    fs.writeFileSync(editsFile, JSON.stringify(list));
+    return true;
+  } catch (_) { return false; }
+}
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk) => { raw += chunk; });
@@ -371,6 +397,17 @@ process.stdin.on('end', () => {
   try { event = JSON.parse(raw || '{}'); } catch (_) { event = {}; }
   const tool = event.tool_name || event.tool || '';
   const input = event.tool_input || event.input || {};
+  const cwd = event.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+  if (tool === 'Write' || tool === 'Edit' || tool === 'MultiEdit') {
+    const fp = input.file_path || input.filePath || input.path || '';
+    if (fp) {
+      try { recordBrowserEditLocal(cwd, fp); } catch (_) {}
+    }
+    process.stdout.write(JSON.stringify({ continue: true }));
+    process.exit(0);
+  }
+
   if (tool !== 'Bash') {
     process.stdout.write(JSON.stringify({ continue: true }));
     process.exit(0);
@@ -417,11 +454,33 @@ function ensureSpoolPollGate(cwd) {
     const gateScript = path.join(gmHooks, 'spool-poll-gate.js');
     const want = spoolPollGateScript();
     let need = true;
+    let oldSha = '';
+    let existed = false;
     try {
       const existing = fs.readFileSync(gateScript, 'utf8');
+      existed = true;
       if (existing === want) need = false;
+      else {
+        try {
+          const _crypto = require('crypto');
+          oldSha = _crypto.createHash('sha256').update(existing).digest('hex').slice(0, 12);
+        } catch (_) {}
+      }
     } catch (_) {}
-    if (need) fs.writeFileSync(gateScript, want);
+    if (need) {
+      fs.writeFileSync(gateScript, want);
+      try {
+        const _crypto = require('crypto');
+        const newSha = _crypto.createHash('sha256').update(want).digest('hex').slice(0, 12);
+        emitBootstrapEvent('info', existed ? 'gate.refreshed' : 'gate.installed', {
+          cwd,
+          path: gateScript,
+          old_sha: oldSha || null,
+          new_sha: newSha,
+          bytes: Buffer.byteLength(want, 'utf8'),
+        });
+      } catch (_) {}
+    }
 
     const claudeDir = path.join(cwd, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -434,18 +493,22 @@ function ensureSpoolPollGate(cwd) {
     if (!settings.hooks || typeof settings.hooks !== 'object') settings.hooks = {};
     if (!Array.isArray(settings.hooks.PreToolUse)) settings.hooks.PreToolUse = [];
     const wantCommand = `node "\${CLAUDE_PROJECT_DIR}/.gm/hooks/spool-poll-gate.js"`;
-    let bashEntry = settings.hooks.PreToolUse.find(e => e && e.matcher === 'Bash');
-    if (!bashEntry) {
-      bashEntry = { matcher: 'Bash', hooks: [] };
-      settings.hooks.PreToolUse.push(bashEntry);
-    }
-    if (!Array.isArray(bashEntry.hooks)) bashEntry.hooks = [];
-    const already = bashEntry.hooks.some(h => h && typeof h.command === 'string' && h.command.includes('spool-poll-gate.js'));
-    if (!already) {
-      bashEntry.hooks.push({ type: 'command', command: wantCommand });
+    let anyAlready = true;
+    for (const matcher of ['Bash', 'Write', 'Edit', 'MultiEdit']) {
+      let entry = settings.hooks.PreToolUse.find(e => e && e.matcher === matcher);
+      if (!entry) {
+        entry = { matcher, hooks: [] };
+        settings.hooks.PreToolUse.push(entry);
+      }
+      if (!Array.isArray(entry.hooks)) entry.hooks = [];
+      const already = entry.hooks.some(h => h && typeof h.command === 'string' && h.command.includes('spool-poll-gate.js'));
+      if (!already) {
+        entry.hooks.push({ type: 'command', command: wantCommand });
+        anyAlready = false;
+      }
     }
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-    emitBootstrapEvent('info', 'Spool-poll gate ensured', { gateScript, settingsPath, hookAlreadyPresent: already });
+    emitBootstrapEvent('info', 'Spool-poll gate ensured', { gateScript, settingsPath, hookAlreadyPresent: anyAlready });
   } catch (e) {
     emitBootstrapEvent('warn', 'ensureSpoolPollGate failed', { error: e.message });
   }
