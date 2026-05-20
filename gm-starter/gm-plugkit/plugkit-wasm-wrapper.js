@@ -744,19 +744,36 @@ function isPortReachableSync(host, port, timeoutMs) {
     s.on('connect', () => { done = true; s.destroy(); process.exit(0); });
     s.on('error', () => { if (!done) process.exit(1); });
     setTimeout(() => { if (!done) { s.destroy(); process.exit(1); } }, ${timeoutMs || 800});
-  `], { timeout: (timeoutMs || 800) + 2000 });
+  `], { timeout: (timeoutMs || 800) + 2000, windowsHide: true });
   return r.status === 0;
 }
 
-let _acptoapiBoot = { spawned_at: 0, pid: null };
+let _acptoapiBoot = { spawned_at: 0, pid: null, last_check_ts: 0, last_check_ok: false };
 function ensureAcptoapi() {
   const host = '127.0.0.1';
   const port = 4800;
   try {
-    if (isPortReachableSync(host, port, 500)) {
-      _acptoapiBoot = { spawned_at: 0, pid: null, status: 'already-running' };
+    // Two-strike port check: localhost connect can race against node cold-
+    // start on Windows. If the first check fails, retry once with a longer
+    // timeout before declaring the port dead. iter9 sniff reported 29
+    // bootstrap.acptoapi.spawned events in 30m despite acptoapi being alive
+    // on :4800 (HTTP 200) — the check flaked under heartbeat-tick load.
+    let reachable = isPortReachableSync(host, port, 1500);
+    if (!reachable) {
+      reachable = isPortReachableSync(host, port, 3000);
+    }
+    if (reachable) {
+      const wasDown = _acptoapiBoot.spawned_at > 0 || !_acptoapiBoot.last_check_ok;
+      _acptoapiBoot = { spawned_at: 0, pid: null, status: 'already-running', last_check_ts: Date.now(), last_check_ok: true };
+      // Only log on transitions (down → up) so the heartbeat doesn't spam
+      // bootstrap.jsonl every 60s with redundant "alive" events.
+      if (wasDown) {
+        logEvent('bootstrap', 'acptoapi.heartbeat-ok', { port, transition: 'down-to-up' });
+      }
       return;
     }
+    _acptoapiBoot.last_check_ok = false;
+    _acptoapiBoot.last_check_ts = Date.now();
     if (_acptoapiBoot.spawned_at && Date.now() - _acptoapiBoot.spawned_at < 30000) {
       return;
     }
@@ -769,7 +786,9 @@ function ensureAcptoapi() {
       shell: false,
     });
     child.unref();
-    _acptoapiBoot = { spawned_at: Date.now(), pid: child.pid, status: 'spawned' };
+    _acptoapiBoot.spawned_at = Date.now();
+    _acptoapiBoot.pid = child.pid;
+    _acptoapiBoot.status = 'spawned';
     logEvent('bootstrap', 'acptoapi.spawned', { pid: child.pid, port });
   } catch (e) {
     logEvent('bootstrap', 'acptoapi.spawn-failed', { error: e && e.message });
