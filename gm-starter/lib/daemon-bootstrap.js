@@ -181,11 +181,16 @@ async function ensureRsLearningDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
+    // CREATE_NO_WINDOW (0x08000000) is inherited by all descendants —
+    // .cmd shims that bun-x downloads/launches never get a console window.
+    // DETACHED_PROCESS (0x00000008) detaches the process group. Windows-only;
+    // Node ignores creationFlags on POSIX.
     const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-learn@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      creationFlags: 0x08000000 | 0x00000008,
     });
 
     const pid = proc.pid;
@@ -235,11 +240,15 @@ async function ensureAcptoapiRunning() {
     });
 
     try {
+      // CREATE_NO_WINDOW | DETACHED_PROCESS — see ensureRsLearningDaemonRunning
+      // above. Inherited by acptoapi's 11 ACP sub-daemons so they don't pop
+      // conhost windows when bun-x launches their .cmd shims.
       const child = spawn(resolveWindowsExe('bun'), ['x', 'acptoapi@latest'], {
         detached: true,
         stdio: 'ignore',
         windowsHide: true,
         env,
+        creationFlags: 0x08000000 | 0x00000008,
       });
       child.unref();
       emitDaemonEvent('acptoapi', 'info', 'Daemon spawned', { pid: child.pid, port, sessionId });

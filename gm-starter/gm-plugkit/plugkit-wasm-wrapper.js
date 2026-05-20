@@ -797,15 +797,22 @@ function ensureAcptoapi() {
     }
     // Resolve `bun` to its actual .exe on Windows so the spawned daemon
     // doesn't enter conhost via a bun.cmd shim. See
-    // [[windows-spawn-cmd-shim-flash]] — cmd.exe + .cmd chain re-enters
-    // conhost even with windowsHide:true on the parent. Falls back to
-    // the bare name on non-Windows / when `where` can't resolve.
+    // [[windows-spawn-cmd-shim-flash]].
+    //
+    // Use CREATE_NO_WINDOW (0x08000000) | DETACHED_PROCESS (0x00000008)
+    // creationFlags so the suppression is INHERITED by every descendant
+    // bun-x downloads and launches (acptoapi itself spawns 11 ACP sub-
+    // daemons via .cmd shims; without this flag each one pops a conhost
+    // window). windowsHide:true alone only hides the immediate child.
+    const CREATE_NO_WINDOW = 0x08000000;
+    const DETACHED_PROCESS = 0x00000008;
     const cmd = resolveWindowsExeLocal('bun');
     const child = spawn(cmd, ['x', 'acptoapi@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       shell: false,
+      creationFlags: CREATE_NO_WINDOW | DETACHED_PROCESS,
     });
     child.unref();
     _acptoapiBoot.spawned_at = Date.now();

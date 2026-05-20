@@ -264,6 +264,9 @@ async function extractNpmPackageWasm(destPath, version) {
         timeout: ATTEMPT_TIMEOUT_MS,
         encoding: 'utf8',
         windowsHide: true,
+        // CREATE_NO_WINDOW — inherited by all .cmd shims npm/npx spawn
+        // during package extraction, so no conhost flash during install.
+        ...(process.platform === 'win32' ? { creationFlags: 0x08000000 } : {}),
       }
     );
 
