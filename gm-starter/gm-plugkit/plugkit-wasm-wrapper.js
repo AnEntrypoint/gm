@@ -733,6 +733,46 @@ function cleanDeadProfileFragments(cwd) {
   }
 }
 
+function isPortReachableSync(host, port, timeoutMs) {
+  const r = spawnSync(process.execPath, ['-e', `
+    const net = require('net');
+    const s = net.connect({ port: ${port}, host: ${JSON.stringify(host)} });
+    let done = false;
+    s.on('connect', () => { done = true; s.destroy(); process.exit(0); });
+    s.on('error', () => { if (!done) process.exit(1); });
+    setTimeout(() => { if (!done) { s.destroy(); process.exit(1); } }, ${timeoutMs || 800});
+  `], { timeout: (timeoutMs || 800) + 2000 });
+  return r.status === 0;
+}
+
+let _acptoapiBoot = { spawned_at: 0, pid: null };
+function ensureAcptoapi() {
+  const host = '127.0.0.1';
+  const port = 4800;
+  try {
+    if (isPortReachableSync(host, port, 500)) {
+      _acptoapiBoot = { spawned_at: 0, pid: null, status: 'already-running' };
+      return;
+    }
+    if (_acptoapiBoot.spawned_at && Date.now() - _acptoapiBoot.spawned_at < 30000) {
+      return;
+    }
+    const isWindows = process.platform === 'win32';
+    const cmd = isWindows ? 'bun.exe' : 'bun';
+    const child = spawn(cmd, ['x', 'acptoapi@latest'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      shell: false,
+    });
+    child.unref();
+    _acptoapiBoot = { spawned_at: Date.now(), pid: child.pid, status: 'spawned' };
+    logEvent('bootstrap', 'acptoapi.spawned', { pid: child.pid, port });
+  } catch (e) {
+    logEvent('bootstrap', 'acptoapi.spawn-failed', { error: e && e.message });
+  }
+}
+
 function findFreePortSync() {
   const r = spawnSync(process.execPath, ['-e', `
     const net = require('net');
@@ -1555,6 +1595,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(outDir, { recursive: true });
 
   try { ensureSpoolPollGate(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
+  try { ensureAcptoapi(); } catch (_) {}
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   let _ownWrapperSha12 = '';
@@ -2061,6 +2102,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   setInterval(writeStatus, 5000);
   writeStatus();
+  setInterval(() => { try { ensureAcptoapi(); } catch (_) {} }, 60000);
 
   const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
   const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
