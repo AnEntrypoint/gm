@@ -24,25 +24,34 @@ plugforge-starter/skills/caveman/
 *.stackdump
 # >>> gm managed (do not edit between markers)
 .gm-stop-verified
-.gm/prd-state.json
-.gm/rslearn-counter.json
-.gm/git-block-counter.json
-.gm/learning-state.md
-.gm/trajectory-drafts/
-.gm/ingest-drafts/
+.gm/exec-spool/
+.gm/gm-fired-*
 .gm/needs-gm
 .gm/lastskill
+.gm/last-prompt.txt
 .gm/turn-state.json
+.gm/turn-state.json.corrupted-*
+.gm/residual-check-fired
+.gm/bootstrap-status.json
+.gm/bootstrap-error.json
+.gm/rslearn-counter.json
+.gm/git-block-counter.json
 .gm/no-memorize-this-turn
+.gm/learning-state.md
 .gm/prd.paused.yml
 .gm/rs-learn.db-shm
 .gm/rs-learn.db-wal
-.gm/exec-spool/in
-.gm/exec-spool/out
-.gm/exec-spool/started
-.gm/embed-cache/
 .gm/hooks/
-# tracked: .gm/rs-learn.db, .gm/code-search/, AGENTS.md, .gm/prd.yml
+.gm/trajectory-drafts/
+.gm/ingest-drafts/
+.gm/prd-state.json
+.gm/subagent-*.json
+.gm/browser-profile/
+.gm/browser-profile-*/
+.gm/build-tool-ignores.md
+.plugkit-browser-profile/
+.plugkit-browser-profile-*/
+# tracked: .gm/rs-learn.db, .gm/code-search/, .gm/disciplines/, AGENTS.md, .gm/prd.yml, .gm/mutables.yml
 # <<< gm managed
 
 
