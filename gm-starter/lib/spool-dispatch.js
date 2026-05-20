@@ -77,6 +77,14 @@ function browserWitnessFile(cwd) {
   return path.join(cwd || process.cwd(), '.gm', 'exec-spool', '.turn-browser-witnessed');
 }
 
+function hashFileShort(root, rel) {
+  try {
+    const abs = path.isAbsolute(rel) ? rel : path.join(root, rel);
+    const buf = fs.readFileSync(abs);
+    return require('crypto').createHash('sha256').update(buf).digest('hex').slice(0, 12);
+  } catch (_) { return ''; }
+}
+
 function recordBrowserEdit(cwd, filePath) {
   try {
     const root = cwd || process.cwd();
@@ -87,8 +95,11 @@ function recordBrowserEdit(cwd, filePath) {
     fs.mkdirSync(path.dirname(f), { recursive: true });
     let list = [];
     try { list = JSON.parse(fs.readFileSync(f, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
-    const entry = { file: rel.replace(/\\/g, '/'), ts: Date.now() };
-    if (!list.some(e => e && e.file === entry.file)) list.push(entry);
+    const relPath = rel.replace(/\\/g, '/');
+    const hash = hashFileShort(root, relPath);
+    const idx = list.findIndex(e => e && e.file === relPath);
+    const entry = { file: relPath, ts: Date.now(), hash };
+    if (idx === -1) list.push(entry); else list[idx] = entry;
     fs.writeFileSync(f, JSON.stringify(list));
     return true;
   } catch (_) { return false; }
@@ -103,10 +114,25 @@ function clearBrowserTurnMarkers(cwd) {
 
 function markBrowserWitnessed(cwd, meta) {
   try {
-    const f = browserWitnessFile(cwd);
+    const root = cwd || process.cwd();
+    const f = browserWitnessFile(root);
     fs.mkdirSync(path.dirname(f), { recursive: true });
-    fs.writeFileSync(f, JSON.stringify({ ts: Date.now(), ...(meta || {}) }));
+    const edits = readBrowserEdits(root);
+    const witnessed_hashes = {};
+    for (const e of edits) {
+      if (!e || !e.file) continue;
+      witnessed_hashes[e.file] = hashFileShort(root, e.file);
+    }
+    fs.writeFileSync(f, JSON.stringify({ ts: Date.now(), witnessed_hashes, ...(meta || {}) }));
   } catch (_) {}
+}
+
+function readBrowserWitness(cwd) {
+  try {
+    const f = browserWitnessFile(cwd);
+    if (!fs.existsSync(f)) return null;
+    return JSON.parse(fs.readFileSync(f, 'utf8'));
+  } catch (_) { return null; }
 }
 
 function readBrowserEdits(cwd) {
@@ -354,6 +380,29 @@ function checkDispatchGates(sessionId, operation, extra) {
       const shown = files.slice(0, 5).join(', ') + (files.length > 5 ? `, +${files.length - 5} more` : '');
       residuals.push(`Browser Witness required: you edited ${shown} without dispatching the browser verb to witness the change in a live page. Per paper §23 this is non-negotiable. Either dispatch browser to verify the edit works in-browser, or revert the changes.`);
       logDeviation('deviation.browser-witness-missing', { files, operation });
+    } else if (browserEdits.length > 0 && isBrowserWitnessed(cwd)) {
+      const witness = readBrowserWitness(cwd) || {};
+      const wh = witness.witnessed_hashes || {};
+      const mismatches = [];
+      for (const e of browserEdits) {
+        if (!e || !e.file) continue;
+        const witnessed = wh[e.file];
+        if (!witnessed) {
+          mismatches.push({ file: e.file, reason: 'no witnessed hash recorded (file edited after witness, or witness predates edit)' });
+          continue;
+        }
+        const current = hashFileShort(cwd || process.cwd(), e.file);
+        if (current !== witnessed) {
+          mismatches.push({ file: e.file, witnessed_hash: witnessed, current_hash: current || '(unreadable)' });
+        }
+      }
+      if (mismatches.length > 0) {
+        const summary = mismatches.slice(0, 3).map(m =>
+          `${m.file} (witnessed=${m.witnessed_hash || 'none'}, current=${m.current_hash || '(none)'}${m.reason ? '; ' + m.reason : ''})`
+        ).join('; ');
+        residuals.push(`Browser Witness hash mismatch: you witnessed file(s) at one state, but their current content differs. Either the witness was on a different state or the file was reverted/re-edited without re-witnessing. Re-run the browser verb against the current state. Mismatches: ${summary}${mismatches.length > 3 ? `, +${mismatches.length - 3} more` : ''}`);
+        logDeviation('deviation.browser-witness-hash-mismatch', { mismatches, operation });
+      }
     }
     if (residuals.length > 0) {
       logDeviation('deviation.gate-deny', { operation, reason: 'stop-gate residuals', residuals });

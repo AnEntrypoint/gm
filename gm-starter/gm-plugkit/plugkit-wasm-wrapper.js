@@ -78,6 +78,17 @@ function isBrowserRunningFileLocal(rel) {
   return false;
 }
 
+function hashFileShortLocal(cwd, rel) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const crypto = require('crypto');
+    const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
+    const buf = fs.readFileSync(abs);
+    return crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12);
+  } catch (_) { return ''; }
+}
+
 function recordBrowserEditLocal(cwd, filePath) {
   try {
     const fs = require('fs');
@@ -89,8 +100,11 @@ function recordBrowserEditLocal(cwd, filePath) {
     fs.mkdirSync(path.dirname(editsFile), { recursive: true });
     let list = [];
     try { list = JSON.parse(fs.readFileSync(editsFile, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
-    const entry = { file: rel.replace(/\\\\/g, '/'), ts: Date.now() };
-    if (!list.some(e => e && e.file === entry.file)) list.push(entry);
+    const relPath = rel.replace(/\\\\/g, '/');
+    const hash = hashFileShortLocal(cwd, relPath);
+    const idx = list.findIndex(e => e && e.file === relPath);
+    const entry = { file: relPath, ts: Date.now(), hash };
+    if (idx === -1) list.push(entry); else list[idx] = entry;
     fs.writeFileSync(editsFile, JSON.stringify(list));
     return true;
   } catch (_) { return false; }
@@ -322,9 +336,24 @@ function dispatchAutoRecall(instance, queryPrompt) {
 function tryAutoRecallForTurnEntry(instance, sess, cwd) {
   try {
     const prompt = readUserPromptForRecall(cwd);
-    if (!prompt) return null;
-    const primary = dispatchAutoRecall(instance, prompt);
-    const fallbackQuery = deriveFallbackQuery(prompt);
+    let emptyPromptFallback = false;
+    let effectivePrompt = prompt;
+    if (!prompt || !String(prompt).trim()) {
+      emptyPromptFallback = true;
+      const key = sess || '(no-session)';
+      const t = _turns.get(key);
+      const phase = (t && t.lastPhase) || 'PLAN';
+      const phaseQueryMap = {
+        PLAN: 'PLAN orient',
+        EXECUTE: 'EXECUTE work',
+        EMIT: 'EMIT closure',
+        VERIFY: 'VERIFY trajectory',
+        COMPLETE: 'COMPLETE residual',
+      };
+      effectivePrompt = phaseQueryMap[phase] || 'PLAN orient';
+    }
+    const primary = dispatchAutoRecall(instance, effectivePrompt);
+    const fallbackQuery = deriveFallbackQuery(effectivePrompt);
     let fallback = null;
     if (fallbackQuery && fallbackQuery !== (primary && primary.query)) {
       fallback = dispatchAutoRecall(instance, fallbackQuery);
@@ -344,12 +373,16 @@ function tryAutoRecallForTurnEntry(instance, sess, cwd) {
     if (primary && primary.query) queries.push(primary.query);
     if (fallback && fallback.query && !queries.includes(fallback.query)) queries.push(fallback.query);
     const payload = {
-      query: (primary && primary.query) || '',
+      query: (primary && primary.query) || effectivePrompt || '',
       queries,
       hits: merged.slice(0, 20),
       fired_at: new Date().toISOString(),
       turn_entry: true,
     };
+    if (emptyPromptFallback) {
+      payload.fallback_reason = 'empty-prompt';
+      if (!payload.query) payload.query = effectivePrompt;
+    }
     logEvent('plugkit', 'auto_recall.turn-entry', { sess, queries, count: merged.length });
     return payload;
   } catch (e) {
@@ -1276,6 +1309,7 @@ function makeHostFunctions(instanceRef) {
         const lang = opts.lang || 'nodejs';
         const cwd = opts.cwd || process.cwd();
         const rawTimeout = opts.timeoutMs;
+        const MIN_TIMEOUT_MS = 100;
         if (rawTimeout === undefined || rawTimeout === null || typeof rawTimeout !== 'number' || !Number.isFinite(rawTimeout) || rawTimeout <= 0 || !Number.isInteger(rawTimeout)) {
           return writeWasmJson(instanceRef.value, {
             ok: false,
@@ -1283,6 +1317,15 @@ function makeHostFunctions(instanceRef) {
             required: 'positive integer milliseconds',
             paper_ref: '§20',
             received: rawTimeout === undefined ? null : rawTimeout,
+          });
+        }
+        if (rawTimeout < MIN_TIMEOUT_MS) {
+          return writeWasmJson(instanceRef.value, {
+            ok: false,
+            error: 'timeoutMs below floor',
+            min: MIN_TIMEOUT_MS,
+            received: rawTimeout,
+            paper_ref: '§20',
           });
         }
         const timeoutMs = rawTimeout;
@@ -1852,10 +1895,23 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       if (verb === 'browser') {
         try {
-          const witnessFile = path.join(process.cwd(), '.gm', 'exec-spool', '.turn-browser-witnessed');
+          const cwd_ = process.cwd();
+          const editsFile = path.join(cwd_, '.gm', 'exec-spool', '.turn-browser-edits.json');
+          const witnessFile = path.join(cwd_, '.gm', 'exec-spool', '.turn-browser-witnessed');
           fs.mkdirSync(path.dirname(witnessFile), { recursive: true });
-          fs.writeFileSync(witnessFile, JSON.stringify({ ts: Date.now(), task: taskBase, dur_ms }));
-          logEvent('plugkit', 'browser.witness-marked', { task: taskBase });
+          let edits = [];
+          try { edits = JSON.parse(fs.readFileSync(editsFile, 'utf8')); if (!Array.isArray(edits)) edits = []; } catch (_) {}
+          const witnessed_hashes = {};
+          for (const e of edits) {
+            if (!e || !e.file) continue;
+            try {
+              const abs = path.isAbsolute(e.file) ? e.file : path.join(cwd_, e.file);
+              const buf = fs.readFileSync(abs);
+              witnessed_hashes[e.file] = crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12);
+            } catch (_) { witnessed_hashes[e.file] = ''; }
+          }
+          fs.writeFileSync(witnessFile, JSON.stringify({ ts: Date.now(), task: taskBase, dur_ms, witnessed_hashes }));
+          logEvent('plugkit', 'browser.witness-marked', { task: taskBase, files: Object.keys(witnessed_hashes) });
         } catch (_) {}
       }
 
