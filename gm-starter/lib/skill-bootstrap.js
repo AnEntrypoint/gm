@@ -164,53 +164,6 @@ async function getLatestRemoteVersion() {
   return { version, sha, source };
 }
 
-function gitignorePath(cwd) { return path.join(cwd, '.gitignore'); }
-
-function getManagedGitignoreEntries() {
-  return [
-    '.gm/exec-spool/',
-    '.gm/gm-fired-*',
-    '.gm/needs-gm',
-    '.gm/lastskill',
-    '.gm/last-prompt.txt',
-    '.gm/turn-state.json',
-    '.gm/turn-state.json.corrupted-*',
-    '.gm/residual-check-fired',
-    '.gm/bootstrap-status.json',
-    '.gm/bootstrap-error.json',
-    '.gm/rslearn-counter.json',
-    '.gm/git-block-counter.json',
-    '.gm/no-memorize-this-turn',
-    '.gm/learning-state.md',
-    '.gm/prd.paused.yml',
-    '.gm/rs-learn.db-shm',
-    '.gm/rs-learn.db-wal',
-    '.gm/hooks/',
-    '.gm/trajectory-drafts/',
-    '.gm/ingest-drafts/',
-    '.gm/prd-state.json',
-    '.gm/subagent-*.json',
-    '.gm/browser-profile/',
-    '.gm/browser-profile-*/',
-    '.gm/build-tool-ignores.md',
-    '.plugkit-browser-profile/',
-    '.plugkit-browser-profile-*/',
-  ];
-}
-
-function getMustStayTracked() {
-  return [
-    '.gm/rs-learn.db',
-    '.gm/code-search/',
-    '.gm/disciplines/',
-    '.gm/prd.yml',
-    '.gm/mutables.yml',
-    'gm-data/rs-learn.db',
-    'gm-data/code-search/',
-    'gm-data/disciplines/',
-  ];
-}
-
 function detectBuildToolConfigs(cwd) {
   const detectors = [
     { tool: 'vite', patterns: ['vite.config.js', 'vite.config.ts', 'vite.config.mjs', 'vite.config.cjs'] },
@@ -345,54 +298,6 @@ function writeSessionSidecar(sessionId) {
     }
     fs.writeFileSync(path.join(spool, '.session-current'), sess);
   } catch (_) {}
-}
-
-function ensureManagedGitignore(cwd) {
-  try {
-    const gi = gitignorePath(cwd);
-    let content = '';
-    try { content = fs.readFileSync(gi, 'utf-8'); } catch (_) {}
-    const START = '# >>> plugkit managed';
-    const END = '# <<< plugkit managed';
-    const entries = getManagedGitignoreEntries();
-    const block = [START, ...entries, END].join('\n');
-    const startIdx = content.indexOf(START);
-    const endIdx = content.indexOf(END);
-    let cleaned;
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      const before = content.slice(0, startIdx).replace(/\n+$/, '');
-      const after = content.slice(endIdx + END.length).replace(/^\n+/, '');
-      cleaned = [before, block, after].filter(Boolean).join('\n');
-    } else {
-      cleaned = content.replace(/\n+$/, '');
-      cleaned = cleaned ? `${cleaned}\n\n${block}` : block;
-    }
-    if (!cleaned.endsWith('\n')) cleaned += '\n';
-    if (cleaned !== content) {
-      fs.writeFileSync(gi, cleaned);
-      emitBootstrapEvent('info', 'Managed .gitignore block updated', { path: gi, entries: entries.length });
-    }
-    const mustTrack = getMustStayTracked();
-    const lines = cleaned.split(/\r?\n/);
-    const inManaged = (idx) => {
-      let inside = false;
-      for (let i = 0; i <= idx; i++) {
-        if (lines[i] === START) inside = true;
-        else if (lines[i] === END) inside = false;
-      }
-      return inside;
-    };
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      if (!t || t.startsWith('#')) continue;
-      if (inManaged(i)) continue;
-      if (mustTrack.includes(t)) {
-        emitBootstrapEvent('warn', 'Hostile .gitignore entry — must stay tracked', { entry: t, line: i + 1 });
-      }
-    }
-  } catch (e) {
-    emitBootstrapEvent('warn', 'ensureManagedGitignore failed', { error: e.message });
-  }
 }
 
 async function downloadPlugkitBinary(version) {
@@ -755,5 +660,4 @@ module.exports = {
   checkPortReachable,
   ensureBuildToolIgnores,
   detectBuildToolConfigs,
-  ensureManagedGitignore,
 };
