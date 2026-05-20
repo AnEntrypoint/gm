@@ -800,7 +800,7 @@
   - Memorize without sigil writes to default only
   - Memorize with @<name> sigil parsed at memorize-fire layer (or memorize verb body)
   - Tested via spool dispatch with namespace and without
-  status: pending
+  status: completed
 - id: rs-learn-db-not-persisted
   subject: 'rs-learn.db documented as committed-to-git for cross-machine memory, but libsql is :memory: only — SQL-side memorize lost on watcher restart'
   description: 'Subagent investigation 2026-05-20: AGENTS.md L78 declares ''.gm/rs-learn.db is committed so memory and index state shares across machines, sessions, and CI''. Reality: libsql_wasm::open(GM_DB, :memory:) — code_index.rs:52 + libsql_wasm.rs:23. SQL-side memories (the structured table) are wiped on every watcher restart. The KV-side persists (file-backed under ~/.claude/gm-tools/kv/<ns>/<key>.json) but the SQL/libsql side is ephemeral. Effect: memorize_libsql writes succeed but vanish on restart; recall_libsql returns from in-memory only. Either (a) change libsql_wasm::open to use <cwd>/.gm/rs-learn.db as the file backing, or (b) update AGENTS.md L78 to remove the cross-machine claim. Pick (a) — the documented design is what the user is checking for.'
@@ -812,7 +812,7 @@
   - Memorize-then-restart-then-recall round-trip preserves the memo
   - File appears in git status after memorize fires
   - File path overridable via env var or body field for testing
-  status: pending
+  status: completed
 - id: recall-cross-project-path-param
   subject: recall verb accepts no projectPath param — cannot read sibling project's memory
   description: 'Subagent investigation 2026-05-20: recall verb body honors {query, namespace, limit, embedding} but has no projectPath or dbPath. Vector store is global at ~/.claude/gm-tools/kv/, libsql is :memory:. Effect: ''fan out subagents to check other project folders'' is unanswerable via current spool ABI. Precedent: sql_open verb at wasm_dispatch.rs:470 accepts a path parameter and calls libsql_wasm::open. Same pattern fits recall and memorize: optional projectPath field opens a different rs-learn.db before the query. Depends on rs-learn-db-not-persisted (need a real file to open before cross-project read makes sense). Once landed, agents can dispatch recall {query, projectPath: ''C:/dev/zellous''} and pull from zellous''s memory bank.'
@@ -826,7 +826,7 @@
   - When provided, libsql opens <projectPath>/.gm/rs-learn.db and queries that DB instead of the local one
   - Vector store similarly routes to <projectPath>/.gm/<vec-dir>/
   - memorize accepts the same param for cross-project writes (or blocks them — pick a policy)
-  status: pending
+  status: completed
 - id: discipline-sigil-parser
   subject: '@<name> sigil from prompt → namespace routing is documented but no parser exists'
   description: 'Subagent investigation 2026-05-20: gm-starter/agents/memorize.md:53 says ''@<name> as first space-token routes the write''. AGENTS.md L81 says ''gm-skill harness and every spool verb propagate the @<name> sigil verbatim through their dispatch chain''. Reality: no parser. Memorize/recall accept namespace field directly via JSON body; there is no code in plugkit-wasm-wrapper.js or rs-plugkit that scans request bodies (or the user''s text) for ^@<name> and rewrites namespace. The discipline verb (wasm_dispatch.rs:367) only does list/get against a KV namespace called ''disciplines''. Fix: add a single sigil parser at the spool intake (gm-starter/lib/spool-dispatch.js) that strips a leading ''@<name> '' from any verb body that''s a string, sets namespace=<name>, and forwards the rest. Small + isolated.'
