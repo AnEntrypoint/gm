@@ -199,11 +199,21 @@ const SPOOL_POLL_PATTERNS = [
 
 const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the canonical way to inspect spool files is the Read tool. Use Read on .gm/exec-spool/out/<verb>-<N>.json directly. If the response file does not exist, the watcher is either dead (Read .gm/exec-spool/.status.json and check its mtime against now) or the verb is genuinely slow (Read .gm/exec-spool/.watcher.log for the dispatch trace). Polling with sleep+cat/ls/Test-Path treats plugkit as an async worker; bare cat/ls of the spool dir treats it as a shell artifact. It is neither. You are the state machine; plugkit serves the response the moment you write the request, and Read is how you observe the result.';
 
+function stripHeredocsAndStringLiterals(command) {
+  let s = String(command);
+  s = s.replace(/<<-?\s*'([A-Z_]+)'[\s\S]*?\n\1/g, '');
+  s = s.replace(/<<-?\s*"?([A-Z_]+)"?[\s\S]*?\n\1/g, '');
+  s = s.replace(/\$\(cat\s+<<-?\s*'?([A-Z_]+)'?[\s\S]*?\n\1\s*\)/g, '');
+  s = s.replace(/-m\s+(['"])(?:\\.|(?!\1)[^\\])*\1/g, '-m STR');
+  s = s.replace(/--message[= ]+(['"])(?:\\.|(?!\1)[^\\])*\1/g, '--message STR');
+  return s;
+}
+
 function isSpoolPollCommand(command) {
   if (!command) return null;
-  const s = String(command);
+  const stripped = stripHeredocsAndStringLiterals(command);
   for (const re of SPOOL_POLL_PATTERNS) {
-    if (re.test(s)) return re.source;
+    if (re.test(stripped)) return re.source;
   }
   return null;
 }
