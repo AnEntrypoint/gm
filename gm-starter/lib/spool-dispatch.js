@@ -173,91 +173,6 @@ function unsolicitedDocs(cwd) {
   }
 }
 
-async function dispatchSpool(cmd, lang, body, timeoutMs, sessionId) {
-  const taskId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-  const langDir = lang.match(/^(nodejs|python|bash|typescript|go|rust|c|cpp|java|deno)$/) ? lang : 'nodejs';
-  const ext = {
-    nodejs: 'js',
-    python: 'py',
-    bash: 'sh',
-    typescript: 'ts',
-    go: 'go',
-    rust: 'rs',
-    c: 'c',
-    cpp: 'cpp',
-    java: 'java',
-    deno: 'ts'
-  }[langDir] || 'js';
-
-  const inDir = path.join(process.cwd(), '.gm', 'exec-spool', 'in', langDir);
-  const outDir = path.join(process.cwd(), '.gm', 'exec-spool', 'out');
-  const inFile = path.join(inDir, `${taskId}.${ext}`);
-  const jsonFile = path.join(outDir, `${taskId}.json`);
-
-  fs.mkdirSync(inDir, { recursive: true });
-  fs.mkdirSync(outDir, { recursive: true });
-
-  let sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
-  try {
-    const spoolDir = path.join(process.cwd(), '.gm', 'exec-spool');
-    if (!sess) {
-      const fallbackFile = path.join(spoolDir, '.session-fallback');
-      try { sess = fs.readFileSync(fallbackFile, 'utf8').trim(); } catch (_) {}
-      if (!sess) {
-        const cwdHash = require('crypto').createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
-        sess = `machine-${cwdHash}-${Date.now().toString(36)}`;
-        try { fs.writeFileSync(fallbackFile, sess); } catch (_) {}
-      }
-    }
-    fs.writeFileSync(path.join(spoolDir, '.session-current'), sess);
-  } catch (_) {}
-
-  const code = sessionId ? `const SESSION_ID = '${sessionId}';\n${body}` : body;
-  fs.writeFileSync(inFile, code, 'utf8');
-
-  return pollForCompletion(jsonFile, timeoutMs, taskId);
-}
-
-async function pollForCompletion(jsonFile, timeoutMs, taskId) {
-  const start = Date.now();
-  const interval = 50;
-
-  while (Date.now() - start < timeoutMs) {
-    if (fs.existsSync(jsonFile)) {
-      try {
-        const metadata = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
-        const outFile = jsonFile.replace(/\.json$/, '.out');
-        const errFile = jsonFile.replace(/\.json$/, '.err');
-        const stdout = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8') : '';
-        const stderr = fs.existsSync(errFile) ? fs.readFileSync(errFile, 'utf8') : '';
-        return {
-          ok: metadata.exitCode === 0 && !metadata.timedOut,
-          exitCode: metadata.exitCode,
-          stdout,
-          stderr,
-          durationMs: metadata.durationMs,
-          taskId,
-          timedOut: metadata.timedOut || false
-        };
-      } catch (e) {
-        await new Promise(r => setTimeout(r, interval));
-      }
-    } else {
-      await new Promise(r => setTimeout(r, interval));
-    }
-  }
-
-  return {
-    ok: false,
-    exitCode: -1,
-    stdout: '',
-    stderr: `[spool dispatch timeout after ${timeoutMs}ms]`,
-    durationMs: Date.now() - start,
-    taskId,
-    timedOut: true
-  };
-}
-
 function sessionMarkerPath(sessionId, kind) {
   const cwd = process.cwd();
   return path.join(cwd, '.gm', 'exec-spool', `.session-${kind}-${sessionId || 'anon'}`);
@@ -458,4 +373,4 @@ function checkDispatchGates(sessionId, operation, extra) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction, isSpoolPollCommand, SPOOL_POLL_REASON, recordBrowserEdit, markBrowserWitnessed, clearBrowserTurnMarkers, isBrowserRunningFile, readBrowserEdits, isBrowserWitnessed };
+module.exports = { checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction, isSpoolPollCommand, SPOOL_POLL_REASON, recordBrowserEdit, markBrowserWitnessed, clearBrowserTurnMarkers, isBrowserRunningFile, readBrowserEdits, isBrowserWitnessed };
