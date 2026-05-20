@@ -34,7 +34,9 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 
-**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`.
+**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `filter`.
+
+**filter verb**: pure stdout → compact-stdout transformation. Body `{kind, input, ...opts}` where kind is one of `grep`, `ls`, `tree`, `json`, `diff`, `git-status`, `log`. Returns `{output, stats:{bytes_in, bytes_out, saved_pct, ...}}`. Pipe raw command output through filter before letting it enter context — rtk's role, in-wasm, no subprocess. Replaces the legacy detached rtk binary download in bootstrap.
 
 ## Documentation Policy
 

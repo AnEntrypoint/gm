@@ -322,10 +322,18 @@ function ensureBuildToolIgnores(cwd) {
 
 function writeSessionSidecar(sessionId) {
   try {
-    const sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
-    if (!sess) return;
     const spool = path.join(process.cwd(), '.gm', 'exec-spool');
     fs.mkdirSync(spool, { recursive: true });
+    let sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+    if (!sess) {
+      const fallbackFile = path.join(spool, '.session-fallback');
+      try { sess = fs.readFileSync(fallbackFile, 'utf8').trim(); } catch (_) {}
+      if (!sess) {
+        const cwdHash = require('crypto').createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
+        sess = `machine-${cwdHash}-${Date.now().toString(36)}`;
+        try { fs.writeFileSync(fallbackFile, sess); } catch (_) {}
+      }
+    }
     fs.writeFileSync(path.join(spool, '.session-current'), sess);
   } catch (_) {}
 }

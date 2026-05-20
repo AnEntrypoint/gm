@@ -101,10 +101,20 @@ async function dispatchSpool(cmd, lang, body, timeoutMs, sessionId) {
   fs.mkdirSync(inDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
-  const sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
-  if (sess) {
-    try { fs.writeFileSync(path.join(process.cwd(), '.gm', 'exec-spool', '.session-current'), sess); } catch (_) {}
-  }
+  let sess = sessionId || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  try {
+    const spoolDir = path.join(process.cwd(), '.gm', 'exec-spool');
+    if (!sess) {
+      const fallbackFile = path.join(spoolDir, '.session-fallback');
+      try { sess = fs.readFileSync(fallbackFile, 'utf8').trim(); } catch (_) {}
+      if (!sess) {
+        const cwdHash = require('crypto').createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
+        sess = `machine-${cwdHash}-${Date.now().toString(36)}`;
+        try { fs.writeFileSync(fallbackFile, sess); } catch (_) {}
+      }
+    }
+    fs.writeFileSync(path.join(spoolDir, '.session-current'), sess);
+  } catch (_) {}
 
   const code = sessionId ? `const SESSION_ID = '${sessionId}';\n${body}` : body;
   fs.writeFileSync(inFile, code, 'utf8');

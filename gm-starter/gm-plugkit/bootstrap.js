@@ -295,26 +295,6 @@ function platformKey() {
   return (a === 'arm64' || a === 'aarch64') ? 'linux-arm64' : 'linux-x64';
 }
 
-function rtkBinaryName() {
-  const key = platformKey();
-  return key.startsWith('win32') ? `rtk-${key}.exe` : `rtk-${key}`;
-}
-
-function readRtkVersion() {
-  const p = path.join(wrapperDir, 'rtk.version');
-  if (!fs.existsSync(p)) return null;
-  const v = fs.readFileSync(p, 'utf8').trim();
-  return v || null;
-}
-
-function rtkCacheDir(root, plugkitVerDir) {
-  const rtkVer = readRtkVersion();
-  if (!rtkVer) return plugkitVerDir;
-  const dir = path.join(root, `rtk-v${rtkVer}`);
-  ensureDir(dir);
-  return dir;
-}
-
 function healIfShaMatches(binPath, expectedSha, sentinelPath, partialPath, kind) {
   if (!fs.existsSync(binPath)) return false;
   if (partialPath) { try { if (fs.existsSync(partialPath)) fs.unlinkSync(partialPath); } catch (_) {} }
@@ -402,7 +382,7 @@ function isLockStale(lockPath) {
   return false;
 }
 
-function pruneOldVersions(root, keepVersion, keepRtkVersion) {
+function pruneOldVersions(root, keepVersion) {
   try {
     const entries = fs.readdirSync(root);
     for (const e of entries) {
@@ -410,7 +390,6 @@ function pruneOldVersions(root, keepVersion, keepRtkVersion) {
       const isRtk = e.startsWith('rtk-v');
       if (!isPlugkit && !isRtk) continue;
       if (isPlugkit && e === `v${keepVersion}`) continue;
-      if (isRtk && keepRtkVersion && e === `rtk-v${keepRtkVersion}`) continue;
       const dir = path.join(root, e);
       const lock = path.join(dir, '.lock');
       if (fs.existsSync(lock) && !isLockStale(lock)) continue;
@@ -446,101 +425,6 @@ function killStaleDaemonIfVersionChanged() {
   writeDaemonVersion(currentVersion);
 }
 
-
-function resolveCachedRtk() {
-  const version = readVersionFile();
-  const root = (() => {
-    try { const r = cacheRoot(); ensureDir(r); return r; }
-    catch (_) { const r = fallbackCacheRoot(); ensureDir(r); return r; }
-  })();
-  const plugkitVerDir = path.join(root, `v${version}`);
-  const cacheDir = rtkCacheDir(root, plugkitVerDir);
-  const rtkPath = path.join(cacheDir, rtkBinaryName());
-  const rtkOk = path.join(cacheDir, '.rtk-ok');
-  if (fs.existsSync(rtkPath) && fs.existsSync(rtkOk)) return rtkPath;
-  return null;
-}
-
-async function bootstrapRtk(plugkitVerDir, plugkitVersion, silent, root) {
-  const rtkName = rtkBinaryName();
-  const cacheDir = rtkCacheDir(root || cacheRoot(), plugkitVerDir);
-  const rtkPath = path.join(cacheDir, rtkName);
-  const rtkOk = path.join(cacheDir, '.rtk-ok');
-  if (fs.existsSync(rtkPath) && fs.existsSync(rtkOk)) {
-    if (!silent) log(`rtk cache hit: ${rtkPath}`);
-    return rtkPath;
-  }
-  const rtkSha = readShaManifest();
-  // rtk.sha256 may be in a separate file
-  const rtkShaPath = path.join(wrapperDir, 'rtk.sha256');
-  let expected = null;
-  if (fs.existsSync(rtkShaPath)) {
-    expected = fs.readFileSync(rtkShaPath, 'utf8').trim();
-  }
-  const tmp = `${rtkPath}.partial`;
-  if (healIfShaMatches(rtkPath, expected, rtkOk, tmp, 'rtk')) {
-    if (!silent) log(`rtk cache heal (sha match): ${rtkPath}`);
-    return rtkPath;
-  }
-  const RTKS_RELEASE_REPO = 'AnEntrypoint/plugkit-bin';
-  const url = `https://github.com/${RTKS_RELEASE_REPO}/releases/download/v${plugkitVersion}/${rtkName}`;
-  const startMs = Date.now();
-  let lastErr;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      log(`rtk download attempt ${attempt}/${MAX_ATTEMPTS}: ${url}`);
-      const result = spawnSync(
-        'curl',
-        ['-fSL', '--max-time', String(Math.floor(ATTEMPT_TIMEOUT_MS / 1000)), '-o', tmp, url],
-        { stdio: 'pipe', timeout: ATTEMPT_TIMEOUT_MS + 5000, windowsHide: true }
-      );
-      if (result.error) throw result.error;
-      if (result.status !== 0) throw new Error(`curl failed with status ${result.status}`);
-      break;
-    } catch (err) {
-      lastErr = err;
-      log(`rtk attempt ${attempt} failed: ${err.message}`);
-      obsEvent('bootstrap', 'rtk.download.attempt_failed', { attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
-      if (attempt < MAX_ATTEMPTS) {
-        const wait = BACKOFF_MS[attempt - 1] || 120000;
-        log(`backing off ${wait}ms`);
-        await new Promise(r => setTimeout(r, wait));
-      }
-    }
-  }
-  if (lastErr) throw lastErr;
-  if (expected) {
-    const got = await sha256OfFile(tmp);
-    if (got !== expected) {
-      try { fs.unlinkSync(tmp); } catch (_) {}
-      throw new Error(`rtk sha256 mismatch: expected ${expected}, got ${got}`);
-    }
-  }
-  try { fs.renameSync(tmp, rtkPath); }
-  catch (err) {
-    if (err.code === 'EEXIST' || err.code === 'EPERM') {
-      try { fs.unlinkSync(rtkPath); } catch (_) {}
-      fs.renameSync(tmp, rtkPath);
-    } else throw err;
-  }
-  if (os.platform() !== 'win32') { try { fs.chmodSync(rtkPath, 0o755); } catch (_) {} }
-  fs.writeFileSync(rtkOk, new Date().toISOString());
-  log(`installed ${rtkPath}`);
-  obsEvent('bootstrap', 'install.done', { path: rtkPath, plugkit_version: plugkitVersion, rtk_version: readRtkVersion() || plugkitVersion, kind: 'rtk', dur_ms: Date.now() - startMs });
-  return rtkPath;
-}
-
-function spawnDetachedRtkFetch() {
-  try {
-    const child = spawn(process.execPath, [__filename, '--rtk-only'], {
-      detached: true, stdio: 'ignore', windowsHide: true,
-    });
-    child.unref();
-    obsEvent('bootstrap', 'rtk.detached.spawned', { pid: child.pid });
-  } catch (err) {
-    log(`rtk detach spawn failed: ${err.message}`);
-  }
-}
 
 async function bootstrap(opts) {
   opts = opts || {};
@@ -587,7 +471,6 @@ async function bootstrap(opts) {
 
   if (healIfShaMatches(finalPath, expectedSha, okSentinel, partialPath, 'plugkit-wasm')) {
     obsEvent('bootstrap', 'decision.heal', { reason: 'sha-match', path: finalPath });
-    spawnDetachedRtkFetch();
     copyWasmToGmTools(finalPath, version);
     clearBootstrapError();
     return finalPath;
@@ -604,8 +487,7 @@ async function bootstrap(opts) {
     }
     if (healIfShaMatches(finalPath, expectedSha, okSentinel, partialPath, 'plugkit-wasm')) {
       obsEvent('bootstrap', 'decision.heal', { reason: 'sha-match-under-lock', path: finalPath });
-      spawnDetachedRtkFetch();
-      copyWasmToGmTools(finalPath, version);
+        copyWasmToGmTools(finalPath, version);
       clearBootstrapError();
       return finalPath;
     }
@@ -663,8 +545,7 @@ async function bootstrap(opts) {
     log(`decision: fetch reason: install-complete (${finalPath})`);
     obsEvent('bootstrap', 'install.done', { path: finalPath, version, kind: 'plugkit-wasm' });
     proactiveKillForNewInstall(version);
-    pruneOldVersions(root, version, readRtkVersion());
-    spawnDetachedRtkFetch();
+    pruneOldVersions(root, version);
     copyWasmToGmTools(finalPath, version);
     clearBootstrapError();
     return finalPath;
@@ -901,15 +782,12 @@ module.exports = {
   getBinaryPath,
   startSpoolDaemon,
   isReady,
-  rtkBinaryName,
   cacheRoot,
   obsEvent,
   killRunningDaemons,
   killStaleDaemonIfVersionChanged,
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
-  resolveCachedRtk,
-  bootstrapRtk,
   readDaemonVersion,
   writeDaemonVersion,
   daemonVersionSentinel,
@@ -919,21 +797,11 @@ if (require.main === module) {
   (async () => {
     try {
       const args = process.argv.slice(2);
-      if (args.includes('--rtk-only')) {
-        const version = readVersionFile();
-        let root = cacheRoot();
-        try { ensureDir(root); }
-        catch (_) { root = fallbackCacheRoot(); ensureDir(root); }
-        const verDir = path.join(root, `v${version}`);
-        ensureDir(verDir);
-        await bootstrapRtk(verDir, version, true, root);
-        process.exit(0);
-      } else if (args.includes('--status')) {
+      if (args.includes('--status')) {
         console.log(JSON.stringify({
           ready: isReady(),
           wasmPath: getWasmPath(),
           daemonVersion: readDaemonVersion(),
-          cachedRtk: resolveCachedRtk(),
         }));
         process.exit(0);
       } else {
