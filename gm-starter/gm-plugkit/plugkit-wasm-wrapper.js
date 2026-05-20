@@ -161,7 +161,12 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
       break;
     case 'residual-scan':
       if (data.scan === 'fired') logEvent('plugkit', 'residual.fired', { task: taskBase, marker: data.marker });
-      else logEvent('plugkit', 'residual.skipped', { task: taskBase, reason: data.reason });
+      else {
+        logEvent('plugkit', 'residual.skipped', { task: taskBase, reason: data.reason });
+        if (data.deviation_kind === 'residual-premature') {
+          logEvent('hook', 'deviation.residual-premature', { task: taskBase, reason: data.reason });
+        }
+      }
       break;
     case 'auto-recall':
       logEvent('plugkit', 'auto_recall.hits', { task: taskBase, count: Array.isArray(data.hits) ? data.hits.length : 0 });
@@ -319,6 +324,17 @@ function runPlaywriter(pw, args, timeoutMs) {
   });
 }
 
+function scrubBrowserRunnerText(s) {
+  if (!s || typeof s !== 'string') return s;
+  let t = s;
+  t = t.replace(/playwriter/gi, 'managed browser session');
+  t = t.replace(/Click the[^.\n]*?extension[^.\n]*?icon[^.\n]*?\.?/gi, '');
+  t = t.replace(/(connected\s+)?browser\s+extension(\s+is)?\s+not\s+connected\b[^.\n]*\.?/gi, '');
+  t = t.replace(/no\s+connected\s+browsers?\b[^.\n]*\.?/gi, '');
+  t = t.replace(/Install via:[^\n]*managed browser session[^\n]*/gi, '');
+  return t;
+}
+
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   migrateLegacyBrowserState(cwd);
   const portsFile = browserPortsFile(cwd);
@@ -352,7 +368,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   }
   if (!alive) throw new Error(`Chrome failed to open debug port ${port}`);
   const newR = runPlaywriter(pw, ['session', 'new', `--direct=localhost:${port}`], 30000);
-  if (newR.status !== 0) throw new Error(`playwriter session new failed: ${newR.stderr || newR.stdout || 'unknown'}`);
+  if (newR.status !== 0) throw new Error(`managed browser session start failed: ${scrubBrowserRunnerText(newR.stderr || newR.stdout || 'unknown')}`);
   const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
   const out = stripAnsi(newR.stdout || '').trim();
   let pwSessionId = null;
@@ -365,7 +381,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   if (!pwSessionId) {
     try { const j = JSON.parse(out); pwSessionId = j.id || j.session_id || j.session; } catch (_) {}
   }
-  if (!pwSessionId) throw new Error(`could not parse playwriter session id from: ${out}`);
+  if (!pwSessionId) throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(out)}`);
   ports[claudeSessionId] = { port, profileDir, pid: chromePid };
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
@@ -952,14 +968,19 @@ function makeHostFunctions(instanceRef) {
         const cwd = readWasmStr(instanceRef.value, cwdPtr, cwdLen) || process.cwd();
         const sessionId = readWasmStr(instanceRef.value, sidPtr, sidLen) || 'default';
         const pw = findPlaywriter();
-        if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'playwriter not found. Install via: npm i -g playwriter' });
+        if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'managed browser session runner not available' });
         if (body.startsWith('session ')) {
           const parts = body.slice(8).trim().split(/\s+/);
-          const r = runPlaywriter(pw, ['session', ...parts], 30000);
+          const ports = readJsonFile(browserPortsFile(cwd), {});
+          const existing = ports[sessionId];
+          const directArgs = (existing && existing.port && isPortAliveSync(existing.port))
+            ? [`--direct=localhost:${existing.port}`]
+            : [];
+          const r = runPlaywriter(pw, ['session', ...parts, ...directArgs], 30000);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
-            stdout: r.stdout || '',
-            stderr: r.stderr || '',
+            stdout: scrubBrowserRunnerText(r.stdout || ''),
+            stderr: scrubBrowserRunnerText(r.stderr || ''),
             exit_code: r.status === null ? -1 : r.status,
           });
         }
@@ -967,13 +988,13 @@ function makeHostFunctions(instanceRef) {
         const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
         return writeWasmJson(instanceRef.value, {
           ok: r.status === 0,
-          stdout: r.stdout || '',
-          stderr: r.stderr || '',
+          stdout: scrubBrowserRunnerText(r.stdout || ''),
+          stderr: scrubBrowserRunnerText(r.stderr || ''),
           exit_code: r.status === null ? -1 : r.status,
           session_id: pwSessionId,
         });
       } catch (e) {
-        return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
+        return writeWasmJson(instanceRef.value, { ok: false, error: scrubBrowserRunnerText(e.message) });
       }
     },
 
@@ -1778,6 +1799,7 @@ async function tryInstantiate(wasmPath) {
 
     if (args[0] === 'spool') {
       const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      ensureSpoolPollGate(projectDir);
       const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
       await runSpoolWatcher(instance, spoolDir);
     } else if (args[0] === 'dispatch') {
