@@ -320,6 +320,127 @@ function ensureBuildToolIgnores(cwd) {
   }
 }
 
+const SPOOL_POLL_GATE_MARK = '__gm_spool_poll_gate__';
+
+function spoolPollGateScript() {
+  return `#!/usr/bin/env node
+// ${SPOOL_POLL_GATE_MARK}
+// PreToolUse hook that blocks bash polling of .gm/exec-spool.
+// Plugkit is synchronous from the agent's view; the Read tool is the canonical
+// way to inspect response files. This hook denies Bash commands that try to
+// poll or shell-read the spool directory.
+
+const SPOOL_POLL_PATTERNS = [
+  /\\bsleep\\s+\\d+(?:\\.\\d+)?\\s*[;&]+\\s*(?:cat|ls|tail|head|find|test|grep)\\b[^|]*\\.gm[\\\\/](?:exec-spool|spool)/i,
+  /\\bStart-Sleep\\b[^;|]*?[;|]\\s*(?:Get-Content|Test-Path|Get-ChildItem|cat|ls|gci|gc|tp)\\b[^|]*\\.gm[\\\\/](?:exec-spool|spool)/i,
+  /\\b(?:cat|ls|tail|head|Get-Content|Test-Path|Get-ChildItem)\\b[^|]*\\.gm[\\\\/](?:exec-spool|spool)[^|]*?[;&|]+\\s*(?:sleep|Start-Sleep)\\b/i,
+  /\\bwhile\\b[^;]*?(?:!|-not)\\s*(?:-(?:f|e)\\s+|Test-Path\\s+)[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
+  /\\buntil\\b[^;]*?(?:-f|-e|Test-Path)\\s+[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
+  /\\bfor\\s+i\\s+in\\b[^;]*?;\\s*do\\b[^;]*?(?:sleep|Start-Sleep)[^;]*?\\.gm[\\\\/](?:exec-spool|spool)/i,
+  /\\b(?:cat|head|tail|less|more|type|Get-Content|gc)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
+  /\\b(?:ls|dir|Get-ChildItem|gci)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
+  /\\b(?:test|Test-Path|tp)\\s+(?:-[A-Za-z]+\\s+)?['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
+];
+
+const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the canonical way to inspect spool files is the Read tool. Use Read on .gm/exec-spool/out/<verb>-<N>.json directly. If the response file does not exist, the watcher is either dead (Read .gm/exec-spool/.status.json and check its mtime against now) or the verb is genuinely slow (Read .gm/exec-spool/.watcher.log for the dispatch trace). You are the state machine; plugkit serves the response the moment you write the request, and Read is how you observe the result.';
+
+function isSpoolPollCommand(command) {
+  if (!command) return null;
+  const s = String(command);
+  for (const re of SPOOL_POLL_PATTERNS) {
+    if (re.test(s)) return re.source;
+  }
+  return null;
+}
+
+let raw = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', (chunk) => { raw += chunk; });
+process.stdin.on('end', () => {
+  let event = {};
+  try { event = JSON.parse(raw || '{}'); } catch (_) { event = {}; }
+  const tool = event.tool_name || event.tool || '';
+  const input = event.tool_input || event.input || {};
+  if (tool !== 'Bash') {
+    process.stdout.write(JSON.stringify({ continue: true }));
+    process.exit(0);
+  }
+  const command = input.command || input.cmd || '';
+  const pattern = isSpoolPollCommand(command);
+  if (!pattern) {
+    process.stdout.write(JSON.stringify({ continue: true }));
+    process.exit(0);
+  }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const day = new Date().toISOString().slice(0, 10);
+    const dir = path.join(process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log'), day);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, 'hook.jsonl'), JSON.stringify({
+      ts: new Date().toISOString(),
+      sub: 'hook',
+      event: 'deviation.spool-poll',
+      pid: process.pid,
+      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      cwd: process.cwd(),
+      operation: 'bash',
+      pattern,
+      command_excerpt: String(command).slice(0, 200),
+      via: 'pre-tool-use-hook',
+    }) + '\\n');
+  } catch (_) {}
+  process.stdout.write(JSON.stringify({
+    decision: 'block',
+    reason: SPOOL_POLL_REASON,
+  }));
+  process.exit(2);
+});
+`;
+}
+
+function ensureSpoolPollGate(cwd) {
+  try {
+    const gmHooks = path.join(cwd, '.gm', 'hooks');
+    fs.mkdirSync(gmHooks, { recursive: true });
+    const gateScript = path.join(gmHooks, 'spool-poll-gate.js');
+    const want = spoolPollGateScript();
+    let need = true;
+    try {
+      const existing = fs.readFileSync(gateScript, 'utf8');
+      if (existing === want) need = false;
+    } catch (_) {}
+    if (need) fs.writeFileSync(gateScript, want);
+
+    const claudeDir = path.join(cwd, '.claude');
+    fs.mkdirSync(claudeDir, { recursive: true });
+    const settingsPath = path.join(claudeDir, 'settings.json');
+    let settings = {};
+    try {
+      const raw = fs.readFileSync(settingsPath, 'utf8');
+      settings = JSON.parse(raw || '{}');
+    } catch (_) { settings = {}; }
+    if (!settings.hooks || typeof settings.hooks !== 'object') settings.hooks = {};
+    if (!Array.isArray(settings.hooks.PreToolUse)) settings.hooks.PreToolUse = [];
+    const wantCommand = `node "\${CLAUDE_PROJECT_DIR}/.gm/hooks/spool-poll-gate.js"`;
+    let bashEntry = settings.hooks.PreToolUse.find(e => e && e.matcher === 'Bash');
+    if (!bashEntry) {
+      bashEntry = { matcher: 'Bash', hooks: [] };
+      settings.hooks.PreToolUse.push(bashEntry);
+    }
+    if (!Array.isArray(bashEntry.hooks)) bashEntry.hooks = [];
+    const already = bashEntry.hooks.some(h => h && typeof h.command === 'string' && h.command.includes('spool-poll-gate.js'));
+    if (!already) {
+      bashEntry.hooks.push({ type: 'command', command: wantCommand });
+    }
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+    emitBootstrapEvent('info', 'Spool-poll gate ensured', { gateScript, settingsPath, hookAlreadyPresent: already });
+  } catch (e) {
+    emitBootstrapEvent('warn', 'ensureSpoolPollGate failed', { error: e.message });
+  }
+}
+
 function writeSessionSidecar(sessionId) {
   try {
     const spool = path.join(process.cwd(), '.gm', 'exec-spool');
@@ -569,6 +690,7 @@ async function bootstrapPlugkit(sessionId, options) {
     writeSessionSidecar(sessionId);
     ensureManagedGitignore(process.cwd());
     ensureBuildToolIgnores(process.cwd());
+    ensureSpoolPollGate(process.cwd());
 
     const manifest = readManifest();
     let targetVersion = manifest.version;
@@ -764,4 +886,6 @@ module.exports = {
   ensureBuildToolIgnores,
   detectBuildToolConfigs,
   ensureManagedGitignore,
+  ensureSpoolPollGate,
+  spoolPollGateScript,
 };

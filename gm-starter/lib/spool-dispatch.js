@@ -192,9 +192,12 @@ const SPOOL_POLL_PATTERNS = [
   /\bwhile\b[^;]*?(?:!|-not)\s*(?:-(?:f|e)\s+|Test-Path\s+)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
   /\buntil\b[^;]*?(?:-f|-e|Test-Path)\s+[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
   /\bfor\s+i\s+in\b[^;]*?;\s*do\b[^;]*?(?:sleep|Start-Sleep)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
+  /\b(?:cat|head|tail|less|more|type|Get-Content|gc)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
+  /\b(?:ls|dir|Get-ChildItem|gci)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
+  /\b(?:test|Test-Path|tp)\s+(?:-[A-Za-z]+\s+)?['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
 ];
 
-const SPOOL_POLL_REASON = 'spool polling is forbidden — plugkit is synchronous from your view. Read the response file at .gm/exec-spool/out/<verb>-<N>.json directly with the Read tool. If it does not exist, the watcher is either dead (check .gm/exec-spool/.status.json mtime) or the verb is genuinely slow (read .gm/exec-spool/.watcher.log for the dispatch trace). Polling with sleep+cat/ls/Test-Path treats plugkit as an async worker; it is not. You are the state machine; plugkit serves the response the moment you write the request.';
+const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the canonical way to inspect spool files is the Read tool. Use Read on .gm/exec-spool/out/<verb>-<N>.json directly. If the response file does not exist, the watcher is either dead (Read .gm/exec-spool/.status.json and check its mtime against now) or the verb is genuinely slow (Read .gm/exec-spool/.watcher.log for the dispatch trace). Polling with sleep+cat/ls/Test-Path treats plugkit as an async worker; bare cat/ls of the spool dir treats it as a shell artifact. It is neither. You are the state machine; plugkit serves the response the moment you write the request, and Read is how you observe the result.';
 
 function isSpoolPollCommand(command) {
   if (!command) return null;
