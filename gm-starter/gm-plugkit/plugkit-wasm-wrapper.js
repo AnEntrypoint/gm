@@ -124,11 +124,35 @@ function ensureSpoolPollGate(cwd) {
     const gateScript = path.join(gmHooks, 'spool-poll-gate.js');
     const want = spoolPollGateScript();
     let need = true;
+    let oldSha = '';
+    let existed = false;
     try {
       const existing = fs.readFileSync(gateScript, 'utf8');
+      existed = true;
       if (existing === want) need = false;
+      else {
+        try {
+          const _crypto = require('crypto');
+          oldSha = _crypto.createHash('sha256').update(existing).digest('hex').slice(0, 12);
+        } catch (_) {}
+      }
     } catch (_) {}
-    if (need) fs.writeFileSync(gateScript, want);
+    if (need) {
+      fs.writeFileSync(gateScript, want);
+      try {
+        const _crypto = require('crypto');
+        const newSha = _crypto.createHash('sha256').update(want).digest('hex').slice(0, 12);
+        try {
+          logEvent('bootstrap', existed ? 'gate.refreshed' : 'gate.installed', {
+            cwd,
+            path: gateScript,
+            old_sha: oldSha || null,
+            new_sha: newSha,
+            bytes: Buffer.byteLength(want, 'utf8'),
+          });
+        } catch (_) {}
+      } catch (_) {}
+    }
 
     const claudeDir = path.join(cwd, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -168,6 +192,99 @@ function applyDisciplineSigil(rawBody) {
     if (!parsed.namespace) parsed.namespace = m[1];
     parsed[key] = v.slice(m[0].length);
     break;
+  }
+  return JSON.stringify(parsed);
+}
+
+function isInstructionTurnStart(sess) {
+  const key = sess || '(no-session)';
+  const now = Date.now();
+  const t = _turns.get(key);
+  if (!t) return true;
+  if ((now - t.lastTs) > TURN_IDLE_MS) return true;
+  return false;
+}
+
+function readUserPromptForRecall(cwd) {
+  const root = cwd || process.cwd();
+  try {
+    const p = path.join(root, '.gm', 'last-prompt.txt');
+    const txt = fs.readFileSync(p, 'utf8').trim();
+    if (txt) return txt;
+  } catch (_) {}
+  try {
+    const p = path.join(root, '.gm', 'turn-state.json');
+    const obj = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (obj && typeof obj.last_prompt === 'string' && obj.last_prompt.trim()) return obj.last_prompt.trim();
+    if (obj && typeof obj.prompt === 'string' && obj.prompt.trim()) return obj.prompt.trim();
+  } catch (_) {}
+  return '';
+}
+
+function dispatchVerbToWasmInternal(instance, verb, body) {
+  const dispatch = instance.exports.dispatch_verb;
+  if (!dispatch) return null;
+  const verbBytes = new TextEncoder().encode(verb);
+  const bodyBytes = new TextEncoder().encode(body || '');
+  const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
+  const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
+  try {
+    new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
+    new Uint8Array(instance.exports.memory.buffer, bodyPtr, bodyBytes.length).set(bodyBytes);
+    const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
+    const ptr = Number(result & 0xffffffffn);
+    const len = Number(result >> 32n);
+    const out = new TextDecoder().decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
+    try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
+    return out;
+  } finally {
+    try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
+    try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
+  }
+}
+
+function tryAutoRecallForTurnEntry(instance, sess, cwd) {
+  try {
+    const prompt = readUserPromptForRecall(cwd);
+    if (!prompt) return null;
+    const out = dispatchVerbToWasmInternal(instance, 'auto-recall', prompt);
+    if (!out) return null;
+    let parsed;
+    try { parsed = JSON.parse(out); } catch (_) { return null; }
+    if (!parsed || parsed.ok !== true) return null;
+    let inner = parsed.data;
+    if (typeof parsed.stdout === 'string' && parsed.stdout.length > 0) {
+      try { inner = JSON.parse(parsed.stdout); } catch (_) {}
+    }
+    if (!inner || typeof inner !== 'object') return null;
+    const hits = Array.isArray(inner.results) ? inner.results : (Array.isArray(inner.hits) ? inner.hits : []);
+    const payload = { query: inner.query || '', hits, fired_at: new Date().toISOString(), turn_entry: true };
+    logEvent('plugkit', 'auto_recall.turn-entry', { sess, query: payload.query, count: hits.length });
+    return payload;
+  } catch (e) {
+    logEvent('plugkit', 'auto_recall.error', { sess, error: String(e && e.message || e) });
+    return null;
+  }
+}
+
+function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
+  if (!autoRecall) return resultStr;
+  let parsed;
+  try { parsed = JSON.parse(resultStr); } catch (_) { return resultStr; }
+  if (!parsed || typeof parsed !== 'object') return resultStr;
+  if (parsed.data && typeof parsed.data === 'object') {
+    parsed.data.auto_recall = autoRecall;
+  } else {
+    parsed.auto_recall = autoRecall;
+  }
+  if (typeof parsed.stdout === 'string' && parsed.stdout.length > 0) {
+    try {
+      const inner = JSON.parse(parsed.stdout);
+      if (inner && typeof inner === 'object') {
+        inner.auto_recall = autoRecall;
+        parsed.stdout = JSON.stringify(inner);
+      }
+    } catch (_) {}
   }
   return JSON.stringify(parsed);
 }
@@ -1203,6 +1320,8 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(inDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
+  try { ensureSpoolPollGate(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
+
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   let _ownWrapperSha12 = '';
   try {
@@ -1506,18 +1625,35 @@ async function runSpoolWatcher(instance, spoolDir) {
     prior_status: _priorStatus,
     prior_status_age_ms: _priorStatus && Number.isFinite(_priorStatus.ts) ? Date.now() - _priorStatus.ts : null,
   };
-  const _isPlannedBoot = _priorShutdown && (_priorShutdown.reason === 'idle' || _priorShutdown.reason === 'sigterm' || _priorShutdown.reason === 'version-change');
+  const _PLANNED_REASONS = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'version-drift', 'external-planned']);
+  const _isPlannedBoot = _priorShutdown && _PLANNED_REASONS.has(_priorShutdown.reason);
   const _isFirstBoot = !_priorShutdown && !_priorStatus;
   const UNPLANNED_RESTART_MARKER = path.join(spoolDir, '.unplanned-restart.json');
-  if (!_isPlannedBoot && !_isFirstBoot) {
+  const HEARTBEAT_RECENT_MS = 60_000;
+  const HEARTBEAT_DEAD_MS = 5 * 60_000;
+  let _severity = 'critical';
+  if (_isPlannedBoot) {
+    _severity = 'info';
+  } else if (!_priorShutdown && _priorStatus && Number.isFinite(_priorStatus.ts)) {
+    const _statusAge = Date.now() - _priorStatus.ts;
+    if (_statusAge <= HEARTBEAT_RECENT_MS) _severity = 'warn';
+    else if (_statusAge < HEARTBEAT_DEAD_MS) _severity = 'warn';
+    else _severity = 'critical';
+  }
+  if (!_isFirstBoot) {
     const incidentPayload = {
       ts: Date.now(),
       version: _bootVersion,
-      severity: 'critical',
+      severity: _severity,
+      planned: _isPlannedBoot,
       ...restartContext,
       log_tail_path: path.join(spoolDir, '.watcher.log'),
       gm_log_dir: GM_LOG_ROOT,
-      instruction: 'Prior watcher died without a planned shutdown. This is treated as a critical failure. Inspect .watcher.log and gm-log/<day>/plugkit.jsonl events supervisor.watcher-exited-unexpectedly + supervisor.heartbeat-stale around the prior_status.ts timestamp to diagnose root cause.',
+      instruction: _isPlannedBoot
+        ? `Planned restart: prior watcher exited with reason="${_priorShutdown.reason}". No action required.`
+        : (_severity === 'warn'
+          ? 'Prior watcher disappeared with a recent heartbeat — likely a clean shutdown that did not write .shutdown-reason.json. Inspect .watcher.log if recurrent.'
+          : 'Prior watcher died without a planned shutdown and without a recent heartbeat. This is treated as a critical failure. Inspect .watcher.log and gm-log/<day>/plugkit.jsonl events supervisor.watcher-exited-unexpectedly + supervisor.heartbeat-stale around the prior_status.ts timestamp to diagnose root cause.'),
     };
     logEvent('plugkit', 'watcher.unplanned-restart', incidentPayload);
     try {
@@ -1575,6 +1711,14 @@ async function runSpoolWatcher(instance, spoolDir) {
       console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
       logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
 
+      let autoRecallPayload = null;
+      if (verb === 'instruction') {
+        const sessForRecall = readCurrentSess();
+        if (isInstructionTurnStart(sessForRecall)) {
+          autoRecallPayload = tryAutoRecallForTurnEntry(instance, sessForRecall, process.cwd());
+        }
+      }
+
       const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
       const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
       new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
@@ -1585,7 +1729,11 @@ async function runSpoolWatcher(instance, spoolDir) {
       const ptr = Number(result & 0xffffffffn);
       const len = Number(result >> 32n);
       const resultBytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
-      const resultStr = new TextDecoder().decode(resultBytes);
+      let resultStr = new TextDecoder().decode(resultBytes);
+
+      if (autoRecallPayload) {
+        resultStr = mergeAutoRecallIntoInstructionResponse(resultStr, autoRecallPayload);
+      }
 
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
       fs.writeFileSync(path.join(outDir, outName), resultStr);
