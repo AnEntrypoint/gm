@@ -62,9 +62,11 @@ node cli.js gm-starter ./build
 
 Single output: `build/gm-skill/` — the canonical universal harness. Published to npm as `gm-skill`.
 
-## plugkit is the brain
+## the agent is the orchestrator; plugkit is the brain it drives
 
-The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. The orchestrator owns phase tracking, mutables resolution, memorize firing, and transition legality. plugkit exposes the orchestrator verbs over the wasm surface (see Spool dispatch ABI above): `transition`, `mutable-resolve`, `memorize-fire`, `phase-status`, `instruction`, `residual-scan`, `auto-recall`. The gm-skill harness calls these verbs; the harness never reimplements the state machine.
+**The agent orchestrates.** Plugkit is the stateful library the agent drives by dispatching verbs. Plugkit does not act autonomously, does not advance phases in the background, does not validate transitions while the agent waits. Every state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`. If a session shows zero dispatches but the agent narrated a full PLAN→COMPLETE walk, the agent fabricated the walk — plugkit's dispatch ledger is ground truth.
+
+The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. Plugkit owns phase tracking, mutables resolution, memorize firing, and transition legality *as data structures and gate checks* — but the agent triggers every operation by dispatching one of the orchestrator verbs over the wasm surface (see Spool dispatch ABI above): `transition`, `mutable-resolve`, `memorize-fire`, `phase-status`, `instruction`, `residual-scan`, `auto-recall`. The gm-skill harness routes the agent's verb writes to plugkit; the harness never reimplements the state machine and the agent never expects plugkit to act without a verb. Polling the spool output dir (`sleep && ls`, `Start-Sleep && Test-Path`) instead of reading the response file is the canonical misuse — plugkit is synchronous from the agent's view.
 
 ## gm-skill is the canonical universal harness
 
