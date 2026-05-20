@@ -984,13 +984,31 @@ function createWasiShim(instanceRef) {
     },
     environ_get: () => 0,
     environ_sizes_get: () => 0,
+    fd_prestat_get: () => 8,
+    fd_prestat_dir_name: () => 8,
+    fd_close: () => 0,
+    fd_fdstat_get: () => 0,
+    fd_fdstat_set_flags: () => 0,
+    fd_filestat_get: () => 0,
+    fd_seek: (_fd, _offset_lo, _offset_hi, _whence, newoffset_ptr) => {
+      try { new DataView(getMemory()).setBigUint64(newoffset_ptr, 0n, true); } catch (_) {}
+      return 0;
+    },
+    fd_read: (_fd, _iovs_ptr, _iovs_len, nread_ptr) => {
+      try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {}
+      return 0;
+    },
+    path_open: () => 8,
+    path_filestat_get: () => 8,
+    poll_oneoff: () => 0,
+    sched_yield: () => 0,
   };
   return new Proxy(shim, {
     get(target, prop) {
       if (prop in target) return target[prop];
       return (...args) => {
         console.error(`[plugkit-wasm] unimplemented WASI call: ${String(prop)} args=${args.length}`);
-        return 52;
+        return 8;
       };
     }
   });
