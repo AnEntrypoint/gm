@@ -100,7 +100,7 @@ process.stdin.on('end', () => {
       sub: 'hook',
       event: 'deviation.spool-poll',
       pid: process.pid,
-      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      sess: event.session_id || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
       cwd: process.cwd(),
       operation: 'bash',
       pattern,
@@ -256,6 +256,13 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
   let parsed;
   try { parsed = JSON.parse(resultStr); } catch (_) { return; }
   if (!parsed || parsed.ok !== true) {
+    let errData = null;
+    if (parsed && typeof parsed.stdout === 'string' && parsed.stdout.length > 0) {
+      try { errData = JSON.parse(parsed.stdout); } catch (_) {}
+    }
+    if (verb === 'prd-resolve' && errData && errData.deviation_kind === 'prd-resolve-unknown-id') {
+      logEvent('hook', 'deviation.prd-resolve-unknown-id', { task: taskBase, prd_id: errData.prd_id, reason: errData.error });
+    }
     logEvent('plugkit', 'orchestrator.error', { verb, task: taskBase, error: parsed && parsed.error ? String(parsed.error) : 'unknown' });
     return;
   }
@@ -276,7 +283,11 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
       logEvent('plugkit', 'prd.added', { task: taskBase, id: data.added });
       break;
     case 'prd-resolve':
-      logEvent('plugkit', 'prd.resolved', { task: taskBase, id: data.resolved });
+      if (data && data.deviation_kind === 'prd-resolve-unknown-id') {
+        logEvent('hook', 'deviation.prd-resolve-unknown-id', { task: taskBase, prd_id: data.prd_id, reason: data.error });
+      } else {
+        logEvent('plugkit', 'prd.resolved', { task: taskBase, id: data.resolved });
+      }
       break;
     case 'mutable-add':
       logEvent('plugkit', 'mutable.added', { task: taskBase, id: data.added });

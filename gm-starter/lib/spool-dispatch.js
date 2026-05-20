@@ -11,14 +11,21 @@ function logDeviation(event, fields) {
     const day = new Date().toISOString().slice(0, 10);
     const dir = path.join(GM_LOG_ROOT, day);
     fs.mkdirSync(dir, { recursive: true });
+    const f = fields || {};
+    const sessOverride = (f.sess !== undefined) ? f.sess : null;
+    const rest = { ...f };
+    delete rest.sess;
+    const sess = (sessOverride && String(sessOverride).length > 0)
+      ? String(sessOverride)
+      : (process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '');
     const line = JSON.stringify({
       ts: new Date().toISOString(),
       sub: 'hook',
       event,
       pid: process.pid,
-      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      sess,
       cwd: process.cwd(),
-      ...fields,
+      ...rest,
     });
     fs.appendFileSync(path.join(dir, 'hook.jsonl'), line + '\n');
   } catch (_) {}

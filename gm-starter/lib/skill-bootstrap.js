@@ -393,7 +393,7 @@ process.stdin.on('end', () => {
       sub: 'hook',
       event: 'deviation.spool-poll',
       pid: process.pid,
-      sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
+      sess: event.session_id || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
       cwd: process.cwd(),
       operation: 'bash',
       pattern,

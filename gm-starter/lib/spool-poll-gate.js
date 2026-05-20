@@ -25,6 +25,7 @@ process.stdin.on('end', () => {
       pattern,
       command_excerpt: String(command).slice(0, 200),
       via: 'pre-tool-use-hook',
+      sess: event.session_id || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
     });
   } catch (_) {}
   process.stdout.write(JSON.stringify({
