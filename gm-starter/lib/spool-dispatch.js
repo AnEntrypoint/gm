@@ -203,11 +203,11 @@ const SPOOL_POLL_PATTERNS = [
   /\bwhile\b[^;]*?(?:!|-not)\s*(?:-(?:f|e)\s+|Test-Path\s+)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
   /\buntil\b[^;]*?(?:-f|-e|Test-Path)\s+[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
   /\bfor\s+i\s+in\b[^;]*?;\s*do\b[^;]*?(?:sleep|Start-Sleep)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
-  /\b(?:cat|head|tail|less|more|type|Get-Content|gc)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
-  /\b(?:ls|dir|Get-ChildItem|gci)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
-  /\b(?:test|Test-Path|tp)\s+(?:-[A-Za-z]+\s+)?['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]/i,
+  /\b(?:cat|head|tail|less|more|type|Get-Content|gc)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]\.status\.json\b/i,
+  /\b(?:cat|head|tail|less|more|type|Get-Content|gc)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]\.watcher\.log\b/i,
+  /\b(?:ls|dir|Get-ChildItem|gci)\s+(?:-[A-Za-z]+\s+)*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)(?:[\\/](?:in|out)?)?[\\/]?['"]?\s*(?:$|[|;&])/i,
+  /\b(?:test|Test-Path|tp)\s+(?:-[A-Za-z]+\s+)?['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/](?:out|in)[\\/]/i,
   /\bfind\b[^|]*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)\b/i,
-  /\b(?:stat|file|wc|Get-Item|gi|Get-Acl|Resolve-Path|Select-String|sls)\b[^|]*['"]?[^'"|;&]*\.gm[\\/](?:exec-spool|spool)[\\/]?/i,
   /\b(?:xargs|parallel|fzf)\b[^|]*\.gm[\\/](?:exec-spool|spool)/i,
 ];
 
@@ -251,6 +251,20 @@ function deferMarkerIn(text) {
   return null;
 }
 
+function readPendingStep(cwd) {
+  try {
+    const f = path.join(cwd, '.gm', 'turn-state.json');
+    if (!fs.existsSync(f)) return null;
+    const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (!st || !st.pending_step_id) return null;
+    const deadline = Number(st.pending_step_deadline_ms || 0);
+    if (deadline && Date.now() > deadline) return null;
+    return { step_id: st.pending_step_id, deadline_ms: deadline };
+  } catch (_) { return null; }
+}
+
+const AWAIT_RESULT_ALLOWED_VERBS = new Set(['memorize-continue', 'instruction', 'phase-status', 'health']);
+
 function checkDispatchGates(sessionId, operation, extra) {
   const cwd = process.cwd();
   const gm = path.join(cwd, '.gm');
@@ -258,6 +272,19 @@ function checkDispatchGates(sessionId, operation, extra) {
   const mutsPath = path.join(gm, 'mutables.yml');
   const needsGmPath = path.join(gm, 'needs-gm');
   const gmFiredPath = path.join(gm, `gm-fired-${sessionId}`);
+
+  if (operation === 'verb' && extra && extra.verb) {
+    const pending = readPendingStep(cwd);
+    if (pending && !AWAIT_RESULT_ALLOWED_VERBS.has(extra.verb)) {
+      logDeviation('deviation.await-result-violation', { verb: extra.verb, step_id: pending.step_id });
+      return {
+        allowed: false,
+        reason: `pipeline suspended at step_id=${pending.step_id}; only memorize-continue advances state. Read the AWAIT-RESULT instruction (dispatch \`instruction\`), compute the step inline using its prompt_template, then dispatch memorize-continue with the result. No other verb is valid until this completes.`,
+        await_result: true,
+        pending_step_id: pending.step_id,
+      };
+    }
+  }
 
   if (['stop', 'complete'].includes(operation)) {
     const residuals = [];
