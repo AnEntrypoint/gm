@@ -763,7 +763,7 @@
   - NODE_AUTH_TOKEN refreshed in AnEntrypoint/gm repo secrets with publish rights to gm-plugkit
   - Next gm push publishes gm-plugkit@2.0.1183+ successfully
   - bun x gm-plugkit@latest fetches the new wrapper including rtk-removal + session-current fallback
-  status: pending
+  status: completed
 - id: rs-plugkit-release-npm-swallow
   subject: rs-plugkit release.yml swallowed npm publish failures with || echo
   description: 'Witnessed: rs-plugkit Release CI ran green on 3945a57 while npm publish actually 404''d because NODE_AUTH_TOKEN lacks publish rights to plugkit-wasm. The ''Publish to npm'' step had continue-on-error:true PLUS ''|| echo failure-msg'' — failure was visible only in raw step logs, not in run status. Effect: every cascade since the token broke published a new GitHub Release but never updated npm, breaking downstream wrappers that try npx plugkit-wasm@latest first. Fixed in 36e532d: capture stderr, emit ::warning:: annotation with first 400 chars of error, keep step green so cascade continues (gh-releases remains canonical). Pushed to AnEntrypoint/rs-plugkit main; CI will validate next release run.'
