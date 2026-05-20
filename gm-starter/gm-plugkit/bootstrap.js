@@ -23,7 +23,8 @@ function resolveWindowsExe(cmd) {
     if (r.status !== 0) return cmd;
     const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const exe = lines.find(l => /\.exe$/i.test(l));
-    return exe || lines[0] || cmd;
+    const shim = lines.find(l => /\.(cmd|bat)$/i.test(l));
+    return exe || shim || cmd;
   } catch {
     return cmd;
   }
@@ -300,6 +301,10 @@ async function extractNpmPackageWithRetry(destPath, version) {
       lastErr = err;
       log(`attempt ${attempt} failed: ${err.message}`);
       obsEvent('bootstrap', 'npm.extract.attempt_failed', { package: NPM_PACKAGE, attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
+      if (err && (err.code === 'ENOENT' || /ENOENT/.test(String(err.message || '')))) {
+        log(`npm binary unresolvable (ENOENT); skipping retries, falling back`);
+        throw err;
+      }
       if (attempt < MAX_ATTEMPTS) {
         const wait = BACKOFF_MS[attempt - 1] || 120000;
         log(`backing off ${wait}ms`);

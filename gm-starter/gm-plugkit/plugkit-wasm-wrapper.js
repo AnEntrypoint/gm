@@ -541,7 +541,8 @@ function resolveWindowsExeLocal(cmd) {
     if (out.status !== 0) return cmd;
     const lines = (out.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const exe = lines.find(l => /\.exe$/i.test(l));
-    return exe || lines[0] || cmd;
+    const shim = lines.find(l => /\.(cmd|bat)$/i.test(l));
+    return exe || shim || cmd;
   } catch {
     return cmd;
   }
