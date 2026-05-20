@@ -47,6 +47,9 @@ const SPOOL_POLL_PATTERNS = [
   /\\b(?:cat|head|tail|less|more|type|Get-Content|gc)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
   /\\b(?:ls|dir|Get-ChildItem|gci)\\s+(?:-[A-Za-z]+\\s+)*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
   /\\b(?:test|Test-Path|tp)\\s+(?:-[A-Za-z]+\\s+)?['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]/i,
+  /\\bfind\\b[^|]*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)\\b/i,
+  /\\b(?:stat|file|wc|Get-Item|gi|Get-Acl|Resolve-Path|Select-String|sls)\\b[^|]*['"]?[^'"|;&]*\\.gm[\\\\/](?:exec-spool|spool)[\\\\/]?/i,
+  /\\b(?:xargs|parallel|fzf)\\b[^|]*\\.gm[\\\\/](?:exec-spool|spool)/i,
 ];
 
 const SPOOL_POLL_REASON = 'spool polling and bash-reads of .gm/exec-spool/ are forbidden — plugkit is synchronous from your view, and the Read tool is the canonical way to inspect spool files. Specific replacements:\\n\\n- Instead of \`cat .gm/exec-spool/.status.json\` → use the Read tool: \`Read .gm/exec-spool/.status.json\`\\n- Instead of \`ls .gm/exec-spool/out/\` → check the specific response file you wrote, e.g. \`Read .gm/exec-spool/out/<verb>-<N>.json\`\\n- Instead of \`cat .gm/exec-spool/.watcher.log\` → use the Read tool with offset for tailing\\n- Instead of \`sleep N; cat .gm/exec-spool/<...>\` → just Read the response file directly; if it doesn\\'t exist yet, the watcher is dead (Read .gm/exec-spool/.status.json — fresh ts means alive) or the verb is slow (Read .gm/exec-spool/.watcher.log for the dispatch trace)\\n\\nYou are the state machine. Plugkit serves the response the moment you write the request file. If you find yourself thinking "let me just check whether the file is there yet" — use Read. If you find yourself thinking "the watcher might have died" — Read .gm/exec-spool/.status.json. Bash on .gm/exec-spool/ is wrong every single time.';
