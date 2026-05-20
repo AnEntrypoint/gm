@@ -5,6 +5,28 @@ const { spawn, execSync } = require('child_process');
 const os = require('os');
 const spool = require('./spool.js');
 
+// Resolve a bare command name to its .exe on Windows. cmd.exe + .cmd shim
+// chains re-enter conhost (visible window flash) even with windowsHide:true
+// on the parent. Spawning the real .exe directly lets CREATE_NO_WINDOW
+// propagate cleanly. Falls back to the original name if no .exe is found.
+// See [[windows-spawn-cmd-shim-flash]] for the discipline rationale.
+function resolveWindowsExe(cmd) {
+  if (process.platform !== 'win32') return cmd;
+  try {
+    const out = execSync(`where ${cmd}`, {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+      timeout: 800,
+    });
+    const lines = out.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const exe = lines.find(l => /\.exe$/i.test(l));
+    return exe || lines[0] || cmd;
+  } catch {
+    return cmd;
+  }
+}
+
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
 const GM_STATE_DIR = path.join(os.homedir(), '.gm');
 
@@ -159,7 +181,7 @@ async function ensureRsLearningDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
-    const proc = spawn('bun', ['x', 'rs-learn@latest'], {
+    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-learn@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
@@ -213,7 +235,7 @@ async function ensureAcptoapiRunning() {
     });
 
     try {
-      const child = spawn('bun', ['x', 'acptoapi@latest'], {
+      const child = spawn(resolveWindowsExe('bun'), ['x', 'acptoapi@latest'], {
         detached: true,
         stdio: 'ignore',
         windowsHide: true,

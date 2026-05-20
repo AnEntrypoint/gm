@@ -736,6 +736,24 @@ function cleanDeadProfileFragments(cwd) {
   }
 }
 
+function resolveWindowsExeLocal(cmd) {
+  if (process.platform !== 'win32') return cmd;
+  try {
+    const out = spawnSync('where', [cmd], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+      timeout: 800,
+    });
+    if (out.status !== 0) return cmd;
+    const lines = (out.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const exe = lines.find(l => /\.exe$/i.test(l));
+    return exe || lines[0] || cmd;
+  } catch {
+    return cmd;
+  }
+}
+
 function isPortReachableSync(host, port, timeoutMs) {
   const r = spawnSync(process.execPath, ['-e', `
     const net = require('net');
@@ -777,8 +795,12 @@ function ensureAcptoapi() {
     if (_acptoapiBoot.spawned_at && Date.now() - _acptoapiBoot.spawned_at < 30000) {
       return;
     }
-    const isWindows = process.platform === 'win32';
-    const cmd = isWindows ? 'bun.exe' : 'bun';
+    // Resolve `bun` to its actual .exe on Windows so the spawned daemon
+    // doesn't enter conhost via a bun.cmd shim. See
+    // [[windows-spawn-cmd-shim-flash]] — cmd.exe + .cmd chain re-enters
+    // conhost even with windowsHide:true on the parent. Falls back to
+    // the bare name on non-Windows / when `where` can't resolve.
+    const cmd = resolveWindowsExeLocal('bun');
     const child = spawn(cmd, ['x', 'acptoapi@latest'], {
       detached: true,
       stdio: 'ignore',
