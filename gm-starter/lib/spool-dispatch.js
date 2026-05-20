@@ -185,6 +185,26 @@ function markInstructionSeen(sessionId) {
   } catch (_) {}
 }
 
+const SPOOL_POLL_PATTERNS = [
+  /\bsleep\s+\d+(?:\.\d+)?\s*[;&]+\s*(?:cat|ls|tail|head|find|test|grep)\b[^|]*\.gm[\\/](?:exec-spool|spool)/i,
+  /\bStart-Sleep\b[^;|]*?[;|]\s*(?:Get-Content|Test-Path|Get-ChildItem|cat|ls|gci|gc|tp)\b[^|]*\.gm[\\/](?:exec-spool|spool)/i,
+  /\b(?:cat|ls|tail|head|Get-Content|Test-Path|Get-ChildItem)\b[^|]*\.gm[\\/](?:exec-spool|spool)[^|]*?[;&|]+\s*(?:sleep|Start-Sleep)\b/i,
+  /\bwhile\b[^;]*?(?:!|-not)\s*(?:-(?:f|e)\s+|Test-Path\s+)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
+  /\buntil\b[^;]*?(?:-f|-e|Test-Path)\s+[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
+  /\bfor\s+i\s+in\b[^;]*?;\s*do\b[^;]*?(?:sleep|Start-Sleep)[^;]*?\.gm[\\/](?:exec-spool|spool)/i,
+];
+
+const SPOOL_POLL_REASON = 'spool polling is forbidden — plugkit is synchronous from your view. Read the response file at .gm/exec-spool/out/<verb>-<N>.json directly with the Read tool. If it does not exist, the watcher is either dead (check .gm/exec-spool/.status.json mtime) or the verb is genuinely slow (read .gm/exec-spool/.watcher.log for the dispatch trace). Polling with sleep+cat/ls/Test-Path treats plugkit as an async worker; it is not. You are the state machine; plugkit serves the response the moment you write the request.';
+
+function isSpoolPollCommand(command) {
+  if (!command) return null;
+  const s = String(command);
+  for (const re of SPOOL_POLL_PATTERNS) {
+    if (re.test(s)) return re.source;
+  }
+  return null;
+}
+
 const DEFER_MARKERS = [
   'next pass', 'next session', 'next turn',
   'defer to later', 'deferred to later', 'deferred for later',
@@ -256,6 +276,14 @@ function checkDispatchGates(sessionId, operation, extra) {
     logDeviation('deviation.write-before-instruction', { operation, sessionId });
   }
 
+  if (operation === 'bash' && extra && extra.command) {
+    const pattern = isSpoolPollCommand(extra.command);
+    if (pattern) {
+      logDeviation('deviation.spool-poll', { operation, pattern, command_excerpt: String(extra.command).slice(0, 200) });
+      return { allowed: false, reason: SPOOL_POLL_REASON };
+    }
+  }
+
   if (operation === 'mutable-resolve' && extra && (!extra.witness_evidence || String(extra.witness_evidence).trim() === '')) {
     logDeviation('deviation.mutable-without-evidence', { mutable_id: extra.id || null });
   }
@@ -291,4 +319,4 @@ function checkDispatchGates(sessionId, operation, extra) {
   return { allowed: true };
 }
 
-module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction };
+module.exports = { dispatchSpool, checkDispatchGates, isWorktreeDirty, hasUnpushedCommits, unsolicitedDocs, logDeviation, markInstructionSeen, hasDispatchedInstruction, isSpoolPollCommand, SPOOL_POLL_REASON };

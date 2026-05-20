@@ -109,7 +109,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded &mdash; the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
 
-<p>For an agent, the equivalent is: one published skill package, with a single hook into the host harness, with all the heavy machinery (search, indexing, memory, code execution, browser automation, phase orchestration) compiled into one wasm module and served on demand through a file-spool dispatch surface.</p>
+<p>For an agent, the equivalent is: one published skill package, with a single hook into the host harness, with all the heavy machinery (search, indexing, memory, code execution, browser automation, phase orchestration) compiled into one wasm module that the agent dispatches on demand through a file-spool surface. The agent is the state machine; the wasm is the durable scratchpad it drives.</p>
 
 <h2>2. The One-Command Install</h2>
 

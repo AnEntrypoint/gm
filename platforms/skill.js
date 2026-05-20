@@ -145,7 +145,7 @@ class SkillAdapter extends PlatformAdapter {
   generateReadme(pluginSpec) {
     return `# gm-skill — Canonical Universal Harness
 
-The single shipped skill for gm. Install into any harness that loads Claude-style skill directories — Claude Code, OpenCode, Cursor, Zed, VS Code, Codex, Kilo, JetBrains, Copilot CLI, Antigravity, Windsurf, Gemini CLI — and plugkit serves every phase instruction, mutables row, and guardrail on demand via the spool.
+The single shipped skill for gm. Install into any harness that loads Claude-style skill directories — Claude Code, OpenCode, Cursor, Zed, VS Code, Codex, Kilo, JetBrains, Copilot CLI, Antigravity, Windsurf, Gemini CLI — and you dispatch the \`instruction\` verb each turn to read every phase directive, mutables row, and guardrail from plugkit via the spool. You are the state machine; plugkit serves the response the moment you write the request.
 
 ## What this is
 
