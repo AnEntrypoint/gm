@@ -102,22 +102,27 @@ function gitDisciplineScan(transcripts, cutoff) {
 }
 
 function collectPlugkitEvents(cutoff) {
-  const root = path.join(os.homedir(), '.claude', 'gm-log');
+  const roots = [
+    path.join(os.homedir(), '.gm-log'),
+    path.join(os.homedir(), '.claude', 'gm-log'),
+  ].filter(r => fs.existsSync(r));
   const events = [];
-  if (!fs.existsSync(root)) { console.log(col('d', `no log at ${root}`)); return events; }
-  for (const date of fs.readdirSync(root)) {
-    const pj = path.join(root, date, 'plugkit.jsonl');
-    if (!fs.existsSync(pj)) continue;
-    let lines; try { lines = fs.readFileSync(pj, 'utf8').split(/\r?\n/); } catch { continue; }
-    for (const line of lines) {
-      if (!line) continue;
-      try {
-        const ev = JSON.parse(line);
-        const ts = Date.parse(ev.ts || '') || 0;
-        if (cutoff && ts && ts < cutoff) continue;
-        ev._ts = ts;
-        events.push(ev);
-      } catch {}
+  if (roots.length === 0) { console.log(col('d', `no gm-log at ~/.gm-log or ~/.claude/gm-log`)); return events; }
+  for (const root of roots) {
+    for (const date of fs.readdirSync(root)) {
+      const pj = path.join(root, date, 'plugkit.jsonl');
+      if (!fs.existsSync(pj)) continue;
+      let lines; try { lines = fs.readFileSync(pj, 'utf8').split(/\r?\n/); } catch { continue; }
+      for (const line of lines) {
+        if (!line) continue;
+        try {
+          const ev = JSON.parse(line);
+          const ts = Date.parse(ev.ts || '') || 0;
+          if (cutoff && ts && ts < cutoff) continue;
+          ev._ts = ts;
+          events.push(ev);
+        } catch {}
+      }
     }
   }
   return events;

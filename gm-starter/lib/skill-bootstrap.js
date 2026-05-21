@@ -6,14 +6,21 @@ const crypto = require('crypto');
 const os = require('os');
 const spool = require('./spool.js');
 
-const PLUGKIT_TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
+function resolveToolsDir() {
+  const primary = path.join(os.homedir(), '.gm-tools');
+  const fallback = path.join(os.homedir(), '.claude', 'gm-tools');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
+}
+const PLUGKIT_TOOLS_DIR = resolveToolsDir();
 const PLUGKIT_VERSION_FILE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.version');
 const PLUGKIT_WASM_PATH = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.wasm');
 const PLUGKIT_WASM_WRAPPER = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-wasm-wrapper.js');
 const PLUGKIT_SUPERVISOR = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-supervisor.js');
 const BOOTSTRAP_STATUS_FILE = path.join(os.homedir(), '.gm', 'bootstrap-status.json');
 const BOOTSTRAP_ERROR_FILE = path.join(os.homedir(), '.gm', 'bootstrap-error.json');
-const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
+const LOG_DIR = path.join(os.homedir(), '.gm-log');
 
 function getPlugkitPath() {
   return PLUGKIT_WASM_PATH;

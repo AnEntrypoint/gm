@@ -9,7 +9,7 @@ const {
   isBrowserAvailable,
 } = require('./browser');
 
-const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
+const LOG_DIR = path.join(os.homedir(), '.gm-log');
 
 function emitHandlerEvent(severity, message, details) {
   try {

@@ -40,7 +40,10 @@ function readExpectedSha() {
 
 // Returns true if gm-tools WASM matches pinned version by sha. Fast: no network.
 function isReady() {
-  const wasmBin = path.join(process.env.USERPROFILE || process.env.HOME || os.homedir(), '.claude', 'gm-tools', 'plugkit.wasm');
+  const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
+  const primaryWasm = path.join(home, '.gm-tools', 'plugkit.wasm');
+  const fallbackWasm = path.join(home, '.claude', 'gm-tools', 'plugkit.wasm');
+  const wasmBin = fs.existsSync(primaryWasm) ? primaryWasm : fallbackWasm;
   if (!fs.existsSync(wasmBin)) return false;
   const expected = readExpectedSha();
   if (!expected) return true;
@@ -105,7 +108,10 @@ function main() {
     return runWasm(args);
   }
 
-  const wasmBin = path.join(process.env.USERPROFILE || process.env.HOME || os.homedir(), '.claude', 'gm-tools', 'plugkit.wasm');
+  const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
+  const primaryWasm = path.join(home, '.gm-tools', 'plugkit.wasm');
+  const fallbackWasm = path.join(home, '.claude', 'gm-tools', 'plugkit.wasm');
+  const wasmBin = fs.existsSync(primaryWasm) ? primaryWasm : fallbackWasm;
   if (!fs.existsSync(wasmBin)) {
     if (isHook) process.exit(0);
     process.exit(1);

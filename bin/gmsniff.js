@@ -49,8 +49,12 @@ function collectEvents(sinceMs) {
       events.push(ev);
     } catch {}
   }
-  const gmLogRoot = path.join(os.homedir(), '.claude', 'gm-log');
-  if (fs.existsSync(gmLogRoot)) {
+  const gmLogRoots = [
+    path.join(os.homedir(), '.gm-log'),
+    path.join(os.homedir(), '.claude', 'gm-log'),
+  ];
+  for (const gmLogRoot of gmLogRoots) {
+    if (!fs.existsSync(gmLogRoot)) continue;
     for (const date of fs.readdirSync(gmLogRoot)) {
       const pj = path.join(gmLogRoot, date, 'plugkit.jsonl');
       if (!fs.existsSync(pj)) continue;

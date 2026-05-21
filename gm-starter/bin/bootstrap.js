@@ -170,7 +170,7 @@ function obsEvent(subsystem, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
     const root = process.env.GM_LOG_DIR
-      || path.join(os.homedir(), '.claude', 'gm-log');
+      || path.join(os.homedir(), '.gm-log');
     const day = new Date().toISOString().slice(0, 10);
     const dir = path.join(root, day);
     fs.mkdirSync(dir, { recursive: true });
@@ -210,12 +210,17 @@ function fallbackCacheRoot() {
 
 function gmToolsDir() {
   const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
-  return path.join(home, '.claude', 'gm-tools');
+  const primary = path.join(home, '.gm-tools');
+  const fallback = path.join(home, '.claude', 'gm-tools');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
 }
 
 // Copy the freshly-resolved plugkit binary + its version+sha manifests to
-// ~/.claude/gm-tools so hooks.json can invoke plugkit directly without going
-// through node. Self-update inside the Rust binary keeps gm-tools fresh from
+// ~/.gm-tools (or ~/.claude/gm-tools for legacy installs) so hooks.json can
+// invoke plugkit directly without going through node. Self-update inside the
+// Rust binary keeps gm-tools fresh from
 // here on. Skipped silently on any error — the next session-start hook will
 // retry via ensure_tools_current.
 

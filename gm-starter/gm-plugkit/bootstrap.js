@@ -45,7 +45,7 @@ function log(msg) {
 function obsEvent(subsystem, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
-    const root = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+    const root = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
     const day = new Date().toISOString().slice(0, 10);
     const dir = path.join(root, day);
     fs.mkdirSync(dir, { recursive: true });
@@ -93,7 +93,11 @@ function fallbackCacheRoot() {
 
 function gmToolsDir() {
   const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
-  return path.join(home, '.claude', 'gm-tools');
+  const primary = path.join(home, '.gm-tools');
+  const fallback = path.join(home, '.claude', 'gm-tools');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
 }
 
 function readVersionFile() {
@@ -623,7 +627,11 @@ function copyWasmToGmTools(wasmPath, version) {
 
 function getWasmPath() {
   const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
-  return path.join(home, '.claude', 'gm-tools', 'plugkit.wasm');
+  const primary = path.join(home, '.gm-tools', 'plugkit.wasm');
+  const fallback = path.join(home, '.claude', 'gm-tools', 'plugkit.wasm');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
 }
 
 function isReady() {

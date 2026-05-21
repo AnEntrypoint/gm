@@ -14,7 +14,7 @@ const STATUS_PATH = path.join(spoolDir, '.status.json');
 const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
 const SUPERVISOR_PATH = path.join(spoolDir, '.supervisor.json');
 const LOG_PATH = path.join(spoolDir, '.watcher.log');
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
 
 const POLL_INTERVAL_MS = 10_000;
 const STATUS_STALE_MS = 30_000;
@@ -85,7 +85,9 @@ function spawnWatcher(bootReason) {
     process.exit(2);
   }
 
-  const wrapper = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  const primaryWrapper = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
+  const fallbackWrapper = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  const wrapper = fs.existsSync(primaryWrapper) ? primaryWrapper : fallbackWrapper;
   if (!fs.existsSync(wrapper)) {
     logEvent('supervisor.wrapper-missing', { wrapper, severity: 'critical' });
     writeSupervisorStatus('error', { error: 'wrapper-missing' });

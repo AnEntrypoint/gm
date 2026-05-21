@@ -18,10 +18,18 @@ function spawn(cmd, args, opts) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const KV_DIR = path.join(os.homedir(), '.claude', 'gm-tools', 'kv');
+function resolveGmToolsRoot() {
+  const primary = path.join(os.homedir(), '.gm-tools');
+  const fallback = path.join(os.homedir(), '.claude', 'gm-tools');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
+}
+const GM_TOOLS_ROOT = resolveGmToolsRoot();
+const KV_DIR = path.join(GM_TOOLS_ROOT, 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
 
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
 const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status', 'prd-add', 'prd-resolve', 'prd-list', 'mutable-add', 'mutable-resolve', 'mutable-list', 'memorize-fire', 'residual-scan', 'auto-recall']);
 
 const TURN_IDLE_MS = 30_000;
@@ -437,19 +445,25 @@ function browserStateDir(cwd) {
 function browserPortsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-ports.json'); }
 function browserSessionsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-sessions.json'); }
 
+function atomicWriteJson(filePath, obj) {
+  const tmp = filePath + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8);
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2));
+  fs.renameSync(tmp, filePath);
+}
+
 function migrateLegacyBrowserState(cwd) {
   const dst1 = browserPortsFile(cwd);
   const dst2 = browserSessionsFile(cwd);
   try {
     if (!fs.existsSync(dst1) && fs.existsSync(LEGACY_BROWSER_PORTS_FILE)) {
       const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_PORTS_FILE, 'utf-8'));
-      if (legacy && typeof legacy === 'object') fs.writeFileSync(dst1, JSON.stringify(legacy, null, 2));
+      if (legacy && typeof legacy === 'object') atomicWriteJson(dst1, legacy);
     }
   } catch (_) {}
   try {
     if (!fs.existsSync(dst2) && fs.existsSync(LEGACY_BROWSER_SESSIONS_FILE)) {
       const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_SESSIONS_FILE, 'utf-8'));
-      if (legacy && typeof legacy === 'object') fs.writeFileSync(dst2, JSON.stringify(legacy, null, 2));
+      if (legacy && typeof legacy === 'object') atomicWriteJson(dst2, legacy);
     }
   } catch (_) {}
 }
@@ -458,7 +472,7 @@ function readJsonFile(fp, fallback) {
   try { return JSON.parse(fs.readFileSync(fp, 'utf-8')); } catch (_) { return fallback; }
 }
 function writeJsonFile(fp, value) {
-  try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
+  try { atomicWriteJson(fp, value); } catch (_) {}
 }
 
 const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
@@ -1538,7 +1552,7 @@ function makeHostFunctions(instanceRef) {
 
 function resolveVersion(instance) {
   try {
-    return fs.readFileSync(path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit.version'), 'utf8').trim();
+    return fs.readFileSync(path.join(GM_TOOLS_ROOT, 'plugkit.version'), 'utf8').trim();
   } catch (_) {}
   try {
     const fn = instance && instance.exports && instance.exports.plugkit_version;
@@ -1554,7 +1568,7 @@ function resolveVersion(instance) {
 }
 
 function readFileVersionOnly() {
-  try { return fs.readFileSync(path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit.version'), 'utf8').trim(); } catch (_) { return null; }
+  try { return fs.readFileSync(path.join(GM_TOOLS_ROOT, 'plugkit.version'), 'utf8').trim(); } catch (_) { return null; }
 }
 
 function readInstanceVersion(instance) {
@@ -1580,7 +1594,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   let _ownWrapperSha12 = '';
   try {
     const _crypto = require('crypto');
-    const _wp = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+    const _wp = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
     _ownWrapperSha12 = _crypto.createHash('sha256').update(fs.readFileSync(_wp)).digest('hex').slice(0, 12);
   } catch (_) {}
   function lockBody() { return `${process.pid}|${Date.now()}|${_ownWrapperSha12}`; }
@@ -1724,7 +1738,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   writeBootActive();
 
-  const PEER_REGISTRY_PATH = path.join(os.homedir(), '.claude', 'gm-tools', 'peer-registry.json');
+  const PEER_REGISTRY_PATH = path.join(GM_TOOLS_ROOT, 'peer-registry.json');
   function registerSelfAsPeer() {
     try {
       let reg = {};
@@ -1860,7 +1874,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const _wrapperPathInstalled = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  const _wrapperPathInstalled = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
   let _wrapperShaAtBoot = '';
   try {
     const _crypto = require('crypto');
@@ -1938,7 +1952,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   process.on('exit', () => { try { clearBootActive(); } catch (_) {} releaseLock(); });
 
   try {
-    const wrapperDst = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+    const wrapperDst = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
     if (path.resolve(__filename) !== path.resolve(wrapperDst)) {
       let same = false;
       if (fs.existsSync(wrapperDst)) {
@@ -2236,7 +2250,7 @@ async function runSpoolWatcher(instance, spoolDir) {
             installed,
             latest,
             checked_at_ms: Date.now(),
-            instruction: 'plugkit is out of date. To update, close the running watcher and re-bootstrap with the @latest flag, e.g. node ~/.claude/gm-tools/plugkit-wasm-wrapper.js spool & after running bootstrap with {latest: true}.',
+            instruction: 'plugkit is out of date. To update, close the running watcher and re-bootstrap with the @latest flag, e.g. node ~/.gm-tools/plugkit-wasm-wrapper.js spool & after running bootstrap with {latest: true}.',
             update_url,
           }, null, 2));
           console.log(`[update] available: installed=${installed} latest=${latest} → wrote ${UPDATE_AVAILABLE_PATH}`);
@@ -2391,7 +2405,7 @@ async function selfHealFromGithubReleases() {
           const got = crypto.createHash('sha256').update(wasm).digest('hex');
           if (got !== sha) throw new Error(`sha mismatch: got ${got}, expected ${sha}`);
         }
-        const toolsDir = path.join(os.homedir(), '.claude', 'gm-tools');
+        const toolsDir = GM_TOOLS_ROOT;
         fs.mkdirSync(toolsDir, { recursive: true });
         fs.writeFileSync(path.join(toolsDir, 'plugkit.wasm'), wasm);
         fs.writeFileSync(path.join(toolsDir, 'plugkit.version'), version);
@@ -2435,7 +2449,7 @@ async function tryInstantiate(wasmPath) {
 
 (async () => {
   try {
-    const wasmPath = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit.wasm');
+    const wasmPath = path.join(GM_TOOLS_ROOT, 'plugkit.wasm');
 
     let instance, instanceRef;
     if (!fs.existsSync(wasmPath)) {

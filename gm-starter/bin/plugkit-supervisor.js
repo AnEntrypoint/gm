@@ -15,7 +15,7 @@ const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
 const SUPERVISOR_STATUS_PATH = path.join(spoolDir, '.supervisor-status.json');
 const SUPERVISOR_PID_PATH = path.join(spoolDir, '.supervisor.pid');
 const LOG_PATH = path.join(spoolDir, '.watcher.log');
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
 
 const HEARTBEAT_STALE_MS = 60_000;
 const HEALTH_POLL_MS = 5_000;
@@ -123,7 +123,11 @@ function nextBackoffMs() {
 }
 
 function resolveWrapper() {
-  return path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  const primary = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
+  const fallback = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+  if (fs.existsSync(primary)) return primary;
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
 }
 
 function resolveRuntime() {

@@ -960,3 +960,39 @@
   effort: medium
   id: item-1779358764056
   status: completed
+- subject: rs-plugkit browser.rs instruction-table entry
+  description: New module rs-plugkit/src/orchestrator/instructions/browser.rs with terse imperative prose documenting body shapes (session new|list|kill, arbitrary JS expression), return envelope ({ok, stdout, stderr, exit_code, session_id?}), per-project profile guarantee, headed-by-default, GM_BROWSER_HEADLESS=1 opt-in. Registered in instructions/mod.rs. Push triggers cascade.
+  category: feature
+  effort: small
+  id: item-1779360248669
+  status: completed
+- subject: browser-ports.json atomic rewrite (write-temp+rename)
+  description: 'Cross-watcher race in gm-starter/gm-plugkit/plugkit-wasm-wrapper.js getOrCreateBrowserSession around line 809-857. Read-modify-write of .gm/exec-spool/browser-ports.json is not atomic - two watchers in same cwd could spawn duplicate browsers. Replace with: write to .browser-ports.json.tmp then fs.renameSync to final path. Same fix for browser-sessions.json.'
+  category: feature
+  effort: small
+  id: item-1779360248710
+  status: completed
+- subject: 'Harness-neutral path sweep: introduce ~/.gm-tools and ~/.gm-log'
+  description: 'Subagent a165499e cataloged ~35 line numbers across skill-bootstrap.js, plugkit-wasm-wrapper.js, supervisor.js, daemon-bootstrap.js, sniff tools and deployed copies. Add ~/.gm-tools and ~/.gm-log as the PRIMARY paths, keep ~/.claude/gm-tools and ~/.claude/gm-log as fallback for existing installs. New installs use the neutral path. Constant rename: PLUGKIT_TOOLS_DIR, GM_LOG_ROOT, etc.'
+  category: refactor
+  effort: medium
+  id: item-1779360253664
+  status: completed
+- subject: Paper-spirit deviations sweep in rs-plugkit
+  description: 'Subagent a164a2ad cataloged 10 paper-spirit deviations in iter1: (1) gates.rs DEFER_MARKERS enumeration is structural-not-enumerated violation, (2) TOPLEVEL_DOC_ALLOWLIST is observational not admissive (logs without deny), (3) gates.rs:150-156 long-gap-no-instruction at 120s only LOGS no deny, (4) AWAIT_ALLOWED_VERBS hardcoded list, (5) transitions.rs Phase::Complete gate checks mutables+prd but not porcelain+ahead==0 (four-observation window prose-only), (6) Phase::Emit and Phase::Verify both map to gm-complete next_skill (predictability lost), (7) transitions.rs recall query is phase+prd_subject ignoring .gm/last-prompt.txt. Fix the high-leverage subset: replace DEFER_MARKERS enum with structural check, make four-observation gate fire in transitions.rs Complete branch, make 120s long-gap deny+force-instruction, split Phase::Emit -> gm-verify next_skill.'
+  category: refactor
+  effort: large
+  id: item-1779360258666
+  status: completed
+- subject: git_push verb accepts a repo arg for sibling repos (rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn)
+  description: 'Audit found ccsniff RAW-PUSH events from this session on C:/dev/rs-plugkit because the agent had to use raw ''cd C:/dev/rs-plugkit && git push'' to push a sibling. The git_push verb in rs-plugkit/src/wasm_dispatch.rs is cwd-bound — runs porcelain probe via host_exec_js which inherits the watcher''s cwd. Fix: accept optional {repo, branch} where repo is an absolute path or a known sibling name; shell the push inside that directory. Still enforces porcelain in the target dir. Pushes from gm cwd to any of the gm-aware sibling repos must route through the verb. Cross-repo pushes via the verb stop the RAW-PUSH deviation that gmsniff/ccsniff currently flag.'
+  category: feature
+  effort: small
+  id: item-1779360474327
+  status: completed
+- subject: Document wrapper.drift and version-drift recovery in SKILL/instruction prose
+  description: 'gmsniff surfaced wrapper.drift event class this audit cycle — supervisor detected the wrapper file changed on disk and recycled the watcher (new event, working as designed but undocumented). Also update.available fires after the respawn. Agent reading instruction prose should understand: when wrapper.drift fires, the next dispatch may briefly fail (wasm_aborted: true / wasm-abort-graceful shutdown-reason); just retry. Add one line to entry.rs prose (or wherever boot/drift prose lives) naming wrapper.drift as benign and the supervisor self-heal pattern.'
+  category: docs
+  effort: small
+  id: item-1779360479229
+  status: completed
