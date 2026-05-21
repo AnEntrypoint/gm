@@ -756,7 +756,7 @@ function startSpoolDaemon() {
     if (!fs.existsSync(wrapper)) {
       return { ok: false, error: `wrapper not at ${wrapper} — ensureReady() must run first` };
     }
-    const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
+    const runtime = process.execPath;
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
@@ -772,14 +772,8 @@ function startSpoolDaemon() {
 
     const supervisor = path.join(__dirname, 'supervisor.js');
     if (process.env.PLUGKIT_SKIP_SUPERVISOR === '1' || !fs.existsSync(supervisor)) {
-      let cmd = runtime;
-      let args = [wrapper, 'spool'];
-      try {
-        require('child_process').execFileSync(runtime, ['--version'], { stdio: 'ignore' });
-      } catch (_) {
-        cmd = process.execPath;
-        args = [wrapper, 'spool'];
-      }
+      const cmd = runtime;
+      const args = [wrapper, 'spool'];
       const logFd = fs.openSync(logPath, 'a');
       try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (no supervisor) ---\n`); } catch (_) {}
       const child = require('child_process').spawn(cmd, args, {
