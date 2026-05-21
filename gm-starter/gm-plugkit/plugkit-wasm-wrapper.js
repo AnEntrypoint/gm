@@ -420,7 +420,84 @@ function writeJsonFile(fp, value) {
   try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
 }
 
+function msPlaywrightCacheRoots() {
+  const roots = [];
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) roots.push(process.env.PLAYWRIGHT_BROWSERS_PATH);
+  if (process.platform === 'win32') {
+    if (process.env.LOCALAPPDATA) roots.push(path.join(process.env.LOCALAPPDATA, 'ms-playwright'));
+  } else if (process.platform === 'darwin') {
+    if (process.env.HOME) roots.push(path.join(process.env.HOME, 'Library', 'Caches', 'ms-playwright'));
+  } else {
+    if (process.env.HOME) roots.push(path.join(process.env.HOME, '.cache', 'ms-playwright'));
+  }
+  return roots.filter(r => r && fs.existsSync(r));
+}
+
+function chromiumExeFromCacheRoot(root) {
+  try {
+    const entries = fs.readdirSync(root)
+      .filter(n => /^chromium-\d+$/.test(n))
+      .sort((a, b) => parseInt(b.split('-')[1], 10) - parseInt(a.split('-')[1], 10));
+    const subdirs = process.platform === 'win32'
+      ? ['chrome-win64', 'chrome-win']
+      : process.platform === 'darwin'
+        ? ['chrome-mac/Chromium.app/Contents/MacOS/Chromium']
+        : ['chrome-linux'];
+    const exeName = process.platform === 'win32' ? 'chrome.exe'
+      : process.platform === 'darwin' ? null
+      : 'chrome';
+    for (const e of entries) {
+      for (const sub of subdirs) {
+        const p = exeName ? path.join(root, e, sub, exeName) : path.join(root, e, sub);
+        if (fs.existsSync(p)) return p;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+function findBundledChromium() {
+  for (const root of msPlaywrightCacheRoots()) {
+    const exe = chromiumExeFromCacheRoot(root);
+    if (exe) return exe;
+  }
+  try {
+    const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true, windowsHide: true, timeout: 5000 });
+    if (npmR.status === 0 && npmR.stdout.trim()) {
+      const root = npmR.stdout.trim().split(/\r?\n/).pop();
+      const pwBrowsers = path.join(root, 'playwriter', 'node_modules', '@xmorse', 'playwright-core', '.local-browsers');
+      if (fs.existsSync(pwBrowsers)) {
+        const exe = chromiumExeFromCacheRoot(pwBrowsers);
+        if (exe) return exe;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+function ensureBundledChromium(pw) {
+  const existing = findBundledChromium();
+  if (existing) return { exe: existing, installed: false };
+  const installer = pw && pw.cmd
+    ? { cmd: pw.cmd, args: [...pw.baseArgs, 'install', 'chromium'], shell: pw.shell }
+    : { cmd: 'npx', args: ['-y', 'playwright', 'install', 'chromium'], shell: true };
+  logEvent('bootstrap', 'browser.chromium-install.start', { via: installer.cmd });
+  const r = spawnSync(installer.cmd, installer.args, {
+    encoding: 'utf-8',
+    timeout: 600000,
+    shell: installer.shell,
+    windowsHide: true,
+    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '' },
+  });
+  logEvent('bootstrap', 'browser.chromium-install.done', { status: r.status });
+  const after = findBundledChromium();
+  if (after) return { exe: after, installed: true };
+  return { exe: null, installed: false, error: r.stderr || r.stdout || 'install failed' };
+}
+
 function findChrome() {
+  const bundled = findBundledChromium();
+  if (bundled) return bundled;
   if (process.platform === 'win32') {
     const candidates = [
       path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
@@ -630,7 +707,7 @@ function runPlaywriter(pw, args, timeoutMs) {
 function scrubBrowserRunnerText(s) {
   if (!s || typeof s !== 'string') return s;
   let t = s;
-  t = t.replace(/playwriter/gi, 'managed browser session');
+  t = t.replace(/(^|[^A-Za-z0-9_\\/.-])playwriter(?![A-Za-z0-9_\\/.-])/gi, (m, pre) => `${pre}managed browser session`);
   t = t.replace(/Click the[^.\n]*?extension[^.\n]*?icon[^.\n]*?\.?/gi, '');
   t = t.replace(/(connected\s+)?browser\s+extension(\s+is)?\s+not\s+connected\b[^.\n]*\.?/gi, '');
   t = t.replace(/no\s+connected\s+browsers?\b[^.\n]*\.?/gi, '');
@@ -670,8 +747,13 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
-  const chrome = findChrome();
-  if (!chrome) throw new Error('Chrome not found. Please install Google Chrome.');
+  let chrome = findBundledChromium();
+  if (!chrome) {
+    const ensured = ensureBundledChromium(pw);
+    if (ensured.exe) chrome = ensured.exe;
+  }
+  if (!chrome) chrome = findChrome();
+  if (!chrome) throw new Error('No chromium binary available. Run: npx playwright install chromium');
   const profileDir = acquireProfileDir(cwd);
   const port = findFreePortSync();
   const chromeArgs = [
@@ -701,7 +783,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     sleepSync(300);
   }
   if (!alive) throw new Error(`Chrome failed to open debug port ${port}`);
-  const newR = runPlaywriter(pw, ['session', 'new', `--direct=localhost:${port}`], 30000);
+  const newR = runPlaywriter(pw, ['session', 'new', '--direct', `localhost:${port}`], 30000);
   if (newR.status !== 0) throw new Error(`managed browser session start failed: ${scrubBrowserRunnerText(newR.stderr || newR.stdout || 'unknown')}`);
   const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
   const out = stripAnsi(newR.stdout || '').trim();
