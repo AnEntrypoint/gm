@@ -257,6 +257,7 @@ async function extractNpmPackageWasm(destPath, version) {
     obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
 
     const npxResolved = resolveWindowsExe('npx');
+    const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(npxResolved);
     const result = spawnSync(
       npxResolved,
       [NPM_PACKAGE + '@' + version, '--prefix', tempDir],
@@ -265,8 +266,7 @@ async function extractNpmPackageWasm(destPath, version) {
         timeout: ATTEMPT_TIMEOUT_MS,
         encoding: 'utf8',
         windowsHide: true,
-        // CREATE_NO_WINDOW — inherited by all .cmd shims npm/npx spawn
-        // during package extraction, so no conhost flash during install.
+        ...(isCmdShim ? { shell: true } : {}),
         ...(process.platform === 'win32' ? { creationFlags: 0x08000000 } : {}),
       }
     );
@@ -302,6 +302,10 @@ async function extractNpmPackageWithRetry(destPath, version) {
       obsEvent('bootstrap', 'npm.extract.attempt_failed', { package: NPM_PACKAGE, attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
       if (err && (err.code === 'ENOENT' || /ENOENT/.test(String(err.message || '')))) {
         log(`npx binary unresolvable (ENOENT); skipping retries, falling back`);
+        throw err;
+      }
+      if (err && (err.code === 'EINVAL' || /EINVAL/.test(String(err.message || '')))) {
+        log(`spawn EINVAL on npx shim; skipping retries, falling back`);
         throw err;
       }
       if (attempt < MAX_ATTEMPTS) {

@@ -205,6 +205,7 @@ async function extractNpmPackageWasm(destPath, version) {
 
     const cmd = resolveWindowsExe('npm');
     const args = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
+    const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(cmd);
 
     const result = spawnSync(cmd, args, {
       cwd: tempDir,
@@ -212,8 +213,7 @@ async function extractNpmPackageWasm(destPath, version) {
       timeout: ATTEMPT_TIMEOUT_MS,
       encoding: 'utf8',
       windowsHide: true,
-      // CREATE_NO_WINDOW — inherited by .cmd shims npm spawns during
-      // package install, so no conhost flash during the extract step.
+      ...(isCmdShim ? { shell: true } : {}),
       ...(process.platform === 'win32' ? { creationFlags: 0x08000000 } : {}),
     });
 
@@ -303,6 +303,10 @@ async function extractNpmPackageWithRetry(destPath, version) {
       obsEvent('bootstrap', 'npm.extract.attempt_failed', { package: NPM_PACKAGE, attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
       if (err && (err.code === 'ENOENT' || /ENOENT/.test(String(err.message || '')))) {
         log(`npm binary unresolvable (ENOENT); skipping retries, falling back`);
+        throw err;
+      }
+      if (err && (err.code === 'EINVAL' || /EINVAL/.test(String(err.message || '')))) {
+        log(`spawn EINVAL on npm shim; skipping retries, falling back`);
         throw err;
       }
       if (attempt < MAX_ATTEMPTS) {

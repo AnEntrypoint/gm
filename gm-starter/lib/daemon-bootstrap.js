@@ -186,11 +186,13 @@ async function ensureRsLearningDaemonRunning() {
     // .cmd shims that bun-x downloads/launches never get a console window.
     // DETACHED_PROCESS (0x00000008) detaches the process group. Windows-only;
     // Node ignores creationFlags on POSIX.
-    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-learn@latest'], {
+    const bunExe = resolveWindowsExe('bun');
+    const proc = spawn(bunExe, ['x', 'rs-learn@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
       creationFlags: 0x08000000 | 0x00000008,
     });
 
@@ -237,11 +239,13 @@ async function ensureRsCodeinsightDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
-    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-codeinsight@latest'], {
+    const bunExe = resolveWindowsExe('bun');
+    const proc = spawn(bunExe, ['x', 'rs-codeinsight@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
       creationFlags: 0x08000000 | 0x00000008,
     });
 
@@ -283,11 +287,13 @@ async function ensureRsSearchDaemonRunning() {
       CLAUDE_SESSION_ID: sessionId,
     });
 
-    const proc = spawn(resolveWindowsExe('bun'), ['x', 'rs-search@latest'], {
+    const bunExe = resolveWindowsExe('bun');
+    const proc = spawn(bunExe, ['x', 'rs-search@latest'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
       env,
+      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
       creationFlags: 0x08000000 | 0x00000008,
     });
 
