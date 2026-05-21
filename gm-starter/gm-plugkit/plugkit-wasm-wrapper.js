@@ -1078,6 +1078,32 @@ function kvNamespaceDirs(ns) {
   return out;
 }
 
+function enabledDisciplineNamespaces(baseNs) {
+  const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const set = new Set([baseNs]);
+  try {
+    const enabledPath = path.join(projectRoot, '.gm', 'disciplines', 'enabled.txt');
+    if (fs.existsSync(enabledPath)) {
+      const lines = fs.readFileSync(enabledPath, 'utf-8').split(/\r?\n/);
+      for (const ln of lines) {
+        const name = ln.trim();
+        if (name && !name.startsWith('#')) set.add(name);
+      }
+    }
+  } catch (_) {}
+  return Array.from(set);
+}
+
+function jaccardOverlap(a, b) {
+  if (!a || !b) return 0;
+  const tokenize = (s) => new Set(String(s).toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3));
+  const A = tokenize(a), B = tokenize(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  return inter / (A.size + B.size - inter);
+}
+
 const __tasks = new Map();
 
 function tasksDir(cwd) {
@@ -1409,8 +1435,8 @@ function makeHostFunctions(instanceRef) {
         if (!raw) return writeWasmJson(instanceRef.value, []);
         let parsedQ;
         try { parsedQ = JSON.parse(raw); } catch (_) { parsedQ = { query: raw }; }
-        const q = parsedQ.query || raw;
         const namespace = parsedQ.namespace || 'default';
+        const sigil = parsedQ.sigil || parsedQ.discipline_sigil || null;
         const extractVec = (e) => {
           if (Array.isArray(e)) return e;
           if (Array.isArray(e?.data?.[0]?.embedding)) return e.data[0].embedding;
@@ -1423,37 +1449,58 @@ function makeHostFunctions(instanceRef) {
           if (process.env.PLUGKIT_DEBUG) console.error('[plugkit-wasm] host_vec_search: no embedding in query, raw=', raw.slice(0, 200));
           return writeWasmJson(instanceRef.value, []);
         }
-        const vecDirs = kvNamespaceDirs(`${namespace}-vec`);
-        const dataDirs = kvNamespaceDirs(namespace);
-        if (vecDirs.length === 0 || dataDirs.length === 0) {
-          return writeWasmJson(instanceRef.value, []);
-        }
+        const namespaces = sigil ? [namespace] : enabledDisciplineNamespaces(namespace);
+        const HALF_LIFE_MS = 30 * 24 * 60 * 60 * 1000;
+        const DEDUP_JACCARD = 0.7;
+        const RECENCY_FLOOR = 0.4;
+        const nowMs = Date.now();
         const scored = [];
         const seen = new Set();
-        for (const vecDir of vecDirs) {
-          for (const f of fs.readdirSync(vecDir)) {
-            if (!f.endsWith('.json')) continue;
-            const key = f.replace(/\.json$/, '');
-            if (seen.has(key)) continue;
-            seen.add(key);
-            let emb;
-            try { emb = JSON.parse(fs.readFileSync(path.join(vecDir, f), 'utf-8')); }
-            catch (_) { continue; }
-            const vector = Array.isArray(emb?.data?.[0]?.embedding) ? emb.data[0].embedding
-                         : Array.isArray(emb?.embedding) ? emb.embedding
-                         : Array.isArray(emb) ? emb : null;
-            if (!vector) continue;
-            const score = cosineSim(queryEmbedding, vector);
-            let text = '';
-            for (const dataDir of dataDirs) {
-              const valuePath = path.join(dataDir, `${key}.json`);
-              if (fs.existsSync(valuePath)) { text = fs.readFileSync(valuePath, 'utf-8'); break; }
+        for (const ns of namespaces) {
+          const vecDirs = kvNamespaceDirs(`${ns}-vec`);
+          const dataDirs = kvNamespaceDirs(ns);
+          if (vecDirs.length === 0 || dataDirs.length === 0) continue;
+          for (const vecDir of vecDirs) {
+            for (const f of fs.readdirSync(vecDir)) {
+              if (!f.endsWith('.json')) continue;
+              const key = f.replace(/\.json$/, '');
+              const seenKey = `${ns}::${key}`;
+              if (seen.has(seenKey)) continue;
+              seen.add(seenKey);
+              const vecPath = path.join(vecDir, f);
+              let emb, mtimeMs;
+              try {
+                emb = JSON.parse(fs.readFileSync(vecPath, 'utf-8'));
+                mtimeMs = fs.statSync(vecPath).mtimeMs;
+              } catch (_) { continue; }
+              const vector = Array.isArray(emb?.data?.[0]?.embedding) ? emb.data[0].embedding
+                           : Array.isArray(emb?.embedding) ? emb.embedding
+                           : Array.isArray(emb) ? emb : null;
+              if (!vector) continue;
+              const cos = cosineSim(queryEmbedding, vector);
+              const ageMs = Math.max(0, nowMs - mtimeMs);
+              const recency = RECENCY_FLOOR + (1 - RECENCY_FLOOR) * Math.exp(-ageMs / HALF_LIFE_MS);
+              const score = cos * recency;
+              let text = '';
+              for (const dataDir of dataDirs) {
+                const valuePath = path.join(dataDir, `${key}.json`);
+                if (fs.existsSync(valuePath)) { text = fs.readFileSync(valuePath, 'utf-8'); break; }
+              }
+              scored.push({ key, text, score, cos, recency, namespace: ns });
             }
-            scored.push({ key, text, score });
           }
         }
         scored.sort((a, b) => b.score - a.score);
-        return writeWasmJson(instanceRef.value, scored.slice(0, k_));
+        const out = [];
+        for (const hit of scored) {
+          let dup = false;
+          for (const kept of out) {
+            if (jaccardOverlap(hit.text, kept.text) >= DEDUP_JACCARD) { dup = true; break; }
+          }
+          if (!dup) out.push(hit);
+          if (out.length >= k_) break;
+        }
+        return writeWasmJson(instanceRef.value, out);
       } catch (e) {
         console.error('[plugkit-wasm] host_vec_search error:', e.message);
         return writeWasmJson(instanceRef.value, []);
