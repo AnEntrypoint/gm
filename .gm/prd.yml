@@ -850,7 +850,7 @@
   - Rust-side code_index.rs project_db_path can be re-enabled to return file path without watcher crash
   - 'Witnessed: memorize→restart-watcher→recall round-trip via libsql returns the memo'
   - No 'unimplemented WASI call' in .watcher.log under normal operation
-  status: pending
+  status: completed
 - id: browser-witness-gate
   subject: Gate stop/complete on browser witness when browser-running files were edited
   category: feature
@@ -896,36 +896,43 @@
 - subject: G1-audit-acptoapi-callsites
   description: Catalog every place rs-learn, rs-plugkit, rs-exec, rs-search, rs-codeinsight, gm reference acptoapi (string match, HTTP fetch, env var, port 4800, bootstrap call). Produce a single text artifact listing file:line for each reference, tagged as either code/doc/memory/test. Feeds G6+G7.
   id: item-1779310267899
-  status: pending
+  status: completed
 - subject: G2-design-callback-protocol
   description: 'Specify the deferred-step protocol shape. rs-learn responds to a memorize/recall request that needs an LLM op (summarize, classify, distill, query-expand) with {pending_step:{kind, id, payload}, partial_state_token}. Agent computes via its own intelligence (no external LLM), calls back with {pending_step_id, result, token}. Two new verbs: memorize-step-pending (returns a step) and memorize-step-continue (consumes result). State suspended in KV between calls.'
   id: item-1779310272906
-  status: pending
+  status: completed
 - subject: G3-implement-rs-learn-callback-surface
   description: 'Implement the memorize-step-pending / memorize-step-continue verb pair in rs-learn (and proxied via rs-plugkit wasm_dispatch). Suspend pipeline state in KV keyed by step_id with TTL. Reject stale tokens. Witness: a memorize call that requires summarization parks, returns pending step, agent test-driver returns result, finalize succeeds and embedding lands.'
   id: item-1779310272925
-  status: pending
+  status: completed
 - subject: G4-rs-plugkit-callback-wiring
   description: 'Wire the instruction phase machine to surface the pending step as part of the response body. New phase or sub-phase AWAIT-RESULT: when a verb returns {pending_step}, the next instruction body presents the step as an imperative to the agent. After the agent dispatches memorize-step-continue with the result, the chain resumes.'
   id: item-1779310277919
-  status: pending
+  status: completed
 - subject: G5-vector-768-everywhere
   description: 'Bump every F32_BLOB(384) and equivalent to F32_BLOB(768) so Nomic Embed v1.5 vectors fit. Audit: rs-plugkit/src/code_index.rs (done locally, needs commit), rs-search schema, any test fixture or expected-dim const. Validate via grep that no 384 lingers in a vector-dim context. Witness: schema migration commit lands on each repo + cascade publish.'
   id: item-1779310277936
-  status: pending
+  status: completed
 - subject: G6-remove-acptoapi-from-source
   description: 'Delete every acptoapi reference from running code: rs-plugkit/src/wasm_dispatch.rs LLM paths, gm-starter/lib/daemon-bootstrap.js bootstrapAcptoapi, gm-starter/lib/skill-bootstrap.js ensureAcptoapi, gm-starter/gm-plugkit/plugkit-wasm-wrapper.js inlined ensureAcptoapi block, any vec_embed HTTP fallback to localhost:4800, mutable yaml entries that reference acptoapi as a dependency. The sidecar (rs-learn-embed) is the only embedding path; the agent (via the G3/G4 callback protocol) is the only LLM-tier path.'
   id: item-1779310282920
-  status: pending
+  status: completed
 - subject: G7-remove-acptoapi-from-docs-memory
   description: Strip acptoapi from AGENTS.md (the 'upstream embedding/LLM proxy' paragraph), docs/distribution.html, docs/paper.html, docs/skills.html, site content, memory files (.gm/memorize-now.md, .gm/mutables-acptoapi.yml — delete that file, .gm/last-prompt.txt content cleanup, .gm/mutables.yml), and the auto-memory store in ~/.claude/projects/C--dev-gm/memory if any entry exists. CHANGELOG history may retain past mentions but no forward-looking guidance should reference acptoapi.
   id: item-1779310287911
-  status: pending
+  status: completed
 - subject: G8-publish-cascade
   description: 'Commit + push each repo in dependency order: rs-learn (schema if applicable + callback surface) → rs-search (768 dim) → rs-plugkit (wasm_dispatch cleanup + callback wiring + schema) → gm (bootstrap stripping + AGENTS.md edits + memory cleanup). Verify cascade.yml in each rs-* repo triggers rs-plugkit''s release.yml; verify rs-plugkit publish bumps gm.json plugkitVersion; verify gm publish.yml runs.'
   id: item-1779310292909
-  status: pending
+  status: completed
 - subject: G9-witness-end-to-end
   description: 'After publish: cold-boot a fresh watcher; dispatch instruction with a real prompt that triggers a summarize step; verify the agent receives a pending_step in the instruction body; agent computes and calls memorize-step-continue; verify a memorize round-trip ends with a 768-dim embedding stored and a subsequent recall returns score>0 hits. Final grep confirms zero acptoapi mentions anywhere except CHANGELOG history.'
   id: item-1779310292926
-  status: pending
+  status: completed
+- subject: Iter27-validate-browser-tool-end-to-end
+  description: 'Validate that the spooling browser tool works exactly as intended. Walk through: (a) browser session lifecycle — open via spool browser verb, page reachable, idle teardown clean; (b) per-project profile localization at .gm/browser-profile/ (not the legacy .plugkit-browser-profile); (c) the host_browser_exec wasm import properly dispatches DOM commands; (d) browser-edit witness records hash via the K2-ported plugkit src/browser_witness.rs path; (e) navigate/click/screenshot/evaluate page actions end-to-end against a real URL (e.g. anentrypoint.github.io/gm landing page or example.com); (f) graceful failure mode when no browser installed. Fix any issues that arise during the validation. Witness via a single browser-session round-trip dispatching real page actions through plugkit verb.'
+  id: item-1779326270790
+  status: completed
+- text: 'Iter29 five-subagent fan-out closed: rs-exec ec2dccc, rs-learn f2cf908+de0faaf, rs-codeinsight 4371395, rs-search e5f4753, rs-plugkit d70a1ef, gm e1b6c175. Instruction-abort fix is purely diagnostic — next reproduction will pinpoint boundary via host_log breadcrumbs + per-verb sentinel + .verb-active.json death postcard.'
+  id: item-1779329847709
+  status: completed
