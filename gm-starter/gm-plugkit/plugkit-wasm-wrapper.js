@@ -27,6 +27,35 @@ const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status',
 const TURN_IDLE_MS = 30_000;
 const _turns = new Map();
 
+function emitShutdownReason(reason, err) {
+  try {
+    const spoolDir = process.env.CLAUDE_PROJECT_DIR
+      ? path.join(process.env.CLAUDE_PROJECT_DIR, '.gm', 'exec-spool')
+      : path.join(process.cwd(), '.gm', 'exec-spool');
+    fs.mkdirSync(spoolDir, { recursive: true });
+    const body = {
+      reason,
+      ts: Date.now(),
+      pid: process.pid,
+      message: err && (err.message || String(err)),
+      stack: err && err.stack ? String(err.stack).slice(0, 4000) : null,
+      version: typeof PLUGKIT_VERSION !== 'undefined' ? PLUGKIT_VERSION : null,
+    };
+    fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify(body, null, 2));
+  } catch (_) {}
+}
+
+process.on('uncaughtException', (err) => {
+  try { console.error('[plugkit-wasm] uncaught:', err && err.stack || err); } catch (_) {}
+  emitShutdownReason('uncaughtException', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  try { console.error('[plugkit-wasm] unhandled rejection:', reason && reason.stack || reason); } catch (_) {}
+  emitShutdownReason('unhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
+  process.exit(1);
+});
 
 function applyDisciplineSigil(rawBody) {
   let parsed;
