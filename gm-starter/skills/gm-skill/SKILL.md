@@ -16,13 +16,27 @@ This is the only thing that makes the discipline work. Drop this and every other
 
 Every turn: dispatch `instruction` (you are the one dispatching it), read the response body, follow the imperative prose, dispatch the next verb the prose names. Re-dispatch `instruction` whenever you drift, stall, get denied at a gate, or feel uncertain about the next move — it is the cheap synchronous recovery primitive that puts you back on the chain. There is no cost to over-dispatching it and unbounded cost to acting without it. A session that stops dispatching instruction has stopped walking the chain. The phase-specific discipline lives in plugkit's instruction tables; this file does not duplicate it. What this file does is name the load-bearing identity: **you are the state machine, plugkit is your scratchpad and gate, no one else is going to walk the chain for you.**
 
-Boot when `.gm/exec-spool/.status.json` is absent or stale (>15s):
+**Boot before dispatching. Always check first.** Writing to `.gm/exec-spool/in/instruction/N.txt` while the watcher is dead is the canonical cold-start failure — the request sits forever, you read no response, you fabricate the chain from memory of the prose. The spool directory's existence does NOT mean the watcher is alive; `.status.json` mtime within the last 15s does. The leftover `.status.json` from yesterday's dead watcher is the most common trap.
 
+Your first tool call of every session is the boot probe, in one Bash invocation:
+
+```bash
+cat .gm/exec-spool/.status.json 2>/dev/null; date +%s%3N
 ```
+
+Compare the `ts` field to the printed epoch ms. If the gap is >15000, the watcher is dead — boot it:
+
+```bash
 bun x gm-plugkit@latest spool > /dev/null 2>&1 &
 ```
 
-(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` missing.) Heartbeat fresh → YOU dispatch `instruction` — first turn body `{"prompt":"<user request>"}` so orient_nouns and recall_hits derive from the request; subsequent turns may use empty body. Read the response file directly with the Read tool. Never poll the spool dir with `sleep && ls` or `Start-Sleep && Test-Path` — plugkit is synchronous from your view; if the response is not there, the watcher is dead (check `.status.json` mtime) or the verb is slow (check `.watcher.log`), not "still processing."
+(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` missing.) Then wait ~8 seconds and re-`cat .gm/exec-spool/.status.json` to confirm a fresh `ts`. Only after a fresh heartbeat may you write to `instruction/`. Never write to `instruction/` while the heartbeat is stale; the request is silently dropped.
+
+**Dispatch shape: Write + Read response in the SAME tool-call block.** Issuing the Write alone is not a dispatch — it's a request that goes nowhere visible. The shape is `Write .gm/exec-spool/in/instruction/<N>.txt` AND `Read .gm/exec-spool/out/instruction-<N>.json` (or `out/<N>.json` for nested verbs) in one parallel-tools block. The Read may return "file does not exist" on the first attempt while plugkit is mid-verb — in that case, re-Read in the next message. Do NOT proceed to any other tool, do NOT narrate "I have everything I need," do NOT begin work until you have READ the response and followed the `instruction` field. Declaring readiness without a response in hand is fabrication.
+
+Never poll the spool dir with `sleep && ls` or `Start-Sleep && Test-Path` — plugkit is synchronous from your view; if the response is not there, the watcher is dead (re-check `.status.json` mtime) or the verb is slow (check `.gm/exec-spool/.watcher.log`), not "still processing."
+
+First turn body must be `{"prompt":"<user request>"}` so orient_nouns and recall_hits derive from the request; subsequent turns in the same conversation may use empty body `{}`.
 
 **Batch writes, waits, and reads together.** Each agent turn costs cycles; the dispatch shape `Write request → wait → Read response` is one logical step, not three. Issue all three in a single message — the Write tool call and the Read tool call go in the same `<function_calls>` block. The Read may return "file does not exist" if plugkit is mid-verb; that's fine, retry with one more Read in the next message rather than spreading the cycle across three turns. Fan-out is the same shape — dispatching three independent verbs (`prd-add g1`, `prd-add g2`, `prd-add g3`) means three Write tool calls in one block, then three Read tool calls in one block. Serial dispatch when you could be parallel is wasted cycles. The only sequencing constraint is real data dependency: if verb B needs the response of verb A, those go in separate turns; otherwise batch.
 
