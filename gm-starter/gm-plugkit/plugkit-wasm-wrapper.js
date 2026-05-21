@@ -638,10 +638,15 @@ function sleepSync(ms) {
 }
 
 function runPlaywriter(pw, args, timeoutMs) {
-  return spawnSync(pw.cmd, [...pw.baseArgs, ...args], {
+  const allArgs = [...pw.baseArgs, ...args];
+  const useShell = !!pw.shell;
+  const spawnCmd = useShell && /\s/.test(pw.cmd) ? `"${pw.cmd}"` : pw.cmd;
+  const spawnArgs = useShell ? allArgs.map(a => /[\s"]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : a) : allArgs;
+  return spawnSync(spawnCmd, spawnArgs, {
     encoding: 'utf-8',
     timeout: timeoutMs,
-    shell: pw.shell,
+    shell: useShell,
+    windowsHide: true,
     env: process.env,
   });
 }
@@ -736,6 +741,27 @@ function isColdRunProfile(profileDir) {
   }
 }
 
+function resolveManagedBrowserKey(pw) {
+  if (process.env.PLAYWRITER_BROWSER_KEY) {
+    const k = process.env.PLAYWRITER_BROWSER_KEY;
+    if (/^profile:/.test(k)) {
+      throw new Error(`PLAYWRITER_BROWSER_KEY=${k} points at a user OS browser profile; refusing — managed sessions must use install:Chromium:*`);
+    }
+    return k;
+  }
+  let text = '';
+  try {
+    const r = runPlaywriter(pw, ['browser', 'list'], 8000);
+    text = (r && (r.stdout || r.stderr)) || '';
+  } catch (e) {
+    throw new Error(`playwriter browser list failed: ${e.message}`);
+  }
+  const lines = text.split(/\r?\n/);
+  const installChromium = lines.map(l => (l.match(/\b(install:Chromium:[A-Za-z0-9_-]+)\b/) || [])[1]).find(Boolean);
+  if (installChromium) return installChromium;
+  throw new Error(`no managed Chromium install detected; playwriter browser list returned: ${scrubBrowserRunnerText(text).trim()}`);
+}
+
 function waitForExtensionReady(pw, profileDir, opts) {
   const cold = (opts && typeof opts.cold === 'boolean') ? opts.cold : isColdRunProfile(profileDir);
   const timeoutMs = (opts && opts.timeoutMs) || (cold ? 180000 : 30000);
@@ -745,10 +771,11 @@ function waitForExtensionReady(pw, profileDir, opts) {
   let attempt = 0;
   let lastErr = '';
   let lastProgressAt = start;
+  const browserKey = resolveManagedBrowserKey(pw);
   while (Date.now() < deadline) {
     const remaining = deadline - Date.now();
     const innerTimeout = Math.max(28000, Math.min(remaining, 30000));
-    const r = runPlaywriter(pw, ['session', 'new'], innerTimeout);
+    const r = runPlaywriter(pw, ['session', 'new', '--browser', browserKey], innerTimeout);
     if (r && r.status === 0) return r;
     lastErr = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || '');
     const now = Date.now();

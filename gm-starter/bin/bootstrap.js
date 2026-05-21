@@ -258,9 +258,12 @@ async function extractNpmPackageWasm(destPath, version) {
 
     const npxResolved = resolveWindowsExe('npx');
     const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(npxResolved);
+    const rawArgs = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
+    const spawnCmd = isCmdShim && /\s/.test(npxResolved) ? `"${npxResolved}"` : npxResolved;
+    const spawnArgs = isCmdShim ? rawArgs.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : rawArgs;
     const result = spawnSync(
-      npxResolved,
-      [NPM_PACKAGE + '@' + version, '--prefix', tempDir],
+      spawnCmd,
+      spawnArgs,
       {
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: ATTEMPT_TIMEOUT_MS,

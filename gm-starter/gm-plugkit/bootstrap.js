@@ -207,7 +207,10 @@ async function extractNpmPackageWasm(destPath, version) {
     const args = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
     const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(cmd);
 
-    const result = spawnSync(cmd, args, {
+    const spawnCmd = isCmdShim ? `"${cmd}"` : cmd;
+    const spawnArgs = isCmdShim ? args.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : args;
+
+    const result = spawnSync(spawnCmd, spawnArgs, {
       cwd: tempDir,
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: ATTEMPT_TIMEOUT_MS,

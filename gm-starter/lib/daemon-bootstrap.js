@@ -28,6 +28,15 @@ function resolveWindowsExe(cmd) {
   }
 }
 
+// When spawning a .cmd/.bat shim with shell:true on Windows, cmd.exe re-parses
+// the command string and breaks on unquoted spaces (e.g. "C:\Program Files\...").
+// Quote the cmd and any space-containing args so cmd.exe sees them as single tokens.
+function shellQuoteWin(cmdOrArg) {
+  const s = String(cmdOrArg);
+  if (!/[\s"]/.test(s)) return s;
+  return `"${s.replace(/"/g, '\\"')}"`;
+}
+
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
 const GM_STATE_DIR = path.join(os.homedir(), '.gm');
 
@@ -187,14 +196,19 @@ async function ensureRsLearningDaemonRunning() {
     // DETACHED_PROCESS (0x00000008) detaches the process group. Windows-only;
     // Node ignores creationFlags on POSIX.
     const bunExe = resolveWindowsExe('bun');
-    const proc = spawn(bunExe, ['x', 'rs-learn@latest'], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      env,
-      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
-      creationFlags: 0x08000000 | 0x00000008,
-    });
+    const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe);
+    const proc = spawn(
+      useShell ? shellQuoteWin(bunExe) : bunExe,
+      useShell ? ['x', 'rs-learn@latest'].map(shellQuoteWin) : ['x', 'rs-learn@latest'],
+      {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env,
+        ...(useShell ? { shell: true } : {}),
+        creationFlags: 0x08000000 | 0x00000008,
+      }
+    );
 
     const pid = proc.pid;
     proc.unref();
@@ -240,14 +254,19 @@ async function ensureRsCodeinsightDaemonRunning() {
     });
 
     const bunExe = resolveWindowsExe('bun');
-    const proc = spawn(bunExe, ['x', 'rs-codeinsight@latest'], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      env,
-      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
-      creationFlags: 0x08000000 | 0x00000008,
-    });
+    const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe);
+    const proc = spawn(
+      useShell ? shellQuoteWin(bunExe) : bunExe,
+      useShell ? ['x', 'rs-codeinsight@latest'].map(shellQuoteWin) : ['x', 'rs-codeinsight@latest'],
+      {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env,
+        ...(useShell ? { shell: true } : {}),
+        creationFlags: 0x08000000 | 0x00000008,
+      }
+    );
 
     const pid = proc.pid;
     proc.unref();
@@ -288,14 +307,19 @@ async function ensureRsSearchDaemonRunning() {
     });
 
     const bunExe = resolveWindowsExe('bun');
-    const proc = spawn(bunExe, ['x', 'rs-search@latest'], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      env,
-      ...(process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe) ? { shell: true } : {}),
-      creationFlags: 0x08000000 | 0x00000008,
-    });
+    const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(bunExe);
+    const proc = spawn(
+      useShell ? shellQuoteWin(bunExe) : bunExe,
+      useShell ? ['x', 'rs-search@latest'].map(shellQuoteWin) : ['x', 'rs-search@latest'],
+      {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env,
+        ...(useShell ? { shell: true } : {}),
+        creationFlags: 0x08000000 | 0x00000008,
+      }
+    );
 
     const pid = proc.pid;
     proc.unref();
