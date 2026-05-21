@@ -64,6 +64,55 @@ function ensureSkillMdCurrent(wrapperDir) {
   }
 }
 
+function ensureNextStepWiring(cwd) {
+  const changes = [];
+  const gmDir = path.join(cwd, '.gm');
+  try { fs.mkdirSync(gmDir, { recursive: true }); }
+  catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: gmDir, error: e.message }); }
+
+  const nextStepPath = path.join(gmDir, 'next-step.md');
+  const nextStepBody = '# Next step\n\nDispatch the `instruction` verb to plugkit by writing `.gm/exec-spool/in/instruction/<N>.txt` (any unique N) with body `{}` (or `{"prompt":"<user request>"}` on the first dispatch of the turn). Read the response from `.gm/exec-spool/out/<N>.json` and follow the imperative in the `instruction` field.\n\nThis file is auto-rewritten by plugkit on every instruction dispatch.\n';
+  try {
+    if (!fs.existsSync(nextStepPath)) {
+      fs.writeFileSync(nextStepPath, nextStepBody);
+      changes.push('seeded .gm/next-step.md');
+    }
+  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: nextStepPath, error: e.message }); }
+
+  const claudeMdPath = path.join(cwd, 'CLAUDE.md');
+  try {
+    if (!fs.existsSync(claudeMdPath)) {
+      fs.writeFileSync(claudeMdPath, '@AGENTS.md\n');
+      changes.push('created CLAUDE.md');
+    } else {
+      const cur = fs.readFileSync(claudeMdPath, 'utf8');
+      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@AGENTS.md');
+      if (!hasLine) {
+        fs.writeFileSync(claudeMdPath, '@AGENTS.md\n' + cur);
+        changes.push('prepended @AGENTS.md to CLAUDE.md');
+      }
+    }
+  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: claudeMdPath, error: e.message }); }
+
+  const agentsMdPath = path.join(cwd, 'AGENTS.md');
+  try {
+    if (fs.existsSync(agentsMdPath)) {
+      const cur = fs.readFileSync(agentsMdPath, 'utf8');
+      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@.gm/next-step.md');
+      if (!hasLine) {
+        const sep = cur.endsWith('\n') ? '' : '\n';
+        fs.writeFileSync(agentsMdPath, cur + sep + '\n@.gm/next-step.md\n');
+        changes.push('appended @.gm/next-step.md to AGENTS.md');
+      }
+    }
+  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: agentsMdPath, error: e.message }); }
+
+  if (changes.length > 0) {
+    log(`next-step wiring: ${changes.join(', ')}`);
+    obsEvent('bootstrap', 'next-step.wiring.applied', { changes });
+  }
+}
+
 // Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
 // shim chains re-enter conhost (visible window flash) even with
 // windowsHide:true on the parent. Spawning the real .exe directly lets
@@ -403,6 +452,7 @@ async function bootstrap(opts) {
   opts = opts || {};
   const wrapperDir = opts.wrapperDir || __dirname;
   try { ensureSkillMdCurrent(wrapperDir); } catch (_) {}
+  try { ensureNextStepWiring(process.cwd()); } catch (_) {}
   const version = opts.version || readVersionFile(wrapperDir);
   const shaManifest = readShaManifest(wrapperDir);
   const wasmName = 'plugkit.wasm';

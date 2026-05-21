@@ -170,3 +170,5 @@ Three persistent diagnostic files at `.gm/exec-spool/` root are updated by the r
 
 `docs/made-with.html` is a static showcase of notable AnEntrypoint projects. Update the PROJECTS array when a new notable project is added — projects with interesting descriptions, meaningful star counts, or technically unusual scope. Static data, no runtime API calls. Standalone HTML, not bundled.
 
+
+@.gm/next-step.md
