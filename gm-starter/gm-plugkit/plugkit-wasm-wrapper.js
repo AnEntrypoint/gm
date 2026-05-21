@@ -1615,6 +1615,15 @@ function makeHostFunctions(instanceRef) {
         const prefix = level >= 3 ? '[plugkit-wasm:err]' : level >= 2 ? '[plugkit-wasm:warn]' : '[plugkit-wasm]';
         if (level >= 2) console.error(`${prefix} ${msg}`);
         else console.log(`${prefix} ${msg}`);
+        const evtMatch = msg.match(/^evt:\s*(\{.*\})\s*$/);
+        if (evtMatch) {
+          try {
+            const ev = JSON.parse(evtMatch[1]);
+            const eventName = ev.event || 'wasm.event';
+            const { event: _e, ts: _ts, sess: _s, sub: _sub, ...fields } = ev;
+            logEvent(ev.sub || 'plugkit', eventName, fields);
+          } catch (_) {}
+        }
         return 0;
       } catch (e) {
         return 0;

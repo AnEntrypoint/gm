@@ -19,12 +19,25 @@ function parseDuration(s) {
 function parseArgs(argv) {
   const flags = new Set();
   let since = null;
+  let project = null;
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--since') { since = parseDuration(argv[++i]); continue; }
+    if (a === '--project') { project = argv[++i]; continue; }
     if (a.startsWith('--')) flags.add(a.slice(2));
   }
-  return { flags, since };
+  return { flags, since, project };
+}
+
+function findProjectRoot(start) {
+  let dir = start;
+  for (let i = 0; i < 12; i++) {
+    if (fs.existsSync(path.join(dir, '.gm', 'exec-spool'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return start;
 }
 
 function readLines(p) {
@@ -33,11 +46,11 @@ function readLines(p) {
   catch (e) { console.log(col('r', `read err ${p}: ${e.message}`)); return []; }
 }
 
-function collectEvents(sinceMs) {
+function collectEvents(sinceMs, projectOverride) {
   const events = [];
   const cutoff = sinceMs ? Date.now() - sinceMs : 0;
-  const cwd = process.cwd();
-  const wlog = path.join(cwd, '.gm', 'exec-spool', '.watcher.log');
+  const projectRoot = projectOverride || findProjectRoot(process.cwd());
+  const wlog = path.join(projectRoot, '.gm', 'exec-spool', '.watcher.log');
   for (const line of readLines(wlog)) {
     const m = line.match(/evt:\s*(\{.*\})\s*$/);
     if (!m) continue;
@@ -120,8 +133,8 @@ function summarize(events) {
 }
 
 function main() {
-  const { flags, since } = parseArgs(process.argv);
-  const allEvents = collectEvents(since);
+  const { flags, since, project } = parseArgs(process.argv);
+  const allEvents = collectEvents(since, project);
   const activeFilters = [...flags].filter(f => FILTERS[f]);
   const useAll = activeFilters.length === 0;
   const kinds = new Set(activeFilters);
