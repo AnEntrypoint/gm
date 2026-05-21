@@ -722,105 +722,84 @@ function findInstalledChromiumBinary() {
   }
 }
 
+function fetchJsonSync(url, timeoutMs) {
+  const r = spawnSync(process.execPath, ['-e', `
+    const http = require('http');
+    const req = http.get(${JSON.stringify(url)}, (res) => {
+      let buf = '';
+      res.on('data', d => buf += d);
+      res.on('end', () => {
+        if (res.statusCode !== 200) { process.stderr.write('status ' + res.statusCode); process.exit(2); }
+        process.stdout.write(buf);
+      });
+    });
+    req.on('error', e => { process.stderr.write(e.message); process.exit(1); });
+    req.setTimeout(${timeoutMs || 1500}, () => { req.destroy(new Error('timeout')); });
+  `], { encoding: 'utf-8', timeout: (timeoutMs || 1500) + 1500, windowsHide: true });
+  if (r.status !== 0) return null;
+  try { return JSON.parse(r.stdout); } catch (_) { return null; }
+}
+
 function startManagedBrowser(pw, profileDir) {
   const headless = process.env.GM_BROWSER_HEADLESS === '1';
-  const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir];
-  if (headless) args.push('--headless');
-  const env = { ...process.env };
-  if (!env.GM_BROWSER_RUNNER_PATH && !env.PLAYWRITER_BROWSER_PATH) {
-    const browserBin = findInstalledChromiumBinary();
-    if (browserBin) {
-      env.GM_BROWSER_RUNNER_PATH = browserBin;
-      env.PLAYWRITER_BROWSER_PATH = browserBin;
-      logEvent('plugkit', 'browser.binary-resolved', { path: browserBin });
-    } else {
-      logEvent('plugkit', 'browser.binary-missing', {});
-    }
+  let browserBin = findInstalledChromiumBinary();
+  if (!browserBin) {
+    logEvent('plugkit', 'browser.chromium-installing', {});
+    spawnSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['--yes', 'playwright', 'install', 'chromium'], {
+      encoding: 'utf-8',
+      timeout: 300000,
+      windowsHide: true,
+      shell: process.platform === 'win32',
+      stdio: 'ignore',
+    });
+    browserBin = findInstalledChromiumBinary();
   }
-  const child = spawn(pw.cmd, args, {
+  if (!browserBin) {
+    const err = new Error('chromium binary not found after install attempt');
+    logEvent('plugkit', 'browser.launch-failed', { reason: 'chromium-missing' });
+    throw err;
+  }
+  const port = findFreePortSync();
+  const args = [
+    '--user-data-dir=' + profileDir,
+    '--remote-debugging-port=' + port,
+    '--remote-debugging-address=127.0.0.1',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-default-apps',
+  ];
+  if (headless) args.push('--headless=new');
+  const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
+  let logFd;
+  try { logFd = fs.openSync(chromeLogPath, 'a'); } catch (_) { logFd = null; }
+  const child = spawn(browserBin, args, {
     detached: true,
-    stdio: 'ignore',
-    shell: pw.shell,
-    windowsHide: true,
-    env,
-    ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
+    stdio: ['ignore', logFd != null ? logFd : 'ignore', logFd != null ? logFd : 'ignore'],
+    windowsHide: false,
+    env: process.env,
   });
+  try { if (typeof logFd === 'number') fs.closeSync(logFd); } catch (_) {}
   const pid = child.pid;
   child.unref();
-  return pid;
-}
-
-function isColdRunProfile(profileDir) {
-  try {
-    if (!fs.existsSync(profileDir)) return true;
-    const entries = fs.readdirSync(profileDir);
-    if (entries.length === 0) return true;
-    if (!entries.some(n => n === 'Default' || n === 'Local State')) return true;
-    return false;
-  } catch (_) {
-    return true;
-  }
-}
-
-function resolveManagedBrowserKey(pw) {
-  const explicitKey = process.env.GM_BROWSER_RUNNER_KEY || process.env.PLAYWRITER_BROWSER_KEY;
-  if (explicitKey) {
-    if (/^profile:/.test(explicitKey)) {
-      throw new Error(`GM_BROWSER_RUNNER_KEY=${explicitKey} points at a user OS browser profile; refusing — managed sessions must use install:Chromium:*`);
-    }
-    return explicitKey;
-  }
-  let text = '';
-  try {
-    const r = runBrowserRunner(pw, ['browser', 'list'], 8000);
-    text = (r && (r.stdout || r.stderr)) || '';
-  } catch (e) {
-    throw new Error(`managed browser session list failed: ${e.message}`);
-  }
-  const lines = text.split(/\r?\n/);
-  const installChromium = lines.map(l => (l.match(/\b(install:Chromium:[A-Za-z0-9_-]+)\b/) || [])[1]).find(Boolean);
-  if (installChromium) return installChromium;
-  throw new Error(`no managed Chromium install detected; browser runner returned: ${scrubBrowserRunnerText(text).trim()}`);
-}
-
-function waitForExtensionReady(pw, profileDir, opts) {
-  const cold = (opts && typeof opts.cold === 'boolean') ? opts.cold : isColdRunProfile(profileDir);
-  const timeoutMs = (opts && opts.timeoutMs) || (cold ? 180000 : 30000);
+  logEvent('plugkit', 'browser.chromium-launched', { pid, port, profileDir, headless, binary: browserBin, chromeLogPath });
   const start = Date.now();
-  const deadline = start + timeoutMs;
-  const backoff = [2000, 4000, 8000];
-  let attempt = 0;
-  let lastErr = '';
-  let lastProgressAt = start;
-  const browserKey = resolveManagedBrowserKey(pw);
+  const deadline = start + 30000;
+  let wsEndpoint = null;
+  let lastErr = null;
   while (Date.now() < deadline) {
-    const remaining = deadline - Date.now();
-    const innerTimeout = Math.max(28000, Math.min(remaining, 30000));
-    const r = runBrowserRunner(pw, ['session', 'new', '--browser', browserKey], innerTimeout);
-    if (r && r.status === 0) return r;
-    lastErr = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || '');
-    const now = Date.now();
-    if (now - lastProgressAt >= 10000) {
-      logEvent('plugkit', 'browser.extension-wait', {
-        elapsed_ms: now - start,
-        cold_run: cold,
-        profileDir,
-        attempt,
-      });
-      lastProgressAt = now;
+    const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 1500);
+    if (info && info.webSocketDebuggerUrl) {
+      wsEndpoint = info.webSocketDebuggerUrl;
+      break;
     }
-    const sleepMs = backoff[Math.min(attempt, backoff.length - 1)];
-    attempt++;
-    if (Date.now() + sleepMs >= deadline) break;
-    sleepSync(sleepMs);
+    sleepSync(500);
   }
-  const flavor = cold
-    ? `cold-run timeout after ${Math.round((Date.now() - start) / 1000)}s waiting for managed browser extension to connect (first run downloads chromium ~150MB and installs the extension; if this persists the extension never registered with the relay server)`
-    : `warm-run timeout after ${Math.round((Date.now() - start) / 1000)}s waiting for managed browser extension to reconnect (profile exists but extension is not registering; relay server may be wedged)`;
-  const err = new Error(`managed browser session start failed: ${flavor}${lastErr ? ` :: ${lastErr}` : ''}`);
-  err._lastErr = lastErr;
-  err._coldRun = cold;
-  throw err;
+  if (!wsEndpoint) {
+    logEvent('plugkit', 'browser.launch-failed', { reason: 'cdp-not-ready', pid, port, elapsed_ms: Date.now() - start });
+    throw new Error(`chromium launched (pid=${pid}) but CDP at 127.0.0.1:${port} did not become ready within 30s${lastErr ? ' :: ' + lastErr : ''}`);
+  }
+  logEvent('plugkit', 'browser.cdp-ready', { pid, port, ms: Date.now() - start, wsEndpoint });
+  return { pid, port, wsEndpoint };
 }
 
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
@@ -830,15 +809,29 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   const ports = readJsonFile(portsFile, {});
   const sessions = readJsonFile(sessionsFile, {});
   const existing = ports[claudeSessionId];
-  if (existing && existing.pid) {
+  if (existing && existing.pid && existing.wsEndpoint) {
     const wantProfile = path.join(cwd, '.gm', 'browser-profile');
     const pidOk = isProcessAliveSync(existing.pid);
     const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(path.join(cwd, '.gm', 'browser-profile'));
-    if (pidOk && profileOk) {
+    const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
+    if (pidOk && profileOk && cdpOk) {
       const pwIds = sessions[claudeSessionId] || [];
-      if (pwIds.length > 0) return pwIds[0];
+      if (pwIds.length > 0 && existing.pwSessionId) return existing.pwSessionId;
+      const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000);
+      if (r && r.status === 0) {
+        const sid = parseSessionId(r.stdout || '');
+        if (sid) {
+          existing.pwSessionId = sid;
+          ports[claudeSessionId] = existing;
+          sessions[claudeSessionId] = [sid];
+          writeJsonFile(portsFile, ports);
+          writeJsonFile(sessionsFile, sessions);
+          logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true });
+          return sid;
+        }
+      }
     } else {
-      const reason = !pidOk ? 'pid-dead' : 'profile-drift';
+      const reason = !pidOk ? 'pid-dead' : (!cdpOk ? 'cdp-dead' : 'profile-drift');
       logEvent('hook', 'deviation.browser-profile-collision', {
         sid: claudeSessionId,
         stale_pid: existing.pid || null,
@@ -853,30 +846,37 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
-  const probedProfile = path.join(cwd, '.gm', 'browser-profile');
-  const coldRun = isColdRunProfile(probedProfile);
   const profileDir = acquireProfileDir(cwd);
-  logEvent('plugkit', 'browser.start', { profileDir, cold_run: coldRun });
-  const browserPid = startManagedBrowser(pw, profileDir);
-  const newR = waitForExtensionReady(pw, profileDir, { cold: coldRun });
-  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
-  const out = stripAnsi(newR.stdout || '').trim();
-  let pwSessionId = null;
-  const created = out.match(/Session\s+(\S+)\s+created/i);
-  if (created) pwSessionId = created[1];
-  if (!pwSessionId) {
-    const hex = out.match(/\b([a-f0-9-]{8,})\b/i);
-    if (hex) pwSessionId = hex[1];
+  logEvent('plugkit', 'browser.start', { profileDir });
+  const { pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir);
+  const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000);
+  if (!r || r.status !== 0) {
+    const errTxt = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || 'unknown');
+    logEvent('plugkit', 'browser.launch-failed', { reason: 'session-attach-failed', pid: browserPid, port, error: errTxt });
+    throw new Error(`playwriter session new --direct failed: ${errTxt}`);
   }
+  const pwSessionId = parseSessionId(r.stdout || '');
   if (!pwSessionId) {
-    try { const j = JSON.parse(out); pwSessionId = j.id || j.session_id || j.session; } catch (_) {}
+    logEvent('plugkit', 'browser.launch-failed', { reason: 'session-id-unparseable', stdout: r.stdout });
+    throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(r.stdout || '')}`);
   }
-  if (!pwSessionId) throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(out)}`);
-  ports[claudeSessionId] = { profileDir, pid: browserPid };
+  ports[claudeSessionId] = { profileDir, pid: browserPid, port, wsEndpoint, pwSessionId };
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
   writeJsonFile(sessionsFile, sessions);
+  logEvent('plugkit', 'browser.attached', { pwSessionId, pid: browserPid, port });
   return pwSessionId;
+}
+
+function parseSessionId(rawOut) {
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const out = stripAnsi(rawOut || '').trim();
+  const created = out.match(/Session\s+(\S+)\s+created/i);
+  if (created) return created[1];
+  const hex = out.match(/\b([a-f0-9-]{8,})\b/i);
+  if (hex) return hex[1];
+  try { const j = JSON.parse(out); return j.id || j.session_id || j.session || null; } catch (_) {}
+  return null;
 }
 
 const VEC_K_DEFAULT = 10;
