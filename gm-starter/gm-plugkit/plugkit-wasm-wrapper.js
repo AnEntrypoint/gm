@@ -42,6 +42,7 @@ function emitShutdownReason(reason, err) {
       version: typeof PLUGKIT_VERSION !== 'undefined' ? PLUGKIT_VERSION : null,
     };
     fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify(body, null, 2));
+    try { fs.unlinkSync(path.join(spoolDir, '.boot-active.json')); } catch (_) {}
   } catch (_) {}
 }
 
@@ -1497,6 +1498,47 @@ async function runSpoolWatcher(instance, spoolDir) {
   acquireLock();
   setInterval(refreshLock, 5000);
 
+  const BOOT_ACTIVE_PATH = path.join(spoolDir, '.boot-active.json');
+  const SHUTDOWN_REASON_PATH_EARLY = path.join(spoolDir, '.shutdown-reason.json');
+  try {
+    let priorBoot = null;
+    let priorShutdownForAbort = null;
+    try { priorBoot = JSON.parse(fs.readFileSync(BOOT_ACTIVE_PATH, 'utf-8')); } catch (_) {}
+    try { priorShutdownForAbort = JSON.parse(fs.readFileSync(SHUTDOWN_REASON_PATH_EARLY, 'utf-8')); } catch (_) {}
+    if (priorBoot && Number.isFinite(priorBoot.ts) && priorBoot.pid !== process.pid) {
+      const ageMs = Date.now() - priorBoot.ts;
+      const shutdownIsNewer = priorShutdownForAbort && Number.isFinite(priorShutdownForAbort.ts) && priorShutdownForAbort.ts >= priorBoot.ts;
+      if (ageMs > 30_000 && !shutdownIsNewer) {
+        logEvent('plugkit', 'watcher.silent-abort', {
+          prior_pid: priorBoot.pid,
+          prior_ts: priorBoot.ts,
+          prior_sha: priorBoot.wrapper_sha || null,
+          prior_version: priorBoot.version || null,
+          detected_at: Date.now(),
+          age_ms: ageMs,
+          shutdown_reason_present: !!priorShutdownForAbort,
+          shutdown_reason_ts: priorShutdownForAbort ? priorShutdownForAbort.ts : null,
+        });
+        try { console.error(`[plugkit-wasm] SILENT ABORT detected: prior watcher pid=${priorBoot.pid} sha=${priorBoot.wrapper_sha} died without writing .shutdown-reason.json (age=${ageMs}ms)`); } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  function writeBootActive() {
+    try {
+      const _v = readInstanceVersion(instance);
+      fs.writeFileSync(BOOT_ACTIVE_PATH, JSON.stringify({
+        pid: process.pid,
+        ts: Date.now(),
+        wrapper_sha: _ownWrapperSha12 || null,
+        version: _v || null,
+      }));
+    } catch (_) {}
+  }
+  function clearBootActive() {
+    try { fs.unlinkSync(BOOT_ACTIVE_PATH); } catch (_) {}
+  }
+  writeBootActive();
+
   const PEER_REGISTRY_PATH = path.join(os.homedir(), '.claude', 'gm-tools', 'peer-registry.json');
   function registerSelfAsPeer() {
     try {
@@ -1593,6 +1635,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     } catch (_) {}
 
     try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+    try { clearBootActive(); } catch (_) {}
     try { releaseLock(); } catch (_) {}
     process.exit(0);
   }
@@ -1624,6 +1667,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) {}
       try { releaseLock(); } catch (_) {}
       try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+      try { clearBootActive(); } catch (_) {}
       process.exit(0);
     } catch (e) {
       console.error(`[version-drift-check] error: ${e.message}`);
@@ -1659,6 +1703,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) {}
       try { releaseLock(); } catch (_) {}
       try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+      try { clearBootActive(); } catch (_) {}
       process.exit(0);
     } catch (e) {
       console.error(`[wrapper-drift-check] error: ${e.message}`);
@@ -1690,9 +1735,21 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, IDLE_CHECK_MS);
 
-  process.on('SIGINT', () => { releaseLock(); process.exit(0); });
-  process.on('SIGTERM', () => { releaseLock(); process.exit(0); });
-  process.on('exit', releaseLock);
+  function handleSignalShutdown(sig) {
+    try {
+      fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({
+        reason: sig.toLowerCase(),
+        ts: Date.now(),
+        pid: process.pid,
+      }));
+    } catch (_) {}
+    try { clearBootActive(); } catch (_) {}
+    try { releaseLock(); } catch (_) {}
+    process.exit(0);
+  }
+  process.on('SIGINT', () => handleSignalShutdown('SIGINT'));
+  process.on('SIGTERM', () => handleSignalShutdown('SIGTERM'));
+  process.on('exit', () => { try { clearBootActive(); } catch (_) {} releaseLock(); });
 
   try {
     const wrapperDst = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
