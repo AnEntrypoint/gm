@@ -112,6 +112,8 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs any future skill that participates in a chain.
 
+**SKILL.md auto-refresh**: every bootstrap call (`bootstrapPlugkit`) compares the sha256 of the bundled `gm-skill/skills/gm-skill/SKILL.md` (shipped inside the npm package) against the installed copies at `~/.agents/skills/gm-skill/SKILL.md` and `~/.claude/skills/gm-skill/SKILL.md`. Hash mismatch triggers atomic write (`.tmp` + rename) of both targets so the agent sees the latest prose on next session — no manual reinstall needed. Logged to `bootstrap.jsonl` as `SKILL.md refreshed`. The bundled SKILL.md is the source of truth; reinstalling gm-skill only matters when the npm package itself changes, which the cascade pipeline guarantees on every plugkit version bump.
+
 **Skill-initiated bootstrap contract**: `gm-starter/lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
 
 ## Cascade pipeline

@@ -282,6 +282,52 @@ function ensureBuildToolIgnores(cwd) {
 }
 
 
+function ensureSkillMdCurrent() {
+  try {
+    const bundledPath = resolveFromCandidates([
+      path.join(__dirname, '..', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(__dirname, '..', '..', 'skills', 'gm-skill', 'SKILL.md'),
+    ], 'gm-skill/skills/gm-skill/SKILL.md');
+    if (!bundledPath || !fs.existsSync(bundledPath)) {
+      emitBootstrapEvent('warn', 'bundled SKILL.md not found; skipping refresh');
+      return { refreshed: [], skipped: true };
+    }
+    const bundled = fs.readFileSync(bundledPath, 'utf8');
+    const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+    const targets = [
+      path.join(os.homedir(), '.agents', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(os.homedir(), '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+    ];
+    const refreshed = [];
+    for (const target of targets) {
+      try {
+        let needsWrite = true;
+        if (fs.existsSync(target)) {
+          const existing = fs.readFileSync(target, 'utf8');
+          const existingHash = crypto.createHash('sha256').update(existing).digest('hex');
+          if (existingHash === bundledHash) needsWrite = false;
+        }
+        if (needsWrite) {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          const tmp = target + '.tmp';
+          fs.writeFileSync(tmp, bundled);
+          fs.renameSync(tmp, target);
+          refreshed.push(target);
+        }
+      } catch (e) {
+        emitBootstrapEvent('warn', 'SKILL.md refresh failed for target', { target, error: e.message });
+      }
+    }
+    if (refreshed.length > 0) {
+      emitBootstrapEvent('info', 'SKILL.md refreshed', { hash: bundledHash.slice(0, 12), targets: refreshed });
+    }
+    return { refreshed, bundledHash };
+  } catch (e) {
+    emitBootstrapEvent('warn', 'ensureSkillMdCurrent failed', { error: e.message });
+    return { refreshed: [], error: e.message };
+  }
+}
+
 function writeSessionSidecar(sessionId) {
   try {
     const spool = path.join(process.cwd(), '.gm', 'exec-spool');
@@ -488,6 +534,7 @@ async function bootstrapPlugkit(sessionId, options) {
 
     writeSessionSidecar(sessionId);
     ensureBuildToolIgnores(process.cwd());
+    ensureSkillMdCurrent();
 
     const manifest = readManifest();
     let targetVersion = manifest.version;
@@ -660,4 +707,5 @@ module.exports = {
   checkPortReachable,
   ensureBuildToolIgnores,
   detectBuildToolConfigs,
+  ensureSkillMdCurrent,
 };
