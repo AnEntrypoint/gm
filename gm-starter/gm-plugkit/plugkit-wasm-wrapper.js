@@ -616,14 +616,66 @@ function scrubBrowserRunnerText(s) {
   return t;
 }
 
+function findInstalledChromiumBinary() {
+  try {
+    if (process.env.PLAYWRITER_BROWSER_PATH && fs.existsSync(process.env.PLAYWRITER_BROWSER_PATH)) {
+      return process.env.PLAYWRITER_BROWSER_PATH;
+    }
+    const roots = [];
+    if (process.platform === 'win32') {
+      const lad = process.env.LOCALAPPDATA;
+      if (lad) roots.push(path.join(lad, 'ms-playwright'));
+    } else {
+      const home = process.env.HOME || '';
+      if (home) {
+        roots.push(path.join(home, '.cache', 'ms-playwright'));
+        roots.push(path.join(home, 'Library', 'Caches', 'ms-playwright'));
+      }
+    }
+    const exeName = process.platform === 'win32' ? 'chrome.exe' : (process.platform === 'darwin' ? 'Chromium.app/Contents/MacOS/Chromium' : 'chrome');
+    const subdirs = process.platform === 'win32'
+      ? ['chrome-win64', 'chrome-win']
+      : process.platform === 'darwin' ? ['chrome-mac'] : ['chrome-linux'];
+    const found = [];
+    for (const root of roots) {
+      if (!fs.existsSync(root)) continue;
+      for (const name of fs.readdirSync(root)) {
+        if (!/^chromium-\d+$/.test(name)) continue;
+        for (const sub of subdirs) {
+          const candidate = path.join(root, name, sub, exeName);
+          if (fs.existsSync(candidate)) {
+            const ver = parseInt(name.split('-')[1], 10) || 0;
+            found.push({ ver, candidate });
+          }
+        }
+      }
+    }
+    if (found.length === 0) return null;
+    found.sort((a, b) => b.ver - a.ver);
+    return found[0].candidate;
+  } catch (_) {
+    return null;
+  }
+}
+
 function startManagedBrowser(pw, profileDir) {
   const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir, '--headless'];
+  const env = { ...process.env };
+  if (!env.PLAYWRITER_BROWSER_PATH) {
+    const browserBin = findInstalledChromiumBinary();
+    if (browserBin) {
+      env.PLAYWRITER_BROWSER_PATH = browserBin;
+      logEvent('plugkit', 'browser.binary-resolved', { path: browserBin });
+    } else {
+      logEvent('plugkit', 'browser.binary-missing', {});
+    }
+  }
   const child = spawn(pw.cmd, args, {
     detached: true,
     stdio: 'ignore',
     shell: pw.shell,
     windowsHide: true,
-    env: process.env,
+    env,
     ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
   });
   const pid = child.pid;
@@ -631,17 +683,54 @@ function startManagedBrowser(pw, profileDir) {
   return pid;
 }
 
-function waitForExtensionReady(pw, timeoutMs) {
-  const deadline = Date.now() + (timeoutMs || 30000);
-  let lastErr = '';
-  while (Date.now() < deadline) {
-    const r = runPlaywriter(pw, ['session', 'new'], 15000);
-    if (r.status === 0) return r;
-    lastErr = scrubBrowserRunnerText(r.stderr || r.stdout || '');
-    sleepSync(500);
+function isColdRunProfile(profileDir) {
+  try {
+    if (!fs.existsSync(profileDir)) return true;
+    const entries = fs.readdirSync(profileDir);
+    if (entries.length === 0) return true;
+    if (!entries.some(n => n === 'Default' || n === 'Local State')) return true;
+    return false;
+  } catch (_) {
+    return true;
   }
-  const err = new Error(`managed browser session start failed: ${lastErr || 'timeout waiting for extension'}`);
+}
+
+function waitForExtensionReady(pw, profileDir, opts) {
+  const cold = (opts && typeof opts.cold === 'boolean') ? opts.cold : isColdRunProfile(profileDir);
+  const timeoutMs = (opts && opts.timeoutMs) || (cold ? 180000 : 30000);
+  const start = Date.now();
+  const deadline = start + timeoutMs;
+  const backoff = [2000, 4000, 8000];
+  let attempt = 0;
+  let lastErr = '';
+  let lastProgressAt = start;
+  while (Date.now() < deadline) {
+    const remaining = deadline - Date.now();
+    const innerTimeout = Math.max(28000, Math.min(remaining, 30000));
+    const r = runPlaywriter(pw, ['session', 'new'], innerTimeout);
+    if (r && r.status === 0) return r;
+    lastErr = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || '');
+    const now = Date.now();
+    if (now - lastProgressAt >= 10000) {
+      logEvent('plugkit', 'browser.extension-wait', {
+        elapsed_ms: now - start,
+        cold_run: cold,
+        profileDir,
+        attempt,
+      });
+      lastProgressAt = now;
+    }
+    const sleepMs = backoff[Math.min(attempt, backoff.length - 1)];
+    attempt++;
+    if (Date.now() + sleepMs >= deadline) break;
+    sleepSync(sleepMs);
+  }
+  const flavor = cold
+    ? `cold-run timeout after ${Math.round((Date.now() - start) / 1000)}s waiting for managed browser extension to connect (first run downloads chromium ~150MB and installs the extension; if this persists the extension never registered with the relay server)`
+    : `warm-run timeout after ${Math.round((Date.now() - start) / 1000)}s waiting for managed browser extension to reconnect (profile exists but extension is not registering; relay server may be wedged)`;
+  const err = new Error(`managed browser session start failed: ${flavor}${lastErr ? ` :: ${lastErr}` : ''}`);
   err._lastErr = lastErr;
+  err._coldRun = cold;
   throw err;
 }
 
@@ -675,9 +764,12 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
+  const probedProfile = path.join(cwd, '.gm', 'browser-profile');
+  const coldRun = isColdRunProfile(probedProfile);
   const profileDir = acquireProfileDir(cwd);
+  logEvent('plugkit', 'browser.start', { profileDir, cold_run: coldRun });
   const browserPid = startManagedBrowser(pw, profileDir);
-  const newR = waitForExtensionReady(pw, 30000);
+  const newR = waitForExtensionReady(pw, profileDir, { cold: coldRun });
   const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
   const out = stripAnsi(newR.stdout || '').trim();
   let pwSessionId = null;
