@@ -1,4 +1,10 @@
 {
+  "outputStyle": "default",
   "prefersReducedMotion": true,
-  "outputStyle": "default"
+  "permissions": {
+    "allow": [
+      "Read(//c/dev/cj/**)",
+      "Bash(rm -f .gm/exec-spool/out/*)"
+    ]
+  }
 }

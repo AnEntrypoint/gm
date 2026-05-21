@@ -50,6 +50,12 @@ plugforge-starter/skills/caveman/
 .gm/learning-state.md
 .gm/git-block-counter.json
 .gm/next-step.md
+.gm/last-instruction-ts
+.gm/boot*.err
+.gm/boot*.out
+.gm/diag-*.out
+.gm/audit-iter-*.md
+.gm/silent-abort-forensics.json
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 # <<< plugkit managed
