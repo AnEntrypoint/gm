@@ -1364,6 +1364,15 @@ function makeHostFunctions(instanceRef) {
       }
     },
 
+    host_vec_embed: (textPtr, textLen, outPtr, outLen) => {
+      try {
+        if (typeof globalThis.__hostEmbedSync === 'function') {
+          return globalThis.__hostEmbedSync(textPtr, textLen, outPtr, outLen, instanceRef.value);
+        }
+      } catch (_) {}
+      return -1;
+    },
+
     host_vec_search: (qPtr, qLen, k) => {
       try {
         const raw = readWasmStr(instanceRef.value, qPtr, qLen);
