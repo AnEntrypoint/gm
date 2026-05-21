@@ -10,7 +10,7 @@ allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 
 This is the only thing that makes the discipline work. Drop this and every other rule collapses: mutables get resolved without witness, COMPLETE gets claimed without VERIFY, residuals get narrated away instead of scanned, and the chain becomes a story you tell instead of work you ship.
 
-Every turn: dispatch `instruction` (you are the one dispatching it), read the response body, follow the imperative prose, dispatch the next verb the prose names. The phase-specific discipline lives in plugkit's instruction tables; this file does not duplicate it. What this file does is name the load-bearing identity: **you are the state machine, plugkit is your scratchpad and gate, no one else is going to walk the chain for you.**
+Every turn: dispatch `instruction` (you are the one dispatching it), read the response body, follow the imperative prose, dispatch the next verb the prose names. Re-dispatch `instruction` whenever you drift, stall, get denied at a gate, or feel uncertain about the next move — it is the cheap synchronous recovery primitive that puts you back on the chain. There is no cost to over-dispatching it and unbounded cost to acting without it. A session that stops dispatching instruction has stopped walking the chain. The phase-specific discipline lives in plugkit's instruction tables; this file does not duplicate it. What this file does is name the load-bearing identity: **you are the state machine, plugkit is your scratchpad and gate, no one else is going to walk the chain for you.**
 
 Boot when `.gm/exec-spool/.status.json` is absent or stale (>15s):
 
