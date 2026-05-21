@@ -1007,22 +1007,22 @@
   category: verify
   effort: medium
   id: item-1779361488637
-  status: pending
+  status: completed
 - subject: Build out c:/dev/penguins
   description: Inventory penguins state. freddie-task.js is the connection point. Extend content/structure as needed for the freddie integration.
   category: feature
   effort: medium
   id: item-1779361489453
-  status: pending
+  status: completed
 - subject: thebird runs gm-skill in freddie locally
   description: 'c:/dev/thebird hosts freddie in the browser. The same gm-skill wasm must run there. Verify locally: instruction verb, gates, embedding stack, libsql stack all work in-browser. Fix issues.'
   category: verify
   effort: large
   id: item-1779361492078
-  status: pending
+  status: completed
 - subject: thebird works at https://anentrypoint.github.io/thebird
   description: After local works, push and verify the deployed gh-pages site runs gm-skill in freddie. End-to-end browser parity.
   category: verify
   effort: medium
   id: item-1779361493716
-  status: pending
+  status: completed
