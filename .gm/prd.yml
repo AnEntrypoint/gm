@@ -942,3 +942,21 @@
   effort: small
   id: item-1779358200584
   status: completed
+- subject: Reverse Claude Code git-discipline hook; virtualize through plugkit
+  description: 'Remove ~/.claude/hooks/git-discipline-guard.js and the hooks.PreToolUse entry in ~/.claude/settings.json shipped by task #14. User constraint: zero Claude Code-specific feature dependencies. Discipline enforcement lives in the SKILL prose + plugkit git_push verb gate only. The rs-plugkit git_push patch that writes a bypass sentinel becomes dead code without the hook reading it — also revert. Keep the verb''s porcelain gate (that''s plugkit-internal, not Claude-specific).'
+  category: refactor
+  effort: small
+  id: item-1779358754061
+  status: completed
+- subject: Audit and remove every Claude Code-specific dependency in gm
+  description: 'Catalog every reference to ~/.claude/, .claude/, settings.local.json hooks, CLAUDE_SESSION_ID-only paths. CLAUDE_SESSION_ID as one of multiple session-id env fallbacks is acceptable (already exists alongside GM_SESSION_ID). Forbidden: writing hooks into ~/.claude/settings.json, requiring ~/.claude/hooks/ presence, ~/.claude/projects path lookups other than as one transcript source. ccsniff reads ~/.claude/projects/**/*.jsonl — that''s a READER, acceptable, not a dependency. plugkit-supervisor.js install path is ~/.claude/gm-tools/ — that''s a TOOL CACHE, also acceptable as a writable bin dir but flag for a rename to ~/.gm-tools/ for purity.'
+  category: refactor
+  effort: medium
+  id: item-1779358759065
+  status: completed
+- subject: rs-plugkit embed::init_ctx skips wasm safetensors when host_vec_embed succeeds at boot probe
+  description: 'Witnessed by gmsniff: 31 watcher unplanned-restarts in 30min, each ends right after embed_init_ok. Supervisor respawns correctly but the wasm process dies on first embed init. Root cause: rs-plugkit/src/embed.rs::init_ctx still loads its own ~45MB safetensors BertModel even though host_vec_embed is now wired up. Fix: at init_ctx boot, do a probe-call to host_vec_embed with a fixed test string; if rc==EMBED_DIM, skip the safetensors load entirely and mark the wasm-side context as host-delegated. This requires rs-plugkit edit + push + cascade rebuild to plugkit-wasm on npm + version bump in gm.json. Witness: supervisor.watcher-exited count goes from 25+ per 30min to 0.'
+  category: bug
+  effort: medium
+  id: item-1779358764056
+  status: completed

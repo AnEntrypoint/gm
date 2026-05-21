@@ -9,12 +9,9 @@ function findPlugkit() {
   const home = os.homedir();
   const candidates = [
     path.join(__dirname, '..', 'bin', 'plugkit.js'),
+    path.join(home, '.gm-tools', 'plugkit.js'),
     path.join(home, '.claude', 'gm-tools', 'plugkit.js'),
-    path.join(home, '.claude', 'plugins', 'marketplaces', 'gm-cc', 'bin', 'plugkit.js'),
   ];
-  if (process.env.CLAUDE_PLUGIN_ROOT) {
-    candidates.push(path.join(process.env.CLAUDE_PLUGIN_ROOT, 'bin', 'plugkit.js'));
-  }
   for (const p of candidates) {
     if (fsSync.existsSync(p)) return p;
   }

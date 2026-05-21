@@ -877,10 +877,25 @@ function cosineSim(a, b) {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
+let __wasmAbortFlag = { aborted: false, code: 0 };
 function createWasiShim(instanceRef) {
   const getMemory = () => instanceRef.value.exports.memory.buffer;
   const shim = {
-    proc_exit: (code) => process.exit(code),
+    proc_exit: (code) => {
+      __wasmAbortFlag.aborted = true;
+      __wasmAbortFlag.code = code;
+      try {
+        const spoolDir = spoolDirForSentinel();
+        fs.mkdirSync(spoolDir, { recursive: true });
+        fs.writeFileSync(path.join(spoolDir, '.wasm-abort.json'), JSON.stringify({
+          ts: Date.now(),
+          exit_code: code,
+          verb_in_flight: __currentVerbContext,
+        }));
+      } catch (_) {}
+      try { console.error(`[plugkit-wasm] wasm proc_exit(${code}) intercepted; throwing to abort current verb without killing watcher`); } catch (_) {}
+      throw new Error(`wasm proc_exit(${code}) during verb ${__currentVerbContext && __currentVerbContext.verb}`);
+    },
     fd_write: (fd, iovs_ptr, iovs_len, nwritten_ptr) => {
       try {
         const buf = getMemory();
@@ -2023,6 +2038,27 @@ async function runSpoolWatcher(instance, spoolDir) {
     const key = path.relative(inDir, filePath);
     if (isProcessed(key)) return;
     markProcessed(key);
+
+    if (__wasmAbortFlag.aborted) {
+      try {
+        const taskBase = path.basename(filePath, path.extname(filePath));
+        const relPath = path.relative(inDir, filePath);
+        const dir = path.dirname(relPath);
+        const verb = dir === '.' ? taskBase : dir;
+        const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
+        fs.writeFileSync(path.join(outDir, outName), JSON.stringify({
+          ok: false,
+          error: `wasm aborted earlier (exit_code=${__wasmAbortFlag.code}); watcher will respawn`,
+          wasm_aborted: true,
+        }));
+        try { fs.unlinkSync(filePath); } catch (_) {}
+      } catch (_) {}
+      unmarkProcessed(key);
+      emitShutdownReason('wasm-abort-graceful', new Error(`wasm proc_exit(${__wasmAbortFlag.code}) earlier; clean watcher restart`));
+      try { console.error('[plugkit-wasm] exiting after wasm abort to allow supervisor respawn'); } catch (_) {}
+      setTimeout(() => process.exit(2), 100).unref();
+      return;
+    }
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');

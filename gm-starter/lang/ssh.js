@@ -5,8 +5,12 @@ const fsSync = require('fs');
 const http = require('http');
 
 function loadTarget(targetName) {
-  const cfgPath = path.join(os.homedir(), '.claude', 'ssh-targets.json');
-  if (!fsSync.existsSync(cfgPath)) throw new Error('No ssh-targets.json found at ' + cfgPath);
+  const candidatesCfg = [
+    path.join(os.homedir(), '.gm-tools', 'ssh-targets.json'),
+    path.join(os.homedir(), '.claude', 'ssh-targets.json'),
+  ];
+  const cfgPath = candidatesCfg.find(p => fsSync.existsSync(p));
+  if (!cfgPath) throw new Error('No ssh-targets.json found at ' + candidatesCfg.join(' or '));
   const cfg = JSON.parse(fsSync.readFileSync(cfgPath, 'utf8'));
   const name = targetName || 'default';
   if (!cfg[name]) throw new Error('No target \'' + name + '\' in ssh-targets.json. Available: ' + Object.keys(cfg).join(', '));
@@ -26,6 +30,7 @@ function parseCommand(code) {
 
 function resolveSsh2() {
   const candidates = [
+    path.join(os.homedir(), '.gm-tools', 'node_modules', 'ssh2'),
     path.join(os.homedir(), '.claude', 'gm-tools', 'node_modules', 'ssh2'),
     path.join(os.homedir(), '.claude', 'plugins', 'node_modules', 'ssh2'),
     'ssh2',
@@ -33,7 +38,7 @@ function resolveSsh2() {
   for (const p of candidates) {
     try { return require(p); } catch (_) {}
   }
-  throw new Error('ssh2 not found. Run: cd ~/.claude/gm-tools && npm install ssh2');
+  throw new Error('ssh2 not found. Install into ~/.gm-tools/ with: mkdir -p ~/.gm-tools && cd ~/.gm-tools && npm install ssh2');
 }
 
 function getRunnerPort() {
