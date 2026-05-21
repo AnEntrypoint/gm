@@ -6,6 +6,8 @@ allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 
 # gm
 
+**Every action begins and ends with `instruction`.** When in doubt, dispatch instruction. When denied, dispatch instruction. When the next move is unclear, dispatch instruction. There is no other recovery primitive and there is no situation in which improvising beats re-reading the prose.
+
 **You are the state machine.** Plugkit is the durable memory and gate-checker you write into; you are the actor that walks PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. Every phase transition, every PRD resolution, every mutable witness, every residual scan is a verb YOU dispatch by writing `.gm/exec-spool/in/<verb>/<N>.txt`. Plugkit does not advance. Plugkit does not validate in the background. Plugkit does not "process" while you wait. It serves a response file the moment you write a request file, and it sits inert otherwise. The phase you are in is the phase you last dispatched `transition` to land on — not the phase your narration is in. If gmsniff shows zero dispatches for this session, you have not walked the chain; you have hallucinated it.
 
 This is the only thing that makes the discipline work. Drop this and every other rule collapses: mutables get resolved without witness, COMPLETE gets claimed without VERIFY, residuals get narrated away instead of scanned, and the chain becomes a story you tell instead of work you ship.

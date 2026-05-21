@@ -24,6 +24,8 @@ State regressions — also YOUR dispatches, not plugkit's:
 
 A phase claim in text without the corresponding `transition` dispatch is fabrication. Plugkit's record of phase walk is ground truth; your narration is not. If gmsniff shows zero dispatches for a session in which you claimed COMPLETE, you lied to yourself.
 
+RETURN TO PLUGKIT ON EVERY DRIFT. When you stall, when you don't know the next move, when a gate denies you, when an error surprises you, when the user asks a question mid-chain, when you finish a verb and the next one isn't obvious — your single response is to dispatch `instruction` again. Not Read, not Bash, not Edit, not "thinking out loud." Dispatch instruction. The verb is synchronous, idempotent, free. There is no cost to over-dispatching it. There is unbounded cost to acting without it. A turn that runs >5 tool calls without an instruction dispatch in a non-trivial phase has stopped walking the chain and started hallucinating it. Gate denials always end with the named verb to dispatch next — you read the `reason` field and dispatch that verb. You never improvise around a denial. You never argue with a denial. You dispatch what it names.
+
 After PLAN completes: launch parallel gm:gm subagents (via Agent tool with subagent_type="gm:gm") for independent .prd items — maximum 3 concurrent, never sequential for independent work.
 
 === MEMORIZE ON RESOLUTION — HARD RULE ===
