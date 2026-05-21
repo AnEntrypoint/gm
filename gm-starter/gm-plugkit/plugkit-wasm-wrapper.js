@@ -1556,6 +1556,26 @@ function makeHostFunctions(instanceRef) {
         return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
       }
     },
+
+    host_git: (argsPtr, argsLen, cwdPtr, cwdLen) => {
+      try {
+        const args = readWasmStr(instanceRef.value, argsPtr, argsLen);
+        const cwdStr = readWasmStr(instanceRef.value, cwdPtr, cwdLen);
+        const cwd = cwdStr || process.cwd();
+        const { execSync } = require('child_process');
+        let stdout = '', stderr = '', exit_code = 0;
+        try {
+          stdout = execSync('git ' + args, { encoding: 'utf8', timeout: 30000, cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+        } catch (e) {
+          stdout = String((e && e.stdout) || '');
+          stderr = String((e && e.stderr) || (e && e.message) || '');
+          exit_code = (e && typeof e.status === 'number') ? e.status : 1;
+        }
+        return writeWasmJson(instanceRef.value, { stdout, stderr, exit_code });
+      } catch (e) {
+        return writeWasmJson(instanceRef.value, { stdout: '', stderr: String(e && e.message || e), exit_code: 1 });
+      }
+    },
   };
 }
 
