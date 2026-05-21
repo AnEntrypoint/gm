@@ -299,6 +299,8 @@ function readCurrentSess() {
   return __sessCache.value;
 }
 
+const __lockRejectedEmitAt = new Map();
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -1462,7 +1464,14 @@ async function runSpoolWatcher(instance, spoolDir) {
             const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
             console.error(`[plugkit-wasm] ${msg}; refusing to start`);
             try { fs.writeFileSync(path.join(spoolDir, '.lock-rejection.json'), msg); } catch (_) {}
-            try { logEvent('plugkit', 'watcher.lock-rejected', { holder_pid: pidStr, lock_age_ms: age }); } catch (_) {}
+            try {
+              const __now = Date.now();
+              const __last = __lockRejectedEmitAt.get(pidStr) || 0;
+              if (__now - __last > 60000) {
+                __lockRejectedEmitAt.set(pidStr, __now);
+                logEvent('plugkit', 'watcher.lock-rejected', { severity: 'info', holder_pid: pidStr, lock_age_ms: age });
+              }
+            } catch (_) {}
             process.exit(75);
           }
         } else {
