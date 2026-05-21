@@ -420,106 +420,6 @@ function writeJsonFile(fp, value) {
   try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
 }
 
-function bundledBrowserCacheRoots() {
-  const roots = [];
-  const envOverride = process.env.PLAYWRIGHT_BROWSERS_PATH;
-  if (envOverride) roots.push(envOverride);
-  if (process.platform === 'win32') {
-    if (process.env.LOCALAPPDATA) roots.push(path.join(process.env.LOCALAPPDATA, 'ms-playwright'));
-  } else if (process.platform === 'darwin') {
-    if (process.env.HOME) roots.push(path.join(process.env.HOME, 'Library', 'Caches', 'ms-playwright'));
-  } else {
-    if (process.env.HOME) roots.push(path.join(process.env.HOME, '.cache', 'ms-playwright'));
-  }
-  return roots.filter(r => r && fs.existsSync(r));
-}
-
-function chromiumExeFromCacheRoot(root) {
-  try {
-    const entries = fs.readdirSync(root)
-      .filter(n => /^chromium-\d+$/.test(n))
-      .sort((a, b) => parseInt(b.split('-')[1], 10) - parseInt(a.split('-')[1], 10));
-    const subdirs = process.platform === 'win32'
-      ? ['chrome-win64', 'chrome-win']
-      : process.platform === 'darwin'
-        ? ['chrome-mac/Chromium.app/Contents/MacOS/Chromium']
-        : ['chrome-linux'];
-    const exeName = process.platform === 'win32' ? 'chrome.exe'
-      : process.platform === 'darwin' ? null
-      : 'chrome';
-    for (const e of entries) {
-      for (const sub of subdirs) {
-        const p = exeName ? path.join(root, e, sub, exeName) : path.join(root, e, sub);
-        if (fs.existsSync(p)) return p;
-      }
-    }
-  } catch (_) {}
-  return null;
-}
-
-function findBundledChromium() {
-  for (const root of bundledBrowserCacheRoots()) {
-    const exe = chromiumExeFromCacheRoot(root);
-    if (exe) return exe;
-  }
-  try {
-    const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true, windowsHide: true, timeout: 5000 });
-    if (npmR.status === 0 && npmR.stdout.trim()) {
-      const root = npmR.stdout.trim().split(/\r?\n/).pop();
-      const localBrowsers = path.join(root, 'playwriter', 'node_modules', '@xmorse', 'playwright-core', '.local-browsers');
-      if (fs.existsSync(localBrowsers)) {
-        const exe = chromiumExeFromCacheRoot(localBrowsers);
-        if (exe) return exe;
-      }
-    }
-  } catch (_) {}
-  return null;
-}
-
-function ensureBundledChromium(pw) {
-  const existing = findBundledChromium();
-  if (existing) return { exe: existing, installed: false };
-  if (!pw || !pw.cmd) {
-    return { exe: null, installed: false, error: 'playwriter not available to install browser' };
-  }
-  const installer = { cmd: pw.cmd, args: [...pw.baseArgs, 'install', 'chromium'], shell: pw.shell };
-  logEvent('bootstrap', 'browser.bundled-install.start', { via: 'playwriter' });
-  const r = spawnSync(installer.cmd, installer.args, {
-    encoding: 'utf-8',
-    timeout: 600000,
-    shell: installer.shell,
-    windowsHide: true,
-  });
-  logEvent('bootstrap', 'browser.bundled-install.done', { status: r.status });
-  const after = findBundledChromium();
-  if (after) return { exe: after, installed: true };
-  return { exe: null, installed: false, error: r.stderr || r.stdout || 'install failed' };
-}
-
-function findChrome() {
-  const bundled = findBundledChromium();
-  if (bundled) return bundled;
-  if (process.platform === 'win32') {
-    const candidates = [
-      path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-    ];
-    for (const c of candidates) { if (c && fs.existsSync(c)) return c; }
-    return null;
-  }
-  if (process.platform === 'darwin') {
-    const mac = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-    if (fs.existsSync(mac)) return mac;
-    return null;
-  }
-  for (const bin of ['google-chrome', 'chromium', 'chromium-browser']) {
-    const r = spawnSync('which', [bin], { encoding: 'utf-8' });
-    if (r.status === 0 && r.stdout.trim()) return r.stdout.trim();
-  }
-  return null;
-}
-
 function findPlaywriter() {
   const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true });
   if (npmR.status === 0 && npmR.stdout.trim()) {
@@ -716,6 +616,35 @@ function scrubBrowserRunnerText(s) {
   return t;
 }
 
+function startManagedBrowser(pw, profileDir) {
+  const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir, '--headless'];
+  const child = spawn(pw.cmd, args, {
+    detached: true,
+    stdio: 'ignore',
+    shell: pw.shell,
+    windowsHide: true,
+    env: process.env,
+    ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
+  });
+  const pid = child.pid;
+  child.unref();
+  return pid;
+}
+
+function waitForExtensionReady(pw, timeoutMs) {
+  const deadline = Date.now() + (timeoutMs || 30000);
+  let lastErr = '';
+  while (Date.now() < deadline) {
+    const r = runPlaywriter(pw, ['session', 'new'], 15000);
+    if (r.status === 0) return r;
+    lastErr = scrubBrowserRunnerText(r.stderr || r.stdout || '');
+    sleepSync(500);
+  }
+  const err = new Error(`managed browser session start failed: ${lastErr || 'timeout waiting for extension'}`);
+  err._lastErr = lastErr;
+  throw err;
+}
+
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   migrateLegacyBrowserState(cwd);
   const portsFile = browserPortsFile(cwd);
@@ -723,20 +652,18 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   const ports = readJsonFile(portsFile, {});
   const sessions = readJsonFile(sessionsFile, {});
   const existing = ports[claudeSessionId];
-  if (existing && existing.port) {
+  if (existing && existing.pid) {
     const wantProfile = path.join(cwd, '.gm', 'browser-profile');
-    const pidOk = existing.pid && isProcessAliveSync(existing.pid);
+    const pidOk = isProcessAliveSync(existing.pid);
     const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(path.join(cwd, '.gm', 'browser-profile'));
-    const portOk = isPortAliveSync(existing.port);
-    if (pidOk && profileOk && portOk) {
+    if (pidOk && profileOk) {
       const pwIds = sessions[claudeSessionId] || [];
       if (pwIds.length > 0) return pwIds[0];
     } else {
-      const reason = !pidOk ? 'pid-dead' : !profileOk ? 'profile-drift' : 'port-dead';
+      const reason = !pidOk ? 'pid-dead' : 'profile-drift';
       logEvent('hook', 'deviation.browser-profile-collision', {
         sid: claudeSessionId,
         stale_pid: existing.pid || null,
-        stale_port: existing.port || null,
         stale_profile: existing.profileDir || null,
         want_profile: wantProfile,
         reason,
@@ -748,44 +675,9 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
-  let chrome = findBundledChromium();
-  if (!chrome) {
-    const ensured = ensureBundledChromium(pw);
-    if (ensured.exe) chrome = ensured.exe;
-  }
-  if (!chrome) chrome = findChrome();
-  if (!chrome) throw new Error('No chromium binary available. Run: bun x playwriter@latest install chromium');
   const profileDir = acquireProfileDir(cwd);
-  const port = findFreePortSync();
-  const chromeArgs = [
-    `--remote-debugging-port=${port}`,
-    `--user-data-dir=${profileDir}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-features=Translate',
-  ];
-  // Chrome itself is GUI but its remote-debugging port creates conhost
-  // when launched from a console-attached parent. CREATE_NO_WINDOW
-  // (0x08000000) | DETACHED_PROCESS (0x00000008) prevents the helper
-  // processes (sandbox, GPU, network service) from allocating consoles.
-  // Inherited by the entire chrome subprocess tree on Windows.
-  const child = spawn(chrome, chromeArgs, {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-    ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
-  });
-  const chromePid = child.pid;
-  child.unref();
-  const deadline = Date.now() + 10000;
-  let alive = false;
-  while (Date.now() < deadline) {
-    if (isPortAliveSync(port)) { alive = true; break; }
-    sleepSync(300);
-  }
-  if (!alive) throw new Error(`Chrome failed to open debug port ${port}`);
-  const newR = runPlaywriter(pw, ['session', 'new', '--direct', `localhost:${port}`], 30000);
-  if (newR.status !== 0) throw new Error(`managed browser session start failed: ${scrubBrowserRunnerText(newR.stderr || newR.stdout || 'unknown')}`);
+  const browserPid = startManagedBrowser(pw, profileDir);
+  const newR = waitForExtensionReady(pw, 30000);
   const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
   const out = stripAnsi(newR.stdout || '').trim();
   let pwSessionId = null;
@@ -799,7 +691,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     try { const j = JSON.parse(out); pwSessionId = j.id || j.session_id || j.session; } catch (_) {}
   }
   if (!pwSessionId) throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(out)}`);
-  ports[claudeSessionId] = { port, profileDir, pid: chromePid };
+  ports[claudeSessionId] = { profileDir, pid: browserPid };
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
   writeJsonFile(sessionsFile, sessions);
@@ -1413,12 +1305,7 @@ function makeHostFunctions(instanceRef) {
         if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'managed browser session runner not available' });
         if (body.startsWith('session ')) {
           const parts = body.slice(8).trim().split(/\s+/);
-          const ports = readJsonFile(browserPortsFile(cwd), {});
-          const existing = ports[sessionId];
-          const directArgs = (existing && existing.port && isPortAliveSync(existing.port))
-            ? [`--direct=localhost:${existing.port}`]
-            : [];
-          const r = runPlaywriter(pw, ['session', ...parts, ...directArgs], 30000);
+          const r = runPlaywriter(pw, ['session', ...parts], 30000);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
             stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1427,12 +1314,7 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
-        const portsAfter = readJsonFile(browserPortsFile(cwd), {});
-        const livePort = portsAfter[sessionId] && portsAfter[sessionId].port;
-        const directArgs = (livePort && isPortAliveSync(livePort))
-          ? [`--direct=localhost:${livePort}`]
-          : [];
-        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', ...directArgs, '-e', body], 60000);
+        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
         return writeWasmJson(instanceRef.value, {
           ok: r.status === 0,
           stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1801,9 +1683,9 @@ async function runSpoolWatcher(instance, spoolDir) {
         const ports = readJsonFile(browserPortsFile(process.cwd()), {});
         let browserAlive = false;
         for (const entry of Object.values(ports)) {
-          if (entry && Number.isFinite(entry.port) && isPortAliveSync(entry.port)) { browserAlive = true; break; }
+          if (entry && Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) { browserAlive = true; break; }
         }
-        if (browserAlive) { markActivity('browser-port-alive'); return; }
+        if (browserAlive) { markActivity('browser-pid-alive'); return; }
       } catch (_) {}
       try {
         let anyRunning = false;
