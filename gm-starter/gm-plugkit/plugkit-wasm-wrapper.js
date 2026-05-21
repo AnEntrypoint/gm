@@ -381,7 +381,18 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
     if (verb === 'prd-resolve' && errData && errData.deviation_kind === 'prd-resolve-unknown-id') {
       logEvent('hook', 'deviation.prd-resolve-unknown-id', { task: taskBase, prd_id: errData.prd_id, reason: errData.error });
     }
-    logEvent('plugkit', 'orchestrator.error', { verb, task: taskBase, error: parsed && parsed.error ? String(parsed.error) : 'unknown' });
+    const reason = (parsed && (parsed.reason || parsed.error)) ||
+                   (parsed && parsed.data && (parsed.data.reason || parsed.data.error)) ||
+                   (errData && (errData.reason || errData.error)) ||
+                   (parsed && parsed.stderr) ||
+                   'unknown';
+    logEvent('plugkit', 'orchestrator.error', {
+      verb,
+      task: taskBase,
+      error: String(reason).slice(0, 500),
+      gate_denied: !!(parsed && parsed.gate_denied),
+      next_dispatch: parsed && parsed.next_dispatch || null,
+    });
     return;
   }
   const data = parsed.data || {};
@@ -847,8 +858,27 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   }
   cleanDeadProfileFragments(cwd);
   const profileDir = acquireProfileDir(cwd);
-  logEvent('plugkit', 'browser.start', { profileDir });
-  const { pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir);
+  const aliveCdpForProfile = (() => {
+    for (const key of Object.keys(ports)) {
+      const ent = ports[key];
+      if (!ent || !ent.pid || !ent.port || !ent.wsEndpoint) continue;
+      if (ent.profileDir !== profileDir && !(ent.profileDir || '').startsWith(profileDir)) continue;
+      if (!isProcessAliveSync(ent.pid)) continue;
+      const info = fetchJsonSync(`http://127.0.0.1:${ent.port}/json/version`, 1000);
+      if (info && info.webSocketDebuggerUrl) {
+        return { pid: ent.pid, port: ent.port, wsEndpoint: ent.wsEndpoint };
+      }
+    }
+    return null;
+  })();
+  let browserPid, port, wsEndpoint;
+  if (aliveCdpForProfile) {
+    ({ pid: browserPid, port, wsEndpoint } = aliveCdpForProfile);
+    logEvent('plugkit', 'browser.reused-existing-chromium', { pid: browserPid, port, profileDir });
+  } else {
+    logEvent('plugkit', 'browser.start', { profileDir });
+    ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir));
+  }
   const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000);
   if (!r || r.status !== 0) {
     const errTxt = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || 'unknown');
