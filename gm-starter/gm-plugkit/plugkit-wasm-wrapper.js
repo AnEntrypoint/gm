@@ -420,9 +420,10 @@ function writeJsonFile(fp, value) {
   try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
 }
 
-function msPlaywrightCacheRoots() {
+function bundledBrowserCacheRoots() {
   const roots = [];
-  if (process.env.PLAYWRIGHT_BROWSERS_PATH) roots.push(process.env.PLAYWRIGHT_BROWSERS_PATH);
+  const envOverride = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (envOverride) roots.push(envOverride);
   if (process.platform === 'win32') {
     if (process.env.LOCALAPPDATA) roots.push(path.join(process.env.LOCALAPPDATA, 'ms-playwright'));
   } else if (process.platform === 'darwin') {
@@ -457,7 +458,7 @@ function chromiumExeFromCacheRoot(root) {
 }
 
 function findBundledChromium() {
-  for (const root of msPlaywrightCacheRoots()) {
+  for (const root of bundledBrowserCacheRoots()) {
     const exe = chromiumExeFromCacheRoot(root);
     if (exe) return exe;
   }
@@ -465,9 +466,9 @@ function findBundledChromium() {
     const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true, windowsHide: true, timeout: 5000 });
     if (npmR.status === 0 && npmR.stdout.trim()) {
       const root = npmR.stdout.trim().split(/\r?\n/).pop();
-      const pwBrowsers = path.join(root, 'playwriter', 'node_modules', '@xmorse', 'playwright-core', '.local-browsers');
-      if (fs.existsSync(pwBrowsers)) {
-        const exe = chromiumExeFromCacheRoot(pwBrowsers);
+      const localBrowsers = path.join(root, 'playwriter', 'node_modules', '@xmorse', 'playwright-core', '.local-browsers');
+      if (fs.existsSync(localBrowsers)) {
+        const exe = chromiumExeFromCacheRoot(localBrowsers);
         if (exe) return exe;
       }
     }
@@ -478,18 +479,18 @@ function findBundledChromium() {
 function ensureBundledChromium(pw) {
   const existing = findBundledChromium();
   if (existing) return { exe: existing, installed: false };
-  const installer = pw && pw.cmd
-    ? { cmd: pw.cmd, args: [...pw.baseArgs, 'install', 'chromium'], shell: pw.shell }
-    : { cmd: 'npx', args: ['-y', 'playwright', 'install', 'chromium'], shell: true };
-  logEvent('bootstrap', 'browser.chromium-install.start', { via: installer.cmd });
+  if (!pw || !pw.cmd) {
+    return { exe: null, installed: false, error: 'playwriter not available to install browser' };
+  }
+  const installer = { cmd: pw.cmd, args: [...pw.baseArgs, 'install', 'chromium'], shell: pw.shell };
+  logEvent('bootstrap', 'browser.bundled-install.start', { via: 'playwriter' });
   const r = spawnSync(installer.cmd, installer.args, {
     encoding: 'utf-8',
     timeout: 600000,
     shell: installer.shell,
     windowsHide: true,
-    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '' },
   });
-  logEvent('bootstrap', 'browser.chromium-install.done', { status: r.status });
+  logEvent('bootstrap', 'browser.bundled-install.done', { status: r.status });
   const after = findBundledChromium();
   if (after) return { exe: after, installed: true };
   return { exe: null, installed: false, error: r.stderr || r.stdout || 'install failed' };
@@ -753,7 +754,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     if (ensured.exe) chrome = ensured.exe;
   }
   if (!chrome) chrome = findChrome();
-  if (!chrome) throw new Error('No chromium binary available. Run: npx playwright install chromium');
+  if (!chrome) throw new Error('No chromium binary available. Run: bun x playwriter@latest install chromium');
   const profileDir = acquireProfileDir(cwd);
   const port = findFreePortSync();
   const chromeArgs = [
