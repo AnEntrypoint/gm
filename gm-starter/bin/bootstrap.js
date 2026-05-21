@@ -17,6 +17,53 @@ function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
 }
 
+function ensureSkillMdCurrent(wrapperDir) {
+  try {
+    const candidates = [
+      path.join(wrapperDir, '..', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(wrapperDir, '..', '..', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(wrapperDir, '..', 'SKILL.md'),
+    ];
+    const bundledPath = candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
+    if (!bundledPath) return { skipped: 'bundled-not-found' };
+    const bundled = fs.readFileSync(bundledPath, 'utf8');
+    const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+    const home = os.homedir();
+    const targets = [
+      path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+    ];
+    const refreshed = [];
+    for (const target of targets) {
+      try {
+        let needsWrite = true;
+        if (fs.existsSync(target)) {
+          const existing = fs.readFileSync(target, 'utf8');
+          const existingHash = crypto.createHash('sha256').update(existing).digest('hex');
+          if (existingHash === bundledHash) needsWrite = false;
+        }
+        if (needsWrite) {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          const tmp = target + '.tmp';
+          fs.writeFileSync(tmp, bundled);
+          fs.renameSync(tmp, target);
+          refreshed.push(target);
+        }
+      } catch (e) {
+        obsEvent('bootstrap', 'skill-md.refresh.target-failed', { target, error: e.message });
+      }
+    }
+    if (refreshed.length > 0) {
+      log(`SKILL.md refreshed (sha=${bundledHash.slice(0, 12)}): ${refreshed.join(', ')}`);
+      obsEvent('bootstrap', 'skill-md.refreshed', { hash: bundledHash.slice(0, 12), targets: refreshed });
+    }
+    return { refreshed, bundledHash };
+  } catch (e) {
+    obsEvent('bootstrap', 'skill-md.refresh.failed', { error: e.message });
+    return { error: e.message };
+  }
+}
+
 // Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
 // shim chains re-enter conhost (visible window flash) even with
 // windowsHide:true on the parent. Spawning the real .exe directly lets
@@ -355,6 +402,7 @@ function pruneOldVersions(root, keepVersion, keepRtkVersion) {
 async function bootstrap(opts) {
   opts = opts || {};
   const wrapperDir = opts.wrapperDir || __dirname;
+  try { ensureSkillMdCurrent(wrapperDir); } catch (_) {}
   const version = opts.version || readVersionFile(wrapperDir);
   const shaManifest = readShaManifest(wrapperDir);
   const wasmName = 'plugkit.wasm';
