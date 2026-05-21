@@ -813,6 +813,55 @@ function startManagedBrowser(pw, profileDir) {
   return { pid, port, wsEndpoint };
 }
 
+function killPidQuiet(pid) {
+  if (!Number.isFinite(pid) || pid <= 0 || pid === process.pid) return false;
+  try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+  if (process.platform === 'win32') {
+    try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', timeout: 3000 }); } catch (_) {}
+  }
+  return true;
+}
+
+function purgeProfileLockFiles(profileDir) {
+  if (!profileDir) return;
+  for (const name of ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
+    try { fs.unlinkSync(path.join(profileDir, name)); } catch (_) {}
+  }
+}
+
+function sleepSyncMs(ms) {
+  if (ms <= 0) return;
+  spawnSync(process.execPath, ['-e', `setTimeout(()=>process.exit(0),${ms})`], { timeout: ms + 500, windowsHide: true });
+}
+
+function gracefulCloseBrowser(entry, reason) {
+  if (!entry) return;
+  const { pid, port, profileDir } = entry;
+  if (Number.isFinite(port) && port > 0) {
+    try {
+      const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 600);
+      if (info && info.webSocketDebuggerUrl) {
+        spawnSync(process.execPath, ['-e', `
+          const http = require('http');
+          const req = http.request({host:'127.0.0.1',port:${port},path:'/json/close/browser',method:'GET',timeout:1500},
+            res => { res.resume(); res.on('end', () => process.exit(0)); });
+          req.on('error', () => process.exit(1));
+          req.on('timeout', () => { req.destroy(); process.exit(1); });
+          req.end();
+        `], { timeout: 3000, windowsHide: true });
+      }
+    } catch (_) {}
+  }
+  if (Number.isFinite(pid) && pid > 0) {
+    const deadline = Date.now() + 1500;
+    try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+    while (Date.now() < deadline && isProcessAliveSync(pid)) sleepSyncMs(Math.min(150, deadline - Date.now()));
+    if (isProcessAliveSync(pid)) killPidQuiet(pid);
+  }
+  purgeProfileLockFiles(profileDir);
+  try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
+}
+
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   migrateLegacyBrowserState(cwd);
   const portsFile = browserPortsFile(cwd);
@@ -850,6 +899,12 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
         want_profile: wantProfile,
         reason,
       });
+      if (typeof gracefulCloseBrowser === 'function') {
+        try { gracefulCloseBrowser(existing, `collision:${reason}`); } catch (_) {}
+      } else if (pidOk && Number.isFinite(existing.pid)) {
+        try { killPidQuiet(existing.pid); } catch (_) {}
+      }
+      purgeProfileLockFiles(existing.profileDir);
       delete ports[claudeSessionId];
       delete sessions[claudeSessionId];
       try { writeJsonFile(portsFile, ports); } catch (_) {}
@@ -1596,6 +1651,7 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
+        try { lastBrowserActivityMs = Date.now(); } catch (_) {}
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
         return writeWasmJson(instanceRef.value, {
           ok: r.status === 0,
@@ -1899,14 +1955,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     lastActivityMs = Date.now();
   }
 
-  function killPidQuiet(pid) {
-    if (!Number.isFinite(pid) || pid <= 0 || pid === process.pid) return false;
-    try { process.kill(pid, 'SIGTERM'); } catch (_) {}
-    if (process.platform === 'win32') {
-      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', timeout: 3000 }); } catch (_) {}
-    }
-    return true;
-  }
+  /* killPidQuiet, purgeProfileLockFiles, gracefulCloseBrowser are module-scope (defined above spool()). */
 
   function teardownAll(reason) {
     try {
@@ -1921,7 +1970,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const sessionsFile = browserSessionsFile(process.cwd());
       const ports = readJsonFile(portsFile, {});
       for (const [sid, entry] of Object.entries(ports)) {
-        if (entry && Number.isFinite(entry.pid)) killPidQuiet(entry.pid);
+        gracefulCloseBrowser(entry, `teardown:${reason}`);
       }
       try { fs.unlinkSync(portsFile); } catch (_) {}
       try { fs.unlinkSync(sessionsFile); } catch (_) {}
@@ -1934,6 +1983,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         pid: process.pid,
         idle_ms: Date.now() - lastActivityMs,
       }));
+      __shutdownReasonWritten = true;
     } catch (_) {}
 
     try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
@@ -2013,6 +2063,32 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 10 * 60 * 1000;
+  let lastBrowserActivityMs = Date.now();
+  setInterval(() => {
+    try {
+      const browserIdleMs = Date.now() - lastBrowserActivityMs;
+      if (browserIdleMs < BROWSER_IDLE_LIMIT_MS) return;
+      const portsFile = browserPortsFile(process.cwd());
+      const sessionsFile = browserSessionsFile(process.cwd());
+      const ports = readJsonFile(portsFile, {});
+      let closed = 0;
+      for (const [sid, entry] of Object.entries(ports)) {
+        if (entry && Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) {
+          try { gracefulCloseBrowser(entry, 'browser-idle'); closed++; } catch (_) {}
+        }
+      }
+      if (closed > 0) {
+        try { fs.unlinkSync(portsFile); } catch (_) {}
+        try { fs.unlinkSync(sessionsFile); } catch (_) {}
+        logEvent('plugkit', 'browser.idle-closed', { count: closed, idle_ms: browserIdleMs });
+      }
+      lastBrowserActivityMs = Date.now();
+    } catch (e) {
+      console.error(`[browser-idle] error: ${e.message}`);
+    }
+  }, 60_000);
+
   setInterval(() => {
     try {
       const idleMs = Date.now() - lastActivityMs;
@@ -2038,20 +2114,48 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, IDLE_CHECK_MS);
 
-  function handleSignalShutdown(sig) {
+  const SHUTDOWN_REQUEST_PATH = path.join(spoolDir, '.shutdown-requested');
+  setInterval(() => {
     try {
-      fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({
-        reason: sig.toLowerCase(),
-        ts: Date.now(),
-        pid: process.pid,
-      }));
-    } catch (_) {}
-    try { clearBootActive(); } catch (_) {}
-    try { releaseLock(); } catch (_) {}
-    process.exit(0);
+      if (!fs.existsSync(SHUTDOWN_REQUEST_PATH)) return;
+      let reqReason = 'shutdown-requested';
+      try {
+        const raw = fs.readFileSync(SHUTDOWN_REQUEST_PATH, 'utf-8').trim();
+        if (raw) {
+          try { const j = JSON.parse(raw); if (j && j.reason) reqReason = String(j.reason); }
+          catch (_) { reqReason = raw.slice(0, 64); }
+        }
+      } catch (_) {}
+      try { fs.unlinkSync(SHUTDOWN_REQUEST_PATH); } catch (_) {}
+      handleSignalShutdown(reqReason.toUpperCase());
+    } catch (e) {
+      console.error(`[shutdown-request] error: ${e.message}`);
+    }
+  }, 2000);
+
+  let _signalShutdownInFlight = false;
+  function handleSignalShutdown(sig) {
+    if (_signalShutdownInFlight) return;
+    _signalShutdownInFlight = true;
+    try { teardownAll(sig.toLowerCase()); } catch (_) {
+      try {
+        fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({
+          reason: sig.toLowerCase(),
+          ts: Date.now(),
+          pid: process.pid,
+          teardown_failed: true,
+        }));
+        __shutdownReasonWritten = true;
+      } catch (__) {}
+      try { clearBootActive(); } catch (__) {}
+      try { releaseLock(); } catch (__) {}
+      process.exit(0);
+    }
   }
   process.on('SIGINT', () => handleSignalShutdown('SIGINT'));
   process.on('SIGTERM', () => handleSignalShutdown('SIGTERM'));
+  process.on('SIGBREAK', () => handleSignalShutdown('SIGBREAK'));
+  process.on('SIGHUP', () => handleSignalShutdown('SIGHUP'));
   process.on('exit', () => { try { clearBootActive(); } catch (_) {} releaseLock(); });
 
   try {
@@ -2089,8 +2193,9 @@ async function runSpoolWatcher(instance, spoolDir) {
     prior_status: _priorStatus,
     prior_status_age_ms: _priorStatus && Number.isFinite(_priorStatus.ts) ? Date.now() - _priorStatus.ts : null,
   };
-  const _PLANNED_REASONS = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'version-drift', 'external-planned']);
-  const _isPlannedBoot = _priorShutdown && _PLANNED_REASONS.has(_priorShutdown.reason);
+  const _UNPLANNED_REASONS = new Set(['uncaughtexception', 'unhandledrejection', 'wasm-abort', 'wasm-abort-graceful']);
+  const _normalizedShutdownReason = _priorShutdown && _priorShutdown.reason ? String(_priorShutdown.reason).toLowerCase() : null;
+  const _isPlannedBoot = !!_normalizedShutdownReason && !_UNPLANNED_REASONS.has(_normalizedShutdownReason);
   const _isFirstBoot = !_priorShutdown && !_priorStatus;
   const UNPLANNED_RESTART_MARKER = path.join(spoolDir, '.unplanned-restart.json');
   const HEARTBEAT_RECENT_MS = 60_000;
@@ -2131,7 +2236,11 @@ async function runSpoolWatcher(instance, spoolDir) {
         history,
       }, null, 2));
     } catch (_) {}
-    console.error(`[plugkit-wasm] UNPLANNED RESTART detected — prior watcher died without writing .shutdown-reason.json. prior_status_age_ms=${restartContext.prior_status_age_ms} boot_reason=${_bootReason}`);
+    if (_isPlannedBoot) {
+      console.log(`[plugkit-wasm] planned restart: prior reason="${_priorShutdown.reason}" boot_reason=${_bootReason}`);
+    } else {
+      console.error(`[plugkit-wasm] UNPLANNED RESTART detected — prior watcher died without writing .shutdown-reason.json. prior_status_age_ms=${restartContext.prior_status_age_ms} boot_reason=${_bootReason}`);
+    }
   }
   try { fs.unlinkSync(SHUTDOWN_REASON_PATH); } catch (_) {}
   logEvent('plugkit', 'watcher.boot', { version: _bootVersion, in_dir: inDir, out_dir: outDir, spool_dir: spoolDir, ...restartContext });
