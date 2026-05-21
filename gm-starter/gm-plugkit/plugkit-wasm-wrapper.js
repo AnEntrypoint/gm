@@ -27,11 +27,20 @@ const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status',
 const TURN_IDLE_MS = 30_000;
 const _turns = new Map();
 
+let __shutdownReasonWritten = false;
+let __currentVerbContext = null;
+
+function spoolDirForSentinel() {
+  return process.env.CLAUDE_PROJECT_DIR
+    ? path.join(process.env.CLAUDE_PROJECT_DIR, '.gm', 'exec-spool')
+    : path.join(process.cwd(), '.gm', 'exec-spool');
+}
+
 function emitShutdownReason(reason, err) {
+  if (__shutdownReasonWritten) return;
+  __shutdownReasonWritten = true;
   try {
-    const spoolDir = process.env.CLAUDE_PROJECT_DIR
-      ? path.join(process.env.CLAUDE_PROJECT_DIR, '.gm', 'exec-spool')
-      : path.join(process.cwd(), '.gm', 'exec-spool');
+    const spoolDir = spoolDirForSentinel();
     fs.mkdirSync(spoolDir, { recursive: true });
     const body = {
       reason,
@@ -40,10 +49,26 @@ function emitShutdownReason(reason, err) {
       message: err && (err.message || String(err)),
       stack: err && err.stack ? String(err.stack).slice(0, 4000) : null,
       version: typeof PLUGKIT_VERSION !== 'undefined' ? PLUGKIT_VERSION : null,
+      verb_in_flight: __currentVerbContext,
     };
     fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify(body, null, 2));
     try { fs.unlinkSync(path.join(spoolDir, '.boot-active.json')); } catch (_) {}
+    try { fs.unlinkSync(path.join(spoolDir, '.verb-active.json')); } catch (_) {}
   } catch (_) {}
+}
+
+function writeVerbActive(verb, task) {
+  __currentVerbContext = { verb, task, started_at_ms: Date.now(), pid: process.pid };
+  try {
+    const spoolDir = spoolDirForSentinel();
+    fs.mkdirSync(spoolDir, { recursive: true });
+    fs.writeFileSync(path.join(spoolDir, '.verb-active.json'), JSON.stringify(__currentVerbContext));
+  } catch (_) {}
+}
+
+function clearVerbActive() {
+  __currentVerbContext = null;
+  try { fs.unlinkSync(path.join(spoolDirForSentinel(), '.verb-active.json')); } catch (_) {}
 }
 
 process.on('uncaughtException', (err) => {
@@ -56,6 +81,22 @@ process.on('unhandledRejection', (reason) => {
   try { console.error('[plugkit-wasm] unhandled rejection:', reason && reason.stack || reason); } catch (_) {}
   emitShutdownReason('unhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
   process.exit(1);
+});
+
+process.on('exit', (code) => {
+  if (__shutdownReasonWritten) return;
+  try {
+    const spoolDir = spoolDirForSentinel();
+    fs.mkdirSync(spoolDir, { recursive: true });
+    fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
+      reason: 'process-exit',
+      exit_code: code,
+      ts: Date.now(),
+      pid: process.pid,
+      verb_in_flight: __currentVerbContext,
+    }, null, 2));
+    __shutdownReasonWritten = true;
+  } catch (_) {}
 });
 
 function applyDisciplineSigil(rawBody) {
@@ -1556,7 +1597,32 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(refreshLock, 5000);
 
   const BOOT_ACTIVE_PATH = path.join(spoolDir, '.boot-active.json');
+  const VERB_ACTIVE_PATH = path.join(spoolDir, '.verb-active.json');
+  const STATUS_PATH_FOR_VERB_ABORT = path.join(spoolDir, '.status.json');
   const SHUTDOWN_REASON_PATH_EARLY = path.join(spoolDir, '.shutdown-reason.json');
+  try {
+    let priorVerb = null;
+    let priorStatusForVerb = null;
+    try { priorVerb = JSON.parse(fs.readFileSync(VERB_ACTIVE_PATH, 'utf-8')); } catch (_) {}
+    try { priorStatusForVerb = JSON.parse(fs.readFileSync(STATUS_PATH_FOR_VERB_ABORT, 'utf-8')); } catch (_) {}
+    if (priorVerb && priorVerb.pid && priorVerb.pid !== process.pid) {
+      const statusAge = priorStatusForVerb && Number.isFinite(priorStatusForVerb.ts) ? Date.now() - priorStatusForVerb.ts : null;
+      const statusFresh = statusAge !== null && statusAge < 30_000;
+      if (!statusFresh) {
+        logEvent('plugkit', 'watcher.verb-abort', {
+          prior_pid: priorVerb.pid,
+          verb: priorVerb.verb,
+          task: priorVerb.task,
+          started_at_ms: priorVerb.started_at_ms,
+          dur_ms_at_death: priorVerb.started_at_ms ? Date.now() - priorVerb.started_at_ms : null,
+          status_age_ms: statusAge,
+          detected_at: Date.now(),
+        });
+        try { console.error(`[plugkit-wasm] VERB ABORT detected: prior watcher pid=${priorVerb.pid} died inside verb=${priorVerb.verb} task=${priorVerb.task}`); } catch (_) {}
+      }
+      try { fs.unlinkSync(VERB_ACTIVE_PATH); } catch (_) {}
+    }
+  } catch (_) {}
   try {
     let priorBoot = null;
     let priorShutdownForAbort = null;
@@ -1693,6 +1759,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
     try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
     try { clearBootActive(); } catch (_) {}
+    try { clearVerbActive(); } catch (_) {}
     try { releaseLock(); } catch (_) {}
     process.exit(0);
   }
@@ -1949,7 +2016,9 @@ async function runSpoolWatcher(instance, spoolDir) {
       new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
       new Uint8Array(instance.exports.memory.buffer, bodyPtr, bodyBytes.length).set(bodyBytes);
 
+      writeVerbActive(verb, taskBase);
       const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
+      clearVerbActive();
 
       const ptr = Number(result & 0xffffffffn);
       const len = Number(result >> 32n);
@@ -1996,6 +2065,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);
     } catch (e) {
+      try { clearVerbActive(); } catch (_) {}
       console.error(`[plugkit-wasm] error processing ${key}: ${e.message}`);
       const taskBase = path.basename(filePath, path.extname(filePath));
       const relPath = path.relative(inDir, filePath);
