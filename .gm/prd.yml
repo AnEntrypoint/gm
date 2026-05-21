@@ -996,3 +996,9 @@
   effort: small
   id: item-1779360479229
   status: completed
+- subject: Remove host-side embedding (ONNX/worker thread) — keep all inference in wasm
+  description: 'User constraint: everything must be encapsulated in the rust setup. Move-out to host is forbidden. Delete ~/.gm-tools/host-embed.js, ~/.gm-tools/host-embed-worker.js, the dynamic-import + globalThis.__hostEmbedSync wiring in plugkit-wasm-wrapper.js. The host_vec_embed import STAYS as a no-op stub returning -1 (harmless; the wasm probe falls back to legacy in-wasm BertModel load). The crash that motivated host delegation (F16/F32 + OOM at init_ctx) must be fixed IN RUST (rs-plugkit/rs-learn), not by outsourcing to Node. Smaller model, quantization, or simpler load path are acceptable in-wasm solutions; ONNX runtime in Node is not.'
+  category: refactor
+  effort: medium
+  id: item-1779361155997
+  status: completed
