@@ -709,7 +709,9 @@ function findInstalledChromiumBinary() {
 }
 
 function startManagedBrowser(pw, profileDir) {
-  const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir, '--headless'];
+  const headless = process.env.GM_BROWSER_HEADLESS === '1';
+  const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir];
+  if (headless) args.push('--headless');
   const env = { ...process.env };
   if (!env.GM_BROWSER_RUNNER_PATH && !env.PLAYWRITER_BROWSER_PATH) {
     const browserBin = findInstalledChromiumBinary();

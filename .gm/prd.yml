@@ -936,3 +936,9 @@
 - text: 'Iter29 five-subagent fan-out closed: rs-exec ec2dccc, rs-learn f2cf908+de0faaf, rs-codeinsight 4371395, rs-search e5f4753, rs-plugkit d70a1ef, gm e1b6c175. Instruction-abort fix is purely diagnostic — next reproduction will pinpoint boundary via host_log breadcrumbs + per-verb sentinel + .verb-active.json death postcard.'
   id: item-1779329847709
   status: completed
+- subject: Browser tooling launches in headed mode so user can always see the window
+  description: 'User constraint: the browser the agent spawns via the browser verb must be HEADED, never headless. Current launch path startManagedBrowser in plugkit-wasm-wrapper.js — verify the args don''t include --headless or that the runner CLI defaults visible. If headed flag is configurable, force it. If a env var controls it (GM_BROWSER_HEADLESS) make sure default is false. Witness via launching browser through the verb and confirming window visibility.'
+  category: feature
+  effort: small
+  id: item-1779358200584
+  status: pending
