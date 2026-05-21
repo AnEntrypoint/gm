@@ -461,15 +461,17 @@ function writeJsonFile(fp, value) {
   try { fs.writeFileSync(fp, JSON.stringify(value, null, 2)); } catch (_) {}
 }
 
-function findPlaywriter() {
+const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
+
+function findBrowserRunner() {
   const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true });
   if (npmR.status === 0 && npmR.stdout.trim()) {
     const root = npmR.stdout.trim().split(/\r?\n/).pop();
-    const binJs = path.join(root, 'playwriter', 'bin.js');
+    const binJs = path.join(root, BROWSER_RUNNER_BIN, 'bin.js');
     if (fs.existsSync(binJs)) return { cmd: process.execPath, baseArgs: [binJs], shell: false };
   }
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-  const r = spawnSync(whichCmd, ['playwriter'], { encoding: 'utf-8', shell: true });
+  const r = spawnSync(whichCmd, [BROWSER_RUNNER_BIN], { encoding: 'utf-8', shell: true });
   if (r.status === 0 && r.stdout.trim()) {
     const candidates = r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const cmd = candidates.find(c => c.toLowerCase().endsWith('.cmd')) || candidates.find(c => !c.toLowerCase().endsWith('.ps1')) || candidates[0];
@@ -477,11 +479,11 @@ function findPlaywriter() {
   }
   const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
   if (bunR.status === 0 && bunR.stdout.trim()) {
-    return { cmd: 'bun', baseArgs: ['x', 'playwriter@latest'], shell: true };
+    return { cmd: 'bun', baseArgs: ['x', `${BROWSER_RUNNER_BIN}@latest`], shell: true };
   }
   const npxR = spawnSync(whichCmd, ['npx'], { encoding: 'utf-8', shell: true });
   if (npxR.status === 0 && npxR.stdout.trim()) {
-    return { cmd: 'npx', baseArgs: ['-y', 'playwriter'], shell: true };
+    return { cmd: 'npx', baseArgs: ['-y', BROWSER_RUNNER_BIN], shell: true };
   }
   return null;
 }
@@ -637,7 +639,7 @@ function sleepSync(ms) {
   spawnSync(process.execPath, ['-e', `setTimeout(()=>{}, ${ms})`], { timeout: ms + 2000 });
 }
 
-function runPlaywriter(pw, args, timeoutMs) {
+function runBrowserRunner(pw, args, timeoutMs) {
   const allArgs = [...pw.baseArgs, ...args];
   const useShell = !!pw.shell;
   const spawnCmd = useShell && /\s/.test(pw.cmd) ? `"${pw.cmd}"` : pw.cmd;
@@ -654,7 +656,7 @@ function runPlaywriter(pw, args, timeoutMs) {
 function scrubBrowserRunnerText(s) {
   if (!s || typeof s !== 'string') return s;
   let t = s;
-  t = t.replace(/(^|[^A-Za-z0-9_\\/.-])playwriter(?![A-Za-z0-9_\\/.-])/gi, (m, pre) => `${pre}managed browser session`);
+  t = t.replace(/(^|[^A-Za-z0-9_\\/.-])(playwriter|playwright|puppeteer)(?![A-Za-z0-9_\\/.-])/gi, (m, pre) => `${pre}managed browser session`);
   t = t.replace(/Click the[^.\n]*?extension[^.\n]*?icon[^.\n]*?\.?/gi, '');
   t = t.replace(/(connected\s+)?browser\s+extension(\s+is)?\s+not\s+connected\b[^.\n]*\.?/gi, '');
   t = t.replace(/no\s+connected\s+browsers?\b[^.\n]*\.?/gi, '');
@@ -664,18 +666,20 @@ function scrubBrowserRunnerText(s) {
 
 function findInstalledChromiumBinary() {
   try {
-    if (process.env.PLAYWRITER_BROWSER_PATH && fs.existsSync(process.env.PLAYWRITER_BROWSER_PATH)) {
-      return process.env.PLAYWRITER_BROWSER_PATH;
+    const explicit = process.env.GM_BROWSER_RUNNER_PATH || process.env.PLAYWRITER_BROWSER_PATH;
+    if (explicit && fs.existsSync(explicit)) {
+      return explicit;
     }
     const roots = [];
+    const cacheDir = process.env.GM_BROWSER_RUNNER_CACHE_DIR || 'ms-playwright';
     if (process.platform === 'win32') {
       const lad = process.env.LOCALAPPDATA;
-      if (lad) roots.push(path.join(lad, 'ms-playwright'));
+      if (lad) roots.push(path.join(lad, cacheDir));
     } else {
       const home = process.env.HOME || '';
       if (home) {
-        roots.push(path.join(home, '.cache', 'ms-playwright'));
-        roots.push(path.join(home, 'Library', 'Caches', 'ms-playwright'));
+        roots.push(path.join(home, '.cache', cacheDir));
+        roots.push(path.join(home, 'Library', 'Caches', cacheDir));
       }
     }
     const exeName = process.platform === 'win32' ? 'chrome.exe' : (process.platform === 'darwin' ? 'Chromium.app/Contents/MacOS/Chromium' : 'chrome');
@@ -707,9 +711,10 @@ function findInstalledChromiumBinary() {
 function startManagedBrowser(pw, profileDir) {
   const args = [...pw.baseArgs, 'browser', 'start', '--user-data-dir', profileDir, '--headless'];
   const env = { ...process.env };
-  if (!env.PLAYWRITER_BROWSER_PATH) {
+  if (!env.GM_BROWSER_RUNNER_PATH && !env.PLAYWRITER_BROWSER_PATH) {
     const browserBin = findInstalledChromiumBinary();
     if (browserBin) {
+      env.GM_BROWSER_RUNNER_PATH = browserBin;
       env.PLAYWRITER_BROWSER_PATH = browserBin;
       logEvent('plugkit', 'browser.binary-resolved', { path: browserBin });
     } else {
@@ -742,24 +747,24 @@ function isColdRunProfile(profileDir) {
 }
 
 function resolveManagedBrowserKey(pw) {
-  if (process.env.PLAYWRITER_BROWSER_KEY) {
-    const k = process.env.PLAYWRITER_BROWSER_KEY;
-    if (/^profile:/.test(k)) {
-      throw new Error(`PLAYWRITER_BROWSER_KEY=${k} points at a user OS browser profile; refusing — managed sessions must use install:Chromium:*`);
+  const explicitKey = process.env.GM_BROWSER_RUNNER_KEY || process.env.PLAYWRITER_BROWSER_KEY;
+  if (explicitKey) {
+    if (/^profile:/.test(explicitKey)) {
+      throw new Error(`GM_BROWSER_RUNNER_KEY=${explicitKey} points at a user OS browser profile; refusing — managed sessions must use install:Chromium:*`);
     }
-    return k;
+    return explicitKey;
   }
   let text = '';
   try {
-    const r = runPlaywriter(pw, ['browser', 'list'], 8000);
+    const r = runBrowserRunner(pw, ['browser', 'list'], 8000);
     text = (r && (r.stdout || r.stderr)) || '';
   } catch (e) {
-    throw new Error(`playwriter browser list failed: ${e.message}`);
+    throw new Error(`managed browser session list failed: ${e.message}`);
   }
   const lines = text.split(/\r?\n/);
   const installChromium = lines.map(l => (l.match(/\b(install:Chromium:[A-Za-z0-9_-]+)\b/) || [])[1]).find(Boolean);
   if (installChromium) return installChromium;
-  throw new Error(`no managed Chromium install detected; playwriter browser list returned: ${scrubBrowserRunnerText(text).trim()}`);
+  throw new Error(`no managed Chromium install detected; browser runner returned: ${scrubBrowserRunnerText(text).trim()}`);
 }
 
 function waitForExtensionReady(pw, profileDir, opts) {
@@ -775,7 +780,7 @@ function waitForExtensionReady(pw, profileDir, opts) {
   while (Date.now() < deadline) {
     const remaining = deadline - Date.now();
     const innerTimeout = Math.max(28000, Math.min(remaining, 30000));
-    const r = runPlaywriter(pw, ['session', 'new', '--browser', browserKey], innerTimeout);
+    const r = runBrowserRunner(pw, ['session', 'new', '--browser', browserKey], innerTimeout);
     if (r && r.status === 0) return r;
     lastErr = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || '');
     const now = Date.now();
@@ -1461,11 +1466,11 @@ function makeHostFunctions(instanceRef) {
         const body = readWasmStr(instanceRef.value, bodyPtr, bodyLen);
         const cwd = readWasmStr(instanceRef.value, cwdPtr, cwdLen) || process.cwd();
         const sessionId = readWasmStr(instanceRef.value, sidPtr, sidLen) || 'default';
-        const pw = findPlaywriter();
+        const pw = findBrowserRunner();
         if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'managed browser session runner not available' });
         if (body.startsWith('session ')) {
           const parts = body.slice(8).trim().split(/\s+/);
-          const r = runPlaywriter(pw, ['session', ...parts], 30000);
+          const r = runBrowserRunner(pw, ['session', ...parts], 30000);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
             stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1474,7 +1479,7 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
-        const r = runPlaywriter(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
+        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
         return writeWasmJson(instanceRef.value, {
           ok: r.status === 0,
           stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1659,7 +1664,13 @@ async function runSpoolWatcher(instance, spoolDir) {
       const ageMs = Date.now() - priorBoot.ts;
       const shutdownIsNewer = priorShutdownForAbort && Number.isFinite(priorShutdownForAbort.ts) && priorShutdownForAbort.ts >= priorBoot.ts;
       if (ageMs > 30_000 && !shutdownIsNewer) {
-        logEvent('plugkit', 'watcher.silent-abort', {
+        let priorVerbSnap = null;
+        let priorStatusSnap = null;
+        let priorPidAlive = null;
+        try { priorVerbSnap = JSON.parse(fs.readFileSync(VERB_ACTIVE_PATH, 'utf-8')); } catch (_) {}
+        try { priorStatusSnap = JSON.parse(fs.readFileSync(path.join(path.dirname(BOOT_ACTIVE_PATH), '.status.json'), 'utf-8')); } catch (_) {}
+        try { process.kill(priorBoot.pid, 0); priorPidAlive = true; } catch (e) { priorPidAlive = e.code === 'EPERM'; }
+        const forensics = {
           prior_pid: priorBoot.pid,
           prior_ts: priorBoot.ts,
           prior_sha: priorBoot.wrapper_sha || null,
@@ -1668,8 +1679,15 @@ async function runSpoolWatcher(instance, spoolDir) {
           age_ms: ageMs,
           shutdown_reason_present: !!priorShutdownForAbort,
           shutdown_reason_ts: priorShutdownForAbort ? priorShutdownForAbort.ts : null,
-        });
-        try { console.error(`[plugkit-wasm] SILENT ABORT detected: prior watcher pid=${priorBoot.pid} sha=${priorBoot.wrapper_sha} died without writing .shutdown-reason.json (age=${ageMs}ms)`); } catch (_) {}
+          prior_verb_active: priorVerbSnap,
+          prior_status: priorStatusSnap,
+          prior_pid_alive: priorPidAlive,
+        };
+        logEvent('plugkit', 'watcher.silent-abort', forensics);
+        try {
+          fs.writeFileSync(path.join(path.dirname(BOOT_ACTIVE_PATH), '.silent-abort-forensics.json'), JSON.stringify(forensics, null, 2));
+        } catch (_) {}
+        try { console.error(`[plugkit-wasm] SILENT ABORT detected: prior watcher pid=${priorBoot.pid} sha=${priorBoot.wrapper_sha} died without writing .shutdown-reason.json (age=${ageMs}ms, prior_pid_alive=${priorPidAlive})`); } catch (_) {}
       }
     }
   } catch (_) {}

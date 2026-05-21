@@ -120,7 +120,7 @@ class SkillAdapter extends PlatformAdapter {
       bugs: { url: 'https://github.com/AnEntrypoint/gm-skill/issues' },
       repository: { type: 'git', url: 'https://github.com/AnEntrypoint/gm-skill.git' },
       main: 'bin/bootstrap.js',
-      bin: { 'gm-skill-bootstrap': './bin/bootstrap.js' },
+      bin: { 'gm-skill-bootstrap': './bin/bootstrap.js', 'gmsniff': './bin/gmsniff.js', 'ccsniff': './bin/ccsniff.js' },
       files: [
         'skills/',
         'agents/',

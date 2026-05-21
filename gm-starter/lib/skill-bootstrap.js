@@ -10,6 +10,7 @@ const PLUGKIT_TOOLS_DIR = path.join(os.homedir(), '.claude', 'gm-tools');
 const PLUGKIT_VERSION_FILE = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.version');
 const PLUGKIT_WASM_PATH = path.join(PLUGKIT_TOOLS_DIR, 'plugkit.wasm');
 const PLUGKIT_WASM_WRAPPER = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-wasm-wrapper.js');
+const PLUGKIT_SUPERVISOR = path.join(PLUGKIT_TOOLS_DIR, 'plugkit-supervisor.js');
 const BOOTSTRAP_STATUS_FILE = path.join(os.homedir(), '.gm', 'bootstrap-status.json');
 const BOOTSTRAP_ERROR_FILE = path.join(os.homedir(), '.gm', 'bootstrap-error.json');
 const LOG_DIR = path.join(os.homedir(), '.claude', 'gm-log');
@@ -385,12 +386,28 @@ function findPlugkitWasmPids() {
 }
 
 function isProcessRunning() {
-  return findPlugkitWasmPids().length > 0;
+  if (findPlugkitWasmPids().length > 0) return true;
+  try {
+    const supervisorPidFile = path.join(process.cwd(), '.gm', 'exec-spool', '.supervisor.pid');
+    if (!fs.existsSync(supervisorPidFile)) return false;
+    const pid = parseInt(fs.readFileSync(supervisorPidFile, 'utf8').trim(), 10);
+    if (!Number.isFinite(pid) || pid <= 0) return false;
+    try { process.kill(pid, 0); return true; } catch (_) { return false; }
+  } catch (_) { return false; }
 }
 
 function killExistingPlugkit() {
   try {
     const pids = findPlugkitWasmPids();
+    try {
+      const supervisorPidFile = path.join(process.cwd(), '.gm', 'exec-spool', '.supervisor.pid');
+      if (fs.existsSync(supervisorPidFile)) {
+        const sp = parseInt(fs.readFileSync(supervisorPidFile, 'utf8').trim(), 10);
+        if (Number.isFinite(sp) && sp > 0) {
+          try { process.kill(sp, 0); pids.unshift(String(sp)); } catch (_) {}
+        }
+      }
+    } catch (_) {}
     if (pids.length === 0) {
       emitBootstrapEvent('info', 'No existing plugkit WASM watcher to kill');
       return;
@@ -477,9 +494,51 @@ function openWatcherLog(projectDir) {
   return fd;
 }
 
+function ensureSupervisorInstalled() {
+  try {
+    const src = resolveFromCandidates([
+      path.join(__dirname, '..', 'bin', 'plugkit-supervisor.js'),
+      path.join(__dirname, '..', '..', 'bin', 'plugkit-supervisor.js'),
+    ], 'gm-skill/bin/plugkit-supervisor.js');
+    if (!src || !fs.existsSync(src)) {
+      emitBootstrapEvent('warn', 'bundled plugkit-supervisor.js not found; supervisor unavailable');
+      return null;
+    }
+    fs.mkdirSync(PLUGKIT_TOOLS_DIR, { recursive: true });
+    let needsWrite = true;
+    if (fs.existsSync(PLUGKIT_SUPERVISOR)) {
+      try {
+        const a = crypto.createHash('sha256').update(fs.readFileSync(src)).digest('hex');
+        const b = crypto.createHash('sha256').update(fs.readFileSync(PLUGKIT_SUPERVISOR)).digest('hex');
+        if (a === b) needsWrite = false;
+      } catch (_) {}
+    }
+    if (needsWrite) {
+      const tmp = PLUGKIT_SUPERVISOR + '.tmp';
+      fs.copyFileSync(src, tmp);
+      fs.renameSync(tmp, PLUGKIT_SUPERVISOR);
+      emitBootstrapEvent('info', 'plugkit-supervisor.js installed', { target: PLUGKIT_SUPERVISOR });
+    }
+    return PLUGKIT_SUPERVISOR;
+  } catch (e) {
+    emitBootstrapEvent('warn', 'ensureSupervisorInstalled failed', { error: e.message });
+    return null;
+  }
+}
+
+function findSupervisorPid() {
+  try {
+    const supervisorPidFile = path.join(process.cwd(), '.gm', 'exec-spool', '.supervisor.pid');
+    if (!fs.existsSync(supervisorPidFile)) return null;
+    const pid = parseInt(fs.readFileSync(supervisorPidFile, 'utf8').trim(), 10);
+    if (!Number.isFinite(pid) || pid <= 0) return null;
+    try { process.kill(pid, 0); return pid; } catch (_) { return null; }
+  } catch (_) { return null; }
+}
+
 async function spawnPlugkitWatcher(wasmPath) {
   try {
-    emitBootstrapEvent('info', 'Spawning plugkit WASM watcher daemon');
+    emitBootstrapEvent('info', 'Spawning plugkit supervisor');
 
     let wrapperPath;
     try {
@@ -494,16 +553,37 @@ async function spawnPlugkitWatcher(wasmPath) {
       throw new Error(`WASM wrapper not found at ${wrapperPath}`);
     }
 
+    const supervisorPath = ensureSupervisorInstalled();
     const projectDir = process.cwd();
-    const logFd = openWatcherLog(projectDir);
 
-    const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
-    // CREATE_NO_WINDOW (0x08000000) | DETACHED_PROCESS (0x00000008) —
-    // inherited by all descendants so bun.exe → spool watcher → any
-    // downstream spawn never allocates a console window. Without this,
-    // windowsHide:true only hides the immediate bun.exe child while
-    // .cmd shims it later spawns each pop their own conhost.
-    const proc = spawn(runtime, [wrapperPath, 'spool'], {
+    const existingSupervisor = findSupervisorPid();
+    if (existingSupervisor) {
+      emitBootstrapEvent('info', 'Plugkit supervisor already running', { pid: existingSupervisor });
+      return existingSupervisor;
+    }
+
+    if (!supervisorPath) {
+      emitBootstrapEvent('warn', 'falling back to direct watcher spawn (no supervisor)');
+      const logFd = openWatcherLog(projectDir);
+      const runtime = process.platform === 'win32' ? 'bun.exe' : 'bun';
+      const proc = spawn(runtime, [wrapperPath, 'spool'], {
+        detached: true,
+        stdio: ['ignore', logFd, logFd],
+        windowsHide: true,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+        ...(process.platform === 'win32' ? { creationFlags: 0x08000000 | 0x00000008 } : {}),
+      });
+      try { fs.closeSync(logFd); } catch (_) {}
+      const pid = proc.pid;
+      proc.unref();
+      emitBootstrapEvent('info', 'Plugkit watcher spawned (unsupervised)', { pid });
+      return pid;
+    }
+
+    const logFd = openWatcherLog(projectDir);
+    try { fs.writeSync(logFd, `\n--- supervisor spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
+
+    const proc = spawn(process.execPath, [supervisorPath], {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
@@ -516,12 +596,51 @@ async function spawnPlugkitWatcher(wasmPath) {
     const pid = proc.pid;
     proc.unref();
 
-    emitBootstrapEvent('info', 'Plugkit WASM watcher spawned', { pid, logPath: path.join(projectDir, '.gm', 'exec-spool', '.watcher.log') });
+    emitBootstrapEvent('info', 'Plugkit supervisor spawned', { pid, supervisor: supervisorPath, logPath: path.join(projectDir, '.gm', 'exec-spool', '.watcher.log') });
     return pid;
   } catch (e) {
-    emitBootstrapEvent('error', 'Failed to spawn plugkit WASM watcher', { error: e.message });
+    emitBootstrapEvent('error', 'Failed to spawn plugkit supervisor', { error: e.message });
     throw e;
   }
+}
+
+function ensureNextStepWiring(cwd) {
+  const gmDir = path.join(cwd, '.gm');
+  try { fs.mkdirSync(gmDir, { recursive: true }); } catch (_) {}
+
+  const nextStepPath = path.join(gmDir, 'next-step.md');
+  const nextStepBody = '# Next step\n\nDispatch the `instruction` verb to plugkit by writing `.gm/exec-spool/in/instruction/<N>.txt` (any unique N) with body `{}` (or `{"prompt":"<user request>"}` on the first dispatch of the turn). Read the response from `.gm/exec-spool/out/<N>.json` and follow the imperative in the `instruction` field.\n\nThis file is auto-rewritten by plugkit on every instruction dispatch.\n';
+  try {
+    if (!fs.existsSync(nextStepPath)) {
+      fs.writeFileSync(nextStepPath, nextStepBody);
+      emitBootstrapEvent('info', 'Seeded .gm/next-step.md', { path: nextStepPath });
+    }
+  } catch (e) {
+    emitBootstrapEvent('warn', 'Failed to seed .gm/next-step.md', { error: e.message });
+  }
+
+  const claudeMdPath = path.join(cwd, 'CLAUDE.md');
+  try {
+    if (!fs.existsSync(claudeMdPath)) {
+      fs.writeFileSync(claudeMdPath, '@AGENTS.md\n');
+    } else {
+      const cur = fs.readFileSync(claudeMdPath, 'utf8');
+      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@AGENTS.md');
+      if (!hasLine) fs.writeFileSync(claudeMdPath, '@AGENTS.md\n' + cur);
+    }
+  } catch (_) {}
+
+  const agentsMdPath = path.join(cwd, 'AGENTS.md');
+  try {
+    if (fs.existsSync(agentsMdPath)) {
+      const cur = fs.readFileSync(agentsMdPath, 'utf8');
+      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@.gm/next-step.md');
+      if (!hasLine) {
+        const sep = cur.endsWith('\n') ? '' : '\n';
+        fs.writeFileSync(agentsMdPath, cur + sep + '\n@.gm/next-step.md\n');
+      }
+    }
+  } catch (_) {}
 }
 
 async function bootstrapPlugkit(sessionId, options) {
@@ -534,6 +653,7 @@ async function bootstrapPlugkit(sessionId, options) {
 
     writeSessionSidecar(sessionId);
     ensureBuildToolIgnores(process.cwd());
+    ensureNextStepWiring(process.cwd());
     ensureSkillMdCurrent();
 
     const manifest = readManifest();

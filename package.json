@@ -4,7 +4,9 @@
   "description": "Unified multi-plugin builder for gm plugins across Claude Code, Gemini CLI, and OpenCode",
   "main": "cli.js",
   "bin": {
-    "gm-builder": "./cli.js"
+    "gm-builder": "./cli.js",
+    "gmsniff": "./bin/gmsniff.js",
+    "ccsniff": "./bin/ccsniff.js"
   },
   "scripts": {
     "build": "node cli.js gm-starter ./build",
