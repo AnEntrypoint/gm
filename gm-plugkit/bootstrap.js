@@ -661,6 +661,65 @@ function ensureWrapperFresh() {
   } catch (_) { return false; }
 }
 
+function ensureSkillMdFresh() {
+  try {
+    const candidates = [
+      path.join(__dirname, '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(__dirname, '..', '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(__dirname, '..', 'skills', 'gm-skill', 'SKILL.md'),
+    ];
+    const bundledPath = candidates.find(p => {
+      try { return fs.existsSync(p); } catch (_) { return false; }
+    });
+    if (!bundledPath) {
+      try {
+        obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { searched: candidates });
+      } catch (_) {}
+      return { skipped: 'bundled-not-found' };
+    }
+    const bundled = fs.readFileSync(bundledPath, 'utf-8');
+    const crypto = require('crypto');
+    const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+    const home = process.env.HOME || process.env.USERPROFILE || require('os').homedir();
+    const targets = [
+      path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+    ];
+    const refreshed = [];
+    for (const target of targets) {
+      try {
+        let needsWrite = true;
+        if (fs.existsSync(target)) {
+          const existing = fs.readFileSync(target, 'utf-8');
+          const existingHash = crypto.createHash('sha256').update(existing).digest('hex');
+          if (existingHash === bundledHash) needsWrite = false;
+        }
+        if (needsWrite) {
+          fs.mkdirSync(path.dirname(target), { recursive: true });
+          const tmp = target + '.tmp';
+          fs.writeFileSync(tmp, bundled);
+          fs.renameSync(tmp, target);
+          refreshed.push(target);
+        }
+      } catch (e) {
+        try {
+          obsEvent('bootstrap', 'skill-md.refresh.target-failed', { target, error: e.message });
+        } catch (_) {}
+      }
+    }
+    if (refreshed.length > 0) {
+      log(`SKILL.md refreshed (sha=${bundledHash.slice(0, 12)}): ${refreshed.length} target(s)`);
+      try {
+        obsEvent('bootstrap', 'skill-md.refreshed', { hash: bundledHash.slice(0, 12), targets: refreshed, source: bundledPath });
+      } catch (_) {}
+    }
+    return { refreshed, bundledHash, source: bundledPath };
+  } catch (e) {
+    try { obsEvent('bootstrap', 'skill-md.refresh.failed', { error: e.message }); } catch (_) {}
+    return { error: e.message };
+  }
+}
+
 function installedVersionAtTools() {
   try {
     const p = path.join(gmToolsDir(), 'plugkit.version');
@@ -704,6 +763,7 @@ async function ensureReady(opts) {
   if (isReady() && !versionDrift) {
     const wasmPath = getWasmPath();
     const wrapperUpdated = ensureWrapperFresh();
+    ensureSkillMdFresh();
     return { ok: true, wasmPath, binaryPath: wasmPath, status: wrapperUpdated ? 'wrapper-refreshed' : 'already-ready', version: installed };
   }
   if (versionDrift) {
@@ -720,6 +780,7 @@ async function ensureReady(opts) {
 
   const wasmPath = await bootstrap();
   ensureWrapperFresh();
+  ensureSkillMdFresh();
   return { ok: true, wasmPath, binaryPath: wasmPath, status: 'bootstrapped', version: targetVersion || installed };
 }
 
