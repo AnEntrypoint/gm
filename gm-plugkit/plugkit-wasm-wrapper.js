@@ -2458,10 +2458,19 @@ async function runSpoolWatcher(instance, spoolDir) {
   const STATUS_PATH = path.join(spoolDir, '.status.json');
   function writeStatus() {
     try {
+      const fileV = readFileVersionOnly() || null;
+      const instV = _instanceVersionAtBoot || null;
+      const version = instV || fileV;
+      const drifted = !!(fileV && instV && fileV !== instV);
       fs.writeFileSync(STATUS_PATH, JSON.stringify({
         pid: process.pid,
         ts: Date.now(),
-        version: resolveVersion(instance),
+        version,
+        instance_version: instV,
+        file_version: fileV,
+        version_drifted: drifted,
+        boot_reason: _bootReason,
+        supervisor_pid: _supervisorPid,
         wrapper_sha: _ownWrapperSha12 || null,
         idle_limit_ms: IDLE_LIMIT_MS,
       }));
