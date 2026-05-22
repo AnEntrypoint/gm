@@ -1623,6 +1623,18 @@ function makeHostFunctions(instanceRef) {
             const { event: _e, ts: _ts, sess: _s, sub: _sub, ...fields } = ev;
             logEvent(ev.sub || 'plugkit', eventName, fields);
           } catch (_) {}
+          return 0;
+        }
+        if (level >= 2) {
+          const gateMatch = msg.match(/^plugkit gate:\s+([\w-]+)\s+(.*)$/);
+          if (gateMatch) {
+            logEvent('hook', `deviation.${gateMatch[1]}`, { detail: gateMatch[2], source: 'stderr-bridge' });
+          } else {
+            const noiseRe = /^(instruction::handle|recall::recall_hits|embed::|memorize::)/;
+            if (!noiseRe.test(msg)) {
+              logEvent('plugkit', level >= 3 ? 'wasm.err' : 'wasm.warn', { msg: msg.slice(0, 500) });
+            }
+          }
         }
         return 0;
       } catch (e) {
