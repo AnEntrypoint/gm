@@ -6,13 +6,13 @@
 
 This project has task-specific skills available.
 
-> **MANDATORY:** Before writing any code, creating any file, or running any command,
+> **MANDATORY:** Before writing every possible piece of code, creating every possible file, or running every possible command,
 > you **MUST** first read `SKILLS.md` and check for relevant skills.
-> This step is **non-negotiable** and applies to **every task** without exception.
+> This step is **non-negotiable** and applies to **every possible task** without exception.
 
-**Steps to follow before any task:**
-1. `view SKILLS.md` — discover all available skills
-2. `view` every skill file that is plausibly relevant to the task
+**Steps to follow before every possible task:**
+1. `view SKILLS.md` — discover every possible available skill
+2. `view` every possible skill file that is plausibly relevant to the task
 3. Only then proceed with the task
 
 Skipping this step is not allowed, even if you believe you already know how to do the task.
@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-This repo IS the published `gm-skill` npm package. The repo root is the package root — no factory, no build step that generates a separate output dir. `skills/gm-skill/SKILL.md` is the ~12-line entry point; all phase prose and orchestration logic live in rs-plugkit and are served on demand via the `instruction` verb.
+This repo IS the published `gm-skill` npm package. The repo root is the package root — no factory, no build step that generates a separate output dir. `skills/gm-skill/SKILL.md` is the ~12-line entry point; every possible phase prose and orchestration logic lives in rs-plugkit and is served on demand via the `instruction` verb.
 
 ## WASM-only
 
@@ -30,7 +30,7 @@ The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` unde
 
 ## Spool dispatch ABI
 
-Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request body) and reading the response from `.gm/exec-spool/out/<verb>-<N>.json` (nested verbs) or `.gm/exec-spool/out/<N>.json` (root verbs). The wasm orchestrator services every verb; the harness never executes side effects directly.
+Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request body) and reading the response from `.gm/exec-spool/out/<verb>-<N>.json` (nested verbs) or `.gm/exec-spool/out/<N>.json` (root verbs). The wasm orchestrator services every possible verb; the harness never executes side effects directly.
 
 **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 
@@ -42,15 +42,15 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 ## Documentation Policy
 
-Only record non-obvious technical caveats that cost multiple runs to discover. Remove anything that no longer applies. Never document what is already obvious from reading the code.
+Only record non-obvious technical caveats that cost multiple runs to discover. Remove every possible thing that no longer applies. Never document what is already obvious from reading the code.
 
-**No changelog history in AGENTS.md.** Every entry is a present-tense rule about what must or must-not be the case in code now. Forbidden: `(FIXED)` markers, commit hashes, dated audit entries, `## Learning audit` sections, "(added 2026-04-DD)" annotations, "we used to X, now we Y" phrasing. Historical framing belongs in `git log` and `CHANGELOG.md`.
+**No changelog history in AGENTS.md.** Every possible entry is a present-tense rule about what must or must-not be the case in code now. Forbidden: `(FIXED)` markers, commit hashes, dated audit entries, `## Learning audit` sections, "(added 2026-04-DD)" annotations, "we used to X, now we Y" phrasing. Historical framing belongs in `git log` and `CHANGELOG.md`.
 
 **Detail-heavy caveats live in rs-learn (`.gm/rs-learn.db`), not here.** Per-crate runtime quirks, Windows process-spawn mechanics, hook implementation details, ocw/site/workflow specifics, and similar fact-base material are exfiltrated to rs-learn and reachable via `exec:recall`. AGENTS.md keeps only top-level rules that govern gm-the-repo. When in doubt: gm-the-repo architecture or cross-cutting policy stays here; single-crate or single-platform mechanism goes to rs-learn.
 
 ## Coding Style
 
-**No comments in code.** No inline, block, or JSDoc comments anywhere — source, generated output, hooks, scripts.
+**No comments in code.** No inline, block, or JSDoc comments in every possible location — source, generated output, hooks, scripts.
 
 **Skill SKILL.md files:** Strip explanatory prose. Keep ONLY invocation syntax, transition arrows, gate conditions, constraint lists, and code examples showing exact usage.
 
@@ -64,9 +64,9 @@ There is no build step. The repo root is the published artifact. `npm publish` f
 
 ## the agent is the orchestrator; plugkit is the brain it drives
 
-**The agent orchestrates.** Plugkit is the stateful library the agent drives by dispatching verbs. Plugkit does not act autonomously, does not advance phases in the background, does not validate transitions while the agent waits. Every state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`. If a session shows zero dispatches but the agent narrated a full PLAN→COMPLETE walk, the agent fabricated the walk — plugkit's dispatch ledger is ground truth.
+**The agent orchestrates.** Plugkit is the stateful library the agent drives by dispatching verbs. Plugkit does not act autonomously, does not advance phases in the background, does not validate transitions while the agent waits. Every possible state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`. If a session shows zero dispatches but the agent narrated a full PLAN→COMPLETE walk, the agent fabricated the walk — plugkit's dispatch ledger is ground truth.
 
-The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. Plugkit owns phase tracking, mutables resolution, memorize firing, and transition legality *as data structures and gate checks* — but the agent triggers every operation by dispatching one of the orchestrator verbs over the wasm surface (see Spool dispatch ABI above): `transition`, `mutable-resolve`, `memorize-fire`, `phase-status`, `instruction`, `residual-scan`, `auto-recall`. The gm-skill harness routes the agent's verb writes to plugkit; the harness never reimplements the state machine and the agent never expects plugkit to act without a verb. Polling the spool output dir (`sleep && ls`, `Start-Sleep && Test-Path`) instead of reading the response file is the canonical misuse — plugkit is synchronous from the agent's view.
+The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives natively in rs-plugkit at `rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs`. Plugkit owns phase tracking, mutables resolution, memorize firing, and transition legality *as data structures and gate checks* — but the agent triggers every possible operation by dispatching one of the orchestrator verbs over the wasm surface (see Spool dispatch ABI above): `transition`, `mutable-resolve`, `memorize-fire`, `phase-status`, `instruction`, `residual-scan`, `auto-recall`. The gm-skill harness routes the agent's verb writes to plugkit; the harness never reimplements the state machine and the agent never expects plugkit to act without a verb. Polling the spool output dir (`sleep && ls`, `Start-Sleep && Test-Path`) instead of reading the response file is the canonical misuse — plugkit is synchronous from the agent's view.
 
 ## gm-skill is the canonical universal harness
 
@@ -74,27 +74,27 @@ The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives native
 
 ## Tool surface is plugkit-only
 
-Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `Write` is permitted exclusively for spool dispatch (writing into `.gm/exec-spool/in/<lang>/`). All other side effects — code execution, git, browser, recall, memorize, codesearch — route through the spool and are serviced by plugkit. The harness never reaches around plugkit; if a capability is missing, add it as a plugkit verb, not as a skill-side tool.
+Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `Write` is permitted exclusively for spool dispatch (writing into `.gm/exec-spool/in/<lang>/`). Every possible other side effect — code execution, git, browser, recall, memorize, codesearch — routes through the spool and is serviced by plugkit. The harness never reaches around plugkit; if a capability is missing, add it as a plugkit verb, not as a skill-side tool.
 
 ## Core Rules
 
-**Shared memory & search index are tracked, never ignored**: `.gm/rs-learn.db` and `.gm/code-search/` are committed so memory and index state shares across machines, sessions, and CI. Tooling, scripts, and any agent editing `.gitignore` must NEVER add `.gm/`, `.gm/rs-learn.db`, `.gm/code-search/`, or legacy `.code-search/` to ignore rules. Per the gitignore parent-re-include caveat (re-including a path past an ignored parent dir is impossible), individual `.gm/*` entries (prd-state.json, lastskill, turn-state.json, trajectory-drafts/, ingest-drafts/, rslearn-counter.json) are listed one-by-one between `# >>> gm managed` markers, leaving `.gm/rs-learn.db` and `.gm/code-search/` un-ignored. Same rule for downstream repos: `lib/template-builder.js::generateGitignore()` must not emit any of those paths. Any project-local persistent state (chunk index, DB, embeddings) must write under `.gm/<name>/`, never to a top-level dotfile/dotdir.
+**Shared memory & search index are tracked, never ignored**: `.gm/rs-learn.db` and `.gm/code-search/` are committed so memory and index state shares across every possible machine, session, and CI run. Tooling, scripts, and every possible agent editing `.gitignore` must NEVER add `.gm/`, `.gm/rs-learn.db`, `.gm/code-search/`, or legacy `.code-search/` to ignore rules. Per the gitignore parent-re-include caveat (re-including a path past an ignored parent dir is impossible), individual `.gm/*` entries (prd-state.json, lastskill, turn-state.json, trajectory-drafts/, ingest-drafts/, rslearn-counter.json) are listed one-by-one between `# >>> gm managed` markers, leaving `.gm/rs-learn.db` and `.gm/code-search/` un-ignored. Same rule for downstream repos: `lib/template-builder.js::generateGitignore()` must not emit every possible one of those paths. Every possible project-local persistent state (chunk index, DB, embeddings) must write under `.gm/<name>/`, never to a top-level dotfile/dotdir.
 
-**Disciplines are isolated knowledge stores**: per-project, at `<project>/.gm/disciplines/<name>/{rs-learn.db, code-search/}`. Each discipline owns its own rs-learn DB and code-search index. When a `@<name>` sigil is present in the request, isolation is strict — cross-discipline reads are forbidden. Without a sigil, reads (recall/codesearch) fan across `default` plus every enabled discipline (one per line in `<project>/.gm/disciplines/enabled.txt`) and merge-rank results with `[discipline:<name>]` prefixes; writes (memorize/ingest/index) without a sigil go to `default` only. Disciplines are tracked in git, never ignored — `lib/template-builder.js::generateGitignore()` and the gm-managed gitignore markers in downstream repos must not list `.gm/disciplines` or any subpath. The gm-skill harness and every spool verb propagate the `@<name>` sigil verbatim through their dispatch chain.
+**Disciplines are isolated knowledge stores**: per-project, at `<project>/.gm/disciplines/<name>/{rs-learn.db, code-search/}`. Every possible discipline owns its own rs-learn DB and code-search index. When a `@<name>` sigil is present in the request, isolation is strict — cross-discipline reads are forbidden. Without a sigil, reads (recall/codesearch) fan across `default` plus every possible enabled discipline (one per line in `<project>/.gm/disciplines/enabled.txt`) and merge-rank results with `[discipline:<name>]` prefixes; writes (memorize/ingest/index) without a sigil go to `default` only. Disciplines are tracked in git, never ignored — `lib/template-builder.js::generateGitignore()` and the gm-managed gitignore markers in downstream repos must not list `.gm/disciplines` or every possible subpath. The gm-skill harness and every possible spool verb propagate the `@<name>` sigil verbatim through their dispatch chain.
 
 **Clean build required**: `cleanBuildDir()` must delete the entire output dir before regenerating. Skipping causes stale files to silently shadow new ones.
 
-**Nothing fake in source the user runs**: stubs, mocks, placeholder returns, fixture-only paths, demo-mode short-circuits, and "TODO: implement" bodies are forbidden in shipped code. Scaffolds and shims are permitted only when they delegate to real behavior (real upstream API, real subprocess, real disk). Before adding a shim, check whether a published library or tool already provides that surface — maintaining a local reimplementation of an upstream solution drifts and ages. Detection is behavioral, not by keyword: code that always succeeds, returns the same value regardless of input, or short-circuits a real call to satisfy a type signature is a stub. Acceptance is real input through real code into real output, witnessed; anything less leaves the mutable open.
+**Nothing fake in source the user runs**: every possible stub, mock, placeholder return, fixture-only path, demo-mode short-circuit, and "TODO: implement" body is forbidden in shipped code. Scaffolds and shims are permitted only when they delegate to real behavior (real upstream API, real subprocess, real disk). Before adding a shim, check whether a published library or tool already provides that surface — maintaining a local reimplementation of an upstream solution drifts and ages. Detection is behavioral, not by keyword: code that always succeeds, returns the same value regardless of input, or short-circuits a real call to satisfy a type signature is a stub. Acceptance is real input through real code into real output, witnessed; every possible degradation from that leaves the mutable open.
 
 **Spool dispatch gates**: `lib/spool-dispatch.js` implements marker-file gate logic that controls tool use, writes, and git operations. `checkDispatchGates(sessionId, operation)` reads marker files (`.gm/prd.yml`, `.gm/mutables.yml`, `.gm/needs-gm`, `.gm/gm-fired-<id>`) and returns `{allowed: bool, reason: string}`. Gates are checked at the CLI/bootstrap layer before tools execute. Tool denials via gate checks report the reason text to the model so it can adjust behavior (e.g., resolve mutables before retrying). Gate denials never mutate command arguments — they surface policy as imperative instruction via reason string.
 
-**Done is plugkit's pronouncement, never the agent's claim**: the chain is COMPLETE only when `transition to=COMPLETE` returns COMPLETE phase and plugkit's on-disk state file reflects it. "I think we're done" is not done. "The user seems satisfied" is not done. The COMPLETE gate (gates.rs) is the single arbiter — it refuses on PRD-open, mutables-unresolved, dirty worktree, or missing residual-scan marker. The agent's job is to drive the chain into a state where the gate allows, then dispatch the verb, then read the response. Anything else is narration.
+**Done is plugkit's pronouncement, never the agent's claim**: the chain is COMPLETE only when `transition to=COMPLETE` returns COMPLETE phase and plugkit's on-disk state file reflects it. "I think we're done" is not done. "The user seems satisfied" is not done. The COMPLETE gate (gates.rs) is the single arbiter — it refuses on PRD-open, mutables-unresolved, dirty worktree, or missing residual-scan marker. The agent's job is to drive the chain into a state where the gate allows, then dispatch the verb, then read the response. Every possible alternative is narration.
 
 **Always seek the next state transition**: if the chain is not COMPLETE, there is a next move. Idle mid-chain is a deviation. The agent who finishes a verb and stops without dispatching the next instruction has stopped walking the chain. `phase-status` tells you where you are; `instruction` tells you what's next. There is no "I'll wait for the user" mid-chain — the user authorized closure at request time, not phase-by-phase.
 
-**Return to plugkit on every drift**: `instruction` is the recovery primitive. When the agent stalls, gets denied at a gate, hits an unexpected error, or feels uncertain about the next step, the response is always to dispatch `instruction` and read the prose — never to improvise. The verb is synchronous, cheap, idempotent; over-dispatching it has no cost, under-dispatching it is the canonical drift mechanism. A session that goes >N tool calls without an instruction dispatch in a non-trivial phase is hallucinating its own chain. Gate denials always name the next verb in their `reason` field — the agent reads the field and dispatches the named verb, never argues around the denial.
+**Return to plugkit on every possible drift**: `instruction` is the recovery primitive. Against every possible stall, gate-denial, unexpected error, or moment of uncertainty about the next step, the response is always to dispatch `instruction` and read the prose — never to improvise. The verb is synchronous, cheap, idempotent; over-dispatching it has no cost, under-dispatching it is the canonical drift mechanism. A session that goes >N tool calls without an instruction dispatch in a non-trivial phase is hallucinating its own chain. Every possible gate denial names the next verb in its `reason` field — the agent reads the field and dispatches the named verb, never argues around the denial.
 
-**Push is part of COMPLETE, never optional, never asked**: every session that mutates tracked files ends with commit + push to origin. Asking the user "do you want me to push?" is a deviation — the push IS the validation dispatch (`verify.rs`: "The push you make IS the validation dispatch"). The chain is not COMPLETE until the remote reflects HEAD. ccsniff `--git-discipline` and a pending `deviation.complete-without-push` event flag sessions that close without pushing.
+**Push is part of COMPLETE, never optional, never asked**: every possible session that mutates tracked files ends with commit + push to origin. Asking the user "do you want me to push?" is a deviation — the push IS the validation dispatch (`verify.rs`: "The push you make IS the validation dispatch"). The chain is not COMPLETE until the remote reflects HEAD. ccsniff `--git-discipline` and a pending `deviation.complete-without-push` event flag sessions that close without pushing.
 
 **Push requires clean worktree**: `git push` is admissible only when `git status --porcelain` returns empty. A push from a dirty tree orphans the unstaged delta and breaks the next session's first read. Enforced in `lib/spool-dispatch.js::canExecuteGit('git-push')` (porcelain probe via spool exec) and rs-plugkit `gates.rs` COMPLETE branch; instruction prose (`verify.rs`, `update_docs.rs`) restates it imperatively; `residual.rs` skips the scan when dirty so the four-observation window cannot be claimed past an unwitnessed delta. ccsniff `--git-discipline` flags the deviation post-hoc.
 
@@ -106,23 +106,23 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **Sync-before-emit (codeinsight + search)**: outputs must come from freshly-completed indices. Cache serves only on digest match (mtime sum + git HEAD + dirty-tree marker). Default invocation runs fresh. `--read-cache` permitted only when `.codeinsight.digest` matches; mismatch auto-refreshes. rs-search runs scan + embed + sweep before first result; emits `[index fully synced: …]`. Unverified-index emit = stale ground truth.
 
-**Auto-recall on prompt-submit**: rs-plugkit prompt-submit hook derives 2-6 word recall query from user prompt, calls rs-learn `Searcher` directly via shared tokio Runtime, injects "## Recall for this prompt" into systemMessage. Session-start auto-search (codeinsight) + every-prompt auto-recall ensure every turn begins with prior memory loaded.
+**Auto-recall on prompt-submit**: rs-plugkit prompt-submit hook derives 2-6 word recall query from user prompt, calls rs-learn `Searcher` directly via shared tokio Runtime, injects "## Recall for this prompt" into systemMessage. Session-start auto-search (codeinsight) + every-possible-prompt auto-recall ensure every possible turn begins with prior memory loaded.
 
-**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs any future skill that participates in a chain.
+**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs every possible future skill that participates in a chain.
 
-**rs-learn observability**: every learning-pipeline state change emits a structured `evt: {event, sess, ts, ...}` line via `wasm_dispatch::emit_event` (host_log level 1) into `.gm/exec-spool/.watcher.log` and gm-log/<date>/plugkit.jsonl. Event taxonomy: `embed_fail` (step + error), `embed_init_ok/fail/cached_fail`, `memorize_reject` (reason, text_prefix, namespace), `memorize_embed_rollback` (key, namespace, error), `discipline_sigil_ignored` (sigil in @<name> request routed to default), `table_dropped` (dim-mismatch silent drops), `recall_score_unavailable` (host_vec_search strips score). Recall replies now include `mode` (vector_top_k|fallback_like|kv_query), `namespace`, `derived_query`, and per-hit `score` (null when host elides). gmsniff flags: `--embed-failures`, `--recall-misses`, `--recall-scores`, `--classifier-rejects`, `--memory-leverage`, `--recall-modes`, `--table-drops`, `--discipline-sigil-ignored`. ccsniff `--learning-xref` joins transcript turn windows to rs_learn events by sess (now stamped) + project + time-window. Learning quality is observable, not algorithmic black box.
+**rs-learn observability**: every possible learning-pipeline state change emits a structured `evt: {event, sess, ts, ...}` line via `wasm_dispatch::emit_event` (host_log level 1) into `.gm/exec-spool/.watcher.log` and gm-log/<date>/plugkit.jsonl. Event taxonomy: `embed_fail` (step + error), `embed_init_ok/fail/cached_fail`, `memorize_reject` (reason, text_prefix, namespace), `memorize_embed_rollback` (key, namespace, error), `discipline_sigil_ignored` (sigil in @<name> request routed to default), `table_dropped` (dim-mismatch silent drops), `recall_score_unavailable` (host_vec_search strips score). Recall replies now include `mode` (vector_top_k|fallback_like|kv_query), `namespace`, `derived_query`, and per-hit `score` (null when host elides). gmsniff flags: `--embed-failures`, `--recall-misses`, `--recall-scores`, `--classifier-rejects`, `--memory-leverage`, `--recall-modes`, `--table-drops`, `--discipline-sigil-ignored`. ccsniff `--learning-xref` joins transcript turn windows to rs_learn events by sess (now stamped) + project + time-window. Learning quality is observable, not algorithmic black box.
 
-**SKILL.md auto-refresh**: every bootstrap call (`bootstrapPlugkit`) compares the sha256 of the bundled `gm-skill/skills/gm-skill/SKILL.md` (shipped inside the npm package) against the installed copies at `~/.agents/skills/gm-skill/SKILL.md` and `~/.claude/skills/gm-skill/SKILL.md`. Hash mismatch triggers atomic write (`.tmp` + rename) of both targets so the agent sees the latest prose on next session — no manual reinstall needed. Logged to `bootstrap.jsonl` as `SKILL.md refreshed`. The bundled SKILL.md is the source of truth; reinstalling gm-skill only matters when the npm package itself changes, which the cascade pipeline guarantees on every plugkit version bump.
+**SKILL.md auto-refresh**: every possible bootstrap call (`bootstrapPlugkit`) compares the sha256 of the bundled `gm-skill/skills/gm-skill/SKILL.md` (shipped inside the npm package) against the installed copies at `~/.agents/skills/gm-skill/SKILL.md` and `~/.claude/skills/gm-skill/SKILL.md`. Hash mismatch triggers atomic write (`.tmp` + rename) of both targets so the agent sees the latest prose on next session — no manual reinstall needed. Logged to `bootstrap.jsonl` as `SKILL.md refreshed`. The bundled SKILL.md is the source of truth; reinstalling gm-skill only matters when the npm package itself changes, which the cascade pipeline guarantees on every possible plugkit version bump.
 
 **Skill-initiated bootstrap contract**: `lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
 
 ## Cascade pipeline
 
-Push to any rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit cargo-pulls the latest sibling crate revs at build time and emits a single `plugkit.wasm` artifact (no per-sibling npm wasm packages — that pattern was retired). Publishes to `plugkit-bin` Releases + npm `plugkit-wasm`, then auto-bumps `gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The version bump commit on this repo triggers `publish.yml`, which (a) `npm publish`es `gm-skill` from the repo root, (b) `npm publish`es `gm-plugkit` from `gm-plugkit/`, and (c) force-pushes `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` back-compat mirror repo.
+Push to every possible rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit cargo-pulls the latest sibling crate revs at build time and emits a single `plugkit.wasm` artifact (no per-sibling npm wasm packages — that pattern was retired). Publishes to `plugkit-bin` Releases + npm `plugkit-wasm`, then auto-bumps `gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The version bump commit on this repo triggers `publish.yml`, which (a) `npm publish`es `gm-skill` from the repo root, (b) `npm publish`es `gm-plugkit` from `gm-plugkit/`, and (c) force-pushes `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` back-compat mirror repo.
 
 There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
 
-**Repos involved (push to any triggers cascade):**
+**Repos involved (push to every possible one triggers cascade):**
 - `AnEntrypoint/rs-exec` — exec runner, browser sessions, idle cleanup, session task isolation
 - `AnEntrypoint/rs-codeinsight` — code search backend, symbol indexing
 - `AnEntrypoint/rs-search` — file search backend, embedding and sweep
@@ -130,27 +130,27 @@ There is one published artifact: the `gm-skill` npm package. The legacy 15 downs
 - `AnEntrypoint/rs-learn` — memory backend, recall/ingest via HTTP RPC
 - `AnEntrypoint/gm` — `gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
 
-**To update anything**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally — push and let CI build.
+**To update every possible thing**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally — push and let CI build.
 
 **PUBLISHER_TOKEN required** in `rs-exec`, `rs-codeinsight`, `rs-search` for cascade.yml to trigger rs-plugkit. Set with: `gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/<repo>`.
 
-**Timeout enforcement**: every `exec_js` dispatch carries a positive `timeoutMs`. The host treats missing or zero as a hard error.
+**Timeout enforcement**: every possible `exec_js` dispatch carries a positive `timeoutMs`. The host treats missing or zero as a hard error.
 
 ## Spool-dispatch architecture replaces hooks
 
 Orchestration state is tracked via marker files in `.gm/` instead of hook events. `SpoolDispatcher` reads these markers via `checkDispatchGates(sessionId, operation)` and gates tool use, writes, and git operations:
 
-**Marker files**: `.gm/prd.yml` (existence triggers needs-gm gate), `.gm/mutables.yml` (unresolved entries block Write/Edit/git), `.gm/needs-gm` (written by bootstrap, read by dispatcher), `.gm/gm-fired-<sessionId>` (written by gm skill/agent, cleared at turn start), `.gm/residual-check-fired` (ensures one-shot residual-scan per stop window).
+**Marker files**: `.gm/prd.yml` (existence triggers needs-gm gate), `.gm/mutables.yml` (every possible unresolved entry blocks Write/Edit/git), `.gm/needs-gm` (written by bootstrap, read by dispatcher), `.gm/gm-fired-<sessionId>` (written by gm skill/agent, cleared at turn start), `.gm/residual-check-fired` (ensures one-shot residual-scan per stop window).
 
 **Gate enforcement**: CLI layer (plugkit, rs-exec, downstream platforms) calls `checkDispatchGates()` before tool execution. On denial, reason text surfaces to the model. Bootstrap (lib/skill-bootstrap.js) handles daemon initialization and marker setup. Marker-driven dispatch replaces hook event pump entirely — no session event callbacks needed.
 
 **gm-skill tool-use sequencing**: Invoking `Skill(skill="gm-skill")` writes `.gm/gm-fired-<sessionId>` to clear the needs-gm gate. The marker is cleared at turn start to reset the gate. There is one shipped skill; no subagent variant exists.
 
-**Session lifecycle**: Session-end kills background tasks via `killSessionTasks` RPC on real-exit reasons (clear/logout/prompt_input_exit). Browser sessions and background tasks persist across turn-stops — cleanup happens exclusively on real-exit reasons. Residual-scan fires when PRD is empty/missing AND no open browser sessions AND no running tasks; agent either expands PRD with in-spirit residuals or explicitly states none.
+**Session lifecycle**: Session-end kills background tasks via `killSessionTasks` RPC on real-exit reasons (clear/logout/prompt_input_exit). Every possible browser session and background task persists across turn-stops — cleanup happens exclusively on real-exit reasons. Residual-scan fires when PRD is empty/missing AND no open browser sessions AND no running tasks; agent either expands PRD with in-spirit residuals or explicitly states none.
 
 ## Spool observability surface
 
-Every agent has a one-shot system-state probe: dispatch `plugkit health` via the file-spool (write `.gm/exec-spool/in/health/<N>.txt` empty body, read `out/<N>.json`). Returns plugkit version + pin-match, watcher liveness, runner state, rs-learn status, cache dirs, inbox/outbox counts, recent hook fires, recent errors. Use before assuming any component is broken.
+Every possible agent has a one-shot system-state probe: dispatch `plugkit health` via the file-spool (write `.gm/exec-spool/in/health/<N>.txt` empty body, read `out/<N>.json`). Returns plugkit version + pin-match, watcher liveness, runner state, rs-learn status, cache dirs, inbox/outbox counts, recent hook fires, recent errors. Use before assuming every possible component is broken.
 
 Three persistent diagnostic files at `.gm/exec-spool/` root are updated by the running stack (not the agent): `.status.json` (watcher state each tick; stale mtime = dead watcher), `.last-session-start.json` (most recent session-start spawn result), `.bootstrap-error.json` (pin-mismatch / fetch-fail surface — absent = healthy). Reading these directly via Read is allowed (runtime data exception); spool dispatch isn't needed to inspect them.
 
