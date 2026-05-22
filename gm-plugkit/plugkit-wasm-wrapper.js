@@ -2640,8 +2640,15 @@ async function runSpoolWatcher(instance, spoolDir) {
         }
       });
     });
-    req.on('timeout', () => { req.destroy(); logEvent('plugkit', 'update.check.error', { error: 'timeout' }); });
-    req.on('error', (e) => logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) }));
+    req.on('timeout', () => {
+      req.destroy();
+      writeSharedUpdateCache(null, -1);
+      logEvent('plugkit', 'update.check.error', { error: 'timeout' });
+    });
+    req.on('error', (e) => {
+      writeSharedUpdateCache(null, -2);
+      logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) });
+    });
   }
   setTimeout(checkForUpdate, 10_000);
   setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
