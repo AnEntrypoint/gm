@@ -1,0 +1,81 @@
+{
+  "name": "rippleui",
+  "version": "1.12.1",
+  "description": "Cleanest, modern and beatifull Tailwind CSS library.",
+  "main": "dist/js/index.js",
+  "types": "dist/js/types/config.types.d.ts",
+  "typings": "dist/js/types/config.types.d.ts",
+  "files": [
+    "dist/js",
+    "dist/css",
+    "package-lock.json",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest __test__",
+    "create:folders": "mkdirp  -p ./dist/css ./dist/js",
+    "create:files": "touch ./dist/css/styles.css && touch ./dist/css/base.css && touch ./dist/css/components.css && touch ./dist/css/utilities.css",
+    "create:paths": "npm run create:folders && npm run create:files",
+    "clean": "rimraf ./dist",
+    "js": "tsc -b",
+    "js:minify": "node ./scripts/minify.js",
+    "styles": "tailwindcss --postcss -i ./components/styles.css -o ./dist/css/styles.css",
+    "base": "npx tailwindcss -c ./components/base/tailwind.config.js -i ./components/base/base.css -o ./dist/css/base.css",
+    "components": "tailwindcss --postcss -i ./components/components.css -o ./dist/css/components.css",
+    "utilities": "npx tailwindcss -c ./components/utilities/tailwind.config.js -i ./components/utilities/utilities.css -o ./dist/css/utilities.css",
+    "build": "export NODE_ENV=production  npm run clean && npm run create:paths && npm run js && npm run js:minify && npm run base -- --minify && npm run utilities -- --minify && npm run styles -- --minify &&  npm run components -- --minify ",
+    "dev": " npm run create:paths &  npm run js -- --watch &  npm run styles -- --watch",
+    "dev:all": "npm run create:paths && start npm run js -- --watch && start npm run styles -- --watch && start npm run base -- --watch && start npm run components -- --watch && start npm run utilities -- --watch",
+    "npm:publish": "npm run build && git push --follow-tags origin main && npm publish",
+    "release": "standard-version && npm run npm:publish",
+    "release:patch": "standard-version --release-as patch --skip.commit && npm run npm:publish",
+    "release:minor": "standard-version --release-as minor --skip.commit && npm run npm:publish",
+    "release:major": "standard-version --release-as major --skip.commit && npm run npm:publish",
+    "release:dry:patch": "standard-version --dry-run --release-as patch",
+    "release:dry:minor": "standard-version --dry-run --release-as minor",
+    "release:dry:major": "standard-version --dry-run --release-as major",
+    "release:dry:first": "standard-version --dry-run --first-release"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Siumauricio/rippleui.git"
+  },
+  "keywords": [
+    "ripple",
+    "ui",
+    "tailwindcss",
+    "components",
+    "modern",
+    "clean",
+    "css",
+    "framework",
+    "ui-library"
+  ],
+  "author": "Mauricio Siu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Siumauricio/rippleui/issues"
+  },
+  "homepage": "https://github.com/Siumauricio/rippleui#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.13",
+    "concurrently": "^7.6.0",
+    "cssnano": "^5.1.14",
+    "mkdirp": "^1.0.4",
+    "postcss-import": "^15.0.0",
+    "prettier": "^2.8.0",
+    "prettier-plugin-tailwindcss": "^0.2.0",
+    "rimraf": "^3.0.2",
+    "standard-version": "^9.5.0",
+    "terser": "^5.16.0",
+    "touch-cli": "^0.0.1",
+    "typescript": "^4.9.3",
+    "vitest": "^0.14.2"
+  },
+  "dependencies": {
+    "@types/postcss-js": "^4.0.0",
+    "postcss": "^8.4.19",
+    "postcss-js": "^4.0.0",
+    "tailwindcss": "^3.3.1"
+  }
+}

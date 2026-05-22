@@ -33,7 +33,7 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 ```
 gm/
 ├── skills/gm-skill/   ← the skill (SKILL.md + index.js, ~12 lines of prose)
-├── bin/               ← bootstrap, plugkit launcher, gmsniff, ccsniff
+├── bin/               ← bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages — `bun x gmsniff`, `bun x ccsniff`)
 ├── lib/               ← runtime: spool dispatch, skill bootstrap, daemon mgmt
 ├── agents/            ← subagent prompts (gm, memorize, research-worker, textprocessing)
 ├── prompts/           ← bash-deny, session-start, prompt-submit, pre-compact

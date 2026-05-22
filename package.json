@@ -23,9 +23,7 @@
   },
   "main": "bin/bootstrap.js",
   "bin": {
-    "gm-skill-bootstrap": "./bin/bootstrap.js",
-    "gmsniff": "./bin/gmsniff.js",
-    "ccsniff": "./bin/ccsniff.js"
+    "gm-skill-bootstrap": "./bin/bootstrap.js"
   },
   "files": [
     "skills/",
