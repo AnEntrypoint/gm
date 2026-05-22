@@ -1648,9 +1648,26 @@ function makeHostFunctions(instanceRef) {
         const cwd = readWasmStr(instanceRef.value, cwdPtr, cwdLen) || process.cwd();
         const sessionId = readWasmStr(instanceRef.value, sidPtr, sidLen) || 'default';
         const pw = findBrowserRunner();
-        if (!pw) return writeWasmJson(instanceRef.value, { ok: false, error: 'managed browser session runner not available' });
-        if (body.startsWith('session ')) {
-          const parts = body.slice(8).trim().split(/\s+/);
+        if (!pw) {
+          throw new Error(`managed browser session runner '${BROWSER_RUNNER_BIN}' not found on PATH or in npm-global; install with 'bun add -g ${BROWSER_RUNNER_BIN}' or 'npm i -g ${BROWSER_RUNNER_BIN}'`);
+        }
+
+        const trimmed = body.trim();
+
+        if (trimmed === 'session new' || trimmed === '') {
+          const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
+          try { lastBrowserActivityMs = Date.now(); } catch (_) {}
+          return writeWasmJson(instanceRef.value, {
+            ok: true,
+            stdout: `Session ${pwSessionId} attached to locally-profiled chromium at ${path.join(cwd, '.gm', 'browser-profile')}`,
+            stderr: '',
+            exit_code: 0,
+            session_id: pwSessionId,
+          });
+        }
+
+        if (trimmed.startsWith('session list') || trimmed.startsWith('session kill') || trimmed.startsWith('session close')) {
+          const parts = trimmed.slice(8).trim().split(/\s+/);
           const r = runBrowserRunner(pw, ['session', ...parts], 30000);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
@@ -1659,6 +1676,7 @@ function makeHostFunctions(instanceRef) {
             exit_code: r.status === null ? -1 : r.status,
           });
         }
+
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
         try { lastBrowserActivityMs = Date.now(); } catch (_) {}
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
