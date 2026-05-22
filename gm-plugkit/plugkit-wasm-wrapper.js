@@ -2577,8 +2577,26 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 5000);
 
+  let _sweepErrLogged = false;
   setInterval(() => {
     try {
+      if (!fs.existsSync(outDir)) {
+        try {
+          fs.mkdirSync(outDir, { recursive: true });
+          fs.mkdirSync(inDir, { recursive: true });
+          console.log(`[retention] recreated missing spool dirs: ${outDir}, ${inDir}`);
+          logEvent('plugkit', 'spool.dirs-recreated', { outDir, inDir, reason: 'sweep-found-missing' });
+          _sweepErrLogged = false;
+          return;
+        } catch (mke) {
+          if (!_sweepErrLogged) {
+            console.error(`[retention] cannot recreate ${outDir}: ${mke.message}`);
+            logEvent('plugkit', 'spool.dirs-recreate-failed', { outDir, error: mke.message });
+            _sweepErrLogged = true;
+          }
+          return;
+        }
+      }
       const cutoff = Date.now() - 3600_000;
       let swept = 0;
       for (const entry of fs.readdirSync(outDir)) {
@@ -2592,9 +2610,13 @@ async function runSpoolWatcher(instance, spoolDir) {
         console.log(`[retention] swept ${swept} out/ files older than 1h`);
         logEvent('plugkit', 'sweep.retention', { swept });
       }
+      _sweepErrLogged = false;
     } catch (e) {
-      console.error(`[retention] sweep error: ${e.message}`);
-      logEvent('plugkit', 'sweep.retention.error', { error: String(e.message || e) });
+      if (!_sweepErrLogged) {
+        console.error(`[retention] sweep error: ${e.message}`);
+        logEvent('plugkit', 'sweep.retention.error', { error: String(e.message || e) });
+        _sweepErrLogged = true;
+      }
     }
   }, 60_000);
 
