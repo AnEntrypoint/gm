@@ -1752,17 +1752,8 @@ function resolveVersion(instance) {
   try {
     return fs.readFileSync(path.join(GM_TOOLS_ROOT, 'plugkit.version'), 'utf8').trim();
   } catch (_) {}
-  try {
-    const fn = instance && instance.exports && instance.exports.plugkit_version;
-    if (typeof fn === 'function') {
-      const result = fn();
-      const ptr = Number(result & 0xffffffffn);
-      const len = Number(result >> 32n);
-      const bytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
-      return new TextDecoder().decode(bytes).trim();
-    }
-  } catch (_) {}
-  return 'unknown';
+  const fromInstance = readInstanceVersion(instance);
+  return fromInstance || 'unknown';
 }
 
 function readFileVersionOnly() {
@@ -1774,10 +1765,22 @@ function readInstanceVersion(instance) {
     const fn = instance && instance.exports && instance.exports.plugkit_version;
     if (typeof fn !== 'function') return null;
     const result = fn();
-    const ptr = Number(result & 0xffffffffn);
-    const len = Number(result >> 32n);
-    const bytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
-    return new TextDecoder().decode(bytes).trim();
+    let ptr, len;
+    if (typeof result === 'bigint') {
+      ptr = Number(result & 0xffffffffn);
+      len = Number(result >> 32n);
+    } else {
+      ptr = Number(result) & 0xffffffff;
+      len = 0;
+    }
+    const buf = new Uint8Array(instance.exports.memory.buffer, ptr, 64);
+    if (len === 0) {
+      let end = 0;
+      while (end < buf.length && buf[end] !== 0) end++;
+      len = end;
+    }
+    if (len === 0) return null;
+    return new TextDecoder().decode(buf.subarray(0, len)).trim() || null;
   } catch (_) { return null; }
 }
 
