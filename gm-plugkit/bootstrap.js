@@ -664,6 +664,7 @@ function ensureWrapperFresh() {
 function ensureSkillMdFresh() {
   try {
     const candidates = [
+      path.join(__dirname, 'SKILL.md'),
       path.join(__dirname, '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
       path.join(__dirname, '..', '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
       path.join(__dirname, '..', 'skills', 'gm-skill', 'SKILL.md'),

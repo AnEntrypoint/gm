@@ -116,6 +116,10 @@ jobs:
             echo "::error::gm.json missing plugkitVersion"
             exit 1
           fi
+          # Embed SKILL.md into gm-plugkit so ensureSkillMdFresh finds it
+          # without depending on gm-skill being installed as a sibling.
+          cp skills/gm-skill/SKILL.md gm-plugkit/SKILL.md
+          echo "✅ Embedded skills/gm-skill/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
           cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}

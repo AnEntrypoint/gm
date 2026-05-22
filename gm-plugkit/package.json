@@ -13,7 +13,8 @@
     "bootstrap.js",
     "plugkit-wasm-wrapper.js",
     "plugkit.version",
-    "plugkit.sha256"
+    "plugkit.sha256",
+    "SKILL.md"
   ],
   "keywords": [
     "gm",
