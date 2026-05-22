@@ -2525,7 +2525,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     try {
       const content = fs.readFileSync(UPDATE_CHECK_SHARED_CACHE, 'utf-8');
       const parsed = JSON.parse(content);
-      if (parsed && parsed.ts && parsed.latest && (Date.now() - parsed.ts) < UPDATE_CHECK_CACHE_TTL_MS) {
+      if (parsed && parsed.ts && (Date.now() - parsed.ts) < UPDATE_CHECK_CACHE_TTL_MS) {
         return parsed;
       }
     } catch (_) {}
