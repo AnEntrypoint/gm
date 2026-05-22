@@ -1,9 +1,9 @@
-name: Build & Publish Plugins
+name: Publish
 
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**', 'LICENSE', '.gitignore', 'CHANGELOG.md', '.gm/**']
+    paths-ignore: ['**.md', 'docs/**', 'site/**', 'LICENSE', '.gitignore', 'CHANGELOG.md', '.gm/**']
   workflow_dispatch:
 
 concurrency:
@@ -20,26 +20,33 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PUBLISHER_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Auto-bump version
         run: |
-          CURRENT_VERSION=$(jq -r '.version' gm-starter/gm.json)
+          CURRENT_VERSION=$(jq -r '.version' gm.json)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
           NEW_PATCH=$((PATCH + 1))
           NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
 
           echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
-          jq --arg v "$NEW_VERSION" '.version = $v' gm-starter/gm.json > /tmp/gm.json.tmp
-          mv /tmp/gm.json.tmp gm-starter/gm.json
+          jq --arg v "$NEW_VERSION" '.version = $v' gm.json > /tmp/gm.json.tmp
+          mv /tmp/gm.json.tmp gm.json
+
+          jq --arg v "$NEW_VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
+          mv /tmp/pkg.json.tmp package.json
+
+          jq --arg v "$NEW_VERSION" '.version = $v' gm-plugkit/package.json > /tmp/pkg.json.tmp
+          mv /tmp/pkg.json.tmp gm-plugkit/package.json
 
           git config --global user.email "noreply@github.com"
           git config --global user.name "gm-bot"
-          git add gm-starter/gm.json
+          git add gm.json package.json gm-plugkit/package.json
           git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
           for i in 1 2 3 4 5; do
             if git push origin main; then
@@ -56,155 +63,26 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "version=$(jq -r '.version' gm-starter/gm.json)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
 
-  build-and-publish:
+  publish-gm-skill:
     needs: prepare
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {platform: skill, name: "gm-skill canonical universal harness"}
-
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Build ${{ matrix.name }}
-        run: node cli.js gm-starter ./build
-
-      - name: Validate build output
-        run: |
-          BUILD_DIR="./build/gm-${{ matrix.platform }}"
-          if [ ! -d "$BUILD_DIR" ]; then
-            echo "❌ Build failed: $BUILD_DIR does not exist"
-            exit 1
-          fi
-          echo "✅ Build output validated at $BUILD_DIR"
-
-      - name: Setup Git
-        env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: |
-          git config --global user.email "noreply@github.com"
-          git config --global user.name "gm-bot"
-          git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-
-      - name: Publish to GitHub
-        env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-          PLATFORM: ${{ matrix.platform }}
-          NAME: ${{ matrix.name }}
-        run: |
-          set -e
-          REPO_NAME="gm-${PLATFORM}"
-          WORK_DIR="/tmp/${REPO_NAME}"
-          BUILD_DIR="./build/gm-${PLATFORM}"
-          SOURCE_ROOT="${GITHUB_WORKSPACE}"
-
-          # Ensure build directory exists and has content
-          if [ ! -d "$BUILD_DIR" ]; then
-            echo "❌ Build directory not found: $BUILD_DIR"
-            exit 1
-          fi
-
-          gh repo create AnEntrypoint/${REPO_NAME} --public 2>/dev/null || true
-
-          gh api -X POST "repos/AnEntrypoint/${REPO_NAME}/pages" \
-            -f "build_type=workflow" 2>/dev/null \
-            || gh api -X PUT "repos/AnEntrypoint/${REPO_NAME}/pages" \
-                 -f "build_type=workflow" 2>/dev/null \
-            || true
-
-          rm -rf "$WORK_DIR"
-          mkdir -p "$WORK_DIR"
-          cd "$WORK_DIR"
-
-          PREBUILT_BIN="${SOURCE_ROOT}/gm-build-latest/gm-${PLATFORM}/bin"
-          mkdir -p "${SOURCE_ROOT}/${BUILD_DIR}/bin"
-          if [ -d "$PREBUILT_BIN" ]; then
-            for f in plugkit.version plugkit.sha256; do
-              if [ -f "$PREBUILT_BIN/$f" ]; then
-                cp -a "$PREBUILT_BIN/$f" "${SOURCE_ROOT}/${BUILD_DIR}/bin/$f"
-              fi
-            done
-            echo "✅ Copied plugkit metadata (version+sha256) from $PREBUILT_BIN — native binaries are fetched at runtime by bin/bootstrap.js"
-          fi
-          if [ ! -f "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.version" ]; then
-            PV=$(jq -r '.plugkitVersion // empty' "${SOURCE_ROOT}/gm-starter/gm.json")
-            if [ -n "$PV" ]; then
-              echo "$PV" > "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.version"
-              echo "✅ Wrote plugkit.version=$PV from gm.json (no PREBUILT_BIN/plugkit.version)"
-            fi
-          fi
-
-          PV=$(cat "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.version" 2>/dev/null | tr -d ' \n\r')
-          if [ -n "$PV" ]; then
-            echo "⏬ Fetching plugkit.wasm@v$PV for all platforms (WASM-only distribution)"
-            curl -sLf -o "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.wasm" \
-              "https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${PV}/plugkit.wasm" \
-              && echo "✅ Fetched plugkit.wasm ($(stat -c%s "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.wasm" 2>/dev/null || stat -f%z "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.wasm") bytes)" \
-              || { echo "❌ plugkit.wasm v$PV not found in plugkit-bin release"; exit 1; }
-            curl -sLf -o "${SOURCE_ROOT}/${BUILD_DIR}/bin/plugkit.wasm.sha256" \
-              "https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${PV}/plugkit.wasm.sha256" \
-              || echo "⚠️ plugkit.wasm.sha256 not present at v$PV — leaving sha-less"
-          fi
-
-          REMOTE_HEAD=$(git ls-remote "https://github.com/AnEntrypoint/${REPO_NAME}.git" main 2>/dev/null | awk '{print $1}' || true)
-          NEED_COMPARE=0
-          if [ -n "$REMOTE_HEAD" ]; then
-            git clone --depth 1 "https://github.com/AnEntrypoint/${REPO_NAME}.git" compare-src 2>/dev/null && NEED_COMPARE=1 || true
-          fi
-
-          git init -q --initial-branch=main fresh
-          cd fresh
-          git remote add origin "https://github.com/AnEntrypoint/${REPO_NAME}.git"
-          rsync -a --exclude='.git' --no-times "${SOURCE_ROOT}/${BUILD_DIR}"/ ./
-
-          CHANGED=1
-          if [ "$NEED_COMPARE" = "1" ]; then
-            if diff -rq --no-dereference ../compare-src ./ \
-                 --exclude='.git' >/dev/null 2>&1; then
-              CHANGED=0
-            fi
-          fi
-
-          if [ "$CHANGED" = "0" ]; then
-            echo "✅ No changes to publish for $NAME"
-            exit 0
-          fi
-
-          git add -A
-          if [ -d bin ]; then git add -f bin/; fi
-          git commit -q -m "Auto-build: ${NAME} plugin from gm (v${{ needs.prepare.outputs.version }})"
-          git push --force origin main
-          echo "✅ Force-pushed single-commit history to $REPO_NAME"
-
-      - name: Publish to npm
-        if: matrix.platform == 'skill'
+      - name: Publish gm-skill to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
-          BUILD_DIR="./build/gm-${{ matrix.platform }}"
-          VERSION="${{ needs.prepare.outputs.version }}"
-
-          # Update version in build output package.json
-          cd "$BUILD_DIR"
-          jq --arg v "$VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
-          mv /tmp/pkg.json.tmp package.json
-
-          # Set npm auth
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-
-          # Publish (tolerate already-published-version error)
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
           if [ "$EXIT" != "0" ]; then
             if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
@@ -213,7 +91,7 @@ jobs:
               exit "$EXIT"
             fi
           fi
-          echo "✅ Published gm-${{ matrix.platform }}@${VERSION} to npm"
+          echo "✅ Published gm-skill@${{ needs.prepare.outputs.version }} to npm"
 
   publish-gm-plugkit:
     needs: prepare
@@ -223,38 +101,23 @@ jobs:
         with:
           ref: main
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish gm-plugkit
+      - name: Publish gm-plugkit to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
-          VERSION="${{ needs.prepare.outputs.version }}"
-          PLUGKIT_VER=$(jq -r '.plugkitVersion // empty' gm-starter/gm.json)
+          PLUGKIT_VER=$(jq -r '.plugkitVersion // empty' gm.json)
           if [ -z "$PLUGKIT_VER" ]; then
             echo "::error::gm.json missing plugkitVersion"
             exit 1
           fi
-
-          cd gm-starter/gm-plugkit
-          jq --arg v "$VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
-          mv /tmp/pkg.json.tmp package.json
-
+          cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
-          echo "✅ Synced bundled plugkit.version=${PLUGKIT_VER} into gm-plugkit package before publish"
-
-          if [ -f ../bin/plugkit.wasm.sha256 ]; then
-            SHA=$(awk '{print $1}' ../bin/plugkit.wasm.sha256)
-            echo "{\"plugkit.wasm\":\"${SHA}\"}" > plugkit.sha256
-            echo "✅ Synced bundled plugkit.sha256 manifest"
-          fi
-
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
           if [ "$EXIT" != "0" ]; then
             if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
@@ -263,4 +126,62 @@ jobs:
               exit "$EXIT"
             fi
           fi
-          echo "✅ Published gm-plugkit@${VERSION} pinning plugkit v${PLUGKIT_VER}"
+          echo "✅ Published gm-plugkit@${{ needs.prepare.outputs.version }} (plugkit v$PLUGKIT_VER) to npm"
+
+  mirror-gm-skill-repo:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Git
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "gm-bot"
+          git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Mirror SKILL.md to gm-skill repo (back-compat)
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          REPO="AnEntrypoint/gm-skill"
+          WORK_DIR="/tmp/gm-skill-mirror"
+
+          gh repo create "${REPO}" --public 2>/dev/null || true
+
+          rm -rf "$WORK_DIR"
+          mkdir -p "$WORK_DIR"
+          cd "$WORK_DIR"
+
+          git init -q --initial-branch=main
+          git remote add origin "https://github.com/${REPO}.git"
+
+          mkdir -p skills/gm-skill
+          cp "${GITHUB_WORKSPACE}/skills/gm-skill/SKILL.md" skills/gm-skill/SKILL.md
+          if [ -f "${GITHUB_WORKSPACE}/skills/gm-skill/index.js" ]; then
+            cp "${GITHUB_WORKSPACE}/skills/gm-skill/index.js" skills/gm-skill/index.js
+          fi
+
+          cat > README.md <<'EOF'
+          # gm-skill (back-compat mirror)
+
+          This repo mirrors only `skills/gm-skill/SKILL.md` for backward compatibility with
+          `bun x skills add AnEntrypoint/gm-skill`. The canonical, maintained source is at
+          [AnEntrypoint/gm](https://github.com/AnEntrypoint/gm).
+
+          New installs should prefer:
+
+          ```bash
+          bun x skills add AnEntrypoint/gm
+          ```
+          EOF
+
+          git add -A
+          git commit -q -m "Mirror SKILL.md from AnEntrypoint/gm (v${{ needs.prepare.outputs.version }})"
+          git push --force origin main
+          echo "✅ Mirrored skill to ${REPO}"

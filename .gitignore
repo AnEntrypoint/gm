@@ -1,6 +1,8 @@
 .glootie-stop-verified
 .prd
 build/
+dist/
+final-build/
 gm-build/
 gm-build-latest/
 gm-build-sync/

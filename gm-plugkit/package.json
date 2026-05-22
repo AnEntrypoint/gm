@@ -21,6 +21,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/AnEntrypoint/gm.git",
-    "directory": "gm-starter/gm-plugkit"
+    "directory": "gm-plugkit"
   }
 }

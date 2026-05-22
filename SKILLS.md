@@ -13,7 +13,7 @@ it must run the command below to get the current skill list.
 Run the following command to list all skills in the project:
 
 ```bash
-uvx --from skills-cli skills to-prompt ./gm-starter\skills/* --format yaml
+uvx --from skills-cli skills to-prompt ./skills/* --format yaml
 ```
 
 ### Example Output
@@ -22,13 +22,13 @@ uvx --from skills-cli skills to-prompt ./gm-starter\skills/* --format yaml
 available_skills:
   - name: data-analysis
     description: Used for reading, analyzing, and summarizing CSV, JSON, and tabular data.
-    location: ./gm-starter/skills/data-analysis/SKILL.md
+    location: ./skills/data-analysis/SKILL.md
   - name: pdf-reader
     description: Used when text or tables need to be extracted from PDF files.
-    location: ./gm-starter/skills/pdf-reader/SKILL.md
+    location: ./skills/pdf-reader/SKILL.md
   - name: code-reviewer
     description: Used to evaluate code quality, security, and best practice compliance.
-    location: ./gm-starter/skills/code-reviewer/SKILL.md
+    location: ./skills/code-reviewer/SKILL.md
 ```
 
 ### Output Fields

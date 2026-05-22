@@ -1,52 +1,101 @@
-# gm
+# glootius maximus (gm)
 
-Convention-driven AI plugin generator. One source, one published artifact: the `gm-skill` universal harness.
+> **more coushin' for the puhin'**
 
-**Hub page:** https://AnEntrypoint.github.io/gm
+gm is a skill that convinces your coding agent it already is a deterministic state machine — PLAN → EXECUTE → EMIT → VERIFY → COMPLETE — and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
 
-## Metrics
+it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN → EXECUTE → EMIT → VERIFY → COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
-[![GitHub stars](https://img.shields.io/github/stars/AnEntrypoint/gm?style=flat&logo=github&color=f1c40f)](https://github.com/AnEntrypoint/gm/stargazers)
-[![npm downloads (gm-skill)](https://img.shields.io/npm/dm/gm-skill?label=gm-skill%20downloads%2Fmonth&color=cb3837&logo=npm)](https://www.npmjs.com/package/gm-skill)
-[![Commits per week](docs/badges/commits-per-week.svg)](docs/badges/commits-per-week.svg)
-[![Open Issues](docs/badges/open-issues.svg)](docs/badges/open-issues.svg)
-[![Contributors](docs/badges/contributors.svg)](docs/badges/contributors.svg)
-[![Avg PR Merge Time](docs/badges/pr-merge-time.svg)](docs/badges/pr-merge-time.svg)
+built over ~200 commits of daily use. free, open source, maintained by one person.
 
-## Install
+disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, force you to push git before ending a session, and reject any execute call without an explicit timeout. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep sitting down.
+
+## install
 
 ```
-bun x skills add AnEntrypoint/gm-skill -y -g
+bun x skills add AnEntrypoint/gm -y -g
 ```
 
-Then add this line to your agent's global memory / system prompt:
+then add this line to your agent's global memory / system prompt:
 
 ```
 always use the gm-skill skill for everything, always fan out subagents
 ```
 
-Plugkit serves all phase instructions, state, mutables, and guardrails on demand via the spool.
+you need bun installed: `curl -fsSL https://bun.sh/install | bash`
 
-## Recommended Claude Code settings
+> The legacy `AnEntrypoint/gm-skill` repo is now a back-compat mirror that only contains `skills/gm-skill/SKILL.md`. New installs should prefer `AnEntrypoint/gm`.
 
-gm runs best with extended thinking off and the autocompact threshold raised so the orchestrator can keep PRD/mutables state in-context longer. Drop this into your `~/.claude/settings.json`:
+## what's in this repo
 
-```json
-{
-  "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "62"
-  },
-  "alwaysThinkingEnabled": false,
-  "effortLevel": "low"
-}
+This repo IS the published `gm-skill` npm package. No build step, no factory. The directory layout you see at root is exactly what ships:
+
+```
+gm/
+├── skills/gm-skill/   ← the skill (SKILL.md + index.js, ~12 lines of prose)
+├── bin/               ← bootstrap, plugkit launcher, gmsniff, ccsniff
+├── lib/               ← runtime: spool dispatch, skill bootstrap, daemon mgmt
+├── agents/            ← subagent prompts (gm, memorize, research-worker, textprocessing)
+├── prompts/           ← bash-deny, session-start, prompt-submit, pre-compact
+├── lang/              ← language packs (browser, ssh)
+├── gm-plugkit/        ← separate npm package that ships the wasm-wrapper
+├── gm.json            ← version + plugkit pin
+├── package.json       ← npm publish manifest
+├── AGENTS.md          ← architectural rules (present-tense, no history)
+├── CHANGELOG.md       ← release history
+└── site/              ← flatspace site source (built to dist/ by CI)
 ```
 
-- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: "62"` — defers autocompaction until 62% of the context window, so the PRD, mutables, and recall stay live longer.
-- `alwaysThinkingEnabled: false` — plugkit already drives deliberation through PLAN→EXECUTE→EMIT→VERIFY; extended thinking duplicates that work.
-- `effortLevel: "low"` — the state machine, not the model, is the reasoning surface. Low effort + spool dispatch is the intended operating point.
+The two npm packages this repo publishes:
 
-## Architecture
+- **`gm-skill`** — the skill bundle, installed via `bun x skills`
+- **`gm-plugkit`** — the wasm-wrapper daemon, dependency of `gm-skill`
 
-`gm-starter/skills/gm-skill/SKILL.md` is the single ~12-line entry point. All orchestration logic lives in `rs-plugkit/src/orchestrator/`. See [AGENTS.md](AGENTS.md) for the full design.
+## how it works
 
-The previous 15-platform fanout (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) has been retired; those downstream repositories are archived on GitHub.
+### the state machine
+
+PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
+
+### tools
+
+Every tool the agent uses is a dispatch verb. No direct shell, no direct file writes outside the spool. The wasm host owns the side effects.
+
+- **`recall`** — vector + KV recall against `rs-learn`, scored by cosine × recency, namespace-aware
+- **`codesearch`** — semantic vector search across the project
+- **`memorize`** — write to the recall index (with the BGE query/passage prefix asymmetry)
+- **`browser`** — managed Chrome session with project-scoped profile at `.gm/browser-profile/`
+- **`git_status` / `branch_status` / `git_push`** — git verbs that gate on porcelain
+- **`filter`** — in-wasm stdout-compaction (grep/ls/tree/json/diff)
+
+### hooks
+
+- **session-start** — bootstraps plugkit, seeds `.gm/next-step.md`, sets `needs-gm` marker
+- **prompt-submit** — reminds the agent to dispatch instruction first; injects per-prompt auto-recall
+- **pre-tool-use** — blocks tool use before the gm skill fires for the turn
+- **stop** — blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty
+
+### ground truth
+
+No mocks, no fakes, no unit tests on disk. Real services, real responses only. The single `test.js` at project root is the integration harness; `gm-complete` runs it before allowing session end.
+
+### memory
+
+`.gm/rs-learn.db` is the per-project memory store, committed to git so it travels with the project. Vector embeddings via BGE-small-en-v1.5 (with proper query/passage asymmetry: queries prefixed with `"Represent this sentence for searching relevant passages: "`, passages raw). LRU query-embedding cache (64 entries, 10-min TTL) sits in front to avoid re-embedding repeat queries.
+
+## release pipeline
+
+A push to `main` triggers `.github/workflows/publish.yml`:
+
+1. auto-bump `gm.json::version` + `package.json::version` + `gm-plugkit/package.json::version`
+2. publish `gm-skill` to npm from repo root (no build step)
+3. publish `gm-plugkit` to npm from `gm-plugkit/`
+4. mirror `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` repo (back-compat)
+
+`.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
+
+The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the wasm at install time — it does not ship in this repo.
+
+## license
+
+MIT

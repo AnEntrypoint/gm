@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-gm generates a single skill package (`gm-skill`) from a convention-driven source. The skill is a ~12-line entry point; all phase prose and orchestration logic live in rs-plugkit and are served on demand via the `instruction` verb.
+This repo IS the published `gm-skill` npm package. The repo root is the package root — no factory, no build step that generates a separate output dir. `skills/gm-skill/SKILL.md` is the ~12-line entry point; all phase prose and orchestration logic live in rs-plugkit and are served on demand via the `instruction` verb.
 
 ## WASM-only
 
@@ -58,11 +58,9 @@ Only record non-obvious technical caveats that cost multiple runs to discover. R
 
 ## Build
 
-```
-node cli.js gm-starter ./build
-```
+There is no build step. The repo root is the published artifact. `npm publish` from root publishes `gm-skill` directly; `package.json` `files:` pins which paths ship.
 
-Single output: `build/gm-skill/` — the canonical universal harness. Published to npm as `gm-skill`.
+`AnEntrypoint/gm-skill` is a back-compat repo mirror that receives only `skills/gm-skill/SKILL.md` per release. The canonical install is `bun x skills add AnEntrypoint/gm`.
 
 ## the agent is the orchestrator; plugkit is the brain it drives
 
@@ -72,7 +70,7 @@ The PLAN → EXECUTE → EMIT → VERIFY → COMPLETE state machine lives native
 
 ## gm-skill is the canonical universal harness
 
-`gm-starter/skills/gm-skill/SKILL.md` is the single source of truth for harness behavior. It is the only skill shipped — the legacy 15-platform fanout (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) is retired; those downstream repos are archived. Users install gm-skill directly into whatever harness they use.
+`skills/gm-skill/SKILL.md` is the single source of truth for harness behavior. It is the only skill shipped — the legacy 15-platform fanout (gm-cc, gm-gc, gm-oc, gm-codex, gm-kilo, gm-qwen, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-copilot-cli, gm-antigravity, gm-windsurf) is retired; those downstream repos are archived. Users install gm-skill directly into whatever harness they use.
 
 ## Tool surface is plugkit-only
 
@@ -116,11 +114,11 @@ Every skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, Write`. `
 
 **SKILL.md auto-refresh**: every bootstrap call (`bootstrapPlugkit`) compares the sha256 of the bundled `gm-skill/skills/gm-skill/SKILL.md` (shipped inside the npm package) against the installed copies at `~/.agents/skills/gm-skill/SKILL.md` and `~/.claude/skills/gm-skill/SKILL.md`. Hash mismatch triggers atomic write (`.tmp` + rename) of both targets so the agent sees the latest prose on next session — no manual reinstall needed. Logged to `bootstrap.jsonl` as `SKILL.md refreshed`. The bundled SKILL.md is the source of truth; reinstalling gm-skill only matters when the npm package itself changes, which the cascade pipeline guarantees on every plugkit version bump.
 
-**Skill-initiated bootstrap contract**: `gm-starter/lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
+**Skill-initiated bootstrap contract**: `lib/skill-bootstrap.js` performs wasm initialization for skill-driven dispatch without hook infrastructure. `bootstrapPlugkit(sessionId)` accepts optional SESSION_ID, ensures the wasm artifact and `plugkit-wasm-wrapper.js` are in place, writes status/error to `.gm/exec-spool/.bootstrap-status.json` and `.bootstrap-error.json` for spool awareness, and returns `{ ok: true }` on success or `{ ok: false, error: message }` on failure. Failures are non-fatal — callers fall back to a degraded surface.
 
 ## Cascade pipeline
 
-Push to any rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit cargo-pulls the latest sibling crate revs at build time and emits a single `plugkit.wasm` artifact (no per-sibling npm wasm packages — that pattern was retired). Publishes to `plugkit-bin` Releases + npm `plugkit-wasm`, then auto-bumps `gm-starter/gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The version bump commit on this repo triggers `publish.yml`, which runs `node cli.js gm-starter ./build` and `npm publish build/gm-skill`.
+Push to any rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit cargo-pulls the latest sibling crate revs at build time and emits a single `plugkit.wasm` artifact (no per-sibling npm wasm packages — that pattern was retired). Publishes to `plugkit-bin` Releases + npm `plugkit-wasm`, then auto-bumps `gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The version bump commit on this repo triggers `publish.yml`, which (a) `npm publish`es `gm-skill` from the repo root, (b) `npm publish`es `gm-plugkit` from `gm-plugkit/`, and (c) force-pushes `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` back-compat mirror repo.
 
 There is one published artifact: the `gm-skill` npm package. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub — no further releases, no orphan-commit publish step.
 
@@ -130,7 +128,7 @@ There is one published artifact: the `gm-skill` npm package. The legacy 15 downs
 - `AnEntrypoint/rs-search` — file search backend, embedding and sweep
 - `AnEntrypoint/rs-plugkit` — CLI entry point, spool watcher dispatcher; version source of truth in `Cargo.toml`
 - `AnEntrypoint/rs-learn` — memory backend, recall/ingest via HTTP RPC
-- `AnEntrypoint/gm` — `gm-starter/gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
+- `AnEntrypoint/gm` — `gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
 
 **To update anything**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally — push and let CI build.
 
@@ -144,7 +142,7 @@ Orchestration state is tracked via marker files in `.gm/` instead of hook events
 
 **Marker files**: `.gm/prd.yml` (existence triggers needs-gm gate), `.gm/mutables.yml` (unresolved entries block Write/Edit/git), `.gm/needs-gm` (written by bootstrap, read by dispatcher), `.gm/gm-fired-<sessionId>` (written by gm skill/agent, cleared at turn start), `.gm/residual-check-fired` (ensures one-shot residual-scan per stop window).
 
-**Gate enforcement**: CLI layer (plugkit, rs-exec, downstream platforms) calls `checkDispatchGates()` before tool execution. On denial, reason text surfaces to the model. Bootstrap (gm-starter/lib/skill-bootstrap.js) handles daemon initialization and marker setup. Marker-driven dispatch replaces hook event pump entirely — no session event callbacks needed.
+**Gate enforcement**: CLI layer (plugkit, rs-exec, downstream platforms) calls `checkDispatchGates()` before tool execution. On denial, reason text surfaces to the model. Bootstrap (lib/skill-bootstrap.js) handles daemon initialization and marker setup. Marker-driven dispatch replaces hook event pump entirely — no session event callbacks needed.
 
 **gm-skill tool-use sequencing**: Invoking `Skill(skill="gm-skill")` writes `.gm/gm-fired-<sessionId>` to clear the needs-gm gate. The marker is cleared at turn start to reset the gate. There is one shipped skill; no subagent variant exists.
 

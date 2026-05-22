@@ -1,37 +1,52 @@
 {
-  "name": "gm-builder",
-  "version": "1.0.0",
-  "description": "Unified multi-plugin builder for gm plugins across Claude Code, Gemini CLI, and OpenCode",
-  "main": "cli.js",
+  "name": "gm-skill",
+  "version": "2.0.1310",
+  "description": "Canonical universal harness — AI-native software engineering via skill-driven orchestration; bootstraps plugkit for task execution and session isolation. Install in any AI coding agent host.",
+  "author": "AnEntrypoint",
+  "license": "MIT",
+  "keywords": [
+    "gm",
+    "skill",
+    "harness",
+    "plugkit",
+    "orchestration",
+    "ai-coding",
+    "canonical"
+  ],
+  "homepage": "https://github.com/AnEntrypoint/gm#readme",
+  "bugs": {
+    "url": "https://github.com/AnEntrypoint/gm/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/gm.git"
+  },
+  "main": "bin/bootstrap.js",
   "bin": {
-    "gm-builder": "./cli.js",
+    "gm-skill-bootstrap": "./bin/bootstrap.js",
     "gmsniff": "./bin/gmsniff.js",
     "ccsniff": "./bin/ccsniff.js"
   },
-  "scripts": {
-    "build": "node cli.js gm-starter ./build",
-    "test": "node cli.js test",
-    "verify": "node cli.js verify all"
-  },
-  "keywords": [
-    "builder",
-    "multi-plugin",
-    "claude-code",
-    "gemini-cli",
-    "opencode"
+  "files": [
+    "skills/",
+    "agents/",
+    "prompts/",
+    "lib/",
+    "lang/",
+    "scripts/",
+    "bin/",
+    "gm-plugkit/",
+    "AGENTS.md",
+    "README.md",
+    "gm.json"
   ],
-  "author": "AnEntrypoint",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm-builder.git"
+  "dependencies": {
+    "gm-plugkit": "^2.0.1310"
   },
-  "homepage": "https://github.com/AnEntrypoint/gm-builder#readme",
   "engines": {
     "node": ">=16.0.0"
   },
-  "dependencies": {
-    "gm-gc": "^2.0.727",
-    "js-yaml": "^4.1.0"
+  "publishConfig": {
+    "access": "public"
   }
 }
