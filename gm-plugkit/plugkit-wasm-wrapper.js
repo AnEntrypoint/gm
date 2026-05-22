@@ -2344,7 +2344,29 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
 
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
+      const rawBuf = fs.readFileSync(filePath);
+      let content;
+      let _detectedEncoding = 'utf-8';
+      if (rawBuf.length >= 2 && rawBuf[0] === 0xFF && rawBuf[1] === 0xFE) {
+        content = rawBuf.slice(2).toString('utf16le');
+        _detectedEncoding = 'utf-16le-bom';
+      } else if (rawBuf.length >= 2 && rawBuf[0] === 0xFE && rawBuf[1] === 0xFF) {
+        const swapped = Buffer.alloc(rawBuf.length - 2);
+        for (let i = 2; i + 1 < rawBuf.length; i += 2) {
+          swapped[i - 2] = rawBuf[i + 1];
+          swapped[i - 1] = rawBuf[i];
+        }
+        content = swapped.toString('utf16le');
+        _detectedEncoding = 'utf-16be-bom';
+      } else if (rawBuf.length >= 3 && rawBuf[0] === 0xEF && rawBuf[1] === 0xBB && rawBuf[2] === 0xBF) {
+        content = rawBuf.slice(3).toString('utf8');
+        _detectedEncoding = 'utf-8-bom';
+      } else {
+        content = rawBuf.toString('utf8');
+      }
+      if (_detectedEncoding !== 'utf-8') {
+        try { logEvent('plugkit', 'spool.body-encoding-recoded', { task: path.basename(filePath, path.extname(filePath)), encoding: _detectedEncoding, bytes: rawBuf.length }); } catch (_) {}
+      }
       const relPath = path.relative(inDir, filePath);
       const dir = path.dirname(relPath);
       const verb = dir === '.' ? path.basename(filePath, path.extname(filePath)) : dir;
