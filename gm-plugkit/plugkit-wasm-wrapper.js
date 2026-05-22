@@ -2272,6 +2272,24 @@ async function runSpoolWatcher(instance, spoolDir) {
   try { fs.unlinkSync(SHUTDOWN_REASON_PATH); } catch (_) {}
   logEvent('plugkit', 'watcher.boot', { version: _bootVersion, in_dir: inDir, out_dir: outDir, spool_dir: spoolDir, ...restartContext });
 
+  const PRE_SUPERVISED_MARKER = path.join(spoolDir, '.pre-supervised-watcher.json');
+  if (_supervisorPid == null && _bootReason === 'direct-no-supervisor') {
+    try {
+      fs.writeFileSync(PRE_SUPERVISED_MARKER, JSON.stringify({
+        ts: Date.now(),
+        reason: 'running-watcher-has-no-supervisor',
+        watcher_pid: process.pid,
+        watcher_version: _bootVersion,
+        boot_reason: _bootReason,
+        severity: 'warn',
+        instruction: 'A running watcher was started directly without supervisor.js. Unplanned-restart recovery and idle-teardown coordination are dormant. To migrate: stop the current watcher and let the next bootstrap (bun x gm-plugkit@latest spool) re-spawn it under supervisor.js.',
+      }, null, 2));
+      logEvent('plugkit', 'watcher.unsupervised-marker-written', { spool_dir: spoolDir, watcher_pid: process.pid });
+    } catch (_) {}
+  } else {
+    try { fs.unlinkSync(PRE_SUPERVISED_MARKER); } catch (_) {}
+  }
+
   const PROCESSED_MAX = 10000;
   const processed = new Map();
   function markProcessed(key) {
