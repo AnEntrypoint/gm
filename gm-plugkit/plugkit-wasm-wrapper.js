@@ -2518,9 +2518,60 @@ async function runSpoolWatcher(instance, spoolDir) {
 
   const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
   const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  const UPDATE_CHECK_SHARED_CACHE = path.join(GM_TOOLS_ROOT, '.update-check-cache.json');
+  const UPDATE_CHECK_CACHE_TTL_MS = 4 * 60 * 1000;
   let _lastKnownDrift = null;
+  function readSharedUpdateCache() {
+    try {
+      const content = fs.readFileSync(UPDATE_CHECK_SHARED_CACHE, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.ts && parsed.latest && (Date.now() - parsed.ts) < UPDATE_CHECK_CACHE_TTL_MS) {
+        return parsed;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function writeSharedUpdateCache(latest, status) {
+    try {
+      fs.mkdirSync(path.dirname(UPDATE_CHECK_SHARED_CACHE), { recursive: true });
+      const tmp = UPDATE_CHECK_SHARED_CACHE + '.tmp.' + process.pid;
+      fs.writeFileSync(tmp, JSON.stringify({ ts: Date.now(), latest, status, by_pid: process.pid }));
+      fs.renameSync(tmp, UPDATE_CHECK_SHARED_CACHE);
+    } catch (_) {}
+  }
+  function applyUpdateCheckResult(installed, latest, statusCode) {
+    if (statusCode !== 200) {
+      logEvent('plugkit', 'update.check.error', { installed, status: statusCode });
+      return;
+    }
+    if (!latest) return;
+    if (latest === installed) {
+      try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
+      if (_lastKnownDrift) {
+        logEvent('plugkit', 'update.cleared', { installed, was: _lastKnownDrift });
+        _lastKnownDrift = null;
+      }
+      return;
+    }
+    const isDrift = latest !== installed;
+    if (isDrift && _lastKnownDrift !== latest) {
+      try {
+        fs.writeFileSync(UPDATE_AVAILABLE_PATH, JSON.stringify({
+          installed, latest, ts: Date.now(),
+          update_url: `https://github.com/AnEntrypoint/plugkit-bin/releases/tag/v${latest}`,
+        }));
+      } catch (_) {}
+      logEvent('plugkit', 'update.available', { installed, latest });
+      _lastKnownDrift = latest;
+    }
+  }
   function checkForUpdate() {
     const installed = resolveVersion(instance);
+    const cached = readSharedUpdateCache();
+    if (cached) {
+      applyUpdateCheckResult(installed, cached.latest, cached.status || 200);
+      return;
+    }
     const req = https.get({
       host: 'api.github.com',
       path: '/repos/AnEntrypoint/plugkit-bin/releases/latest',
@@ -2529,7 +2580,8 @@ async function runSpoolWatcher(instance, spoolDir) {
     }, (res) => {
       if (res.statusCode !== 200) {
         res.resume();
-        logEvent('plugkit', 'update.check.error', { installed, status: res.statusCode });
+        writeSharedUpdateCache(null, res.statusCode);
+        applyUpdateCheckResult(installed, null, res.statusCode);
         return;
       }
       const chunks = [];
@@ -2540,6 +2592,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           const tag = rel && rel.tag_name;
           if (!tag) return;
           const latest = tag.replace(/^v/, '');
+          writeSharedUpdateCache(latest, 200);
           if (latest === installed) {
             try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
             if (_lastKnownDrift) {
