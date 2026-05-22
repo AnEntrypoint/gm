@@ -357,13 +357,18 @@ function logEvent(sub, event, fields) {
     const day = new Date().toISOString().slice(0, 10);
     const dir = path.join(GM_LOG_ROOT, day);
     fs.mkdirSync(dir, { recursive: true });
+    const safeFields = { ...(fields || {}) };
+    if (Object.prototype.hasOwnProperty.call(safeFields, 'pid')) {
+      safeFields.child_pid = safeFields.pid;
+      delete safeFields.pid;
+    }
     const line = JSON.stringify({
       ts: new Date().toISOString(),
       sub,
       event,
       pid: process.pid,
       sess: readCurrentSess(),
-      ...fields,
+      ...safeFields,
     });
     fs.appendFileSync(path.join(dir, `${sub}.jsonl`), line + '\n');
   } catch (_) {}
@@ -1691,13 +1696,29 @@ function makeHostFunctions(instanceRef) {
 
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
         try { lastBrowserActivityMs = Date.now(); } catch (_) {}
-        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', '14000', '-e', body], 60000);
+        let evalBody = body;
+        let timeoutMs = 14000;
+        const timeoutMatch = body.match(/^timeout=(\d+)\s*\n([\s\S]*)$/);
+        if (timeoutMatch) {
+          const requested = parseInt(timeoutMatch[1], 10);
+          if (Number.isFinite(requested) && requested > 0) {
+            timeoutMs = Math.min(requested, 50000);
+            evalBody = timeoutMatch[2];
+          }
+        }
+        const outerTimeoutMs = Math.min(timeoutMs + 6000, 60000);
+        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs);
+        const ok = r.status === 0;
+        if (!ok && r.status === null) {
+          logEvent('plugkit', 'browser.runner-timeout', { session_id: pwSessionId, timeout_ms: timeoutMs, body_bytes: evalBody.length });
+        }
         return writeWasmJson(instanceRef.value, {
-          ok: r.status === 0,
+          ok,
           stdout: scrubBrowserRunnerText(r.stdout || ''),
           stderr: scrubBrowserRunnerText(r.stderr || ''),
           exit_code: r.status === null ? -1 : r.status,
           session_id: pwSessionId,
+          timeout_ms_used: timeoutMs,
         });
       } catch (e) {
         return writeWasmJson(instanceRef.value, { ok: false, error: scrubBrowserRunnerText(e.message) });
