@@ -6,6 +6,8 @@ final-build/
 gm-build/
 gm-build-latest/
 gm-build-sync/
+bin/plugkit.wasm
+gm-plugkit/plugkit.wasm
 .codeinsight
 node_modules/
 
