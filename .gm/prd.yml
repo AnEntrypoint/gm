@@ -1126,3 +1126,38 @@
   - external
   status: completed
   witness: 'name-and-stop: residuals predate session and are not session work — site/theme.mjs M was already modified at session start (per initial gitStatus), .gm/witness/ and bin/gm-shell-validate.js were untracked at session start. Owner must decide. blockedBy:external.'
+- id: dedupe-update-check-error
+  subject: Suppress repeated update.check.error events to once-per-condition
+  category: feature
+  effort: small
+  description: 8x update.check.error status:-2 in 30 min. Once-per-transition logging needed.
+  acceptance:
+  - update.check.error emits at most once per error-condition transition
+  - update.check.recovered emits on recovery
+  status: pending
+- id: prune-acp-launcher-noise
+  subject: Disable or detect-and-skip legacy acp-launcher emissions
+  category: feature
+  effort: small
+  description: 'acp-launcher (kilo-code-cli archived) keeps writing wrapper_failed events. gmsniff queries get noisier. Options: gmsniff --exclude-legacy default, or move to separate gm-log subfolder.'
+  acceptance:
+  - gmsniff default view excludes acp-launcher legacy
+  status: pending
+- id: gm-shell-validate-port-discovery
+  subject: bin/gm-shell-validate.js discovers CDP port instead of hardcoding 19988
+  category: feature
+  effort: small
+  description: Script posts to http://127.0.0.1:19988/cli/execute hardcoded. Per-session port lives in .gm/exec-spool/browser-ports.json.
+  acceptance:
+  - script reads browser-ports.json to find live port
+  - fallback only when ports.json absent
+  status: pending
+- id: clean-stale-cross-project-watchers
+  subject: Detect and report cross-project watchers with stale heartbeats
+  category: feature
+  effort: small
+  description: gmsniff iter-10 showed looper watcher.unplanned-restart severity:critical with binary 0.1.342 from May 12. Boot-probe should sweep known project dirs for stale .status.json + dead pid, emit cleanup events.
+  acceptance:
+  - cross-project.stale-watcher-detected event emits
+  - User has clear path to clean stale watchers without manual hunting
+  status: pending
