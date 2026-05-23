@@ -2,19 +2,90 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const cp = require('child_process');
 const { ensureReady, startSpoolDaemon } = require('./bootstrap');
 
 const usage = `gm-plugkit — Bootstrap and daemon-spawn for gm plugkit binary.
 
 Usage:
-  bun x gm-plugkit@latest          Bootstrap + start spool daemon
-  bun x gm-plugkit@latest spool    Same as default (explicit)
-  bun x gm-plugkit@latest --daemon Same as default
-  bun x gm-plugkit@latest --binary Print binary path only
-  bun x gm-plugkit@latest --status JSON status check
-  bun x gm-plugkit@latest --help   Show this help
+  bun x gm-plugkit@latest                    Bootstrap + start spool daemon
+  bun x gm-plugkit@latest spool              Same as default (explicit)
+  bun x gm-plugkit@latest --daemon           Same as default
+  bun x gm-plugkit@latest --binary           Print binary path only
+  bun x gm-plugkit@latest --status           JSON status check
+  bun x gm-plugkit@latest --kill-stale-watchers
+                                             Kill plugkit watchers whose in-memory
+                                             wrapper sha differs from on-disk
+                                             (lets new wrapper code load on next bootstrap)
+  bun x gm-plugkit@latest --help             Show this help
 `;
+
+function killStaleWatchers() {
+  try {
+    const wrapperPath = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
+    if (!fs.existsSync(wrapperPath)) {
+      console.log(JSON.stringify({ ok: false, error: 'wrapper not installed at ~/.gm-tools/plugkit-wasm-wrapper.js' }));
+      return 1;
+    }
+    const diskMtime = fs.statSync(wrapperPath).mtimeMs;
+    const stale = [];
+    const fresh = [];
+    if (process.platform === 'win32') {
+      const ps = `Get-WmiObject Win32_Process -Filter "name='node.exe'" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CreationDate }`;
+      const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
+      for (const line of out.split(/\r?\n/).filter(Boolean)) {
+        const [pidStr, creation] = line.split('|');
+        const pid = parseInt(pidStr, 10);
+        if (!Number.isFinite(pid)) continue;
+        const m = creation && creation.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\.(\d+))?(?:([+-])(\d+))?/);
+        if (!m) continue;
+        const localMs = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], m[7] ? Math.round(+('0.' + m[7]) * 1000) : 0).getTime();
+        if (localMs < diskMtime) stale.push({ pid, started_ms: localMs });
+        else fresh.push({ pid, started_ms: localMs });
+      }
+    } else {
+      const out = cp.execFileSync('ps', ['-eo', 'pid,lstart,command'], { encoding: 'utf-8' });
+      for (const line of out.split('\n').slice(1)) {
+        if (!line.includes('plugkit-wasm-wrapper')) continue;
+        const m = line.match(/^\s*(\d+)\s+(.+?\d{4})\s+/);
+        if (!m) continue;
+        const pid = parseInt(m[1], 10);
+        const start = Date.parse(m[2]);
+        if (!Number.isFinite(pid) || !Number.isFinite(start)) continue;
+        if (start < diskMtime) stale.push({ pid, started_ms: start });
+        else fresh.push({ pid, started_ms: start });
+      }
+    }
+    const killed = [];
+    const failed = [];
+    for (const s of stale) {
+      try {
+        if (process.platform === 'win32') {
+          cp.execFileSync('taskkill', ['/F', '/PID', String(s.pid)], { stdio: 'ignore', windowsHide: true });
+        } else {
+          process.kill(s.pid, 'SIGTERM');
+        }
+        killed.push(s.pid);
+      } catch (e) {
+        failed.push({ pid: s.pid, error: e.message });
+      }
+    }
+    console.log(JSON.stringify({
+      ok: true,
+      disk_wrapper_mtime_ms: diskMtime,
+      stale_found: stale.length,
+      fresh_found: fresh.length,
+      killed,
+      failed,
+    }, null, 2));
+    return 0;
+  } catch (e) {
+    console.log(JSON.stringify({ ok: false, error: e.message }));
+    return 1;
+  }
+}
 
 function spoolDir() {
   const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -53,6 +124,10 @@ function writeCliError(phase, err) {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(usage);
     process.exit(0);
+  }
+
+  if (args.includes('--kill-stale-watchers')) {
+    process.exit(killStaleWatchers());
   }
 
   ensureSpoolDir();
