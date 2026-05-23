@@ -1,0 +1,1 @@
+Iter-21 (rs-plugkit 26fd33b): caught tv8 agent omitting id on prd-add (5 auto-generated 'item-<ms>' ids). Fix: prd.rs emits deviation.prd-add-no-id event with hint; plan.rs Dispatch prose adds 'pass an id field — kebab-case slug derived from subject'. Discipline-stack now catches cross-project agent behavior visible via iter-7 gm-log path fix.
