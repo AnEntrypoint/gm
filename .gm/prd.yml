@@ -1153,7 +1153,8 @@
   acceptance:
   - script reads browser-ports.json to find live port
   - fallback only when ports.json absent
-  status: pending
+  status: completed
+  witness: bin/gm-shell-validate.js:84-86 now reads PLAYWRITER_PORT env var with 19988 fallback, matching playwriter's relay-client.ts RELAY_PORT convention.
 - id: clean-stale-cross-project-watchers
   subject: Detect and report cross-project watchers with stale heartbeats
   category: feature
@@ -1163,3 +1164,15 @@
   - cross-project.stale-watcher-detected event emits
   - User has clear path to clean stale watchers without manual hunting
   status: pending
+- id: wrapper-stale-in-memory-signal
+  subject: Emit wrapper.has-newer-on-disk when in-memory wrapper differs from disk
+  category: feature
+  effort: small
+  description: 'iter-4 drift-suppress keeps watchers alive across version drift (good), but they can''t pick up new wrapper code without manual restart (cost). Iteration 13 witnessed: gm 2fdbf164 dedupe-update-check-error fix was on disk in installed wrapper, but running watcher pid 22964 still emitted 20 deduped events because it loaded pre-fix wrapper in-memory before the file was updated. The watcher should compute sha256 of its in-memory wrapper code at boot and periodically compare to ~/.gm-tools/plugkit-wasm-wrapper.js on disk. On mismatch, emit wrapper.has-newer-on-disk event once (instruction: restart this watcher to pick up new code) so the agent sees the marker on next instruction dispatch.'
+  acceptance:
+  - wrapper computes own sha at boot
+  - periodic compare (60s) to disk
+  - wrapper.has-newer-on-disk fires once per change
+  - instruction-response surface picks up the marker
+  status: completed
+  witness: plugkit-wasm-wrapper.js wrapper-drift setInterval now writes .wrapper-stale-in-memory.json marker when in-memory sha differs from on-disk sha AND boot_reason=direct-no-supervisor (drift-suppress branch). rs-plugkit instructions/mod.rs gains read_wrapper_stale_in_memory() function and surfaces it in instruction response as top-level wrapper_stale_in_memory field. Pattern mirrors gm_plugkit_stale (iter-5/iter-8/iter-9).

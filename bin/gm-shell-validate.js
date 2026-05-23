@@ -81,7 +81,8 @@ return JSON.stringify(result);
 `);
 
   const script = fs.readFileSync(witness, 'utf8');
-  const relayUrl = 'http://127.0.0.1:19988/cli/execute';
+  const relayPort = Number(process.env.PLAYWRITER_PORT) || 19988;
+  const relayUrl = `http://127.0.0.1:${relayPort}/cli/execute`;
   const response = await fetch(relayUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

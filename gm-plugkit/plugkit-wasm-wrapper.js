@@ -2171,6 +2171,17 @@ async function runSpoolWatcher(instance, spoolDir) {
       if (unsupervised) {
         if (_wrapperDriftLoggedOnce) return;
         _wrapperDriftLoggedOnce = true;
+        try {
+          const marker = {
+            ts: new Date().toISOString(),
+            reason: 'wrapper-has-newer-on-disk',
+            running_sha12: _wrapperShaAtBoot.slice(0, 12),
+            disk_sha12: cur.slice(0, 12),
+            running_pid: process.pid,
+            instruction: 'Wrapper code on disk has newer sha than what this watcher loaded in-memory. Drift-suppress kept the watcher alive (good), but new code only loads on restart. Kill this watcher (taskkill /F /PID ' + process.pid + ' on Windows, kill ' + process.pid + ' on POSIX) and re-bootstrap (bun x gm-plugkit@latest spool) to pick up the new wrapper.',
+          };
+          fs.writeFileSync(path.join(spoolDir, '.wrapper-stale-in-memory.json'), JSON.stringify(marker, null, 2));
+        } catch (_) {}
         logEvent('plugkit', 'wrapper.drift-detected-no-exit', {
           boot_sha: _wrapperShaAtBoot.slice(0, 12),
           file_sha: cur.slice(0, 12),
@@ -2639,17 +2650,47 @@ async function runSpoolWatcher(instance, spoolDir) {
       fs.renameSync(tmp, UPDATE_CHECK_SHARED_CACHE);
     } catch (_) {}
   }
+  const UPDATE_CHECK_ERROR_MARKER = path.join(GM_TOOLS_ROOT, '.update-check-error.json');
   let _lastKnownUpdateError = null;
+  function readSharedUpdateErrorKey() {
+    try {
+      const raw = fs.readFileSync(UPDATE_CHECK_ERROR_MARKER, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.key === 'string' && Date.now() - (parsed.ts || 0) < 60 * 60 * 1000) {
+        return parsed.key;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function writeSharedUpdateErrorKey(key) {
+    try {
+      const tmp = UPDATE_CHECK_ERROR_MARKER + '.tmp';
+      fs.writeFileSync(tmp, JSON.stringify({ ts: Date.now(), key, by_pid: process.pid }));
+      fs.renameSync(tmp, UPDATE_CHECK_ERROR_MARKER);
+    } catch (_) {}
+  }
+  function clearSharedUpdateErrorKey() {
+    try { fs.unlinkSync(UPDATE_CHECK_ERROR_MARKER); } catch (_) {}
+  }
   function logUpdateCheckError(fields) {
     const key = `${fields.status || ''}:${fields.error || ''}`;
     if (_lastKnownUpdateError === key) return;
+    const shared = readSharedUpdateErrorKey();
+    if (shared === key) {
+      _lastKnownUpdateError = key;
+      return;
+    }
     _lastKnownUpdateError = key;
+    writeSharedUpdateErrorKey(key);
     logEvent('plugkit', 'update.check.error', fields);
   }
   function clearUpdateCheckError(installed) {
-    if (_lastKnownUpdateError !== null) {
-      logEvent('plugkit', 'update.check.recovered', { installed, was: _lastKnownUpdateError });
+    const shared = readSharedUpdateErrorKey();
+    if (_lastKnownUpdateError !== null || shared !== null) {
+      const was = _lastKnownUpdateError || shared;
+      logEvent('plugkit', 'update.check.recovered', { installed, was });
       _lastKnownUpdateError = null;
+      clearSharedUpdateErrorKey();
     }
   }
   function applyUpdateCheckResult(installed, latest, statusCode) {
