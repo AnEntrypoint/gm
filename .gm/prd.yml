@@ -1081,3 +1081,37 @@
   - rs-learn-port-graph-store
   status: completed
   witness: 'rs-learn commit 213b946 feat(graph): port 8-head graph attention with edge features from dd065b9^'
+- id: drift-exit-suppress-no-supervisor
+  subject: Suppress version-drift-exit when boot_reason=direct-no-supervisor
+  category: feature
+  effort: small
+  description: 'plugkit-wasm-wrapper.js version-drift-check (gm-plugkit/plugkit-wasm-wrapper.js:2059-2091) currently exits regardless of supervisor presence. When boot_reason=direct-no-supervisor, exit creates a permanent dispatch hole because no respawner exists. Fix: check process.env.PLUGKIT_BOOT_REASON inside the drift-detect setInterval; if ''direct-no-supervisor'', log version.drift event without exiting and emit a deviation event the agent can observe. The split-brain (file=N, instance=N-1) is mild; total watcher death is catastrophic.'
+  acceptance:
+  - plugkit-wasm-wrapper.js drift-detect setInterval checks boot_reason
+  - 'direct-no-supervisor mode: log drift event but do NOT process.exit'
+  - Supervised mode unchanged (still exits for respawn)
+  - 'Witness via gmsniff event filter: version.drift-detected-no-exit'
+  status: completed
+  witness: gm-plugkit/plugkit-wasm-wrapper.js:2063-2105 version-drift setInterval now reads PLUGKIT_BOOT_REASON; if 'direct-no-supervisor' logs version.drift-detected-no-exit event and returns without process.exit. Same pattern at wrapper.drift check :2115-2160. Once-per-process logging via _driftLoggedOnce / _wrapperDriftLoggedOnce flags. Syntax verified via node --check.
+- id: acp-launcher-noise-source
+  subject: Locate external acp-launcher process emitting EADDRINUSE 4780 spam to gm-log
+  category: docs
+  effort: small
+  description: 156 wrapper_failed + 52 spawn_failed events from acp-launcher in past 24h gm-log. Source is not in c:/dev/gm. kilo-code-cli is archived. Find the external launcher (likely systemd/scheduled task/shell rc) and disable it. Out-of-spirit if source machine isn't accessible - then name-and-stop as blockedBy:external.
+  acceptance:
+  - Locate process emitting `kilo wrapper` failure events
+  - Document source path
+  - Either disable, or PRD blockedBy:external if owner-only
+  status: pending
+- id: playwriter-version-check-at-dispatch
+  subject: Plugkit browser-verb pre-checks playwriter version, surfaces clean self-heal
+  category: feature
+  effort: medium
+  description: 'tv8 browser dispatches fail with ''managed browser session 0.1.0 is outdated (extension requires 0.2.0)'' from playwriter stderr. Issue (1): playwriter install-instruction names a fake package ''managed browser session@latest'' instead of real ''playwriter@latest''. Issue (2): plugkit propagates raw stderr instead of pre-checking. Fix: (a) plugkit-wasm-wrapper.js browser-verb pre-dispatch checks `playwriter --version` against required min and emits browser.outdated-playwriter event with clean install instruction; (b) upstream playwriter stderr names ''playwriter'' as the install target.'
+  acceptance:
+  - browser verb gates on playwriter min-version check before forwarding to executor
+  - browser.outdated-playwriter event surfaces in gmsniff
+  - tv8 retry sequence completes without raw playwriter stderr leaking to agent
+  blockedBy:
+  - external
+  status: pending

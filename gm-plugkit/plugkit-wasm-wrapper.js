@@ -2061,11 +2061,27 @@ async function runSpoolWatcher(instance, spoolDir) {
   }, 5000);
 
   const _instanceVersionAtBoot = readInstanceVersion(instance);
+  let _driftLoggedOnce = false;
   setInterval(() => {
     try {
       const fileV = readFileVersionOnly();
       const instV = _instanceVersionAtBoot;
       if (!fileV || !instV || fileV === instV) return;
+      const bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
+      const unsupervised = bootReason === 'direct-no-supervisor';
+      if (unsupervised) {
+        if (_driftLoggedOnce) return;
+        _driftLoggedOnce = true;
+        logEvent('plugkit', 'version.drift-detected-no-exit', {
+          instance_version: instV,
+          file_version: fileV,
+          action: 'suppress-exit',
+          reason: 'no-supervisor-to-respawn',
+          boot_reason: bootReason,
+        });
+        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — exit SUPPRESSED (boot_reason=${bootReason}; no supervisor to respawn)`);
+        return;
+      }
       logEvent('plugkit', 'version.drift', {
         instance_version: instV,
         file_version: fileV,
@@ -2096,12 +2112,28 @@ async function runSpoolWatcher(instance, spoolDir) {
     const _crypto = require('crypto');
     _wrapperShaAtBoot = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
   } catch (_) {}
+  let _wrapperDriftLoggedOnce = false;
   setInterval(() => {
     try {
       if (!_wrapperShaAtBoot) return;
       const _crypto = require('crypto');
       const cur = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
       if (cur === _wrapperShaAtBoot) return;
+      const bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
+      const unsupervised = bootReason === 'direct-no-supervisor';
+      if (unsupervised) {
+        if (_wrapperDriftLoggedOnce) return;
+        _wrapperDriftLoggedOnce = true;
+        logEvent('plugkit', 'wrapper.drift-detected-no-exit', {
+          boot_sha: _wrapperShaAtBoot.slice(0, 12),
+          file_sha: cur.slice(0, 12),
+          action: 'suppress-exit',
+          reason: 'no-supervisor-to-respawn',
+          boot_reason: bootReason,
+        });
+        console.error(`[plugkit-wasm] wrapper.js drift detected — exit SUPPRESSED (boot_reason=${bootReason}; no supervisor to respawn)`);
+        return;
+      }
       logEvent('plugkit', 'wrapper.drift', {
         boot_sha: _wrapperShaAtBoot.slice(0, 12),
         file_sha: cur.slice(0, 12),
