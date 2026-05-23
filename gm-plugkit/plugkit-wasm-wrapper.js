@@ -2059,6 +2059,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   }, 5000);
 
   let _selfStaleLoggedOnce = false;
+  let _selfStaleProbeErrorLogged = false;
   function probeGmPlugkitSelfStale() {
     try {
       const ownPkgVersionFile = path.join(GM_TOOLS_ROOT, 'gm-plugkit.version');
@@ -2072,11 +2073,19 @@ async function runSpoolWatcher(instance, spoolDir) {
       }
       if (!own) return;
       const https = require('https');
-      const req = https.get('https://registry.npmjs.org/gm-plugkit/latest', { timeout: 3000 }, (res) => {
+      let _probeErrored = false;
+      const req = https.get('https://registry.npmjs.org/gm-plugkit/latest', { timeout: 10000, headers: { 'user-agent': 'plugkit-watcher' } }, (res) => {
         let body = '';
         res.on('data', (c) => body += c);
         res.on('end', () => {
           try {
+            if (res.statusCode !== 200) {
+              if (!_selfStaleProbeErrorLogged) {
+                _selfStaleProbeErrorLogged = true;
+                try { logEvent('plugkit', 'gm-plugkit.self-stale-probe-error', { reason: `http-${res.statusCode}` }); } catch (_) {}
+              }
+              return;
+            }
             const latest = JSON.parse(body).version;
             const stalePath = path.join(spoolDir, '.gm-plugkit-stale.json');
             if (!latest || latest === own) {
@@ -2088,7 +2097,7 @@ async function runSpoolWatcher(instance, spoolDir) {
               reason: 'gm-plugkit-self-stale',
               running_version: own,
               latest_version: latest,
-              instruction: `gm-plugkit running ${own} but npm has ${latest}. The npx/bun cache served a stale copy. Clear the cache so the next invocation picks up the latest wrapper fixes: bun pm cache rm; or npx clear-npx-cache; or rm -rf ~/.npm/_npx ~/AppData/Local/npm-cache/_npx`,
+              instruction: `gm-plugkit running ${own} but npm has ${latest}. The npx/bun cache served a stale copy. Run 'bun x gm-plugkit@latest --kill-stale-watchers' then re-bootstrap. Or clear the cache directly: bun pm cache rm; or rm -rf ~/.npm/_npx ~/AppData/Local/npm-cache/_npx`,
               detected_by: 'watcher-periodic-probe',
             };
             try { fs.writeFileSync(stalePath, JSON.stringify(marker, null, 2)); } catch (_) {}
@@ -2097,11 +2106,31 @@ async function runSpoolWatcher(instance, spoolDir) {
               try { logEvent('plugkit', 'gm-plugkit.self-stale', { running_version: own, latest_version: latest, detected_by: 'watcher-periodic-probe' }); } catch (_) {}
               console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
             }
-          } catch (_) {}
+          } catch (e) {
+            if (!_selfStaleProbeErrorLogged) {
+              _selfStaleProbeErrorLogged = true;
+              try { logEvent('plugkit', 'gm-plugkit.self-stale-probe-error', { reason: 'parse', error: String(e && e.message || e).slice(0, 200) }); } catch (_) {}
+            }
+          }
         });
       });
-      req.on('error', () => {});
-      req.on('timeout', () => { try { req.destroy(); } catch (_) {} });
+      req.on('error', (e) => {
+        if (_probeErrored) return;
+        _probeErrored = true;
+        if (!_selfStaleProbeErrorLogged) {
+          _selfStaleProbeErrorLogged = true;
+          try { logEvent('plugkit', 'gm-plugkit.self-stale-probe-error', { reason: 'network', error: String(e && e.message || e).slice(0, 200) }); } catch (_) {}
+        }
+      });
+      req.on('timeout', () => {
+        if (_probeErrored) { try { req.destroy(); } catch (_) {} return; }
+        _probeErrored = true;
+        try { req.destroy(); } catch (_) {}
+        if (!_selfStaleProbeErrorLogged) {
+          _selfStaleProbeErrorLogged = true;
+          try { logEvent('plugkit', 'gm-plugkit.self-stale-probe-error', { reason: 'timeout' }); } catch (_) {}
+        }
+      });
     } catch (_) {}
   }
   setTimeout(probeGmPlugkitSelfStale, 5000);
