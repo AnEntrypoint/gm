@@ -354,6 +354,10 @@ function readCurrentSess() {
     resolved = __sessCache.syntheticSess;
   }
   __sessCache.value = resolved;
+  if (!__sessCache._diagLogged) {
+    __sessCache._diagLogged = true;
+    try { console.error('[sess-diag] cwd=' + process.cwd() + ' found=' + JSON.stringify(found) + ' env_claude=' + JSON.stringify(process.env.CLAUDE_SESSION_ID) + ' env_gm=' + JSON.stringify(process.env.GM_SESSION_ID) + ' resolved=' + JSON.stringify(resolved) + ' synth=' + JSON.stringify(__sessCache.syntheticSess)); } catch (_) {}
+  }
   return __sessCache.value;
 }
 
