@@ -14,7 +14,7 @@ hero:
     - { label: "every dispatch through one spool folder" }
     - { label: "no mocks, no skips, no excuses" }
   ctas:
-    - { label: "⭐ Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
+    - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
     - { label: "Install", href: "https://github.com/AnEntrypoint/gm#install" }
     - { label: "live stats", href: "./stats/" }
     - { label: "rust crates", href: "./crates/" }
