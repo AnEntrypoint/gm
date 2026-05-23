@@ -1631,14 +1631,12 @@ function makeHostFunctions(instanceRef) {
           return 0;
         }
         if (level >= 2) {
-          const gateMatch = msg.match(/^plugkit gate:\s+([\w-]+)\s+(.*)$/);
-          if (gateMatch) {
-            logEvent('hook', `deviation.${gateMatch[1]}`, { detail: gateMatch[2], source: 'stderr-bridge' });
-          } else {
-            const noiseRe = /^(instruction::handle|recall::recall_hits|embed::|memorize::)/;
-            if (!noiseRe.test(msg)) {
-              logEvent('plugkit', level >= 3 ? 'wasm.err' : 'wasm.warn', { msg: msg.slice(0, 500) });
-            }
+          if (/^plugkit gate:\s+[\w-]+\s+/.test(msg)) {
+            return 0;
+          }
+          const noiseRe = /^(instruction::handle|recall::recall_hits|embed::|memorize::)/;
+          if (!noiseRe.test(msg)) {
+            logEvent('plugkit', level >= 3 ? 'wasm.err' : 'wasm.warn', { msg: msg.slice(0, 500) });
           }
         }
         return 0;
