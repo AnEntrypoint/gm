@@ -746,9 +746,61 @@ async function resolveLatestRemoteVersion(timeoutMs) {
   return null;
 }
 
+async function resolveLatestGmPlugkitNpmVersion(timeoutMs) {
+  try {
+    const buf = await httpGetBuffer('https://registry.npmjs.org/gm-plugkit/latest', timeoutMs || 3000);
+    const meta = JSON.parse(buf.toString('utf-8'));
+    if (meta && typeof meta.version === 'string') return meta.version;
+  } catch (_) {}
+  return null;
+}
+
+function getSelfVersion() {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
+    return pkg.version || null;
+  } catch (_) { return null; }
+}
+
+async function probeSelfStaleness(timeoutMs) {
+  const own = getSelfVersion();
+  if (!own) return { stale: false, reason: 'no-self-version' };
+  const latest = await resolveLatestGmPlugkitNpmVersion(timeoutMs);
+  if (!latest) return { stale: false, reason: 'no-remote-version', own };
+  if (latest === own) return { stale: false, own, latest };
+  return { stale: true, own, latest };
+}
+
 async function ensureReady(opts) {
   opts = opts || {};
   const offline = opts.offline === true;
+
+  if (!offline) {
+    try {
+      const selfStale = await probeSelfStaleness(2500);
+      if (selfStale && selfStale.stale) {
+        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+        const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
+        try { fs.mkdirSync(spoolDir, { recursive: true }); } catch (_) {}
+        const marker = {
+          ts: new Date().toISOString(),
+          reason: 'gm-plugkit-self-stale',
+          running_version: selfStale.own,
+          latest_version: selfStale.latest,
+          instruction: `gm-plugkit running ${selfStale.own} but npm has ${selfStale.latest}. The npx/bun cache served a stale copy. Clear the cache so the next invocation picks up the latest wrapper fixes: bun pm cache rm; or  npx clear-npx-cache; or rm -rf ~/.npm/_npx ~/AppData/Local/npm-cache/_npx`,
+        };
+        try { fs.writeFileSync(path.join(spoolDir, '.gm-plugkit-stale.json'), JSON.stringify(marker, null, 2)); } catch (_) {}
+        log(`gm-plugkit self-stale: running ${selfStale.own}, latest npm ${selfStale.latest} — cache served old code (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
+      } else if (selfStale && selfStale.own) {
+        try {
+          const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+          const stalePath = path.join(projectDir, '.gm', 'exec-spool', '.gm-plugkit-stale.json');
+          if (fs.existsSync(stalePath)) fs.unlinkSync(stalePath);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   let pinnedVersion = null;
   try { pinnedVersion = readVersionFile(); } catch (_) {}
   let targetVersion = pinnedVersion;
