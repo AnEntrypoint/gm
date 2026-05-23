@@ -65,6 +65,11 @@ import { createActor, createMachine } from './vendor/xstate/dist/xstate.esm.js';
 const data = JSON.parse(document.getElementById('__site__').textContent);
 const tabs = Array.from(document.querySelectorAll('[data-tab]'));
 const sections = Array.from(document.querySelectorAll('[data-section]'));
+const appButtons = Array.from(document.querySelectorAll('[data-app]'));
+const appActionButtons = Array.from(document.querySelectorAll('[data-app-action]'));
+const appSurfaces = Array.from(document.querySelectorAll('[data-app-surface]'));
+const activeAppCopy = document.getElementById('active-app-copy');
+const activeActionCopy = document.getElementById('active-action-copy');
 const machine = createMachine({
   id: 'siteViews',
   initial: 'overview',
@@ -76,14 +81,38 @@ const machine = createMachine({
 });
 const actor = createActor(machine);
 let state = 'overview';
+let activeApp = 'home';
 const sync = () => {
   tabs.forEach((btn) => btn.dataset.active = String(btn.dataset.tab === state));
+  appButtons.forEach((btn) => btn.dataset.active = String(btn.dataset.app === activeApp));
+  appActionButtons.forEach((btn) => btn.dataset.active = String(btn.dataset.appAction === activeApp));
+  appSurfaces.forEach((surface) => {
+    surface.hidden = surface.dataset.appSurface !== activeApp;
+  });
+  if (activeAppCopy) {
+    const labels = {
+      home: 'Home surface is the default shell entrypoint.',
+      paper: 'Paper surface is active for docs and reading.',
+      stats: 'Stats surface is active for live metrics.',
+      crates: 'Crates surface is active for extension inventory.',
+      skills: 'Skills surface is active for capability routing.',
+    };
+    activeAppCopy.textContent = labels[activeApp] || 'The current app selection is active.';
+  }
+  if (activeActionCopy) {
+    activeActionCopy.textContent = activeApp + ' actions are active and ready for browser routing.';
+  }
   sections.forEach((section) => {
     section.hidden = section.dataset.section !== state;
   });
+  window.dispatchEvent(new CustomEvent('gm:state', { detail: { view: state, app: activeApp } }));
 };
 const go = (next) => {
   actor.send({ type: next });
+};
+const launch = (app) => {
+  activeApp = app;
+  sync();
 };
 tabs.forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -91,6 +120,12 @@ tabs.forEach((btn) => {
     actor.send({ type: 'GOTO_' + btn.dataset.tab.toUpperCase() });
     sync();
   });
+});
+appButtons.forEach((btn) => {
+  btn.addEventListener('click', () => launch(btn.dataset.app));
+});
+appActionButtons.forEach((btn) => {
+  btn.addEventListener('click', () => launch(btn.dataset.appAction));
 });
 document.querySelectorAll('[data-flow]').forEach((btn) => {
   btn.addEventListener('click', () => go(btn.dataset.flow));
@@ -107,12 +142,92 @@ window.__debug = {
     view: () => state,
     views: tabs.map((btn) => btn.dataset.tab),
     count: () => sections.length,
+    surfaces: () => appSurfaces.length,
+    app: () => activeApp,
+    apps: () => appButtons.map((btn) => btn.dataset.app),
+    actions: () => appActionButtons.map((btn) => btn.dataset.appAction),
   }
 };
 `;
 
 const renderHtml = ({ site, navItems, page }) => {
   const navHtml = navItems.map(([label, href]) => `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`).join('');
+  const launcherApps = [
+    ['home', 'Home', '/'],
+    ['paper', 'Paper', '/paper/'],
+    ['stats', 'Stats', '/stats/'],
+    ['crates', 'Crates', '/crates/'],
+    ['skills', 'Skills', '/skills/'],
+  ];
+  const appDescriptions = {
+    home: {
+      title: 'Home surface',
+      body: 'Entry view, launcher status, and shell health indicators.',
+      accent: 'overview',
+    },
+    paper: {
+      title: 'Paper surface',
+      body: 'Documentation and concepts rendered as a stable reading workspace.',
+      accent: 'docs',
+    },
+    stats: {
+      title: 'Stats surface',
+      body: 'Live site telemetry, validation signals, and system counters.',
+      accent: 'metrics',
+    },
+    crates: {
+      title: 'Crates surface',
+      body: 'Extension inventory and pluggable building blocks for later apps.',
+      accent: 'modules',
+    },
+    skills: {
+      title: 'Skills surface',
+      body: 'Capability registry for browser, shell, and task flows.',
+      accent: 'capabilities',
+    },
+  };
+  const launcherHtml = launcherApps.map(([app, label, href]) => `<button class="btn btn-outline btn-sm" data-app="${escapeHtml(app)}" type="button">${escapeHtml(label)}</button>`).join('');
+  const appSurfaceHtml = Object.entries(appDescriptions).map(([app, meta]) => `
+    <section class="doc-card" data-app-surface="${escapeHtml(app)}" hidden>
+      <strong>${escapeHtml(meta.title)}</strong>
+      <p>${escapeHtml(meta.body)}</p>
+      <small>${escapeHtml(meta.accent)}</small>
+    </section>
+  `).join('');
+  const appActionStrip = launcherApps.map(([app, label]) => `<button class="btn btn-ghost btn-sm" data-app-action="${escapeHtml(app)}" type="button">${escapeHtml(label)} action</button>`).join('');
+  const appRouteRows = launcherApps.map(([app, label, href]) => `
+    <button class="btn btn-sm justify-start" data-app-action="${escapeHtml(app)}" type="button">
+      <span class="flex flex-1 items-center justify-between gap-4">
+        <span>${escapeHtml(label)}</span>
+        <span class="text-xs uppercase tracking-[0.24em] text-base-content/50">${escapeHtml(href)}</span>
+      </span>
+    </button>
+  `).join('');
+  const appDockCards = launcherApps.map(([app, label, href], index) => `
+    <button class="card card-compact border border-base-300 bg-base-100/80 p-3 text-left transition hover:border-primary/50" data-app-action="${escapeHtml(app)}" type="button">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-xs uppercase tracking-[0.24em] text-base-content/50">app ${String(index + 1).padStart(2, '0')}</div>
+          <div class="mt-1 font-semibold">${escapeHtml(label)}</div>
+        </div>
+        <div class="badge badge-outline">${escapeHtml(appAccent[app] || 'overview')}</div>
+      </div>
+      <div class="mt-2 text-sm text-base-content/60">${escapeHtml(appDescriptions[app]?.body || '')}</div>
+      <div class="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.24em] text-base-content/50">
+        <span>open</span>
+        <span>${escapeHtml(href)}</span>
+      </div>
+    </button>
+  `).join('');
+  const appHintRows = launcherApps.map(([app, label], index) => `
+    <div class="flex items-center justify-between gap-3 rounded-2xl border border-base-300 bg-base-100/80 px-3 py-2">
+      <div class="flex items-center gap-3">
+        <span class="badge badge-sm badge-outline">${String(index + 1)}</span>
+        <span class="font-medium">${escapeHtml(label)}</span>
+      </div>
+      <div class="text-xs uppercase tracking-[0.24em] text-base-content/50">${escapeHtml(appAccent[app] || 'overview')}</div>
+    </div>
+  `).join('');
   const heroBadges = (page.hero?.badges || []).map((b) => `<span class="pill">${escapeHtml(b.label)}</span>`).join('');
   const heroActions = (page.hero?.ctas || []).map((c) => `<a class="btn ${c.primary ? 'primary' : ''}" href="${escapeHtml(c.href)}">${escapeHtml(c.label)}</a>`).join('');
   const featureHtml = (page.features?.items || []).map((it, i) => `
@@ -474,12 +589,12 @@ const renderHtml = ({ site, navItems, page }) => {
               <div class="doc-card">
                 <strong>State-machine framing</strong>
                 <p>The view is driven by a tiny client state machine so the browser experience has explicit states instead of implicit DOM drift.</p>
-                <small>xstate is staged for the next pass</small>
+                <small>stateful and predictable</small>
               </div>
               <div class="doc-card">
                 <strong>Local shell</strong>
-                <p>The layout, spacing, and visual treatment are now in this repo, not only in a remote component library.</p>
-                <small>vendor localization remains to do</small>
+                <p>The layout, spacing, and visual treatment are now owned in this repo.</p>
+                <small>local workspace path</small>
               </div>
             </div>
           </section>
@@ -514,23 +629,69 @@ const renderHtml = ({ site, navItems, page }) => {
                 <small>launcher rail</small>
               </div>
               <div class="flex flex-wrap gap-2">
-                ${navItems.map(([label, href]) => `<a class="btn btn-outline btn-sm" href="${escapeHtml(href)}">${escapeHtml(label)}</a>`).join('')}
+                ${launcherHtml}
               </div>
             </div>
             <div class="docs-grid" style="margin-top:0">
               <div class="doc-card">
                 <strong>Live signals</strong>
-                <p>State machine, local vendors, and local rendering all remain in the browser loop and are ready for more app panes.</p>
+                <p>State machine, rendering, and routed app panes all remain in the browser loop.</p>
                 <small>workspace status</small>
               </div>
               <div class="doc-card">
                 <strong>Ready state</strong>
-                <p>${escapeHtml(page.layout === 'article' ? 'article' : 'launcher')} view is still witnessable through <code>window.__debug.gm</code>.</p>
-                <small>${escapeHtml(page.layout === 'article' ? 'docs' : 'shell')}</small>
+                <p>${escapeHtml(page.layout === 'article' ? 'article' : 'workspace')} view is still witnessable through <code>window.__debug.gm</code>.</p>
+                <small>${escapeHtml(page.layout === 'article' ? 'docs' : 'workspace')}</small>
+              </div>
+              <div class="doc-card">
+                <strong>Active app</strong>
+                <p>The launcher owns an explicit app selection state so the workspace can grow into a true multi-surface OS.</p>
+                <small>multi-surface routing</small>
+              </div>
+              <div class="doc-card">
+                <strong>Visible app route</strong>
+                <p id="active-app-copy">The current launcher selection drives the content below and in the live witness panes.</p>
+                <small>app surface</small>
               </div>
             </div>
           </div>
         </div>
+
+        <section class="panel section" style="padding:18px">
+          <div class="eyebrow">app surfaces</div>
+          <div class="grid gap-3 lg:grid-cols-3" id="app-surfaces">
+            ${appSurfaceHtml}
+          </div>
+          <div class="mt-4 rounded-2xl border border-base-300 bg-base-100/60 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="text-xs uppercase tracking-[0.24em] text-base-content/50">action strip</div>
+                <div class="mt-1 text-sm text-base-content/60" id="active-action-copy">Actions adapt to the selected app.</div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                ${appActionStrip}
+              </div>
+            </div>
+          <div class="mt-4 grid gap-2 md:grid-cols-2">
+              ${appRouteRows}
+            </div>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              ${appDockCards}
+            </div>
+            <div class="mt-4 rounded-2xl border border-base-300 bg-base-100/60 p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div class="text-xs uppercase tracking-[0.24em] text-base-content/50">keyboard</div>
+                  <div class="mt-1 text-sm text-base-content/60" id="active-hint-copy">Use the app shortcuts to switch the active workspace surface.</div>
+                </div>
+                <div class="text-xs uppercase tracking-[0.24em] text-base-content/50">active: ${'${escapeHtml(routeLabels[((readState().app && readState().app()) || \'home\')] || \'Home\')}'}</div>
+              </div>
+              <div class="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                ${appHintRows}
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     `}
   </div>
@@ -541,6 +702,28 @@ const renderHtml = ({ site, navItems, page }) => {
     const data = JSON.parse(document.getElementById('__site__').textContent);
     const host = document.getElementById('workspace-shell');
     const shellLinks = (data.navItems || []).slice(0, 6);
+    const readState = () => (window.__debug && window.__debug.gm) || {};
+    const appCopy = {
+      home: 'Home surface focused on shell entry, health, and launch control.',
+      paper: 'Paper surface focused on reading, docs, and long-form guidance.',
+      stats: 'Stats surface focused on validation and live signals.',
+      crates: 'Crates surface focused on pluggable extension inventory.',
+      skills: 'Skills surface focused on runtime capabilities and workflows.',
+    };
+    const appAccent = {
+      home: 'overview',
+      paper: 'docs',
+      stats: 'metrics',
+      crates: 'modules',
+      skills: 'capabilities',
+    };
+    const routeLabels = {
+      home: 'Home',
+      paper: 'Paper',
+      stats: 'Stats',
+      crates: 'Crates',
+      skills: 'Skills',
+    };
     const render = () => applyDiff(host, createElement('section', { class: 'mb-4 grid gap-4 rounded-3xl border border-base-300 bg-base-100/85 p-4 shadow-2xl lg:grid-cols-[1.1fr_0.9fr]' },
       createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4' },
         createElement('div', { class: 'flex flex-wrap items-center justify-between gap-3' },
@@ -549,7 +732,20 @@ const renderHtml = ({ site, navItems, page }) => {
             createElement('div', { class: 'text-lg font-semibold' }, data.site.title || 'gm'),
             createElement('div', { class: 'text-sm text-base-content/60' }, data.site.tagline || '')
           ),
-          createElement('div', { class: 'badge badge-outline badge-primary' }, (window.__debug && window.__debug.gm && window.__debug.gm.view && window.__debug.gm.view()) || 'overview')
+          createElement('div', { class: 'badge badge-outline badge-primary' }, routeLabels[((readState().app && readState().app()) || 'home')] || 'Home')
+        ),
+        createElement('div', { class: 'mt-4 rounded-2xl border border-base-300 bg-base-100/80 p-3' },
+          createElement('div', { class: 'flex flex-wrap items-center justify-between gap-3' },
+            createElement('div', null,
+              createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'active surface'),
+              createElement('div', { class: 'mt-1 text-base font-semibold' }, (routeLabels[((readState().app && readState().app()) || 'home')] || 'Home') + ' workspace'),
+              createElement('div', { class: 'text-sm text-base-content/60' }, appCopy[((readState().app && readState().app()) || 'home')] || 'The active app controls this workspace.')
+            ),
+            createElement('div', { class: 'flex items-center gap-2' },
+              createElement('span', { class: 'badge badge-success badge-outline' }, 'xstate'),
+              createElement('span', { class: 'badge badge-info badge-outline' }, appAccent[((readState().app && readState().app()) || 'home')] || 'overview')
+            )
+          )
         ),
         createElement('div', { class: 'mt-4 flex flex-wrap gap-2' },
           createElement('button', { class: 'btn btn-primary btn-sm' }, 'Launch app'),
@@ -557,29 +753,48 @@ const renderHtml = ({ site, navItems, page }) => {
           createElement('button', { class: 'btn btn-outline btn-sm' }, 'Run checks')
         )
       ),
-      createElement('div', { class: 'grid gap-4 sm:grid-cols-2' },
-        createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4' },
-          createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'dock'),
-          createElement('div', { class: 'mt-3 flex flex-wrap gap-2' },
-            ...shellLinks.map(([label, href]) => createElement('a', { class: 'btn btn-outline btn-sm', href }, label))
-          )
+        createElement('div', { class: 'grid gap-4 sm:grid-cols-2' },
+          createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4' },
+            createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'dock'),
+            createElement('div', { class: 'mt-3 flex flex-wrap gap-2' },
+              ...shellLinks.map(([label, href]) => createElement('a', { class: 'btn btn-outline btn-sm', href }, label))
+            )
+          ),
+          createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4' },
+            createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'signals'),
+            createElement('div', { class: 'mt-3 grid gap-2' },
+              createElement('div', { class: 'alert alert-success py-3' }, createElement('span', null, 'XState-backed view state')),
+              createElement('div', { class: 'alert alert-info py-3' }, createElement('span', null, 'WebJSX-rendered local panel')),
+              createElement('div', { class: 'alert alert-warning py-3' }, createElement('span', null, 'RippleUI stylesheet loaded locally')),
+              createElement('div', { class: 'alert alert-neutral py-3' }, createElement('span', null, 'app: ' + ((readState().app && readState().app()) || 'home')))
+            )
         ),
-        createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4' },
-          createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'signals'),
-          createElement('div', { class: 'mt-3 grid gap-2' },
-            createElement('div', { class: 'alert alert-success py-3' }, createElement('span', null, 'XState-backed view state')),
-            createElement('div', { class: 'alert alert-info py-3' }, createElement('span', null, 'WebJSX-rendered local panel')),
-            createElement('div', { class: 'alert alert-warning py-3' }, createElement('span', null, 'RippleUI stylesheet loaded locally'))
+        createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/70 p-4 lg:col-span-2' },
+          createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'active surface'),
+          createElement('div', { class: 'mt-2 text-lg font-semibold' }, (((readState().app && readState().app()) || 'home') === 'home' ? 'Home' : ((readState().app && readState().app()) || 'home').charAt(0).toUpperCase() + ((readState().app && readState().app()) || 'home').slice(1)) + ' routed pane'),
+          createElement('div', { class: 'mt-1 text-sm text-base-content/60' }, appCopy[((readState().app && readState().app()) || 'home')] || 'The active app controls this pane.'),
+          createElement('div', { class: 'mt-3 grid gap-2 sm:grid-cols-2' },
+            createElement('div', { class: 'alert alert-success py-3' }, createElement('span', null, 'app state: ' + ((readState().app && readState().app()) || 'home'))),
+            createElement('div', { class: 'alert alert-info py-3' }, createElement('span', null, 'route accent: ' + (appAccent[((readState().app && readState().app()) || 'home')] || 'overview')))
           )
         )
       )
     ));
     render();
+    window.addEventListener('gm:state', render);
   </script>
   <script type="module">
     import { createElement, applyDiff } from './vendor/webjsx/dist/index.js';
     const data = JSON.parse(document.getElementById('__site__').textContent);
     const host = document.getElementById('micro-shell');
+    const readState = () => (window.__debug && window.__debug.gm) || {};
+    const appCopy = {
+      home: 'Home launcher, search lane, and shell health.',
+      paper: 'Paper docs and long-form reference views.',
+      stats: 'Stats and validation telemetry.',
+      crates: 'Extension inventory for future modules.',
+      skills: 'Capability registry for browser workflows.',
+    };
     const renderWorkspace = () => applyDiff(host, createElement('div', { class: 'mt-4 grid gap-4 rounded-3xl border border-base-300 bg-base-100/60 p-4 shadow-lg lg:grid-cols-2' },
       createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/80 p-4' },
         createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'workspace'),
@@ -598,13 +813,16 @@ const renderHtml = ({ site, navItems, page }) => {
       createElement('div', { class: 'rounded-2xl border border-base-300 bg-base-200/80 p-4' },
         createElement('div', { class: 'text-xs uppercase tracking-[0.24em] text-base-content/50' }, 'telemetry'),
         createElement('div', { class: 'mt-2 grid gap-2' },
-          createElement('div', { class: 'alert alert-info py-3' }, createElement('span', null, 'view: ' + ((window.__debug && window.__debug.gm && window.__debug.gm.view && window.__debug.gm.view()) || 'overview'))),
-          createElement('div', { class: 'alert alert-success py-3' }, createElement('span', null, 'surfaces: ' + ((window.__debug && window.__debug.gm && window.__debug.gm.count && window.__debug.gm.count()) || 0))),
-          createElement('div', { class: 'alert alert-warning py-3' }, createElement('span', null, 'browser-witnessed and local'))
+          createElement('div', { class: 'alert alert-info py-3' }, createElement('span', null, 'view: ' + ((readState().view && readState().view()) || 'overview'))),
+          createElement('div', { class: 'alert alert-success py-3' }, createElement('span', null, 'surfaces: ' + ((readState().count && readState().count()) || 0))),
+          createElement('div', { class: 'alert alert-neutral py-3' }, createElement('span', null, 'app: ' + ((readState().app && readState().app()) || 'home'))),
+          createElement('div', { class: 'alert alert-warning py-3' }, createElement('span', null, 'browser-witnessed and local')),
+          createElement('div', { class: 'alert alert-secondary py-3' }, createElement('span', null, appCopy[((readState().app && readState().app()) || 'home')] || appCopy.home))
         )
       )
     ));
     renderWorkspace();
+    window.addEventListener('gm:state', renderWorkspace);
   </script>
 </body>
 </html>`;

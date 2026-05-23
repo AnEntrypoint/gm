@@ -61,6 +61,13 @@ plugforge-starter/skills/caveman/
 .gm/diag-*.out
 .gm/audit-iter-*.md
 .gm/silent-abort-forensics.json
+.gm/witness/
+.gm/disciplines/default/
+.gm/disciplines/default-vec/
+.gm/disciplines/*/mem-*.json
+.gm/disciplines/*/__vec_meta.json
+.gm/disciplines/*/__index.json
+.gm/exec-spool/.gm-plugkit-stale.json
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 # <<< plugkit managed
