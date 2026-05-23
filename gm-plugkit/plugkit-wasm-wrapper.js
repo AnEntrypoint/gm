@@ -345,7 +345,15 @@ function readCurrentSess() {
     } catch (_) {}
   }
   __sessCache.readAt = now;
-  __sessCache.value = found || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  let resolved = found || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
+  if (!resolved) {
+    if (!__sessCache.syntheticSess) {
+      const cwdHash = require('crypto').createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
+      __sessCache.syntheticSess = `cwd-${cwdHash}-pid${process.pid}`;
+    }
+    resolved = __sessCache.syntheticSess;
+  }
+  __sessCache.value = resolved;
   return __sessCache.value;
 }
 
