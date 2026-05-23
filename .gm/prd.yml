@@ -1176,3 +1176,12 @@
   - instruction-response surface picks up the marker
   status: completed
   witness: plugkit-wasm-wrapper.js wrapper-drift setInterval now writes .wrapper-stale-in-memory.json marker when in-memory sha differs from on-disk sha AND boot_reason=direct-no-supervisor (drift-suppress branch). rs-plugkit instructions/mod.rs gains read_wrapper_stale_in_memory() function and surfaces it in instruction response as top-level wrapper_stale_in_memory field. Pattern mirrors gm_plugkit_stale (iter-5/iter-8/iter-9).
+- id: gmsniff-noise-filter-default
+  subject: gmsniff default view filters dispatch.start/end pairs
+  category: feature
+  effort: small
+  description: audit shows 128 dispatch events vs 9 deviations (high-signal). Default view should filter low-signal noise events.
+  acceptance:
+  - default --since query filters dispatch.start/end + sweep.retention + embed.query_cache_hit
+  - --include-noise restores them
+  status: pending
