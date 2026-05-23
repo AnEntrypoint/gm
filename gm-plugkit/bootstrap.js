@@ -612,6 +612,13 @@ function copyWasmToGmTools(wasmPath, version) {
   if (!wasmFresh) fs.copyFileSync(wasmPath, target);
   fs.writeFileSync(path.join(dst, 'plugkit.version'), version);
 
+  try {
+    const ownPkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
+    if (ownPkg && ownPkg.version) {
+      fs.writeFileSync(path.join(dst, 'gm-plugkit.version'), ownPkg.version);
+    }
+  } catch (_) {}
+
   if (fs.existsSync(wrapperSrc)) {
     let wrapperFresh = false;
     if (fs.existsSync(wrapperDst)) {

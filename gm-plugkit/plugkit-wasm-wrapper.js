@@ -2061,9 +2061,15 @@ async function runSpoolWatcher(instance, spoolDir) {
   let _selfStaleLoggedOnce = false;
   function probeGmPlugkitSelfStale() {
     try {
-      const ownPkgPath = path.join(__dirname, 'package.json');
-      if (!fs.existsSync(ownPkgPath)) return;
-      const own = JSON.parse(fs.readFileSync(ownPkgPath, 'utf-8')).version;
+      const ownPkgVersionFile = path.join(GM_TOOLS_ROOT, 'gm-plugkit.version');
+      const ownPkgJsonFile = path.join(__dirname, 'package.json');
+      let own = null;
+      if (fs.existsSync(ownPkgVersionFile)) {
+        try { own = fs.readFileSync(ownPkgVersionFile, 'utf-8').trim(); } catch (_) {}
+      }
+      if (!own && fs.existsSync(ownPkgJsonFile)) {
+        try { own = JSON.parse(fs.readFileSync(ownPkgJsonFile, 'utf-8')).version; } catch (_) {}
+      }
       if (!own) return;
       const https = require('https');
       const req = https.get('https://registry.npmjs.org/gm-plugkit/latest', { timeout: 3000 }, (res) => {
