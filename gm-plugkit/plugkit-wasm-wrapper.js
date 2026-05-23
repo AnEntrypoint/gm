@@ -2702,7 +2702,12 @@ async function runSpoolWatcher(instance, spoolDir) {
     try { fs.unlinkSync(UPDATE_CHECK_ERROR_MARKER); } catch (_) {}
   }
   function normalizeUpdateErrorCategory(fields) {
-    if (fields.status && fields.status !== 200) return `http-${fields.status}`;
+    if (typeof fields.status === 'number') {
+      if (fields.status === -1) return 'network';
+      if (fields.status === -2) return 'network';
+      if (fields.status < 0) return 'network';
+      if (fields.status !== 200 && fields.status > 0) return `http-${fields.status}`;
+    }
     const err = String(fields.error || '').toLowerCase();
     if (!err) return 'unknown';
     if (/timeout|timed out|etimedout/.test(err)) return 'network';
