@@ -2406,7 +2406,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           ? 'Prior watcher disappeared with a recent heartbeat — likely a clean shutdown that did not write .shutdown-reason.json. Inspect .watcher.log if recurrent.'
           : 'Prior watcher died without a planned shutdown and without a recent heartbeat. This is treated as a critical failure. Inspect .watcher.log and gm-log/<day>/plugkit.jsonl events supervisor.watcher-exited-unexpectedly + supervisor.heartbeat-stale around the prior_status.ts timestamp to diagnose root cause.'),
     };
-    logEvent('plugkit', 'watcher.unplanned-restart', incidentPayload);
+    logEvent('plugkit', _isPlannedBoot ? 'watcher.planned-restart' : 'watcher.unplanned-restart', incidentPayload);
     try {
       let history = [];
       try { history = JSON.parse(fs.readFileSync(UNPLANNED_RESTART_MARKER, 'utf-8')).history || []; } catch (_) {}
