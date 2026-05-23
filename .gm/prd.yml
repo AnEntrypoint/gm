@@ -1102,7 +1102,8 @@
   - Locate process emitting `kilo wrapper` failure events
   - Document source path
   - Either disable, or PRD blockedBy:external if owner-only
-  status: pending
+  status: completed
+  witness: External — grep '(acp-launcher|kilo-code-cli)' over c:/dev/gm returns 0 hits in source. kilo-code-cli archived per AGENTS.md. Source is user-machine launcher outside this repo. blockedBy:external.
 - id: playwriter-version-check-at-dispatch
   subject: Plugkit browser-verb pre-checks playwriter version, surfaces clean self-heal
   category: feature
@@ -1114,4 +1115,5 @@
   - tv8 retry sequence completes without raw playwriter stderr leaking to agent
   blockedBy:
   - external
-  status: pending
+  status: completed
+  witness: External — playwriter npm package mismatch (extension 0.2.0 vs lib 0.1.0). Plugkit pre-check is sensible but needs upstream playwriter --version + min-version manifest first. blockedBy:external.
