@@ -1,0 +1,1 @@
+Iter-20 (rs-plugkit 8a72459): residual-scan skip payloads now carry next_dispatch field for agent loop to act on without parsing prose. Validated iter-19 watcher.planned-restart vs unplanned-restart discriminator working in live events.
