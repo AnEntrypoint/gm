@@ -1036,13 +1036,15 @@
   - 'Pure-Rust test: 100 positive feedback iterations grow norm monotonically up to bound'
   - 'Pure-Rust test: norm-bound never exceeded'
   - 'Pure-Rust test: LR floor RS_LEARN_LR_MIN respected'
-  status: pending
+  status: completed
+  witness: 'rs-learn commit 0159793 feat(learn): port MicroLoRA Hebbian adapter (instant_core) from dd065b9^ — file rs-learn/src/learn/instant.rs (head sha c81fe88 cleans up phantom module)'
 - id: rs-learn-port-graph-store
   subject: Port temporal-graph store + bi-temporal edge model from dd065b9^ onto host_kv_* surface
   category: feature
   effort: large
   description: 'Extract pre-refactor src/store/{schema,read_graph,write}.rs (~700 lines) + src/graph/{time,edges,entities,validation}.rs (~734 lines). Adapt: schema.rs CREATE TABLE becomes host_kv namespace conventions; read_graph BFS uses host_vec_search + host_kv_query joins. Bi-temporal edges carry {t_valid,t_invalid,t_created,t_expired}; query at time T returns edges where t_valid<=T<t_invalid OR t_invalid IS NULL.'
-  status: pending
+  status: completed
+  witness: 'rs-learn commit 0a6b8a0 feat(graph): bi-temporal edge store + Graphiti-style invalidation (TemporalGraph) — bi-temporal edge model on host_kv_* surface'
 - id: rs-learn-port-graph-invalidation
   subject: Port contradiction-driven edge invalidation from dd065b9^ src/graph/ingest.rs
   category: feature
@@ -1050,7 +1052,8 @@
   description: 'Extract src/graph/ingest.rs (312) + prompts/{dedupe_edges,extract_edges}.rs. Adapt direct LLM calls to verb-dispatch pending_step pattern matching pipeline.rs::build_summarize_pending. On contradiction confirm, set t_invalid=new.t_valid on old edge; never delete. Acceptance: insert ''Alice@Acme'' then ''Alice@Globex''; both retrievable, old has t_invalid set.'
   blockedBy:
   - rs-learn-port-graph-store
-  status: pending
+  status: completed
+  witness: 'rs-learn commit 0a6b8a0 feat(graph): bi-temporal edge store + Graphiti-style invalidation (TemporalGraph) — Graphiti-style invalidation shipped alongside the temporal store'
 - id: rs-learn-port-router-fastgrnn
   subject: Port FastGRNN sparse+low-rank router from dd065b9^ src/router*.rs
   category: feature
@@ -1058,7 +1061,8 @@
   description: Extract src/router{,_core,_persist,_train}.rs (~450). Softmax over ACP targets + context bucket + temperature + topP + confidence; 90% sparse + rank-8 low-rank matrices; safetensors persistence via host_kv_put binary blob.
   blockedBy:
   - rs-learn-port-instant-lora
-  status: pending
+  status: completed
+  witness: 'rs-learn commit d1fa9f8 feat(router): port FastGRNN sparse+low-rank router from dd065b9^'
 - id: rs-learn-port-deep-ewc
   subject: Port DeepLoop EWC++ from dd065b9^ src/learn/deep.rs
   category: feature
@@ -1066,7 +1070,8 @@
   description: 'Extract src/learn/deep.rs (139): EWC++ with online Fisher EMA decay 0.999 + z-score boundary detection. On feedback() loss recorded; on boundary fires, adapter weights EWC-consolidated before reset_adapter() to prevent catastrophic forgetting.'
   blockedBy:
   - rs-learn-port-instant-lora
-  status: pending
+  status: completed
+  witness: 'rs-learn commit 9ab3177 feat(learn): port DeepLoop EWC++ (deep_core) from dd065b9^'
 - id: rs-learn-port-attention
   subject: Port 8-head graph attention from dd065b9^ src/attention.rs
   category: feature
@@ -1074,4 +1079,5 @@
   description: Extract src/attention{,_math,_tests}.rs (~300). Edge features = relation one-hot + recency decay + weight. Output feeds into recall scoring.
   blockedBy:
   - rs-learn-port-graph-store
-  status: pending
+  status: completed
+  witness: 'rs-learn commit 213b946 feat(graph): port 8-head graph attention with edge features from dd065b9^'
