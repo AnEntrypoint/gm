@@ -2060,6 +2060,49 @@ async function runSpoolWatcher(instance, spoolDir) {
     try { reapTimedOutTasks(); } catch (_) {}
   }, 5000);
 
+  let _selfStaleLoggedOnce = false;
+  function probeGmPlugkitSelfStale() {
+    try {
+      const ownPkgPath = path.join(__dirname, 'package.json');
+      if (!fs.existsSync(ownPkgPath)) return;
+      const own = JSON.parse(fs.readFileSync(ownPkgPath, 'utf-8')).version;
+      if (!own) return;
+      const https = require('https');
+      const req = https.get('https://registry.npmjs.org/gm-plugkit/latest', { timeout: 3000 }, (res) => {
+        let body = '';
+        res.on('data', (c) => body += c);
+        res.on('end', () => {
+          try {
+            const latest = JSON.parse(body).version;
+            const stalePath = path.join(spoolDir, '.gm-plugkit-stale.json');
+            if (!latest || latest === own) {
+              if (fs.existsSync(stalePath)) { try { fs.unlinkSync(stalePath); } catch (_) {} }
+              return;
+            }
+            const marker = {
+              ts: new Date().toISOString(),
+              reason: 'gm-plugkit-self-stale',
+              running_version: own,
+              latest_version: latest,
+              instruction: `gm-plugkit running ${own} but npm has ${latest}. The npx/bun cache served a stale copy. Clear the cache so the next invocation picks up the latest wrapper fixes: bun pm cache rm; or npx clear-npx-cache; or rm -rf ~/.npm/_npx ~/AppData/Local/npm-cache/_npx`,
+              detected_by: 'watcher-periodic-probe',
+            };
+            try { fs.writeFileSync(stalePath, JSON.stringify(marker, null, 2)); } catch (_) {}
+            if (!_selfStaleLoggedOnce) {
+              _selfStaleLoggedOnce = true;
+              try { logEvent('plugkit', 'gm-plugkit.self-stale', { running_version: own, latest_version: latest, detected_by: 'watcher-periodic-probe' }); } catch (_) {}
+              console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
+            }
+          } catch (_) {}
+        });
+      });
+      req.on('error', () => {});
+      req.on('timeout', () => { try { req.destroy(); } catch (_) {} });
+    } catch (_) {}
+  }
+  setTimeout(probeGmPlugkitSelfStale, 5000);
+  setInterval(probeGmPlugkitSelfStale, 300_000);
+
   const _instanceVersionAtBoot = readInstanceVersion(instance);
   let _driftLoggedOnce = false;
   setInterval(() => {
