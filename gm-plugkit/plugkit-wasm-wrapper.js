@@ -2188,14 +2188,32 @@ async function runSpoolWatcher(instance, spoolDir) {
       if (unsupervised) {
         if (_driftLoggedOnce) return;
         _driftLoggedOnce = true;
-        logEvent('plugkit', 'version.drift-detected-no-exit', {
+        logEvent('plugkit', 'version.drift-self-respawn', {
           instance_version: instV,
           file_version: fileV,
-          action: 'suppress-exit',
-          reason: 'no-supervisor-to-respawn',
+          action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — exit SUPPRESSED (boot_reason=${bootReason}; no supervisor to respawn)`);
+        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — spawning replacement via bun x gm-plugkit@latest spool then exiting`);
+        try {
+          const cp = require('child_process');
+          const bunPath = process.env.GM_BUN_PATH || 'bun';
+          const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true,
+            env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-drift' },
+          });
+          child.unref();
+        } catch (e) {
+          console.error(`[plugkit-wasm] failed to spawn replacement: ${e.message}; exiting anyway so next agent dispatch boots fresh`);
+        }
+        try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'version-change-unsupervised', ts: Date.now(), pid: process.pid, instance_version: instV, file_version: fileV })); } catch (_) {}
+        try { releaseLock(); } catch (_) {}
+        try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+        try { clearBootActive(); } catch (_) {}
+        setTimeout(() => process.exit(0), 2000);
         return;
       }
       logEvent('plugkit', 'version.drift', {
