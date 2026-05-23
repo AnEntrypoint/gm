@@ -359,6 +359,38 @@ function readCurrentSess() {
 
 const __lockRejectedEmitAt = new Map();
 
+function autoRecordBrowserEditsFromBody(body, cwd, taskBase, verb) {
+  if (!body || typeof body !== 'string') return;
+  const BROWSER_EXT_RE = /[\w.\-/\\]+\.(?:html?|tsx?|jsx?|mjs|cjs|vue|svelte|css|scss|sass)\b/gi;
+  const matches = body.match(BROWSER_EXT_RE);
+  if (!matches || matches.length === 0) return;
+  const seen = new Set();
+  const editsFile = path.join(cwd, '.gm', 'exec-spool', '.turn-browser-edits.json');
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(editsFile, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
+  let added = 0;
+  for (const raw of matches) {
+    let rel = String(raw).replace(/^["'`(]+|["'`)]+$/g, '').replace(/\\/g, '/');
+    if (rel.startsWith('http://') || rel.startsWith('https://') || rel.startsWith('//')) continue;
+    if (rel.includes('node_modules/') || rel.startsWith('.gm/') || rel.includes('/.gm/')) continue;
+    if (seen.has(rel)) continue;
+    seen.add(rel);
+    const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
+    let st;
+    try { st = fs.statSync(abs); } catch (_) { continue; }
+    if (!st.isFile()) continue;
+    let hash = '';
+    try { hash = require('crypto').createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 12); } catch (_) {}
+    const idx = list.findIndex(e => e && e.file === rel);
+    const entry = { file: rel, ts: Date.now(), hash, source_verb: verb, source_task: taskBase };
+    if (idx === -1) { list.push(entry); added++; } else { list[idx] = entry; }
+  }
+  if (added > 0) {
+    try { fs.mkdirSync(path.dirname(editsFile), { recursive: true }); fs.writeFileSync(editsFile, JSON.stringify(list)); } catch (_) {}
+    logEvent('plugkit', 'browser.edits-autorecorded', { verb, task: taskBase, files: list.slice(-added).map(e => e.file), added });
+  }
+}
+
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
@@ -2534,6 +2566,10 @@ async function runSpoolWatcher(instance, spoolDir) {
       const t0 = Date.now();
       console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
       logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
+
+      if (verb === 'memorize-fire' || verb === 'transition' || verb === 'prd-resolve' || verb === 'mutable-resolve') {
+        try { autoRecordBrowserEditsFromBody(body, process.cwd(), taskBase, verb); } catch (_) {}
+      }
 
       let autoRecallPayload = null;
       if (verb === 'instruction') {
