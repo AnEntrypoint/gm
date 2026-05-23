@@ -22,6 +22,29 @@ Usage:
   bun x gm-plugkit@latest --help             Show this help
 `;
 
+function readDiskWasmVersion() {
+  try {
+    const versionFile = path.join(os.homedir(), '.gm-tools', 'plugkit.version');
+    return fs.readFileSync(versionFile, 'utf-8').trim() || null;
+  } catch (_) { return null; }
+}
+
+function readWatcherInstanceVersion(pid) {
+  try {
+    const ps = process.platform === 'win32'
+      ? `(Get-WmiObject Win32_Process -Filter "ProcessId=${pid}").CommandLine`
+      : null;
+    if (!ps) return null;
+    const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
+    const m = out.match(/([A-Z]:\\[^"\s]+\.gm[\\/]exec-spool)/i);
+    if (!m) return null;
+    const statusPath = path.join(m[1].replace(/[\\/]exec-spool.*$/, ''), 'exec-spool', '.status.json');
+    if (!fs.existsSync(statusPath)) return null;
+    const status = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
+    return status && status.instance_version ? status.instance_version : null;
+  } catch (_) { return null; }
+}
+
 function killStaleWatchers() {
   try {
     const wrapperPath = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
@@ -30,8 +53,17 @@ function killStaleWatchers() {
       return 1;
     }
     const diskMtime = fs.statSync(wrapperPath).mtimeMs;
+    const diskWasmVersion = readDiskWasmVersion();
     const stale = [];
     const fresh = [];
+    function consider(pid, startedMs) {
+      const reasons = [];
+      if (startedMs < diskMtime) reasons.push('wrapper-mtime');
+      const instV = readWatcherInstanceVersion(pid);
+      if (diskWasmVersion && instV && instV !== diskWasmVersion) reasons.push(`wasm-drift:${instV}->${diskWasmVersion}`);
+      if (reasons.length > 0) stale.push({ pid, started_ms: startedMs, instance_version: instV, reasons });
+      else fresh.push({ pid, started_ms: startedMs, instance_version: instV });
+    }
     if (process.platform === 'win32') {
       const ps = `Get-WmiObject Win32_Process -Filter "name='node.exe'" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CreationDate }`;
       const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
@@ -42,8 +74,7 @@ function killStaleWatchers() {
         const m = creation && creation.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\.(\d+))?(?:([+-])(\d+))?/);
         if (!m) continue;
         const localMs = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], m[7] ? Math.round(+('0.' + m[7]) * 1000) : 0).getTime();
-        if (localMs < diskMtime) stale.push({ pid, started_ms: localMs });
-        else fresh.push({ pid, started_ms: localMs });
+        consider(pid, localMs);
       }
     } else {
       const out = cp.execFileSync('ps', ['-eo', 'pid,lstart,command'], { encoding: 'utf-8' });
@@ -54,8 +85,7 @@ function killStaleWatchers() {
         const pid = parseInt(m[1], 10);
         const start = Date.parse(m[2]);
         if (!Number.isFinite(pid) || !Number.isFinite(start)) continue;
-        if (start < diskMtime) stale.push({ pid, started_ms: start });
-        else fresh.push({ pid, started_ms: start });
+        consider(pid, start);
       }
     }
     const killed = [];
@@ -75,8 +105,10 @@ function killStaleWatchers() {
     console.log(JSON.stringify({
       ok: true,
       disk_wrapper_mtime_ms: diskMtime,
+      disk_wasm_version: diskWasmVersion,
       stale_found: stale.length,
       fresh_found: fresh.length,
+      stale_detail: stale,
       killed,
       failed,
     }, null, 2));
