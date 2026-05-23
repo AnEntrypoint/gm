@@ -186,6 +186,7 @@ const renderHtml = ({ site, navItems, page }) => {
       accent: 'capabilities',
     },
   };
+  const appAccent = Object.fromEntries(Object.entries(appDescriptions).map(([k, v]) => [k, v.accent]));
   const launcherHtml = launcherApps.map(([app, label, href]) => `<button class="btn btn-outline btn-sm" data-app="${escapeHtml(app)}" type="button">${escapeHtml(label)}</button>`).join('');
   const appSurfaceHtml = Object.entries(appDescriptions).map(([app, meta]) => `
     <section class="doc-card" data-app-surface="${escapeHtml(app)}" hidden>
