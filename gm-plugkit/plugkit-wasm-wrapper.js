@@ -2672,8 +2672,17 @@ async function runSpoolWatcher(instance, spoolDir) {
   function clearSharedUpdateErrorKey() {
     try { fs.unlinkSync(UPDATE_CHECK_ERROR_MARKER); } catch (_) {}
   }
+  function normalizeUpdateErrorCategory(fields) {
+    if (fields.status && fields.status !== 200) return `http-${fields.status}`;
+    const err = String(fields.error || '').toLowerCase();
+    if (!err) return 'unknown';
+    if (/timeout|timed out|etimedout/.test(err)) return 'network';
+    if (/socket hang up|econnreset|econnrefused|enotfound|eai_again|enetunreach|ehostunreach|getaddrinfo/.test(err)) return 'network';
+    if (/json|parse|unexpected/.test(err)) return 'parse';
+    return 'other';
+  }
   function logUpdateCheckError(fields) {
-    const key = `${fields.status || ''}:${fields.error || ''}`;
+    const key = normalizeUpdateErrorCategory(fields);
     if (_lastKnownUpdateError === key) return;
     const shared = readSharedUpdateErrorKey();
     if (shared === key) {
@@ -2682,7 +2691,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
     _lastKnownUpdateError = key;
     writeSharedUpdateErrorKey(key);
-    logEvent('plugkit', 'update.check.error', fields);
+    logEvent('plugkit', 'update.check.error', { ...fields, category: key });
   }
   function clearUpdateCheckError(installed) {
     const shared = readSharedUpdateErrorKey();
@@ -2774,12 +2783,17 @@ async function runSpoolWatcher(instance, spoolDir) {
         }
       });
     });
+    let _checkErrored = false;
     req.on('timeout', () => {
-      req.destroy();
+      if (_checkErrored) { try { req.destroy(); } catch (_) {} return; }
+      _checkErrored = true;
+      try { req.destroy(); } catch (_) {}
       writeSharedUpdateCache(null, -1);
       logUpdateCheckError({ error: 'timeout' });
     });
     req.on('error', (e) => {
+      if (_checkErrored) return;
+      _checkErrored = true;
       writeSharedUpdateCache(null, -2);
       logUpdateCheckError({ error: String(e && e.message || e) });
     });
