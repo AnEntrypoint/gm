@@ -2144,7 +2144,24 @@ async function runSpoolWatcher(instance, spoolDir) {
             if (!_selfStaleLoggedOnce) {
               _selfStaleLoggedOnce = true;
               try { logEvent('plugkit', 'gm-plugkit.self-stale', { running_version: own, latest_version: latest, detected_by: 'watcher-periodic-probe' }); } catch (_) {}
-              console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
+              console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} → spawning replacement via bun x gm-plugkit@latest spool and exiting`);
+              try {
+                const cp = require('child_process');
+                const bunPath = process.env.GM_BUN_PATH || 'bun';
+                const child = cp.spawn(bunPath, ['x', `gm-plugkit@${latest}`, 'spool'], {
+                  cwd: process.cwd(),
+                  detached: true,
+                  stdio: 'ignore',
+                  windowsHide: true,
+                  env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-self-stale' },
+                });
+                child.unref();
+                try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest }); } catch (_) {}
+                try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'gm-plugkit-self-stale', ts: Date.now(), pid: process.pid, running_version: own, latest_version: latest })); } catch (_) {}
+                setTimeout(() => process.exit(0), 2000);
+              } catch (e) {
+                console.error(`[plugkit-wasm] failed to spawn replacement on self-stale: ${e.message}`);
+              }
             }
           } catch (e) {
             if (!_selfStaleProbeErrorLogged) {
@@ -2258,25 +2275,32 @@ async function runSpoolWatcher(instance, spoolDir) {
       if (unsupervised) {
         if (_wrapperDriftLoggedOnce) return;
         _wrapperDriftLoggedOnce = true;
-        try {
-          const marker = {
-            ts: new Date().toISOString(),
-            reason: 'wrapper-has-newer-on-disk',
-            running_sha12: _wrapperShaAtBoot.slice(0, 12),
-            disk_sha12: cur.slice(0, 12),
-            running_pid: process.pid,
-            instruction: 'Wrapper code on disk has newer sha than what this watcher loaded in-memory. Drift-suppress kept the watcher alive (good), but new code only loads on restart. Kill this watcher (taskkill /F /PID ' + process.pid + ' on Windows, kill ' + process.pid + ' on POSIX) and re-bootstrap (bun x gm-plugkit@latest spool) to pick up the new wrapper.',
-          };
-          fs.writeFileSync(path.join(spoolDir, '.wrapper-stale-in-memory.json'), JSON.stringify(marker, null, 2));
-        } catch (_) {}
-        logEvent('plugkit', 'wrapper.drift-detected-no-exit', {
+        logEvent('plugkit', 'wrapper.drift-self-respawn', {
           boot_sha: _wrapperShaAtBoot.slice(0, 12),
           file_sha: cur.slice(0, 12),
-          action: 'suppress-exit',
-          reason: 'no-supervisor-to-respawn',
+          action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] wrapper.js drift detected — exit SUPPRESSED (boot_reason=${bootReason}; no supervisor to respawn)`);
+        console.error(`[plugkit-wasm] wrapper.js drift detected — spawning replacement via bun x gm-plugkit@latest spool then exiting`);
+        try {
+          const cp = require('child_process');
+          const bunPath = process.env.GM_BUN_PATH || 'bun';
+          const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true,
+            env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-wrapper-drift' },
+          });
+          child.unref();
+        } catch (e) {
+          console.error(`[plugkit-wasm] failed to spawn replacement: ${e.message}`);
+        }
+        try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'wrapper-drift-unsupervised', ts: Date.now(), pid: process.pid, boot_sha: _wrapperShaAtBoot.slice(0, 12), file_sha: cur.slice(0, 12) })); } catch (_) {}
+        try { releaseLock(); } catch (_) {}
+        try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+        try { clearBootActive(); } catch (_) {}
+        setTimeout(() => process.exit(0), 2000);
         return;
       }
       logEvent('plugkit', 'wrapper.drift', {
