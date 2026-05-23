@@ -2639,12 +2639,26 @@ async function runSpoolWatcher(instance, spoolDir) {
       fs.renameSync(tmp, UPDATE_CHECK_SHARED_CACHE);
     } catch (_) {}
   }
+  let _lastKnownUpdateError = null;
+  function logUpdateCheckError(fields) {
+    const key = `${fields.status || ''}:${fields.error || ''}`;
+    if (_lastKnownUpdateError === key) return;
+    _lastKnownUpdateError = key;
+    logEvent('plugkit', 'update.check.error', fields);
+  }
+  function clearUpdateCheckError(installed) {
+    if (_lastKnownUpdateError !== null) {
+      logEvent('plugkit', 'update.check.recovered', { installed, was: _lastKnownUpdateError });
+      _lastKnownUpdateError = null;
+    }
+  }
   function applyUpdateCheckResult(installed, latest, statusCode) {
     if (statusCode !== 200) {
-      logEvent('plugkit', 'update.check.error', { installed, status: statusCode });
+      logUpdateCheckError({ installed, status: statusCode });
       return;
     }
     if (!latest) return;
+    clearUpdateCheckError(installed);
     if (latest === installed) {
       try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
       if (_lastKnownDrift) {
@@ -2715,18 +2729,18 @@ async function runSpoolWatcher(instance, spoolDir) {
             _lastKnownDrift = latest;
           }
         } catch (e) {
-          logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) });
+          logUpdateCheckError({ error: String(e && e.message || e) });
         }
       });
     });
     req.on('timeout', () => {
       req.destroy();
       writeSharedUpdateCache(null, -1);
-      logEvent('plugkit', 'update.check.error', { error: 'timeout' });
+      logUpdateCheckError({ error: 'timeout' });
     });
     req.on('error', (e) => {
       writeSharedUpdateCache(null, -2);
-      logEvent('plugkit', 'update.check.error', { error: String(e && e.message || e) });
+      logUpdateCheckError({ error: String(e && e.message || e) });
     });
   }
   setTimeout(checkForUpdate, 10_000);

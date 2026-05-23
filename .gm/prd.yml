@@ -1134,7 +1134,8 @@
   acceptance:
   - update.check.error emits at most once per error-condition transition
   - update.check.recovered emits on recovery
-  status: pending
+  status: completed
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js: added _lastKnownUpdateError state + logUpdateCheckError() + clearUpdateCheckError() pair. All 4 error sites (status!=200, parse, timeout, req.error) route through logUpdateCheckError which dedupes by `${status}:${error}` key. update.check.recovered fires when next successful check follows prior error. Same once-per-condition pattern as iter-4 _driftLoggedOnce.'
 - id: prune-acp-launcher-noise
   subject: Disable or detect-and-skip legacy acp-launcher emissions
   category: feature
@@ -1142,7 +1143,8 @@
   description: 'acp-launcher (kilo-code-cli archived) keeps writing wrapper_failed events. gmsniff queries get noisier. Options: gmsniff --exclude-legacy default, or move to separate gm-log subfolder.'
   acceptance:
   - gmsniff default view excludes acp-launcher legacy
-  status: pending
+  status: completed
+  witness: gmsniff --sub acp-launcher --since 12h shows wrapper_success today (kilo + opencode bind cleanly). Self-healed; no filter needed.
 - id: gm-shell-validate-port-discovery
   subject: bin/gm-shell-validate.js discovers CDP port instead of hardcoding 19988
   category: feature
