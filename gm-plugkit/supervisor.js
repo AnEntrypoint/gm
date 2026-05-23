@@ -14,7 +14,7 @@ const STATUS_PATH = path.join(spoolDir, '.status.json');
 const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
 const SUPERVISOR_PATH = path.join(spoolDir, '.supervisor.json');
 const LOG_PATH = path.join(spoolDir, '.watcher.log');
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
 
 const POLL_INTERVAL_MS = 10_000;
 const STATUS_STALE_MS = 30_000;

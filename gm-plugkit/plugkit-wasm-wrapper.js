@@ -29,7 +29,7 @@ const GM_TOOLS_ROOT = resolveGmToolsRoot();
 const KV_DIR = path.join(GM_TOOLS_ROOT, 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
 
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.gm-log');
+const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
 const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status', 'prd-add', 'prd-resolve', 'prd-list', 'mutable-add', 'mutable-resolve', 'mutable-list', 'memorize-fire', 'residual-scan', 'auto-recall']);
 
 const TURN_IDLE_MS = 30_000;

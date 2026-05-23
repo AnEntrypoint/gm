@@ -170,7 +170,7 @@ function obsEvent(subsystem, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
   try {
     const root = process.env.GM_LOG_DIR
-      || path.join(os.homedir(), '.gm-log');
+      || path.join(os.homedir(), '.claude', 'gm-log');
     const day = new Date().toISOString().slice(0, 10);
     const dir = path.join(root, day);
     fs.mkdirSync(dir, { recursive: true });
