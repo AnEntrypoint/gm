@@ -1473,3 +1473,19 @@
   witness_evidence: rs-plugkit commit ed3cecc pushed Cargo 0.1.537. gates.rs line 234 now resets on all three verbs.
   id: item-1779621782733
   witness: 'rs-plugkit commit ed3cecc pushed. Cargo 0.1.537. gates.rs line 234 now refreshes last-instruction-ts on instruction OR transition OR phase-status. Cascade to npm pending. Note: this iteration''s prd-add fell back to item-<ms> ids because watcher (0.1.532) hasn''t loaded the slug-fallback yet; slug fix is in CI cascade (rs-plugkit 0.1.534 commit c628db9, will land in subsequent gm-skill republish).'
+- subject: Verify slug fallback on prd-add without id
+  category: feature
+  description: Without id, plugkit 0.1.538 should derive slug from subject.
+  acceptance:
+  - prd-add response data.added is a slug not item-<ms>
+  status: completed
+  id: verify-slug-fallback-on-prd-add-without-id
+  witness: prd-add without id on plugkit 0.1.538 returned data.added='verify-slug-fallback-on-prd-add-without-id' — slug derived from subject as designed. Previously fell back to item-<ms>. Slug fix from rs-plugkit commit c628db9 (0.1.534) confirmed live in 0.1.538 wasm.
+- subject: Verify gate refresh on transition
+  category: feature
+  description: After transition (just landed in transition-44), the gate clock should be refreshed; this prd-add immediately after should not be gated.
+  acceptance:
+  - prd-add response ok:true, no gate_denied
+  status: completed
+  id: verify-gate-refresh-on-transition
+  witness: 'Sequence: transition-44 (PLAN reset) -> prd-add-42 (immediate, no gap) -> prd-add-43 (immediate, no gap). Pre-refresh: long-gap-no-instruction would have fired on prd-add-42 because 1851s+ since last instruction. Post-refresh (commit ed3cecc, 0.1.537+): transition counts as orientation event; both prd-adds succeeded without gate_denied. Gate-refresh-on-transition fix confirmed live.'
