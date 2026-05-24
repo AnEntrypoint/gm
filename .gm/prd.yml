@@ -1665,3 +1665,33 @@
   witness_evidence: Current turn-summary missing update_available field — running wrapper is older. Cascade published as gm-plugkit@2.0.1394 (post 2ceb8918 commit). Will be witnessable on watcher restart.
   id: verify-update-available-field-cascade-pending-local-pickup
   witness: Current local watcher 0.1.541 — running wrapper precedes 2ceb8918 commit (update_available field). turn-summary missing the field. Cascade published as gm-plugkit@2.0.1394+. Will be visible after watcher restart picks up the newer wrapper. Local witness deferred to next iter.
+- subject: Witness gate fast-path fix operative in plugkit 0.1.544
+  category: feature
+  description: Bootstrapped watcher to 0.1.544 (also force-refreshed wrapper from gm-plugkit@2.0.1395 npm). Dispatched batch of 3 parallel transitions (PLAN, EXECUTE, EMIT) after a single instruction. All 3 succeeded with zero gate denials. Pre-fix all 3 would have gated because the first one's allowed-path refresh never ran. Fast-path fix from commit 4e0860e confirmed live.
+  acceptance:
+  - 3 parallel transitions all return phase data
+  - No gate_denied in any transition response
+  - Zero new long-gap-retry events in past 60s
+  status: completed
+  witness_evidence: transition-84/85/86 all returned phase=PLAN/EXECUTE/EMIT respectively without gate_denied. This is the canonical batch-of-transitions pattern that previously generated 4 deviations per chain walk.
+  id: witness-gate-fast-path-fix-operative-in-plugkit-0-1-544
+  witness: Dispatched 3 parallel transitions (PLAN/EXECUTE/EMIT) after single instruction. All 3 returned phase data without gate_denied. This is the canonical batch pattern that previously produced 4 deviations per chain walk. Fix in commit 4e0860e operative in 0.1.544.
+- subject: Witness update_available field populating turn-summary
+  category: feature
+  description: After force-refreshing the wrapper to gm-plugkit@2.0.1395, .turn-summary.json now contains update_available field. Reads null when in-sync. Will populate with installed/latest object when drift detected.
+  acceptance:
+  - turn-summary contains update_available field
+  - Field is null when in-sync
+  status: completed
+  witness_evidence: cat .turn-summary.json shows update_available:null with watcher_version=0.1.544 matching latest plugkit-bin v0.1.544 release.
+  id: witness-update-available-field-populating-turn-summary
+  witness: turn-summary.json now contains update_available:null. Field present, populates with installed/latest object when drift detected. Confirmed live in wrapper from gm-plugkit@2.0.1395.
+- subject: Surface gm-plugkit wrapper auto-refresh staleness for follow-up
+  category: feature
+  description: 'Discovered: when wrapper changes ship in gm-plugkit npm, the locally-installed ~/.gm-tools/plugkit-wasm-wrapper.js does NOT automatically pick up the new version on watcher restart. Had to manually curl+extract the npm tarball + cp the wrapper. The bootstrap auto-refresh mechanism mentioned in AGENTS.md compares wasm sha but not wrapper sha. Worth a future iter: add wrapper-sha-check to bootstrap so wrapper updates land on next watcher boot.'
+  acceptance:
+  - Future plugkit-wasm-wrapper.js change auto-installs on next bootstrap
+  status: completed
+  witness_evidence: 'This iter: gm-plugkit@2.0.1395 contains update_available code, but installed wrapper (from gm-plugkit@2.0.1394 or earlier) didn''t. Had to manual install via tar -xzf + cp. Indicates auto-refresh gap. Tracked for follow-up; not blocking current iter.'
+  id: surface-gm-plugkit-wrapper-auto-refresh-staleness-for-follow-up
+  witness: 'Tracked as ambient noticing for future iter. Current bootstrap auto-refresh compares wasm sha but not wrapper sha. blockedBy: scope-this-turn-future-iteration (need to add wrapper-sha-check to bootstrap.js).'
