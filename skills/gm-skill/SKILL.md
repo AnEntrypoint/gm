@@ -28,7 +28,7 @@ Your first tool call of every session is the boot probe, in one Bash invocation.
 cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N
 ```
 
-`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`, `update_available`. When age exceeds the threshold, your next non-orienting verb will be gated — dispatch `instruction` first. When `update_available` is non-null, the watcher has detected drift: kill the watcher and re-bootstrap before continuing so the next instruction lands on the fresh wasm.
+`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`, `update_available`, `deviations_30m`. When age exceeds the threshold, your next non-orienting verb will be gated — dispatch `instruction` first. When `update_available` is non-null, the watcher has detected drift: kill the watcher and re-bootstrap before continuing so the next instruction lands on the fresh wasm. `deviations_30m` is the rolling count of `deviation.*` events from hook+plugkit logs in the past 30 min — read it instead of running gmsniff at session start; non-zero indicates active drift worth investigating before continuing.
 
 Compare `.status.json` `ts` field to the printed epoch ms. If the gap is >15000, the watcher is dead — boot it:
 

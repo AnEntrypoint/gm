@@ -2789,6 +2789,30 @@ async function runSpoolWatcher(instance, spoolDir) {
           updateAvailable = { installed: upd.installed, latest: upd.latest };
         }
       } catch (_) {}
+      let deviations30m = 0;
+      try {
+        const day = new Date().toISOString().slice(0, 10);
+        const cutoff = Date.now() - 30 * 60 * 1000;
+        for (const sub of ['hook', 'plugkit']) {
+          const p = path.join(GM_LOG_ROOT, day, `${sub}.jsonl`);
+          if (!fs.existsSync(p)) continue;
+          const raw = fs.readFileSync(p, 'utf-8');
+          let idx = 0;
+          while (true) {
+            const nl = raw.indexOf('\n', idx);
+            const line = nl === -1 ? raw.slice(idx) : raw.slice(idx, nl);
+            if (line.includes('"event":"deviation.')) {
+              const tsm = line.match(/"ts":"([^"]+)"/);
+              if (tsm) {
+                const t = Date.parse(tsm[1]);
+                if (Number.isFinite(t) && t >= cutoff) deviations30m++;
+              }
+            }
+            if (nl === -1) break;
+            idx = nl + 1;
+          }
+        }
+      } catch (_) {}
       fs.writeFileSync(TURN_SUMMARY_PATH, JSON.stringify({
         ts: Date.now(),
         watcher_pid: process.pid,
@@ -2801,6 +2825,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         long_gap_threshold_ms: 300000,
         browser_sessions_alive: browserSessions,
         update_available: updateAvailable,
+        deviations_30m: deviations30m,
       }));
     } catch (_) {}
   }
