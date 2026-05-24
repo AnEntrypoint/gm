@@ -1393,3 +1393,25 @@
   status: completed
   witness_evidence: rs-plugkit commit 45d4b62 pushed; Cargo bumped 0.1.531.
   witness: rs-plugkit commit 45d4b62 pushed to origin/main. Cargo bumped 0.1.531. gates.rs change narrows prd-anti-shape log to transitions whose target is COMPLETE. Cascade to 0.1.531 wasm pending.
+- id: tv8-browser-idle-default-too-aggressive
+  subject: Raise default BROWSER_IDLE_LIMIT_MS from 10min to 60min
+  category: refactor
+  description: tv8 saw 16 browser-profile-collision events in 24h, all triggered by browser-idle close at 10min. On long-horizon tasks (terrain rendering, atmospheric sim) the agent legitimately spends >10min between browser dispatches doing edits/reads/codesearch/planning. Idle-close kills chromium and loses in-browser state (loaded scenes, captured shaders, WebGPU contexts). Raised default to 60min in plugkit-wasm-wrapper.js. Env var PLUGKIT_BROWSER_IDLE_LIMIT_MS still tunable per-project.
+  acceptance:
+  - Default raised to 60*60*1000 in plugkit-wasm-wrapper.js
+  - Committed to gm
+  - tv8 sees no browser-idle close in next 30min window of long-horizon work
+  status: completed
+  witness_evidence: Edit applied to c:/dev/gm/gm-plugkit/plugkit-wasm-wrapper.js:2330. Default changed from 10 to 60 minutes. Cascade republishes gm-plugkit npm via gm publish.yml.
+  witness: 'gm commit eb98b1ef pushed (origin 8e0a5ba8). plugkit-wasm-wrapper.js:2330 BROWSER_IDLE_LIMIT_MS default raised 10*60*1000 -> 60*60*1000. Cascade gm publish.yml will republish gm-plugkit npm; new watchers booted via bun x gm-plugkit@latest after cascade lands will use 60min default. Root cause for tv8 stops identified: idle-close was killing chromium during legitimate >10min agent work between browser dispatches.'
+- id: tv8-browser-idle-default-too-aggressive
+  subject: Raise default BROWSER_IDLE_LIMIT_MS 10min -> 60min
+  category: refactor
+  description: tv8 saw 16 browser-profile-collision events in 24h, all triggered by browser-idle close at 10min. Long-horizon tasks legitimately spend >10min between browser dispatches.
+  acceptance:
+  - Default raised in plugkit-wasm-wrapper.js
+  - Committed + pushed
+  - Cascade republishes gm-plugkit
+  status: completed
+  witness_evidence: gm commit eb98b1ef pushed (origin 8e0a5ba8). gm-plugkit/plugkit-wasm-wrapper.js:2330 default changed 10*60*1000 -> 60*60*1000.
+  witness: 'gm commit eb98b1ef pushed (origin 8e0a5ba8). plugkit-wasm-wrapper.js:2330 BROWSER_IDLE_LIMIT_MS default raised 10*60*1000 -> 60*60*1000. Cascade gm publish.yml will republish gm-plugkit npm; new watchers booted via bun x gm-plugkit@latest after cascade lands will use 60min default. Root cause for tv8 stops identified: idle-close was killing chromium during legitimate >10min agent work between browser dispatches.'
