@@ -1415,3 +1415,43 @@
   status: completed
   witness_evidence: gm commit eb98b1ef pushed (origin 8e0a5ba8). gm-plugkit/plugkit-wasm-wrapper.js:2330 default changed 10*60*1000 -> 60*60*1000.
   witness: 'gm commit eb98b1ef pushed (origin 8e0a5ba8). plugkit-wasm-wrapper.js:2330 BROWSER_IDLE_LIMIT_MS default raised 10*60*1000 -> 60*60*1000. Cascade gm publish.yml will republish gm-plugkit npm; new watchers booted via bun x gm-plugkit@latest after cascade lands will use 60min default. Root cause for tv8 stops identified: idle-close was killing chromium during legitimate >10min agent work between browser dispatches.'
+- id: verify-prd-anti-shape-narrow-live
+  subject: Verify prd-anti-shape scope narrow is live and effective
+  category: feature
+  description: Past 24h 228 events; past 30min 0. Scope narrow from rs-plugkit 0.1.531 deployed and effective.
+  acceptance:
+  - gmsniff confirms 0 prd-anti-shape past 30min
+  status: completed
+  witness_evidence: gmsniff --since 30m --list-deviations shows 0 prd-anti-shape events; 24h count was 228.
+  witness: 'gmsniff --since 30m --list-deviations: 0 prd-anti-shape events (vs 228/24h before). Scope narrow from rs-plugkit commit 45d4b62 effective.'
+- id: verify-browser-idle-60min-effective
+  subject: Verify BROWSER_IDLE_LIMIT_MS 60min default reduces collisions
+  category: feature
+  description: Past 24h 36 browser-profile-collision events; past 30min 0. gm-plugkit@2.0.1388 with 60min default deployed.
+  acceptance:
+  - gmsniff confirms 0 browser-profile-collision past 30min
+  - npm gm-plugkit version contains the fix
+  status: completed
+  witness_evidence: gmsniff confirms 0 collisions past 30min. npm registry shows gm-plugkit@2.0.1388 published with the 60min default.
+  witness: 'gmsniff --since 30m: 0 browser-profile-collision (vs 36/24h before). npm gm-plugkit@2.0.1388 published with BROWSER_IDLE_LIMIT_MS=60min default.'
+- id: ship-prd-add-subject-slug-fallback
+  subject: Derive prd id from subject slug when not provided
+  category: refactor
+  description: 27/24h prd-add-no-id events fell back to item-<ms> ids agent could not reference later. Slug-from-subject gives semantically findable id.
+  acceptance:
+  - rs-plugkit slug helper added
+  - 0.1.534 pushed
+  - cascade republishes wasm
+  status: completed
+  witness_evidence: rs-plugkit commit c628db9 pushed (slug_from_subject helper in prd.rs, used as fallback when id is None). Cargo bumped 0.1.534.
+  witness: rs-plugkit commit c628db9 pushed; Cargo 0.1.534. slug_from_subject helper added in prd.rs; used as fallback when id is None before falling through to item-<ms>.
+- id: elevate-memory-routing-brickwall-in-skill-md
+  subject: Elevate memory-routing brickwall in SKILL.md per user directive
+  category: refactor
+  description: 'User noted: programming tools writing to their own memory dirs instead of memorize-fire spool. SKILL.md is the top of the preserved hierarchy; brickwall limiters must live there to survive context summarization. Strengthened phrasing and made it a top-level rule, named platform paths explicitly, named memorize-fire to .gm/rs-learn.db as the only portable surface.'
+  acceptance:
+  - SKILL.md edit committed + pushed
+  - Cascade republishes gm-skill npm + back-compat mirror
+  status: completed
+  witness_evidence: gm commit e7d4f60e pushed (origin 0958c207). skills/gm-skill/SKILL.md memory-routing paragraph elevated with explicit refusal language and named portable surfaces.
+  witness: gm commit e7d4f60e pushed (origin 0958c207). skills/gm-skill/SKILL.md memory-routing rule elevated; explicit platform paths named (~/.claude/projects/*/memory/, ~/.codex/memory/, ~/.cursor/*); memorize-fire dispatch to .gm/rs-learn.db named as only portable surface. Refusal language tightened. Cascade republishes gm-skill npm + back-compat mirror.
