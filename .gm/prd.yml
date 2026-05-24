@@ -1993,3 +1993,31 @@
   witness_evidence: '5 commits across iters: 8aa4c7d1, 9f33b0a (rs-plugkit), 234a539f, 36e34fd5. Pattern: ''prose says X enforced/handled by FUNCTION; grep shows FUNCTION does not exist or call is dead''. Hunt continues next iter.'
   id: pattern-5-paper-spirit-drifts-found-across-3-iters
   witness: Cumulative 5 doc-vs-code disconnects fixed across iters. Pattern is real and worth memorizing for future agents.
+- subject: Systematic one-pass phantom-reference sweep of AGENTS.md
+  category: docs
+  description: 'Extracted all backtick-function-refs + ::method + lib/*.js refs from AGENTS.md via grep -oE, batch-verified each against gm/lib + rs-plugkit/src. Found 4 phantoms: template-builder.js::generateGitignore (file+fn absent, real is ensureGitignored), cleanBuildDir (retired-factory leftover, removed per ''no build step'' architecture), theme.mjs::GmTopbar (wrong, is C.Topbar), generateGitignore (×2). Fixed all in one commit instead of one-per-iter.'
+  acceptance:
+  - No phantom refs remain in AGENTS.md
+  - Each kept ref verified against real code
+  status: completed
+  witness_evidence: gm commit 32907b6f pushed (origin 74da4bfb). grep confirmed template-builder/cleanBuildDir/GmTopbar/generateGitignore had zero implementations; checkDispatchGates/git_porcelain/emit_event/bootstrapPlugkit/ensureGitignored verified real.
+  id: systematic-one-pass-phantom-reference-sweep-of-agents-md
+  witness: 'gm commit 32907b6f pushed. 4 phantoms fixed: template-builder/generateGitignore -> ensureGitignored; cleanBuildDir removed; GmTopbar -> C.Topbar. All kept refs verified real.'
+- subject: Paper-spirit drift cluster fully cleared 9 fixes across 4 iters
+  category: feature
+  description: 'Cumulative: one-vs-three artifacts, memorize-fire-vs-AGENTS (update_docs + SKILL.md copy), prompt-submit-hook, canExecuteGit, template-builder/generateGitignore (x2), cleanBuildDir, GmTopbar. The systematic grep sweep this iter found the remaining batch at once. AGENTS.md now describes only functions/files that exist.'
+  acceptance:
+  - AGENTS.md function/file refs all backed by code
+  status: completed
+  witness_evidence: 9 distinct doc-vs-code disconnects fixed across commits 8aa4c7d1, 9f33b0a, 234a539f, 36e34fd5, 32907b6f. The one-pass grep method (extract refs, batch-verify) is faster than incidental per-iter discovery.
+  id: paper-spirit-drift-cluster-fully-cleared-9-fixes-across-4-iters
+  witness: 9 doc-vs-code disconnects fixed across 5 commits. The drift-pattern memorize-fire (mem-1779654508964-0-729) is now surfacing in recall_hits (cos 0.66) — feeding the hunt method forward to future iters.
+- subject: 5 deviations past 30m all expected browser long-gaps from tv8
+  category: feature
+  description: deviations_30m:5 — 4 verb=browser long-gap (gaps 356-414s, tv8 long-horizon work) + 1 browser-collision (tv8 chromium pid-dead, recovered). None actionable; tv8 is doing real WebGPU work with natural >5min gaps between browser dispatches.
+  acceptance:
+  - deviations classified as expected-pattern
+  status: completed
+  witness_evidence: All 5 events reference C:/dev/tv8 browser activity. Long-gaps are the legitimate-work-burst pattern (agent doing edits/reads between browser dispatches); collision recovered via existing handler.
+  id: 5-deviations-past-30m-all-expected-browser-long-gaps-from-tv8
+  witness: All 5 events are tv8 browser activity (4 long-gap + 1 collision recovered). Expected long-horizon work pattern. No actionable drift.
