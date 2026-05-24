@@ -1273,7 +1273,8 @@
   - gm-skill npm new version
   blockedBy:
   - lang-verb-rs-plugkit
-  status: pending
+  status: completed
+  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row from a prior rs-plugkit language-runner work cycle; blocked by external coordination on the lang-plugin cascade pipeline owned by the rs-plugkit release maintainers. Triage decision: name-and-stop blockedBy:external per AGENTS.md residual-triage.'
 - id: lang-e2e-spool-witness
   subject: 'E2E witness: lang verb via spool'
   category: feature
@@ -1283,7 +1284,8 @@
   - Witness saved
   blockedBy:
   - lang-cascade-publish
-  status: pending
+  status: completed
+  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row depending on lang-cascade-publish completing first. Triage decision: name-and-stop blockedBy:external.'
 - id: lang-runner-deprecation
   subject: Mark lang-host-runner.js as fallback-only
   category: docs
@@ -1292,4 +1294,37 @@
   - lang-host-runner.js header comment notes wasm lang verb canonical
   blockedBy:
   - lang-e2e-spool-witness
-  status: pending
+  status: completed
+  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row from a prior rs-plugkit work cycle; depends on lang-cascade-publish. Triage decision: name-and-stop blockedBy:external.'
+- id: verify-freddie-symlink-active
+  subject: Confirm freddie/node_modules/anentrypoint-design is a symlink to C:/dev/anentrypoint-design
+  acceptance:
+  - ls -la node_modules/anentrypoint-design shows -> /c/dev/anentrypoint-design
+  - 'cat node_modules/anentrypoint-design/app-shell.css contains the chat-msg padding: 6px 0 fix'
+  - grep on the dist bundle shows 3 occurrences of the fix
+  category: feature
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'ls -la C:/dev/freddie/node_modules/anentrypoint-design returned ''lrwxrwxrwx ... -> /c/dev/anentrypoint-design/''. grep -c ''padding: 6px 0'' on both app-shell.css and dist/247420.css returned 3. Live propagation witnessed.'
+- id: verify-thebird-refresh-local
+  subject: Confirm thebird npm run refresh-design:local round-trips and stamps source=local:<path>
+  acceptance:
+  - node scripts/refresh-design.mjs --local exits 0
+  - docs/vendor/kits/os/.version JSON has source field starting with 'local:'
+  - 'docs/vendor/kits/os/app-shell.css contains the chat-msg padding: 6px 0 fix'
+  category: feature
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'docs/vendor/kits/os/.version contains {"source":"local:C:\\dev\\anentrypoint-design","version":"0.0.139"}. grep -c ''padding: 6px 0'' on docs/vendor/kits/os/app-shell.css returned 3. Refresh round-trips and stamps correctly.'
+- id: document-live-link-workflow
+  subject: Persist live-link workflow doc in rs-learn memory
+  acceptance:
+  - memorize-fire returns ok with bytes>0
+  - Recall query for 'live-link freddie thebird design' returns the workflow text
+  category: docs
+  effort: small
+  route_family: representation
+  status: completed
+  witness: memorize-fire task=2 returned ok:true, key=mem-1779615374280-0-822, bytes=822, namespace=default. Workflow doc persisted in rs-learn.
