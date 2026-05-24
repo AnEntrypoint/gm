@@ -1875,3 +1875,33 @@
   witness_evidence: 'This iter validated the design before shipping: the 5-event batch I''d dispatched was exactly the failure-mode the user asked me to look for. Fix ships now; effect measurable next iter via deviations_30m trend.'
   id: predictability-for-llms-fast-path-now-matches-the-chain-walk-men
   witness: 'Pre-fix mental model: ''3 magic verbs reset the clock''. Post-fix: ''state-touching verbs reset, side-effect verbs gate after idle''. Matches the chain-walk discipline agents already follow. Future iters should see fewer gate denials on legitimate prd/mutable batch work.'
+- subject: Verify prd and mutable fast-path extension live in 0.1.547
+  category: feature
+  description: Bootstrapped 0.1.547. Past 30min shows zero prd-resolve or prd-add long-gap events — the 5-event batch noise from prior iter is gone. The fast-path extension from 0.1.546 is operative.
+  acceptance:
+  - zero new prd-* long-gap events
+  - batch of prd dispatches succeeds without denial
+  status: completed
+  witness_evidence: 'gmsniff --since 30m: only 1 long-gap (verb=browser, legitimate) + 1 browser-collision (tv8 chromium crash, recovered). Zero prd-*/mutable-* gate denials confirms fast-path live.'
+  id: verify-prd-and-mutable-fast-path-extension-live-in-0-1-547
+  witness: This very iter dispatched 3 prd-adds + 3 transitions in one parallel batch. All 6 succeeded with zero gate denials. The fast-path extension from 0.1.546 (now in 0.1.547) eliminates the prd-resolve batch noise pattern.
+- subject: Add one-line rebootstrap command to SKILL.md update_available section
+  category: docs
+  description: 'Previously SKILL.md said ''kill the watcher and re-bootstrap'' without naming the command, leaving agents to figure out bootstrap mechanics. This iter I spent 5+ tool calls doing what one command does. Now SKILL.md gives the exact: ''bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool > /dev/null 2>&1 &''. ensureReady handles the download/refresh; one-line replaces 7-step manual pipeline.'
+  acceptance:
+  - SKILL.md mentions the command verbatim
+  - Next agent that sees update_available executes one command not seven steps
+  status: completed
+  witness_evidence: gm commit 174e8af3 pushed (origin e205618a). SKILL.md line 31 update_available section now includes the exact one-line invocation.
+  id: add-one-line-rebootstrap-command-to-skill-md-update-available-se
+  witness: 'gm commit 174e8af3 pushed (origin e205618a). SKILL.md update_available section now gives the exact two-command sequence: --kill-stale-watchers then spool. Cascade republishes gm-skill npm.'
+- subject: Act on update_available signal per SKILL.md prescription
+  category: feature
+  description: This iter's boot probe showed update_available:{installed:0.1.544, latest:0.1.547}. Per SKILL.md guidance, killed-and-rebootstrapped before continuing. Watcher now 0.1.547. The update_available signal drove behavior — not just observability.
+  acceptance:
+  - agent rebootstraps when update_available is non-null
+  - subsequent verbs land on fresh wasm
+  status: completed
+  witness_evidence: Watcher pid 3208 v0.1.547 alive post-restart. update_available:null in current turn-summary (in-sync). Dispatch is happening against the fresh wasm.
+  id: act-on-update-available-signal-per-skill-md-prescription
+  witness: Boot probe this iter showed update_available:{installed:0.1.544, latest:0.1.547}. Killed stale watchers, downloaded + installed 0.1.547 wasm and 2.0.1400+ wrapper, rebooted. Watcher pid 3208 v0.1.547 now alive. update_available:null in fresh turn-summary. The signal drove behavior.
