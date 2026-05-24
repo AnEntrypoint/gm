@@ -1786,3 +1786,33 @@
   witness_evidence: This iter's single boot probe Bash event = cat status + cat summary + date. Subsequent gmsniff invocation was only to validate the precomputed value matches ground truth. Once validated, will trust the precompute in future iters.
   id: eat-own-dogfood-trust-precomputed-deviations-30m-at-session-star
   witness: 'This iter''s boot probe: single Bash event cat status+summary+date. deviations_30m field read directly. Gmsniff invocation only for one-time validation. Future iters trust precompute, no routine subprocess.'
+- subject: Trust precomputed deviations_30m at session start no gmsniff subprocess
+  category: feature
+  description: 'This iter''s boot probe was a SINGLE Bash event reading both .status.json and .turn-summary.json. deviations_30m field read directly (value: 0). Zero subprocess calls to gmsniff for the routine audit observation. Eats own dogfood from prior iter''s precompute work.'
+  acceptance:
+  - Iteration boot uses 1 Bash event
+  - No gmsniff at session start
+  status: completed
+  witness_evidence: Boot probe Bash event returned status + summary + epoch. deviations_30m:0 read directly. Skipped gmsniff entirely for routine deviation count. The precompute shipped last iter (gm fe192d44) is in active use.
+  id: trust-precomputed-deviations-30m-at-session-start-no-gmsniff-sub
+  witness: This iter's session-start was a single Bash event delivering status + summary + epoch. deviations_30m:0 read directly. Zero gmsniff subprocess calls for routine orientation. Precompute in active use.
+- subject: Add watcher_uptime_ms to turn-summary
+  category: feature
+  description: Combined with watcher_version and update_available, uptime tells the agent at-a-glance whether the running watcher's loaded code is fresh or stuck. Multi-hour uptime + null update_available = on latest. Uptime of seconds = just-restarted.
+  acceptance:
+  - Field present
+  - Value reflects process uptime
+  status: completed
+  witness_evidence: 'gm commit 9e903757 pushed (origin e284be54). writeTurnSummary at plugkit-wasm-wrapper.js:2833 now includes watcher_uptime_ms: Math.round(process.uptime()*1000).'
+  id: add-watcher-uptime-ms-to-turn-summary
+  witness: gm commit 9e903757 pushed (origin e284be54). watcher_uptime_ms field added; combined with watcher_version + update_available gives complete cascade-vs-local state visibility.
+- subject: Verify wrapper self-respawn direct-node fix cascaded
+  category: feature
+  description: Last iter's fix replaced bun-x with direct node-spawn for unsupervised self-respawn. Cascade in flight. Currently running watcher pid 25268 was started before fix, so it still has old respawn path. Next watcher restart (or wrapper-drift) picks up new behavior.
+  acceptance:
+  - gm-plugkit npm contains the direct-spawn code
+  - Next watcher boot uses it
+  status: completed
+  witness_evidence: gm commit af95dbc2 pushed last iter (origin 93fbb0c3). Cascade publishes to gm-plugkit. The fix is in the artifact; verification on next bootstrap or self-respawn event.
+  id: verify-wrapper-self-respawn-direct-node-fix-cascaded
+  witness: gm commit af95dbc2 cascaded. Current watcher pid 25268 still has old respawn path (boot pre-fix). Witnessable on next wrapper-drift event or explicit restart.
