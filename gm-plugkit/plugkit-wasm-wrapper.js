@@ -824,6 +824,7 @@ function startManagedBrowser(pw, profileDir) {
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-default-apps',
+    '--disable-gpu-process-crash-limit',
   ];
   if (headless) args.push('--headless=new');
   const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
