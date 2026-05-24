@@ -1905,3 +1905,33 @@
   witness_evidence: Watcher pid 3208 v0.1.547 alive post-restart. update_available:null in current turn-summary (in-sync). Dispatch is happening against the fresh wasm.
   id: act-on-update-available-signal-per-skill-md-prescription
   witness: Boot probe this iter showed update_available:{installed:0.1.544, latest:0.1.547}. Killed stale watchers, downloaded + installed 0.1.547 wasm and 2.0.1400+ wrapper, rebooted. Watcher pid 3208 v0.1.547 now alive. update_available:null in fresh turn-summary. The signal drove behavior.
+- subject: Discover paper-spirit drift AGENTS.md claimed one npm artifact actually three
+  category: docs
+  description: 'AGENTS.md line 129 claimed ''one published artifact: gm-skill'' but line 127 lists publish.yml shipping gm-skill + gm-plugkit, and the rs-plugkit cascade ships plugkit-wasm. npm registry confirms all three live: gm-skill@2.0.1400, gm-plugkit@2.0.1400, plugkit-wasm@0.1.547. Fixed AGENTS.md to reflect reality.'
+  acceptance:
+  - AGENTS.md says 'three npm packages' not 'one published artifact'
+  - Includes gm-skill + gm-plugkit + plugkit-wasm by name
+  status: completed
+  witness_evidence: 'gm commit 8aa4c7d1 pushed. AGENTS.md line 129 now reads ''Three npm packages publish from this repo: gm-skill (the skill harness), gm-plugkit (bootstrap + watcher), plugkit-wasm (wasm binary).'''
+  id: discover-paper-spirit-drift-agents-md-claimed-one-npm-artifact-a
+  witness: 'AGENTS.md line 129 updated to ''Three npm packages publish: gm-skill, gm-plugkit, plugkit-wasm''. gm commit 8aa4c7d1 pushed (origin 38b80ee6).'
+- subject: Correct update-docs prose about memorize-fire vs AGENTS.md
+  category: docs
+  description: 'update_docs.rs claimed ''route edits to AGENTS.md through memorize-fire only — never inline-edit''. But grep across rs-plugkit src showed NO code path actually writes to AGENTS.md from memorize-fire. memorize-fire only stores to rs-learn DB. Agents following the prose dispatch memorize-fire and AGENTS.md never gets updated. Fixed prose to: AGENTS.md is inline-edited (top of preserved hierarchy); memorize-fire is parallel rs-learn surface for recall reinforcement; use both when load-bearing.'
+  acceptance:
+  - update_docs.rs prose matches code reality
+  - cascade republishes wasm with corrected instruction
+  status: completed
+  witness_evidence: rs-plugkit commit 9f33b0a pushed Cargo 0.1.549. update_docs.rs:9 now says inline-edit primary, memorize-fire parallel. Eliminates the deceptive prose that caused agents to silently fail at the doc-update intent.
+  id: correct-update-docs-prose-about-memorize-fire-vs-agents-md
+  witness: rs-plugkit commit 9f33b0a pushed Cargo 0.1.549. update_docs.rs prose now says inline-edit primary, memorize-fire parallel rs-learn surface. Eliminates the deceptive 'memorize-fire updates AGENTS.md' claim that had no code backing.
+- subject: Memorize-fire stored npm-three-packages fact to rs-learn for recall
+  category: feature
+  description: Even with prose corrected, memorize-fire IS the correct surface for recall-time reinforcement. The correction fact was stored as mem-1779650571903-0-269 in default + default-vec namespaces. Both JSON files committed to .gm/disciplines/. Recall surfaces the fact when query touches publish/npm/artifact topics.
+  acceptance:
+  - memorize-fire returns ok:true with mem-key
+  - mem files committed
+  status: completed
+  witness_evidence: 'memorize-fire-2 response: {ok:true, key:mem-1779650571903-0-269, bytes:269, embedded:true}. Files in .gm/disciplines/default/ + default-vec/. Committed in 8aa4c7d1.'
+  id: memorize-fire-stored-npm-three-packages-fact-to-rs-learn-for-rec
+  witness: memorize-fire-2 returned ok:true key:mem-1779650571903-0-269. Two JSON files in .gm/disciplines/default/ + default-vec/. Committed in 8aa4c7d1. Recall surfaces the correction on future publish-topic queries.
