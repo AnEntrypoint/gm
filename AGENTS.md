@@ -112,7 +112,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **Sync-before-emit (codeinsight + search)**: outputs must come from freshly-completed indices. Cache serves only on digest match (mtime sum + git HEAD + dirty-tree marker). Default invocation runs fresh. `--read-cache` permitted only when `.codeinsight.digest` matches; mismatch auto-refreshes. rs-search runs scan + embed + sweep before first result; emits `[index fully synced: …]`. Unverified-index emit = stale ground truth.
 
-**Auto-recall on prompt-submit**: rs-plugkit prompt-submit hook derives 2-6 word recall query from user prompt, calls rs-learn `Searcher` directly via shared tokio Runtime, injects "## Recall for this prompt" into systemMessage. Session-start auto-search (codeinsight) + every-possible-prompt auto-recall ensure every possible turn begins with prior memory loaded.
+**Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack `{query, hits, fired_at, turn_entry:true}` to its response on the first dispatch after a >30s idle gap or session-start. Query is derived from `.gm/last-prompt.txt` / `.gm/turn-state.json`; hits are the top recall results plugkit pulled before serving the instruction. Wasm-side `wasm_hooks::prompt_submit` exports exist for legacy hook-host integration but the current spool watcher does not invoke them — orientation comes through the instruction verb's response pack instead.
 
 **Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs every possible future skill that participates in a chain.
 
