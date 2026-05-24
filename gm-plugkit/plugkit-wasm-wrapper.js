@@ -1868,7 +1868,9 @@ async function runSpoolWatcher(instance, spoolDir) {
         const holderSha = parts[2] || '';
         const lockTs = parseInt(tsStr, 10);
         const age = Date.now() - lockTs;
-        if (age < 15000) {
+        const holderPidNum = parseInt(pidStr, 10);
+        const holderAlive = Number.isFinite(holderPidNum) && isProcessAliveSync(holderPidNum);
+        if (age < 15000 && holderAlive) {
           if (_ownWrapperSha12 && holderSha && holderSha !== _ownWrapperSha12) {
             try { logEvent('plugkit', 'peer.stale-wrapper-takeover', { holder_pid: pidStr, holder_sha: holderSha, own_sha: _ownWrapperSha12, lock_age_ms: age }); } catch (_) {}
             console.error(`[plugkit-wasm] peer wrapper-sha mismatch (holder=${holderSha} own=${_ownWrapperSha12}); killing pid=${pidStr} and taking over`);
@@ -1896,6 +1898,9 @@ async function runSpoolWatcher(instance, spoolDir) {
             } catch (_) {}
             process.exit(75);
           }
+        } else if (!holderAlive) {
+          console.error(`[plugkit-wasm] stale lock (holder pid=${pidStr} dead, age=${age}ms); taking over`);
+          try { logEvent('plugkit', 'watcher.lock-pid-dead-takeover', { stale_pid: pidStr, lock_age_ms: age }); } catch (_) {}
         } else {
           console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
         }
