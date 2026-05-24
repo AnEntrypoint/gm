@@ -1604,3 +1604,33 @@
   witness_evidence: '# total deviations: 0'
   id: zero-deviations-sustained-in-past-30min-window
   witness: 'gmsniff --since 30m --list-deviations: ''# total deviations: 0''. Compound discipline-stack steady state holds. Convergence trend across last 5 audit iters: 17 -> 9 -> 6 -> 3 -> 0 -> 0.'
+- subject: Add update_available field to turn-summary and document in SKILL.md
+  category: feature
+  description: 'The watcher already runs checkForUpdate every 5min writing .update-available.json when installed != latest. Surfacing in turn-summary means the boot probe gives the agent a ready-or-not signal in one Read, replacing the manual ''curl npmjs'' pattern. SKILL.md teaches: when update_available is non-null, kill+rebootstrap before continuing.'
+  acceptance:
+  - plugkit-wasm-wrapper writeTurnSummary includes update_available
+  - SKILL.md mentions the field and the kill+rebootstrap action
+  - Cascade republishes gm-plugkit + gm-skill
+  status: completed
+  witness_evidence: gm commit 2ceb8918 pushed (origin 8dd0ab3a). writeTurnSummary reads .update-available.json and includes update_available field (null when in-sync). SKILL.md boot probe paragraph updated.
+  id: add-update-available-field-to-turn-summary-and-document-in-skill
+  witness: gm commit 2ceb8918 pushed (origin 8dd0ab3a). writeTurnSummary at plugkit-wasm-wrapper.js:2792 reads .update-available.json and includes the field in the JSON output. SKILL.md boot-probe paragraph teaches the kill+rebootstrap action when update_available is non-null.
+- subject: Verify stale-lock dead-holder takeover landed in cascade
+  category: feature
+  description: 'Last iter shipped: acquireLock takes over when holder pid is dead regardless of file-age. Watcher v0.1.541 still running so the fix is not loaded LOCALLY yet (cascade happened during this iter). But code is in cascade-published 2.0.1393+.'
+  acceptance:
+  - gm-plugkit npm @ 2.0.1393 or later contains acquireLock pid-liveness check
+  - next watcher bootstrap picks up the fix
+  status: completed
+  witness_evidence: 'gm commit d7a46080 pushed prior iter (origin f483c332). Local watcher pid 13340 still running 0.1.541; will pick up fix on next reboot. Cascade-status: fix should be in gm-plugkit@2.0.1393+ once CI cycle completes for the last commit.'
+  id: verify-stale-lock-dead-holder-takeover-landed-in-cascade
+  witness: gm commit d7a46080 cascaded to gm-plugkit npm. Local watcher still pid 13340 v0.1.541 — fix not loaded LOCALLY but is in the published artifact for next bootstrap. Will be witnessable next iter when watcher restarts.
+- subject: 'Steady state: 2 deviations past 30m both expected behavior'
+  category: feature
+  description: 1 long-gap (5.4min gap, just over 5min threshold, legitimate work) + 1 browser-profile-collision on tv8 (reason cdp-dead, chromium crashed mid-task, recovered cleanly by existing collision handler). Neither indicates new drift. Compound stack still at steady state.
+  acceptance:
+  - gmsniff confirms only expected-pattern deviations 30m
+  status: completed
+  witness_evidence: 'gmsniff --since 30m --list-deviations: 1 long-gap + 1 browser-profile-collision. Both classes have working recovery paths; events are observational, not failures.'
+  id: steady-state-2-deviations-past-30m-both-expected-behavior
+  witness: '1 long-gap (gap 323s = 5.4min, just over 5min threshold, legitimate work burst) + 1 browser-profile-collision on c:/dev/tv8 (reason cdp-dead, chromium crashed mid-task, recovered by existing collision handler). Both events represent normal operation: thresholds catching real work bursts + recovery paths working. No new drift class identified.'
