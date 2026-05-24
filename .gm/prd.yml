@@ -1695,3 +1695,34 @@
   witness_evidence: 'This iter: gm-plugkit@2.0.1395 contains update_available code, but installed wrapper (from gm-plugkit@2.0.1394 or earlier) didn''t. Had to manual install via tar -xzf + cp. Indicates auto-refresh gap. Tracked for follow-up; not blocking current iter.'
   id: surface-gm-plugkit-wrapper-auto-refresh-staleness-for-follow-up
   witness: 'Tracked as ambient noticing for future iter. Current bootstrap auto-refresh compares wasm sha but not wrapper sha. blockedBy: scope-this-turn-future-iteration (need to add wrapper-sha-check to bootstrap.js).'
+- subject: Discover wrapper auto-refresh already works via existing drift-detection
+  category: docs
+  description: Last iter's noticing was wrong — investigation this iter showed ensureWrapperFresh exists at bootstrap.js:649 and runs at every bootstrap call. wrapper.drift-self-respawn at plugkit-wasm-wrapper.js:2266 polls own sha every 60s and self-respawns when file changes. Combined, wrapper updates DO land on next bootstrap, and running watchers auto-restart on file change. Last iter I manually patched because I didn't trigger bootstrap — operational gap not architectural.
+  acceptance:
+  - bootstrap.js has ensureWrapperFresh
+  - wrapper.js has wrapper.drift detection that self-respawns
+  status: completed
+  witness_evidence: Read bootstrap.js:649 (ensureWrapperFresh function); plugkit-wasm-wrapper.js:2266 (drift detection writes shutdown-reason wrapper-drift and re-spawns).
+  id: discover-wrapper-auto-refresh-already-works-via-existing-drift-d
+  witness: bootstrap.js:649 ensureWrapperFresh sha-compares + copies; called at line 856 and 873 in ensureReady. plugkit-wasm-wrapper.js:2266 wrapper-drift-self-respawn poll every 60s. Combined system handles wrapper updates automatically — last iter's manual cp was an operational gap not architectural.
+- subject: Add cwd to every logEvent JSONL line for cross-project visibility
+  category: feature
+  description: Multiple watchers share ~/.claude/gm-log/<date>/<sub>.jsonl files. Adding cwd to line schema makes events self-describing for cross-project audits — pid lookup only works while process alive. Saw 3 prd-add-no-id from pid 3404 this iter without obvious project context.
+  acceptance:
+  - logEvent emits cwd field
+  - Future gmsniff output shows cwd
+  - Cascade republishes
+  status: completed
+  witness_evidence: 'gm commit f7563fee pushed (origin 3816fe6f). plugkit-wasm-wrapper.js:411 logEvent body now includes cwd: process.cwd() in the JSON line schema.'
+  id: add-cwd-to-every-logevent-jsonl-line-for-cross-project-visibilit
+  witness: 'gm commit f7563fee pushed (origin 3816fe6f). logEvent body schema in plugkit-wasm-wrapper.js now includes cwd: process.cwd(). Cascade republishes.'
+- subject: Validate prd-add-no-id scope fix flags only true unfindable cases
+  category: feature
+  description: '30m sample: 3 events all with subject empty string, fallback_id item-<ms>. This is exactly the case the 0.1.540 scope-narrow was designed to flag. Slug-derivable subjects no longer trigger. Confirms scope fix is correctly distinguishing usable-slug-fallback from unfindable-item-fallback.'
+  acceptance:
+  - All prd-add-no-id events past 30m have empty subject
+  - Scope fix correctly suppresses slug case
+  status: completed
+  witness_evidence: gmsniff --grep prd-add-no-id --json shows subject:'' on all 3 events. The scope fix is doing its job — flagging only true item-<ms> fallback cases.
+  id: validate-prd-add-no-id-scope-fix-flags-only-true-unfindable-case
+  witness: gmsniff --since 30m --event deviation.prd-add-no-id --json showed all 3 events had subject:'' and fallback_id:item-<ms>. Scope fix from rs-plugkit 0.1.540 correctly distinguishes usable-slug-fallback from unfindable-item-fallback — flags only the latter.
