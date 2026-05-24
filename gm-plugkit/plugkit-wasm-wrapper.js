@@ -2830,6 +2830,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         ts: Date.now(),
         watcher_pid: process.pid,
         watcher_version: instV || fileV,
+        watcher_uptime_ms: Math.round(process.uptime() * 1000),
         phase,
         last_skill: lastSkill,
         prd_pending: prdPending,
