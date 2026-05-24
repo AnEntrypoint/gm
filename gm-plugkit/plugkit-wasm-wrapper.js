@@ -2742,6 +2742,57 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(writeStatus, 5000);
   writeStatus();
 
+  const TURN_SUMMARY_PATH = path.join(spoolDir, '.turn-summary.json');
+  function writeTurnSummary() {
+    try {
+      const cwd = process.cwd();
+      const gmDir = path.join(cwd, '.gm');
+      let phase = null, lastSkill = null, prdPending = 0, browserSessions = 0;
+      let lastInstructionTs = null, lastInstructionAgeMs = null;
+      try {
+        const ts = JSON.parse(fs.readFileSync(path.join(gmDir, 'turn-state.json'), 'utf-8'));
+        phase = ts.phase || null;
+        lastSkill = ts.last_skill || null;
+      } catch (_) {}
+      try {
+        const prdRaw = fs.readFileSync(path.join(gmDir, 'prd.yml'), 'utf-8');
+        const openRe = /\n\s*status:\s*(pending|in_progress|unknown)\b/g;
+        const matches = prdRaw.match(openRe);
+        prdPending = matches ? matches.length : 0;
+      } catch (_) {}
+      try {
+        const tsRaw = fs.readFileSync(path.join(gmDir, 'last-instruction-ts'), 'utf-8');
+        const n = parseInt(tsRaw.trim(), 10);
+        if (Number.isFinite(n) && n > 0) {
+          lastInstructionTs = n;
+          lastInstructionAgeMs = Date.now() - n;
+        }
+      } catch (_) {}
+      try {
+        const ports = readJsonFile(browserPortsFile(cwd), {});
+        for (const entry of Object.values(ports)) {
+          if (entry && Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) browserSessions++;
+        }
+      } catch (_) {}
+      const fileV = readFileVersionOnly() || null;
+      const instV = _instanceVersionAtBoot || null;
+      fs.writeFileSync(TURN_SUMMARY_PATH, JSON.stringify({
+        ts: Date.now(),
+        watcher_pid: process.pid,
+        watcher_version: instV || fileV,
+        phase,
+        last_skill: lastSkill,
+        prd_pending: prdPending,
+        last_instruction_ts: lastInstructionTs,
+        last_instruction_age_ms: lastInstructionAgeMs,
+        long_gap_threshold_ms: 300000,
+        browser_sessions_alive: browserSessions,
+      }));
+    } catch (_) {}
+  }
+  setInterval(writeTurnSummary, 5000);
+  writeTurnSummary();
+
   const UPDATE_AVAILABLE_PATH = path.join(spoolDir, '.update-available.json');
   const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
   const UPDATE_CHECK_SHARED_CACHE = path.join(GM_TOOLS_ROOT, '.update-check-cache.json');
