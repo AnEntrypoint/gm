@@ -1935,3 +1935,32 @@
   witness_evidence: 'memorize-fire-2 response: {ok:true, key:mem-1779650571903-0-269, bytes:269, embedded:true}. Files in .gm/disciplines/default/ + default-vec/. Committed in 8aa4c7d1.'
   id: memorize-fire-stored-npm-three-packages-fact-to-rs-learn-for-rec
   witness: memorize-fire-2 returned ok:true key:mem-1779650571903-0-269. Two JSON files in .gm/disciplines/default/ + default-vec/. Committed in 8aa4c7d1. Recall surfaces the correction on future publish-topic queries.
+- subject: Used SKILL.md one-line rebootstrap command on update_available
+  category: feature
+  description: Boot probe showed update_available:{installed:0.1.547, latest:0.1.550}. Dispatched 'bun x gm-plugkit@latest --kill-stale-watchers' + manual boot per SKILL.md guidance. Replaces 5+ manual steps with 2 commands.
+  acceptance:
+  - Watcher on 0.1.550 after one-line sequence
+  status: completed
+  witness_evidence: Watcher pid 22596 v0.1.550 alive post-restart. update_available now null. The SKILL.md guidance from last iter is in active use.
+  id: used-skill-md-one-line-rebootstrap-command-on-update-available
+  witness: Watcher pid 22596 v0.1.550 alive post-restart. The exact SKILL.md command was used. Replaces 5+ manual steps with 2 commands.
+- subject: Purge stale SKILL.md memorize-fire claim that contradicts code reality
+  category: docs
+  description: 'SKILL.md line 63 said ''AGENTS.md routed through memorize-fire not inline-edited'' but no code path writes AGENTS.md from memorize-fire (verified by grep last iter). Same drift I fixed in rs-plugkit update_docs.rs prose last iter, but SKILL.md is loaded into agent context every turn — must be corrected at the top of the preserved hierarchy too. Fixed: AGENTS.md inline-edited; memorize-fire is parallel rs-learn surface; they''re complementary not alternatives.'
+  acceptance:
+  - SKILL.md memory-routing paragraph no longer claims memorize-fire updates AGENTS.md
+  - Cascade republishes gm-skill npm with corrected SKILL.md
+  status: completed
+  witness_evidence: gm commit 234a539f pushed (origin e911808e). SKILL.md line 63 now describes the two surfaces as complementary; AGENTS.md inline-edit acknowledged as primary.
+  id: purge-stale-skill-md-memorize-fire-claim-that-contradicts-code-r
+  witness: 'gm commit 234a539f pushed. SKILL.md line 63 corrected: AGENTS.md inline-edit primary; memorize-fire parallel recall surface; complementary not alternatives.'
+- subject: Purge AGENTS.md prompt-submit-hook claim that has no caller
+  category: docs
+  description: AGENTS.md line 115 claimed 'rs-plugkit prompt-submit hook derives 2-6 word recall query, injects into systemMessage'. Grep showed wasm_hooks::prompt_submit exists as an export but has ZERO callers in plugkit-wasm-wrapper.js — the runtime path doesn't fire it. Real auto-recall lives inline in instruction verb response pack (auto_recall.turn-entry). Updated AGENTS.md to describe the actual mechanism + note legacy hook exports retained for hypothetical hook-host integration.
+  acceptance:
+  - AGENTS.md describes auto-recall via instruction verb not hook
+  - Acknowledges legacy hook exports as unused-by-current-watcher
+  status: completed
+  witness_evidence: 'gm commit 234a539f. AGENTS.md line 115 now: ''Auto-recall on turn entry: the instruction verb attaches an auto_recall pack...'''
+  id: purge-agents-md-prompt-submit-hook-claim-that-has-no-caller
+  witness: gm commit 234a539f. AGENTS.md line 115 corrected to describe instruction-verb auto_recall pack; legacy wasm_hooks::prompt_submit acknowledged as unused-by-current-watcher.
