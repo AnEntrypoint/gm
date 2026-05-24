@@ -2287,11 +2287,10 @@ async function runSpoolWatcher(instance, spoolDir) {
           action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] wrapper.js drift detected — spawning replacement via bun x gm-plugkit@latest spool then exiting`);
+        console.error(`[plugkit-wasm] wrapper.js drift detected — spawning replacement directly from installed wrapper then exiting`);
         try {
           const cp = require('child_process');
-          const bunPath = process.env.GM_BUN_PATH || 'bun';
-          const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
+          const child = cp.spawn(process.execPath, [_wrapperPathInstalled, 'spool'], {
             cwd: process.cwd(),
             detached: true,
             stdio: 'ignore',
@@ -2300,7 +2299,21 @@ async function runSpoolWatcher(instance, spoolDir) {
           });
           child.unref();
         } catch (e) {
-          console.error(`[plugkit-wasm] failed to spawn replacement: ${e.message}`);
+          console.error(`[plugkit-wasm] direct node spawn failed: ${e.message}; falling back to bun x`);
+          try {
+            const cp = require('child_process');
+            const bunPath = process.env.GM_BUN_PATH || 'bun';
+            const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
+              cwd: process.cwd(),
+              detached: true,
+              stdio: 'ignore',
+              windowsHide: true,
+              env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-wrapper-drift-fallback' },
+            });
+            child.unref();
+          } catch (e2) {
+            console.error(`[plugkit-wasm] fallback bun-x also failed: ${e2.message}`);
+          }
         }
         try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'wrapper-drift-unsupervised', ts: Date.now(), pid: process.pid, boot_sha: _wrapperShaAtBoot.slice(0, 12), file_sha: cur.slice(0, 12) })); } catch (_) {}
         try { releaseLock(); } catch (_) {}
