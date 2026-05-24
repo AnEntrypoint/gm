@@ -1366,3 +1366,30 @@
   - Witness saved
   status: completed
   witness: 'Two back-to-back exec:blender dispatches: ms=935 and ms=1021, both ok:true. Fresh process each time, no leakage.'
+- id: verify-gate-300s-live
+  subject: Verify 300s threshold loaded in 0.1.529
+  category: feature
+  description: Witness 300000ms in gate denial.
+  acceptance:
+  - gate denial reason contains '300000ms'
+  status: completed
+  witness_evidence: lang-9 and transition-17 both denied with 'threshold 300000ms'. Confirmed live.
+  witness: 'lang-9 and transition-17 both denied with ''long-gap-no-instruction: ...ms (threshold 300000ms)''. New threshold is loaded in plugkit 0.1.529 watcher.'
+- id: verify-lang-post-cascade
+  subject: Verify lang verb works on 0.1.529
+  category: feature
+  description: Dispatch lang verb against blender-kit post-cascade.
+  acceptance:
+  - lang-10 ok:true
+  status: completed
+  witness_evidence: 'lang-10: {ok:true, plugin_id:''blender'', ms:1684}.'
+  witness: lang-10 dispatched against blender-kit returned {ok:true, plugin_id:'blender', ms:1684, output:'Blender 5.0.1 ... Blender quit'}. Lang verb confirmed working on 0.1.529.
+- id: scope-prd-anti-shape-to-complete
+  subject: Narrow prd-anti-shape log to COMPLETE-bound transitions
+  category: refactor
+  description: Gate was bloating dashboard.
+  acceptance:
+  - rs-plugkit 0.1.531 pushed with scope narrowing
+  status: completed
+  witness_evidence: rs-plugkit commit 45d4b62 pushed; Cargo bumped 0.1.531.
+  witness: rs-plugkit commit 45d4b62 pushed to origin/main. Cargo bumped 0.1.531. gates.rs change narrows prd-anti-shape log to transitions whose target is COMPLETE. Cascade to 0.1.531 wasm pending.
