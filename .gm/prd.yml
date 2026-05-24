@@ -2021,3 +2021,32 @@
   witness_evidence: All 5 events reference C:/dev/tv8 browser activity. Long-gaps are the legitimate-work-burst pattern (agent doing edits/reads between browser dispatches); collision recovered via existing handler.
   id: 5-deviations-past-30m-all-expected-browser-long-gaps-from-tv8
   witness: All 5 events are tv8 browser activity (4 long-gap + 1 collision recovered). Expected long-horizon work pattern. No actionable drift.
+- subject: Fix phantom client-emit-no-witness event in emit.rs prose
+  category: docs
+  description: 'Instruction-prose phantom sweep: extracted all deviation.* names from instructions/*.rs + SKILL.md, verified each against log_deviation/logDeviation call sites. emit.rs claimed ''transition to=VERIFY refuses ... client-emit-no-witness fires'' — event name has no emitter (real is client-edit-no-witness) AND fires at COMPLETE not VERIFY. Fixed both. All other deviation names (browser-witness-missing/-hash-mismatch, client-edit-no-witness, push-dirty) verified emitted.'
+  acceptance:
+  - emit.rs references client-edit-no-witness at COMPLETE
+  - No phantom deviation names in instruction prose
+  status: completed
+  witness_evidence: 'rs-plugkit commit 555a69b pushed Cargo 0.1.552. emit.rs line 19 now: ''COMPLETE gate refuses ... client-edit-no-witness event fires (gates.rs, complete branch)''.'
+  id: fix-phantom-client-emit-no-witness-event-in-emit-rs-prose
+  witness: rs-plugkit commit 555a69b pushed Cargo 0.1.552. emit.rs now references client-edit-no-witness at COMPLETE gate. All instruction-prose deviation names verified against emitters.
+- subject: Ship --disable-gpu-process-crash-limit for recurring tv8 collision class
+  category: fix
+  description: tv8 browser-profile-collision (cdp-dead) has recurred across many iters. Chrome launch log shows 'Message N rejected by interface blink.mojom.WidgetHost' (renderer IPC death) preceding collisions — GPU/renderer crashes during WebGPU terrain rendering. Chromium disables GPU after 3 process crashes by default, escalating transient crashes to dead sessions. Added --disable-gpu-process-crash-limit so GPU process respawns indefinitely. tv8 needs GPU (can't --disable-gpu); this is the targeted flag.
+  acceptance:
+  - launch args include --disable-gpu-process-crash-limit
+  - tv8 collision rate drops in future windows
+  status: completed
+  witness_evidence: gm commit 84ba0b05 pushed (origin a8d7244a). plugkit-wasm-wrapper.js launch args now include --disable-gpu-process-crash-limit. Effect measurable next iters via tv8 browser-collision count.
+  id: ship-disable-gpu-process-crash-limit-for-recurring-tv8-collision
+  witness: gm commit 84ba0b05 pushed (origin a8d7244a). Launch args include --disable-gpu-process-crash-limit. Targeted fix for the WebGPU-renderer-crash collision class (WidgetHost IPC death in chrome log). tv8 keeps GPU; crash recovery becomes unlimited.
+- subject: 3 deviations past 30m all expected long-gap browser tv8
+  category: feature
+  description: deviations_30m:3 all verb=browser long-gaps from tv8 long-horizon WebGPU work. Steady-state noise floor. The GPU-crash-limit fix should reduce the collision subset going forward.
+  acceptance:
+  - deviations classified expected
+  status: completed
+  witness_evidence: All 3 events tv8 browser long-gap. No new drift class.
+  id: 3-deviations-past-30m-all-expected-long-gap-browser-tv8
+  witness: All 3 tv8 browser long-gaps. Expected long-horizon pattern. GPU-crash-limit fix should reduce collision subset next windows.
