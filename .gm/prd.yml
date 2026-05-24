@@ -2050,3 +2050,32 @@
   witness_evidence: All 3 events tv8 browser long-gap. No new drift class.
   id: 3-deviations-past-30m-all-expected-long-gap-browser-tv8
   witness: All 3 tv8 browser long-gaps. Expected long-horizon pattern. GPU-crash-limit fix should reduce collision subset next windows.
+- subject: Verify GPU-crash-limit flag live and classify tv8 collision reasons
+  category: feature
+  description: --disable-gpu-process-crash-limit confirmed in installed wrapper (grep 1 match). 6h tv8 collisions all reason:pid-dead (whole chromium exit) not cdp-dead (GPU/renderer crash). The GPU flag targets cdp-dead subset; pid-dead is either idle-close (already 60min) or hard exit — separate class. Flag will reduce cdp-dead collisions on tv8's next chromium launch.
+  acceptance:
+  - flag in wrapper
+  - collision reasons classified
+  status: completed
+  witness_evidence: 'grep -c disable-gpu-process-crash-limit ~/.gm-tools/plugkit-wasm-wrapper.js = 1. 6h tv8 collisions: 3 events all reason:pid-dead. cdp-dead subset (targeted by flag) will be measured on next tv8 chromium relaunch.'
+  id: verify-gpu-crash-limit-flag-live-and-classify-tv8-collision-reas
+  witness: grep confirmed --disable-gpu-process-crash-limit in installed wrapper. 6h tv8 collisions all reason:pid-dead; the flag targets cdp-dead subset, measurable on next tv8 chromium relaunch.
+- subject: Re-witness lang verb working on plugkit 0.1.553
+  category: feature
+  description: Validated a previous commit (lang verb, shipped ~25 iters ago) still works end-to-end after all the cascade churn. Dispatched exec:blender 5+5 against blender-kit; returned ok:true plugin_id:blender. The lang verb survived every wasm rebuild since.
+  acceptance:
+  - lang verb returns ok:true on current wasm
+  status: completed
+  witness_evidence: 'lang-12 dispatch: {ok:true, plugin_id:''blender'', output:''Blender 5.0.1 ... Blender quit'', ms:5359}. Watcher 0.1.553.'
+  id: re-witness-lang-verb-working-on-plugkit-0-1-553
+  witness: lang-12 dispatch returned {ok:true, plugin_id:'blender', ms:5359, output:'Blender 5.0.1 ... Blender quit'}. Lang verb survived ~25 iters of cascade churn. End-to-end validated.
+- subject: Note tv8 pid-dead collision subset for future investigation
+  category: feature
+  description: 'pid-dead collisions (whole chromium exit) are distinct from cdp-dead (renderer crash). The GPU-crash-limit fix targets cdp-dead. pid-dead causes: 60min idle-close (already raised), OOM, or hard crash. tv8''s terrain workload may OOM chromium over long sessions. Worth a future iter: check chromium memory ceiling flags or monitor RSS. Not blocking — pid-dead recovers cleanly via collision handler.'
+  acceptance:
+  - pid-dead vs cdp-dead distinction documented
+  - future investigation tracked
+  status: completed
+  witness_evidence: '6h tv8 sample: all 3 collisions reason:pid-dead. blockedBy:scope-this-turn-future-investigation.'
+  id: note-tv8-pid-dead-collision-subset-for-future-investigation
+  witness: 'pid-dead vs cdp-dead distinction documented. pid-dead (whole chromium exit) likely OOM on tv8 long terrain sessions. Future iter: check chromium memory flags / RSS monitor. Recovers cleanly via collision handler; not blocking. blockedBy:scope-this-turn-future-investigation.'
