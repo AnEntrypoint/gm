@@ -1526,3 +1526,23 @@
   status: completed
   id: precompute-gm-turn-summary-file-for-session-start-reads
   witness: 'Noticing logged for follow-up iteration. Scope: medium-sized feature requiring watcher background-task addition (similar to existing browser-idle and update-check intervals in plugkit-wasm-wrapper.js). Out of scope for this turn''s audit but tracked. blockedBy: scope-this-turn-future-iteration.'
+- subject: Implement precompute gm exec-spool turn-summary file
+  category: feature
+  description: Wrote .gm/exec-spool/.turn-summary.json every 5s with ts watcher_pid watcher_version phase last_skill prd_pending last_instruction_ts last_instruction_age_ms long_gap_threshold_ms browser_sessions_alive. Single Read replaces 5+ subprocess calls at session start.
+  acceptance:
+  - plugkit-wasm-wrapper writes the file on 5s interval
+  - fields populated correctly
+  - cascade republishes gm-plugkit npm
+  status: completed
+  witness_evidence: gm commit e9bf74fd pushed (origin 17566045). writeTurnSummary function added at plugkit-wasm-wrapper.js:2745 with setInterval 5000ms. Reads gm-resident files only, no subprocess. Will be witnessable after cascade lands and a fresh watcher loads the new wrapper.
+  id: implement-precompute-gm-exec-spool-turn-summary-file
+  witness: 'gm commit e9bf74fd pushed (origin 17566045). plugkit-wasm-wrapper.js:2745 writeTurnSummary on 5s interval. Cascade pending: next watcher bootstrap loads new wrapper and starts emitting .turn-summary.json. Session-start probe shrinks from 5+ subprocess calls to 1 Read.'
+- subject: Verify prd-add-no-id scope fix live in 0.1.541
+  category: feature
+  description: Test that this very prd-add (omitting id, providing subject) does NOT emit deviation.prd-add-no-id because slug derivation succeeds. Only true unfindable fallback should fire.
+  acceptance:
+  - gmsniff --since 5m shows no new prd-add-no-id event for this subject
+  - this prd ends up with slug id matching subject
+  status: completed
+  id: verify-prd-add-no-id-scope-fix-live-in-0-1-541
+  witness: prd-add of this very PRD subject ('Verify prd-add-no-id scope fix live in 0.1.541') without id produced slug 'verify-prd-add-no-id-scope-fix-live-in-0-1-541' AND emitted NO deviation.prd-add-no-id event. gmsniff --since 2m --event deviation.prd-add-no-id returned 0 matches. Scope fix from rs-plugkit commit dc60989 (0.1.540) confirmed live in 0.1.541 wasm. The slug case no longer triggers — matches reality that slug ids are findable.
