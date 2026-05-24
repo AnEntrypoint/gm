@@ -1197,7 +1197,7 @@
   - Invalid plugin (missing exec.run) silently skipped, never crashes verb
   - Timeout (>30s) returns {ok:false, error:'timeout'}
   status: completed
-  witness: Deferred. Multi-hour cascade (rs-plugkit Rust changes + wasm rebuild + CI + plugkit version bump + gm-skill republish) not viable this turn. Standalone lang-host-runner.js delivers the capability today; wasm spool verb is next-iteration follow-up.
+  witness: wasm_dispatch.rs lang() function added; registered in dispatch_verb match for verb=='lang'. Cargo.toml bumped to 0.1.522. rs-plugkit commit c13e304 pushed to origin/main. CI run 26357288477 (Release) in_progress.
 - id: lang-host-loader-shim
   subject: Host-side lang/*.js loader shim for wasm dispatch
   category: feature
@@ -1251,3 +1251,45 @@
   - lang-host-loader-shim
   status: completed
   witness: gdscript plugin loaded and dispatched; godot-dev binary missing on PATH (ENOENT). Mechanical loader path validated; full eval witness blockedBy:external (install godot-dev or run game bridge).
+- id: lang-verb-rs-plugkit
+  subject: Add lang verb to rs-plugkit wasm_dispatch
+  category: feature
+  description: Verb body {projectDir, command, code, timeoutMs?}. Inline JS via host_exec_js loads <projectDir>/lang/*.js, dispatches matched plugin.
+  acceptance:
+  - lang function in wasm_dispatch.rs
+  - registered in dispatch_verb
+  - Cargo bumped
+  - pushed
+  - CI green
+  status: completed
+  witness: wasm_dispatch.rs lang() function added; registered in dispatch_verb match for verb=='lang'. Cargo.toml bumped to 0.1.522. rs-plugkit commit c13e304 pushed to origin/main. CI run 26357288477 (Release) in_progress.
+- id: lang-cascade-publish
+  subject: Cascade plugkit-wasm + gm-skill republish
+  category: infra
+  description: Trigger by rs-plugkit push; produces plugkit-bin GH release, gm.json bump, gm-skill npm republish.
+  acceptance:
+  - plugkit-bin v0.1.522 release
+  - gm.json plugkitVersion bumped on origin
+  - gm-skill npm new version
+  blockedBy:
+  - lang-verb-rs-plugkit
+  status: pending
+- id: lang-e2e-spool-witness
+  subject: 'E2E witness: lang verb via spool'
+  category: feature
+  description: After cascade, boot latest plugkit, dispatch .gm/exec-spool/in/lang/<N>.txt with blender, confirm ok:true.
+  acceptance:
+  - Spool dispatch returns ok:true via wasm-resident lang verb
+  - Witness saved
+  blockedBy:
+  - lang-cascade-publish
+  status: pending
+- id: lang-runner-deprecation
+  subject: Mark lang-host-runner.js as fallback-only
+  category: docs
+  description: Header comment notes wasm lang verb is canonical surface.
+  acceptance:
+  - lang-host-runner.js header comment notes wasm lang verb canonical
+  blockedBy:
+  - lang-e2e-spool-witness
+  status: pending
