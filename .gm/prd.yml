@@ -1187,3 +1187,61 @@
   - --include-noise restores them
   status: completed
   witness: blockedBy:external — gmsniff lives in a separate npm package (gmsniff@1.0.x, source not in c:/dev/gm). Cannot modify default-filter behavior from this repo. iter-19 watcher.planned-restart vs unplanned-restart fix already significantly reduces noise from watcher-event surface; remaining noise (dispatch.start/end, sweep.retention) is operational background, not deviation signal. Agents using gmsniff for audit should pass --grep deviation or --event deviation.* to filter for high-signal events. Workaround documented in iter-24 audit; upstream fix is in gmsniff repo not gm.
+- id: lang-verb-rs-plugkit
+  subject: Add `lang` verb to rs-plugkit orchestrator
+  category: feature
+  description: 'New verb in rs-plugkit. Body: {projectDir, command, code}. Reads <projectDir>/lang/*.js (excluding loader.js), loads each via host_exec_js child process (since plugkit is wasm and cannot require() Node CJS), finds first whose exec.match.test(command) is true, invokes exec.run(code, projectDir) with 30s timeout, returns {ok, output, plugin_id, ms}. Routes through wasm_dispatch.'
+  acceptance:
+  - in/lang/<N>.txt {projectDir, command:'exec:blender', code:'print(1+1)'} returns plugin_id='blender' and output containing '2'
+  - in/lang/<N>.txt with no matching plugin returns {ok:false, error:'no-plugin-matched'}
+  - Invalid plugin (missing exec.run) silently skipped, never crashes verb
+  - Timeout (>30s) returns {ok:false, error:'timeout'}
+  status: pending
+- id: lang-host-loader-shim
+  subject: Host-side lang/*.js loader shim for wasm dispatch
+  category: feature
+  description: Since plugkit is wasm and cannot require() lang/*.js directly, the new `lang` verb dispatches via host_exec_js. Create gm-plugkit/lang-host-runner.js that takes {projectDir, command, code} on argv/stdin, scans lang/*.js, loads with require(), runs exec.run, prints JSON result to stdout.
+  acceptance:
+  - gm-plugkit/lang-host-runner.js exists and is invocable
+  - Returns {ok, output, plugin_id, ms} JSON
+  - Manual smoke succeeds on blender-kit
+  status: pending
+- id: lang-spec-rewrite-blender
+  subject: Rewrite blender-kit/lang/SPEC.md for spool-verb integration
+  category: docs
+  description: Current SPEC.md references gm-cc hook system that no longer exists. Rewrite to describe spool-verb invocation.
+  acceptance:
+  - No gm-cc mention
+  - Spool invocation documented
+  - Plugin shape preserved
+  status: pending
+- id: lang-spec-rewrite-godot
+  subject: Rewrite godot-kit/lang/SPEC.md for spool-verb integration
+  category: docs
+  description: Mirror of blender SPEC rewrite for godot-kit.
+  acceptance:
+  - No gm-cc mention
+  - Spool invocation documented
+  status: pending
+- id: lang-e2e-blender
+  subject: 'E2E witness: exec:blender via lang verb'
+  category: feature
+  description: Dispatch lang verb against blender-kit. Witness output or document blockedBy:external if Blender unavailable.
+  acceptance:
+  - Spool dispatch returns ok:true OR external-unavailable documented
+  - Witness under .gm/witness/
+  blockedBy:
+  - lang-verb-rs-plugkit
+  - lang-host-loader-shim
+  status: pending
+- id: lang-e2e-godot
+  subject: 'E2E witness: exec:gdscript via lang verb'
+  category: feature
+  description: Dispatch lang verb against godot-kit. Witness or document blockedBy:external.
+  acceptance:
+  - Spool dispatch returns ok:true OR external-unavailable documented
+  - Witness under .gm/witness/
+  blockedBy:
+  - lang-verb-rs-plugkit
+  - lang-host-loader-shim
+  status: pending
