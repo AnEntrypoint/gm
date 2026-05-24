@@ -42,7 +42,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
 .gm-topbar nav .gm-dd-menu a{padding:8px 12px;border-radius:5px;display:block}
 .gm-topbar nav .gm-dd-menu a:hover{background:var(--panel-2)}
-@media (max-width:640px){.gm-topbar{flex-wrap:wrap}.gm-topbar nav{margin-left:0;width:100%;justify-content:flex-start}.gm-topbar nav .gm-dd-menu{position:static;box-shadow:none;border:0;padding-left:14px;background:transparent}}
+@media (max-width:1024px){html.ds-247420 .gm-topbar nav{flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;-webkit-overflow-scrolling:touch}html.ds-247420 .gm-topbar nav::-webkit-scrollbar{display:none}}
+@media (max-width:640px){.gm-topbar{flex-wrap:wrap}.gm-topbar nav{margin-left:0;width:100%;justify-content:flex-start;overflow-x:visible;flex-wrap:wrap}.gm-topbar nav .gm-dd-menu{position:static;box-shadow:none;border:0;padding-left:14px;background:transparent}}
 </style>
 </head>
 <body data-screen-label="gm / stats">

@@ -36,7 +36,7 @@ article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: upper
 article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
 article p { margin: 0 0 12px 0; }
 article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
-article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); overflow-wrap: anywhere; word-break: break-word; }
 article pre code { padding: 0; background: transparent; }
 article a { color: var(--panel-accent); text-decoration: underline; text-underline-offset: 3px; }
 article a:hover { color: var(--panel-accent-2); }
@@ -60,7 +60,8 @@ article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0;
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
 .gm-topbar nav .gm-dd-menu a{padding:8px 12px;border-radius:5px;display:block}
 .gm-topbar nav .gm-dd-menu a:hover{background:var(--panel-2)}
-@media (max-width:640px){.gm-topbar{flex-wrap:wrap}.gm-topbar nav{margin-left:0;width:100%;justify-content:flex-start}.gm-topbar nav .gm-dd-menu{position:static;box-shadow:none;border:0;padding-left:14px;background:transparent}}
+@media (max-width:1024px){html.ds-247420 .gm-topbar nav{flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;-webkit-overflow-scrolling:touch}html.ds-247420 .gm-topbar nav::-webkit-scrollbar{display:none}}
+@media (max-width:640px){.gm-topbar{flex-wrap:wrap}.gm-topbar nav{margin-left:0;width:100%;justify-content:flex-start;overflow-x:visible;flex-wrap:wrap}.gm-topbar nav .gm-dd-menu{position:static;box-shadow:none;border:0;padding-left:14px;background:transparent}}
 </style>
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
