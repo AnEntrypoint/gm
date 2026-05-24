@@ -1575,3 +1575,32 @@
   witness_evidence: '# total deviations: 0 reported by gmsniff --since 30m --list-deviations at iteration start.'
   id: continued-deviation-convergence-past-30min-was-zero
   witness: 'gmsniff --since 30m --list-deviations: ''# total deviations: 0''. Compound stack at steady state across all previously-tuned classes.'
+- subject: Auto-expire watcher lock when holder pid is dead
+  category: fix
+  description: Lock acquire now takes over when holder pid is dead regardless of file-age threshold. Eliminates Windows watcher proliferation pattern where stale-lock-with-dead-holder caused N retry boots to all be rejected, requiring manual lock deletion.
+  acceptance:
+  - plugkit-wasm-wrapper acquireLock checks pid liveness in addition to age
+  - watcher.lock-pid-dead-takeover event emitted for observability
+  - cascade republishes gm-plugkit npm
+  status: completed
+  witness_evidence: gm commit d7a46080 pushed (origin f483c332). acquireLock at line 1861 now checks isProcessAliveSync(holderPidNum); takes over when !holderAlive.
+  id: auto-expire-watcher-lock-when-holder-pid-is-dead
+  witness: gm commit d7a46080 pushed (origin f483c332). acquireLock at plugkit-wasm-wrapper.js:1861 checks isProcessAliveSync(holderPidNum); takes over when !holderAlive regardless of file-age. New event watcher.lock-pid-dead-takeover provides observability.
+- subject: Verify turn-summary continues populating with current watcher
+  category: feature
+  description: Boot probe this iter read .turn-summary.json successfully on the running watcher (pid 13340 v0.1.541). All 10 fields present. Confirms the feature is stable across audit iterations.
+  acceptance:
+  - turn-summary.json reads cleanly at iter start
+  status: completed
+  witness_evidence: Boot probe returned .turn-summary.json with ts=1779630519047 (current), watcher_pid=13340, watcher_version=0.1.541, phase=COMPLETE, last_skill=update-docs, prd_pending=0, last_instruction_age_ms=1490818, long_gap_threshold_ms=300000, browser_sessions_alive=0.
+  id: verify-turn-summary-continues-populating-with-current-watcher
+  witness: Boot probe at iter start read .turn-summary.json with all 10 fields populated correctly. Watcher pid 13340 v0.1.541 has been alive across this iteration and the previous, file refreshed every 5s. Feature stable.
+- subject: Zero deviations sustained in past 30min window
+  category: feature
+  description: gmsniff --since 30m --list-deviations returned 0 total. Compound discipline-stack at steady state. All previously-tuned classes remain at zero through normal operation.
+  acceptance:
+  - gmsniff confirms 0 deviations 30m
+  status: completed
+  witness_evidence: '# total deviations: 0'
+  id: zero-deviations-sustained-in-past-30min-window
+  witness: 'gmsniff --since 30m --list-deviations: ''# total deviations: 0''. Compound discipline-stack steady state holds. Convergence trend across last 5 audit iters: 17 -> 9 -> 6 -> 3 -> 0 -> 0.'
