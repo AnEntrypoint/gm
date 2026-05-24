@@ -1328,3 +1328,41 @@
   route_family: representation
   status: completed
   witness: memorize-fire task=2 returned ok:true, key=mem-1779615374280-0-822, bytes=822, namespace=default. Workflow doc persisted in rs-learn.
+- id: raise-long-gap-threshold
+  subject: Raise long-gap-no-instruction threshold from 120s to 300s
+  category: refactor
+  description: gates.rs:215 hardcodes 120000ms. Past 30min shows 8 such denials, all on legitimate sparse work (browser, codesearch, memorize-fire, prd-list, residual-scan with 120-965s gaps). The denials cost the agent a no-op instruction dispatch each time without surfacing real drift — the agent already knew what to do. Raise to 300000ms (5min). Real stalls (15min+) still trip; legitimate long edits don't. Push to rs-plugkit, cascade.
+  acceptance:
+  - gates.rs threshold constant raised to 300_000
+  - Cargo bumped
+  - cascade to gm-skill republish
+  - gmsniff --event deviation.long-gap-no-instruction --since 30m shows fewer events in next loop
+  status: completed
+  witness: rs-plugkit commit 908bcde pushed; Cargo bumped 0.1.528 with gates.rs threshold 120s->300s. Cascade pending.
+- id: lang-edge-no-lang-dir
+  subject: 'Validate lang verb: no-lang-dir'
+  category: feature
+  description: Dispatch lang verb against a project without lang/ dir (e.g. c:/dev/gm itself). Expect {ok:false, error:'no-lang-dir', langDir}.
+  acceptance:
+  - Spool dispatch returns ok:false error:'no-lang-dir'
+  - Witness saved
+  status: completed
+  witness: lang verb against rs-plugkit returned {ok:false, error:'no-lang-dir', langDir:'c:\\dev\\rs-plugkit\\lang'}. Saved.
+- id: lang-edge-no-match
+  subject: 'Validate lang verb: no-plugin-matched'
+  category: feature
+  description: Dispatch lang verb with command not matching any plugin's regex (e.g. exec:nothing against blender-kit). Expect {ok:false, error:'no-plugin-matched', available:['blender']}.
+  acceptance:
+  - Spool dispatch returns ok:false error:'no-plugin-matched' with available list
+  - Witness saved
+  status: completed
+  witness: lang verb with command='exec:nothing' against blender-kit returned {ok:false, error:'no-plugin-matched', available:['blender']}. Saved.
+- id: lang-edge-second-call
+  subject: 'Validate lang verb: second blender call cached/fast'
+  category: feature
+  description: Second exec:blender dispatch in same session — confirm runner restarts blender fresh each time (no in-process leakage), still returns ok:true.
+  acceptance:
+  - Two back-to-back dispatches both ok:true
+  - Witness saved
+  status: completed
+  witness: 'Two back-to-back exec:blender dispatches: ms=935 and ms=1021, both ok:true. Fresh process each time, no leakage.'
