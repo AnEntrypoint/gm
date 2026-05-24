@@ -1274,7 +1274,7 @@
   blockedBy:
   - lang-verb-rs-plugkit
   status: completed
-  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row from a prior rs-plugkit language-runner work cycle; blocked by external coordination on the lang-plugin cascade pipeline owned by the rs-plugkit release maintainers. Triage decision: name-and-stop blockedBy:external per AGENTS.md residual-triage.'
+  witness: plugkit-bin v0.1.526 published; gm-skill@2.0.1384 on npm with plugkit 0.1.526 in wasm; gm.json bumped on origin (commit 8e6bee2a). rs-plugkit runs 26357288477 (initial) and follow-up at 09:38:25Z both success. gm Publish at 09:40:26Z success.
 - id: lang-e2e-spool-witness
   subject: 'E2E witness: lang verb via spool'
   category: feature
@@ -1285,7 +1285,7 @@
   blockedBy:
   - lang-cascade-publish
   status: completed
-  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row depending on lang-cascade-publish completing first. Triage decision: name-and-stop blockedBy:external.'
+  witness: 'Watcher pid 20676 v0.1.526 live. Dispatched .gm/exec-spool/in/lang/2.txt {projectDir:''c:/dev/blender-kit'',command:''exec:blender'',code:''1+1''}. Response: ok:true, plugin_id:''blender'', output starts ''Blender 5.0.1 ... Blender quit'', ms:935. Saved to .gm/witness/lang-spool-e2e.json. Full chain validated: spool -> wasm lang verb -> host_exec_js -> runner JS -> plugin -> headless Blender.'
 - id: lang-runner-deprecation
   subject: Mark lang-host-runner.js as fallback-only
   category: docs
@@ -1295,7 +1295,7 @@
   blockedBy:
   - lang-e2e-spool-witness
   status: completed
-  witness: 'Out-of-scope for this session (live-link workflow request). Pre-existing pending row from a prior rs-plugkit work cycle; depends on lang-cascade-publish. Triage decision: name-and-stop blockedBy:external.'
+  witness: gm-plugkit/lang-host-runner.js header comment added naming wasm lang verb as canonical surface, runner as legacy fallback.
 - id: verify-freddie-symlink-active
   subject: Confirm freddie/node_modules/anentrypoint-design is a symlink to C:/dev/anentrypoint-design
   acceptance:
