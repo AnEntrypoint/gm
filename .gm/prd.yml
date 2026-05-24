@@ -1455,3 +1455,21 @@
   status: completed
   witness_evidence: gm commit e7d4f60e pushed (origin 0958c207). skills/gm-skill/SKILL.md memory-routing paragraph elevated with explicit refusal language and named portable surfaces.
   witness: gm commit e7d4f60e pushed (origin 0958c207). skills/gm-skill/SKILL.md memory-routing rule elevated; explicit platform paths named (~/.claude/projects/*/memory/, ~/.codex/memory/, ~/.cursor/*); memorize-fire dispatch to .gm/rs-learn.db named as only portable surface. Refusal language tightened. Cascade republishes gm-skill npm + back-compat mirror.
+- subject: Verify cascade convergence 30min deviations down to 3
+  category: feature
+  description: 'Past 30min: 3 events vs 9 last iter vs 17 two iters back.'
+  acceptance:
+  - gmsniff confirms <=5
+  status: completed
+  witness_evidence: 'gmsniff --since 30m: 3 deviations total, all classes I previously fixed at 0.'
+  id: item-1779621777583
+  witness: 'gmsniff --since 30m: 3 deviations total (1 long-gap legitimate, 1 push-dirty+gate-deny paired). 0 prd-anti-shape, 0 browser-collision, 0 prd-add-no-id, 0 long-gap-retry. Compound stack converging: 17 -> 9 -> 3 across last 3 audit iters.'
+- subject: Gate refresh on transition and phase-status
+  category: refactor
+  description: transition and phase-status responses carry orientation surface equivalent to instruction. Refresh last-instruction-ts on dispatch.
+  acceptance:
+  - gates.rs 0.1.537 pushed
+  status: completed
+  witness_evidence: rs-plugkit commit ed3cecc pushed Cargo 0.1.537. gates.rs line 234 now resets on all three verbs.
+  id: item-1779621782733
+  witness: 'rs-plugkit commit ed3cecc pushed. Cargo 0.1.537. gates.rs line 234 now refreshes last-instruction-ts on instruction OR transition OR phase-status. Cascade to npm pending. Note: this iteration''s prd-add fell back to item-<ms> ids because watcher (0.1.532) hasn''t loaded the slug-fallback yet; slug fix is in CI cascade (rs-plugkit 0.1.534 commit c628db9, will land in subsequent gm-skill republish).'
