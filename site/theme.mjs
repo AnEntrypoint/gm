@@ -235,6 +235,58 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
+  <style>
+    .cli {
+      background: var(--panel-1, #0f1115);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 12px 0 24px 0;
+      font-family: var(--ff-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--panel-text, #d6d8df);
+      box-shadow: var(--panel-shadow, 0 1px 0 rgba(0,0,0,0.04));
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .cli .cli-cmt {
+      color: var(--panel-text-3, #7a8090);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 1.2em;
+    }
+    .cli .cli-line {
+      display: flex;
+      gap: 8px;
+      padding: 2px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .cli .cli-line .prompt {
+      color: var(--panel-accent, #6ee7b7);
+      flex: 0 0 auto;
+      user-select: none;
+    }
+    .cli .cli-line .cmd {
+      color: var(--panel-text, #d6d8df);
+      flex: 1 1 auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .panel .row .title { display: block; }
+    .panel .row .title .sub {
+      display: block;
+      margin-top: 4px;
+      font-weight: 400;
+      color: var(--panel-text-2, #9aa0ad);
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+    .panel .row { align-items: flex-start; padding: 12px 16px; }
+    .panel .row .code { padding-top: 1px; }
+    .panel .row .meta { padding-top: 1px; }
+  </style>
 </head>
 <body>
   <div id="app"></div>
