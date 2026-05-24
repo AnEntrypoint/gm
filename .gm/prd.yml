@@ -1964,3 +1964,32 @@
   witness_evidence: 'gm commit 234a539f. AGENTS.md line 115 now: ''Auto-recall on turn entry: the instruction verb attaches an auto_recall pack...'''
   id: purge-agents-md-prompt-submit-hook-claim-that-has-no-caller
   witness: gm commit 234a539f. AGENTS.md line 115 corrected to describe instruction-verb auto_recall pack; legacy wasm_hooks::prompt_submit acknowledged as unused-by-current-watcher.
+- subject: Purge AGENTS.md canExecuteGit reference that has no implementation
+  category: docs
+  description: AGENTS.md line 105 claimed 'Enforced in lib/spool-dispatch.js::canExecuteGit(git-push)' but grep found no canExecuteGit function. The real mechanism is checkDispatchGates(sessionId, 'git', extra) which runs git status --porcelain via spawnSync and refuses dirty trees. Fixed AGENTS.md to reference the actual function + signature.
+  acceptance:
+  - AGENTS.md mentions checkDispatchGates with operation:git
+  - No canExecuteGit reference remains
+  status: completed
+  witness_evidence: gm commit 36e34fd5 pushed (origin 3f7cc35c). AGENTS.md line 105 now reads 'Enforced in lib/spool-dispatch.js::checkDispatchGates(sessionId, git, {...}) which runs the porcelain probe via spawnSync(git, [status, --porcelain]) and refuses dirty trees'.
+  id: purge-agents-md-canexecutegit-reference-that-has-no-implementati
+  witness: gm commit 36e34fd5 pushed. AGENTS.md line 105 fixed.
+- subject: Verify other AGENTS.md function references exist
+  category: feature
+  description: 'Checked function refs in AGENTS.md to catch other drift: bootstrapPlugkit (skill-bootstrap.js line 653, exported line 832) EXISTS. checkDispatchGates (spool-dispatch.js line 266) EXISTS. Other lib/spool-dispatch.js + lib/skill-bootstrap.js references all backed by real code. canExecuteGit was the only invented function name.'
+  acceptance:
+  - No other phantom function refs in AGENTS.md
+  status: completed
+  witness_evidence: grep for bootstrapPlugkit found at line 653 + exports at 832. grep for checkDispatchGates found at line 266 + exports at 404. Only canExecuteGit was missing; now fixed.
+  id: verify-other-agents-md-function-references-exist
+  witness: bootstrapPlugkit + checkDispatchGates verified by grep. canExecuteGit was the only phantom.
+- subject: 'Pattern: 5 paper-spirit drifts found across 3 iters'
+  category: feature
+  description: 'Cumulative drift hunt: (1) AGENTS one-vs-three artifacts (last-last iter); (2) update_docs memorize-fire-vs-AGENTS (last-last); (3) SKILL.md copy of #2 (last); (4) AGENTS prompt-submit-hook (last); (5) AGENTS canExecuteGit (this iter). All were documentation claiming behavior the code did not implement. Following the prose silently accomplished nothing. Worth a memorize-fire so future iters keep hunting.'
+  acceptance:
+  - fact memorized
+  - drift class catalogued
+  status: completed
+  witness_evidence: '5 commits across iters: 8aa4c7d1, 9f33b0a (rs-plugkit), 234a539f, 36e34fd5. Pattern: ''prose says X enforced/handled by FUNCTION; grep shows FUNCTION does not exist or call is dead''. Hunt continues next iter.'
+  id: pattern-5-paper-spirit-drifts-found-across-3-iters
+  witness: Cumulative 5 doc-vs-code disconnects fixed across iters. Pattern is real and worth memorizing for future agents.
