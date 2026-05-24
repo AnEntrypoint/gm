@@ -1546,3 +1546,32 @@
   status: completed
   id: verify-prd-add-no-id-scope-fix-live-in-0-1-541
   witness: prd-add of this very PRD subject ('Verify prd-add-no-id scope fix live in 0.1.541') without id produced slug 'verify-prd-add-no-id-scope-fix-live-in-0-1-541' AND emitted NO deviation.prd-add-no-id event. gmsniff --since 2m --event deviation.prd-add-no-id returned 0 matches. Scope fix from rs-plugkit commit dc60989 (0.1.540) confirmed live in 0.1.541 wasm. The slug case no longer triggers — matches reality that slug ids are findable.
+- subject: Verify turn-summary.json precompute live end-to-end
+  category: feature
+  description: 'Restarted watcher (pid 13340 v0.1.541), .turn-summary.json appeared with all fields populated correctly: phase=COMPLETE, last_skill=update-docs, prd_pending=0, last_instruction_age_ms=1798257, long_gap_threshold_ms=300000, browser_sessions_alive=0.'
+  acceptance:
+  - file exists
+  - all fields present and correct
+  status: completed
+  witness_evidence: cat .gm/exec-spool/.turn-summary.json returned valid JSON with all 10 fields. Verified after killing stale watcher 21524 and booting fresh 13340 which loaded the auto-refreshed wrapper from gm-plugkit@2.0.1392.
+  id: verify-turn-summary-json-precompute-live-end-to-end
+  witness: .turn-summary.json populated with all 10 fields after watcher reboot. Read it directly and confirmed correct values.
+- subject: Teach agent in SKILL.md to read turn-summary at session start
+  category: docs
+  description: SKILL.md boot probe paragraph now reads both .status.json AND .turn-summary.json in the opening Bash command. Documents that .turn-summary.json carries phase/prd_pending/last_instruction_age_ms/etc — replaces gmsniff/git/yaml-parse subprocess queries with one Read.
+  acceptance:
+  - SKILL.md edit committed + pushed
+  - Cascade republishes gm-skill npm + back-compat mirror
+  status: completed
+  witness_evidence: gm commit 4c4e8f21 pushed (origin b0be1458). SKILL.md lines 25-29 updated.
+  id: teach-agent-in-skill-md-to-read-turn-summary-at-session-start
+  witness: gm commit 4c4e8f21 pushed (origin b0be1458). SKILL.md boot probe reads both .status.json and .turn-summary.json. Cascade republishes gm-skill npm + AnEntrypoint/gm-skill mirror.
+- subject: Continued deviation convergence past 30min was zero
+  category: feature
+  description: gmsniff --since 30m --list-deviations returned 0. All previously top-ranked classes (prd-anti-shape, browser-collision, long-gap, prd-add-no-id) are at zero this window. Compound discipline-stack at steady state.
+  acceptance:
+  - gmsniff confirms 0 deviations in 30m window
+  status: completed
+  witness_evidence: '# total deviations: 0 reported by gmsniff --since 30m --list-deviations at iteration start.'
+  id: continued-deviation-convergence-past-30min-was-zero
+  witness: 'gmsniff --since 30m --list-deviations: ''# total deviations: 0''. Compound stack at steady state across all previously-tuned classes.'
