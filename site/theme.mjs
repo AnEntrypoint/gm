@@ -263,7 +263,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       padding: 3px 0;
       line-height: 1.6;
     }
-    .cli .cli-cmt:empty::before { content: '\00a0'; }
+    .cli .cli-cmt:empty::before { content: '\\00a0'; }
     .cli .cli-line {
       display: flex;
       gap: 10px;
