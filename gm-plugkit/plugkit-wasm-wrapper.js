@@ -2781,6 +2781,13 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) {}
       const fileV = readFileVersionOnly() || null;
       const instV = _instanceVersionAtBoot || null;
+      let updateAvailable = null;
+      try {
+        const upd = JSON.parse(fs.readFileSync(path.join(spoolDir, '.update-available.json'), 'utf-8'));
+        if (upd && upd.installed && upd.latest && upd.installed !== upd.latest) {
+          updateAvailable = { installed: upd.installed, latest: upd.latest };
+        }
+      } catch (_) {}
       fs.writeFileSync(TURN_SUMMARY_PATH, JSON.stringify({
         ts: Date.now(),
         watcher_pid: process.pid,
@@ -2792,6 +2799,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         last_instruction_age_ms: lastInstructionAgeMs,
         long_gap_threshold_ms: 300000,
         browser_sessions_alive: browserSessions,
+        update_available: updateAvailable,
       }));
     } catch (_) {}
   }

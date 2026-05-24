@@ -28,7 +28,7 @@ Your first tool call of every session is the boot probe, in one Bash invocation.
 cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N
 ```
 
-`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`. When age exceeds the threshold, your next non-orienting verb will be gated — dispatch `instruction` first.
+`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`, `update_available`. When age exceeds the threshold, your next non-orienting verb will be gated — dispatch `instruction` first. When `update_available` is non-null, the watcher has detected drift: kill the watcher and re-bootstrap before continuing so the next instruction lands on the fresh wasm.
 
 Compare `.status.json` `ts` field to the printed epoch ms. If the gap is >15000, the watcher is dead — boot it:
 
