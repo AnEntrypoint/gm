@@ -1756,3 +1756,33 @@
   witness_evidence: 'gmsniff --since 1h --list-deviations: 3 prd-add-no-id + 1 long-gap-no-instruction. The 3 prd-add-no-id are observational (true item-<ms> fallback flag working as designed). No long-gap-retry escalations.'
   id: compound-discipline-stack-at-steady-state
   witness: 'gmsniff --since 1h: 4 deviations total (3 observational prd-add-no-id + 1 legitimate long-gap). Zero long-gap-retry escalations post fast-path fix. All previously-tuned classes at acceptable noise floors.'
+- subject: Verify deviations_30m field populated correctly
+  category: feature
+  description: After watcher restart, .turn-summary.json now contains deviations_30m field. Value 2 matched gmsniff --since 30m --list-deviations exactly (1 push-dirty + 1 gate-deny from last iter). Precompute trustworthy.
+  acceptance:
+  - field present
+  - value matches gmsniff count
+  status: completed
+  witness_evidence: 'turn-summary deviations_30m:2 matched ''total deviations: 2'' from gmsniff. Cross-verified.'
+  id: verify-deviations-30m-field-populated-correctly
+  witness: 'turn-summary.json deviations_30m:2. gmsniff --since 30m --list-deviations ''total: 2'' (1 push-dirty + 1 gate-deny). Counts match exactly; precompute trustworthy.'
+- subject: Fix wrapper self-respawn to use direct node spawn instead of bun-x
+  category: fix
+  description: 'Wrapper-drift detector fired but never respawned this iter — old watcher pid 25356 ran 28min with new wrapper on disk. Root cause: replacement spawn used ''bun x gm-plugkit@latest spool'' requiring bun on PATH + npm extract + working extracted wrapper. Three failure points for what only needed to re-load wrapper already on disk. Fix: spawn directly via process.execPath + installed wrapper path; bun-x kept as fallback.'
+  acceptance:
+  - wrapper-drift detector spawns replacement reliably
+  - No more 28min-stale-wrapper situations
+  status: completed
+  witness_evidence: gm commit af95dbc2 pushed (origin 93fbb0c3). plugkit-wasm-wrapper.js:2290 now spawns process.execPath + _wrapperPathInstalled, falls back to bun-x on failure.
+  id: fix-wrapper-self-respawn-to-use-direct-node-spawn-instead-of-bun
+  witness: gm commit af95dbc2 pushed (origin 93fbb0c3). Self-respawn replaces bun-x npm fetch with process.execPath + installed wrapper path direct spawn. bun-x kept as fallback. Eliminates network dependency in respawn path.
+- subject: 'Eat own dogfood: trust precomputed deviations_30m at session start'
+  category: feature
+  description: Iteration's boot probe used the precomputed field — single Bash event delivered status + summary including deviations_30m. Did NOT run gmsniff at session start. Only ran gmsniff to cross-verify the precompute value (one-time validation, not routine usage).
+  acceptance:
+  - Boot probe doesn't run gmsniff routine
+  - Trust precomputed field for orientation
+  status: completed
+  witness_evidence: This iter's single boot probe Bash event = cat status + cat summary + date. Subsequent gmsniff invocation was only to validate the precomputed value matches ground truth. Once validated, will trust the precompute in future iters.
+  id: eat-own-dogfood-trust-precomputed-deviations-30m-at-session-star
+  witness: 'This iter''s boot probe: single Bash event cat status+summary+date. deviations_30m field read directly. Gmsniff invocation only for one-time validation. Future iters trust precompute, no routine subprocess.'
