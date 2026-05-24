@@ -2327,7 +2327,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 10 * 60 * 1000;
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 60 * 60 * 1000;
   let lastBrowserActivityMs = Date.now();
   setInterval(() => {
     try {
