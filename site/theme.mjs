@@ -236,14 +236,23 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
+    .app-main > h1,
+    .app-main > h2,
+    .app-main > h3 { margin-top: 36px; margin-bottom: 12px; }
+    .app-main > h1:first-child { margin-top: 8px; }
+    .app-main > .panel,
+    .app-main > .work-detail-chips,
+    .app-main > .cli { margin-top: 18px; margin-bottom: 18px; }
+    .app-main .ds-lede { margin-top: 4px; margin-bottom: 18px; max-width: 64ch; line-height: 1.6; }
+    .work-detail-chips { gap: 10px; row-gap: 10px; }
     .cli {
       background: var(--panel-1, #0f1115);
       border-radius: 8px;
-      padding: 14px 18px;
-      margin: 12px 0 24px 0;
+      padding: 16px 20px;
+      margin: 16px 0 28px 0;
       font-family: var(--ff-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
       font-size: 12.5px;
-      line-height: 1.55;
+      line-height: 1.6;
       color: var(--panel-text, #d6d8df);
       box-shadow: var(--panel-shadow, 0 1px 0 rgba(0,0,0,0.04));
       overflow-x: auto;
@@ -255,11 +264,12 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 1.2em;
+      padding: 3px 0;
     }
     .cli .cli-line {
       display: flex;
-      gap: 8px;
-      padding: 2px 0;
+      gap: 10px;
+      padding: 3px 0;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -274,18 +284,26 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       white-space: pre-wrap;
       word-break: break-word;
     }
-    .panel .row .title { display: block; }
+    .panel .row { align-items: flex-start; padding: 16px 20px; gap: 16px; }
+    .panel .row + .row { box-shadow: inset 0 1px 0 rgba(0,0,0,0.06); }
+    .panel .row .code { padding-top: 2px; min-width: 28px; }
+    .panel .row .meta { padding-top: 2px; opacity: 0.4; }
+    .panel .row .title { display: block; line-height: 1.4; }
     .panel .row .title .sub {
       display: block;
-      margin-top: 4px;
+      margin-top: 6px;
       font-weight: 400;
       color: var(--panel-text-2, #9aa0ad);
-      font-size: 12.5px;
-      line-height: 1.55;
+      font-size: 13px;
+      line-height: 1.6;
     }
-    .panel .row { align-items: flex-start; padding: 12px 16px; }
-    .panel .row .code { padding-top: 1px; }
-    .panel .row .meta { padding-top: 1px; }
+    @media (max-width: 720px) {
+      .app-main > h1,
+      .app-main > h2,
+      .app-main > h3 { margin-top: 28px; }
+      .panel .row { padding: 14px 16px; gap: 12px; }
+      .cli { padding: 14px 16px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
