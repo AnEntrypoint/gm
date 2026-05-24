@@ -22,13 +22,15 @@ Every turn: dispatch `instruction` (you are the one dispatching it), read the re
 
 **Boot before dispatching. Always check first.** Writing to `.gm/exec-spool/in/instruction/N.txt` while the watcher is dead is the canonical cold-start failure — the request sits forever, you read no response, you fabricate the chain from memory of the prose. The spool directory's existence does NOT mean the watcher is alive; `.status.json` mtime within the last 15s does. The leftover `.status.json` from yesterday's dead watcher is the most common trap.
 
-Your first tool call of every session is the boot probe, in one Bash invocation:
+Your first tool call of every session is the boot probe, in one Bash invocation. Read `.status.json` (liveness) and `.turn-summary.json` (orientation) together — the watcher precomputes both every 5s, so the two files give you everything you'd otherwise extract via gmsniff queries, git, yaml-parse, and ports-file scans:
 
 ```bash
-cat .gm/exec-spool/.status.json 2>/dev/null; date +%s%3N
+cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N
 ```
 
-Compare the `ts` field to the printed epoch ms. If the gap is >15000, the watcher is dead — boot it:
+`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`. When age exceeds the threshold, your next non-orienting verb will be gated — dispatch `instruction` first.
+
+Compare `.status.json` `ts` field to the printed epoch ms. If the gap is >15000, the watcher is dead — boot it:
 
 ```bash
 bun x gm-plugkit@latest spool > /dev/null 2>&1 &
