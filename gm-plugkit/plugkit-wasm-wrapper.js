@@ -407,6 +407,7 @@ function logEvent(sub, event, fields) {
       sub,
       event,
       pid: process.pid,
+      cwd: process.cwd(),
       sess: readCurrentSess(),
       ...safeFields,
     });
