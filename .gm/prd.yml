@@ -1726,3 +1726,33 @@
   witness_evidence: gmsniff --grep prd-add-no-id --json shows subject:'' on all 3 events. The scope fix is doing its job — flagging only true item-<ms> fallback cases.
   id: validate-prd-add-no-id-scope-fix-flags-only-true-unfindable-case
   witness: gmsniff --since 30m --event deviation.prd-add-no-id --json showed all 3 events had subject:'' and fallback_id:item-<ms>. Scope fix from rs-plugkit 0.1.540 correctly distinguishes usable-slug-fallback from unfindable-item-fallback — flags only the latter.
+- subject: Verify cwd in event JSONL lines after cascade
+  category: feature
+  description: 'Bootstrapped wrapper to gm-plugkit@2.0.1396 with cwd-in-logEvent fix. New events emit cwd: process.cwd() in line schema.'
+  acceptance:
+  - gmsniff sample event shows cwd field
+  status: completed
+  witness_evidence: bunx gmsniff --since 30s --limit 3 --json showed cwd:'C:\\dev\\gm' on all 3 events from pid 25356. Confirms gm commit f7563fee operative in wrapper 2.0.1396.
+  id: verify-cwd-in-event-jsonl-lines-after-cascade
+  witness: bunx gmsniff --since 30s --limit 3 --json showed cwd:'C:\\dev\\gm' on dispatch.start, embed.wasm-loading, embed.model-loaded events from pid 25356. gm commit f7563fee operative in wrapper 2.0.1396.
+- subject: Precompute deviations_30m in turn-summary
+  category: feature
+  description: Audit pattern runs gmsniff --since 30m --list-deviations every iter as first observation step. Precompute count into turn-summary so session-start saves one subprocess invocation. Watcher already has the log files at hand.
+  acceptance:
+  - writeTurnSummary scans today's hook+plugkit jsonl for deviation.* lines
+  - field present in turn-summary
+  - SKILL.md updated
+  status: completed
+  witness_evidence: gm commit fe192d44 pushed (origin cfc70fdc). plugkit-wasm-wrapper.js writeTurnSummary now scans GM_LOG_ROOT/<day>/{hook,plugkit}.jsonl for deviation events with ts >= now-30min. SKILL.md boot probe paragraph documents the new field.
+  id: precompute-deviations-30m-in-turn-summary
+  witness: gm commit fe192d44 pushed (origin cfc70fdc). writeTurnSummary now scans GM_LOG_ROOT/<day>/{hook,plugkit}.jsonl for deviation.* events with ts>=now-30min. Cascade republishes. SKILL.md teaches the new field.
+- subject: Compound discipline stack at steady state
+  category: feature
+  description: 'Past 1h: 4 deviations (3 prd-add-no-id with empty subject = correct scope-fix behavior + 1 long-gap legitimate from cron-wake). Zero long-gap-retry events (fast-path fix preventing batch escalation). All previously-tuned classes at acceptable noise floors.'
+  acceptance:
+  - 1h deviation count < 10
+  - No long-gap-retry events
+  status: completed
+  witness_evidence: 'gmsniff --since 1h --list-deviations: 3 prd-add-no-id + 1 long-gap-no-instruction. The 3 prd-add-no-id are observational (true item-<ms> fallback flag working as designed). No long-gap-retry escalations.'
+  id: compound-discipline-stack-at-steady-state
+  witness: 'gmsniff --since 1h: 4 deviations total (3 observational prd-add-no-id + 1 legitimate long-gap). Zero long-gap-retry escalations post fast-path fix. All previously-tuned classes at acceptable noise floors.'
