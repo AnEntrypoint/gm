@@ -1,6 +1,6 @@
 title: "gm"
-tagline: "more coushin' for the pushin'"
-description: "glootius maximus — gm convinces your coding agent it already is a deterministic state machine. PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. the cushion is the discipline that lets the agent finally sit down and finish the work."
+tagline: "a state machine your coding agent can sit inside"
+description: "gm puts a deterministic PLAN, EXECUTE, EMIT, VERIFY, COMPLETE loop around your coding agent. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
 repo: "https://github.com/AnEntrypoint/gm"
 url: "https://anentrypoint.github.io/gm"
 year: 2026

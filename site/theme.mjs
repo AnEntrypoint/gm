@@ -160,27 +160,23 @@ const buildLandingMain = () => {
     }));
   }
 
-  // Quickstart — install + CLI block.
+  // Quickstart — single CLI block (no SDK Install widget; that duplicates the cmd that already lives inline in lines).
   const qs = page.quickstart;
   if (qs && qs.lines && qs.lines.length) {
-    const firstCmd = qs.lines.find((l) => l && l.kind !== 'cmt' && l.text);
-    if (firstCmd && C.Install) {
-      main.push(h('h3', {}, qs.heading || 'quick start'));
-      main.push(C.Install({ cmd: firstCmd.text }));
-    }
-    const more = qs.lines.filter((l) => l && (l.kind === 'cmt' || l.text));
-    if (more.length) {
-      main.push(h('div', { class: 'cli' },
-        ...more.map((ln, i) => {
-          if (!ln) return null;
-          if (ln.kind === 'cmt') return h('div', { key: i, class: 'cli-cmt' }, ln.text || '');
+    main.push(h('h3', {}, qs.heading || 'quick start'));
+    main.push(h('div', { class: 'cli' },
+      ...qs.lines.map((ln, i) => {
+        if (!ln) return null;
+        if (ln.kind === 'cmt') return h('div', { key: i, class: 'cli-cmt' }, ln.text || ' ');
+        if (ln.text) {
           return h('div', { key: i, class: 'cli-line' },
             h('span', { class: 'prompt' }, '$'),
-            h('span', { class: 'cmd' }, ln.text || '')
+            h('span', { class: 'cmd' }, ln.text)
           );
-        }).filter(Boolean)
-      ));
-    }
+        }
+        return null;
+      }).filter(Boolean)
+    ));
   }
 
   // Examples / "read further" — Panel of .row links.
@@ -263,9 +259,11 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       color: var(--panel-text-3, #7a8090);
       white-space: pre-wrap;
       word-break: break-word;
-      min-height: 1.2em;
+      min-height: 1.4em;
       padding: 3px 0;
+      line-height: 1.6;
     }
+    .cli .cli-cmt:empty::before { content: '\00a0'; }
     .cli .cli-line {
       display: flex;
       gap: 10px;
