@@ -34,7 +34,9 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 
-**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `health`, `filter`, `git_status`, `branch_status`, `git_push`.
+**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `memorize-prune`, `health`, `filter`, `git_status`, `branch_status`, `git_push`.
+
+**memorize-prune verb**: deletes bad/superseded memories — pruning bad memory matters more than preserving good memory, since a wrong recall hit is worse than a miss. Two modes: explicit `{key}`/`{keys:[...]}` deletes exactly those mem keys (text + `-vec` embedding sibling) via the `host_kv_delete` host import; `{query}` returns review-only candidates (vector_top_k hits with keys) for the agent to judge, then re-dispatch with the stale `{keys:[...]}`. Query mode never auto-deletes by similarity — a blind similarity-delete is itself a bad-memory generator; the destructive step stays under agent judgment. Emits `memory.pruned` per deletion.
 
 **git verbs**: `git_status` returns `{dirty, modified, untracked, deleted, staged}` from `git status --porcelain`. `branch_status` returns `{branch, ahead, behind, remote}` — the `remote-pushed` witness. `git_push` is the ONLY admissible push surface — it gates on `git_porcelain()` non-empty (refuses dirty), emits `deviation.push-dirty` on attempt, and shells the push only when clean. A raw `git push` via Bash bypasses the gate and is itself a deviation; ccsniff `--git-discipline` flags it.
 

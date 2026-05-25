@@ -1505,6 +1505,26 @@ function makeHostFunctions(instanceRef) {
       }
     },
 
+    host_kv_delete: (nsPtr, nsLen, keyPtr, keyLen) => {
+      try {
+        const ns = readWasmStr(instanceRef.value, nsPtr, nsLen);
+        const key = readWasmStr(instanceRef.value, keyPtr, keyLen);
+        if (!ns || !key) return 0;
+        let removed = 0;
+        // Delete the key from the namespace AND its -vec sibling across every enabled discipline dir,
+        // so a pruned memory leaves no orphan embedding that host_vec_search would still surface.
+        for (const baseNs of [ns, `${ns}-vec`]) {
+          for (const dir of kvNamespaceDirs(baseNs)) {
+            const fp = path.join(dir, safeName(key) + '.json');
+            try { if (fs.existsSync(fp)) { fs.rmSync(fp, { force: true }); removed++; } } catch (_) {}
+          }
+        }
+        return removed > 0 ? 1 : 0;
+      } catch (e) {
+        return 0;
+      }
+    },
+
     host_kv_query: (nsPtr, nsLen, qPtr, qLen) => {
       try {
         const ns = readWasmStr(instanceRef.value, nsPtr, nsLen);
