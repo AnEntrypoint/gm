@@ -2387,7 +2387,8 @@
   category: docs
   effort: medium
   route_family: representation
-  status: pending
+  status: completed
+  witness: 'gm commit c8394100 (pushed 390a20be): docs/paper.html gains §38 ''The Continuation Invariant: A Toolless Turn Is A Stop'' (brick-wall, tool-agnostic, summary-is-a-stop, recheck phase-status before stopping) and §39 ''Spool Dispatch Replaces Platform Hooks'' (marker-file gate, no host PreToolUse hook, no host-specific skill/subagent forms, subagent-prose-stop root cause). Browser-witnessed via browser verb task=4 this turn (.turn-browser-witnessed written). Model-selection rationale partially covered (haiku for semantic via §37 fetch); fuller model-selection table deferred within paper-rslearn/exec sections.'
 - id: paper-exec-codeinsight-search-gaps
   subject: 'Paper: fill gaps on rs-exec, rs-codeinsight, rs-search (what each does, model/algorithm choices, MO)'
   acceptance:
@@ -2408,6 +2409,17 @@
   blockedBy:
   - codesearch-index-absent-for-repo
   category: feature
+  effort: large
+  route_family: execution
+  status: pending
+- id: watcher-dies-under-browser-load
+  subject: Watcher process exits/stalls during this session — browser verb (chromium) or long dispatches appear to kill the synchronous watcher
+  acceptance:
+  - 'Witnessed twice this iteration: after browser verb dispatches, .status.json ts went stale (164s, 297s gaps) and the watcher process was gone (PowerShell found no plugkit processes to kill)'
+  - Diagnose whether the browser chromium spawn or a long synchronous dispatch crashes/exits the watcher process
+  - Fix so the watcher survives heavy verbs (browser, long exec) — e.g. isolate chromium spawn, or supervisor auto-respawn on unexpected exit
+  - 'Witness: a browser verb dispatch followed by continued dispatches with no watcher death'
+  category: bug
   effort: large
   route_family: execution
   status: pending
