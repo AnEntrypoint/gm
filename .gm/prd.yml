@@ -2198,3 +2198,39 @@
   route_family: execution
   status: completed
   witness: 'Root cause documented: Agent(subagent_type=gm:gm) subagent isolation returns a prose summary (''Done. Updated client/...'') to the parent; the parent reads no continuing tool call and stops. Fixed parent-side by the brick-wall rule (no toolless turn, no summary until COMPLETE) now in SKILL.md/AGENTS.md/entry.rs/verify.rs. The subagent-preferred guidance was the source of the bundling; its Claude-specific text is stripped in rs-plugkit c15f2db.'
+- id: prd-add-reject-unreferenceable
+  subject: prd-add rejects when neither a usable id nor a slugifiable subject is present, instead of soft-warning with item-<ms> fallback
+  acceptance:
+  - 'rs-plugkit/src/orchestrator/prd.rs: when provided_id is none AND slug_from_subject is none, return an error (exitCode 1) instructing the agent to pass id or a meaningful subject — not a silent item-<ms> insert'
+  - 'Error text names the fix: pass id directly or provide a slugifiable subject'
+  - deviation.prd-add-no-id still emits for the audit trail, but the row is NOT created
+  - 'Witness: prd-add with empty subject and no id returns ok:false'
+  category: feature
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit commit 7817c54 (pushed 1dfe7d4): prd.rs lines ~122-130 now return (String::new(), err, 1) when provided_id is none AND slug_from_subject is none — hard reject with text ''A referenceable handle is mandatory''. deviation.prd-add-no-id still emits for audit. No item-<ms> row admitted. Cascade rebuilds to 0.1.556.'
+- id: kill-stale-watchers-misses-siblings
+  subject: --kill-stale-watchers does not kill all plugkit watcher processes, so version updates fail to land
+  acceptance:
+  - 'Witnessed: --kill-stale-watchers returned killed:[] while pid 151052 v0.1.554 kept ticking; update to 0.1.555 only landed after killing ALL bun/node plugkit-wasm-wrapper processes manually'
+  - Root cause identified in gm-plugkit kill-stale logic (which processes it enumerates / how it matches)
+  - Fix so the documented update sequence reliably lands the new wasm, OR SKILL.md guidance updated to the working sequence
+  - 'Validation: a single kill-stale-watchers + boot lands the pinned version'
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'Root cause: gm-plugkit/cli.js killStaleWatchers line 68 Windows branch filtered Get-WmiObject to name=''node.exe'' only, so bun.exe-hosted watchers (the default boot is `bun x gm-plugkit`) were invisible and survived — pid 151052 (bun, 0.1.554) was never killed, blocking the 0.1.555 update. Fix: filter now ''name=node.exe OR name=bun.exe''. POSIX branch already matched on command-line regardless of exe name. Witnessed this iteration: only manual kill of all bun plugkit-wasm-wrapper processes landed 0.1.555 (watcher now pid 153076 v0.1.555).'
+- id: validate-brick-wall-and-AB-live-0155
+  subject: Validate prior-iter fixes (brick-wall prose, DEFECT A/B/C) deployed and working on plugkit 0.1.555
+  acceptance:
+  - Watcher confirmed v0.1.555 (brick-wall entry.rs/verify.rs prose live)
+  - 'DEFECT A: deviation.complete-chain-poll observed firing 4x in 30m window'
+  - 'DEFECT B: turn.end events carry idle_spanned flag, no multi-hour dur_ms overflow'
+  - 'DEFECT C: fresh prompt reset COMPLETE->PLAN observed this iteration (instruction-18 returned PLAN)'
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: '.status.json version=0.1.555 pid=153076 (brick-wall entry.rs/verify.rs prose live). DEFECT A: gmsniff 30m showed deviation.complete-chain-poll firing 4x. DEFECT B: turn.end events carry idle_spanned:true, max dur_ms bounded (81064ms real work). DEFECT C: instruction-18 with fresh prompt returned phase=PLAN from COMPLETE chain on 0.1.555.'

@@ -65,7 +65,7 @@ function killStaleWatchers() {
       else fresh.push({ pid, started_ms: startedMs, instance_version: instV });
     }
     if (process.platform === 'win32') {
-      const ps = `Get-WmiObject Win32_Process -Filter "name='node.exe'" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CreationDate }`;
+      const ps = `Get-WmiObject Win32_Process -Filter "name='node.exe' OR name='bun.exe'" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CreationDate }`;
       const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
       for (const line of out.split(/\r?\n/).filter(Boolean)) {
         const [pidStr, creation] = line.split('|');
