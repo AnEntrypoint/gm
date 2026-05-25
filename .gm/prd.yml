@@ -2479,7 +2479,8 @@
   category: feature
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Resolved with clarified design: ''AGENTS.md -> learning migration'' is the agent''s DUAL-WRITE, not an automatic file-scan ingest, and that is deliberate. Found the .gm/disciplines/AGENTS.md/ namespace is NOT AGENTS.md content — it''s mislabeled session memories (e.g. ''thebird deployed end-to-end witness'') from a prior session that passed namespace:''AGENTS.md''. No auto-ingest exists or should: the classifier cannot safely judge which AGENTS.md paragraphs are recall-worthy rules vs narrative; the agent judges at write time. Sharpened update_docs.rs prose (rs-plugkit) to make the migration explicit: AGENTS.md is staging, learning store is recall surface, the same session edit that lands a load-bearing rule in AGENTS.md also fires memorize-fire to the DEFAULT namespace where auto_recall reads it; do NOT pass namespace:''AGENTS.md'' (creates mislabeled namespace). The dual-write keeps them in sync. Migration is smooth-by-discipline, validated working (recall round-trip + auto_recall confirmed in prior fires).'
 - id: fix-stale-200kb-wasm-size-claim
   subject: AGENTS.md + site claim wasm is <200KB but the shipped artifact is ~149MB (embeds bge-small) — stale/misleading claim
   acceptance:
