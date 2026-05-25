@@ -2423,3 +2423,15 @@
   effort: large
   route_family: execution
   status: pending
+- id: watcher-autoupdate-thrash-fix
+  subject: Revert auto-update version-file-bump — it poisoned installedVersionAtTools and caused infinite drift-respawn thrash
+  acceptance:
+  - 'Witnessed: prior commit b2e9d721 auto-arm bumped ~/.gm-tools/plugkit.version to latest BEFORE downloading the binary; ensureReady then computed versionDrift=false (file==target) + isReady=true and returned already-ready WITHOUT downloading; running instance stayed old; drift-check saw instance(556)!=file(557) forever -> infinite ''spawning replacement'' loop'
+  - 'Fix: both auto-arm sites (network + cache path) reverted to notify-only; version file must only advance after a verified binary download (bootstrap''s job)'
+  - _autoUpdateArmedFor removed
+  - 'Witnessed fixed: wrapper installed, version file reset to 556 to match binary, watcher boots drifted:false with zero spawning-replacement events'
+  - Proper auto-update deferred to a sha-verified force-download path
+  category: bug
+  effort: medium
+  route_family: execution
+  status: pending
