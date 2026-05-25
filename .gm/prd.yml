@@ -2319,7 +2319,8 @@
   category: infra
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'On 0.1.557 (routing fix live, wasm sha 469a6018): memorize-fired sentinel ''qy7-roundtrip-sentinel-1779705344'' then recalled it — returned as TOP hit, mode:vector_top_k, hits:8, score:0.804, exact text match. The full memorize-fire -> embed (file-vec) -> recall round-trip works end to end now that the recall verb routes to the file-vec backend (was rows:[] on 0.1.556 via legacy libsql). Namespace default routing confirmed.'
 - id: validate-temporal-recency-scoring
   subject: Validate temporal/recency sensitivity in recall scoring is real and correct
   acceptance:
@@ -2329,7 +2330,8 @@
   category: infra
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'On 0.1.557: recall returned per-hit recency computed from mem timestamp — fresh sentinel recency:0.9999995 vs older Iter-14 mem recency:0.962. score = cos*recency (host_vec_search: HALF_LIFE 30d, RECENCY_FLOOR 0.4, recency=FLOOR+(1-FLOOR)*exp(-age/HALFLIFE)). Recent mem ranks higher as intended. Temporal sensitivity is real and correct.'
 - id: validate-tree-lora-optimization-pathways
   subject: Confirm tree stability/optimization + lora optimization pathways exist and actually run (were LLM calls, now agent-instructions?)
   acceptance:
@@ -2434,4 +2436,5 @@
   category: bug
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'gm commit cdf69176 (pushed af97ab02): both auto-arm sites reverted to notify-only, _autoUpdateArmedFor removed. Root cause: version-file bumped ahead of binary download poisoned installedVersionAtTools -> ensureReady returned already-ready without downloading -> infinite drift-respawn (witnessed repeated ''spawning replacement'' log lines, installed wasm sha c08168ba != pinned 0.1.557 sha 469a6018). Fixed live: version file reset to 556, fixed wrapper installed to ~/.gm-tools, watcher rebooted drifted:false with 0 spawning-replacement events (grep /tmp/bootfixed.log returned 0).'
