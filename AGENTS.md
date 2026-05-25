@@ -26,7 +26,7 @@ This repo IS the published `gm-skill` npm package. The repo root is the package 
 
 ## WASM-only
 
-The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun. No native binaries are built, downloaded, or published. The wasm artifact is small (<200KB) and ships inside the `gm-skill` npm package; atomic write to disk is sufficient — no kill-before-rename mechanics apply.
+The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun. No native binaries are built, downloaded, or published. The plugkit orchestration logic compiles small (hundreds of KB), but the shipped `plugkit.wasm` artifact is ~149MB because it embeds the bge-small-en-v1.5 embedding model in-wasm (133MB safetensors + 711KB tokenizer, 384-dim, host_delegated:false — embeddings run wasm-side, offline, no text leak). The artifact is fetched at bootstrap from the `plugkit-wasm` npm package / `plugkit-bin` gh-releases (sha256-pinned in `bin/plugkit.wasm.sha256`), not bundled inside `gm-skill`. Atomic write to disk (temp + rename) is sufficient — no kill-before-rename mechanics apply.
 
 ## Spool dispatch ABI
 

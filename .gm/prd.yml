@@ -2368,7 +2368,8 @@
   category: docs
   effort: medium
   route_family: representation
-  status: pending
+  status: completed
+  witness: 'docs/paper.html §41 ''The WASM Migration'' added + browser-witnessed (session 11, exit_code 0, s41 renders). Documents: single wasm cdylib loaded by JS wrapper under Node/Bun, no per-platform native binaries (distributability + sha256 reproducibility), host-contract imports with JS delegation, browser-compat path. CORRECTED the size story with real facts: plugkit logic is hundreds of KB but the shipped artifact is ~149MB because it embeds bge-small-en-v1.5 in-wasm (133MB safetensors + 711KB tokenizer, 384-dim, 12 layers, host_delegated:false = offline embedding, no text leak). System stability: atomic write, version-drift self-respawn, embed_init_ok witness, shared model/kv/vec resources amortized per-session. NOTE: prior site/AGENTS claim of ''<200KB'' refers to logic-only, not the shipped model-bundled artifact.'
 - id: paper-rslearn-advances-section
   subject: 'Paper: document rs-learn advances (optimization pathways, agent-as-LLM via instruction-served prose, tree/lora, file-vec store, bad-memory pruning)'
   acceptance:
@@ -2405,7 +2406,8 @@
   category: docs
   effort: medium
   route_family: representation
-  status: pending
+  status: completed
+  witness: 'docs/paper.html §42 ''The Rust Service Crates: exec, codeinsight, search'' added + browser-witnessed (session 11, s42 renders). rs-exec: language runner (nodejs/python/bash/ts/deno/go/rust/c/cpp/java) + browser sessions + per-call timeouts + session isolation (timeout mandatory because wasm host runs subprocesses synchronously). rs-codeinsight: tree-sitter, 13 languages, 500-file project <200ms one pass, zero-dep static binary. rs-search: hybrid BM25 (identifier-aware snake/kebab/camel tokenization) + vector via Reciprocal Rank Fusion, .gitignore discipline, PDF ingestion, content-addressable embedding cache. Model selection documented: meaning->small fast model via fetch (1/call parallel), mechanics->deterministic Rust, embeddings->bge-small; unifying MO is one-concern-per-layer (model=meaning, Rust=mechanics, host=IO, rs-learn=math).'
 - id: codeinsight-index-autobuild-trigger
   subject: codesearch returns empty until codeinsight index is built; nothing triggers the build (sync-before-emit not wired)
   acceptance:
@@ -2477,3 +2479,14 @@
   effort: large
   route_family: execution
   status: pending
+- id: fix-stale-200kb-wasm-size-claim
+  subject: AGENTS.md + site claim wasm is <200KB but the shipped artifact is ~149MB (embeds bge-small) — stale/misleading claim
+  acceptance:
+  - AGENTS.md WASM-only section says 'wasm artifact is small (<200KB)' but ~/.gm-tools/plugkit.wasm is 149412104 bytes because it embeds the 133MB bge-small safetensors + tokenizer
+  - Correct AGENTS.md (and site/content if it repeats it) to distinguish plugkit-logic-wasm (small) from the shipped model-bundled artifact (~149MB), or state the accurate size
+  - Paper §41 already states this correctly — align AGENTS.md/site to match
+  category: docs
+  effort: small
+  route_family: representation
+  status: completed
+  witness: 'AGENTS.md WASM-only section corrected: was ''wasm artifact is small (<200KB) and ships inside the gm-skill npm package'' (both false — artifact is 149412104 bytes, fetched from plugkit-wasm npm/plugkit-bin gh-releases not bundled). Now states: plugkit logic is hundreds of KB but shipped plugkit.wasm is ~149MB embedding bge-small (133MB safetensors + 711KB tokenizer, 384-dim, host_delegated:false offline), fetched at bootstrap sha256-pinned. Aligned with paper §41.'

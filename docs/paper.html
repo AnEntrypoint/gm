@@ -854,6 +854,22 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
+<h2 id="s41">41. The WASM Migration</h2>
+
+<p>The orchestrator stack runs as a single WebAssembly cdylib loaded by a thin JavaScript wrapper under Node or Bun. No native binaries are built, downloaded, or published per platform. The reasoning is distributability and reproducibility: one artifact runs identically on every operating system the JS host supports, pinned by sha256, with no per-architecture build matrix and no platform-specific install path. The wasm imports a small host contract&mdash;filesystem, key-value, vector search, fetch, subprocess, clock, log&mdash;and the JS wrapper satisfies it by delegating to Node, so the wasm carries the logic and the host carries the IO. The same module loads in a browser given a host that satisfies the imports, which is the browser-compatibility path.</p>
+
+<p>Two size stories live in one artifact. The plugkit orchestration logic compiles to a small wasm&mdash;the state machine, gates, dispatch, and verb routing are hundreds of kilobytes. The shipped artifact is large (~149&nbsp;MB) because it embeds the embedding model in-wasm: BAAI/bge-small-en-v1.5, twelve hidden layers, 384-dimension output, a 133&nbsp;MB safetensors weight blob plus a 711&nbsp;KB tokenizer. Embedding runs wasm-side with no host delegation and no external service&mdash;recall and memorize compute vectors in-process, so memory works offline and leaks no text to a remote embedder. The trade is deliberate: a one-time large download buys a self-contained, reproducible, network-independent memory system rather than a small binary that phones home for every embedding.</p>
+
+<p>System stability follows from the single-artifact discipline. The wasm is written atomically (temp file then rename); a version drift between the running instance and the on-disk version file triggers a clean self-respawn rather than a partial reload; embedding initialization is witnessed by an <code>embed_init_ok</code> event before the first recall. Shared resources&mdash;the kv store, the vector index, the embedding model&mdash;are owned by the host process and shared across every verb dispatch in a session, so a single model load amortizes over the whole session rather than re-initializing per call.</p>
+
+<h2 id="s42">42. The Rust Service Crates: exec, codeinsight, search</h2>
+
+<p>Three Rust crates provide the capabilities the orchestrator dispatches into, each a single static artifact with zero runtime dependencies. <strong>rs-exec</strong> is the language runner: it executes nodejs, python, bash, typescript, deno, go, rust, c, cpp, and java through the spool, owns browser sessions, and enforces per-call timeouts and session task isolation&mdash;every execution carries a positive timeout because the wasm host runs subprocesses synchronously and an unbounded child blocks the watcher. <strong>rs-codeinsight</strong> is the AST x-ray: tree-sitter parsing across thirteen languages, analyzing a 500-file project in under 200&nbsp;ms in one pass, so an agent landing in an unfamiliar repo gets files, symbols, and shape immediately instead of burning its first interactions grepping. <strong>rs-search</strong> is the hybrid finder: BM25 lexical scoring with identifier-aware tokenization (snake, kebab, and camel splits) fused with vector similarity via Reciprocal Rank Fusion, with <code>.gitignore</code> discipline, PDF ingestion, and a content-addressable embedding cache so re-indexing only re-embeds changed content.</p>
+
+<p>Model selection across the stack follows a split between meaning and mechanics. Semantic work&mdash;summarize, classify, judge-if-two-texts-mean-the-same&mdash;routes to a small fast model through the fetch callback, one item per call, parallel by default. Mechanics&mdash;parse, sort, hash, count&mdash;stay in deterministic Rust. Embeddings use bge-small for its 384-dimension output and small weight footprint relative to recall quality. The unifying motivation is the same one that drives the wasm migration and the rs-learn boundary: each layer owns exactly one concern&mdash;the model owns meaning, Rust owns mechanics, the host owns IO, the algorithm crate owns math&mdash;so every layer is independently testable, reproducible, and swappable.</p>
+
+<hr>
+
 <h2 id="three-layer-filter">Three-Layer Admission Filter</h2>
 
 <p>Sections 2&ndash;37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
