@@ -2468,7 +2468,8 @@
   category: feature
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Disposition decided with implementation plan. rs-learn/crates/wasm exposes crate-type=[''cdylib'',''rlib''] and pub dispatch::{LearnSession, dispatch_json} — so plugkit CAN link it as an rlib dependency and route learn-* verbs to rs_learn::dispatch_json, reusing plugkit''s existing host_kv_*/host_vec_search/host_now_ms/host_log imports (rs-learn''s wasm_host declares the same contract). The bridge = (1) add rs-learn rlib dep to rs-plugkit Cargo.toml, (2) construct a KvBackend over the shared host imports, (3) add dispatch arms ''learn-insert-edge''/''learn-route''/''learn-feedback''/etc forwarding to dispatch_json, (4) expose via spool ABI. blockedBy: out-of-reach for the loop — this is cross-wasm symbol linkage (two crates declaring the same extern "C" host imports into one wasm) that MUST be verified with a local cargo build before shipping; AGENTS.md forbids local cargo build and a blind push of unverified linkage could brick the wasm for every consumer. Requires a deliberate build-and-verify cycle outside the destructive loop. Plan + rationale recorded for that session.'
 - id: agentsmd-migration-not-implemented
   subject: AGENTS.md-as-staging-ground -> learning-store migration is NOT implemented — store frozen, no code path ingests AGENTS.md
   acceptance:
@@ -2562,4 +2563,5 @@
   category: feature
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Fixed rs-plugkit e17696d: code_index::index now dual-writes each chunk to the file-vec store (host_kv_put text->codeinsight, {embedding}->codeinsight-vec, key ci-<ts>-<line>-<n>) alongside the existing libsql insert, mirroring memorize_with_raw. codesearch() now autobuilds on empty index (code_index::index(''.'',500) then retry, auto_indexed-guarded against rebuild loop). This closes the backend split: the file-vec codesearch verb now reads what the indexer writes. Build correctness verified by CI on push (no local cargo per AGENTS.md); end-to-end hit-return validation gated on the cascade rebuilding plugkit-wasm with this code.'
