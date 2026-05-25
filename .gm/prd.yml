@@ -3159,3 +3159,43 @@
   - out-of-reach
   status: completed
   witness: 'Triaged: bias-toward-rejection is correct (a false-positive costs a rephrase; a false-negative leaks bad memory which the user ranks worse). Workaround documented in mem-1779743390991. A precise sentence-position/override-field refinement is a larger classifier redesign deferred out-of-reach; not worth destabilizing the simple safe substring rule for a rephrase-cost false positive.'
+- id: skill-bootstrap-missing-wrapper-refresh
+  subject: skill-bootstrap.js refreshes SKILL.md and plugkit-supervisor.js (sha-compare + atomic write) but has NO equivalent for plugkit-wasm-wrapper.js, so gm-plugkit-only JS fixes never reach the installed ~/.gm-tools wrapper that running watchers + the drift-self-respawn detector key on
+  acceptance:
+  - 'Witness: installed ~/.gm-tools/plugkit-wasm-wrapper.js mtime 15:35 lacks the iter22 browser.stale-reclaimed fix despite gm-plugkit 2.0.1432 (with fix) publishing 21:12; tv8 still fired 2x pid-dead collision deviations 21:14+21:22'
+  - 'Add ensureWrapperInstalled() mirroring ensureSupervisorInstalled(): resolve bundled wrapper, sha-compare vs installed, atomic tmp+rename on mismatch'
+  - Call it in the bootstrap sequence alongside ensureSupervisorInstalled
+  - node --check passes
+  - After refresh the wrapper drift-self-respawn interval picks up the new sha and reboots the watcher with current JS
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'lib/skill-bootstrap.js: added ensureWrapperInstalled() (mirrors ensureSupervisorInstalled) — resolves gm-plugkit npm wrapper or bundled gm-plugkit/plugkit-wasm-wrapper.js, sha-compares vs PLUGKIT_WASM_WRAPPER, atomic tmp+rename on mismatch, emits ''plugkit-wasm-wrapper.js refreshed''. Wired into bootstrap sequence after ensureSupervisorInstalled (line 605). node --check passes.'
+- id: validate-wrapper-refresh-then-browser-fix-live
+  subject: After adding wrapper refresh, locally refresh the installed wrapper + reboot, then confirm the browser pid-dead fix is actually live (no more collision deviation for pid-dead)
+  acceptance:
+  - installed wrapper sha matches bundled after refresh
+  - fresh watcher boots with browser.stale-reclaimed code
+  - verify grep browser.stale-reclaimed present in installed wrapper
+  category: validation
+  effort: low
+  route_family: execution
+  blockedBy:
+  - skill-bootstrap-missing-wrapper-refresh
+  status: completed
+  witness: 'Ran the ensureWrapperInstalled action manually: installed wrapper sha 455b45f3->06be66de, grep browser.stale-reclaimed 0->1 match. Killed stale watcher pid 200996, booted fresh pid 220296 from the refreshed wrapper (''spool watcher running''), phase-status-208 returned EXECUTE + prd-add-209 serviced — fresh watcher with the browser pid-dead fix is live and functional.'
+- id: wrapper-drift-detector-missed-installed-file-change
+  subject: The wrapper drift-self-respawn interval (60s) did not fire when I changed the installed ~/.gm-tools wrapper sha under a running direct-no-supervisor watcher; had to manually kill+boot to load the fix
+  acceptance:
+  - 'Witness: refreshed installed wrapper 455b45f3->06be66de under live watcher pid 200996; waited >60s, no wrapper.drift-self-respawn event, pid unchanged; manual kill+boot (pid 220296) loaded the fix'
+  - 'Possible causes: the long-running watcher booted on a wrapper version predating the drift-detector at line 2326; or _wrapperShaAtBoot/_wrapperPathInstalled path mismatch (GM_TOOLS_ROOT); or the interval was cleared'
+  - Diagnose why the detector silently no-ops; the primary root-cause fix (ensureWrapperInstalled on bootstrap) covers the refresh-write, but the drift-detector is the runtime-pickup half and should be reliable
+  - Lower priority than the bootstrap fix since per-session bootstrap now refreshes + a fresh boot always loads latest
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Triaged out-of-reach: needs deeper diagnosis of the long-running watcher''s drift-detector (line 2326, 60s interval) — likely the watcher booted on a wrapper predating the detector, or a GM_TOOLS_ROOT path mismatch. The primary root-cause fix (ensureWrapperInstalled writes the refresh on every bootstrap) + a fresh boot always loading latest covers the user-facing symptom; the runtime-pickup-without-reboot half is a lower-priority refinement deferred to a wrapper-lifecycle fire (same class as watcher-dies-on-cascade-publish).'
