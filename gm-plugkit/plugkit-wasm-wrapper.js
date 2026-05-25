@@ -374,6 +374,24 @@ function readCurrentSess() {
 
 const __lockRejectedEmitAt = new Map();
 
+const UNAMBIGUOUS_CLIENT_EXT_RE = /\.(?:html?|jsx|tsx|vue|svelte|css|scss|sass)$/i;
+const AMBIGUOUS_JS_EXT_RE = /\.(?:m?js|cjs|ts)$/i;
+const BROWSER_REACHABLE_DIR_RE = /(?:^|\/)(?:site|public|web|www|client|frontend|ui|assets|static|dist|build|docs)\//i;
+const NODE_ONLY_DIR_RE = /(?:^|\/)(?:lib|bin|scripts?|gm-plugkit|node_modules|tests?|__tests__|\.gm)\//i;
+
+function isBrowserRelevantPath(rel, cwd) {
+  if (UNAMBIGUOUS_CLIENT_EXT_RE.test(rel)) return true;
+  if (!AMBIGUOUS_JS_EXT_RE.test(rel)) return false;
+  if (NODE_ONLY_DIR_RE.test(rel)) return false;
+  if (BROWSER_REACHABLE_DIR_RE.test(rel)) return true;
+  try {
+    const dir = path.dirname(path.isAbsolute(rel) ? rel : path.join(cwd, rel));
+    const sibs = fs.readdirSync(dir);
+    if (sibs.some(f => /\.html?$/i.test(f))) return true;
+  } catch (_) {}
+  return false;
+}
+
 function autoRecordBrowserEditsFromBody(body, cwd, taskBase, verb) {
   if (!body || typeof body !== 'string') return;
   const BROWSER_EXT_RE = /[\w.\-/\\]+\.(?:html?|tsx?|jsx?|mjs|cjs|vue|svelte|css|scss|sass)\b/gi;
@@ -388,6 +406,7 @@ function autoRecordBrowserEditsFromBody(body, cwd, taskBase, verb) {
     let rel = String(raw).replace(/^["'`(]+|["'`)]+$/g, '').replace(/\\/g, '/');
     if (rel.startsWith('http://') || rel.startsWith('https://') || rel.startsWith('//')) continue;
     if (rel.includes('node_modules/') || rel.startsWith('.gm/') || rel.includes('/.gm/')) continue;
+    if (!isBrowserRelevantPath(rel, cwd)) continue;
     if (seen.has(rel)) continue;
     seen.add(rel);
     const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);

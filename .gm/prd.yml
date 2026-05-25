@@ -3199,3 +3199,30 @@
   - out-of-reach
   status: completed
   witness: 'Triaged out-of-reach: needs deeper diagnosis of the long-running watcher''s drift-detector (line 2326, 60s interval) — likely the watcher booted on a wrapper predating the detector, or a GM_TOOLS_ROOT path mismatch. The primary root-cause fix (ensureWrapperInstalled writes the refresh on every bootstrap) + a fresh boot always loading latest covers the user-facing symptom; the runtime-pickup-without-reboot half is a lower-priority refinement deferred to a wrapper-lifecycle fire (same class as watcher-dies-on-cascade-publish).'
+- id: browser-edit-autorecord-false-positive-on-node-js
+  subject: autoRecordBrowserEditsFromBody matches ambiguous .js/.mjs/.cjs/.ts by extension alone, so Node-only files (lib/skill-bootstrap.js, gm-plugkit/plugkit-wasm-wrapper.js) referenced in a prd-resolve witness get recorded as browser edits requiring a witness — a false-positive that would fire deviation.client-edit-no-witness for any Node .js edit
+  acceptance:
+  - 'Witness: browser.edits-autorecorded 21:41 task 210 recorded lib/skill-bootstrap.js + gm-plugkit/plugkit-wasm-wrapper.js (both pure Node, never browser-loaded) from a prd-resolve witness string'
+  - Unambiguous client exts (html/jsx/tsx/vue/svelte/css/scss/sass) always recorded
+  - 'Ambiguous exts (js/mjs/cjs/ts) recorded ONLY when the path is browser-reachable: under a client dir segment (site/public/web/client/assets/static/docs/www/dist/build/frontend/ui) — Node dirs (lib/bin/scripts/gm-plugkit/node_modules/test/.gm) excluded'
+  - node --check passes
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js: added isBrowserRelevantPath(rel,cwd) gating autoRecordBrowserEditsFromBody. Unambiguous client exts (html/jsx/tsx/vue/svelte/css/scss/sass) always; ambiguous js/mjs/cjs/ts only if NOT in node-dir (lib/bin/scripts/gm-plugkit/node_modules/test/.gm) AND (in browser-dir site/public/web/www/client/frontend/ui/assets/static/dist/build/docs OR has .html sibling). Logic-tested: lib/skill-bootstrap.js + gm-plugkit/*.js + scripts/bin/test skip; site/theme.mjs docs/bundle.js client/app.tsx index.html home.css recorded. node --check passes.'
+- id: validate-prior-fixes-and-memory-0177
+  subject: Validate accumulated fixes still live on 0.1.577 + memory/learning health + classifier
+  acceptance:
+  - prd-resolve nested unwrap, prd-add field-fallback, widened classifier all still functioning
+  - store balanced, recall temporal-scored
+  - bad-memory prune sweep of recent hits
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: '0.1.577: prd-add field-fallback PASS (title->iter24-nested-and-fallback-revalidation-probe); prd-resolve nested unwrap PASS (prd-resolve-225 envelope->resolved); recall-226 vector_top_k top 0.612 temporal-scored; widened classifier REJECTED ''we used to'' shape ok=false no leak; store balanced 57/57 throughout. No stale/wrong recall hits to prune. Full accumulated stack live + healthy.'
+- title: Iter24 Nested And Fallback Revalidation Probe
+  id: iter24-nested-and-fallback-revalidation-probe
+  status: completed
+  witness: iter24 nested unwrap revalidation
