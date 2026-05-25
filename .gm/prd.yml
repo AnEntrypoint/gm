@@ -2604,3 +2604,32 @@
   - out-of-reach
   status: completed
   witness: 'Confirmed version lag: running 0.1.561 codesearch returns ok:true hits:0 and .gm/disciplines/codeinsight-vec is empty — the dual-write/autobuild fix e17696d is not yet in the published wasm. blockedBy out-of-reach this fire (cannot validate code that hasn''t deployed); the next loop fire after the cascade advances re-runs the codesearch probe to witness autobuild + populated index. Fix is pushed and CI-built.'
+- id: slugtest-probe
+  subject: slug alias probe
+  category: infra
+  effort: small
+  status: completed
+  witness: Test row created solely to validate the slug-alias resolve path on 0.1.562; resolution via {slug:...} succeeded (its purpose). Closing the probe row.
+- id: validate-slug-alias-live-0162
+  subject: Validate slug id-alias fix deployed and working on plugkit 0.1.562
+  acceptance:
+  - prd-add {id:slugtest-probe} then prd-resolve {slug:slugtest-probe} -> resolved:slugtest-probe ok:true
+  - Confirms 5304958 (slug accepted as id alias) is live; the {verb,slug} malformed-resolve deviation class is now handled
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'On 0.1.562: prd-add {id:slugtest-probe} then prd-resolve {slug:slugtest-probe} returned {resolved:slugtest-probe, ok:true}. The slug key (previously unrecognized, fell through to not-found) now resolves. 5304958 live. Cross-LLM predictability fix confirmed working in practice.'
+- id: codesearch-autobuild-still-cascade-lagged
+  subject: codesearch dual-write/autobuild (e17696d) not yet in published wasm — 0.1.562 has slug fix but not codesearch fix
+  acceptance:
+  - 'On 0.1.562: codesearch returned {data:[]} (old pre-autobuild shape, no index-build log, codeinsight-vec empty) while slug-alias validated working — so 0.1.562 was built between 5304958 and e17696d'
+  - 'Cascade ordering: e17696d lands in a later plugkit-wasm version; re-validate codesearch autobuild on the next loop fire after the version advances past 0.1.562'
+  - Fix is pushed + CI-built; deployment lag only
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'On 0.1.562 codesearch returned {data:[]} (pre-autobuild shape), no code_index log, codeinsight-vec empty — e17696d not in this build (0.1.562 sits between 5304958 and e17696d). blockedBy out-of-reach: cannot validate undeployed code; the next loop fire after the version advances re-runs the codesearch autobuild probe. Pushed + CI-built.'
