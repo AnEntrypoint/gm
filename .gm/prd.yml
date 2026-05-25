@@ -3226,3 +3226,28 @@
   id: iter24-nested-and-fallback-revalidation-probe
   status: completed
   witness: iter24 nested unwrap revalidation
+- id: ensure-wrapper-refresh-reached-when-watcher-running
+  subject: 'My iter23 ensureWrapperInstalled fix is unreachable for the common case: bootstrapPlugkit returns early (line 745) when binary up-to-date AND watcher already running, BEFORE spawnPlugkitWatcher where ensureWrapperInstalled is called (line 605). So a gm-plugkit-only JS update (no wasm bump) never refreshes the installed wrapper while a watcher runs — exactly the staleness the fix was meant to cure'
+  acceptance:
+  - 'Witness: installed ~/.gm-tools wrapper lacks iter24 isBrowserRelevantPath (grep 0) while repo+npm 2.0.1434 has it (grep 2); watcher pid 220296 up since iter23, bootstrap early-returns without refreshing'
+  - Move ensureWrapperInstalled() (and ensureSupervisorInstalled) to the unconditional bootstrap-start block alongside ensureSkillMdCurrent (~line 706), so the installed wrapper is sha-refreshed on EVERY bootstrap regardless of watcher-running / version-match early return
+  - node --check passes
+  - 'Validate: after the move, a bootstrap with a running watcher + no version change refreshes the installed wrapper to match bundled'
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'lib/skill-bootstrap.js: moved ensureWrapperInstalled() to the unconditional bootstrap-start block (after ensureSkillMdCurrent, line ~707), so it runs BEFORE the binary-up-to-date + watcher-running early return at line 745. Previously only spawnPlugkitWatcher (line 605) called it, unreachable when a watcher already runs. node --check passes.'
+- id: validate-wrapper-refresh-reaches-running-watcher
+  subject: After moving ensureWrapperInstalled to unconditional bootstrap-start, validate it refreshes the installed wrapper even with a running watcher + no version change
+  acceptance:
+  - Run the ensureWrapperInstalled logic against bundled wrapper while watcher runs
+  - installed wrapper sha matches bundled (isBrowserRelevantPath grep goes 0->2)
+  - reboot loads iter24 fix
+  category: validation
+  effort: low
+  route_family: execution
+  blockedBy:
+  - ensure-wrapper-refresh-reached-when-watcher-running
+  status: completed
+  witness: 'Ran ensureWrapperInstalled logic with watcher running + no version change: installed wrapper refreshed 06be66de->7724a21b, isBrowserRelevantPath grep 0->2 (iter24 fix now installed). Rebooted watcher pid 227884 from refreshed wrapper, phase-status-240 returned EXECUTE, store balanced 58/58. The bootstrap-start placement makes every session refresh the wrapper regardless of early-return.'
