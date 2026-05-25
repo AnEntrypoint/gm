@@ -8,6 +8,11 @@ import { spawn as _rawSpawn, spawnSync as _rawSpawnSync } from 'child_process';
 import net from 'net';
 import { fileURLToPath } from 'url';
 
+// Set by the spool watcher's writeStatus closure once it is live. Lets long synchronous verbs
+// (browser/chromium spawn, long exec) stamp a busy_until window into .status.json before the
+// blocking call, so a liveness probe reads "busy" not "dead" while the event loop is blocked.
+let _writeStatusBusy = () => {};
+
 function spawnSync(cmd, args, opts) {
   return _rawSpawnSync(cmd, args, { windowsHide: true, ...(opts || {}) });
 }
@@ -725,6 +730,9 @@ function runBrowserRunner(pw, args, timeoutMs) {
   const useShell = !!pw.shell;
   const spawnCmd = useShell && /\s/.test(pw.cmd) ? `"${pw.cmd}"` : pw.cmd;
   const spawnArgs = useShell ? allArgs.map(a => /[\s"]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : a) : allArgs;
+  // Stamp a busy window before the synchronous spawn so the blocked event loop's stale heartbeat
+  // is not misread as a dead watcher. Pad past the spawn timeout for teardown.
+  _writeStatusBusy((timeoutMs || 30000) + 5000);
   return spawnSync(spawnCmd, spawnArgs, {
     encoding: 'utf-8',
     timeout: timeoutMs,
@@ -2774,15 +2782,16 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
 
   const STATUS_PATH = path.join(spoolDir, '.status.json');
-  function writeStatus() {
+  function writeStatus(busyMs) {
     try {
       const fileV = readFileVersionOnly() || null;
       const instV = _instanceVersionAtBoot || null;
       const version = instV || fileV;
       const drifted = !!(fileV && instV && fileV !== instV);
-      fs.writeFileSync(STATUS_PATH, JSON.stringify({
+      const now = Date.now();
+      const rec = {
         pid: process.pid,
-        ts: Date.now(),
+        ts: now,
         version,
         instance_version: instV,
         file_version: fileV,
@@ -2791,10 +2800,19 @@ async function runSpoolWatcher(instance, spoolDir) {
         supervisor_pid: _supervisorPid,
         wrapper_sha: _ownWrapperSha12 || null,
         idle_limit_ms: IDLE_LIMIT_MS,
-      }));
+      };
+      // A synchronous verb (chromium spawn, long exec) blocks the event loop, so the 5s
+      // heartbeat interval cannot fire for the duration. Without a hint, a liveness probe that
+      // checks ts-within-15s reads the busy watcher as dead and may kill/respawn it mid-verb.
+      // busy_until tells probes "alive but synchronously busy until this epoch ms" — read it
+      // alongside ts: a stale ts whose busy_until is still in the future is a busy watcher, not
+      // a dead one. The pre-verb writeStatus(busyMs) stamps it before the blocking call.
+      if (busyMs && busyMs > 0) rec.busy_until = now + busyMs;
+      fs.writeFileSync(STATUS_PATH, JSON.stringify(rec));
     } catch (_) {}
   }
-  setInterval(writeStatus, 5000);
+  _writeStatusBusy = (ms) => { try { writeStatus(ms); } catch (_) {} };
+  setInterval(() => writeStatus(), 5000);
   writeStatus();
 
   const TURN_SUMMARY_PATH = path.join(spoolDir, '.turn-summary.json');

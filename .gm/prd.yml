@@ -2431,7 +2431,8 @@
   category: bug
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Root cause: the browser verb uses spawnSync (synchronous, ~15-18s chromium launch) which blocks the wasm watcher event loop, so the 5s writeStatus heartbeat cannot fire — .status.json ts goes stale and a 15s-threshold liveness probe reads the busy watcher as DEAD and kills/respawns it mid-verb. It was never dying, it was heartbeat-starved. FIX (gm wrapper): writeStatus(busyMs) stamps a busy_until=now+busyMs field; runBrowserRunner calls _writeStatusBusy(timeoutMs+5000) before the spawnSync. SKILL.md boot-probe + dead-watcher-recovery prose updated: a stale ts with a future busy_until is busy, not dead — wait, do not boot a second watcher. VALIDATED LIVE: during a real chromium spawn .status.json showed busy_until in the future (busy_in_future:true) at +3s; browser verb completed exit_code:0; watcher stayed same pid 187216, no death. node --check passed before deploy.'
 - id: watcher-autoupdate-thrash-fix
   subject: Revert auto-update version-file-bump — it poisoned installedVersionAtTools and caused infinite drift-respawn thrash
   acceptance:
