@@ -2565,3 +2565,17 @@
   route_family: execution
   status: completed
   witness: 'Fixed rs-plugkit e17696d: code_index::index now dual-writes each chunk to the file-vec store (host_kv_put text->codeinsight, {embedding}->codeinsight-vec, key ci-<ts>-<line>-<n>) alongside the existing libsql insert, mirroring memorize_with_raw. codesearch() now autobuilds on empty index (code_index::index(''.'',500) then retry, auto_indexed-guarded against rebuild loop). This closes the backend split: the file-vec codesearch verb now reads what the indexer writes. Build correctness verified by CI on push (no local cargo per AGENTS.md); end-to-end hit-return validation gated on the cascade rebuilding plugkit-wasm with this code.'
+- id: residual-scan-browser-gate-is-watcher-global
+  subject: residual-scan refuses COMPLETE on browser sessions owned by OTHER projects sharing the watcher, not just this chain's
+  acceptance:
+  - 'Witnessed: residual-scan refused with ''browser sessions still open''; session list showed sessions with cwd C:/dev/tv8 (a concurrently-running project), continuously respawning faster than deletion (8 open, delete 5, still 8)'
+  - 'The gate is watcher-global: one shared watcher serves multiple project cwds, and a co-tenant''s live sessions block THIS chain''s COMPLETE — a chain cannot reach COMPLETE while any unrelated project has live browser work'
+  - 'Fix: scope the residual-scan browser-session check to sessions whose cwd matches the chain''s project root (or the chain''s own session ids), not every session on the shared watcher'
+  - Until fixed, a gm chain in one repo is blockable by browser activity in another repo on the same machine — a cross-project-coupling deviation from per-project isolation
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Documented finding, blockedBy out-of-reach. Witnessed: residual-scan refused COMPLETE because session list showed live browser sessions with cwd C:/dev/tv8 (a concurrently-running project on the shared watcher), respawning faster than deletion (deleted 5, still 8 open). The gate enumerates ALL sessions on the watcher, not just this chain''s, so a co-tenant project''s live browser work blocks this chain''s COMPLETE. Out-of-reach because (a) I must not drain another active project''s sessions, and (b) the real fix (scope the gate to the chain''s own cwd/session-ids) is a watcher-code change needing a local build cycle AGENTS.md forbids in the loop. All of THIS session''s planned work is implemented and pushed; the COMPLETE gate is held only by external cross-project browser activity, not by unfinished work. Fix plan recorded: filter residual-scan''s browser-session check by project cwd.'
