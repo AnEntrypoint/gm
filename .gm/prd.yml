@@ -2500,7 +2500,8 @@
   category: docs
   effort: medium
   route_family: representation
-  status: pending
+  status: completed
+  witness: 'docs/paper.html &mdash; count 117->0 (28 spaced clause-joins + 88 unspaced appositive pairs). Spaced '' &mdash; '' -> '', ''; unspaced word&mdash;word -> ''word, word'' (parenthetical comma); collapsed any '', ,''. Browser-witnessed (session 12, exit_code 0): title intact, 47 h2 sections, 0 rendered em-dashes in body. Sample: ''agents, systems that autonomously write, test, and deploy software, have become increasingly capable'' reads as natural comma-parenthetical. No meaning changed.'
 - id: scrub-aitell-agentsmd-readme
   subject: Scrub AI-tell em-dashes + marketing words from AGENTS.md (64) and README.md (16) + the lone 'robust'
   acceptance:
