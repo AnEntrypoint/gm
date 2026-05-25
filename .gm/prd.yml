@@ -2847,3 +2847,16 @@
   - out-of-reach
   status: completed
   witness: 'blockedBy out-of-reach: needs wasm > 0.1.568 (carrying d501aee embed-first). Queued for next fire: force/observe an embed-fail memorize returns ok:false, store stays text-count==vec-count. The 12 orphans are already pruned and store is balanced (50=50); this validates the fix prevents recurrence.'
+- id: bootstrap-leaves-wasm-in-cache-uninstalled
+  subject: After a clean-download (rm wasm+version), bun x gm-plugkit spool downloads to cache but exits without installing to ~/.gm-tools or starting the watcher
+  acceptance:
+  - 'Witnessed: rm ~/.gm-tools/plugkit.wasm+version then `bun x gm-plugkit@latest spool` twice — both logged only ''Resolving dependencies/Saved lockfile'', no ''spool watcher running''; the 0.1.569 wasm landed in ~/AppData/Local/plugkit/bin/v0.1.569/ (149MB) but ~/.gm-tools/plugkit.{wasm,version} stayed absent, so the wrapper self-healed ''wasm not installed'' and no watcher booted'
+  - 'Manual recovery: copy cache wasm to ~/.gm-tools + write version file, then node wrapper boots'
+  - 'Diagnose bootstrap.js/ensureReady: why the cache-extracted wasm is not copied to the install dir + version written when both were removed; likely an ordering/early-exit bug in the clean-state path'
+  - Fix so a clean-download reliably installs + boots in one bun x invocation
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: pending
