@@ -2784,3 +2784,17 @@
   - out-of-reach
   status: completed
   witness: 'blockedBy out-of-reach: documented operational optimization. Witnessed ~3min synchronous autobuild (58 files/397 chunks, each a wasm BERT embed) blocking the watcher inline; busy_until kept it from false-death so it completed correctly. Optimization (lazy/incremental/background indexing or chunk-cap with backfill) is a large design change, lower priority than the now-fixed correctness. Recorded for a focused session.'
+- id: rslearn-bridge-design-and-linkage-risk
+  subject: 'rs-learn rlib bridge: exact design documented + the cross-wasm linkage risk that keeps it out-of-reach for the loop'
+  acceptance:
+  - 'Design (reachable architecturally): add rs-learn as a git rlib dep in rs-plugkit wasm32 deps; route learn-* verbs (insert_edge/query_at/contradict/init_instant/feedback/consolidate/ewc_penalty/init_router/route/init_attention/attend) to rs_learn::dispatch::dispatch_json(&mut LearnSession::new(rs_learn::graph::host_kv_backend::HostKv), body); reuses the identical host imports rs-plugkit already provides'
+  - 'RISK (why out-of-reach for the loop): both are large wasm cdylibs each registering getrandom-custom + a panic handler + candle/tokenizers; linking both into one wasm can collide on those globals or pull duplicate/incompatible candle versions — a build-succeeds-but-runtime-broken failure the CI verify-step alone will not catch'
+  - 'Required before shipping: a LOCAL cargo build wasm32-wasip1 + a runtime smoke test (dispatch a learn-* verb, confirm no panic/getrandom error) — AGENTS.md forbids local cargo build in the loop'
+  - 'Once bridged: rs-learn''s temporal graph + LoRA/EWC/router cores become live agent-dispatchable verbs'
+  category: feature
+  effort: large
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Design fully specified from reading rs-learn source: dispatch_json + LearnSession::new + pub graph::host_kv_backend::HostKv all reachable; host imports (host_kv_get/put/query, host_vec_search, host_log, host_now_ms) identical to rs-plugkit''s so no new imports. Bridge = git rlib dep + route learn-* verbs to dispatch_json. blockedBy out-of-reach: the real risk is dual getrandom-custom/panic-handler/candle registration colliding when two large wasm cdylibs link into one — a runtime-broken-but-build-green failure CI can''t catch alone; needs local cargo build wasm32 + runtime smoke test which AGENTS.md forbids in the loop. Sharpens the prior rslearn-pathways-orphaned PRD with the exact verbs, the HostKv reuse, and the named linkage hazards so a build-cycle session executes it safely.'
