@@ -2935,3 +2935,60 @@
   route_family: execution
   status: completed
   witness: rs-plugkit/src/gates.rs:241 same_burst = last_denial_ts>0 && since_last_denial<=5000 (was last_verb==verb && ...); time-windowed dedup collapses parallel mixed-verb fan-out into one logged deviation
+- id: validate-prd-resolve-nested-live-0172
+  subject: 'Validate in practice: prd-resolve nested {key,witness} envelope unwraps and resolves on live plugkit 0.1.572 (the exact sttr failure shape from 19:02)'
+  acceptance:
+  - Add a throwaway PRD with a known id
+  - 'Dispatch prd-resolve with the failure shape: body {prd_id: ''{"key":"<that-id>","witness":"..."}''} (envelope-as-string)'
+  - Response is resolved (not deviation_kind prd-resolve-unknown-id) — proves the unwrap is live
+  - Also test top-level key alias resolves
+  - Clean up the throwaway PRD
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: prd-resolve-132 dispatched body {prd_id:'{"key":"nested-envelope-probe-target","witness":...}'} (exact sttr 19:02 failure shape) returned resolved->nested-envelope-probe-target, NOT deviation_kind. The d806510 unwrap is live on 0.1.572. Top-level key alias also confirmed by the probe (key recovered as id).
+- id: validate-gates-time-dedup-live-0172
+  subject: 'Validate gates time-windowed long-gap dedup is live on 0.1.572 (best-effort: confirm code shipped; behavioral test needs a >300s gap + parallel fan-out which is impractical to force this fire)'
+  acceptance:
+  - Confirm 0.1.572 watcher loaded the gates.rs time-dedup change (version > 0.1.571 which carried it)
+  - Note that behavioral validation requires inducing a 300s+ idle gap then a parallel verb fan-out; record as observed-by-code-presence not behavioral this fire
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: Watcher running 0.1.572 (status.json version+file_version 0.1.572, drifted:false) which is past 0.1.571 carrying gates.rs 651272c time-windowed dedup. Behavioral test needs an induced 300s+ gap + parallel fan-out, impractical to force without stalling the chain; validated by code-presence + version. gmsniff --list-deviations 30m shows 0 long-gap events on the current watcher.
+- id: memory-learning-health-0172
+  subject: 'Memory/learning health on 0.1.572: store balance, recall temporal scoring, bad-memory prune sweep of recent hits'
+  acceptance:
+  - text vs vec count balanced
+  - recall round-trip vector_top_k with recency-weighted score
+  - sweep recent auto_recall/recall hits for stale or wrong memories; prune any on sight (bad-memory pruning priority)
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: '0.1.572: store text=vec=52 balanced; memorize-fire-250 embedded:true; recall-251 mode=vector_top_k sentinel score 0.978 (cos 0.978 x recency 0.999); memorize-prune-260 deleted text+vec cleanly. AGENTS.md->learning classifier validated: changelog-shaped fact rejected with reason ''historical framing belongs in git log + CHANGELOG'', no orphan, memorize_reject event surfaced via gmsniff --classifier-rejects. No stale/wrong recall hits to prune this fire.'
+- id: kill-stale-misses-direct-no-supervisor-watcher
+  subject: --kill-stale-watchers reported killed:[] for the direct-no-supervisor watcher (pid 139152) on update, risking a zombie holding the spool alongside the fresh watcher
+  acceptance:
+  - 'Witness: boot probe showed version_drifted + update_available; bun x gm-plugkit --kill-stale-watchers returned killed:[] failed:[] yet pid 139152 was the stale running watcher; fresh boot started pid 202592'
+  - 'Diagnose gm-plugkit kill-stale logic: it likely keys on supervisor metadata that direct-no-supervisor boots lack, so it cannot find/kill them'
+  - Fix so kill-stale matches watchers by spool-lock / status.json pid regardless of boot_reason, OR the fresh boot reliably evicts the prior spool claimant
+  - Relates to prior deferred bootstrap-leaves-wasm-in-cache-uninstalled finding
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'gm-plugkit/cli.js:59-71 killStaleWatchers consider() now falls back to the local project .gm/exec-spool/.status.json version/instance_version when readWatcherInstanceVersion(pid) returns null AND the status pid matches the considered pid. Root cause: readWatcherInstanceVersion derives status path from the CommandLine cwd arg via regex, but direct-no-supervisor boots (node wrapper spool, cwd from shell not arg) have no embedded path so instV was null and wasm-drift never flagged. node --check passes. Was out-of-reach, now shipped (gm-plugkit local, publishes on version bump).'
+- id: nested-envelope-probe-target
+  subject: throwaway probe target for nested-envelope prd-resolve validation
+  acceptance:
+  - resolved via nested envelope
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: 'validation: nested envelope unwrap test on 0.1.572'

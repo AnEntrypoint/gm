@@ -54,12 +54,20 @@ function killStaleWatchers() {
     }
     const diskMtime = fs.statSync(wrapperPath).mtimeMs;
     const diskWasmVersion = readDiskWasmVersion();
+    let localStatus = null;
+    try {
+      const localStatusPath = path.join(process.cwd(), '.gm', 'exec-spool', '.status.json');
+      if (fs.existsSync(localStatusPath)) localStatus = JSON.parse(fs.readFileSync(localStatusPath, 'utf-8'));
+    } catch (_) { localStatus = null; }
     const stale = [];
     const fresh = [];
     function consider(pid, startedMs) {
       const reasons = [];
       if (startedMs < diskMtime) reasons.push('wrapper-mtime');
-      const instV = readWatcherInstanceVersion(pid);
+      let instV = readWatcherInstanceVersion(pid);
+      if (!instV && localStatus && localStatus.pid === pid) {
+        instV = localStatus.instance_version || localStatus.version || null;
+      }
       if (diskWasmVersion && instV && instV !== diskWasmVersion) reasons.push(`wasm-drift:${instV}->${diskWasmVersion}`);
       if (reasons.length > 0) stale.push({ pid, started_ms: startedMs, instance_version: instV, reasons });
       else fresh.push({ pid, started_ms: startedMs, instance_version: instV });
