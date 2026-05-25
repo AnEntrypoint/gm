@@ -2860,3 +2860,78 @@
   blockedBy:
   - out-of-reach
   status: completed
+- id: prd-resolve-tolerate-nested-envelope
+  subject: prd-resolve handle_resolve must recover the real id when prd_id/id holds a nested JSON-object-string like {"key":"X","witness":"Y"} instead of rejecting it as unknown-id
+  acceptance:
+  - 'Witness: gmsniff --list-deviations showed 5x prd-resolve-unknown-id (2026-05-25 19:02:19-23) from a steem/hive runner session passing prd_id={"key":"steem-runner-threshold...","witness":"..."} as a stringified envelope'
+  - In handle_resolve (rs-plugkit/src/orchestrator/prd.rs:166), after extracting id_target, if id_target itself parses as a JSON object, recover id from its key/id/prd_id/slug field and witness from its witness/witness_evidence field
+  - Top-level key accepted as an id alias (agents bleed rs-learn memorize 'key' vocabulary into prd-resolve)
+  - Recovered witness used only when no top-level witness_evidence was given
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: rs-plugkit/src/orchestrator/prd.rs:177-202 parse_resolve_target unwraps nested JSON-object-string in id, recovers key/id/prd_id/slug + witness; top-level key alias added at :168; pushed 87b34c6
+- id: prd-resolve-nested-recovery-corner-cases
+  subject: Every-possible corner cases for nested-envelope id recovery
+  acceptance:
+  - 'Nested object with key but no witness: recover id, no witness'
+  - 'Nested object whose recovered id ALSO is not a known row: still emit unknown-id but with the recovered (inner) id in the message, not the raw blob, so known_ids comparison is meaningful'
+  - 'Nested object that is valid JSON but an array or scalar (not object): do not attempt recovery, fall through to existing unknown-id path'
+  - 'Doubly-nested string (envelope inside envelope): recover only one level, do not infinite-loop'
+  - 'id_target that merely looks like JSON but fails to parse: unchanged behavior'
+  - 'Both top-level witness_evidence AND nested witness present: top-level wins'
+  category: bug
+  effort: low
+  route_family: execution
+  blockedBy:
+  - prd-resolve-tolerate-nested-envelope
+  status: completed
+  witness: 'rs-plugkit/src/orchestrator/prd.rs: array/scalar inner falls through (as_object None branch :197), no-recoverable-key keeps blob (recovered.unwrap_or(id) :196), top-level witness wins (wit.is_none() guard :189), single-level unwrap no loop (one from_str :177); covered by tests resolve_nested_array_falls_through_unchanged / resolve_nested_object_without_recoverable_key_keeps_blob / resolve_top_level_witness_wins_over_nested'
+- id: prd-resolve-unit-tests-nested
+  subject: Unit tests in prd.rs for nested-envelope recovery and all corner cases
+  acceptance:
+  - 'Test: prd_id holding {"key":"foo","witness":"bar"} recovers id=foo, witness=bar'
+  - 'Test: top-level key=foo maps to id'
+  - 'Test: nested array/scalar falls through unchanged'
+  - 'Test: existing resolve_unknown_id_returns_deviation_kind still passes'
+  category: test
+  effort: low
+  route_family: execution
+  blockedBy:
+  - prd-resolve-tolerate-nested-envelope
+  status: completed
+  witness: 'rs-plugkit/src/orchestrator/prd.rs:288+ 8 new tests: resolve_unwraps_nested_envelope_in_prd_id, resolve_accepts_top_level_key_alias, resolve_nested_recovers_id_alias_when_no_key, resolve_top_level_witness_wins_over_nested, resolve_nested_array_falls_through_unchanged, resolve_nested_object_without_recoverable_key_keeps_blob, resolve_plain_id_unaffected, resolve_raw_text_body_unaffected; existing resolve_unknown_id_returns_deviation_kind preserved'
+- id: validate-0170-prior-fixes-live
+  subject: 'Validate prior-fire commits live on plugkit 0.1.570: memorize embed-first atomicity, gate-dedup long-gap-burst'
+  acceptance:
+  - memorize-fire on 0.1.570 writes both text+vec, store balanced
+  - 'gate-dedup: rapid same-verb retries after gap collapse to one deviation not N'
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: 'plugkit 0.1.570 live (pid 139152): memorize-fire-220 returned embedded:true, store balanced 51->52->51 across memorize+prune; gate-dedup verb-keyed version (bb039f9) was live but exposed parallel-fanout race (see gate-dedup-time-based-not-verb-based) now fixed'
+- id: memory-store-health-0170
+  subject: 'Memory/learning system health check: text vs vec balance, orphan scan, bad-memory prune sweep'
+  acceptance:
+  - ls .gm/disciplines/default vs default-vec counts equal (no text-without-vec orphans)
+  - recall round-trip returns scored hits with temporal recency
+  - scan recent auto_recall hits for stale/wrong memories and prune on sight (bad-memory pruning > preservation)
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: text=vec=51 balanced (no orphans); recall-221 mode=vector_top_k returned sentinel at score 0.977 (cos 0.977 x recency 0.999 — temporal scoring active); memorize-prune-230 deleted both text+vec cleanly; auto_recall on instruction-100 surfaced 5 relevant scored hits. No stale/wrong hits observed warranting prune this fire — recent hits all accurate prior-iter records.
+- id: gate-dedup-time-based-not-verb-based
+  subject: long-gap deviation dedup must be time-windowed not verb-keyed; verb-keyed dedup raced under parallel orient fan-out (recall+codesearch) producing 4 deviations for one logical gate-trip
+  acceptance:
+  - 'Witness: gmsniff showed 4 long-gap-no-instruction at 18:47:34 (recall,recall,codesearch,codesearch) gap_ms within 13ms — a parallel orient fan-out after idle, each logged because verb-keyed dedup saw no matching last_verb under non-atomic retry-state read-modify-write race'
+  - 'Fix rs-plugkit/src/gates.rs: same_burst now = last_denial_ts>0 && since_last_denial<=5000 (time-based), independent of verb'
+  - Escalation count still tracks genuine same-verb retries past the 5s window
+  - deny still fires per dispatch; only audit-log dedups
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: rs-plugkit/src/gates.rs:241 same_burst = last_denial_ts>0 && since_last_denial<=5000 (was last_verb==verb && ...); time-windowed dedup collapses parallel mixed-verb fan-out into one logged deviation
