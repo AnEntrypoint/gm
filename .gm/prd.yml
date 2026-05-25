@@ -3105,3 +3105,57 @@
   - out-of-reach
   status: completed
   witness: 'Triaged out-of-reach: needs a gm-plugkit wrapper auto-update redesign (respawn-then-handoff, or detect-drift-on-next-boot instead of self-tear-down) + cascade publish to validate. Witnessed + recovery (manual boot self-updates+drains queue) recorded in mem-1779742294534. Same version-transition-lifecycle fragility class as kill-stale + bootstrap-cache findings. Deferred to a wrapper-lifecycle fire.'
+- id: browser-pid-dead-is-not-a-collision-deviation
+  subject: browser-profile pid-dead stale entry should be silently reclaimed (informational browser.stale-reclaimed event), not flagged as deviation.browser-profile-collision; tv8 fired 4 false deviations in 8 minutes for routine dead-browser cleanup
+  acceptance:
+  - 'Witness: gmsniff showed 4x deviation.browser-profile-collision from tv8 20:46-20:54 all reason:pid-dead (profile C:/dev/tv8/.gm/browser-profile)'
+  - 'getOrCreateBrowserSession: pid-dead branch now logs plugkit/browser.stale-reclaimed (informational), only cdp-dead/profile-drift remain deviation.browser-profile-collision (true anomalies: pid alive but CDP unreachable, or profile path mismatch)'
+  - node --check passes
+  - cleanup still happens (purge lock, delete stale ports/sessions entries)
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js:958-977 getOrCreateBrowserSession: pid-dead branch now logs plugkit/browser.stale-reclaimed (informational), cdp-dead/profile-drift remain deviation.browser-profile-collision. node --check passes. Cleanup (purgeProfileLockFiles + delete stale ports/sessions) unchanged. Eliminates the 4x false tv8 deviations for routine dead-browser reclaim.'
+- id: validate-prd-add-fallback-live-0177
+  subject: Validate prd-add field-fallback (title/description) is live on 0.1.577; confirm the 20:39 prd-add-no-id was pre-deploy not a regression
+  acceptance:
+  - 20:39 prd-add-no-id ran on pre-0.1.577 watcher (0.1.575 published 20:38, not yet booted) — not a regression
+  - Dispatch prd-add with content in title (no subject/id) and confirm it slugifies + admits instead of rejecting
+  - Clean up the probe
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: prd-add-190 with only title (no id/subject) admitted as validate-title-field-fallback-probe-on-0177 — field-fallback LIVE on 0.1.577. 20:39 prd-add-no-id confirmed pre-deploy (0.1.575 published 20:38, not yet booted into watcher; my 0.1.577 boot was ~20:50) — not a regression.
+- id: memory-learning-health-0177
+  subject: 'Memory/learning health on 0.1.577: store balance, recall temporal scoring, classifier (widened blacklist now live), bad-memory prune sweep'
+  acceptance:
+  - text=vec balanced
+  - recall vector_top_k temporal-scored
+  - widened changelog classifier now rejects the previously-leaking shapes (fixed-in-commit, previously-did, dated-audit)
+  - sweep recent hits, prune any stale/wrong on sight
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: 'store balanced 55/55 throughout; widened changelog classifier (iter20 fix, live on 0.1.577) RE-TESTED: ''FIXED in commit cafebabe, previously did...dated audit entry'' now REJECTED ok:false (was leaking last fire), no orphan. recall vector_top_k temporal-scored hits accurate. No stale/wrong recall hits warranting prune this fire.'
+- title: Validate Title Field Fallback Probe On 0177
+  category: validation
+  id: validate-title-field-fallback-probe-on-0177
+  status: completed
+  witness: 'throwaway validation probe: title-only prd-add admitted as validate-title-field-fallback-probe-on-0177, proving field-fallback live on 0.1.577'
+- id: classifier-substring-false-positive-on-self-describing-facts
+  subject: The widened changelog classifier is substring-based and self-rejects legitimate session-learning memories that QUOTE a changelog-trigger phrase (e.g. a fact describing 'the fixed-in-commit shape was rejected' gets caught by the 'fixed in commit' pattern)
+  acceptance:
+  - 'Witness this fire: memorize-fire-340 (a legitimate iter22 learning) rejected by its own quoted ''FIXED in commit'' substring; rephrased 341 stored fine'
+  - 'Consider a more precise rule: trigger only when the phrase is the memo''s PRIMARY framing (e.g. sentence-initial, or the memo is short and dominated by the pattern) rather than any-substring; OR allow an explicit override field for meta-facts about the classifier'
+  - 'Tradeoff: substring is simple+safe (false-positive costs a rephrase, false-negative leaks bad memory which is worse per user priority) — bias stays toward rejection'
+  - 'Low priority: workaround (phrase without literal triggers) is documented in mem'
+  category: chore
+  effort: low
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Triaged: bias-toward-rejection is correct (a false-positive costs a rephrase; a false-negative leaks bad memory which the user ranks worse). Workaround documented in mem-1779743390991. A precise sentence-position/override-field refinement is a larger classifier redesign deferred out-of-reach; not worth destabilizing the simple safe substring rule for a rephrase-cost false positive.'

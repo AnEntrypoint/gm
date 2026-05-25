@@ -957,13 +957,22 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
       }
     } else {
       const reason = !pidOk ? 'pid-dead' : (!cdpOk ? 'cdp-dead' : 'profile-drift');
-      logEvent('hook', 'deviation.browser-profile-collision', {
-        sid: claudeSessionId,
-        stale_pid: existing.pid || null,
-        stale_profile: existing.profileDir || null,
-        want_profile: wantProfile,
-        reason,
-      });
+      if (reason === 'pid-dead') {
+        logEvent('plugkit', 'browser.stale-reclaimed', {
+          sid: claudeSessionId,
+          stale_pid: existing.pid || null,
+          stale_profile: existing.profileDir || null,
+          want_profile: wantProfile,
+        });
+      } else {
+        logEvent('hook', 'deviation.browser-profile-collision', {
+          sid: claudeSessionId,
+          stale_pid: existing.pid || null,
+          stale_profile: existing.profileDir || null,
+          want_profile: wantProfile,
+          reason,
+        });
+      }
       if (typeof gracefulCloseBrowser === 'function') {
         try { gracefulCloseBrowser(existing, `collision:${reason}`); } catch (_) {}
       } else if (pidOk && Number.isFinite(existing.pid)) {
