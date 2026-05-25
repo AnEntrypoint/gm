@@ -2079,3 +2079,34 @@
   witness_evidence: '6h tv8 sample: all 3 collisions reason:pid-dead. blockedBy:scope-this-turn-future-investigation.'
   id: note-tv8-pid-dead-collision-subset-for-future-investigation
   witness: 'pid-dead vs cdp-dead distinction documented. pid-dead (whole chromium exit) likely OOM on tv8 long terrain sessions. Future iter: check chromium memory flags / RSS monitor. Recovers cleanly via collision handler; not blocking. blockedBy:scope-this-turn-future-investigation.'
+- id: plugkit-fresh-prompt-resets-complete
+  subject: instruction verb resets phase COMPLETE->PLAN on a fresh prompt that differs from last-prompt
+  acceptance:
+  - handle_instruction compares prompt to read_last_prompt(); if phase==COMPLETE, no phase= override, and prompt differs, set phase=PLAN and persist via write_state
+  - SKILL.md promise 'a fresh prompt resets phase to PLAN' is now implemented in code
+  - 'Witness next loop iteration: a {prompt:...} body on a COMPLETE chain returns PLAN instruction'
+  category: bug
+  effort: medium
+  route_family: execution
+  status: pending
+- id: plugkit-complete-chain-poll-deviation
+  subject: instruction verb emits deviation.complete-chain-poll when re-dispatched on terminal chain
+  acceptance:
+  - 'idev() helper added to instructions/mod.rs mirroring gates.rs log_deviation evt: line format'
+  - When phase==COMPLETE, no phase= override, prd_pending==0, and prompt is empty/unchanged, emit deviation.complete-chain-poll
+  - gmsniff --grep deviation surfaces the poll anti-pattern that SKILL.md describes
+  category: feature
+  effort: small
+  route_family: execution
+  status: pending
+- id: wrapper-turn-idle-span-fix
+  subject: turn.end dur_ms no longer balloons across idle gaps from non-instruction verbs
+  acceptance:
+  - turnTick idle-split (now - lastTs > TURN_IDLE_MS) runs for ALL verbs, not just instruction
+  - Stale turn closed with idle_spanned:true before a post-idle verb stamps lastTs forward
+  - Non-instruction verb after idle does not open a turn; next instruction does
+  - 'Witness: no turn.end with multi-hour dur_ms and single-digit dispatches'
+  category: bug
+  effort: medium
+  route_family: execution
+  status: pending

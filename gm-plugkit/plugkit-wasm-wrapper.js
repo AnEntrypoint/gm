@@ -288,29 +288,39 @@ function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
   return JSON.stringify(parsed);
 }
 
+function endTurn(sess, t, idleSpanned) {
+  logEvent('plugkit', 'turn.end', {
+    sess, turn_idx: t.idx, dur_ms: t.lastTs - t.startTs,
+    dispatches: t.dispatches, verbs: Object.fromEntries(t.verbs),
+    phases_walked: [...t.phases], deviations: t.deviations,
+    ended_in_phase: t.lastPhase || null,
+    idle_spanned: !!idleSpanned,
+  });
+}
+
 function turnTick(sess, verb, taskBase, phase) {
   const key = sess || '(no-session)';
   const now = Date.now();
   let t = _turns.get(key);
-  if (verb === 'instruction') {
-    if (t && (now - t.lastTs) > TURN_IDLE_MS) {
-      logEvent('plugkit', 'turn.end', {
-        sess, turn_idx: t.idx, dur_ms: t.lastTs - t.startTs,
-        dispatches: t.dispatches, verbs: Object.fromEntries(t.verbs),
-        phases_walked: [...t.phases], deviations: t.deviations,
-        ended_in_phase: t.lastPhase || null,
-      });
-      t = null;
-    }
-    if (!t) {
-      const idx = ((_turns.get(key + ':lastIdx') || 0) + 1);
-      _turns.set(key + ':lastIdx', idx);
-      t = { idx, startTs: now, lastTs: now, dispatches: 0, verbs: new Map(), phases: new Set(), deviations: 0, lastPhase: phase };
-      _turns.set(key, t);
-      logEvent('plugkit', 'turn.start', { sess, turn_idx: idx, phase: phase || null });
-    }
+  // Any verb arriving after an idle gap closes the stale turn — not just instruction.
+  // Otherwise a non-instruction verb (prd-add, mutable-resolve, transition) landing
+  // after an overnight sleep stamps t.lastTs forward without splitting, and dur_ms
+  // (lastTs - startTs) balloons to wall-clock-with-sleep instead of active work time.
+  if (t && (now - t.lastTs) > TURN_IDLE_MS) {
+    endTurn(sess, t, true);
+    _turns.delete(key);
+    t = null;
   }
-  if (!t) return;
+  if (!t) {
+    // Only an instruction dispatch opens a new turn; a stray non-instruction verb after
+    // idle is recorded against no turn (the next instruction starts the real turn).
+    if (verb !== 'instruction') return;
+    const idx = ((_turns.get(key + ':lastIdx') || 0) + 1);
+    _turns.set(key + ':lastIdx', idx);
+    t = { idx, startTs: now, lastTs: now, dispatches: 0, verbs: new Map(), phases: new Set(), deviations: 0, lastPhase: phase };
+    _turns.set(key, t);
+    logEvent('plugkit', 'turn.start', { sess, turn_idx: idx, phase: phase || null });
+  }
   t.lastTs = now;
   t.dispatches++;
   t.verbs.set(verb, (t.verbs.get(verb) || 0) + 1);
