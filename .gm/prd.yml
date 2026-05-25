@@ -2674,3 +2674,27 @@
   - out-of-reach
   status: completed
   witness: Documented as secondary provenance risk, blockedBy out-of-reach. release.yml bump job runs 'git rebase -s recursive -X theirs origin/main' after committing the version bump — -X theirs takes origin's side on conflicts, which could revert a just-pushed source change if a concurrent push overlapped. Assessment needs a CI-behavior test + workflow redesign (narrow rebase to Cargo.toml or fail-on-conflict); out-of-reach for the loop. The primary cause (stale-cache) is fixed in 0905378; this is the lower-probability secondary vector kept on record.
+- id: decouple-codeindex-from-libsql
+  subject: code_index file-vec dual-write must run even when libsql ensure_schema fails — was aborting early
+  acceptance:
+  - 'Validated on 0.1.563 (built fresh from the codesearch commit via the provenance fix): codesearch STILL returned {data:[]} in ~180ms, zero code_index log — autobuild called index() which died at ''if Err(ensure_schema) return'' (libsql/wasi schema init fails in this wasm)'
+  - 'Fix rs-plugkit 4689b7d: ensure_schema best-effort (libsql_ok flag), libsql INSERT guarded by it, file-vec dual-write always runs, added entry log (root/files/libsql_ok)'
+  - 'This was the 4th and deepest layer of the codesearch-empty issue: routing -> backend-split -> build-provenance -> libsql-gate'
+  - 'Validate on next cascade: codesearch autobuild populates codeinsight-vec and returns hits'
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit 4689b7d: index() no longer returns early on ensure_schema failure — libsql_ok flag, libsql INSERT guarded, file-vec dual-write (host_kv_put codeinsight/codeinsight-vec) always runs, entry log added. Diagnosed by: 0.1.563 (built from 09053784 = the provenance fix commit, so binary IS fresh and contains e17696d) STILL returned codesearch {data:[]} in 180ms with zero code_index log — the autobuild''s index() call aborted at the libsql ensure_schema gate before any file-vec write. The rs-learn.db wasi-shim fragility (known) makes ensure_schema fail in this wasm. Now decoupled. CI builds; validate on next cascade.'
+- id: revalidate-codesearch-after-libsql-decouple
+  subject: Re-validate codesearch autobuild end-to-end once the cascade publishes the wasm with rs-plugkit 4689b7d
+  acceptance:
+  - 'After version > 0.1.563 publishes (carrying 4689b7d): codesearch on empty index logs ''code_index: indexing root=. files=N libsql_ok=...'', populates .gm/disciplines/codeinsight-vec, and returns ranked hits'
+  - Confirms the full codesearch chain works (routing + backend + provenance + libsql-decouple all stacked)
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'blockedBy out-of-reach: cannot validate code that hasn''t deployed. Recorded as the next-cascade validation task — after version > 0.1.563 (carrying 4689b7d) publishes, dispatch codesearch on empty index and witness the ''code_index: indexing'' log + populated codeinsight-vec + ranked hits. The provenance fix (0905378) now guarantees the build reflects HEAD, so the next version genuinely carries the libsql-decouple.'
