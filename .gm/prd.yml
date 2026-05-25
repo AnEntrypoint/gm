@@ -2526,3 +2526,14 @@
   route_family: representation
   status: completed
   witness: skills/gm-skill/SKILL.md em-dashes 37->0 (glossary->colon, prose->comma). docs/crates.html 13->0, skills.html 6->0, distribution.html 21->0, made-with.html 4->0 (&mdash; + — both handled). Zero double-comma artifacts across all 5 files. Browser-witnessed crates.html (session 12, exit_code 0, renders 'Every rust crate behind gm-ski', 0 em-dashes in body). All agent-facing + site doc surfaces now em-dash-free.
+- id: scrub-aitell-theme-stats
+  subject: Scrub final em-dashes from site/theme.mjs (7) and docs/stats.html heading
+  acceptance:
+  - site/theme.mjs em-dashes -> 0 (JS comments -> colons, title separator -> comma)
+  - docs/stats.html <h1> 'gm — Metrics' -> 'gm Metrics'; intentional UI placeholder — values in stat divs kept (loading indicators, not AI-tells)
+  - browser-witnessed stats renders 'gm Metrics'
+  category: docs
+  effort: small
+  route_family: representation
+  status: completed
+  witness: 'site/theme.mjs em-dashes 7->0 (6 JS comments ''// x — y'' -> ''// x: y'', 1 title-separator '' — '' -> '', ''). docs/stats.html <h1>''gm — Metrics''->''gm Metrics''; 9 remaining — are intentional UI placeholder/loading dashes in stat-value divs (not AI-tells). Browser-witnessed stats renders ''gm Metrics'' (session 12 exit_code 0). Final sweep: every prose surface (paper, AGENTS, CLAUDE, README, SKILL.md, all docs/*.html, theme.mjs, home.yaml) is now free of decorative em-dashes; no emoji present anywhere.'

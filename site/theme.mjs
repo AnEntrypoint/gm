@@ -1,4 +1,4 @@
-// gm site renderer — delegates to anentrypoint-design SDK (window.ds.components).
+// gm site renderer: delegates to anentrypoint-design SDK (window.ds.components).
 // Mirrors C:/dev/247420/lib/components.js: load the SDK from unpkg, render every
 // page via C.AppShell + C.Topbar + C.Crumb + C.Panel + C.Status. No vendored
 // RippleUI/XState. No inline tokens. Pages render at runtime in the browser.
@@ -57,7 +57,7 @@ function flattenNav(nav) {
 const SDK_CSS = 'https://unpkg.com/anentrypoint-design@latest/dist/247420.css';
 const SDK_JS  = 'https://unpkg.com/anentrypoint-design@latest/dist/247420.js';
 
-// Client renderer — runs in the browser. Reads __site__ JSON, builds the page
+// Client renderer: runs in the browser. Reads __site__ JSON, builds the page
 // via window.ds.components (C), mounts into #app. Every surface is an SDK
 // primitive: Topbar, AppShell, Crumb, Panel, Section, Install, Receipt,
 // Manifesto, Chip, Heading, Lede, Status. No hand-rolled HTML.
@@ -122,7 +122,7 @@ const buildArticleMain = () => {
   if (C.Heading) main.push(C.Heading({ level: 1, children: page.title || site.title || '' }));
   if (page.subtitle && C.Lede) main.push(C.Lede({ children: page.subtitle }));
   else if (page.description && C.Lede) main.push(C.Lede({ children: page.description }));
-  // Article HTML — empty host now; innerHTML injected after applyDiff mounts.
+  // Article HTML: empty host now; innerHTML injected after applyDiff mounts.
   main.push(h('div', { class: 'ds-prose', id: 'ds-article-host' }));
   return main;
 };
@@ -146,7 +146,7 @@ const buildLandingMain = () => {
   const badges = (hero.badges || []).map((b, i) => C.Chip ? C.Chip({ key: i, tone: 'dim', children: b.label }) : h('span', { key: i }, b.label));
   if (badges.length) main.push(h('div', { class: 'work-detail-chips' }, ...badges));
 
-  // Features panel — every item becomes a .row.
+  // Features panel: every item becomes a .row.
   const features = page.features;
   if (features && features.items && features.items.length && C.Panel) {
     main.push(C.Panel({
@@ -160,7 +160,7 @@ const buildLandingMain = () => {
     }));
   }
 
-  // Quickstart — single CLI block (no SDK Install widget; that duplicates the cmd that already lives inline in lines).
+  // Quickstart: single CLI block (no SDK Install widget; that duplicates the cmd that already lives inline in lines).
   const qs = page.quickstart;
   if (qs && qs.lines && qs.lines.length) {
     main.push(h('h3', {}, qs.heading || 'quick start'));
@@ -179,7 +179,7 @@ const buildLandingMain = () => {
     ));
   }
 
-  // Examples / "read further" — Panel of .row links.
+  // Examples / "read further": Panel of .row links.
   const ex = page.examples;
   if (ex && ex.items && ex.items.length && C.Panel) {
     main.push(C.Panel({
@@ -222,7 +222,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(page.title || site.title)}${site.tagline ? ' — ' + escapeHtml(site.tagline) : ''}</title>
+  <title>${escapeHtml(page.title || site.title)}${site.tagline ? ', ' + escapeHtml(site.tagline) : ''}</title>
   <meta name="description" content="${escapeHtml(page.description || site.description || site.tagline || site.title)}" />
   <meta property="og:title" content="${escapeHtml(page.title || site.title)}" />
   <meta property="og:description" content="${escapeHtml(page.description || site.description || site.tagline || '')}" />
