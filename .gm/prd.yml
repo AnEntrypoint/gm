@@ -2698,3 +2698,28 @@
   - out-of-reach
   status: completed
   witness: 'blockedBy out-of-reach: cannot validate code that hasn''t deployed. Recorded as the next-cascade validation task — after version > 0.1.563 (carrying 4689b7d) publishes, dispatch codesearch on empty index and witness the ''code_index: indexing'' log + populated codeinsight-vec + ranked hits. The provenance fix (0905378) now guarantees the build reflects HEAD, so the next version genuinely carries the libsql-decouple.'
+- id: fix-listdir-entry-object-shape
+  subject: code_index list_dir must extract name from host entry-objects, not just bare strings — was finding files=0
+  acceptance:
+  - 'On 0.1.564 the autobuild FIRED (log: code_index: indexing root=. files=0 libsql_ok=true) — layers 1-4 validated working — but found files=0'
+  - 'Root cause: list_dir parsed host_fs_readdir expecting bare strings (x.as_str()), but the wrapper returns {name,is_dir,is_file} objects; every object failed as_str -> empty list -> files=0 -> empty index'
+  - 'Fix rs-plugkit 6a45c67: list_dir extracts name/path/file from objects + still accepts bare strings'
+  - 5th and final layer of the codesearch-empty bug; validate full chain on next cascade > 0.1.564
+  category: bug
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit 6a45c67: list_dir now extracts name from host entry-objects (name/path/file keys) as well as bare strings. Diagnosed on 0.1.564 where the autobuild fired for the first time (code_index: indexing root=. files=0 libsql_ok=true) — proving layers 1-4 (routing/backend/provenance/libsql-decouple) all work — but found files=0 because list_dir''s x.as_str() returned None for every {name,is_dir,is_file} object the wrapper emits. Validate full chain on next cascade > 0.1.564.'
+- id: revalidate-codesearch-after-listdir-fix
+  subject: Re-validate codesearch end-to-end once cascade publishes wasm > 0.1.564 (carrying list_dir fix 6a45c67)
+  acceptance:
+  - 'After version > 0.1.564: codesearch on empty index logs ''code_index: indexing root=. files=N'' with N>0, populates .gm/disciplines/codeinsight-vec, returns ranked hits'
+  - 'Confirms all 5 codesearch layers stacked: routing + backend + provenance + libsql-decouple + readdir-shape'
+  - If files still 0, the next layer is walk_posix's dot-heuristic or host readdir path resolution
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'blockedBy out-of-reach: validation needs the wasm > 0.1.564 (carrying 6a45c67) to publish. Queued for the next loop fire: codesearch on empty index should log files=N>0 + populate codeinsight-vec + return hits. The provenance fix guarantees the build reflects HEAD so the next version genuinely carries the list_dir fix.'
