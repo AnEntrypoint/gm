@@ -2798,3 +2798,27 @@
   - out-of-reach
   status: completed
   witness: 'Design fully specified from reading rs-learn source: dispatch_json + LearnSession::new + pub graph::host_kv_backend::HostKv all reachable; host imports (host_kv_get/put/query, host_vec_search, host_log, host_now_ms) identical to rs-plugkit''s so no new imports. Bridge = git rlib dep + route learn-* verbs to dispatch_json. blockedBy out-of-reach: the real risk is dual getrandom-custom/panic-handler/candle registration colliding when two large wasm cdylibs link into one — a runtime-broken-but-build-green failure CI can''t catch alone; needs local cargo build wasm32 + runtime smoke test which AGENTS.md forbids in the loop. Sharpens the prior rslearn-pathways-orphaned PRD with the exact verbs, the HostKv reuse, and the named linkage hazards so a build-cycle session executes it safely.'
+- id: memorize-atomic-embed-or-refuse
+  subject: memorize_with_raw must embed-first and refuse text-only writes, preventing un-vector-recallable orphans
+  acceptance:
+  - 'Witnessed: default ns had 61 text but 49 vec — 12 text-without-vec orphans from early-May embed failures (text written before embed, embed returned None, text persisted with no vector)'
+  - 'Fix rs-plugkit: embed FIRST, write text only on embed success, else return err ''embed failed; refusing text-only memory'' — atomic by construction, no future orphans'
+  - Mirrors code_index's NULL-embedding refusal discipline
+  - 'Validate on cascade: a memorize with embed failure returns ok:false instead of creating an orphan'
+  category: bug
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit d501aee: memorize_with_raw now embeds first (match crate::embed::embed_text_json -> None returns err ''refusing text-only memory''), writes text + vec only on success. Prevents the text-without-vec orphan class. Validates on cascade: memorize with embed-fail returns ok:false. Root cause of the 12 orphans witnessed this fire (text 61 vs vec 49).'
+- id: prune-12-orphan-memories
+  subject: Prune the 12 text-without-vec orphan memories (bad memory > preservation)
+  acceptance:
+  - 11 real May-16/17 iteration notes (un-vector-recallable, superseded) + 1 tombstone pruned via memorize-prune explicit-key
+  - 'default ns now balanced: text 49 = vec 49, every memory vector-recallable'
+  - memorize-prune batch (12 keys) validated working on 0.1.568
+  - Pruned files committed (git rm shows the deletions)
+  category: infra
+  effort: small
+  route_family: state
+  status: completed
+  witness: All 12 text-without-vec orphans pruned via memorize-prune explicit-key (tasks 40-51, each returned deleted:[key]). default ns now balanced text 49 = vec 49 (was 61/49). 11 were superseded May-16/17 iteration notes, 1 a tombstone — all un-vector-recallable degraded memory. git shows 12 deletions to commit. memorize-prune batch validated on 0.1.568.
