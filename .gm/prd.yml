@@ -2579,3 +2579,28 @@
   - out-of-reach
   status: completed
   witness: 'Documented finding, blockedBy out-of-reach. Witnessed: residual-scan refused COMPLETE because session list showed live browser sessions with cwd C:/dev/tv8 (a concurrently-running project on the shared watcher), respawning faster than deletion (deleted 5, still 8 open). The gate enumerates ALL sessions on the watcher, not just this chain''s, so a co-tenant project''s live browser work blocks this chain''s COMPLETE. Out-of-reach because (a) I must not drain another active project''s sessions, and (b) the real fix (scope the gate to the chain''s own cwd/session-ids) is a watcher-code change needing a local build cycle AGENTS.md forbids in the loop. All of THIS session''s planned work is implemented and pushed; the COMPLETE gate is held only by external cross-project browser activity, not by unfinished work. Fix plan recorded: filter residual-scan''s browser-session check by project cwd.'
+- id: prd-slug-alias-cross-llm-predictability
+  subject: Accept slug as id alias on prd-add/prd-resolve so an LLM calling the field slug isn't rejected
+  acceptance:
+  - 'Witnessed deviation: prd-resolve got {verb:prd-resolve,slug:feat-bruneton-true-param}, slug key unrecognized, fell through to not-found'
+  - 'Fixed rs-plugkit 5304958: slug added to provided_id alias chain (prd-add) and id_target alias chain (prd-resolve), hint updated'
+  - 'Cross-LLM predictability: same intent succeeds regardless of id-field synonym'
+  - Validation gated on cascade publishing the wasm with this code
+  category: feature
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit 5304958: handle_resolve id_target chain now has .or_else(v.get(''slug'')); prd-add provided_id chain now has slug + prd_id aliases; unknown-id hint lists slug. Resolves the witnessed {verb,slug} malformed-resolve deviation. CI verifies build; behavior live on next cascade.'
+- id: validate-codesearch-dualwrite-on-cascade
+  subject: Validate codesearch autobuild + file-vec dual-write once the cascade publishes the wasm carrying rs-plugkit e17696d
+  acceptance:
+  - Running 0.1.561 returned codesearch ok:true hits:0 with codeinsight-vec dir still empty — the dual-write/autobuild fix (e17696d) is not yet in the published wasm (version lag, expected)
+  - When the cascade publishes the wasm with e17696d, a codesearch on an empty index autobuilds then returns ranked hits, and .gm/disciplines/codeinsight-vec populates
+  - Re-validate on the next loop fire after the version advances
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Confirmed version lag: running 0.1.561 codesearch returns ok:true hits:0 and .gm/disciplines/codeinsight-vec is empty — the dual-write/autobuild fix e17696d is not yet in the published wasm. blockedBy out-of-reach this fire (cannot validate code that hasn''t deployed); the next loop fire after the cascade advances re-runs the codesearch probe to witness autobuild + populated index. Fix is pushed and CI-built.'
