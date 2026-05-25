@@ -2126,3 +2126,69 @@
   route_family: execution
   status: completed
   witness: 'Watcher booted 0.1.553->0.1.554 (.status.json version=0.1.554 pid=151052). DEFECT A: .watcher.log line ts=1779698028173 evt deviation.complete-chain-poll fired on empty-body instruction at phase=COMPLETE prd_pending=0. DEFECT C: instruction-14 with fresh prompt returned phase=PLAN from a COMPLETE chain (no phase= override). DEFECT B: gmsniff 30m turn.end events show max dur_ms=743377 (12min real work, 8 dispatches), no multi-hour overflow. 30m audit: single deviation browser-profile-collision in tv8 self-recovered (close+relaunch same instant). All prior-iter fixes working in practice.'
+- id: brick-wall-no-toolless-turn-skill
+  subject: 'SKILL.md hard rule: never emit a turn without a tool call; never summarize until plugkit COMPLETE; recheck phase-status before stopping'
+  acceptance:
+  - SKILL.md opening carries a load-bearing brick-wall section stating an assistant message with no tool call IS a stop
+  - 'States: while chain in-flight, every turn ends in a tool call (dispatch the next verb), never in prose'
+  - 'States: never summarize/narrate-as-closure until plugkit returns phase=COMPLETE AND prd_pending=0'
+  - 'States: before any apparent stop or summary, dispatch phase-status to recheck; if not terminal, dispatch instruction and continue'
+  - 'Tool-agnostic: no hook/tool-specific mechanism named'
+  category: refactor
+  effort: medium
+  route_family: representation
+  status: pending
+- id: brick-wall-no-toolless-turn-orchestrator
+  subject: rs-plugkit instruction prose (plan/execute/emit/verify/complete + entry) encodes the no-toolless-turn brick wall
+  acceptance:
+  - Each phase prose states the chain advances only by a dispatched verb; a prose-only turn is a stop and a deviation
+  - 'verify/complete prose: recheck phase-status before declaring done; summary is authorized only by COMPLETE gate'
+  - entry.rs names the rule as the first continuation invariant
+  - Terse imperative, no numbered procedure
+  category: refactor
+  effort: medium
+  route_family: representation
+  status: pending
+- id: brick-wall-agents-md
+  subject: 'AGENTS.md Core Rule: text-without-toolcall is a stop; continuation requires a tool call every turn until COMPLETE'
+  acceptance:
+  - AGENTS.md has a present-tense Core Rule stating the no-toolless-turn / no-premature-summary / recheck-before-stop discipline
+  - Frames it as tool-agnostic continuation mechanism (works on every agent, no hooks)
+  - No changelog/dated framing
+  category: docs
+  effort: small
+  route_family: representation
+  status: pending
+- id: spawnpoint-stop-rootcause
+  subject: Diagnose why spawnpoint agents bundle work into one turn/session then stop
+  acceptance:
+  - ccsniff + gmsniff read for the most recent spawnpoint session
+  - 'Identify the stop signature: prose-only final message, premature COMPLETE, or no plugkit dispatch at all'
+  - Name whether any tool-specific/hook mechanism is involved that must be eliminated for cross-agent parity
+  - Findings recorded as witness; corrective PRD rows added if a code/prose fix is implicated
+  category: infra
+  effort: medium
+  route_family: execution
+  status: pending
+- id: eliminate-claude-specific-hook-exports
+  subject: Remove Claude-Code-specific hook JSON (permissionDecision/hookSpecificOutput, Skill(gm:gm)/Agent subagent_type) from rs-plugkit wasm_hooks; the spool is the only portable gate
+  acceptance:
+  - rs-plugkit/src/lib.rs pre_tool_use/post_tool_use/session_start no longer emit hookSpecificOutput/permissionDecision (Claude Code hook schema)
+  - No prose names Skill(skill=gm:gm) or Agent(subagent_type=gm:gm) as the gate-satisfying action — those are Claude-Code-only forms
+  - Confirm no live caller depends on these exports (grep wasm_hooks::pre_tool_use callers); AGENTS.md already says spool-dispatch replaces hooks
+  - Gate enforcement is the spool long-gap / needs-gm marker path, identical on every agent
+  category: refactor
+  effort: large
+  route_family: execution
+  status: pending
+- id: spawnpoint-subagent-bundles-and-stops
+  subject: Subagent-form orchestration (Agent subagent_type=gm:gm) bundles work and reports Done in prose, causing the parent to stop
+  acceptance:
+  - 'Witnessed in ccsniff session 627dff5f: subagent tool_results end with prose ''Done. Updated...'' and parent assistant/text recaps then /exit'
+  - 'Root cause documented: subagent isolation returns a prose summary that the parent treats as closure (no continuing tool call)'
+  - Brick-wall rule (no toolless turn, no summary until COMPLETE) addresses the parent-side stop
+  - Subagent-preferred guidance removed as part of eliminate-claude-specific-hook-exports since Agent subagent is Claude-Code-specific
+  category: infra
+  effort: medium
+  route_family: execution
+  status: pending
