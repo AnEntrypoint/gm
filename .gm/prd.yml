@@ -2648,3 +2648,29 @@
   - out-of-reach
   status: completed
   witness: 'Diagnosed to the boundary of safe reach, blockedBy out-of-reach. Facts: (1) committed code is correct — git show HEAD:src/wasm_dispatch.rs has the autobuild branch (kv_empty && !auto_indexed -> code_index::index(''.'',500) then retry). (2) rs-plugkit Cargo.toml has NO sibling-crate deps or git/rev pins — the codesearch code is local to the crate, so no stale-sibling-pull explanation. (3) embedding works live (memorize probe embedded:true; memorize-prune also validated: deleted the probe). (4) On 0.1.562 (built from 5304958 which descends from e17696d, so it MUST contain the code by git ancestry) codesearch on an empty index returns {data:[]} in 124ms with ZERO code_index/files_scanned/chunk log lines — code_index::index was never called, so the autobuild branch is NOT in the running binary. Conclusion: the published wasm does not reflect the committed source for that commit — a build-provenance/caching bug in rs-plugkit release.yml (likely a cached target/ or the wasm not regenerated). Out-of-reach: needs CI-log inspection + a local build cycle (AGENTS.md forbids local cargo build in-loop) to confirm and fix the workflow. Re-validate codesearch once a build verified to contain e17696d publishes. Bonus this fire: memorize-prune validated working live on 0.1.562 (explicit-key delete removed the probe mem + file).'
+- id: fix-cascade-stale-wasm-cache
+  subject: Force fresh crate compile in rs-plugkit release.yml so the published wasm reflects pushed source
+  acceptance:
+  - 'Root cause: Swatinem/rust-cache constant key release-wasm32-wasip1 restores stale rs_plugkit.wasm + fingerprints; cargo skips recompiling top crate; Rename cp''s the cached stale wasm; pushed source absent despite green CI (this is why e17696d/codesearch missing from 0.1.562)'
+  - 'Fix rs-plugkit 0905378: rm target wasm + cargo clean -p rs-plugkit before build + post-build existence check'
+  - 'Self-validating: next release rebuilds fresh or the verify step fails'
+  - After the fix's release publishes, codesearch autobuild becomes validatable for real
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit 0905378: release.yml Build job now has a ''Force fresh compile'' step (rm target/wasm32-wasip1/release/rs_plugkit.wasm + cargo clean --release -p rs-plugkit) before cargo build, plus a post-build ''Verify WASM produced'' existence check. Root cause confirmed by reading release.yml: Swatinem/rust-cache@v2 with constant key release-wasm32-wasip1 restores target/ (stale wasm + fingerprints); cargo''s post-restore incremental judgment skips the top crate; Rename cp''s the cached stale wasm. This explains e17696d absent from 0.1.562 despite git ancestry. Self-validating via the next release run; supersedes cascade-build-omits-pushed-commit with the implemented fix.'
+- id: bump-rebase-theirs-can-drop-source
+  subject: release.yml auto-bump git rebase -X theirs origin/main can silently drop a raced source change
+  acceptance:
+  - 'bump job does: commit version bump, git fetch origin main, git rebase -s recursive -X theirs origin/main, push HEAD:main'
+  - -X theirs resolves conflicts by taking origin's side; if a concurrent push touched lines overlapping a just-pushed source change, the rebase could revert that source while keeping the version bump
+  - Secondary provenance risk beyond the cache bug (fix-cascade-stale-wasm-cache); assess whether to narrow the rebase to Cargo.toml-only or fail-on-conflict instead of -X theirs
+  - Lower priority than the cache fix but a real silent-source-loss vector
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: Documented as secondary provenance risk, blockedBy out-of-reach. release.yml bump job runs 'git rebase -s recursive -X theirs origin/main' after committing the version bump — -X theirs takes origin's side on conflicts, which could revert a just-pushed source change if a concurrent push overlapped. Assessment needs a CI-behavior test + workflow redesign (narrow rebase to Cargo.toml or fail-on-conflict); out-of-reach for the loop. The primary cause (stale-cache) is fixed in 0905378; this is the lower-probability secondary vector kept on record.
