@@ -2113,3 +2113,16 @@
   route_family: execution
   status: completed
   witness: 'gm commit e098e9e6 (pushed d0b144ba): turnTick idle-split now runs for ALL verbs via shared endTurn() helper with idle_spanned flag; non-instruction verb after idle opens no turn. gm-plugkit/plugkit-wasm-wrapper.js lines ~291-322. Live on next watcher boot.'
+- id: validate-prior-iter-fixes-live
+  subject: Validate DEFECT A/B/C fixes working in practice on deployed plugkit 0.1.554
+  acceptance:
+  - Watcher booted to 0.1.554 (was stale 0.1.553) — update_available cleared
+  - 'DEFECT A: deviation.complete-chain-poll witnessed firing in .watcher.log on terminal re-dispatch'
+  - 'DEFECT C: fresh prompt on COMPLETE chain reset phase to PLAN (witnessed phase=PLAN response)'
+  - 'DEFECT B: 30m turn.end events show bounded dur_ms (max 743377ms real work), no multi-hour overflow'
+  - '30m audit: 1 deviation (browser-profile-collision tv8) self-recovered correctly'
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'Watcher booted 0.1.553->0.1.554 (.status.json version=0.1.554 pid=151052). DEFECT A: .watcher.log line ts=1779698028173 evt deviation.complete-chain-poll fired on empty-body instruction at phase=COMPLETE prd_pending=0. DEFECT C: instruction-14 with fresh prompt returned phase=PLAN from a COMPLETE chain (no phase= override). DEFECT B: gmsniff 30m turn.end events show max dur_ms=743377 (12min real work, 8 dispatches), no multi-hour overflow. 30m audit: single deviation browser-profile-collision in tv8 self-recovered (close+relaunch same instant). All prior-iter fixes working in practice.'
