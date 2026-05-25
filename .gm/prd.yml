@@ -2822,3 +2822,28 @@
   route_family: state
   status: completed
   witness: All 12 text-without-vec orphans pruned via memorize-prune explicit-key (tasks 40-51, each returned deleted:[key]). default ns now balanced text 49 = vec 49 (was 61/49). 11 were superseded May-16/17 iteration notes, 1 a tombstone — all un-vector-recallable degraded memory. git shows 12 deletions to commit. memorize-prune batch validated on 0.1.568.
+- id: gates-dedup-longgap-burst
+  subject: Dedup long-gap-no-instruction deviation across a same-verb burst (12 events -> 1)
+  acceptance:
+  - 'Witnessed: 12 memorize-prune long-gap denials at one timestamp (gap_ms~1550523) from a fan-out batch fired before clearing the gate'
+  - 'Fix rs-plugkit bb039f9: gates.rs same_burst (same verb within 5s window) suppresses the duplicate deviation emit while still denying; one event per burst-start, genuine slow retries still escalate'
+  - Audit signal-to-noise rises; deny behavior unchanged
+  - 'Validate on cascade: a same-verb burst under long-gap logs one deviation'
+  category: feature
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit bb039f9: gates.rs computes same_burst (last_verb==verb && since_last_denial<=5000) and gates both the retry-escalation log and the plain long-gap-no-instruction log on !same_burst, so a same-verb 5s burst emits one deviation not N. Diagnosed from this fire''s 12 identical memorize-prune long-gap denials. Deny still fires per dispatch; only audit emit dedups. CI builds; validate on cascade.'
+- id: validate-memorize-atomic-on-cascade
+  subject: Validate memorize embed-first atomicity (d501aee) once cascade publishes > 0.1.568
+  acceptance:
+  - 'After version > 0.1.568: a memorize with a forced embed failure returns ok:false (no text-only orphan written)'
+  - Store stays balanced (text count == vec count) across memorize-fires
+  - Confirms the orphan class cannot recur
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'blockedBy out-of-reach: needs wasm > 0.1.568 (carrying d501aee embed-first). Queued for next fire: force/observe an embed-fail memorize returns ok:false, store stays text-count==vec-count. The 12 orphans are already pruned and store is balanced (50=50); this validates the fix prevents recurrence.'
