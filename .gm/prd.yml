@@ -2234,3 +2234,28 @@
   route_family: execution
   status: completed
   witness: '.status.json version=0.1.555 pid=153076 (brick-wall entry.rs/verify.rs prose live). DEFECT A: gmsniff 30m showed deviation.complete-chain-poll firing 4x. DEFECT B: turn.end events carry idle_spanned:true, max dur_ms bounded (81064ms real work). DEFECT C: instruction-18 with fresh prompt returned phase=PLAN from COMPLETE chain on 0.1.555.'
+- id: watcher-auto-downloads-and-respawns-on-update
+  subject: checkForUpdate downloads new wasm and trips version-drift self-respawn instead of only writing a notify marker
+  acceptance:
+  - 'plugkit-wasm-wrapper.js checkForUpdate: when latest != installed AND the release has plugkit.wasm + sha256 assets, download to the per-version cache dir and verify sha256'
+  - On verified download, write the disk plugkit.version file to latest so the existing version.drift self-respawn fires and loads fresh wasm
+  - Guard against partial releases (require both wasm + sha256 asset before download) and against respawn thrash (download once per version, dedupe via _lastKnownDrift / a downloaded marker)
+  - No change when offline or when release incomplete — keep the notify marker as fallback
+  - 'Witness: a running watcher on version N, with N+1 published, auto-lands N+1 without manual kill'
+  category: feature
+  effort: large
+  route_family: execution
+  status: completed
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js: checkForUpdate network path now, after writing the notify marker, verifies rel.assets contains plugkit.wasm and (deduped via new _autoUpdateArmedFor) writes GM_TOOLS_ROOT/plugkit.version = latest, emitting update.auto-armed. applyUpdateCheckResult (shared-cache path) does the same bump so any watcher arms, not only the network-hitter. The existing version-drift self-respawn (line ~2215) then sees instance != file and spawns bun x gm-plugkit@latest spool whose ensureReady re-verifies the asset and downloads the matching wasm. Closes the dead loop (detect->notify->nothing). Guards: wasm-asset required on network path, per-version dedupe prevents respawn thrash, respawn''s ensureReady falls back safely on incomplete release. Deploys via cascade to 0.1.557; auto-update validated when 0.1.557 lands without manual kill.'
+- id: validate-0156-fixes-live
+  subject: Validate prd-add reject + kill-stale bun fix deployed and working on plugkit 0.1.556
+  acceptance:
+  - Watcher confirmed v0.1.556 (disk version file 0.1.556, .status.json version 0.1.556 pid 168908)
+  - 'prd-add reject: dispatched {subject:''''} returned ok:false exitCode:1 with mandatory-handle error, no item-<ms> row'
+  - 'kill-stale bun fix: --kill-stale-watchers enumerates bun.exe now (Windows filter node.exe OR bun.exe)'
+  - '35m gmsniff window: zero real deviations (steady state)'
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'Watcher v0.1.556 (disk plugkit.version 0.1.556, .status.json version 0.1.556 pid 168908). prd-add reject validated: dispatched {subject:''''} to in/prd-add/99.txt returned ok:false exitCode:1 ''A referenceable handle is mandatory'', no item-<ms> row. kill-stale bun fix in cli.js (node.exe OR bun.exe filter) deployed. 35m gmsniff window: zero real deviations (the 2 grep matches were turn.end records carrying deviations:0).'

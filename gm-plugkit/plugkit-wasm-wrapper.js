@@ -2862,6 +2862,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   const UPDATE_CHECK_SHARED_CACHE = path.join(GM_TOOLS_ROOT, '.update-check-cache.json');
   const UPDATE_CHECK_CACHE_TTL_MS = 4 * 60 * 1000;
   let _lastKnownDrift = null;
+  let _autoUpdateArmedFor = null;
   function readSharedUpdateCache() {
     try {
       const content = fs.readFileSync(UPDATE_CHECK_SHARED_CACHE, 'utf-8');
@@ -2963,6 +2964,18 @@ async function runSpoolWatcher(instance, spoolDir) {
       logEvent('plugkit', 'update.available', { installed, latest });
       _lastKnownDrift = latest;
     }
+    // Auto-update from the shared-cache path too, so any watcher (not only the one that hit the
+    // network) arms the self-respawn. The cache entry is only written after a 200 from
+    // /releases/latest, and the respawn's ensureReady re-verifies the wasm asset before downloading,
+    // so a bump here is safe even without per-asset confirmation in this branch.
+    if (isDrift && _autoUpdateArmedFor !== latest) {
+      try {
+        _autoUpdateArmedFor = latest;
+        const verFile = path.join(GM_TOOLS_ROOT, 'plugkit.version');
+        fs.writeFileSync(verFile, latest + '\n');
+        logEvent('plugkit', 'update.auto-armed', { installed, latest, source: 'shared-cache', action: 'bumped-version-file-for-drift-respawn' });
+      } catch (_) {}
+    }
   }
   function checkForUpdate() {
     const installed = resolveVersion(instance);
@@ -3005,13 +3018,34 @@ async function runSpoolWatcher(instance, spoolDir) {
             installed,
             latest,
             checked_at_ms: Date.now(),
-            instruction: 'plugkit is out of date. To update, close the running watcher and re-bootstrap with the @latest flag, e.g. node ~/.gm-tools/plugkit-wasm-wrapper.js spool & after running bootstrap with {latest: true}.',
+            instruction: 'plugkit is out of date. The watcher auto-updates: on the next drift-check tick it bumps the disk version file and self-respawns into the fresh wasm. No manual action needed.',
             update_url,
           }, null, 2));
           console.log(`[update] available: installed=${installed} latest=${latest} → wrote ${UPDATE_AVAILABLE_PATH}`);
           if (_lastKnownDrift !== latest) {
             logEvent('plugkit', 'update.available', { installed, latest, update_url });
             _lastKnownDrift = latest;
+          }
+          // Auto-update: a running healthy watcher otherwise never self-updates — checkForUpdate
+          // only NOTIFIED, and the version-drift self-respawn compares instance-vs-disk-file, but
+          // the disk file only moved on a fresh boot that never ran while the watcher held the lock.
+          // Close the loop: once the release is fully published (wasm asset present, confirmed by
+          // this /releases/latest response carrying it), bump the disk version file to `latest`.
+          // The existing drift-check tick then sees instance != file and self-respawns; the respawn's
+          // ensureReady downloads the wasm matching the bumped version file. Guard against partial
+          // releases and respawn thrash: require the wasm asset, and write the file at most once per
+          // detected version (dedupe via _autoUpdateArmedFor).
+          try {
+            const hasWasmAsset = Array.isArray(rel.assets) && rel.assets.some(a => a && a.name === 'plugkit.wasm');
+            if (hasWasmAsset && latest !== installed && _autoUpdateArmedFor !== latest) {
+              _autoUpdateArmedFor = latest;
+              const verFile = path.join(GM_TOOLS_ROOT, 'plugkit.version');
+              fs.writeFileSync(verFile, latest + '\n');
+              logEvent('plugkit', 'update.auto-armed', { installed, latest, action: 'bumped-version-file-for-drift-respawn' });
+              console.log(`[update] auto-armed: bumped ${verFile} ${installed} -> ${latest}; drift-check will self-respawn into fresh wasm`);
+            }
+          } catch (e) {
+            logUpdateCheckError({ error: `auto-arm failed: ${String(e && e.message || e)}` });
           }
         } catch (e) {
           logUpdateCheckError({ error: String(e && e.message || e) });
