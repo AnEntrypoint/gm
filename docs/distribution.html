@@ -98,7 +98,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <div class="abstract-block">
   <div class="abstract-title">Thesis</div>
   <div class="abstract-text">
-    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets one npm package &mdash; <code>gm-skill</code> &mdash; whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The artifact&rsquo;s entire genealogy &mdash; every Rust crate, every workflow, every published wasm &mdash; is open source under one organization, one cascade, one push at a time.
+    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets one npm package, <code>gm-skill</code>, whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The artifact&rsquo;s entire genealogy, every Rust crate, every workflow, every published wasm, is open source under one organization, one cascade, one push at a time.
   </div>
 </div>
 
@@ -108,7 +108,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p class="first">Most coding agents fail at the install step. They ask for a Python virtualenv, a Node version, a Rust toolchain, an environment variable, a config file, an API key, and a directory layout the user has to memorize. By the time the agent runs, the user has spent more time on it than they intended to spend in a week. Worst, every component the agent needs is a separate vendor decision the user has to ratify implicitly.</p>
 
-<p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded &mdash; the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
+<p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded, the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
 
 <p>For an agent, the equivalent is: one published skill package, with a single hook into the host harness, with all the heavy machinery (search, indexing, memory, code execution, browser automation, phase orchestration) compiled into one wasm module that the agent dispatches on demand through a file-spool surface. The agent is the state machine; the wasm is the durable scratchpad it drives.</p>
 
@@ -128,7 +128,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <ul>
   <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs.</li>
-  <li>No native build step at install. The single wasm artifact runs everywhere a Node 20+ WASI host runs &mdash; one binary for every OS and every CPU.</li>
+  <li>No native build step at install. The single wasm artifact runs everywhere a Node 20+ WASI host runs, one binary for every OS and every CPU.</li>
   <li>No daemon to install or supervise. The watcher and host run inside the same wasm instance as the orchestrator. There is no port, no rpc daemon, no <code>kill -9</code> story.</li>
   <li>No mandatory secrets at install. Embeddings run in-wasm via baked Q4 weights; LLM-tier work is offloaded to the host agent via callback. Offline use is the default.</li>
 </ul>
@@ -154,28 +154,28 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <p class="first">Six repositories cooperate but no human steps between them. A push to any of the sibling Rust repos triggers a deterministic cascade that ends with a fresh <code>gm-skill</code> publish on npm:</p>
 
 <div class="pipeline">rs-exec / rs-codeinsight / rs-search / rs-learn
-  &mdash; push to main
-  &mdash;&gt; .github/workflows/cascade.yml fires rs-plugkit release.yml
+ , push to main
+  , &gt; .github/workflows/cascade.yml fires rs-plugkit release.yml
        via gh workflow run + PUBLISHER_TOKEN
   (siblings publish their own @anentrypoint/&lt;name&gt;-wasm artifacts
    independently; the cascade does NOT recompile their source
    into rs-plugkit)
 
 rs-plugkit
-  &mdash; release.yml: build plugkit.wasm (wasm32-wasip1, ~&lt;200 KB)
-  &mdash; publish plugkit-bin Releases + npm plugkit-wasm
-  &mdash; bump gm-starter/gm.json::plugkitVersion and
+ , release.yml: build plugkit.wasm (wasm32-wasip1, ~&lt;200 KB)
+ , publish plugkit-bin Releases + npm plugkit-wasm
+ , bump gm-starter/gm.json::plugkitVersion and
        gm-starter/bin/plugkit.wasm.sha256 in AnEntrypoint/gm
 
 gm
-  &mdash; that bump commit triggers publish.yml
-  &mdash; node cli.js gm-starter ./build         (regenerates skill body)
-  &mdash; npm publish build/gm-skill              (one package, one tag)
+ , that bump commit triggers publish.yml
+ , node cli.js gm-starter ./build         (regenerates skill body)
+ , npm publish build/gm-skill              (one package, one tag)
 
 users
-  &mdash; bun add -g gm-skill   (or harness-local install)
-  &mdash; on first dispatch, gm-plugkit ensures plugkit.wasm is present
-  &mdash; every subsequent verb is a local wasm call</div>
+ , bun add -g gm-skill   (or harness-local install)
+ , on first dispatch, gm-plugkit ensures plugkit.wasm is present
+ , every subsequent verb is a local wasm call</div>
 
 <p>No human edits a version string. No human runs <code>cargo build</code>. The cascade is the publishing pipeline. The phrase &ldquo;to update anything, push to the relevant repo&rdquo; is literal: a one-line fix in <code>rs-search</code> propagates to a new <code>gm-skill</code> on npm within one CI cycle.</p>
 
@@ -201,7 +201,7 @@ users
 
 <h2>7. The Verb Surface</h2>
 
-<p class="first">Distribution is not just &ldquo;getting bits onto the user&rsquo;s disk&rdquo; &mdash; it is also the verb surface that the agent talks to once the bits are there. Every capability the harness exposes is a verb dispatched through the file-spool at <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>, with output landing at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root). Three families:</p>
+<p class="first">Distribution is not just &ldquo;getting bits onto the user&rsquo;s disk&rdquo;, it is also the verb surface that the agent talks to once the bits are there. Every capability the harness exposes is a verb dispatched through the file-spool at <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>, with output landing at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root). Three families:</p>
 
 <table>
 <thead><tr><th>family</th><th>examples</th><th>serviced by</th></tr></thead>
@@ -246,7 +246,7 @@ users
 
 <ol>
   <li><strong>The host is Node.</strong> Every harness that loads a skill loads it inside a Node-capable runtime. Publishing to crates.io or PyPI would force every host to bridge Rust or Python at install time, which is exactly the toolchain dependency the SQLite model exists to avoid. npm is the lowest-common-denominator registry for skill-loading hosts.</li>
-  <li><strong>The wasm is the binary.</strong> A cargo install would require <code>rustup</code>; a pip install would require Python. The npm tarball ships the precompiled wasm and the JS wrapper together &mdash; no transpilation, no native build, no postinstall script.</li>
+  <li><strong>The wasm is the binary.</strong> A cargo install would require <code>rustup</code>; a pip install would require Python. The npm tarball ships the precompiled wasm and the JS wrapper together, no transpilation, no native build, no postinstall script.</li>
 </ol>
 
 <h2>11. Operational Lessons</h2>
@@ -254,8 +254,8 @@ users
 <p class="first">Three production failures shaped the current pipeline:</p>
 
 <ul>
-  <li><strong>Native-binary fan-out doubled CI duration linearly with platform count.</strong> Building six platform binaries on every push, then signing them, then uploading them, then bumping fifteen downstream repos, took 18&ndash;25 minutes per cascade tick. The wasm-only model collapses this to one build, one publish, one npm tag &mdash; under four minutes.</li>
-  <li><strong>Stale binaries pinned to dead PIDs.</strong> The previous daemonized <code>rs-exec</code> wrote a port file then sometimes died, leaving clients pointing at a port nothing listened on. The wasm model has no port and no daemon &mdash; <code>exec_js</code> is a synchronous wasm host call via <code>child_process.spawnSync</code>, alive only for the duration of the call.</li>
+  <li><strong>Native-binary fan-out doubled CI duration linearly with platform count.</strong> Building six platform binaries on every push, then signing them, then uploading them, then bumping fifteen downstream repos, took 18&ndash;25 minutes per cascade tick. The wasm-only model collapses this to one build, one publish, one npm tag, under four minutes.</li>
+  <li><strong>Stale binaries pinned to dead PIDs.</strong> The previous daemonized <code>rs-exec</code> wrote a port file then sometimes died, leaving clients pointing at a port nothing listened on. The wasm model has no port and no daemon, <code>exec_js</code> is a synchronous wasm host call via <code>child_process.spawnSync</code>, alive only for the duration of the call.</li>
   <li><strong>Concurrent CI publishes raced on downstream branches.</strong> Resolved by collapsing fifteen downstream branches into one npm publish.</li>
 </ul>
 

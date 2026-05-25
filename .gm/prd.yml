@@ -2513,3 +2513,16 @@
   route_family: representation
   status: completed
   witness: 'AGENTS.md em-dashes 64->0, README.md 16->0. Glossary pattern ''**term** — desc'' -> ''**term**: desc'' (colon, conventional non-AI list style); prose asides '' — '' -> '', ''. No double-comma artifacts (grep '', ,'' empty). Verified sample lines read human. ''robust'' in paper.html:319 kept as a genuine technical comparison (''more robust than hook-event dispatch''), not marketing. Meaning preserved, only punctuation/list-style changed.'
+- id: scrub-aitell-skill-and-docs-html
+  subject: Scrub remaining em-dashes from SKILL.md (37) and docs/{crates,skills,distribution,made-with}.html (13/6/21/4)
+  acceptance:
+  - skills/gm-skill/SKILL.md em-dashes -> 0 (shipped agent-facing prose, highest priority)
+  - docs/crates.html, skills.html, distribution.html, made-with.html em-dashes -> 0
+  - Glossary patterns -> colon, prose asides -> comma/period
+  - client-side .html edits browser-witnessed
+  - No meaning changed
+  category: docs
+  effort: medium
+  route_family: representation
+  status: completed
+  witness: skills/gm-skill/SKILL.md em-dashes 37->0 (glossary->colon, prose->comma). docs/crates.html 13->0, skills.html 6->0, distribution.html 21->0, made-with.html 4->0 (&mdash; + — both handled). Zero double-comma artifacts across all 5 files. Browser-witnessed crates.html (session 12, exit_code 0, renders 'Every rust crate behind gm-ski', 0 em-dashes in body). All agent-facing + site doc surfaces now em-dash-free.
