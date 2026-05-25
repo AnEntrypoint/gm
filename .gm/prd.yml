@@ -2419,7 +2419,8 @@
   category: feature
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Investigated: a codesearch-triggered autobuild cannot work as a one-liner because code_index::index() writes to libsql (code_index.rs:89 CREATE TABLE memories) while the codesearch verb reads the file-vec store via host_vec_search — different backends, so the retry would still find nothing. Shipping that would be a fake fix; reverted it (Nothing Fake). Superseded by codeinsight-backend-split-blocks-autobuild which documents the precise blocker and the two real fix options (file-vec code indexer, or route codesearch to libsql). Same backend-split class as the recall fix 1d21ac7.'
 - id: watcher-dies-under-browser-load
   subject: Watcher process exits/stalls during this session — browser verb (chromium) or long dispatches appear to kill the synchronous watcher
   acceptance:
@@ -2549,3 +2550,14 @@
   route_family: execution
   status: completed
   witness: 'plugkit-wasm-wrapper.js: the session-command guard matched only ''session list|kill|close'', so ''session delete''/''session reset'' (playwriter''s real subcommands) fell through to the JS-eval path and crashed with SyntaxError, while ''close''/''kill'' reached playwriter and were rejected as unknown. Fixed: guard now matches any ''session '' prefix, maps legacy close/kill->delete, passes list/new/delete/reset verbatim. Witnessed live after wrapper reboot (pid 102636): ''session list'' -> ok:true with session table header; ''session delete paper-witness'' -> reaches playwriter (''Session not found'' because reboot already cleared live sessions, not a JS-eval crash). Stale browser-sessions.json (paper-witness, default) reset to {} as runtime residual.'
+- id: codeinsight-backend-split-blocks-autobuild
+  subject: 'codeinsight autobuild is blocked by backend split: codesearch verb reads file-vec (host_vec_search) but code_index::index writes libsql'
+  acceptance:
+  - 'Witnessed: codesearch() in wasm_dispatch.rs reads namespace ''codeinsight'' via host_vec_search/host_kv_query (file-vec store .gm/disciplines/codeinsight-vec). But code_index::index() (the codeinsight_index verb body) writes to libsql_wasm (CREATE TABLE memories, code_index.rs:89) — a DIFFERENT backend'
+  - So a naive autobuild (codesearch calls code_index::index on empty index then retries) would populate libsql while the file-vec retry still finds nothing — a fake fix, correctly NOT shipped (reverted)
+  - 'Real fix options: (a) add a file-vec code indexer that writes .gm/disciplines/codeinsight-vec via host_kv_put like memorize does, then autobuild calls it; or (b) route codesearch to the libsql recall path (but that was the broken-recall path fixed in 1d21ac7). Same backend-split class as the recall fix.'
+  - Supersedes codeinsight-index-autobuild-trigger with the precise blocker
+  category: feature
+  effort: large
+  route_family: execution
+  status: pending
