@@ -64,6 +64,8 @@ plugforge-starter/skills/caveman/
 .gm/witness/
 .gm/long-gap-retry-state
 .gm/exec-spool/.gm-plugkit-stale.json
+.gm/disciplines/codeinsight/
+.gm/disciplines/codeinsight-vec/
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 # <<< plugkit managed

@@ -2747,3 +2747,40 @@
   - out-of-reach
   status: completed
   witness: 'blockedBy out-of-reach: needs wasm > 0.1.565 (carrying 23e3c2e) published. Queued for next fire: codesearch should index >0 chunks, populate codeinsight-vec, return hits. Provenance fix ensures the build reflects HEAD. If chunks still 0, layer 7 is extract_chunks/embed — instrument with a chunks+embedded count log.'
+- id: validate-codesearch-full-chain-0167
+  subject: Codesearch validated end-to-end on 0.1.567 — all 6 layers fixed, returns real hits
+  acceptance:
+  - 'code_index done log: files_indexed=58 chunks=397 embedded=397 skipped_no_embed=0'
+  - codesearch F1 returned ranked hit {cos:0.6347, key:ci-..., namespace:codeinsight, recency:0.9999}
+  - codeinsight-vec populated (397 files); watcher survived the long synchronous build (busy_until held, pid stable)
+  - The full chain (routing->backend->provenance->libsql-decouple->readdir-shape->read-path) works in practice
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'On 0.1.567: code_index done log ''files_indexed=58 chunks=397 embedded=397 skipped_no_embed=0''; codesearch F1 returned ranked hit {cos:0.6347, key:ci-1779728799946-306-225, namespace:codeinsight, recency:0.9999}; codeinsight-vec populated 397 files; watcher survived ~3min synchronous build (busy_until held, pid stable 189408). All 6 codesearch layers (routing/backend/provenance/libsql-decouple/readdir-shape/read-path) confirmed working end-to-end in practice. The codesearch saga is CLOSED.'
+- id: codeinsight-index-should-be-gitignored
+  subject: The autobuilt codeinsight code-index (397 derived embedding files) is untracked and NOT gitignored — should be in the managed block
+  acceptance:
+  - codeinsight + codeinsight-vec discipline dirs hold rebuildable derived data (autobuild regenerates them), unlike the tracked 'default' learning discipline (shared memory)
+  - Add .gm/disciplines/codeinsight/ and .gm/disciplines/codeinsight-vec/ to the gm-managed gitignore block so the per-machine code index is not committed as noise
+  - Verify the tracked learning disciplines (default, default-vec) remain un-ignored — only the codeinsight code-index is derived/ignorable
+  - Resolves committing ~3MB of machine-local embeddings on every codesearch
+  category: infra
+  effort: small
+  route_family: state
+  status: completed
+  witness: Added .gm/disciplines/codeinsight/ + codeinsight-vec/ to the gm .gitignore managed block AND to rs-plugkit gitignore.rs MANAGED_ENTRIES (durable). git check-ignore confirms the 397 index files are now ignored; porcelain no longer lists them. The tracked learning disciplines (default, default-vec) stay un-ignored — only the rebuildable codeinsight code-index is ignored. Honors the MUST_STAY_TRACKED/.gm/disciplines/ design via more-specific subpath ignores under the tracked parent.
+- id: codesearch-autobuild-too-slow-inline
+  subject: codesearch autobuild indexes ~400 chunks synchronously (~3min), blocking the watcher inline
+  acceptance:
+  - On 0.1.567 the first codesearch on an empty index ran code_index over 58 files / 397 chunks, each a wasm BERT embed, ~3min synchronous — the dispatch blocked the watcher the whole time (busy_until kept it from false-death)
+  - A multi-minute inline autobuild is poor UX and risks the long-gap gate; consider lazy/incremental indexing, a background/one-shot index task, or capping autobuild chunk count with progressive backfill
+  - Lower priority than correctness (now fixed); operational optimization
+  category: feature
+  effort: large
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'blockedBy out-of-reach: documented operational optimization. Witnessed ~3min synchronous autobuild (58 files/397 chunks, each a wasm BERT embed) blocking the watcher inline; busy_until kept it from false-death so it completed correctly. Optimization (lazy/incremental/background indexing or chunk-cap with backfill) is a large design change, lower priority than the now-fixed correctness. Recorded for a focused session.'
