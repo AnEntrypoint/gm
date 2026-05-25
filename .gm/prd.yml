@@ -2381,7 +2381,8 @@
   category: docs
   effort: medium
   route_family: representation
-  status: pending
+  status: completed
+  witness: 'docs/paper.html §40 ''The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer'' added + browser-witnessed (browser verb session 10, exit_code 0, s40 textContent confirmed rendering, 45 h2s). Documents: the live file-vec layer (memorize-fire embed -> 2 files text+384dim vec, recall cosine*recency 30d-halflife 0.4-floor jaccard-dedup, project-resident), memorize-prune (text+vec together, explicit-key or review-only query, never blind similarity-delete, precision over retention), and the rs-learn algorithm layer''s 5 cores (instant MicroLoRA/sona, EWC++ deep, bi-temporal graph/graphiti, 8-head graph-attention, FastGRNN router) with the host-owns-IO/rs-learn-owns-math boundary as the reusability+reproducibility win. Notes the cores are tested-standalone and the bridge to the live spool surface is the remaining step (per PRD rslearn-pathways-orphaned-from-plugkit). MO + motivations captured.'
 - id: paper-spool-brickwall-section
   subject: 'Paper: document spool-replaces-hooks architecture + brick-wall continuation discipline + model selection'
   acceptance:

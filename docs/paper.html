@@ -842,6 +842,18 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
+<h2 id="s40">40. The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer</h2>
+
+<p>Memory splits into two layers with a deliberate boundary. The <em>live</em> layer is the file-vec store: <code>memorize-fire</code> embeds a fact through the in-wasm bge-small model and writes two files per memory&mdash;the text under <code>.gm/disciplines/&lt;ns&gt;/&lt;key&gt;.json</code> and its 384-dim embedding under <code>.gm/disciplines/&lt;ns&gt;-vec/&lt;key&gt;.json</code>. <code>recall</code> and the turn-entry <code>auto_recall</code> read those directories fresh, scoring each candidate as <code>cosine &times; recency</code> where recency decays on a 30-day half-life with a 0.4 floor, then dedup by Jaccard overlap. This layer is the one the agent actually drives every turn; it travels with the project in git, so memory is project-resident, not platform-resident.</p>
+
+<p>Pruning is first-class in the live layer because a wrong recall hit is worse than a miss: a stale fact surfaces on every future query that matches it, poisoning the orient pack. The <code>memorize-prune</code> verb deletes a memory&rsquo;s text and embedding together (no orphan vector survives) either by explicit key or by a review-only query that returns candidates for the agent to judge&mdash;never a blind similarity-delete, since an automatic similarity prune is itself a bad-memory generator. Pruning precision is valued over retention.</p>
+
+<p>The <em>algorithm</em> layer is rs-learn, a separate wasm cdylib of five continual-learning cores: an instant rank-2 Hebbian MicroLoRA adapter with norm-bound and EWC correction (in the spirit of sona); an EWC++ deep core with online Fisher EMA and z-score boundary detection; a bi-temporal knowledge graph that invalidates rather than deletes contradicted edges and answers point-in-time queries (in the spirit of graphiti); an 8-head graph-attention module with relation and recency edge features; and a FastGRNN sparse-plus-low-rank router with epsilon-greedy exploration over model, context-bucket, temperature, top_p, and confidence heads. rs-learn is purely the algorithm layer&mdash;it owns no IO, importing <code>host_kv_*</code>, <code>host_vec_search</code>, <code>host_log</code>, and <code>host_now_ms</code> from whatever host satisfies the contract, and exposing every core through one JSON dispatch surface.</p>
+
+<p>The motivating design choice is that the host owns IO, scheduling, embedding, and agent transport while rs-learn owns only the math&mdash;so the same algorithm crate is native-Rust testable in isolation and reusable by any host that satisfies the six imports. The current live system runs the file-vec layer in full; wiring the rs-learn algorithm cores into the agent-facing spool surface is the bridge that turns the temporal graph and the LoRA/router optimization from a tested standalone crate into per-turn live behavior. The boundary itself&mdash;math layer with no IO, host layer with no algorithm&mdash;is the reusability and reproducibility win: the cores carry no platform assumptions, and the host carries no learning-rate constants.</p>
+
+<hr>
+
 <h2 id="three-layer-filter">Three-Layer Admission Filter</h2>
 
 <p>Sections 2&ndash;37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
