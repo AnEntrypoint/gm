@@ -2490,3 +2490,25 @@
   route_family: representation
   status: completed
   witness: 'AGENTS.md WASM-only section corrected: was ''wasm artifact is small (<200KB) and ships inside the gm-skill npm package'' (both false — artifact is 149412104 bytes, fetched from plugkit-wasm npm/plugkit-bin gh-releases not bundled). Now states: plugkit logic is hundreds of KB but shipped plugkit.wasm is ~149MB embedding bge-small (133MB safetensors + 711KB tokenizer, 384-dim, host_delegated:false offline), fetched at bootstrap sha256-pinned. Aligned with paper §41.'
+- id: scrub-aitell-paper-emdashes
+  subject: Replace decorative em-dashes (&mdash;/—) in docs/paper.html with commas/parens/periods — 117 occurrences, the dominant AI watermark
+  acceptance:
+  - docs/paper.html em-dash count drops substantially; remaining dashes are grammatically necessary only
+  - Prose reads as human-written, not LLM dramatic-pause style
+  - No meaning changed, only punctuation/phrasing
+  - Browser-witness paper still renders after edits
+  category: docs
+  effort: medium
+  route_family: representation
+  status: pending
+- id: scrub-aitell-agentsmd-readme
+  subject: Scrub AI-tell em-dashes + marketing words from AGENTS.md (64) and README.md (16) + the lone 'robust'
+  acceptance:
+  - AGENTS.md and README.md em-dash counts drop to grammatically-necessary only
+  - '''robust'' and any delve/leverage/seamless/comprehensive removed or replaced with plain words'
+  - Present-tense rule phrasing preserved; only punctuation/word-choice changed
+  category: docs
+  effort: medium
+  route_family: representation
+  status: completed
+  witness: 'AGENTS.md em-dashes 64->0, README.md 16->0. Glossary pattern ''**term** — desc'' -> ''**term**: desc'' (colon, conventional non-AI list style); prose asides '' — '' -> '', ''. No double-comma artifacts (grep '', ,'' empty). Verified sample lines read human. ''robust'' in paper.html:319 kept as a genuine technical comparison (''more robust than hook-event dispatch''), not marketing. Meaning preserved, only punctuation/list-style changed.'

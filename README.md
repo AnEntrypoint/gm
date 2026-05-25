@@ -2,7 +2,7 @@
 
 > **more coushin' for the puhin'**
 
-gm is a skill that convinces your coding agent it already is a deterministic state machine — PLAN → EXECUTE → EMIT → VERIFY → COMPLETE — and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
+gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN → EXECUTE → EMIT → VERIFY → COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
 
 it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN → EXECUTE → EMIT → VERIFY → COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
@@ -33,7 +33,7 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 ```
 gm/
 ├── skills/gm-skill/   ← the skill (SKILL.md + index.js, ~12 lines of prose)
-├── bin/               ← bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages — `bun x gmsniff`, `bun x ccsniff`)
+├── bin/               ← bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
 ├── lib/               ← runtime: spool dispatch, skill bootstrap, daemon mgmt
 ├── agents/            ← subagent prompts (gm, memorize, research-worker, textprocessing)
 ├── prompts/           ← bash-deny, session-start, prompt-submit, pre-compact
@@ -48,8 +48,8 @@ gm/
 
 The two npm packages this repo publishes:
 
-- **`gm-skill`** — the skill bundle, installed via `bun x skills`
-- **`gm-plugkit`** — the wasm-wrapper daemon, dependency of `gm-skill`
+- **`gm-skill`**: the skill bundle, installed via `bun x skills`
+- **`gm-plugkit`**: the wasm-wrapper daemon, dependency of `gm-skill`
 
 ## how it works
 
@@ -61,19 +61,19 @@ PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. Every transition is a verb th
 
 Every tool the agent uses is a dispatch verb. No direct shell, no direct file writes outside the spool. The wasm host owns the side effects.
 
-- **`recall`** — vector + KV recall against `rs-learn`, scored by cosine × recency, namespace-aware
-- **`codesearch`** — semantic vector search across the project
-- **`memorize`** — write to the recall index (with the BGE query/passage prefix asymmetry)
-- **`browser`** — managed Chrome session with project-scoped profile at `.gm/browser-profile/`
-- **`git_status` / `branch_status` / `git_push`** — git verbs that gate on porcelain
-- **`filter`** — in-wasm stdout-compaction (grep/ls/tree/json/diff)
+- **`recall`**: vector + KV recall against `rs-learn`, scored by cosine × recency, namespace-aware
+- **`codesearch`**: semantic vector search across the project
+- **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
+- **`browser`**: managed Chrome session with project-scoped profile at `.gm/browser-profile/`
+- **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
+- **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
 
 ### hooks
 
-- **session-start** — bootstraps plugkit, seeds `.gm/next-step.md`, sets `needs-gm` marker
-- **prompt-submit** — reminds the agent to dispatch instruction first; injects per-prompt auto-recall
-- **pre-tool-use** — blocks tool use before the gm skill fires for the turn
-- **stop** — blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty
+- **session-start**: bootstraps plugkit, seeds `.gm/next-step.md`, sets `needs-gm` marker
+- **prompt-submit**: reminds the agent to dispatch instruction first; injects per-prompt auto-recall
+- **pre-tool-use**: blocks tool use before the gm skill fires for the turn
+- **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty
 
 ### ground truth
 
@@ -94,7 +94,7 @@ A push to `main` triggers `.github/workflows/publish.yml`:
 
 `.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
 
-The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the wasm at install time — it does not ship in this repo.
+The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the wasm at install time, it does not ship in this repo.
 
 ## license
 
