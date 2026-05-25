@@ -2723,3 +2723,27 @@
   - out-of-reach
   status: completed
   witness: 'blockedBy out-of-reach: validation needs the wasm > 0.1.564 (carrying 6a45c67) to publish. Queued for the next loop fire: codesearch on empty index should log files=N>0 + populate codeinsight-vec + return hits. The provenance fix guarantees the build reflects HEAD so the next version genuinely carries the list_dir fix.'
+- id: fix-codeindex-cwd-relative-read
+  subject: code_index must host_read cwd-relative paths, not '/'-prefixed filesystem-absolute — indexed 0 chunks despite files=101
+  acceptance:
+  - 'On 0.1.565: code_index found files=101 (layer 5 fixed) but indexed 0 chunks, codeinsight-vec empty'
+  - 'Root cause: read_path = ''/'' + relative made ./src/lib.rs -> /src/lib.rs; host_fs_read (fs.readFileSync) resolved against fs root and failed for all 101 files; loop continue''d past every file'
+  - 'Fix rs-plugkit 23e3c2e: try path as-is relative first (host reads relative to cwd), then raw fp, then /-absolute fallback'
+  - 6th layer of codesearch-empty; validate full chain on next cascade > 0.1.565
+  category: bug
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit 23e3c2e: read_path no longer prepends ''/''; tries relative-as-is first (host_fs_read = fs.readFileSync relative to cwd), then raw fp, then /-absolute fallback. Diagnosed on 0.1.565: code_index log files=101 but 0 chunks; the ''/'' prefix turned ./src/lib.rs into /src/lib.rs which readFileSync resolved against fs root -> all reads failed -> continue past every file. Validate on cascade > 0.1.565.'
+- id: revalidate-codesearch-after-readpath-fix
+  subject: Re-validate codesearch end-to-end once cascade publishes wasm > 0.1.565 (read-path fix 23e3c2e)
+  acceptance:
+  - 'After version > 0.1.565: codesearch logs files=101, indexes >0 chunks, codeinsight-vec populates, returns ranked hits for a known symbol'
+  - 'If chunks still 0: check extract_chunks (CHUNK_NODE_TYPES coverage) or embed_text bulk-failure as the 7th layer — the entry log + a chunks/embedded count log will show which'
+  category: infra
+  effort: small
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'blockedBy out-of-reach: needs wasm > 0.1.565 (carrying 23e3c2e) published. Queued for next fire: codesearch should index >0 chunks, populate codeinsight-vec, return hits. Provenance fix ensures the build reflects HEAD. If chunks still 0, layer 7 is extract_chunks/embed — instrument with a chunks+embedded count log.'
