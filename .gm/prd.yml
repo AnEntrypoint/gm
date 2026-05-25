@@ -2633,3 +2633,18 @@
   - out-of-reach
   status: completed
   witness: 'On 0.1.562 codesearch returned {data:[]} (pre-autobuild shape), no code_index log, codeinsight-vec empty — e17696d not in this build (0.1.562 sits between 5304958 and e17696d). blockedBy out-of-reach: cannot validate undeployed code; the next loop fire after the version advances re-runs the codesearch autobuild probe. Pushed + CI-built.'
+- id: cascade-build-omits-pushed-commit
+  subject: Published plugkit-wasm 0.1.562 does not contain rs-plugkit e17696d codesearch autobuild despite git ancestry — build provenance bug
+  acceptance:
+  - 'Timeline: 0.1.561 published 13:41 from codesearch Release (commit e17696d); 0.1.562 published 14:00 from slug Release (commit 5304958, which descends from e17696d). 0.1.562 MUST contain e17696d by git ancestry.'
+  - 'BUT on 0.1.562: codesearch on empty index returns {data:[]} in 124ms with ZERO code_index/autobuild log lines — the committed autobuild branch (kv_empty && !auto_indexed -> code_index::index then retry) did not fire. The committed code (git show HEAD:src/wasm_dispatch.rs) clearly has the branch.'
+  - 'So the published wasm does not contain the pushed+CI-built source — a cascade build-provenance/caching bug where a commit''s code is silently absent from the artifact. This is serious: fixes can appear shipped but not be in the binary.'
+  - 'Diagnose: does rs-plugkit release.yml build from the triggering commit''s tree, or cargo-pull a pinned/cached rev? Check if the wasm build caches a stale target/ or pulls sibling crates at a fixed rev. Fix so the published wasm always reflects HEAD at build time.'
+  - Re-validate codesearch autobuild once a build verified to contain e17696d publishes
+  category: bug
+  effort: large
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Diagnosed to the boundary of safe reach, blockedBy out-of-reach. Facts: (1) committed code is correct — git show HEAD:src/wasm_dispatch.rs has the autobuild branch (kv_empty && !auto_indexed -> code_index::index(''.'',500) then retry). (2) rs-plugkit Cargo.toml has NO sibling-crate deps or git/rev pins — the codesearch code is local to the crate, so no stale-sibling-pull explanation. (3) embedding works live (memorize probe embedded:true; memorize-prune also validated: deleted the probe). (4) On 0.1.562 (built from 5304958 which descends from e17696d, so it MUST contain the code by git ancestry) codesearch on an empty index returns {data:[]} in 124ms with ZERO code_index/files_scanned/chunk log lines — code_index::index was never called, so the autobuild branch is NOT in the running binary. Conclusion: the published wasm does not reflect the committed source for that commit — a build-provenance/caching bug in rs-plugkit release.yml (likely a cached target/ or the wasm not regenerated). Out-of-reach: needs CI-log inspection + a local build cycle (AGENTS.md forbids local cargo build in-loop) to confirm and fix the workflow. Re-validate codesearch once a build verified to contain e17696d publishes. Bonus this fire: memorize-prune validated working live on 0.1.562 (explicit-key delete removed the probe mem + file).'
