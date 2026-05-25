@@ -2343,7 +2343,8 @@
   category: infra
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'VALIDATED (negative result): rs-learn/crates/wasm/src has the full machinery — graph/attention, graph/temporal_core, learn/deep_core (EWC: consolidate/ewc_penalty), learn/instant_core (instant-LoRA: init_instant/feedback/apply_adapter), router/core (FastGRNN: init_router/route/record_outcome). dispatch.rs exposes all as verbs. BUT rs-learn is NOT a Cargo dep of rs-plugkit and NONE of these verbs are in the gm spool ABI (only recall/memorize/memorize-prune file-vec). So the pathways exist but are orphaned from the live gm loop — they don''t fire because nothing bridges plugkit->rs-learn. Root cause captured in new PRD rslearn-pathways-orphaned-from-plugkit; this answers ''tree stability/optimization + lora not firing = no bridge''.'
 - id: validate-agentsmd-staging-migration
   subject: Validate AGENTS.md-as-staging-ground continual migration to the learning store is smooth
   acceptance:
@@ -2354,7 +2355,8 @@
   category: infra
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'VALIDATED (negative result): .gm/disciplines/AGENTS.md/ namespace has 9 mems all mtime May 21 (frozen 4 days). No code path reads AGENTS.md and ingests into the learning store — grep AGENTS.md across rs-plugkit/src + gm/lib returns only doc-commit-policy (gates.rs, update_docs.rs) and classifier refs, no ingest/migrate. update_docs.rs prose claims memorize-fire is a parallel surface but there is NO continual AGENTS.md->learning migration mechanism. Root cause + fix captured in new PRD agentsmd-migration-not-implemented.'
 - id: paper-wasm-migration-section
   subject: 'Paper: new section documenting the WASM migration (reasoning, browser compat, <200KB, distributability, reproducibility, embeddings-in-wasm, shared resources, stability)'
   acceptance:
@@ -2450,3 +2452,27 @@
   route_family: representation
   status: completed
   witness: 'rs-plugkit 2404684: entry.rs Memorize section now prompts memorize-prune on bad recall hits (stale/wrong hit worse than a miss; prune {key}; uncertain via {query} review then {keys}; never blind similarity-delete). gm SKILL.md: added the same as a ''Prune bad memory on sight'' paragraph after the memory-residency rule. Terse principle-as-prompt, no procedure.'
+- id: rslearn-pathways-orphaned-from-plugkit
+  subject: rs-learn advanced pathways (temporal graph, instant-LoRA, EWC, FastGRNN router, attention) are NOT bridged to plugkit — agent can't invoke them
+  acceptance:
+  - rs-learn/crates/wasm/src/dispatch.rs exposes verbs insert_edge/query_at/invalidate_edge/contradict/init_instant/feedback/apply_adapter/consolidate/ewc_penalty/init_router/route/record_outcome/init_attention/attend
+  - 'rs-learn is NOT a Cargo dependency of rs-plugkit (confirmed: grep rs-learn rs-plugkit/Cargo.toml empty); the gm spool ABI exposes only recall/memorize/memorize-prune (simple file-vec), none of the rs-learn graph/learn/router verbs'
+  - So the 'massive rs-learn advances' run in a standalone crate orphaned from the live gm loop — nothing dispatches to them, which is why the scheduled internal processes 'require manual work' (no bridge exists)
+  - 'Decide+implement: either bridge rs-learn dispatch verbs through the plugkit spool, or document that rs-learn is a separate experimental crate not yet in the live loop'
+  - This is the root finding behind tree-stability/tree-optimization/lora-optimization 'not firing'
+  category: feature
+  effort: large
+  route_family: execution
+  status: pending
+- id: agentsmd-migration-not-implemented
+  subject: AGENTS.md-as-staging-ground -> learning-store migration is NOT implemented — store frozen, no code path ingests AGENTS.md
+  acceptance:
+  - .gm/disciplines/AGENTS.md/ namespace has 9 mems all mtime May 21 — frozen 4 days, nothing recent
+  - No code path in rs-plugkit/gm reads AGENTS.md and ingests it into the learning store (grep AGENTS.md hits are doc-commit policy + classifier only, no ingest/migrate)
+  - update_docs.rs claims memorize-fire is a parallel surface to AGENTS.md but there is no AGENTS.md->learning migration mechanism
+  - 'Decide+implement: a migration path (residual-scan or a verb that ingests new AGENTS.md rules into the learning store) OR correct the prose to stop claiming continual migration that does not exist'
+  - User wants this smooth and validated; currently it does not happen
+  category: feature
+  effort: large
+  route_family: execution
+  status: pending
