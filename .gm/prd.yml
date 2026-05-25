@@ -2439,3 +2439,14 @@
   route_family: execution
   status: completed
   witness: 'gm commit cdf69176 (pushed af97ab02): both auto-arm sites reverted to notify-only, _autoUpdateArmedFor removed. Root cause: version-file bumped ahead of binary download poisoned installedVersionAtTools -> ensureReady returned already-ready without downloading -> infinite drift-respawn (witnessed repeated ''spawning replacement'' log lines, installed wasm sha c08168ba != pinned 0.1.557 sha 469a6018). Fixed live: version file reset to 556, fixed wrapper installed to ~/.gm-tools, watcher rebooted drifted:false with 0 spawning-replacement events (grep /tmp/bootfixed.log returned 0).'
+- id: surface-prune-in-recall-prose
+  subject: Tell the agent to dispatch memorize-prune when it judges a recall hit stale/wrong — verb exists but no instruction prose prompts its use
+  acceptance:
+  - memorize-prune is in AGENTS.md ABI but the agent never sees a prompt to USE it when a recall hit is bad
+  - 'Add terse imperative to instruction prose (entry.rs or the recall-surfacing path) + SKILL.md: when a recall/auto_recall hit is wrong or superseded, dispatch memorize-prune {key} to remove it — bad memory is worse than no memory'
+  - Keep implicit principle-as-prompt, not procedure
+  category: refactor
+  effort: small
+  route_family: representation
+  status: completed
+  witness: 'rs-plugkit 2404684: entry.rs Memorize section now prompts memorize-prune on bad recall hits (stale/wrong hit worse than a miss; prune {key}; uncertain via {query} review then {keys}; never blind similarity-delete). gm SKILL.md: added the same as a ''Prune bad memory on sight'' paragraph after the memory-residency rule. Terse principle-as-prompt, no procedure.'
