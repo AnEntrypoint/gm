@@ -2306,7 +2306,8 @@
   category: feature
   effort: large
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'Implemented: rs-plugkit 1c0ca87 adds memorize-prune verb + host_kv_delete import declaration; gm 6a4a56b2 adds the host_kv_delete wrapper impl (deletes key text + -vec sibling across enabled discipline dirs) + AGENTS.md docs. Two modes: explicit {key}/{keys} hard-deletes named mems (emits memory.pruned); {query} is review-only returning vector_top_k candidates with keys for agent judgment — never auto-similarity-deletes (a blind similarity delete is itself a bad-memory generator). Pruning is now possible where the store was append-only. Wrapper installed to ~/.gm-tools. End-to-end verb dispatch validation gated on the cascade rebuilding plugkit-wasm with the new verb + the host import pairing — carries to next fire.'
 - id: validate-memorize-embed-recall-roundtrip
   subject: Validate the full memorize-fire -> embed -> recall round-trip end to end on the file-vec store
   acceptance:
