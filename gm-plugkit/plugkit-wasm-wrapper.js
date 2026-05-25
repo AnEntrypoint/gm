@@ -1753,8 +1753,13 @@ function makeHostFunctions(instanceRef) {
           });
         }
 
-        if (trimmed.startsWith('session list') || trimmed.startsWith('session kill') || trimmed.startsWith('session close')) {
+        if (trimmed.startsWith('session ')) {
           const parts = trimmed.slice(8).trim().split(/\s+/);
+          // playwriter's actual session subcommands are list|new|delete|reset.
+          // Map the legacy close/kill aliases (recognized here historically) to delete,
+          // and pass list/new/delete/reset through verbatim. Anything else is rejected
+          // by playwriter with its own usage text, which is the correct surface.
+          if (parts[0] === 'close' || parts[0] === 'kill') parts[0] = 'delete';
           const r = runBrowserRunner(pw, ['session', ...parts], 30000);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
