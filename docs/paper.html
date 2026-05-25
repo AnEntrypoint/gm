@@ -816,6 +816,32 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
+<h2 id="s38">38. The Continuation Invariant: A Toolless Turn Is A Stop</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: While The Chain Is In-Flight, Every Turn Ends In A Tool Call <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE &middot; EMIT &middot; VERIFY]</span></div>
+  <p>Every programming agent reads only tool calls and their outputs; an assistant message that ends in prose with no tool call <em>is</em> the turn ending, and the harness halts there. So while the chain is in-flight (phase &ne; COMPLETE or prd_pending &gt; 0) the agent never ends a turn in prose and never writes a summary or recap&mdash;summary is a stop. The only event that authorizes a prose-only turn is plugkit returning phase=COMPLETE and prd_pending=0. Before any apparent stop, the agent dispatches <code>phase-status</code> and rechecks; a non-terminal phase means the urge to stop was drift, and the recovery is to dispatch <code>instruction</code> and continue.</p>
+</div>
+
+<p>This is the mechanical root of the most common long-horizon failure: an agent completes one small piece of a multi-part task, writes a &ldquo;here is what I did&rdquo; paragraph, emits no tool call, and the harness reads that paragraph as the end of the work. The agent did not decide to stop&mdash;the absence of a tool call <em>is</em> the stop, independent of intent. No amount of &ldquo;remember to continue&rdquo; in the prompt survives the moment the model emits a closing sentence, because the closing sentence and the stop are the same event.</p>
+
+<p>The invariant inverts the default. Instead of &ldquo;continue unless done,&rdquo; the rule is &ldquo;the answer to <em>am I done?</em> is another tool call&rdquo; until the gate says otherwise. Doneness is not a feeling the agent reports; it is a pronouncement the agent reads back from plugkit&rsquo;s COMPLETE gate. The agent that types a summary has substituted its own judgment for the gate&rsquo;s&mdash;and on a long-horizon task that judgment is wrong often enough that the substitution is the dominant source of premature halt.</p>
+
+<p>Crucially this depends on nothing but the verb spool. It is not a hook, not a stop-event interceptor, not a platform-specific continuation feature&mdash;any of which would bind the discipline to one agent host and break the moment the same skill runs under a different harness. The continuation invariant is prose served through the <code>instruction</code> verb and restated in the skill body; it elicits the same behavior on every model that can read and call tools. Predictability across heterogeneous LLMs is the goal, and a spool-only rule is the only mechanism that achieves it.</p>
+
+<h2 id="s39">39. Spool Dispatch Replaces Platform Hooks</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: The Gate Is The Spool, Not A Host Hook <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE]</span></div>
+  <p>Orchestration state is tracked via marker files in <code>.gm/</code> and gated at the dispatch layer, not through any agent-host hook event. No skill prose, gate denial, or instruction names a host-specific invocation form (a plugin-namespaced skill, a host-specific subagent type). The gate-satisfying action is always a portable spool dispatch: write <code>.gm/exec-spool/in/instruction/&lt;N&gt;.txt</code> and read the response.</p>
+</div>
+
+<p>An earlier generation gated the chain with the host&rsquo;s PreToolUse hook, emitting that host&rsquo;s permission-decision JSON and naming that host&rsquo;s skill- and subagent-invocation forms as the way to satisfy the gate. That coupling is invisible until the same skill is installed under a different harness, where the hook never fires and the named invocation forms do not exist&mdash;so the gate either never engages or instructs the agent to call something that is not there. Subagent-form orchestration compounds the failure: an isolated subagent returns a prose summary to its parent, and the parent, reading prose with no continuing tool call, stops (§38).</p>
+
+<p>The replacement is marker files plus spool dispatch. <code>checkDispatchGates</code> reads <code>.gm/prd.yml</code>, <code>.gm/mutables.yml</code>, and the needs-gm / gm-fired markers and returns an allow/deny with a reason string; the reason names the next portable verb to dispatch, never a host-specific tool. Every behavior the old hooks enforced&mdash;gm-before-other-tools, mutables-block-writes, residual-scan-before-stop&mdash;survives as a spool gate that behaves identically on every agent. The legacy <code>wasm_hooks</code> exports remain only as dead ABI with no caller; the agent-facing surface names nothing tool-specific.</p>
+
+<hr>
+
 <h2 id="three-layer-filter">Three-Layer Admission Filter</h2>
 
 <p>Sections 2&ndash;37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
