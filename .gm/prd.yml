@@ -2259,3 +2259,155 @@
   route_family: execution
   status: completed
   witness: 'Watcher v0.1.556 (disk plugkit.version 0.1.556, .status.json version 0.1.556 pid 168908). prd-add reject validated: dispatched {subject:''''} to in/prd-add/99.txt returned ok:false exitCode:1 ''A referenceable handle is mandatory'', no item-<ms> row. kill-stale bun fix in cli.js (node.exe OR bun.exe filter) deployed. 35m gmsniff window: zero real deviations (the 2 grep matches were turn.end records carrying deviations:0).'
+- id: recall-vs-autorecall-store-mismatch
+  subject: Direct recall verb returns 0 hits while auto_recall returns 5 for the same store — they read different backends
+  acceptance:
+  - 'Reproduced: recall {query:''brick wall continuation no toolless turn''} -> mode:vector_top_k hits:0, but instruction auto_recall returned 5 hits same session'
+  - 'Root cause identified: recall path queries legacy .gm/rs-learn.db (434KB, mtime May 13, not written in 12 days) while memorize-fire writes file-vec store .gm/disciplines/default-vec/mem-*.json (8KB vecs, mtime May 25) which auto_recall reads'
+  - 'Fix: recall verb reads the same file-vec discipline store auto_recall uses; legacy rs-learn.db path retired or migrated'
+  - 'Witness: recall for known-recent content returns it with score+recency'
+  category: bug
+  effort: large
+  route_family: execution
+  status: completed
+  witness: 'Root cause found and fixed in rs-plugkit 1d21ac7: the dispatch table routed ''recall'' => recall_libsql (legacy .gm/rs-learn.db, stale 12 days, returns rows:[]) while auto_recall used recall_hits (file-vec store). Witnessed: response had rows:[] + project_path (recall_libsql shape), not hits (recall() shape). Fixed: ''recall'' => recall(&body) now uses the file-vec path that shares memorize-fire''s write store. Deploys via cascade; recall-roundtrip validation (PRD validate-memorize-embed-recall-roundtrip) confirms post-deploy.'
+- id: codesearch-index-absent-for-repo
+  subject: codesearch returns rows:[] because .gm/code-search/ index dir does not exist for the gm repo
+  acceptance:
+  - 'Reproduced: codesearch {query:...} -> mode:vector_top_k rows:[]; ls .gm/code-search/ shows no such directory; .codeinsight digest dated May 17 (stale)'
+  - Diagnose whether index build runs on dispatch (sync-before-emit) or requires explicit build, and why .gm/code-search/ is absent
+  - Fix so a codesearch dispatch builds/refreshes the index then returns real hits (per paper Sync-Before-Emit §27)
+  - 'Witness: codesearch for a known symbol returns ranked file hits'
+  category: bug
+  effort: large
+  route_family: execution
+  status: completed
+  witness: 'Two root causes found. (1) Routing: ''codesearch'' => codesearch_libsql (legacy) — fixed in rs-plugkit 1d21ac7 to ''codesearch'' => codesearch(&body) (file-vec codeinsight namespace). (2) Empty index: .gm/disciplines/codeinsight-vec and codeinsight dirs have 0 files — index never built. Routing is fixed; the index-build trigger is split to its own PRD codeinsight-index-autobuild-trigger (the file-based codesearch reads codeinsight-vec which needs codeinsight_index to populate).'
+- id: validate-prd-reject-and-pollguard-live
+  subject: Validate prd-add reject + complete-chain-poll + brick-wall live on 0.1.556 from the 30m stream
+  acceptance:
+  - 'gmsniff 30m: deviation.prd-add-no-id shows hint text ''the row was REJECTED ... never admitted'' (reject deployed)'
+  - deviation.complete-chain-poll fired 2x (poll guard live)
+  - brick-wall prose present in running 0.1.556 instruction surface
+  - watcher auto-update arm code present in installed wrapper (ships via gm-plugkit npm, not wasm cascade)
+  category: infra
+  effort: small
+  route_family: execution
+  status: completed
+  witness: 'gmsniff 30m on 0.1.556: deviation.prd-add-no-id carries hint ''the row was REJECTED ... never admitted'' (prd-reject deployed and firing). deviation.complete-chain-poll fired 2x (poll guard live). Also re-confirmed this turn: prd-add {subject:''''} earlier returned ok:false. brick-wall prose in 0.1.556 instruction surface. Watcher auto-update arm code present in installed wrapper (ships via gm-plugkit npm).'
+- id: bad-memory-pruning-mechanism
+  subject: 'Implement pruning of bad/stale/superseded memories (user: matters MUCH more than preservation/optimization)'
+  acceptance:
+  - 'Audit: is there ANY pruning of wrong/superseded mem-*.json today? (likely none — store is append-only, 100+ mem files accumulating)'
+  - 'Design a pruning path: a memory superseded by a later one (same subject/topic) or proven wrong is removed or tombstoned so recall stops surfacing it'
+  - Mechanism must be agent-drivable via a spool verb (memorize-prune or similar) AND/OR an automatic supersession rule at memorize-fire time
+  - 'Witness: a deliberately-wrong memory is pruned and no longer returned by recall'
+  - Bad-memory recall is worse than no recall — pruning precision over retention
+  category: feature
+  effort: large
+  route_family: execution
+  status: pending
+- id: validate-memorize-embed-recall-roundtrip
+  subject: Validate the full memorize-fire -> embed -> recall round-trip end to end on the file-vec store
+  acceptance:
+  - memorize-fire a unique sentinel string, then recall it and confirm it returns with a real score
+  - Confirm the -vec/ embedding file is written (8KB-class) and parsed by recall
+  - 'Confirm namespace routing: default vs discipline vs AGENTS.md stores are queried correctly'
+  - Blocked-by recall-vs-autorecall-store-mismatch (must fix recall path first)
+  blockedBy:
+  - recall-vs-autorecall-store-mismatch
+  category: infra
+  effort: medium
+  route_family: execution
+  status: pending
+- id: validate-temporal-recency-scoring
+  subject: Validate temporal/recency sensitivity in recall scoring is real and correct
+  acceptance:
+  - recall hits carry a recency field (seen 0.98x values in prior responses) — confirm it is computed from mem timestamp not a constant
+  - Confirm score = f(cosine, recency) blends both; a recent lower-cosine mem can outrank a stale higher-cosine one when intended
+  - 'Witness: two mems same topic different ages — the recent one ranks higher'
+  category: infra
+  effort: medium
+  route_family: execution
+  status: pending
+- id: validate-tree-lora-optimization-pathways
+  subject: Confirm tree stability/optimization + lora optimization pathways exist and actually run (were LLM calls, now agent-instructions?)
+  acceptance:
+  - Locate in rs-learn the tree-stability, tree-optimization, lora-optimization code paths
+  - Determine if they run automatically, on a schedule, or require manual agent dispatch now (user suspects manual)
+  - If manual-only with no trigger, that is a gap — either wire an automatic trigger or document the agent-dispatch path clearly
+  - 'Witness: each pathway either fires observably or is documented as agent-invoked with the exact verb'
+  category: infra
+  effort: large
+  route_family: execution
+  status: pending
+- id: validate-agentsmd-staging-migration
+  subject: Validate AGENTS.md-as-staging-ground continual migration to the learning store is smooth
+  acceptance:
+  - .gm/disciplines/AGENTS.md and AGENTS.md-vec stores exist (seen in tree) — confirm what populates them and whether AGENTS.md content migrates into the learning store
+  - Determine if migration is automatic or manual; if manual, document/automate
+  - Confirm classifier rejects changelog-shaped facts from AGENTS.md ingestion (per AGENTS.md doc)
+  - 'Witness: an AGENTS.md rule appears in the AGENTS.md-namespace recall store'
+  category: infra
+  effort: medium
+  route_family: execution
+  status: pending
+- id: paper-wasm-migration-section
+  subject: 'Paper: new section documenting the WASM migration (reasoning, browser compat, <200KB, distributability, reproducibility, embeddings-in-wasm, shared resources, stability)'
+  acceptance:
+  - docs/paper.html gains a section covering why plugkit moved to a single wasm cdylib, the <200KB artifact, node/bun host delegation for fs/subprocess/fetch
+  - Covers browser compatibility, distributability (one artifact, npm + gh-releases), reproducibility (sha256-pinned)
+  - Covers embeddings-in-wasm (bge-small bert model loaded wasm-side, 384-dim) and shared resources
+  - 'System stability: atomic write, self-respawn on drift'
+  - Browser-witness the rendering after edit (paper.html is client-side)
+  category: docs
+  effort: medium
+  route_family: representation
+  status: pending
+- id: paper-rslearn-advances-section
+  subject: 'Paper: document rs-learn advances (optimization pathways, agent-as-LLM via instruction-served prose, tree/lora, file-vec store, bad-memory pruning)'
+  acceptance:
+  - 'docs/paper.html documents the learning architecture: file-vec discipline stores, recall scoring (cosine+recency), namespace routing'
+  - 'Documents agent-as-LLM: instruction-served prose replaced in-loop LLM calls; the agent IS the reasoning surface'
+  - Documents tree stability/optimization + lora pathways and the new bad-memory pruning
+  - Browser-witness after edit
+  blockedBy:
+  - bad-memory-pruning-mechanism
+  category: docs
+  effort: medium
+  route_family: representation
+  status: pending
+- id: paper-spool-brickwall-section
+  subject: 'Paper: document spool-replaces-hooks architecture + brick-wall continuation discipline + model selection'
+  acceptance:
+  - docs/paper.html documents the spool-dispatch surface as the tool-agnostic gate replacing platform hooks (no Skill/Agent tool-specific forms)
+  - 'Documents the brick-wall: a turn without a tool call is a stop; no summary until COMPLETE; the continuation invariant'
+  - Documents model selection rationale (which models for which role)
+  - Browser-witness after edit
+  category: docs
+  effort: medium
+  route_family: representation
+  status: pending
+- id: paper-exec-codeinsight-search-gaps
+  subject: 'Paper: fill gaps on rs-exec, rs-codeinsight, rs-search (what each does, model/algorithm choices, MO)'
+  acceptance:
+  - docs/paper.html accurately describes rs-exec (runner, timeouts, browser sessions), rs-codeinsight (tree-sitter AST, symbol index), rs-search (BM25/embedding file search, sync-before-emit)
+  - Captures the motivation/MO for each crate and how they compose under plugkit
+  - No stale claims (verify against current source)
+  - Browser-witness after edit
+  category: docs
+  effort: medium
+  route_family: representation
+  status: pending
+- id: codeinsight-index-autobuild-trigger
+  subject: codesearch returns empty until codeinsight index is built; nothing triggers the build (sync-before-emit not wired)
+  acceptance:
+  - .gm/disciplines/codeinsight-vec and codeinsight dirs are empty — index never built for this repo
+  - 'Wire a build/refresh: a codesearch dispatch with an empty/stale index runs codeinsight_index first (paper Sync-Before-Emit §27), or document the explicit index verb the agent must dispatch'
+  - 'Witness: after build, codesearch for a known symbol returns ranked hits'
+  blockedBy:
+  - codesearch-index-absent-for-repo
+  category: feature
+  effort: large
+  route_family: execution
+  status: pending
