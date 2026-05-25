@@ -2088,7 +2088,8 @@
   category: bug
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'rs-plugkit commit 003a80c (pushed 4275510): handle_instruction now computes fresh_prompt = prompt differs from read_last_prompt(); when phase==COMPLETE && !raw_phase_override && fresh_prompt, sets phase=PLAN + write_state. src/orchestrator/instructions/mod.rs lines ~263-295. Cascade rebuilds plugkit.wasm to deploy.'
 - id: plugkit-complete-chain-poll-deviation
   subject: instruction verb emits deviation.complete-chain-poll when re-dispatched on terminal chain
   acceptance:
@@ -2098,7 +2099,8 @@
   category: feature
   effort: small
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'rs-plugkit commit 003a80c: idev() helper added (mirrors gates.rs log_deviation evt: line, host_log level 1). In handle_instruction, phase==COMPLETE && !raw_phase_override && !fresh_prompt && prd_pending==0 emits deviation.complete-chain-poll. gmsniff --grep deviation will surface it once cascade deploys.'
 - id: wrapper-turn-idle-span-fix
   subject: turn.end dur_ms no longer balloons across idle gaps from non-instruction verbs
   acceptance:
@@ -2109,4 +2111,5 @@
   category: bug
   effort: medium
   route_family: execution
-  status: pending
+  status: completed
+  witness: 'gm commit e098e9e6 (pushed d0b144ba): turnTick idle-split now runs for ALL verbs via shared endTurn() helper with idle_spanned flag; non-instruction verb after idle opens no turn. gm-plugkit/plugkit-wasm-wrapper.js lines ~291-322. Live on next watcher boot.'
