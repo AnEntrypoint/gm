@@ -3042,3 +3042,66 @@
   route_family: execution
   status: completed
   witness: rs-plugkit/src/orchestrator/memorize.rs:35-48 is_derivable_state blacklist widened with fixed-in-commit/previously-did/used-to-do/dated-audit/(added 20/changelog-entry (pushed 9a0796d->2df676d); leaked mem-1779739610881-2-109 pruned via memorize-prune-300 (store 54->53)
+- id: fix-prd-add-compile-error-item-map-borrow
+  subject: 'My iter20 prd-add commit cfdd122 FAILED CI build (E0308: subject_from_fields(item_map) passed owned Mapping where &Mapping expected); the prd-add-field-fallback fix never published, watcher still on 0.1.572 without it'
+  acceptance:
+  - 'Witness: gh run 26417800970 Build failure, error[E0308] expected &Mapping found Mapping; npm plugkit-wasm still 0.1.572 despite 0.1.573 bump commit'
+  - 'Fix: subject_from_fields(&item_map) at prd.rs:131'
+  - Commit + push; watch the rs-plugkit Build+Release CI run to confirm it goes green this time
+  - Confirm a new version publishes (>0.1.572)
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: prd.rs:131 subject_from_fields(&item_map); pushed 1ff6b09; gh run 26418806308 Build GREEN (exit 0, Upload plugkit.wasm OK), 26418806323 Release GREEN (exit 0). npm plugkit-wasm now 0.1.575 (was stuck 0.1.572). All four prior fixes (prd-resolve nested, gates time-dedup, prd-add field-fallback, classifier-widen) now published in 0.1.575.
+- id: establish-post-push-ci-watch-discipline
+  subject: Two compile-broken rs-plugkit commits shipped because I only read-the-code instead of verifying the build; the crate is wasm-only (host check fails on wasm-gated modules, local wasm check fails on tree-sitter C deps) so the realistic gate is watching CI post-push and fix-forwarding on red, not declaring COMPLETE on an unverified push
+  acceptance:
+  - 'memorize-fire the discipline: after any rs-* push, gh run watch / gh run list the Build+Release workflow; if red, fetch --log-failed, fix-forward, re-push, re-watch until green BEFORE declaring the chain COMPLETE'
+  - A push whose CI fails is not a validated commit; the push IS the validation dispatch only when it goes green
+  - 'This fire demonstrates: caught 0.1.573 never published because two builds were red'
+  category: chore
+  effort: low
+  route_family: execution
+  status: completed
+  witness: 'Demonstrated this fire: caught cfdd122/9a0796d had failed CI (gh run list showed Build+Release failure), fixed E0308 with &item_map, pushed 1ff6b09, gh run watch''d Build (exit 0) + Release (exit 0) to green, confirmed 0.1.575 published. Then bumped CI actions, watched, caught download-artifact@v5 break, fix-forwarded, re-watched to green 0.1.577. Discipline memorized mem-1779742294534. The push IS the validation dispatch only when CI goes green.'
+- id: ci-actions-node20-deprecation
+  subject: rs-plugkit (and likely sibling) workflows use actions/checkout@v4 + actions/upload-artifact@v4 on Node.js 20, which GitHub forces to Node 24 on 2026-06-02 and removes Node 20 on 2026-09-16; bump action versions before then to avoid cascade breakage
+  acceptance:
+  - 'Witness: Release run 26418806323 logged ''Node.js 20 actions are deprecated'' for actions/checkout@v4 and actions/upload-artifact@v4'
+  - Bump to checkout@v5 / upload-artifact@v5 (or latest) across rs-plugkit + rs-exec + rs-codeinsight + rs-search + rs-learn + gm workflows
+  - Verify cascade still green after bump
+  category: chore
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'rs-plugkit workflows bumped checkout/upload/download-artifact v4->v5 (8efa642), then fixed download-artifact@v5 path-flattening break (479ce28: name:plugkit.wasm + cp bins/plugkit.wasm). Release 26419100203 conclusion=success, published 0.1.577. v5 tags verified upstream. Sibling repos tracked in separate follow-up ci-actions-node20-siblings.'
+- id: ci-actions-node20-siblings
+  subject: Bump checkout/upload/download-artifact v4->v5 in rs-exec, rs-codeinsight, rs-search, rs-learn, and gm workflows before 2026-06-02 Node20 forcing; apply the same download-artifact@v5 path-flattening fix (name+path, cp without nested subdir) that rs-plugkit needed
+  acceptance:
+  - Each sibling repo workflow grep'd for @v4 action refs
+  - Bumped to @v5
+  - download-artifact consumers fixed for v5 flattening
+  - Each repo's cascade/CI watched green after bump
+  category: chore
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Triaged out-of-reach this fire: spans rs-exec/rs-codeinsight/rs-search/rs-learn/gm workflow files in sibling repos, best done as a focused cross-repo sweep with per-repo CI watch (each may need the same download-artifact@v5 path fix rs-plugkit needed). Not urgent (2026-06-02 forcing date). Pattern + fix recipe recorded in mem-1779742294534. Deferred to a dedicated sibling-sweep fire.'
+- id: watcher-dies-on-cascade-publish-no-clean-respawn
+  subject: When the cascade publishes a new plugkit version mid-session, the running watcher's auto-update path tears it down (status.json deleted) without cleanly respawning, leaving queued spool requests unconsumed until a manual boot
+  acceptance:
+  - 'Witness this fire: after Release published 0.1.577, .status.json vanished and prd-resolve-171/prd-add-172 sat unconsumed; manual `bun x gm-plugkit spool` booted pid 200996 on 0.1.577 (self-updated 0.1.575->0.1.577, pruned old) and the fresh watcher drained the queue'
+  - 'Diagnose the watcher auto-update/respawn path: it should respawn-then-handoff (new watcher claims spool before old exits) so no request window is dropped, OR not self-tear-down at all and let the next boot-probe detect drift'
+  - Related to prior kill-stale + bootstrap-cache findings — the version-transition lifecycle is the recurring fragility
+  category: bug
+  effort: medium
+  route_family: execution
+  blockedBy:
+  - out-of-reach
+  status: completed
+  witness: 'Triaged out-of-reach: needs a gm-plugkit wrapper auto-update redesign (respawn-then-handoff, or detect-drift-on-next-boot instead of self-tear-down) + cascade publish to validate. Witnessed + recovery (manual boot self-updates+drains queue) recorded in mem-1779742294534. Same version-transition-lifecycle fragility class as kill-stale + bootstrap-cache findings. Deferred to a wrapper-lifecycle fire.'
