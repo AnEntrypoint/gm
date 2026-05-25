@@ -2992,3 +2992,53 @@
   route_family: execution
   status: completed
   witness: 'validation: nested envelope unwrap test on 0.1.572'
+- id: prd-add-subject-field-fallback
+  subject: prd-add slug derivation must fall back through title/name/task/goal/description/notes when subject is empty, so an agent's content is not lost to field-name mismatch
+  acceptance:
+  - 'Witness: gmsniff showed 3x prd-add-no-id from sttr (cwd C:/dev/sttr pid 200080, 19:54:04-15) all with subject:'''' and no id — content lost 3x'
+  - subject_from_fields(item_map) tries subject,title,name,task,goal,description,notes in order, first non-empty trimmed wins
+  - slug_from_subject fed the recovered text; truly-empty bodies still hard-reject
+  - reject hint updated to name the full field set
+  - 5 unit tests cover precedence, title/description fallback, whitespace-skip, empty-reject
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: 'rs-plugkit/src/orchestrator/prd.rs: subject_from_fields tries subject,title,name,task,goal,description,notes (pushed cfdd122->2df676d); 5 unit tests (subject_prefers_subject_field, subject_falls_back_to_title, subject_falls_back_through_description, subject_skips_empty_and_whitespace_fields, subject_empty_when_no_text_fields); hint updated to name full field set'
+- id: validate-iter19-fixes-live-0172
+  subject: 'Validate iter19 fixes still working on 0.1.572: prd-resolve nested unwrap, kill-stale fallback (8838f062 gm-plugkit), memory store health'
+  acceptance:
+  - prd-resolve nested envelope still unwraps
+  - memory store balanced, recall temporal-scored
+  - AGENTS.md->learning classifier still rejects changelog-shaped facts
+  category: validation
+  effort: low
+  route_family: execution
+  status: completed
+  witness: prd-resolve-151 nested envelope unwrapped+resolved on 0.1.572 (still live); store balanced; recall-152 vector_top_k top 0.670; AGENTS.md->learning classifier RE-TESTED and found leaky (stored a changelog fact) — fixed this fire (classifier-changelog-leak-widen-blacklist). kill-stale fallback 8838f062 confirmed shipped in gm-plugkit (no version-drift this fire, update_available null).
+- id: sttr-recurring-prd-handle-friction
+  subject: The sttr project agent has now hit prd-resolve-nested-envelope AND prd-add-no-id across two fires — a recurring cross-LLM friction signature worth a durable memory so the pattern is recognized
+  acceptance:
+  - 'memorize-fire a note: sttr/steem-runner agent repeatedly mis-shapes prd verbs (envelope-in-prd_id, content-in-non-subject-field); both now tolerated by plugkit; if a third distinct prd-verb mis-shape appears, consider a broader body-normalization pass at the verb dispatch boundary'
+  category: chore
+  effort: low
+  route_family: execution
+  status: completed
+  witness: memorize-fire-310 (mem-1779739846138-3-1049) recorded the recurring sttr prd-verb mis-shape signature + the verb-handler-normalization principle for recall
+- id: iter20-nested-revalidation-probe
+  subject: throwaway probe for re-validating nested-envelope unwrap on 0.1.572
+  status: completed
+  witness: re-validate nested unwrap on 0.1.572
+- id: classifier-changelog-leak-widen-blacklist
+  subject: memorize changelog-shape classifier leaked a changelog fact (matched only narrow patterns); widen blacklist and prune the leak
+  acceptance:
+  - 'Witness: probe ''FIXED in commit deadbee... previously did A... dated audit entry'' was STORED ok:true (store 53->54) while last-fire ''we used to'' probe was rejected — classifier inconsistent'
+  - Leaked memory mem-1779739610881-2-109 pruned (store back to 53)
+  - 'is_derivable_state blacklist widened: fixed-in-commit, previously-did, used-to-do, dated-audit, (added 20, changelog-entry'
+  - Patterns kept narrow to avoid false-rejecting legitimate facts
+  - Classifier is wasm32-only (host handle_fire spools without classifying) so validation is by-code + on cascade
+  category: bug
+  effort: medium
+  route_family: execution
+  status: completed
+  witness: rs-plugkit/src/orchestrator/memorize.rs:35-48 is_derivable_state blacklist widened with fixed-in-commit/previously-did/used-to-do/dated-audit/(added 20/changelog-entry (pushed 9a0796d->2df676d); leaked mem-1779739610881-2-109 pruned via memorize-prune-300 (store 54->53)
