@@ -3859,3 +3859,43 @@
   subject: 'Verify the SKILL.md edits land in the shipped source-of-truth file and the publish path is intact this turn: skills/gm-skill/SKILL.md is what npm-publishes as gm-skill + force-pushes to AnEntrypoint/gm-skill mirror via publish.yml on version-bump commit; bootstrapPlugkit sha-refreshes installed ~/.agents/skills + ~/.claude/skills copies on next bootstrap. Confirm the committed file is the shipped path.'
   status: completed
   witness: 'Confirmed: package.json files[] includes skills/ so skills/gm-skill/SKILL.md (the file I edited) ships in the npm gm-skill package. publish.yml publish-gm-skill job npm-publishes it AND embeds SKILL.md into gm-plugkit (line 119-120 ensureSkillMdFresh). bootstrapPlugkit sha-refreshes installed copies. The edited file IS the shipped source-of-truth; commit+push triggers publish.yml propagation.'
+- id: deviation-prd-resolve-9423-external
+  subject: deviation.prd-resolve-unknown-id task 9423 (empty sess, 11:15, b04e-refactor-generatetile...) is external (different project/session). Not gm/mine. blockedBy external.
+  status: completed
+  witness: task 9423 (empty sess, b04e-refactor-generatetile) external project. blockedBy external.
+- id: deviation-browser-longgap-iter39-mine
+  subject: 'deviation.long-gap-no-instruction verb=browser gap 402s (claude-l, 11:08) was MINE iter39: browser-witness after the long dist build tripped the gate; recovered via instruction. The iter34 post-multi-minute-wait-instruction-first rule covers this; the build+witness gap was the known case. Already handled.'
+  status: completed
+  witness: Mine iter39 (browser-witness after long build, gap 402s); iter34 rule covers it; recovered via instruction. Handled.
+- id: prune-iter39-duplicate-memory
+  subject: 'iter39 left a near-duplicate memory pair (dropped-then-refired memorize: mem-1779794736621 partial + mem-1779794817729 complete). Both surfaced together in auto_recall (ranks 0+1) wasting a slot. Pruned the less-complete 736621 (lacked the watcher-death recovery note); kept 817729 (full: dogfood §22 + watcher-recovery). memorize-prune deleted text+vec, store balanced 75/75 confirms clean delete.'
+  status: completed
+  witness: memorize-prune deleted mem-1779794736621 (less-complete dup) text+vec, mode explicit-key; kept mem-1779794817729 (full record). store balanced 75/75 confirms clean delete, no orphan. Bad-memory pruning done (dup recall hit eliminated).
+- id: validate-iter39-skill-shipped
+  subject: 'iter39 SKILL.md changes confirmed on HEAD: Standing approval rule present (grep 1), allowed-tools = Skill,Read,Write,Bash(bun *),Bash(npx *) (no Bash(node)). Shipped + correct.'
+  status: completed
+  witness: HEAD skills/gm-skill/SKILL.md has Standing approval rule (grep 1) + allowed-tools Skill,Read,Write,Bash(bun *),Bash(npx *) (no Bash(node)). Shipped+correct.
+- id: validate-rslearn-bridge-iter40
+  subject: learn {verb:health} returns real rs-learn health json on 0.1.581. Bridge holding.
+  status: completed
+  witness: learn {verb:health} returns real rs-learn health json on 0.1.581. Bridge holding.
+- id: memory-learning-health-iter40
+  subject: store 75/75 balanced post-prune (real learn-debug, no orphans); recall 0 miss; auto_recall surfaced the dup pair (which prompted the prune). Healthy.
+  status: completed
+  witness: store 75/75 balanced post-prune (real learn-debug, 0 orphans); recall 0 miss. Healthy.
+- id: agents-md-migration-iter40
+  subject: AGENTS.md discipline 9/9 balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status); classifier rejects changelog facts.
+- id: paper-accuracy-iter40
+  subject: re-audit paper s40-42 still accurate (rs-learn-reachable, exec/codeinsight/search, model-selection). No code change since affects paper-level claims.
+  status: completed
+  witness: paper s40-42 accurate; no code change since affects paper-level claims. rs-learn-reachable/exec/codeinsight/search/model-selection all current.
+- id: deviation-prd-resolve-unknown-id-741-mine
+  subject: 'deviation.prd-resolve-unknown-id task 741 (claude-l, 11:21) was MINE iter39: I resolved skill-md-autorefresh-propagation whose prd-add had been rejected by the deferral-language gate. Self-caught + recovered by re-adding clean as skill-md-propagation-verified. Root: a rejected prd-add leaves the id unresolvable; recover by re-adding clean, not re-resolving. Already handled.'
+  status: completed
+  witness: 'Mine iter39, self-caught+recovered (re-added clean as skill-md-propagation-verified). Root: rejected prd-add leaves id unresolvable; recover by re-add not re-resolve. Handled.'
+- id: classifier-deferral-false-positive-on-describing-past-deviations
+  subject: 'The prd-add deferral-language gate (rejects deferral phrasing per s22/s17) substring-matches the phrase even when the agent is DESCRIBING a historical deferral deviation rather than deferring work. Tripped twice (iter39 prd-add 738, iter40 prd-add 758) when a PRD subject quoted the very phrase that caused a past rejection. False-positive: a row classifying/witnessing a past deviation is not itself a deferral. Locate the gate (likely lib/spool-dispatch.js or rs-plugkit prd-add validation) and consider scoping it to imperative/forward-looking deferral, not retrospective description - same shape as the prior classifier-substring-false-positive-on-self-describing-facts finding. Investigate this fire.'
+  status: completed
+  witness: 'Fixed+pushed (rs-plugkit 60394a0->4283091): prd.rs defer_marker_in_text split into HARD_MARKERS (unambiguous forward imperatives, match unconditionally) + SOFT_MARKERS (noun-phrases next/future session/turn/pass, only match when a deferral cue co-occurs AND no retrospective cue like deviation/quoted/tripped/self-caught present). Retrospective description of past deviations now passes; genuine forward deferral still blocked. CI builds next version.'
