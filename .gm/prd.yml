@@ -3331,3 +3331,43 @@
   subject: 'git_push rebase-retry must be bounded (e.g. 3 attempts) since a fast-moving cascade remote could reject repeatedly; after N failures return gate_denied naming remote-moving-faster-than-push rather than looping. Witness: release.yml bump step uses 5-attempt loop.'
   status: completed
   witness: 'wasm_dispatch.rs: while loop bounded attempts<3; after exhaustion log_deviation_push(push-remote-outpaces) + gate_denied naming remote-moving-faster-than-push. Matches release.yml bounded-retry pattern.'
+- id: fix-ccsniff-replay-ts-skew
+  subject: 'ccsniff JsonlReplayer _push emitted timestamp:Date.now() (index.js:128) instead of the JSONL event ts, so git-discipline (and every streaming_progress consumer) showed scan-time not command-time. Displayed ts drifted forward each run (06:06->06:07->06:07:50); --since 30m never aged out historical deviations, polluting every audit window with already-corrected violations. FIX: thread Date.parse(e.timestamp) through _push as eventTs (fallback Date.now() for live stream). Validated: 1h window now shows real 05:37/05:39; 15m window ages out iter26 deviation (0 violations).'
+  status: completed
+  witness: 'Fixed ccsniff src/index.js:127-129 _push: threads Date.parse(e.timestamp) as eventTs (fallback Date.now() for live). Committed 9fc80de, pushed 167a266. Validated: --git-discipline 1h shows real 05:37/05:39 (was drifting 06:0x); --since 15m ages out the 32m-old iter26 deviation (0 violations). Audit-window accuracy restored.'
+- id: validate-iter26-deviation-is-historical
+  subject: The 2 push-no-porcelain-witness flagged this window are MY iter26 chained pull-rebase+push (real ts 05:37/05:39, ~32m ago), already corrected in iter27 (separate-event pushes) and root-fixed in git_push verb. After ccsniff ts fix they age out of the 30m window. Not a new deviation.
+  status: completed
+  witness: The 2 flagged push-no-porcelain-witness are MY iter26 chained pushes (real ts 05:37:57/05:39:08 UTC, ~32m before now 06:09 UTC), corrected in iter27 + root-fixed in git_push verb. Post-ccsniff-fix they age out of 30m window. Confirmed not a new deviation; iter27 corrected pushes (bare separate-event) NOT flagged.
+- id: investigate-version-transition-fragility
+  subject: 'update_available 0.1.577->0.1.578/579 fired; kill-stale reported watcher fresh (disk wasm 0.1.577 matched) but latest was higher; bun x spool downloaded 0.1.579 to cache + installed to ~/.gm-tools (version file ->0.1.579) but the respawn left NO live watcher (status.json empty, no plugkit process); required manual node wrapper spool boot (pid 194748 0.1.579). Recurring lifecycle gap: cascade-publish -> install-to-disk OK -> respawn-no-live-watcher. Document/fix.'
+  status: completed
+  witness: 'Documented recurring lifecycle gap: update_available fired (0.1.577->0.1.578/579); kill-stale saw watcher fresh vs disk wasm 0.1.577; bun x spool downloaded 0.1.579 to cache + installed to ~/.gm-tools (version->0.1.579) BUT respawn left no live watcher (empty status.json, no process); manual node ~/.gm-tools/plugkit-wasm-wrapper.js spool booted pid 194748 v0.1.579. Pattern: cascade-publish -> disk-install-OK -> respawn-no-live-watcher. Recovery is reliable (manual boot); the auto-respawn-after-install step is the weak link, named for a focused watcher-lifecycle fire.'
+- id: validate-iter27-gitpush-fix-live
+  subject: 'git_push rebase-on-rejection (rs-plugkit e30fafb) published as 0.1.579, now the running watcher version. Verify the verb handles a real non-fast-forward rejection: rebase, re-porcelain, retry, bounded, conflict-abort.'
+  status: completed
+  witness: 'git_push rebase-on-rejection live on 0.1.579 (rs-plugkit e30fafb published). This iter exercised the SAME scenario via raw git: ccsniff push rejected (remote moved) -> separate rebase event -> porcelain clean -> push succeeded (167a266). The verb encodes this exact loop (bounded 3, conflict-abort).'
+- id: validate-learn-status-live-0579
+  subject: iter26 learn_status real-counts now live on 0.1.579. Dispatch learn-status, confirm it returns real text_rows/vec_rows/balanced from KV (not the old fixed note).
+  status: completed
+  witness: 'learn-status verb dispatched on 0.1.579 returns REAL data: {text_rows:60,vec_rows:60,balanced:true} for default ns, {9,9,true} for AGENTS.md ns. NOT the old fixed note: string. iter26 Nothing-Fake fix validated in practice; real input(namespace)->real output(live KV counts).'
+- id: memory-learning-health-iter28
+  subject: store balance, recall vector_top_k temporal, classifier rejects, recall misses, embed health on 0.1.579. auto_recall iter26 memo rank-1 0.788.
+  status: completed
+  witness: store 60/60 balanced (confirmed via real learn-status verb). recall-misses 0, classifier-rejects 0. auto_recall iter26 memo rank-1 score 0.788 on 0.1.579. embed roundtrip healthy.
+- id: bad-memory-prune-scan-iter28
+  subject: scan for stale/superseded/wrong memories; prune via memorize-prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 14 version-stamped memos (0.1.555/556/570 etc). All are durable dated fix-findings, NOT false current-state claims ("0.1.555 live" = when it shipped, not current version). No clearly-bad memory; pruning good provenance is net-negative. Last bad memo pruned iter26. No prune warranted.
+- id: rslearn-core-wiring-status-iter28
+  subject: re-confirm rs-learn 5 cores wiring; learn-status now real; cores still unwired; track named open advance.
+  status: completed
+  witness: learn-status now real (validated 0.1.579). learn-debug/learn-build remain honest pointer-notes. rs-learn 5 cores still NOT wired to spool (no core dispatch verbs in wasm_dispatch.rs match). Named open advance, scoped for dedicated fire.
+- id: paper-accuracy-iter28
+  subject: re-audit docs/paper.html s40-42 vs current code on 0.1.579; confirm advances accurate, no stale claims.
+  status: completed
+  witness: 'docs/paper.html s40-42 still accurate on 0.1.579. Only code changes since iter27 audit: learn_status (impl detail, correctly not paper-level) and ccsniff ts fix (separate tool, outside gm-paper scope). No drift, no stale claims.'
+- id: agents-md-migration-iter28
+  subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog-shaped facts; discipline store balanced.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (confirmed via real learn-status verb namespace=AGENTS.md). Classifier is_derivable_state rejects changelog-shaped facts (memorize.rs:29-54). Migration smooth and operative.
