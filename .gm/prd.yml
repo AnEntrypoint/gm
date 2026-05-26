@@ -4531,3 +4531,23 @@
   text: 'PROCESS SLIP this turn: jumped into the graph fix (EXECUTE work) without first adding the audit PRD rows in PLAN - resolved graph-tree-growth-bound (iter57 carryover row) then tried to resolve deviations/commits rows that were never added. CORRECTION: even on a focused single-fix iter, add ALL audit PRD rows at PLAN before executing, so noticing persists. Self-caught.'
   status: completed
   witness: 'Self-caught process slip: executed the graph fix before adding the full audit PRD. Corrected by adding all rows now. The fix itself is sound + CI-verified; the slip was ordering (EXECUTE-before-complete-PLAN), not correctness. Memorizing the correction: add all noticing as PRD rows at PLAN even on focused iters.'
+- id: query-at-bounded-witness-592
+  text: 'WITNESS query_at_bounded via spool on 0.1.592: memorize >K facts in a test namespace (each auto-creates a graph edge under the hub), then query_at with limit:K returns exactly K most-recent edges (vs full count without limit). Proves the tree-stability bound works end-to-end through the learn verb.'
+  status: completed
+  witness: 'WITNESSED end-to-end on 0.1.592: memorized 4 facts in itertest59 (each auto-edged under the hub); query_at unbounded returned count=4; query_at with limit:2 returned count=2 = the 2 MOST-RECENT edges (mem-...387215-3, mem-...386078-2, highest created_at first). Recency-ordering correct, history preserved. The tree-stability bound works through the learn verb spool surface.'
+- id: limit-consumer-wiring
+  text: 'The reachable follow-on: query_at_bounded is built+dispatchable but no internal consumer USES it yet. Determine if recall-over-graph or attend should auto-bound, OR if the agent-dispatchable limit param is the intended surface (consumer = the agent passing limit). If a default internal bound is wanted, wire it; else document that the limit is the agent-facing knob and the auto-edge graph is queried bounded by the agent on demand.'
+  status: completed
+  witness: 'DESIGN DECISION (correct): limit is the AGENT-FACING knob, not a forced internal default. query_at{limit:K} is now dispatchable (witnessed); the consumer is whoever queries the graph (the agent on demand, or a future attend-subgraph builder passing limit). A forced internal default bound would silently drop edges a consumer wanted - wrong for a general graph store. The clean surface is: store everything (bi-temporal), retrieve bounded on demand. No additional wiring needed; the limit param IS the consumer surface. Future: attend could accept a subgraph-size cap that calls query_at_bounded, tracked if attend-over-the-live-graph becomes a built path (currently attend takes an explicit subgraph from the caller).'
+- id: deviations-iter59-triage
+  text: 'Triage deviations_30m=3: 20:21 long-gap (iter58 in-session heavy-work gap) + 2x prd-resolve-unknown-id 20:32 (the iter58 plan-slip - resolving rows before adding them; self-caught, corrected, memorized). All mine, all known/corrected. Validates the iter58 plan-slip lesson had a measurable 2-deviation cost.'
+  status: completed
+  witness: 'deviations_30m=3 all mine/known: 20:21 long-gap (iter58 heavy-work gap) + 2x prd-resolve-unknown-id 20:32 (iter58 plan-slip: resolved 2 rows before adding them; self-caught+corrected+memorized that turn). The plan-slip cost 2 measurable deviations - validates the lesson. This turn I planned properly (added full PRD before executing). No new class; zero complete-chain-poll (sess-gate holds).'
+- id: iter58-commits-practice-592
+  text: 'Validate iter58 commits on 0.1.592: query_at_bounded (witness this iter), tree-stability bound (native test green 0770fd0). Confirm behave in practice.'
+  status: completed
+  witness: 'iter58 commits behave on 0.1.592: query_at_bounded WITNESSED (count 4->2 bounded, recency-ordered), tree-stability bound (native test green 0770fd0, dispatchable via limit). Working in practice.'
+- id: memory-health-iter59
+  text: Memory health + bad-memory prune scan on 0.1.592.
+  status: completed
+  witness: 'Memory health on 0.1.592: recall working. Prune scan top hits all technical/lesson content (iter26/28 audits, iter51 BEHAVIORAL CORRECTION, iter24 milestone, iter56/52 advances) - no pure-status markers (prior iters pruned the consecutive-fire notes). No bad-recall hazards. Memory system healthy; the new query_at_bounded gives a recall-over-graph bounding lever. No prune needed this scan.'
