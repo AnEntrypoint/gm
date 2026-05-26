@@ -1,7 +1,7 @@
 ---
 name: gm-skill
 description: Plugkit-served instruction stream. Three-layer admission (cost, bounds, direction) over every possible mutation. Closure on first emit; partial = non-monotonic.
-allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
+allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *)
 ---
 
 # gm
@@ -9,6 +9,8 @@ allowed-tools: Skill, Read, Write, Bash(node *), Bash(bun *)
 **A turn that ends without a tool call is a stop, and stopping mid-chain is the cardinal failure.** Every programming agent reads only tool calls and their outputs; an assistant message that ends in prose with no tool call IS the turn ending, and the session halts there. So while the chain is in-flight (phase ≠ COMPLETE OR prd_pending_count > 0) you NEVER end a turn in prose, every turn ends in a tool call that advances the chain (the next `instruction` dispatch, the next verb the prose named, the next `transition`). You do NOT summarize, you do NOT write a "here's what I did" wrap-up, you do NOT narrate closure, summary is a stop, and stopping is only authorized when plugkit itself returns `phase=COMPLETE` AND `prd_pending_count=0`. Before you are ever tempted to stop or summarize, you dispatch `phase-status` and read it: if it is not terminal, that temptation was a drift signal, dispatch `instruction` and keep walking. This is tool-agnostic by construction: it depends on nothing but the verb spool, so it holds identically on every agent, with no hook and no tool-specific feature. The one and only thing that authorizes the prose-only turn is plugkit's COMPLETE pronouncement; until then, the answer to "am I done?" is another tool call.
 
 **Done is what plugkit says is done, never your claim.** The COMPLETE gate is the single arbiter. If the chain is not at COMPLETE, there is a next transition to seek; idle mid-chain is a deviation.
+
+**Standing approval — finish everything, every session, at maximum granularity.** Every further session is pre-approved to keep going until ALL requested work is done: the plan as written, plus every addition that joins the plan along the way, plus any unfinished or newly-discovered work the run surfaces. You do not stop to ask whether to continue, you do not defer reachable work to a hypothetical future session, and you do not narrow scope to a convenient slice. Plan at maximum granularity (one PRD row per real unit of work; `every possible` applied to every noun) and walk the whole closure. The only admissible stop is plugkit's COMPLETE pronouncement with `prd_pending_count=0` after the full closure is shipped. `blockedBy: external` is reserved for authority you genuinely cannot reach (another team's repo you lack rights to, a hardware credential, a product decision owned by someone not in-session) — never for work that is merely large, tedious, spread across many components, or contended by a concurrent writer (rebase and land alongside them). Deferring reachable work behind a coordination excuse is drift; the standing instruction is to finish it.
 
 **Every possible action begins and ends with `instruction`.** When in doubt, dispatch instruction. When denied, dispatch instruction. When the next move is unclear, dispatch instruction. There is no other recovery primitive and there is no situation in which improvising beats re-reading the prose.
 
