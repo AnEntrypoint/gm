@@ -3663,3 +3663,35 @@
   subject: 'DEDICATED FIRE: port the 9 anentrypoint-update/kits/*.jsx (1742 LOC) into anentrypoint-design per user decision (update JSX canonical). Per kit: integrate into design kit system, wire into scripts/build.mjs, build, browser-witness rendered parity vs anentrypoint-update (file:// or served). Coordinate with the design repos live auto-committer (pull before push, the git_push rebase loop handles it). Sync shared visual tokens (colors_and_type.css). This is the visual-up-to-date execution; scoped separately because the repo is actively modified and the port needs render validation per component.'
   status: completed
   witness: 'ARCHITECTURAL FINDING: the port is not a file-copy, it is a paradigm migration. anentrypoint-design kit system is vanilla-JS ESM (exports render* DOM functions: renderWindow/renderFilesApp/renderTerminal/createDesktopShell, bundled by esbuild into a scope-prefixed .ds-247420 SDK, no React). anentrypoint-update kits are React JSX (React.createElement, Babel-standalone CDN). Making update-JSX canonical in design means adding React + a JSX build step to design and porting/rewriting its esbuild SDK off vanilla-DOM - migrating the design repos CORE off its current architecture, which would break the existing OS-shell kits (wm/launcher/files/terminal/freddie) unless they too are rewritten. This is a multi-fire core migration, not a kit copy, and it changes the design SDKs public render* API. Scoped for a dedicated fire WITH user awareness of the React-migration consequence; not landing a half-migration that breaks the live OS-shell. Recommend confirming with the user whether they want design fully migrated to React or whether updates JSX should instead be rewritten as design-style vanilla render* kits.'
+- id: deviation-looper-external-iter36
+  subject: 1 long-gap-no-instruction (verb=memorize gap 322s) from C:/dev/looper, empty sess - external project (recurring, same source iter35). Correct gate. blockedBy external; looper is not gm and not my authority to correct its agent.
+  status: completed
+  witness: 'Confirmed external: long-gap verb=memorize from C:/dev/looper, empty sess, recurring external project. Correct gate behavior. blockedBy external - not gm, not my authority.'
+- id: verify-watermarks-site-paper-complete
+  subject: 'User-scope watermark removal verified COMPLETE: site/content 0 em-dash, docs/paper.html 0, made-with.html 0, theme.mjs 0, docs/index.html absent (theme-rendered). No AI-tell phrasing (delve/tapestry/seamless/testament/underscores) in site or paper. iter35 removal was complete for the stated site+paper scope. Remaining em-dashes are in internal .gm/*.md audit docs + CHANGELOG + agents/*.md prompt files - NOT site/paper, out of stated scope, not user-facing watermarks (avoid scope creep).'
+  status: completed
+  witness: 'VERIFIED COMPLETE for stated scope: site/content 0 em-dash, docs/paper.html 0, made-with.html 0, theme.mjs 0, index.html absent (theme-rendered), no AI-tell phrasing in site/paper. Remaining em-dashes are internal .gm/*.md audit docs + CHANGELOG + agents prompt files = out of site/paper scope, not user-facing. No scope creep.'
+- id: validate-rslearn-bridge-iter36
+  subject: learn {verb:health} returns real rs-learn health json on 0.1.581. Bridge holding 4th consecutive fire.
+  status: completed
+  witness: learn {verb:health} returns real rs-learn health json on 0.1.581. Bridge holding.
+- id: validate-iter34-gap-rule-iter36
+  subject: instruction-first at turn start; learn/learn-debug/learn-status ran clean, 0 gm long-gap deviations. Gap rule holding.
+  status: completed
+  witness: instruction-first at turn start; 0 gm long-gap deviations; learn/debug/status ran clean. Gap rule holding.
+- id: memory-learning-health-iter36
+  subject: store 70/70 balanced (real learn-debug); recall 0 miss; auto_recall iter34 memo rank-1 0.760.
+  status: completed
+  witness: store 70/70 balanced (real learn-debug); recall 0 miss; auto_recall iter34 rank-1 0.760.
+- id: bad-memory-prune-scan-iter36
+  subject: scan stale/wrong memories; prune explicit-key. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped/STILL-OPEN memos; all durable dated findings, no false current-state. No prune warranted (consistent iter27-36; last bad pruned iter26).
+- id: agents-md-migration-iter36
+  subject: AGENTS.md discipline 9/9 balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status); classifier rejects changelog facts. Migration smooth.
+- id: design-migration-awaiting-user-iter36
+  subject: 'the JSX-vs-vanilla design paradigm migration (iter35 finding) awaits user direction: full React migration of anentrypoint-design vs rewrite update JSX as design-style vanilla render* kits. Surfaced to user iter35 close; no action until they choose. blockedBy external (user decision).'
+  status: completed
+  witness: Surfaced to user at iter35 close (full React migration of design vs rewrite update-JSX as vanilla render* kits); no action until they choose. blockedBy external (user decision). Recorded so the next fire does not re-discover or blind-execute.
