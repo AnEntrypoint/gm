@@ -878,6 +878,14 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
+<h2 id="s43">43. Deviation Gates: Predictability Across LLMs</h2>
+
+<p>The discipline's promise is that the same project behaves the same way no matter which model drives it. That promise is kept not by trusting the model but by a small set of gates that refuse the disallowed dispatch and name the recovery. Each gate is a pure check over on-disk state, so it fires identically under any LLM and any harness: <code>long-gap-no-instruction</code> refuses a non-orienting verb dispatched more than five minutes after the last <code>instruction</code> and tells the agent to re-orient first; <code>complete-chain-poll</code> flags an agent that keeps dispatching <code>instruction</code> on an already-terminal chain instead of stopping; <code>push-dirty</code> refuses a push from an unclean worktree; <code>client-edit-no-witness</code> refuses the transition to COMPLETE while a client-side edit lacks its browser witness. The gate does not mutate the agent's command, it returns a refusal whose text is the next instruction, so a weaker model that would otherwise drift is steered the same way a stronger one steers itself.</p>
+
+<p>A gate is only as good as its attribution: it must fire on the agent's mistakes and stay silent on the mechanism's own bookkeeping. Two refinements make the deviation count an honest signal rather than noise. First, the long-gap clock is reset whenever a fresh watcher boots, because a version upgrade kills the watcher, downloads a new artifact, and restarts, a multi-minute gap the agent did not cause; charging that gap to the agent's next dispatch would punish the upgrade, so the boot stamps the last-instruction timestamp to now. Second, the complete-chain-poll deviation fires only for a session-attributed dispatch, because the empty-body probes the cron and stop-hook machinery fire against a terminal chain are not an agent re-polling its own work; counting them inflated the deviation rate at every COMPLETE without reflecting any agent behavior. The principle generalizes: a deviation is an agent action that went off-discipline, and the gate must distinguish the agent's dispatches (which carry a session) from the harness's internal bookkeeping (which does not), or the predictability signal it produces is measuring the wrong thing.</p>
+
+<hr>
+
 <h2 id="three-layer-filter">Three-Layer Admission Filter</h2>
 
 <p>Sections 2&ndash;37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
