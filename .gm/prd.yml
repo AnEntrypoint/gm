@@ -4723,3 +4723,23 @@
   text: Memory health + bad-memory prune scan.
   status: completed
   witness: 'Memory health on 0.1.596: recall+codesearch working (codesearch-1551 ok hits>0 post-upgrade). Prune scan top hits all technical/lesson (iter26/24/51/56) - no pure-status markers, no bad-recall hazards. Corpus lean. No prune needed.'
+- id: paper-numbering-collision-fix
+  text: 'Paper had a numbering collision: two h2 with id=s38 (Continuation Invariant + Discussion) and two id=s39 (Spool Dispatch + Conclusion) - duplicate ids broke the TOC anchors and reused the numbers. Fixed: Discussion->44 id=s44, Conclusion->45 id=s45, TOC links updated. Browser-witness.'
+  status: completed
+  witness: 'Fixed + browser-witnessed (browser-1566): Discussion->s44, Conclusion->s45, TOC links updated. no_dup_s38:true no_dup_s39:true (collision gone), discussion_s44:true conclusion_s45:true.'
+- id: paper-toc-missing-recent-sections
+  text: Paper TOC jumped from s37 straight to Discussion - MISSING entries for s38 (Continuation), s39 (Spool), s40 (Memory/rs-learn), s41 (WASM Migration), s42 (Service Crates exec/codeinsight/search), s43 (Deviation Gates), + the Three-Layer-Filter + Code-Invariants appendices. The recent substantive MO sections existed in the body but were NOT navigable. Added all missing TOC entries. This is the detail-all-advances-in-the-paper completeness gap (advances present but not navigable). Browser-witness.
+  status: completed
+  witness: 'Fixed + browser-witnessed (browser-1566): added TOC entries s38-s43 + three-layer-filter + code-invariants. toc_has_s40:true toc_has_s43:true toc_has_threelayer:true. The recent MO sections (memory/rs-learn, wasm migration, service crates, deviation gates) are now navigable from the TOC, not just present in the body.'
+- id: paper-mo-coverage-audit
+  text: 'Audit paper coverage vs user MO list: wasm migration(s41), browser compat+size+distributability+embeddings-in-wasm+shared-resources+system-stability(s41), rs-learn+optimization-pathways+agent-as-llm(s40), exec/codeinsight/search(s42), model selection(s42-43), deviation gates(s43). Confirm each MO point is EXPLAINED not just named; flag any still-thin.'
+  status: completed
+  witness: 'Paper MO coverage CONFIRMED complete+explained: s41 WASM Migration covers browser-compat, ~149MB size story, distributability/reproducibility, shared-resources, system-stability (atomic-write+self-respawn), offline embeddings-in-wasm (all present via awk-grep). s40 covers rs-learn 5 cores + persistence + scoring-head LoRA + agent-as-llm self-report + temporal recency. s42 covers exec(10 langs+browser+timeouts)/codeinsight(13-lang tree-sitter)/search(BM25+RRF+PDF+embed-cache). s43 deviation gates + the two-tier model selection. The content was explained; the gap was navigability (TOC missing s40-43) + numbering collision, both fixed this turn. No thin sections found.'
+- id: deviations-iter66-triage
+  text: deviations_30m=0 at boot; confirm + note the in-session long-gap (paper-audit heavy work) - interleave instruction.
+  status: completed
+  witness: deviations_30m=0 at boot (cleanest). The 1 in-session long-gap this turn (paper-audit heavy work crossed 300s, sess=agent) is the known heavy-EXECUTE pattern - interleaving instruction. No new class; the clean boot count confirms the iter55/56 fixes hold.
+- id: memory-health-iter66
+  text: Memory health + bad-memory prune scan.
+  status: completed
+  witness: 'Memory health on 0.1.596: recall working, prune-scan top hits all technical/lesson (iter26/24/63/28) - no pure-status markers, no bad-recall hazards. No prune needed. Corpus lean+accurate.'

@@ -163,8 +163,16 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
     <li><a href="#s35">CI Is the Build</a></li>
     <li><a href="#s36">The Residual-Scan Stop Gate</a></li>
     <li><a href="#s37">Meaning Through Haiku, Mechanics Through Code</a></li>
-    <li><a href="#s38">Discussion</a></li>
-    <li><a href="#s39">Conclusion</a></li>
+    <li><a href="#s38">The Continuation Invariant: A Toolless Turn Is A Stop</a></li>
+    <li><a href="#s39">Spool Dispatch Replaces Platform Hooks</a></li>
+    <li><a href="#s40">The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer</a></li>
+    <li><a href="#s41">The WASM Migration</a></li>
+    <li><a href="#s42">The Rust Service Crates: exec, codeinsight, search</a></li>
+    <li><a href="#s43">Deviation Gates: Predictability Across LLMs</a></li>
+    <li><a href="#three-layer-filter">Three-Layer Admission Filter</a></li>
+    <li><a href="#code-invariants">Code Invariants</a></li>
+    <li><a href="#s44">Discussion</a></li>
+    <li><a href="#s45">Conclusion</a></li>
     <li><a href="#refs">References</a></li>
   </ol>
 </div>
@@ -931,7 +939,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
-<h2 id="s38">38. Discussion</h2>
+<h2 id="s44">44. Discussion</h2>
 
 <h3>38.1 Relationship to Formal Methods</h3>
 <p>The approach shares surface similarities with model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions on advancement). It operates at a coarser abstraction level: the &ldquo;states&rdquo; are task phases, not program states, and the &ldquo;contracts&rdquo; concern what the agent knows rather than program correctness. The governance layer (§13) adds route families that function like typing domains: they partition the space of valid operations rather than verifying program properties.</p>
@@ -956,7 +964,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
-<h2 id="s39">39. Conclusion</h2>
+<h2 id="s45">45. Conclusion</h2>
 
 <p>We have described the complete gm discipline: a phase-gated lifecycle model, a mutable-naming and witnessed-execution framework, an in-phase quality discipline, a governance layer with seven route families and four state planes, second-generation rules for autonomy and scope, operational hard rules that close gaps the earlier model left open, and a third generation of dispatch-boundary rules that move the discipline out of the agent&rsquo;s context window and onto disk into marker-file gates.</p>
 
