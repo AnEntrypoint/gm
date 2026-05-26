@@ -4087,3 +4087,35 @@
   subject: re-audit s40-42 accurate.
   status: completed
   witness: paper s40-42 intact (3 anchors), accurate.
+- id: fix-gm-plugkit-package-omits-supervisor
+  subject: 'FINDING+FIX: gm-plugkit/package.json files[] omitted supervisor.js AND lang-host-runner.js, so they NEVER shipped to npm. CONSEQUENCE: published consumers always hit fs.existsSync(supervisor)=false -> the supervised watcher path (unplanned-restart recovery + idle-teardown coordination, which bootstrap.js:921 explicitly wants to spawn) is PERMANENTLY DORMANT for everyone; lang-host-runner.js (lang-verb host loader) also absent. Verified: published 2.0.1442 package contained only cli/index/bootstrap/wrapper.js, not supervisor.js (grep resolveNode blank because the file was absent, not because my iter46 edit failed). FIX: added supervisor.js + lang-host-runner.js to files[]. Now the supervisor (with the iter46 node-runtime fix) + lang host actually ship.'
+  status: completed
+  witness: 'FIXED: added supervisor.js + lang-host-runner.js to gm-plugkit/package.json files[] (was cli/index/bootstrap/wrapper only). Verified via npm pack 2.0.1442 that supervisor.js was absent -> supervised watcher path dormant for all published consumers. Now both ship; the supervisor carries the iter46 node-runtime fix. Committed this fire.'
+- id: validate-iter46-noSupervisor-branch-saved-published
+  subject: 'Confirmed the iter46 fresh-boot fix shipped via the path that matters: published 2.0.1442 bootstrap.js HAS resolveNodeRuntime (grep 2). Since supervisor.js was absent, published installs took the no-supervisor branch - which iter46 ALSO fixed (cmd=resolveNodeRuntime()). So fresh-boot-death was fixed for published consumers even before this packaging fix; this fix additionally restores the supervised path.'
+  status: completed
+  witness: Confirmed published 2.0.1442 bootstrap.js HAS resolveNodeRuntime (grep 2); published installs took the no-supervisor branch (supervisor.js absent) which iter46 also fixed -> fresh-boot-death already fixed for published consumers; this packaging fix restores the supervised path too.
+- id: deviations-iter47-external
+  subject: '2 deviations 30m: both long-gap-no-instruction verb=browser from C:/dev/tv8 + C:/dev/gltf-progressive (external projects, empty sess). Not gm/mine. blockedBy external.'
+  status: completed
+  witness: 2 long-gap-no-instruction verb=browser from C:/dev/tv8 + C:/dev/gltf-progressive (external, empty sess). Not gm. blockedBy external.
+- id: validate-0582-fixes-holding-iter47
+  subject: '0.1.582 fixes holding: learn-debug real, store 83/83 balanced, classifier+browser-gate validated iter45 in the running wasm.'
+  status: completed
+  witness: learn-debug real, store 83/83 balanced; 0.1.582 classifier+browser-gate holding.
+- id: memory-learning-health-iter47
+  subject: store 83/83 balanced (real learn-debug, 0 orphans); recall 0 miss; AGENTS.md balanced.
+  status: completed
+  witness: store 83/83 balanced; recall 0 miss; AGENTS.md balanced.
+- id: bad-memory-prune-scan-iter47
+  subject: scan stale/wrong memories; prune explicit-key.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable; no prune warranted (last bad pruned iter40).
+- id: agents-md-migration-iter47
+  subject: AGENTS.md migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline balanced (real learn-status); classifier rejects changelog facts.
+- id: paper-accuracy-iter47
+  subject: re-audit s40-42 accurate.
+  status: completed
+  witness: paper s40-42 intact (3 anchors), accurate.
