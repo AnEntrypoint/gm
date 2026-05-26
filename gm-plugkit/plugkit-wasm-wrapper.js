@@ -2289,7 +2289,8 @@ async function runSpoolWatcher(instance, spoolDir) {
           action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — spawning replacement via bun x gm-plugkit@latest spool then exiting`);
+        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — spawning replacement via bun x gm-plugkit@latest spool, waiting for its heartbeat before exiting`);
+        let spawnOk = false;
         try {
           const cp = require('child_process');
           const bunPath = process.env.GM_BUN_PATH || 'bun';
@@ -2301,14 +2302,42 @@ async function runSpoolWatcher(instance, spoolDir) {
             env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-drift' },
           });
           child.unref();
+          spawnOk = true;
         } catch (e) {
           console.error(`[plugkit-wasm] failed to spawn replacement: ${e.message}; exiting anyway so next agent dispatch boots fresh`);
         }
         try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'version-change-unsupervised', ts: Date.now(), pid: process.pid, instance_version: instV, file_version: fileV })); } catch (_) {}
-        try { releaseLock(); } catch (_) {}
-        try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
-        try { clearBootActive(); } catch (_) {}
-        setTimeout(() => process.exit(0), 2000);
+        const exitNow = () => {
+          try { releaseLock(); } catch (_) {}
+          try { fs.unlinkSync(STATUS_PATH_FOR_TEARDOWN); } catch (_) {}
+          try { clearBootActive(); } catch (_) {}
+          process.exit(0);
+        };
+        if (!spawnOk) { setTimeout(exitNow, 2000); return; }
+        const myPid = process.pid;
+        const respawnDeadline = Date.now() + 90000;
+        const pollReplacement = () => {
+          try {
+            const raw = fs.readFileSync(STATUS_PATH_FOR_TEARDOWN, 'utf8');
+            const st = JSON.parse(raw);
+            const freshHeartbeat = st && st.ts && (Date.now() - st.ts) < 15000;
+            const differentProc = st && st.pid && st.pid !== myPid;
+            if (freshHeartbeat && differentProc) {
+              try { logEvent('plugkit', 'version.drift-respawn-confirmed', { old_pid: myPid, new_pid: st.pid, new_version: st.version }); } catch (_) {}
+              try { releaseLock(); } catch (_) {}
+              try { clearBootActive(); } catch (_) {}
+              process.exit(0);
+              return;
+            }
+          } catch (_) {}
+          if (Date.now() > respawnDeadline) {
+            try { logEvent('plugkit', 'version.drift-respawn-timeout', { old_pid: myPid, waited_ms: 90000 }); } catch (_) {}
+            exitNow();
+            return;
+          }
+          setTimeout(pollReplacement, 1500);
+        };
+        setTimeout(pollReplacement, 3000);
         return;
       }
       logEvent('plugkit', 'version.drift', {

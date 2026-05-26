@@ -3455,3 +3455,33 @@
   subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog facts; discipline 9/9 balanced.
   status: completed
   witness: AGENTS.md discipline 9/9 balanced (real learn-status verb); classifier rejects changelog facts. Migration smooth.
+- id: fix-watcher-respawn-gap-cascade-publish
+  subject: 'Watcher died on cascade-publish of 0.1.580 (recurring: documented iter25/28, never fixed). ROOT CAUSE: drift-self-respawn (plugkit-wasm-wrapper.js:2292-2311) spawned bun x gm-plugkit@latest spool then exited after 2000ms + deleted .status.json - but the replacement needs far longer (149MB wasm download) to produce a live watcher, leaving a window where no watcher exists and .status.json is gone. FIX: keep heartbeat alive, poll .status.json for fresh ts from a DIFFERENT pid (bounded 90s for download), exit only once replacement confirmed live; do not delete .status.json pre-confirmation; timeout-exit fail-safe. Closes the manual-boot-every-cascade gap (user: scheduled internal processes requiring manual agent work).'
+  status: pending
+- id: validate-respawn-gap-isnodeonly
+  subject: 'plugkit-wasm-wrapper.js edit needs no Browser Witness: NODE_ONLY_DIR_RE (line 380) matches gm-plugkit/, isBrowserRelevantPath returns false. Node-only watcher process, never HTML-loaded.'
+  status: pending
+- id: validate-iter30-learn-debug-live-0580
+  subject: iter30 learn_debug fix (f413535) cascaded to 0.1.580; the rebooted watcher runs 0.1.580. Dispatch learn-debug, confirm it returns real per-discipline health (not the old fixed note).
+  status: pending
+- id: validate-zero-deviations-iter31
+  subject: gmsniff 0 deviations + ccsniff 0 git-discipline in 30m. Corrections holding (driver/no-repoll/ccsniff-ts/git_push). 3rd consecutive clean window.
+  status: pending
+- id: memory-learning-health-iter31
+  subject: store balance via real learn-status; recall vector_top_k 0 miss/0 fallback/0 classifier-reject; auto_recall iter30 memo rank-1 0.863.
+  status: pending
+- id: bad-memory-prune-scan-iter31
+  subject: scan for stale/superseded/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: pending
+- id: rslearn-core-wiring-iter31
+  subject: learn-status + learn-debug both real; rs-learn 5 cores still unwired; named open advance.
+  status: pending
+- id: paper-accuracy-iter31
+  subject: re-audit docs/paper.html s40-42; the watcher-respawn fix relates to s41 system-stability/self-respawn claim - verify paper s41 still accurate (atomic write + self-respawn).
+  status: pending
+- id: agents-md-migration-iter31
+  subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog facts; discipline balanced.
+  status: pending
+- id: validate-driver-rule-3rd-fire
+  subject: 'driver rule (86e96df6) validated 3rd consecutive fire: iter31 invoked Skill(gm-skill) as first working action after boot probe + watcher recovery.'
+  status: pending
