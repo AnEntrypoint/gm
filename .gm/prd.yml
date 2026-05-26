@@ -3287,3 +3287,47 @@
   subject: 'Paper s40-42 audited: covers every user-named advance (wasm migration reasoning, embeddings-in-wasm 149MB offline, distributability/reproducibility, shared-resource amortization, system stability atomic-write+self-respawn, rs-learn 5 cores, model-selection meaning-vs-mechanics, agent-as-llm via fetch, exec/codeinsight/search). s40:853 honestly states rs-learn cores not-yet-wired. Paper is accurate and comprehensive.'
   status: completed
   witness: 'docs/paper.html 988 lines, 42 sections. s40 (memory file-vec+rs-learn 5 cores), s41 (WASM migration: distributability/reproducibility/149MB-embeddings-in-wasm/offline/shared-resource-amortization/atomic-write-self-respawn), s42 (exec/codeinsight/search + model-selection meaning-vs-mechanics + agent-as-llm via fetch). Every user-named advance present and accurate. s40:853 honestly states rs-learn cores not-yet-wired.'
+- id: fix-my-push-porcelain-witness-deviation
+  subject: 'ccsniff --git-discipline flagged 2 push-no-porcelain-witness on MY iter26 pushes 05:43:44: I chained git pull --rebase + git push in ONE Bash event, so the porcelain probe was not the immediately-preceding event. Behavioral correction: porcelain probe is its own event directly before a bare push event, no rebase in the push event. Root cause: raw Bash used because git_push verb lacks rebase-on-rejection vs moving cascade remote.'
+  status: completed
+  witness: 'Corrected live this iter27: rs-plugkit push e30fafb done as 4 separate Bash tool-use events — (1) git status --porcelain (clean) (2) bare git push (rejected) (3) git pull --rebase (own event) (4) git status --porcelain (clean) (5) bare git push. No rebase chained into a push event; porcelain probe immediately precedes each push. ccsniff --git-discipline scan will find the porcelain witness in the correct slot.'
+- id: gitpush-verb-rebase-on-rejection
+  subject: 'git_push verb (wasm_dispatch.rs:979-1012) runs exec_git_push_in with NO handling of non-fast-forward rejection; cascade constantly bumps gm.json on origin so plain push is rejected, forcing agents to raw-Bash pull --rebase + push (the deviation source). FIX: detect rejection in push output, pull --rebase origin branch, re-verify porcelain clean, retry push. Makes the gated verb usable vs moving remote so raw-Bash workaround is unnecessary.'
+  status: completed
+  witness: 'Implemented wasm_dispatch.rs:1006+ : git_push detects push_rejected(rejected/non-fast-forward/fetch-first), runs pull --rebase origin branch, re-verifies porcelain clean, retries push. Returns rebased/rebase_retries in ok payload. Eliminates the raw-Bash pull-rebase-push workaround that caused the deviation. Committed efd09fd, pushed e30fafb.'
+- id: validate-iter26-learn-status-published
+  subject: 'iter26 learn_status real-counts fix: rs-plugkit 7afee67 CI green, plugkit-bin v0.1.578 published 05:40:10. Verify cascade fully propagated: gm.json plugkitVersion bumped on origin, gm-plugkit npm carries it, learn-status verb returns real text_rows/vec_rows when dispatched.'
+  status: completed
+  witness: 'plugkit-bin v0.1.578 published 05:40:10 with learn_status real-counts fix; rs-plugkit 7afee67 CI green (Release/Build/Pages). Cascade fully propagated: origin gm.json bumped 0.1.577->0.1.578, gm-plugkit npm 2.0.1436.'
+- id: validate-local-gmjson-version-pickup
+  subject: local gm.json says 0.1.577 but plugkit-bin published 0.1.578; watcher update_available=null. Determine if origin gm.json bumped to 0.1.578 (un-pulled) or if my iter26 gm push rebased over it. Check whether running watcher should self-update to 0.1.578.
+  status: completed
+  witness: 'Local was 4 commits behind origin (gm.json 0.1.577 vs origin 0.1.578 from cascade). Pulled --rebase --autostash: local now 0.1.578, 0 ahead/0 behind. Watcher picks up 0.1.578 on next bootstrap (update_available will signal or ensureWrapperInstalled refreshes).'
+- id: memory-learning-health-iter27
+  subject: validate store balance, recall vector_top_k temporal scoring, classifier rejects, recall misses, embed health on current wasm. auto_recall surfaced iter26 memo rank-1 score 0.762 (write+embed roundtrip works).
+  status: completed
+  witness: Store 59/59 balanced. recall-modes 0 fallback (vector_top_k only), recall-misses 0, classifier-rejects 0 in window. auto_recall surfaced iter26 memo rank-1 score 0.762 — write+embed+recall roundtrip healthy on 0.1.577/578.
+- id: bad-memory-prune-scan-iter27
+  subject: 'scan store for stale/superseded/wrong memories (user priority: pruning > preservation). Judge each candidate; prune via memorize-prune explicit-key. Never blind similarity-delete.'
+  status: completed
+  witness: Scanned store for stale/superseded memos. mem-1779707599650 has a dated STILL-OPEN tail (some items now closed) but its core (pruning-validation witness) is durable; pruning to remove a stale tail is net-negative. No clearly-bad memory this iter (last pruned iter26). Authoritative open-list is the live PRD + iter26 memo, which supersede dated tails. No prune warranted.
+- id: rslearn-core-wiring-status-iter27
+  subject: re-confirm rs-learn 5 cores (MicroLoRA/EWC++/bi-temporal/GAT/FastGRNN) wiring status to spool; verify learn-status now real (iter26 fix), learn-debug/learn-build honest pointers; track the core-bridge as the named open advance.
+  status: completed
+  witness: learn-status now returns real KV counts (iter26 fix, validated published 0.1.578). learn-debug/learn-build remain honest pointer-notes. rs-learn 5 cores (MicroLoRA/EWC++/bi-temporal/GAT/FastGRNN) still NOT wired to spool (no core dispatch verbs in wasm_dispatch.rs match block); paper s40:853 documents this honestly. Named open advance, scoped for dedicated fire.
+- id: paper-accuracy-iter27
+  subject: re-audit docs/paper.html s40-42 for any drift vs current code (esp learn-status no longer a stub); confirm all user-named advances accurate; no stale claims.
+  status: completed
+  witness: 'docs/paper.html s40-42 re-audited: accurate vs current code. s24 Nothing-Fake (line 630-632) correctly defines stub test (always-same-value-regardless-of-input) that iter26 learn_status fix addressed. learn-status not named at paper level (correct - impl detail). No drift, no stale claims.'
+- id: agents-md-migration-iter27
+  subject: 'validate AGENTS.md staging->rs-learn migration smoothness: classifier is_derivable_state rejects changelog-shaped facts, AGENTS.md discipline store populated, recall surfaces migrated facts.'
+  status: completed
+  witness: .gm/disciplines/AGENTS.md 9 text / 9 vec balanced (staging->learning populated). Classifier is_derivable_state (memorize.rs:29-54) rejects changelog-shaped facts. Migration smooth and operative.
+- id: gitpush-rebase-conflict-guard
+  subject: 'git_push rebase-on-rejection corner case: if pull --rebase conflicts (not clean fast-forward), worktree becomes dirty with conflict markers. Must detect rebase failure, abort (git rebase --abort), and return gate_denied with reason naming the conflict rather than force-pushing or leaving a half-rebased tree. Re-check porcelain after rebase; only retry push if clean.'
+  status: completed
+  witness: 'wasm_dispatch.rs: rebase_failed(conflict/could-not-apply/error/needs-merge/automatic-merge-failed) OR non-clean porcelain after rebase -> git rebase --abort + log_deviation_push(push-rebase-conflict) + gate_denied with conflict reason. No force-push, no half-rebased tree left.'
+- id: gitpush-rebase-bounded-retries
+  subject: 'git_push rebase-retry must be bounded (e.g. 3 attempts) since a fast-moving cascade remote could reject repeatedly; after N failures return gate_denied naming remote-moving-faster-than-push rather than looping. Witness: release.yml bump step uses 5-attempt loop.'
+  status: completed
+  witness: 'wasm_dispatch.rs: while loop bounded attempts<3; after exhaustion log_deviation_push(push-remote-outpaces) + gate_denied naming remote-moving-faster-than-push. Matches release.yml bounded-retry pattern.'
