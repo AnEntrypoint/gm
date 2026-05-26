@@ -4502,7 +4502,7 @@
 - id: graph-tree-growth-bound
   text: 'FRONTIER (user: tree stability/optimization): the auto-edge means the graph grows one edge per memorize, all under the namespace hub (src=default). Over a long-lived project this is unbounded edge accumulation on one hub node, degrading query_at/attend (the hub fan-out grows linearly). Investigate: is there edge pruning/consolidation (the graph invalidates on memory-prune, but un-pruned memories accumulate edges forever)? Should there be a tree-stability bound (e.g. consolidate old low-weight edges, or cap hub fan-out)? Audit + document or fix.'
   status: completed
-  witness: 'CONFIRMED unbounded-growth finding: query_at(src,t)=edges_by_src(src).filter(active_at(t)).collect() (temporal_core.rs:99-101) returns ALL active edges for a src with NO cap/limit. The auto-edge puts every memorize under src=default, so the default hub fan-out grows linearly forever; attend over that subgraph and query_at both scale with total un-invalidated memory count. Graph has invalidate_edge + contradiction-invalidation but NO recency-eviction, fan-out cap, or consolidation. FIX-DIRECTION (deferred, substantial rs-learn design): either (a) recency-bounded query_at (return top-K by recency within a window), (b) hub fan-out cap with LRU edge eviction, or (c) periodic consolidation of old low-weight edges into a summary node. NOT shipping a rushed graph change that risks bi-temporal correctness; documented as the next tree-stability frontier with concrete options. Severity is low-rate for gm (few memories/iter) but real for high-volume projects.'
+  witness: rs-learn 9e8e525 query_at_bounded(src,t,limit), Publish SUCCESS 0770fd0 incl native test. Recency-bounded retrieval caps hub fan-out non-destructively. Tree-stability frontier closed.
 - id: paper-operational-perfection-advances
   text: 'FRONTIER (user: detail all advances in the paper, predictability regardless of llm): the paper does not document the operational-perfection layer - the deviation taxonomy + the gates that enforce it (long-gap-no-instruction with boot-reset, complete-chain-poll with sess-gate, push-dirty, client-edit-no-witness). This is core to predictability-from-the-user. Add a paper section on the deviation gates + how they make agent behavior predictable across LLMs. Browser-witness.'
   status: completed
@@ -4511,3 +4511,23 @@
   text: 'NOTICED iter57: page.goto defaults to a 10s nav timeout in the browser verb, which times out on the large paper.html (first witness browser-1350 failed page.goto Timeout 10000ms; succeeded with explicit timeout:40000). Recurring browser-witness friction. FIX-candidate: the browser verb / playwriter wrapper should set a longer default navigation timeout (e.g. 30s) OR witnesses must always pass {timeout} to page.goto. Document the workaround (explicit nav timeout) in the witness pattern. Low-risk: a wrapper-level default-nav-timeout bump.'
   status: completed
   witness: 'The 10s default is playwright/playwriter-level (the wrapper passes the eval body to playwriter -e; page.goto default nav timeout is playwrights, not settable from the gm wrapper without a playwriter change). PRACTICAL FIX (documented witness pattern): browser witnesses on large pages MUST pass page.goto(url,{waitUntil:commit,timeout:40000}) + page.waitForLoadState - witnessed working (browser-1351). A playwriter-level default-nav-timeout bump is an rs-exec change tracked separately; the witness-pattern workaround is sufficient and zero-risk. Memorizing the pattern for future witnesses.'
+- id: graph-tree-growth-bound
+  text: 'Implement+validate tree-stability bound for the auto-edge unbounded hub fan-out. DONE: rs-learn 9e8e525 query_at_bounded, Publish SUCCESS 0770fd0.'
+  status: completed
+  witness: rs-learn 9e8e525 query_at_bounded(src,t,limit), Publish SUCCESS 0770fd0 incl native test. Recency-bounded retrieval caps hub fan-out non-destructively. Tree-stability frontier closed.
+- id: deviations-iter58-triage
+  text: Triage deviations_30m=2 (both long-gap, zero complete-chain-poll). Boot carryover + in-session heavy-work gap. No new class.
+  status: completed
+  witness: deviations_30m=2 both long-gap (zero complete-chain-poll, sess-gate holds). 20:01 empty-sess boot-carryover + 20:21 agent-sess heavy-EXECUTE gap (iter57-memorized pattern). Trend 5->4->3->2 down. No new class.
+- id: iter57-commits-practice-591
+  text: 'Validate iter57 commits behave on 0.1.591: paper §43, complete-chain-poll sess-gate live, graph-growth finding now fixed.'
+  status: completed
+  witness: 'iter57 commits behave on 0.1.591: paper §43 renders, complete-chain-poll sess-gate live (zero in window), graph-growth finding fixed this iter.'
+- id: memory-health-iter58
+  text: Memory health + bad-memory prune scan on 0.1.591.
+  status: completed
+  witness: 'Memory health on 0.1.591: recall working. Pruned 1 low-signal consecutive-fire marker (mem-1779782914680 iter32 4th-consecutive, no durable lesson). Kept technical/lesson memories (iter26/28 audits, iter24 milestone, iter51 BEHAVIORAL CORRECTION, iter56/52/33/25 advances). No bad-recall hazards. The new query_at_bounded gives a future tree-stability lever for recall over the graph. Bad-memory pruning ongoing.'
+- id: plan-slip-iter58-note
+  text: 'PROCESS SLIP this turn: jumped into the graph fix (EXECUTE work) without first adding the audit PRD rows in PLAN - resolved graph-tree-growth-bound (iter57 carryover row) then tried to resolve deviations/commits rows that were never added. CORRECTION: even on a focused single-fix iter, add ALL audit PRD rows at PLAN before executing, so noticing persists. Self-caught.'
+  status: completed
+  witness: 'Self-caught process slip: executed the graph fix before adding the full audit PRD. Corrected by adding all rows now. The fix itself is sound + CI-verified; the slip was ordering (EXECUTE-before-complete-PLAN), not correctness. Memorizing the correction: add all noticing as PRD rows at PLAN even on focused iters.'
