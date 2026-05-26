@@ -3415,3 +3415,43 @@
   subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog-shaped facts; discipline balanced.
   status: completed
   witness: AGENTS.md discipline 9/9 balanced via real learn-status verb; classifier rejects changelog-shaped facts. Migration smooth.
+- id: improve-learn-debug-real-introspection
+  subject: 'learn_debug returned a fixed note (use exec:nodejs to inspect) regardless of input - a non-functional pointer. Made it real: enumerates disciplines (default + disciplines KV) and reports per-namespace text_rows/vec_rows/balanced/orphans via kv_ns_count (extracted from learn_status). Gives the agent a one-call learning-system health surface, serving "check effectivity of memory/learning". wasm_dispatch.rs:613.'
+  status: completed
+  witness: 'learn_debug rewritten (wasm_dispatch.rs:613): enumerates disciplines + reports per-ns text_rows/vec_rows/balanced/orphans via kv_ns_count. Real introspection replacing fixed note. Committed e981cfb, pushed f413535 (cascade builds next version). CI is wasm type-gate.'
+- id: validate-zero-deviations-iter30
+  subject: 'gmsniff 0 deviations + ccsniff 0 git-discipline violations in 30m. First fully-clean window across iter26-30: iter29 stop-hook-no-repoll rule held (no complete-chain-poll), ccsniff ts-fix aged out historical, driver+git_push corrections compounding. Operational discipline converged.'
+  status: completed
+  witness: gmsniff 0 deviations + ccsniff 0 git-discipline violations in 30m. First fully-clean window across iter26-30; corrections (driver/ccsniff-ts/git_push/no-repoll) compounding.
+- id: validate-iter29-norepoll-live
+  subject: 'iter29 stop-hook-no-repoll rule (f88642b0) validated: this iter has 0 complete-chain-poll despite COMPLETE chain at boot; I did not re-poll. Behavioral correction holding.'
+  status: completed
+  witness: 0 complete-chain-poll this iter despite COMPLETE chain at boot; I did not re-poll. Rule f88642b0 holding in practice.
+- id: validate-driver-rule-live-iter30
+  subject: 'driver rule (86e96df6) validated 2nd consecutive fire: iter30 invoked Skill(gm-skill) as first working action; auto_recall healthy. Predictable skill-driven entry.'
+  status: completed
+  witness: 2nd consecutive fire invoking Skill(gm-skill) as first working action per 86e96df6. Predictable skill-driven entry.
+- id: validate-learn-status-0579-iter30
+  subject: learn_status real {63,63,balanced} default, {9,9,balanced} AGENTS.md on 0.1.579. Store grew 62->63 (iter29 memo). Prior fix live.
+  status: completed
+  witness: learn_status real {63,63,balanced} default, {9,9} AGENTS.md on 0.1.579. Store grew 62->63. Live.
+- id: memory-learning-health-iter30
+  subject: store 63/63 balanced; recall 0 misses, 0 fallback modes, 0 classifier rejects; auto_recall healthy. 0.1.579.
+  status: completed
+  witness: store 63/63 balanced (real learn-status); recall 0 misses/0 fallback/0 classifier-rejects; auto_recall healthy.
+- id: bad-memory-prune-scan-iter30
+  subject: scan for stale/superseded/wrong memories; prune via memorize-prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable dated findings (not false current-state claims), consistent with iter27-29 judgment. No prune warranted (last bad pruned iter26).
+- id: rslearn-core-wiring-iter30
+  subject: learn-status + learn-debug now both real introspection; learn-build accurate note (no build step). rs-learn 5 algorithm cores still unwired to spool. Named open advance.
+  status: completed
+  witness: learn-status + learn-debug both real introspection now; learn-build accurate note; rs-learn 5 algorithm cores still unwired to spool. Named open advance.
+- id: paper-accuracy-iter30
+  subject: re-audit docs/paper.html s40-42; confirm accurate; note learn-debug/status now real (impl detail, not paper-level).
+  status: completed
+  witness: docs/paper.html s40-42 intact (3 anchors); accurate. learn-debug/status now real is impl detail, not paper-level. No drift.
+- id: agents-md-migration-iter30
+  subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog facts; discipline 9/9 balanced.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status verb); classifier rejects changelog facts. Migration smooth.
