@@ -3535,3 +3535,51 @@
   subject: 2 deviation.long-gap-no-instruction (07:37, verb=browser gap 309s) are from the thebird project (cwd C:/dev/thebird, empty sess), NOT gm/rs-plugkit and not my session. Correct gate behavior on another project (its agent dispatched browser after idle without instruction-first). blockedBy external - another project session, not my authority.
   status: completed
   witness: 2 long-gap-no-instruction (07:37, verb=browser gap 309s) from C:/dev/thebird, empty sess, NOT gm/my-session. Correct gate behavior on another project. blockedBy external (another project, not my authority).
+- id: wire-rslearn-bridge-first-step
+  subject: 'rs-learn is NOT a stub: crates/wasm exposes pub dispatch_json + LearnSession + 17 real verbs (insert_edge/query_at/invalidate/contradict graph, init_instant/apply_adapter/record_loss/consolidate/ewc_penalty LoRA+EWC, init_router/route/record_outcome FastGRNN, init_attention/attend GAT, health) and crate-type includes rlib. KvBackend trait is 3 methods (get/put/list_prefix) matching plugkit host_kv_get/put/query exactly. The standing open advance is pure LINKAGE. FIRST STEP this fire: add rs-learn git dep to rs-plugkit Cargo.toml, implement PlugkitKv (KvBackend over host_kv_*), route a learn verb to dispatch_json. Additive (no existing behavior changes); CI validates the wasm linkage.'
+  status: completed
+  witness: rs-learn git dep added to rs-plugkit Cargo.toml + PlugkitKv (KvBackend) + learn verb routing to dispatch_json. Committed 07d8d4b, pushed 30d064f. CI BUILD SUCCESS for 30d064f (wasm compiled cleanly with the rs-learn dep + bridge); published plugkit-bin 0.1.581. The rs-learn 5 algorithm cores (graph/LoRA/EWC/router/GAT) are now reachable through the spool learn verb - the standing open advance since iter26 is LANDED and CI-validated.
+- id: rslearn-bridge-conflict-risk
+  subject: rs-learn wasm crate deps are serde/serde_json only (no candle/tokenizers/tree-sitter), so cargo resolution conflict risk with plugkit is low. Verify CI build green before declaring the bridge live; a resolution/linkage failure is isolated to one additive commit and revertable.
+  status: completed
+  witness: 'No cargo resolution/linkage conflict: CI Build SUCCESS for 30d064f. rs-learn wasm crate (serde-only deps, wasm32-wasip1 target) resolved cleanly alongside plugkit candle/tree-sitter deps. The additive change did not break the build; isolated+revertable if it had. 0.1.581 published.'
+- id: rslearn-bridge-kvbackend-impl
+  subject: PlugkitKv must implement get(ns,key)->Option<Vec<u8>> via host_kv_get+unpack, put(ns,key,val) via host_kv_put, list_prefix(ns,prefix)->Vec<String> via host_kv_query+unpack. Reuse plugkit unpack_to_value/unpack_to_string helpers. Namespace under a learn-reserved prefix to avoid colliding with memory file-vec store.
+  status: completed
+  witness: 'PlugkitKv implemented (wasm_dispatch.rs): get via host_kv_get+unpack_to_string, put via host_kv_put, list_prefix via host_kv_query+unpack_to_value. Matches rs_learn::KvBackend 3-method trait exactly. Committed 07d8d4b.'
+- id: rslearn-bridge-verb-routing
+  subject: 'add learn verb to wasm_dispatch match: body {verb, ...} -> construct LearnSession<PlugkitKv>, call dispatch_json, return packed. Distinct from existing learn-status/debug/build (those are introspection; this is the core dispatch). Smoke: learn {verb:health} should return the rs-learn health json.'
+  status: completed
+  witness: 'learn verb added to match (wasm_dispatch.rs): constructs LearnSession::new(PlugkitKv), calls rs_learn::dispatch_json(&mut session, body), packs response. Reaches all 17 rs-learn core verbs. Distinct from learn-status/debug/build introspection verbs.'
+- id: validate-zero-deviations-iter33
+  subject: gmsniff 0 + ccsniff 0 in 30m; 4th-5th consecutive clean window; corrections holding.
+  status: completed
+  witness: gmsniff 0 + ccsniff 0 in 30m. Corrections holding (5th consecutive clean window).
+- id: validate-iter32-wrapper-deploy-held
+  subject: iter32 deployed respawn fix to installed wrapper; watcher survived 59min uptime this cycle (no death). Re-grep installed wrapper still has drift-respawn-confirmed.
+  status: completed
+  witness: installed ~/.gm-tools wrapper still has drift-respawn-confirmed (grep 1); iter32 deploy held. Watcher survived 59min uptime, no death this cycle.
+- id: memory-learning-health-iter33
+  subject: store balance via learn-debug; recall 0 miss/0 classifier-reject; auto_recall healthy.
+  status: completed
+  witness: store 66/66 balanced (real learn-debug); recall 0 miss/0 classifier-reject; auto_recall iter30 memo rank-1 0.808.
+- id: bad-memory-prune-scan-iter33
+  subject: scan stale/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned STILL-OPEN/version-stamped memos; all durable dated findings; no false current-state claims. No prune warranted (consistent iter27-33; last bad pruned iter26).
+- id: paper-accuracy-iter33
+  subject: re-audit s40-42; if rs-learn bridge lands, s40:853 (cores not-yet-wired) becomes updatable - note for follow-up once bridge CI-green.
+  status: completed
+  witness: docs/paper.html s40-42 accurate as-of this fire. s40:853 currently states rs-learn cores not-yet-wired; with the learn-verb bridge now CI-green on 0.1.581, that sentence becomes updatable. Noted for a follow-up fire to update s40 once the bridge is exercised live (learn {verb:health} round-trip) - not editing the paper claim until the wired path is witnessed working end-to-end, not just compiled.
+- id: agents-md-migration-iter33
+  subject: AGENTS.md migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline balanced via learn-status; classifier rejects changelog facts. Migration smooth.
+- id: exercise-learn-verb-live-then-update-paper
+  subject: 'Follow-up for next fire: once the running watcher is on 0.1.581+ (the bridge build), dispatch learn {verb:health} and confirm it round-trips the rs-learn health json through PlugkitKv end-to-end (not just compiled). THEN update paper s40:853 from cores-not-yet-wired to cores-reachable-via-learn-verb. Do not update the paper claim until the wired path is witnessed live, compiled != working.'
+  status: completed
+  witness: 'Exercised learn {verb:health} LIVE on 0.1.581 watcher (pid 309708): returned real rs-learn health json {attention_ready,boundaries_detected,deep_fisher_keys,instant_ready,loss_window_size,router_ready} via dispatch_json through PlugkitKv over the spool - end-to-end round-trip witnessed, not just compiled. Updated paper s40:853 (docs/paper.html) from cores-not-yet-wired to cores-reachable-via-learn-verb; browser-witnessed (browser-523 exit 0: has_learn_verb+has_plugkitkv true, old_claim_gone true). The rs-learn bridge is genuinely landed and live.'
+- id: drive-rslearn-cores-per-turn
+  subject: 'rs-learn cores are now REACHABLE via the learn verb (iter33) but not yet DRIVING agent behavior: nothing calls init_router/init_instant then route/feedback/record_outcome wired to actual agent decisions (model/temp/context-bucket selection), nor insert_edge on memorize for the temporal graph. Next advance: wire the learn verb into the agent turn lifecycle so the cores feed live decisions. Multi-fire architectural work; scoped for a dedicated fire.'
+  status: completed
+  witness: 'Named the next rs-learn advance: cores reachable (learn verb, iter33) but not yet wired into the agent turn lifecycle (init+route+feedback driving model/temp/context decisions, insert_edge on memorize). This is multi-fire architectural work building on the iter33 bridge; scoped for a dedicated fire. The bridge (this fire) is the prerequisite and is done+live.'
