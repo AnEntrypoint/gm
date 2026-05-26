@@ -3495,3 +3495,43 @@
   subject: 'driver rule (86e96df6) validated 3rd consecutive fire: iter31 invoked Skill(gm-skill) as first working action after boot probe + watcher recovery.'
   status: completed
   witness: 'driver rule (86e96df6) validated 3rd consecutive fire: iter31 invoked Skill(gm-skill) as first working action after boot+watcher-recovery. Predictable.'
+- id: deploy-iter31-respawn-fix-to-installed-wrapper
+  subject: 'gm-plugkit npm 2.0.1439 HAS the iter31 respawn-confirm fix (grep 3) but installed ~/.gm-tools wrapper does NOT (sha 052e790c != repo 1dd0ed3d, grep 0). Root: iter31 dead-watcher recovery booted via node ~/.gm-tools/...spool directly, bypassing ensureWrapperInstalled (only in bun x gm-plugkit bootstrap path). Fix is published but not deployed. ACTION: refresh installed wrapper via bun x gm-plugkit@latest + reboot so the running watcher carries the respawn-confirm code; only then is the iter31 fix validated in practice.'
+  status: completed
+  witness: 'Refreshed installed wrapper via bun x gm-plugkit@latest spool: ~/.gm-tools/plugkit-wasm-wrapper.js now has drift-respawn-confirmed (grep 0->1, sha 052e790c->e6ca55eb). The iter31 respawn-confirm fix is now DEPLOYED to the running environment, not just published to npm 2.0.1439. Next cascade-publish will exercise the fixed respawn path.'
+- id: investigate-direct-node-boot-skips-wrapper-refresh
+  subject: 'Recurring: booting watcher via node ~/.gm-tools/plugkit-wasm-wrapper.js spool (the dead-watcher recovery form) does NOT refresh the installed wrapper, so a just-published wrapper fix stays undeployed. The bun x gm-plugkit@latest spool path DOES refresh. This is why iter31 fix did not auto-deploy. Consider: should direct-node boot also sha-check+refresh, or should the skill mandate bun-x recovery? Note as structural finding.'
+  status: completed
+  witness: 'Root cause confirmed: node ~/.gm-tools/...spool (dead-watcher recovery form used iter31) skips ensureWrapperInstalled, leaving installed wrapper stale despite npm having the fix. bun x gm-plugkit@latest spool DOES refresh. Codified in AGENTS.md "Dead-watcher recovery prefers bun x gm-plugkit@latest spool" + verify-deployment-by-grep-not-npm-version.'
+- id: validate-learn-debug-live-0580-iter32
+  subject: learn-debug real [default 65/65 balanced orphans:0] on 0.1.580. Store grew to 65. Live.
+  status: completed
+  witness: learn-debug real [default 65/65 balanced orphans:0] on 0.1.580. Store grew to 65. Live.
+- id: validate-no-gm-deviations-iter32
+  subject: 'gm/rs-plugkit: 0 deviations in 30m, 0 ccsniff git-discipline. Corrections holding (the only 2 deviations are external thebird).'
+  status: completed
+  witness: gm/rs-plugkit 0 deviations + 0 ccsniff git-discipline in 30m (only 2 deviations are external thebird). Corrections holding; watcher survived 29min (no cascade this window).
+- id: memory-learning-health-iter32
+  subject: store 65/65 balanced (real learn-debug); recall 0 miss/0 classifier-reject; auto_recall iter31 memo rank-1 0.867.
+  status: completed
+  witness: store 65/65 balanced (real learn-debug); recall 0 miss/0 classifier-reject; auto_recall iter31 memo rank-1 0.867.
+- id: bad-memory-prune-scan-iter32
+  subject: scan for stale/superseded/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable dated findings, no false current-state claims. No prune warranted (consistent iter27-32; last bad pruned iter26).
+- id: rslearn-core-wiring-iter32
+  subject: learn-status+learn-debug real; rs-learn 5 cores still unwired; named open advance.
+  status: completed
+  witness: learn-status+learn-debug real on 0.1.580; learn-build accurate note; rs-learn 5 cores still unwired. Named open advance.
+- id: paper-accuracy-iter32
+  subject: re-audit docs/paper.html s40-42; confirm accurate.
+  status: completed
+  witness: docs/paper.html s40-42 intact (3 anchors), accurate. No drift.
+- id: agents-md-migration-iter32
+  subject: AGENTS.md 9/9 balanced; classifier rejects changelog facts; migration smooth.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status); classifier rejects changelog facts. Migration smooth.
+- id: thebird-long-gap-deviations-external
+  subject: 2 deviation.long-gap-no-instruction (07:37, verb=browser gap 309s) are from the thebird project (cwd C:/dev/thebird, empty sess), NOT gm/rs-plugkit and not my session. Correct gate behavior on another project (its agent dispatched browser after idle without instruction-first). blockedBy external - another project session, not my authority.
+  status: completed
+  witness: 2 long-gap-no-instruction (07:37, verb=browser gap 309s) from C:/dev/thebird, empty sess, NOT gm/my-session. Correct gate behavior on another project. blockedBy external (another project, not my authority).
