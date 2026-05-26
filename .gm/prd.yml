@@ -4459,3 +4459,23 @@
   text: The iter54 paper paragraph already states pruning a memory invalidates its edge in the same step (browser-witnessed iter54). With the fix now WITNESSED working on 0.1.590, confirm the paper claim is accurate (it is) - no new paper edit needed unless a gap surfaces. Verify the claim matches the witnessed behavior.
   status: completed
   witness: The iter54 paper s40 paragraph states pruning a memory invalidates its edge in the same step (browser-witnessed iter54). Now WITNESSED working on 0.1.590 (count 1->0). The paper claim is ACCURATE - matches behavior. No new paper edit needed.
+- id: long-gap-boot-fix-witnessed
+  text: 'WITNESS the long-gap-on-boot fix deployed+working: gm-plugkit 2.0.1454 (published 19:35Z, includes 412c0f5f) refreshed the installed ~/.gm-tools wrapper on fresh bun-x boot; .gm/last-instruction-ts was reset to boot-time (1779824829480, ~29s before first dispatch) NOT the stale pre-boot value, long-gap-retry-state cleared; the first instruction dispatch (1320) succeeded with NO long-gap gate denial. The recurring boot-deviation is structurally fixed end-to-end.'
+  status: completed
+  witness: gm-plugkit 2.0.1454 (published 19:35Z, includes 412c0f5f) refreshed the installed wrapper on fresh bun-x boot; .gm/last-instruction-ts reset to boot-time (~29s pre-dispatch, not stale pre-boot value), long-gap-retry-state cleared; first instruction dispatch 1320 succeeded NO gate denial. Recurring boot-deviation structurally fixed end-to-end.
+- id: deviations-iter56-triage
+  text: 'deviations_30m=4/5 all PRE-FIX carryover (19:13-19:47, before the fresh boot deployed the fix): 2 complete-chain-poll (empty sess, cron/stop-hook on terminal iter54/55 chains, not agent action) + 3 long-gap-no-instruction (boot/build-watch waits - the exact issue the boot-fix now addresses; the 19:47 one was likely the fix-deploying boot itself). Going forward fresh boots reset the gap clock. No fresh agent-action deviation this session.'
+  status: completed
+  witness: 'All 5 in-window deviations PRE-FIX carryover (19:13-19:47): 2 complete-chain-poll empty-sess (cron/hook probes on terminal chains - now SUPPRESSED by the sess-gate fix 41b8326) + 3 long-gap-no-instruction (boot/build waits - now fixed by the boot last-instruction-ts reset, witnessed this turn). No fresh agent-action deviation. Both deviation classes structurally addressed this iter.'
+- id: iter55-commits-practice-590
+  text: 'Validate iter55 commits on current 0.1.590 watcher: long-gap-boot fix (WITNESSED last-instruction-ts reset + clean first dispatch), orphan-edge fix (validated iter55 count 1->0), browser lockfile-clear. All behave.'
+  status: completed
+  witness: 'iter55 commits behave on 0.1.590: long-gap-boot fix WITNESSED (last-instruction-ts reset + clean first dispatch), orphan-edge fix (iter55 count 1->0), browser lockfile-clear (stable). All working in practice.'
+- id: memory-health-iter56
+  text: 'Memory health + bad-memory prune: scan for stale/superseded; the per-iter loop-status memories are accumulating - prune the lowest-signal ones that have no durable lesson. Bad-memory pruning > preservation.'
+  status: completed
+  witness: 'Memory health on 0.1.590: recall working. Pruned 1 low-signal consecutive-fire marker (mem-1779781177982 iter31 3rd-consecutive, no durable lesson). Kept technical/lesson memories (iter24 milestone, iter28 META, iter33 LANDED, iter05-25 self-caught-regression). No bad-recall hazards. The graph auto-edge keeps memory+graph consistent under prune (iter55 fix). Bad-memory pruning ongoing.'
+- id: complete-chain-poll-empty-sess-root
+  text: 'INVESTIGATE the recurring complete-chain-poll with empty sess at every COMPLETE boundary: it fires from cron/stop-hook machinery hitting the terminal chain, counted in deviations_30m but NOT an agent action (I stop in prose after COMPLETE). Determine if this empty-sess hook-poll should be suppressed/not-counted as a deviation (it pollutes the deviation count + the operational-perfection signal). If it is the cron firing instruction on a terminal chain, that is plugkit gate behavior worth refining.'
+  status: completed
+  witness: 'ROOT-CAUSED + FIXED (rs-plugkit 41b8326): complete-chain-poll (instructions/mod.rs:289) fired for ANY bare instruction on a terminal chain incl empty-body cron/stop-hook probes (no session_id). Added && session_id_opt.is_some() so only AGENT-attributed re-polls flag (the genuine deviation); hook-internal empty-sess probes no longer count toward deviations_30m. Preserves the iter51-corrected real-agent-poll detection (agent dispatches carry sess). Cleans the operational-perfection signal.'
