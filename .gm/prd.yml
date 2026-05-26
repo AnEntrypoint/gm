@@ -3371,3 +3371,7 @@
   subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog-shaped facts; discipline store balanced.
   status: completed
   witness: AGENTS.md discipline 9/9 balanced (confirmed via real learn-status verb namespace=AGENTS.md). Classifier is_derivable_state rejects changelog-shaped facts (memorize.rs:29-54). Migration smooth and operative.
+- id: agents-md-gmskill-driver-rule
+  subject: 'Add structural rule to AGENTS.md: every /loop fire (and any user request carrying use-/gm-skill) must invoke Skill(gm-skill) as its FIRST action to drive the chain; dispatching spool verbs (instruction/transition/prd-*/memorize-fire/residual-scan/phase-status) directly without first entering the skill is the omission the stop-hook flags. The spool verbs are the skill mechanism, not a substitute for invoking it. Boot probe via Bash is still prescribed by the skill itself and is fine; the skill invocation must wrap the working session.'
+  status: completed
+  witness: 'AGENTS.md:157 new rule "The skill is the driver, not a post-hoc witness" added after gm-skill-tool-use-sequencing: first working action of any gm-skill-instructed session is Skill(gm-skill); spool verbs are the mechanism not a substitute; end-only invocation does not satisfy. Inline structural-rule edit per skill prose.'
