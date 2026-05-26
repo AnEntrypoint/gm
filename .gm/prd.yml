@@ -4743,3 +4743,31 @@
   text: Memory health + bad-memory prune scan.
   status: completed
   witness: 'Memory health on 0.1.596: recall working, prune-scan top hits all technical/lesson (iter26/24/63/28) - no pure-status markers, no bad-recall hazards. No prune needed. Corpus lean+accurate.'
+- id: migration-classifier-validated
+  text: 'VALIDATE the AGENTS.md->learning classifier end-to-end: changelog-shaped (fixed in commit X) REJECTED (commit-fix belongs in git log), dated-audit (dated audit YYYY-) REJECTED, rule-shaped ACCEPTED+embedded. The classifier gates derivable-state out of the recall index correctly.'
+  status: completed
+  witness: 'Classifier validated end-to-end on 0.1.596: memorize {fixed in commit abc123...} REJECTED (commit-fix belongs in git log); {dated audit 2026-05-27...} REJECTED (dated audit belongs in git log); rule-shaped {code search must route through codesearch...} ACCEPTED embedded:true. Derivable-state correctly gated out of recall.'
+- id: migration-recall-roundtrip-validated
+  text: 'VALIDATE the migration is COMPLETE not just write-accepted: a rule memorized via memorize-fire is immediately RECALLABLE (test rule recalled top score 0.844). The dual-write surface works end-to-end - hard rule -> memorize -> recall. Test rule pruned after (text+vec both gone, confirming clean prune).'
+  status: completed
+  witness: 'Migration COMPLETE end-to-end: the test rule memorized via memorize-fire recalled at TOP score 0.844 immediately. Hard-rule -> memorize -> recall round-trip works. Test rule then pruned (text+vec both deleted, clean). The dual-write surface is proven, not just claimed.'
+- id: migration-is-deliberately-manual-finding
+  text: 'FINDING for the user suspicion (scheduled internal processes that now require manual work): the AGENTS.md->learning dual-write IS deliberately MANUAL - the agent judges recall-worthiness + fires memorize-fire at write time; there is NO auto-scan of AGENTS.md. This is BY DESIGN (the classifier can reject derivable-state but cannot judge which AGENTS.md paragraphs are recall-worthy RULES vs narrative - only the agent can at authoring time). So it is correctly manual, matching the users observation, NOT a gap. Confirm this is documented as the intended model + the agent reliably dual-writes (it has, across iters - the codesearch rule is in both AGENTS.md + recall).'
+  status: completed
+  witness: 'ANSWERED the user suspicion: the AGENTS.md->learning dual-write IS manual BY DESIGN - the agent judges recall-worthiness + fires memorize-fire at authoring time; no auto-scan exists because the classifier rejects derivable-state but cannot judge which AGENTS.md paragraphs are recall-worthy RULES vs narrative (only the authoring agent can, per the iter61 agent-as-LLM principle - the agent IS the judge). Correctly manual, not a gap. Witnessed reliable in practice: the iter64/65 codesearch-forbid rule is in BOTH AGENTS.md AND recall (surfaced in recall-1581). The manual dual-write is the intended scheduled-internal-process, executed by the agent each authoring.'
+- id: deviations-iter67-triage
+  text: Triage deviations_30m=2.
+  status: completed
+  witness: 'deviations_30m=2 both long-gap-no-instruction: 22:53 empty-sess (boot-window) + 23:01 agent-sess (in-session validation-heavy-work gap). Known patterns (boot + heavy-EXECUTE), no new class. The iter55/56 deviation-class fixes hold (zero complete-chain-poll, zero prd-resolve-unknown this window).'
+- id: memory-health-iter67
+  text: Memory health + prune scan (already pruned the test rule cleanly).
+  status: completed
+  witness: 'Memory health on 0.1.596: VALIDATED clean prune (test rule mem-1779837176003 text+vec both deleted), classifier gating derivable-state, recall round-trip working. The memory system is healthy + the migration path is proven. No bad-recall hazards. The deliberate-manual dual-write is the correct model.'
+- id: lora-namespace-train-reassess-67
+  text: 'Re-assess the iter63 LoRA re-rank no-op: still no multi-namespace recall (enabled.txt empty). The re-rank engages only with multi-discipline + namespace-trained head. Confirm still correctly-sequenced-not-built (single-namespace project has nothing to discriminate), OR if worth a synthetic multi-discipline validation.'
+  status: completed
+  witness: 'Re-confirmed: enabled.txt still empty (default-only recall), so multi-namespace recall is inactive and the iter63 re-rank correctly no-ops (nothing to discriminate). Building a synthetic multi-discipline validation is possible but low-value for a single-namespace project; the re-rank is shipped no-op-safe + the namespace-targeted-train is documented (iter63 mem). Correctly sequenced-not-built - it activates when a real project enables disciplines. No change.'
+- id: classifier-substring-false-positive
+  text: 'NEW FINDING iter67: the memorize classifier (is_derivable_state, memorize.rs) substring-matches derivable-state trigger phrases (commit-fix, dated audit, changelog) even inside a LEGITIMATE lesson-memory that merely QUOTES or discusses them - my iter67 lesson-memory was rejected because it contained the phrase describing a commit-fix-reference. False-positive on meta-memories about the classifier itself. ASSESS: is this acceptable (reword to avoid trigger, cheap) or should the classifier be smarter (e.g. only reject if the trigger is the MEMORYs subject, not a quoted token)? Lean acceptable - the reword is trivial + a smarter classifier risks letting real changelog facts through. Document the substring nature so agents reword meta-memories.'
+  status: completed
+  witness: 'ASSESSED: the classifier is substring-based (is_derivable_state matches trigger phrases anywhere in the text), so a legitimate lesson-memory quoting a rejected-phrase (commit-fix/dated-audit/changelog) gets caught - witnessed: my iter67 lesson-memory was rejected for containing the phrase, reworded + re-accepted (mem-1779837382803). DECISION: acceptable as-is - the reword is trivial, and a smarter context-aware classifier risks the worse failure (letting real changelog facts INTO recall, which the user prioritizes preventing - bad memory worse than a miss). Documented the substring nature so agents reword meta-memories that discuss the trigger tokens. Not changing the classifier; the conservative substring match is the right tradeoff.'
