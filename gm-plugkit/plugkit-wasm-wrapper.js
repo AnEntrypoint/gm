@@ -1203,9 +1203,9 @@ function legacyKvDir(ns) {
   return path.join(KV_DIR, safeName(ns));
 }
 
-function kvFilePath(ns, key) {
+function kvFilePath(ns, key, ensureDir) {
   const dir = projectKvDir(ns);
-  fs.mkdirSync(dir, { recursive: true });
+  if (ensureDir) fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, safeName(key) + '.json');
 }
 
@@ -1534,7 +1534,7 @@ function makeHostFunctions(instanceRef) {
         const key = readWasmStr(instanceRef.value, keyPtr, keyLen);
         const val = readWasmStr(instanceRef.value, valPtr, valLen);
         if (!ns || !key) return 0;
-        fs.writeFileSync(kvFilePath(ns, key), val);
+        fs.writeFileSync(kvFilePath(ns, key, true), val);
         return 1;
       } catch (e) {
         return 0;
