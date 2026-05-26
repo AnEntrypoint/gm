@@ -3587,3 +3587,35 @@
   subject: 'iter33: after the paper-witness browser dispatch, the session orphaned - playwriter lost its handle (reset said session-not-found) but the chrome process persisted, AND the watcher kept the session in browser-ports/sessions.json (open_browser_sessions non-empty), blocking the COMPLETE gate. Manual recovery: kill the chrome pid + clear the tracking files. DEFECT: watcher should reap browser sessions whose chrome pid is dead (or whose playwriter handle is gone) so a crashed/orphaned witness browser does not wedge the residual-scan/COMPLETE gate. Also kill-port verb rejected timeoutMs in body (received:null) - schema mismatch worth checking. Scoped for a watcher-lifecycle fire.'
   status: completed
   witness: 'Named the defect: watcher does not reap browser sessions with dead chrome pids / lost playwriter handles, wedging the COMPLETE gate; kill-port verb also has a timeoutMs-parsing mismatch (received:null despite body having it). Recovered manually this fire (killed orphan chrome 310716, cleared browser-ports/sessions.json). Both are watcher-lifecycle fixes scoped for a dedicated fire. Tracking files are runtime/gitignored, not commit residuals.'
+- id: fix-post-version-transition-gap-deviations
+  subject: '3 long-gap-no-instruction deviations (08:48-08:50, verb=memorize-fire/learn/browser, all mine cwd C:/dev/gm) were caused by the iter33 0.1.580->0.1.581 version transition: the 149MB download took ~8min idle, so my first verbs after the new watcher booted each tripped the 300s long-gap gate. I recovered each via instruction, but the burst was predictable+avoidable. FIX: AGENTS.md rule - the FIRST verb after any version-transition wait (or any multi-minute wait) is instruction, to reset the long-gap clock, before memorize/learn/browser/etc. Converts a recurring 3-deviation burst to zero. Instructional-perfection.'
+  status: completed
+  witness: 'AGENTS.md rule added "The first verb after any multi-minute wait is instruction, to reset the long-gap clock": pre-empts the deviation.long-gap-no-instruction burst that the iter33 version transition caused (3 mine: memorize-fire/learn/browser). Inline structural edit.'
+- id: validate-iter33-learn-bridge-live-0581
+  subject: learn {verb:health} returns real rs-learn health json on 0.1.581 cleanly (no gate-denial this fire - instruction at turn start reset the gap). Bridge holding.
+  status: completed
+  witness: learn {verb:health} returned real rs-learn health json on 0.1.581 cleanly this fire (no gate-denial - instruction reset gap). Bridge holding.
+- id: memory-learning-health-iter34
+  subject: store 68/68 balanced (real learn-debug); recall 0 miss; auto_recall iter33 memo rank-1 0.809.
+  status: completed
+  witness: store 68/68 balanced (real learn-debug); recall 0 miss; auto_recall iter33 memo rank-1 0.809.
+- id: bad-memory-prune-scan-iter34
+  subject: scan stale/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable dated findings, no false current-state claims. No prune warranted (consistent iter27-34; last bad pruned iter26).
+- id: validate-driver-rule-6th-fire
+  subject: 'driver rule validated 6th consecutive fire: iter34 invoked Skill(gm-skill) as first working action.'
+  status: completed
+  witness: 'driver rule validated 6th consecutive fire: iter34 invoked Skill(gm-skill) as first working action.'
+- id: agents-md-migration-iter34
+  subject: AGENTS.md migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status); classifier rejects changelog facts. Migration smooth.
+- id: paper-accuracy-iter34
+  subject: re-audit s40-42; confirm s40 rs-learn-reachable update (iter33) accurate.
+  status: completed
+  witness: docs/paper.html s40 carries the iter33 rs-learn-reachable update (cores are now reachable / learn verb / PlugkitKv all present; literal grep was split by <code> tags). Accurate.
+- id: consider-advancing-open-items-iter34
+  subject: drive-rslearn-cores-per-turn and watcher-reap-dead-browser-sessions are the two named open advances; assess if either has a safe first step this fire or remain scoped.
+  status: completed
+  witness: 'Assessed: drive-rslearn-cores-per-turn (wire route/feedback into agent turn lifecycle) and watcher-reap-dead-browser-sessions (watcher reaping logic) are both genuinely multi-step with no safe single-fire validatable increment; this fire already shipped the post-version-transition gap rule. Both remain scoped for dedicated fires. No premature partial.'
