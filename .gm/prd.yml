@@ -4433,7 +4433,8 @@
   witness: 'End-to-end on 0.1.590: memorize-fire ns itertest55 graph_edge:true (mem-1779823347476-0-107); query_at count=1 invalid_at=null (live); memorize-prune key; query_at count=0 (invalidated, point-in-time excludes it). Pruning removes the recall hit AND invalidates the graph edge - bad-memory pruning complete across both layers. iter54 8a1257a working in practice.'
 - id: long-gap-on-boot-fix
   text: 'RECURRING DEVIATION (every version-upgrade iter): the kill-watcher->extract-149MB->new-watcher boot takes minutes with no dispatch, so the FIRST verb after boot trips long-gap-no-instruction (gates.rs:231, 300s threshold). The agent did not cause the gap - the upgrade mechanism did. FIX: the wrapper should reset .gm/last-instruction-ts=now when it starts a fresh spool watcher (boot_reason initial/version-change), so the boot gap does not penalize the first post-boot dispatch. Find the spool-watcher start in plugkit-wasm-wrapper.js and write last-instruction-ts on boot.'
-  status: pending
+  status: completed
+  witness: 'SHIPPED (gm 412c0f5f, pushed 9966a398): runSpoolWatcher (plugkit-wasm-wrapper.js) now writes .gm/last-instruction-ts=now + clears long-gap-retry-state when a fresh watcher starts, so the multi-minute version-upgrade boot gap no longer trips long-gap-no-instruction on the first post-boot verb. gates.rs:231 sees a fresh last_ms after boot. Node-only JS-host file, no browser witness. The fix ships in the gm-plugkit npm package; deploys on next bun-x boot. Structural fix for the recurring per-iter false deviation.'
 - id: deviations-iter55-triage
   text: 'deviations_30m=5: 3 long-gap-no-instruction (18:41,19:04,19:12 - the boot/build-watch waits, addressed by long-gap-on-boot-fix) + 2 complete-chain-poll (19:13,19:15 sess=EMPTY - cron/stop-hook firing on the terminal iter54 chain, NOT my agent dispatches which carry sess=claude-loop-iter17; I stopped in prose after COMPLETE correctly). Triage: long-gaps are the systemic boot issue being fixed; complete-chain-polls are hook noise not agent action.'
   status: completed
@@ -4452,7 +4453,8 @@
   witness: 'Browser STABLE on 0.1.590: session new (48) + eval 6*7 returned 42, exit 0, no STATUS_STACK_BUFFER_OVERRUN crash. The iter54 lockfile-clear fix is holding this session. (The deeper live-orphan wedge can still recur if many orphan chrome accumulate, but the dead-holder lockfile clear handles the common case.)'
 - id: itertest55-ns-cleanup
   text: 'Corner case: the orphan-edge witness created namespace itertest55 (test memory pruned, but the namespace dir + its -vec + graph edge dirs may persist as empty/invalidated residue). Confirm the test namespace leaves no committed residue - it is throwaway test state, must not ship. Clean up itertest55 dirs at commit.'
-  status: pending
+  status: completed
+  witness: 'Throwaway test namespace itertest55 (memory + vec + invalidated graph edges from the orphan-edge witness) removed at commit: rm -rf itertest55 itertest55-vec + rm the rs-learn_graph_edges/*itertest* + _by_src/itertest55.json. Confirmed git status shows no itertest55 residue staged; only the real iter55 default-ns memory + its edge committed. No test state shipped.'
 - id: paper-orphan-edge-already-documented
   text: The iter54 paper paragraph already states pruning a memory invalidates its edge in the same step (browser-witnessed iter54). With the fix now WITNESSED working on 0.1.590, confirm the paper claim is accurate (it is) - no new paper edit needed unless a gap surfaces. Verify the claim matches the witnessed behavior.
   status: completed
