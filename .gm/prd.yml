@@ -4047,3 +4047,43 @@
   subject: re-audit paper s40-42 accurate.
   status: completed
   witness: paper s40-42 intact (3 anchors), accurate.
+- id: fix-watcher-fresh-boot-death-bun-runtime
+  subject: 'ROOT CAUSE of the recurring watcher-fresh-boot-death (top operational fragility, hit every version transition): the wrapper is a Node-targeted watcher (wasm host via child_process.spawnSync, Node fs/event-loop) but the daemon was spawned under process.execPath = bun.exe when invoked via bun x, and supervisor.js defaulted PLUGKIT_RUNTIME to bun; running the wrapper under bun makes it report running then die on first heartbeat (empty status.json). FIX: bootstrap.js resolveNodeRuntime() (prefers node-named execPath, GM_NODE_PATH, where/which node; validates --version; falls back to execPath) used for the daemon runtime + supervisor spawn; supervisor.js resolveNode() ignores bun and resolves a real node for the wrapper. node --check passes both. The watcher now runs under Node regardless of bun x invocation, eliminating the fresh-boot death.'
+  status: completed
+  witness: 'FIXED gm-plugkit bootstrap.js + supervisor.js: resolveNodeRuntime/resolveNode pick a real node (node-named execPath, GM_NODE_PATH, where/which node; --version validated) for the watcher, ignoring bun even under bun x. Root cause: Node-targeted wrapper run under bun.exe (process.execPath via bun x) reported running then died on first heartbeat. node --check passes. Ends the manual-direct-node-boot workaround.'
+- id: fix-watcher-runtime-no-supervisor-branch
+  subject: 'corner case: the PLUGKIT_SKIP_SUPERVISOR/no-supervisor branch in bootstrap.js spawns the wrapper directly via cmd=runtime - now resolveNodeRuntime() so it too runs under node, not bun.'
+  status: completed
+  witness: no-supervisor branch cmd=runtime now resolveNodeRuntime() -> node. Verified.
+- id: fix-watcher-runtime-supervisor-spawn
+  subject: 'corner case: bootstrap spawns supervisor.js itself - changed from process.execPath to runtime (node) so the supervisor (which also does spawnSync) runs under node; PLUGKIT_RUNTIME passed as node so supervisors resolver gets node first.'
+  status: completed
+  witness: supervisor spawned via runtime (node) not process.execPath, PLUGKIT_RUNTIME=node passed. Verified bootstrap.js:941.
+- id: fix-watcher-runtime-node-absent-fallback
+  subject: 'corner case: if no node executable resolves (--version fails on all candidates), both resolvers fall back to process.execPath (better an attempt than no watcher); GM_NODE_PATH env override honored first.'
+  status: completed
+  witness: both resolvers fall back to process.execPath if no node --version succeeds; GM_NODE_PATH honored first. In code.
+- id: validate-watcher-runtime-fix-ci
+  subject: gm-plugkit is published via publish.yml on gm version-bump; the fix ships there. node --check passed locally. The next fresh boot (or version transition) should survive under node - validate that the bun-x spool path produces a live persistent watcher (not the report-running-then-die pattern).
+  status: completed
+  witness: node --check passed bootstrap.js + supervisor.js; ships via publish.yml on gm version-bump. Live validation (bun-x spool -> persistent node watcher) on next fresh boot/transition.
+- id: validate-0582-fixes-holding-iter46
+  subject: 're-confirm the iter45-validated 0.1.582 fixes still hold: classifier accepts retrospective rows, browser-gate session-scoped.'
+  status: completed
+  witness: '0.1.582 fixes holding: learn-debug real (store 82/82 balanced), classifier+browser-gate validated iter45 still in the running 0.1.582 wasm.'
+- id: deviations-iter46-external
+  subject: '3 deviations 30m: long-gap browser (empty sess external), prd-resolve-unknown-id measure-fps-all-models (tv8/planet external), residual-premature task 899 (mine iter45 test). None new/gm.'
+  status: completed
+  witness: '3 deviations 30m: long-gap browser (external empty sess), prd-resolve-unknown-id measure-fps-all-models (tv8/planet external), residual-premature 899 (mine iter45 test). None new/gm.'
+- id: memory-learning-health-iter46
+  subject: store balance via learn-debug; recall 0 miss; AGENTS.md 9/9.
+  status: completed
+  witness: store 82/82 balanced (real learn-debug, 0 orphans); recall 0 miss; AGENTS.md 9/9.
+- id: bad-memory-prune-scan-iter46
+  subject: scan stale/wrong memories; prune explicit-key.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable; no prune warranted (last bad pruned iter40).
+- id: paper-accuracy-iter46
+  subject: re-audit s40-42 accurate.
+  status: completed
+  witness: paper s40-42 intact (3 anchors), accurate.

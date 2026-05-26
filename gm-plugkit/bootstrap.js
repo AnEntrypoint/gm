@@ -879,13 +879,32 @@ function probeUnsupervisedWatcher(spoolDir) {
   } catch (_) {}
 }
 
+function resolveNodeRuntime() {
+  const isNodeExe = (p) => /(^|[\\/])node(\.exe)?$/i.test(String(p || ''));
+  const candidates = [];
+  if (isNodeExe(process.env.GM_NODE_PATH)) candidates.push(process.env.GM_NODE_PATH);
+  if (isNodeExe(process.execPath)) candidates.push(process.execPath);
+  try {
+    const which = process.platform === 'win32' ? 'where' : 'which';
+    const out = require('child_process').spawnSync(which, ['node'], { encoding: 'utf8', windowsHide: true });
+    if (out && out.stdout) {
+      const first = out.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
+      if (first) candidates.push(first);
+    }
+  } catch (_) {}
+  for (const c of candidates) {
+    try { const r = require('child_process').spawnSync(c, ['--version'], { stdio: 'ignore', windowsHide: true }); if (r && r.status === 0) return c; } catch (_) {}
+  }
+  return process.execPath;
+}
+
 function startSpoolDaemon() {
   try {
     const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
     if (!fs.existsSync(wrapper)) {
       return { ok: false, error: `wrapper not at ${wrapper} — ensureReady() must run first` };
     }
-    const runtime = process.execPath;
+    const runtime = resolveNodeRuntime();
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
@@ -919,7 +938,7 @@ function startSpoolDaemon() {
 
     const logFd = fs.openSync(logPath, 'a');
     try { fs.writeSync(logFd, `\n--- supervisor spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
-    const child = require('child_process').spawn(process.execPath, [supervisor], {
+    const child = require('child_process').spawn(runtime, [supervisor], {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
