@@ -4119,3 +4119,31 @@
   subject: re-audit s40-42 accurate.
   status: completed
   witness: paper s40-42 intact (3 anchors), accurate.
+- id: fix-home-yaml-stale-200kb-wasm-claim
+  subject: 'home.yaml line 33 (wasm-polymorphism feature) claims plugkit.wasm is under 200KB with no multi-megabyte bundles - FACTUALLY WRONG + user-facing on the landing page. The shipped artifact is ~149MB (embeds the 133MB bge-small safetensors for offline in-wasm embeddings), per AGENTS.md + paper s41. The under-200KB describes only the orchestration LOGIC. This misleads on size/distributability and contradicts the paper. FIX: rewrite the home.yaml feature to match s41 reality - logic is hundreds of KB, shipped wasm ~149MB embedding the model in-wasm for offline/no-text-leak memory, a deliberate one-time-download trade for self-contained reproducible distribution.'
+  status: completed
+  witness: 'FIXED home.yaml wasm-polymorphism feature: replaced the false under-200KB/no-multi-megabyte claim with the accurate s41 reality - logic hundreds of KB, shipped artifact ~149MB embedding bge-small in-wasm for offline/no-text-leak recall+memorize, a one-time sha-pinned download for self-contained reproducible distribution. grep: under-200KB now 0, 149MB present. Was user-facing on the landing page + contradicted the paper.'
+- id: paper-audit-comprehensive-no-gap
+  subject: 'DEEP paper audit: docs/paper.html s40-42 covers EVERY user-named advance accurately - s40 all 5 rs-learn cores (Hebbian MicroLoRA+norm-bound+EWC-correction spirit-of-sona, EWC++ online-Fisher-EMA+z-score boundary, bi-temporal graph spirit-of-graphiti, 8-head graph-attention relation/recency, FastGRNN sparse+low-rank router epsilon-greedy over model/context/temp/top_p/confidence) + file-vec layer + pruning-first + IO/math boundary + iter33 learn-verb bridge; s41 wasm migration reasoning + 149MB/embeddings-in-wasm/offline + distributability/reproducibility + shared-resource amortization + atomic-write/self-respawn stability; s42 rs-exec/codeinsight/search + model-selection meaning-vs-mechanics + agent-as-llm fetch-callback. No content gap; padding would be churn + AI-watermark risk. Only the home.yaml size claim was stale (separate row).'
+  status: completed
+  witness: DEEP audit confirmed docs/paper.html s40-42 covers every user-named advance accurately (all 5 rs-learn cores named+detailed, wasm migration reasoning, 149MB embeddings-in-wasm, distributability/reproducibility, shared-resources, system-stability, exec/codeinsight/search, model-selection meaning-vs-mechanics, agent-as-llm). No content gap; padding would be churn + AI-watermark risk. Read s40 in full to verify.
+- id: rslearn-cores-per-turn-still-open
+  subject: 'The genuine substantive frontier: rs-learn cores are REACHABLE (learn verb iter33) + accurately described (s40), but NOT yet DRIVING per-turn decisions - nothing calls init_router->route->record_outcome wired to actual model/temp/context selection, nor insert_edge on memorize for the temporal graph. This is a multi-fire architectural advance (wiring cores into the agent turn lifecycle); s40 honestly says dispatchable not yet per-turn-live. Named open advance, scoped for a dedicated fire; the bridge (iter33) is the prerequisite + done.'
+  status: completed
+  witness: 'Named open advance: cores reachable (learn verb iter33) + accurately described (s40) but not yet driving per-turn decisions (init_router/route/record_outcome wired to model/temp selection, insert_edge on memorize). Multi-fire architectural work, scoped for a dedicated fire; bridge prerequisite done.'
+- id: deviation-iter48-mine-recovered
+  subject: 1 deviation long-gap-no-instruction verb=learn-debug (claude-l) was MINE iter47 (learn-debug before instruction after orient gap); recovered. iter34 gap rule covers. No new/external.
+  status: completed
+  witness: 1 deviation long-gap verb=learn-debug mine iter47, recovered. iter34 rule covers. No new/external.
+- id: memory-learning-health-iter48
+  subject: store balance via learn-debug; recall 0 miss; AGENTS.md balanced on 0.1.582.
+  status: completed
+  witness: store 84/84 balanced (real learn-debug, 0 orphans); recall 0 miss; AGENTS.md balanced on 0.1.582.
+- id: bad-memory-prune-scan-iter48
+  subject: scan stale/wrong memories; prune explicit-key. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable; no prune warranted (last bad pruned iter40).
+- id: agents-md-migration-iter48
+  subject: validate AGENTS.md staging->rs-learn migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline balanced (real learn-status); classifier rejects changelog facts.

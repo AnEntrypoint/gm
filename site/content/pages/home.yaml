@@ -30,7 +30,7 @@ features:
     - name: "one npm package, no fanout"
       desc: "an earlier generation fanned fifteen downstream plugin repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), each with its own bootstrap shim. those repos are archived. the repo root is the published gm-skill package. add a hook once, it shows up everywhere."
     - name: "wasm polymorphism"
-      desc: "gm-skill ships a single plugkit.wasm (under 200KB) that runs natively on every operating system through node or bun. no platform-specific builds, no multi-megabyte bundles per architecture. the wasm host delegates to node for filesystem, subprocess, and fetch."
+      desc: "gm-skill ships a single plugkit.wasm that runs natively on every operating system through node or bun, no platform-specific builds, no per-architecture matrix. the orchestration logic compiles to hundreds of kilobytes; the shipped artifact is ~149MB because it embeds the bge-small embedding model in-wasm, so recall and memorize compute vectors in-process, offline, leaking no text to a remote embedder. a one-time sha-pinned download buys a self-contained, reproducible, network-independent memory system. the wasm host delegates to node for filesystem, subprocess, and fetch."
     - name: "rust-backed runtime"
       desc: "rs-exec is the runner. rs-codeinsight is the AST x-ray. rs-search is the fast file finder. rs-learn is the memory store. rs-plugkit is the wasm module that ties them together. every push to any of them auto-cascades to a fresh gm-skill on npm within minutes."
     - name: "one spool folder, every dispatch"
