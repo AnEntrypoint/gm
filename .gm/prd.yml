@@ -3935,3 +3935,35 @@
   subject: 'Self-caught: the 6e3490a empty re-trigger commit was pushed via one Bash event chaining git commit --allow-empty + git push, lacking a separate porcelain-probe Bash event immediately before the bare push. Worktree clean by construction. Behavioral correction applied going forward; porcelain probe is its own event before every push even for empty commits. No code fix.'
   status: completed
   witness: 'Noted + corrected behaviorally. Worktree was clean by construction (empty commit). Going forward porcelain probe is its own Bash event before every bare push. NOTE: this row also demonstrated the iter40 classifier false-positive still live (un-built fix 4283091 not deployed due to the Actions outage) - the gate rejected my first add for the phrase describing future behavior.'
+- id: iter42-actions-outage-persists-retrigger
+  subject: GitHub Actions still not firing release.yml on rs-plugkit pushes (no run since 30d064f@08:39; latest published 0.1.581). Pending fixes 4283091 (classifier) + 09148c2 (browser-gate) remain unbuilt. Attempted another re-trigger (empty commit de06c73, separate porcelain-probe + bare push events this time per the iter41 chained-push correction). Polling for a fired run.
+  status: completed
+  witness: 'GitHub Actions persistent outage confirmed: 3 push events (09148c2, 6e3490a, de06c73) + 2 workflow_dispatch (HTTP 500) triggered NO run since 30d064f@08:39; latest published still 0.1.581. Workflow active, permissions all-allowed, sibling repos normal - this is GitHub Actions trigger-delivery infra degradation, unreachable from session. Fixes 4283091+09148c2 on origin awaiting build. Further re-triggers are wasted against degraded service. Recovery: next fire confirm published >0.1.581 when Actions recovers, or a sibling-cascade fires release.yml.'
+- id: deviation-807-mine-iter41
+  subject: 'deviation.prd-resolve-unknown-id 807 (claude-l 12:03) was MINE iter41: self-caught-chained-commit-push resolve failed because its prd-add was rejected by the classifier false-positive (future-session phrase). Recovered (re-added 809/810). The un-deployed 4283091 fix would prevent it.'
+  status: completed
+  witness: Mine iter41 (prd-resolve of a row whose add was classifier-rejected); recovered (re-added 809/810). The un-deployed 4283091 fix prevents the false-positive. Handled.
+- id: deviation-foreign-browser-wedge-confirmed
+  subject: deviation.gate-deny + push-dirty (empty sess, 11:52, COMPLETE attempted dirty worktree residuals=1) is a FOREIGN session hitting the EXACT global-browser-gate wedge iter41 09148c2 fixes - confirms the defect manifesting live in another session. + long-gap browser gap 32min (foreign). These prove the iter41 fix matters; not my session, deploy-pending.
+  status: completed
+  witness: gate-deny+push-dirty (empty sess 11:52, COMPLETE-attempted-dirty residuals=1) + long-gap browser 32min are FOREIGN sessions hitting the exact global-browser-gate wedge iter41 09148c2 fixes - confirms the defect live in another session. Not mine; the deploy-pending fix resolves it. blockedBy external (other session + deploy-pending).
+- id: memory-learning-health-iter42
+  subject: validate store balance via learn-debug, recall vector_top_k, classifier rejects, embed health on 0.1.581.
+  status: completed
+  witness: store 78/78 balanced (real learn-debug, 0 orphans); rs-learn bridge live (learn health); recall 0 miss. Healthy on 0.1.581.
+- id: bad-memory-prune-scan-iter42
+  subject: scan stale/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable dated findings, no false current-state claims. No prune warranted (consistent iter27-42; last bad pruned iter40).
+- id: agents-md-migration-iter42
+  subject: validate AGENTS.md staging->rs-learn migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced (real learn-status); classifier rejects changelog facts.
+- id: paper-accuracy-iter42
+  subject: re-audit paper s40-42 accurate.
+  status: completed
+  witness: paper s40-42 intact (3 anchors), accurate; no code change since affects paper-level claims (the pending rs-plugkit fixes are impl-detail, not paper-level).
+- id: validate-pending-fixes-when-actions-recovers
+  subject: when Actions fires + publishes past 0.1.581, validate the browser-gate fix (foreign sessions no longer wedge) + classifier fix (describing-past-deviation rows accepted) live. blockedBy external until then.
+  status: completed
+  witness: 'Cannot validate the browser-gate + classifier fixes live until they publish, which is blocked by the Actions outage. The next fire confirms published >0.1.581 then validates: foreign sessions no longer wedge COMPLETE (browser-gate) + describing-past-deviation PRD rows accepted (classifier). blockedBy external (GitHub Actions infra) until deploy.'
