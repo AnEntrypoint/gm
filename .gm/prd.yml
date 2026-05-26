@@ -3375,3 +3375,43 @@
   subject: 'Add structural rule to AGENTS.md: every /loop fire (and any user request carrying use-/gm-skill) must invoke Skill(gm-skill) as its FIRST action to drive the chain; dispatching spool verbs (instruction/transition/prd-*/memorize-fire/residual-scan/phase-status) directly without first entering the skill is the omission the stop-hook flags. The spool verbs are the skill mechanism, not a substitute for invoking it. Boot probe via Bash is still prescribed by the skill itself and is fine; the skill invocation must wrap the working session.'
   status: completed
   witness: 'AGENTS.md:157 new rule "The skill is the driver, not a post-hoc witness" added after gm-skill-tool-use-sequencing: first working action of any gm-skill-instructed session is Skill(gm-skill); spool verbs are the mechanism not a substitute; end-only invocation does not satisfy. Inline structural-rule edit per skill prose.'
+- id: fix-my-complete-chain-poll-deviation
+  subject: '3 deviation.complete-chain-poll (06:19-06:23, instruction-353/354/356) are MINE: during the stop-hook exchange I re-dispatched instruction/phase-status with empty body on a terminal chain (COMPLETE, prd_pending=0, no fresh prompt) to re-confirm state. mod.rs:282-294 correctly flags this. Behavioral root: when a stop-hook fires on an already-terminal chain, re-polling to prove terminality IS the deviation; correct response is prose-only (COMPLETE authorizes) OR fresh-prompt new work.'
+  status: completed
+  witness: '3 complete-chain-poll deviations (06:19-06:23, instruction-353/354/356) were mine during the stop-hook exchange — empty-body instruction/phase-status on a terminal chain. Root cause understood (mod.rs:282-294). Corrected behaviorally this iter: stop-hook on terminal chain -> prose-only OR fresh-prompt new work, never re-poll. Codified in AGENTS.md (below).'
+- id: agents-md-stophook-on-terminal-chain-rule
+  subject: 'Add AGENTS.md rule: when a stop-hook/condition fires on a chain already at COMPLETE+prd_pending=0, do NOT dispatch instruction/phase-status to re-confirm (that emits complete-chain-poll and pollutes the chain). The COMPLETE pronouncement already authorizes prose-only; if the condition needs new work, open it with a FRESH prompt (resets to PLAN). Re-polling a terminal chain to satisfy a hook is the anti-pattern just observed in the iter26-28 stop-hook loop.'
+  status: completed
+  witness: 'AGENTS.md new rule "A stop-hook firing on a terminal chain does not authorize re-polling" added after the driver rule: re-dispatching instruction/phase-status on COMPLETE+prd_pending=0 emits complete-chain-poll; two admissible responses only (prose-only, or fresh-prompt new work); repeatedly answering the same hook is a loop. Inline structural-rule edit.'
+- id: validate-ccsniff-tsfix-live
+  subject: 'iter28 ccsniff ts fix (167a266) validated in practice: --git-discipline 30m now shows real command-time (06:15:01) not scan-time; my historical deviations aged out; only the tv8 (2277b4a5) chained-push violation remains, correctly flagged with its true ts. Audit window accurate.'
+  status: completed
+  witness: 'ccsniff 167a266 validated: --git-discipline 30m shows real command-time 06:15:01 (not scan-time); my historical pushes aged out; only tv8 2277b4a5 chained-push violation remains, true ts. Window accurate.'
+- id: validate-agents-md-driver-rule-live
+  subject: 'AGENTS.md driver rule (86e96df6) validated: this iter29 fire invoked Skill(gm-skill) as first working action per the rule; auto_recall surfaced the workflow-correction memo rank-1 (0.788). The correction propagated end-to-end.'
+  status: completed
+  witness: 'AGENTS.md driver rule 86e96df6 validated end-to-end: iter29 invoked Skill(gm-skill) as first working action; auto_recall surfaced workflow-correction memo rank-1 0.788. Correction propagated.'
+- id: validate-learn-status-gitpush-0579
+  subject: learn_status returns real {62,62,balanced} on 0.1.579; git_push rebase-on-rejection is running code (exercised via raw-git separate-event pushes this session set). Prior fixes live.
+  status: completed
+  witness: learn_status real {62,62,balanced} on 0.1.579; git_push rebase-on-rejection is running code. Prior fixes live.
+- id: memory-learning-health-iter29
+  subject: store 62/62 balanced; recall 0 misses, 0 classifier rejects; auto_recall workflow-correction memo rank-1 0.788. Healthy on 0.1.579.
+  status: completed
+  witness: store 62/62 balanced (real learn-status verb); recall 0 misses, 0 classifier rejects; auto_recall workflow-correction rank-1 0.788. Healthy.
+- id: bad-memory-prune-scan-iter29
+  subject: scan for stale/superseded/wrong memories; prune via memorize-prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned; workflow-correction memo singular (no dup); recent additions all distinct durable findings; no stale/wrong/superseded memory. No prune warranted (last bad pruned iter26).
+- id: rslearn-core-wiring-iter29
+  subject: re-confirm rs-learn 5 cores wiring; learn-status real; cores still unwired; track named open advance.
+  status: completed
+  witness: learn-status real on 0.1.579; learn-debug/build honest pointers; rs-learn 5 cores still unwired (no core dispatch verbs in wasm_dispatch match). Named open advance.
+- id: paper-accuracy-iter29
+  subject: re-audit docs/paper.html s40-42 vs current code; confirm advances accurate.
+  status: completed
+  witness: docs/paper.html s40-42 intact (41 topic matches); accurate vs current code (no paper-level claim changed by learn_status/ccsniff/AGENTS.md edits). No drift.
+- id: agents-md-migration-iter29
+  subject: validate AGENTS.md staging->rs-learn migration; classifier rejects changelog-shaped facts; discipline balanced.
+  status: completed
+  witness: AGENTS.md discipline 9/9 balanced via real learn-status verb; classifier rejects changelog-shaped facts. Migration smooth.
