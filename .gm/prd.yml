@@ -3987,3 +3987,63 @@
   subject: 'DEPLOY-STATE: gh-pages.yml fired for 0ce4ad4 (12:42) but FAILED at Set up job - codeload.github.com could not download actions/configure-pages@v5 (error An action could not be found / Failed to download archive after 1 attempt, GH error B450). This is the SAME GitHub Actions infra incident as the rs-plugkit trigger outage (action+tarball delivery degraded). Source fix is correct+committed+browser-witnessed (chip tops 448, cli stacks); the LIVE deploy is blockedBy:external (GitHub codeload/Actions infra) until it recovers - a re-run or next push deploys it. NOT a code error in our fix.'
   status: completed
   witness: 'gh-pages run 26448665806 failed at Set up job: codeload.github.com failed to download actions/configure-pages@v5 (GH infra error B450, Failed to download archive after 1 attempt) - same GitHub Actions delivery incident as the rs-plugkit trigger outage. Our source fix (theme.mjs 0ce4ad48) is correct, pushed, and browser-witnessed working; deploy is blockedBy:external (GitHub codeload infra) - a workflow re-run or next push deploys once GitHub recovers.'
+- id: iter44-deploy-backlog-codeload-recovery-test
+  subject: 'Backlog blocked on GitHub codeload/Actions infra (iter42-43): rs-plugkit 4283091+09148c2 unbuilt (no run since 30d064f@08:39, 0.1.581), gm gh-pages home-fix failed x2 on codeload (actions/configure-pages download). Re-ran gh-pages to test recovery; polling. If codeload recovered, the gh-pages re-run succeeds + deploys the home fix, and a sibling-cascade push can trigger rs-plugkit release.yml.'
+  status: completed
+  witness: 'CODELOAD RECOVERED. gm gh-pages re-run (5eea62a) SUCCEEDED - home fix LIVE: raw HTML fetch confirms .cli{display:block} (install stacks) + .work-detail-chips{display:flex} (star aligned, browser-witnessed tops all 448) deployed. The earlier browser cli_display:flex reading was a stale chrome-session cache; .cli .cli-line{display:flex} is the correct inner prompt+cmd row, .cli container is block. rs-plugkit backlog re-triggered via empty commit 7bbb3b9 (push now that codeload is back); polling for the run.'
+- id: deviations-iter44-mostly-external
+  subject: '5 deviations 30m: 2 prd-resolve-unknown-id (b05-render-swap, entity-loop-optimize) external tv8/planet sessions; gate-deny+complete-without-residual-scan (empty sess residuals=1) external session hitting the foreign-browser-wedge iter41 09148c2 fixes (undeployed); long-gap browser 389s MINE iter43 (post-orient witness, iter34 rule covers, recovered). 1 mine-recovered, 4 external.'
+  status: completed
+  witness: '5 deviations 30m: 2 prd-resolve-unknown-id (b05-render-swap, entity-loop-optimize) external tv8/planet; gate-deny+complete-without-residual-scan external session (foreign-browser-wedge iter41 fixes, undeployed); long-gap browser 389s MINE iter43 post-orient witness (iter34 rule, recovered). 1 mine-recovered, 4 external.'
+- id: memory-learning-health-iter44
+  subject: store 80/80 balanced (real learn-debug, 0 orphans); rs-learn bridge live; recall 0 miss; AGENTS.md 9/9. Healthy on 0.1.581.
+  status: completed
+  witness: store 80/80 balanced (real learn-debug, 0 orphans); rs-learn bridge live; recall 0 miss; AGENTS.md 9/9.
+- id: bad-memory-prune-scan-iter44
+  subject: scan stale/wrong memories; prune explicit-key; never blind similarity-delete. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable dated findings, no false current-state. No prune warranted (consistent iter27-44; last bad pruned iter40).
+- id: paper-accuracy-iter44
+  subject: re-audit paper s40-42 accurate; no code change since affects paper-level.
+  status: completed
+  witness: paper s40-42 intact, accurate; no code change since affects paper-level claims.
+- id: retrigger-via-dispatch-not-empty-commit
+  subject: 'FINDING: rs-plugkit release.yml has paths-ignore [**.md, docs/**, ...] - an EMPTY commit changes no matching path so it does NOT trigger Release (the iter41-42 empty-commit re-triggers were futile, only fired Deploy-GH-Pages which has no path filter). The correct re-trigger when push-delivery is degraded is gh workflow run release.yml --repo ... --ref main (workflow_dispatch), or a sibling-repo cascade (rs-exec/cascade.yml does gh workflow run release.yml on rs-plugkit). Confirmed: workflow_dispatch (which 500-errored during the codeload outage) succeeded once codeload recovered -> Release queued for 7bbb3b9. Real src-touching commits (4283091/09148c2) DO match the filter but did not fire only because the outage suppressed push-event delivery.'
+  status: completed
+  witness: 'Demonstrated this fire: empty commit 7bbb3b9 fired only Deploy-GH-Pages not Release (paths-ignore skips no-path-change commits); gh workflow run release.yml --ref main then succeeded (codeload recovered) -> Release queued for 7bbb3b9, building 4283091+09148c2. The reliable re-trigger is workflow_dispatch or sibling cascade, NOT empty commits, for any workflow with a paths/paths-ignore filter.'
+- id: validate-classifier-fix-live-0582
+  subject: 'VALIDATION PROBE: this row describes a past deviation - the iter40 prd-add was rejected when it quoted the phrase future session in a retrospective context (self-caught, tripped the gate). On 0.1.581 the deferral-language gate substring-matched this and rejected it. On 0.1.582 the split HARD/SOFT marker fix should ACCEPT it because retrospective cues (deviation, quoted, tripped, self-caught, false-positive) are present and no deferral cue co-occurs.'
+  status: completed
+  witness: row 897 (this probe) describing a past deviation with future-session in retrospective context was ACCEPTED on 0.1.582 -> the 4283091 split-marker classifier fix works live (rejected on 0.1.581). Validated.
+- id: validate-deploy-0582-live
+  subject: 0.1.582 published (iter44, from 7bbb3b9 containing 4283091+09148c2) and now LIVE on the running watcher (pid 321840 after install-then-direct-node-boot; the bun-x boot died on fresh-respawn, recovered via direct node wrapper spool). Both backlog fixes validated live this fire.
+  status: completed
+  witness: '0.1.582 (7bbb3b9: 4283091+09148c2) live on watcher 321840; recovered the fresh-boot respawn death via direct node wrapper spool. Backlog deployed.'
+- id: validate-classifier-fix-live-0582
+  subject: 'VALIDATED: prd-add 897 describing a past deviation with retrospective cues + the future-session phrase was ACCEPTED on 0.1.582 (was rejected on 0.1.581). The split HARD/SOFT deferral-marker fix (4283091) works in practice.'
+  status: completed
+  witness: row 897 (this probe) describing a past deviation with future-session in retrospective context was ACCEPTED on 0.1.582 -> the 4283091 split-marker classifier fix works live (rejected on 0.1.581). Validated.
+- id: validate-browser-gate-fix-live-0582
+  subject: 'VALIDATED: injected a FOREIGN-tv8-session into browser-sessions.json; on 0.1.582 open_browser_sessions returned [] (foreign session ignored, scoped to current claude-loop-iter17 sid). On 0.1.581 it would have surfaced + wedged COMPLETE. The session-scoping fix (09148c2) works in practice. Test data cleaned up.'
+  status: completed
+  witness: Injected FOREIGN-tv8-session; open_browser_sessions []=foreign-ignored on 0.1.582 (scoped to current sid). 09148c2 confirmed live. Cleaned up.
+- id: deviation-residual-premature-mine
+  subject: 1 deviation residual-premature (task 899) was MINE this fire - ran residual-scan with PRD items pending while testing the foreign-browser-gate. Harmless (scan correctly refused on PRD-pending, never reached browser check). Self-caused by the validation test sequence.
+  status: completed
+  witness: Mine - residual-scan with PRD pending during the foreign-browser-gate test. Harmless, scan refused on PRD-pending. Self-caused by validation sequence.
+- id: close-iter44-chain
+  subject: iter44 chain was left in EXECUTE awaiting this deploy validation; now that 0.1.582 is live + both fixes validated, the deploy-backlog (open since iter41) is fully closed. The 4-iteration GitHub-Actions-outage saga (iter41-44) is resolved.
+  status: completed
+  witness: 0.1.582 live + both fixes validated; deploy-backlog (iter41-44, GitHub Actions/codeload outage) fully closed.
+- id: memory-learning-health-iter45
+  subject: store 81/81 balanced (real learn-debug, 0 orphans) on 0.1.582; recall 0 miss; AGENTS.md 9/9.
+  status: completed
+  witness: store 81/81 balanced on 0.1.582; recall 0 miss; AGENTS.md 9/9.
+- id: bad-memory-prune-scan-iter45
+  subject: scan stale/wrong memories; prune explicit-key. User priority.
+  status: completed
+  witness: Scanned; all durable; no prune warranted (last bad pruned iter40).
+- id: paper-accuracy-iter45
+  subject: re-audit paper s40-42 accurate.
+  status: completed
+  witness: paper s40-42 intact (3 anchors), accurate.
