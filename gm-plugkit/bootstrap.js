@@ -226,7 +226,9 @@ async function extractNpmPackageWasm(destPath, version) {
 
     if (result.error) throw result.error;
     if (result.status !== 0) {
-      throw new Error(`npx extraction failed: ${result.stderr || result.stdout || 'unknown error'}`);
+      const detail = (result.stderr || result.stdout || '').trim().split(/\r?\n/).slice(-5).join(' | ');
+      const sig = result.signal ? ` signal=${result.signal}` : '';
+      throw new Error(`npm install failed status=${result.status}${sig}: ${detail || 'no stderr/stdout captured'}`);
     }
 
     const nodeModulesPath = path.join(tempDir, 'node_modules', NPM_PACKAGE, 'plugkit.wasm');
