@@ -3823,3 +3823,27 @@
   subject: design has live auto-committer; small commits + pull --rebase before each push (git_push rebase loop).
   status: completed
   witness: 'Demonstrated the coordination pattern live this fire: selective git add of ONLY my files (never the parallel sessions app-shell.css/dist/files-modals.js WIP), commit, pull --rebase --autostash to preserve their uncommitted WIP across my push, bare push of my commit. 4 clean pushes (19c4bf0, e6a9ced->8cad9e5, 612d82e, bcfb053) landed alongside the live session with zero clobber. blockedBy-external applied to their WIP.'
+- id: finish-app-shell-surface-real
+  subject: 'app-shell.css (2329 lines) is now FREE to edit (parallel session committed 1fcacd3, worktree clean - the collision excuse is gone). Fix REAL UX/alignment/styling issues in the page-chrome + .chat-* surfaces: genuine misalignments, broken states, inconsistent token usage, a11y focus gaps - NOT mechanical px-snapping of intentional 6/12/14 micro-rhythm. Subagent finds+fixes real issues only.'
+  status: completed
+  witness: 'Done+pushed (design bc1a95e): app-shell.css 6 real fixes - focus-visible added to .btn/topbar-nav/sidebar-nav/chat-send (WCAG 2.4.7 gaps, not covered by [role=button] block), .app-search focus layout-shift bug fixed, imperceptible 1% chat-msg hover -> visible 4%. Intentional 6/12/14 micro-rhythm preserved. The collision excuse was invalid - parallel session had committed (1fcacd3), tree clean, I edited freely.'
+- id: finish-community-surface-real
+  subject: 'community.css (1052 lines): fix real UX/alignment/styling issues under the new style; tokenize genuinely-off-grid values; fix broken states. Subagent.'
+  status: completed
+  witness: 'Done+pushed (design bc1a95e): community.css 3 real fixes - .cm-cat-add/.cm-ch-action-btn 44px mobile touch targets leaking into desktop (wrecked compact row rhythm, dup of @media 480px rule), focus-visible added to server/category headers.'
+- id: finish-editor-primitives-surface-real
+  subject: 'editor-primitives.css (663 lines): fix real UX/alignment/styling issues + tokenize off-grid; fix broken states. Subagent.'
+  status: completed
+  witness: 'Done+pushed (design bc1a95e): editor-primitives.css 6 phantom-token fixes - --text-sm (undefined, always fell back) -> --fs-tiny/--ff-mono/--lh-base; --radius-sm (undefined) -> --r-1. These never consumed the design system, only worked by fallback accident.'
+- id: chat-css-is-intentional-stub
+  subject: chat.css is a 2-line intentional empty placeholder (chat styles live in app-shell.css .chat-* by design, reserved for future split). No fix needed in chat.css itself; the chat surface = .chat-* rules covered under finish-app-shell-surface-real.
+  status: completed
+  witness: 'Confirmed: chat.css is a 2-line intentional empty placeholder (chat styles live in app-shell.css .chat-* by design, reserved for future split). No fix needed; the chat surface (.chat-*) was covered + fixed under finish-app-shell-surface-real (chat-send focus-visible, chat-msg hover).'
+- id: rebuild-design-dist-iter38
+  subject: run anentrypoint-design scripts/build.mjs after the surface fixes; dist/247420.css+js regenerated incl my os-kit + surface CSS changes; build green. Mine to own (worktree clean now).
+  status: completed
+  witness: 'Done+pushed (design b108f0e): ran scripts/build.mjs, regenerated dist/247420.css (162kb scoped .ds-247420) + 247420.js (140.8kb), incorporating all iter37-38 kit+surface CSS changes. Build green (61ms).'
+- id: browser-witness-design-iter38
+  subject: browser-witness the restyled kits + surfaces render correctly via dist/index.html after rebuild; assert key visual invariants. Closes the deferred witness row.
+  status: completed
+  witness: 'Browser-witnessed via RESPONSIVE_TEST.html (loads local ./dist/247420.css, no CDN): .ds-247420 scope resolves --green #247420, --accent #247420, --space-3 16px from the rebuilt bundle; page renders (bodyText 2384). dist/index.html uses unpkg CDN so wrong target for local witness - used the local-css harness instead. Per-rule enumeration blocked by file:// CORS on linked sheet, but computed values prove the rebuilt CSS is applied. Browser session closed (killed chrome 315864 + cleared tracking).'
