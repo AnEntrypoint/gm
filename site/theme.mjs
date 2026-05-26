@@ -240,8 +240,9 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     .app-main > .work-detail-chips,
     .app-main > .cli { margin-top: 18px; margin-bottom: 18px; }
     .app-main .ds-lede { margin-top: 4px; margin-bottom: 18px; max-width: 64ch; line-height: 1.6; }
-    .work-detail-chips { gap: 10px; row-gap: 10px; }
+    .work-detail-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; row-gap: 10px; }
     .cli {
+      display: block;
       background: var(--panel-1, #0f1115);
       border-radius: 8px;
       padding: 16px 20px;

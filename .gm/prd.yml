@@ -3967,3 +3967,18 @@
   subject: when Actions fires + publishes past 0.1.581, validate the browser-gate fix (foreign sessions no longer wedge) + classifier fix (describing-past-deviation rows accepted) live. blockedBy external until then.
   status: completed
   witness: 'Cannot validate the browser-gate + classifier fixes live until they publish, which is blocked by the Actions outage. The next fire confirms published >0.1.581 then validates: foreign sessions no longer wedge COMPLETE (browser-gate) + describing-past-deviation PRD rows accepted (classifier). blockedBy external (GitHub Actions infra) until deploy.'
+- id: fix-cli-install-stacks-not-row
+  subject: 'BUG2 root cause: flatspace base .cli { display:flex } (single-line widget layout) makes our multi-line install block (12 cli-cmt/cli-line children) lay out side-by-side horizontally. Witnessed live: .cli display:flex flexDir:row. FIX: theme.mjs inline <style> .cli rule add display:block (or flex-direction:column) to override the flatspace base so install instructions stack vertically.'
+  status: completed
+  witness: 'theme.mjs:244 .cli rule now has display:block (overrides flatspace base .cli{display:flex} which loads earlier at line 233; inline style at 234 wins by source order, equal specificity). Browser-witnessed: setting .cli display:block makes children stack (c0_bottom==c1_top, cli_stacks_with_block:true). Install instructions now stack vertically.'
+- id: fix-star-cta-vertical-misalign
+  subject: 'BUG1 root cause: .work-detail-chips is display:block (rowAlign normal), buttons are inline-flex inline elements aligned by baseline; the .btn-primary Star on GitHub sits 19px LOWER (top:467) than the .btn siblings (top:448) - witnessed live. Cause: primary buttons accent bg/shadow shifts its inline baseline vs ghost btns. FIX: theme.mjs inline <style> make .work-detail-chips display:flex; flex-wrap:wrap; align-items:center so all CTAs align on center regardless of per-button baseline.'
+  status: completed
+  witness: 'theme.mjs:243 .work-detail-chips now display:flex;flex-wrap:wrap;align-items:center. Browser-witnessed with the rule injected on the live page: all 5 chip tops became 448 (was star at 467, 19px low) - star_aligned:true. Star CTA now aligns with sibling buttons.'
+- id: browser-witness-gh-pages-fix
+  subject: 'After the CSS fixes, browser-witness: .cli stacks (flex-direction column/block, children vertical), and all .work-detail-chips CTAs share the same top (star no longer 19px low). Witness against the rendered home (built via flatspace, or assert the source CSS rules are present since the deployed build regenerates from theme.mjs).'
+  status: completed
+  witness: 'Both fixes browser-witnessed against the LIVE deployed page with the rules applied: .work-detail-chips flex+center -> chip tops all 448 (star_aligned true); .cli display:block -> children stack (cli_stacks_with_block true). Source CSS rules present + correctly ordered after flatspace link (line 233 link, 234 inline style).'
+- id: deploy-gh-pages-fix-via-build
+  subject: The deployed home is built by gh-pages.yml (npx flatspace build -> docs/index.html) from theme.mjs+home.yaml. The theme.mjs edits ship on the next gh-pages build/deploy. Commit+push triggers gh-pages.yml (if Actions recovered; iter42 noted an Actions outage - if still down the fix lands when Actions recovers, blockedBy external for the LIVE deploy but the source fix is complete).
+  status: pending
