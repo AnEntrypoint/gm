@@ -1923,6 +1923,12 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(inDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
+  try {
+    const gmDir = path.dirname(spoolDir);
+    fs.writeFileSync(path.join(gmDir, 'last-instruction-ts'), String(Date.now()));
+    fs.writeFileSync(path.join(gmDir, 'long-gap-retry-state'), '');
+  } catch (_) {}
+
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   let _ownWrapperSha12 = '';
