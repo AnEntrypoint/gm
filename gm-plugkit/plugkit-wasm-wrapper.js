@@ -641,6 +641,7 @@ function isProfileLocked(profileDir) {
     try { fs.unlinkSync(lock); } catch (_) {}
     try { fs.unlinkSync(path.join(profileDir, 'SingletonCookie')); } catch (_) {}
     try { fs.unlinkSync(path.join(profileDir, 'SingletonSocket')); } catch (_) {}
+    try { fs.unlinkSync(path.join(profileDir, 'lockfile')); } catch (_) {}
     logEvent('bootstrap', 'browser-profile.lock-cleared', {
       profileDir, dead_pid: holderPid,
     });
