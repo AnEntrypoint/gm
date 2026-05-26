@@ -4703,3 +4703,23 @@
   text: placeholder
   status: completed
   witness: 'Superseded by lora-namespace-train-assess (1528): the re-rank cannot be live-validated until multi-discipline recall is enabled + the head is namespace-trained (no-op until then by design). Covered by the namespace-train refinement row; no separate validation possible this turn. (Stray placeholder row, resolved as duplicate of 1528.)'
+- id: codesearch-verb-validated
+  text: 'VALIDATE codesearch works (forbade Explore for it iter64): codesearch-1537 query route_hint returned ok:true 10 hits with file:line+symbol+snippet (bootstrap.js:67 ensureNextStepWiring etc). The forbid does NOT strand the agent - codesearch is a fully functional spool-routed index-grounded alternative to Explore. Confirmed.'
+  status: completed
+  witness: codesearch-1537 (query route_hint) returned ok:true 10 hits, file:line+symbol+snippet (bin/bootstrap.js:67 ensureNextStepWiring, gm-plugkit/bootstrap.js:671 ensureSkillMdFresh, lib/skill-bootstrap.js:175). The verb is fully functional - spool-routed, codeinsight-index-grounded. The iter64 Explore-forbid does not strand the agent; codesearch IS the working alternative.
+- id: consolidate-native-tool-forbid
+  text: 'GENERALIZE iter64 search-forbid into a CLASS rule: allowed-tools (Skill,Read,Write,Bash(bun/npx)) blocks raw git/exec/grep but Skill-invoked subagents (Explore/Task/Plan/general-purpose) AND native WebSearch/WebFetch slip past. Every plugkit verb has a native equivalent: codesearch<->Explore/grep, fetch<->WebFetch/WebSearch, exec_js<->raw Bash, browser<->puppeteer. Add ONE consolidated SKILL.md rule: any platform-native capability that has a plugkit verb is forbidden in favor of the verb (search->codesearch, web fetch->fetch verb, exec->exec spool, browser->browser verb). Names the principle so future native subagents are covered without a per-tool patch.'
+  status: completed
+  witness: 'SKILL.md gained the CLASS rule after the search-specific one: every platform-native capability with a plugkit verb is forbidden in favor of the verb - codesearch (search/Explore), recall (prior knowledge), fetch verb (WebFetch/WebSearch), exec_js/exec spool (raw run), browser verb (puppeteer), memorize-fire (memory). Names the 3 reasons (bypasses spool/index/portability) + the principle: ask what-verb-does-plugkit-expose not what-tool-does-my-platform-give. Future native subagents covered without a per-tool patch. The iter64 search-forbid is now an instance of the class.'
+- id: watcher-stuck-0592-extract-flaky
+  text: 'FINDING: the local watcher has been on 0.1.592 ~108min across 3 version bumps (593/594/595) - the 149MB extract-flakiness (wasm-extract-flaky, iter53) keeps it from upgrading, so ALL iter61-64 rs-plugkit prose/code (self-report directive, scoring-head, codesearch-forbid in execute.rs) is shipped to npm but NOT running locally. The SKILL.md changes (iter64) DO deploy (smaller, the bun-x wrapper refresh works); the wasm-embedded instruction prose does not. This is the recurring extract blocker. Attempt upgrade to 0.1.595; if extract fails again, note that wasm-prose fixes lag the local watcher until a successful extract.'
+  status: completed
+  witness: 'RESOLVED by successful upgrade: killed the 108-min-stuck 0.1.592 watcher, bun-x boot extracted 0.1.596 successfully (pid 370000 live) - the extract-flakiness is INTERMITTENT not permanent, a retry landed it. All iter61-65 rs-plugkit wasm-prose/code (self-report, scoring-head, recall re-rank, codesearch-forbid execute.rs) now RUNNING on 0.1.596. NOTE for future: when the watcher lags multiple version bumps, the wasm-embedded instruction prose is shipped-but-not-live until a successful extract; SKILL.md changes deploy faster via the bun-x wrapper refresh. Periodic upgrade-attempts clear the lag.'
+- id: deviations-iter65-triage
+  text: Triage deviations_30m=2.
+  status: completed
+  witness: deviations_30m=2, both empty-sess (22:10 prd-resolve-unknown-id + 22:11 long-gap) - cron/hook + boot-window artifacts, not agent-action, aged+rolling off. No agent deviation this session. Known/benign.
+- id: memory-health-iter65
+  text: Memory health + bad-memory prune scan.
+  status: completed
+  witness: 'Memory health on 0.1.596: recall+codesearch working (codesearch-1551 ok hits>0 post-upgrade). Prune scan top hits all technical/lesson (iter26/24/51/56) - no pure-status markers, no bad-recall hazards. Corpus lean. No prune needed.'
