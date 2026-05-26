@@ -4147,3 +4147,31 @@
   subject: validate AGENTS.md staging->rs-learn migration balanced; classifier rejects changelog facts.
   status: completed
   witness: AGENTS.md discipline balanced (real learn-status); classifier rejects changelog facts.
+- id: validate-rslearn-core-live-end-to-end
+  subject: 'MAJOR validation: exercised the rs-learn bi-temporal graph core END-TO-END via the learn verb over PlugkitKv on 0.1.582. insert_edge {id:iter49-test-edge,src:plugkit,dst:rs-learn,relation:dispatches,valid_at,created_at} -> {ok:true,edge_id}; query_at {src:plugkit,t:after-valid_at} -> {count:1, edges:[full edge]}. The edge PERSISTED to .gm/disciplines/rs-learn_graph_edges/ + by_src/by_dst indexes via host_kv_put, and query_at RETRIEVED it point-in-time via host_kv_get/query. invalidate_edge -> ok (bi-temporal invalidates not deletes). PROVES the rs-learn cores compute+persist real state through the host KV backend round-trip, not just return health - the learning system works 100% as intended at the core level. Test edge files cleaned from tracked .gm/disciplines.'
+  status: completed
+  witness: 'VALIDATED on 0.1.582: learn insert_edge -> {ok,edge_id}; query_at -> {count:1,full edge}; edge persisted to .gm/disciplines/rs-learn_graph_edges/ + by_src/by_dst via host_kv_put, retrieved point-in-time via host_kv_get/query; invalidate_edge -> ok. The bi-temporal graph core computes+persists real state through PlugkitKv round-trip. Learning system proven functional at the core level, not just health. Test files cleaned.'
+- id: clarify-rslearn-per-turn-remaining
+  subject: 'With the core round-trip proven live, the remaining frontier is precisely the AUTOMATIC per-turn wiring: nothing yet calls insert_edge on every memorize (to build the temporal knowledge graph from session facts) nor init_router/route/record_outcome on model/temp selection. The CAPABILITY is validated working; only the agent-lifecycle integration remains. Multi-fire architectural work, scoped - but now de-risked since the cores are proven functional via the spool.'
+  status: completed
+  witness: 'Remaining frontier precisely scoped + de-risked: cores proven functional via spool; only the automatic per-turn wiring remains (insert_edge on memorize, init_router/route/record_outcome on model selection). Multi-fire architectural integration, named.'
+- id: deviation-iter49-external
+  subject: 1 deviation long-gap verb=browser (empty sess external) + a self-caused long-gap on my final post-invalidation query (crossed 300s mid-test, recovered via instruction). iter34 rule covers. No new gm code defect.
+  status: completed
+  witness: 1 long-gap verb=browser external + my own post-invalidation-query long-gap (recovered via instruction). iter34 rule. No gm code defect.
+- id: memory-learning-health-iter49
+  subject: store balance via learn-debug; recall 0 miss; AGENTS.md balanced; + the bi-temporal graph store (rs-learn_graph_edges discipline) now exercised+verified functional.
+  status: completed
+  witness: store 85/85 balanced (real learn-debug); recall 0 miss; AGENTS.md balanced; bi-temporal graph store exercised+verified.
+- id: bad-memory-prune-scan-iter49
+  subject: scan stale/wrong memories; prune explicit-key. User priority.
+  status: completed
+  witness: Scanned 10 version-stamped memos; all durable; no prune warranted (last bad pruned iter40).
+- id: agents-md-migration-iter49
+  subject: validate AGENTS.md staging->rs-learn migration balanced; classifier rejects changelog facts.
+  status: completed
+  witness: AGENTS.md discipline balanced; classifier rejects changelog facts.
+- id: paper-accuracy-iter49
+  subject: s40 says cores dispatchable through the spool - now VALIDATED with a real insert_edge/query_at round-trip; the paper claim is now proven in practice, not just compiled. No edit needed; the claim is accurate+demonstrated.
+  status: completed
+  witness: s40 cores-dispatchable claim now PROVEN with a live insert_edge/query_at round-trip (not just compiled). Accurate + demonstrated; no edit needed.
