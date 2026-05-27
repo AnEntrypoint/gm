@@ -253,10 +253,15 @@ function httpGetBuffer(url, timeoutMs) {
     let settled = false;
     const settleReject = (err) => { if (!settled) { settled = true; reject(err); } };
     const settleResolve = (v) => { if (!settled) { settled = true; resolve(v); } };
-    const absTimer = setTimeout(() => {
-      try { req.destroy(new Error(`abs-deadline ${totalDeadlineMs}ms ${url} after ${bytesReceived} bytes`)); } catch (_) {}
-      settleReject(new Error(`abs-deadline ${totalDeadlineMs}ms ${url} after ${bytesReceived} bytes`));
-    }, totalDeadlineMs);
+    let absTimer = null;
+    const armAbsTimer = () => {
+      if (absTimer) clearTimeout(absTimer);
+      absTimer = setTimeout(() => {
+        try { req.destroy(new Error(`abs-deadline ${totalDeadlineMs}ms-since-progress ${url} after ${bytesReceived} bytes`)); } catch (_) {}
+        settleReject(new Error(`abs-deadline ${totalDeadlineMs}ms-since-progress ${url} after ${bytesReceived} bytes`));
+      }, totalDeadlineMs);
+    };
+    armAbsTimer();
     const req = https.get(url, { timeout: idleTimeoutMs, headers: { 'user-agent': 'gm-plugkit-bootstrap' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
@@ -271,7 +276,7 @@ function httpGetBuffer(url, timeoutMs) {
         return;
       }
       const chunks = [];
-      res.on('data', c => { chunks.push(c); bytesReceived += c.length; });
+      res.on('data', c => { chunks.push(c); bytesReceived += c.length; armAbsTimer(); });
       res.on('end', () => { clearTimeout(absTimer); settleResolve(Buffer.concat(chunks)); });
       res.on('error', (e) => { clearTimeout(absTimer); settleReject(e); });
     });

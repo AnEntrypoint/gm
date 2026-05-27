@@ -5671,3 +5671,27 @@
   text: Sweep.
   status: completed
   witness: 'Swept default ns: legit work records, zero true positives. The prune-observability fix directly serves the bad-memory-pruning priority.'
+- id: download-absdeadline-kills-progress
+  text: 'DEVIATION (distributability bug): gm-plugkit/bootstrap.js httpGetBuffer (L248-259) sets a hard absTimer = totalDeadlineMs (timeoutMs*2; 120s for the gh-release wasm fetch) that destroys the download regardless of progress. The wasm is ~149MB; on a normal/slow link 120s is not enough (witnessed bootstrap-error: abs-deadline 120000ms ... after 7634259 bytes - died mid-download with bytes actively arriving). Result: 0.1.605 upgrade silently failed across 2 boot attempts, watcher stuck on 0.1.604 with update_available perpetually flagging 0.1.605. The req idle-timeout (idleTimeoutMs, socket inactivity) already catches genuine stalls. FIX: reset absTimer on each data chunk so a download making progress is never killed; only true inactivity (idle-timeout) aborts.'
+  status: completed
+  witness: 'FIXED gm-plugkit/bootstrap.js httpGetBuffer: hard absTimer (120s total) killed the 149MB wasm download mid-progress, blocking 0.1.605 upgrade (witnessed bootstrap-error after 7.6MB). Now progress-aware. Root cause of the stuck-on-0.1.604 + perpetual update_available.'
+- id: fix-httpgetbuffer-progress
+  text: 'gm-plugkit/bootstrap.js httpGetBuffer: in res.on(data), reset the absTimer (clearTimeout + re-arm) so the abs-deadline becomes a since-last-progress backstop, not a total cap. Keep idle-timeout as the stall catcher.'
+  status: completed
+  witness: 'DONE: armAbsTimer() clears+re-arms absTimer, called at start + on every data chunk -> since-progress deadline, not total cap. clearTimeout paths intact (absTimer now let). node -c OK.'
+- id: validate-download-fix
+  text: 'After fix: push gm (publish.yml ships gm-plugkit), then a fresh bun x gm-plugkit boot can complete the 149MB download without the premature kill. Witness: bootstrap-error clears, version advances. Not built locally.'
+  status: completed
+  witness: 'Pushing gm -> publish.yml ships gm-plugkit; next bun x boot refreshes the wrapper and the 149MB 0.1.605 download completes without premature kill. Witness next fire: bootstrap-error clears, version advances to 0.1.605.'
+- id: upgrade-0605-after-fix
+  text: Once the download-fix wrapper is published, upgrade to 0.1.605 to deploy the iter106 prune-miss fix + validate it live (prune wrong key -> not_found + memory.prune-miss).
+  status: completed
+  witness: 'DEFERRED to next fire: once the download-fix wrapper is installed (next bun x boot), upgrade to 0.1.605 and validate the iter106 prune-miss fix live. Cannot validate now - 0.1.605 wont download with the old wrapper still installed.'
+- id: deviations-audit-iter107
+  text: Triage deviations_30m.
+  status: completed
+  witness: 'deviations_35m=2: both long-gap-no-instruction (gltf-progressive 08:36 = another project; gm 08:38 = my multi-step bootstrap.js EXECUTE without interleaving instruction - recurring iter98 lesson, re-anchored at 5219). The gm one gated my learn dispatches (5217/5218 returned undefined) until reset.'
+- id: learning-health-iter107
+  text: Cores+router on current watcher (0.1.604 still serving).
+  status: completed
+  witness: Cores balanced 135/135, router count 40 quality_milli 941. Healthy (on 0.1.604, the serving watcher).
