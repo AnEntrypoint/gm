@@ -6083,3 +6083,27 @@
   subject: Triage residuals, close via git_finalize (validates stability).
   status: completed
   witness: git_status modified [router, prd.yml] this-session writes, closing via git_finalize. No junk.
+- id: deflate-rule-instruction
+  subject: 'Encode bidirectional-migration/deflation rule in rs-plugkit update_docs.rs instruction prose: every memorize run also drains a few detail-heavy AGENTS.md entries to rs-learn.'
+  status: completed
+  witness: 'update_docs.rs: added a paragraph after the dual-write para encoding bidirectional migration + deflation back-pressure - every memorize run drains a few detail-heavy/single-crate/single-platform AGENTS.md entries to rs-learn, compress to one-line pointer same commit. Raw-string r#...# intact (only delimiters line 1+44, no stray in addition).'
+- id: deflate-rule-agents
+  subject: Add the deflation rule to AGENTS.md Documentation Policy (every memorize run drains AGENTS.md).
+  status: completed
+  witness: 'AGENTS.md Documentation Policy: added the deflation rule after the detail-heavy-caveats-live-in-rs-learn rule - every memorize run also drains AGENTS.md, witnessed by store-gain + byte-drop, a few per run.'
+- id: deflate-demonstrate
+  subject: Exfiltrate a few real detail-heavy AGENTS.md entries to rs-learn this session + compress to one-line pointers (demonstrate the discipline, start the deflation).
+  status: completed
+  witness: Exfiltrated 4 detail-heavy entries (host_exec_js-synchronous, SKILL.md-auto-refresh, skill-bootstrap-contract, rs-learn-observability-taxonomy) via memorize-fire 6620-6623, all embedded:true. Compressed each AGENTS.md entry to a one-line pointer naming the recall query.
+- id: deflate-witness
+  subject: 'Witness deflation: AGENTS.md byte-count drops + exfiltrated facts recall back.'
+  status: completed
+  witness: 'AGENTS.md 40305->39869 bytes (-436 NET, despite adding 2 new rule paragraphs ~600B, so ~1KB detail drained). Exfiltrated host_exec_js fact recalls back at 0.88. Both witnesses confirmed: store gains + AGENTS.md shrinks.'
+- id: iter118-reconcile-leftover
+  subject: Reconcile iter117 leftover unpushed commit (was ahead:1).
+  status: completed
+  witness: 'iter117 leftover reconciled: git_push -> Everything up-to-date, branch_status ahead:0/behind:0. The 1ae1935e commit WAS on origin; the earlier ahead:1 was a transient stale read during watcher abort-churn (git_finalize pushed:true was correct).'
+- id: iter118-residual
+  subject: Triage residuals across gm + rs-plugkit, close via git_finalize.
+  status: completed
+  witness: 'rs-plugkit committed+pushed faf1f23 (clean). gm: AGENTS.md (deflation rule + 4 compressed entries) + .gm artifacts (prd.yml, memorize mem-files, router) - all real session work, closing via git_finalize. No junk.'
