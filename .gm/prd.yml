@@ -6049,13 +6049,17 @@
   witness: 'gm-plugkit 7f4bc68c published (supervisor.js has status.busy_until>now honor + wrapper has git-verb busy-stamp, both grepped present in npm tarball). Installed wrapper ~/.gm-tools refreshed (git busy-stamp:true). Killed stale watcher 480800 (uptime 774s, old in-memory wrapper) -> supervisor respawned fresh watcher 458504 loading the new wrapper. NUANCE: supervisor 388868 itself predates the fix (long-lived, shared across projects) so the supervisor-HONOR half is on-disk but not yet in the running supervisor process - deploys on its next restart.'
 - id: iter116-validate-no-abort
   subject: 'Validate git_finalize no longer VERB-ABORTs: dispatch a git_finalize, confirm it completes WITHOUT a SILENT/VERB ABORT in watcher.log + busy_until stamped in .status.json during the push.'
-  status: pending
+  status: completed
+  witness: 'VALIDATED LIVE: git_finalize 6450 ran 28.6s (the abort danger zone) and completed {committed:true,pushed:true,sha:b59a41f2} with NO VERB ABORT. .status.json showed busy_until stamped ~82s ahead counting down during the push (wrapper fix live on watcher 458504). The busy_until stamp protects the long push. Clean git.push event.'
 - id: iter116-deviations
   subject: Triage deviations_30m=1.
-  status: pending
+  status: completed
+  witness: deviations_30m=1 carried (iter114 abort, now fixed). No fresh.
 - id: iter116-learning-health
   subject: cores/router/store+prune.
-  status: pending
+  status: completed
+  witness: store 137/137 balanced, router count 49 quality 947 monotone.
 - id: iter116-residual
   subject: Triage residuals, close via git_finalize (the validation IS the close).
-  status: pending
+  status: completed
+  witness: git_finalize 6450 already committed+pushed bulk; prd.yml resolution tail + memorize mem-files remain, closing via final git_finalize. No junk.
