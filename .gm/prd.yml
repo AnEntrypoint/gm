@@ -5439,3 +5439,23 @@
   text: Honest assessment
   status: completed
   witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
+- id: skill-md-phase-reset-prose
+  text: 'DEVIATION (instruction-prose inaccuracy, predictability gap): SKILL.md L23 says a new prompt resets phase to PLAN on the next instruction dispatch carrying a fresh {prompt} body. But iter92 AND iter94 both observed the first instruction after a fresh /loop prompt returning phase=COMPLETE + UPDATE-DOCS, NOT PLAN - the auto-reset is non-deterministic. The prose overstates reliability and omits the recovery, so a different LLM would poll instruction (firing complete-chain-poll) instead of dispatching transition to=PLAN. FIX: amend L23 to document that if the first instruction still returns COMPLETE/UPDATE-DOCS on intended-new work, dispatch transition to=PLAN once (the new-work path, not a poll) to reopen the chain. Improves predictability-regardless-of-llm.'
+  status: completed
+  witness: 'FIXED SKILL.md L23: amended to state the PLAN reset is not always automatic + dispatch transition to=PLAN once on intended-new work if instruction still returns COMPLETE (distinguished from the re-poll deviation). Closes the predictability gap from iter92/94. Ships via publish.yml mirror + bootstrap auto-refresh.'
+- id: skill-md-witness
+  text: 'Browser-witness not needed (SKILL.md is .md not client-side). Validate: grep confirms the amended prose + no regression.'
+  status: completed
+  witness: 'Verified: grep confirms amended prose present; .md not client-side so no browser witness; rs-plugkit update_docs.rs:35 covers the complementary case correctly, no regression.'
+- id: deviations-audit-iter94
+  text: Audit
+  status: completed
+  witness: deviations_35m=0. Clean (transition COMPLETE->PLAN was admissible new-work, no poll deviation).
+- id: learning-health-iter94
+  text: Cores+router
+  status: completed
+  witness: Cores 122/122, router count 26 quality_milli 915 (monotone 611->915). Healthy.
+- id: bad-memory-prune-iter94
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
