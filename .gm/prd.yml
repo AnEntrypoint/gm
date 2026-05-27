@@ -6111,3 +6111,25 @@
   subject: 'NOTICED + ROOT-CAUSED (real bug): branch_status reports ahead:N against a STALE local origin/main tracking ref. Witnessed this fire: git_finalize pushed 737d3b40 (ok:true), origin actually advanced (git fetch showed 55d54ae0..737d3b40 main->origin/main, so the push LANDED), but branch_status kept returning ahead:1 because git_push/git_finalize do not update the local remote-tracking ref and branch_status computes rev-list origin/main...HEAD against the stale ref. Only after a manual git fetch did branch_status read ahead:0. IMPACT: the COMPLETE gate uses branch_status remote-pushed witness (ahead==0); a stale ahead:N is a FALSE POSITIVE that wedges the chain at VERIFY even though the work is pushed - this is the recurring ahead:1 I saw iter116-118 and mis-attributed to transient churn. FIX: branch_status should git fetch (or git ls-remote origin <branch>) before computing ahead/behind, so it compares against the true remote not a stale local ref. In rs-plugkit wasm_dispatch.rs branch_status fn (~line 1082).'
   status: completed
   witness: 'ROOT-CAUSED + FIXED at BOTH sites. (1) wasm_dispatch.rs branch_status: added git fetch <remote> <branch> before the rev-list (gated by {no_fetch} opt, tolerates offline). (2) orchestrator/transitions.rs:68 COMPLETE-gate remote-pushed witness: same fetch-before-rev-list - THIS was the recurring ahead:1 COMPLETE rejection across iter116-118, mis-attributed to transient churn; it was a stale local origin/main ref the whole time. Witnessed: git fetch showed 55d54ae0..737d3b40 (push HAD landed), branch_status post-fetch ahead:0. Fix ships next wasm; this session manually fetched so the running gate now reads ahead:0.'
+- id: iter119-validate-branchstatus-fix
+  subject: 'Validate 0.1.608 branch_status fetch fix LIVE: after a git_finalize, branch_status should read ahead:0 WITHOUT a manual git fetch (the fix auto-fetches). Witness: finalize then branch_status ahead:0 with no intervening manual fetch.'
+  status: pending
+- id: iter119-deviations
+  subject: Triage deviations_30m=2 (abort-related from last session churn, now root-fixed).
+  status: completed
+  witness: deviations_30m=2 carried abort-related from last session churn (root-fixed via busy_until + the branch_status fetch fix). No fresh iter119 deviation.
+- id: iter119-learning-health
+  subject: cores/router/store balance + monotone, prune review.
+  status: completed
+  witness: store 143/143 balanced (grew from deflation exfiltrations), router count 51 quality 949 monotone, prune-miss holds.
+- id: iter119-deflation-drain
+  subject: 'Dogfood the shipped deflation discipline: drain a few more detail-heavy AGENTS.md entries to rs-learn, compress to pointers. Witness byte-drop + recall.'
+  status: completed
+  witness: 'Dogfooded the shipped deflation discipline: exfiltrated 3 more detail-heavy entries (spool-dispatch-gates markers, SKILL.md-frontmatter, cascade-pipeline mechanics) to rs-learn (embedded:true), compressed each to a one-line recall pointer. AGENTS.md 39869->38883 bytes (-986). cascade fact recalls 0.79. Discipline self-sustaining.'
+- id: iter119-prior-commits
+  subject: 'Validate prior commits: deflation rule (faf1f23/737d3b40), branch_status fix (544fdcb/0.1.608) working in practice.'
+  status: completed
+  witness: deflation rule (faf1f23/737d3b40) working - drained this run. branch_status fix deployed as 0.1.608 (watcher version confirms). Validating live next.
+- id: iter119-residual
+  subject: Triage residuals, close via git_finalize.
+  status: pending

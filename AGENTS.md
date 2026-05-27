@@ -88,7 +88,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **Nothing fake in source the user runs**: every possible stub, mock, placeholder return, fixture-only path, demo-mode short-circuit, and "TODO: implement" body is forbidden in shipped code. Scaffolds and shims are permitted only when they delegate to real behavior (real upstream API, real subprocess, real disk). Before adding a shim, check whether a published library or tool already provides that surface, maintaining a local reimplementation of an upstream solution drifts and ages. Detection is behavioral, not by keyword: code that always succeeds, returns the same value regardless of input, or short-circuits a real call to satisfy a type signature is a stub. Acceptance is real input through real code into real output, witnessed; every possible degradation from that leaves the mutable open.
 
-**Spool dispatch gates**: `lib/spool-dispatch.js` implements marker-file gate logic that controls tool use, writes, and git operations. `checkDispatchGates(sessionId, operation)` reads marker files (`.gm/prd.yml`, `.gm/mutables.yml`, `.gm/needs-gm`, `.gm/gm-fired-<id>`) and returns `{allowed: bool, reason: string}`. Gates are checked at the CLI/bootstrap layer before tools execute. Tool denials via gate checks report the reason text to the model so it can adjust behavior (e.g., resolve mutables before retrying). Gate denials never mutate command arguments, they surface policy as imperative instruction via reason string.
+**Spool dispatch gates**: `lib/spool-dispatch.js::checkDispatchGates(sessionId, operation)` reads `.gm/` marker files and returns `{allowed, reason}`; denials surface the reason to the model as imperative instruction, never mutate args. Marker list + per-marker semantics in rs-learn (`recall: spool dispatch gates marker files`).
 
 **Done is plugkit's pronouncement, never the agent's claim**: the chain is COMPLETE only when `transition to=COMPLETE` returns COMPLETE phase and plugkit's on-disk state file reflects it. "I think we're done" is not done. "The user seems satisfied" is not done. The COMPLETE gate (gates.rs) is the single arbiter, it refuses on PRD-open, mutables-unresolved, dirty worktree, or missing residual-scan marker. The agent's job is to drive the chain into a state where the gate allows, then dispatch the verb, then read the response. Every possible alternative is narration.
 
@@ -120,7 +120,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack `{query, hits, fired_at, turn_entry:true}` to its response on the first dispatch after a >30s idle gap or session-start. Query is derived from `.gm/last-prompt.txt` / `.gm/turn-state.json`; hits are the top recall results plugkit pulled before serving the instruction. Wasm-side `wasm_hooks::prompt_submit` exports exist for legacy hook-host integration but the current spool watcher does not invoke them, orientation comes through the instruction verb's response pack instead.
 
-**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: If a skill omits `allowed-tools` or does not list `Skill`, the model loses the ability to invoke downstream skills that turn. The shipped surface is a single skill (`gm-skill`); this rule governs every possible future skill that participates in a chain.
+**Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: a skill must list `Skill` (and `Read`/`Write`, Write only for spool dispatch) or it loses downstream-skill invocation that turn. Detail in rs-learn (`recall: SKILL.md frontmatter allowed-tools`).
 
 **rs-learn observability**: every learning-pipeline state change emits a structured `evt:{event,sess,ts,...}` line into `.gm/exec-spool/.watcher.log` + gm-log; recall replies carry `mode`/`namespace`/`derived_query`/per-hit `score`; gmsniff/ccsniff expose the taxonomy. Learning quality is observable, not a black box. Full event taxonomy + flag list in rs-learn (`recall: rs-learn observability taxonomy`).
 
@@ -130,7 +130,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 ## Cascade pipeline
 
-Push to every possible rs-* sibling repo (rs-exec, rs-search, rs-codeinsight, rs-learn) triggers `cascade.yml` which uses `gh workflow run` to invoke rs-plugkit's `release.yml` via PUBLISHER_TOKEN. rs-plugkit cargo-pulls the latest sibling crate revs at build time and emits a single `plugkit.wasm` artifact (no per-sibling npm wasm packages, that pattern was retired). Publishes to `plugkit-bin` Releases + npm `plugkit-wasm`, then auto-bumps `gm.json::plugkitVersion` and `bin/plugkit.wasm.sha256` in this repo. The version bump commit on this repo triggers `publish.yml`, which (a) `npm publish`es `gm-skill` from the repo root, (b) `npm publish`es `gm-plugkit` from `gm-plugkit/`, and (c) force-pushes `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` back-compat mirror repo.
+Push to any rs-* sibling triggers `cascade.yml` → rs-plugkit `release.yml` → single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) → auto-bump `gm.json::plugkitVersion` → `publish.yml` ships gm-skill + gm-plugkit + the SKILL.md mirror. Full step sequence + PUBLISHER_TOKEN setup in rs-learn (`recall: cascade pipeline`).
 
 Three npm packages publish from this repo: `gm-skill` (the skill harness), `gm-plugkit` (bootstrap + watcher), `plugkit-wasm` (wasm binary). publish.yml + the rs-plugkit cascade ships all three on every version-bump commit. The legacy 15 downstream repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf) are archived on GitHub, no further releases, no orphan-commit publish step.
 
@@ -143,8 +143,6 @@ Three npm packages publish from this repo: `gm-skill` (the skill harness), `gm-p
 - `AnEntrypoint/gm`, `gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally, push and let CI build.
-
-**PUBLISHER_TOKEN required** in `rs-exec`, `rs-codeinsight`, `rs-search` for cascade.yml to trigger rs-plugkit. Set with: `gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/<repo>`.
 
 **Timeout enforcement**: every possible `exec_js` dispatch carries a positive `timeoutMs`. The host treats missing or zero as a hard error.
 
