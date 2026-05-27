@@ -6135,3 +6135,27 @@
   subject: Triage residuals, close via git_finalize.
   status: completed
   witness: git_finalize 8d0885ab committed+pushed the AGENTS.md drain + memorize mem-files. Tail (prd.yml resolves) closes via final finalize. No junk.
+- id: iter120-deviations
+  subject: Triage deviations_30m=1, confirm carried/no fresh.
+  status: completed
+  witness: deviations_30m=1 carried, no fresh iter120.
+- id: iter120-learning-health
+  subject: cores/router/store balance+monotone, prune review zero-true-positive.
+  status: completed
+  witness: store 147/147 balanced, router count 52 quality 950 (milestone) monotone, prune review 10 legit candidates zero true-positives.
+- id: iter120-prior-commits
+  subject: 'Validate prior commits work: git verbs, branch_status fix (0.1.608), prune-miss, AGENTS.md->rs-learn recall.'
+  status: completed
+  witness: git verbs + branch_status fix (0.1.608) + prune-miss + AGENTS.md->rs-learn recall all working in practice.
+- id: iter120-deflation-drain
+  subject: 'Continue the deflation discipline: drain a few more detail-heavy AGENTS.md entries to rs-learn, compress to pointers, witness byte-drop.'
+  status: completed
+  witness: Drained 2 more (auto-recall-on-turn-entry, gate-enforcement-layer) to rs-learn, compressed to pointers. AGENTS.md 38883->38464 bytes. Cumulative 40305->38464 over 3 fires (~5% drained). Recall round-trips 0.78.
+- id: iter120-improvement-probe
+  subject: Genuinely probe rs-* for a real fix. Honest null acceptable.
+  status: completed
+  witness: codesearch stub/fake -> 10 hits all real impls. Honest null per Nothing Fake.
+- id: iter120-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: AGENTS.md drain + memorize mem-files + prd.yml, all session work, closing via git_finalize.

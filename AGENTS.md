@@ -118,7 +118,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **Sync-before-emit (codeinsight + search)**: outputs must come from freshly-completed indices. Cache serves only on digest match (mtime sum + git HEAD + dirty-tree marker). Default invocation runs fresh. `--read-cache` permitted only when `.codeinsight.digest` matches; mismatch auto-refreshes. rs-search runs scan + embed + sweep before first result; emits `[index fully synced: …]`. Unverified-index emit = stale ground truth.
 
-**Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack `{query, hits, fired_at, turn_entry:true}` to its response on the first dispatch after a >30s idle gap or session-start. Query is derived from `.gm/last-prompt.txt` / `.gm/turn-state.json`; hits are the top recall results plugkit pulled before serving the instruction. Wasm-side `wasm_hooks::prompt_submit` exports exist for legacy hook-host integration but the current spool watcher does not invoke them, orientation comes through the instruction verb's response pack instead.
+**Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack to its response on the first dispatch after a >30s idle gap or session-start; orientation comes through that pack, not legacy hooks. Mechanism detail in rs-learn (`recall: auto-recall on turn entry`).
 
 **Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: a skill must list `Skill` (and `Read`/`Write`, Write only for spool dispatch) or it loses downstream-skill invocation that turn. Detail in rs-learn (`recall: SKILL.md frontmatter allowed-tools`).
 
@@ -152,7 +152,7 @@ Orchestration state is tracked via marker files in `.gm/` instead of hook events
 
 **Marker files**: `.gm/prd.yml` (existence triggers needs-gm gate), `.gm/mutables.yml` (every possible unresolved entry blocks Write/Edit/git), `.gm/needs-gm` (written by bootstrap, read by dispatcher), `.gm/gm-fired-<sessionId>` (written by gm skill/agent, cleared at turn start), `.gm/residual-check-fired` (ensures one-shot residual-scan per stop window).
 
-**Gate enforcement**: CLI layer (plugkit, rs-exec, downstream platforms) calls `checkDispatchGates()` before tool execution. On denial, reason text surfaces to the model. Bootstrap (lib/skill-bootstrap.js) handles daemon initialization and marker setup. Marker-driven dispatch replaces hook event pump entirely, no session event callbacks needed.
+**Gate enforcement**: the CLI layer calls `checkDispatchGates()` before tool execution; marker-driven dispatch replaces the hook event pump entirely. Detail in rs-learn (`recall: gate enforcement layer`).
 
 **gm-skill tool-use sequencing**: Invoking `Skill(skill="gm-skill")` writes `.gm/gm-fired-<sessionId>` to clear the needs-gm gate. The marker is cleared at turn start to reset the gate. There is one shipped skill; no subagent variant exists.
 
