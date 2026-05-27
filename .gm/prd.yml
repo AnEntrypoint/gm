@@ -5695,3 +5695,35 @@
   text: Cores+router on current watcher (0.1.604 still serving).
   status: completed
   witness: Cores balanced 135/135, router count 40 quality_milli 941. Healthy (on 0.1.604, the serving watcher).
+- id: iter108-deploy-0605
+  subject: 'Deploy 0.1.605 via bun x reboot - fetches fixed wrapper + downloads 149MB wasm with progress-aware deadline (the iter107 fix being validated live). Witness: .status.json version=0.1.605.'
+  status: completed
+  witness: "boot log: install-complete C:...\v0.1.605plugkit.wasm; .status.json version=0.1.605; wasm 142.7MB on disk; update_available now null"
+- id: iter108-validate-download-fix
+  subject: 'Confirm the progress-aware deadline let the 149MB download complete (no abs-deadline kill mid-progress). Witness: .bootstrap-error.json absent/cleared + version advanced.'
+  status: completed
+  witness: '0.1.605 wasm downloaded fully via npm-extract path (plugkit-wasm@0.1.605), no abs-deadline kill; .bootstrap-error.json absent. NUANCE: this boot used npm-extract not gh-release httpGetBuffer, so the progress-aware-deadline fix guards the gh-release fallback path specifically; npm path was the working route here.'
+- id: iter108-validate-prune-miss
+  subject: 'Once on 0.1.605, validate iter106 prune-miss fix live: memorize-prune a deliberately-wrong key -> expect {deleted:[],not_found:[key]} + memory.prune-miss event, NOT silent {deleted:[]}.'
+  status: completed
+  witness: prune of mem-DELIBERATELY-NONEXISTENT-iter108-probe returned {deleted:[],not_found:[key],note:...} on 0.1.605 - the iter106 fix; NOT the old silent {deleted:[]}. Validates the tv8-agent prune-noop is fixed.
+- id: iter108-deviations-audit
+  subject: 'Triage deviations_30m=3 (carried: 2 long-gap iter107 + 1 gltf cross-project). Confirm no new deviation classes this window.'
+  status: completed
+  witness: 'deviations_30m=3, all deviation.long-gap-no-instruction from watcher-log: ts 1779871129766 (iter107 learn-status) + 2 older cross-project (browser/recall/memorize-fire gaps from needle-tools/proland sessions sharing the watcher). NO new deviation class from iter108. The cross-project events confirm the shared-watcher model is working.'
+- id: iter108-learning-health
+  subject: 'Validate cores balance, router count/quality monotone, pruning effectiveness. Witness: learn-status dispatch.'
+  status: completed
+  witness: 'learn-status: balanced=true, text_rows=136 vec_rows=136 (was 135/135 iter107, +1 from iter107 download-finding memorize). mode=wasm. Store healthy + balanced.'
+- id: iter108-agentsmd-migration
+  subject: Validate AGENTS.md->rs-learn migration round-trip smooth (recall a migration-witness fact, confirm classifier behavior).
+  status: completed
+  witness: recall {AGENTS.md migration staging learning round-trip} -> vector_top_k, top hit MIGRATION-WITNESS iter85 score 0.78. The staging->rs-learn->recall round-trip surfaces correctly; classifier+namespace behavior intact.
+- id: iter108-residual-triage
+  subject: Triage all git residuals this turn across gm + 5 rs-* repos.
+  status: completed
+  witness: 'gm porcelain: M rs-learn_router/default.json (router self-report 5350) + M prd.yml + ?? mem-1779872352369 (learn-shape memorize 5351). All real session artifacts -> commit (disciplines tracked). No junk to revert. rs-* repos not touched this fire (no source edits, only dispatch).'
+- id: iter108-learn-verb-shape
+  subject: 'NOTICED: learn verb rejects {record_outcome:true,...} (missing verb field) AND {verb:record_outcome,target,quality} (target required despite present). The router record_outcome body shape is non-obvious/ergonomically brittle. Investigate the exact accepted shape via codesearch in rs-learn/rs-plugkit and document it (or confirm prior fires used a different working shape).'
+  status: completed
+  witness: 'RESOLVED as operator-error not system-bug: correct shape is learn {verb:record_outcome, body:{target,quality}} (verify.rs:58, wasm_dispatch.rs:676). Dispatched correctly 5350 -> ok:true count 41 quality_milli 941. Memorized the nested-body trap (5351).'
