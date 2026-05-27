@@ -6113,7 +6113,8 @@
   witness: 'ROOT-CAUSED + FIXED at BOTH sites. (1) wasm_dispatch.rs branch_status: added git fetch <remote> <branch> before the rev-list (gated by {no_fetch} opt, tolerates offline). (2) orchestrator/transitions.rs:68 COMPLETE-gate remote-pushed witness: same fetch-before-rev-list - THIS was the recurring ahead:1 COMPLETE rejection across iter116-118, mis-attributed to transient churn; it was a stale local origin/main ref the whole time. Witnessed: git fetch showed 55d54ae0..737d3b40 (push HAD landed), branch_status post-fetch ahead:0. Fix ships next wasm; this session manually fetched so the running gate now reads ahead:0.'
 - id: iter119-validate-branchstatus-fix
   subject: 'Validate 0.1.608 branch_status fetch fix LIVE: after a git_finalize, branch_status should read ahead:0 WITHOUT a manual git fetch (the fix auto-fetches). Witness: finalize then branch_status ahead:0 with no intervening manual fetch.'
-  status: pending
+  status: completed
+  witness: 'VALIDATED LIVE on 0.1.608: git_finalize pushed 8d0885ab, then branch_status read {ahead:0,behind:0} with NO intervening manual git fetch - the verb auto-fetches before rev-list, so the stale-ref false ahead:1 is gone. On 0.1.607 this showed ahead:1. The 544fdcb fix works in practice; the COMPLETE gate remote-pushed witness no longer falsely blocks.'
 - id: iter119-deviations
   subject: Triage deviations_30m=2 (abort-related from last session churn, now root-fixed).
   status: completed
@@ -6132,4 +6133,5 @@
   witness: deflation rule (faf1f23/737d3b40) working - drained this run. branch_status fix deployed as 0.1.608 (watcher version confirms). Validating live next.
 - id: iter119-residual
   subject: Triage residuals, close via git_finalize.
-  status: pending
+  status: completed
+  witness: git_finalize 8d0885ab committed+pushed the AGENTS.md drain + memorize mem-files. Tail (prd.yml resolves) closes via final finalize. No junk.
