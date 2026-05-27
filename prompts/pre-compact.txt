@@ -10,12 +10,8 @@ Apply the same terse policy to the compacted summary itself. Strip articles/fill
 
 === POST-COMPACT FIRST RESPONSE — HARD RULE ===
 
-The very next response after this compaction MUST call Skill("gm:gm") as the FIRST tool invocation. Zero text output before it. No narration, no summary, no acknowledgement. The pre-tool-use hook is already armed — any other tool fires first and gets blocked. Invoke Skill("gm:gm") immediately, silently.
+The very next response after this compaction invokes the gm-skill and dispatches the instruction verb first. Boot probe, then write .gm/exec-spool/in/instruction/<N>.txt with {"prompt":"<request>"} and read the response. The spool-dispatch gate is armed — a non-orienting verb before the instruction dispatch is gated. Re-enter the chain immediately.
 
 === MEMORIZE SELF-CHECK (mandatory before closing this response) ===
 
-Scan the conversation above for every exec: output, code read, CI result, or user preference that resolved an unknown but was NOT followed by an Agent(subagent_type='memorize') call. For each one found:
-
-  Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<fact>')
-
-Spawn ALL missed memorize calls NOW, in parallel, before this response closes. One call per fact. Missing one = memory leak = bug.
+Scan the conversation above for every exec output, code read, CI result, or user preference that resolved an unknown but was NOT memorized. For each one found, dispatch the memorize-fire spool verb — write .gm/exec-spool/in/memorize/<N>.txt with the fact (one fact per file, parallel by default). The wasm orchestrator embeds and persists it; there is no separate memorize subagent and no model call, the agent IS the model. Missing one = memory leak = bug.

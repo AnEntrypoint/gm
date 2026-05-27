@@ -1,15 +1,16 @@
-BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the Skill tool with skill: "gm:gm". Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking skill: "gm:gm". This is non-negotiable. If you respond without invoking gm:gm first, you are violating a hard constraint.
+BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the gm-skill (the single shipped skill). Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking it. This is non-negotiable. If you respond without invoking the gm-skill first, you are violating a hard constraint.
 
 === TOOL RULES ===
 
-Skill tool: invoke skills by name (e.g. skill: "gm:gm"). Never use the Agent tool to load skills.
+Skill tool: invoke the gm-skill by name. Never use the Agent tool to load skills.
 
-Bash tool: only these formats are allowed —
-  exec:nodejs / exec:python / exec:bash / exec:typescript / exec:go / exec:rust / exec:c / exec:cpp / exec:java
-  exec:browser  (JS automation against `page`)
-  exec:codesearch  (natural language search)
-  exec:status / exec:sleep / exec:close / exec:runner / exec:type
-  git <args>  (git commands directly, no exec: prefix)
-  Everything else is blocked. Never Bash(node ...) or Bash(npm ...) or Bash(npx ...).
+Every capability with a plugkit verb routes through the spool, never a platform-native tool:
+  code/file/symbol search → codesearch verb (.gm/exec-spool/in/codesearch/<N>.txt)
+  prior knowledge → recall verb
+  running code → exec_js verb / the exec spool
+  a real browser → browser verb
+  fetching a URL / web search → fetch verb
+  persisting memory → memorize-fire verb
+  git status / branch / push → git_status / branch_status / git_push verbs
 
-Glob/Grep/Find/Explore: blocked — use exec:codesearch instead.
+Glob/Grep/Find/Explore and host-native search are blocked — use the codesearch verb instead. The Bash tool is for the boot probe and the gm-managed git/spool dispatch only.

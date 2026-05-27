@@ -5167,3 +5167,31 @@
   text: Grep ALL paper haiku/callback-protocol refs; each stale one is its own fix (TOC entry s37 line 165 title too).
   status: completed
   witness: 'DONE: grep confirms ZERO haiku/callback-protocol refs remain in paper.html after the 4 fixes (abstract, TOC s37, §37 heading, §37 body).'
+- id: prompts-stale-haiku-memorize
+  text: 'DEVIATION (stale framing, agent-as-llm + spool contradiction): prompts/pre-compact.txt:19 + prompts/prompt-submit.txt:37 instruct memorize via Agent(subagent_type=memorize/gm:memorize, model=haiku, run_in_background=true) - the PRE-SPOOL hook-prompt architecture. Contradicts (1) memorize routes through the spool memorize-fire verb not a subagent, (2) agent-as-llm (no separate haiku model), (3) the retired gm:memorize 15-platform subagent. These prompt .txt ship to npm (files:[prompts/]) but have NO live reader (bin/plugkit.js match was coincidental substring). Judgment: FIX not remove (a hook harness could load them; fixed prompts are correct for that path) - rewrite the memorize instruction to the spool memorize-fire dispatch.'
+  status: completed
+  witness: 'FIXED (not removed - AGENTS.md L59 treats prompt-submit.txt as live). All 3 prompt files rewritten: haiku-memorize-subagent->memorize-fire spool dispatch (agent IS the model), gm:gm->gm-skill, hook-denial->spool-dispatch gate. Zero stale refs.'
+- id: fix-pre-compact-memorize
+  text: 'prompts/pre-compact.txt: replace the Agent(subagent_type=memorize,model=haiku) memorize form with the spool memorize-fire dispatch (write .gm/exec-spool/in/memorize/<N>.txt with the fact).'
+  status: completed
+  witness: 'DONE: pre-compact.txt memorize self-check now dispatches memorize-fire spool verb; post-compact-first-response now invokes gm-skill + instruction dispatch (not Skill(gm:gm)).'
+- id: fix-prompt-submit-memorize
+  text: 'prompts/prompt-submit.txt: same fix - replace gm:memorize haiku-subagent form with spool memorize-fire dispatch.'
+  status: completed
+  witness: 'DONE: prompt-submit.txt memorize-on-resolution now the spool memorize-fire form; removed gm:gm skill/subagent + haiku, fixed parallel-spawn + hook->spool-gate + exec:codesearch example.'
+- id: prompts-full-stale-sweep
+  text: Sweep ALL prompts/*.txt (session-start, bash-deny too) for other stale framing (Skill(gm:gm), Agent(subagent), haiku, hook-specific) and fix each to the spool/agent-as-llm framing.
+  status: completed
+  witness: 'DONE: swept all 4 prompts/*.txt. session-start.txt rewritten (gm:gm->gm-skill, exec:-prefix tool-rules->per-verb spool routing). bash-deny.txt already correct. ZERO stale refs remain.'
+- id: deviations-audit-iter81
+  text: Audit gm-log past 35min.
+  status: completed
+  witness: deviations_35m=0. Clean (mid-EXECUTE instruction interleaves at 2618/2619/2620 prevented long-gap).
+- id: learning-health-iter81
+  text: Cores + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 107/107, router count 12 quality_milli 815 (climbed 611->815 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter81
+  text: Sweep + prune.
+  status: completed
+  witness: 'Swept: top candidates legit work records. Zero true positives, correct no-deletion.'
