@@ -116,7 +116,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error); long subprocesses block the watcher; no async/background exec under wasm. Mechanism detail in rs-learn (`recall: host_exec_js synchronous`).
 
-**Sync-before-emit (codeinsight + search)**: outputs must come from freshly-completed indices. Cache serves only on digest match (mtime sum + git HEAD + dirty-tree marker). Default invocation runs fresh. `--read-cache` permitted only when `.codeinsight.digest` matches; mismatch auto-refreshes. rs-search runs scan + embed + sweep before first result; emits `[index fully synced: …]`. Unverified-index emit = stale ground truth.
+**Sync-before-emit (codeinsight + search)**: codeinsight/search output must come from a freshly-synced index this invocation (cache serves only on digest match); unverified-index emit = stale ground truth. Digest/cache mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).
 
 **Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack to its response on the first dispatch after a >30s idle gap or session-start; orientation comes through that pack, not legacy hooks. Mechanism detail in rs-learn (`recall: auto-recall on turn entry`).
 

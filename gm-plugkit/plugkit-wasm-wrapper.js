@@ -2876,18 +2876,24 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   };
 
-  function walkDir(dir) {
+  function walkDir(dir, depth = 0) {
     const files = [];
     try {
       for (const entry of fs.readdirSync(dir)) {
         if (/\.tmp\.\d+(\.|$)/.test(entry)) continue;
+        // The verb tree is in/<verb>/[<sub>/]<N>.<ext> — at most two levels deep. A
+        // dot-prefixed dir (e.g. a stray nested .gm/exec-spool/ created by a misfire)
+        // is never a verb dir; recursing into it derives a bogus verb like
+        // `prd-resolve\.gm\exec-spool` and dispatch-errors on every tick forever.
+        // Skip dot-dirs and cap depth so a spool-inside-spool cannot wedge the watcher.
+        if (entry.startsWith('.')) continue;
         const fullPath = path.join(dir, entry);
         let stat;
         try { stat = fs.statSync(fullPath); } catch (_) { continue; }
         if (stat.isFile()) {
           files.push(fullPath);
-        } else if (stat.isDirectory()) {
-          files.push(...walkDir(fullPath));
+        } else if (stat.isDirectory() && depth < 2) {
+          files.push(...walkDir(fullPath, depth + 1));
         }
       }
     } catch (e) {
@@ -3329,6 +3335,10 @@ async function runSpoolWatcher(instance, spoolDir) {
   watch(inDir, { recursive: true }, (eventType, filename) => {
     if (!filename) return;
     if (/\.tmp\.\d+(\.|$)/.test(filename)) return;
+    // Skip any path with a dot-prefixed segment (e.g. a stray nested
+    // prd-resolve/.gm/exec-spool/…): it is not a real verb dispatch and walking it
+    // derives a bogus verb that dispatch-errors on every tick. Matches walkDir's guard.
+    if (filename.split(/[\\/]/).some(seg => seg.startsWith('.'))) return;
     const fullPath = path.join(inDir, filename);
     markActivity('watch');
 

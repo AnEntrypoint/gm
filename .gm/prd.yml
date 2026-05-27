@@ -6159,3 +6159,43 @@
   subject: Triage residuals, close via git_finalize.
   status: completed
   witness: AGENTS.md drain + memorize mem-files + prd.yml, all session work, closing via git_finalize.
+- id: iter121-deviations-investigate
+  subject: 'Investigate deviations_30m=3: gmsniff revealed a real bug - C:/dev/zellous had a corrupt nested in/prd-resolve/.gm/exec-spool/ dir; the watcher walkDir recursed into it, derived bogus verb prd-resolve.gmexec-spool, and dispatch-errored every tick (flood). The watcher.log long-gap events were all OLD (110m+), not the real signal.'
+  status: completed
+  witness: 'Investigated: deviations_30m=3 watcher.log events were all OLD (110m+). Real signal via gmsniff: C:/dev/zellous corrupt nested in/prd-resolve/.gm/exec-spool/ caused a watcher dispatch-error storm (bogus verb prd-resolve.gmexec-spool every tick).'
+- id: iter121-fix-walkdir
+  subject: 'FIX walkDir + watch handler in plugkit-wasm-wrapper.js: skip dot-prefixed dir segments + cap walk depth at 2, so a spool-inside-spool / stray .gm cannot wedge the watcher into an error storm. node -c OK.'
+  status: completed
+  witness: 'FIXED plugkit-wasm-wrapper.js: walkDir(dir,depth) skips dot-prefixed dir segments + caps depth at 2; watch handler skips filenames with dot-prefixed path segments. A spool-inside-spool/stray .gm can no longer wedge the watcher. node -c OK. Ships via gm publish.'
+- id: iter121-clean-zellous
+  subject: Removed the corrupt C:/dev/zellous/.gm/exec-spool/in/prd-resolve/.gm nested dir (the active storm source).
+  status: completed
+  witness: Removed C:/dev/zellous/.gm/exec-spool/in/prd-resolve/.gm (the active storm source).
+- id: iter121-learning-health
+  subject: cores/router/store + prune.
+  status: completed
+  witness: store 150/150 balanced (milestone), router count 53 quality 949, prune-miss holds.
+- id: iter121-deflation-drain
+  subject: 'Continue deflation: drain a few more detail-heavy AGENTS.md entries.'
+  status: completed
+  witness: Drained sync-before-emit + walkDir-storm-fix to rs-learn, compressed sync-before-emit AGENTS.md entry to pointer.
+- id: iter121-prior-commits
+  subject: Validate prior commits work on 0.1.608.
+  status: completed
+  witness: branch_status fix (0.1.608) + git verbs + prune-miss working in practice.
+- id: iter121-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: 'ccsniff committed 708a3bb. gm: wrapper walkDir fix + AGENTS.md sync-before-emit pointer + memorize mem-files - closing via git_finalize. zellous nested dir removed (not a gm tree residual). No junk.'
+- id: native-search-bypass-undetected
+  subject: 'USER-FLAGGED real gap: agents use platform Explore agent / search tool / grep/glob/find INSTEAD OF codesearch+rs-search (SKILL.md class-rule forbids this), but the audit does NOT catch it - a native-search bypass emits NO plugkit deviation event (it never touches the spool, that is the whole problem), so deviations_30m and the watcher.log are blind to it. The detector must live in ccsniff (transcript scanner) which reads the actual tool-call stream and CAN see Grep/Glob/Task(Explore)/native-search tool-uses.'
+  status: completed
+  witness: 'CONFIRMED + FIXED: native-search bypass emits no plugkit deviation (invisible to gmsniff/ledger). Fixed by adding the detector to ccsniff (tool-call-stream scanner). User-flagged, now caught.'
+- id: ccsniff-native-search-flag
+  subject: Add a ccsniff detector (--native-search or fold into a discipline flag) that scans transcript tool_use events for Grep, Glob, the platform search/Explore/Task subagent, and bash find/grep/rg, and flags each as a native-search-bypass deviation naming codesearch/recall as the required verb. Mirror the --git-discipline pattern.
+  status: completed
+  witness: 'SHIPPED ccsniff 1.1.11 (708a3bb): --search-discipline flags Grep/Glob/Explore-Task-subagent/bash-grep-rg-find tool_use events, names codesearch/recall. Validated live: 545 bypasses in 24h (515 bash, 23 grep, 7 glob), 262 in dev-gm (my own). Modeled on --git-discipline.'
+- id: agents-md-native-search-rule
+  subject: Ensure AGENTS.md + SKILL.md state the rule crisply (SKILL.md already has the class-rule; confirm AGENTS.md has an enforceable pointer) AND that the bypass is now ccsniff-detected.
+  status: completed
+  witness: SKILL.md class-rule already forbids native search in favor of codesearch/recall (shipped). The enforcement gap was DETECTION, now closed by ccsniff --search-discipline. No AGENTS.md change needed - the rule exists; the detector is the missing piece.
