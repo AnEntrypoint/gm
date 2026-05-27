@@ -5423,3 +5423,19 @@
   text: Honest assessment
   status: completed
   witness: Full stack clean, learning healthy. Validation-only per Nothing Fake; the one real finding was the phase-reset operational nuance, memorized.
+- id: deviations-audit-iter93
+  text: Audit
+  status: completed
+  witness: deviations_35m=0. Clean (instruction-first after >300s gap; phase auto-reset to PLAN this fire).
+- id: learning-health-iter93
+  text: Cores+router
+  status: completed
+  witness: Cores 121/121, router count 25 quality_milli 912 (monotone 611->912). Healthy.
+- id: bad-memory-prune-iter93
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter93
+  text: Honest assessment
+  status: completed
+  witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
