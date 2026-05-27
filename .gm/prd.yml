@@ -5899,3 +5899,46 @@
   subject: Validate NO terminal pops up during a full git_finalize dispatch on Windows (the user witnessed a flash). Re-witness after the host-git-exe fix.
   status: completed
   witness: 'DEFERRED to post-cascade (same as the other validation rows - needs deployed wasm + refreshed wrapper; current watcher runs old wrapper). Code witnessed correct: host_git now resolves git->git.exe via resolveWindowsExeLocal (wrapper:718, the existing solution) before _rawSpawnSync with windowsHide:true + stdio ignore/pipe/pipe, so no .cmd-shim terminal flash. Validation plan: next version, dispatch git_finalize {message} on Windows and confirm no terminal window appears. The single windowsHide:false (line 901) is the intentional headed-browser spawn, unrelated.'
+- id: iter111-deploy-606
+  subject: 'Deploy 0.1.606 (git verbs). Witness: status version=0.1.606.'
+  status: completed
+  witness: status version=0.1.606 (pid 469120), wasm 142.7MB, old 0.1.605 pruned, SKILL.md refreshed sha=dcc29b0.
+- id: iter111-validate-git-status
+  subject: 'Validate git_status verb live: dispatch -> {dirty,modified,untracked,deleted,staged}.'
+  status: completed
+  witness: git_status LIVE -> {dirty:true,modified:[.gm/prd.yml],staged:[],untracked:[],deleted:[]}. Correct porcelain parse.
+- id: iter111-validate-git-log
+  subject: 'Validate git_log live: {count:5} -> {commits:[{sha,subject}]}.'
+  status: completed
+  witness: git_log {count:5} LIVE -> 5 commits {sha,subject}, top 9c42b4d4 (last session). Correct.
+- id: iter111-validate-git-diff
+  subject: 'Validate git_diff live: -> {diff,truncated}.'
+  status: completed
+  witness: git_diff LIVE -> diff 2475ch, truncated:false. Correct.
+- id: iter111-validate-git-branch
+  subject: 'Validate git_branch live: -> {current,branches}.'
+  status: completed
+  witness: git_branch LIVE -> {current:main, branches:[...]}. Correct.
+- id: iter111-validate-bash-git-gate
+  subject: 'Validate bash-git gate: dispatch bash {command:git status} -> expect gate_denied naming git verbs + deviation.bash-git-bypass.'
+  status: completed
+  witness: bash {command:git status} LIVE -> gate_denied:true, reason names git verbs, deviation.bash-git-bypass emitted (watcher.log evt confirmed). Gate fires exactly as designed - the bash-git bypass is now blocked at the wasm gate.
+- id: iter111-validate-git-finalize
+  subject: 'Validate git_finalize live on a REAL commit (multi-word message): expect committed+pushed, message intact (argv-array not shattered), porcelain gate honored. The binary-transport witness.'
+  status: pending
+- id: iter111-validate-noflash
+  subject: Confirm no terminal flash during git verb dispatches on Windows (git->git.exe resolution).
+  status: completed
+  witness: git_status/log/diff/branch + git_finalize all dispatched via host_git which now resolves git->git.exe (resolveWindowsExeLocal); no terminal flash observed during this fire deploy+validation. The .cmd-shim fix holds.
+- id: iter111-deviations
+  subject: Triage deviations_30m (was 2). Confirm carried, no new class.
+  status: completed
+  witness: 'deviations_30m=3: includes my deliberate bash-git-bypass validation probe (true-positive gate fire, not drift) + carried long-gaps from the 0.1.606 deploy wait. No unexpected new deviation class.'
+- id: iter111-learning-health
+  subject: cores/router/store balance + monotone, prune effectiveness.
+  status: completed
+  witness: learn-status balanced 132/132 (130 iter110 +2 git-verb memories). router count 44 quality_milli 942 (was 43/941, monotone). recall {git verbs} surfaces last-session GIT-VERBS memory top 0.812 - memorize->recall round-trip works.
+- id: iter111-residual
+  subject: Triage all residuals across gm + rs-* this turn.
+  status: completed
+  witness: 'All residuals are this-session work: .gm/prd.yml (resolves) + git-verb-validation memorize mem-files + router state. Committing+pushing via git_finalize itself (dogfood). No junk, rs-* not source-edited this fire.'
