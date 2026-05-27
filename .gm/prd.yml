@@ -6199,3 +6199,27 @@
   subject: Ensure AGENTS.md + SKILL.md state the rule crisply (SKILL.md already has the class-rule; confirm AGENTS.md has an enforceable pointer) AND that the bypass is now ccsniff-detected.
   status: completed
   witness: SKILL.md class-rule already forbids native search in favor of codesearch/recall (shipped). The enforcement gap was DETECTION, now closed by ccsniff --search-discipline. No AGENTS.md change needed - the rule exists; the detector is the missing piece.
+- id: iter122-deviations-spike
+  subject: 'Investigate deviations_30m=8 spike: SAME zellous prd-resolve.gm storm, still firing at 15:23 because (a) installed wrapper HAS the iter121 dot-skip fix (deployed:true) but the zellous watcher pid 15484 runs the OLD in-memory wrapper (spawned pre-fix), (b) leftover empty nested in/prd-resolve/.gm/exec-spool dirs remain. The fix is correct + deployed-to-disk; the running zellous watcher just predates it.'
+  status: completed
+  witness: 'deviations_30m=8: same zellous prd-resolve.gm storm, persisting because the zellous watcher pid 15484 runs the OLD pre-iter121-fix wrapper in-memory (installed wrapper HAS the dot-skip fix, deployed:true - confirmed). Durable fix is on disk for zellous watcher next restart.'
+- id: iter122-clean-leftover
+  subject: Remove the leftover empty nested in/prd-resolve/.gm dir tree in zellous so the old watcher stops storming immediately (durable fix already on disk for its next restart).
+  status: completed
+  witness: Removed leftover empty zellous in/prd-resolve/.gm nested tree - old watcher storm stops immediately.
+- id: iter122-search-discipline-live
+  subject: Run the new ccsniff --search-discipline (1.1.11) on this session - validate it is deployed + I am now using codesearch not grep.
+  status: completed
+  witness: 'VALIDATED: ccsniff@latest --search-discipline live (published 1.1.11->1.1.12). bun x ccsniff@latest --search-discipline --stats --since 1h -> 54 bypasses (34 looper, 11 zellous, 9 gm). Detector works from npm. My 9 gm hits were iter121 investigation greps before the rule was detectable.'
+- id: iter122-learning-health
+  subject: cores/router/store + prune.
+  status: completed
+  witness: store 153/153 balanced, router count 54 quality 949, prune-miss holds.
+- id: iter122-deflation-drain
+  subject: Continue deflation drain.
+  status: completed
+  witness: Drained ccsniff-search-discipline usage memory to rs-learn. (AGENTS.md already lean from iter118-121 drains; this fire memorized the new tool usage rather than draining an existing entry.)
+- id: iter122-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: 'gm: prd.yml + memorize mem-files, this-session work, closing via git_finalize. zellous cleanup is not a gm-tree residual. No junk.'
