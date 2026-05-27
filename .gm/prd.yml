@@ -5387,3 +5387,19 @@
   text: Honest steady-state assessment
   status: completed
   witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
+- id: deviations-audit-iter91
+  text: Audit
+  status: completed
+  witness: deviations_35m=0.
+- id: learning-health-iter91
+  text: Cores+router
+  status: completed
+  witness: Cores 119/119, router count 23 quality_milli 904 (monotone 611->904). Healthy.
+- id: bad-memory-prune-iter91
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter91
+  text: Honest assessment
+  status: completed
+  witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
