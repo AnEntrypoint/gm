@@ -5971,3 +5971,23 @@
   subject: Triage all residuals via git_status verb this turn.
   status: completed
   witness: git_status verb shows modified [router/default.json, prd.yml] - this-session writes, committing via git_finalize. No junk, rs-* not source-edited.
+- id: iter113-deviations
+  subject: Triage deviations_30m=1, confirm carried/no fresh.
+  status: completed
+  witness: deviations_30m=1 carried (prior long-gap), no fresh iter113.
+- id: iter113-learning-health
+  subject: cores/router/store balance+monotone, prune review zero-true-positive check.
+  status: completed
+  witness: store 134/134 balanced, router count 46 quality 944 monotone, prune review 10 legit-memory candidates zero true-positives.
+- id: iter113-prior-commits
+  subject: git verbs + prune-miss + AGENTS.md->rs-learn working in practice on 0.1.606.
+  status: completed
+  witness: git verbs working (git_status live correct), prune-miss re-witnessed {deleted:[],not_found:[key]}, AGENTS.md->rs-learn recall 0.81. All prior commits working on 0.1.606.
+- id: iter113-improvement-probe
+  subject: Genuinely probe rs-* for a real fix (codesearch). Honest null acceptable.
+  status: completed
+  witness: codesearch stub/fake/TODO -> 10 hits all real impls. Honest null per Nothing Fake; no fix to manufacture.
+- id: iter113-residual
+  subject: Triage residuals via git_status verb; close via git_finalize.
+  status: completed
+  witness: git_status shows router/default.json+prd.yml (this-session writes), closing via git_finalize. No junk.
