@@ -5271,3 +5271,23 @@
   text: Sweep + prune.
   status: completed
   witness: 'Discipline-level prune: removed the validate test-residue discipline (15 synthetic gm-validate witness entries). Default-namespace sweep: top candidates legit work records, zero individual-key true positives. Bad-memory pruning applied at discipline granularity.'
+- id: deviations-audit-iter85
+  text: Audit gm-log past 35min for deviation.*
+  status: completed
+  witness: deviations_35m=0. Clean (instruction-first after the >300s boot gap prevented long-gap).
+- id: learning-health-iter85
+  text: Cores + router + temporal on 0.1.603
+  status: completed
+  witness: Cores balanced 111/111, router count 16 quality_milli 860 (monotone 611->860 across run), temporal validated. Healthy.
+- id: agents-md-migration-witness-iter85
+  text: Freshly witness the AGENTS.md->learning migration round-trip end-to-end
+  status: completed
+  witness: 'WITNESSED round-trip end-to-end on 0.1.603: memorize-fire of a migration-witness fact embedded (embedded:true, graph_edge:true, namespace:default, rejected:false) and recalled back as the TOP hit at score 0.871. The AGENTS.md(structural rules inline)->memorize-fire(recall-time embed)->recall staging->learning path is smooth and working.'
+- id: bad-memory-prune-iter85
+  text: Sweep + prune stale memory
+  status: completed
+  witness: 'Swept default namespace: top candidates high-recency legit work records. Zero true positives (validate test-discipline already pruned iter84).'
+- id: steady-state-iter85
+  text: Honest steady-state assessment after the iter76-84 arc
+  status: completed
+  witness: 'HONEST STEADY-STATE: the iter76-84 arc closed all real drift (dead code removed, stale framing fixed across every surface, validate discipline pruned, LoRA-dormancy judged by-design). 0.1.603 latest+clean, response bounded, cores 111/111, router climbing, deviations 0. No new removable drift this fire; the one substantive action was the fresh migration round-trip witness. Per Nothing Fake, no manufactured fix.'
