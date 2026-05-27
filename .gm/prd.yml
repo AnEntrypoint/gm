@@ -5195,3 +5195,35 @@
   text: Sweep + prune.
   status: completed
   witness: 'Swept: top candidates legit work records. Zero true positives, correct no-deletion.'
+- id: lib-rs-gm-gm-stale-namespace
+  text: 'DEVIATION (stale namespace in retained hook ABI): rs-plugkit src/lib.rs wasm_hooks still references the retired gm:gm 15-platform namespace at L107 (pre_tool_use detection: skill_name==gm:gm || agent_type==gm:gm), L172 (prompt_submit ctx: Invoke Skill(gm:gm) first), L199 (pre_compact policy: MUST call Skill(gm:gm)). The single shipped skill is gm-skill; gm:gm does not exist. These hooks are retained-for-compat (iter77 KEEP decision) but UNINVOKED (zero JS callers, confirmed). A hook host loading them would tell the agent to invoke a non-existent skill. The continuation-fix memory noted the agent-facing TEXT here should name the portable spool dispatch, not gm:gm - incompletely migrated. FIX: update detection to accept gm-skill, and rewrite the agent-facing strings to the spool-dispatch framing (invoke gm-skill / dispatch the instruction verb).'
+  status: completed
+  witness: 'FIXED (4f1fddd->95d3ebf): wasm_hooks gm:gm namespace + Skill(gm)/Skill(gm:planning) agent-facing strings rewritten to gm-skill + spool-dispatch. Detection legacy-tolerant. ROUTER_MODELS haiku is the model-selection target, kept.'
+- id: fix-lib-rs-detection
+  text: 'lib.rs:107 pre_tool_use: accept gm-skill (and keep gm:gm as legacy-tolerant) so the gate recognizes the current skill name.'
+  status: completed
+  witness: 'DONE: lib.rs:107 is_gm_name closure accepts gm-skill || gm:gm (legacy-tolerant).'
+- id: fix-lib-rs-prompt-submit-ctx
+  text: 'lib.rs:172 prompt_submit ctx string: Invoke Skill(gm:gm) first -> invoke the gm-skill / dispatch the instruction verb (spool-dispatch framing).'
+  status: completed
+  witness: 'DONE: lib.rs prompt_submit ctx now invoke the gm-skill + dispatch instruction verb + spool-dispatch gate.'
+- id: fix-lib-rs-pre-compact-policy
+  text: 'lib.rs:199 pre_compact policy: MUST call Skill(gm:gm) -> invoke the gm-skill and dispatch the instruction verb first.'
+  status: completed
+  witness: 'DONE: lib.rs pre_compact policy now invoke gm-skill + dispatch instruction verb; also fixed 3 stop-hook reason strings + the gm:planning ref.'
+- id: lib-rs-validate
+  text: 'After edit: cargo not run locally (push, CI builds); confirm no other gm:gm refs remain in rs-plugkit src; grep clean.'
+  status: completed
+  witness: 'DONE: grep confirms no stale gm:gm/Skill(gm/gm:planning refs remain (only the intentional is_gm_name legacy-tolerant detection + ROUTER_MODELS haiku model-target). Not built locally - pushed 95d3ebf, CI builds via cascade.'
+- id: deviations-audit-iter82
+  text: Audit gm-log past 35min.
+  status: completed
+  witness: deviations_35m=0. Clean (mid-EXECUTE instruction interleaves prevented long-gap).
+- id: learning-health-iter82
+  text: Cores + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 108/108, router count 13 quality_milli 828 (monotone 611->828 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter82
+  text: Sweep + prune.
+  status: completed
+  witness: 'Swept: top candidates legit work records. Zero true positives.'
