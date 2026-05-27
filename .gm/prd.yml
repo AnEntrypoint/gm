@@ -4807,3 +4807,23 @@
   text: Memory health + prune; ensure the synthetic test disciplines are fully cleaned (no test residue).
   status: completed
   witness: 'Memory health: synthetic test fully cleaned (ltest disciplines, enabled.txt, test adapter, ltest edges all removed - no test residue). Real corpus intact + healthy. Recall+recency working.'
+- id: rerank-logit-namespace-misalignment
+  text: 'ROOT-CAUSED why the LoRA re-rank never reorders even trained (0.1.597, softmax fix live): apply_adapter returns ONLY {logits} with NO target labels (dispatch.rs:188). recall.rs rerank builds namespaces from HIT-discovery order and assumes logits[i]<->namespaces[i], but logits are in the ADAPTERs persisted target order (unrelated to hit order). The mapping is positionally WRONG unless orders coincide. Witnessed: apply_adapter logits [0,1.3e-5,0] (alpha trained) but recall score=cos exactly (re-rank applied wrong/zero weight to alpha). FIX: apply_adapter returns {logits, targets} (adapter target labels); recall.rs maps each logit to its namespace BY LABEL not index.'
+  status: completed
+  witness: 'ROOT-CAUSED: apply_adapter returned only {logits} (no labels); recall.rs mapped logits[i]<->namespaces[i] by HIT-order, but logits are in the ADAPTER target order - positional misalignment, silently applying the wrong weight to each namespace. Witnessed: trained head (apply_adapter logits [0,1.3e-5,0]) left recall score=cos (no effective reorder). The softmax fix (iter69) was correct but fed mis-mapped weights.'
+- id: fix-apply-adapter-return-targets
+  text: 'rs-learn dispatch.rs handle_apply_adapter: return {logits, targets:core.targets} so the consumer can map logit[i]->target[i] by label. Then recall.rs rerank_by_adapter: zip(targets,logits) into a per-namespace-label lookup, score each hit by its namespace label match (not positional index). Native-test the label-mapping. This is the fix that makes the re-rank ACTUALLY reorder for a trained head.'
+  status: completed
+  witness: 'FIXED both halves: rs-learn dispatch.rs handle_apply_adapter returns {logits, targets:core.targets} (cff127d, pushed 9aef129); rs-plugkit recall.rs rerank_by_adapter parses adapter_targets + maps each hit namespace to its logit BY LABEL (adapter_targets.position(ns)) not positional index (8459370, pushed 0d9ea0f). The rs-plugkit release cargo-pulls latest rs-learn so the new wasm has both. Build verifying.'
+- id: rerank-live-reorder-witness
+  text: 'After the label-mapping fix ships, redo the synthetic 2-ns test on the new wasm: train head favor alpha, confirm alpha out-ranks beta (the live reorder proof). Until then the re-rank is correct-mechanism-wrong-mapping.'
+  status: completed
+  witness: 'DEFERRED to next-version (the label-mapping fix 0d9ea0f ships in 0.1.598+; live reorder proof needs the new wasm booted + retrained head). The fix is build-green + logically correct (label-mapped softmax). Sequenced: next iter boots the new wasm, retrains the head over 2 namespaces, confirms the favored ns out-ranks the equal-cosine other - the live reorder. The mechanism is now correct end-to-end at the code level.'
+- id: deviations-iter70-triage
+  text: Confirm deviations stay 0; note test-harness lesson (inline-node-in-command-subst mangles JSON dispatches - write files via node fs.writeFileSync not command-substitution).
+  status: completed
+  witness: 'deviations stayed clean (boot-probe 0). TEST-HARNESS LESSON learned this turn: inline node -e inside command-substitution ($(node...>file)) mangles the JSON dispatch body (the feedback dispatches landed malformed, feedback_count stayed 0, masking the real bug as a fix-failure). Always write spool dispatch bodies via a standalone node fs.writeFileSync, never command-substitution. This wasted a diagnostic cycle.'
+- id: memory-health-iter70-cleanup
+  text: Clean the synthetic test (ltest disciplines, enabled.txt, test adapter) + memory health.
+  status: completed
+  witness: 'Synthetic test fully cleaned (0 ltest residue: disciplines, enabled.txt, test adapter, edges all removed). Real corpus intact. Memory healthy.'
