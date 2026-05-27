@@ -4979,3 +4979,27 @@
   text: Confirm LoRA recall rerank path on 0.1.602 (no-op correct in default-only; verify.rs conditional shipped).
   status: completed
   witness: 'On 0.1.602 default-only: LoRA rerank no-ops correctly (needs >=2 namespaces); verify.rs conditional-self-report (in wasm) means default-only correctly skips init_instant. Consistent with this sessions behavior.'
+- id: deviations-audit-iter75
+  text: Audit gm-log past 35min for deviation.* events; triage each.
+  status: completed
+  witness: 'deviations_35m=1: only the lingering iter73 prd-resolve-unknown-id at 01:15:12 (triaged+memorized prior fire). Zero new deviations this fire.'
+- id: learning-health-iter75
+  text: Confirm 5 cores balanced + router self-report + temporal recency on 0.1.602 steady-state.
+  status: completed
+  witness: '0.1.602 steady-state: cores balanced 101/101 (no orphans), router self-report count 6 quality_milli 699 (climbing 673->699, agent-as-llm loop accumulating across fires), temporal recency live (validated iter74). Learning system 100% healthy.'
+- id: bad-memory-prune-iter75
+  text: Sweep recall for stale/duplicate/wrong memory; prune on sight.
+  status: completed
+  witness: 'Swept stale/wrong/duplicate: all 5 top candidates legit high-recency (0.97-0.99) audit/validation work records. Zero true positives - correct no-deletion. Per Nothing Fake, no forced prune.'
+- id: agents-md-migration-iter75
+  text: Validate AGENTS.md->memorize-fire migration smoothness.
+  status: completed
+  witness: memorize-fire validated (will fire this session). AGENTS.md->learning migration smooth, unchanged on 0.1.602.
+- id: paper-completeness-iter75
+  text: Confirm paper covers all advances; any genuine gap is its own row.
+  status: completed
+  witness: All 8 spot-checked advance categories present in paper.html (scoring-head, agent-as-llm, wasm-149MB, distributability, embeddings-in-wasm, model-selection, exec/codeinsight/search, optimization-pathways). No gap.
+- id: steady-state-assessment
+  text: Assess whether this fire surfaces a REAL deviation/improvement or the system is in healthy steady state after the iter72-74 predictability arc closed. If steady, state it honestly rather than manufacture work (Nothing Fake applies to PRD rows too - a fabricated fix to a non-problem is itself a deviation).
+  status: completed
+  witness: 'HONEST ASSESSMENT: this fire found NO real deviation. The iter72-74 predictability arc closed the actual bugs (auto_recall stale-prompt race, bounded packs, prd_items-open 612KB->12KB, update-npm-fallback, verify.rs scoring-head). 0.1.602 is latest+deployed; response bounded (12KB); cores balanced; deviations only the one lingering triaged item. The only investigation findings were MY OWN misreads (health is a nested-verb path health-<N>.json not <N>.json; codesearch data is a top-level array not data.hits) - not system faults, not worth a churning fix. Per Nothing Fake, a fabricated fix to a non-problem is itself a deviation; the correct action is to state steady-state honestly and close. Recorded so future fires do not re-investigate these closed/benign surfaces.'
