@@ -5615,3 +5615,19 @@
   text: Assessment
   status: completed
   witness: Full stack clean, learning healthy. Validation-only per Nothing Fake.
+- id: deviations-audit-iter104
+  text: Audit
+  status: completed
+  witness: deviations_35m=0.
+- id: learning-health-iter104
+  text: Cores+router
+  status: completed
+  witness: Cores 132/132, router count 37 quality_milli 936. Healthy.
+- id: bad-memory-prune-iter104
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter104
+  text: Assessment
+  status: completed
+  witness: Full stack clean, learning healthy. Validation-only per Nothing Fake.
