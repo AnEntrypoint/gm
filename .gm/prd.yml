@@ -6247,3 +6247,27 @@
   subject: Triage residuals, close via git_finalize.
   status: completed
   witness: 'gm: wrapper processFile guard + prd.yml + memorize mem-files, this-session work, closing via git_finalize. zellous nested dir re-removed (other project, not gm residual). No junk.'
+- id: iter124-deviations
+  subject: Triage deviations_30m=2 (decaying 8->3->2); confirm storm guards holding, identify any fresh.
+  status: completed
+  witness: deviations_30m=2 decaying (8->3->2); ZERO nested-spool storm events in gm log - the walkDir+processFile guards hold. No fresh deviation.
+- id: iter124-watcher-death
+  subject: Note the gm watcher 290224 died silently (no .shutdown-reason, process-exit, uptime ~3h). Supervisor respawned correctly. Determine if idle-kill (idle_limit 1h) or crash - low priority if respawn is clean.
+  status: completed
+  witness: gm watcher 290224 died silently (no .shutdown-reason, process-exit, ~3h uptime); supervisor respawned cleanly (new watcher 22724). Low priority - clean respawn, likely OS/idle, no code defect signal. Noted for pattern-watch.
+- id: iter124-learning-health
+  subject: cores/router/store + prune.
+  status: completed
+  witness: store 155/155 balanced, router count 56 quality 949 monotone, prune-miss holds.
+- id: iter124-prior-commits
+  subject: Validate walkDir+processFile guards (a6d30882), branch_status (0.1.608), ccsniff search-discipline working in practice.
+  status: completed
+  witness: 'walkDir+processFile guards (a6d30882): zero gm storm events. branch_status (0.1.608) + ccsniff search-discipline (1.1.12) validated prior fires. All working in practice.'
+- id: iter124-deflation-drain
+  subject: Continue deflation drain if a candidate remains.
+  status: completed
+  witness: No drain this fire - AGENTS.md lean from iter118-122 arc (~38KB), no remaining purely-single-mechanism candidate worth draining. Discipline applied (checked, nothing eligible).
+- id: iter124-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: 'gm: prd.yml + router state, this-session work, closing via git_finalize. No junk. zellous not touched this fire (guards hold).'
