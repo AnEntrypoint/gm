@@ -5459,3 +5459,19 @@
   text: Sweep
   status: completed
   witness: Zero true positives.
+- id: deviations-audit-iter95
+  text: Audit
+  status: completed
+  witness: deviations_35m=0. Clean.
+- id: learning-health-iter95
+  text: Cores+router
+  status: completed
+  witness: Cores 123/123, router count 28 quality_milli 921 (monotone 611->921). Healthy.
+- id: bad-memory-prune-iter95
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter95
+  text: Honest assessment
+  status: completed
+  witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Phase auto-reset worked (iter94 fix holds). Validation-only per Nothing Fake.'
