@@ -119,7 +119,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. This paper consolidates the gm discipline into a single document. We describe the phase-gated state machine (PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic routing through a haiku-backed text-processing agent. Together these form a complete behavioral envelope for coding agents, packaged as a single wasm-backed skill shipped on npm.
+    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. This paper consolidates the gm discipline into a single document. We describe the phase-gated state machine (PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic work performed by the agent itself (agent-as-LLM) fanned out as parallel spool dispatches. Together these form a complete behavioral envelope for coding agents, packaged as a single wasm-backed skill shipped on npm.
   </div>
 </div>
 
@@ -162,7 +162,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
     <li><a href="#s34">Hook Denials Throw, Never Mutate</a></li>
     <li><a href="#s35">CI Is the Build</a></li>
     <li><a href="#s36">The Residual-Scan Stop Gate</a></li>
-    <li><a href="#s37">Meaning Through Haiku, Mechanics Through Code</a></li>
+    <li><a href="#s37">Meaning Through the Agent, Mechanics Through Code</a></li>
     <li><a href="#s38">The Continuation Invariant: A Toolless Turn Is A Stop</a></li>
     <li><a href="#s39">Spool Dispatch Replaces Platform Hooks</a></li>
     <li><a href="#s40">The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer</a></li>
@@ -809,18 +809,18 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
-<h2 id="s37">37. Meaning Through fetch, Mechanics Through Code</h2>
+<h2 id="s37">37. Meaning Through the Agent, Mechanics Through Code</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Semantic Work Routes Through fetch <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE &middot; EMIT]</span></div>
-  <p>Any task whose correctness depends on understanding, summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same, routes through a haiku-class model call offloaded to the host agent via the LLM callback protocol. One call per item, N items in N parallel spool dispatches in one message.</p>
+  <div class="rule-title">Hard Rule: Semantic Work Is the Agent's Own Judgment <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN &middot; EXECUTE &middot; EMIT]</span></div>
+  <p>Any task whose correctness depends on understanding, summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same, is the agent's own inline judgment, not a separate model call. plugkit is the harness and the agent IS the model it dispatched, so each semantic decision is the agent deciding on the spot from the current situation. When the work is many independent items, fan them out as N parallel spool dispatches in one message, one item per dispatch.</p>
 </div>
 
 <p>The split is between mechanics and meaning. Mechanics are operations whose correctness can be decided by a deterministic procedure: parse this JSON, sort these strings, hash this file, count occurrences of a regex. Meaning is operations whose correctness depends on the model&rsquo;s understanding of language: does this commit message describe a bug fix or a feature, does this docstring contradict its function&rsquo;s behavior, are these two error messages saying the same thing in different words.</p>
 
 <p>Code does mechanics well and meaning badly. A keyword-list or regex-on-meaning-phrases loop deciding semantic questions ships a green check that lies, in the same way §24 Nothing Fake ships a green check that lies. The deterministic procedure looks right because it terminates and returns a value; the value is unrelated to the question the user actually asked.</p>
 
-<p>Parallelism is the second half of the discipline. N items go to N parallel dispatches in one message; batching them into a single call dilutes the signal because the model averages over the batch instead of attending to each item. The cost difference is negligible, haiku calls are cheap, and the quality difference is large. This pairs with §12 memorize-fire dispatch, which uses the same fan-out shape for the same reason: one fact per call, parallel by default.</p>
+<p>Parallelism is the second half of the discipline. N items go to N parallel dispatches in one message; batching them into a single judgment dilutes the signal because the agent averages over the batch instead of attending to each item. The cost difference is negligible and the quality difference is large. This pairs with §12 memorize-fire dispatch, which uses the same fan-out shape for the same reason: one fact per call, parallel by default.</p>
 
 <hr>
 

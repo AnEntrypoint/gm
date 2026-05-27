@@ -5135,3 +5135,35 @@
   text: 'Extend drift hunt to rs-* repos: confirmed no src/bin daemon entrypoints, no tracked junk beyond the stackdump. dist/ dirs are tracked build outputs (flatspace site) - check if stale vs src is in-scope or by-design.'
   status: completed
   witness: 'Extended to rs-* repos: no src/bin daemon entrypoints (wasm cdylib only, consistent with WASM-only); only tracked junk was the stackdump (resolved). dist/ dirs are by-design tracked flatspace build outputs. No other drift.'
+- id: paper-haiku-stale-agent-as-llm
+  text: 'DEVIATION (paper drift contradicting agent-as-llm MO): paper.html abstract (line 122) + §37 body (816,823) describe semantic work routing through a haiku-class model call offloaded to the host agent via the LLM callback protocol + haiku calls are cheap. But the agent-as-llm principle (AGENTS.md, verify.rs) is that rs-learn/plugkit NEVER call a separate model - the agent IS the LLM and does understand/classify/score/decide INLINE. haiku appears nowhere in AGENTS.md or live code. §37 title was already updated to Meaning Through fetch but the body still says haiku - internally inconsistent. FIX: rewrite the abstract clause + §37 body to the agent-as-llm framing (the agent itself performs the semantic judgment as parallel spool dispatches, not a separate haiku model).'
+  status: completed
+  witness: FIXED all 4 paper refs (abstract, TOC, §37 heading+title+body) from haiku-class-model-call to agent-as-llm framing (the agent IS the model, semantic work is its own inline judgment, parallel dispatches). Zero haiku refs remain. Browser-witnessed.
+- id: fix-abstract-haiku-clause
+  text: 'Abstract line 122: replace semantic routing through a haiku-backed text-processing agent with the agent-as-llm framing (semantic work performed by the agent itself, fanned out as parallel dispatches).'
+  status: completed
+  witness: 'DONE: abstract line 122 now reads semantic work performed by the agent itself (agent-as-LLM) fanned out as parallel spool dispatches.'
+- id: fix-s37-body-haiku
+  text: '§37 body (816,823): replace haiku-class model call offloaded...via the LLM callback protocol and haiku calls are cheap with the agent-as-llm framing - the agent IS the model, performs each semantic judgment inline, N parallel dispatches.'
+  status: completed
+  witness: 'DONE: §37 heading->Meaning Through the Agent; hard-rule title->Semantic Work Is the Agents Own Judgment; body->agent IS the model, inline judgment, N parallel dispatches; removed haiku-calls-are-cheap.'
+- id: paper-haiku-witness
+  text: Browser-witness the paper §37 + abstract render correctly after edit (client-side .html edit = browser verb same turn).
+  status: completed
+  witness: 'DONE: browser verb (raw JS code body) page.evaluate on file:///paper.html returned s37_title correct, has_agent_as_llm=true, no_haiku=true. Session closed (browser_sessions_alive=0).'
+- id: deviations-audit-iter80
+  text: Audit gm-log past 35min for deviation.* events.
+  status: completed
+  witness: deviations_35m=0. Clean.
+- id: learning-health-iter80
+  text: Cores balanced + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 106/106, router count 11 quality_milli 801 (climbed 611->801 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter80
+  text: Sweep + prune stale memory.
+  status: completed
+  witness: 'Swept: top candidates legit work records. Zero true positives.'
+- id: paper-other-haiku-refs
+  text: Grep ALL paper haiku/callback-protocol refs; each stale one is its own fix (TOC entry s37 line 165 title too).
+  status: completed
+  witness: 'DONE: grep confirms ZERO haiku/callback-protocol refs remain in paper.html after the 4 fixes (abstract, TOC s37, §37 heading, §37 body).'
