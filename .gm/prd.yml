@@ -5551,3 +5551,19 @@
   text: Assessment
   status: completed
   witness: Full stack clean on 0.1.604, fresh-prompt fix validated live. Per Nothing Fake, the live validation IS the work; no manufactured fix.
+- id: deviations-audit-iter100
+  text: Audit
+  status: completed
+  witness: deviations_35m=0.
+- id: learning-health-iter100
+  text: Cores+router
+  status: completed
+  witness: Cores 128/128, router count 33 quality_milli 932 (monotone 611->932 across the run). Healthy.
+- id: bad-memory-prune-iter100
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter100
+  text: Assessment
+  status: completed
+  witness: 'HONEST STEADY-STATE (100th fire): full stack clean, learning healthy + accumulating, fresh-prompt fix holds, all prior work validated. Validation-only per Nothing Fake. The run holds the 100%.'
