@@ -5111,3 +5111,27 @@
   text: Sweep + prune stale memory.
   status: completed
   witness: 'Swept: top candidates high-recency legit work records. Zero true positives, correct no-deletion.'
+- id: rs-plugkit-tracked-stackdump
+  text: 'DEVIATION (tracked junk): rs-plugkit/bash.exe.stackdump (1196b Cygwin/MSYS bash crash dump from Mar 29) is TRACKED in git despite *.stackdump being in .gitignore line 3 - it was committed BEFORE the ignore rule, and gitignore does not untrack already-committed files. Remove from tracking (git rm) + delete from disk. Scanned all 5 repos (rs-learn/codeinsight/search/exec/plugkit + gm); this is the ONLY tracked junk (no .core/.orig/.rej/DS_Store/Thumbs elsewhere).'
+  status: completed
+  witness: 'RESOLVED: git rm --cached bash.exe.stackdump + rm. Was a staged-but-never-committed index artifact (not in HEAD), so removal left a clean tree needing no commit. Only tracked junk across all 5 repos.'
+- id: stackdump-validate
+  text: 'After git rm --cached + delete: confirm git ls-files no longer lists it, *.stackdump gitignore rule prevents re-add, worktree clean.'
+  status: completed
+  witness: 'Confirmed: absent from disk + index + HEAD, porcelain clean, *.stackdump gitignore rule prevents re-add.'
+- id: deviations-audit-iter79
+  text: Audit gm-log past 35min for deviation.* events.
+  status: completed
+  witness: deviations_35m=0. Fully clean (iter76 long-gap aged out; instruction-first after the >300s boot gap prevented a new one).
+- id: learning-health-iter79
+  text: Cores balanced + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 105/105, router count 10 quality_milli 784 (climbing 611->784 across fires), temporal validated. Healthy.
+- id: bad-memory-prune-iter79
+  text: Sweep + prune stale memory.
+  status: completed
+  witness: 'Swept: top candidates high-recency (0.97-0.99) legit work records. Zero true positives, correct no-deletion.'
+- id: drift-hunt-rs-repos-iter79
+  text: 'Extend drift hunt to rs-* repos: confirmed no src/bin daemon entrypoints, no tracked junk beyond the stackdump. dist/ dirs are tracked build outputs (flatspace site) - check if stale vs src is in-scope or by-design.'
+  status: completed
+  witness: 'Extended to rs-* repos: no src/bin daemon entrypoints (wasm cdylib only, consistent with WASM-only); only tracked junk was the stackdump (resolved). dist/ dirs are by-design tracked flatspace build outputs. No other drift.'
