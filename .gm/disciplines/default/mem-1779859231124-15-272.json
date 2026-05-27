@@ -1,0 +1,1 @@
+iter96 (2026-05-27, 0.1.603): clean steady-state. deviations 0, cores 124/124, router count 29 quality 923 (monotone 611->923 across ~45 fires). prune zero true positives. Full-stack clean, no new drift. Per Nothing Fake, validation-only. The iter50-96 run holds the 100%.
