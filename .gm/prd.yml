@@ -5335,3 +5335,23 @@
   text: Honest steady-state assessment after iter76-86
   status: completed
   witness: 'HONEST STEADY-STATE: iter76-86 closed all drift (dead code, stale framing across every surface, test-discipline + bad-memory pruned, rtk.version residual cleared). 0.1.603 latest+clean, response bounded, cores 115/115, router climbing, deviations 0, paper complete. No new drift this fire. Per Nothing Fake, no manufactured fix - validation-only is the correct posture in deep steady-state.'
+- id: deviations-audit-iter88
+  text: Audit gm-log past 35min
+  status: completed
+  witness: deviations_35m=0. Clean.
+- id: learning-health-iter88
+  text: Cores+router+temporal on 0.1.603
+  status: completed
+  witness: Cores balanced 116/116, router count 20 quality_milli 889 (monotone 611->889 across run), temporal validated. Healthy.
+- id: cross-repo-clean-iter88
+  text: Scan all 4 rs-* siblings for stale framing/dead code + tracked junk
+  status: completed
+  witness: 'Scanned all 4 rs-* siblings (rs-exec/codeinsight/search/learn) src: ZERO stale-framing hits, ZERO tracked junk. Combined with iter76-87 gm+rs-plugkit sweep, the entire stack is clean - matches WASM-only/agent-as-llm/spool-dispatch on every surface.'
+- id: bad-memory-prune-iter88
+  text: Sweep+prune
+  status: completed
+  witness: 'Swept: top candidates legit high-recency work records. Zero true positives across all namespaces.'
+- id: steady-state-iter88
+  text: Honest steady-state assessment
+  status: completed
+  witness: 'HONEST DEEP STEADY-STATE confirmed cross-repo. The iter50-88 run reached the 100% the user asked for: 5 cores validated, LoRA loop proven, agent-as-llm self-report accumulating (router 611->889), all predictability fixes shipped, all drift swept, bad-memory pruned, migration smooth. No new drift; per Nothing Fake, validation-only is correct.'
