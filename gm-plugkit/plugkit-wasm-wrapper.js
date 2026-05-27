@@ -213,9 +213,19 @@ function dispatchAutoRecall(instance, queryPrompt) {
   } catch (_) { return null; }
 }
 
-function tryAutoRecallForTurnEntry(instance, sess, cwd) {
+function promptFromInstructionBody(body) {
   try {
-    const prompt = readUserPromptForRecall(cwd);
+    const obj = JSON.parse(body);
+    if (obj && typeof obj.prompt === 'string' && obj.prompt.trim()) return obj.prompt.trim();
+  } catch (_) {}
+  return '';
+}
+
+function tryAutoRecallForTurnEntry(instance, sess, cwd, bodyPrompt) {
+  try {
+    const prompt = (typeof bodyPrompt === 'string' && bodyPrompt.trim())
+      ? bodyPrompt.trim()
+      : readUserPromptForRecall(cwd);
     let emptyPromptFallback = false;
     let effectivePrompt = prompt;
     if (!prompt || !String(prompt).trim()) {
@@ -271,6 +281,22 @@ function tryAutoRecallForTurnEntry(instance, sess, cwd) {
   }
 }
 
+function capHitText(hits, maxLen, maxCount) {
+  if (!Array.isArray(hits)) return hits;
+  return hits.slice(0, maxCount).map((h) => {
+    if (!h || typeof h !== 'object' || typeof h.text !== 'string' || h.text.length <= maxLen) return h;
+    return { ...h, text: h.text.slice(0, maxLen) + '…[+' + (h.text.length - maxLen) + 'ch]' };
+  });
+}
+
+function capInstructionPacks(parsed) {
+  const target = (parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+  if (Array.isArray(target.recall_hits)) target.recall_hits = capHitText(target.recall_hits, 360, 8);
+  if (target.auto_recall && Array.isArray(target.auto_recall.hits)) {
+    target.auto_recall.hits = capHitText(target.auto_recall.hits, 360, 8);
+  }
+}
+
 function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
   if (!autoRecall) return resultStr;
   let parsed;
@@ -281,6 +307,7 @@ function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
   } else {
     parsed.auto_recall = autoRecall;
   }
+  capInstructionPacks(parsed);
   if (typeof parsed.stdout === 'string' && parsed.stdout.length > 0) {
     try {
       const inner = JSON.parse(parsed.stdout);
@@ -2744,7 +2771,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       if (verb === 'instruction') {
         const sessForRecall = readCurrentSess();
         if (isInstructionTurnStart(sessForRecall)) {
-          autoRecallPayload = tryAutoRecallForTurnEntry(instance, sessForRecall, process.cwd());
+          autoRecallPayload = tryAutoRecallForTurnEntry(instance, sessForRecall, process.cwd(), promptFromInstructionBody(body));
           try {
             const _spoolDir = path.join(process.cwd(), '.gm', 'exec-spool');
             for (const _f of ['.turn-browser-edits.json', '.turn-browser-witnessed']) {
@@ -2771,6 +2798,14 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       if (autoRecallPayload) {
         resultStr = mergeAutoRecallIntoInstructionResponse(resultStr, autoRecallPayload);
+      } else if (verb === 'instruction' || verb === 'transition') {
+        try {
+          const parsed = JSON.parse(resultStr);
+          if (parsed && typeof parsed === 'object') {
+            capInstructionPacks(parsed);
+            resultStr = JSON.stringify(parsed);
+          }
+        } catch (_) {}
       }
 
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;

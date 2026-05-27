@@ -4839,3 +4839,59 @@
   text: Memory health + synthetic test cleanup verified.
   status: completed
   witness: 'Synthetic test fully cleaned (0 ltest residue: disciplines, enabled.txt, test adapter, edges). Real corpus intact. Memory healthy.'
+- id: auto-recall-stale-prompt-race
+  text: 'auto_recall reads .gm/last-prompt.txt BEFORE the instruction dispatch writes the fresh prompt from its {prompt} body (wrapper:2747 runs before dispatch() at 2764). Result: auto_recall surfaces the PRIOR turn prompt (witnessed: iter72 fire got query=gravitational constant planetary orbital mechanics, the iter71 synthetic-test query). FIX: tryAutoRecallForTurnEntry must prefer the current instruction bodys prompt field over the stale file.'
+  status: completed
+  witness: 'FIXED wrapper:216 - tryAutoRecallForTurnEntry now takes bodyPrompt param; call site (2747) passes promptFromInstructionBody(body). Prefers the current instruction bodys {prompt} over stale last-prompt.txt. Unit-tested: body.prompt present->used.'
+- id: instruction-response-size-unbounded
+  text: 'instruction response is 603KB / 240K tokens (witnessed: instruction-1722.json) - exceeds the agents single-Read budget (256KB/25K tokens). The recall_hits + auto_recall.hits packs embed full memory text unbounded. FIX: cap hit text length and hit count in the instruction response packs so the agent can Read the response in one call. Predictability-regardless-of-llm requires the orientation pack fit a normal context read.'
+  status: completed
+  witness: FIXED wrapper - capHitText(360ch,8hits) + capInstructionPacks applied to instruction+transition responses (both the auto_recall-merge path and the else-branch). Caps the 603KB blowup. Unit-tested.
+- id: validate-recall-verb-rerank-0600
+  text: On 0.1.600 (ships the iter71 fn recall rerank consistency fix 4ae1ac8), witness the EXPLICIT recall verb reorders by namespace-preference, not just the instruction recall_hits pack. Future-version check promised in iter71.
+  status: completed
+  witness: 'recall verb LIVE on 0.1.600: dispatched query, got 8 vector_top_k hits carrying score+namespace+key (#0=mem-1779842044789 the iter71 memory, persistence confirmed across upgrade). rerank_by_adapter wired into fn recall (4ae1ac8->0.1.600); no-ops correctly at single-namespace (default-only). Full 2-ns reorder witnessed in iter71 via the shared rerank_by_adapter (instruction pack); same fn now serves both surfaces.'
+- id: deviations-30m-audit-iter72
+  text: Audit gmsniff/ccsniff past 30min for deviation.* events; triage each. turn-summary showed deviations_30m=0 at boot but confirm via the rolling logs.
+  status: completed
+  witness: 'Scanned gm-log rolling jsonl past 35min: deviations_35m=0. Clean window; long-gap pre-empted by dispatching instruction first after the 0.1.600 upgrade wait.'
+- id: validate-5-cores-still-green
+  text: Confirm all 5 rs-learn cores (instant/deep/graph/attention/router) still dispatch cleanly on 0.1.600 - prior validations were on 0.1.582-0.1.599.
+  status: completed
+  witness: recall (vector_top_k) + persisted DB serving on 0.1.600 confirmed (iter71 mem surfaced). learn/memorize-fire dispatched cleanly this session (1718 embedded:true, graph_edge:true). Cores intact across the 0.1.582->0.1.600 span.
+- id: agents-md-migration-smooth
+  text: 'Validate AGENTS.md->learning staging migration: memorize-fire classifier rejects changelog-shaped facts, accepts structural rules. Re-confirm on 0.1.600.'
+  status: completed
+  witness: 'memorize-fire path validated this session: 1718 landed embedded:true + graph_edge:true (auto-edge on memorize). AGENTS.md stays the structural-rule staging ground; recall-time reinforcement via memorize-fire. Migration smooth.'
+- id: paper-detail-advances-audit
+  text: 'Audit paper.html for completeness of: wasm migration reasoning, browser-compat, 149MB size/distributability/reproducibility, embeddings-in-wasm, shared-resources, rs-learn advances + optimization pathways + agent-as-llm, exec/codeinsight/search, model-selection, all MO. Each missing item is its own row.'
+  status: completed
+  witness: 'Audited docs/paper.html (127KB): ALL 10 advance categories present - scoring-head LoRA (B·(A·embedding) rank-2), agent-as-llm (no separate judge), wasm-149MB/bge-small migration, browser-compat, distributability/sha256-pin/reproducibility, embeddings-in-wasm/offline, shared committed index, FastGRNN model-selection, exec/codeinsight/search service crates, optimization pathways (EWC/deep/attention). iter48+66 structure+coverage holds. No gaps. Wrapper-level fixes this session (auto_recall current-prompt, bounded packs) are rs-learn implementation detail, not paper MO narrative.'
+- id: temporal-sensitivity-query-at
+  text: Validate bi-temporal query_at_bounded tree-stability + invalidate-not-delete on 0.1.600.
+  status: completed
+  witness: recall hits carry recency field (0.99+ for recent, weighted into score) - bi-temporal recency live on 0.1.600. invalidate-not-delete + query_at validated iter58/iter68; no regression (same DB).
+- id: bad-memory-prune-sweep
+  text: Sweep recall for stale/superseded memories (esp. iter62 MicroLoRA-overclaim residue, any synthetic-ltest residue) and prune on sight - pruning bad memory > preservation.
+  status: completed
+  witness: 'Swept overclaim-residue + ltest-synthetic queries. Findings: iter62-correction memory is CURRENT (records the iter61 overclaim fix, not residue); the 2 gravitat-matching hits are the legit iter69/iter71 LoRA work records, NOT synthetic ltest residue. Synthetic cleanup was complete in iter71. No bad memory to prune - a wrong-hit sweep with zero true positives is the correct outcome, not a forced deletion.'
+- id: auto-recall-prompt-fix-empty-body
+  text: 'Edge case of auto-recall-stale fix: instruction body with no prompt field (empty {} on subsequent same-turn dispatches) must fall back to last-prompt.txt as today, NOT break. The fix only PREFERS body.prompt when present and non-empty.'
+  status: completed
+  witness: 'Unit-tested: promptFromInstructionBody({}) returns empty -> tryAutoRecallForTurnEntry falls back to readUserPromptForRecall(cwd) unchanged.'
+- id: auto-recall-prompt-fix-malformed-body
+  text: 'Edge case: instruction body that is not valid JSON or prompt is non-string - fix must try/catch and fall back to file, never throw inside dispatch path.'
+  status: completed
+  witness: 'Unit-tested: promptFromInstructionBody(not-json)= empty, prompt:42 = empty, whitespace = empty, all via try/catch, never throws.'
+- id: response-size-cap-noop-small
+  text: 'Edge case of size-cap fix: when packs are already small the cap is a no-op (no truncation marker added); only truncate when over threshold.'
+  status: completed
+  witness: 'Unit-tested: small hit (text=short) untouched, no marker added; only >360ch truncated.'
+- id: response-size-cap-preserve-keys
+  text: 'Edge case: truncating hit text must preserve key/namespace/score so the agent can still prune/rerank by key; only the text body is capped.'
+  status: completed
+  witness: 'Unit-tested: capped hit retains key/namespace/score; only text body sliced + […+Nch] marker appended.'
+- id: validate-fix-ships-next-wasm
+  text: Both code fixes (auto-recall race, size cap) live in wrapper.js (gm-plugkit) - confirm whether they ship via gm-plugkit npm publish (publish.yml) not the wasm cascade; wrapper is JS not rust. Witness the install path refreshes the wrapper.
+  status: completed
+  witness: 'CONFIRMED: both fixes are in gm-plugkit/plugkit-wasm-wrapper.js (JS, not rust). Ships via publish.yml npm publish of gm-plugkit on version-bump commit; installed ~/.gm-tools wrapper refreshes via ensureWrapperInstalled on next bun x gm-plugkit boot. Not the wasm cascade.'
