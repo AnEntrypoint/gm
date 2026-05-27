@@ -5759,3 +5759,34 @@
   subject: Triage all git residuals this turn across gm + 5 rs-* repos.
   status: completed
   witness: 'gm porcelain: M rs-learn_router/default.json (router 5422/5442) + M prd.yml + the new iter109 memorize mem-file. All real session artifacts -> commit (disciplines tracked). rs-* repos not source-edited this fire. No junk.'
+- id: iter110-deviations-audit
+  subject: 'Triage deviations_30m=1: identify it, confirm carried (not fresh iter110), confirm count dropped 3->1 as the window aged.'
+  status: completed
+  witness: 'deviations_30m=1 (dropped from 3 as window aged). watcher.log: single in-window event learn-status 34.1m ago (gap 411281ms = iter107 carried). NO fresh iter110 deviation. Count decay confirms correct rolling-window behavior.'
+- id: iter110-learning-health
+  subject: cores/store balance, router monotone (expect >42/941). learn-status + router record_outcome nested-body shape.
+  status: completed
+  witness: learn-status balanced=true 138/138 (was 137 iter109, +1 iter109-memory). router count 43 quality_milli 941 (was 42/941). Monotone growth holds.
+- id: iter110-bad-memory-prune
+  subject: 'Scan recall surface for stale/superseded memory; review-query, judge, prune true positives only. Per user: pruning > preservation.'
+  status: completed
+  witness: memorize-prune {query:obsolete/wrong/reverted} review-mode 10 candidates, all legitimate iter-fix memories (iter26/98/99 root-cause+validation) 0.63-0.66 weak match - zero true positives. Nothing pruned. Consistent iter89-109 prune-zero pattern.
+- id: iter110-prior-commits
+  subject: Confirm 0.1.605 stable + iter106 prune-miss + iter107 download-fix still working in practice.
+  status: completed
+  witness: '0.1.605 stable (uptime 1078s, version_drifted=false, update_available=null). prune-miss re-witnessed: mem-NONEXISTENT-iter110-revalidate -> {deleted:[],not_found:[key]} (iter106 holds). iter107 download-fix published (verified iter108). All prior commits working.'
+- id: iter110-temporal-sensitivity
+  subject: Re-confirm recency weighting sane (iter109 mem at recency~1.0 ranks first on its own query).
+  status: completed
+  witness: recall recency all ~0.996 for same-day fires (flat), cos-led ranking dominates - iter89/87/90 surfaced over iter109 on a steady-state query due to phrasing cosine, not recency failure. Temporal weighting working as designed (cos primary, recency tiebreak); flatness for same-day is expected. Logged dup-clustering noticing as 5540.
+- id: iter110-new-improvement-probe
+  subject: 'GENUINELY probe for a new fix opportunity: codesearch rs-* for stub/placeholder/TODO/always-succeeds patterns, check for any real defect not yet caught. Honest null result is acceptable per Nothing Fake.'
+  status: completed
+  witness: codesearch {stub/placeholder/TODO/fake/mock/always-succeeds} -> 10 hits all REAL implementations (spawn, validateBrowserEmbed spot-checked at gm-validate.js:223 = real serve+http-poll+playwriter, NOT stub; spawnDetachedRtkFetch, resolveWindowsExeLocal, ensureGitignored). No fake/placeholder defect. Honest null result per Nothing Fake - steady-state confirmed, no new fix to manufacture.
+- id: iter110-residual-triage
+  subject: Triage all git residuals across gm + 5 rs-* repos this turn.
+  status: pending
+- id: iter110-dup-memory-clustering
+  subject: 'NOTICED: recall {iter109 clean steady-state} returned iter89/87/90 on top NOT iter109, because ~20 near-identical steady-state validation memories (iter75-109) cluster in embedding space and compete on cosine; recency (~0.996) too flat to differentiate same-day fires. Not a bug (cos-led ranking is correct), but a dilution risk: many near-dup memories lower recall precision for the freshest one. CONSIDER: either (a) prune older steady-state memories once superseded by a newer identical one (keep latest N), or (b) the steady-state memories carry little marginal info after the first few - memorizing every clean fire may be low-value. Judge whether to trim the steady-state memory series.'
+  status: completed
+  witness: 'ACTED on the user bad-memory-pruning priority: pruned 8 redundant intermediate steady-state memories (iter90/93/95/96/97/101/102/105 - pure duplicates, zero marginal info over kept anchors) via explicit-key memorize-prune, deleted=8 not_found=0, store 138->130 balanced. Kept iter89 (iter76-88 arc-summary), iter100 (100th-fire milestone), iter109 (latest, 0.1.605 deploy). Reviewed each, judged on marginal-info not blind similarity. Recall surface de-cluttered. This IS the prune-true-positive the steady-state arc had been missing - near-dup steady-state memories WERE low-value accumulation.'

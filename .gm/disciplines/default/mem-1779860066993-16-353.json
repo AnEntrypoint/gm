@@ -1,1 +1,0 @@
-iter97 (2026-05-27, 0.1.603): clean steady-state. deviations 0, cores 125/125, router count 30 quality 925 (monotone 611->925 across ~46 fires). prune zero true positives. Phase returned COMPLETE on fresh prompt; recovered via the iter94-documented transition to=PLAN (now in SKILL.md). Full-stack clean, no new drift. Per Nothing Fake, validation-only.
