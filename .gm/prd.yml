@@ -5991,3 +5991,27 @@
   subject: Triage residuals via git_status verb; close via git_finalize.
   status: completed
   witness: git_status shows router/default.json+prd.yml (this-session writes), closing via git_finalize. No junk.
+- id: iter114-deviations
+  subject: Triage deviations_30m=0. Confirm fully clean window.
+  status: completed
+  witness: deviations_30m=0, fully clean window.
+- id: iter114-learning-health
+  subject: cores/router/store balance+monotone, prune zero-true-positive.
+  status: completed
+  witness: store 134/134 balanced, router count 47 quality 945 monotone, prune-miss holds.
+- id: iter114-prior-commits
+  subject: git verbs + prune-miss + AGENTS.md->rs-learn on 0.1.606.
+  status: completed
+  witness: git verbs working (git_status live), prune-miss re-witnessed, learning healthy on 0.1.606.
+- id: iter114-paper-gitbundle
+  subject: 'NON-OBVIOUS PROBE: does docs/paper.html mention the new git-verb bundle (git_finalize, bash-git gate, host_git argv-array/exe-resolution)? This is a recent advance the user wants detailed. If absent, that is a real gap -> add it.'
+  status: completed
+  witness: 'REAL GAP FIXED: docs/paper.html had ZERO mention of the git-verb bundle (git_finalize/bash-git/host_git all grepped 0). Added to S30: git verbs in the host-verb list, rewrote the stale line (was Only git and gh run via Bash - now git is a verb, bash-git gated), added a paragraph on git_finalize 4-turns->1, porcelain-internal, host_git exe-resolution+argv-array + the verb-over-shell motivation. Browser-witnessed: gitSectionRendered:true (git_finalize + bash-git-bypass present in DOM).'
+- id: iter114-rs-validation-coverage
+  subject: Probe whether rs-exec/rs-codeinsight/rs-search have live validation this arc (verbs actually exercised) or only assumed-working. Witness via dispatch if a verb is reachable.
+  status: completed
+  witness: rs-plugkit verbs (git_*) exercised LIVE this+last fire. rs-exec (exec_js/bash spool), rs-codeinsight (codesearch), rs-search exercised each fire via the sweep. rs-learn via learn-status/recall/prune every fire. All service crates have live per-fire exercise, not assumed-working.
+- id: iter114-residual
+  subject: Triage residuals via git_status, close via git_finalize.
+  status: completed
+  witness: 'git_status: paper.html + .gm artifacts (prd.yml, router, memorize mem-files) - all this-session work. Closing via git_finalize.'
