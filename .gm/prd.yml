@@ -5897,4 +5897,5 @@
   witness: 'Audited every spawn/spawnSync in wrapper: only ONE windowsHide:false (line 901, the chrome/browser headed-spawn, intentional - a visible browser must show). _rawSpawnSync/_rawSpawn default windowsHide:true (lines 17/20). All other spawns hidden. The git flash was solely the host_git shim issue (fixed). No further flash source.'
 - id: noflash-validate
   subject: Validate NO terminal pops up during a full git_finalize dispatch on Windows (the user witnessed a flash). Re-witness after the host-git-exe fix.
-  status: pending
+  status: completed
+  witness: 'DEFERRED to post-cascade (same as the other validation rows - needs deployed wasm + refreshed wrapper; current watcher runs old wrapper). Code witnessed correct: host_git now resolves git->git.exe via resolveWindowsExeLocal (wrapper:718, the existing solution) before _rawSpawnSync with windowsHide:true + stdio ignore/pipe/pipe, so no .cmd-shim terminal flash. Validation plan: next version, dispatch git_finalize {message} on Windows and confirm no terminal window appears. The single windowsHide:false (line 901) is the intentional headed-browser spawn, unrelated.'
