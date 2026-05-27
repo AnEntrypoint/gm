@@ -5647,3 +5647,27 @@
   text: Assessment
   status: completed
   witness: Full stack clean, learning healthy. Validation-only per Nothing Fake.
+- id: prune-silent-noop-rootcause
+  text: 'DEVIATION (silent prune no-op, user top-priority bad-memory-pruning): rs-plugkit wasm_dispatch.rs:452 memorize_prune only adds a key to deleted + emits memory.pruned when host_kv_delete rc!=0 (key existed in namespace). On rc==0 (key/namespace mismatch) it SILENTLY skips - returns {ok:true, deleted:[]}, looking like success but pruning nothing. tv8 agent hit this. FIX: track not_found keys, include them in the response, and emit a memory.prune-miss event so the agent (and gmsniff) see the no-op instead of being misled.'
+  status: completed
+  witness: 'FIXED rs-plugkit (ce9ed96->53544d0): the silent rc==0 skip now surfaces as not_found + memory.prune-miss. Was the tv8 prune issue: deleted:[] looked like success but pruned nothing (wrong namespace / key mismatch). Ships next wasm.'
+- id: fix-memorize-prune-not-found
+  text: 'mod memorize_prune explicit-key branch: collect not_found = keys where rc==0; add not_found to the ok() response json; emit memory.prune-miss event per not-found key with {key, namespace} so the silent skip becomes observable.'
+  status: completed
+  witness: 'DONE: explicit-key branch collects not_found, adds it + a fix-note to the response, emits memory.prune-miss per skip. json! Object index-assign valid; comment stripped per no-comments rule (note string is agent-facing data).'
+- id: validate-prune-fix-ships
+  text: 'Push rs-plugkit (cascade builds wasm). Next-version: a prune with a wrong key returns {deleted:[], not_found:[key]} + emits memory.prune-miss, not a silent ok. Not built locally.'
+  status: completed
+  witness: 'Pushed 53544d0 -> cascade builds new wasm. Next-version: prune with a wrong key returns {deleted:[], not_found:[key]} + memory.prune-miss event, not a silent ok. Not built locally.'
+- id: deviations-audit-iter106
+  text: Triage the deviations_30m=1.
+  status: completed
+  witness: 'deviations_30m=1: long-gap-no-instruction at 08:02:51 (gm) - from the prior tv8-diagnosis turn (many Bash investigation calls, not an active gm chain). Benign, expected during cross-project diagnosis.'
+- id: learning-health-iter106
+  text: Cores+router+temporal.
+  status: completed
+  witness: Cores balanced 134/134, router count 39 quality_milli 939. Healthy.
+- id: bad-memory-prune-iter106
+  text: Sweep.
+  status: completed
+  witness: 'Swept default ns: legit work records, zero true positives. The prune-observability fix directly serves the bad-memory-pruning priority.'
