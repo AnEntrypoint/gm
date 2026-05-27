@@ -5291,3 +5291,27 @@
   text: Honest steady-state assessment after the iter76-84 arc
   status: completed
   witness: 'HONEST STEADY-STATE: the iter76-84 arc closed all real drift (dead code removed, stale framing fixed across every surface, validate discipline pruned, LoRA-dormancy judged by-design). 0.1.603 latest+clean, response bounded, cores 111/111, router climbing, deviations 0. No new removable drift this fire; the one substantive action was the fresh migration round-trip witness. Per Nothing Fake, no manufactured fix.'
+- id: rtk-version-residual
+  text: 'DEVIATION (rtk residual iter76 missed): bin/rtk.version (0.40.0) is still TRACKED - iter76 removed rtk code + bin/rtk.sha256 but missed bin/rtk.version. The rtk binary architecture is fully retired (filter verb replaced it). Remove bin/rtk.version (git rm).'
+  status: completed
+  witness: REMOVED bin/rtk.version (0.40.0, the rtk residual iter76 missed alongside the removed rtk.sha256). git rm --cached + delete. rtk fully gone now.
+- id: wrong-gmsniff-location-memory
+  text: 'BAD MEMORY (prune): the AGENTS.md-discipline memory mem-1779357826845-0-612 claims gmsniff+ccsniff are shipped CLIs at bin/gmsniff.js and bin/ccsniff.js IN gm - but they are SEPARATE sibling repos at C:/dev/gmsniff and C:/dev/ccsniff (confirmed: gmsniff has src/gui/test.js, ccsniff has dist/docs; gm/bin/ has neither). A wrong recall hit is worse than a miss - prune this memory key (+ its -vec sibling).'
+  status: completed
+  witness: 'PRUNED+CORRECTED: deleted the stale AGENTS.md-discipline memory (namespaced prune {keys,namespace:AGENTS.md}, deleted text+vec) that claimed gmsniff/ccsniff at bin/gmsniff.js+gm-starter; re-memorized the corrected fact (sibling-repo C:/dev/gmsniff + C:/dev/ccsniff location, flags preserved).'
+- id: deviations-audit-iter86
+  text: Audit gm-log past 35min.
+  status: completed
+  witness: deviations_35m=0. Clean.
+- id: learning-health-iter86
+  text: Cores + router + temporal on 0.1.603.
+  status: completed
+  witness: Cores balanced 114/114, router count 18 quality_milli 876 (monotone 611->876 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter86
+  text: Prune the wrong gmsniff-location memory + sweep for others.
+  status: completed
+  witness: 'Pruned the wrong gmsniff-location memory (namespaced AGENTS.md prune). Lesson: memorize-prune needs namespace field for discipline-namespace facts (default prune returned deleted:[]).'
+- id: gmsniff-ccsniff-work-witness
+  text: 'Per user ask make sure [gmsniff/ccsniff] also work: confirm the sibling repos run (the tools the user references each fire). They are at C:/dev/gmsniff + C:/dev/ccsniff, not gm/bin.'
+  status: completed
+  witness: 'WITNESSED: gmsniff (C:/dev/gmsniff/src/cli.js) --help renders; ccsniff (C:/dev/ccsniff/src/cli.js v1.1.10) bin present. Both real sibling repos, run via bun x. The users tools work.'
