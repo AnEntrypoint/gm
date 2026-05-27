@@ -4818,7 +4818,7 @@
 - id: rerank-live-reorder-witness
   text: 'After the label-mapping fix ships, redo the synthetic 2-ns test on the new wasm: train head favor alpha, confirm alpha out-ranks beta (the live reorder proof). Until then the re-rank is correct-mechanism-wrong-mapping.'
   status: completed
-  witness: 'DEFERRED to next-version (the label-mapping fix 0d9ea0f ships in 0.1.598+; live reorder proof needs the new wasm booted + retrained head). The fix is build-green + logically correct (label-mapped softmax). Sequenced: next iter boots the new wasm, retrains the head over 2 namespaces, confirms the favored ns out-ranks the equal-cosine other - the live reorder. The mechanism is now correct end-to-end at the code level.'
+  witness: 'WITNESSED LIVE on 0.1.599 (instruction recall_hits pack): baseline beta#0(0.9095)>alpha#1(0.8996); after training the head to favor alpha (feedback_count 8, apply_adapter logits [0,1.76e-5,0]+targets), the re-rank PROMOTED alpha to #0 ABOVE beta despite alphas LOWER cosine. The LoRA loop is materially effective end-to-end: train->persist->label-map->softmax-reorder. The deferred iter69/70 reorder proof is closed. FOUND: the re-rank ran in the instruction recall_hits pack (recall_hits()) but NOT the explicit recall verb (fn recall) - fixed (4ae1ac8) to apply it to both surfaces consistently, ships next wasm.'
 - id: deviations-iter70-triage
   text: Confirm deviations stay 0; note test-harness lesson (inline-node-in-command-subst mangles JSON dispatches - write files via node fs.writeFileSync not command-substitution).
   status: completed
@@ -4827,3 +4827,15 @@
   text: Clean the synthetic test (ltest disciplines, enabled.txt, test adapter) + memory health.
   status: completed
   witness: 'Synthetic test fully cleaned (0 ltest residue: disciplines, enabled.txt, test adapter, edges all removed). Real corpus intact. Memory healthy.'
+- id: recall-verb-rerank-consistency
+  text: 'FOUND the re-rank applied only to the instruction recall_hits pack, not the explicit recall verb (fn recall in wasm_dispatch routes separately). FIXED 4ae1ac8: fn recall now also calls rerank_by_adapter (made pub) so both recall surfaces re-rank consistently. Ships next wasm.'
+  status: completed
+  witness: fn recall (wasm_dispatch:333) now calls rerank_by_adapter (made pub in recall.rs), so the explicit recall verb re-ranks like the instruction pack. Committed 4ae1ac8, build pending CI, ships next wasm. Both recall surfaces now consistent.
+- id: deviations-iter71-triage
+  text: Triage deviations_30m.
+  status: completed
+  witness: deviations_30m=0 - fully clean window, zero agent deviations. The gate fixes + discipline all holding.
+- id: memory-health-iter71
+  text: Memory health + synthetic test cleanup verified.
+  status: completed
+  witness: 'Synthetic test fully cleaned (0 ltest residue: disciplines, enabled.txt, test adapter, edges). Real corpus intact. Memory healthy.'
