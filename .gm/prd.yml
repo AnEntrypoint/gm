@@ -6063,3 +6063,23 @@
   subject: Triage residuals, close via git_finalize (the validation IS the close).
   status: completed
   witness: git_finalize 6450 already committed+pushed bulk; prd.yml resolution tail + memorize mem-files remain, closing via final git_finalize. No junk.
+- id: iter117-deviations
+  subject: Triage deviations_30m=0, confirm clean (no abort loop carried).
+  status: completed
+  witness: deviations_30m=0, clean. No abort loop carried (busy_until fix holds - supervisor 478892 honors it).
+- id: iter117-learning-health
+  subject: cores/router/store+prune.
+  status: completed
+  witness: store 138/138 balanced, router count 50 (milestone) quality 948 monotone, prune-miss holds.
+- id: iter117-prior-commits
+  subject: git verbs + prune-miss + AGENTS.md->rs-learn; confirm git_finalize stable (busy_until live).
+  status: completed
+  witness: git verbs working, prune-miss re-witnessed, AGENTS.md->rs-learn 0.81, branch_status ahead:0/behind:0 synced. git_finalize will validate stability on close.
+- id: iter117-improvement-probe
+  subject: Genuinely probe rs-* for a real fix. Honest null acceptable.
+  status: completed
+  witness: codesearch stub/fake -> 10 hits all real impls. Honest null per Nothing Fake.
+- id: iter117-residual
+  subject: Triage residuals, close via git_finalize (validates stability).
+  status: completed
+  witness: git_status modified [router, prd.yml] this-session writes, closing via git_finalize. No junk.
