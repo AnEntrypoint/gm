@@ -2757,6 +2757,16 @@ async function runSpoolWatcher(instance, spoolDir) {
       const relPath = path.relative(inDir, filePath);
       const dir = path.dirname(relPath);
       const verb = dir === '.' ? path.basename(filePath, path.extname(filePath)) : dir;
+      // Defense-in-depth beyond walkDir's dot-dir skip: a real verb is a single clean
+      // segment (e.g. instruction, prd-resolve). A derived verb containing a path
+      // separator or a dot-segment means the file lives under a stray nested spool
+      // (in/prd-resolve/.gm/exec-spool/…); dispatching it builds a bogus verb+outName
+      // and ENOENT-storms every tick. Skip + unmark so it never re-enters the loop.
+      if (/[\\/]/.test(verb) || verb.split(/[\\/]/).some(seg => seg.startsWith('.'))) {
+        try { logEvent('plugkit', 'spool.skip-nested-verb', { rel: relPath, derived_verb: verb }); } catch (_) {}
+        unmarkProcessed(key);
+        return;
+      }
       let body = content.trim() || '{}';
       const taskBase = path.basename(filePath, path.extname(filePath));
 

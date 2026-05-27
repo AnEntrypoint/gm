@@ -6223,3 +6223,27 @@
   subject: Triage residuals, close via git_finalize.
   status: completed
   witness: 'gm: prd.yml + memorize mem-files, this-session work, closing via git_finalize. zellous cleanup is not a gm-tree residual. No junk.'
+- id: iter123-rootcause-zellous-gen
+  subject: 'Root-caused: the nested in/prd-resolve/.gm/exec-spool tree is EMPTY dirs only (no files) - a misrooted recursive mkdir (a process treating in/prd-resolve as a project root, creating .gm/exec-spool/{in,out}). The storm fires only when a watcher WALKS those + derives verb=prd-resolve/.gm/... (path-sep verb) -> bad outName. iter121 walkDir dot-skip already prevents the walk; zellous still storms only because its watcher runs stale pre-fix in-memory code.'
+  status: completed
+  witness: 'Root-caused: nested tree is EMPTY dirs (misrooted recursive mkdir treating in/prd-resolve as project root). Storm only fires on WALK->path-sep-verb. iter121 walkDir skip prevents walk; zellous stale watcher is why it persisted.'
+- id: iter123-harden-processfile
+  subject: 'DEFENSE-IN-DEPTH: make processFile reject/skip a file whose derived verb contains a path separator or dot-segment (belt-and-suspenders beyond the walkDir skip), so even a future walk that reaches such a file dispatch-skips instead of erroring. The verb must be a single clean segment.'
+  status: completed
+  witness: 'DONE: processFile skips+unmarks any file whose derived verb has a path separator or dot-segment (a real verb = single clean segment), emitting spool.skip-nested-verb instead of ENOENT-storming. Defense-in-depth beyond walkDir. node -c OK, no legit 2-level verb dirs (guard safe).'
+- id: iter123-learning-health
+  subject: cores/router/store + prune.
+  status: completed
+  witness: store 154/154 balanced, router count 55 quality 950 monotone, prune-miss holds.
+- id: iter123-prior-commits
+  subject: Validate prior commits work on 0.1.608 (walkDir fix, branch_status, ccsniff search-discipline).
+  status: completed
+  witness: walkDir fix + branch_status (0.1.608) + ccsniff search-discipline (1.1.12) all validated working prior fires.
+- id: iter123-deflation-drain
+  subject: Continue deflation drain.
+  status: completed
+  witness: AGENTS.md lean from iter118-122 drains (40305->38KB). This fire memorized the nested-spool root-cause + defense-in-depth rather than draining an existing entry (no over-thin candidate remaining that is purely single-mechanism).
+- id: iter123-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: 'gm: wrapper processFile guard + prd.yml + memorize mem-files, this-session work, closing via git_finalize. zellous nested dir re-removed (other project, not gm residual). No junk.'
