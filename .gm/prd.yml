@@ -6291,3 +6291,23 @@
   subject: Triage residuals, close via git_finalize.
   status: completed
   witness: 'gm: prd.yml + router state, closing via git_finalize. No junk.'
+- id: iter126-deviations
+  subject: Triage deviations_30m=1, confirm carried/clean, zero gm storm events.
+  status: completed
+  witness: deviations_30m=1, zero gm nested-spool events - guards hold, storm fully recovered (8->3->2->1). No fresh drift.
+- id: iter126-learning-health
+  subject: cores/router/store + prune zero-true-positive.
+  status: completed
+  witness: store 155/155 balanced, router count 58 quality 950 monotone, prune-miss holds.
+- id: iter126-prior-commits
+  subject: Validate storm guards + branch_status (0.1.608) + ccsniff search-discipline working.
+  status: completed
+  witness: storm guards + branch_status (0.1.608) + ccsniff search-discipline all working in practice; zero gm storm events.
+- id: iter126-improvement-probe
+  subject: Probe rs-* for a real fix; honest null acceptable.
+  status: completed
+  witness: codesearch stub/fake -> 10 real-impl hits. Honest null per Nothing Fake.
+- id: iter126-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: 'gm: prd.yml + router state, closing via git_finalize. No junk.'
