@@ -5075,3 +5075,39 @@
   text: 'Systematic drift hunt: check each AGENTS.md retired/replaced claim for lingering code. rtk removed iter76; wasm_hooks correctly retained. Any OTHER claim (per-sibling npm wasm packages retired, 15-platform fanout) with live code = its own row.'
   status: completed
   witness: 'Systematic: per-sibling wasm packages = zero live refs; legacy .code-search/ = zero live refs in lib/bin/gm-plugkit; 15-platform fanout = refs only in .gm/ runtime state not code. rtk (iter76) was the only real dead-code drift. All other AGENTS.md retired claims are genuinely gone or intentionally retained (wasm_hooks).'
+- id: dead-daemon-learning-modules
+  text: 'DEVIATION (architectural drift, rtk-class): AGENTS.md §27 WASM-only says No native binaries built/downloaded/published, the stack is a wasm cdylib + spool verbs. But lib/ still ships 3 pre-wasm daemon-RPC modules: lib/learning.js (rs-learn via ensureRsLearningDaemonRunning + rs-learn daemon not available), lib/daemon-bootstrap.js (ensureRs{Learning,Codeinsight,Search}DaemonRunning spawn functions), lib/codeinsight.js (Codeinsight daemon at host:port). Live learning/codeinsight now route through the wasm recall/memorize/learn/codesearch spool verbs. CONFIRMED dead: exhaustive grep shows ZERO live importers - learning.js imported by nothing, daemon-bootstrap.js imported ONLY by dead learning.js, codeinsight.js imported by nothing. checkPortReachable is independently reimplemented in the live lib/skill-bootstrap.js. These are shipped to npm via files:[lib/]. Remove all 3.'
+  status: completed
+  witness: REMOVED 3 pre-wasm daemon modules. Confirmed dead via exhaustive grep (zero live importers; live path uses wasm spool verbs). Contradicted WASM-only §27, shipped to npm via files:[lib/].
+- id: remove-lib-learning
+  text: Delete lib/learning.js (dead pre-wasm daemon rs-learn module, zero importers).
+  status: completed
+  witness: 'DONE: deleted lib/learning.js (zero importers).'
+- id: remove-lib-daemon-bootstrap
+  text: Delete lib/daemon-bootstrap.js (dead daemon-spawn module, imported only by dead learning.js).
+  status: completed
+  witness: 'DONE: deleted lib/daemon-bootstrap.js (imported only by dead learning.js).'
+- id: remove-lib-codeinsight
+  text: Delete lib/codeinsight.js (dead pre-wasm codeinsight-daemon module, zero importers).
+  status: completed
+  witness: 'DONE: deleted lib/codeinsight.js (zero importers).'
+- id: dead-modules-validate
+  text: 'After deletion: grep confirms zero dangling requires; node -e require of remaining lib/ live modules (spool, skill-bootstrap, spool-dispatch, browser, git, wasm-host, browser-spool-handler) still load.'
+  status: completed
+  witness: 'DONE: zero dangling requires post-delete; all 7 remaining live lib/ modules require-load OK (spool, skill-bootstrap, spool-dispatch, browser, git, wasm-host, browser-spool-handler).'
+- id: dead-modules-edge-lang-scripts
+  text: 'Edge: verify no lang/ handler or scripts/ entry imports the 3 removed modules (already grepped clean, re-confirm post-delete).'
+  status: completed
+  witness: 'DONE: exhaustive grep across lang/ scripts/ bin/ gm-plugkit/ + whole repo confirmed no importer of the 3 modules before AND after delete.'
+- id: deviations-audit-iter78
+  text: Audit gm-log past 35min for deviation.* events.
+  status: completed
+  witness: 'deviations_35m=1: only the aging iter76 long-gap at 01:56:52. No new deviations (mid-EXECUTE instruction interleave at 2320 prevented a repeat).'
+- id: learning-health-iter78
+  text: Cores balanced + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 104/104, router count 9 quality_milli 767 (climbing 746->767), temporal validated. Healthy.
+- id: bad-memory-prune-iter78
+  text: Sweep + prune stale memory.
+  status: completed
+  witness: 'Swept: top candidates high-recency legit work records. Zero true positives, correct no-deletion.'
