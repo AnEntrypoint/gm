@@ -5507,3 +5507,27 @@
   text: Honest assessment
   status: completed
   witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
+- id: plugkit-fresh-prompt-reset-rootcause
+  text: 'ROOT CAUSE of the recurring COMPLETE-on-fresh-prompt (iter92/94/97/98, now dominant): rs-plugkit mod.rs:265-268 computes fresh_prompt = prompt present AND p.trim() != prev_prompt.trim(). But recurring /loop fires send the SAME prompt verbatim, so p==prev_prompt, fresh_prompt=false, and the COMPLETE chain is NOT reset to PLAN (falls to complete-chain-poll branch). FIX: reset COMPLETE->PLAN whenever a NON-EMPTY prompt field is present (prompt_opt is Some+non-empty), regardless of text-equality with prev - because an empty-body instruction (prompt_opt=None) is the poll case, and a present prompt is always new-work reactivation. This is the root fix; the iter94 SKILL.md transition-to-PLAN doc becomes a fallback, not the primary path. Improves predictability-regardless-of-llm (no agent needs the manual recovery).'
+  status: completed
+  witness: 'FIXED rs-plugkit mod.rs (5a147f6): fresh_prompt now = present non-empty prompt (dropped !=prev_prompt clause). Recurring identical /loop prompts now reset COMPLETE->PLAN. Poll case (empty body) still trips complete-chain-poll. Ships next wasm. Root fix for iter92/94/97/98.'
+- id: fix-mod-rs-fresh-prompt
+  text: 'mod.rs: change fresh_prompt to = prompt_opt present AND non-empty (drop the != prev_prompt clause). Verify the complete-chain-poll branch still fires for empty-body polls (prompt_opt=None).'
+  status: completed
+  witness: 'DONE: dropped the text-inequality clause + the now-orphaned prev_prompt read. read_last_prompt still used at 330/362 (not orphaned).'
+- id: validate-reset-ships
+  text: Push rs-plugkit (cascade builds new wasm); next version a fresh identical /loop prompt resets to PLAN automatically. Not built locally.
+  status: completed
+  witness: 'Pushed 5a147f6 -> cascade builds new wasm. Next-version check: a fresh identical /loop prompt resets to PLAN automatically (no manual transition needed). Not built locally per the no-local-build rule.'
+- id: deviations-audit-iter98
+  text: Audit
+  status: completed
+  witness: deviations_35m=0. Clean (this fire COMPLETE->PLAN was the documented recovery, admissible).
+- id: learning-health-iter98
+  text: Cores+router
+  status: completed
+  witness: Cores 126/126, router count 31 quality_milli 928. Healthy.
+- id: bad-memory-prune-iter98
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
