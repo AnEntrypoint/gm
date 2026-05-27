@@ -5943,3 +5943,31 @@
   subject: Triage all residuals across gm + rs-* this turn.
   status: completed
   witness: 'All residuals are this-session work: .gm/prd.yml (resolves) + git-verb-validation memorize mem-files + router state. Committing+pushing via git_finalize itself (dogfood). No junk, rs-* not source-edited this fire.'
+- id: iter112-deviations
+  subject: 'Triage deviations_30m=1: identify, confirm carried/no fresh iter112 deviation.'
+  status: completed
+  witness: deviations_30m=1 (down from 3 iter111 as my bash-git-bypass test probe + deploy long-gaps aged out). No fresh iter112 deviation.
+- id: iter112-learning-health
+  subject: cores/router/store balance + monotone (expect >44/942), prune effectiveness via review-query.
+  status: completed
+  witness: store 133/133 balanced (132+iter111 mem). router count 45 quality_milli 943 (was 44/942 monotone). prune review 10 candidates all legit iter-fix memories 0.65-0.67, zero true positives.
+- id: iter112-prior-commits
+  subject: 'Validate prior commits work: git verbs (0.1.606) still functioning via git_status verb; prune-miss; AGENTS.md->rs-learn recall.'
+  status: completed
+  witness: 'git verbs (0.1.606) still working: git_status verb live correct, prune-miss re-witnessed (mem-NONEXISTENT-iter112 -> {deleted:[],not_found:[key]}), AGENTS.md->rs-learn recall top 0.81. All prior commits working in practice.'
+- id: iter112-temporal
+  subject: Re-confirm temporal recency weighting sane.
+  status: completed
+  witness: recall recency cos-led, recency ~0.995 same-day flat (iter89/103/91 by cosine not recency-dominated). Working as designed.
+- id: iter112-improvement-probe
+  subject: Genuinely probe rs-* for a new fix opportunity (codesearch stub/TODO/fake). Honest null acceptable per Nothing Fake.
+  status: completed
+  witness: codesearch stub/fake/TODO -> 10 hits all real impls (emitBootstrapEvent/validateBrowserEmbed/ensureGitignored/spawnDetachedRtkFetch). No fake. Honest null per Nothing Fake.
+- id: iter112-dogfood-git
+  subject: Dogfood git verbs for all git ops this fire (git_status inspect, git_finalize commit+push). No raw Bash git.
+  status: completed
+  witness: git_status verb dogfooded LIVE -> {dirty:true,modified:[router,prd.yml]}. Will close via git_finalize. No raw Bash git this fire.
+- id: iter112-residual
+  subject: Triage all residuals via git_status verb this turn.
+  status: completed
+  witness: git_status verb shows modified [router/default.json, prd.yml] - this-session writes, committing via git_finalize. No junk, rs-* not source-edited.
