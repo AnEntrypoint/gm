@@ -5315,3 +5315,23 @@
   text: 'Per user ask make sure [gmsniff/ccsniff] also work: confirm the sibling repos run (the tools the user references each fire). They are at C:/dev/gmsniff + C:/dev/ccsniff, not gm/bin.'
   status: completed
   witness: 'WITNESSED: gmsniff (C:/dev/gmsniff/src/cli.js) --help renders; ccsniff (C:/dev/ccsniff/src/cli.js v1.1.10) bin present. Both real sibling repos, run via bun x. The users tools work.'
+- id: deviations-audit-iter87
+  text: Audit gm-log past 35min
+  status: completed
+  witness: deviations_35m=0. Clean (instruction-first after >300s boot gap prevented long-gap).
+- id: learning-health-iter87
+  text: Cores+router+temporal on 0.1.603
+  status: completed
+  witness: Cores balanced 115/115, router count 19 quality_milli 883 (monotone 611->883 across run), temporal validated. Healthy.
+- id: paper-service-crate-coverage-iter87
+  text: Verify paper covers exec/codeinsight/search + model selection (user-named gaps)
+  status: completed
+  witness: 'CONFIRMED paper.html covers all 6 user-named categories: rs-exec (runner/sessions/idle-cleanup), rs-codeinsight (symbol index), rs-search (embed/sweep), model-selection FastGRNN (haiku/sonnet/opus), exec_js timeout/spawnSync, sync-before-emit/digest-match. No service-crate or model-selection gap.'
+- id: bad-memory-prune-iter87
+  text: Sweep+prune
+  status: completed
+  witness: 'Swept: top candidates high-recency legit work records. Zero true positives (iter84 validate-discipline + iter86 gmsniff-location memory already pruned).'
+- id: steady-state-iter87
+  text: Honest steady-state assessment after iter76-86
+  status: completed
+  witness: 'HONEST STEADY-STATE: iter76-86 closed all drift (dead code, stale framing across every surface, test-discipline + bad-memory pruned, rtk.version residual cleared). 0.1.603 latest+clean, response bounded, cores 115/115, router climbing, deviations 0, paper complete. No new drift this fire. Per Nothing Fake, no manufactured fix - validation-only is the correct posture in deep steady-state.'
