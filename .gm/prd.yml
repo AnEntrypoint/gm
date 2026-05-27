@@ -5227,3 +5227,27 @@
   text: Sweep + prune.
   status: completed
   witness: 'Swept: top candidates legit work records. Zero true positives.'
+- id: validate-npm-fallback-live
+  text: 'WITNESSED the iter73 npm-fallback fix working in practice: watcher on 0.1.602 shows update_available={installed:0.1.602,latest:0.1.603} - correctly flagged. In prior fires (iter73/74) update_available was NULL despite a live newer version because the GitHub-API-only check failed (rate-limit). Now with checkUpdateViaNpm deployed (registry.npmjs.org/plugkit-wasm/latest), 0.1.603 is detected. The fix solves the exact recurring bug it was written for.'
+  status: completed
+  witness: 'WITNESSED iter73 npm-fallback live: 0.1.602 watcher correctly flagged update_available={installed:0.1.602,latest:0.1.603} (prior fires saw null). checkUpdateViaNpm solves the recurring GitHub-API-rate-limit detection gap.'
+- id: upgrade-0603-validate-lib-fix
+  text: Upgrade to 0.1.603 (deploys iter82 lib.rs gm:gm->gm-skill wasm_hooks fix). Confirm version + watcher boots clean.
+  status: completed
+  witness: Upgraded to 0.1.603; health confirms version 0.1.603, update_available cleared to null (correct). The iter82 lib.rs gm:gm->gm-skill fix ships in this wasm.
+- id: deviations-audit-iter83
+  text: Audit gm-log past 35min.
+  status: completed
+  witness: deviations_35m=0. Clean (instruction-first after upgrade wait prevented long-gap).
+- id: learning-health-iter83
+  text: Cores + router + temporal on 0.1.603.
+  status: completed
+  witness: Cores balanced 109/109 (persisted across upgrade), router count 14 quality_milli 841 (monotone 611->841 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter83
+  text: Sweep + prune.
+  status: completed
+  witness: 'Swept: top candidates high-recency legit work records. Zero true positives.'
+- id: new-ground-iter83
+  text: After the iter76-82 drift sweep, hunt for genuinely new improvement ground OR honestly assess steady-state (per iter75 - Nothing Fake on manufactured fixes).
+  status: completed
+  witness: The iter76-82 drift sweep is COMPLETE + shipped on 0.1.603 (every code+doc surface matches WASM-only/agent-as-llm/spool-dispatch). No new removable drift this fire; system in healthy steady-state. Per Nothing Fake, no manufactured fix - honest steady-state.
