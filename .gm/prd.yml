@@ -6019,3 +6019,27 @@
   subject: 'NOTICED: git_finalize 6160 returned {committed:false,pushed:true,sha:""} but the commit DID land (git_log shows 6934fd8f at HEAD, tree clean). Cause: watcher pid 469120 DIED inside verb=git_finalize (VERB ABORT detected in watcher.log), respawned, re-ran finalize; the retry found nothing-to-commit (already committed by the dead attempt) so reported committed:false. The response shape is misleading on watcher-abort-mid-finalize: it under-reports the commit + has empty sha despite success. Real end-state was correct (committed+pushed) but the verb response lied. POSSIBLE FIX: git_finalize on nothing-to-commit should check if HEAD is ahead of @{u} or read last commit sha to report the actual committed sha rather than committed:false/sha:empty. Lower-priority resilience edge - the work landed - but the response contract should not under-report.'
   status: completed
   witness: 'FIXED in rs-plugkit 77542ee (pushed, cascading): git_finalize not-dirty branch now checks rev-list @{u}..HEAD and if ahead reports real HEAD sha+summary with already_committed:true, instead of committed:false/sha:empty. Falls back to nothing_to_commit when no upstream/nothing ahead. Validated the diagnosis live: git_finalize aborted+retried TWICE this fire (watcher dies mid-verb on the ~30s network push), both times committed:false/pushed:true but git_log confirms the commit landed (paper 6934fd8f, rs-plugkit 77542ee). Fix ships next wasm version - cannot self-validate on the old 0.1.606 still running.'
+- id: iter115-validate-77542ee
+  subject: 'Validate rs-plugkit 77542ee (abort-shape fix) cascaded: release.yml success 11:12, check published plugkit version + whether deployed.'
+  status: completed
+  witness: rs-plugkit 77542ee release.yml SUCCESS 11:12 -> plugkit-wasm@0.1.607 published (abort-shape fix). Watcher on 0.1.606, update_available was null (detection lag); 0.1.607 carries the real-HEAD-sha fix. Will deploy.
+- id: iter115-busy-until-fix
+  subject: 'Implement busy_until heartbeat-extension for git_finalize/git_push: set busy_until before the ~30s network push so the watcher supervisor does not reap the long synchronous verb as hung (VERB ABORT seen twice iter114). Copy the browser-verb busy_until pattern.'
+  status: completed
+  witness: 'FIXED both halves: (1) supervisor.js checkWatcherHealth now returns early if status.busy_until>now (honors it like the boot probe). (2) wrapper processFile stamps _writeStatusBusy(90000) before dispatching git_finalize/git_push/git_fetch. node --check both OK. Ships via gm publish.yml (wrapper+supervisor are gm-plugkit JS).'
+- id: iter115-busy-until-mechanism
+  subject: Find HOW the browser verb sets busy_until + WHERE the supervisor reaps hung verbs (the abort detection). Witness file:line.
+  status: completed
+  witness: 'WITNESSED: supervisor.js:185 checkWatcherHealth reaps watcher on age>STATUS_STALE_MS (30000, line 20) via SIGTERM+taskkill (199-209), IGNORING busy_until - root cause of the VERB ABORT. wrapper writeStatus (2899-2918) already supports busy_until via _writeStatusBusy(ms) (2921), only the browser runner called it (782). git_finalize push ~30s == STATUS_STALE_MS exactly = intermittent reap.'
+- id: iter115-deviations
+  subject: Triage deviations_30m=1.
+  status: completed
+  witness: deviations_30m=1 carried (likely the iter114 git_finalize VERB ABORT, which this fire ROOT-FIXED via busy_until). No fresh unexpected deviation.
+- id: iter115-learning-health
+  subject: cores/router/store + prune.
+  status: completed
+  witness: store 136/136 balanced, router count 48 quality 946 monotone (was 47/945). Healthy.
+- id: iter115-residual
+  subject: Triage residuals, close via git_finalize.
+  status: completed
+  witness: supervisor.js + wrapper busy_until fix, prd.yml, mem-files - this-session work, closing via git_finalize.

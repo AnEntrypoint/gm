@@ -2771,6 +2771,14 @@ async function runSpoolWatcher(instance, spoolDir) {
       console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
       logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
 
+      // Network-bound git verbs block the event loop for the duration of a push/fetch (~30s),
+      // so the 5s heartbeat cannot fire and the supervisor would reap the watcher as hung
+      // (the VERB ABORT). Stamp a busy_until window before the synchronous dispatch so the
+      // supervisor's heartbeat-stale check honors it, exactly as the browser runner does.
+      if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
+        try { _writeStatusBusy(90000); } catch (_) {}
+      }
+
       if (verb === 'memorize-fire' || verb === 'transition' || verb === 'prd-resolve' || verb === 'mutable-resolve') {
         try { autoRecordBrowserEditsFromBody(body, process.cwd(), taskBase, verb); } catch (_) {}
       }

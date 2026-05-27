@@ -195,7 +195,15 @@ function checkWatcherHealth() {
     });
     return;
   }
-  const age = Date.now() - (status.ts || 0);
+  const now = Date.now();
+  // A long synchronous verb (git_finalize's ~30s network push, a chromium spawn)
+  // blocks the heartbeat write. The verb advertises busy_until in .status.json; while
+  // that is in the future the watcher is busy, not hung — reaping it kills the verb
+  // mid-flight (the VERB ABORT). Honor busy_until exactly as the agent boot probe does.
+  if (status.busy_until && status.busy_until > now) {
+    return;
+  }
+  const age = now - (status.ts || 0);
   if (age > STATUS_STALE_MS) {
     logEvent('supervisor.heartbeat-stale', {
       watcher_pid: currentChildPid,
