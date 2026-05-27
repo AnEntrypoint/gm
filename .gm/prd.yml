@@ -5371,3 +5371,19 @@
   text: Honest steady-state after iter76-88 full-stack-clean
   status: completed
   witness: 'HONEST STEADY-STATE: entire stack clean (iter88 cross-repo verified), learning healthy, no new drift. Validation-only per Nothing Fake. System at 100%.'
+- id: deviations-audit-iter90
+  text: Audit gm-log past 35min
+  status: completed
+  witness: deviations_35m=0.
+- id: learning-health-iter90
+  text: Cores+router+temporal on 0.1.603
+  status: completed
+  witness: Cores 118/118, router count 22 quality_milli 900 (crossed 900; monotone 611->900). Healthy.
+- id: bad-memory-prune-iter90
+  text: Sweep+prune
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter90
+  text: Honest steady-state assessment
+  status: completed
+  witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
