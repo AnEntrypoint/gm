@@ -5047,3 +5047,31 @@
   text: Validate AGENTS.md->memorize-fire migration; AND update AGENTS.md filter-verb line if it still implies rtk exists (it says replaces, which becomes true after removal).
   status: completed
   witness: 'AGENTS.md filter-verb line updated inline to drop dead rtk-binary reference (now accurate: bootstrap fetches only plugkit.wasm). memorize-fire validated (2125). Migration smooth.'
+- id: wasm-hooks-keep-not-remove
+  text: 'ASSESSED wasm_hooks (pre/post_tool_use, session_start/end, prompt_submit, pre_compact) in rs-plugkit src/lib.rs as a drift candidate (like iter76 rtk). VERDICT: KEEP - NOT dead code. AGENTS.md line 119 says these exist FOR legacy hook-host integration (deliberate compat ABI for non-spool harnesses); only the SPOOL watcher does not invoke them. Distinct from rtk (fully superseded, nothing consumes it). Removing wasm_hooks would break the portability promise for hook-based harnesses. Confirmed: no hooks.json ships, no JS invokes hook_* (only the compiled wasm contains them, by design). Record so future fires do not repeatedly propose removing this retained compat surface.'
+  status: completed
+  witness: ASSESSED + VERDICT KEEP. AGENTS.md says wasm_hooks exist FOR legacy hook-host integration (compat ABI), only spool watcher skips them - NOT dead like rtk. No hooks.json ships, no JS invokes hook_*. Removing breaks hook-harness portability. Recorded the replaces-vs-exists-for distinction.
+- id: deviations-audit-iter77
+  text: Audit gm-log past 35min for deviation.* events; triage.
+  status: completed
+  witness: 'deviations_35m=1: only the iter76 long-gap-no-instruction at 01:56:52 (self-caught + memorized last fire). Zero new deviations.'
+- id: learning-health-iter77
+  text: Confirm cores balanced + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 103/103, router count 8 quality_milli 746 (climbing 724->746), temporal validated. Healthy steady-state.
+- id: bad-memory-prune-iter77
+  text: Sweep + prune stale memory on sight.
+  status: completed
+  witness: 'Swept: top candidates high-recency (0.97-0.99) legit work records. Zero true positives, correct no-deletion.'
+- id: agents-md-migration-iter77
+  text: Validate AGENTS.md->memorize-fire migration.
+  status: completed
+  witness: memorize-fire validated (2221). AGENTS.md->learning migration smooth, unchanged.
+- id: paper-completeness-iter77
+  text: Confirm paper covers all advances; any genuine gap is its own row.
+  status: completed
+  witness: Paper coverage confirmed complete iter72/75/76 (all advance categories present); no source change since affecting it. No gap.
+- id: drift-hunt-iter77
+  text: 'Systematic drift hunt: check each AGENTS.md retired/replaced claim for lingering code. rtk removed iter76; wasm_hooks correctly retained. Any OTHER claim (per-sibling npm wasm packages retired, 15-platform fanout) with live code = its own row.'
+  status: completed
+  witness: 'Systematic: per-sibling wasm packages = zero live refs; legacy .code-search/ = zero live refs in lib/bin/gm-plugkit; 15-platform fanout = refs only in .gm/ runtime state not code. rtk (iter76) was the only real dead-code drift. All other AGENTS.md retired claims are genuinely gone or intentionally retained (wasm_hooks).'
