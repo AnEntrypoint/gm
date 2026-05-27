@@ -5785,7 +5785,8 @@
   witness: codesearch {stub/placeholder/TODO/fake/mock/always-succeeds} -> 10 hits all REAL implementations (spawn, validateBrowserEmbed spot-checked at gm-validate.js:223 = real serve+http-poll+playwriter, NOT stub; spawnDetachedRtkFetch, resolveWindowsExeLocal, ensureGitignored). No fake/placeholder defect. Honest null result per Nothing Fake - steady-state confirmed, no new fix to manufacture.
 - id: iter110-residual-triage
   subject: Triage all git residuals across gm + 5 rs-* repos this turn.
-  status: pending
+  status: completed
+  witness: 'gm porcelain after prune+memorize: D default/+default-vec/ (8 pruned memories, intentional), M graph_edges (edge-invalidation from prune), M router/default.json (self-report 5522/5550), M prd.yml. All real session work -> committed. rs-* repos not source-edited. No junk.'
 - id: iter110-dup-memory-clustering
   subject: 'NOTICED: recall {iter109 clean steady-state} returned iter89/87/90 on top NOT iter109, because ~20 near-identical steady-state validation memories (iter75-109) cluster in embedding space and compete on cosine; recency (~0.996) too flat to differentiate same-day fires. Not a bug (cos-led ranking is correct), but a dilution risk: many near-dup memories lower recall precision for the freshest one. CONSIDER: either (a) prune older steady-state memories once superseded by a newer identical one (keep latest N), or (b) the steady-state memories carry little marginal info after the first few - memorizing every clean fire may be low-value. Judge whether to trim the steady-state memory series.'
   status: completed
