@@ -329,14 +329,6 @@ async function extractNpmPackageWithRetry(destPath, version) {
 }
 
 
-function platformKey() {
-  const p = os.platform();
-  const a = os.arch();
-  if (p === 'win32') return a === 'arm64' ? 'win32-arm64' : 'win32-x64';
-  if (p === 'darwin') return a === 'arm64' ? 'darwin-arm64' : 'darwin-x64';
-  return (a === 'arm64' || a === 'aarch64') ? 'linux-arm64' : 'linux-x64';
-}
-
 function healIfShaMatches(binPath, expectedSha, sentinelPath, partialPath, kind) {
   if (!fs.existsSync(binPath)) return false;
   if (partialPath) { try { if (fs.existsSync(partialPath)) fs.unlinkSync(partialPath); } catch (_) {} }
@@ -428,10 +420,8 @@ function pruneOldVersions(root, keepVersion) {
   try {
     const entries = fs.readdirSync(root);
     for (const e of entries) {
-      const isPlugkit = e.startsWith('v') && !e.startsWith('rtk-');
-      const isRtk = e.startsWith('rtk-v');
-      if (!isPlugkit && !isRtk) continue;
-      if (isPlugkit && e === `v${keepVersion}`) continue;
+      if (!e.startsWith('v')) continue;
+      if (e === `v${keepVersion}`) continue;
       const dir = path.join(root, e);
       const lock = path.join(dir, '.lock');
       if (fs.existsSync(lock) && !isLockStale(lock)) continue;

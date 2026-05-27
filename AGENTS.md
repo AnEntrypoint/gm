@@ -40,7 +40,7 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 **git verbs**: `git_status` returns `{dirty, modified, untracked, deleted, staged}` from `git status --porcelain`. `branch_status` returns `{branch, ahead, behind, remote}`, the `remote-pushed` witness. `git_push` is the ONLY admissible push surface, it gates on `git_porcelain()` non-empty (refuses dirty), emits `deviation.push-dirty` on attempt, and shells the push only when clean. A raw `git push` via Bash bypasses the gate and is itself a deviation; ccsniff `--git-discipline` flags it.
 
-**filter verb**: pure stdout → compact-stdout transformation. Body `{kind, input, ...opts}` where kind is one of `grep`, `ls`, `tree`, `json`, `diff`, `git-status`, `log`. Returns `{output, stats:{bytes_in, bytes_out, saved_pct, ...}}`. Pipe raw command output through filter before letting it enter context, rtk's role, in-wasm, no subprocess. Replaces the legacy detached rtk binary download in bootstrap.
+**filter verb**: pure stdout → compact-stdout transformation. Body `{kind, input, ...opts}` where kind is one of `grep`, `ls`, `tree`, `json`, `diff`, `git-status`, `log`. Returns `{output, stats:{bytes_in, bytes_out, saved_pct, ...}}`. Pipe raw command output through filter before letting it enter context, in-wasm, no subprocess. The bootstrap fetches only `plugkit.wasm`, there is no separate filter/rtk binary download.
 
 ## Documentation Policy
 

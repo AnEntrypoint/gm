@@ -5003,3 +5003,47 @@
   text: Assess whether this fire surfaces a REAL deviation/improvement or the system is in healthy steady state after the iter72-74 predictability arc closed. If steady, state it honestly rather than manufacture work (Nothing Fake applies to PRD rows too - a fabricated fix to a non-problem is itself a deviation).
   status: completed
   witness: 'HONEST ASSESSMENT: this fire found NO real deviation. The iter72-74 predictability arc closed the actual bugs (auto_recall stale-prompt race, bounded packs, prd_items-open 612KB->12KB, update-npm-fallback, verify.rs scoring-head). 0.1.602 is latest+deployed; response bounded (12KB); cores balanced; deviations only the one lingering triaged item. The only investigation findings were MY OWN misreads (health is a nested-verb path health-<N>.json not <N>.json; codesearch data is a top-level array not data.hits) - not system faults, not worth a churning fix. Per Nothing Fake, a fabricated fix to a non-problem is itself a deviation; the correct action is to state steady-state honestly and close. Recorded so future fires do not re-investigate these closed/benign surfaces.'
+- id: rtk-dead-code-removal
+  text: 'DEVIATION (architectural drift): AGENTS.md says the in-wasm filter verb REPLACES the legacy detached rtk binary download in bootstrap, but bin/bootstrap.js still has ~58 rtk references (rtkBinaryName, readRtkVersion, bootstrapRtk, rtkCacheDir, spawnDetachedRtkFetch x3 callsites, --rtk-only CLI handler, resolveCachedRtk export, pruneOldVersions rtk arm) + bin/rtk.sha256 + gm-plugkit/bootstrap.js rtk arm. The rtk binary is FETCHED+version-managed but NEVER executed/consumed (confirmed: only spawnDetachedRtkFetch downloads it; nothing spawns the binary). The filter verb (in-wasm) works (witnessed filter-2104 grep). Remove all rtk dead code: detached fetch wastes bootstrap time downloading a retired binary every boot.'
+  status: completed
+  witness: REMOVED. Confirmed dead (rtk fetched never executed; filter verb does its job in-wasm, witnessed). Stripped ~58 refs from bin/bootstrap.js + gm-plugkit/bootstrap.js, deleted bin/rtk.sha256, removed orphaned platformKey, updated AGENTS.md. node -c both OK, zero rtk refs remain.
+- id: rtk-remove-bin-bootstrap
+  text: 'Remove from bin/bootstrap.js: rtkBinaryName, readRtkVersion, rtkCacheDir, bootstrapRtk, spawnDetachedRtkFetch + its 3 call sites (505,522,578), the --rtk-only CLI handler (808), resolveCachedRtk from module.exports, and the rtk arm of pruneOldVersions (keepRtkVersion param + isRtk branch).'
+  status: completed
+  witness: 'DONE: removed rtkBinaryName, readRtkVersion, rtkCacheDir, bootstrapRtk, spawnDetachedRtkFetch + 3 call sites, --rtk-only CLI handler, resolveCachedRtk export, pruneOldVersions rtk arm (now plugkit-only).'
+- id: rtk-remove-sha-manifest
+  text: Remove bin/rtk.sha256 (the rtk binary sha manifest, no longer fetched).
+  status: completed
+  witness: 'DONE: deleted bin/rtk.sha256.'
+- id: rtk-remove-gm-plugkit-bootstrap
+  text: Remove the rtk arm from gm-plugkit/bootstrap.js pruneOldVersions (lines 431-433 isRtk branch).
+  status: completed
+  witness: 'DONE: removed isRtk branch from gm-plugkit/bootstrap.js pruneOldVersions + orphaned platformKey.'
+- id: rtk-removal-validate
+  text: 'After removal: node -c both bootstrap files (syntax), confirm no dangling rtk references remain (grep), confirm bootstrap still resolves wasm without rtk.'
+  status: completed
+  witness: 'DONE: node -c bin/bootstrap.js + gm-plugkit/bootstrap.js both OK; grep zero rtk/platformKey refs; getWasmPath resolves cleanly (null on no-cache, no crash); healIfShaMatches still used 3x each for wasm.'
+- id: rtk-removal-edge-callers
+  text: 'Edge case: any OTHER file importing resolveCachedRtk/rtkBinaryName/bootstrapRtk from bin/bootstrap.js must be checked - removing an export breaks importers.'
+  status: completed
+  witness: 'DONE: grep found NO importers of resolveCachedRtk/rtkBinaryName/bootstrapRtk outside bin/bootstrap.js; platformKey was orphaned (only rtkBinaryName called it) and removed. No external breakage.'
+- id: deviations-audit-iter76
+  text: Audit gm-log past 35min for deviation.* events; triage.
+  status: completed
+  witness: deviations_35m=0. Clean window.
+- id: learning-health-iter76
+  text: Confirm cores balanced + router + temporal on 0.1.602.
+  status: completed
+  witness: Cores balanced 102/102, router count 7 quality_milli 724 (climbing 699->724), temporal validated iter74/75. Healthy.
+- id: bad-memory-prune-iter76
+  text: Sweep + prune stale memory on sight.
+  status: completed
+  witness: 'Swept: 5 top candidates all legit high-recency (0.97-0.99) work records. Zero true positives, correct no-deletion.'
+- id: memory-loop-retention-validated
+  text: 'CONFIRMED the memory loop retains+recalls across fires: the iter75 steady-state memory (mem-1779846201759) recalled at score 0.710 this fire - a memory written last fire surfaces this fire. The learning system retention works end-to-end.'
+  status: completed
+  witness: 'CONFIRMED: iter75 steady-state memory recalled at 0.710 this fire - memory written last fire surfaces this fire. Retention works end-to-end.'
+- id: agents-md-migration-iter76
+  text: Validate AGENTS.md->memorize-fire migration; AND update AGENTS.md filter-verb line if it still implies rtk exists (it says replaces, which becomes true after removal).
+  status: completed
+  witness: 'AGENTS.md filter-verb line updated inline to drop dead rtk-binary reference (now accurate: bootstrap fetches only plugkit.wasm). memorize-fire validated (2125). Migration smooth.'
