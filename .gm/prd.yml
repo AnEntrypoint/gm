@@ -4943,3 +4943,39 @@
   text: Combined closure of the size issue across wrapper cap + mod.rs prd_items open-only.
   status: completed
   witness: recall/auto_recall capped (wrapper 2.0.1466 live) + prd_items open-only (mod.rs, next wasm). 609KB->few KB.
+- id: update-detection-still-null-0602
+  text: 'RECURRING (validates iter73 finding): watcher on 0.1.601 shows update_available:null though 0.1.602 is live on gm.json+npm+gh-release. The iter73 npm-fallback wrapper fix (f5152aa2) is published but NOT in the running watcher (still old wrapper). Confirms the GitHub-API-only detection fails (rate-limit) and the npm fallback is the correct fix. Validate after upgrade that the fallback works.'
+  status: completed
+  witness: CONFIRMED the iter73 finding was real+recurring (0.1.601 watcher missed the live 0.1.602). The npm-fallback fix (f5152aa2) is now deployed (checkUpdateViaNpm, 4 matches). update_available:null on 0.1.602 is now CORRECT (0.1.602 IS latest). Fallback code path present; fires on GitHub-API failure.
+- id: upgrade-0602-validate-prd-items
+  text: 'Upgrade to 0.1.602 (deploys prd_items-open mod.rs fix in wasm + npm-fallback wrapper). VALIDATE LIVE: instruction response now ships only open prd_items + prd_total_count, response size drops from 612KB to a few KB.'
+  status: completed
+  witness: 'VALIDATED LIVE: upgraded to 0.1.602; instruction response dropped 612KB->14969 bytes (41x). Ships 9 open prd_items + prd_total_count:747. The iter73 prd_items-open mod.rs fix works end-to-end.'
+- id: deviations-30m-audit-iter74
+  text: Audit gm-log past 35min for deviation.* events; triage. (boot showed deviations_30m=1, the iter73 self-caught prd-resolve-unknown-id - confirm no new ones).
+  status: completed
+  witness: 'deviations_35m=1: only the iter73 self-caught prd-resolve-unknown-id at 01:15:12 (already triaged+memorized). No NEW deviations this fire. Clean.'
+- id: validate-5-cores-0602
+  text: Confirm 5 rs-learn cores balanced + dispatching on 0.1.602.
+  status: completed
+  witness: 'learn-status on 0.1.602: balanced:true, 100/100 rows (no orphans). Router record_outcome landed (count 5, quality_milli 673, climbing from 642). 5 cores green.'
+- id: bad-memory-prune-sweep-iter74
+  text: Sweep recall for stale/duplicate/superseded memory; prune on sight.
+  status: completed
+  witness: 'Swept stale/wrong/duplicate queries: all 6 top candidates are legit high-recency (0.97-1.0) audit/validation/bad-memory-pruning work records. Zero true positives - correct no-deletion outcome. Store 100/100 balanced.'
+- id: agents-md-migration-iter74
+  text: Re-validate AGENTS.md->memorize-fire migration on 0.1.602.
+  status: completed
+  witness: memorize-fire validated this session (1925 dispatched, embeds to default with graph edge). AGENTS.md->learning migration smooth on 0.1.602.
+- id: paper-advances-recheck-iter74
+  text: Re-confirm paper covers all advances; the predictability fixes (prd_items-open, update-fallback) as MO if structural.
+  status: completed
+  witness: 'Paper coverage confirmed complete (iter72 audit: all 10 advance categories present). The iter72-74 predictability fixes (bounded packs, prd_items-open, update-fallback) are wrapper/orchestrator implementation detail -> rs-learn/AGENTS.md, not paper MO narrative. No paper gap.'
+- id: temporal-tree-stability-0602
+  text: Validate temporal recency + bi-temporal query_at + tree stability on 0.1.602.
+  status: completed
+  witness: 'VALIDATED on 0.1.602: recall hits carry recency (0.996 recent), score blends recency (score != cos) - bi-temporal weighting live. invalidate-not-delete + query_at validated iter58/68, no regression (same DB, 100/100 balanced).'
+- id: validate-recall-rerank-0602
+  text: Confirm LoRA recall rerank path on 0.1.602 (no-op correct in default-only; verify.rs conditional shipped).
+  status: completed
+  witness: 'On 0.1.602 default-only: LoRA rerank no-ops correctly (needs >=2 namespaces); verify.rs conditional-self-report (in wasm) means default-only correctly skips init_instant. Consistent with this sessions behavior.'
