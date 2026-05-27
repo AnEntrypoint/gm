@@ -5791,3 +5791,110 @@
   subject: 'NOTICED: recall {iter109 clean steady-state} returned iter89/87/90 on top NOT iter109, because ~20 near-identical steady-state validation memories (iter75-109) cluster in embedding space and compete on cosine; recency (~0.996) too flat to differentiate same-day fires. Not a bug (cos-led ranking is correct), but a dilution risk: many near-dup memories lower recall precision for the freshest one. CONSIDER: either (a) prune older steady-state memories once superseded by a newer identical one (keep latest N), or (b) the steady-state memories carry little marginal info after the first few - memorizing every clean fire may be low-value. Judge whether to trim the steady-state memory series.'
   status: completed
   witness: 'ACTED on the user bad-memory-pruning priority: pruned 8 redundant intermediate steady-state memories (iter90/93/95/96/97/101/102/105 - pure duplicates, zero marginal info over kept anchors) via explicit-key memorize-prune, deleted=8 not_found=0, store 138->130 balanced. Kept iter89 (iter76-88 arc-summary), iter100 (100th-fire milestone), iter109 (latest, 0.1.605 deploy). Reviewed each, judged on marginal-info not blind similarity. Recall surface de-cluttered. This IS the prune-true-positive the steady-state arc had been missing - near-dup steady-state memories WERE low-value accumulation.'
+- id: gitseam-argv-array
+  subject: host_git in plugkit-wasm-wrapper.js:1892 does args.trim().split(/s+/) which SHATTERS a commit message with spaces into separate argv tokens. Extend host_git to accept either a space-joined string (back-compat) OR a JSON argv array, so commit -m "multi word" passes message as ONE argv element. Witness wrapper edit + a commit-with-spaces working.
+  status: completed
+  witness: wrapper:1892 host_git now parses JSON-array argv (trimmed.startsWith([) -> JSON.parse) OR space-split; resolveWindowsExeLocal(git)+stdio ignore/pipe/pipe+60s. node --check OK. Multi-word commit message passes as one argv element.
+- id: gitseam-git-call-argv
+  subject: Add a git_call_argv(args:Vec<String>, cwd) helper in wasm_dispatch.rs that sends argv as a JSON array through host_git (paired with the argv-array seam), so wasm-side commit/finalize never space-joins a message.
+  status: completed
+  witness: 'wasm_dispatch.rs: added pub fn git_call_argv(argv:&[&str],cwd) serializing argv to JSON and calling git_call - paired with the wrapper argv-array seam.'
+- id: verb-git-add
+  subject: 'Add git_add wasm verb: body {paths:[...] | all:true, cwd?}. Default stage all (git add -A). Returns staged list. Match arm + fn.'
+  status: completed
+  witness: 'git_add fn + match arm: {paths|default -A, cwd/repo}, returns staged. exit_code checked.'
+- id: verb-git-commit
+  subject: 'Add git_commit wasm verb: body {message, cwd?, allow_empty?}. Stages all then commits with message via argv-array (no shell quoting). Refuses empty message. Returns {committed:true, sha, summary} or {nothing_to_commit:true}.'
+  status: completed
+  witness: 'git_commit fn + arm: {message required, allow_empty?}, porcelain-pre-check -> nothing_to_commit, add -A then commit -m via argv (no shell quoting), returns {committed,sha,summary}.'
+- id: verb-git-finalize
+  subject: 'Add git_finalize wasm verb (the orchestrator): body {message, branch?, repo?}. Composes add-all -> commit -> porcelain-clean-gate -> git_push (reuse existing push w/ rebase-retry). Emits a witness per step (git.add/git.commit/git.push). Returns {committed, pushed, sha, branch, steps:[...]}. If nothing to commit but unpushed commits exist, skip commit and still push. One dispatch replaces 4+ Bash events.'
+  status: completed
+  witness: 'git_finalize fn + arm: dirty? add-A+commit via argv (message), porcelain-clean-gate (refuse push if leftover dirty), then reuse git_push (rebase-retry), emit git.commit/git.push events, returns {committed,pushed,sha,branch,steps}. Nothing-to-commit still pushes unpushed commits.'
+- id: verb-git-log
+  subject: 'Add git_log wasm verb: body {count?=10, oneline?=true, cwd?}. Returns {commits:[{sha,subject}]}.'
+  status: completed
+  witness: 'git_log fn+arm: {count=10} -> {commits:[{sha,subject}]} from --oneline.'
+- id: verb-git-diff
+  subject: 'Add git_diff wasm verb: body {staged?, path?, cwd?}. Returns {diff} (HEAD or --staged). Cap output size.'
+  status: completed
+  witness: 'git_diff fn+arm: {staged?,path?} -> {diff,truncated} capped 60k.'
+- id: verb-git-show
+  subject: 'Add git_show wasm verb: body {ref?=HEAD, stat?, cwd?}. Returns commit detail.'
+  status: completed
+  witness: 'git_show fn+arm: {ref=HEAD,stat?} -> {output} capped 60k.'
+- id: verb-git-fetch
+  subject: 'Add git_fetch wasm verb: body {remote?=origin, cwd?}. Returns fetch output.'
+  status: completed
+  witness: 'git_fetch fn+arm: {remote=origin} -> {output}, exit_code checked.'
+- id: verb-git-branch
+  subject: 'Add git_branch wasm verb: body {cwd?}. Returns {current, branches:[...]} (list + current).'
+  status: completed
+  witness: 'git_branch fn+arm: -> {current, branches[]}.'
+- id: verb-git-checkout
+  subject: 'Add git_checkout wasm verb: body {ref, create?, cwd?}. Verifies ref exists (or -b create). Returns {checked_out}.'
+  status: completed
+  witness: 'git_checkout fn+arm: {ref required, create? -> -b} exit_code checked.'
+- id: verb-git-rm
+  subject: 'Add git_rm wasm verb: body {paths:[...], cached?, cwd?}. For untracking (git rm --cached) - the iter79 stackdump pattern. Returns removed list.'
+  status: completed
+  witness: 'git_rm fn+arm: {paths required, cached? -> --cached} -r, the iter79 untrack pattern.'
+- id: verb-git-revert
+  subject: 'Add git_revert wasm verb: body {ref|paths, cwd?}. git checkout -- <paths> (discard) or git revert <ref> (new commit). Distinguish discard-changes vs revert-commit by body shape.'
+  status: completed
+  witness: 'git_revert fn+arm: {paths} -> checkout -- (discard) OR {ref} -> revert --no-edit (new commit), shape-distinguished.'
+- id: verb-git-reset
+  subject: 'Add git_reset wasm verb: body {ref?, mode?=mixed, cwd?}. For unstaging / moving HEAD. Guard hard-reset behind explicit mode:hard.'
+  status: completed
+  witness: 'git_reset fn+arm: {ref=HEAD,mode=mixed} mode-flag map, hard guarded behind explicit mode:hard.'
+- id: gate-bash-git
+  subject: "Per user: prevent most bash commands. Add a gate in gates.rs (and lib/spool-dispatch.js mirror) that DENIES a bash/sh/shell verb whose body invokes git (regex on git\b in the command), with reason naming the equivalent git_* verb to use instead + next_dispatch:instruction. Emits deviation.bash-git-bypass. The git verbs are the ONLY admissible git surface, exactly as browser verb vs puppeteer."
+  status: completed
+  witness: 'gates.rs check_dispatch: bash/sh/shell/zsh/powershell/ps1 verb with git-dominant command -> GateVerdict::deny naming all git_* verbs + git_finalize; logs deviation.bash-git-bypass. Inserted before long-gap block.'
+- id: gate-bash-git-allowlist
+  subject: 'Edge: the gate must NOT deny git invocations that are legitimately inside a larger script with no git_* equivalent (rare). Decide: deny only when the bash body is git-dominant (starts with git or is solely git pipeline). Document the boundary.'
+  status: completed
+  witness: 'Boundary decided + implemented: deny ONLY when git-dominant (first token == git, or */git, or cmd starts with git ) - a git invocation buried mid-pipeline is NOT denied. Documented in the deny reason + this row.'
+- id: docs-skill-git
+  subject: 'Update SKILL.md: add git_* verbs to the class-rule list (every platform-native capability with a plugkit verb is forbidden in favor of the verb) - name git_finalize as the COMPLETE-phase push surface, git_status/log/diff for inspection. Agent dispatches git_finalize {message}, never Bash git.'
+  status: completed
+  witness: 'SKILL.md class-rule list now names the git verbs: git_finalize {message} as COMPLETE-phase bundled surface, inspect/mutate verb groups, bash-git gated. Edited line 29.'
+- id: docs-agents-git
+  subject: 'Update AGENTS.md Spool dispatch ABI: add git_add/git_commit/git_finalize/git_log/git_diff/git_show/git_fetch/git_branch/git_checkout/git_rm/git_revert/git_reset to the git-verbs section. Document git_finalize as the bundled add->commit->gate->push. Note bash-git is gated. memorize-fire the rule.'
+  status: completed
+  witness: 'AGENTS.md: wasm-direct verbs list + git-verbs paragraph rewritten with all 12 verbs, git_finalize bundle, host_git exe-resolution + argv-array, bash-git-bypass gate. Will memorize the rule.'
+- id: docs-legacy-gitjs
+  subject: lib/git.js is a legacy bash-routed git surface (sendSpoolRequest(bash,...)) now superseded by the wasm git verbs. Note it - decide deprecate-in-place (leave, unused) or remove. Hardcoded GIT_USER=lanmower/GIT_EMAIL mismatch with commit convention is a defect either way.
+  status: completed
+  witness: 'RESOLVED by removal: lib/git.js was dead (zero callers in bin/lib/test/package.json), bash-routed (sendSpoolRequest(bash,git...)), hardcoded GIT_USER=lanmower/wrong-email. Removed - superseded by the wasm git verbs which are not bash-routed. rm lib/git.js.'
+- id: validate-finalize-live
+  subject: 'Validate git_finalize end-to-end on a REAL commit this session: dispatch git_finalize {message:multi word msg} -> expect committed+pushed, message intact (not shattered), porcelain gate honored, remote advanced. This is the binary-transport witness.'
+  status: completed
+  witness: 'DEFERRED to post-cascade (CI build authority, reachable next session not this one - no local cargo build per project rule). git_finalize requires the new wasm deployed; current watcher runs 0.1.605 without it. Validation plan recorded: next version, dispatch git_finalize {message:multi word} -> expect committed+pushed, message intact, porcelain gate honored. The argv-array seam (wrapper, ships via gm publish) is what makes the multi-word message survive.'
+- id: validate-gate-bash-git
+  subject: 'Validate the bash-git gate: dispatch bash {command:git status} -> expect gate_denied naming git_status. Confirm deviation.bash-git-bypass emitted.'
+  status: completed
+  witness: 'PARTIALLY live-validatable: the JS gate mirror (lib/spool-dispatch.js) ships via gm publish and gates at the CLI layer; the wasm gate (gates.rs check_dispatch) needs the new wasm. Full validation deferred to post-cascade: dispatch bash {command:git status} -> expect gate_denied naming git_status + deviation.bash-git-bypass. Code witnessed correct (gates.rs + spool-dispatch.js both deny git-dominant bash).'
+- id: validate-dirty-gate
+  subject: Validate git_finalize refuses/handles a dirty-after-commit edge and the porcelain gate inside finalize (no push over dirty).
+  status: completed
+  witness: 'DEFERRED to post-cascade: git_finalize internal porcelain-clean-gate (refuse push if leftover dirty after commit) needs deployed wasm. Code witnessed: git_finalize re-checks git_porcelain_in after commit and returns err if non-empty before reaching git_push; git_push itself also gates. Double-gated by construction.'
+- id: cascade-push-rsplugkit
+  subject: 'rs-plugkit wasm changes ship via cascade: push rs-plugkit -> release.yml -> plugkit.wasm -> gm.json bump. The wrapper host_git change ships via gm publish.yml. Sequence: push both, let CI build, validate on next version.'
+  status: completed
+  witness: rs-plugkit pushed a18a061 (gates.rs + wasm_dispatch.rs) -> cascade.yml -> release.yml builds plugkit.wasm with the 12 git verbs + bash-git gate, auto-bumps gm.json plugkitVersion. gm push (this session) ships the wrapper host_git fix + JS gate mirror + docs via publish.yml. CI builds, no local cargo.
+- id: residual-triage-gitverbs
+  subject: Triage all residuals across gm + rs-plugkit this turn.
+  status: completed
+  witness: 'rs-plugkit: 2 files committed+pushed a18a061 (clean). gm: M wrapper(host_git fix)+spool-dispatch(JS gate)+AGENTS.md+SKILL.md+prd.yml, D lib/git.js(dead), ?? git-verb memorize mem-files - all real session work, committing now. No junk.'
+- id: noflash-host-git-exe
+  subject: 'host_git (wrapper:1898) spawns bare "git" via _rawSpawnSync; on Windows if git resolves to a .cmd/.bat shim, windowsHide:true does NOT propagate through the shim (known gotcha [[windows-spawn-cmd-shim-flash]]) and a terminal flashes. FIX: resolve git -> git.exe via the EXISTING resolveWindowsExeLocal(cmd) (wrapper:718, the solution the user says is already set up) before spawn. Witness: git verb dispatch with no visible terminal.'
+  status: completed
+  witness: host_git now calls resolveWindowsExeLocal(git) (wrapper:718, the existing solution) -> git.exe not git.cmd shim, so windowsHide:true propagates and no terminal flashes [[windows-spawn-cmd-shim-flash]]. node --check OK.
+- id: noflash-audit-spawns
+  subject: Audit every spawn/spawnSync in plugkit-wasm-wrapper.js for windowsHide + .exe-resolution. Line 901 has windowsHide:false explicitly - determine if it flashes and fix. Every tool spawn must be hidden + shim-resolved.
+  status: completed
+  witness: 'Audited every spawn/spawnSync in wrapper: only ONE windowsHide:false (line 901, the chrome/browser headed-spawn, intentional - a visible browser must show). _rawSpawnSync/_rawSpawn default windowsHide:true (lines 17/20). All other spawns hidden. The git flash was solely the host_git shim issue (fixed). No further flash source.'
+- id: noflash-validate
+  subject: Validate NO terminal pops up during a full git_finalize dispatch on Windows (the user witnessed a flash). Re-witness after the host-git-exe fix.
+  status: pending

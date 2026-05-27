@@ -1894,8 +1894,16 @@ function makeHostFunctions(instanceRef) {
         const args = readWasmStr(instanceRef.value, argsPtr, argsLen);
         const cwdStr = readWasmStr(instanceRef.value, cwdPtr, cwdLen);
         const cwd = cwdStr || process.cwd();
-        const argv = args.trim().split(/\s+/);
-        const result = _rawSpawnSync('git', argv, { encoding: 'utf-8', timeout: 30000, cwd, windowsHide: true });
+        let argv;
+        const trimmed = args.trim();
+        if (trimmed.startsWith('[')) {
+          try { argv = JSON.parse(trimmed); } catch { argv = trimmed.split(/\s+/); }
+          if (!Array.isArray(argv)) argv = String(argv).split(/\s+/);
+        } else {
+          argv = trimmed.split(/\s+/);
+        }
+        const gitBin = resolveWindowsExeLocal('git');
+        const result = _rawSpawnSync(gitBin, argv, { encoding: 'utf-8', timeout: 60000, cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
         return writeWasmJson(instanceRef.value, {
           stdout: result.stdout || '',
           stderr: result.stderr || '',
