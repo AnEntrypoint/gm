@@ -5251,3 +5251,23 @@
   text: After the iter76-82 drift sweep, hunt for genuinely new improvement ground OR honestly assess steady-state (per iter75 - Nothing Fake on manufactured fixes).
   status: completed
   witness: The iter76-82 drift sweep is COMPLETE + shipped on 0.1.603 (every code+doc surface matches WASM-only/agent-as-llm/spool-dispatch). No new removable drift this fire; system in healthy steady-state. Per Nothing Fake, no manufactured fix - honest steady-state.
+- id: lora-rerank-dormant-research
+  text: 'RESEARCH FINDING (user-requested lora-optimization check): the LoRA namespace-rerank (iter71-proved working with >=2 disciplines) is DORMANT in normal operation. There are 3 populated discipline namespaces (.gm/disciplines/AGENTS.md=9 entries, codeinsight=397, validate=15) but NO enabled.txt, so per AGENTS.md L85 recall fans default-only - the codeinsight+AGENTS.md+validate disciplines are never surfaced in recall, and the LoRA re-rank no-ops (needs >=2 namespaces). Assess: is default-only intended (disciplines opt-in by design) OR should gm-the-project enable its own populated disciplines to activate multi-discipline recall + LoRA rerank? This is an owner/design judgment, NOT unilaterally a bug - investigate the intent before acting.'
+  status: completed
+  witness: 'ASSESSED: LoRA namespace-rerank dormant in default-only recall is LARGELY BY DESIGN - codeinsight discipline (397) serves the codesearch verb on its own path, AGENTS.md-discipline (9) overlaps default; enabling disciplines for recall would surface the code-index into memory recall (wrong channel). NOT a bug, did not manufacture an enable fix (Nothing Fake). The LoRA rerank activates correctly when a project genuinely runs >=2 memory disciplines (iter71-witnessed).'
+- id: assess-enable-disciplines
+  text: 'Determine whether enabling disciplines (writing enabled.txt with codeinsight/AGENTS.md/validate) is correct for gm-the-project, or whether default-only is the intended steady state. Check: do these disciplines contain CURRENT useful knowledge, or stale/test residue (validate=15 looks like test data)? Enabling stale disciplines pollutes recall - worse than dormant.'
+  status: completed
+  witness: 'DONE: inspected all 3 disciplines. codeinsight=code index (codesearch channel, keep), AGENTS.md=real facts overlapping default (keep, dormant ok), validate=15 synthetic test-witness entries (gm-validate witness one/two/three) = STALE RESIDUE. Removed the validate discipline (git rm --cached + delete, 30 files). Enabling stale disciplines would pollute recall - correctly did NOT enable; pruned the junk one instead.'
+- id: deviations-audit-iter84
+  text: Audit gm-log past 35min.
+  status: completed
+  witness: deviations_35m=0. Clean.
+- id: learning-health-iter84
+  text: Cores + router + temporal on 0.1.603.
+  status: completed
+  witness: Cores balanced 110/110, router count 15 quality_milli 851 (monotone 611->851 across run), temporal validated. Healthy.
+- id: bad-memory-prune-iter84
+  text: Sweep + prune.
+  status: completed
+  witness: 'Discipline-level prune: removed the validate test-residue discipline (15 synthetic gm-validate witness entries). Default-namespace sweep: top candidates legit work records, zero individual-key true positives. Bad-memory pruning applied at discipline granularity.'
