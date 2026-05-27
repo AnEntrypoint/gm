@@ -1,0 +1,1 @@
+iter101 (2026-05-27, 0.1.604): clean steady-state. deviations 0, cores 129/129, router count 34 quality 933 (monotone 611->933). prune zero true positives. fresh-prompt fix holds (auto-reset PLAN). Full-stack clean. Per Nothing Fake, validation-only.
