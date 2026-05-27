@@ -5727,3 +5727,35 @@
   subject: 'NOTICED: learn verb rejects {record_outcome:true,...} (missing verb field) AND {verb:record_outcome,target,quality} (target required despite present). The router record_outcome body shape is non-obvious/ergonomically brittle. Investigate the exact accepted shape via codesearch in rs-learn/rs-plugkit and document it (or confirm prior fires used a different working shape).'
   status: completed
   witness: 'RESOLVED as operator-error not system-bug: correct shape is learn {verb:record_outcome, body:{target,quality}} (verify.rs:58, wasm_dispatch.rs:676). Dispatched correctly 5350 -> ok:true count 41 quality_milli 941. Memorized the nested-body trap (5351).'
+- id: iter109-deviations-audit
+  subject: 'Triage deviations_30m=3: identify each, confirm all carried (iter107/108 long-gap + cross-project) with no NEW deviation class from a fresh session this window.'
+  status: completed
+  witness: deviations_30m=3, watcher.log shows all long-gap-no-instruction, latest at 26.5m (iter107 learn-status gap 411281ms) + 62.5m recall + cross-project - all CARRIED from prior fires/sessions, NONE from a fresh iter109 session. No new deviation class. The shared watcher spans multiple projects (needle-tools/proland) contributing to the count.
+- id: iter109-validate-prior-commits
+  subject: Validate iter107 download-fix + iter108 prune-miss still working in practice on 0.1.605 (re-witness prune-miss, confirm version stable).
+  status: completed
+  witness: '0.1.605 stable (watcher_uptime 588s, version_drifted=false, update_available=null). prune-miss re-witnessed: mem-NONEXISTENT-iter109-revalidate -> {deleted:[],not_found:[key]} (iter106 fix holds). iter107 download-fix published in gm-plugkit 2.0.1476 (verified iter108). All prior commits working in practice.'
+- id: iter109-learning-health
+  subject: cores balance, router count/quality monotone (expect >41/941), store row balance, pruning effectiveness. learn-status + router record_outcome (nested-body shape per iter108 memory).
+  status: completed
+  witness: learn-status balanced=true 137/137 (was 136 iter108, +1 learn-shape memory). router record_outcome count 42 quality_milli 941 (was 41/941). mode=wasm. Monotone growth holds.
+- id: iter109-bad-memory-prune
+  subject: 'Per user priority (pruning > preservation): scan recall surface for stale/superseded memories, prune any true positive. Review-mode query first, judge, then explicit-key delete.'
+  status: completed
+  witness: memorize-prune {query:wrong/stale/obsolete} review-mode returned 10 candidates, ALL legitimate iter-fix-validation memories (iter98 root-cause, iter99 validation, iter26/83 audits) scoring 0.63-0.66 - these are GOOD memories matching the bad-memory query weakly, NOT true positives. Zero pruned. Blind-delete would itself be the bad-memory generator the rule forbids. Consistent with iter89-100 prune-zero pattern.
+- id: iter109-agentsmd-migration
+  subject: Confirm AGENTS.md->rs-learn round-trip smooth (recall migration-witness, classifier behavior intact).
+  status: completed
+  witness: recall {AGENTS.md staging migration learning classifier} -> vector_top_k top hit MIGRATION-WITNESS iter85 score 0.81. Round-trip + classifier behavior intact.
+- id: iter109-temporal-sensitivity
+  subject: Validate temporal/recency weighting in recall is sane (recent iter100 outranks older on equal cos; no stale-memory dominance).
+  status: completed
+  witness: 'recall recency monotone with iteration: iter105 r=0.999 > iter102 r=0.998 > iter96 r=0.997 > iter93 r=0.996. score=cos lightly recency-adjusted (iter105 cos0.846->score0.845), recency nudges not dominates. No stale-memory dominance. Temporal weighting sane.'
+- id: iter109-paper-gaps
+  subject: Check paper.html for gaps in wasm-migration/rs-learn/exec/codeinsight/search/model-selection coverage; the MO must be detailed. Prior fires (iter87) confirmed 6 categories covered - re-verify no regression + new advances landed.
+  status: completed
+  witness: 'docs/paper.html covers all named advances: wasm-migration + two-size-story (~149MB vs hundreds-KB orchestration), in-wasm embeddings (bge-small-en-v1.5, 384-dim, 133MB safetensors+711KB tokenizer, wasm-side no-host-delegation offline no-text-leak), distributability, reproducibility, FastGRNN model-selection, MicroLoRA rank-2 scoring head, agent-as-llm. No gap; iter87 coverage holds, no regression.'
+- id: iter109-residual-triage
+  subject: Triage all git residuals this turn across gm + 5 rs-* repos.
+  status: completed
+  witness: 'gm porcelain: M rs-learn_router/default.json (router 5422/5442) + M prd.yml + the new iter109 memorize mem-file. All real session artifacts -> commit (disciplines tracked). rs-* repos not source-edited this fire. No junk.'
