@@ -5531,3 +5531,23 @@
   text: Sweep
   status: completed
   witness: Zero true positives.
+- id: validate-fresh-prompt-fix-0604
+  text: Witness the iter98 fresh-prompt-reset fix live on 0.1.604
+  status: completed
+  witness: 'WITNESSED LIVE: instruction 4400 on 0.1.604 with a fresh identical /loop prompt returned phase=PLAN directly, no manual transition. The iter98 root-cause fix (fresh_prompt=present-non-empty) works end-to-end; recurring identical prompts auto-reset. iter94 doc now a fallback only.'
+- id: deviations-audit-iter99
+  text: Audit
+  status: completed
+  witness: deviations_35m=0. Clean (the auto-reset means no transition-to-PLAN needed, no poll).
+- id: learning-health-iter99
+  text: Cores+router
+  status: completed
+  witness: Cores balanced 127/127 (persisted across 0.1.604 upgrade), router count 32 quality_milli 931 (monotone 611->931). Healthy.
+- id: bad-memory-prune-iter99
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter99
+  text: Assessment
+  status: completed
+  witness: Full stack clean on 0.1.604, fresh-prompt fix validated live. Per Nothing Fake, the live validation IS the work; no manufactured fix.
