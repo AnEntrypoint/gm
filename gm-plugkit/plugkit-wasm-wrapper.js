@@ -3109,6 +3109,30 @@ async function runSpoolWatcher(instance, spoolDir) {
     // file ahead of a verified binary download poisons installedVersionAtTools() and causes an infinite
     // drift-respawn thrash. Auto-update is notify-only until a sha-verified force-download path exists.
   }
+  function checkUpdateViaNpm(installed) {
+    const req = https.get({
+      host: 'registry.npmjs.org',
+      path: '/plugkit-wasm/latest',
+      headers: { 'user-agent': 'plugkit-watcher', 'accept': 'application/json' },
+      timeout: 5000,
+    }, (res) => {
+      if (res.statusCode !== 200) { res.resume(); return; }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const meta = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+          const latest = meta && meta.version;
+          if (!latest) return;
+          writeSharedUpdateCache(latest, 200);
+          applyUpdateCheckResult(installed, latest, 200);
+        } catch (_) {}
+      });
+    });
+    req.on('timeout', () => { try { req.destroy(); } catch (_) {} });
+    req.on('error', () => {});
+  }
+
   function checkForUpdate() {
     const installed = resolveVersion(instance);
     const cached = readSharedUpdateCache();
@@ -3126,6 +3150,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         res.resume();
         writeSharedUpdateCache(null, res.statusCode);
         applyUpdateCheckResult(installed, null, res.statusCode);
+        checkUpdateViaNpm(installed);
         return;
       }
       const chunks = [];
@@ -3178,12 +3203,14 @@ async function runSpoolWatcher(instance, spoolDir) {
       try { req.destroy(); } catch (_) {}
       writeSharedUpdateCache(null, -1);
       logUpdateCheckError({ error: 'timeout' });
+      checkUpdateViaNpm(installed);
     });
     req.on('error', (e) => {
       if (_checkErrored) return;
       _checkErrored = true;
       writeSharedUpdateCache(null, -2);
       logUpdateCheckError({ error: String(e && e.message || e) });
+      checkUpdateViaNpm(installed);
     });
   }
   setTimeout(checkForUpdate, 10_000);

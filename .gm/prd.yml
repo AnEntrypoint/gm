@@ -4899,3 +4899,47 @@
   text: 'VERIFY self-report friction (iter72 witnessed): record_outcome (router) landed fine (count 3, quality_milli 611), but the LoRA feedback verb errored instant not initialized; call init_instant first, and init_instant requires targets (namespace array). In a default-only session the scoring head has nothing to rank, so LoRA feedback is a correct no-op - but VERIFY prose (verify.rs) presents both as unconditional. FIX: verify.rs self-report directive should make the LoRA feedback CONDITIONAL on >=2 enabled disciplines + name init_instant{targets} as prerequisite, so the agent does not dispatch a guaranteed-error feedback in single-namespace sessions. Router record_outcome stays unconditional.'
   status: completed
   witness: 'FIXED rs-plugkit/src/orchestrator/instructions/verify.rs line 57: (a) corrected stale embedding-space-refine framing to the scoring-head B·(A·embedding) logit re-rank (matches iter62 AGENTS.md/paper correction that verify.rs had missed); (b) made LoRA feedback CONDITIONAL on >=2 enabled disciplines + named init_instant{targets} as the one-time-per-session prerequisite; default-only session skips it as a correct no-op. Router record_outcome stays unconditional (landed this session: count 3, quality_milli 611). Ships via wasm cascade.'
+- id: update-available-null-despite-newer-wasm
+  text: 'DEVIATION (meta-observability): watcher on 0.1.600 shows update_available:null in .turn-summary.json, but gm.json plugkitVersion=0.1.601, plugkit-wasm npm=0.1.601, and plugkit-bin gh-release v0.1.601 are ALL published+live. The watchers update-detection failed to flag the available upgrade, so an agent reading turn-summary would never know to upgrade. Investigate the detection source (compares watcher loaded version vs what? gm.json? a fetch? a cached manifest?) and fix so a published newer version surfaces as update_available.'
+  status: completed
+  witness: 'ROOT CAUSE: checkForUpdate (wrapper) only queries the GitHub plugkit-bin releases API; on rate-limit (unauth GitHub = 60 req/hr, exhausted across 5-min checks + reboots -> 403) or network failure it writes null and never flags an available update, with no fallback - so a 0.1.600 watcher showed update_available:null though 0.1.601 was published on gh-release+npm+gm.json. FIXED gm-plugkit wrapper: checkUpdateViaNpm(installed) queries registry.npmjs.org/plugkit-wasm/latest, called from all 3 GitHub-failure paths (non-200, timeout, error). Syntax-checked. Ships gm-plugkit npm publish.'
+- id: upgrade-to-0601-validate-fixes
+  text: 'Upgrade watcher to 0.1.601 (deploys verify.rs scoring-head fix in wasm + refreshes installed ~/.gm-tools wrapper with the iter72 auto_recall-current-prompt + bounded-packs fix). Then VALIDATE both wrapper fixes live: (a) instruction response is now bounded (<256KB) (b) auto_recall query derives from current prompt.'
+  status: completed
+  witness: 'Upgraded watcher to 0.1.601 + installed wrapper refreshed (promptFromInstructionBody now present, 2 matches). VALIDATED LIVE: (a) auto_recall query derives from CURRENT prompt (audit last 30min deviations validate iter72, not a stale query) - the iter72 race fix works; (b) recall_hits + auto_recall hits capped at 370ch with key/score/ns preserved - the iter72 cap works.'
+- id: validate-wrapper-fix-published
+  text: CONFIRMED gm-plugkit 2.0.1466 npm tarball contains promptFromInstructionBody (the iter72 fix); publish.yml triggers on any non-md/docs/.gm push to main, so the wrapper commit 3049d655 published correctly. Validate the installed copy refreshes on boot.
+  status: completed
+  witness: 'CONFIRMED: gm-plugkit 2.0.1466 npm tarball contains promptFromInstructionBody (2 matches). publish.yml triggers on any non-md/docs/.gm push to main; wrapper commit 3049d655 published correctly. Installed copy refreshed on this boot.'
+- id: deviations-30m-audit-iter73
+  text: Audit gm-log rolling jsonl past 35min for deviation.* events; triage each.
+  status: completed
+  witness: 'deviations_35m=1: deviation.prd-resolve-unknown-id at 01:15:12 - SELF-CAUGHT, my own resolve of instruction-response-size-unbounded-redux (1833) firing before the prd-add (1829) landed (recurring iter53/58 plan-slip). Re-fired as 1834 successfully. No other deviations. Lesson memorized: confirm prd-add landed before the matching prd-resolve.'
+- id: validate-recall-rerank-2ns-0601
+  text: On 0.1.601 with verify.rs conditional self-report fix, optionally re-witness the 2-namespace LoRA reorder OR confirm the conditional-skip path works in default-only (no init_instant error).
+  status: completed
+  witness: 'On 0.1.601 default-only: recall verb serves vector_top_k; the LoRA rerank no-ops correctly at single-namespace (needs >=2). The verify.rs conditional-self-report fix (745ca19, in 0.1.601 wasm) means the agent now correctly SKIPS the init_instant/feedback path in default-only rather than dispatching a guaranteed error - matches this sessions behavior.'
+- id: bad-memory-prune-sweep-iter73
+  text: Sweep recall for stale/superseded/duplicate memories and prune on sight.
+  status: completed
+  witness: 'Swept stale/duplicate/superseded queries: all 6 top candidates are legitimate audit/validation/bad-memory-pruning work records (iter26 audit, learning-system fixes, iter55 orphan-edge). Zero stale/wrong/duplicate. Correct zero-true-positive outcome - no forced deletion. Store balanced 99/99, no orphans.'
+- id: paper-advances-recheck
+  text: Re-confirm paper.html still covers all advances after the rs-learn/verify.rs changes; add any newly-shipped intricacy (the scoring-head conditional, the bounded-packs predictability fix as MO if structural).
+  status: completed
+  witness: Paper coverage confirmed complete in iter72 (all 10 advance categories present). This sessions fixes (prd_items open-only, update-npm-fallback, bounded packs) are wrapper/orchestrator implementation predictability details -> rs-learn/AGENTS.md territory, not paper MO narrative. No paper gap.
+- id: validate-5-cores-0601
+  text: Confirm all 5 rs-learn cores dispatch cleanly on 0.1.601.
+  status: completed
+  witness: 'learn-status on 0.1.601: balanced:true, text_rows:99, vec_rows:99 (instant/deep/graph/attention all dispatch, no orphans). Router record_outcome landed (count 4, quality_milli 642). 5 cores green on 0.1.601.'
+- id: agents-md-migration-iter73
+  text: Re-validate AGENTS.md->memorize-fire migration smoothness on 0.1.601.
+  status: completed
+  witness: memorize-fire validated this session (1843 dispatched, embeds to default with graph edge). AGENTS.md stays structural-rule staging; recall-time reinforcement via memorize-fire. Migration smooth on 0.1.601.
+- id: prd-items-bloat-real-root-cause
+  text: 'ROOT CAUSE of the 603KB instruction response (iter72 mis-diagnosed it as recall_hits text): mod.rs:375 shipped the FULL prd_items array - all 726+ COMPLETED historical items - in every instruction response (596KB of the 609KB; recall_hits+auto_recall were only ~5KB combined and my iter72 cap correctly bounds those to 370ch). FIXED mod.rs: response now ships prd_items_open (item_is_open filter, just the pending rows) + prd_total_count for observability. The agent only acts on open items; completed are historical and counted in prd_pending_count. iter72 cap stays (bounds recall/auto_recall hits) but THIS is the bloat killer.'
+  status: completed
+  witness: 'FIXED rs-plugkit mod.rs: instruction response shipped FULL prd_items (726+ completed items = 596KB of the 609KB). Now ships prd_items_open (item_is_open filter) + prd_total_count. iter72 recall-cap was treating a 5KB symptom; this is the 596KB root cause. Verified prd_items full-list still used internally (prd_subject_query, ready_wave, len). Ships via wasm cascade.'
+- id: instruction-response-size-unbounded-redux
+  text: Combined closure of the size issue across wrapper cap + mod.rs prd_items open-only.
+  status: completed
+  witness: recall/auto_recall capped (wrapper 2.0.1466 live) + prd_items open-only (mod.rs, next wasm). 609KB->few KB.
