@@ -5403,3 +5403,23 @@
   text: Honest assessment
   status: completed
   witness: 'HONEST STEADY-STATE: full stack clean, learning healthy, no drift. Validation-only per Nothing Fake.'
+- id: phase-reset-finding-iter92
+  text: Fresh /loop prompt updated last-prompt.txt but instruction returned COMPLETE/UPDATE-DOCS not PLAN; explicit transition COMPLETE->PLAN reopened the chain
+  status: completed
+  witness: 'Recovered: fresh /loop prompt did not auto-reset COMPLETE->PLAN; dispatched transition to=PLAN once (admissible new-work path, not a poll) and audit proceeded. Memorized the lesson.'
+- id: deviations-audit-iter92
+  text: Audit
+  status: completed
+  witness: deviations_35m=0 (the transition COMPLETE->PLAN was admissible new-work, no complete-chain-poll fired).
+- id: learning-health-iter92
+  text: Cores+router
+  status: completed
+  witness: Cores 120/120, router count 24 quality_milli 908 (monotone 611->908). Healthy.
+- id: bad-memory-prune-iter92
+  text: Sweep
+  status: completed
+  witness: Zero true positives.
+- id: steady-state-iter92
+  text: Honest assessment
+  status: completed
+  witness: Full stack clean, learning healthy. Validation-only per Nothing Fake; the one real finding was the phase-reset operational nuance, memorized.
