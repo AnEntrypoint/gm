@@ -5925,7 +5925,8 @@
   witness: bash {command:git status} LIVE -> gate_denied:true, reason names git verbs, deviation.bash-git-bypass emitted (watcher.log evt confirmed). Gate fires exactly as designed - the bash-git bypass is now blocked at the wasm gate.
 - id: iter111-validate-git-finalize
   subject: 'Validate git_finalize live on a REAL commit (multi-word message): expect committed+pushed, message intact (argv-array not shattered), porcelain gate honored. The binary-transport witness.'
-  status: pending
+  status: completed
+  witness: git_finalize {multi-word message} LIVE -> {ok:true,committed:true,pushed:true,sha:96ef8e8c,branch:main,steps:[commit,push]}. Message survived argv-array seam INTACT (summary correct, not shattered) - the binary-transport witness. git.commit+git.push events emitted. ONE dispatch (24.5s incl network push) did add->commit->porcelain-gate->push, replacing 4+ Bash events. The user git-bundling request is shipped AND validated in practice.
 - id: iter111-validate-noflash
   subject: Confirm no terminal flash during git verb dispatches on Windows (git->git.exe resolution).
   status: completed
