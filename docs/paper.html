@@ -2,7 +2,7 @@
 <html lang="en" class="ds-247420" data-theme="auto"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Complete Discipline · gm · 247420</title>
+<title>The Complete Discipline - gm - 247420</title>
 <meta name="description" content="The Complete Discipline: the unified gm research paper. Phase-gated lifecycle, mutable discipline, search protocol, governance layer, maximal cover, bounded autonomy, learning loop, and all operational hard rules in one document.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
@@ -113,7 +113,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <div class="title-block">
   <h1>The Complete Discipline: Lifecycle Control,<br>Governance, and Operational Hard Rules<br>for LLM Coding Agents</h1>
   <div class="author">AnEntrypoint</div>
-  <div class="date">May 2026 · the complete discipline, in one document</div>
+  <div class="date">May 2026 - the complete discipline, in one document</div>
 </div>
 
 <div class="abstract-block">
@@ -539,7 +539,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s18">18. Bounded Autonomy</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: User Request = Authorization <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE]</span></div>
+  <div class="rule-title">Hard Rule: User Request = Authorization <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE]</span></div>
   <p>The user&rsquo;s first message asking for X is the approval to do X. The PRD records the authorization; it is not a second permission gate. Re-asking &ldquo;want me to do X?&rdquo;, &ldquo;should I proceed?&rdquo;, &ldquo;which shape of X?&rdquo; after the user said &ldquo;do X&rdquo; is forced closure dressed as deference, the user already authorized the work and waits while the agent stalls.</p>
   <p>Surfacing tradeoffs is allowed inside the same chain (one sentence: &ldquo;going with shape A because Y&rdquo;) so the user can interrupt, never as a stop-and-wait. Multi-repo scope, build cost, CI duration, and binary-size impact are never grounds to re-confirm.</p>
   <p>A written PRD is the user&rsquo;s authorization. Once it exists, EXECUTE owns the work to COMPLETE. Every doubt arising during execution is resolved by witnessed probe, by recall, or by re-reading the PRD, never by asking the user.</p>
@@ -599,7 +599,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s22">22. Fix on Sight</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
   <p>Every issue surfaced during work is fixed in-band, this turn, at root cause. Defer-markers, swallowed errors, suppressed output, skipped tests, and &ldquo;address it next session&rdquo; are variants of the same failure: a known-bad signal carried past the moment of detection.</p>
   <p>Surface &rarr; diagnose &rarr; fix at root cause &rarr; re-witness &rarr; continue. New unknown surfaced by the fix &rarr; regress to planning. Out-of-scope-irreversible fix &rarr; residual into PRD before moving on. Narration is not a substitute for a PRD item.</p>
 </div>
@@ -627,7 +627,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s23">23. Browser Witness</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Browser Witness <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Browser Witness <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
   <p>Editing code that runs in a browser requires a live <code>exec:browser</code> witness in the same turn as the edit. The witness does not defer to a later phase; later phases re-witness on top, they do not replace this one.</p>
   <p>Protocol: (1) boot the real surface, server up, page reachable, HTTP 200 witnessed; (2) <code>exec:browser</code> &rarr; navigate &rarr; poll for the global the change affects; (3) <code>page.evaluate</code> asserting the specific invariant the change establishes, capturing the witnessed values; (4) variance &rarr; fix at root cause, re-witness (Fix on Sight). Never advance on unwitnessed client behavior.</p>
   <p>Pure-prose edits to static documents with no JS/canvas/DOM behavior change are exempt; the exemption is tagged explicitly with the reason so the skip is auditable. Silent skip on actual behavior change is forced closure.</p>
@@ -644,7 +644,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s24">24. Nothing Fake</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Nothing Fake <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Nothing Fake <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
   <p>What ships runs against real services, real data, real binaries. Stubs, mocks, placeholder returns, fixture-only paths, &ldquo;TODO: implement&rdquo;, hardcoded sample responses, and demo-mode fallbacks are forbidden in source the user will run. They produce green checks that survive into production and lie about what works.</p>
   <p>Scaffolding and shims are permitted when they call through to real behavior: an empty file laid down before its body, a thin adapter wrapping an upstream API, a build target that compiles but is wired to nothing yet and is the only callsite of itself. The test is whether the artifact, executed, would do the thing it claims. If it would not, it is a stub.</p>
   <p>Before writing a shim or adapter, the agent asks whether an existing library or tool already provides the same surface. Maintaining a local reimplementation of something an upstream package solves is its own failure mode, the shim drifts, ages, and accumulates the bugs the upstream already fixed.</p>
@@ -658,7 +658,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s25">25. Web-Search Before Pause</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Web-Search Before Pause <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Web-Search Before Pause <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
   <p>Before <code>exec:pause</code> or any in-conversation question whose answer plausibly exists on the public web, missing artifact, prebuilt binary, library status, build recipe, version compatibility, upstream issue, &ldquo;does X exist for Y&rdquo;, fire <code>WebSearch</code> and at least one targeted <code>WebFetch</code> first. Pause or ask only after the web pass returns empty, or returns candidates the agent has witnessed and rejected.</p>
   <p>Pausing on a question the web could have answered is forced closure dressed as humility. Fix on sight: re-enter planning, web-search, and resume.</p>
   <p>Genuine user-only questions: private credentials, preference among already-surfaced viable options, destructive-irreversible authorization.</p>
@@ -671,7 +671,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s26">26. Single Integration Test Policy</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Single Integration Test <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY · COMPLETE]</span></div>
+  <div class="rule-title">Hard Rule: Single Integration Test <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY, COMPLETE]</span></div>
   <p>One <code>test.js</code> at project root. 200-line hard cap. No fixtures, mocks, or scattered test files under any naming convention. Plain assertions, real data, real system. <code>gm-complete</code> runs it. Failure = regression to EXECUTE.</p>
   <p>Any second test runner, under any name, in any directory, is a smuggled parallel surface that fights the observability discipline. If a behavior needs exercising in-page, register it in <code>window.__debug</code> and assert via <code>test.js</code>.</p>
 </div>
@@ -719,7 +719,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s30">30. The Spool Dispatch Surface</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
   <p>Code execution and every utility verb both write a file to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>. Language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>. Host verbs: <code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>browser</code>, <code>health</code>. Git verbs: <code>git_status</code>, <code>branch_status</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, <code>git_branch</code> (inspect), <code>git_add</code>, <code>git_commit</code>, <code>git_finalize</code>, <code>git_push</code> (stage/commit/push), <code>git_checkout</code>, <code>git_fetch</code>, <code>git_rm</code>, <code>git_revert</code>, <code>git_reset</code> (mutate). Orchestrator verbs: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>/<code>prd-resolve</code>/<code>prd-list</code>, <code>mutable-add</code>/<code>mutable-resolve</code>/<code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>. Output lands at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> for nested verbs and <code>out/&lt;N&gt;.json</code> for root verbs.</p>
   <p>Git is a first-class spool surface, not a shell command. A <code>bash</code>/<code>sh</code>/<code>powershell</code> body whose command is git-dominant is denied at the dispatch gate (<code>deviation.bash-git-bypass</code>), the denial naming the equivalent git verb. Inline tool args, JSON-form dispatch, and any attempt to bypass the spool (e.g. <code>Bash(node script.js)</code>, <code>Bash(python -c &hellip;)</code>) are denied at the Bash gate. Only <code>gh</code> runs directly via Bash.</p>
 </div>
@@ -742,7 +742,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s31">31. The Mutables File as Co-Equal Hook Gate</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Mutables File Co-Equal With PRD <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT]</span></div>
+  <div class="rule-title">Hard Rule: Mutables File Co-Equal With PRD <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT]</span></div>
   <p><code>.gm/mutables.yml</code> lives alongside <code>.gm/prd.yml</code>. Every unknown surfaced during PLAN lands as a row with <code>status: unknown</code>. Write, Edit, NotebookEdit, <code>git commit</code>, <code>git push</code>, and the stop checkpoint are all hard-blocked by the dispatcher while any row has <code>status: unknown</code>. Rows flip to <code>witnessed</code> only when <code>witness_evidence</code> is filled with concrete proof (file:line, codesearch hit, exec output snippet).</p>
 </div>
 
@@ -782,7 +782,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s34">34. Hook Denials Throw, Never Mutate</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Throw on Denial <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN · EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Throw on Denial <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
   <p>A hook that blocks a tool call <em>throws</em> an error with an imperative instruction string. It does not rewrite the call&rsquo;s arguments into a self-failing form, not a shell command that exits 1, not a Node one-liner that writes to stderr and process.exit. The thrown error is the entire denial surface.</p>
 </div>
 
@@ -795,7 +795,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s35">35. CI Is the Build</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE · EMIT · VERIFY]</span></div>
+  <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
   <p>For the Rust crates in this org (<code>rs-plugkit</code>, <code>rs-exec</code>, <code>rs-learn</code>, <code>rs-search</code>, <code>rs-codeinsight</code>) and the gm publish chain, <code>git push</code> triggers the build pipeline. <code>cargo build</code> and <code>cargo test</code> are not run locally. Toolchain mismatches, rustc version skew, and missing system dependencies never block a push, push, watch CI via <code>gh run watch</code> dispatched through the spool, fix on red.</p>
 </div>
 
@@ -1017,13 +1017,13 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec · rs-codeinsight · rs-search · rs-learn · rs-plugkit</span></a>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit</span></a>
   <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>the SQLite model</span></a>
 </div>
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
-<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> · <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> and <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
 <span>probably emerging</span>
 </footer>
 
