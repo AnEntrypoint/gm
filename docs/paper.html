@@ -54,7 +54,7 @@ article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0;
 .gm-topbar nav a:hover, .gm-topbar nav .gm-dd > summary:hover{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd{position:relative}
 .gm-topbar nav .gm-dd > summary::-webkit-details-marker{display:none}
-.gm-topbar nav .gm-dd > summary::after{content:'▾';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
+.gm-topbar nav .gm-dd > summary::after{content:'';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
 .gm-topbar nav .gm-dd[open] > summary::after{transform:rotate(180deg)}
 .gm-topbar nav .gm-dd[open] > summary{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
@@ -916,7 +916,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>Sections 2&ndash;37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
 
-<pre><code>candidate → [L1 cost] → [L2 bounds] → [L3 direction] → execute
+<pre><code>candidate to [L1 cost] to [L2 bounds] to [L3 direction] to execute
 </code></pre>
 
 <p><strong>L1 Cost.</strong> Amortized cost &le; prior-best envelope. Unmeasured marginal = inadmissible. ORIENT (&sect;21) is the baseline probe.</p>

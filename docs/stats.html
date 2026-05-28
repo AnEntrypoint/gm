@@ -36,7 +36,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 .gm-topbar nav a:hover, .gm-topbar nav .gm-dd > summary:hover{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd{position:relative}
 .gm-topbar nav .gm-dd > summary::-webkit-details-marker{display:none}
-.gm-topbar nav .gm-dd > summary::after{content:'▾';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
+.gm-topbar nav .gm-dd > summary::after{content:'';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
 .gm-topbar nav .gm-dd[open] > summary::after{transform:rotate(180deg)}
 .gm-topbar nav .gm-dd[open] > summary{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
@@ -65,7 +65,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     </div></details>
   </nav>
 </header>
-<div class="app-crumb"><span>247420</span><span class="sep">›</span><span>gm</span><span class="sep">›</span><span class="leaf">stats</span></div>
+<div class="app-crumb"><span>247420</span><span class="sep">/</span><span>gm</span><span class="sep">/</span><span class="leaf">stats</span></div>
 
 
 
@@ -267,7 +267,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     function showError(errors) {
       const errorDiv = document.createElement('div');
       errorDiv.className = 'error';
-      errorDiv.innerHTML = '<strong>Error loading data:</strong><br>' + errors.map(e => `• ${e}`).join('<br>');
+      errorDiv.innerHTML = '<strong>Error loading data:</strong><br>' + errors.map(e => `- ${e}`).join('<br>');
       const main = document.querySelector('main');
       const existing = main.querySelector('.error');
       if (existing) existing.remove();
@@ -435,7 +435,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
             <span class="release-date">${r.date}</span>
           </div>
           <div class="release-name">${r.name}</div>
-          <a href="${r.url}" target="_blank" class="release-link">View on GitHub →</a>
+          <a href="${r.url}" target="_blank" class="release-link">View on GitHub</a>
         </div>
       `).join('') || '<div style="text-align:center;color:var(--panel-text-3);">No releases</div>';
     }

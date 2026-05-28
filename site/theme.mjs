@@ -110,12 +110,12 @@ const crumb = C.Crumb ? C.Crumb({
 const status = C.Status ? C.Status({
   left: [
     site.title || 'gm',
-    site.code ? '• ' + site.code : null,
-    site.category ? '• ' + site.category : null,
+    site.code ? site.code : null,
+    site.category ? site.category : null,
   ].filter(Boolean),
   right: [
     site.year ? String(site.year) : null,
-    site.repo ? h('a', { href: site.repo, target: '_blank', rel: 'noopener' }, 'source ↗') : null,
+    site.repo ? h('a', { href: site.repo, target: '_blank', rel: 'noopener' }, 'source') : null,
   ].filter(Boolean),
 }) : null;
 
@@ -157,7 +157,7 @@ const buildLandingMain = () => {
       children: features.items.map((it, i) => h('div', { key: i, class: 'row' },
         h('span', { class: 'code' }, String(i + 1).padStart(2, '0')),
         h('span', { class: 'title' }, it.name || '', it.desc ? h('span', { class: 'sub' }, it.desc) : null),
-        h('span', { class: 'meta' }, '§')
+        h('span', { class: 'meta' }, '')
       )),
     }));
   }
@@ -190,7 +190,7 @@ const buildLandingMain = () => {
       children: ex.items.map((it, i) => h('a', { key: i, class: 'row', href: it.href || '#' },
         h('span', { class: 'code' }, String(i + 1).padStart(2, '0')),
         h('span', { class: 'title' }, it.name || '', it.desc ? h('span', { class: 'sub' }, it.desc) : null),
-        h('span', { class: 'meta' }, it.cta || 'open →')
+        h('span', { class: 'meta' }, it.cta || 'open')
       )),
     }));
   }
