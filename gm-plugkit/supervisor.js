@@ -145,15 +145,18 @@ function spawnWatcher(bootReason) {
     const reason = shutdownReason && shutdownReason.reason;
     const idleClean = reason === 'idle';
     const lockRejected = code === 75;
-    const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'external-planned']);
-    const isPlanned = plannedReasons.has(reason) || lockRejected;
+    const cleanExit = code === 0;
+    const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'external-planned', 'process-exit']);
+    const isPlanned = plannedReasons.has(reason) || lockRejected || cleanExit;
     const eventName = idleClean
       ? 'supervisor.watcher-exited-idle'
       : reason === 'version-change'
         ? 'supervisor.watcher-exited-for-update'
         : lockRejected
           ? 'supervisor.watcher-exited-lock-rejected'
-          : 'supervisor.watcher-exited-unexpectedly';
+          : cleanExit
+            ? 'supervisor.watcher-exited-clean'
+            : 'supervisor.watcher-exited-unexpectedly';
     logEvent(eventName, {
       watcher_pid: currentChildPid,
       exit_code: code,

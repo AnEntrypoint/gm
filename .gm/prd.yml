@@ -30,3 +30,15 @@
   body: Prior iteration chain was at VERIFY (blocked by concurrent design session dirtying tree). Boot shows phase reset to PLAN this fire (fresh prompt). The prior COMPLETE never landed but the prior work was committed+pushed (7a27664e). Confirm no orphaned residual from that, and that this fire can reach COMPLETE.
   status: completed
   witness: Prior chain was VERIFY-blocked by concurrent design session dirtying tree; this fire phase reset to PLAN on fresh prompt (instruction-1 returned PLAN). Prior work was committed+pushed (7a27664e) before the block, so no work lost - the COMPLETE gate simply never flipped while the peer wrote. This fire walks its own chain to COMPLETE.
+- id: supervisor-clean-exit-misc:classified-critical
+  body: 'WITNESSED at 0.1.611 version transition (10:41-10:42): many supervisor.watcher-exited-unexpectedly severity:CRITICAL with exit_code:0 reason:process-exit across projects. exit 0 is a CLEAN exit (watcher self-exited for version-drift self-respawn); process-exit is a planned teardown marker. My prior fix handled exit-75 (lock-reject) but not exit-0/process-exit. FIX: supervisor.js classify code===0 (cleanExit) AND reason process-exit as planned (severity:info, supervisor.watcher-exited-clean). Now only genuine non-zero unexpected exits flag critical - version transitions stop flooding critical.'
+  status: open
+- id: deploy-validate-browser-fix
+  body: 'The per-session browser profile fix (sessionProfileDir) IS on disk at ~/.gm-tools/plugkit-wasm-wrapper.js (grep confirms 6 hits, acquireProfileDir(cwd,claudeSessionId) line 689+1051) BUT the running watcher (pid 190444, uptime 21min) booted before the wrapper refresh - per the installed!=running caveat it carries the old in-memory wrapper. VALIDATE: kill+reboot the watcher (bun x gm-plugkit@latest spool) to load fresh wrapper, dispatch instruction FIRST after the wait, then confirm a browser session resolves to .gm/browser-profile-<sid> not the shared .gm/browser-profile. This also live-tests the supervisor clean-exit + exit-75 classification on the transition.'
+  status: open
+- id: validate-supervisor-exit75-held
+  body: 'exit-75 lock-rejection fix VALIDATED LIVE: gmsniff 10:41:31 supervisor.watcher-exited-lock-rejected exit_code:75 severity:info uptime_ms:862 (the prior-iteration 7a27664e fix working in practice). Resolve with this witness.'
+  status: open
+- id: memory-learning-health-iter
+  body: 'Learning 100% check: bad-memory prune review+explicit-key (prioritized), temporal recency live, router quality monotone, agents_drain mechanical per memorize-fire, AGENTS.md drain this run. cores balanced via health.'
+  status: open
