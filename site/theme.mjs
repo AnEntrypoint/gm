@@ -237,6 +237,13 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
 }
+// Landing pages have no measure cap from the SDK, so prose runs edge-to-edge at
+// desktop width (unreadable ~1300px lines). Cap prose landings to a readable measure;
+// grid/table pages (made-with, stats) stay full-width.
+const GRID_PAGES = ['made-with', 'stats'];
+if (page.layout !== 'article' && !GRID_PAGES.includes(page.id)) {
+  document.documentElement.classList.add('landing-capped');
+}
 if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
   if (host) {
@@ -299,6 +306,11 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
     .app-main > * { flex-shrink: 0; }
+    /* Landing measure cap: the SDK only caps article (.narrow) pages, so prose landings
+       (home/crates/skills/distribution) ran edge-to-edge to ~1320px (unreadable lines).
+       Cap each direct child to a readable measure and center it; the panel/hero/cli all
+       sit in one ~940px column. Grid pages (made-with/stats) keep full width (no class). */
+    html.landing-capped .app-main > * { max-width: var(--measure-wide, 940px); margin-left: auto; margin-right: auto; width: 100%; }
     /* Mobile topbar: the SDK topbar squeezed 9 nav links into a collapsed grid cell
        so they overlapped unreadably. Make the topbar a wrapping flex row; nav drops to
        its own full-width row and scrolls horizontally with real link spacing. */
@@ -337,7 +349,9 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
        internal typography (title, list, links) is restated here with SDK tokens. */
     #ds-article-host.has-toc {
       display: grid;
-      grid-template-columns: 256px minmax(0, 1fr);
+      /* Body column capped to a readable measure (was 1fr -> 1036px paragraphs,
+         too long to read). TOC rail 256px, body ~760ch-measure, slack to the right. */
+      grid-template-columns: 256px minmax(0, var(--measure-narrow, 760px));
       column-gap: 44px;
       align-items: start;
     }
