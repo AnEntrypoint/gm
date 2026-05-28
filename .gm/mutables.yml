@@ -148,3 +148,7 @@
   witness_method: bun x gm-plugkit@latest in background, watch /tmp/gm-plugkit-update.log, read .status.json after
   witness_evidence: 'Bootstrap log showed: npm.extract attempts 1-3 failed with spawnSync npx.cmd EINVAL (known Windows issue), GH-releases fallback downloaded plugkit.wasm v0.1.416 (12885019 bytes, sha verified 748ab8b58d5c09a4...), wrote to AppData\Local\plugkit\bin\v0.1.416, pruned v0.1.412 cache. New daemon spawned pid 35400. .status.json after: {pid:34204, version:0.1.416, ts:1779115513430} — original PID self-healed file lookup. Side finding: health verb returns version 0.1.411 (wasm instance hardcoded), creating split-brain with file-derived version. Captured as PRD-45 for follow-up.'
   status: witnessed
+- id: agents-edit-mechanism
+  subject: Does AGENTS.md get edited inline or via memorize-dispatch for these structural rules?
+  status: witnessed
+  witness_evidence: 'SKILL.md line 71: inline-edit AGENTS.md for the hard rule. memorize-fire and inline-AGENTS.md edits are complementary, not alternatives. Resolution: AGENTS.md structural rules edited inline; memorize-fire dispatched additionally for recall reinforcement; SKILL.md edited inline directly.'
