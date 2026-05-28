@@ -61,6 +61,7 @@ plugforge-starter/skills/caveman/
 .gm/diag-*.out
 .gm/audit-iter-*.md
 .gm/silent-abort-forensics.json
+.gm/*.png
 .gm/witness/
 .gm/long-gap-retry-state
 .gm/exec-spool/.gm-plugkit-stale.json

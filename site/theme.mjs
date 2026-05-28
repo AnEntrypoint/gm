@@ -73,10 +73,12 @@ const h = ds.h;
 
 const navItemsKit = navItems.map(([label, href]) => [label, href]);
 const activeLabel = (() => {
-  const here = location.pathname.replace(/\\/$/, '') || '/';
+  const seg = (p) => (String(p).replace(/[#?].*$/, '').replace(/^\\.?\\//, '').replace(/\\/$/, '').split('/').filter(Boolean).pop() || '');
+  const here = seg(location.pathname);
   const hit = navItems.find(([, href]) => {
-    const norm = String(href).replace(/^\\.\\//, '/').replace(/\\/$/, '') || '/';
-    return norm === here || (norm !== '/' && here.startsWith(norm));
+    const h = String(href);
+    if (/^https?:/.test(h)) return false;
+    return seg(h) === here;
   });
   return hit ? hit[0] : (navItems[0] && navItems[0][0]) || '';
 })();
@@ -210,7 +212,17 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 
 if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
-  if (host) host.innerHTML = page.articleHtml;
+  if (host) {
+    host.innerHTML = page.articleHtml;
+    const blocks = host.querySelectorAll('.mermaid');
+    if (blocks.length) {
+      import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
+        const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+        mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+        mermaid.run({ nodes: blocks });
+      }).catch(() => {});
+    }
+  }
 }
 
 window.__debug = window.__debug || {};
@@ -229,9 +241,10 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E${encodeURIComponent(site.glyph || '◆')}%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
+    .app-main > * { flex-shrink: 0; }
     .app-main > h1,
     .app-main > h2,
     .app-main > h3 { margin-top: 36px; margin-bottom: 12px; }

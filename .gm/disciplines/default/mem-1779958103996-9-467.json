@@ -1,0 +1,3 @@
+## Resolved mutable: hero-collapse-root-cause
+
+RESOLVED: cause is .app-main > *{min-height:0} (app-shell.css:293) on a height:100% flex column -> default flex-shrink:1 compresses children below content. Fix .app-main > *{flex-shrink:0}. Verified live-injection browser-763 h1 13->76px overlap gone, and built site browser-781/801. Not a font-metric bug; the font correlation was incidental (fallback vs loaded changed content height enough to mask/expose the shrink).
