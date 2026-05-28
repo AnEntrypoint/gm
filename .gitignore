@@ -56,6 +56,7 @@ plugforge-starter/skills/caveman/
 .gm/git-block-counter.json
 .gm/next-step.md
 .gm/last-instruction-ts
+.gm/last-dispatch-ts
 .gm/boot*.err
 .gm/boot*.out
 .gm/diag-*.out
