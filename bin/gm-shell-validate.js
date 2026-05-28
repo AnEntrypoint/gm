@@ -33,7 +33,7 @@ async function renderPreview() {
     const mod = await import('file:///C:/dev/gm/site/theme.mjs');
     const ctx = {
       readGlobal: (k) => {
-        if (k === 'site') return { title: 'gm', tagline: "more coushin' for the pushin'", description: 'local browser OS surface', glyph: '◆', accent_from: '#7ee787', accent_to: '#56d364' };
+        if (k === 'site') return { title: 'gm', tagline: "more coushin' for the pushin'", description: 'local browser OS surface', glyph: 'g', accent_from: '#7ee787', accent_to: '#56d364' };
         if (k === 'navigation') return { links: [{ label: 'Home', href: '/' }, { label: 'Paper', href: '/paper/' }, { label: 'Stats', href: '/stats/' }, { label: 'Crates', href: '/crates/' }, { label: 'Skills', href: '/skills/' }] };
         return null;
       },
