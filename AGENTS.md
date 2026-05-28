@@ -34,7 +34,7 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 
-**Wasm-direct verbs**: `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `kv_get`, `kv_put`, `kv_query`, `fetch`, `exec_js`, `env_get`, `recall`, `codesearch`, `memorize`, `memorize-prune`, `health`, `filter`, `git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_finalize`, `git_log`, `git_diff`, `git_show`, `git_fetch`, `git_branch`, `git_checkout`, `git_rm`, `git_revert`, `git_reset`.
+**Wasm-direct verbs**: fs/kv/exec/fetch/env, recall, codesearch, memorize(+prune), health, filter, and the full git verb family. Complete enumeration in rs-learn (`recall: wasm-direct plugkit verbs full list`).
 
 **memorize-prune verb**: deletes bad/superseded memories, pruning bad memory matters more than preserving good memory, since a wrong recall hit is worse than a miss. Two modes: explicit `{key}`/`{keys:[...]}` deletes exactly those mem keys (text + `-vec` embedding sibling) via the `host_kv_delete` host import; `{query}` returns review-only candidates (vector_top_k hits with keys) for the agent to judge, then re-dispatch with the stale `{keys:[...]}`. Query mode never auto-deletes by similarity, a blind similarity-delete is itself a bad-memory generator; the destructive step stays under agent judgment. Emits `memory.pruned` per deletion.
 

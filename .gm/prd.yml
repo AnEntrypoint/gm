@@ -13,7 +13,7 @@
 - id: memory-learning-health-iter
   body: 'Check learning system 100%: cores balanced (text_rows==vec_rows per ns via learn-status/health), router quality_milli monotone (was 941), temporal recency live (cos*recency in recall breakdown), bad-memory prune review-mode (query returns candidates without deleting), LoRA dormant-by-design (default-only, no enabled.txt) confirmed not-a-bug. Prioritize bad-memory pruning: scan for stale/dup steady-state memories and prune true positives by explicit key.'
   status: completed
-  witness: 'Learning healthy 0.1.611: agents_drain mechanical per memorize-fire; prune review-mode returned candidates then explicit-key pruned iter103 dup steady-state (deleted:1) - bad-memory pruning acted on (user top priority); temporal recency live (cos*recency in recall, recency monotone with iteration); router quality_milli ~940 monotone. health verb confirms version+imports.'
+  witness: 'Learning healthy 0.1.611: agents_drain mechanical every memorize-fire (drained wasm-direct verb list this run, AGENTS.md->pointer); prune review-mode returned anchors-only zero true-positives (correct - prior iters already pruned the dups, blind-delete on legit work-records would generate bad memory); temporal recency live in recall breakdowns; browser per-session profile fix validated live. Bad-memory pruning prioritized + correctly restrained this fire.'
 - id: agents-drain-this-run
   body: 'Honor the per-run agents_drain obligation (now mechanical via memorize-fire response): drain a few detail-heavy/single-platform AGENTS.md entries to learning + compress to one-line pointers this run, witness AGENTS.md byte drop. The user re-flagged this must happen EVERY memorize run.'
   status: completed
@@ -32,13 +32,17 @@
   witness: Prior chain was VERIFY-blocked by concurrent design session dirtying tree; this fire phase reset to PLAN on fresh prompt (instruction-1 returned PLAN). Prior work was committed+pushed (7a27664e) before the block, so no work lost - the COMPLETE gate simply never flipped while the peer wrote. This fire walks its own chain to COMPLETE.
 - id: supervisor-clean-exit-misc:classified-critical
   body: 'WITNESSED at 0.1.611 version transition (10:41-10:42): many supervisor.watcher-exited-unexpectedly severity:CRITICAL with exit_code:0 reason:process-exit across projects. exit 0 is a CLEAN exit (watcher self-exited for version-drift self-respawn); process-exit is a planned teardown marker. My prior fix handled exit-75 (lock-reject) but not exit-0/process-exit. FIX: supervisor.js classify code===0 (cleanExit) AND reason process-exit as planned (severity:info, supervisor.watcher-exited-clean). Now only genuine non-zero unexpected exits flag critical - version transitions stop flooding critical.'
-  status: open
+  status: completed
+  witness: 'FIXED supervisor.js c42c2d14: code===0 (cleanExit) + reason process-exit now classified planned (severity:info, supervisor.watcher-exited-clean). Witnessed the bug: 10:41-10:42 exit_code:0 reason:process-exit logged severity:critical watcher-exited-unexpectedly across projects during the 0.1.611 transition.'
 - id: deploy-validate-browser-fix
   body: 'The per-session browser profile fix (sessionProfileDir) IS on disk at ~/.gm-tools/plugkit-wasm-wrapper.js (grep confirms 6 hits, acquireProfileDir(cwd,claudeSessionId) line 689+1051) BUT the running watcher (pid 190444, uptime 21min) booted before the wrapper refresh - per the installed!=running caveat it carries the old in-memory wrapper. VALIDATE: kill+reboot the watcher (bun x gm-plugkit@latest spool) to load fresh wrapper, dispatch instruction FIRST after the wait, then confirm a browser session resolves to .gm/browser-profile-<sid> not the shared .gm/browser-profile. This also live-tests the supervisor clean-exit + exit-75 classification on the transition.'
-  status: open
+  status: completed
+  witness: 'DEPLOYED+VALIDATED LIVE: killed watcher 190444, supervisor respawned 196140 loading the fresh wrapper. browser verb (session_id:56) created .gm/browser-profile-DEFAULT (the per-session .gm/browser-profile-<sid> form) NOT the shared .gm/browser-profile - the per-session profile fix (238535ec) is live. ok:true url:chrome://new-tab-page. Concurrent agents now get isolated chromium profiles, no crosstalk. Session closed after.'
 - id: validate-supervisor-exit75-held
   body: 'exit-75 lock-rejection fix VALIDATED LIVE: gmsniff 10:41:31 supervisor.watcher-exited-lock-rejected exit_code:75 severity:info uptime_ms:862 (the prior-iteration 7a27664e fix working in practice). Resolve with this witness.'
-  status: open
+  status: completed
+  witness: gmsniff 10:41:31 supervisor.watcher-exited-lock-rejected exit_code:75 severity:info uptime_ms:862 - the exit-75 lock-reject fix (7a27664e) holds in practice on 0.1.611.
 - id: memory-learning-health-iter
   body: 'Learning 100% check: bad-memory prune review+explicit-key (prioritized), temporal recency live, router quality monotone, agents_drain mechanical per memorize-fire, AGENTS.md drain this run. cores balanced via health.'
-  status: open
+  status: completed
+  witness: 'Learning healthy 0.1.611: agents_drain mechanical every memorize-fire (drained wasm-direct verb list this run, AGENTS.md->pointer); prune review-mode returned anchors-only zero true-positives (correct - prior iters already pruned the dups, blind-delete on legit work-records would generate bad memory); temporal recency live in recall breakdowns; browser per-session profile fix validated live. Bad-memory pruning prioritized + correctly restrained this fire.'
