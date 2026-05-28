@@ -18,7 +18,7 @@ If the reach check returns out-of-reach:
 
 - **Do** ingest classified facts into rs-learn (Step 2) — rs-learn is per-user, not per-project, so private notes about a project the user is reading-but-not-owning are safe there.
 - **Do not** read or edit `<project root>/AGENTS.md` (Step 3). Skip the file entirely.
-- **Do not** run the AGENTS.md ↔ rs-learn migration audit (Step 4). The audit edits AGENTS.md.
+- **Do not** run the AGENTS.md <-> rs-learn migration audit (Step 4). The audit edits AGENTS.md.
 
 Reason: agents running in a cwd that points at a third-party repo (e.g. running Claude inside a checkout of `nousresearch/hermes-agent` while building a downstream port) must not write project-specific notes into the upstream project's AGENTS.md. That AGENTS.md belongs to the upstream maintainers. Personal porting notes belong in the user's downstream repo's AGENTS.md, or — when the work spans multiple repos and there's no clean home — in rs-learn only.
 
@@ -78,12 +78,12 @@ A non-obvious technical caveat qualifies if it required multiple failed runs to 
 
 For each qualifying fact from context:
 - Read AGENTS.md first if not already read this run
-- If AGENTS.md already covers it → skip
-- If genuinely non-obvious → append to the appropriate section
+- If AGENTS.md already covers it -> skip
+- If genuinely non-obvious -> append to the appropriate section
 
 Never add: obvious patterns, active task progress, redundant restatements.
 
-## STEP 4: AGENTS.md → RS-LEARN MIGRATION (BENCHMARK + DRAIN)
+## STEP 4: AGENTS.md -> RS-LEARN MIGRATION (BENCHMARK + DRAIN)
 
 AGENTS.md is the **always-on context buffer** — every prompt sees it. rs-learn is the **conditional retrieval store** — only relevant facts surface. The migration loop turns AGENTS.md into a benchmark for rs-learn's recall quality:
 
@@ -91,8 +91,8 @@ AGENTS.md is the **always-on context buffer** — every prompt sees it. rs-learn
 2. For each item, derive a 2-6 word query that a future agent would naturally use to find this fact.
 3. Run `exec:recall` with that query.
 4. Decide:
-   - **Recall accurate AND complete** → the rs-learn store has internalized this fact; **remove it from AGENTS.md**. Frees buffer space and confirms learning.
-   - **Recall partial / outdated / missing** → keep the AGENTS.md item AND ingest a refined version of the fact via `exec:memorize` so next round it can pass. Note the outcome in your run log.
+   - **Recall accurate AND complete** -> the rs-learn store has internalized this fact; **remove it from AGENTS.md**. Frees buffer space and confirms learning.
+   - **Recall partial / outdated / missing** -> keep the AGENTS.md item AND ingest a refined version of the fact via `exec:memorize` so next round it can pass. Note the outcome in your run log.
 5. Report the audit cycle in the run output (items checked, removed, refined). Do not write the audit result to AGENTS.md — it is changelog-shaped and AGENTS.md forbids dated audit sections.
 
 Why: AGENTS.md grows monotonically without this loop. rs-learn already filters by relevance per-prompt, so duplicating stable facts in AGENTS.md just inflates the always-on context. The migration drains AGENTS.md into the retrieval store as the store proves it can recall. Failed migrations leave the fact in AGENTS.md (safe default) and improve the store. Success rate over time = a metric for how well gm is learning this project.

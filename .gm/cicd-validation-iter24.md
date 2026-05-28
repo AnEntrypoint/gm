@@ -10,7 +10,7 @@ End-to-end propagation works: rs-learn push at 22:45:15Z -> rs-plugkit Release r
 
 ---
 
-## Check 1 — rs-* siblings → rs-plugkit trigger — PASS
+## Check 1 — rs-* siblings -> rs-plugkit trigger — PASS
 
 - rs-learn cascade.yml run 26194322167 success, push 2026-05-20T22:45:15Z, commit `fix(embeddings): align EMBED_DIM 768 -> 384`, headSha `6e37f964`.
 - rs-plugkit Release workflow_dispatch run 26194326074 success, started 22:45:21Z (6s after cascade fired). Duration 1m48s.

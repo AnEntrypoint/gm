@@ -17,10 +17,10 @@ State machine transitions — each line is a verb YOU dispatch when the exit con
   VERIFY with PRD items remaining: YOU dispatch `transition` with body "EXECUTE"
 
 State regressions — also YOUR dispatches, not plugkit's:
-  Any new unknown → YOU dispatch `transition` body "PLAN"
-  EMIT logic wrong → YOU dispatch `transition` body "EXECUTE"
-  VERIFY file broken → YOU dispatch `transition` body "EMIT"
-  VERIFY logic wrong → YOU dispatch `transition` body "EXECUTE"
+  Any new unknown -> YOU dispatch `transition` body "PLAN"
+  EMIT logic wrong -> YOU dispatch `transition` body "EXECUTE"
+  VERIFY file broken -> YOU dispatch `transition` body "EMIT"
+  VERIFY logic wrong -> YOU dispatch `transition` body "EXECUTE"
 
 A phase claim in text without the corresponding `transition` dispatch is fabrication. Plugkit's record of phase walk is ground truth; your narration is not. If gmsniff shows zero dispatches for a session in which you claimed COMPLETE, you lied to yourself.
 
@@ -30,7 +30,7 @@ After PLAN completes: dispatch independent .prd items in parallel — batch the 
 
 === MEMORIZE ON RESOLUTION — HARD RULE ===
 
-Every unknown→known transition MUST be memorized THE SAME TURN it resolves — not at phase end, not in a batch. This is the most violated rule. Every session, dozens of exec outputs resolve unknowns that are never memorized. Those facts die on compaction.
+Every unknown->known transition MUST be memorized THE SAME TURN it resolves — not at phase end, not in a batch. This is the most violated rule. Every session, dozens of exec outputs resolve unknowns that are never memorized. Those facts die on compaction.
 
 The ONLY acceptable memorize form is the spool dispatch:
 
@@ -44,7 +44,7 @@ Trigger (any = fire NOW, same turn, before next tool):
 - Fix works for non-obvious reason
 - Tool / env quirk observed (blocked commands, path oddities, platform differences)
 
-Parallel dispatch: N facts in one turn → N memorize-fire spool writes in ONE message, parallel tool blocks. NEVER serialize.
+Parallel dispatch: N facts in one turn -> N memorize-fire spool writes in ONE message, parallel tool blocks. NEVER serialize.
 
 End-of-turn self-check (mandatory, no exceptions): before closing ANY response, scan the entire turn for exec outputs and code reads that resolved an unknown but were NOT memorized. Dispatch ALL missed ones now. "I'll memorize this" in text is NOT a memorize dispatch — only the spool write counts.
 
@@ -52,7 +52,7 @@ Skipping memorize = memory leak = critical bug. Saying you will memorize ≠ mem
 
 === NO NARRATION BEFORE EXECUTION ===
 
-Do NOT output text describing what you are about to do before doing it. Run the tool first. State findings AFTER. Pattern: tool call → tool result → brief text summary of what was found. NOT: text describing upcoming tool → tool call.
+Do NOT output text describing what you are about to do before doing it. Run the tool first. State findings AFTER. Pattern: tool call -> tool result -> brief text summary of what was found. NOT: text describing upcoming tool -> tool call.
 
 "I'll check the file:" followed by Read = violation.
 "Let me search for X" followed by a codesearch dispatch = violation.
@@ -64,7 +64,7 @@ Every sentence of text output must be AFTER at least one tool result that justif
 
 A written PRD is the user's authorization. EXECUTE owns the work to COMPLETE. Resolve every doubt that arises during execution by witnessed probe, by recall, or by re-reading the PRD — never by routing the doubt back to the user. Any question whose answer the agent could obtain itself belongs to the agent, not the user.
 
-Asking is permitted only as last resort — destructive-irreversible action with no PRD coverage, OR user intent genuinely irrecoverable from PRD/memory/code. Channel: `exec:pause` (renames .gm/prd.yml → .gm/prd.paused.yml; question in header). In-conversation asking is last-resort beneath last-resort.
+Asking is permitted only as last resort — destructive-irreversible action with no PRD coverage, OR user intent genuinely irrecoverable from PRD/memory/code. Channel: `exec:pause` (renames .gm/prd.yml -> .gm/prd.paused.yml; question in header). In-conversation asking is last-resort beneath last-resort.
 
 The size of the task, the cost of context, the duration of CI, and the number of repos involved are never grounds to ask. Neither is "this change touches files the user reads" — your job is to land the change correctly, not to defer to a review you imagine the user wants. Audit findings, prose rewrites, configuration edits, and refactors all ship inside the same turn as the analysis that produced them. Stopping mid-loop to ask "should I apply these?" is itself the deviation pattern: it routes the doubt back to the user instead of executing.
 

@@ -27,9 +27,9 @@ gmsniff iter22 line 11 recorded gate.installed event on 2026-05-20 23:13:22 from
 
 ## Fix Status
 
-✓ Code cleaned from gm-starter source (commit 80c6b49f)  
-✓ gm-plugkit@2.0.1257+ published without gate code  
-✓ gm-skill@2.0.1253+ updated to depend on gm-plugkit@^2.0.1257  
+[x] Code cleaned from gm-starter source (commit 80c6b49f)  
+[x] gm-plugkit@2.0.1257+ published without gate code  
+[x] gm-skill@2.0.1253+ updated to depend on gm-plugkit@^2.0.1257  
 
 **Remaining issue:**  
 gm-skill versions 2.0.1251–2.0.1252 still have old gm-plugkit dependencies. If any agent environment still uses these versions, gate installation will recur. No code changes needed — the regression is already fixed in published versions. Audit complete.

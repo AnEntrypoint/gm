@@ -36,17 +36,17 @@ Candle has a GGUF loader (`candle-core::quantized::gguf_file`) and Q4_K dequant 
 
 ## Latency Projection
 
-- Cold start (parse wasm + instantiate + dequant Q4_K_M weights into linear memory): **~1–3 s** on modern CPU. Dequant of 81 MiB → ~150 MiB F32 working set is the dominant cost.
-- First embedding (137M params, mean-pool, matryoshka 768→768): **~150–600 ms per sentence** single-threaded wasm. Reference: tract-wasi is ~3–4× slower than native ONNX; candle wasm is comparable. For a 137M-param BERT, native CPU ≈ 30–80 ms/embed → wasm ≈ 100–400 ms.
+- Cold start (parse wasm + instantiate + dequant Q4_K_M weights into linear memory): **~1–3 s** on modern CPU. Dequant of 81 MiB -> ~150 MiB F32 working set is the dominant cost.
+- First embedding (137M params, mean-pool, matryoshka 768->768): **~150–600 ms per sentence** single-threaded wasm. Reference: tract-wasi is ~3–4× slower than native ONNX; candle wasm is comparable. For a 137M-param BERT, native CPU ≈ 30–80 ms/embed -> wasm ≈ 100–400 ms.
 - Memory: F32 activations + dequant weights ≈ 250–400 MiB peak, comfortably under the 2 GiB wasm32 linear-memory ceiling.
 
 Both inside budget.
 
 ## Known Blockers / Unknowns
 
-1. **Dequant-at-load memory spike**: 81 MiB Q4 → 262 MiB F32 means peak RSS during cold start touches ~350 MiB. Acceptable but worth measuring.
+1. **Dequant-at-load memory spike**: 81 MiB Q4 -> 262 MiB F32 means peak RSS during cold start touches ~350 MiB. Acceptable but worth measuring.
 2. **`tokenizers` crate wasm story**: needs `unstable_wasm` feature; some regex deps historically pulled `mio`. Verify clean build before committing.
-3. **Matryoshka truncation + LayerNorm**: candle's `nomic_bert` does mean-pool but the layer-norm-then-truncate step for matryoshka 768→512/256 must be added in caller code (~30 LOC).
+3. **Matryoshka truncation + LayerNorm**: candle's `nomic_bert` does mean-pool but the layer-norm-then-truncate step for matryoshka 768->512/256 must be added in caller code (~30 LOC).
 4. **serde version coexistence with libsql-ffi 0.9.0 + tree-sitter-***: candle pins serde 1.x — no conflict expected, but `Cargo.lock` resolution must be verified.
 5. **Wasm-opt pass**: `wasm-opt -Oz` will shave another ~20% off code segment but must run in CI; not currently in rs-plugkit's release.yml.
 
@@ -56,7 +56,7 @@ Both inside budget.
 
 ## Last-Resort: Model Swap
 
-If 137M params is too heavy or candle path fails entirely, swap to **all-MiniLM-L6-v2 Q4_K_M (~21 MiB, 384-dim, 22M params)** via candle's `bert` model. **Dim mismatch cost**: rs-plugkit's `F32_BLOB(768)` schema → `F32_BLOB(384)`. Requires (a) sqlite-vec column re-create migration, (b) re-embed of all rs-learn corpus, (c) recall-quality regression test. Roughly 1 subagent-hour migration + several hours wallclock to re-embed depending on corpus size. **Quality drop is real** — MiniLM MTEB avg ≈ 56 vs Nomic v1.5 ≈ 62; recall@k will degrade on technical content.
+If 137M params is too heavy or candle path fails entirely, swap to **all-MiniLM-L6-v2 Q4_K_M (~21 MiB, 384-dim, 22M params)** via candle's `bert` model. **Dim mismatch cost**: rs-plugkit's `F32_BLOB(768)` schema -> `F32_BLOB(384)`. Requires (a) sqlite-vec column re-create migration, (b) re-embed of all rs-learn corpus, (c) recall-quality regression test. Roughly 1 subagent-hour migration + several hours wallclock to re-embed depending on corpus size. **Quality drop is real** — MiniLM MTEB avg ≈ 56 vs Nomic v1.5 ≈ 62; recall@k will degrade on technical content.
 
 Burn is rejected as primary: backend-agnostic but no shipped Nomic/BERT model code; would mean hand-porting weights. Hand-rolled is rejected: WordPiece + 12-layer transformer + Q4_K dequant kernels is ~2–3 KLOC of careful matmul, not a payoff vs candle.
 

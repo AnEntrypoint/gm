@@ -1,4 +1,4 @@
-# thebird sql.js → plugkit migration map
+# thebird sql.js -> plugkit migration map
 
 (I1 audit, iter19 — preserved for later thebird-side migration after the policy-into-plugkit refactor lands.)
 
@@ -6,7 +6,7 @@
 
 ### 1. `docs/libsql-sqljs.js` (1-206) — ENTRY POINT, DELETE
 - API used: `loadSqlJs`, `window.initSqlJs`, `new SQL.Database()`, `db.prepare/exec/export/getRowsModified/close`, `db.__thebirdPlugkitBacked` flag
-- Plugkit coverage: full — via `docs/lib/sqlite-shim-libsql-client-adapter.js` (lines 47-107) bridging `createClient({url})` → `sqlite3.oo1.DB`, emitting `{rows, columns, rowsAffected, lastInsertRowid}`
+- Plugkit coverage: full — via `docs/lib/sqlite-shim-libsql-client-adapter.js` (lines 47-107) bridging `createClient({url})` -> `sqlite3.oo1.DB`, emitting `{rows, columns, rowsAffected, lastInsertRowid}`
 - Action: **delete entirely**
 
 ### 2. `docs/lib/sqlite-shim.js` (1-494) — KEEP (plugkit shim)
@@ -17,7 +17,7 @@
 - Action: **keep, no changes**
 
 ### 3. `docs/lib/sqlite-shim-libsql-client-adapter.js` (1-110) — KEEP
-- `createClient({url})` → libsql Client shape over `sqlite3.oo1.DB`
+- `createClient({url})` -> libsql Client shape over `sqlite3.oo1.DB`
 - Action: **keep, no changes**
 
 ### 4. `docs/vendor/busybase/embedded.js` — REROUTE comment only
@@ -34,7 +34,7 @@
 - Action: remove the `"sql.js"` importmap entry; keep sqlite3-wasm aliases
 
 ### 7. `docs/validate.html` (16-36) — CLEAN IMPORTMAP
-- Lines 19-22 importmap `"sql.js"` → `./lib/sqlite-shim.js`
+- Lines 19-22 importmap `"sql.js"` -> `./lib/sqlite-shim.js`
 - Affected 159-invariants: `sqlite_shim_global_present`, `sqlite_shim_init_returns_oo1_DB`, `sqlite_shim_exec_round_trip`, `sqlite_shim_uses_plugkit`, all busybase invariants. All plugkit-backed already.
 - Action: remove the `"sql.js"` importmap entry; update comments to plugkit-only
 
@@ -74,7 +74,7 @@
 
 ## KEY CONTRACT NOTES
 
-- `parseSelectColumns()` is a plugkit workaround (alphabetical-keys → SELECT order recovery), NOT sql.js-specific. Survives migration unchanged.
+- `parseSelectColumns()` is a plugkit workaround (alphabetical-keys -> SELECT order recovery), NOT sql.js-specific. Survives migration unchanged.
 - All 159 validate-harness invariants are plugkit-backed already; only importmap noise remains.
 - Footprint reduction: ~650 KB (sql-wasm.wasm) + ~25 KB (wrappers/aliases/entry).
 - Plugkit.wasm is loaded from CDN (`https://github.com/AnEntrypoint/plugkit-bin/releases/download/v0.1.464/plugkit.wasm`) per iter19 I2 decision.

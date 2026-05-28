@@ -1,15 +1,15 @@
 - id: skill-dispatch-latency-audit
   subject: Measure skill-dispatch overhead and identify compression opportunities
   status: completed
-  description: Skills-based platforms (vscode, cursor, zed, jetbrains) lack rs-plugkit hooks for auto-recall, session-start threading, pre-tool denials, prompt-submit gating, CI watch. Trace a complete gm-cc skill-only invocation (no hooks) through PLAN→EXECUTE→EMIT→COMPLETE phases. Measure turns, tokens, and RPC counts. Compare vs gm-cc hook-driven baseline. Identify top 3 compression wins.
+  description: Skills-based platforms (vscode, cursor, zed, jetbrains) lack rs-plugkit hooks for auto-recall, session-start threading, pre-tool denials, prompt-submit gating, CI watch. Trace a complete gm-cc skill-only invocation (no hooks) through PLAN->EXECUTE->EMIT->COMPLETE phases. Measure turns, tokens, and RPC counts. Compare vs gm-cc hook-driven baseline. Identify top 3 compression wins.
   effort: large
   category: infra
   route_family: execution
   load: 0.8
   acceptance:
-    - Documented turn sequence for gm-cc skill-only mode (no hooks) ✓
+    - Documented turn sequence for gm-cc skill-only mode (no hooks) [x]
     - Measured tokens per phase vs baseline: gm-cc (1 turn), skills-only (5 turns, +4 overhead)
-    - Identified 3+ compression opportunities with priority ranking ✓
+    - Identified 3+ compression opportunities with priority ranking [x]
     - Ranked by impact: (1) session-state threading (5-10% per phase), (2) recall auto-inject (2 turns context), (3) skill-chain-consolidation (15% overhead + perceived single flow)
 
 - id: session-id-threading-pattern
@@ -54,18 +54,18 @@
     - Test: attempt gm-emit with unknown mutable shows expected throw
 
 - id: skill-chain-consolidation
-  subject: Enable single-invocation full-chain dispatch (PLAN→COMPLETE)
+  subject: Enable single-invocation full-chain dispatch (PLAN->COMPLETE)
   status: completed
-  description: Skills-only platforms currently require 5 skill invocations: planning → gm-execute → gm-emit → gm-complete → update-docs. gm-cc does this via single `gm:gm` subagent call. Implemented option (B): gm SKILL.md frontmatter signals `end-to-end: true`; gm skill returns structured JSON output with nextSkill field; platform adapters (vscode, cursor, zed, jetbrains) detect signal and auto-invoke next skill with context dict, collapsing 5 invocations to 1 user invocation + 4 transparent auto-dispatches.
+  description: Skills-only platforms currently require 5 skill invocations: planning -> gm-execute -> gm-emit -> gm-complete -> update-docs. gm-cc does this via single `gm:gm` subagent call. Implemented option (B): gm SKILL.md frontmatter signals `end-to-end: true`; gm skill returns structured JSON output with nextSkill field; platform adapters (vscode, cursor, zed, jetbrains) detect signal and auto-invoke next skill with context dict, collapsing 5 invocations to 1 user invocation + 4 transparent auto-dispatches.
   effort: large
   category: feature
   route_family: execution
   load: 0.6
   acceptance:
-    - gm SKILL.md frontmatter extended with `end-to-end: true` signal ✓
-    - gm SKILL.md documents output contract: JSON {nextSkill, context, phase} on stdout ✓
-    - Platform SKILL.md templates (10 files) document end-to-end detection pattern, bootstrap pattern, SESSION_ID threading ✓
-    - All 10 platform SKILL.md expanded from 20→30 lines with bootstrap + SESSION_ID + end-to-end sections ✓
+    - gm SKILL.md frontmatter extended with `end-to-end: true` signal [x]
+    - gm SKILL.md documents output contract: JSON {nextSkill, context, phase} on stdout [x]
+    - Platform SKILL.md templates (10 files) document end-to-end detection pattern, bootstrap pattern, SESSION_ID threading [x]
+    - All 10 platform SKILL.md expanded from 20->30 lines with bootstrap + SESSION_ID + end-to-end sections [x]
     - Adapter detects signal and auto-invokes next skill with context dict (adapter implementation pending)
 
 - id: ci-watch-pattern

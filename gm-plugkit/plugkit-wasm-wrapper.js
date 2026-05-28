@@ -2279,7 +2279,7 @@ async function runSpoolWatcher(instance, spoolDir) {
             if (!_selfStaleLoggedOnce) {
               _selfStaleLoggedOnce = true;
               try { logEvent('plugkit', 'gm-plugkit.self-stale', { running_version: own, latest_version: latest, detected_by: 'watcher-periodic-probe' }); } catch (_) {}
-              console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} → spawning replacement via bun x gm-plugkit@latest spool and exiting`);
+              console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} -> spawning replacement via bun x gm-plugkit@latest spool and exiting`);
               try {
                 const cp = require('child_process');
                 const bunPath = process.env.GM_BUN_PATH || 'bun';
@@ -2402,7 +2402,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         file_version: fileV,
         action: 'exit-for-respawn',
       });
-      console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} → exiting so supervisor reloads fresh wasm`);
+      console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} -> exiting so supervisor reloads fresh wasm`);
       try {
         fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
           reason: 'version-change',
@@ -2485,7 +2485,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         file_sha: cur.slice(0, 12),
         action: 'exit-for-respawn',
       });
-      console.error(`[plugkit-wasm] wrapper.js drift detected → exiting so supervisor reloads fresh wrapper`);
+      console.error(`[plugkit-wasm] wrapper.js drift detected -> exiting so supervisor reloads fresh wrapper`);
       try {
         fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({
           reason: 'wrapper-change',
@@ -2793,7 +2793,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const bodyBytes = new TextEncoder().encode(body);
 
       const t0 = Date.now();
-      console.log(`[dispatch] → verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
+      console.log(`[dispatch] -> verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
       logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
 
       // Network-bound git verbs block the event loop for the duration of a push/fetch (~30s),
@@ -2852,7 +2852,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
       fs.writeFileSync(path.join(outDir, outName), resultStr);
       const dur_ms = Date.now() - t0;
-      console.log(`[dispatch] ← verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
+      console.log(`[dispatch] <- verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
       logEvent('plugkit', 'dispatch.end', { verb, task: taskBase, dur_ms, out_bytes: resultStr.length });
       emitOrchestratorEvents(verb, taskBase, resultStr);
 
@@ -3225,7 +3225,7 @@ async function runSpoolWatcher(instance, spoolDir) {
             instruction: 'plugkit is out of date. Update with: bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool. A fresh boot downloads the new wasm and respawns; an in-place running watcher does not self-download.',
             update_url,
           }, null, 2));
-          console.log(`[update] available: installed=${installed} latest=${latest} → wrote ${UPDATE_AVAILABLE_PATH}`);
+          console.log(`[update] available: installed=${installed} latest=${latest} -> wrote ${UPDATE_AVAILABLE_PATH}`);
           if (_lastKnownDrift !== latest) {
             logEvent('plugkit', 'update.available', { installed, latest, update_url });
             _lastKnownDrift = latest;

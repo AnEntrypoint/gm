@@ -2,9 +2,9 @@
 
 > **more coushin' for the puhin'**
 
-gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN → EXECUTE → EMIT → VERIFY → COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
+gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
 
-it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN → EXECUTE → EMIT → VERIFY → COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
+it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
 built over ~200 commits of daily use. free, open source, maintained by one person.
 
@@ -32,18 +32,18 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 
 ```
 gm/
-├── skills/gm-skill/   ← the skill (SKILL.md + index.js, ~12 lines of prose)
-├── bin/               ← bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
-├── lib/               ← runtime: spool dispatch, skill bootstrap, daemon mgmt
-├── agents/            ← subagent prompts (gm, memorize, research-worker, textprocessing)
-├── prompts/           ← bash-deny, session-start, prompt-submit, pre-compact
-├── lang/              ← language packs (browser, ssh)
-├── gm-plugkit/        ← separate npm package that ships the wasm-wrapper
-├── gm.json            ← version + plugkit pin
-├── package.json       ← npm publish manifest
-├── AGENTS.md          ← architectural rules (present-tense, no history)
-├── CHANGELOG.md       ← release history
-└── site/              ← flatspace site source (built to dist/ by CI)
+├── skills/gm-skill/   <- the skill (SKILL.md + index.js, ~12 lines of prose)
+├── bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
+├── lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
+├── agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
+├── prompts/           <- bash-deny, session-start, prompt-submit, pre-compact
+├── lang/              <- language packs (browser, ssh)
+├── gm-plugkit/        <- separate npm package that ships the wasm-wrapper
+├── gm.json            <- version + plugkit pin
+├── package.json       <- npm publish manifest
+├── AGENTS.md          <- architectural rules (present-tense, no history)
+├── CHANGELOG.md       <- release history
+└── site/              <- flatspace site source (built to dist/ by CI)
 ```
 
 The two npm packages this repo publishes:
@@ -55,7 +55,7 @@ The two npm packages this repo publishes:
 
 ### the state machine
 
-PLAN → EXECUTE → EMIT → VERIFY → COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
+PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
 
 ### tools
 

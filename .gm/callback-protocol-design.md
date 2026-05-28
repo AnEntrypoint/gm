@@ -54,11 +54,11 @@ One resume verb keeps the surface small; `token` identifies origin flow.
 
 Resume state machine:
 1. Verify HMAC; check step_id.
-2. Load suspended pipeline from KV at `state_kv_key`. Missing → `expired`.
+2. Load suspended pipeline from KV at `state_kv_key`. Missing -> `expired`.
 3. Validate `result` against schema + max_result_bytes.
 4. Splice into pipeline frame, advance one tick.
-5. If next tick needs LLM → emit new pending_step.
-6. If terminal → run native finalizer (embed → SQL insert / FTS query → rank), delete KV, return final response.
+5. If next tick needs LLM -> emit new pending_step.
+6. If terminal -> run native finalizer (embed -> SQL insert / FTS query -> rank), delete KV, return final response.
 
 ## 4. Step kinds
 
@@ -151,10 +151,10 @@ Suspended pipeline IS the open mutable.
 
 ## 8. Error / timeout handling
 
-- **Schema-invalid result** → `{ok:false, error:"result_schema_violation", pending_step:{...same id, same token...}, attempts_remaining: n-1}`. Retry; at 0 → terminal abort.
-- **Stale token** (HMAC valid, KV GC'd) → `{ok:false, error:"expired", flow_id, hint:"redispatch original verb"}`. Gate clears `pending_step_id`.
-- **Forged token** → `{ok:false, error:"invalid_token"}`. Gate untouched (defensive).
-- **Deadline passed with no continue** → on next `instruction`, plugkit notices `now > deadline_ms`, deletes KV, clears gate, surfaces `pipeline_timeout` event in instruction body with original verb body. Memo NOT persisted.
+- **Schema-invalid result** -> `{ok:false, error:"result_schema_violation", pending_step:{...same id, same token...}, attempts_remaining: n-1}`. Retry; at 0 -> terminal abort.
+- **Stale token** (HMAC valid, KV GC'd) -> `{ok:false, error:"expired", flow_id, hint:"redispatch original verb"}`. Gate clears `pending_step_id`.
+- **Forged token** -> `{ok:false, error:"invalid_token"}`. Gate untouched (defensive).
+- **Deadline passed with no continue** -> on next `instruction`, plugkit notices `now > deadline_ms`, deletes KV, clears gate, surfaces `pipeline_timeout` event in instruction body with original verb body. Memo NOT persisted.
 - **Terminal abort** (attempts exhausted): KV deleted, gate cleared, `{ok:false, error:"step_unresolvable", kind, step_id, last_validation_error}`. Logged. Original memorize dropped; no half-state in SQL.
 
 No partial commits. No background retries. Deterministic finalize-with-result, or write nothing.

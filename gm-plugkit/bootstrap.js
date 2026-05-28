@@ -237,7 +237,7 @@ async function extractNpmPackageWasm(destPath, version) {
     }
 
     fs.copyFileSync(nodeModulesPath, destPath);
-    log(`extracted ${nodeModulesPath} → ${destPath}`);
+    log(`extracted ${nodeModulesPath} -> ${destPath}`);
     obsEvent('bootstrap', 'npm.extract.end', { dur_ms: Date.now() - startMs, ok: true });
   } finally {
     try { fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 1, retryDelay: 50 }); } catch (_) {}

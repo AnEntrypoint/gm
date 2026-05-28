@@ -86,3 +86,47 @@
   body: 'Learning check: learn-status cores balanced; bad-memory prune review (prioritized, watch the clean-steady-state cluster); temporal recency; AGENTS.md drain if memorize fires.'
   status: completed
   witness: 'Learning healthy 0.1.611: learn-status balanced 172/172 (no orphans); prune review-mode returned distinct anchors only, zero true-positives (cluster well-pruned by prior fires - my latest anchor + iter100/110/49/88/75/112/68/52/120 each unique). Correct restraint.'
+- id: forbid-glyphs-rule-skill
+  body: 'Add hard rule to skills/gm-skill/SKILL.md (always-loaded behavioral surface): decorative/graphical symbols are FORBIDDEN in all output and source - arrows (the rightwards/leftwards/bidirectional arrow glyphs), box/geometric glyphs (rotated squares, filled squares/circles), stars, checkmarks, crosses, bullet dots, emojis, and any non-ASCII decorative glyph - and must be converted to an industry-standard ASCII/text equivalent (-> for arrow, * or - for bullet, [x]/[ ] or done/todo for check/cross, plain words for status) AS SOON AS discovered anywhere. This is a tell-tale-AI-design-element class: one sighting spawns a full-codebase sweep (same shape as the existing tell-tale rule). Functional operators in code (??, math, regex) and historical CHANGELOG entries are NOT targets - the rule is decorative/prose glyphs. Phrase as terse imperative prose, not a numbered list (skill-prose style).'
+  status: completed
+  witness: 'Added Graphical-symbols-are-forbidden hard rule to skills/gm-skill/SKILL.md (before the pliable rule): decorative glyphs (arrows/box/star/dot/bullet/check/cross/emoji) forbidden in output+source, convert to ASCII (-> bullet [x]/[ ] words) on sight, one sighting spawns full-codebase sweep (tell-tale class), exemptions narrow (functional operators, frozen changelog, binary, intentional icon-font). Terse imperative prose per skill style.'
+- id: forbid-glyphs-rule-agents
+  body: 'Add the same forbidden-decorative-glyphs hard rule to AGENTS.md Coding Style section (project-tracked cross-cutting rule, survives compaction): graphical symbols forbidden in output+source, convert to industry-standard text on discovery, one sighting spawns full-codebase sweep, functional operators + historical changelog exempt.'
+  status: completed
+  witness: Added same rule to AGENTS.md Coding Style after No-comments rule; also fixed line 59 transition arrows -> transition markers (->). Cross-cutting, survives compaction.
+- id: clean-glyphs-skill-md
+  body: 'Clean skills/gm-skill/SKILL.md of its own decorative glyphs (5 glyph lines incl ~20 arrow chars: PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE chains, add->commit->push etc). Convert arrow glyph to -> ASCII. The skill must obey its own rule. Browser-witness N/A (markdown, not loaded by HTML entry).'
+  status: completed
+  witness: perl-converted all arrow glyphs to -> in SKILL.md; final scan 0 arrow + 0 box/star/check/bullet. Em-dashes kept (industry-standard punctuation, not graphical, per iter35). The skill obeys its own rule.
+- id: clean-glyphs-agents-md
+  body: 'Clean AGENTS.md of its decorative glyphs (6 lines incl 14 arrow chars: PLAN -> EXECUTE state-machine refs, add->commit->push). Convert arrow glyph to ->. AGENTS.md must obey its own rule.'
+  status: completed
+  witness: AGENTS.md arrows converted to ->, final scan 0 decorative glyphs. Obeys its own rule.
+- id: clean-glyphs-prompts
+  body: Clean prompts/prompt-submit.txt (8) + prompts/session-start.txt (7) of decorative glyphs - these are LIVE behavioral elicitation surfaces (AGENTS.md treats prompts/ as behavioral). Convert arrows/glyphs to ASCII.
+  status: completed
+  witness: prompts/prompt-submit.txt + session-start.txt converted, 0 decorative glyphs remaining (both behavioral elicitation surfaces).
+- id: clean-glyphs-readme-changelog
+  body: 'Clean README.md (15 decorative glyphs - user-facing, shipped). CHANGELOG.md (14): historical entries are EXEMPT per the rule (changelog past-tense), but any decorative glyphs in non-historical header/template lines convert. Assess each: README is prose-to-clean, CHANGELOG body entries are historical-exempt.'
+  status: completed
+  witness: 'README.md converted (0 decorative glyphs). CHANGELOG.md left as-is: historical entries are exempt per the rule (frozen changelog, like git-log).'
+- id: clean-glyphs-agents-mds
+  body: Clean agents/*.md (textprocessing 6, memorize 6, gm 1) + SKILLS.md (4) of decorative glyphs - these are agent-facing instruction surfaces. Convert to ASCII.
+  status: completed
+  witness: agents/textprocessing.md + memorize.md + gm.md + SKILLS.md converted, 0 decorative glyphs across all.
+- id: clean-glyphs-code
+  body: 'Clean decorative glyphs in code: gm-plugkit/plugkit-wasm-wrapper.js (6), lib/spool-dispatch.js (2), gm-plugkit/bootstrap.js (1), bin/bootstrap.js (1), agents/gm.md (1). Distinguish decorative (log-message arrows, comment glyphs) from functional - convert decorative to ASCII, leave operators.'
+  status: completed
+  witness: gm-plugkit/plugkit-wasm-wrapper.js + lib/spool-dispatch.js + gm-plugkit/bootstrap.js + bin/bootstrap.js (+ index/cli/supervisor) arrow glyphs in log-messages/gate-reason-strings converted to ->; 0 remaining; node --check passes all 4 (no syntax breakage). Functional operators (=>,??) untouched.
+- id: clean-glyphs-site-paper
+  body: Sweep site/ + docs/ (paper.html, *.html, site/content, site/theme.mjs) for decorative glyphs - user-facing published surfaces. The earlier scan did not flag docs/*.html but rerun a targeted scan; convert any prose arrows/glyphs/emojis. Preserve legitimate UI data-placeholders (?? fallbacks per iter35) and CSS content glyphs that are intentional design.
+  status: completed
+  witness: 'site/ + docs/ scan: only 1 hit in docs/_archive/ (archived, exempt). site/theme.mjs, content yaml, paper.html, docs/*.html all clean of decorative glyphs. No conversion needed beyond the archived exempt file.'
+- id: glyph-exempt-classes
+  body: 'EDGE CASE / exemptions row: the rule must NOT touch (a) functional code operators (?? ?. => -> already-ascii, comparison/math), (b) historical CHANGELOG/git-log entries, (c) .gm/rs-learn.db (binary memory store), (d) .gm/*.md design-notes that are scratch/superseded (assess: these are mostly stale local notes, low priority - clean only if shipped). (e) intentional CSS ::before content or icon-font glyphs that are real design. Enumerate so the sweep does not over-reach into functional/binary/historical.'
+  status: completed
+  witness: 'Exemptions applied: functional operators (=>,??,?.) untouched; CHANGELOG history frozen; .gm/rs-learn.db binary excluded; .gm/*.yml witness_evidence are frozen historical mutable-records (left); docs/_archive archived (left). .gm/*.md scratch design-notes were cleaned (prose, not frozen records). Sweep did not over-reach into functional/binary/historical.'
+- id: validate-glyph-sweep-clean
+  body: After cleaning, re-run the codebase-wide decorative-glyph scan and confirm the shipped surfaces (SKILL.md, AGENTS.md, prompts, README, agents/*.md, site, paper, code) are glyph-free; remaining hits are only exempt classes (CHANGELOG history, binary db, functional operators). Witness the scan count drop.
+  status: completed
+  witness: 'FINAL scan (git ls-files excl node_modules/disciplines/rs-learn.db/CHANGELOG/_archive/binaries): ALL shipped + agent-facing + behavioral + code + site + docs surfaces are 0 decorative glyphs. Remaining hits only in exempt classes: .gm/*.yml frozen witness_evidence (historical mutable records) + binary rs-learn.db. node --check passed on all touched JS. Sweep complete + validated.'

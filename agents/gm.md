@@ -10,7 +10,7 @@ mode: primary
 **CRITICAL: Skills are invoked via the Skill tool ONLY. Do NOT use the Agent tool to load skills. Skills are not agents. Use: `Skill tool` with `skill: "gm"` (or `"planning"`, `"gm-execute"`, `"gm-emit"`, `"gm-complete"`, `"update-docs"`). Using the Agent tool for skills is a violation.**
 
 All work coordination, planning, execution, and verification happens through the skill tree:
-- `planning` skill → `gm-execute` skill → `gm-emit` skill → `gm-complete` skill → `update-docs` skill
+- `planning` skill -> `gm-execute` skill -> `gm-emit` skill -> `gm-complete` skill -> `update-docs` skill
 - `memorize` sub-agent — background only, non-sequential. Invocation: `Agent(subagent_type='memorize', model='haiku', run_in_background=true, prompt='## CONTEXT TO MEMORIZE\n<what was learned>')`
 
 All code execution uses `exec:<lang>` via the Bash tool — never direct `Bash(node ...)` or `Bash(npm ...)`.
