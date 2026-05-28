@@ -234,10 +234,22 @@ if (ds.applyDiff) ds.applyDiff(root, shell);
 else if (ds.mount) ds.mount(root, shell);
 else { root.innerHTML = ''; root.appendChild(shell); }
 
+if (page.layout === 'article') {
+  document.documentElement.classList.add('article-flow');
+}
 if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
   if (host) {
     host.innerHTML = page.articleHtml;
+    // The crumb already renders the page title; the article markdown carries its own leading
+    // <h1> too, so the title appears twice. Drop the article's leading h1 when it duplicates
+    // the page title (prefix match handles the article's longer subtitle form).
+    const firstH1 = host.querySelector('h1');
+    if (firstH1) {
+      const norm = (s) => String(s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const a = norm(firstH1.textContent), t = norm(page.title);
+      if (t && (a === t || a.startsWith(t) || t.startsWith(a))) firstH1.remove();
+    }
     const blocks = host.querySelectorAll('.mermaid');
     if (blocks.length) {
       import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
@@ -268,6 +280,17 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
+    /* The SDK app-shell makes .app-main a fixed-viewport-height column with overflow-y:auto
+       (right for app-style surfaces). For a long article that crams the whole paper into a
+       short inner scroll box with its own scrollbar; let the article grow and the PAGE scroll. */
+    /* The SDK app-shell (.app/.app-body/.app-main) is a fixed-viewport-height layout with
+       overflow:hidden/auto, right for OS-window surfaces but wrong for a long article: it clipped
+       the paper to ~517px with an inner scrollbar. Free the whole chain so the article flows and
+       the document scrolls. html.ds-247420 specificity + !important beats the SDK rules. */
+    html.article-flow, html.article-flow body { height: auto !important; min-height: 100% !important; overflow-y: auto !important; }
+    html.article-flow #app, html.article-flow .app, html.article-flow .app-body, html.article-flow .app-main {
+      height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
+    }
     .app-main > * { flex-shrink: 0; }
     /* The flatspace-injected article must flow in the page, never inside its own
        scroll box. A narrow AppShell column plus an overflow:auto ancestor squashed
