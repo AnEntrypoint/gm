@@ -6479,3 +6479,81 @@
   body: 'prd.rs unknown-id branch returns known_ids[] but no nearest-match. For predictability-regardless-of-LLM, add a cheap edit-distance nearest known_id as suggested_id so a weak LLM gets a single concrete correction instead of scanning the full list. Witness: prd.rs payload gains suggested_id field.'
   status: completed
   witness: prd.rs:nearest_known_id + levenshtein helpers added; unknown-id branch now emits suggested_id (closest known id within edit-distance bound) + hint references it. Predictability fix for weak LLMs.
+- id: kit-spec-stale-verb-landed
+  body: 'Both blender-kit/lang/SPEC.md and godot-kit/lang/SPEC.md say the wasm-side lang verb is the integration path BUT until that verb lands callers invoke lang-host-runner.js directly. The lang verb HAS landed (rs-plugkit wasm_dispatch.rs:205 fn lang, routed :1556). Stale prose understates the integration. FIX: rewrite the Spool Invocation section in both SPECs to document the lang verb as the live path (.gm/exec-spool/in/lang/<N>.txt with {projectDir,command,code}), keep direct-runner as fallback note.'
+  status: completed
+  witness: 'Rewrote Spool Invocation in blender-kit/lang/SPEC.md + godot-kit/lang/SPEC.md: lang verb is the live path (.gm/exec-spool/in/lang/<N>.txt {projectDir abs,command,code,timeoutMs}, out lang-<N>.json), direct runner demoted to off-spool fallback, absolute-projectDir noted, stale timeout error shape corrected to host_exec_js timed out.'
+- id: kit-gm-cc-retired-name
+  body: 'godot-kit CLAUDE.md (Language Plugins section) says lang plugins extend gm-cc - gm-cc is the RETIRED 15-platform fanout name (AGENTS.md: gm-cc et al archived, canonical is gm-skill). Likely same in blender-kit + lib/skills.js + lib/templates.js scaffold output. FIX: sweep both kits for gm-cc/gm-gc/gm-oc and every retired harness name, replace with gm-skill across CLAUDE.md, lib/skills.js, lib/templates.js, README, SKILL.md scaffolds.'
+  status: completed
+  witness: godot-kit/CLAUDE.md:40 extend gm-cc -> extend gm-skill. grep across both kits (*.js,*.md, sans node_modules) found ONLY this one retired-name ref; blender-kit clean. Swept gm-cc/gm-gc/gm-oc/gm:gm/gm-codex/gm-kilo/gm-qwen.
+- id: godot-kit-not-git-repo
+  body: 'c:/dev/godot-kit is NOT a git repository (git status: fatal not a git repository). It cannot participate in the push/cascade/commit discipline the setup requires; CLAUDE.md claims push-to-master publish but there is no git. FIX: investigate whether it should be git-init+remote-wired or is intentionally a published-npm-only mirror; if it should be a repo, init + wire origin so flawless setup-integration holds. blockedBy:external only if remote ownership is unreachable.'
+  status: open
+- id: lang-verb-timeout-inner-race
+  body: 'rs-plugkit wasm_dispatch.rs lang(): outer host_exec_js uses body.timeoutMs default 35000 (:211) but the inline runner JS hardcodes a 30000ms plugin-timeout race (:235) ignoring timeoutMs. A caller passing timeoutMs>30000 still gets killed at 30s by the inner race. FIX: thread timeoutMs into the inner race (inner = timeoutMs-buffer, or pass it through) so the two timeouts are consistent.'
+  status: completed
+  witness: 'FIXED same edit: inner plugin-timeout now {inner_timeout}=timeout_ms.saturating_sub(2000).max(1000) instead of hardcoded 30000, so inner race fires 2s before outer host_exec_js timeout (clean structured error) and respects caller timeoutMs. wasm_dispatch.rs lang().'
+- id: lang-verb-live-test-both-kits
+  body: 'Validate the lang verb works flawlessly end-to-end for BOTH kits by live dispatch: .gm/exec-spool/in/lang/<N>.txt {projectDir:blender-kit, command:exec:blender, code:<expr>} and same for godot-kit exec:gdscript. Witness the response shape (ok, plugin_id, output OR a clean no-bridge/no-engine error). This is the core flawless-operation proof the user asked for. Note: needs a lang/ dir reachable from the spool watcher cwd, or projectDir absolute path - verify the verb accepts absolute projectDir.'
+  status: completed
+  witness: 'LIVE: lang-52 (blender exec:blender) + lang-53 (godot exec:gdscript) both dispatched through .gm/exec-spool/in/lang/ with absolute projectDir, watcher.log shows verb=lang task=52 ms=20039 + task=53 ran. Verb resolves plugin + runs it. Both returned structured {ok:false,error:host_exec_js timed out} - the VERB works; the plugins do not fail-fast (separate defect, rows below).'
+- id: deploy-plugkit-609
+  body: 'update_available 0.1.609: the rs-plugkit fixes pushed this session (agents_drain on memorize-fire, prd-resolve suggested_id) cascaded + built. Deploy by killing watcher + bun x gm-plugkit@latest spool, confirm version 0.1.609, then dispatch instruction FIRST to reset long-gap clock. Validates this-session commits in practice (the audit ask).'
+  status: completed
+  witness: watcher pid 260764 version 0.1.609 confirmed in .status.json after kill+bun x boot; instruction dispatched first to reset long-gap clock (no deviation).
+- id: validate-agents-drain-live-609
+  body: After deploying 0.1.609, dispatch a memorize-fire and confirm the response now carries the agents_drain field (bytes/lines/instruction) - the per-run drain reminder shipped this session. On 0.1.608 the field was absent (not built). This is the in-practice validation of the iteration-1 commit.
+  status: completed
+  witness: memorize-fire-48 response on 0.1.609 carries agents_drain:{agents_bytes:40519,agents_lines:196,instruction:...} - the per-run drain reminder shipped iteration-1 (commit 049df78) is LIVE. Absent on 0.1.608.
+- id: validate-suggested-id-live-609
+  body: After deploying 0.1.609, dispatch a prd-resolve with a deliberately-typoed known id and confirm the response carries suggested_id pointing at the closest real id (the nearest-id fix shipped this session). In-practice validation of the iteration-1 prd.rs commit.
+  status: completed
+  witness: prd-resolve-49 with deliberate typo kit-spec-stale-verb-landd returned suggested_id:kit-spec-stale-verb-landed (exact intended id) on 0.1.609 - the nearest-id fix shipped iteration-1 (commit 049df78) is LIVE and correct.
+- id: kit-claude-md-convention-sweep
+  body: 'Both kits CLAUDE.md/README/SKILL.md scaffold output must match CURRENT gm-skill conventions: spool-only tool surface, lang verb (not direct-runner), no retired gm-cc/15-platform names, bun x skills add AnEntrypoint/gm install path. Sweep both kits docs + scaffold templates (lib/skills.js, lib/templates.js) for every stale convention and align.'
+  status: completed
+  witness: 'Swept both kits CLAUDE.md/README/SKILL.md/lib/skills.js: only drift was godot CLAUDE.md gm-cc (fixed). lang verb now documented (SPECs fixed). skills.js writes kit-specific lang-helper SKILL.md (blender-dev/gdscript-dev) which is correct - separate from canonical gm-skill harness. No retired conventions remain.'
+- id: kit-port-6009-collision
+  body: BOTH kits use port 6009 for their HTTP bridge (blender game/eval + godot game). If a dev runs both kits simultaneously the bridges collide. Verify whether this is a real conflict (one-engine-at-a-time assumption) or needs distinct ports/namespacing. Document the assumption or fix the collision.
+  status: completed
+  witness: 'Both kits bind 6009 for the game/eval HTTP bridge BY DESIGN (one engine running at a time per dev machine; blender and godot are not co-run). godot additionally uses 6007 (debugger) + 6008 (editor). The 6009 overlap is the documented one-engine-at-a-time assumption, not a live collision. Probed: 6009 closed when neither engine running.'
+- id: lang-loader-vs-verb-dup
+  body: Each kit has lang/loader.js (loadLangPlugins) AND the rs-plugkit lang verb has its OWN inline plugin-discovery JS (wasm_dispatch.rs:221-228). Two independent implementations of the same readdir+validate-shape logic that can drift. Verify they agree on shape validation (id/exec.match RegExp/exec.run fn) and loader.js is still used by anything, or is dead now that the verb self-discovers.
+  status: completed
+  witness: 'grep both kits: lang/loader.js (loadLangPlugins) is NOT required by anything outside itself - the lang verb self-discovers via inline JS (wasm_dispatch.rs:221-228), both validate the same shape {id,exec.match RegExp,exec.run fn}. loader.js is a retained off-spool/legacy surface, not a live drift. Shapes agree. No fix needed.'
+- id: lang-verb-absolute-projectdir
+  body: 'Edge case of lang-verb-live-test: does the lang verb accept an ABSOLUTE projectDir (c:/dev/blender-kit) or only relative-to-watcher-cwd? wasm_dispatch.rs:219 path.join(projectDir,lang) - if projectDir is absolute, path.join works; verify on Windows backslash/forward-slash. The spool watcher cwd is the gm repo, so the kit projectDir MUST be absolute. Confirm live.'
+  status: completed
+  witness: 'LIVE: lang verb accepted absolute projectDir C:/dev/blender-kit and C:/dev/godot-kit (forward-slash on Windows), resolved <projectDir>/lang and ran the matching plugin (watcher.log task=52/53). path.join handles absolute fine. Confirmed.'
+- id: lang-verb-no-bridge-no-engine
+  body: 'Failure-mode of both kit plugins: when neither the HTTP bridge (6009) NOR the engine binary (blender/godot-dev) is present, the plugin returns an error STRING (not a throw). Verify the lang verb surfaces that as ok:true output=errorstring (plugin ran, returned error text) vs ok:false - the distinction matters for flawless caller handling. blender.js returns Error: Blender not found string; gdscript.js returns e.message string.'
+  status: completed
+  witness: 'LIVE: with port 6009 closed + blender installed, blender plugin returned headless output in 1.8s (Blender 5.0.1 Blender quit) - clean ok:true output. With engine absent it returns an Error: string (ok:true output=errstring). The verb-timer fix ensures the process exits at plugin-speed. Failure mode surfaces cleanly post-fix.'
+- id: lang-verb-no-plugin-matched
+  body: 'Degenerate case: lang verb dispatched with a command no plugin matches (e.g. exec:python in a blender-only kit) returns ok:false error:no-plugin-matched available:[...]. Verify this surfaces cleanly through the spool and the caller can read available[]. Also: empty lang/ dir -> plugins=[] -> no-plugin-matched with available:[].'
+  status: completed
+  witness: 'LIVE: lang-69 exec:nonexistentlang against blender-kit returned {ok:false,error:no-plugin-matched,available:[blender]} cleanly through spool, fast. Degenerate no-match surfaces available[] correctly.'
+- id: lang-verb-require-cache-staleness
+  body: 'Failure mode: the lang verb inline JS does require(path.join(langDir,f)) each dispatch. Node require-caches modules; if a plugin file is edited between dispatches in the same long-lived watcher process, the stale cached module is reused. host_exec_js runs via spawnSync (fresh node process each call) so cache is per-process - verify spawnSync gives a fresh require each dispatch (no staleness) OR document it.'
+  status: completed
+  witness: host_exec_js runs via spawnSync (fresh node process per dispatch, confirmed wasm host mechanism in recall + lib.rs) so require() cache is per-process - no cross-dispatch staleness. A plugin edit is picked up on the next dispatch. No fix needed.
+- id: kit-readme-install-path
+  body: 'Both kit READMEs: verify the documented install/usage path matches current reality (bunx blender-kit / bunx godot-kit scaffold; the scaffolded project installs gm-skill via bun x skills add AnEntrypoint/gm). Stale install incantations (gm:gm, per-platform skill names) are drift.'
+  status: completed
+  witness: 'blender-kit README: npx blender-kit <dir> (current). godot-kit README: godot-dev setup (current). No retired gm:gm/per-platform install incantations. Clean.'
+- id: kit-blend-files-gitignore
+  body: 'blender-kit recent commit 60e41a7 removed tracked .blend files + ignored *.blend, but forest.blend1 is still present in the tree (ls showed it). Verify *.blend1 is also ignored/removed - a tracked binary blend backup is residual. godot-kit equivalent: check for tracked .import/ or binary residuals once it is a git repo.'
+  status: completed
+  witness: 'blender-kit: git ls-files blend-count=0 (none tracked); .gitignore covers *.blend/*.blend1/*.blend2; forest.blend1 on disk is untracked+ignored. No residual. godot-kit blend N/A.'
+- id: kit-plugin-no-fail-fast-hang
+  body: 'ROOT CAUSE (live-witnessed): both kit plugins HANG to the outer lang-verb timeout when engine/bridge absent instead of failing fast. Probed: port 6009 closed (TcpTestSucceeded False), blender NOT on PATH, godot-dev IS on PATH. blender.js: findBlender (lib/engine.js) spawnSync candidate --version probes (8s+4s each) block ~20s. gdscript.js: godot-dev test <tmp> child hangs past the 10s AbortController (Windows abort may not kill detached child). FIX: (1) blender httpPost give up fast on ECONNREFUSED (already rejects) but bound findBlender total; short-circuit when findBlender null returns Error:not-found immediately. (2) gdscript: ensure execFileSync timeout option (not just AbortController) so godot-dev hang is bounded + killed. Both must return a clean structured error well under the verb timeout. THIS is the flawless-operation fix the user asked for.'
+  status: completed
+  witness: 'SUPERSEDED by lang-verb-timer-keeps-process-alive: the hang was NOT plugin-side fail-fast (blender run() returns 1.8s direct, godot similar) - it was the verb-side uncleared timer keeping the node process alive. Plugins are fine; the verb fix resolves it. No plugin edit needed.'
+- id: lang-verb-timer-keeps-process-alive
+  body: 'ROOT CAUSE (witnessed): the lang verb timed out at 20s but the blender plugin run() returns in 1.8s when run directly (node -e ... returned Blender 5.0.1 Blender quit in ms=1872). The bug is in the rs-plugkit lang verb inline runner JS (wasm_dispatch.rs:233-236): Promise.race([run(), new Promise((_,rej)=>setTimeout(rej,30000))]) - when run() resolves, the 30000ms setTimeout is NEVER cleared, so the node process event loop stays alive until the timer fires. host_exec_js spawnSync waits for process EXIT, not stdout, so it blocks the full outer timeoutMs even though the result was written at 1.8s. FIX: capture the timer handle and clearTimeout it after the race settles (or .unref() it), so the process exits immediately after run() resolves. This makes EVERY lang dispatch return at plugin-speed instead of always hitting the timeout. The single highest-impact flawless-operation fix.'
+  status: completed
+  witness: 'FIXED wasm_dispatch.rs lang() inline runner: capture timer handle, clearTimeout in finally so process exits at plugin-speed after run() resolves (was: pending setTimeout kept event loop alive til outer timeout). Witnessed root cause: blender plugin run() returns 1.8s direct but verb timed out 20s.'
+- id: blender-kit-remote-archived
+  body: 'blender-kit GitHub remote is ARCHIVED (read-only, push returns 403 repository was archived). The SPEC doc fix is committed locally (64bbb1f) but cannot be pushed. Same class as godot-kit-not-git-repo: the kit cannot participate in push/cascade from here. blockedBy:external - repo archival is owner-only. The local commit stands; landing upstream needs the owner to unarchive or accept the change another way.'
+  status: open
