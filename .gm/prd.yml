@@ -49,7 +49,7 @@
 - id: steady-state-validate-iter
   body: 'Honest steady-state: this 35-min window has NO new system bug. All deviations are the concurrent 247420 session (prd-resolve-unknown fix-pages-yml-alpine-apk, long-gap 19min, stop-gate residuals). The one watcher-exited-unexpectedly exit_code:4294967295 critical at 11:06 was MY deliberate force-kill last fire to deploy the browser fix - correctly classified critical (unexpected from supervisor POV). 0 git/search-discipline violations. Per Nothing Fake: validate, do not manufacture churn. Prior fixes (lang timer, COMPLETE-gate, exit-75, clean-exit, browser isolation) all shipped+validated across the last 4 fires.'
   status: completed
-  witness: 35-min window 4 deviations all concurrent-247420 (3 long-gap browser + stop-gate residuals), 0 git/search violations, no new system bug from my work. Prior commits deployed 0.1.611. The genuine finding (fresh-prompt-reset gap) is fixed separately.
+  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
 - id: deploy-kill-predictability
   body: 'NOTICED: when an agent deliberately kills a watcher to deploy a wrapper fix (the documented deploy method), the supervisor logs watcher-exited-unexpectedly severity:critical (exit 4294967295 force-kill) - a false critical for a planned action. IMPROVEMENT for predictability: the deploy-kill should first write .gm/exec-spool/.shutdown-reason.json {reason:external-planned} (already in plannedReasons) so the supervisor classifies it info. Document the deploy-kill-with-shutdown-reason method in AGENTS.md/recall so any LLM deploying a wrapper fix does it predictably. Code already supports it (plannedReasons has external-planned); the gap is the agent-side procedure.'
   status: completed
@@ -61,7 +61,7 @@
 - id: steady-state-validate-iter
   body: 'Honest deep steady-state: 35-min window has 2 deviations both concurrent-session (stop-gate residuals + long-gap browser, no-session 247420), 0 git/search-discipline violations, NO watcher exits, NO supervisor criticals. The supervisor exit-75 + clean-exit fixes are holding (no critical floods), browser per-session isolation holding (no crosstalk). Per Nothing Fake: validate honestly, no manufactured churn. Prior 5 fires shipped+validated lang-timer/COMPLETE-gate/exit-75/clean-exit/browser-isolation/deploy-kill-procedure.'
   status: completed
-  witness: 35-min window 4 deviations all concurrent-247420 (3 long-gap browser + stop-gate residuals), 0 git/search violations, no new system bug from my work. Prior commits deployed 0.1.611. The genuine finding (fresh-prompt-reset gap) is fixed separately.
+  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
 - id: learning-health-deep-check
   body: 'Deep learning-system check this fire: learn-status cores balanced (text_rows==vec_rows per namespace); router quality_milli monotone; temporal recency live (cos*recency); bad-memory prune review (prioritized) - act only on true-positive dups; agents_drain mechanical per memorize-fire; AGENTS.md drain this run.'
   status: completed
@@ -69,7 +69,7 @@
 - id: steady-state-validate-iter
   body: 'Honest steady-state: 35-min window 2 deviations both concurrent-247420-session long-gap-no-instruction on browser verbs (gap ~5min). 0 git/search-discipline violations, no new system bug. Prior commits validated deployed on 0.1.611. The gm tree is dirty with the 247420 design-SDK session 6-file docs/*.html sweep - that session is ACTIVE at EMIT prd_pending:1 (just added prd harness-html-runs-sandbox 12:11), it owns + will commit those files at its own COMPLETE. This is legitimate concurrent-writer contention, not my work. Per Nothing Fake: validate honestly, no manufactured churn.'
   status: completed
-  witness: 35-min window 4 deviations all concurrent-247420 (3 long-gap browser + stop-gate residuals), 0 git/search violations, no new system bug from my work. Prior commits deployed 0.1.611. The genuine finding (fresh-prompt-reset gap) is fixed separately.
+  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
 - id: learning-health-iter
   body: 'Learning 100% check (needs no clean tree): learn-status cores balanced; temporal recency live; router quality monotone; bad-memory prune review (prioritized) act only on true-positive dups; agents_drain mechanical per memorize-fire; AGENTS.md drain this run.'
   status: completed
@@ -81,7 +81,7 @@
 - id: steady-state-validate-iter
   body: '35-min window: 4 deviations all concurrent-247420 (3 long-gap browser + 1 stop-gate residuals), 0 git/search violations. No new system bug from my work. Prior commits deployed on 0.1.611. The one genuine finding is the fresh-prompt-reset-from-non-terminal gap (separate row).'
   status: completed
-  witness: 35-min window 4 deviations all concurrent-247420 (3 long-gap browser + stop-gate residuals), 0 git/search violations, no new system bug from my work. Prior commits deployed 0.1.611. The genuine finding (fresh-prompt-reset gap) is fixed separately.
+  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
 - id: learning-health-iter
   body: 'Learning check: learn-status cores balanced; bad-memory prune review (prioritized, watch the clean-steady-state cluster); temporal recency; AGENTS.md drain if memorize fires.'
   status: completed
@@ -130,3 +130,19 @@
   body: After cleaning, re-run the codebase-wide decorative-glyph scan and confirm the shipped surfaces (SKILL.md, AGENTS.md, prompts, README, agents/*.md, site, paper, code) are glyph-free; remaining hits are only exempt classes (CHANGELOG history, binary db, functional operators). Witness the scan count drop.
   status: completed
   witness: 'FINAL scan (git ls-files excl node_modules/disciplines/rs-learn.db/CHANGELOG/_archive/binaries): ALL shipped + agent-facing + behavioral + code + site + docs surfaces are 0 decorative glyphs. Remaining hits only in exempt classes: .gm/*.yml frozen witness_evidence (historical mutable records) + binary rs-learn.db. node --check passed on all touched JS. Sweep complete + validated.'
+- id: glyph-rule-deploy-lag
+  body: 'WITNESSED: the forbidden-glyphs rule shipped to gm-skill npm 2.0.1494 (commit 7bc6a79d before the 41ae53ea auto-bump, publish.yml ran) BUT the installed ~/.claude/skills/gm-skill/SKILL.md + ~/.agents/skills/gm-skill/SKILL.md still show 0 rule + 5 arrow glyphs - the SKILL.md auto-refresh (bootstrapPlugkit sha-compare) has not re-fired since publish. Mechanism is correct (auto-refresh exists) but lags until a fresh bootstrap. This is the installed!=published!=running caveat for SKILL.md. ACTION: trigger the refresh (bun x gm-plugkit@latest spool reboot or skill-bootstrap) so the installed skill reflects the shipped rule, then verify the installed copy has the rule + 0 glyphs. Validate in practice.'
+  status: completed
+  witness: 'DEPLOYED+VALIDATED: wrote .shutdown-reason.json {external-planned}, kill-stale, bun x gm-plugkit@latest spool reboot ran ensureSkillMdCurrent/auto-refresh; installed ~/.claude/skills/gm-skill/SKILL.md + ~/.agents/skills/gm-skill/SKILL.md now both have the Graphical-symbols-forbidden rule (1 each) AND 0 arrow glyphs. The shipped rule (gm-skill 2.0.1494) is now live in the running agent installed skill. installed==published==running for SKILL.md confirmed.'
+- id: validate-fresh-prompt-fix-612
+  body: 'VALIDATE (data in hand): fresh-prompt-reset fix (0c7cba1->0.1.612) working - this fire reset to PLAN cleanly with current auto_recall (fired_at 12:58 matching the actual prompt), no manual transition-to-PLAN needed (prior 3 fires needed it). Resolve with witness.'
+  status: completed
+  witness: 'VALIDATED LIVE on 0.1.612: this fire reset to PLAN cleanly on the fresh prompt with current auto_recall (fired_at 12:58 derived from the actual prompt Add-hard-rule-shipped-SKILL), no manual transition-to-PLAN needed (the prior 3 fires required it from stuck non-terminal carryover). The 0c7cba1 fresh-prompt-reset-from-any-phase fix works in practice.'
+- id: ccsniff-glyph-discipline
+  body: 'CONSIDER: a ccsniff/gmsniff glyph-discipline detector so the no-graphical-symbols rule is observable like --search-discipline/--git-discipline. It would scan agent output/written files for decorative glyphs and flag. ASSESS first: is this in-scope+reducing (a real observability gap) or churn? The rule is already enforced by the agent on sight; a detector adds post-hoc observability. ccsniff is a sibling repo (C:/dev/ccsniff). Decide: implement only if it is a clear net improvement, else note as deferred-by-judgment (Nothing Fake - do not manufacture).'
+  status: completed
+  witness: 'IMPLEMENTED + validated: ccsniff --glyph-discipline (commit 6e58280) mirrors search/git-discipline - scans Write/Edit/NotebookEdit content for decorative glyphs (arrow/box/geometric/star/dot/check/cross/emoji unicode ranges), em-dash + ASCII operators excluded (no false positives, tested). node --check OK. Live run found 15 violations across projects by-project. Real net improvement: makes the no-graphical-symbols rule observable post-hoc, symmetric with the other discipline flags. Use: bun x ccsniff@latest --glyph-discipline --stats --since <window> each audit fire.'
+- id: steady-state-validate-iter
+  body: 35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug. Prior commits (glyph rule, fresh-prompt, supervisor, browser) deployed/holding on 0.1.612 except the SKILL.md install-lag (separate row). Learning health + drain this run.
+  status: completed
+  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
