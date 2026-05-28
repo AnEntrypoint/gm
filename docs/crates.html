@@ -100,10 +100,10 @@ sequenceDiagram
   <div class="crate-header">
     <h2>rs-plugkit</h2>
     <span class="role">the orchestrator</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit &uarr;</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> own the PLAN&rarr;EXECUTE&rarr;EMIT&rarr;VERIFY&rarr;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm module that loads into the Node host; the other four crates are its imports.</p>
+  <p><strong>Job:</strong> own the PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm module that loads into the Node host; the other four crates are its imports.</p>
 
   <h3>what it actually does</h3>
   <ul>
@@ -118,7 +118,7 @@ sequenceDiagram
   <h3>commandments it enforces</h3>
   <ul>
     <li><span class="tag danger">blocked</span> direct Bash for <code>node|npm|npx|bun</code>, use <code>exec_js</code> via the spool</li>
-    <li><span class="tag">redirect</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> &rarr; <code>codesearch</code></li>
+    <li><span class="tag">redirect</span> <code>find</code>, <code>grep</code>, <code>rg</code>, <code>Glob</code>, <code>Explore</code> -&gt; <code>codesearch</code></li>
     <li><span class="tag">stop-block</span> while <code>.gm/prd.yml</code> has items, while <code>.gm/mutables.yml</code> has unwitnessed rows, while git is uncommitted or unpushed</li>
     <li><span class="tag">residual-scan</span> one-shot challenge at COMPLETE before allowing stop</li>
   </ul>
@@ -135,7 +135,7 @@ sequenceDiagram
   <div class="crate-header">
     <h2>rs-exec</h2>
     <span class="role">wasm host helpers</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec &uarr;</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec (open)</a></span>
   </div>
 
   <p><strong>Job:</strong> provide the host-side machinery that plugkit&rsquo;s wasm imports use to actually touch the world. Code execution, browser sessions, file-system glue, idle cleanup. Formerly a native exec daemon with its own port and rpc; now a wasm-only utility crate published as <code>@anentrypoint/rs-exec-wasm</code>.</p>
@@ -168,7 +168,7 @@ sequenceDiagram
   <div class="crate-header">
     <h2>rs-codeinsight</h2>
     <span class="role">the AST x-ray</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight &uarr;</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight (open)</a></span>
   </div>
 
   <p><strong>Job:</strong> tree-sitter-based code structure analysis. Powers the symbol layer of <code>codesearch</code> and the session-start architectural overview that lands in the agent&rsquo;s opening context. Published as <code>@anentrypoint/rs-codeinsight-wasm</code>.</p>
@@ -177,7 +177,7 @@ sequenceDiagram
   <ul>
     <li>walks the project tree, parses every supported language via tree-sitter, builds a structural index</li>
     <li>computes per-file metrics: lines, functions, classes, average complexity, parameter counts, long functions, large files</li>
-    <li>derives architectural layers (L0 pure exports &rarr; L3 pure imports), identifies hub modules and circular dependencies</li>
+    <li>derives architectural layers (L0 pure exports -&gt; L3 pure imports), identifies hub modules and circular dependencies</li>
     <li>flags issues: complex functions, large files, duplicated groups, dead exports, orphaned files</li>
     <li>caches results in <code>.codeinsight</code> with a digest of (mtime sum + git HEAD + dirty-tree marker); default invocation always runs fresh, <code>--read-cache</code> permitted only on exact digest match</li>
   </ul>
@@ -194,7 +194,7 @@ sequenceDiagram
   <div class="crate-header">
     <h2>rs-search</h2>
     <span class="role">the file finder</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search &uarr;</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search (open)</a></span>
   </div>
 
   <p><strong>Job:</strong> answer <code>codesearch &lt;words&gt;</code>. BM25 plus embedding fusion over file content, scan-embed-sweep pipeline, with snippet windows and tunable context. Published as <code>@anentrypoint/rs-search-wasm</code>.</p>
@@ -227,7 +227,7 @@ sequenceDiagram
   <div class="crate-header">
     <h2>rs-learn</h2>
     <span class="role">the memory store</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn &uarr;</a></span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn (open)</a></span>
   </div>
 
   <p><strong>Job:</strong> hold every fact the agent ever resolved, across every session, on every machine. The <code>recall</code> verb reads from it. The <code>memorize-fire</code> orchestrator verb writes to it. The store is committed to the repo as <code>.gm/rs-learn.db</code>, so memory shares across machines, sessions, CI, and contributors. Published as <code>@anentrypoint/rs-learn-wasm</code>.</p>

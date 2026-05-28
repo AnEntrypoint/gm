@@ -250,6 +250,13 @@ if (page.layout === 'article' && page.articleHtml) {
       const a = norm(firstH1.textContent), t = norm(page.title);
       if (t && (a === t || a.startsWith(t) || t.startsWith(a))) firstH1.remove();
     }
+    // When the article carries a Contents block, hoist it to a direct child of the host
+    // and switch the host to the two-column grid so the .toc sits in a sticky side rail.
+    const toc = host.querySelector('.toc');
+    if (toc) {
+      if (toc.parentElement !== host) host.insertBefore(toc, host.firstChild);
+      host.classList.add('has-toc');
+    }
     const blocks = host.querySelectorAll('.mermaid');
     if (blocks.length) {
       import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
@@ -303,6 +310,70 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       min-height: 0;
     }
     .ds-prose { line-height: 1.65; }
+    /* TOC sidebar: when the extracted article carries a .toc, lay the host out as a
+       two-column grid with the Contents in a sticky left rail and the article body in
+       the right column. The .toc spans all rows; everything else flows in column 2.
+       The paper's own .toc head styles are stripped on extraction, so the rail's
+       internal typography (title, list, links) is restated here with SDK tokens. */
+    #ds-article-host.has-toc {
+      display: grid;
+      grid-template-columns: 256px minmax(0, 1fr);
+      column-gap: 44px;
+      align-items: start;
+    }
+    #ds-article-host.has-toc > .toc {
+      grid-column: 1;
+      grid-row: 1 / -1;
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0;
+      max-width: 100%;
+      padding: 18px 18px 18px 20px;
+      background: var(--panel-1);
+      border-radius: 10px;
+      box-shadow: var(--panel-shadow);
+      /* Thin themed scrollbar so the rail does not show a raw wide OS scrollbar. */
+      scrollbar-width: thin;
+      scrollbar-color: var(--panel-3, #2a2f3a) transparent;
+    }
+    #ds-article-host.has-toc > .toc::-webkit-scrollbar { width: 8px; }
+    #ds-article-host.has-toc > .toc::-webkit-scrollbar-track { background: transparent; }
+    #ds-article-host.has-toc > .toc::-webkit-scrollbar-thumb {
+      background: var(--panel-3, #2a2f3a);
+      border-radius: 8px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    #ds-article-host.has-toc > .toc::-webkit-scrollbar-thumb:hover { background: var(--panel-text-3, #4a5060); background-clip: padding-box; }
+    #ds-article-host .toc .toc-title {
+      font-family: var(--ff-mono, monospace);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--panel-text-2);
+      margin: 0 0 14px 0;
+    }
+    #ds-article-host .toc ol { margin: 0; padding-left: 18px; }
+    #ds-article-host .toc li { font-size: 13px; line-height: 1.85; color: var(--panel-text); }
+    #ds-article-host .toc li::marker { color: var(--panel-text-3, #7a8090); font-variant-numeric: tabular-nums; }
+    #ds-article-host .toc a { color: var(--panel-text-2); text-decoration: none; transition: color .12s ease; }
+    #ds-article-host .toc a:hover { color: var(--panel-accent, #6ee7b7); }
+    #ds-article-host.has-toc > :not(.toc) { grid-column: 2; min-width: 0; }
+    @media (max-width: 900px) {
+      #ds-article-host.has-toc {
+        display: block;
+      }
+      #ds-article-host.has-toc > .toc {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        margin: 0 0 28px 0;
+      }
+    }
     .ds-prose pre, .ds-prose table { overflow-x: auto; max-width: 100%; }
     .app-main > h1,
     .app-main > h2,
