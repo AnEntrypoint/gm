@@ -614,6 +614,14 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>The bar is <em>obvious + reachable from this session</em>, not any conceivable refactor. Speculative or aesthetic changes stay out. Library-replacement is a specific case: before keeping a local reimplementation of something a published package already provides, add a PRD item to swap to the import. Local code competes with upstream maintenance and loses.</p>
 
+<p>The architecture is treated as <em>pliable</em>: not a fixed substrate the work routes around, but a shape the work is licensed to reshape. Every architectural change that clearly improves the design or clearly reduces the code-maintenance burden is a spooled PRD plan, not a deferred wish. Replacing bespoke code with native functionality or a very-popular, well-maintained library is encouraged, but only when it <em>reduces the codebase</em> to a net-smaller shipped-and-maintained surface. Adding a heavy dependency to delete a few lines net-grows maintenance and is the failure mode the rule guards against; the swap is admissible precisely when the line count and the maintenance surface both fall.</p>
+
+<h3>22.3 The Jank Sweep</h3>
+<p>At PLAN, for every surface the user&rsquo;s prompt concerns, the agent enumerates to the PRD a complete list of every possible aspect that can be checked for <em>jank</em>, every immaturity, every unfinished edge, every half-wired path, across gui, ux, ui, client state, server state, the client/server state boundary, and any other surface the request reaches. <em>Jank</em> is the operative word: the sweep hunts the rough, the unpolished, the almost-done, not only outright bugs. Each aspect that must be improved or validated is its own PRD row, including a profiling row and a security row for every surface that can carry them. The sweep is scoped to what the prompt concerns and its reachable closure, not an unbounded repo-wide audit, but within that closure it is exhaustive. Every issue found along the way opens its own debug-and-repair plan spooled as PRD rows the same turn, and every outstanding quick improvement is spooled too.</p>
+
+<h3>22.4 The Tell-Tale Sweep</h3>
+<p>One tell-tale AI design element found along the way, a boilerplate flourish, an over-hedged comment, a generic scaffold name, an unmistakable machine-authored shape, spawns a full-codebase sweep. A single sighting is never a one-off local fix: it is the witness that the same shape is likely elsewhere, so it triggers a complete codebase-wide resolution run spooled to the PRD as its own rows, one for the scan, one per cluster of findings, one for the fix-and-verify, exhaustive over every possible file. A tell-tale left standing anywhere is the tell that the whole was machine-shaped, so the sweep does not stop at the instance that surfaced it.</p>
+
 <hr>
 
 <h2 id="s23">23. Browser Witness</h2>
@@ -627,6 +635,9 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 </div>
 
 <p>The browser witness rule closes the gap between &ldquo;the test passes&rdquo; and &ldquo;the feature works.&rdquo; A test that passes against a mock DOM cannot witness whether the live page renders the change correctly. The only authoritative evidence is the live page&rsquo;s own evaluation of the invariant.</p>
+
+<h3>23.1 The Live Page Is the Debugger</h3>
+<p>Client-side debugging exposes globals on the page and runs experiments <em>in</em> the browser through <code>page.evaluate</code>, rather than blind experimentation paired with continuous server restarts. The restart-and-eyeball loop observes almost nothing per cycle and burns a turn each time; a global plus a <code>page.evaluate</code> reads the actual live state in a single dispatch and runs the experiment against the real runtime. When a client behavior is unclear, the move is to surface the relevant state as a <code>window.*</code> global, then evaluate it live, then assert against what the page actually holds, not to restart the server and guess from the rendered output. The live page is the debugger; the same surface that witnesses an edit (§23) also diagnoses it.</p>
 
 <hr>
 
@@ -839,6 +850,9 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>Crucially this depends on nothing but the verb spool. It is not a hook, not a stop-event interceptor, not a platform-specific continuation feature, any of which would bind the discipline to one agent host and break the moment the same skill runs under a different harness. The continuation invariant is prose served through the <code>instruction</code> verb and restated in the skill body; it elicits the same behavior on every model that can read and call tools. Predictability across heterogeneous LLMs is the goal, and a spool-only rule is the only mechanism that achieves it.</p>
 
+<h3>38.1 Caveman-Terse Output</h3>
+<p>The user-facing prose around the tool calls is held to the tersest achievable form, emitted only when words are absolutely needed. Mundane output, boot-probe narration, dispatch echoes, restatement of prose the agent just read, status recaps, is suppressed or cut <em>caveman</em>-terse: drop the articles, drop the preamble, drop the play-by-play. What earns words is substantive, a real finding, a decision and its one-line reason, a blocker; nothing else does. The discipline composes with, and never overrides, the continuation invariant above: terse means fewer and shorter words, never zero tool calls and never silent work. The turn still ends in the chain-advancing tool call, and the agent still states in one terse clause what it is about to do. The output shrinks toward zero exactly when the tool calls already carry the meaning, which on a well-driven chain is most of the time.</p>
+
 <h2 id="s39">39. Spool Dispatch Replaces Platform Hooks</h2>
 
 <div class="hard-rule">
@@ -943,19 +957,19 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <h2 id="s44">44. Discussion</h2>
 
-<h3>38.1 Relationship to Formal Methods</h3>
+<h3>44.1 Relationship to Formal Methods</h3>
 <p>The approach shares surface similarities with model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions on advancement). It operates at a coarser abstraction level: the &ldquo;states&rdquo; are task phases, not program states, and the &ldquo;contracts&rdquo; concern what the agent knows rather than program correctness. The governance layer (§13) adds route families that function like typing domains: they partition the space of valid operations rather than verifying program properties.</p>
 
-<h3>38.2 Relationship to Test-Driven Development</h3>
+<h3>44.2 Relationship to Test-Driven Development</h3>
 <p>There is a loose analogy to TDD: both emphasize verification before completion. The difference is that verifications in this system are not persisted as a test suite during EXECUTE, they exist as witnessed execution. The single integration test (§26) is the COMPLETE-phase residual of this witnessing. The 200-line budget trades regression depth for context-window economy.</p>
 
-<h3>38.3 External vs. Self-Regulation</h3>
+<h3>44.3 External vs. Self-Regulation</h3>
 <p>A recurring design choice is external enforcement over self-regulation. Marker-file gates enforce phase boundaries because the same model that reasons through a problem also reasons through the justification for shortcuts. The agent cannot bypass the stop-checkpoint gate by deciding it has already verified; the dispatcher reads <code>.gm/prd.yml</code> and <code>.gm/mutables.yml</code> on disk, independent of the agent&rsquo;s judgment. The hard rules in §§21&ndash;37 are externally enforced in the same sense: they live in the wasm orchestrator&rsquo;s <code>instruction</code> output and in the marker-file gates, not in the agent&rsquo;s in-context reasoning. The earlier hook-event architecture made this enforcement contingent on a working callback pump; the current architecture reduces it to a file read.</p>
 
-<h3>38.4 Overhead vs. Benefit</h3>
+<h3>44.4 Overhead vs. Benefit</h3>
 <p>Every backward transition introduces overhead: discovering a new unknown during EMIT discards partial work and requires re-planning and re-executing. In production, this cost is offset by reduced late-stage rework. The snake-back mechanism surfaces problems early when their scope is still bounded; problems discovered at COMPLETE have compounded across all subsequent work.</p>
 
-<h3>38.5 Limitations</h3>
+<h3>44.5 Limitations</h3>
 <ol>
   <li><strong>Finite unknown assumption:</strong> Termination requires discoverable unknowns to be finite. In adversarial or chaotic environments this may not hold. Specifically, the two-pass reclassification allowance (§9.2) does not prevent an unknown from persisting across both passes if the underlying blocker is structural rather than transient. If an unknown persists after the second pass, the prescribed behavior is <code>exec:pause</code> with the blocker recorded in the PRD header, not reclassification to a third pass. Without this termination condition, persistent blockers could produce unbounded reclassification cycles.</li>
   <li><strong>Witnessed execution cost:</strong> Real execution against expensive external APIs may be prohibitive for some resolution paths.</li>

@@ -6383,3 +6383,31 @@
   subject: 'Strengthen the caveman-terse rule to explicitly encourage user-facing responses to be the tersest achievable form, emitted only when absolutely needed. Composes with no-prose-only-stop: tersest never omits the chain-advancing tool call; the user-visible prose shrinks to near-zero unless a substantive finding/decision/blocker requires words.'
   status: completed
   witness: 'SKILL.md terse rule extended: target for every user-facing response is the tersest achievable form emitted only when words absolutely needed; prose shrinks to near-zero when tool calls carry meaning'
+- id: paper-jank-sweep-subsection
+  subject: 'Add to docs/paper.html section 22 (Fix on Sight) a subsection 22.3 documenting the jank-sweep discipline: at PLAN the agent enumerates to the PRD every possible aspect checkable for jank across gui/ux/ui/client-state/server-state/boundary including profiling and security rows, scoped to the prompt''s concern + reachable closure. Use the load-bearing word jank verbatim.'
+  status: completed
+  witness: docs/paper.html new subsection 22.3 The Jank Sweep added after 22.2; uses jank verbatim, enumerates across gui/ux/ui/client-state/server-state/boundary with profiling+security rows, scoped to prompt closure
+- id: paper-telltale-sweep-subsection
+  subject: 'Add to docs/paper.html section 22 a subsection 22.4 documenting the tell-tale-AI full-codebase-sweep discipline: one tell-tale AI design element found spawns a complete codebase-wide sweep+fix run spooled to the PRD, exhaustive over every possible file, never a one-off local fix.'
+  status: completed
+  witness: 'docs/paper.html new subsection 22.4 The Tell-Tale Sweep: one sighting spawns full-codebase sweep+fix spooled to PRD, exhaustive over every possible file'
+- id: paper-pliable-architecture
+  subject: 'Sharpen docs/paper.html section 22.2 (Auto-PRD on Re-Architecting Opportunities) to name the pliable-architecture discipline explicitly: architecture is treated as pliable, every clear improvement or maintenance-reduction is a spooled PRD plan, native/popular-lib swap admissible ONLY when it reduces the codebase to a net-smaller maintained surface. Use pliable verbatim. Compose with the existing library-replacement prose.'
+  status: completed
+  witness: 'docs/paper.html section 22.2 gained a pliable paragraph: architecture treated as pliable, every clear improvement spooled, native/popular-lib swap only when it reduces codebase to net-smaller maintained surface; pliable used verbatim'
+- id: paper-caveman-terse-section
+  subject: 'Add a new short section to docs/paper.html documenting the caveman-terse output discipline: mundane user-facing text is suppressed or cut caveman-terse, tersest achievable form only when needed, while the continuation invariant (a toolless turn is a stop, section 38) is preserved - terse never means zero tool calls or silent work. Place near section 38 (Continuation Invariant) or section 37 (Meaning Through Agent). Add TOC entry + renumber if inserting mid-sequence, or append as a late section to avoid renumber churn.'
+  status: completed
+  witness: docs/paper.html subsection 38.1 Caveman-Terse Output under section 38 Continuation Invariant; caveman verbatim; collision with stale 38.x in section 44 resolved by renumber
+- id: skill-browser-globals-debug-rule
+  subject: 'Add a SKILL.md + AGENTS.md rule: to debug client-side code, expose globals on the client (window.*) and use the browser verb''s page.evaluate/exec to inspect live state and run experiments IN the browser, rather than blind experimentation + continuous server restarts. The live page is the debugger; a global + page.evaluate reads actual state in one dispatch, where a restart-and-eyeball loop burns turns and observes nothing. Composes with Browser Witness.'
+  status: completed
+  witness: SKILL.md new rule The live page is the debugger (after Browser Witness rule) + AGENTS.md mirror Client-side debugging exposes globals; memorized mem 330
+- id: paper-browser-globals-debug
+  subject: 'Document the browser-globals debugging discipline in docs/paper.html, extending section 23 (Browser Witness) with a subsection: expose client globals and use page.evaluate/in-browser code execution to inspect live state and run experiments, instead of blind experimentation + continuous restarts. The live page is the debugger.'
+  status: completed
+  witness: docs/paper.html subsection 23.1 The Live Page Is the Debugger added under Browser Witness
+- id: paper-s44-subsection-renumber
+  subject: docs/paper.html section 44 Discussion has subsections mislabeled 38.1/38.2/... (stale numbering from a prior section move) which now collides with the new 38.1 Caveman-Terse under section 38. Renumber the section-44 Discussion subsections from 38.x to 44.x so numbering is consistent and the 38.1 collision is gone. Noticed during the paper edit; jank found along the way is triaged this turn.
+  status: completed
+  witness: docs/paper.html section 44 Discussion subsections renumbered 38.1-38.5 -> 44.1-44.5; grep confirms only one 38.1 remains (the new Caveman-Terse under section 38), no collision
