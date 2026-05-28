@@ -32,8 +32,8 @@ article code { font-family: var(--ff-mono); font-size: 12px; background: var(--p
 .row .k { font-family: var(--ff-mono); font-size: 11px; color: var(--panel-text-2); text-transform: uppercase; letter-spacing: .06em; }
 .flow { display:block; margin:12px 0; padding:14px 16px; background: var(--panel-2); border-radius:6px; font-family: var(--ff-mono); font-size:11px; line-height:1.5; color:var(--panel-text); white-space: pre; overflow-x:auto; }
 .tag { display:inline-block; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); font-family: var(--ff-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--panel-text); margin-right: 4px; }
-.tag.danger { background: #f9d4d2; color: #6a1f1c; }
-.tag.special { background: #d4e6f9; color: #1c3a6a; }
+.tag.danger { background: color-mix(in oklab, var(--warn, #c0392b) 14%, transparent); color: var(--warn, #c0392b); }
+.tag.special { background: color-mix(in oklab, var(--sky, #2b6cb0) 14%, transparent); color: var(--sky, #2b6cb0); }
 </style>
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';

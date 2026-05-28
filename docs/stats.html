@@ -73,7 +73,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 
   <header>
     <h1>gm Metrics</h1>
-    <p style="color: #94a3b8; margin-top: 0.5rem;">Live GitHub stats</p>
+    <p style="color: var(--panel-text-2); margin-top: 0.5rem;">Live GitHub stats</p>
   </header>
 
   <main>
@@ -137,7 +137,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     </section>
 
     <section id="releases">
-      <h2>🏷️ Recent Releases</h2>
+      <h2>Recent Releases</h2>
       <div id="releasesList"></div>
     </section>
   </main>
@@ -145,7 +145,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
   <footer>
     <div id="updated">Loading…</div>
     <div style="margin-top: 0.5rem;">
-      <button onclick="refreshData()">🔄 Refresh Now</button>
+      <button onclick="refreshData()">Refresh Now</button>
       <label style="margin-left: 1rem;">
         <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
         Auto-refresh every 5 min
@@ -157,6 +157,16 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     let chartInstances = {};
     let apiData = {};
     let autoRefreshId = null;
+
+    // Pull chart colors from the SDK theme tokens so charts track paper/ink.
+    const tok = (name, fallback) => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    };
+    const C_LINE = () => tok('--panel-accent', '#3f8a4a');
+    const C_GRID = () => tok('--panel-3', '#e3dac7');
+    const C_TICK = () => tok('--panel-text-3', '#857b6c');
+    const C_MUTED = () => tok('--panel-text-2', '#5a5246');
 
     window.__debug = {
       dashboard: {
@@ -292,8 +302,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           datasets: [{
             label: 'Stars',
             data: data.map(d => d.count),
-            borderColor: '#60a5fa',
-            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+            borderColor: C_LINE(),
+            backgroundColor: 'rgba(63, 138, 74, 0.12)',
             tension: 0.3,
             fill: true
           }]
@@ -303,8 +313,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+            y: { beginAtZero: true, grid: { color: C_GRID() }, ticks: { color: C_TICK() } },
+            x: { grid: { color: C_GRID() }, ticks: { color: C_TICK() } }
           }
         }
       });
@@ -333,8 +343,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+            y: { beginAtZero: true, grid: { color: C_GRID() }, ticks: { color: C_TICK() } },
+            x: { grid: { display: false }, ticks: { color: C_TICK() } }
           }
         }
       });
@@ -356,7 +366,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           datasets: [{
             label: 'Downloads/day',
             data: totals.map(d => d.count),
-            borderColor: '#f59e0b',
+            borderColor: C_LINE(),
             backgroundColor: 'rgba(245, 158, 11, 0.12)',
             tension: 0.3,
             fill: true
@@ -367,8 +377,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+            y: { beginAtZero: true, grid: { color: C_GRID() }, ticks: { color: C_TICK() } },
+            x: { grid: { color: C_GRID() }, ticks: { color: C_TICK() } }
           }
         }
       });
@@ -383,7 +393,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           <td><strong>${r.login}</strong></td>
           <td>${r.reviews}</td>
         </tr>
-      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:var(--panel-text-3);">No data</td></tr>';
     }
 
     function renderFilesTable() {
@@ -391,10 +401,10 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
       const data = apiData.insights?.top_files || [];
       tbody.innerHTML = data.slice(0, 5).map(f => `
         <tr>
-          <td><code style="color:#60a5fa;font-size:0.75rem;">${f.path.slice(-50)}</code></td>
+          <td><code style="color:var(--panel-accent);font-size:0.75rem;">${f.path.slice(-50)}</code></td>
           <td>${f.changes}</td>
         </tr>
-      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:var(--panel-text-3);">No data</td></tr>';
     }
 
     function renderVelocityTable() {
@@ -405,7 +415,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           <td>${v.week}</td>
           <td><strong>${v.merged}</strong></td>
         </tr>
-      `).join('') || '<tr><td colspan="2" style="text-align:center;color:#64748b;">No data</td></tr>';
+      `).join('') || '<tr><td colspan="2" style="text-align:center;color:var(--panel-text-3);">No data</td></tr>';
     }
 
     function renderSummaryCards() {
@@ -427,7 +437,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
           <div class="release-name">${r.name}</div>
           <a href="${r.url}" target="_blank" class="release-link">View on GitHub →</a>
         </div>
-      `).join('') || '<div style="text-align:center;color:#64748b;">No releases</div>';
+      `).join('') || '<div style="text-align:center;color:var(--panel-text-3);">No releases</div>';
     }
 
     function updateTimestamp() {

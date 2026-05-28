@@ -316,6 +316,19 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       .panel .row { padding: 14px 16px; gap: 12px; }
       .cli { padding: 14px 16px; font-size: 12px; }
     }
+
+    /* Article-extracted surfaces (made-with showcase, stats, callouts).
+       The source docs' own <style> heads are stripped on extraction, so the
+       shell restyles them here with SDK tokens. */
+    .ds-prose .card { display: grid; grid-template-columns: 180px 1fr auto; gap: 16px; padding: 12px 16px; margin: 6px 0; background: var(--panel-1); border-radius: 6px; align-items: baseline; font-size: 13px; box-shadow: var(--panel-shadow); text-decoration: none; }
+    .ds-prose .card:hover { background: var(--panel-hover); }
+    .ds-prose .card .repo-name { font-weight: 600; color: var(--panel-text); }
+    .ds-prose .card .stars { color: var(--panel-text-3); font-family: var(--ff-mono); font-size: 12px; }
+    .ds-prose .card .desc { color: var(--panel-text-2); font-size: 12px; line-height: 1.5; margin: 0; }
+    .ds-prose .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ds-prose .tag { background: var(--panel-2); color: var(--panel-text-2); border: 1px solid var(--panel-3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: var(--ff-mono, monospace); }
+    .ds-prose .gm-callout { margin: 18px 0; padding: 14px 18px; background: var(--panel-1); border-left: 3px solid var(--panel-accent); color: var(--panel-text); }
+    .ds-prose .gm-callout .who { display: block; font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); margin-bottom: 4px; }
   </style>
 </head>
 <body>
