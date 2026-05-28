@@ -40,7 +40,7 @@ Agents dispatch verbs by writing to `.gm/exec-spool/in/<verb>/<N>.txt` (request 
 
 **git verbs**: git is a first-class spool surface, never a shell command; `git_finalize {message}` is the bundled COMPLETE-phase push surface and `git_push` is the only admissible raw push (porcelain-gated, rebase-retry). A git-dominant `bash`/`powershell` body is gated (`deviation.bash-git-bypass`). Full per-verb shapes, host_git `.exe` resolution, and the gate detail live in rs-learn (`recall: git verbs rs-plugkit spool surface`).
 
-**filter verb**: pure stdout → compact-stdout transformation. Body `{kind, input, ...opts}` where kind is one of `grep`, `ls`, `tree`, `json`, `diff`, `git-status`, `log`. Returns `{output, stats:{bytes_in, bytes_out, saved_pct, ...}}`. Pipe raw command output through filter before letting it enter context, in-wasm, no subprocess. The bootstrap fetches only `plugkit.wasm`, there is no separate filter/rtk binary download.
+**filter verb**: pure stdout → compact-stdout transformation, in-wasm, no subprocess; pipe raw command output through it before it enters context. Full per-kind spec in rs-learn (`recall: filter verb rs-plugkit spool spec`).
 
 ## Documentation Policy
 

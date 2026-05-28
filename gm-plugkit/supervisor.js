@@ -144,13 +144,16 @@ function spawnWatcher(bootReason) {
     const shutdownReason = readShutdownReason();
     const reason = shutdownReason && shutdownReason.reason;
     const idleClean = reason === 'idle';
+    const lockRejected = code === 75;
     const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'external-planned']);
-    const isPlanned = plannedReasons.has(reason);
+    const isPlanned = plannedReasons.has(reason) || lockRejected;
     const eventName = idleClean
       ? 'supervisor.watcher-exited-idle'
       : reason === 'version-change'
         ? 'supervisor.watcher-exited-for-update'
-        : 'supervisor.watcher-exited-unexpectedly';
+        : lockRejected
+          ? 'supervisor.watcher-exited-lock-rejected'
+          : 'supervisor.watcher-exited-unexpectedly';
     logEvent(eventName, {
       watcher_pid: currentChildPid,
       exit_code: code,
@@ -163,6 +166,11 @@ function spawnWatcher(bootReason) {
     });
     if (idleClean) {
       writeSupervisorStatus('exited-idle', { watcher_pid: currentChildPid });
+      try { fs.unlinkSync(SUPERVISOR_PATH); } catch (_) {}
+      process.exit(0);
+    }
+    if (lockRejected) {
+      writeSupervisorStatus('exited-lock-rejected', { watcher_pid: currentChildPid });
       try { fs.unlinkSync(SUPERVISOR_PATH); } catch (_) {}
       process.exit(0);
     }

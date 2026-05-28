@@ -23,6 +23,8 @@ main > a { display: grid; grid-template-columns: 180px 1fr auto; gap: 16px; padd
 main > a:hover { background: var(--panel-hover); text-decoration: none; }
 main > a h2, main > a h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--panel-text); }
 main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height: 1.5; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { background: var(--panel-2); color: var(--panel-text-2); border: 1px solid var(--panel-3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: var(--ff-mono, monospace); }
 </style>
 <style>
 .gm-topbar{display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--panel-1);box-shadow:var(--panel-shadow);border-bottom:1px solid var(--panel-3);position:sticky;top:0;z-index:50}
@@ -71,7 +73,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
 
   <header>
     <h1>Made with gm</h1>
-    <p>Projects from <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:#6366f1;">AnEntrypoint</a> built using the gm workflow.</p>
+    <p>Projects from <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:var(--panel-accent)">AnEntrypoint</a> built using the gm workflow.</p>
   </header>
   <main>
     <a href="https://github.com/AnEntrypoint/gm-exec" target="_blank" rel="noopener" class="card">
@@ -80,7 +82,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">123</span>
       </div>
       <p class="desc">Exec dispatcher powering gm, multi-language code execution with session isolation and live output streaming.</p>
-      <div class="tags"><span style="background:#6366f122;color:#6366f1;border:1px solid #6366f144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">exec</span> <span style="background:#6366f122;color:#6366f1;border:1px solid #6366f144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">runtime</span></div>
+      <div class="tags"><span class="tag">exec</span> <span class="tag">runtime</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/hyper-nat" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -88,7 +90,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">75</span>
       </div>
       <p class="desc">NAT traversal library. Punch through firewalls without a relay server.</p>
-      <div class="tags"><span style="background:#10b98122;color:#10b981;border:1px solid #10b98144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">networking</span> <span style="background:#10b98122;color:#10b981;border:1px solid #10b98144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">p2p</span></div>
+      <div class="tags"><span class="tag">networking</span> <span class="tag">p2p</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/agentgui" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -96,7 +98,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">10</span>
       </div>
       <p class="desc">Multi-agent GUI for Claude Code, Gemini CLI, and other coding tools. Sidebar UI with streaming conversations.</p>
-      <div class="tags"><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">gui</span> <span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">agents</span></div>
+      <div class="tags"><span class="tag">gui</span> <span class="tag">agents</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/vexify" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -104,7 +106,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">6</span>
       </div>
       <p class="desc">Portable vector database. Auto-installs Ollama embeddings, no config needed.</p>
-      <div class="tags"><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">database</span> <span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">embeddings</span></div>
+      <div class="tags"><span class="tag">database</span> <span class="tag">embeddings</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/codebasesearch" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -112,7 +114,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">4</span>
       </div>
       <p class="desc">Fast BM25 codebase search with MCP protocol support.</p>
-      <div class="tags"><span style="background:#8b5cf622;color:#8b5cf6;border:1px solid #8b5cf644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">search</span> <span style="background:#8b5cf622;color:#8b5cf6;border:1px solid #8b5cf644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">MCP</span></div>
+      <div class="tags"><span class="tag">search</span> <span class="tag">MCP</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/codemode-agent" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -120,7 +122,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">4</span>
       </div>
       <p class="desc">Agent framework with MCP integration for complex multi-step workflows.</p>
-      <div class="tags"><span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">agents</span> <span style="background:#8b5cf622;color:#8b5cf6;border:1px solid #8b5cf644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">MCP</span></div>
+      <div class="tags"><span class="tag">agents</span> <span class="tag">MCP</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/acpreact" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -128,7 +130,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">3</span>
       </div>
       <p class="desc">React bindings and patterns for agentic coding pipelines.</p>
-      <div class="tags"><span style="background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">react</span> <span style="background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">frontend</span></div>
+      <div class="tags"><span class="tag">react</span> <span class="tag">frontend</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/mcp-thorns" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -136,7 +138,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">3</span>
       </div>
       <p class="desc">MCP server with sharp edges, tools for agents that need direct system access.</p>
-      <div class="tags"><span style="background:#8b5cf622;color:#8b5cf6;border:1px solid #8b5cf644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">MCP</span> <span style="background:#8b5cf622;color:#8b5cf6;border:1px solid #8b5cf644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">tools</span></div>
+      <div class="tags"><span class="tag">MCP</span> <span class="tag">tools</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/zellous" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -144,7 +146,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">3</span>
       </div>
       <p class="desc">Production push-to-talk over WebRTC with Opus codec and Discord-style ducking.</p>
-      <div class="tags"><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">audio</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">WebRTC</span></div>
+      <div class="tags"><span class="tag">audio</span> <span class="tag">WebRTC</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/audit-cc-tail" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -152,7 +154,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">2</span>
       </div>
       <p class="desc">Detects distinct Claude model variants per family from behavioral fingerprinting.</p>
-      <div class="tags"><span style="background:#f8717122;color:#f87171;border:1px solid #f8717144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">claude</span> <span style="background:#f8717122;color:#f87171;border:1px solid #f8717144;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">diagnostics</span></div>
+      <div class="tags"><span class="tag">claude</span> <span class="tag">diagnostics</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/thebird" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -160,7 +162,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">Anthropic SDK to Gemini streaming bridge. Drop-in adapter for cross-provider code.</p>
-      <div class="tags"><span style="background:#34d39922;color:#34d399;border:1px solid #34d39944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">bridge</span> <span style="background:#34d39922;color:#34d399;border:1px solid #34d39944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">streaming</span></div>
+      <div class="tags"><span class="tag">bridge</span> <span class="tag">streaming</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/wasivst" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -168,7 +170,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">Run unmodified Windows VST2/VST3 plugins in the browser via WASM.</p>
-      <div class="tags"><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">audio</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">WASM</span></div>
+      <div class="tags"><span class="tag">audio</span> <span class="tag">WASM</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/floosie" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -176,7 +178,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">Universal stream processing platform. Pipe anything to anything.</p>
-      <div class="tags"><span style="background:#34d39922;color:#34d399;border:1px solid #34d39944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">streams</span> <span style="background:#34d39922;color:#34d399;border:1px solid #34d39944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">pipeline</span></div>
+      <div class="tags"><span class="tag">streams</span> <span class="tag">pipeline</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/diagen" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -184,7 +186,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">1</span>
       </div>
       <p class="desc">Text-to-speech and facial animation server for VRM avatars.</p>
-      <div class="tags"><span style="background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">TTS</span> <span style="background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">animation</span></div>
+      <div class="tags"><span class="tag">TTS</span> <span class="tag">animation</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/busybase" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -192,7 +194,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">1</span>
       </div>
       <p class="desc">Supabase-like HTTP API over SQLite. No Postgres, no infra, just a file.</p>
-      <div class="tags"><span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">database</span> <span style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">sqlite</span></div>
+      <div class="tags"><span class="tag">database</span> <span class="tag">sqlite</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/godot-kit" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -200,7 +202,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">1</span>
       </div>
       <p class="desc">Agentic Godot 4.x boilerplate, REPL, CLI debugging, live reload for agent-driven game dev.</p>
-      <div class="tags"><span style="background:#84cc1622;color:#84cc16;border:1px solid #84cc1644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">godot</span> <span style="background:#84cc1622;color:#84cc16;border:1px solid #84cc1644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">gamedev</span></div>
+      <div class="tags"><span class="tag">godot</span> <span class="tag">gamedev</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/ancient-anguish" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -208,7 +210,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">MUD game in React + Vite. Text-based multiplayer world with a modern frontend.</p>
-      <div class="tags"><span style="background:#84cc1622;color:#84cc16;border:1px solid #84cc1644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">game</span> <span style="background:#84cc1622;color:#84cc16;border:1px solid #84cc1644;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">multiplayer</span></div>
+      <div class="tags"><span class="tag">game</span> <span class="tag">multiplayer</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/baremetal-plugs" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -216,7 +218,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">Vital wavetable synth running on bare-metal Raspberry Pi 4 via Circle, no OS.</p>
-      <div class="tags"><span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">audio</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">embedded</span></div>
+      <div class="tags"><span class="tag">audio</span> <span class="tag">embedded</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/jit-render" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -224,7 +226,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         
       </div>
       <p class="desc">Generative UI framework built on WebJSX and web standards. No virtual DOM overhead.</p>
-      <div class="tags"><span style="background:#fb923c22;color:#fb923c;border:1px solid #fb923c44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">UI</span> <span style="background:#fb923c22;color:#fb923c;border:1px solid #fb923c44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">framework</span></div>
+      <div class="tags"><span class="tag">UI</span> <span class="tag">framework</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/milkvid" target="_blank" rel="noopener" class="card">
       <div class="card-top">
@@ -232,7 +234,7 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
         <span class="stars">1</span>
       </div>
       <p class="desc">Milkdrop preset video renderer via butterchurn, WebCodecs, and ffmpeg.wasm.</p>
-      <div class="tags"><span style="background:#f43f5e22;color:#f43f5e;border:1px solid #f43f5e44;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">video</span> <span style="background:#ec489922;color:#ec4899;border:1px solid #ec489944;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:3px;font-family:monospace;">audio</span></div>
+      <div class="tags"><span class="tag">video</span> <span class="tag">audio</span></div>
     </a>
   </main>
   <script>
