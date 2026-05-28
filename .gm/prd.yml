@@ -6411,3 +6411,23 @@
   subject: docs/paper.html section 44 Discussion has subsections mislabeled 38.1/38.2/... (stale numbering from a prior section move) which now collides with the new 38.1 Caveman-Terse under section 38. Renumber the section-44 Discussion subsections from 38.x to 44.x so numbering is consistent and the 38.1 collision is gone. Noticed during the paper edit; jank found along the way is triaged this turn.
   status: completed
   witness: docs/paper.html section 44 Discussion subsections renumbered 38.1-38.5 -> 44.1-44.5; grep confirms only one 38.1 remains (the new Caveman-Terse under section 38), no collision
+- id: remove-caveman-skill
+  subject: Remove the word 'caveman' from skills/gm-skill/SKILL.md:83 terse-output rule, keeping the discipline. Replace 'speak caveman-terse' / 'caveman is the load-bearing word' with clear phrasing (e.g. 'stripped to the bone', 'terse is the load-bearing word').
+  status: completed
+  witness: SKILL.md:83 rule retitled Suppress mundane output; strip it to the bone; caveman removed, terse discipline kept. grep caveman skills/ = 0 hits
+- id: remove-caveman-agents
+  subject: Remove 'caveman' from AGENTS.md:103 (Mundane user-facing output rule), keeping the terse discipline. Replace caveman-terse / caveman-is-the-load-bearing-word with clear phrasing.
+  status: completed
+  witness: AGENTS.md:103 rule retitled stripped to the bone; caveman removed. grep caveman AGENTS.md = 0 hits
+- id: remove-caveman-paper
+  subject: Rename docs/paper.html:853 heading '38.1 Caveman-Terse Output' and remove 'caveman' from the 854 body, keeping the terse-output discipline. New heading e.g. '38.1 Terse Output'.
+  status: completed
+  witness: docs/paper.html:853 heading 38.1 Terse Output (was Caveman-Terse); body caveman-terse -> stripped to the bone. grep caveman docs/ = 0 hits
+- id: prune-caveman-memories
+  subject: 'Prune the two stale rs-learn memories that assert ''caveman is a load-bearing word kept verbatim'' (mem-1779953200841-3-461 and mem-1779953201241-4-381) - now wrong since the word is being removed. Dispatch memorize-prune {keys}. Then memorize-fire a corrected fact: the terse-output discipline stands but ''caveman'' was removed; load-bearing hyper-words are jank, every possible, pliable (not caveman).'
+  status: completed
+  witness: memorize-prune deleted mem-1779953200841-3-461 and mem-1779953201241-4-381 (mode explicit-key); corrected fact memorized mem-1779955382124 stating caveman removed, hyper-words are jank/every-possible/pliable
+- id: telltale-sweep-site-paper
+  subject: 'Exhaustive tell-tale-AI scan of docs/*.html and site/content/pages/*.yaml: grep for hype-filler (seamless/effortless/unlock/leverage/cutting-edge/delve/tapestry/myriad/testament/realm/plethora/game-changing), marketing cadence, over-hedging, and em-dash tic clusters. Record findings and fix any real ones. Site is in an intentional lowercase authored voice; the scan must distinguish house-style from machine-tic.'
+  status: completed
+  witness: Exhaustive grep of docs/*.html + site/content/pages/*.yaml for hype-filler (seamless/effortless/unlock/leverage/delve/tapestry/myriad/testament/realm/plethora/game-changing/cutting-edge/state-of-the-art/ecosystem/paradigm/holistic) returned ZERO hits. made-with.html project descriptions are concrete+specific. home.yaml is intentional lowercase authored voice, not machine-tic. paper intro is academic prose; robust at line 327 is a precise technical comparison not filler. Only tell-tale coupling was the caveman word, removed. Site+paper clean.
