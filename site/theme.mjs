@@ -299,6 +299,26 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
     .app-main > * { flex-shrink: 0; }
+    /* Mobile topbar: the SDK topbar squeezed 9 nav links into a collapsed grid cell
+       so they overlapped unreadably. Make the topbar a wrapping flex row; nav drops to
+       its own full-width row and scrolls horizontally with real link spacing. */
+    .app-topbar { display: flex; flex-wrap: wrap; align-items: center; }
+    .app-topbar > nav { margin-left: auto; }
+    .app-topbar nav a { flex: 0 0 auto; }
+    @media (max-width: 640px) {
+      .app-topbar > nav {
+        flex: 1 1 100%; max-width: none; margin-left: 0; order: 3;
+        display: flex; flex-wrap: nowrap; gap: 2px;
+        overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      }
+      .app-topbar > nav::-webkit-scrollbar { display: none; }
+      .app-topbar nav a { flex: 0 0 auto; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
+      /* The crumb's tagline chip ("a state machine...") is redundant with the hero
+         on mobile and wraps to a tall row eating ~127px of vertical space. Hide it
+         on narrow screens; keep the theme toggle. */
+      .app-crumb .ds-chip, .app-crumb [class*="chip"] { display: none; }
+      .app-crumb .ds-theme-toggle, .app-crumb [class*="theme-toggle"] { display: inline-flex; }
+    }
     /* The flatspace-injected article must flow in the page, never inside its own
        scroll box. A narrow AppShell column plus an overflow:auto ancestor squashed
        the paper into a narrow bracket with its own scrollbar; force natural flow and
