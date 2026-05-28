@@ -83,9 +83,31 @@ const activeLabel = (() => {
   return hit ? hit[0] : (navItems[0] && navItems[0][0]) || '';
 })();
 
+// Nav hrefs from navigation.yaml are root-relative ("./paper/"). location.href on a relative
+// href resolves against the CURRENT page, so from /gm/paper/ a link to "./skills/" wrongly lands
+// at /gm/paper/skills/. Resolve every nav href against the SITE ROOT (the deployment base, which
+// is /gm/ on Pages and / locally), derived by stripping the active page's own path from the
+// current pathname so it works under any base.
+const siteRoot = (() => {
+  const segNorm = (p) => String(p).replace(/[#?].*$/, '').replace(/^\\.\\//, '').replace(/^\\/+|\\/+$/g, '');
+  const here = location.pathname.replace(/[#?].*$/, '');
+  const activeEntry = navItems.find(([l]) => l === activeLabel);
+  const activeRel = activeEntry ? segNorm(activeEntry[1]) : '';
+  if (activeRel && here.replace(/\\/+$/, '').endsWith('/' + activeRel)) {
+    return here.replace(/\\/+$/, '').slice(0, here.replace(/\\/+$/, '').length - activeRel.length) || '/';
+  }
+  // active page is root ("./") or unmatched: root is the dir of the current path
+  return here.endsWith('/') ? here : here.replace(/[^/]*$/, '');
+})();
+const toRootHref = (href) => {
+  const h = String(href);
+  if (/^https?:/.test(h) || h.startsWith('#') || h.startsWith('mailto:')) return h;
+  if (h.startsWith('/')) return h;
+  return siteRoot.replace(/\\/+$/, '/') + h.replace(/^\\.\\//, '').replace(/^\\/+/, '');
+};
 const onNav = (label) => {
   const entry = navItems.find(([l]) => l === label);
-  if (entry) location.href = entry[1];
+  if (entry) location.href = toRootHref(entry[1]);
 };
 
 const ThemeToggleSlot = () => C.ThemeToggle ? C.ThemeToggle({}) : null;
@@ -201,7 +223,7 @@ const buildLandingMain = () => {
 const main = page.layout === 'article' ? buildArticleMain() : buildLandingMain();
 
 // Prose articles read best narrow; list/grid pages (showcase, stats) need width.
-const WIDE_ARTICLES = ['made-with', 'stats'];
+const WIDE_ARTICLES = ['made-with', 'stats', 'paper'];
 const shell = C.AppShell ? C.AppShell({
   topbar, crumb, main, status,
   narrow: page.layout === 'article' && !WIDE_ARTICLES.includes(page.id),
@@ -247,6 +269,18 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
     .app-main > * { flex-shrink: 0; }
+    /* The flatspace-injected article must flow in the page, never inside its own
+       scroll box. A narrow AppShell column plus an overflow:auto ancestor squashed
+       the paper into a narrow bracket with its own scrollbar; force natural flow and
+       full column width so the article scrolls with the page. */
+    #ds-article-host, .ds-prose {
+      width: 100%;
+      max-width: 100%;
+      overflow: visible;
+      min-height: 0;
+    }
+    .ds-prose { line-height: 1.65; }
+    .ds-prose pre, .ds-prose table { overflow-x: auto; max-width: 100%; }
     .app-main > h1,
     .app-main > h2,
     .app-main > h3 { margin-top: 36px; margin-bottom: 12px; }
