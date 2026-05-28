@@ -6463,3 +6463,19 @@
   subject: 'After all fixes land and are built+pushed/published, re-load the live (or locally-built) site via the browser verb at desktop+mobile and witness: h1 box height ~= line-height (no overlap), quickstart code block clean single-column, mermaid SVG rendered, fonts loaded, breadcrumb correct per page, no horizontal overflow. This is the browser-witness that closes the client-side edits per paper section 23.'
   status: completed
   witness: 'Full built-site browser witness (served dist/ via node static server :8902): home browser-781 (h1 76px, no overlap, fonts loaded, no hScroll), paper browser-793 (mermaid SVG rendered, breadcrumb correct), all-pages browser-801 (clean). Closes the client-side edits per paper section 23 - the .js/.mjs theme edits are witnessed on the live built page.'
+- id: agents-drain-mechanical-surface
+  body: 'AGENTS.md is inflating (41.7KB/196 lines). The per-memorize-run drain is policy-prose-only, nothing mechanical reminds/enforces it, so it does not happen every run (user-flagged live). FIX: make memorize-fire response carry an agents_drain field: a few AGENTS.md candidate paragraphs (detail-heavy/single-crate/single-platform) the agent should exfiltrate to learning + compress to one-line pointer THIS commit. Witness: response field present + AGENTS.md byte count drops.'
+  status: completed
+  witness: memorize.rs:167 payload now carries agents_drain field; memorize.rs:172-189 agents_drain_obligation() reads AGENTS.md via host_read, returns bytes+lines+drain instruction on every successful memorize-fire. Mechanical per-run reminder replaces prose-only policy.
+- id: prd-resolve-blind-retry
+  body: 'deviation.prd-resolve-unknown-id fired 3x in window: prd_id={} (malformed body) and test-regression-guard-extend retried identically 20s apart. Agent re-dispatched same unknown id without reading the hint field. Predictability gap: a different LLM hits the same wall. Verify the deviation payload carries a usable hint + nearest-id suggestion; strengthen if hint is weak.'
+  status: completed
+  witness: 'prd.rs:281 already returns full known_ids + prd.rs:282 hint explicitly says next-dispatch is prd-add THEN prd-resolve. The 3 window fires retried blind DESPITE this payload - agent-discipline gap, not payload gap. Refinement: add nearest-id suggestion for weaker-LLM predictability (new row).'
+- id: validate-agents-drain-roundtrip
+  body: 'Validate the AGENTS.md->learning drain round-trip in practice this session: pick real detail-heavy AGENTS.md paragraphs, memorize-fire their substance, confirm recall returns them, compress AGENTS.md paragraph to one-line pointer, witness byte-count drop. The users persistent smooth-migration ask.'
+  status: completed
+  witness: Drained AGENTS.md L167+L169 (single-platform mechanisms) -> memorize-fire keys mem-1779959952562 + mem-1779959953701 both embedded:true graph_edge:true -> compressed both paragraphs to one-line rs-learn pointers same change -> AGENTS.md 41719->40519 bytes (-1200). Round-trip witnessed end-to-end.
+- id: prd-resolve-nearest-id
+  body: 'prd.rs unknown-id branch returns known_ids[] but no nearest-match. For predictability-regardless-of-LLM, add a cheap edit-distance nearest known_id as suggested_id so a weak LLM gets a single concrete correction instead of scanning the full list. Witness: prd.rs payload gains suggested_id field.'
+  status: completed
+  witness: prd.rs:nearest_known_id + levenshtein helpers added; unknown-id branch now emits suggested_id (closest known id within edit-distance bound) + hint references it. Predictability fix for weak LLMs.
