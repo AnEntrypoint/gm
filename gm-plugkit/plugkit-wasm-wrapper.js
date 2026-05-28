@@ -677,15 +677,24 @@ function isProfileLocked(profileDir) {
   return true;
 }
 
-function acquireProfileDir(cwd) {
+function sessionProfileSlug(claudeSessionId) {
+  const s = String(claudeSessionId || 'default').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
+  return s || 'default';
+}
+
+function sessionProfileDir(cwd, claudeSessionId) {
+  return path.join(cwd, '.gm', `browser-profile-${sessionProfileSlug(claudeSessionId)}`);
+}
+
+function acquireProfileDir(cwd, claudeSessionId) {
   const gmDir = path.join(cwd, '.gm');
   try { fs.mkdirSync(gmDir, { recursive: true }); } catch (_) {}
-  const primary = path.join(gmDir, 'browser-profile');
   ensureGitignored(cwd, '.gm/browser-profile/');
   ensureGitignored(cwd, '.gm/browser-profile-*/');
+  const primary = sessionProfileDir(cwd, claudeSessionId);
   try { fs.mkdirSync(primary, { recursive: true }); } catch (_) {}
   if (!isProfileLocked(primary)) return primary;
-  const fallback = path.join(gmDir, `browser-profile-${process.pid}`);
+  const fallback = path.join(gmDir, `browser-profile-${sessionProfileSlug(claudeSessionId)}-${process.pid}`);
   try { fs.mkdirSync(fallback, { recursive: true }); } catch (_) {}
   return fallback;
 }
@@ -696,15 +705,21 @@ function cleanDeadProfileFragments(cwd) {
     if (!fs.existsSync(gmDir)) return { cleaned: 0 };
     let cleaned = 0;
     for (const name of fs.readdirSync(gmDir)) {
-      const m = name.match(/^browser-profile-(\d+)$/);
-      if (!m) continue;
-      const pid = parseInt(m[1], 10);
-      if (!isProcessAliveSync(pid)) {
-        try {
-          fs.rmSync(path.join(gmDir, name), { recursive: true, force: true });
-          cleaned++;
-        } catch (_) {}
+      if (!/^browser-profile($|-)/.test(name)) continue;
+      const dir = path.join(gmDir, name);
+      const pidM = name.match(/-(\d+)$/);
+      if (pidM) {
+        if (!isProcessAliveSync(parseInt(pidM[1], 10))) {
+          try { fs.rmSync(dir, { recursive: true, force: true }); cleaned++; } catch (_) {}
+        }
+        continue;
       }
+      try {
+        if (fs.existsSync(dir) && !isProfileLocked(dir)) {
+          fs.rmSync(dir, { recursive: true, force: true });
+          cleaned++;
+        }
+      } catch (_) {}
     }
     if (cleaned > 0) {
       logEvent('bootstrap', 'browser-profile.hygiene', { cwd, cleaned });
@@ -982,9 +997,9 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   const sessions = readJsonFile(sessionsFile, {});
   const existing = ports[claudeSessionId];
   if (existing && existing.pid && existing.wsEndpoint) {
-    const wantProfile = path.join(cwd, '.gm', 'browser-profile');
+    const wantProfile = sessionProfileDir(cwd, claudeSessionId);
     const pidOk = isProcessAliveSync(existing.pid);
-    const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(path.join(cwd, '.gm', 'browser-profile'));
+    const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(wantProfile);
     const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
     if (pidOk && profileOk && cdpOk) {
       const pwIds = sessions[claudeSessionId] || [];
@@ -1033,7 +1048,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
-  const profileDir = acquireProfileDir(cwd);
+  const profileDir = acquireProfileDir(cwd, claudeSessionId);
   const aliveCdpForProfile = (() => {
     for (const key of Object.keys(ports)) {
       const ent = ports[key];
