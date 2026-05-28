@@ -49,7 +49,7 @@
 - id: steady-state-validate-iter
   body: 'Honest steady-state: this 35-min window has NO new system bug. All deviations are the concurrent 247420 session (prd-resolve-unknown fix-pages-yml-alpine-apk, long-gap 19min, stop-gate residuals). The one watcher-exited-unexpectedly exit_code:4294967295 critical at 11:06 was MY deliberate force-kill last fire to deploy the browser fix - correctly classified critical (unexpected from supervisor POV). 0 git/search-discipline violations. Per Nothing Fake: validate, do not manufacture churn. Prior fixes (lang timer, COMPLETE-gate, exit-75, clean-exit, browser isolation) all shipped+validated across the last 4 fires.'
   status: completed
-  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'
 - id: deploy-kill-predictability
   body: 'NOTICED: when an agent deliberately kills a watcher to deploy a wrapper fix (the documented deploy method), the supervisor logs watcher-exited-unexpectedly severity:critical (exit 4294967295 force-kill) - a false critical for a planned action. IMPROVEMENT for predictability: the deploy-kill should first write .gm/exec-spool/.shutdown-reason.json {reason:external-planned} (already in plannedReasons) so the supervisor classifies it info. Document the deploy-kill-with-shutdown-reason method in AGENTS.md/recall so any LLM deploying a wrapper fix does it predictably. Code already supports it (plannedReasons has external-planned); the gap is the agent-side procedure.'
   status: completed
@@ -61,7 +61,7 @@
 - id: steady-state-validate-iter
   body: 'Honest deep steady-state: 35-min window has 2 deviations both concurrent-session (stop-gate residuals + long-gap browser, no-session 247420), 0 git/search-discipline violations, NO watcher exits, NO supervisor criticals. The supervisor exit-75 + clean-exit fixes are holding (no critical floods), browser per-session isolation holding (no crosstalk). Per Nothing Fake: validate honestly, no manufactured churn. Prior 5 fires shipped+validated lang-timer/COMPLETE-gate/exit-75/clean-exit/browser-isolation/deploy-kill-procedure.'
   status: completed
-  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'
 - id: learning-health-deep-check
   body: 'Deep learning-system check this fire: learn-status cores balanced (text_rows==vec_rows per namespace); router quality_milli monotone; temporal recency live (cos*recency); bad-memory prune review (prioritized) - act only on true-positive dups; agents_drain mechanical per memorize-fire; AGENTS.md drain this run.'
   status: completed
@@ -69,7 +69,7 @@
 - id: steady-state-validate-iter
   body: 'Honest steady-state: 35-min window 2 deviations both concurrent-247420-session long-gap-no-instruction on browser verbs (gap ~5min). 0 git/search-discipline violations, no new system bug. Prior commits validated deployed on 0.1.611. The gm tree is dirty with the 247420 design-SDK session 6-file docs/*.html sweep - that session is ACTIVE at EMIT prd_pending:1 (just added prd harness-html-runs-sandbox 12:11), it owns + will commit those files at its own COMPLETE. This is legitimate concurrent-writer contention, not my work. Per Nothing Fake: validate honestly, no manufactured churn.'
   status: completed
-  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'
 - id: learning-health-iter
   body: 'Learning 100% check (needs no clean tree): learn-status cores balanced; temporal recency live; router quality monotone; bad-memory prune review (prioritized) act only on true-positive dups; agents_drain mechanical per memorize-fire; AGENTS.md drain this run.'
   status: completed
@@ -81,7 +81,7 @@
 - id: steady-state-validate-iter
   body: '35-min window: 4 deviations all concurrent-247420 (3 long-gap browser + 1 stop-gate residuals), 0 git/search violations. No new system bug from my work. Prior commits deployed on 0.1.611. The one genuine finding is the fresh-prompt-reset-from-non-terminal gap (separate row).'
   status: completed
-  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'
 - id: learning-health-iter
   body: 'Learning check: learn-status cores balanced; bad-memory prune review (prioritized, watch the clean-steady-state cluster); temporal recency; AGENTS.md drain if memorize fires.'
   status: completed
@@ -145,4 +145,16 @@
 - id: steady-state-validate-iter
   body: 35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug. Prior commits (glyph rule, fresh-prompt, supervisor, browser) deployed/holding on 0.1.612 except the SKILL.md install-lag (separate row). Learning health + drain this run.
   status: completed
-  witness: '35-min window 3 deviations all concurrent-247420 long-gap browser, 0 git/search violations, no new system bug from my work. Prior commits validated on 0.1.612: fresh-prompt-reset working (clean PLAN reset this fire), glyph rule shipped+now-deployed to installed skill, supervisor+browser holding. New: ccsniff glyph-discipline shipped.'
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'
+- id: workflow-checkmark-glyph
+  body: Decorative checkmark glyph in .github/workflows/publish-releases-api.yml:90 echo "[checkmark] Pushed releases.json changes" - a real no-graphical-symbols violation in a SHIPPED CI file (the glyph appears in CI logs). Convert to ASCII (e.g. echo "Pushed releases.json changes" or [ok] prefix). Found by the new glyph-discipline scan + manual grep.
+  status: completed
+  witness: 'FIXED .github/workflows/publish-releases-api.yml:90: removed the decorative checkmark glyph from echo (now echo Pushed releases.json changes). A real no-graphical-symbols violation in a shipped CI file, caught by glyph-discipline + manual grep.'
+- id: glyph-detector-regex-false-positive
+  body: 'glyph-discipline detector false-positives on its OWN regex-definition: ccsniff cli.js GLYPH char-class literally contains the glyph bounds (← ⇿ etc) it matches, so an Edit to cli.js flags glyph-written (witnessed: gm cwd Edit 13:13 flagged cli.js). A tool that defines the rule must contain the glyphs. NARROW FIX: the detector should skip a file when the glyphs appear only inside a JS/regex character-class or string that is the detector definition itself - simplest: exclude paths matching ccsniff cli.js or detect when the glyph run is inside [...] regex brackets. ASSESS: is the false-positive rate worth a code change, or is it a known self-reference acceptable as-is (the detector flagging the file that defines it is arguably correct - those ARE glyphs in source). Decide per Nothing-Fake: only fix if it is a real recurring FP, else document the self-reference as expected.'
+  status: completed
+  witness: 'FIXED (real recurring FP, not just assessed): ccsniff b32ae16->49696f2 added stripGlyphCharClass - blanks regex [...] char-class bodies that are glyph-range definitions before the GLYPH test, so the detector no longer flags its own definition or any glyph-range source. Verified: regex-def no longer flags, decorative checkmark+arrow still flag (no false-negatives). node --check OK.'
+- id: steady-state-validate-iter
+  body: '35-min window deviations: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow). 0 git/search-discipline violations. glyph-discipline live (8 violations, all other-project except the gm self-reference FP). Prior commits deployed on 0.1.612. learn-status balanced 176/176.'
+  status: completed
+  witness: '35-min window: 1 concurrent long-gap + my prior-fire complete-without-residual/stop-gate (router-state flow, benign). 0 git/search-discipline violations. glyph-discipline live + now FP-free. The 2 real glyph findings this fire (workflow checkmark + detector self-FP) both fixed+pushed. learn-status balanced 176/176. Prior commits holding on 0.1.612.'

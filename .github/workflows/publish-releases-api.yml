@@ -87,5 +87,5 @@ jobs:
             for i in 1 2 3 4 5; do
               git pull --rebase origin main && git push && break || sleep $((RANDOM % 10 + 5))
             done
-            echo "✓ Pushed releases.json changes"
+            echo "Pushed releases.json changes"
           fi
