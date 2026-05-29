@@ -3263,6 +3263,48 @@ async function runSpoolWatcher(instance, spoolDir) {
   setTimeout(checkForUpdate, 10_000);
   setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
 
+  function periodicSkillMdRefresh() {
+    try {
+      const skillCandidates = [
+        path.join(wrapperDir, 'SKILL.md'),
+        path.join(wrapperDir, '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
+        path.join(wrapperDir, '..', '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
+        path.join(wrapperDir, '..', 'skills', 'gm-skill', 'SKILL.md'),
+      ];
+      const bundledPath = skillCandidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
+      if (!bundledPath) return;
+      const bundled = fs.readFileSync(bundledPath, 'utf-8');
+      const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+      const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
+      const targets = [
+        path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
+        path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+      ];
+      const refreshed = [];
+      for (const target of targets) {
+        try {
+          let needsWrite = true;
+          if (fs.existsSync(target)) {
+            const existingHash = crypto.createHash('sha256').update(fs.readFileSync(target, 'utf-8')).digest('hex');
+            if (existingHash === bundledHash) needsWrite = false;
+          }
+          if (needsWrite) {
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            const tmp = target + '.tmp';
+            fs.writeFileSync(tmp, bundled);
+            fs.renameSync(tmp, target);
+            refreshed.push(target);
+          }
+        } catch (_) {}
+      }
+      if (refreshed.length > 0) {
+        try { logEvent('plugkit', 'skill-md.refreshed-periodic', { hash: bundledHash.slice(0, 12), targets: refreshed.length, source: bundledPath }); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+  setTimeout(periodicSkillMdRefresh, 12_000);
+  setInterval(periodicSkillMdRefresh, UPDATE_CHECK_INTERVAL_MS);
+
   const pollInterval = setInterval(async () => {
     const existing = walkDir(inDir);
     if (existing.length > 0) markActivity('poll');
