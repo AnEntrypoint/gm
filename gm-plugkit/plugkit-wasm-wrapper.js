@@ -2304,7 +2304,30 @@ async function runSpoolWatcher(instance, spoolDir) {
                 child.unref();
                 try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest }); } catch (_) {}
                 try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'gm-plugkit-self-stale', ts: Date.now(), pid: process.pid, running_version: own, latest_version: latest })); } catch (_) {}
-                setTimeout(() => process.exit(0), 2000);
+                // Wait for the replacement's fresh heartbeat before exiting (mirror the
+                // version-drift path) instead of a blind 2s exit: the gm-plugkit download can
+                // take many seconds, and exiting early lets the supervisor relaunch the SAME
+                // stale version before the new one lands, so the update never sticks.
+                const myPid = process.pid;
+                const respawnDeadline = Date.now() + 90000;
+                const exitSelfStale = () => { try { process.exit(0); } catch (_) {} };
+                const pollSelfStaleReplacement = () => {
+                  try {
+                    const st = JSON.parse(fs.readFileSync(STATUS_PATH_FOR_TEARDOWN, 'utf8'));
+                    const freshHeartbeat = st && st.ts && (Date.now() - st.ts) < 15000;
+                    const differentProc = st && st.pid && st.pid !== myPid;
+                    if (freshHeartbeat && differentProc) {
+                      try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn-confirmed', { old_pid: myPid, new_pid: st.pid, new_version: st.version, latest_version: latest }); } catch (_) {}
+                      return exitSelfStale();
+                    }
+                  } catch (_) {}
+                  if (Date.now() > respawnDeadline) {
+                    try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn-timeout', { old_pid: myPid, waited_ms: 90000 }); } catch (_) {}
+                    return exitSelfStale();
+                  }
+                  setTimeout(pollSelfStaleReplacement, 1500);
+                };
+                setTimeout(pollSelfStaleReplacement, 3000);
               } catch (e) {
                 console.error(`[plugkit-wasm] failed to spawn replacement on self-stale: ${e.message}`);
               }
