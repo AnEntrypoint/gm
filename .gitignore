@@ -22,7 +22,6 @@ docs/badges/
 *.tgz
 .plugkit-browser-profile/
 tmp/
-plugforge-starter/skills/caveman/
 .claude/scheduled_tasks.lock
 .plugkit-browser-profile-*/
 .plugkit-agent-worktree/
@@ -71,3 +70,4 @@ plugforge-starter/skills/caveman/
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 # <<< plugkit managed
+.gm/pw-sock-*/

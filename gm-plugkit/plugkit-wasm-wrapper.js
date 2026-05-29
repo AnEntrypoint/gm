@@ -563,6 +563,21 @@ function browserStateDir(cwd) {
 function browserPortsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-ports.json'); }
 function browserSessionsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-sessions.json'); }
 
+const { selectIdleBrowserSessions } = require('./browser-idle.js');
+
+function stampBrowserLastUse(cwd, claudeSessionId) {
+  try {
+    const portsFile = browserPortsFile(cwd);
+    const ports = readJsonFile(portsFile, {});
+    const entry = ports[claudeSessionId];
+    if (entry && typeof entry === 'object') {
+      entry.lastUse = Date.now();
+      ports[claudeSessionId] = entry;
+      writeJsonFile(portsFile, ports);
+    }
+  } catch (_) {}
+}
+
 function atomicWriteJson(filePath, obj) {
   const tmp = filePath + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8);
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2));
@@ -1020,6 +1035,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
         const sid = parseSessionId(r.stdout || '');
         if (sid) {
           existing.pwSessionId = sid;
+          existing.lastUse = Date.now();
           ports[claudeSessionId] = existing;
           sessions[claudeSessionId] = [sid];
           writeJsonFile(portsFile, ports);
@@ -1092,7 +1108,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     logEvent('plugkit', 'browser.launch-failed', { reason: 'session-id-unparseable', stdout: r.stdout });
     throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(r.stdout || '')}`);
   }
-  ports[claudeSessionId] = { profileDir, pid: browserPid, port, wsEndpoint, pwSessionId };
+  ports[claudeSessionId] = { profileDir, pid: browserPid, port, wsEndpoint, pwSessionId, lastUse: Date.now() };
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
   writeJsonFile(sessionsFile, sessions);
@@ -1833,7 +1849,7 @@ function makeHostFunctions(instanceRef) {
 
         if (trimmed === 'session new' || trimmed === '') {
           const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
-          try { lastBrowserActivityMs = Date.now(); } catch (_) {}
+          stampBrowserLastUse(cwd, sessionId);
           return writeWasmJson(instanceRef.value, {
             ok: true,
             stdout: `Session ${pwSessionId} attached to locally-profiled chromium at ${path.join(cwd, '.gm', 'browser-profile')}`,
@@ -1845,12 +1861,26 @@ function makeHostFunctions(instanceRef) {
 
         if (trimmed.startsWith('session ')) {
           const parts = trimmed.slice(8).trim().split(/\s+/);
-          // playwriter's actual session subcommands are list|new|delete|reset.
-          // Map the legacy close/kill aliases (recognized here historically) to delete,
-          // and pass list/new/delete/reset through verbatim. Anything else is rejected
-          // by playwriter with its own usage text, which is the correct surface.
           if (parts[0] === 'close' || parts[0] === 'kill') parts[0] = 'delete';
           const r = runBrowserRunner(pw, ['session', ...parts], 30000, cwd, sessionId);
+          if (r.status === 0 && (parts[0] === 'delete' || parts[0] === 'reset')) {
+            try {
+              const portsFile = browserPortsFile(cwd);
+              const sessionsFile = browserSessionsFile(cwd);
+              const ports = readJsonFile(portsFile, {});
+              const sessions = readJsonFile(sessionsFile, {});
+              const entry = ports[sessionId];
+              if (entry && typeof entry === 'object') {
+                if (Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) {
+                  gracefulCloseBrowser(entry, `session-${parts[0]}`);
+                }
+                delete ports[sessionId];
+                delete sessions[sessionId];
+                writeJsonFile(portsFile, ports);
+                writeJsonFile(sessionsFile, sessions);
+              }
+            } catch (_) {}
+          }
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
             stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1860,7 +1890,7 @@ function makeHostFunctions(instanceRef) {
         }
 
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
-        try { lastBrowserActivityMs = Date.now(); } catch (_) {}
+        stampBrowserLastUse(cwd, sessionId);
         let evalBody = body;
         let timeoutMs = 14000;
         const timeoutMatch = body.match(/^timeout=(\d+)\s*\n([\s\S]*)$/);
@@ -2538,27 +2568,49 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 60 * 60 * 1000;
-  let lastBrowserActivityMs = Date.now();
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 10 * 60 * 1000;
   setInterval(() => {
     try {
-      const browserIdleMs = Date.now() - lastBrowserActivityMs;
-      if (browserIdleMs < BROWSER_IDLE_LIMIT_MS) return;
       const portsFile = browserPortsFile(process.cwd());
       const sessionsFile = browserSessionsFile(process.cwd());
       const ports = readJsonFile(portsFile, {});
-      let closed = 0;
+      const sessions = readJsonFile(sessionsFile, {});
+      const now = Date.now();
+      const idle = selectIdleBrowserSessions(ports, now, BROWSER_IDLE_LIMIT_MS);
+      const idleSids = new Set(idle.map((x) => x.sid));
+      let mutated = false;
+      for (const { sid, entry, idleMs } of idle) {
+        if (Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) {
+          try { gracefulCloseBrowser(entry, 'browser-idle'); } catch (_) {}
+        }
+        delete ports[sid];
+        delete sessions[sid];
+        mutated = true;
+        logEvent('plugkit', 'browser.idle-closed', { sid, pid: entry.pid || null, idle_ms: idleMs });
+      }
       for (const [sid, entry] of Object.entries(ports)) {
-        if (entry && Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) {
-          try { gracefulCloseBrowser(entry, 'browser-idle'); closed++; } catch (_) {}
+        if (idleSids.has(sid) || !entry || typeof entry !== 'object') continue;
+        const pidAlive = Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid);
+        if (!pidAlive) {
+          delete ports[sid];
+          delete sessions[sid];
+          mutated = true;
+          logEvent('plugkit', 'browser.stale-reclaimed', { sid, pid: entry.pid || null, reason: 'pid-dead' });
+          continue;
+        }
+        const cdpOk = !!fetchJsonSync(`http://127.0.0.1:${entry.port}/json/version`, 1000);
+        if (!cdpOk) {
+          try { gracefulCloseBrowser(entry, 'orphan-cdp-dead'); } catch (_) {}
+          delete ports[sid];
+          delete sessions[sid];
+          mutated = true;
+          logEvent('plugkit', 'browser.stale-reclaimed', { sid, pid: entry.pid || null, reason: 'cdp-dead' });
         }
       }
-      if (closed > 0) {
-        try { fs.unlinkSync(portsFile); } catch (_) {}
-        try { fs.unlinkSync(sessionsFile); } catch (_) {}
-        logEvent('plugkit', 'browser.idle-closed', { count: closed, idle_ms: browserIdleMs });
+      if (mutated) {
+        try { writeJsonFile(portsFile, ports); } catch (_) {}
+        try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
       }
-      lastBrowserActivityMs = Date.now();
     } catch (e) {
       console.error(`[browser-idle] error: ${e.message}`);
     }
