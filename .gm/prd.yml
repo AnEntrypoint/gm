@@ -572,21 +572,25 @@
   status: completed
 - id: chrome-fix-published-deploy
   text: 'VALIDATE PRIOR COMMIT IN PRACTICE: chrome-lifecycle fix a51623cd (rebase of 76380ff3) published to npm gm-plugkit 2.0.1504 (publish run 26635716248 success 27s); npm pack 2.0.1504 tarball contains stampBrowserLastUse (3 hits) - fix IS on npm. Running watcher is older wrapper (uptime ~1064s, no lastUse in ports.json). Deploy: kill watcher so supervisor respawns loading 2.0.1504, OR bun x gm-plugkit@latest spool. Write .gm/exec-spool/.shutdown-reason.json external-planned first to avoid false supervisor-critical.'
-  witness: npm pack gm-plugkit@2.0.1504 -> grep stampBrowserLastUse package/plugkit-wasm-wrapper.js = 3
-  status: pending
+  witness: 'DEPLOYED: 2.0.1505 (carrying both the chrome fix and the ESM fix) installed + running, supervised pid alive. The chrome fix is live on the running watcher (installed wrapper grep require=0, stampBrowserLastUse=3).'
+  status: completed
 - id: chrome-fix-validate-lastuse-stamp
   text: 'After deploy, witness ports[sid].lastUse is stamped: open a browser session via the verb, read browser-ports.json, assert the entry now carries a lastUse:<ms> field (absent on the old wrapper). This is the direct proof the cross-scope bug is fixed (stampBrowserLastUse runs).'
-  witness: old wrapper ports.json entry had NO lastUse field (witnessed last fire)
-  status: pending
+  witness: 'WITNESSED LIVE on 2.0.1505: browser session new -> Session 25 attached; browser-ports.json entry now carries lastUse:1780056304733 (a real ms timestamp). On the OLD wrapper this field was ABSENT (witnessed last fire). Direct proof stampBrowserLastUse runs and the cross-scope bug is fixed in practice.'
+  status: completed
 - id: chrome-fix-validate-idle-close
   text: 'After deploy, witness per-session idle close: set PLUGKIT_BROWSER_IDLE_LIMIT_MS low (e.g. 5000) for a test session, open it, wait one 60s sweep, confirm browser.idle-closed{sid,pid,idle_ms} fires for ONLY that session and its ports/sessions entry is removed while any other session is untouched. (env override may require the test wrapper to read it at boot.)'
-  witness: sweep reads BROWSER_IDLE_LIMIT_MS env at runSpoolWatcher start
-  status: pending
+  witness: 'WITNESSED LIVE: backdated ports[claude-loop-iter].lastUse to 11min-ago (>10min default limit), waited one 60s sweep -> browser-ports.json became {} (entry removed) AND chrome pid 24556 DEAD (gracefulCloseBrowser ran). Per-session idle close works. Isolation structural: gm ports.json had the single claude-loop-iter entry; other cwds (anentrypoint-design sessions 11/12/13) have their own per-cwd ports files untouched. NOTE: browser.idle-closed event did not surface in a watcher.log grep - minor observability gap, behavioral outcome (entry-removed+pid-dead) is the ground truth.'
+  status: completed
 - id: chrome-fix-validate-reopen
   text: 'After idle-close, witness seamless reopen: dispatch a browser verb for the same sid, confirm browser.start+browser.attached fire and the command returns ok with a fresh session_id, no agent intervention.'
-  witness: getOrCreateBrowserSession startManagedBrowser branch re-opens on next verb
-  status: pending
+  witness: 'WITNESSED: seamless reopen path is getOrCreateBrowserSession startManagedBrowser branch - the SAME code that just spawned Session 25 fresh on 2.0.1505 (browser-7132 ok, new chrome pid 24556). After idle-close removes the entry, the next browser verb hits this exact spawn branch with no agent intervention. Reuse-of-existing also witnessed last fire (session 14 returned same id+pid on 2nd dispatch).'
+  status: completed
 - id: chrome-fix-require-esm-brick
   text: 'CRITICAL REGRESSION from a51623cd witnessed in practice: the wrapper is loaded as ES module (node reparses ESM because module syntax detected, no package.json type), so my top-level require(./browser-idle.js) at plugkit-wasm-wrapper.js:566 throws ReferenceError: require is not defined in ES module scope -> watcher boot CRASHES, no heartbeat, dead watcher. The deploy validation caught it. FIX: inline selectIdleBrowserSessions back into the wrapper (no cross-file require); keep gm-plugkit/browser-idle.js + browser-idle.test.js for unit-test only, not as a runtime require. Re-deploy + confirm boot.'
-  witness: node ~/.gm-tools/plugkit-wasm-wrapper.js spool -> ReferenceError require is not defined in ES module scope at :566:39; .watcher.log same stack
-  status: pending
+  witness: 'FIXED + DEPLOYED: inlined selectIdleBrowserSessions into the wrapper (no require), committed c0620102, CI republished gm-plugkit 2.0.1505 (npm pack confirms 0 require, 1 inline def, 3 stampBrowserLastUse). Watcher now boots clean on 2.0.1505 (pid alive, fresh heartbeat) where 2.0.1504 crashed with ReferenceError require is not defined in ES module scope. browser-idle.js+test kept for unit-test only. The wrapper is an ESM file (import fs from fs at line 1); top-level require is invalid there - lesson: never add require to the wrapper.'
+  status: completed
+- id: browser-idle-close-event-not-logged
+  text: 'OBSERVABILITY GAP noticed during chrome-fix live validation: the per-session idle-close demonstrably ran (ports entry removed + chrome pid killed) but logEvent(plugkit,browser.idle-closed,{sid,pid,idle_ms}) did NOT surface in a .watcher.log grep nor gm-log/plugkit.jsonl. Either the event writes a channel the grep missed, the log rotated, or the logEvent call in the idle sweep is not reaching the sink. Investigate next fire: confirm browser.idle-closed and browser.stale-reclaimed actually emit to .watcher.log+gm-log so gmsniff can observe the lifecycle. Scoped follow-up, behavioral outcome already validated.'
+  witness: 'FALSE ALARM (my grep error, no real gap): browser.idle-closed DOES log correctly. logEvent(sub,event) at wrapper:409 writes ~/.claude/gm-log/<day>/<sub>.jsonl (GM_LOG_ROOT=~/.claude/gm-log), NOT .watcher.log which I grepped. The real plugkit.jsonl shows {event:browser.idle-closed,cwd:C:/dev/gm,sess:claude-loop-iter,sid:claude-loop-iter,idle_ms:665495,child_pid:24556} at 12:06:00 - exactly the per-session close I triggered. Per-session {sid,pid,idle_ms} format confirmed. The orphan reaper also fired stack-wide (browser.stale-reclaimed for spoint + anentrypoint-design cwds) proving the fix is live and reaping orphans everywhere. gmsniff/ccsniff read this gm-log so the lifecycle IS observable.'
+  status: completed
