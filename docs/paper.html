@@ -89,6 +89,14 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 .toc a{color:var(--panel-text-2);text-decoration:none}
 .toc a:hover{color:var(--panel-accent);text-decoration:underline}
 </style>
+<style>
+.paper-body{max-width:min(110ch,94vw);margin:24px auto;padding:0 32px;display:grid;grid-template-columns:var(--sidebar-width) minmax(0,1fr);gap:32px;align-items:start}
+@media (min-width:1400px){.paper-body{max-width:min(132ch,92vw)}}
+@media (min-width:1800px){.paper-body{max-width:152ch}}
+.paper-body > .toc{margin:0;max-width:none !important;position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;align-self:start}
+.paper-body > article{margin:0;max-width:none;padding:0}
+@media (max-width:900px){.paper-body{grid-template-columns:minmax(0,1fr);gap:16px;padding:0 20px}.paper-body > .toc{position:static;max-height:none;overflow:visible}}
+</style>
 </head>
 <body data-screen-label="gm / paper">
 <header class="app-topbar gm-topbar">
@@ -123,6 +131,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
   </div>
 </div>
 
+<div class="paper-body">
 <div class="toc">
   <div class="toc-title">Contents</div>
   <ol>
@@ -1015,6 +1024,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 </div>
 
 </article>
+</div>
 
 <div class="cross-footer">
   <a href="./crates.html"><strong>rust crates</strong><span>rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit</span></a>
