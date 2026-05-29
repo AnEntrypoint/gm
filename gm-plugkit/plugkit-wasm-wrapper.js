@@ -787,11 +787,22 @@ function sleepSync(ms) {
   spawnSync(process.execPath, ['-e', `setTimeout(()=>{}, ${ms})`], { timeout: ms + 2000 });
 }
 
-function runBrowserRunner(pw, args, timeoutMs) {
+function playwriterHomeFor(cwd, claudeSessionId) {
+  if (process.env.PLAYWRITER_HOME) return process.env.PLAYWRITER_HOME;
+  if (!cwd) return path.join(GM_TOOLS_ROOT, `pw-sock-${sessionProfileSlug(claudeSessionId)}`);
+  try { ensureGitignored(cwd, '.gm/pw-sock-*/'); } catch (_) {}
+  return path.join(cwd, '.gm', `pw-sock-${sessionProfileSlug(claudeSessionId)}`);
+}
+
+function runBrowserRunner(pw, args, timeoutMs, cwd, claudeSessionId) {
   const allArgs = [...pw.baseArgs, ...args];
   const useShell = !!pw.shell;
   const spawnCmd = useShell && /\s/.test(pw.cmd) ? `"${pw.cmd}"` : pw.cmd;
   const spawnArgs = useShell ? allArgs.map(a => /[\s"]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : a) : allArgs;
+  const env = { ...process.env };
+  const sockDir = playwriterHomeFor(cwd, claudeSessionId);
+  try { fs.mkdirSync(sockDir, { recursive: true }); } catch (_) {}
+  env.PLAYWRITER_HOME = sockDir;
   // Stamp a busy window before the synchronous spawn so the blocked event loop's stale heartbeat
   // is not misread as a dead watcher. Pad past the spawn timeout for teardown.
   _writeStatusBusy((timeoutMs || 30000) + 5000);
@@ -800,7 +811,7 @@ function runBrowserRunner(pw, args, timeoutMs) {
     timeout: timeoutMs,
     shell: useShell,
     windowsHide: true,
-    env: process.env,
+    env,
   });
 }
 
