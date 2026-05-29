@@ -1004,7 +1004,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     if (pidOk && profileOk && cdpOk) {
       const pwIds = sessions[claudeSessionId] || [];
       if (pwIds.length > 0 && existing.pwSessionId) return existing.pwSessionId;
-      const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000);
+      const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000, cwd, claudeSessionId);
       if (r && r.status === 0) {
         const sid = parseSessionId(r.stdout || '');
         if (sid) {
@@ -1070,7 +1070,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     logEvent('plugkit', 'browser.start', { profileDir });
     ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir));
   }
-  const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000);
+  const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000, cwd, claudeSessionId);
   if (!r || r.status !== 0) {
     const errTxt = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || 'unknown');
     logEvent('plugkit', 'browser.launch-failed', { reason: 'session-attach-failed', pid: browserPid, port, error: errTxt });
@@ -1839,7 +1839,7 @@ function makeHostFunctions(instanceRef) {
           // and pass list/new/delete/reset through verbatim. Anything else is rejected
           // by playwriter with its own usage text, which is the correct surface.
           if (parts[0] === 'close' || parts[0] === 'kill') parts[0] = 'delete';
-          const r = runBrowserRunner(pw, ['session', ...parts], 30000);
+          const r = runBrowserRunner(pw, ['session', ...parts], 30000, cwd, sessionId);
           return writeWasmJson(instanceRef.value, {
             ok: r.status === 0,
             stdout: scrubBrowserRunnerText(r.stdout || ''),
@@ -1861,7 +1861,7 @@ function makeHostFunctions(instanceRef) {
           }
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 60000);
-        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs);
+        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
         const ok = r.status === 0;
         if (!ok && r.status === null) {
           logEvent('plugkit', 'browser.runner-timeout', { session_id: pwSessionId, timeout_ms: timeoutMs, body_bytes: evalBody.length });
