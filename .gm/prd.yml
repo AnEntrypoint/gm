@@ -566,3 +566,27 @@
   text: 'PREFERENCE DIVERGENCE noticed during chrome-lifecycle residual triage: .gitignore line 71 still contains plugforge-starter/skills/caveman/ - the word caveman the user mandated removed project-wide. Check if the plugforge-starter/skills/caveman/ directory still exists; if so rename/remove it and update the gitignore entry; if gone, drop the stale gitignore line. Scoped follow-up, not this chrome fire.'
   witness: 'RESOLVED: plugforge-starter/skills/caveman/ dir is GONE (ls -> DIR GONE), no tracked files reference caveman (git ls-files | grep caveman empty). Removed the stale .gitignore:25 plugforge-starter/skills/caveman/ line. Project now caveman-free in tracked paths.'
   status: completed
+- id: audit-deviations-all-foreign
+  text: 'Triage the 10 deviations_30m: 4 gate-deny(stop-gate residuals=1)+3 residual-premature+1 prd-resolve-unknown(audit-kits-hardcoded-colors) are the concurrent anentrypoint-design/kits session; 2 long-gap(memorize-fire 358s, browser 326s) are a concurrent idle session. ALL carry session_id=-------- (no gm sid) and the prd-id audit-kits-hardcoded-colors is a design-kit row, not gm/rs-*. Zero gm/rs-* defects this window. Record + close.'
+  witness: 'gmsniff --list-deviations 35m: 10 events, every one session_id=-------- (no gm sid). 4 gate-deny(stop-gate residuals=1) 11:25 + 3 residual-premature 11:24 + 1 prd-resolve-unknown(audit-kits-hardcoded-colors) 11:51 = concurrent anentrypoint-design/kits session (audit-kits-hardcoded-colors is a design-kit PRD id). 2 long-gap(memorize-fire 358s + browser 326s) 11:50 = concurrent idle session. ccsniff git+search 35m: 0 violations. All 6 repos clean ahead=0. Zero gm/rs-* defects this window.'
+  status: completed
+- id: chrome-fix-published-deploy
+  text: 'VALIDATE PRIOR COMMIT IN PRACTICE: chrome-lifecycle fix a51623cd (rebase of 76380ff3) published to npm gm-plugkit 2.0.1504 (publish run 26635716248 success 27s); npm pack 2.0.1504 tarball contains stampBrowserLastUse (3 hits) - fix IS on npm. Running watcher is older wrapper (uptime ~1064s, no lastUse in ports.json). Deploy: kill watcher so supervisor respawns loading 2.0.1504, OR bun x gm-plugkit@latest spool. Write .gm/exec-spool/.shutdown-reason.json external-planned first to avoid false supervisor-critical.'
+  witness: npm pack gm-plugkit@2.0.1504 -> grep stampBrowserLastUse package/plugkit-wasm-wrapper.js = 3
+  status: pending
+- id: chrome-fix-validate-lastuse-stamp
+  text: 'After deploy, witness ports[sid].lastUse is stamped: open a browser session via the verb, read browser-ports.json, assert the entry now carries a lastUse:<ms> field (absent on the old wrapper). This is the direct proof the cross-scope bug is fixed (stampBrowserLastUse runs).'
+  witness: old wrapper ports.json entry had NO lastUse field (witnessed last fire)
+  status: pending
+- id: chrome-fix-validate-idle-close
+  text: 'After deploy, witness per-session idle close: set PLUGKIT_BROWSER_IDLE_LIMIT_MS low (e.g. 5000) for a test session, open it, wait one 60s sweep, confirm browser.idle-closed{sid,pid,idle_ms} fires for ONLY that session and its ports/sessions entry is removed while any other session is untouched. (env override may require the test wrapper to read it at boot.)'
+  witness: sweep reads BROWSER_IDLE_LIMIT_MS env at runSpoolWatcher start
+  status: pending
+- id: chrome-fix-validate-reopen
+  text: 'After idle-close, witness seamless reopen: dispatch a browser verb for the same sid, confirm browser.start+browser.attached fire and the command returns ok with a fresh session_id, no agent intervention.'
+  witness: getOrCreateBrowserSession startManagedBrowser branch re-opens on next verb
+  status: pending
+- id: chrome-fix-require-esm-brick
+  text: 'CRITICAL REGRESSION from a51623cd witnessed in practice: the wrapper is loaded as ES module (node reparses ESM because module syntax detected, no package.json type), so my top-level require(./browser-idle.js) at plugkit-wasm-wrapper.js:566 throws ReferenceError: require is not defined in ES module scope -> watcher boot CRASHES, no heartbeat, dead watcher. The deploy validation caught it. FIX: inline selectIdleBrowserSessions back into the wrapper (no cross-file require); keep gm-plugkit/browser-idle.js + browser-idle.test.js for unit-test only, not as a runtime require. Re-deploy + confirm boot.'
+  witness: node ~/.gm-tools/plugkit-wasm-wrapper.js spool -> ReferenceError require is not defined in ES module scope at :566:39; .watcher.log same stack
+  status: pending
