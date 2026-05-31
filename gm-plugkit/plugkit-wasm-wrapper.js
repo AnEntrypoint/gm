@@ -1701,6 +1701,7 @@ function makeHostFunctions(instanceRef) {
         const HALF_LIFE_MS = 30 * 24 * 60 * 60 * 1000;
         const DEDUP_JACCARD = 0.7;
         const RECENCY_FLOOR = 0.4;
+        const COS_FLOOR = namespace === 'codeinsight' ? 0.55 : 0;
         const nowMs = Date.now();
         const scored = [];
         const seen = new Set();
@@ -1712,6 +1713,7 @@ function makeHostFunctions(instanceRef) {
             for (const f of fs.readdirSync(vecDir)) {
               if (!f.endsWith('.json')) continue;
               const key = f.replace(/\.json$/, '');
+              if (key === '__digest__') continue;
               const seenKey = `${ns}::${key}`;
               if (seen.has(seenKey)) continue;
               seen.add(seenKey);
@@ -1726,6 +1728,7 @@ function makeHostFunctions(instanceRef) {
                            : Array.isArray(emb) ? emb : null;
               if (!vector) continue;
               const cos = cosineSim(queryEmbedding, vector);
+              if (cos < COS_FLOOR) continue;
               const ageMs = Math.max(0, nowMs - mtimeMs);
               const recency = RECENCY_FLOOR + (1 - RECENCY_FLOOR) * Math.exp(-ageMs / HALF_LIFE_MS);
               const score = cos * recency;
@@ -2896,8 +2899,12 @@ async function runSpoolWatcher(instance, spoolDir) {
       // so the 5s heartbeat cannot fire and the supervisor would reap the watcher as hung
       // (the VERB ABORT). Stamp a busy_until window before the synchronous dispatch so the
       // supervisor's heartbeat-stale check honors it, exactly as the browser runner does.
-      if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
-        try { _writeStatusBusy(90000); } catch (_) {}
+      // codesearch is the longest synchronous verb: a cold first call loads the 133MB bge-small
+      // bert model AND re-indexes the tree, far exceeding the 30s stale limit. Without busy_until
+      // the supervisor reaps the watcher mid-index and respawns it, which cold-loads again =
+      // respawn-thrash that never completes the index (the codeinsight-stale symptom).
+      if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch' || verb === 'codesearch') {
+        try { _writeStatusBusy(180000); } catch (_) {}
       }
 
       if (verb === 'memorize-fire' || verb === 'transition' || verb === 'prd-resolve' || verb === 'mutable-resolve') {
