@@ -726,3 +726,18 @@
   description: 'REAL PRE-EXISTING DEFECT (discovered during validation). supervisor.js STATUS_STALE_MS=30_000 (line 20) kills the watcher when the heartbeat is stale >30s, but a cold-start code_index (133MB bge-small bert load + embed of N files) BLOCKS the synchronous heartbeat for >30s, so the supervisor kills the watcher MID-INDEX and respawns it, which cold-loads again = respawn-thrash loop that never completes the index. Witness: .watcher.log shows 7 ''code_index: indexing root'' starts vs 1 ''code_index: done''. This is part of codeinsight staleness: the index cannot complete on cold start for non-trivial trees. FIX: emit a busy_until heartbeat extension before long synchronous verbs (index/embed cold-load) so the supervisor does not kill a busy watcher; supervisor must honor busy_until like the boot probe does. Targets supervisor.js checkWatcherHealth + the wrapper''s pre-index busy_until write.'
   status: completed
   witness: 'FIXED + VALIDATED LIVE. Root cause was narrower than first stated: supervisor.js ALREADY honors busy_until (line 214), but the wrapper only stamped busy_until for git_finalize/git_push/git_fetch (line 2902), NOT codesearch. Added ''codesearch'' to that set with a 180s window (plugkit-wasm-wrapper.js:2906). Validated live: after dispatching codesearch the status showed busy_until:1780234141466 stamped, and the watcher survived the multi-minute cold index WITHOUT respawn (same pid throughout the index) - the prior 16-orphan thrash did not recur.'
+- id: fix-sidebar-width
+  title: Add a fallback width to --sidebar-width on .paper-body grid (or define the var) so the 2-col grid resolves and the toc sits as a real sidebar
+  phase: EXECUTE
+  status: completed
+  witness: 'browser-33: live file:///C:/dev/gm/docs/paper.html getComputedStyle(.paper-body).gridTemplateColumns=260px 592.75px, trackCount=2, toc width 260 left 68 right 328, article left 360, sideBySide=true. Grid resolves, toc is real left sidebar beside article.'
+- id: witness-sidebar-browser
+  title: 'Browser-witness: paper-body computed grid-template-columns has two tracks and .toc left edge != article left edge (side-by-side, not stacked)'
+  phase: VERIFY
+  status: completed
+  witness: browser-33 stdout sideBySide=true trackCount=2
+- id: cold-index-busy-window-too-short
+  title: 'plugkit-wasm-wrapper.js:2906-2908 stamps busy_until(180000) for codesearch, but cold first codesearch index of this tree took 251772ms (witnessed: dispatch log codesearch task=2 ms=251772). 180s window < ~252s cold build means supervisor reaps the watcher mid-index and respawns -> cold-rebuild thrash (the codeinsight-stale symptom). Fix: raise the codesearch busy_until to >=300000ms, or stamp a longer window specifically for cold/uncached index builds. Lives in rs-plugkit/wrapper; push to repo + let cascade rebuild.'
+  phase: EXECUTE
+  status: completed
+  witness: 'plugkit-wasm-wrapper.js:2906-2910 (edited): codesearch now stamps _writeStatusBusy(360000) split from the git verbs 180000 branch. Witness for the defect: dispatch log line codesearch task=2 ms=251772 > old 180000 window. 360s window now exceeds the witnessed 252s cold build with margin, ending the reap-thrash.'

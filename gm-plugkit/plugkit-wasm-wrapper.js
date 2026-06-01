@@ -2900,10 +2900,13 @@ async function runSpoolWatcher(instance, spoolDir) {
       // (the VERB ABORT). Stamp a busy_until window before the synchronous dispatch so the
       // supervisor's heartbeat-stale check honors it, exactly as the browser runner does.
       // codesearch is the longest synchronous verb: a cold first call loads the 133MB bge-small
-      // bert model AND re-indexes the tree, far exceeding the 30s stale limit. Without busy_until
-      // the supervisor reaps the watcher mid-index and respawns it, which cold-loads again =
-      // respawn-thrash that never completes the index (the codeinsight-stale symptom).
-      if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch' || verb === 'codesearch') {
+      // bert model AND re-indexes the tree. A cold build was witnessed at ~252s (dispatch log
+      // codesearch ms=251772), so a 180s window let the supervisor reap the watcher mid-index and
+      // respawn it, cold-loading again = respawn-thrash that never completes (the codeinsight-stale
+      // symptom). codesearch gets a 360s window; the bounded git verbs keep 180s.
+      if (verb === 'codesearch') {
+        try { _writeStatusBusy(360000); } catch (_) {}
+      } else if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
         try { _writeStatusBusy(180000); } catch (_) {}
       }
 

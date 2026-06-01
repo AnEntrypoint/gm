@@ -90,7 +90,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 .toc a:hover{color:var(--panel-accent);text-decoration:underline}
 </style>
 <style>
-.paper-body{max-width:min(110ch,94vw);margin:24px auto;padding:0 32px;display:grid;grid-template-columns:var(--sidebar-width) minmax(0,1fr);gap:32px;align-items:start}
+.paper-body{--sidebar-width:260px;max-width:min(110ch,94vw);margin:24px auto;padding:0 32px;display:grid;grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr);gap:32px;align-items:start}
 @media (min-width:1400px){.paper-body{max-width:min(132ch,92vw)}}
 @media (min-width:1800px){.paper-body{max-width:152ch}}
 .paper-body > .toc{margin:0;max-width:none !important;position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;align-self:start}
