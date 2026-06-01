@@ -1025,3 +1025,15 @@
   text: 'Noticing: gmsniff display column truncates cwd to (no-sess for mid-chain-stall events so an operator cannot see WHICH project stalled without dropping to raw gm-log jsonl. The raw event has full cwd; only the formatted view hides it. Investigate gmsniff formatter to surface cwd (or first path segment) for deviation rows = triage-jank improvement'
   status: completed
   witness: 'FIXED cli.js:177-179 - derive ~<cwd-last-segment> tag for sentinel/empty sess rows. Verified: node src/cli.js --since 4h shows mid-chain-stall rows as ~tv8 / ~spoint instead of bare --------. Operator can now triage which project stalled from default view, no raw-jsonl drop needed'
+- id: validate-cwd-tag-05b18de-live-in-practice
+  text: 'Validate gmsniff ~cwd-tag fix 05b18de works live: all deviation+turn.end rows this window show ~spoint/~tv8/~looper instead of bare -------- (node src/cli.js patched formatter). The 3 deviations this fire (14:59 mid-chain-stall ~tv8 prd=7, 15:03 long-gap ~tv8 browser, 15:11 long-gap ~tv8 browser) were triageable AT A GLANCE as foreign tv8 = the operator-jank improvement paying off'
+  status: completed
+  witness: 'node src/cli.js --since 35m output: all rows show ~spoint/~tv8/~looper tags; 3 deviations all tagged ~tv8; npm gmsniff@1.0.16 published (CI bumped 05b18de), origin/master tip 05b18de = feat ~cwd-segment tag'
+- id: validate-3-deviations-all-foreign-tv8-gate-positive
+  text: 'Validate 3 deviations_30m all foreign ~tv8 gate-positives zero gm/rs-*: (1) 14:59:26 mid-chain-stall ~tv8 EXECUTE prd=7 idle=311203 turn=18 watchdog-4th-fire (tv8 now 7 rows down from 17, partial progress but still stalling); (2) 15:03:25 long-gap ~tv8 browser gap=550915; (3) 15:11:34 long-gap ~tv8 browser gap=326290. All gates fired correctly'
+  status: completed
+  witness: 'gmsniff grep deviation 35m: 14:59:26 mid-chain-stall ~tv8 EXECUTE prd=7 idle=311203 turn=18; 15:03:25 long-gap ~tv8 verb=browser gap=550915; 15:11:34 long-gap ~tv8 verb=browser gap=326290. All cwd-tagged ~tv8 foreign, all gates correct'
+- id: all-8-repos-clean-ccsniff-zero-this-fire
+  text: 'Validate all 8 repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn/ccsniff/gmsniff) porcelain=0; ccsniff all 4 disciplines 0 over 35m; prior commits live: gm 7fc5612d committed 14:56, gmsniff 05b18de patched formatter running'
+  status: completed
+  witness: 'per-repo porcelain wc -l all 0: gm rs-plugkit rs-exec rs-codeinsight rs-search rs-learn ccsniff gmsniff; ccsniff --git+search+continuation+glyph --since 35m empty; gm git.commit 7fc5612d 14:56 in gm-log; gmsniff origin tip 05b18de'
