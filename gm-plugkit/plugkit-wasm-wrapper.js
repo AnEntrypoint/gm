@@ -380,14 +380,18 @@ function scanStalledTurns() {
     const terminal = t.lastPhase === 'COMPLETE' && (t.prdPending === 0 || t.prdPending == null);
     if (terminal) continue;
     t.stallEmitted = true;
-    logEvent('hook', 'deviation.mid-chain-stall', {
-      sess: key,
+    // key is the _turns map key (sess || '(no-session)'). When it is the sentinel, the turn was
+    // unattributed, so do not override logEvent's own cwd+sess base fields with '(no-session)' —
+    // let the cwd-based attribution stand. Pass an explicit sess only when key is a real session.
+    const fields = {
       turn_idx: t.idx,
       ended_in_phase: t.lastPhase || null,
       prd_pending: t.prdPending,
       idle_ms: now - t.lastTs,
       dispatches: t.dispatches,
-    });
+    };
+    if (key && key !== '(no-session)') fields.sess = key;
+    logEvent('hook', 'deviation.mid-chain-stall', fields);
   }
 }
 

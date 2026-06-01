@@ -961,3 +961,23 @@
   phase: VERIFY
   status: completed
   witness: 'ccsniff --search-discipline 35m by-project: 16 tv8 + 3 sttr, gm-only query empty. Foreign concurrent sessions, not a gm/rs-* defect.'
+- id: watchdog-fired-correctly-production
+  title: 'VALIDATED stall watchdog fired correctly in production 13:07:04: event {cwd:C:/dev/tv8, ended_in_phase:EXECUTE, prd_pending:17, idle_ms:309707, dispatches:1, turn_idx:2}. idle_ms 309707 > STALL_MS 300000 threshold; non-terminal EXECUTE + 17 open rows = genuine stall NOT false-positive. Every designed field present + correct. The observability hole (mem-1780313258383) is closed and validated in production - the previously-invisible tv8 mid-EXECUTE stall is now a surfaced signal.'
+  phase: VERIFY
+  status: completed
+  witness: 'gmsniff --grep mid-chain-stall --json: {cwd:C:/dev/tv8, ended_in_phase:EXECUTE, prd_pending:17, idle_ms:309707, dispatches:1, turn_idx:2}. idle 309707>300000 threshold, non-terminal+17-open=genuine stall. Every designed field present+correct. Observability hole validated closed in production.'
+- id: stalled-session-is-tv8-foreign
+  title: VERIFIED the stalled session is tv8 (cwd=C:/dev/tv8), the same concurrent foreign session the user originally flagged as leaving-work-undone. It stalled AGAIN mid-EXECUTE with 17 open rows - exactly the pattern that motivated the watchdog. Now caught instead of invisible. Not a gm/rs-* defect; tv8 is a separate project. The companion long-gap-no-instruction 13:07:09 verb=git_rm is the same stalled tv8 session tripping the long-gap gate on its recovery attempt = gate-working POSITIVE.
+  phase: VERIFY
+  status: completed
+  witness: Event cwd=C:/dev/tv8 = the foreign tv8 session, stalled mid-EXECUTE with 17 open rows (the exact original motivating pattern, now caught). Companion long-gap 13:07:09 verb=git_rm same tv8 session = gate-working positive. Not a gm/rs-* defect.
+- id: harden-stall-event-session-attribution
+  title: 'Minor hardening: scanStalledTurns passes sess:key which is (no-session) for an unattributed foreign turn, overriding logEvents own cwd+sess base fields. The event IS attributable via cwd (=C:/dev/tv8) so no real gap, but the (no-session) override is noise. Improve: pass sess only when key is a real session id (not the (no-session) sentinel), letting logEvents cwd-based attribution stand cleanly. Marginal clarity win.'
+  phase: EXECUTE
+  status: completed
+  witness: 'plugkit-wasm-wrapper.js scanStalledTurns: sess field now conditional (if key && key!==(no-session)). Unit test PASS: no-session omits sess (lets logEvent cwd attribute), real session carries sess, both keep ended_in_phase/prd_pending/idle_ms. node -c SYNTAX-OK. Deploys via cascade.'
+- id: all-repos-clean-prior-commits-live
+  title: 'VERIFIED all 7 repos clean (dirty=0) + prior commits live: watchdog deployed (this fire IS the proof it runs in the installed wrapper), ccsniff continuation/search-FP on @latest, gm disciplines 0. update_available=null.'
+  phase: VERIFY
+  status: completed
+  witness: git status all 7 repos dirty=0. Watchdog deployed (this fire IS proof it ran in installed wrapper). ccsniff continuation/search-FP on @latest, gm disciplines 0, update_available=null.
