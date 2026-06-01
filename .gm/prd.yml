@@ -1065,3 +1065,7 @@
   text: 'Validate near-zero-deviation fire: gmsniff 35m has exactly ONE deviation = 18:16:32 long-gap-no-instruction ~tv8 gap=685196 - this is the SAME carryover already triaged last fire (straddled window boundary), NO new deviation since 18:16 in ~28min. tv8 wedge went idle. ccsniff all 4 disciplines 0. All 8 repos porcelain=0. gm HEAD ahead=0. Effectively zero-new-deviation steady-state'
   status: completed
   witness: node src/cli.js grep deviation. 35m = single line 18:16:32 ~tv8 gap_ms=685196 (carryover from last fire window boundary, no new event since); ccsniff 4-discipline empty; 8 repos porcelain=0; gm HEAD 043bf243 ahead=0
+- id: zero-deviation-clean-fire-tv8-fully-quiet
+  text: 'Validate true zero-deviation clean fire: gmsniff 35m grep deviation. = 0 events, deviations_30m=0 matched. tv8 wedge fully quiet (no long-gap, no stall). ccsniff all 4 disciplines 0. All 8 repos porcelain=0. gm HEAD ahead=0. 2nd true zero-deviation fire of the run (joins 16:17), 8th consecutive clean fire since watchdog+cwd-tag fixes shipped'
+  status: completed
+  witness: node src/cli.js --since 35m grep -c deviation. = 0; deviations_30m=0; ccsniff 4-discipline empty; 8 repos porcelain=0; gm HEAD 5f9cac34 ahead=0
