@@ -866,3 +866,58 @@
   phase: EXECUTE
   status: completed
   witness: 'The workflow verify phase enforced this constraint: rejected the last_instruction_ts-enum-drop and the view-each-skill-file-substep-drop as safe:false because they lost enumeration/gate fidelity. Confirms the preserve-hard-edges guard worked end to end.'
+- id: ccsniff-exempt-git-C-context
+  title: 'ccsniff search-discipline targetsOutsideCwd: parse git -C <dir> (and pushd) as a cwd-override on the same line, exactly like cd. A grep/find inside a git -C <sibling> ... is cross-repo and must be exempt. Add git -C and pushd to the cd-context match.'
+  phase: EXECUTE
+  status: completed
+  witness: 'discipline-helpers.js targetsOutsideCwd: ctxM matches (cd|pushd) OR git -C; test.js asserts git -C sibling exempt + git -C inside-cwd NOT exempt. 12 cases pass.'
+- id: ccsniff-exempt-non-symbol-structural-grep
+  title: 'ccsniff search-discipline false-positives on structural/non-symbol greps that codesearch CANNOT serve: counting a literal delimiter (grep -n r#-quote, grep -n quote-hash for raw-string balance), grepping a fixed single file by exact path for a literal token. codesearch is a semantic symbol index, not a line-counter for one file. Consider: a grep that targets ONE explicit file path (not a tree) is a file-read-filter, not a tree search - exempt it like the piped-stdout case. Witness which of my flagged greps are single-file-path (grep PATTERN onefile.rs).'
+  phase: EXECUTE
+  status: completed
+  witness: 'targetsSingleFile exempts grep PATTERN onefile.ext (read-filter); isTreeSearchLine skips # comment lines. Session FP count dropped 16->5, remaining 5 are genuine in-cwd multi-pattern symbol greps.'
+- id: reinforce-codesearch-in-cwd-discipline
+  title: 'Agent discipline: I drifted to grep for in-cwd gm symbols. Reinforce via memorize-fire the absolute rule (in-cwd symbol lookup = codesearch, no exceptions for speed/iteration) AND verify the SKILL.md prose already names it clearly enough that the next LLM does not drift the same way. If the prose is ambiguous about fast-iteration greps, sharpen it.'
+  phase: EXECUTE
+  status: completed
+  witness: memorize-fire 460 fired the absolute in-cwd=codesearch rule with the fast-iteration caveat (the pull to grep is strongest during dense EXECUTE, that is when to dispatch codesearch). SKILL.md search-routes-through-spool prose already names raw grep/Glob as forbidden - the prose is clear; the drift was mine, not a prose gap. Reinforcement via recall is the correction.
+- id: close-leftover-browser-session
+  title: browser_sessions_alive=1 from prior iteration. Close it via browser verb session close to avoid orphan-chrome resource leak (the iter33 wedge class).
+  phase: EXECUTE
+  status: completed
+  witness: browser session 2 (gm, C:/dev/gm) closed via browser verb session close 2 -> Session 2 deleted. Sessions 1/3/4 are foreign tv8 (concurrent session, not mine to reap).
+- id: validate-prior-commits-landed
+  title: 'Validate prior session commits work in practice: gm 989e897e (continuation+watchdog) on origin/main; ccsniff 7ca7d79 (continuation-discipline) on origin + published; rs-plugkit 0ce2f04 (deferred-intent prose) on origin + cascade building. Confirm each via git_log/branch_status and that ccsniff@latest now carries --continuation-discipline.'
+  phase: VERIFY
+  status: completed
+  witness: 'gm continuation commit on origin as 310e8531 (989e897e rebased->310e8531 during git_finalize; merge-base HEAD ancestor-of origin/main = YES, local behind 2 = CI bumps). ccsniff 7ca7d79 on origin + ccsniff@latest --help SHOWS --continuation-discipline (published+live). rs-plugkit 0ce2f04 on origin. Bonus: 34eed18b bootstrap-level stall watchdog also landed. All prior work validated working in practice.'
+- id: validate-ccsniff-fp-fix-rerun
+  title: After the targetsOutsideCwd fix, re-run --search-discipline on THIS session and confirm the sibling-repo/structural false positives drop while the ~6 genuine in-cwd gm violations remain flagged. A fix that drops everything is over-broad; a fix that drops nothing is inert.
+  phase: VERIFY
+  status: completed
+  witness: 'Re-ran node src/cli.js --search-discipline --since 50m --project gm: count 16->5. The 11 dropped were FPs (sibling-repo git -C/cd greps, single-file greps, redirects, # comment line). The 5 remaining are genuine in-cwd multi-pattern Grep-tool symbol lookups (writeStatus/Toolless/setInterval/scanStalledTurns) - true positives, my real drift. Fix is precise: drops FPs, preserves genuine violations. Not over-broad (would drop to 0), not inert (would stay 16).'
+- id: single-file-exempt-must-not-overexempt-tree
+  title: 'EDGE: the single-file-path exemption (413) must distinguish grep PATTERN path/to/one.rs (file, exempt) from grep -r PATTERN src/ or grep PATTERN **/*.js (tree search, NOT exempt - that is the real bypass). Gate on: the last non-flag arg resolves to a single existing file path with an extension, AND no -r/-R/--recursive flag. A bare grep PATTERN with no path reads stdin or is part of a pipe (already handled). Do not exempt a directory or glob target.'
+  phase: EXECUTE
+  status: completed
+  witness: 'test.js: grep -r X src/ NOT single (false), glob **/*.js NOT single (false), dir src/ NOT single (false), no-path NOT single (false). Only single-file-with-extension exempt. All pass.'
+- id: git-C-parse-must-preserve-abs-path-logic
+  title: 'EDGE: adding git -C <dir> to targetsOutsideCwd must not regress the existing cd + absolute-arg detection. git -C <relative> (rare) should resolve against cwd; git -C <abs-outside> exempts. Keep the existing two checks, ADD git -C/pushd as a third cwd-override source. Unit-test all three on synthetic lines.'
+  phase: EXECUTE
+  status: completed
+  witness: 'test.js: existing cd + absolute-arg detection preserved (cd sibling exempt, msys-path-form /c/dev/rs-learn normalized via normPath ^/([a-z])/ -> $1:/). git -C added as third source without regressing. 12/12 pass.'
+- id: ccsniff-fp-fix-unit-tests
+  title: 'Add/extend ccsniff test coverage for the new exemptions: (a) git -C /c/dev/sibling grep X -> exempt, (b) cd /c/dev/sibling; grep X -> exempt (already), (c) grep X gm-plugkit/wrapper.js (in-cwd file) -> FLAGGED, (d) grep -n delim onefile.rs single-file -> exempt, (e) grep -r X src/ in-cwd tree -> FLAGGED. Witness the matrix passes.'
+  phase: VERIFY
+  status: completed
+  witness: test.js testSearchDisciplineExemptions 12 cases (git -C/cd/pushd sibling, inside-cwd, msys-norm, single-file, redirect, tree -r, glob, dir, no-path) all assert-pass; helpers extracted to src/discipline-helpers.js (testable, no cli.js side-effects). node test.js ALL TESTS PASS.
+- id: ccsniff-fp-fix-cascade-deploy
+  title: After committing the ccsniff fix, push triggers ccsniff auto-bump+publish. The audit loop uses bun x ccsniff@latest, so the fix only takes effect once published. Validate the fix LOCALLY (node src/cli.js) before relying on @latest; note the publish lag.
+  phase: EXECUTE
+  status: completed
+  witness: Fix validated LOCALLY via node test.js (12 cases pass) + node src/cli.js --search-discipline (16->5). The bun x ccsniff@latest the loop uses will carry it after the push auto-bumps+publishes ccsniff. Local validation is the witness; publish lag noted.
+- id: check-other-repos-rs-exec-search-learn-clean
+  title: 'User named rs-exec/rs-codeinsight/rs-search/rs-learn as possibly implicated. Quick-check each: git status clean + ahead==0 (no orphaned local work), and whether the search-discipline FP or any deviation touches them this window. If clean, state so; if not, spool rows.'
+  phase: VERIFY
+  status: completed
+  witness: rs-exec/rs-codeinsight/rs-search/rs-learn all dirty=0, none ahead (rs-codeinsight behind 1 = remote moved, benign). No orphaned local work in any. Clean.

@@ -188,3 +188,11 @@
   status: resolved
   witness: 'plugkit-wasm-wrapper.js:333-360 turnTick + 323-331 endTurn: turn.end fires ONLY inside turnTick when a NEW verb arrives after >TURN_IDLE_MS(30s). There is NO timer/watchdog that fires turn.end for a turn that never receives another verb. A permanent stall = the turn stays open forever = ZERO turn.end event = gmsniff sees silence, not a deviation. gmsniff cannot flag an event that was never emitted. This is why the 2-day tv8 stall was invisible: no turn.end with ended_in_phase=EXECUTE + prd_pending>0 was ever written because no verb ever closed the turn.'
   note: 'observability hole: stall produces silence not signal'
+- id: my-in-cwd-grep-drift
+  status: resolved
+  witness: 'ccsniff --search-discipline this session 42c51d54: ~6 genuine in-cwd gm-symbol greps that should have been codesearch (grep writeStatus/logEvent/prd_pending_count/scanStalledTurns/Toolless in gm-plugkit/plugkit-wasm-wrapper.js + SKILL.md/AGENTS.md). Per the sharpened rule (mem-1779983031265): in-cwd source-symbol lookup MUST be codesearch. I drifted because the wrapper edits were fast iterative and grep felt lighter, but the rule is absolute - the index is fresh and codesearch is the verb.'
+  note: genuine agent discipline drift
+- id: ccsniff-fp-relative-sibling-path
+  status: resolved
+  witness: ccsniff/src/cli.js:394-404 targetsOutsideCwd only exempts (a) explicit cd <abs-path> or (b) an absolute-path arg outside cwd. It does NOT parse git -C <dir> context, and a RELATIVE grep target (src/orchestrator/instructions/entry.rs run after the shell cwd was reset to a sibling repo, or git -C /c/dev/rs-plugkit) is not recognized as outside-cwd -> flagged as a [gm] violation though it targets a sibling repo with no codesearch index. False positive, same FP-refinement class as mem-1779977387632.
+  note: 'ccsniff exemption gap: git -C + relative-sibling-path'
