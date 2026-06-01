@@ -981,3 +981,23 @@
   phase: VERIFY
   status: completed
   witness: git status all 7 repos dirty=0. Watchdog deployed (this fire IS proof it ran in installed wrapper). ccsniff continuation/search-FP on @latest, gm disciplines 0, update_available=null.
+- id: watchdog-per-episode-firing-is-correct
+  title: 'DECISION: the watchdog firing once per stall episode on a wedged tv8 session (turn_idx 2 then 5, same prd_pending=17) is CORRECT, not noise. turn_idx advancing 2->5 means tv8 received intervening verbs (each resets stallEmitted), so each is a genuinely distinct stall episode - the agent stalled, got nudged, stalled again. A repeatedly-going-down session deserves a signal each time; suppressing repeats would HIDE a worsening wedge. The existing fields (cwd + turn_idx) already let downstream tooling count stalls-per-session by correlation, so no dedup/rate-limit/counter change is warranted. Per-episode is the right design.'
+  phase: VERIFY
+  status: completed
+  witness: turn_idx 2 (last fire) -> 5 (this fire) on same tv8 cwd, same prd_pending=17. Advancing turn_idx means intervening verbs reset stallEmitted, so each is a distinct episode = correct per-episode firing. Existing cwd+turn_idx fields enable wedge-correlation. No dedup needed - suppressing repeats would hide a worsening wedge.
+- id: hardening-097773a5-committed-pending-deploy
+  title: 'VERIFIED hardening 097773a5 (conditional sess attribution) is committed to repo, NOT yet in installed wrapper (grep key!==no-session = 0). This is the normal cascade publish lag: gm-plugkit republishes on the version-bump commit, then the watcher reinstalls on next boot/drift-detect. The 13:29 event still shows (no-session) = old deployed code, but is correctly attributed via cwd=C:/dev/tv8 regardless. Publish path validated by the EARLIER watchdog itself deploying (it is live now, proving the path works). The hardening will follow the same path.'
+  phase: VERIFY
+  status: completed
+  witness: grep key!==no-session installed wrapper = 0 (not deployed); 097773a5 in repo. Normal cascade publish lag - the earlier watchdog itself is now deployed (proving the path works). cwd attribution works regardless.
+- id: tv8-wedge-is-foreign-not-gm-scope
+  title: 'The recurring tv8 stall is a FOREIGN-session wedge (tv8 is a separate project the user explicitly scoped OUT - evidence only). The watchdog correctly surfaces it; fixing tv8 itself is out of scope. The gm/rs-* contribution is COMPLETE: the watchdog that makes the wedge visible. No gm/rs-* code change needed.'
+  phase: VERIFY
+  status: completed
+  witness: Event cwd=C:/dev/tv8 = foreign project, user-scoped-out (evidence only). Watchdog correctly surfaces it; gm/rs-* contribution (the visibility) is complete. No gm/rs-* change needed.
+- id: all-7-repos-clean-this-fire
+  title: VERIFIED all 7 repos clean (gm/ccsniff/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn dirty=0). ccsniff git/search-gm/continuation 0. No orphan work. Prior commits live.
+  phase: VERIFY
+  status: completed
+  witness: git status all 7 repos dirty=0; ccsniff git/search-gm/continuation 0; prior commits live (watchdog deployed+firing).
