@@ -1057,3 +1057,7 @@
   text: 'Validate predictability-for-user closure: the recurring foreign tv8 long-gap noise (user-scoped-out wedge resuming every ~30min) is now BOTH cwd-tagged (~tv8 visible in default view via 05b18de) AND filterable (gmsniff --exclude-cwd tv8 drops it to 0 deviations). An operator sees foreign-vs-gm at a glance and can exclude foreign cwds to isolate genuine gm/rs-* drift. This is the user-goal predictability-regardless-of-LLM satisfied at the observability layer'
   status: completed
   witness: node src/cli.js --since 35m --exclude-cwd tv8 | grep -c deviation. = 0 (the single ~tv8 deviation excluded cleanly); default view shows ~tv8 tag (05b18de). Foreign noise both visible-tagged and excludable = operator isolates gm/rs-* drift deterministically
+- id: clean-fire-1815-two-longgap-tv8-gate-positive
+  text: 'Validate clean steady-state: gmsniff 35m TWO deviations both foreign ~tv8 long-gap-no-instruction (18:03:40 gap=743796, 18:16:32 gap=685196) verb=browser - tv8 wedge resuming twice, both gate-positive not gm/rs-* defect. cwd-tag ~tv8 triaged at a glance. ccsniff all 4 disciplines 0. All 8 repos porcelain=0. gm HEAD ahead=0'
+  status: completed
+  witness: 'node src/cli.js grep deviation. 35m = two lines both ~tv8: 18:03:40 gap_ms=743796, 18:16:32 gap_ms=685196 verb=browser; ccsniff 4-discipline empty; 8 repos porcelain=0; gm HEAD eb7b87bf ahead=0'
