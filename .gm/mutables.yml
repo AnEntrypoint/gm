@@ -180,3 +180,11 @@
   status: resolved
   witness: docs/paper.html:93 grid-template-columns:var(--sidebar-width) minmax(0,1fr); --sidebar-width is never defined anywhere in the file (grep returns only the use site). Undefined var with no fallback invalidates the whole grid-template-columns declaration -> grid collapses to single implicit column -> .toc sidebar stacks above article instead of beside it.
   note: root cause of sidebar layout break
+- id: deferred-intent-turn-end-linguistic-root
+  status: resolved
+  witness: 'tv8 transcript a4ea48fa...jsonl last 4 assistant texts (ts 2026-06-01T10:50:50 through 10:51:21) ALL end in deferred-intent prose: "Let me read it." / "Let me re-dispatch instruction..." / "Let me read the dnoise definition and the FS frame setup I need." The final message announces the next read in prose then emits NO tool call -> turn ends -> chain stalls at EXECUTE 22 pending. The agent did not think it was summarizing (skill forbids summary/wrap-up); it thought it was ANNOUNCING the next step. The skill prose names summary/recap/closure as the stop but does NOT name deferred-intent ("Let me X"/"I will X"/"Now to X" as a turn-final sentence promising a tool call instead of making it). That linguistic hole is what let the agent self-authorize the stop.'
+  note: 'root cause of mid-EXECUTE stall: deferred-intent-as-turn-ending'
+- id: permanent-stall-emits-no-turn-end-event
+  status: resolved
+  witness: 'plugkit-wasm-wrapper.js:333-360 turnTick + 323-331 endTurn: turn.end fires ONLY inside turnTick when a NEW verb arrives after >TURN_IDLE_MS(30s). There is NO timer/watchdog that fires turn.end for a turn that never receives another verb. A permanent stall = the turn stays open forever = ZERO turn.end event = gmsniff sees silence, not a deviation. gmsniff cannot flag an event that was never emitted. This is why the 2-day tv8 stall was invisible: no turn.end with ended_in_phase=EXECUTE + prd_pending>0 was ever written because no verb ever closed the turn.'
+  note: 'observability hole: stall produces silence not signal'

@@ -330,7 +330,7 @@ function endTurn(sess, t, idleSpanned) {
   });
 }
 
-function turnTick(sess, verb, taskBase, phase) {
+function turnTick(sess, verb, taskBase, phase, prdPending) {
   const key = sess || '(no-session)';
   const now = Date.now();
   let t = _turns.get(key);
@@ -349,14 +349,46 @@ function turnTick(sess, verb, taskBase, phase) {
     if (verb !== 'instruction') return;
     const idx = ((_turns.get(key + ':lastIdx') || 0) + 1);
     _turns.set(key + ':lastIdx', idx);
-    t = { idx, startTs: now, lastTs: now, dispatches: 0, verbs: new Map(), phases: new Set(), deviations: 0, lastPhase: phase };
+    t = { idx, startTs: now, lastTs: now, dispatches: 0, verbs: new Map(), phases: new Set(), deviations: 0, lastPhase: phase, prdPending: null, stallEmitted: false };
     _turns.set(key, t);
     logEvent('plugkit', 'turn.start', { sess, turn_idx: idx, phase: phase || null });
   }
   t.lastTs = now;
   t.dispatches++;
+  // A verb arriving resumes the turn — clear any prior stall flag so a later re-stall
+  // is a fresh episode, not silently suppressed by the one-shot guard.
+  t.stallEmitted = false;
   t.verbs.set(verb, (t.verbs.get(verb) || 0) + 1);
   if (phase) { t.phases.add(phase); t.lastPhase = phase; }
+  if (typeof prdPending === 'number') t.prdPending = prdPending;
+}
+
+// turn.end fires only when a NEW verb arrives after idle, so a turn that simply never
+// receives another verb stays open forever and emits no signal — a permanent stall is
+// silence, not an event, which is how a mid-EXECUTE stop stays invisible for days. The
+// heartbeat scan closes that hole: for each open turn idle past STALL_MS whose last phase
+// is non-terminal (or carries open PRD rows), emit turn.stalled once. One-shot per episode
+// (stallEmitted), reset when a verb resumes the turn. A COMPLETE turn with no open rows
+// idling is the authorized prose-only state and never stalls.
+const STALL_MS = 300_000;
+function scanStalledTurns() {
+  const now = Date.now();
+  for (const [key, t] of _turns) {
+    if (!t || typeof t !== 'object' || !Number.isFinite(t.startTs)) continue;
+    if (t.stallEmitted) continue;
+    if ((now - t.lastTs) < STALL_MS) continue;
+    const terminal = t.lastPhase === 'COMPLETE' && (t.prdPending === 0 || t.prdPending == null);
+    if (terminal) continue;
+    t.stallEmitted = true;
+    logEvent('hook', 'deviation.mid-chain-stall', {
+      sess: key,
+      turn_idx: t.idx,
+      ended_in_phase: t.lastPhase || null,
+      prd_pending: t.prdPending,
+      idle_ms: now - t.lastTs,
+      dispatches: t.dispatches,
+    });
+  }
 }
 
 let __sessCache = { value: '', mtimeMs: 0, readAt: 0, srcMtimeMs: 0 };
@@ -504,7 +536,7 @@ function emitOrchestratorEvents(verb, taskBase, resultStr) {
   }
   const data = parsed.data || {};
   const sess = readCurrentSess();
-  turnTick(sess, verb, taskBase, data.phase);
+  turnTick(sess, verb, taskBase, data.phase, typeof data.prd_pending_count === 'number' ? data.prd_pending_count : undefined);
   switch (verb) {
     case 'transition':
       logEvent('plugkit', 'phase.transitioned', { task: taskBase, phase: data.phase, next_skill: data.nextSkill, recall_count: Array.isArray(data.recall_hits) ? data.recall_hits.length : 0 });
@@ -3065,6 +3097,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   _writeStatusBusy = (ms) => { try { writeStatus(ms); } catch (_) {} };
   setInterval(() => writeStatus(), 5000);
+  setInterval(() => { try { scanStalledTurns(); } catch (_) {} }, 30000);
   writeStatus();
 
   const TURN_SUMMARY_PATH = path.join(spoolDir, '.turn-summary.json');

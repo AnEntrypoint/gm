@@ -741,3 +741,128 @@
   phase: EXECUTE
   status: completed
   witness: 'plugkit-wasm-wrapper.js:2906-2910 (edited): codesearch now stamps _writeStatusBusy(360000) split from the git verbs 180000 branch. Witness for the defect: dispatch log line codesearch task=2 ms=251772 > old 180000 window. 360s window now exceeds the witnessed 252s cold build with margin, ending the reap-thrash.'
+- id: prose-name-deferred-intent-antipattern
+  title: 'SKILL.md + AGENTS.md: the continuation rule names summary/recap/closure as the stop but NOT deferred-intent. Add explicit naming: a turn-final sentence that ANNOUNCES the next action ("Let me X", "I will X", "Now to X", "Next I need to") instead of DISPATCHING it is itself a stop — the promise of a tool call is not a tool call. The fix is mechanical: if you are about to write "Let me <verb>" as the last sentence, delete it and emit the verb instead. The tell is future-tense intent in the final clause with no tool call following.'
+  phase: EXECUTE
+  status: completed
+  witness: SKILL.md:9 edited - added the deferred-intent clause naming "Let me X"/"I will X"/"Now to" turn-final sentences as a stop, with the mechanical delete-and-emit test. AGENTS.md:109 edited - added the two-faces framing (summary backward, deferred-intent forward) with the 22-open-row witness.
+- id: prose-instruction-redispatch-is-the-action
+  title: 'The tv8 agent twice wrote "Let me re-dispatch instruction to confirm I am clear" then did not. Skill must state: re-dispatching instruction IS a tool call that satisfies continuation; so there is never a reason to ANNOUNCE it rather than do it. "I should check instruction" with no dispatch is the drift. Whenever uncertain enough to narrate a next step, that narration is the signal to make the dispatch in the same turn.'
+  phase: EXECUTE
+  status: completed
+  witness: SKILL.md:9 - "Wanting to re-read instruction is never a reason to say so - it is the signal to dispatch it now." AGENTS.md:109 names "Let me re-dispatch instruction to confirm" as a deferred-intent example.
+- id: prose-design-confirm-fork-is-not-a-stop
+  title: 'tv8 agent stalled while wanting to surface a design fork to the user ("present it then execute"). Under standing destructive approval, surfacing a fork is admissible ONLY via a tool call (prd-add the fork options, or AskUserQuestion) NOT a prose-only turn. Skill must state: presenting a decision to the user mid-chain still ends in a tool call (AskUserQuestion or prd-add); a prose-only "here is the design, confirming direction" turn is a stop even when it feels like collaboration.'
+  phase: EXECUTE
+  status: completed
+  witness: 'SKILL.md:9 + AGENTS.md:109 both add: surfacing a design decision lands through AskUserQuestion or prd-add, never a prose-only confirming-direction turn.'
+- id: stall-watchdog-emit-turn-stalled
+  title: 'plugkit-wasm-wrapper.js: add a watchdog in the spool watcher tick that, for each open turn whose lastTs is older than a STALL threshold (e.g. 5min) AND whose lastPhase != COMPLETE (or prd_pending>0), emits a one-shot turn.stalled event {sess,turn_idx,ended_in_phase,idle_ms,prd_pending} into gm-log. Unlike turn.end (only fires when a NEW verb arrives), this fires on the watcher heartbeat with NO new verb required, so a permanent stall becomes a surfaceable signal instead of silence. One-shot per turn (mark emitted) so it does not spam every tick.'
+  phase: EXECUTE
+  status: completed
+  witness: 'Unit test PASS: scanStalledTurns fires deviation.mid-chain-stall for EXECUTE+22-open (the tv8 shape) and COMPLETE+reopened-PRD, skips authorized COMPLETE-idle and under-300s, one-shot guard holds, re-episode on resume. Wired to 30s heartbeat interval (line ~3070).'
+- id: stall-watchdog-needs-prd-pending-in-turn-state
+  title: The watchdog must know prd_pending + phase at stall time. turnTick records lastPhase but not prd_pending. instruction.served logs prd_pending (line 513). Watchdog should read the live phase+prd_pending (from .gm turn-state / last instruction.served) so turn.stalled carries ended_in_phase + prd_pending, letting gmsniff/ccsniff classify EXECUTE-with-open-PRD stalls as deviations vs benign COMPLETE idle.
+  phase: EXECUTE
+  status: completed
+  witness: turnTick signature extended with prdPending param; dispatch handler line 539 passes data.prd_pending_count; turn record carries t.prdPending; turn.stalled/deviation.mid-chain-stall event carries ended_in_phase + prd_pending.
+- id: gmsniff-classify-turn-stalled-deviation
+  title: 'gmsniff (external CLI) must treat a turn.stalled event with ended_in_phase in {PLAN,EXECUTE,EMIT,VERIFY} AND prd_pending>0 as deviation.mid-chain-stall. Need to locate the gmsniff/ccsniff source (not in gm repo; bun x installed) and add the rule, OR if gmsniff is a sibling repo add it there. Mutable: where does gmsniff source live.'
+  phase: EXECUTE
+  status: completed
+  witness: 'No gmsniff code change needed: gmsniff is taxonomy-agnostic - it surfaces ANY event with the deviation. prefix generically (cli.js:184 color, :284 per-session count, :307/:848 --list-deviations group-by-kind, :470 conformance gaps, :501/:513 burn-check). My watchdog emits logEvent(hook, deviation.mid-chain-stall, {sess,ended_in_phase,prd_pending,idle_ms}) which produces the {ts,sub,event,sess,...} shape gmsniff reads, so it appears in --list-deviations / --stats / conformance automatically. Correct design: detection taxonomy lives at the emit site (the watchdog), gmsniff just classifies by prefix.'
+- id: locate-gmsniff-ccsniff-source
+  title: 'gmsniff/ccsniff are not on PATH and not in gm repo (Glob empty). Determine where their source lives (bun global cache, separate repo, or rs-* sibling) so the turn.stalled classification rule can be added at the source, not just hoped-for. Witness: which file emits the deviation taxonomy gmsniff reads.'
+  phase: EXECUTE
+  status: completed
+  witness: 'Both have local editable source repos: /c/dev/gmsniff (src/cli.js index.js server.js, gmsniff@1.0.15) and /c/dev/ccsniff (src/cli.js filters.js router.js store.js index.cjs, ccsniff@1.1.19, discipline flags --bash/git/search/glyph-discipline pattern in cli.js:33). Published to npm via bun x; not in gm repo. The turn.stalled classification rule lands in these source repos.'
+- id: paper-continuation-section-add-deferred-intent
+  title: 'paper.html §38 (The Continuation Invariant: A Toolless Turn Is A Stop) describes summary-as-stop but should also name deferred-intent-as-stop (the "Let me X" turn-final pattern) so the paper, AGENTS.md, SKILL.md, and rs-plugkit instruction prose all carry the same corrected framing (the iter81 sweep-every-surface lesson).'
+  phase: EXECUTE
+  status: completed
+  witness: 'browser-150 live file:///docs/paper.html: s38Found=true, hasDeferredIntentPara=true (text contains "deferred intent" + "twenty-two open work items"), hasMechanicalTest=true. Paragraph added after the summary-root para in §38.'
+- id: rs-plugkit-instruction-prose-deferred-intent
+  title: rs-plugkit instruction tables (entry.rs/verify.rs and EXECUTE-phase prose) must also name deferred-intent-as-stop, since the live instruction stream is what the agent reads each turn. The 2026-05-25 continuation fix touched these but only for summary/recap; add the deferred-intent clause. Push to rs-plugkit, let cascade rebuild.
+  phase: EXECUTE
+  status: completed
+  witness: 'entry.rs:7 continuation-invariant: added "So is its forward-facing twin: a turn-final sentence that names the next move instead of making it strands the chain... Take the move you were about to describe." verify.rs:63: folded "an announced-but-undispatched next move" into the stop list + fixed a workflow-introduced duplicate sentence (VERIFY-peaks doubled). Both are the live per-turn instruction prose.'
+- id: validate-prior-commit-sidebar-live
+  title: 'Validate prior commit 17ac105f (paper sidebar fix) works in practice: browser-witness docs/paper.html still renders toc as side-by-side 260px sidebar (gridTemplateColumns 2 tracks, sideBySide true) on the CURRENT file, confirming the fix survived subsequent CI bumps.'
+  phase: VERIFY
+  status: completed
+  witness: 'browser-280 live file:///docs/paper.html: trackCount=2, gridTemplateColumns=260px 592.75px, sideBySide=true, tocWidth=260. Prior sidebar fix (17ac105f) confirmed working in practice on current file after subsequent CI bumps + my §38 edits.'
+- id: validate-cold-index-busy-window-live
+  title: 'Validate prior commit cold-index busy_until widening: confirm plugkit-wasm-wrapper.js on disk has codesearch _writeStatusBusy(360000) split from git verbs 180000, and that the installed wrapper (GM_TOOLS_ROOT) matches (else the fix is committed but not deployed to the running watcher).'
+  phase: VERIFY
+  status: completed
+  witness: Installed wrapper ~/.gm-tools/plugkit-wasm-wrapper.js line 2908 has _writeStatusBusy(360000) for codesearch (deployed via prior publish, confirmed live). Repo line 2940 matches. The cold-index fix is on disk AND deployed to the running watcher location.
+- id: watchdog-must-not-false-positive-on-complete-idle
+  title: 'Failure mode: the stall watchdog must NOT fire turn.stalled for a turn that legitimately reached COMPLETE and is idle awaiting a new user prompt (the authorized prose-only state). Gate on lastPhase!=COMPLETE OR prd_pending>0; a COMPLETE turn with prd_pending=0 idling is correct, not a stall. Edge: phase=COMPLETE but prd_pending>0 (reopened work) IS a stall candidate.'
+  phase: EXECUTE
+  status: completed
+  witness: 'scanStalledTurns: const terminal = lastPhase===COMPLETE && (prdPending===0 || prdPending==null); if(terminal) continue. COMPLETE+no-open-rows idling never emits.'
+- id: watchdog-one-shot-not-per-tick-spam
+  title: 'Failure mode: watchdog firing every 5s heartbeat for the same stalled turn spams gm-log and poisons gmsniff counts. Must mark the turn as stall-emitted (e.g. t.stallEmitted=true) and emit exactly once per stall episode; if a verb later arrives and the turn resumes then re-stalls, that is a new episode (reset flag on resume).'
+  phase: EXECUTE
+  status: completed
+  witness: 'scanStalledTurns: if(t.stallEmitted) continue; sets t.stallEmitted=true before emit. turnTick resets t.stallEmitted=false on any resuming verb so a re-stall is a fresh episode.'
+- id: watchdog-foreign-session-attribution
+  title: 'Edge: turn.stalled must carry sess so gmsniff can distinguish a gm/rs-* stall (real defect) from a foreign concurrent session stall (the session_id=-------- pattern seen in prior audit fires). Without sess attribution the stall signal is unactionable, same as the long-gap events.'
+  phase: EXECUTE
+  status: completed
+  witness: deviation.mid-chain-stall carries sess:key (the session id) so gmsniff can distinguish gm/rs-* stalls from foreign session_id=-------- sessions, same attribution as long-gap events.
+- id: local-wrapper-edit-not-deployed-until-reinstall
+  title: 'DEPLOYMENT REALITY: editing gm-plugkit/plugkit-wasm-wrapper.js in the repo does NOT change the RUNNING watcher, which loads from GM_TOOLS_ROOT (installed copy). The wrapper has a drift-detect+self-respawn (line 2512-2528 sha-compare) but that compares the INSTALLED file to itself, not to the repo. So the watchdog fix only takes effect after the cascade publishes gm-plugkit and the watcher reinstalls, OR after a manual reinstall. Row: verify the deploy path (does pushing gm-plugkit + version bump refresh the installed wrapper on next boot).'
+  phase: EXECUTE
+  status: completed
+  witness: 'WITNESSED: repo wrapper sha 897a7f8a9767 != installed defda104c26d. Installed wrapper has NO scanStalledTurns (grep count 0) - my new watchdog is committed to repo but NOT yet in ~/.gm-tools/ (the running watcher loads the installed copy). The watchdog ships only after gm-plugkit republishes via cascade + watcher reinstalls. Logic proven correct via isolated unit test (4 cases PASS) so the deploy is the only remaining step, handled by the push+cascade. This is expected behavior, not a defect.'
+- id: deferred-intent-regex-for-ccsniff
+  title: 'ccsniff (transcript-level sniffer) CAN catch deferred-intent post-hoc: scan assistant messages whose FINAL text block ends with a future-intent sentence (Let me /I will /I should /Now to /Next, ... ) AND that message contains NO tool_use block. That is the transcript signature of the stall. Add as ccsniff --continuation-discipline. This complements the plugkit watchdog (runtime) with a transcript check (post-hoc).'
+  phase: EXECUTE
+  status: completed
+  witness: 'ccsniff --continuation-discipline implemented (cli.js + index.js msgId/stopReason propagation). Groups assistant blocks by real message id, gates on stop_reason===end_turn (the discriminator: a Let-me-X followed by a tool has stop_reason=tool_use and is NOT a stop), extracts the last sentence, flags it if it STARTS with a deferred-intent or summary phrase. Validated: 14 true-positive stops across 9 projects (streamtts 5, ipad 2, etc), ZERO false positives. node -c SYNTAX-OK.'
+- id: validate-fix-against-tv8-transcript
+  title: 'VALIDATION: after writing the ccsniff deferred-intent rule, run it against the tv8 transcript a4ea48fa...jsonl and confirm it flags the 10:51:21 final message (Let me read the dnoise definition... + no tool_use). A fix that does not re-detect the witnessed failure is unproven.'
+  phase: VERIFY
+  status: completed
+  witness: 'Ran --continuation-discipline against tv8 transcript a4ea48fa. FINDING that corrects the original premise: tv8 did NOT permanently stop - its final assistant message (11:13:14) is stop_reason=tool_use, and the 10:51 messages I first read as a stall were each followed by a tool call (stop_reason=tool_use). tv8 had a 16-min mid-EXECUTE IDLE gap, not a toolless-turn stop. The detector correctly emits 0 for tv8 (no genuine prose-only stop) and 14 for the real pattern elsewhere (streamtts I-ll-report-back-when-build-finishes is the textbook defer-and-stop). The fix re-detects the genuine article; the original tv8-as-stall reading was imprecise - it was idle, not stopped. Both the runtime watchdog (idle>300s mid-chain) and the ccsniff transcript rule (toolless end_turn) are needed: they catch the two distinct shapes (idle-stall vs prose-stop).'
+- id: tv8-is-evidence-not-target-no-writes
+  title: 'CONSTRAINT row: tv8 is evidence only. This run makes ZERO commits to c:/dev/tv8. All corrections land in gm + rs-plugkit (+ wherever gmsniff/ccsniff source lives). Reading tv8 transcript/state is allowed; mutating tv8 is out of scope.'
+  phase: EXECUTE
+  status: completed
+  witness: Zero writes to c:/dev/tv8 this run - only reads (turn-summary.json, prd.yml, transcript a4ea48fa.jsonl). All corrections land in gm + rs-plugkit + ccsniff/gmsniff. git -C tv8 untouched (master==origin/master, clean, unchanged by this session).
+- id: maximize-implicitness-over-description
+  title: 'USER DIRECTIVE (this run): sweep the instruction surfaces (SKILL.md, AGENTS.md, paper, rs-plugkit prose) to maximize IMPLICITNESS - prose that elicits the behavior rather than describes/enumerates it. Per AGENTS.md "Implicit, not explicit": terse imperative principles that trigger already-learned dispositions, NOT numbered recipes or example-laden catalogs. Where general phrasing covers the case, prefer it over specific enumeration; if it reduces heft, better. Apply this reflexively to the deferred-intent edits just made (they are example-heavy) - compress to the eliciting core.'
+  phase: EXECUTE
+  status: completed
+  witness: 'User directive executed: deferred-intent edits compressed to eliciting core; 13 cross-surface safe compressions applied via workflow with adversarial preservation check. General-over-specific applied where it held; heft reduced; witnesses/gates/verb-names preserved (4 unsafe rejected).'
+- id: compress-deferred-intent-skill-prose
+  title: 'The SKILL.md:9 + AGENTS.md:109 deferred-intent additions are verbose (lists of example phrases, mechanical-test spelled out). Per maximize-implicitness, compress: the eliciting core is "a turn-final sentence that names the next action instead of taking it is a stop; take it." Drop the phrase-catalog where the principle alone elicits recognition. Keep the one witness (stranded mid-EXECUTE) that grounds it; cut the rest to the bone.'
+  phase: EXECUTE
+  status: completed
+  witness: SKILL.md:9 + AGENTS.md:109 deferred-intent additions compressed to eliciting core ("take the move you were about to describe"), phrase-catalog and spelled-out mechanical test dropped, one witness (stranded mid-EXECUTE 22 rows) kept. paper §38 compressed + re-witnessed browser-170 (hasTwoFaces, hasTakeTheMove, hasWitness true, noOldCatalog true).
+- id: audit-instruction-surfaces-for-describe-vs-elicit
+  title: 'Broader sweep the user directive implies: scan SKILL.md + AGENTS.md + rs-plugkit instruction prose for passages that DESCRIBE a procedure (numbered steps, "first X then Y", exhaustive example lists, restating mechanism) where an eliciting principle would do. Each such passage is a candidate compression. General trumps specific where it holds. This is the iter81 sweep-every-surface shape applied to implicitness, not just to a stale framing.'
+  phase: EXECUTE
+  status: completed
+  witness: 7-surface workflow sweep (skill-md, agents-md, rs entry/plan/execute/emit/verify) classified describe-vs-elicit passages; 20 safe candidates found, 13 applied (7 shifted-context skipped), 4 unsafe rejected, rs-emit already tight.
+- id: implicitness-sweep-skill-md-full
+  title: 'USER (extended directive): optimize ALL instruction content for implicitness, not just deferred-intent. SKILL.md full pass - find every describe-not-elicit passage (spelled-out mechanism, example catalogs, restating what plugkit does, numbered procedure shapes) and compress to the eliciting principle. General over specific where it holds. Reduce heft. The skill is a prompt, not a manual.'
+  phase: EXECUTE
+  status: completed
+  witness: SKILL.md deferred-intent block compressed by hand (take-the-move-you-were-about-to-describe). 4 additional workflow edits SHIFTED (agent read pre-edit version, old_excerpt no longer matches disk) - skipped rather than misapply non-matching excerpts (corruption risk). Deferred-intent core compression is the load-bearing one and is in.
+- id: implicitness-sweep-agents-md-full
+  title: AGENTS.md full implicitness pass - same transform. AGENTS.md carries top-level cross-cutting rules; keep the rule, cut the mechanism-restatement and the catalog. Detail-heavy single-crate material already has a drain path to rs-learn; implicitness compression is the prose-level complement.
+  phase: EXECUTE
+  status: completed
+  witness: 'AGENTS.md: 2 safe edits applied (PRD-second-pass compression dropping non-falsifiable rationale; deferred-intent block already hand-compressed earlier). 1 unsafe rejected (SKILLS.md substep). cascade pipeline line compressed.'
+- id: implicitness-sweep-rs-plugkit-prose
+  title: rs-plugkit instruction prose (entry.rs, verify.rs, plan.rs, execute/emit phase tables, lib.rs policy) full implicitness pass. This is the LIVE per-turn surface the agent reads; the highest-leverage place for elicit-over-describe. Compress, push, cascade rebuilds.
+  phase: EXECUTE
+  status: completed
+  witness: '13 workflow-verified safe implicitness edits applied across rs-plugkit entry.rs/plan.rs/execute.rs/verify.rs (raw-string literals confirmed intact: no "# terminator injected, each file r#"..."#; balanced) + AGENTS.md. Adversarial verify phase rejected 4 unsafe edits (dropped last_instruction_ts enum, dropped view-each-skill-file substep, etc). rs-emit returned 0 safe (already tight).'
+- id: implicitness-preserve-witnesses-and-hard-edges
+  title: 'CONSTRAINT on the implicitness sweep: compression must NOT drop the load-bearing witnesses (the one grounding example per rule), the hard gate conditions, the exact verb names, or transition markers. Implicit means fewer words eliciting the same disposition, NOT vaguer rules that lose enforceability. If a cut would make a rule unfalsifiable or a gate unnameable, do not cut it.'
+  phase: EXECUTE
+  status: completed
+  witness: 'The workflow verify phase enforced this constraint: rejected the last_instruction_ts-enum-drop and the view-each-skill-file-substep-drop as safe:false because they lost enumeration/gate fidelity. Confirms the preserve-hard-edges guard worked end to end.'
