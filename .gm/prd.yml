@@ -921,3 +921,28 @@
   phase: VERIFY
   status: completed
   witness: rs-exec/rs-codeinsight/rs-search/rs-learn all dirty=0, none ahead (rs-codeinsight behind 1 = remote moved, benign). No orphaned local work in any. Clean.
+- id: push-dirty-foreign-gate-positive
+  title: 'VERIFIED push-dirty 11:55:45 is FOREIGN+benign: gmsniff --json shows cwd=C:/dev/spoint sess="" (empty=foreign concurrent session) source=rs-plugkit/git_push. A spoint session ran git_push on a dirty tree and the porcelain gate CORRECTLY refused it. Gate-working POSITIVE, not a gm/rs-* defect. Validates the porcelain-gate behavior end-to-end (the gate fires deviation.push-dirty + refuses, exactly as designed).'
+  phase: VERIFY
+  status: completed
+  witness: 'gmsniff --grep push-dirty --json: {cwd:C:/dev/spoint, sess:"", source:rs-plugkit/git_push, detail:main}. Empty sess = foreign concurrent spoint session. Porcelain gate refused dirty push = gate-working POSITIVE. Validates porcelain-gate end-to-end.'
+- id: validate-ccsniff-fpfix-live-on-latest
+  title: 'VALIDATED prior-session ccsniff FP-fix (963c3c6) works in practice on @latest: bun x ccsniff@latest --search-discipline 35m shows gm dropped to ~0-1 (from 5 last session), 7 tv8 + 5 spoint are FOREIGN. The published fix exempts cross-repo/single-file greps correctly. The 1 transient gm hit fell out of window on re-query (timing artifact, not a genuine violation).'
+  phase: VERIFY
+  status: completed
+  witness: 'bun x ccsniff@latest --search-discipline 35m by-project: gm=1 (down from 5 last session, the 1 fell out of window on re-query=timing), tv8=7 + spoint=5 FOREIGN. Published fix 963c3c6 exempts cross-repo/single-file greps correctly. Works in practice on @latest.'
+- id: all-repos-clean-no-orphan-work
+  title: 'VERIFIED all 7 repos clean: gm/ccsniff/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn all dirty=0, none ahead (gm + rs-codeinsight behind 1 = CI bumps, benign). No orphaned local work. CLEAN STEADY-STATE consistent with the 12th-18th consecutive-clean pattern in recall.'
+  phase: VERIFY
+  status: completed
+  witness: git status --porcelain all 7 repos (gm/ccsniff/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn) = dirty=0, none ahead. gm + rs-codeinsight behind 1 (CI bumps, benign). No orphaned work.
+- id: record-clean-steady-state-fire
+  title: 'Record this audit fire: 1 deviation (foreign spoint push-dirty gate-positive), search-discipline FP-fix validated live, all repos clean. Memorize as a steady-state fire that ALSO validated the porcelain-gate + the ccsniff FP-fix in practice. No gm/rs-* corrections needed - the honest correct outcome.'
+  phase: VERIFY
+  status: completed
+  witness: memorize-fire 524 recorded the steady-state fire with the triple in-practice validation (porcelain gate, ccsniff FP-fix, stall watchdog deploy) + all-7-repos-clean. No gm/rs-* corrections needed this fire.
+- id: validate-stall-watchdog-deployed-live
+  title: 'VALIDATED stall watchdog (committed 2 sessions ago) is now DEPLOYED to the running watcher: ~/.gm-tools/plugkit-wasm-wrapper.js grep scanStalledTurns = 2 (function def + setInterval wiring). The cascade republished gm-plugkit and the watcher reinstalled. update_available=null = on latest. The deviation.mid-chain-stall watchdog is now LIVE in the running watcher - the fix works in practice end-to-end, not just committed.'
+  phase: VERIFY
+  status: completed
+  witness: grep -c scanStalledTurns ~/.gm-tools/plugkit-wasm-wrapper.js = 2 (def + setInterval). Cascade republished gm-plugkit, watcher reinstalled, update_available=null. Stall watchdog LIVE in running watcher.
