@@ -1001,3 +1001,15 @@
   phase: VERIFY
   status: completed
   witness: git status all 7 repos dirty=0; ccsniff git/search-gm/continuation 0; prior commits live (watchdog deployed+firing).
+- id: clean-fire-1407-longgap-gate-positive
+  text: 'Validate: gmsniff 35m shows exactly ONE deviation this fire = long-gap-no-instruction 14:07:03 verb=browser gap_ms=317519 session FOREIGN (spoint), gate fired correctly on genuinely-idle browser work verb = ec6a751 positive validation NOT gm/rs-* defect'
+  status: completed
+  witness: 'gmsniff 35m grep deviation: single line 2026-06-01 14:07:03 hook deviation.long-gap-no-instru -------- {detail:verb=browser gap_ms=317519,source:rs-plugkit/gates}; session -------- = FOREIGN spoint, gate fired on genuinely-idle browser verb = ec6a751 positive'
+- id: watchdog-quiet-no-stall-negative-validation
+  text: 'Validate: NO mid-chain-stall fired this 35m window - the tv8 wedge that fired the watchdog at 13:07+13:29 is quiet now and the only live session (spoint) is healthy (walks EXECUTE->COMPLETE with browser witnesses + noticing-to-PRD). Negative validation: scanStalledTurns is not noisy, fires only on genuine stall'
+  status: completed
+  witness: 'gmsniff 35m deviation grep = zero mid-chain-stall lines; spoint session events show healthy walk: 14:08-14:10 EXECUTE->EMIT->VERIFY->COMPLETE git_finalize+memorize+transition, 14:13:55 mutable.added joiner-connected-flag-stuck-false + 3 prd.added on discovery'
+- id: all-7-repos-clean-ccsniff-zero
+  text: 'Validate: all 7 repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn/ccsniff) porcelain=0 dirty=0 this fire; ccsniff all 4 disciplines (git/search/continuation/glyph) 0 over 35m'
+  status: completed
+  witness: 'per-repo porcelain wc -l: gm0 rs-plugkit0 rs-exec0 rs-codeinsight0 rs-search0 rs-learn0 ccsniff0; ccsniff --git+search+continuation+glyph --since 35m returned empty (0 violations); gm HEAD 567d4d2a ahead=0 on origin'
