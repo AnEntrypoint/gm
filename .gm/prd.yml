@@ -1037,3 +1037,7 @@
   text: 'Validate all 8 repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn/ccsniff/gmsniff) porcelain=0; ccsniff all 4 disciplines 0 over 35m; prior commits live: gm 7fc5612d committed 14:56, gmsniff 05b18de patched formatter running'
   status: completed
   witness: 'per-repo porcelain wc -l all 0: gm rs-plugkit rs-exec rs-codeinsight rs-search rs-learn ccsniff gmsniff; ccsniff --git+search+continuation+glyph --since 35m empty; gm git.commit 7fc5612d 14:56 in gm-log; gmsniff origin tip 05b18de'
+- id: cleanest-fire-zero-deviations-prior-commits-live
+  text: 'Validate zero-deviation clean steady-state this fire: gmsniff 60m has ZERO deviation.* events (the 2 grep hits are my own git.commit message text, not events), deviations_30m=0 matched. ccsniff all 4 disciplines 0. All 8 repos porcelain=0. Foreign sessions (tv8/spoint) quiet this window. Prior commits live: gm 832ae206 in gm-log + ahead=0 on origin, gmsniff cwd-tag npm 1.0.16. No gm/rs-* corrections needed'
+  status: completed
+  witness: node src/cli.js --since 60m grep deviation = 2 hits both my own git.commit message text (832ae206 summary contains "3 deviations"), zero deviation.* events; deviations_30m=0; ccsniff 4-discipline empty; 8 repos porcelain=0; gm HEAD 04f8870d ahead=0 (CI bump over my 832ae206 live underneath)
