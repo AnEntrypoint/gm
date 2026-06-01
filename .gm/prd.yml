@@ -946,3 +946,18 @@
   phase: VERIFY
   status: completed
   witness: grep -c scanStalledTurns ~/.gm-tools/plugkit-wasm-wrapper.js = 2 (def + setInterval). Cascade republished gm-plugkit, watcher reinstalled, update_available=null. Stall watchdog LIVE in running watcher.
+- id: verify-7-repos-clean-this-fire
+  title: 'VERIFIED 7 repos clean: gm/ccsniff/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn all dirty=0, none ahead (gm + rs-codeinsight behind 1 = CI bumps). No orphan work. Matches the 12th-20th consecutive-clean-fire pattern in recall.'
+  phase: VERIFY
+  status: completed
+  witness: git status --porcelain all 7 repos = dirty=0; gm + rs-codeinsight behind 1 (CI bumps, benign), rest sync. No orphan work.
+- id: verify-prior-commits-live-this-fire
+  title: 'VERIFIED prior commits live in practice: stall watchdog scanStalledTurns deployed to installed wrapper (grep=2); ccsniff --continuation-discipline on @latest (help grep=1); search-discipline FP-fix working (gm search=0 this window, 19 hits ALL foreign tv8/sttr). update_available=null = on latest.'
+  phase: VERIFY
+  status: completed
+  witness: grep -c scanStalledTurns ~/.gm-tools/wrapper=2 (watchdog deployed); ccsniff@latest --help grep continuation-discipline=1 (live); gm search-discipline=0 this window (FP-fix working); update_available=null.
+- id: foreign-search-hits-not-gm-defect
+  title: VERIFIED the 19 search-discipline hits are foreign concurrent sessions (16 tv8 + 3 sttr, 0 gm). Not a gm/rs-* defect - other repos doing native search in their own trees. gm-only query returns empty. The FP-fix correctly does not flag gm.
+  phase: VERIFY
+  status: completed
+  witness: 'ccsniff --search-discipline 35m by-project: 16 tv8 + 3 sttr, gm-only query empty. Foreign concurrent sessions, not a gm/rs-* defect.'
