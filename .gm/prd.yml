@@ -1013,3 +1013,15 @@
   text: 'Validate: all 7 repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn/ccsniff) porcelain=0 dirty=0 this fire; ccsniff all 4 disciplines (git/search/continuation/glyph) 0 over 35m'
   status: completed
   witness: 'per-repo porcelain wc -l: gm0 rs-plugkit0 rs-exec0 rs-codeinsight0 rs-search0 rs-learn0 ccsniff0; ccsniff --git+search+continuation+glyph --since 35m returned empty (0 violations); gm HEAD 567d4d2a ahead=0 on origin'
+- id: validate-4-deviations-all-foreign-gate-positive
+  text: 'Validate the 4 deviations_30m this window are ALL foreign gate-positives not gm/rs-* defects: (1) 14:21:55 mid-chain-stall cwd=C:/dev/spoint EXECUTE prd=2 idle=323215 turn=8 watchdog-3rd-fire on NEW project; (2) 14:26:21 long-gap verb=browser gap=944315 foreign; (3) 14:30:44 long-gap verb=git_status gap=454383 foreign; (4) 14:31:31 prd-add-no-id foreign rejected+hinted'
+  status: completed
+  witness: 'raw gm-log hook.jsonl parse: 14:21:55 mid-chain-stall cwd=C:devspoint EXECUTE prd=2 idle=323215 turn=8; 14:26:21 long-gap verb=browser gap=944315; 14:30:44 long-gap verb=git_status gap=454383; 14:31:31 prd-add-no-id rejected+hinted. All cwd foreign (spoint), all gates fired correctly = positive not gm/rs-* defect'
+- id: validate-hardening-097773a5-deployed-cwd-attribution-works
+  text: 'Validate hardening 097773a5 (scanStalledTurns conditional sess) DEPLOYED to installed wrapper (~/.gm-tools line 383-393) AND working: raw gm-log mid-chain-stall events carry full cwd attribution (tv8 13:07/13:29, spoint 14:21) with honest (no-session) sentinel for sessions lacking .session-current. cwd comes from each foreign watchers own process.cwd, single-watcher-per-cwd arch confirmed (logEvent line 507)'
+  status: completed
+  witness: installed wrapper ~/.gm-tools line 382-394 has conditional-sess block + comment; gm-log git.commit 097773a5 13:20:56 live; raw stall events all carry correct cwd (tv8/spoint) from each foreign watchers process.cwd; logEvent line 507 cwd:process.cwd() = single-watcher-per-cwd arch
+- id: gmsniff-truncates-stall-cwd-in-display
+  text: 'Noticing: gmsniff display column truncates cwd to (no-sess for mid-chain-stall events so an operator cannot see WHICH project stalled without dropping to raw gm-log jsonl. The raw event has full cwd; only the formatted view hides it. Investigate gmsniff formatter to surface cwd (or first path segment) for deviation rows = triage-jank improvement'
+  status: completed
+  witness: 'FIXED cli.js:177-179 - derive ~<cwd-last-segment> tag for sentinel/empty sess rows. Verified: node src/cli.js --since 4h shows mid-chain-stall rows as ~tv8 / ~spoint instead of bare --------. Operator can now triage which project stalled from default view, no raw-jsonl drop needed'
