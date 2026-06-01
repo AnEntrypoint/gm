@@ -1085,3 +1085,7 @@
   title: 'Audit fire 2026-06-01 21:44: TRUE ZERO-DEVIATION (5th of run). gmsniff 35m: zero deviation.<name> event tokens (grep -oE ''deviation\.[a-z-]+'' empty). ccsniff all 4 disciplines empty. All 8 repos porcelain=0. gm HEAD 0cf43803 ahead=0, prior commits (174c1f79+docs-bump) live. Validate + memorialize.'
   status: completed
   witness: 'gmsniff --since 35m | grep -oE ''deviation\.[a-z-]+'' = empty (zero real deviation event tokens). ccsniff 4 disciplines empty. Repos porcelain: all 8 = 0. gm HEAD 0cf43803, rev-list @{u}..HEAD = 0.'
+- id: true-zero-dev-fire-2214
+  title: 'Audit fire 2026-06-02 ~22:14: TRUE ZERO-DEVIATION (6th of run, 3rd consecutive). gmsniff 35m: zero deviation.<name> event tokens. ccsniff all 4 disciplines empty. All 8 repos porcelain=0. gm HEAD 50348ae8 ahead=0, prior commits (349098c9+docs-bump) live. Validate + memorialize.'
+  status: completed
+  witness: 'gmsniff --since 35m | grep -oE ''deviation\.[a-z-]+'' = empty. ccsniff 4 disciplines empty. Repos porcelain: all 8 = 0. gm HEAD 50348ae8, rev-list @{u}..HEAD = 0.'
