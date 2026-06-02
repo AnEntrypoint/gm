@@ -807,6 +807,49 @@ function cleanDeadProfileFragments(cwd) {
   }
 }
 
+function parsePlaywriterSessionList(stdout) {
+  const rows = [];
+  if (!stdout) return rows;
+  const lines = stdout.split(/\r?\n/);
+  for (const line of lines) {
+    const m = line.match(/^\s*(\d+)\s+\S+\s+\S+\s+\S+\s+(\S+)/);
+    if (!m) continue;
+    const id = m[1];
+    let cwd = m[2];
+    if (cwd === '-') cwd = '';
+    rows.push({ id, cwd });
+  }
+  return rows;
+}
+
+function reapOrphanBrowserSessions(pw, cwd, claudeSessionId, reason) {
+  try {
+    const ports = readJsonFile(browserPortsFile(cwd), {});
+    const activeIds = new Set();
+    for (const ent of Object.values(ports)) {
+      if (ent && ent.pwSessionId) activeIds.add(String(ent.pwSessionId));
+    }
+    const r = runBrowserRunner(pw, ['session', 'list'], 15000, cwd, claudeSessionId);
+    if (!r || r.status !== 0) return { reaped: 0 };
+    const rows = parsePlaywriterSessionList(r.stdout || '');
+    const norm = (p) => String(p || '').replace(/[\\/]+$/, '').toLowerCase();
+    const wantCwd = norm(cwd);
+    let reaped = 0;
+    for (const { id, cwd: rowCwd } of rows) {
+      if (rowCwd && norm(rowCwd) !== wantCwd) continue;
+      if (activeIds.has(String(id))) continue;
+      const d = runBrowserRunner(pw, ['session', 'delete', id], 15000, cwd, claudeSessionId);
+      if (d && d.status === 0) {
+        reaped++;
+        try { logEvent('plugkit', 'browser.orphan-session-reaped', { session_id: id, reason: reason || 'boot', cwd }); } catch (_) {}
+      }
+    }
+    return { reaped };
+  } catch (_) {
+    return { reaped: 0 };
+  }
+}
+
 function resolveWindowsExeLocal(cmd) {
   if (process.platform !== 'win32') return cmd;
   try {
@@ -1137,6 +1180,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
   }
   cleanDeadProfileFragments(cwd);
+  reapOrphanBrowserSessions(pw, cwd, claudeSessionId, 'pre-spawn');
   const profileDir = acquireProfileDir(cwd, claudeSessionId);
   const aliveCdpForProfile = (() => {
     for (const key of Object.keys(ports)) {
@@ -2085,6 +2129,8 @@ async function runSpoolWatcher(instance, spoolDir) {
     fs.writeFileSync(path.join(gmDir, 'long-gap-retry-state'), '');
   } catch (_) {}
 
+  try { reapOrphanBrowserSessions(findBrowserRunner(), process.cwd(), process.env.CLAUDE_SESSION_ID || 'claude-loop-iter', 'watcher-boot'); } catch (_) {}
+
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   try {
@@ -2722,6 +2768,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         try { writeJsonFile(portsFile, ports); } catch (_) {}
         try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
       }
+      try { reapOrphanBrowserSessions(findBrowserRunner(), process.cwd(), process.env.CLAUDE_SESSION_ID || 'claude-loop-iter', 'idle-sweep'); } catch (_) {}
     } catch (e) {
       console.error(`[browser-idle] error: ${e.message}`);
     }
