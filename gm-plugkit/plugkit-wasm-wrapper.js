@@ -12,6 +12,9 @@ import { fileURLToPath } from 'url';
 // (browser/chromium spawn, long exec) stamp a busy_until window into .status.json before the
 // blocking call, so a liveness probe reads "busy" not "dead" while the event loop is blocked.
 let _writeStatusBusy = () => {};
+// Latest busy_until epoch ms stamped by a long synchronous verb (codesearch rebuild, chromium
+// spawn). scanStalledTurns reads it so a busy watcher is not mis-flagged as an idle stall.
+let _lastBusyUntil = 0;
 
 function spawnSync(cmd, args, opts) {
   return _rawSpawnSync(cmd, args, { windowsHide: true, ...(opts || {}) });
@@ -373,6 +376,10 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
 const STALL_MS = 300_000;
 function scanStalledTurns() {
   const now = Date.now();
+  // A long synchronous verb (codesearch index rebuild, chromium spawn) stamps busy_until and
+  // blocks the spool — the agent is legitimately waiting, not stalled. Honor it exactly as
+  // supervisor.js checkWatcherHealth does, so a busy watcher never emits a false mid-chain-stall.
+  if (_lastBusyUntil && _lastBusyUntil > now) return;
   for (const [key, t] of _turns) {
     if (!t || typeof t !== 'object' || !Number.isFinite(t.startTs)) continue;
     if (t.stallEmitted) continue;
@@ -3095,7 +3102,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       // busy_until tells probes "alive but synchronously busy until this epoch ms" — read it
       // alongside ts: a stale ts whose busy_until is still in the future is a busy watcher, not
       // a dead one. The pre-verb writeStatus(busyMs) stamps it before the blocking call.
-      if (busyMs && busyMs > 0) rec.busy_until = now + busyMs;
+      if (busyMs && busyMs > 0) { rec.busy_until = now + busyMs; _lastBusyUntil = rec.busy_until; }
       fs.writeFileSync(STATUS_PATH, JSON.stringify(rec));
     } catch (_) {}
   }
