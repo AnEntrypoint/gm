@@ -3,9 +3,14 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import https from 'https';
+import http from 'http';
 import { watch } from 'fs';
+import * as _childProcess from 'child_process';
 import { spawn as _rawSpawn, spawnSync as _rawSpawnSync } from 'child_process';
 import net from 'net';
+const _netModule = net;
+const _httpModule = http;
+const _httpsModule = https;
 import { fileURLToPath } from 'url';
 
 // Set by the spool watcher's writeStatus closure once it is live. Lets long synchronous verbs
@@ -437,7 +442,7 @@ function readCurrentSess() {
   let resolved = found || process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '';
   if (!resolved) {
     if (!__sessCache.syntheticSess) {
-      const cwdHash = require('crypto').createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
+      const cwdHash = crypto.createHash('sha1').update(process.cwd()).digest('hex').slice(0, 8);
       __sessCache.syntheticSess = `cwd-${cwdHash}-pid${process.pid}`;
     }
     resolved = __sessCache.syntheticSess;
@@ -488,7 +493,7 @@ function autoRecordBrowserEditsFromBody(body, cwd, taskBase, verb) {
     try { st = fs.statSync(abs); } catch (_) { continue; }
     if (!st.isFile()) continue;
     let hash = '';
-    try { hash = require('crypto').createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 12); } catch (_) {}
+    try { hash = crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 12); } catch (_) {}
     const idx = list.findIndex(e => e && e.file === rel);
     const entry = { file: rel, ts: Date.now(), hash, source_verb: verb, source_task: taskBase };
     if (idx === -1) { list.push(entry); added++; } else { list[idx] = entry; }
@@ -823,7 +828,7 @@ function resolveWindowsExeLocal(cmd) {
 
 function isPortReachableSync(host, port, timeoutMs) {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = require('net');
+    const net = _netModule;
     const s = net.connect({ port: ${port}, host: ${JSON.stringify(host)} });
     let done = false;
     s.on('connect', () => { done = true; s.destroy(); process.exit(0); });
@@ -835,7 +840,7 @@ function isPortReachableSync(host, port, timeoutMs) {
 
 function findFreePortSync() {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = require('net');
+    const net = _netModule;
     const srv = net.createServer();
     srv.listen(0, '127.0.0.1', () => { const p = srv.address().port; srv.close(() => { process.stdout.write(String(p)); }); });
     srv.on('error', e => { process.stderr.write(e.message); process.exit(1); });
@@ -846,7 +851,7 @@ function findFreePortSync() {
 
 function isPortAliveSync(port) {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = require('net');
+    const net = _netModule;
     const s = net.connect({ port: ${port}, host: '127.0.0.1' });
     s.on('connect', () => { s.destroy(); process.exit(0); });
     s.on('error', () => process.exit(1));
@@ -944,7 +949,7 @@ function findInstalledChromiumBinary() {
 
 function fetchJsonSync(url, timeoutMs) {
   const r = spawnSync(process.execPath, ['-e', `
-    const http = require('http');
+    const http = _httpModule;
     const req = http.get(${JSON.stringify(url)}, (res) => {
       let buf = '';
       res.on('data', d => buf += d);
@@ -1052,7 +1057,7 @@ function gracefulCloseBrowser(entry, reason) {
       const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 600);
       if (info && info.webSocketDebuggerUrl) {
         spawnSync(process.execPath, ['-e', `
-          const http = require('http');
+          const http = _httpModule;
           const req = http.request({host:'127.0.0.1',port:${port},path:'/json/close/browser',method:'GET',timeout:1500},
             res => { res.resume(); res.on('end', () => process.exit(0)); });
           req.on('error', () => process.exit(1));
@@ -2083,10 +2088,8 @@ async function runSpoolWatcher(instance, spoolDir) {
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
   try {
-    const _crypto = require('crypto');
     const _wp = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
-    _ownWrapperSha12 = _crypto.createHash('sha256').update(fs.readFileSync(_wp)).digest('hex').slice(0, 12);
-    try { logEvent('plugkit', 'watcher.own-wrapper-sha', { sha: _ownWrapperSha12, wrapper_path: _wp }); } catch (_) {}
+    _ownWrapperSha12 = crypto.createHash('sha256').update(fs.readFileSync(_wp)).digest('hex').slice(0, 12);
   } catch (e) {
     try { logEvent('plugkit', 'watcher.own-wrapper-sha-failed', { error: String(e && e.message || e), gm_tools_root: GM_TOOLS_ROOT }); } catch (_) {}
   }
@@ -2350,7 +2353,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         try { own = JSON.parse(fs.readFileSync(ownPkgJsonFile, 'utf-8')).version; } catch (_) {}
       }
       if (!own) return;
-      const https = require('https');
+      const https = _httpsModule;
       let _probeErrored = false;
       const req = https.get('https://registry.npmjs.org/gm-plugkit/latest', { timeout: 10000, headers: { 'user-agent': 'plugkit-watcher' } }, (res) => {
         let body = '';
@@ -2384,7 +2387,7 @@ async function runSpoolWatcher(instance, spoolDir) {
               try { logEvent('plugkit', 'gm-plugkit.self-stale', { running_version: own, latest_version: latest, detected_by: 'watcher-periodic-probe' }); } catch (_) {}
               console.error(`[plugkit-wasm] gm-plugkit self-stale: running ${own}, latest npm ${latest} -> spawning replacement via bun x gm-plugkit@latest spool and exiting`);
               try {
-                const cp = require('child_process');
+                const cp = _childProcess;
                 const bunPath = process.env.GM_BUN_PATH || 'bun';
                 const child = cp.spawn(bunPath, ['x', `gm-plugkit@${latest}`, 'spool'], {
                   cwd: process.cwd(),
@@ -2475,7 +2478,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — spawning replacement via bun x gm-plugkit@latest spool, waiting for its heartbeat before exiting`);
         let spawnOk = false;
         try {
-          const cp = require('child_process');
+          const cp = _childProcess;
           const bunPath = process.env.GM_BUN_PATH || 'bun';
           const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
             cwd: process.cwd(),
@@ -2550,15 +2553,13 @@ async function runSpoolWatcher(instance, spoolDir) {
   const _wrapperPathInstalled = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
   let _wrapperShaAtBoot = '';
   try {
-    const _crypto = require('crypto');
-    _wrapperShaAtBoot = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
+    _wrapperShaAtBoot = crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
   } catch (_) {}
   let _wrapperDriftLoggedOnce = false;
   setInterval(() => {
     try {
       if (!_wrapperShaAtBoot) return;
-      const _crypto = require('crypto');
-      const cur = _crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
+      const cur = crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
       if (cur === _wrapperShaAtBoot) return;
       const bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
       const unsupervised = bootReason === 'direct-no-supervisor';
@@ -2573,7 +2574,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         });
         console.error(`[plugkit-wasm] wrapper.js drift detected — spawning replacement directly from installed wrapper then exiting`);
         try {
-          const cp = require('child_process');
+          const cp = _childProcess;
           const child = cp.spawn(process.execPath, [_wrapperPathInstalled, 'spool'], {
             cwd: process.cwd(),
             detached: true,
@@ -2585,7 +2586,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         } catch (e) {
           console.error(`[plugkit-wasm] direct node spawn failed: ${e.message}; falling back to bun x`);
           try {
-            const cp = require('child_process');
+            const cp = _childProcess;
             const bunPath = process.env.GM_BUN_PATH || 'bun';
             const child = cp.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
               cwd: process.cwd(),
