@@ -72,20 +72,31 @@ function pidAlive(pid) {
 // and duplicates spawn duplicate watchers that lock-fight in an endless spawn-reject churn. Write the
 // pid file on startup and refuse to start if a live peer already holds it.
 function acquireSingleInstance() {
-  try {
-    if (fs.existsSync(SUPERVISOR_PID_PATH)) {
-      const other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10);
-      if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
-        logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
-        return false;
+  // Atomic via O_EXCL ('wx'): exclusive-create fails if the file exists, so when N supervisors
+  // race to start in the same instant exactly one wins. A plain existsSync->write is TOCTOU and
+  // lets a concurrent burst all pass, which is the duplicate-supervisor churn this guards against.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(SUPERVISOR_PID_PATH, 'wx');
+      try { fs.writeSync(fd, String(process.pid)); } finally { fs.closeSync(fd); }
+      return true;
+    } catch (e) {
+      if (e && e.code === 'EEXIST') {
+        let other = NaN;
+        try { other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10); } catch (_) {}
+        if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
+          logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
+          return false;
+        }
+        // Holder is dead/stale: remove and retry the exclusive create once.
+        try { fs.unlinkSync(SUPERVISOR_PID_PATH); } catch (_) {}
+        continue;
       }
+      logEvent('supervisor.pid-write-failed', { error: e && e.message, severity: 'warn' });
+      return true;
     }
-    fs.writeFileSync(SUPERVISOR_PID_PATH, String(process.pid));
-    return true;
-  } catch (e) {
-    logEvent('supervisor.pid-write-failed', { error: e.message, severity: 'warn' });
-    return true;
   }
+  return true;
 }
 
 function releaseSingleInstance() {

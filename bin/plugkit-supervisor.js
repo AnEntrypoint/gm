@@ -90,22 +90,31 @@ function statusMtime() {
 }
 
 function acquireSingleInstance() {
-  try {
-    if (fs.existsSync(SUPERVISOR_PID_PATH)) {
-      const raw = fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim();
-      const other = parseInt(raw, 10);
-      if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
-        logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
-        process.stderr.write(`[plugkit-supervisor] another supervisor is alive (pid=${other}); exiting\n`);
-        return false;
+  // Atomic via O_EXCL ('wx'): exclusive-create fails if the file exists, so when N supervisors
+  // race to start in the same instant exactly one wins. A plain existsSync->write is TOCTOU and
+  // lets a concurrent burst all pass, which is the duplicate-supervisor churn this guards against.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(SUPERVISOR_PID_PATH, 'wx');
+      try { fs.writeSync(fd, String(process.pid)); } finally { fs.closeSync(fd); }
+      return true;
+    } catch (e) {
+      if (e && e.code === 'EEXIST') {
+        let other = NaN;
+        try { other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10); } catch (_) {}
+        if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
+          logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
+          process.stderr.write(`[plugkit-supervisor] another supervisor is alive (pid=${other}); exiting\n`);
+          return false;
+        }
+        try { fs.unlinkSync(SUPERVISOR_PID_PATH); } catch (_) {}
+        continue;
       }
+      logEvent('supervisor.pid-write-failed', { error: e && e.message, severity: 'warn' });
+      return true;
     }
-    fs.writeFileSync(SUPERVISOR_PID_PATH, String(process.pid));
-    return true;
-  } catch (e) {
-    logEvent('supervisor.pid-write-failed', { error: e.message, severity: 'warn' });
-    return true;
   }
+  return true;
 }
 
 function releaseSingleInstance() {
