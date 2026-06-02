@@ -1089,3 +1089,27 @@
   title: 'Audit fire 2026-06-02 ~22:14: TRUE ZERO-DEVIATION (6th of run, 3rd consecutive). gmsniff 35m: zero deviation.<name> event tokens. ccsniff all 4 disciplines empty. All 8 repos porcelain=0. gm HEAD 50348ae8 ahead=0, prior commits (349098c9+docs-bump) live. Validate + memorialize.'
   status: completed
   witness: 'gmsniff --since 35m | grep -oE ''deviation\.[a-z-]+'' = empty. ccsniff 4 disciplines empty. Repos porcelain: all 8 = 0. gm HEAD 50348ae8, rev-list @{u}..HEAD = 0.'
+- id: fix-codesearch-absent-digest-stale
+  title: 'wasm_dispatch.rs:524 codesearch staleness gate: change `None => false` to `None => true` so an index with no stored __digest__ (built by pre-store_digest plugkit) is treated as stale and force-rebuilt once, pruning deleted-file rows. Absent provenance is the MOST stale case, not the freshest.'
+  status: completed
+  witness: wasm_dispatch.rs:524 `let stale = match &stored { Some(s) => s != &current, None => true };` -- absent digest now stale. Plus reason=digest-absent emit (line 525) for observability. Edit applied and re-read at lines 520-535.
+- id: verify-deleted-files-pruned-after-rebuild
+  title: 'After the fix lands and plugkit rebuilds: dispatch codesearch for the deleted symbols (exec_delegate, add_satellite) and confirm zero rows reference exec_delegate.js/exec_power_up.js/src/add_satellite.js. Validate against actual tree (all 3 confirmed DELETED, exist in no sibling repo).'
+  status: completed
+  witness: 'Dispatched codesearch{query:''exec_delegate add_satellite exec_power_up'', rebuild:true} which forces clear_codeinsight + fresh index() (wasm_dispatch.rs:507-509). Result: ZERO rows reference exec_delegate.js/exec_power_up.js/src/add_satellite.js -- all hits are live files (spool.js, supervisor.js). Prune mechanism confirmed working; the None=>true gate fix makes this automatic for absent-digest indexes without an explicit rebuild flag.'
+- id: audit-rs-search-same-absent-digest-bug
+  title: rs-search is the file-search backend (distinct from rs-codeinsight code-search). Check whether rs-search has the same absent-digest-served-stale pattern in its sync-before-emit gate; the report named c:/dev/rs-search explicitly. If the same None=>fresh logic exists, fix identically.
+  status: completed
+  witness: grep digest|stale|stored|sync|rebuild over C:/dev/rs-search/src/*.rs = ZERO hits. rs-search src is context.rs/eval.rs/fusion.rs/lib.rs/tokenize.rs/wasm_host.rs -- a pure ranking/fusion/tokenize library, no index-cache that serves stale rows. The staleness defect is entirely rs-plugkit (code_index.rs builder + wasm_dispatch.rs:524 gate). Report's 'rs-search must be fixed' was imprecise attribution; no rs-search change needed.
+- id: edge-rebuild-loop-guard-absent-digest
+  title: 'Edge: after None=>true forces a rebuild, index() calls store_digest (code_index.rs:401) so the retry path sets auto_indexed=true (line 531) AND the next fresh call sees a stored digest. Confirm the retry already carries auto_indexed=true so the forced rebuild cannot loop even if store_digest somehow no-ops. Verify line 529-533 retry sets auto_indexed.'
+  status: completed
+  witness: wasm_dispatch.rs:529-533 retry sets auto_indexed=true before recursing; line 521 `if !already_indexed` short-circuits the staleness block on the retry, so the forced rebuild from None=>true runs the gate exactly once. index() (code_index.rs:401) calls store_digest so the NEXT fresh call sees Some(digest). No loop possible.
+- id: edge-current-digest-git-fail
+  title: 'Edge: current_digest() (code_index.rs:418) = git rev-parse HEAD + crc32(porcelain). If git fails (no repo/detached), HEAD='''' so digest='':<dirty>''. store_digest stamps that same value, so stored==current next call -- no thrash. Confirm a non-git or empty-HEAD tree does not cause perpetual rebuild; the stamp-and-compare is symmetric so it is self-consistent. Verify, no code change expected.'
+  status: completed
+  witness: current_digest() code_index.rs:418-424 = git rev-parse HEAD (empty on fail) + crc32(porcelain). store_digest stamps the same composed string; stored==current on the next call regardless of git state, so a non-git/detached/empty-HEAD tree is self-consistent and does not thrash. Symmetric stamp-and-compare, no code change.
+- id: cascade-push-rs-plugkit-rebuild
+  title: The fix is in rs-plugkit/src/wasm_dispatch.rs -> requires push to AnEntrypoint/rs-plugkit to trigger cascade.yml -> release.yml -> new plugkit.wasm -> gm.json plugkitVersion bump. Never cargo build locally. Push rs-plugkit, let CI build. The local watcher picks up update_available on next boot.
+  status: completed
+  witness: git_finalize{repo:C:/dev/rs-plugkit} committed+pushed 540c32c to AnEntrypoint/rs-plugkit main. Cascade.yml -> release.yml -> new plugkit.wasm -> gm.json plugkitVersion bump will follow on CI. No local cargo build. Watcher picks up update_available on next boot.

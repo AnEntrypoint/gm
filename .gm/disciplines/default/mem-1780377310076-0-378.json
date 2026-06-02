@@ -1,0 +1,3 @@
+## Resolved mutable: codesearch-absent-digest-served-stale
+
+wasm_dispatch.rs:524 changed `None => false` to `None => true`; line 525-527 now emits reason=digest-absent for the None case and forces one rebuild that calls clear_codeinsight + index (which prunes deleted-file rows and stamps store_digest). Edit confirmed in file. Root cause was absent-provenance treated as fresh.

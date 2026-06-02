@@ -196,3 +196,7 @@
   status: resolved
   witness: ccsniff/src/cli.js:394-404 targetsOutsideCwd only exempts (a) explicit cd <abs-path> or (b) an absolute-path arg outside cwd. It does NOT parse git -C <dir> context, and a RELATIVE grep target (src/orchestrator/instructions/entry.rs run after the shell cwd was reset to a sibling repo, or git -C /c/dev/rs-plugkit) is not recognized as outside-cwd -> flagged as a [gm] violation though it targets a sibling repo with no codesearch index. False positive, same FP-refinement class as mem-1779977387632.
   note: 'ccsniff exemption gap: git -C + relative-sibling-path'
+- id: codesearch-absent-digest-served-stale
+  status: witnessed
+  note: 'wasm_dispatch.rs:524 `let stale = match stored { Some(s) => s != current, None => false };` -- absent stored digest (index built by pre-store_digest plugkit, e.g. the deleted exec_delegate.js/exec_power_up.js/src/add_satellite.js rows) is treated as fresh and served forever, never rebuilt. Witness: code_index.rs:401 store_digest only called since the 2026-05-31 fix; any index predating it has no __digest__ row so stored_digest()=None.'
+  witness_evidence: wasm_dispatch.rs:524 changed `None => false` to `None => true`; line 525-527 now emits reason=digest-absent for the None case and forces one rebuild that calls clear_codeinsight + index (which prunes deleted-file rows and stamps store_digest). Edit confirmed in file. Root cause was absent-provenance treated as fresh.
