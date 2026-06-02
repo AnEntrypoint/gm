@@ -23,6 +23,7 @@ fs.mkdirSync(spoolDir, { recursive: true });
 const STATUS_PATH = path.join(spoolDir, '.status.json');
 const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
 const SUPERVISOR_PATH = path.join(spoolDir, '.supervisor.json');
+const SUPERVISOR_PID_PATH = path.join(spoolDir, '.supervisor.pid');
 const LOG_PATH = path.join(spoolDir, '.watcher.log');
 const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
 
@@ -64,6 +65,36 @@ function writeSupervisorStatus(state, extra) {
 function pidAlive(pid) {
   if (!Number.isFinite(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch (_) { return false; }
+}
+
+// Single-instance guard. findSupervisorPid (skill-bootstrap.js) reads .supervisor.pid to early-return
+// when a supervisor is already running; without it every bootstrap spawns a duplicate supervisor,
+// and duplicates spawn duplicate watchers that lock-fight in an endless spawn-reject churn. Write the
+// pid file on startup and refuse to start if a live peer already holds it.
+function acquireSingleInstance() {
+  try {
+    if (fs.existsSync(SUPERVISOR_PID_PATH)) {
+      const other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10);
+      if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
+        logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
+        return false;
+      }
+    }
+    fs.writeFileSync(SUPERVISOR_PID_PATH, String(process.pid));
+    return true;
+  } catch (e) {
+    logEvent('supervisor.pid-write-failed', { error: e.message, severity: 'warn' });
+    return true;
+  }
+}
+
+function releaseSingleInstance() {
+  try {
+    if (fs.existsSync(SUPERVISOR_PID_PATH)) {
+      const raw = fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim();
+      if (parseInt(raw, 10) === process.pid) fs.unlinkSync(SUPERVISOR_PID_PATH);
+    }
+  } catch (_) {}
 }
 
 function readStatus() {
@@ -273,9 +304,15 @@ process.on('SIGTERM', () => {
   if (currentChildPid && pidAlive(currentChildPid)) {
     try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
   }
+  releaseSingleInstance();
   process.exit(0);
 });
+process.on('exit', () => { releaseSingleInstance(); });
 
+if (!acquireSingleInstance()) {
+  process.stderr.write('[plugkit-supervisor] another supervisor is alive; exiting\n');
+  process.exit(0);
+}
 writeSupervisorStatus('starting', {});
 logEvent('supervisor.starting', { spool_dir: spoolDir });
 try { fs.unlinkSync(path.join(spoolDir, '.pre-supervised-watcher.json')); } catch (_) {}
