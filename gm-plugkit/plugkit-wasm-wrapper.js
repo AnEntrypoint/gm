@@ -828,7 +828,7 @@ function resolveWindowsExeLocal(cmd) {
 
 function isPortReachableSync(host, port, timeoutMs) {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = _netModule;
+    const net = require('net');
     const s = net.connect({ port: ${port}, host: ${JSON.stringify(host)} });
     let done = false;
     s.on('connect', () => { done = true; s.destroy(); process.exit(0); });
@@ -840,7 +840,7 @@ function isPortReachableSync(host, port, timeoutMs) {
 
 function findFreePortSync() {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = _netModule;
+    const net = require('net');
     const srv = net.createServer();
     srv.listen(0, '127.0.0.1', () => { const p = srv.address().port; srv.close(() => { process.stdout.write(String(p)); }); });
     srv.on('error', e => { process.stderr.write(e.message); process.exit(1); });
@@ -851,7 +851,7 @@ function findFreePortSync() {
 
 function isPortAliveSync(port) {
   const r = spawnSync(process.execPath, ['-e', `
-    const net = _netModule;
+    const net = require('net');
     const s = net.connect({ port: ${port}, host: '127.0.0.1' });
     s.on('connect', () => { s.destroy(); process.exit(0); });
     s.on('error', () => process.exit(1));
@@ -949,7 +949,7 @@ function findInstalledChromiumBinary() {
 
 function fetchJsonSync(url, timeoutMs) {
   const r = spawnSync(process.execPath, ['-e', `
-    const http = _httpModule;
+    const http = require('http');
     const req = http.get(${JSON.stringify(url)}, (res) => {
       let buf = '';
       res.on('data', d => buf += d);
@@ -1057,7 +1057,7 @@ function gracefulCloseBrowser(entry, reason) {
       const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 600);
       if (info && info.webSocketDebuggerUrl) {
         spawnSync(process.execPath, ['-e', `
-          const http = _httpModule;
+          const http = require('http');
           const req = http.request({host:'127.0.0.1',port:${port},path:'/json/close/browser',method:'GET',timeout:1500},
             res => { res.resume(); res.on('end', () => process.exit(0)); });
           req.on('error', () => process.exit(1));
@@ -2369,8 +2369,33 @@ async function runSpoolWatcher(instance, spoolDir) {
             }
             const latest = JSON.parse(body).version;
             const stalePath = path.join(spoolDir, '.gm-plugkit-stale.json');
+            const respawnGuardPath = path.join(spoolDir, '.gm-plugkit-respawn-guard.json');
             if (!latest || latest === own) {
               if (fs.existsSync(stalePath)) { try { fs.unlinkSync(stalePath); } catch (_) {} }
+              if (fs.existsSync(respawnGuardPath)) { try { fs.unlinkSync(respawnGuardPath); } catch (_) {} }
+              return;
+            }
+            let respawnGuard = { attempts: 0, last_own: null, last_latest: null, first_ts: Date.now() };
+            try {
+              if (fs.existsSync(respawnGuardPath)) respawnGuard = JSON.parse(fs.readFileSync(respawnGuardPath, 'utf8'));
+            } catch (_) {}
+            const sameStaleAsBefore = respawnGuard.last_own === own && respawnGuard.last_latest === latest;
+            const cameFromSelfRespawn = process.env.PLUGKIT_BOOT_REASON === 'self-respawn-from-self-stale';
+            if (sameStaleAsBefore && respawnGuard.attempts >= 3) {
+              try { fs.writeFileSync(stalePath, JSON.stringify({
+                ts: new Date().toISOString(),
+                reason: 'gm-plugkit-self-stale-respawn-exhausted',
+                running_version: own,
+                latest_version: latest,
+                respawn_attempts: respawnGuard.attempts,
+                instruction: `gm-plugkit ${own} cannot self-upgrade to ${latest}: ${respawnGuard.attempts} respawns all came up ${own} (bun/npx cache is serving the stale tarball). Respawn loop halted to keep this watcher alive and serving verbs. Fix manually: bun pm cache rm; npm cache clean --force; rm -rf ~/AppData/Local/npm-cache/_npx ~/.bun/install/cache; then bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool`,
+                detected_by: 'watcher-periodic-probe',
+              }, null, 2)); } catch (_) {}
+              if (!_selfStaleLoggedOnce) {
+                _selfStaleLoggedOnce = true;
+                try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn-exhausted', { running_version: own, latest_version: latest, attempts: respawnGuard.attempts }); } catch (_) {}
+                console.error(`[plugkit-wasm] gm-plugkit self-stale respawn EXHAUSTED after ${respawnGuard.attempts} attempts (cache serving stale ${own} for latest ${latest}); halting respawn loop and staying alive to serve verbs`);
+              }
               return;
             }
             const marker = {
@@ -2389,6 +2414,25 @@ async function runSpoolWatcher(instance, spoolDir) {
               try {
                 const cp = _childProcess;
                 const bunPath = process.env.GM_BUN_PATH || 'bun';
+                const bustCache = sameStaleAsBefore || cameFromSelfRespawn;
+                if (bustCache) {
+                  try { cp.execFileSync(bunPath, ['pm', 'cache', 'rm'], { stdio: 'ignore', timeout: 30000, windowsHide: true }); } catch (_) {}
+                  try {
+                    const home = process.env.USERPROFILE || process.env.HOME || '';
+                    for (const rel of ['AppData/Local/npm-cache/_npx', '.npm/_npx', '.bun/install/cache']) {
+                      try { fs.rmSync(path.join(home, rel), { recursive: true, force: true }); } catch (_) {}
+                    }
+                  } catch (_) {}
+                  try { logEvent('plugkit', 'gm-plugkit.self-stale-cache-busted', { running_version: own, latest_version: latest, attempt: (respawnGuard.attempts || 0) + 1 }); } catch (_) {}
+                }
+                try { fs.writeFileSync(respawnGuardPath, JSON.stringify({
+                  attempts: (sameStaleAsBefore ? (respawnGuard.attempts || 0) : 0) + 1,
+                  last_own: own,
+                  last_latest: latest,
+                  first_ts: respawnGuard.first_ts || Date.now(),
+                  last_ts: Date.now(),
+                  cache_busted: bustCache,
+                }, null, 2)); } catch (_) {}
                 const child = cp.spawn(bunPath, ['x', `gm-plugkit@${latest}`, 'spool'], {
                   cwd: process.cwd(),
                   detached: true,
@@ -2397,7 +2441,7 @@ async function runSpoolWatcher(instance, spoolDir) {
                   env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-self-stale' },
                 });
                 child.unref();
-                try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest }); } catch (_) {}
+                try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest, cache_busted: bustCache, attempt: (respawnGuard.attempts || 0) + 1 }); } catch (_) {}
                 try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'gm-plugkit-self-stale', ts: Date.now(), pid: process.pid, running_version: own, latest_version: latest })); } catch (_) {}
                 // Wait for the replacement's fresh heartbeat before exiting (mirror the
                 // version-drift path) instead of a blind 2s exit: the gm-plugkit download can
@@ -2406,13 +2450,17 @@ async function runSpoolWatcher(instance, spoolDir) {
                 const myPid = process.pid;
                 const respawnDeadline = Date.now() + 90000;
                 const exitSelfStale = () => { try { process.exit(0); } catch (_) {} };
+                const ownVersionFile = path.join(GM_TOOLS_ROOT, 'gm-plugkit.version');
                 const pollSelfStaleReplacement = () => {
                   try {
                     const st = JSON.parse(fs.readFileSync(STATUS_PATH_FOR_TEARDOWN, 'utf8'));
                     const freshHeartbeat = st && st.ts && (Date.now() - st.ts) < 15000;
                     const differentProc = st && st.pid && st.pid !== myPid;
-                    if (freshHeartbeat && differentProc) {
-                      try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn-confirmed', { old_pid: myPid, new_pid: st.pid, new_version: st.version, latest_version: latest }); } catch (_) {}
+                    let replacementOnLatest = false;
+                    try { replacementOnLatest = fs.readFileSync(ownVersionFile, 'utf-8').trim() === latest; } catch (_) {}
+                    if (freshHeartbeat && differentProc && replacementOnLatest) {
+                      try { fs.unlinkSync(respawnGuardPath); } catch (_) {}
+                      try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn-confirmed', { old_pid: myPid, new_pid: st.pid, new_version: st.version, latest_version: latest, replacement_gm_plugkit: latest }); } catch (_) {}
                       return exitSelfStale();
                     }
                   } catch (_) {}

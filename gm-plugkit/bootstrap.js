@@ -665,6 +665,20 @@ function ensureWrapperFresh() {
   } catch (_) { return false; }
 }
 
+function ensureGmPlugkitVersionFresh() {
+  try {
+    const ownPkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
+    if (!ownPkg || !ownPkg.version) return false;
+    const dst = path.join(gmToolsDir(), 'gm-plugkit.version');
+    let cur = null;
+    try { cur = fs.readFileSync(dst, 'utf-8').trim(); } catch (_) {}
+    if (cur === ownPkg.version) return false;
+    fs.mkdirSync(gmToolsDir(), { recursive: true });
+    fs.writeFileSync(dst, ownPkg.version);
+    return true;
+  } catch (_) { return false; }
+}
+
 function ensureSkillMdFresh() {
   try {
     const candidates = [
@@ -820,8 +834,9 @@ async function ensureReady(opts) {
   if (isReady() && !versionDrift) {
     const wasmPath = getWasmPath();
     const wrapperUpdated = ensureWrapperFresh();
+    const versionMarkerUpdated = ensureGmPlugkitVersionFresh();
     ensureSkillMdFresh();
-    return { ok: true, wasmPath, binaryPath: wasmPath, status: wrapperUpdated ? 'wrapper-refreshed' : 'already-ready', version: installed };
+    return { ok: true, wasmPath, binaryPath: wasmPath, status: (wrapperUpdated || versionMarkerUpdated) ? 'wrapper-refreshed' : 'already-ready', version: installed };
   }
   if (versionDrift) {
     try { killRunningDaemons(`version_drift:${installed}->${targetVersion}`); } catch (_) {}

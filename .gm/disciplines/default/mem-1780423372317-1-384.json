@@ -1,0 +1,3 @@
+## Resolved mutable: tv8-self-stale-respawn-loop
+
+bootstrap.js ensureGmPlugkitVersionFresh() added+called in ensureReady (node --check OK); wrapper self-stale probe busts cache+confirms-by-version+halts after 3 attempts; wrote 2.0.1518 to shared .gm-tools/gm-plugkit.version; loop halted fleet-wide - tv8 pid 13248, spoint 22588, sttr 20624 all stable 28s with 0 new self-stale lines.

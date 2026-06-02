@@ -65,8 +65,22 @@ jobs:
         id: version
         run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run gm-plugkit tests
+        run: |
+          for t in gm-plugkit/*.test.js; do
+            echo "running $t"
+            node "$t"
+          done
+
   publish-gm-skill:
-    needs: prepare
+    needs: [prepare, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,15 +100,15 @@ jobs:
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
           if [ "$EXIT" != "0" ]; then
             if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
-              echo "⚠️  Version already published, skipping"
+              echo "[warn] Version already published, skipping"
             else
               exit "$EXIT"
             fi
           fi
-          echo "✅ Published gm-skill@${{ needs.prepare.outputs.version }} to npm"
+          echo "[done] Published gm-skill@${{ needs.prepare.outputs.version }} to npm"
 
   publish-gm-plugkit:
-    needs: prepare
+    needs: [prepare, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,18 +133,18 @@ jobs:
           # Embed SKILL.md into gm-plugkit so ensureSkillMdFresh finds it
           # without depending on gm-skill being installed as a sibling.
           cp skills/gm-skill/SKILL.md gm-plugkit/SKILL.md
-          echo "✅ Embedded skills/gm-skill/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
+          echo "[done] Embedded skills/gm-skill/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
           cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
           if [ "$EXIT" != "0" ]; then
             if grep -q "cannot publish over\|previously published" /tmp/npm-out.log; then
-              echo "⚠️  Version already published, skipping"
+              echo "[warn] Version already published, skipping"
             else
               exit "$EXIT"
             fi
           fi
-          echo "✅ Published gm-plugkit@${{ needs.prepare.outputs.version }} (plugkit v$PLUGKIT_VER) to npm"
+          echo "[done] Published gm-plugkit@${{ needs.prepare.outputs.version }} (plugkit v$PLUGKIT_VER) to npm"
 
   mirror-gm-skill-repo:
     needs: prepare
@@ -188,4 +202,4 @@ jobs:
           git add -A
           git commit -q -m "Mirror SKILL.md from AnEntrypoint/gm (v${{ needs.prepare.outputs.version }})"
           git push --force origin main
-          echo "✅ Mirrored skill to ${REPO}"
+          echo "[done] Mirrored skill to ${REPO}"
