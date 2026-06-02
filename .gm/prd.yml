@@ -1113,3 +1113,38 @@
   title: The fix is in rs-plugkit/src/wasm_dispatch.rs -> requires push to AnEntrypoint/rs-plugkit to trigger cascade.yml -> release.yml -> new plugkit.wasm -> gm.json plugkitVersion bump. Never cargo build locally. Push rs-plugkit, let CI build. The local watcher picks up update_available on next boot.
   status: completed
   witness: git_finalize{repo:C:/dev/rs-plugkit} committed+pushed 540c32c to AnEntrypoint/rs-plugkit main. Cascade.yml -> release.yml -> new plugkit.wasm -> gm.json plugkitVersion bump will follow on CI. No local cargo build. Watcher picks up update_available on next boot.
+- id: fix-handle-fire-cfg-dup
+  text: 'Add #[cfg(target_arch=wasm32)] to memorize.rs:56 handle_fire so wasm + non-wasm variants are mutually exclusive; unblocks Build-WASM CI compile'
+  status: completed
+  witness: 'memorize.rs:56 now carries #[cfg(target_arch=wasm32)]; the two handle_fire variants (wasm real-kv-path / non-wasm spool-path) are mutually exclusive on every target'
+- id: verify-wasm-check-clean-after-fix
+  text: After cfg fix, native cargo check --features wasm --lib must show zero E0428/E0433; confirms the duplicate+fallout resolved
+  status: completed
+  witness: 'native cargo check post-fix: E0428 eliminated (was: handle_fire defined multiple times at memorize.rs:56+219). Remaining E0433 are native-only (wasm-cfg modules absent off-wasm), not present on the wasm CI target.'
+- id: validate-cascade-publishes-after-push
+  text: After pushing the fix, the rs-plugkit Release run must reach Build-WASM success + publish-binaries; a future audit fire confirms plugkit-bin release > v0.1.616 and gm.json plugkitVersion bump
+  status: completed
+  witness: 'FULLY VALIDATED end-to-end: plugkit-bin latest release = v0.1.629 (published 2026-06-02T07:43:26Z, body: Auto-published WASM-only build from rs-plugkit CI at ee481ee). gm.json plugkitVersion bumped to 0.1.629 via publish.yml commit 16f97c26 (pulled to local). Build-WASM SUCCESS + Upload WASM artifact SUCCESS on Release run 26805719007. The 5-day-dark cascade (stuck at v0.1.616) is restored; every queued digest/codesearch fix now ships in the published wasm.'
+- id: find-second-wasm-build-error
+  text: 'E0428 fix advanced Build-WASM 12s->28s (d0fb5ff) but it still fails at a SECOND compile error in wasm-cfg code (code_index.rs/wasm_dispatch.rs digest logic) invisible to native+wasm32-unknown-unknown checks. Native --features wasm check is clean except structural E0433 (wasm modules absent off-wasm); wasm32-unknown-unknown dies on getrandom; wasm32-wasip1 needs wasi-sdk-24 for tree-sitter+libsql C deps. To read the error: install wasi-sdk-24 (windows build) + set CC_wasm32_wasip1/AR/CFLAGS per build.yml:57-65, then cargo check --target wasm32-wasip1 --features wasm --lib. Admin-gated CI logs (403) and check-run annotations (exit 101 only) do not expose the rustc error.'
+  status: completed
+  witness: 'RESOLVED via CI error-surfacing (7c843db): the failure was never a second SOURCE compile error - it was a rust-lld LINK error (undefined symbol host_kv_put/get in rs_learn dep) that only manifests on Linux release link, invisible to cargo check and to Windows release build. Fixed in rs-learn 47f2804. The premise (second compile error in code_index/wasm_dispatch) was wrong; the real layer was cross-crate wasm import linkage.'
+- id: add-ci-rust-error-surfacing
+  text: 'OBSERVABILITY GAP: the cascade was dark 5 days with no signal because update_available=null is correct-when-no-release-exists and nothing flags pushed-commits-without-a-matching-published-release. ADD: (a) a gmsniff/health probe comparing rs-plugkit Cargo.toml version vs plugkit-bin latest release tag - alert when source > published by >1 version; (b) make release.yml Build-WASM step echo the cargo error to a non-admin-readable artifact OR post it as a check-run annotation so future audits read the rustc error without admin/wasi-sdk. Witness: 5-day silent outage of every digest/codesearch fix.'
+  status: completed
+  witness: 'release.yml + build.yml Build-WASM step now pipes cargo output to /tmp/wasm-build.log via tee, and on failure echoes the rustc error lines as ::error:: GitHub Actions annotations (public, no admin needed) + a ::group:: block. Closes part (b): future Linux-CI wasm errors are readable in the run summary without admin-403 or local wasi-sdk. Part (a) version-vs-release probe spooled separately as add-source-vs-release-version-probe.'
+- id: defeat-poisoned-rust-cache
+  text: 'REAL second-order cause: rust-cache cache-on-failure:true saved the E0428-failed target/ under constant keys (release/build/check-wasm32-wasip1); every subsequent run restored that poisoned incremental state, and cargo clean -p rs-plugkit did not purge cross-crate fingerprints -> the build kept failing even after the source fix landed (d0fb5ff source builds clean locally via exact CI cmd, EXIT=0). FIX: bumped all 3 cache keys to -v2 (abandon poison) + set cache-on-failure:false (never re-poison).'
+  status: completed
+  witness: 'Cache keys bumped to -v2 + cache-on-failure:false shipped (rs-plugkit 27eeea8); the successful Build-WASM on ee481ee ran with the clean cache and produced the published v0.1.629 wasm, confirming no poisoned-cache restore. (Note: the cache poison was a contributing factor masking the link errors but not the sole cause - the real blocker was the wasm import-module link errors, now also fixed.)'
+- id: add-source-vs-release-version-probe
+  text: 'OBSERVABILITY part (a): add a gmsniff/health probe (or audit-fire step) comparing rs-plugkit Cargo.toml version vs plugkit-bin latest GH release tag; alert when source > published by >1 patch (the silent-cascade-outage signal). update_available=null is correct when no newer release exists, so this gap needs its own detector. Witness: this 5-day outage ran dark precisely because nothing watched source-vs-published version drift.'
+  status: pending
+- id: fix-rs-learn-wasm-import-module
+  text: 'Add #[link(wasm_import_module="env")] to rs-learn/crates/wasm/src/wasm_host.rs extern block so the host_kv_put/get/query/host_vec_search/host_log/host_now_ms imports are canonical env-module imports that Linux rust-lld merges with the rs-plugkit cdylib, fixing the undefined-symbol link error that broke Build-WASM.'
+  status: completed
+  witness: 'rs-learn 47f2804 pushed: #[link(wasm_import_module=env)] added to wasm_host.rs extern block; triggers rs-learn cascade -> rs-plugkit next build pulls fixed rs-learn HEAD via cargo generate-lockfile'
+- id: audit-sibling-crates-wasm-import-module
+  text: 'SYSTEMIC: verify rs-exec/rs-search/rs-codeinsight (the other wasm-linked sibling crates) also mark their host-import extern C blocks with #[link(wasm_import_module=env)]. rs-exec/src/wasm_host.rs declares host_kv_put etc - if bare extern C and it gets linked into the cdylib, it will throw the same Linux rust-lld undefined-symbol. Check each; fix any bare block. Also consider adding the rule to AGENTS.md as a hard wasm-linkage invariant.'
+  status: completed
+  witness: 'Checked all wasm-linked siblings: rs-exec/src/wasm_host.rs:2 + rs-search/src/wasm_host.rs:3 had bare extern C host-import blocks (host_kv_*, host_vec_search/host_bm25_search/host_git_search, host_log, host_now_ms) -> both now carry #[link(wasm_import_module=env)]. rs-codeinsight has no host-import extern block. These were NOT linked into the current rs-plugkit cdylib (only rs-learn is a direct git dep, and only rs_learn+rs_plugkit objects errored) so they were not cascade-blocking, but the fix prevents the same Linux-rust-lld undefined-symbol class for their own wasm builds. Systemic rule added to AGENTS.md WASM-only section.'
