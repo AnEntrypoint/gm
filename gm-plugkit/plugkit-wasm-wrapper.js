@@ -1037,7 +1037,11 @@ function startManagedBrowser(pw, profileDir) {
     '--disable-default-apps',
     '--disable-gpu-process-crash-limit',
   ];
-  if (headless) args.push('--headless=new');
+  if (headless) {
+    args.push('--headless=new');
+  } else {
+    args.push('--no-startup-window');
+  }
   const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
   let logFd;
   try { logFd = fs.openSync(chromeLogPath, 'a'); } catch (_) { logFd = null; }
