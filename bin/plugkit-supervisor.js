@@ -5,6 +5,13 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawn, spawnSync } = require('child_process');
+const crypto = require('crypto');
+
+function wrapperSha12OnDisk() {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(resolveWrapper())).digest('hex').slice(0, 12);
+  } catch (_) { return null; }
+}
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
@@ -248,6 +255,25 @@ function checkWatcherHealth() {
       severity: 'critical',
     });
     killChild('supervisor-killed-stale-heartbeat');
+    return;
+  }
+  // A published wrapper-only fix (no wasm version bump) is copied to ~/.gm-tools by the next
+  // bootstrap's ensureWrapperFresh, but a healthy running watcher keeps the old wrapper until it
+  // restarts. Compare the watcher's reported wrapper_sha against the on-disk wrapper; on drift,
+  // recycle so the fix goes live without a manual kill. Skip while busy (a long verb is running).
+  const status = readStatus();
+  if (status && !(status.busy_until && status.busy_until > Date.now())) {
+    const reported = status.wrapper_sha || null;
+    const onDisk = wrapperSha12OnDisk();
+    if (reported && onDisk && reported !== onDisk) {
+      logEvent('supervisor.wrapper-sha-drift', {
+        watcher_pid: currentChildPid,
+        reported_sha: reported,
+        on_disk_sha: onDisk,
+        severity: 'info',
+      });
+      killChild('supervisor-killed-wrapper-sha-drift');
+    }
   }
 }
 

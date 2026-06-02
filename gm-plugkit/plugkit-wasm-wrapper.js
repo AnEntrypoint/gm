@@ -15,6 +15,10 @@ let _writeStatusBusy = () => {};
 // Latest busy_until epoch ms stamped by a long synchronous verb (codesearch rebuild, chromium
 // spawn). scanStalledTurns reads it so a busy watcher is not mis-flagged as an idle stall.
 let _lastBusyUntil = 0;
+// First 12 hex of sha256 of this watcher's own gmTools wrapper. Module-scoped so writeStatus
+// (a different function scope) can stamp status.wrapper_sha, which the supervisor compares
+// against the on-disk wrapper to recycle a watcher running a stale wrapper-only fix.
+let _ownWrapperSha12 = '';
 
 function spawnSync(cmd, args, opts) {
   return _rawSpawnSync(cmd, args, { windowsHide: true, ...(opts || {}) });
@@ -2078,7 +2082,6 @@ async function runSpoolWatcher(instance, spoolDir) {
 
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
-  let _ownWrapperSha12 = '';
   try {
     const _crypto = require('crypto');
     const _wp = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');

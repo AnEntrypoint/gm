@@ -4,7 +4,17 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
+
+function wrapperSha12OnDisk() {
+  try {
+    const primary = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
+    const fallback = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
+    const wp = fs.existsSync(primary) ? primary : fallback;
+    return crypto.createHash('sha256').update(fs.readFileSync(wp)).digest('hex').slice(0, 12);
+  } catch (_) { return null; }
+}
 
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
@@ -222,6 +232,25 @@ function checkWatcherHealth() {
       status_age_ms: age,
       stale_limit_ms: STATUS_STALE_MS,
       severity: 'critical',
+    });
+    try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
+    if (process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+    }
+    return;
+  }
+  // A published wrapper-only fix (no wasm version bump) lands in ~/.gm-tools via the next
+  // bootstrap's ensureWrapperFresh, but a healthy running watcher keeps the old wrapper until it
+  // restarts. On wrapper_sha drift (watcher's reported sha != on-disk), recycle so the fix goes
+  // live without a manual kill. busy_until already returned above, so the watcher is not mid-verb.
+  const reported = status.wrapper_sha || null;
+  const onDisk = wrapperSha12OnDisk();
+  if (reported && onDisk && reported !== onDisk) {
+    logEvent('supervisor.wrapper-sha-drift', {
+      watcher_pid: currentChildPid,
+      reported_sha: reported,
+      on_disk_sha: onDisk,
+      severity: 'info',
     });
     try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
     if (process.platform === 'win32') {
