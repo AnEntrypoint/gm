@@ -2086,7 +2086,10 @@ async function runSpoolWatcher(instance, spoolDir) {
     const _crypto = require('crypto');
     const _wp = path.join(GM_TOOLS_ROOT, 'plugkit-wasm-wrapper.js');
     _ownWrapperSha12 = _crypto.createHash('sha256').update(fs.readFileSync(_wp)).digest('hex').slice(0, 12);
-  } catch (_) {}
+    try { logEvent('plugkit', 'watcher.own-wrapper-sha', { sha: _ownWrapperSha12, wrapper_path: _wp }); } catch (_) {}
+  } catch (e) {
+    try { logEvent('plugkit', 'watcher.own-wrapper-sha-failed', { error: String(e && e.message || e), gm_tools_root: GM_TOOLS_ROOT }); } catch (_) {}
+  }
   function lockBody() { return `${process.pid}|${Date.now()}|${_ownWrapperSha12}`; }
   function acquireLock() {
     try {
