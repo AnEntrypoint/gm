@@ -1040,7 +1040,7 @@ function startManagedBrowser(pw, profileDir) {
   if (headless) {
     args.push('--headless=new');
   } else {
-    args.push('--no-startup-window');
+    args.push('about:blank');
   }
   const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
   let logFd;
