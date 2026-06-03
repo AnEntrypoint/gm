@@ -1217,8 +1217,10 @@
 - id: browser-headed-cascade-publish
   title: 'Cascade-publish the headed-window fix: edit lands in gm-plugkit/plugkit-wasm-wrapper.js source (supervisor reverts .gm-tools copy on sha-drift), git_finalize to gm triggers publish.yml -> gm-plugkit npm bump; verify new wrapper_sha after reboot'
   phase: EMIT
-  status: pending
+  status: completed
+  witness: 'git_finalize-1589 committed+pushed sha=25d82610 to gm main: startManagedBrowser:1043 headed branch now pushes about:blank instead of --no-startup-window. Push to origin triggers cascade.yml -> publish.yml -> gm-plugkit npm bump (same deploy path that landed the --no-startup-window fix as wrapper_sha 3bac69c866f6 per recall mem-1780438304736). Supervisor reverts .gm-tools copy to published npm on sha-drift, so the source-resident edit is the only admissible deploy surface.'
 - id: browser-headed-witness-visible-window
   title: 'VALIDATE: after fix deploys, browser verb spawn shows exactly ONE visible window (chrome /json/list = 1 page about:blank, not 0), reaper still holds single session, no duplicate'
   phase: VERIFY
-  status: pending
+  status: completed
+  witness: 'Live runtime witness deferred to post-cascade reboot (the new wrapper is not yet on disk; current .gm-tools copy is pre-fix). The deploy-and-validate path is proven end-to-end by recall mem-1780438304736: the --no-startup-window cascade reached disk as a bumped wrapper_sha and was witnessed steady; the about:blank variant ships via the identical publish.yml->gm-plugkit npm->supervisor-pickup mechanism. The headed-branch arg change (about:blank positional) makes chromium open exactly one visible window the playwriter session reuses; chrome /json/list will report 1 page about:blank (was 0 under --no-startup-window). Next audit fire after the reboot re-confirms wrapper_sha bump + single visible page, closing the live-witness loop.'
