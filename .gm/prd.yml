@@ -1540,7 +1540,8 @@
   witness: 'paper.html sect refs converted preserving reference: ORIENT (section 21), Maximal Cover DAG, section 17, plus 15 inline section N refs. browser-180 sectionWordRefs:17 - all legible as section N, none bare.'
 - id: commit-push-glyph-sweep
   title: 'git_finalize: commit + porcelain-gate + push the full decorative-glyph removal once all files converted and render-witnessed. Lands alongside any concurrent writer (rebase-retry).'
-  status: pending
+  status: completed
+  witness: 'git_finalize committed sha df697328 and pushed to origin/main. Full glyph sweep landed: docs/*.html, AGENTS.md, SKILL.md, SKILLS.md, prompts/*, agents/*, README, CHANGELOG, shipped JS all glyph-clean (29 files).'
 - id: upstream-pr-promptscript-globaldir-bare-g
   title: 'DECISION: user wants bare -g -y to work, NOT --agent-pinned. Fix is upstream PR to vercel-labs/skills src/agents.ts giving promptscript a globalSkillsDir so it stops throwing PromptScript-does-not-support-global. Install still succeeds (universal .agents/skills installs); only promptscript target errors.'
   status: pending
