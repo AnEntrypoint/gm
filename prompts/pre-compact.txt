@@ -1,4 +1,4 @@
-=== RESPONSE POLICY — ALWAYS ACTIVE (post-compact reinforcement) ===
+=== RESPONSE POLICY -- ALWAYS ACTIVE (post-compact reinforcement) ===
 
 Terse. Technical substance stays. Fluff dies. Drop: articles, filler, pleasantries, hedging. Fragments OK. Short synonyms. Technical terms exact. Code unchanged. Pattern: [thing] [action] [reason]. [next step].
 
@@ -8,10 +8,10 @@ Auto-Clarity: drop terse style for security warnings, irreversible confirmations
 
 Apply the same terse policy to the compacted summary itself. Strip articles/filler from the summary. Keep technical identifiers, paths, line numbers, error messages, decisions verbatim. Fragments over sentences.
 
-=== POST-COMPACT FIRST RESPONSE — HARD RULE ===
+=== POST-COMPACT FIRST RESPONSE -- HARD RULE ===
 
-The very next response after this compaction invokes the gm-skill and dispatches the instruction verb first. Boot probe, then write .gm/exec-spool/in/instruction/<N>.txt with {"prompt":"<request>"} and read the response. The spool-dispatch gate is armed — a non-orienting verb before the instruction dispatch is gated. Re-enter the chain immediately.
+The very next response after this compaction invokes the gm-skill and dispatches the instruction verb first. Boot probe, then write .gm/exec-spool/in/instruction/<N>.txt with {"prompt":"<request>"} and read the response. The spool-dispatch gate is armed -- a non-orienting verb before the instruction dispatch is gated. Re-enter the chain immediately.
 
 === MEMORIZE SELF-CHECK (mandatory before closing this response) ===
 
-Scan the conversation above for every exec output, code read, CI result, or user preference that resolved an unknown but was NOT memorized. For each one found, dispatch the memorize-fire spool verb — write .gm/exec-spool/in/memorize/<N>.txt with the fact (one fact per file, parallel by default). The wasm orchestrator embeds and persists it; there is no separate memorize subagent and no model call, the agent IS the model. Missing one = memory leak = bug.
+Scan the conversation above for every exec output, code read, CI result, or user preference that resolved an unknown but was NOT memorized. For each one found, dispatch the memorize-fire spool verb -- write .gm/exec-spool/in/memorize/<N>.txt with the fact (one fact per file, parallel by default). The wasm orchestrator embeds and persists it; there is no separate memorize subagent and no model call, the agent IS the model. Missing one = memory leak = bug.

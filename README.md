@@ -15,7 +15,7 @@ disclaimer: this is extremely opinionated. it will block bash, redirect your too
 ## install
 
 ```
-bun x skills add AnEntrypoint/gm -y
+bun x skills add AnEntrypoint/gm -y -g
 ```
 
 then add this line to your agent's global memory / system prompt:
@@ -63,7 +63,7 @@ PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE. Every transition is a verb the ag
 
 Every tool the agent uses is a dispatch verb. No direct shell, no direct file writes outside the spool. The wasm host owns the side effects.
 
-- **`recall`**: vector + KV recall against `rs-learn`, scored by cosine × recency, namespace-aware
+- **`recall`**: vector + KV recall against `rs-learn`, scored by cosine x recency, namespace-aware
 - **`codesearch`**: semantic vector search across the project
 - **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
 - **`browser`**: managed Chrome session with project-scoped profile at `.gm/browser-profile/`

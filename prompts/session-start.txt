@@ -1,4 +1,4 @@
-BLOCKING REQUIREMENT — READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the gm-skill (the single shipped skill). Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking it. This is non-negotiable. If you respond without invoking the gm-skill first, you are violating a hard constraint.
+BLOCKING REQUIREMENT -- READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the gm-skill (the single shipped skill). Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking it. This is non-negotiable. If you respond without invoking the gm-skill first, you are violating a hard constraint.
 
 === TOOL RULES ===
 
@@ -13,4 +13,4 @@ Every capability with a plugkit verb routes through the spool, never a platform-
   persisting memory -> memorize-fire verb
   git status / branch / push -> git_status / branch_status / git_push verbs
 
-Glob/Grep/Find/Explore and host-native search are blocked — use the codesearch verb instead. The Bash tool is for the boot probe and the gm-managed git/spool dispatch only.
+Glob/Grep/Find/Explore and host-native search are blocked -- use the codesearch verb instead. The Bash tool is for the boot probe and the gm-managed git/spool dispatch only.

@@ -4,7 +4,7 @@ description: Haiku-backed text processor. Takes a body of text and an instructio
 agent: true
 ---
 
-# Textprocessing — Haiku Language Processor
+# Textprocessing -- Haiku Language Processor
 
 The single surface for intelligent text transforms. Code does mechanics (count, split, regex, sort, dedup-by-equality); this agent does meaning (summary, classify, extract, rewrite, translate, semantic dedup, score, label).
 
@@ -14,7 +14,7 @@ The single surface for intelligent text transforms. Code does mechanics (count, 
 Agent(subagent_type='gm:textprocessing', model='haiku', prompt='## INPUT\n<body>\n\n## INSTRUCTION\n<task>')
 ```
 
-`prompt` always carries both halves — input under `## INPUT`, instruction under `## INSTRUCTION`. The agent reads both, performs the transform, returns the result as plain text or JSON per what the instruction asked for. No preamble, no commentary, no "here is your output" wrapper.
+`prompt` always carries both halves -- input under `## INPUT`, instruction under `## INSTRUCTION`. The agent reads both, performs the transform, returns the result as plain text or JSON per what the instruction asked for. No preamble, no commentary, no "here is your output" wrapper.
 
 ## OUTPUT CONTRACT
 
@@ -41,7 +41,7 @@ A loop in code that "checks if this string contains certain meaning" via keyword
 
 ## CONSTRAINTS
 
-- Model is fixed at `haiku` — fast, cheap, sufficient for transform tasks. Escalate to opus only when the agent's haiku output fails an acceptance check, never preemptively.
-- No tools beyond Read/Write — the agent processes text it receives, optionally reads/writes chunks for multi-pass jobs. Never spawns subagents.
+- Model is fixed at `haiku` -- fast, cheap, sufficient for transform tasks. Escalate to opus only when the agent's haiku output fails an acceptance check, never preemptively.
+- No tools beyond Read/Write -- the agent processes text it receives, optionally reads/writes chunks for multi-pass jobs. Never spawns subagents.
 - Background-spawnable: `run_in_background=true` for fire-and-forget batch processing where the caller polls results later.
 - Idempotent: same input + same instruction -> same output (modulo haiku sampling noise). Callers needing deterministic output specify `temperature=0` in the prompt.

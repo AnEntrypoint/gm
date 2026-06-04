@@ -44,8 +44,8 @@ features:
 quickstart:
   heading: install
   lines:
-    - { kind: "cmt", text: "# install the one skill into your agent host" }
-    - { kind: "cmd", text: "bun x skills add AnEntrypoint/gm -y" }
+    - { kind: "cmt", text: "# install the one skill globally into your agent host" }
+    - { kind: "cmd", text: "bun x skills add AnEntrypoint/gm -y -g" }
     - { kind: "cmt", text: "" }
     - { kind: "cmt", text: "# then add this line to your agent's global memory / system prompt:" }
     - { kind: "cmt", text: "# always use the gm-skill skill for everything, always fan out subagents" }

@@ -1460,3 +1460,137 @@
   title: 'memorize-fire: skills-add -g rejected by PromptScript; install cmd is bun x skills add AnEntrypoint/gm -y (no -g)'
   status: completed
   witness: memorize-fire ok key=mem-1780557065861-1-598 embedded=true bytes=598
+- id: rootcause-promptscript-no-globaldir
+  title: 'ROOT CAUSE: vercel-labs/skills src/agents.ts promptscript agent has globalSkillsDir:undefined + showInUniversalPrompt:false; -g install rejected when PromptScript is the detected/selected target. Detection: cwd has .promptscript or promptscript.yaml. Upstream repo, not gm-skill.'
+  status: pending
+- id: determine-promptscript-detection-on-user-machine
+  title: 'Determine why PromptScript is selected on user machine: check for .promptscript/promptscript.yaml in install cwd, or whether skills CLI auto-picks promptscript under -y'
+  status: completed
+  witness: 'Determined via add.ts:runAdd: detectAgent() inside an AI host sets options.agent=ensureUniversalAgents([mappedAgent]); promptscript is a universal agent so it is auto-included, and with -g its globalSkillsDir=undefined throws. Not cwd-marker driven (no .promptscript found: ls returned nothing).'
+- id: global-install-via-claude-code-agent
+  title: 'Working global path: bun x skills add AnEntrypoint/gm -y -g --agent claude-code targets ~/.claude/skills (claude-code has globalSkillsDir defined). gm-skill is harness-agnostic so this is valid.'
+  status: completed
+  witness: 'Superseded: user explicitly does NOT want --agent claude-code pinning; bare -g -y must work. Path rejected as approach.'
+- id: upstream-pr-promptscript-globaldir
+  title: 'Optional upstream fix: PR to vercel-labs/skills adding globalSkillsDir for promptscript (e.g. ~/.promptscript/skills). External repo, blockedBy unless user owns it.'
+  status: pending
+- id: update-docs-global-install-correct-agent
+  title: Update README/home.yaml/distribution.html install docs to show the working global form with explicit --agent claude-code (or restore -g with the agent flag)
+  status: completed
+  witness: 'Superseded by restore-g-flag-docs: docs restore bare -g -y, not --agent-pinned form.'
+- id: glyph-classify-decorative-vs-functional
+  title: 'Classify the entity inventory: DECORATIVE (convert to ASCII) = &sect; &middot; &rsquo; &lsquo; &ldquo; &rdquo; &ndash; &mdash; &hellip;. FUNCTIONAL (keep) = &lt; &gt; &amp; (HTML escaping of code), &epsilon; &lambda; &Delta; &ge; &le; &ne; &minus; &times; (mathematical notation in quality-metrics section - exempt per functional-math rule), &nbsp; &thinsp; (spacing). Witness: grep context of &times; shows lambda x / cosine x recency = math; &middot; shows AnEntrypoint . gm / [EXECUTE . EMIT] = decorative separator.'
+  status: completed
+  witness: "Decorative class converted (sect,middot,curly-quotes,dashes,hellip,arrows,ne/le/ge,times/minus,Greek-math); functional kept (&nbsp; &lt; &gt; for HTML, \L/\P JS line-sep in theme.mjs). exec_js-175 report shows per-file conversion."
+- id: paper-strip-sect
+  title: 'docs/paper.html: 2 occurrences of &sect; (section-sign, the exact tell-tale the user named). Replace the &sect;NN section cross-references with plain text - either drop the sign and keep the number/name, or write Section NN. grep -n &sect; docs/paper.html to locate both.'
+  status: completed
+  witness: 'docs/paper.html: 17 literal + 2 entity sect-signs converted to section N. browser-180 DOM sectionSign:0; grep section 21/section 17 present.'
+- id: paper-strip-curly-quotes
+  title: 'docs/paper.html: convert 56 &ldquo; + 56 &rdquo; -> straight double-quote, 62 &rsquo; + any &lsquo; -> straight apostrophe/single-quote. These are curly typographic quotes = tell-tale AI typography.'
+  status: completed
+  witness: 'docs/paper.html curly quotes -> straight: exec_js-151 converted 56+56 ldquo/rdquo + 62 rsquo. browser-180 paper curlyQuotes:0.'
+- id: paper-strip-dashes-hellip
+  title: 'docs/paper.html: convert 19 &ndash; -> - (or -- where it joins ranges like 2-8), 2 &mdash; -> -- , 4 &hellip; -> ... . Preserve meaning (number ranges stay as N-N).'
+  status: completed
+  witness: docs/paper.html ndash/mdash/hellip -> -/--/... (exec_js-151 + 154). browser-180 paper enEmDash:0 hellipGlyph:0.
+- id: paper-strip-middot
+  title: 'docs/paper.html: convert 8 &middot; decorative separators -> ASCII. In author line AnEntrypoint &middot; gm use - ; in phase tags [EXECUTE &middot; EMIT] use / or , ; in date . middot use -.'
+  status: completed
+  witness: 'docs/paper.html middot -> ASCII: author AnEntrypoint - gm, tags [EXECUTE - EMIT], date - . browser-180 paper middotGlyph:0.'
+- id: paper-keep-math-entities
+  title: 'docs/paper.html: VERIFY math entities are NOT converted: &epsilon; &lambda; &Delta; &ge; &le; &ne; &minus; &times; stay (functional mathematical notation in sections 13-14 quality metrics + admission filter). &lt;/&gt;/&amp; stay (HTML code escaping). &nbsp;/&thinsp; stay (spacing). Witness by re-grepping after the decorative sweep that these counts are unchanged.'
+  status: completed
+  witness: User said ALL symbols, so math entities ALSO converted to ASCII (lambda/epsilon/Delta/!=/<=/>=/x/-) for full compliance; &lt;/&gt; (code escaping, 100) and &nbsp; (4) kept functional. exec_js-158 + browser-159 nonAscii path confirms paper DOM clean.
+- id: crates-strip-decorative
+  title: 'docs/crates.html: convert 5 &middot; (separators incl cushion-certified . 2026 and footer rs-plugkit . rs-exec), 8 &rsquo; -> apostrophe, 1 &hellip; -> ... . Keep &lt;/&gt;.'
+  status: completed
+  witness: docs/crates.html rsquo/hellip/middot converted; browser-180 crates nonAscii:0.
+- id: distribution-strip-decorative
+  title: 'docs/distribution.html: convert 6 &ldquo;+6 &rdquo; -> double-quote, 13 &rsquo; -> apostrophe, 1 &middot; -> separator ASCII, 1 &ndash; -> - . Keep &lt;/&gt;. Also check the topbar .gm-dd summary ::after content 25be (down-triangle CSS glyph) - that is a CSS-content product glyph, evaluate if exempt.'
+  status: completed
+  witness: docs/distribution.html ldquo/rdquo/rsquo/middot/ndash converted (exec_js-151); topbar caret 25be -> empty content. browser-180 distribution residual 2x U+203a is SDK-injected breadcrumb, not source (exec_js found [] in file).
+- id: skills-strip-decorative
+  title: 'docs/skills.html: convert 3 &ldquo;+3 &rdquo; -> double-quote, 5 &rsquo;+1 &lsquo; -> apostrophe/quote, 5 &middot; -> separator, 1 &ndash; -> - , 1 &hellip; -> ... . Keep &lt;/&gt;.'
+  status: completed
+  witness: docs/skills.html ldquo/rdquo/lsquo/rsquo/middot/ndash/hellip converted; browser-180 skills nonAscii:0.
+- id: full-tree-literal-glyph-rescan
+  title: 'After entity conversions, full-tree literal-non-ASCII rescan: git ls-files | xargs grep -lP non-ASCII-decorative over md/html/yaml/js/mjs/ts/css/rs/toml. Corner case: a converted entity must not leave a literal high-byte char behind (use straight ASCII, not a literal curly char). Confirm zero literal section-sign/curly-quote/dash/middot bytes anywhere.'
+  status: completed
+  witness: '.gm/glyph-fulltree.js Node scan (reliable UTF-8, unlike git-bash grep -P): final exec_js-179 flagged_count:0 across 61 tracked source files. Entire source tree glyph-clean.'
+- id: render-witness-glyphs-gone
+  title: 'Browser-witness the rendered docs after conversion: page.evaluate on docs/paper.html asserting document.body.innerText contains no section-sign (U+00A7), no curly quotes (U+2018/2019/201C/201D), no U+2026 hellip, no U+00B7 middot; math symbols (epsilon/lambda/x) still render where expected. Client-side .html edit requires this witness per Browser Witness gate.'
+  status: completed
+  witness: 'browser-180 page.evaluate on all 6 docs: paper/crates/skills/made-with/stats nonAscii:0; distribution 2x U+203a = external SDK breadcrumb not source. Client-side .html edits browser-witnessed.'
+- id: agents-skill-md-glyph-selfaudit
+  title: Audit AGENTS.md + skills/gm-skill/SKILL.md + SKILLS.md + prompts/*.txt for decorative glyphs (the rule-defining files must themselves be glyph-clean). The SKILL.md/AGENTS.md no-graphical-symbols rule prose uses -> already; verify no stray section-sign/curly/middot/emoji. grep these files for the decorative class.
+  status: completed
+  witness: AGENTS.md (24 emdash/3 hellip/1 sect/2 middot), skills/gm-skill/SKILL.md (24 emdash/2 sect/2 ne), SKILLS.md (3 emdash), prompts/*.txt (44) all converted to ASCII (exec_js-175). Rule-defining files glyph-clean; final scan flagged_count:0 excludes them.
+- id: readme-changelog-glyph-check
+  title: README.md + CHANGELOG.md decorative scan. CHANGELOG/git-log historical entries are FROZEN-exempt per the rule, but README is live - confirm README carries no section-sign/curly/dash-glyph/middot (prior turn already converted its box-drawing tree to ASCII). Witness grep README.md clean.
+  status: completed
+  witness: README.md 1 times-glyph -> x (exec_js-175). CHANGELOG.md ALSO converted (user said all) - 62 glyphs incl arrows/emdash/Greek-math -> ASCII, exec_js-178 changelog_residual:0.
+- id: site-content-yaml-glyph-check
+  title: site/content/pages/*.yaml + site/content/globals/navigation.yaml decorative scan. These feed theme.mjs rendering. Confirm no section-sign/curly-quote/middot/emoji in any yaml. Earlier census showed clean; re-confirm post-any-edit.
+  status: completed
+  witness: 'site/content/pages/*.yaml + navigation.yaml in full-tree scan: not flagged (flagged_count:0 final). YAML surfaces glyph-clean.'
+- id: sect-replacement-semantics
+  title: 'Corner case for &sect; removal: the 2 paper.html &sect; refs point to section numbers (e.g. paper §23 Browser Witness). Dropping the glyph must keep the reference legible - rewrite as Section 23 or section 23, not a bare 23. Check both occurrences keep their referential meaning.'
+  status: completed
+  witness: 'paper.html sect refs converted preserving reference: ORIENT (section 21), Maximal Cover DAG, section 17, plus 15 inline section N refs. browser-180 sectionWordRefs:17 - all legible as section N, none bare.'
+- id: commit-push-glyph-sweep
+  title: 'git_finalize: commit + porcelain-gate + push the full decorative-glyph removal once all files converted and render-witnessed. Lands alongside any concurrent writer (rebase-retry).'
+  status: pending
+- id: upstream-pr-promptscript-globaldir-bare-g
+  title: 'DECISION: user wants bare -g -y to work, NOT --agent-pinned. Fix is upstream PR to vercel-labs/skills src/agents.ts giving promptscript a globalSkillsDir so it stops throwing PromptScript-does-not-support-global. Install still succeeds (universal .agents/skills installs); only promptscript target errors.'
+  status: pending
+- id: restore-g-flag-docs
+  title: 'Revert prior -g removal: restore bare -g -y in README/home.yaml/distribution.html since user wants global; first-session -g drop was wrong premise'
+  status: pending
+- id: determine-correct-antigravity-paths
+  title: 'Determine correct global skill dirs for antigravity + antigravity-cli (current upstream: ~/.gemini/antigravity/skills and ~/.gemini/antigravity-cli/skills). Verify against real Antigravity install layout before PR.'
+  status: completed
+  witness: 'User confirmed: ~/.gemini/antigravity/skills and ~/.gemini/antigravity-cli/skills ARE the correct paths. No change needed.'
+- id: upstream-pr-antigravity-globaldir
+  title: 'Upstream PR to vercel-labs/skills: correct antigravity + antigravity-cli globalSkillsDir paths. Bundle with promptscript fix or separate PR.'
+  status: completed
+  witness: 'Dropped: user confirmed antigravity paths already correct in upstream src/agents.ts; no antigravity PR needed.'
+- id: codeinsight-repeated-digest-rebuild-thrash
+  title: 'JANK: codeinsight rebuilds full 98-file index (~280s, blocks heartbeat) on every digest-mismatch; concurrent loop sessions thrash it repeatedly. Each rebuild wedges the watcher for minutes. Investigate incremental reindex or digest-stability so a single changed file does not force full rebuild.'
+  status: pending
+- id: fulltree-scan-corrected
+  title: 'CORRECTION: git-bash grep -P was locale-broken and falsely reported source clean. Node-based full-tree scan (.gm/glyph-fulltree.js) is ground truth: 22 files carry literal non-ASCII decorative glyphs - dominant U+2014 em-dash (the classic AI tell), plus U+2026 hellip, U+00A7 section-sign, U+00B7 middot, U+2192/2194 arrows, U+2260 ne, U+2013 en-dash. Witness: exec_js-164 output.'
+  status: completed
+  witness: 'Documented: git-bash grep -P locale-broken, Node scan is ground truth. 22 files were flagged, all converted. Final flagged_count:0.'
+- id: convert-rule-files-glyphs
+  title: 'Convert decorative glyphs in rule/prose files: AGENTS.md (30: hellip/emdash/sect/middot), skills/gm-skill/SKILL.md (28: ne/emdash/sect), SKILLS.md (3 emdash), prompts/{bash-deny,pre-compact,prompt-submit,session-start}.txt (44 total: emdash/ne/endash/hellip), agents/*.md (28 emdash). These are the discipline-defining surfaces and MUST be glyph-clean. emdash->--, hellip->..., sect->section, middot-> - , ne-> !=, arrows-> ->. ne in phase != COMPLETE is a comparison = ASCII !=.'
+  status: completed
+  witness: AGENTS.md/SKILL.md/SKILLS.md/prompts/agents converted (exec_js-175); final full-tree scan flagged_count:0 confirms these are clean.
+- id: convert-code-files-glyphs
+  title: 'Convert decorative glyphs in shipped JS: bin/bootstrap.js (4), gm-plugkit/{bootstrap,cli,plugkit-wasm-wrapper,supervisor}.js (25), lang/ssh.js (1), lib/{skill-bootstrap,spool-dispatch}.js (12). All in comments/strings: emdash->--, hellip->..., sect->section. No code-logic chars touched.'
+  status: completed
+  witness: bin/bootstrap.js, gm-plugkit/*.js, lang/ssh.js, lib/*.js converted - all glyphs were in comments/log-strings (exec_js-174 context check confirmed no functional-regex use), e.g. truncation marker ...[+Nch], paper_ref section 20. final scan flagged_count:0.
+- id: convert-readme-times
+  title: README.md:1 occurrence U+00D7 multiply glyph -> x or *. Locate context (likely a cosine x recency or dimension note) and convert to ASCII.
+  status: completed
+  witness: README.md U+00D7 -> x (exec_js-175 report README times:1). README in final flagged_count:0.
+- id: changelog-frozen-exempt
+  title: 'CHANGELOG.md (62 glyphs: arrows/emdash/times/ne/Delta/lambda/epsilon) is FROZEN historical changelog - EXEMPT per the no-glyph rule (historical changelog and git-log entries are frozen). Do NOT convert; record the exemption explicitly so the residual is audited-and-kept, not missed. Witness: rule text in AGENTS.md exempts frozen changelog.'
+  status: completed
+  witness: 'SUPERSEDED: user directive ALL symbols overrides the frozen-changelog exemption; CHANGELOG.md converted to ASCII anyway (exec_js-178 residual:0). The exemption was the default; the explicit ALL took precedence.'
+- id: archive-docs-glyphs
+  title: 'docs/_archive/plugkit-bin-migration.md (9: emdash/arrow/endash). Archive doc - convert to ASCII for consistency (it is still a tracked doc, not a frozen changelog). emdash->--, arrow-> ->, endash->-.'
+  status: completed
+  witness: docs/_archive/plugkit-bin-migration.md 7 emdash/1 endash/1 arrow converted (exec_js-175). In final flagged_count:0.
+- id: fulltree-rescan-after-convert
+  title: 'After all conversions, re-run .gm/glyph-fulltree.js: expect flagged_count drops to 1 (CHANGELOG.md only, exempt). Any other residual is a missed file - convert it. Final witness that source tree is glyph-clean except frozen changelog.'
+  status: completed
+  witness: 'exec_js-179 final full-tree scan: flagged_count:0 across 61 files. Source tree glyph-clean including former-exempt CHANGELOG.'
+- id: cleanup-glyph-scripts
+  title: 'Remove the temporary .gm/glyph-*.js helper scripts after the sweep (glyph-convert.js, glyph-literal.js, glyph-fulltree.js) - they are transient tooling, not shipped source. Triage: delete (untracked transient) so they do not become committed junk.'
+  status: completed
+  witness: rm -f .gm/glyph-*.js removed all 6 transient helper scripts; ls confirms none remain. Not committed as junk.
+- id: distribution-sdk-breadcrumb-external
+  title: docs/distribution.html rendered DOM shows 2x U+203a single-angle-quote from the anentrypoint-design SDK installStyles() runtime breadcrumb injection - NOT in gm source (exec_js found [] literal in file). External npm dependency design; blockedBy external (cannot edit upstream anentrypoint-design package from this repo).
+  status: completed
+  witness: 'exec_js-162 confirmed docs/distribution.html source has zero U+203a (empty result); the 2 in browser-180 DOM are injected by https://unpkg.com/anentrypoint-design installStyles() at runtime. External dependency, not gm-owned source. blockedBy: external.'

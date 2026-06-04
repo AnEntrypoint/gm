@@ -167,5 +167,5 @@ exec:ssh
 [@target]
 <shell command>
 
-Runs shell command on remote SSH host. Target from ~/.claude/ssh-targets.json ("default" if no @name). Supports multi-line scripts. Password or key auth. Returns combined stdout+stderr. Commands ending with & or using nohup/systemd-run are backgrounded — use exec:sleep/status/close to follow.`
+Runs shell command on remote SSH host. Target from ~/.claude/ssh-targets.json ("default" if no @name). Supports multi-line scripts. Password or key auth. Returns combined stdout+stderr. Commands ending with & or using nohup/systemd-run are backgrounded -- use exec:sleep/status/close to follow.`
 };

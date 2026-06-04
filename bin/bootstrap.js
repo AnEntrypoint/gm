@@ -216,7 +216,7 @@ function gmToolsDir() {
 // ~/.gm-tools (or ~/.claude/gm-tools for legacy installs) so hooks.json can
 // invoke plugkit directly without going through node. Self-update inside the
 // Rust binary keeps gm-tools fresh from
-// here on. Skipped silently on any error — the next session-start hook will
+// here on. Skipped silently on any error -- the next session-start hook will
 // retry via ensure_tools_current.
 
 function copyWasmToGmTools(wasmPath, wrapperDir, version) {
@@ -469,7 +469,7 @@ async function bootstrap(opts) {
         clearBootstrapError();
         return wasmFinalPath;
       }
-      log(`decision: fetch reason: cache-hit-sha-mismatch (dir=v${version} expected ${wasmExpectedSha.slice(0,12)}… got ${(actualSha||'').slice(0,12)}…)`);
+      log(`decision: fetch reason: cache-hit-sha-mismatch (dir=v${version} expected ${wasmExpectedSha.slice(0,12)}... got ${(actualSha||'').slice(0,12)}...)`);
       writeBootstrapError({
         expected_version: version,
         cached_version: null,
@@ -544,7 +544,7 @@ async function bootstrap(opts) {
       }
       log('sha256 verified');
     } else {
-      log('no sha256 manifest — skipping verify');
+      log('no sha256 manifest -- skipping verify');
     }
 
     try { fs.renameSync(wasmPartialPath, wasmFinalPath); }

@@ -84,7 +84,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 
     <section id="npm-downloads">
       <h2>NPM Downloads (last 30d)</h2>
-      <div id="npmTotal" style="font-family:var(--ff-mono);font-size:13px;color:var(--panel-text-2);margin-bottom:8px;">—</div>
+      <div id="npmTotal" style="font-family:var(--ff-mono);font-size:13px;color:var(--panel-text-2);margin-bottom:8px;">--</div>
       <canvas id="npmChart"></canvas>
     </section>
 
@@ -120,19 +120,19 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     <section id="summary">
       <div class="card">
         <div class="label">Open Issues</div>
-        <div class="value" id="openIssues">—</div>
+        <div class="value" id="openIssues">--</div>
       </div>
       <div class="card">
         <div class="label">Commits/Week</div>
-        <div class="value" id="commitsPerWeek">—</div>
+        <div class="value" id="commitsPerWeek">--</div>
       </div>
       <div class="card">
         <div class="label">Contributors</div>
-        <div class="value" id="contributors">—</div>
+        <div class="value" id="contributors">--</div>
       </div>
       <div class="card">
         <div class="label">Avg Merge Time</div>
-        <div class="value" id="avgMergeTime">—</div>
+        <div class="value" id="avgMergeTime">--</div>
       </div>
     </section>
 
@@ -143,7 +143,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
   </main>
 
   <footer>
-    <div id="updated">Loading…</div>
+    <div id="updated">Loading...</div>
     <div style="margin-top: 0.5rem;">
       <button onclick="refreshData()">Refresh Now</button>
       <label style="margin-left: 1rem;">
@@ -419,10 +419,10 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     }
 
     function renderSummaryCards() {
-      document.getElementById('openIssues').textContent = apiData.metrics?.open_issues ?? '—';
-      document.getElementById('commitsPerWeek').textContent = apiData.metrics?.commits_per_week ?? '—';
-      document.getElementById('contributors').textContent = apiData.metrics?.contributors ?? '—';
-      document.getElementById('avgMergeTime').textContent = apiData.metrics?.avg_merge_time ?? '—';
+      document.getElementById('openIssues').textContent = apiData.metrics?.open_issues ?? '--';
+      document.getElementById('commitsPerWeek').textContent = apiData.metrics?.commits_per_week ?? '--';
+      document.getElementById('contributors').textContent = apiData.metrics?.contributors ?? '--';
+      document.getElementById('avgMergeTime').textContent = apiData.metrics?.avg_merge_time ?? '--';
     }
 
     function renderReleases() {

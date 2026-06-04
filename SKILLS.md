@@ -1,4 +1,4 @@
-# SKILLS.md — Skill Discovery Tool
+# SKILLS.md -- Skill Discovery Tool
 
 ## Purpose
 
@@ -37,7 +37,7 @@ available_skills:
 |---------------|--------------------------------------------------------------------|
 | `name`        | Short identifier for the skill                                     |
 | `description` | What the skill does and when it should be used                     |
-| `location`    | Full path to the skill's SKILL.md — read this file before using it |
+| `location`    | Full path to the skill's SKILL.md -- read this file before using it |
 
 ---
 
@@ -59,7 +59,7 @@ available_skills:
 
 ## Rules
 
-- **Always discover first:** If you don't know the available skills, run the command — don't assume.
+- **Always discover first:** If you don't know the available skills, run the command -- don't assume.
 - **Read description carefully:** The `description` field determines which skill to use.
 - **Read from location:** Always read the SKILL.md at the `location` path before using a skill.
 - **Multiple skills:** If the task requires more than one skill, read all relevant SKILL.md files.

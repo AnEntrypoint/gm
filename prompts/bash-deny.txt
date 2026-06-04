@@ -1,6 +1,6 @@
 The Bash tool accepts ONLY git commands directly (no exec: prefix): `git status`, `git commit -m "msg"`, `git push`, etc.
 
-Everything else — code execution AND utility verbs — goes through the file-spool. Write a file at:
+Everything else -- code execution AND utility verbs -- goes through the file-spool. Write a file at:
 
   .gm/exec-spool/in/<lang-or-verb>/<N>.<ext>
 
@@ -15,7 +15,7 @@ Verbs: codesearch, recall, memorize, wait, sleep, status, close, browser, runner
 The spool watcher executes the request and streams output:
   - .gm/exec-spool/out/<N>.out      (stdout, written line-by-line)
   - .gm/exec-spool/out/<N>.err      (stderr, written line-by-line)
-  - .gm/exec-spool/out/<N>.json     (metadata: exitCode, durationMs, timedOut, startedAt, endedAt — written once at completion)
+  - .gm/exec-spool/out/<N>.json     (metadata: exitCode, durationMs, timedOut, startedAt, endedAt -- written once at completion)
 
 Result returns as systemMessage on next tool use with `--- stdout ---` and `--- stderr ---` separators. Both `in/` and `out/` are wiped at session start and session end (real-exit reasons only).
 

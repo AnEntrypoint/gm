@@ -58,7 +58,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 .gm-topbar nav a:hover, .gm-topbar nav .gm-dd > summary:hover{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd{position:relative}
 .gm-topbar nav .gm-dd > summary::-webkit-details-marker{display:none}
-.gm-topbar nav .gm-dd > summary::after{content:'\25be';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
+.gm-topbar nav .gm-dd > summary::after{content:'';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
 .gm-topbar nav .gm-dd[open] > summary::after{transform:rotate(180deg)}
 .gm-topbar nav .gm-dd[open] > summary{background:var(--panel-2);color:var(--panel-accent)}
 .gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
@@ -98,7 +98,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <div class="abstract-block">
   <div class="abstract-title">Thesis</div>
   <div class="abstract-text">
-    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> (glootius maximus) applies the same combination to coding-agent infrastructure: the user gets one npm package, <code>gm-skill</code>, whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The single-package, no-fanout shape is also a maintenance decision in the same spirit as the harness's token austerity, a smaller shipped surface is a smaller source of drift, so every part that does not need to ship does not ship. The artifact&rsquo;s entire genealogy, every Rust crate, every workflow, every published wasm, is open source under one organization, one cascade, one push at a time.
+    A coding agent should install in one command and never need a build toolchain on the user's machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> (glootius maximus) applies the same combination to coding-agent infrastructure: the user gets one npm package, <code>gm-skill</code>, whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The single-package, no-fanout shape is also a maintenance decision in the same spirit as the harness's token austerity, a smaller shipped surface is a smaller source of drift, so every part that does not need to ship does not ship. The artifact's entire genealogy, every Rust crate, every workflow, every published wasm, is open source under one organization, one cascade, one push at a time.
   </div>
 </div>
 
@@ -108,7 +108,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p class="first">Most coding agents fail at the install step. They ask for a Python virtualenv, a Node version, a Rust toolchain, an environment variable, a config file, an API key, and a directory layout the user has to memorize. By the time the agent runs, the user has spent more time on it than they intended to spend in a week. Worst, every component the agent needs is a separate vendor decision the user has to ratify implicitly.</p>
 
-<p>SQLite&rsquo;s design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user&rsquo;s code links it; that&rsquo;s the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded, the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
+<p>SQLite's design choice was: ship one C file. No toolchain, no daemon, no driver, no version skew. The user's code links it; that's the install. Two decades later, SQLite is in every phone, every browser, every aircraft. The lesson is not that databases should be embedded, the lesson is that <em>the install experience is the product</em>, and that radical simplicity at install is compatible with radical openness underneath.</p>
 
 <p>For an agent, the equivalent is: one published skill package, with a single hook into the host harness, with all the heavy machinery (search, indexing, memory, code execution, browser automation, phase orchestration) compiled into one wasm module that the agent dispatches on demand through a file-spool surface. The agent is the state machine; the wasm is the durable scratchpad it drives.</p>
 
@@ -116,15 +116,15 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p class="first"><code>gm-skill</code> is one npm package. Any harness that can resolve a Claude-style skill folder installs it the same way:</p>
 
-<pre><code>bun x skills add AnEntrypoint/gm -y</code></pre>
+<pre><code>bun x skills add AnEntrypoint/gm -y -g</code></pre>
 
-<p>Then add this line to your agent&rsquo;s global memory / system prompt:</p>
+<p>Then add this line to your agent's global memory / system prompt:</p>
 
 <pre><code>always use the gm-skill skill for everything, always fan out subagents</code></pre>
 
-<p>That&rsquo;s the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
+<p>That's the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
 
-<h3>2.1 What &ldquo;Turnkey&rdquo; Excludes</h3>
+<h3>2.1 What "Turnkey" Excludes</h3>
 
 <ul>
   <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs.</li>
@@ -135,11 +135,11 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <h2>3. Open All The Way Down</h2>
 
-<p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no &ldquo;and then a private build server takes over&rdquo; step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
+<p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no "and then a private build server takes over" step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
 
 <div class="repo-card"><span class="repo-name">rs-exec</span><span class="repo-role">Wasm host helpers. Compiled to <code>wasm32-wasip1</code>. Provides <code>exec_js</code>, browser session management, file-system glue, and the spool-watcher loop that the orchestrator imports. No daemon, no port; runs inside the wasm host process.</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">Code structure analysis via tree-sitter. Compiled to wasm. Powers the <code>codesearch</code> verb&rsquo;s symbol layer and session-start architectural overviews.</span></div>
+<div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">Code structure analysis via tree-sitter. Compiled to wasm. Powers the <code>codesearch</code> verb's symbol layer and session-start architectural overviews.</span></div>
 
 <div class="repo-card"><span class="repo-name">rs-search</span><span class="repo-role">File-content search. BM25 plus embedding fusion, scan-embed-sweep pipeline. Compiled to wasm. The codebase index lives under <code>.gm/code-search/</code> (tracked in git so the index travels).</span></div>
 
@@ -177,13 +177,13 @@ users
  , on first dispatch, gm-plugkit ensures plugkit.wasm is present
  , every subsequent verb is a local wasm call</div>
 
-<p>No human edits a version string. No human runs <code>cargo build</code>. The cascade is the publishing pipeline. The phrase &ldquo;to update anything, push to the relevant repo&rdquo; is literal: a one-line fix in <code>rs-search</code> propagates to a new <code>gm-skill</code> on npm within one CI cycle.</p>
+<p>No human edits a version string. No human runs <code>cargo build</code>. The cascade is the publishing pipeline. The phrase "to update anything, push to the relevant repo" is literal: a one-line fix in <code>rs-search</code> propagates to a new <code>gm-skill</code> on npm within one CI cycle.</p>
 
 <h2>5. One Skill Replaces Fifteen Plugin Repos</h2>
 
 <p class="first">An earlier generation of this project fanned out fifteen downstream plugin repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), one per host editor or CLI, each holding its own bootstrap shim and per-platform native binary. Those repos are now archived; they hold only a redirect README pointing at <code>gm-skill</code>.</p>
 
-<p>The fan-out existed because every host had a different conception of what a &ldquo;plugin&rdquo; was. Once every host gained the ability to load a Claude-style skill directory, the fan-out became dead weight: fifteen pieces of orchestration around a payload that wanted to be one package. Skills are the universal harness; <code>gm-skill</code> is the universal payload.</p>
+<p>The fan-out existed because every host had a different conception of what a "plugin" was. Once every host gained the ability to load a Claude-style skill directory, the fan-out became dead weight: fifteen pieces of orchestration around a payload that wanted to be one package. Skills are the universal harness; <code>gm-skill</code> is the universal payload.</p>
 
 <h2>6. The Bootstrap, In One File</h2>
 
@@ -201,7 +201,7 @@ users
 
 <h2>7. The Verb Surface</h2>
 
-<p class="first">Distribution is not just &ldquo;getting bits onto the user&rsquo;s disk&rdquo;, it is also the verb surface that the agent talks to once the bits are there. Every capability the harness exposes is a verb dispatched through the file-spool at <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>, with output landing at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root). Three families:</p>
+<p class="first">Distribution is not just "getting bits onto the user's disk", it is also the verb surface that the agent talks to once the bits are there. Every capability the harness exposes is a verb dispatched through the file-spool at <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>, with output landing at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root). Three families:</p>
 
 <table>
 <thead><tr><th>family</th><th>examples</th><th>serviced by</th></tr></thead>
@@ -227,7 +227,7 @@ users
 </tbody>
 </table>
 
-<p>The closest cousin is the SQLite amalgamation: one artifact, no install scaffolding, transparent provenance. The differences are that gm&rsquo;s artifact is a wasm module (because the user is not compiling against it; the host is loading it), and updates arrive via npm tags rather than a swap of one C file.</p>
+<p>The closest cousin is the SQLite amalgamation: one artifact, no install scaffolding, transparent provenance. The differences are that gm's artifact is a wasm module (because the user is not compiling against it; the host is loading it), and updates arrive via npm tags rather than a swap of one C file.</p>
 
 <h2>9. Trust And Verifiability</h2>
 
@@ -237,7 +237,7 @@ users
   <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
   <li><strong>SHA-256 manifest.</strong> The skill ships <code>bin/plugkit.wasm.sha256</code> pinned next to <code>gm-starter/gm.json::plugkitVersion</code>. The bootstrap verifies the wasm against this hash before instantiation; mismatch is fatal-soft (recorded to <code>.bootstrap-error.json</code> rather than thrown into the agent).</li>
   <li><strong>One target.</strong> <code>wasm32-wasip1</code> is reproducible from Cargo across Linux and macOS runners; mismatch between runs is a CI red, not silent drift.</li>
-  <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all seven repositories and point their skill at their own fork&rsquo;s npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
+  <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all seven repositories and point their skill at their own fork's npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
 </ul>
 
 <h2>10. Why Not Just Publish To cargo / pip?</h2>
@@ -254,7 +254,7 @@ users
 <p class="first">Three production failures shaped the current pipeline:</p>
 
 <ul>
-  <li><strong>Native-binary fan-out doubled CI duration linearly with platform count.</strong> Building six platform binaries on every push, then signing them, then uploading them, then bumping fifteen downstream repos, took 18&ndash;25 minutes per cascade tick. The wasm-only model collapses this to one build, one publish, one npm tag, under four minutes.</li>
+  <li><strong>Native-binary fan-out doubled CI duration linearly with platform count.</strong> Building six platform binaries on every push, then signing them, then uploading them, then bumping fifteen downstream repos, took 18-25 minutes per cascade tick. The wasm-only model collapses this to one build, one publish, one npm tag, under four minutes.</li>
   <li><strong>Stale binaries pinned to dead PIDs.</strong> The previous daemonized <code>rs-exec</code> wrote a port file then sometimes died, leaving clients pointing at a port nothing listened on. The wasm model has no port and no daemon, <code>exec_js</code> is a synchronous wasm host call via <code>child_process.spawnSync</code>, alive only for the duration of the call.</li>
   <li><strong>Concurrent CI publishes raced on downstream branches.</strong> Resolved by collapsing fifteen downstream branches into one npm publish.</li>
 </ul>
@@ -262,15 +262,15 @@ users
 <h2>12. The Invariant</h2>
 
 <div class="theorem">
-  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user&rsquo;s machine.</em>
+  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user's machine.</em>
 </div>
 
-<p>This is what we mean when we call gm &ldquo;the SQLite of coding-agent infrastructure.&rdquo; Not that it is a database; that it has SQLite&rsquo;s ratio of install-experience-to-openness. One npm install in. Seven repositories out (gm, rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn, plugkit-bin). One wasm in between.</p>
+<p>This is what we mean when we call gm "the SQLite of coding-agent infrastructure." Not that it is a database; that it has SQLite's ratio of install-experience-to-openness. One npm install in. Seven repositories out (gm, rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn, plugkit-bin). One wasm in between.</p>
 
 </article>
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
-<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> &middot; <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> - <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
 <span>probably emerging</span>
 </footer>
 

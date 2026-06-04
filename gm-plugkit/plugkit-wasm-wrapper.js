@@ -297,7 +297,7 @@ function capHitText(hits, maxLen, maxCount) {
   if (!Array.isArray(hits)) return hits;
   return hits.slice(0, maxCount).map((h) => {
     if (!h || typeof h !== 'object' || typeof h.text !== 'string' || h.text.length <= maxLen) return h;
-    return { ...h, text: h.text.slice(0, maxLen) + '…[+' + (h.text.length - maxLen) + 'ch]' };
+    return { ...h, text: h.text.slice(0, maxLen) + '...[+' + (h.text.length - maxLen) + 'ch]' };
   });
 }
 
@@ -346,7 +346,7 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
   const key = sess || '(no-session)';
   const now = Date.now();
   let t = _turns.get(key);
-  // Any verb arriving after an idle gap closes the stale turn — not just instruction.
+  // Any verb arriving after an idle gap closes the stale turn -- not just instruction.
   // Otherwise a non-instruction verb (prd-add, mutable-resolve, transition) landing
   // after an overnight sleep stamps t.lastTs forward without splitting, and dur_ms
   // (lastTs - startTs) balloons to wall-clock-with-sleep instead of active work time.
@@ -367,7 +367,7 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
   }
   t.lastTs = now;
   t.dispatches++;
-  // A verb arriving resumes the turn — clear any prior stall flag so a later re-stall
+  // A verb arriving resumes the turn -- clear any prior stall flag so a later re-stall
   // is a fresh episode, not silently suppressed by the one-shot guard.
   t.stallEmitted = false;
   t.verbs.set(verb, (t.verbs.get(verb) || 0) + 1);
@@ -376,7 +376,7 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
 }
 
 // turn.end fires only when a NEW verb arrives after idle, so a turn that simply never
-// receives another verb stays open forever and emits no signal — a permanent stall is
+// receives another verb stays open forever and emits no signal -- a permanent stall is
 // silence, not an event, which is how a mid-EXECUTE stop stays invisible for days. The
 // heartbeat scan closes that hole: for each open turn idle past STALL_MS whose last phase
 // is non-terminal (or carries open PRD rows), emit turn.stalled once. One-shot per episode
@@ -386,7 +386,7 @@ const STALL_MS = 300_000;
 function scanStalledTurns() {
   const now = Date.now();
   // A long synchronous verb (codesearch index rebuild, chromium spawn) stamps busy_until and
-  // blocks the spool — the agent is legitimately waiting, not stalled. Honor it exactly as
+  // blocks the spool -- the agent is legitimately waiting, not stalled. Honor it exactly as
   // supervisor.js checkWatcherHealth does, so a busy watcher never emits a false mid-chain-stall.
   if (_lastBusyUntil && _lastBusyUntil > now) return;
   for (const [key, t] of _turns) {
@@ -397,7 +397,7 @@ function scanStalledTurns() {
     if (terminal) continue;
     t.stallEmitted = true;
     // key is the _turns map key (sess || '(no-session)'). When it is the sentinel, the turn was
-    // unattributed, so do not override logEvent's own cwd+sess base fields with '(no-session)' —
+    // unattributed, so do not override logEvent's own cwd+sess base fields with '(no-session)' --
     // let the cwd-based attribution stand. Pass an explicit sess only when key is a real session.
     const fields = {
       turn_idx: t.idx,
@@ -1872,7 +1872,7 @@ function makeHostFunctions(instanceRef) {
             ok: false,
             error: 'missing timeoutMs',
             required: 'positive integer milliseconds',
-            paper_ref: '§20',
+            paper_ref: 'section 20',
             received: rawTimeout === undefined ? null : rawTimeout,
           });
         }
@@ -1882,7 +1882,7 @@ function makeHostFunctions(instanceRef) {
             error: 'timeoutMs below floor',
             min: MIN_TIMEOUT_MS,
             received: rawTimeout,
-            paper_ref: '§20',
+            paper_ref: 'section 20',
           });
         }
         const timeoutMs = rawTimeout;
@@ -2573,7 +2573,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} — spawning replacement via bun x gm-plugkit@latest spool, waiting for its heartbeat before exiting`);
+        console.error(`[plugkit-wasm] version drift detected: instance=${instV} file=${fileV} -- spawning replacement via bun x gm-plugkit@latest spool, waiting for its heartbeat before exiting`);
         let spawnOk = false;
         try {
           const cp = _childProcess;
@@ -2670,7 +2670,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           action: 'spawn-replacement-and-exit',
           boot_reason: bootReason,
         });
-        console.error(`[plugkit-wasm] wrapper.js drift detected — spawning replacement directly from installed wrapper then exiting`);
+        console.error(`[plugkit-wasm] wrapper.js drift detected -- spawning replacement directly from installed wrapper then exiting`);
         try {
           const cp = _childProcess;
           const child = cp.spawn(process.execPath, [_wrapperPathInstalled, 'spool'], {
@@ -2910,7 +2910,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       instruction: _isPlannedBoot
         ? `Planned restart: prior watcher exited with reason="${_priorShutdown.reason}". No action required.`
         : (_severity === 'warn'
-          ? 'Prior watcher disappeared with a recent heartbeat — likely a clean shutdown that did not write .shutdown-reason.json. Inspect .watcher.log if recurrent.'
+          ? 'Prior watcher disappeared with a recent heartbeat -- likely a clean shutdown that did not write .shutdown-reason.json. Inspect .watcher.log if recurrent.'
           : 'Prior watcher died without a planned shutdown and without a recent heartbeat. This is treated as a critical failure. Inspect .watcher.log and gm-log/<day>/plugkit.jsonl events supervisor.watcher-exited-unexpectedly + supervisor.heartbeat-stale around the prior_status.ts timestamp to diagnose root cause.'),
     };
     logEvent('plugkit', _isPlannedBoot ? 'watcher.planned-restart' : 'watcher.unplanned-restart', incidentPayload);
@@ -2928,7 +2928,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     if (_isPlannedBoot) {
       console.log(`[plugkit-wasm] planned restart: prior reason="${_priorShutdown.reason}" boot_reason=${_bootReason}`);
     } else {
-      console.error(`[plugkit-wasm] UNPLANNED RESTART detected — prior watcher died without writing .shutdown-reason.json. prior_status_age_ms=${restartContext.prior_status_age_ms} boot_reason=${_bootReason}`);
+      console.error(`[plugkit-wasm] UNPLANNED RESTART detected -- prior watcher died without writing .shutdown-reason.json. prior_status_age_ms=${restartContext.prior_status_age_ms} boot_reason=${_bootReason}`);
     }
   }
   try { fs.unlinkSync(SHUTDOWN_REASON_PATH); } catch (_) {}
@@ -3023,7 +3023,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       // Defense-in-depth beyond walkDir's dot-dir skip: a real verb is a single clean
       // segment (e.g. instruction, prd-resolve). A derived verb containing a path
       // separator or a dot-segment means the file lives under a stray nested spool
-      // (in/prd-resolve/.gm/exec-spool/…); dispatching it builds a bogus verb+outName
+      // (in/prd-resolve/.gm/exec-spool/...); dispatching it builds a bogus verb+outName
       // and ENOENT-storms every tick. Skip + unmark so it never re-enters the loop.
       if (/[\\/]/.test(verb) || verb.split(/[\\/]/).some(seg => seg.startsWith('.'))) {
         try { logEvent('plugkit', 'spool.skip-nested-verb', { rel: relPath, derived_verb: verb }); } catch (_) {}
@@ -3161,7 +3161,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     try {
       for (const entry of fs.readdirSync(dir)) {
         if (/\.tmp\.\d+(\.|$)/.test(entry)) continue;
-        // The verb tree is in/<verb>/[<sub>/]<N>.<ext> — at most two levels deep. A
+        // The verb tree is in/<verb>/[<sub>/]<N>.<ext> -- at most two levels deep. A
         // dot-prefixed dir (e.g. a stray nested .gm/exec-spool/ created by a misfire)
         // is never a verb dir; recursing into it derives a bogus verb like
         // `prd-resolve\.gm\exec-spool` and dispatch-errors on every tick forever.
@@ -3205,7 +3205,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       // A synchronous verb (chromium spawn, long exec) blocks the event loop, so the 5s
       // heartbeat interval cannot fire for the duration. Without a hint, a liveness probe that
       // checks ts-within-15s reads the busy watcher as dead and may kill/respawn it mid-verb.
-      // busy_until tells probes "alive but synchronously busy until this epoch ms" — read it
+      // busy_until tells probes "alive but synchronously busy until this epoch ms" -- read it
       // alongside ts: a stale ts whose busy_until is still in the future is a busy watcher, not
       // a dead one. The pre-verb writeStatus(busyMs) stamps it before the blocking call.
       if (busyMs && busyMs > 0) { rec.busy_until = now + busyMs; _lastBusyUntil = rec.busy_until; }
@@ -3408,7 +3408,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       logEvent('plugkit', 'update.available', { installed, latest });
       _lastKnownDrift = latest;
     }
-    // NOTE: no version-file bump here either — see the network-path comment above. Bumping the version
+    // NOTE: no version-file bump here either -- see the network-path comment above. Bumping the version
     // file ahead of a verified binary download poisons installedVersionAtTools() and causes an infinite
     // drift-respawn thrash. Auto-update is notify-only until a sha-verified force-download path exists.
   }
@@ -3489,7 +3489,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           // NOTE: do NOT bump the disk version file here to "arm" a drift-respawn. installedVersionAtTools()
           // reads that file as the source of truth for the installed version; bumping it ahead of the actual
           // wasm download makes ensureReady compute versionDrift=false (file==target) and isReady()=true, so it
-          // returns already-ready WITHOUT downloading the new binary — while the running instance is still the
+          // returns already-ready WITHOUT downloading the new binary -- while the running instance is still the
           // old version. The drift-check then sees instance(old) != file(new) forever and self-respawns in an
           // infinite loop, each respawn reloading the same old wasm. The version file must only advance AFTER
           // a verified binary download (bootstrap's job). Auto-update stays notify-only until ensureReady gains
@@ -3630,7 +3630,7 @@ async function runSpoolWatcher(instance, spoolDir) {
               const base = path.basename(fp, path.extname(fp));
               const outName = verbDir === '.' ? `${base}.json` : `${verbDir}-${base}.json`;
               try {
-                fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: 'stale input — never dispatched or watcher crash mid-flight' }));
+                fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: 'stale input -- never dispatched or watcher crash mid-flight' }));
               } catch (e) { console.error(`[stale-sweep] failed to write error for ${rel}: ${e.message}`); }
               try { fs.unlinkSync(fp); stale++; } catch (e) { console.error(`[stale-sweep] failed to unlink ${rel}: ${e.message}`); }
               console.error(`[stale-sweep] auto-failed ${rel} (age >${600}s)`);
@@ -3659,7 +3659,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     if (!filename) return;
     if (/\.tmp\.\d+(\.|$)/.test(filename)) return;
     // Skip any path with a dot-prefixed segment (e.g. a stray nested
-    // prd-resolve/.gm/exec-spool/…): it is not a real verb dispatch and walking it
+    // prd-resolve/.gm/exec-spool/...): it is not a real verb dispatch and walking it
     // derives a bogus verb that dispatch-errors on every tick. Matches walkDir's guard.
     if (filename.split(/[\\/]/).some(seg => seg.startsWith('.'))) return;
     const fullPath = path.join(inDir, filename);
@@ -3782,7 +3782,7 @@ async function tryInstantiate(wasmPath) {
       if (isLink || isCompile) {
         const healed = await selfHeal(`${e.name || 'instantiate'}: ${e.message}`);
         if (!healed) {
-          console.error('[plugkit-wasm] wrapper/wasm version skew — run: bun x gm-plugkit@latest spool');
+          console.error('[plugkit-wasm] wrapper/wasm version skew -- run: bun x gm-plugkit@latest spool');
           process.exit(1);
         }
         ({ instance, instanceRef } = await tryInstantiate(wasmPath));

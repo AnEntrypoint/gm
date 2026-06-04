@@ -59,7 +59,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <div class="title-block">
   <h1>Every rust crate behind gm (glootius maximus)</h1>
   <div class="author">five wasm cdylibs, one orchestrator, zero native binaries</div>
-  <div class="date">cushion-certified &middot; 2026</div>
+  <div class="date">cushion-certified - 2026</div>
 </div>
 
 <div class="abstract-block">
@@ -138,12 +138,12 @@ sequenceDiagram
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> provide the host-side machinery that plugkit&rsquo;s wasm imports use to actually touch the world. Code execution, browser sessions, file-system glue, idle cleanup. Formerly a native exec daemon with its own port and rpc; now a wasm-only utility crate published as <code>@anentrypoint/rs-exec-wasm</code>.</p>
+  <p><strong>Job:</strong> provide the host-side machinery that plugkit's wasm imports use to actually touch the world. Code execution, browser sessions, file-system glue, idle cleanup. Formerly a native exec daemon with its own port and rpc; now a wasm-only utility crate published as <code>@anentrypoint/rs-exec-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
     <li>implements <code>exec_js</code> as a synchronous <code>child_process.spawnSync</code> call from the wasm host, the watcher blocks for the duration; long subprocesses are not supported under wasm</li>
-    <li>spawns the user&rsquo;s code in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></li>
+    <li>spawns the user's code in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></li>
     <li>enforces an explicit <code>timeoutMs</code> per call; missing or zero is a hard error</li>
     <li>preserves partial streamed output on timeout; emits <code>timedOut: true</code> on the response</li>
     <li>manages project-scoped browser sessions for the <code>browser</code> verb; idle-cleans dead sessions on a 60-second tick</li>
@@ -171,7 +171,7 @@ sequenceDiagram
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> tree-sitter-based code structure analysis. Powers the symbol layer of <code>codesearch</code> and the session-start architectural overview that lands in the agent&rsquo;s opening context. Published as <code>@anentrypoint/rs-codeinsight-wasm</code>.</p>
+  <p><strong>Job:</strong> tree-sitter-based code structure analysis. Powers the symbol layer of <code>codesearch</code> and the session-start architectural overview that lands in the agent's opening context. Published as <code>@anentrypoint/rs-codeinsight-wasm</code>.</p>
 
   <h3>what it actually does</h3>
   <ul>
@@ -204,7 +204,7 @@ sequenceDiagram
     <li>scans the project (respecting <code>.gitignore</code>), tokenizes file content, builds a sparse term-frequency index plus a dense embedding index</li>
     <li>fuses BM25 with embedding cosine; reranks with a sweep pass; returns top matches with surrounding line context</li>
     <li>indexes PDFs as code (extracts text via <code>pdf-extract</code>, caches per-page under <code>.gm/code-search/pdf-cache/</code>)</li>
-    <li>emits an <code>[index fully synced: &hellip;]</code> line before the first result so freshness is visible</li>
+    <li>emits an <code>[index fully synced: ...]</code> line before the first result so freshness is visible</li>
     <li>tracks the index under <code>.gm/code-search/</code>, committed to git so the index travels with the project</li>
   </ul>
 
@@ -239,7 +239,7 @@ sequenceDiagram
     <li>community detection (label propagation) groups related episodes; LLM summarization synthesizes per-community context</li>
     <li>graph search via <code>Searcher</code> with configurable result count plus relevance threshold</li>
     <li>fast-path ingest avoids re-embedding when content is identical</li>
-    <li>called directly from the orchestrator&rsquo;s wasm imports, no rpc, no daemon, no <code>bun x rs-learn</code> shim</li>
+    <li>called directly from the orchestrator's wasm imports, no rpc, no daemon, no <code>bun x rs-learn</code> shim</li>
   </ul>
 
   <h3>commandments it enforces</h3>
@@ -259,20 +259,20 @@ sequenceDiagram
 
 <h2>How to update any of them</h2>
 
-<p><strong>Push to the relevant repo. That&rsquo;s it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, <code>rs-learn</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>&rsquo;s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
+<p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, <code>rs-learn</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>'s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
 
-<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, and <code>rs-learn</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>&rsquo;s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, and <code>rs-learn</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
 
 <h2>notes on the architecture</h2>
 
 <blockquote>
-  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one, they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don&rsquo;t merge them.", from the gm field guide
+  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one, they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them.", from the gm field guide
 </blockquote>
 
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit &middot; rs-exec &middot; rs-learn &middot; rs-search &middot; rs-codeinsight</span></a>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit - rs-exec - rs-learn - rs-search - rs-codeinsight</span></a>
   <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>one skill, one wasm</span></a>
 </div>

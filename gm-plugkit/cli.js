@@ -7,7 +7,7 @@ const path = require('path');
 const cp = require('child_process');
 const { ensureReady, startSpoolDaemon } = require('./bootstrap');
 
-const usage = `gm-plugkit — Bootstrap and daemon-spawn for gm plugkit binary.
+const usage = `gm-plugkit -- Bootstrap and daemon-spawn for gm plugkit binary.
 
 Usage:
   bun x gm-plugkit@latest                    Bootstrap + start spool daemon

@@ -4,13 +4,13 @@ This file is a one-time migration playbook for moving plugkit native binaries ou
 
 The gm side of the migration is already in this repo. This file documents the changes you need to apply in two other repos:
 
-- `AnEntrypoint/rs-plugkit` — rewrite `release.yml` to publish to `plugkit-bin` instead of force-pushing into `AnEntrypoint/gm`.
-- `AnEntrypoint/plugkit-bin` — new repo, holds nothing but Releases.
+- `AnEntrypoint/rs-plugkit` -- rewrite `release.yml` to publish to `plugkit-bin` instead of force-pushing into `AnEntrypoint/gm`.
+- `AnEntrypoint/plugkit-bin` -- new repo, holds nothing but Releases.
 
 ## 1. Create `AnEntrypoint/plugkit-bin`
 
 ```bash
-gh repo create AnEntrypoint/plugkit-bin --public --description "plugkit native binaries — distributed via GitHub Releases, consumed by gm bootstrap"
+gh repo create AnEntrypoint/plugkit-bin --public --description "plugkit native binaries -- distributed via GitHub Releases, consumed by gm bootstrap"
 ```
 
 The repo's main branch can stay empty (a single README is fine). All payload lives in Releases.
@@ -51,12 +51,12 @@ Token must have `contents:write` on `AnEntrypoint/plugkit-bin`.
 
 **Replace the existing publish-binaries job** (the one that copies into `gm-build-latest/gm-cc/bin/` and force-pushes to `AnEntrypoint/gm`) with a job that:
 
-1. Reads `plugkit-VERSION` (whatever rs-plugkit's existing version source is — `Cargo.toml` package.version).
+1. Reads `plugkit-VERSION` (whatever rs-plugkit's existing version source is -- `Cargo.toml` package.version).
 2. Builds all 6 platform binaries via the matrix already in place (`win32-x64`, `win32-arm64`, `darwin-x64`, `darwin-arm64`, `linux-x64`, `linux-arm64`).
 3. Computes sha256 over each file, accumulates into a `plugkit.sha256` manifest.
 4. Writes `plugkit.version` containing the bare version.
 5. Uploads all 8 assets to the corresponding `v{version}` release in `AnEntrypoint/plugkit-bin` (creating the release if missing).
-6. Bumps `gm-starter/gm.json::plugkitVersion` in `AnEntrypoint/gm` via a PR or direct push (existing pattern preserved — only the upload destination changes).
+6. Bumps `gm-starter/gm.json::plugkitVersion` in `AnEntrypoint/gm` via a PR or direct push (existing pattern preserved -- only the upload destination changes).
 
 Skeleton:
 
@@ -78,7 +78,7 @@ publish-binaries:
         set -e
         VER=$(cargo pkgid | sed 's/.*#//')
         mkdir -p ./release-assets
-        # Map artifact-name → final-asset-name
+        # Map artifact-name -> final-asset-name
         cp bins/plugkit-win32-x64/plugkit.exe        release-assets/plugkit-win32-x64.exe
         cp bins/plugkit-win32-arm64/plugkit.exe      release-assets/plugkit-win32-arm64.exe
         cp bins/plugkit-darwin-x64/plugkit            release-assets/plugkit-darwin-x64
@@ -153,7 +153,7 @@ publish-binaries:
 
 ## 4. Re-enable all tree-sitter languages in rs-codeinsight
 
-The 108MB binary cap that drove the language-stripping in rs-codeinsight was a **GitHub push-blob constraint** — files >100MB cannot be pushed to a repo. **It does not apply to Release assets** (which can be up to 2 GB per asset). Once binaries no longer ride inside any pushed git history, that constraint disappears.
+The 108MB binary cap that drove the language-stripping in rs-codeinsight was a **GitHub push-blob constraint** -- files >100MB cannot be pushed to a repo. **It does not apply to Release assets** (which can be up to 2 GB per asset). Once binaries no longer ride inside any pushed git history, that constraint disappears.
 
 Action items in `AnEntrypoint/rs-codeinsight`:
 
@@ -161,9 +161,9 @@ Action items in `AnEntrypoint/rs-codeinsight`:
 - Remove any `cfg(feature = ...)` gates that conditionally exclude grammars.
 - Verify scanner dispatch in `src/scanner.rs` recognises the restored extensions.
 
-Expected binary size after restore: ~100–110MB linux-x64. Acceptable now.
+Expected binary size after restore: ~100-110MB linux-x64. Acceptable now.
 
-Also update the AGENTS.md caveat in this repo (the "rs-plugkit binary size (108MB) root cause" entry) to note the constraint is gone — see task 6.
+Also update the AGENTS.md caveat in this repo (the "rs-plugkit binary size (108MB) root cause" entry) to note the constraint is gone -- see task 6.
 
 ## 5. First manual release (one-time, before CI flips over)
 

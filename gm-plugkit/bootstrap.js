@@ -567,7 +567,7 @@ async function bootstrap(opts) {
       }
       log('sha256 verified');
     } else {
-      log('no sha256 manifest — skipping verify');
+      log('no sha256 manifest -- skipping verify');
     }
 
     try { fs.renameSync(partialPath, finalPath); }
@@ -808,7 +808,7 @@ async function ensureReady(opts) {
           instruction: `gm-plugkit running ${selfStale.own} but npm has ${selfStale.latest}. The npx/bun cache served a stale copy. Clear the cache so the next invocation picks up the latest wrapper fixes: bun pm cache rm; or  npx clear-npx-cache; or rm -rf ~/.npm/_npx ~/AppData/Local/npm-cache/_npx`,
         };
         try { fs.writeFileSync(path.join(spoolDir, '.gm-plugkit-stale.json'), JSON.stringify(marker, null, 2)); } catch (_) {}
-        log(`gm-plugkit self-stale: running ${selfStale.own}, latest npm ${selfStale.latest} — cache served old code (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
+        log(`gm-plugkit self-stale: running ${selfStale.own}, latest npm ${selfStale.latest} -- cache served old code (marker at .gm/exec-spool/.gm-plugkit-stale.json)`);
       } else if (selfStale && selfStale.own) {
         try {
           const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -914,7 +914,7 @@ function startSpoolDaemon() {
   try {
     const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
     if (!fs.existsSync(wrapper)) {
-      return { ok: false, error: `wrapper not at ${wrapper} — ensureReady() must run first` };
+      return { ok: false, error: `wrapper not at ${wrapper} -- ensureReady() must run first` };
     }
     const runtime = resolveNodeRuntime();
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
