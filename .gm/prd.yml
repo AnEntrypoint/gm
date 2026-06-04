@@ -1562,7 +1562,8 @@
   witness: 'Dropped: user confirmed antigravity paths already correct in upstream src/agents.ts; no antigravity PR needed.'
 - id: codeinsight-repeated-digest-rebuild-thrash
   title: 'JANK: codeinsight rebuilds full 98-file index (~280s, blocks heartbeat) on every digest-mismatch; concurrent loop sessions thrash it repeatedly. Each rebuild wedges the watcher for minutes. Investigate incremental reindex or digest-stability so a single changed file does not force full rebuild.'
-  status: pending
+  status: completed
+  witness: 'Fixed at source: rs-plugkit PR #5 (https://github.com/AnEntrypoint/rs-plugkit/pull/5) filters current_digest() porcelain to indexable-source paths (drops .gm/ + non-tree-sitter exts, sorts), so runtime churn no longer flips the digest and forces the ~280s full re-embed. Ships via cascade on merge.'
 - id: fulltree-scan-corrected
   title: 'CORRECTION: git-bash grep -P was locale-broken and falsely reported source clean. Node-based full-tree scan (.gm/glyph-fulltree.js) is ground truth: 22 files carry literal non-ASCII decorative glyphs - dominant U+2014 em-dash (the classic AI tell), plus U+2026 hellip, U+00A7 section-sign, U+00B7 middot, U+2192/2194 arrows, U+2260 ne, U+2013 en-dash. Witness: exec_js-164 output.'
   status: completed
