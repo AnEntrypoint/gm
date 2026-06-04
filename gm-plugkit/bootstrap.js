@@ -968,6 +968,7 @@ function startSpoolDaemon() {
 module.exports = {
   bootstrap,
   ensureReady,
+  gmToolsDir,
   getWasmPath,
   getBinaryPath,
   startSpoolDaemon,

@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir } = require('./bootstrap');
 
 const usage = `gm-plugkit -- Bootstrap and daemon-spawn for gm plugkit binary.
 
@@ -24,7 +24,7 @@ Usage:
 
 function readDiskWasmVersion() {
   try {
-    const versionFile = path.join(os.homedir(), '.gm-tools', 'plugkit.version');
+    const versionFile = path.join(gmToolsDir(), 'plugkit.version');
     return fs.readFileSync(versionFile, 'utf-8').trim() || null;
   } catch (_) { return null; }
 }
@@ -47,9 +47,9 @@ function readWatcherInstanceVersion(pid) {
 
 function killStaleWatchers() {
   try {
-    const wrapperPath = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
+    const wrapperPath = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
     if (!fs.existsSync(wrapperPath)) {
-      console.log(JSON.stringify({ ok: false, error: 'wrapper not installed at ~/.gm-tools/plugkit-wasm-wrapper.js' }));
+      console.log(JSON.stringify({ ok: false, error: `wrapper not installed at ${wrapperPath}` }));
       return 1;
     }
     const diskMtime = fs.statSync(wrapperPath).mtimeMs;

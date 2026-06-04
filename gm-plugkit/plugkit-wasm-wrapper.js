@@ -946,6 +946,35 @@ function scrubBrowserRunnerText(s) {
   return t;
 }
 
+// Standard OS install locations for a Chrome/Chromium that speaks CDP. Used as a
+// fallback when the managed ms-playwright cache is absent (e.g. cache evicted),
+// so the browser verb keeps working off the system browser instead of failing.
+function findSystemChromiumBinary() {
+  const candidates = process.platform === 'win32'
+    ? [
+        path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Chromium', 'Application', 'chrome.exe'),
+      ]
+    : process.platform === 'darwin'
+      ? [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+          '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        ]
+      : [
+          '/usr/bin/chromium',
+          '/usr/bin/chromium-browser',
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable',
+          '/opt/google/chrome/chrome',
+          '/snap/bin/chromium',
+        ];
+  for (const c of candidates) {
+    try { if (fs.existsSync(c)) return c; } catch (_) {}
+  }
+  return null;
+}
+
 function findInstalledChromiumBinary() {
   try {
     const explicit = process.env.GM_BROWSER_RUNNER_PATH || process.env.PLAYWRITER_BROWSER_PATH;
@@ -982,11 +1011,11 @@ function findInstalledChromiumBinary() {
         }
       }
     }
-    if (found.length === 0) return null;
+    if (found.length === 0) return findSystemChromiumBinary();
     found.sort((a, b) => b.ver - a.ver);
     return found[0].candidate;
   } catch (_) {
-    return null;
+    return findSystemChromiumBinary();
   }
 }
 
