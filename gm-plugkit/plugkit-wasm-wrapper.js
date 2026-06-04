@@ -453,56 +453,6 @@ function readCurrentSess() {
 
 const __lockRejectedEmitAt = new Map();
 
-const UNAMBIGUOUS_CLIENT_EXT_RE = /\.(?:html?|jsx|tsx|vue|svelte|css|scss|sass)$/i;
-const AMBIGUOUS_JS_EXT_RE = /\.(?:m?js|cjs|ts)$/i;
-const BROWSER_REACHABLE_DIR_RE = /(?:^|\/)(?:site|public|web|www|client|frontend|ui|assets|static|dist|build|docs)\//i;
-const NODE_ONLY_DIR_RE = /(?:^|\/)(?:lib|bin|scripts?|gm-plugkit|node_modules|tests?|__tests__|\.gm)\//i;
-
-function isBrowserRelevantPath(rel, cwd) {
-  if (UNAMBIGUOUS_CLIENT_EXT_RE.test(rel)) return true;
-  if (!AMBIGUOUS_JS_EXT_RE.test(rel)) return false;
-  if (NODE_ONLY_DIR_RE.test(rel)) return false;
-  if (BROWSER_REACHABLE_DIR_RE.test(rel)) return true;
-  try {
-    const dir = path.dirname(path.isAbsolute(rel) ? rel : path.join(cwd, rel));
-    const sibs = fs.readdirSync(dir);
-    if (sibs.some(f => /\.html?$/i.test(f))) return true;
-  } catch (_) {}
-  return false;
-}
-
-function autoRecordBrowserEditsFromBody(body, cwd, taskBase, verb) {
-  if (!body || typeof body !== 'string') return;
-  const BROWSER_EXT_RE = /[\w.\-/\\]+\.(?:html?|tsx?|jsx?|mjs|cjs|vue|svelte|css|scss|sass)\b/gi;
-  const matches = body.match(BROWSER_EXT_RE);
-  if (!matches || matches.length === 0) return;
-  const seen = new Set();
-  const editsFile = path.join(cwd, '.gm', 'exec-spool', '.turn-browser-edits.json');
-  let list = [];
-  try { list = JSON.parse(fs.readFileSync(editsFile, 'utf8')); if (!Array.isArray(list)) list = []; } catch (_) {}
-  let added = 0;
-  for (const raw of matches) {
-    let rel = String(raw).replace(/^["'`(]+|["'`)]+$/g, '').replace(/\\/g, '/');
-    if (rel.startsWith('http://') || rel.startsWith('https://') || rel.startsWith('//')) continue;
-    if (rel.includes('node_modules/') || rel.startsWith('.gm/') || rel.includes('/.gm/')) continue;
-    if (!isBrowserRelevantPath(rel, cwd)) continue;
-    if (seen.has(rel)) continue;
-    seen.add(rel);
-    const abs = path.isAbsolute(rel) ? rel : path.join(cwd, rel);
-    let st;
-    try { st = fs.statSync(abs); } catch (_) { continue; }
-    if (!st.isFile()) continue;
-    let hash = '';
-    try { hash = crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex').slice(0, 12); } catch (_) {}
-    const idx = list.findIndex(e => e && e.file === rel);
-    const entry = { file: rel, ts: Date.now(), hash, source_verb: verb, source_task: taskBase };
-    if (idx === -1) { list.push(entry); added++; } else { list[idx] = entry; }
-  }
-  if (added > 0) {
-    try { fs.mkdirSync(path.dirname(editsFile), { recursive: true }); fs.writeFileSync(editsFile, JSON.stringify(list)); } catch (_) {}
-    logEvent('plugkit', 'browser.edits-autorecorded', { verb, task: taskBase, files: list.slice(-added).map(e => e.file), added });
-  }
-}
 
 function logEvent(sub, event, fields) {
   if (process.env.GM_LOG_DISABLE) return;
@@ -3086,10 +3036,6 @@ async function runSpoolWatcher(instance, spoolDir) {
         try { _writeStatusBusy(360000); } catch (_) {}
       } else if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
         try { _writeStatusBusy(180000); } catch (_) {}
-      }
-
-      if (verb === 'memorize-fire' || verb === 'transition' || verb === 'prd-resolve' || verb === 'mutable-resolve') {
-        try { autoRecordBrowserEditsFromBody(body, process.cwd(), taskBase, verb); } catch (_) {}
       }
 
       let autoRecallPayload = null;
