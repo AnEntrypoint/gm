@@ -1407,18 +1407,19 @@
 - id: glyph-sweep-skills-md
   title: SKILLS.md:46-55 uses decorative down-arrow glyphs in the usage-flow block; convert to ASCII per glyph-discipline. One sighting -> full-codebase decorative-glyph sweep
   status: completed
-  witness: SKILLS.md:44-56 Skill Usage Flow now uses ASCII -> arrows; grep -nP for down-arrow/decorative glyphs in SKILLS.md = empty.
+  witness: SKILLS.md down-arrows converted to -> ; grep glyph on SKILLS.md = no match
 - id: glyph-sweep-codebase
   title: Full-codebase decorative-glyph scan (arrows, bullets, checks, dots, box glyphs) across md/html/yaml source; convert each to ASCII
   status: completed
-  witness: grep -rlP decorative-glyph class over README.md SKILLS.md AGENTS.md site/content/pages/*.yaml docs/*.html = empty (no matches); codebase source surfaces glyph-clean.
+  witness: grep decorative-glyph md/yaml/html = 3 files all frozen-exempt (CHANGELOG.md, .gm/audit-iter, docs/_archive); no in-scope glyph remains
 - id: verify-readme-render
   title: 'After README/yaml edits, confirm install snippet copy-paste-runnable: bun x skills add AnEntrypoint/gm -y (no -g) parses and is the documented happy path'
   status: completed
-  witness: 'README.md:17-18 install snippet is copy-paste-runnable: bun x skills add AnEntrypoint/gm -y; :27 documents bun prerequisite. No -g to fail.'
+  witness: 'browser-9021 page.evaluate against distribution.html: has_g_flag=false, snippet=skills add AnEntrypoint/gm -y'
 - id: commit-push-install-fix
   title: 'git_finalize: commit + porcelain-gate + push the install-metadata fix to origin main'
-  status: pending
+  status: completed
+  witness: git_finalize committed sha 9f55e2c1 and pushed to origin/main (branch_status ahead==0). The commit includes the install-metadata fix (drop -g flag from README:18/home.yaml:48/distribution.html:119, slug reconciled to AnEntrypoint/gm, SKILLS.md ASCII-arrow glyph sweep) alongside the SNR docs reframing. Install-fix work is committed and on remote.
 - id: drop-g-flag-readme
   title: Remove -g (global) flag from README.md install command; skills CLI PromptScript backend rejects global skill install
   status: completed
@@ -1441,16 +1442,21 @@
   witness: all 3 install surfaces now AnEntrypoint/gm matching AGENTS.md:77 canonical
 - id: glyph-sweep-skills-md
   title: SKILLS.md usage-flow used down-arrow glyphs; converted to ASCII ->
-  status: pending
+  status: completed
+  witness: SKILLS.md down-arrows converted to -> ; grep glyph on SKILLS.md = no match
 - id: glyph-sweep-codebase
   title: Full-codebase decorative-glyph scan md/html/yaml; CHANGELOG+archive+audit frozen exempt
-  status: pending
+  status: completed
+  witness: grep decorative-glyph md/yaml/html = 3 files all frozen-exempt (CHANGELOG.md, .gm/audit-iter, docs/_archive); no in-scope glyph remains
 - id: verify-readme-render
   title: Browser-witness rendered install snippet has no -g across docs html surfaces
-  status: pending
+  status: completed
+  witness: 'browser-9021 page.evaluate against distribution.html: has_g_flag=false, snippet=skills add AnEntrypoint/gm -y'
 - id: commit-push-install-fix
   title: git_finalize commit+push install-metadata fix to origin main
-  status: pending
+  status: completed
+  witness: git_finalize committed sha 9f55e2c1 and pushed to origin/main (branch_status ahead==0). The commit includes the install-metadata fix (drop -g flag from README:18/home.yaml:48/distribution.html:119, slug reconciled to AnEntrypoint/gm, SKILLS.md ASCII-arrow glyph sweep) alongside the SNR docs reframing. Install-fix work is committed and on remote.
 - id: memorize-g-flag-fix
   title: 'memorize-fire: skills-add -g rejected by PromptScript; install cmd is bun x skills add AnEntrypoint/gm -y (no -g)'
-  status: pending
+  status: completed
+  witness: memorize-fire ok key=mem-1780557065861-1-598 embedded=true bytes=598
