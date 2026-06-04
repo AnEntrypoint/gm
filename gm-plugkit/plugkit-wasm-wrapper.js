@@ -3472,78 +3472,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       applyUpdateCheckResult(installed, cached.latest, cached.status || 200);
       return;
     }
-    const req = https.get({
-      host: 'api.github.com',
-      path: '/repos/AnEntrypoint/plugkit-bin/releases/latest',
-      headers: { 'user-agent': 'plugkit-watcher', 'accept': 'application/json' },
-      timeout: 5000,
-    }, (res) => {
-      if (res.statusCode !== 200) {
-        res.resume();
-        writeSharedUpdateCache(null, res.statusCode);
-        applyUpdateCheckResult(installed, null, res.statusCode);
-        checkUpdateViaNpm(installed);
-        return;
-      }
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        try {
-          const rel = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-          const tag = rel && rel.tag_name;
-          if (!tag) return;
-          const latest = tag.replace(/^v/, '');
-          writeSharedUpdateCache(latest, 200);
-          if (latest === installed) {
-            try { fs.unlinkSync(UPDATE_AVAILABLE_PATH); } catch (_) {}
-            if (_lastKnownDrift) {
-              logEvent('plugkit', 'update.cleared', { installed, was: _lastKnownDrift });
-              _lastKnownDrift = null;
-            }
-            return;
-          }
-          const update_url = `https://github.com/AnEntrypoint/plugkit-bin/releases/tag/v${latest}`;
-          fs.writeFileSync(UPDATE_AVAILABLE_PATH, JSON.stringify({
-            installed,
-            latest,
-            checked_at_ms: Date.now(),
-            instruction: 'plugkit is out of date. Update with: bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool. A fresh boot downloads the new wasm and respawns; an in-place running watcher does not self-download.',
-            update_url,
-          }, null, 2));
-          console.log(`[update] available: installed=${installed} latest=${latest} -> wrote ${UPDATE_AVAILABLE_PATH}`);
-          if (_lastKnownDrift !== latest) {
-            logEvent('plugkit', 'update.available', { installed, latest, update_url });
-            _lastKnownDrift = latest;
-          }
-          // NOTE: do NOT bump the disk version file here to "arm" a drift-respawn. installedVersionAtTools()
-          // reads that file as the source of truth for the installed version; bumping it ahead of the actual
-          // wasm download makes ensureReady compute versionDrift=false (file==target) and isReady()=true, so it
-          // returns already-ready WITHOUT downloading the new binary -- while the running instance is still the
-          // old version. The drift-check then sees instance(old) != file(new) forever and self-respawns in an
-          // infinite loop, each respawn reloading the same old wasm. The version file must only advance AFTER
-          // a verified binary download (bootstrap's job). Auto-update stays notify-only until ensureReady gains
-          // a sha-verified force-download path; see PRD watcher-autoupdate-thrash-fix.
-        } catch (e) {
-          logUpdateCheckError({ error: String(e && e.message || e) });
-        }
-      });
-    });
-    let _checkErrored = false;
-    req.on('timeout', () => {
-      if (_checkErrored) { try { req.destroy(); } catch (_) {} return; }
-      _checkErrored = true;
-      try { req.destroy(); } catch (_) {}
-      writeSharedUpdateCache(null, -1);
-      logUpdateCheckError({ error: 'timeout' });
-      checkUpdateViaNpm(installed);
-    });
-    req.on('error', (e) => {
-      if (_checkErrored) return;
-      _checkErrored = true;
-      writeSharedUpdateCache(null, -2);
-      logUpdateCheckError({ error: String(e && e.message || e) });
-      checkUpdateViaNpm(installed);
-    });
+    checkUpdateViaNpm(installed);
   }
   setTimeout(checkForUpdate, 10_000);
   setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
@@ -3739,11 +3668,10 @@ async function selfHealFromGithubReleases() {
     });
     (async () => {
       try {
-        const rel = await fetchJson('https://api.github.com/repos/AnEntrypoint/plugkit-bin/releases/latest');
-        const tag = rel.tag_name;
-        if (!tag) throw new Error('no tag_name from GH Releases');
-        const version = tag.replace(/^v/, '');
-        const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/${tag}`;
+        const meta = await fetchJson('https://registry.npmjs.org/plugkit-wasm/latest');
+        const version = meta && meta.version;
+        if (!version) throw new Error('no version from npm plugkit-wasm');
+        const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
         const [wasm, sha] = await Promise.all([
           fetchBuf(`${base}/plugkit.wasm`),
           fetchBuf(`${base}/plugkit.wasm.sha256`).then(b => b.toString('utf-8').trim().split(/\s+/)[0]).catch(() => ''),
