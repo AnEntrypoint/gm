@@ -1,3 +1,0 @@
-## Resolved mutable: codeinsight-no-digest-resync
-
-CONFIRMED. code_index.rs (517 lines) contains zero digest/mtime/git-HEAD/dirty-marker storage or comparison (grep digest|stale|sync|mtime|HEAD = no matches in index/search logic). search() at code_index.rs:410 and codesearch verb at wasm_dispatch.rs:501 serve existing rows with no freshness check. This is the sync-before-emit violation. Fix tracked in PRD fix-codeinsight-digest-resync.
