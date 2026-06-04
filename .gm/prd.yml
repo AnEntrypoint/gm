@@ -1462,7 +1462,8 @@
   witness: memorize-fire ok key=mem-1780557065861-1-598 embedded=true bytes=598
 - id: rootcause-promptscript-no-globaldir
   title: 'ROOT CAUSE: vercel-labs/skills src/agents.ts promptscript agent has globalSkillsDir:undefined + showInUniversalPrompt:false; -g install rejected when PromptScript is the detected/selected target. Detection: cwd has .promptscript or promptscript.yaml. Upstream repo, not gm-skill.'
-  status: pending
+  status: completed
+  witness: 'vercel-labs/skills src/agents.ts:664 globalSkillsDir:undefined for promptscript; confirmed via raw fetch of agents.ts. Real cause: add.ts runAdd auto-includes promptscript (universal) under AI-host detection, -g rejects its undefined global dir.'
 - id: determine-promptscript-detection-on-user-machine
   title: 'Determine why PromptScript is selected on user machine: check for .promptscript/promptscript.yaml in install cwd, or whether skills CLI auto-picks promptscript under -y'
   status: completed
@@ -1473,7 +1474,8 @@
   witness: 'Superseded: user explicitly does NOT want --agent claude-code pinning; bare -g -y must work. Path rejected as approach.'
 - id: upstream-pr-promptscript-globaldir
   title: 'Optional upstream fix: PR to vercel-labs/skills adding globalSkillsDir for promptscript (e.g. ~/.promptscript/skills). External repo, blockedBy unless user owns it.'
-  status: pending
+  status: completed
+  witness: 'PR opened live: https://github.com/vercel-labs/skills/pull/1365 (lanmower:fix/promptscript-global-skills-dir -> vercel-labs/skills main), changes line 664 to join(configHome,agents/skills).'
 - id: update-docs-global-install-correct-agent
   title: Update README/home.yaml/distribution.html install docs to show the working global form with explicit --agent claude-code (or restore -g with the agent flag)
   status: completed
@@ -1544,10 +1546,12 @@
   witness: 'git_finalize committed sha df697328 and pushed to origin/main. Full glyph sweep landed: docs/*.html, AGENTS.md, SKILL.md, SKILLS.md, prompts/*, agents/*, README, CHANGELOG, shipped JS all glyph-clean (29 files).'
 - id: upstream-pr-promptscript-globaldir-bare-g
   title: 'DECISION: user wants bare -g -y to work, NOT --agent-pinned. Fix is upstream PR to vercel-labs/skills src/agents.ts giving promptscript a globalSkillsDir so it stops throwing PromptScript-does-not-support-global. Install still succeeds (universal .agents/skills installs); only promptscript target errors.'
-  status: pending
+  status: completed
+  witness: 'PR #1365 makes bare -g -y resolve promptscript to the universal global dir, killing the error without --agent pinning. Patch writeup at upstream-patches/vercel-labs-skills-promptscript-globaldir.md.'
 - id: restore-g-flag-docs
   title: 'Revert prior -g removal: restore bare -g -y in README/home.yaml/distribution.html since user wants global; first-session -g drop was wrong premise'
-  status: pending
+  status: completed
+  witness: README.md:18 bun x skills add AnEntrypoint/gm -y -g (user-confirmed live); home.yaml:48 -y -g + globally comment; distribution.html:119 -y -g; browser-9170 page eval confirms distribution snippet bun x skills add AnEntrypoint/gm -y -g.
 - id: determine-correct-antigravity-paths
   title: 'Determine correct global skill dirs for antigravity + antigravity-cli (current upstream: ~/.gemini/antigravity/skills and ~/.gemini/antigravity-cli/skills). Verify against real Antigravity install layout before PR.'
   status: completed
