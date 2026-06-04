@@ -1700,3 +1700,7 @@
   title: 'VALIDATE IN PRACTICE: digest-stability fix (plugkit-wasm 0.1.635, gm.json plugkitVersion=0.1.635, rs-plugkit 6ecb553) LIVE. Last codeinsight_rebuild ts 1780599570121 digest fdf6c20:0 (HEAD-change, porcelain crc=:0 proving .gm excluded). NO rebuild since despite this session .gm churn - the multi-minute thrash is eliminated durably. Prior fix proven working.'
   witness: watcher.log last codeinsight_rebuild fdf6c20...:0 (HEAD-change, porcelain crc :0 = .gm excluded), no rebuild since despite .gm churn this session. gm.json plugkitVersion=0.1.635, rs-plugkit head 6ecb553. Thrash eliminated, validated live.
   status: completed
+- id: true-zero-deviation-verdict
+  title: '30m verdict: TRUE ZERO-DEVIATION clean fire for gm/rs-*. gmsniff 30m: zero deviation.* tokens (deviations_30m=0). ccsniff git/continuation/glyph/search ALL 0 gm-flags. All 6 repos porcelain=0 ahead=0 (gm 591fbe09, rs-plugkit 6ecb553, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804). Both prior fixes holding: edits ledger EMPTY (recorder fix), last codeinsight_rebuild fdf6c20:0 HEAD-change-only with no thrash (digest fix). Second consecutive clean steady-state fire, first with TRUE zero deviations. No corrections needed - operational-perfection target met.'
+  witness: gmsniff --since 30m deviation tokens EMPTY; ccsniff git/continuation/glyph/search 0 gm-flags each; 6 repos porcelain=0 ahead=0; edits ledger empty; last rebuild fdf6c20:0 HEAD-change no thrash. TRUE zero-deviation, both fixes holding, nothing to correct.
+  status: completed
