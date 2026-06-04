@@ -120,14 +120,14 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 
 <div class="title-block">
   <h1>The Complete Discipline: Lifecycle Control,<br>Governance, and Operational Hard Rules<br>for LLM Coding Agents</h1>
-  <div class="author">AnEntrypoint</div>
-  <div class="date">May 2026 - the complete discipline, in one document</div>
+  <div class="author">AnEntrypoint &middot; gm (glootius maximus)</div>
+  <div class="date">May 2026 - the complete discipline, in one document, oriented end to end at agentic signal-to-noise</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. This paper consolidates the gm discipline into a single document. We describe the phase-gated state machine (PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic work performed by the agent itself (agent-as-LLM) fanned out as parallel spool dispatches. Together these form a complete behavioral envelope for coding agents, packaged as a single wasm-backed skill shipped on npm.
+    LLM-based coding agents exhibit failure modes that self-regulation cannot fix: silent assumption propagation, state drift, memory loss, premature closure, and fabricated outputs presented as results. Read as one phenomenon, these are all <em>noise</em> injected into the channel between the request and the shipped result, and the single quantity this discipline exists to raise is the agent's signal-to-noise ratio (SNR): the fraction of every token, every action, and every emitted result that is genuine progress toward the ask rather than drift around it. gm (glootius maximus) is the accumulation of 14000+ hours of supervised modification spent on exactly that target, and its companion goal, token austerity, is the same target enforced at the budget: a token spent on narration, hedging, or busy-output is noise, so the cheapest tokens are the ones never spent. This paper consolidates that discipline into a single document; each section below is a mechanism for removing one class of noise, and the framing is stated here once so the sections need not repeat it. We describe the phase-gated state machine (PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE), the named-mutable and witnessed-execution framework, the in-phase quality discipline, the governance layer with its route families and quality metrics, and the second-generation rules that emerged from production use: Maximal Cover, bounded autonomy, the learning loop, and the execution budget model. We also document operational hard rules absent from earlier papers: Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, the ORIENT discipline, and the single integration test policy. A third generation of rules covers the dispatch boundary itself: the spool surface as universal execution channel, the mutables file as externally-enforced unknown-tracking, discipline isolation via the <code>@</code>sigil, daemonize-by-default exec semantics, throw-not-mutate hook denials, CI-as-build for cross-platform witness, the residual-scan stop gate, and semantic work performed by the agent itself (agent-as-LLM) fanned out as parallel spool dispatches. Together these form a complete behavioral envelope for coding agents, packaged as a single wasm-backed skill shipped on npm.
   </div>
 </div>
 
@@ -190,21 +190,23 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 
 <h2 id="s1">1. Introduction</h2>
 
-<p>LLM-based coding agents, systems that autonomously write, test, and deploy software, have become increasingly capable, but their reliability remains uneven. In our experience maintaining a single-skill agent harness (<code>gm-skill</code>, npm-published, wasm-backed) loaded across every Claude-style skill host, we have observed three primary failure categories:</p>
+<p>LLM-based coding agents, systems that autonomously write, test, and deploy software, have become increasingly capable, but their reliability remains uneven. In our experience maintaining a single-skill agent harness (<code>gm-skill</code>, npm-published, wasm-backed) loaded across every Claude-style skill host, we have observed three primary failure categories. Each is best understood as a distinct source of noise on the channel between the user's intent and the delivered software; naming them this way is what lets the rest of the paper treat every rule as a denoising step:</p>
 
 <ol>
-  <li><strong>Assumption propagation:</strong> Agents narrate hypotheses about code behavior without verifying them, producing cascading errors when assumptions prove false.</li>
-  <li><strong>State amnesia:</strong> Multi-step tasks lose coherence as context windows fill, with agents forgetting earlier decisions or re-solving solved subproblems.</li>
-  <li><strong>Premature closure:</strong> Agents declare work done before conditions are met, ship placeholders as results, skip verification steps, or stop short of the full scope of a request.</li>
+  <li><strong>Assumption propagation:</strong> Agents narrate hypotheses about code behavior without verifying them, producing cascading errors when assumptions prove false. This is noise that masquerades as signal, an unverified claim carries the same surface form as a witnessed one.</li>
+  <li><strong>State amnesia:</strong> Multi-step tasks lose coherence as context windows fill, with agents forgetting earlier decisions or re-solving solved subproblems. This is signal lost to a leaky channel, the decision was made and then dropped.</li>
+  <li><strong>Premature closure:</strong> Agents declare work done before conditions are met, ship placeholders as results, skip verification steps, or stop short of the full scope of a request. This is the channel cutting out before the message finishes, the most expensive noise because it reads as completion.</li>
 </ol>
 
-<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts. External behavioral enforcement, the spool-dispatch gate below the agent&rsquo;s decision layer, marker-file stop barriers, orchestrator-enforced phase transitions, and hard rules served by the wasm <code>instruction</code> verb, is the only reliable mitigation.<sup><a href="#r8">8</a>,<a href="#r9">9</a></sup> Recent empirical studies of agentic failure across multi-agent frameworks and tool-use benchmarks converge on the same diagnosis: premature termination, assumption propagation, and over-helpful substitution are dominant under unrestricted self-regulation, and constrained-pipeline alternatives outperform free-form agents on real software-engineering workloads.<sup><a href="#r7">7</a>,<a href="#r3">3</a></sup></p>
+<p>Self-regulation fails against these patterns because the same model that reasons through a problem also reasons through the justification for shortcuts, so it cannot reliably denoise its own output: the faculty that would catch the noise is the same one producing it. External behavioral enforcement, the spool-dispatch gate below the agent&rsquo;s decision layer, marker-file stop barriers, orchestrator-enforced phase transitions, and hard rules served by the wasm <code>instruction</code> verb, is the only reliable mitigation.<sup><a href="#r8">8</a>,<a href="#r9">9</a></sup> Recent empirical studies of agentic failure across multi-agent frameworks and tool-use benchmarks converge on the same diagnosis: premature termination, assumption propagation, and over-helpful substitution are dominant under unrestricted self-regulation, and constrained-pipeline alternatives outperform free-form agents on real software-engineering workloads.<sup><a href="#r7">7</a>,<a href="#r3">3</a></sup></p>
 
-<p>This paper is the complete reference for the gm discipline as it stands in production. Sections 2&ndash;8 cover the lifecycle model. Sections 9&ndash;12 cover the in-phase quality discipline. Sections 13&ndash;16 cover the governance layer. Sections 17&ndash;20 cover the autonomy and scope rules. Sections 21&ndash;29 cover operational hard rules. Sections 30&ndash;37 cover the dispatch-boundary rules that move the discipline out of the agent's context window onto disk and through the spool-dispatch gate.</p>
+<p>This paper is the complete reference for the gm discipline as it stands in production. The reader can hold a single lens across all of it: every section describes a mechanism that either suppresses one of the three noise sources above or preserves signal that would otherwise be lost, and the catalogue is what 14000+ hours of supervised modification converged on. Sections 2&ndash;8 cover the lifecycle model. Sections 9&ndash;12 cover the in-phase quality discipline. Sections 13&ndash;16 cover the governance layer. Sections 17&ndash;20 cover the autonomy and scope rules. Sections 21&ndash;29 cover operational hard rules. Sections 30&ndash;37 cover the dispatch-boundary rules that move the discipline out of the agent's context window onto disk and through the spool-dispatch gate.</p>
 
 <hr>
 
 <h2 id="s2">2. The State Machine Model</h2>
+
+<p>The lifecycle exists to suppress the loudest noise an agent makes: acting before it knows, and stopping before it is done. Forward gates are conjunctive so progress carries only resolved facts; backward snakes return on every surprise so workarounds never accumulate. The phase you are in is the phase you last transitioned to, never the one your narration implies.</p>
 
 <pre class="mermaid">
 stateDiagram-v2
@@ -249,6 +251,8 @@ stateDiagram-v2
 
 <h2 id="s3">3. The Mutable Discipline</h2>
 
+<p>An unverified assumption is noise wearing the costume of fact: it reads exactly like a witnessed value until it fails downstream. The mutable discipline strips the costume by refusing to let any unknown pass as known until real execution has assigned it.</p>
+
 <h3>3.1 Named Unknowns</h3>
 <p>A <em>named mutable</em> is every unknown fact needed to make a decision or write code, explicitly named before action is taken. A mutable has a name, an expected value, a current value (initially UNKNOWN), and a resolution method. The agent does not proceed past an unresolved mutable.</p>
 
@@ -274,6 +278,8 @@ stateDiagram-v2
 
 <h2 id="s4">4. Work Item Management: The PRD</h2>
 
+<p>Scope drift, delivering a convenient slice and calling the remainder follow-up, is signal lost between request and result. The PRD makes the full ask durable on disk so nothing the user wanted can quietly fall off the channel; an item left pending is an unfinished message, not a closed one.</p>
+
 <h3>4.1 Structure</h3>
 <p>The system tracks work through a <code>.gm/prd.yml</code> file. Each item carries an id, imperative subject, status (pending -&gt; in_progress -&gt; completed), acceptance criteria, edge cases, bidirectional dependency links, effort estimates, route family tag, and load score (0.0&ndash;1.0: consequence weight). Writing the PRD is mandatory for any task touching more than one line in one file.</p>
 
@@ -293,6 +299,8 @@ stateDiagram-v2
 <hr>
 
 <h2 id="s5">5. Cross-Session Memory Architecture</h2>
+
+<p>A context window is a lossy channel: as it fills, earlier signal drops out, and a re-solved subproblem is the same answer transmitted twice. Persistent memory is the error-correcting store that keeps resolved signal across the session boundary, while the exclusion and verification rules below keep stale entries from re-entering as noise.</p>
 
 <h3>5.1 Memory Types</h3>
 <p>The system implements file-based persistent memory with four semantic types:</p>
@@ -317,6 +325,8 @@ stateDiagram-v2
 <hr>
 
 <h2 id="s6">6. Implementation: The gm Orchestrator</h2>
+
+<p>Enforcement that lives in the agent's own context is enforcement the agent can reason its way around, the noise source editing its own filter. The orchestrator moves every gate below the decision layer, onto disk and into the wasm verb surface, so the denoising happens whether or not the model cooperates.</p>
 
 <h3>6.1 Single-Skill Architecture</h3>
 <p>There is one published skill: <code>gm-skill</code>. Its <code>SKILL.md</code> body is roughly twelve lines and contains no phase prose; it instructs the agent to dispatch the <code>instruction</code> verb through the spool on every turn. Every phase&rsquo;s imperative content is generated by the orchestrator at call time. The earlier multi-skill chain (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing) is gone, its behaviors are now properties of the <code>instruction</code> response and the verb dispatch surface.</p>
@@ -345,7 +355,7 @@ stateDiagram-v2
 
 <h2 id="s7">7. Constraint Tiers</h2>
 
-<p>The framework defines four tiers of constraints with decreasing severity:</p>
+<p>The tiers rank constraints by how much noise their violation admits: Tier 0 breaches corrupt the channel outright, while Tier 3 breaches only lower signal density. The framework defines four tiers of constraints with decreasing severity:</p>
 <dl>
   <dt>Tier 0 (Absolute):</dt><dd><code>no_crash</code>, <code>no_exit</code>, <code>ground_truth_only</code>, <code>real_execution</code>, enforced by the spool-dispatch gate, cannot be overridden</dd>
   <dt>Tier 1 (Quality):</dt><dd><code>max_file_lines=200</code>, <code>hot_reloadable</code>, <code>checkpoint_state</code></dd>
@@ -357,13 +367,15 @@ stateDiagram-v2
 
 <h2 id="s8">8. Pre-Emit Verification Protocol</h2>
 
-<p>The EMIT phase implements two-stage verification. <strong>Pre-emit:</strong> the agent imports the target module, runs proposed logic in-memory with real and error inputs, records expected outputs, and verifies all gate conditions hold simultaneously. Only then does it write to disk.</p>
+<p>A file that looks right in memory but fails from disk is fabrication, the highest-cost noise because it ships with a green check. Two-stage verification closes that gap by re-reading the actual artifact and comparing exact output before the work is allowed to count. The EMIT phase implements two-stage verification. <strong>Pre-emit:</strong> the agent imports the target module, runs proposed logic in-memory with real and error inputs, records expected outputs, and verifies all gate conditions hold simultaneously. Only then does it write to disk.</p>
 
 <p><strong>Post-emit:</strong> the agent re-imports the actual file from disk (not in-memory), runs identical inputs, and compares output exactly. Known variance triggers fix-and-reverify; unknown variance triggers a snake to PLAN. This catches errors that test-after-write approaches miss: serialization bugs, import resolution differences, and file system race conditions.</p>
 
 <hr>
 
 <h2 id="s9">9. In-Phase Quality: The Search and Code Discipline</h2>
+
+<p>Two agents can reach the same correct answer with wildly different signal density: one greps blind and re-derives what the project already knew, the other recalls it in a single hit. This discipline keeps the search grounded and the code structural so the path to the answer carries as little wasted motion as the answer itself.</p>
 
 <h3>9.1 Codebase Search Protocol</h3>
 <p>Before naming any unknown as absent, the agent must conduct a minimum search campaign:</p>
@@ -388,13 +400,15 @@ stateDiagram-v2
 
 <h2 id="s10">10. Structural Parallelism and Wave Execution</h2>
 
-<p>Independent work items are never executed sequentially. The wave discipline: identify all pending items whose dependencies are satisfied, launch up to 3 parallel subagents in one message using <code>Promise.allSettled</code>, collect results, then evaluate the next wave. Each idea gets its own try/catch block. Wave execution completes the entire PRD covering family; the agent does not stop after any single wave to ask which item is next.</p>
+<p>Serializing independent work is dead air on the channel, wall-clock spent transmitting nothing. The wave discipline fills it: independent work items are never executed sequentially. The wave discipline: identify all pending items whose dependencies are satisfied, launch up to 3 parallel subagents in one message using <code>Promise.allSettled</code>, collect results, then evaluate the next wave. Each idea gets its own try/catch block. Wave execution completes the entire PRD covering family; the agent does not stop after any single wave to ask which item is next.</p>
 
 <p>The only serialization constraint is the browser: <code>exec:browser</code> tasks do not parallelize (shared Chromium instance). All other execution is fair game for the wave model.</p>
 
 <hr>
 
 <h2 id="s11">11. Permanent Observability</h2>
+
+<p>You cannot reduce noise you cannot measure. Observability is the instrument that makes the channel legible, every subsystem queryable without a restart, so drift is read off a structured endpoint instead of guessed at from rendered output.</p>
 
 <h3>11.1 Mandatory Enumeration</h3>
 <p>On every planning iteration, the agent must enumerate every subsystem that lacks a permanent queryable inspection endpoint and add a PRD item to address each gap. The planning skill exits only when this enumeration pass produces zero gaps.</p>
@@ -412,7 +426,7 @@ stateDiagram-v2
 
 <h2 id="s12">12. The Memorize Sub-Agent</h2>
 
-<p>Every unknown-to-known transition triggers a background memorize dispatch in the same turn it resolves. The pattern is a spool verb dispatch:</p>
+<p>Signal earned once should never be paid for twice. Memorize is the write half of the loop that keeps a resolved fact available to every later session instead of letting it decay back into an unknown. Every unknown-to-known transition triggers a background memorize dispatch in the same turn it resolves. The pattern is a spool verb dispatch:</p>
 <pre><code>write .gm/exec-spool/in/memorize-fire/&lt;N&gt;.txt
   body: "&lt;fact&gt;"
 read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
@@ -424,6 +438,8 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <hr>
 
 <h2 id="s13">13. Governance Layer</h2>
+
+<p>The governance layer is where the discipline becomes measurable: route families, state planes, and refused collapses turn "less noise" from an aspiration into a set of detection tests a transition either passes or fails. What the lifecycle suppresses by construction, governance verifies by instrument.</p>
 
 <h3>13.1 Seven Route Families</h3>
 <p>Every PRD item is tagged with one of seven route families that determine which quality constraints apply:</p>
@@ -474,7 +490,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <h2 id="s15">15. Failure Taxonomy</h2>
 
-<p>Sixteen failure modes are catalogued across four categories. Every PLAN pass cross-references this taxonomy against each PRD item:</p>
+<p>This taxonomy is the noise catalogue, every entry a specific way an agent injects error or drops signal, and every rule elsewhere in the paper maps to suppressing one of them. Sixteen failure modes are catalogued across four categories. Every PLAN pass cross-references this taxonomy against each PRD item:</p>
 
 <h3>Grounding Failures</h3>
 <ol>
@@ -541,7 +557,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>Enforcement: committed work + named out-of-spirit residuals must equal the witnessable closure of the request. Gap = cover not maximal -&gt; re-enter planning.</p>
 </div>
 
-<p>The Maximal Cover obligation emerges from recognizing that scope-exceeds-reach is not a stopping condition; it is a planning condition. The covering family is the plan. Stopping at one slice is the same as refusing, both leave witnessable work unexecuted, both are forced closure. Recent controlled experiments quantify the structural bias the rule corrects: LLMs systematically omit required sections, undershoot length requirements, and substitute minimum-viable outputs for the full ask, laziness is measurable, not anecdotal.<sup><a href="#r17">17</a></sup></p>
+<p>A dropped requirement is the quietest noise there is: it leaves no error and no red test, only a result that silently fails to be what was asked. Maximal Cover is the rule that hunts it. The Maximal Cover obligation emerges from recognizing that scope-exceeds-reach is not a stopping condition; it is a planning condition. The covering family is the plan. Stopping at one slice is the same as refusing, both leave witnessable work unexecuted, both are forced closure. Recent controlled experiments quantify the structural bias the rule corrects: LLMs systematically omit required sections, undershoot length requirements, and substitute minimum-viable outputs for the full ask, laziness is measurable, not anecdotal.<sup><a href="#r17">17</a></sup></p>
 
 <hr>
 
@@ -556,13 +572,13 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p><code>exec:pause</code> interaction with the stop checkpoint: when the agent issues <code>exec:pause</code>, the PRD is renamed to <code>prd.paused.yml</code>. The stop gate&rsquo;s PRD-completeness check reads <code>.gm/prd.yml</code> and finds no live PRD, so the session may close normally. On the next session-start bootstrap, <code>skill-bootstrap.js</code> detects <code>prd.paused.yml</code> without a live <code>prd.yml</code> and renames it back, resuming where the agent paused. There is no hook-timeout race because the rename is a synchronous file operation completed before stop is attempted.</p>
 </div>
 
-<p>The asking-cost principle: asking always costs at least one round trip. The agent that asks a question answerable via tools has transferred work to the user that belongs to the agent. The accumulated asking tax across a session, five questions each costing the user 30 seconds of context reconstruction, is a form of quality failure as real as a broken test.</p>
+<p>A question the agent could answer itself is noise pushed onto the user, and the round trip it costs is signal the session never spends on the work. The asking-cost principle: asking always costs at least one round trip. The agent that asks a question answerable via tools has transferred work to the user that belongs to the agent. The accumulated asking tax across a session, five questions each costing the user 30 seconds of context reconstruction, is a form of quality failure as real as a broken test.</p>
 
 <hr>
 
 <h2 id="s19">19. The Learning Loop</h2>
 
-<p>The learning loop consists of two operations that must both fire to function:</p>
+<p>The learning loop is the one mechanism that improves the ratio over time rather than holding it: every fact recalled instead of re-derived is discovery cost not paid again, so the system grows quieter the longer it runs. The learning loop consists of two operations that must both fire to function:</p>
 
 <h3>19.1 Recall (Read)</h3>
 <p>Before resolving any unknown via fresh execution, check past sessions. The recall operation:</p>
@@ -580,7 +596,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <h2 id="s20">20. Execution Budget Model</h2>
 
-<p>Every <code>exec_js</code> dispatch operates within a two-layer budget:</p>
+<p>The budget model is token austerity made literal at the execution layer: a mandatory per-call ceiling means no dispatch can spend unbounded resource producing nothing, and a timed-out call returns its partial signal rather than hanging the channel. Every <code>exec_js</code> dispatch operates within a two-layer budget:</p>
 <ol>
   <li><strong>Dispatch layer:</strong> <code>timeoutMs</code> field mandatory in the request body; the wasm host hard-rejects missing or zero values</li>
   <li><strong>Host layer:</strong> <code>child_process.spawnSync</code> with a timeout argument; on timeout, partial streamed output is preserved and <code>timedOut: true</code> lands on the response sidecar</li>
@@ -601,11 +617,13 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>ORIENT is free relative to the duplicated discovery and disagree-with-prior-witness risk it prevents. Its cost equals the cost of skipping it, because the skipping agent will eventually run the same searches; it just does so later, after having already named unknowns that may be stale.</p>
 </div>
 
-<p>The ORIENT discipline formalizes a pre-planning reconnaissance phase. Before the agent names any unknown as absent, it must have searched for it. Before the agent designs an abstraction, it must have checked whether one exists. The parallel pack ensures this reconnaissance runs at maximum speed and does not serialize the planning phase unnecessarily.</p>
+<p>ORIENT front-loads signal: it pulls what the project already knows to the start of planning, so the unknowns the agent names are genuinely fresh rather than facts it failed to look up. The ORIENT discipline formalizes a pre-planning reconnaissance phase. Before the agent names any unknown as absent, it must have searched for it. Before the agent designs an abstraction, it must have checked whether one exists. The parallel pack ensures this reconnaissance runs at maximum speed and does not serialize the planning phase unnecessarily.</p>
 
 <hr>
 
 <h2 id="s22">22. Fix on Sight</h2>
+
+<p>Jank accumulates as background hiss: each rough edge left standing is a small persistent corruption of the result, and a codebase of them reads as machine-shaped no matter how correct any single line is. Fix on Sight is the rule that refuses to let detected noise outlive the turn that found it.</p>
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
@@ -643,7 +661,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>This rule fires in EXECUTE (witness on edit), EMIT (post-emit verify), and VERIFY (final gate).</p>
 </div>
 
-<p>The browser witness rule closes the gap between &ldquo;the test passes&rdquo; and &ldquo;the feature works.&rdquo; A test that passes against a mock DOM cannot witness whether the live page renders the change correctly. The only authoritative evidence is the live page&rsquo;s own evaluation of the invariant.</p>
+<p>A passing test against a mock DOM is a confident signal about nothing, the highest-noise outcome an agent can produce, because it certifies a result no one verified. Browser Witness replaces it with the live page's own evaluation. The browser witness rule closes the gap between &ldquo;the test passes&rdquo; and &ldquo;the feature works.&rdquo; A test that passes against a mock DOM cannot witness whether the live page renders the change correctly. The only authoritative evidence is the live page&rsquo;s own evaluation of the invariant.</p>
 
 <h3>23.1 The Live Page Is the Debugger</h3>
 <p>Client-side debugging exposes globals on the page and runs experiments <em>in</em> the browser through <code>page.evaluate</code>, rather than blind experimentation paired with continuous server restarts. The restart-and-eyeball loop observes almost nothing per cycle and burns a turn each time; a global plus a <code>page.evaluate</code> reads the actual live state in a single dispatch and runs the experiment against the real runtime. When a client behavior is unclear, the move is to surface the relevant state as a <code>window.*</code> global, then evaluate it live, then assert against what the page actually holds, not to restart the server and guess from the rendered output. The live page is the debugger; the same surface that witnesses an edit (§23) also diagnoses it.</p>
@@ -660,7 +678,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>Stub detection is behavioral, not by keyword: code paths that always succeed, always return the same value regardless of input, or short-circuit a real call to satisfy a type signature are stubs. Comments asserting realness do not make code real.</p>
 </div>
 
-<p>The Nothing Fake rule is the execution-layer complement to the witnessed-execution principle: witnessed execution requires real code to run; Nothing Fake prohibits shipping code that passes witnessing through deception. Together they close the loop: you cannot fabricate a witness, and you cannot ship fabricated code past a witness.</p>
+<p>A stub that ships is pure noise transmitted with maximum confidence: it returns a clean value, passes its check, and means nothing. Nothing Fake is the rule that this noise is never admissible in shipped source. The Nothing Fake rule is the execution-layer complement to the witnessed-execution principle: witnessed execution requires real code to run; Nothing Fake prohibits shipping code that passes witnessing through deception. Together they close the loop: you cannot fabricate a witness, and you cannot ship fabricated code past a witness.</p>
 
 <hr>
 
@@ -735,7 +753,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>The git surface is the clearest case for verb-over-shell. Closing a session used to cost four-plus separate Bash tool-use events &mdash; a porcelain probe, an add, a commit, a push &mdash; each a distinct round-trip the agent had to sequence correctly, with the porcelain-witness discipline (§ the push gate) riding on the agent remembering to make the probe its own event. <code>git_finalize {message}</code> collapses that into one dispatch: it stages all, commits with the supplied message, re-checks the porcelain to refuse a push over a still-dirty tree, then pushes with rebase-retry, emitting a <code>git.commit</code> and <code>git.push</code> witness along the way. Four-plus turns become one, the porcelain gate is internal and unforgettable, and the whole flow is visible in the dispatch ledger rather than scattered across shell history. The inspect verbs (<code>git_status</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, <code>git_branch</code>) and the granular mutators (<code>git_add</code>, <code>git_commit</code>, <code>git_checkout</code>, <code>git_fetch</code>, <code>git_rm</code>, <code>git_revert</code>, <code>git_reset</code>) cover the rest, so the agent never needs raw <code>git</code>. All route through a single <code>host_git</code> import that resolves <code>git</code> to its <code>.exe</code> (so a Windows <code>.cmd</code> shim cannot defeat <code>windowsHide</code> and flash a terminal) and accepts a JSON argv array (so a multi-word commit message survives intact instead of being shattered by whitespace-splitting). The motivation is the same that drives the whole spool: a capability the agent reaches for through a verb is auditable, gated, and portable; the same capability reached for through the shell is none of those.</p>
 
-<p>The spool exists because tool args are ephemeral and inline. They live for the duration of one call, do not survive compaction, are not replayable, and cannot be inspected without re-running the agent. A file-based surface inverts every one of these properties: the request lives on disk before the watcher reads it, the watcher is detached from the agent process, and the output triplet (<code>.out</code>, <code>.err</code>, <code>.json</code>) is auditable after the fact by any tool that can read a directory.</p>
+<p>Moving every dispatch onto disk is what makes the channel legible: a request that survives compaction, a response auditable after the fact, and a ledger that distinguishes work the agent actually did from work it merely narrated, the single sharpest cut between signal and noise in the whole system. The spool exists because tool args are ephemeral and inline. They live for the duration of one call, do not survive compaction, are not replayable, and cannot be inspected without re-running the agent. A file-based surface inverts every one of these properties: the request lives on disk before the watcher reads it, the watcher is detached from the agent process, and the output triplet (<code>.out</code>, <code>.err</code>, <code>.json</code>) is auditable after the fact by any tool that can read a directory.</p>
 
 <p>The three-file output shape maps to the agent&rsquo;s three needs. <code>.out</code> is the live stdout stream, written line-by-line as the task runs. <code>.err</code> is the separate stderr channel, mixing them collapses the distinction between &ldquo;result&rdquo; and &ldquo;diagnostic,&rdquo; which leads to ambiguous downstream parsing. <code>.json</code> is the metadata sidecar written once at completion: <code>exitCode</code>, <code>durationMs</code>, <code>timedOut</code>, <code>startedAt</code>, <code>endedAt</code>. The metadata file is what tells the agent whether the task ended cleanly, was killed for budget, or is still running; the streams alone cannot answer that.</p>
 
@@ -838,7 +856,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>Any task whose correctness depends on understanding, summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same, is the agent's own inline judgment, not a separate model call. plugkit is the harness and the agent IS the model it dispatched, so each semantic decision is the agent deciding on the spot from the current situation. When the work is many independent items, fan them out as N parallel spool dispatches in one message, one item per dispatch.</p>
 </div>
 
-<p>The split is between mechanics and meaning. Mechanics are operations whose correctness can be decided by a deterministic procedure: parse this JSON, sort these strings, hash this file, count occurrences of a regex. Meaning is operations whose correctness depends on the model&rsquo;s understanding of language: does this commit message describe a bug fix or a feature, does this docstring contradict its function&rsquo;s behavior, are these two error messages saying the same thing in different words.</p>
+<p>A regex deciding a question of meaning is noise with a deterministic face: it terminates, returns a value, and that value has no relation to what was asked. Routing meaning to the agent's own judgment and mechanics to code keeps each engine on the work it actually carries signal for. The split is between mechanics and meaning. Mechanics are operations whose correctness can be decided by a deterministic procedure: parse this JSON, sort these strings, hash this file, count occurrences of a regex. Meaning is operations whose correctness depends on the model&rsquo;s understanding of language: does this commit message describe a bug fix or a feature, does this docstring contradict its function&rsquo;s behavior, are these two error messages saying the same thing in different words.</p>
 
 <p>Code does mechanics well and meaning badly. A keyword-list or regex-on-meaning-phrases loop deciding semantic questions ships a green check that lies, in the same way §24 Nothing Fake ships a green check that lies. The deterministic procedure looks right because it terminates and returns a value; the value is unrelated to the question the user actually asked.</p>
 
@@ -917,7 +935,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <h2 id="s43">43. Deviation Gates: Predictability Across LLMs</h2>
 
-<p>The discipline's promise is that the same project behaves the same way no matter which model drives it. That promise is kept not by trusting the model but by a small set of gates that refuse the disallowed dispatch and name the recovery. Each gate is a pure check over on-disk state, so it fires identically under any LLM and any harness: <code>long-gap-no-instruction</code> refuses a non-orienting verb dispatched more than five minutes after the last <code>instruction</code> and tells the agent to re-orient first; <code>complete-chain-poll</code> flags an agent that keeps dispatching <code>instruction</code> on an already-terminal chain instead of stopping; <code>push-dirty</code> refuses a push from an unclean worktree; <code>client-edit-no-witness</code> refuses the transition to COMPLETE while a client-side edit lacks its browser witness. The gate does not mutate the agent's command, it returns a refusal whose text is the next instruction, so a weaker model that would otherwise drift is steered the same way a stronger one steers itself.</p>
+<p>Predictability across models is the same target stated for the worst case: a weaker driver should land at the same signal-to-noise floor as a stronger one, because the gates, not the model, hold the line. The discipline's promise is that the same project behaves the same way no matter which model drives it. That promise is kept not by trusting the model but by a small set of gates that refuse the disallowed dispatch and name the recovery. Each gate is a pure check over on-disk state, so it fires identically under any LLM and any harness: <code>long-gap-no-instruction</code> refuses a non-orienting verb dispatched more than five minutes after the last <code>instruction</code> and tells the agent to re-orient first; <code>complete-chain-poll</code> flags an agent that keeps dispatching <code>instruction</code> on an already-terminal chain instead of stopping; <code>push-dirty</code> refuses a push from an unclean worktree; <code>client-edit-no-witness</code> refuses the transition to COMPLETE while a client-side edit lacks its browser witness. The gate does not mutate the agent's command, it returns a refusal whose text is the next instruction, so a weaker model that would otherwise drift is steered the same way a stronger one steers itself.</p>
 
 <p>A gate is only as good as its attribution: it must fire on the agent's mistakes and stay silent on the mechanism's own bookkeeping. Two refinements make the deviation count an honest signal rather than noise. First, the long-gap clock is reset whenever a fresh watcher boots, because a version upgrade kills the watcher, downloads a new artifact, and restarts, a multi-minute gap the agent did not cause; charging that gap to the agent's next dispatch would punish the upgrade, so the boot stamps the last-instruction timestamp to now. Second, the complete-chain-poll deviation fires only for a session-attributed dispatch, because the empty-body probes the cron and stop-hook machinery fire against a terminal chain are not an agent re-polling its own work; counting them inflated the deviation rate at every COMPLETE without reflecting any agent behavior. The principle generalizes: a deviation is an agent action that went off-discipline, and the gate must distinguish the agent's dispatches (which carry a session) from the harness's internal bookkeeping (which does not), or the predictability signal it produces is measuring the wrong thing.</p>
 
@@ -998,6 +1016,8 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>The discipline is not a set of aspirational guidelines. Every rule in this document is enforced either by the spool-dispatch gate running below the agent&rsquo;s decision layer, by file-based state the gate reads independently of the agent, or by hard-rule encoding in the orchestrator&rsquo;s <code>instruction</code> response that the agent cannot reason its way around. The agent&rsquo;s job is to execute within the envelope; the envelope&rsquo;s job is to prevent the agent from collapsing the discipline under the pressure of local optimality.</p>
 
 <p>Our experience operating a single-skill harness, <code>gm-skill</code>, one npm package, one wasm artifact, across every Claude-style host that can load a skill folder suggests that agent reliability depends substantially on lifecycle control, not just model capability. The marker-file architecture in particular suggests that reliability also depends on moving discipline-state out of the agent&rsquo;s memory and out of the host&rsquo;s event pump into externally-readable artifacts: a spool file, a mutables row, a stop-checkpoint marker, a CI run. The agent is a participant in the discipline, not the keeper of it; the host is its delivery surface, not its enforcer. We offer this body of work as a practical engineering artifact rather than a theoretical claim.</p>
+
+<p>Read as a whole, every rule above is one measure of the same quantity. gm (glootius maximus) is the accumulation of 14000+ hours of supervised modification spent raising a single number: the agent&rsquo;s signal-to-noise ratio, the fraction of every token and every action that is genuine progress toward what was asked rather than drift, fabrication, amnesia, or premature stop around it. Token austerity is that same target read at the budget, the cheapest signal is the noise never emitted. The phase gates, the witnessed mutables, the maximal cover, the continuation invariant, the spool ledger, and the deviation gates are not independent guidelines; they are the catalogue those hours converged on, each removing one class of noise from the channel between intent and shipped software. That orientation, stated once here and once at the outset, is the lens under which the entire document is meant to be read.</p>
 
 <div class="references">
   <h2 id="refs">References</h2>

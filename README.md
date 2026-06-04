@@ -2,18 +2,20 @@
 
 > **more coushin' for the puhin'**
 
-gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
+**glootius maximus** (gm) exists to raise one number: the signal-to-noise ratio (SNR) of a coding agent. every failure an agent commits, narrating an unverified guess, forgetting a decision, shipping a placeholder, stopping early, is noise injected into the channel between what you asked and what gets built. gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up." every rule in it is one more noise source removed.
+
+that orientation is also why gm is built for token austerity: every token an agent spends should be signal toward the work, never narration, hedging, or busy-output. austerity is SNR enforced at the budget.
 
 it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
-built over ~200 commits of daily use. free, open source, maintained by one person.
+built over 14000+ hours of supervised modification, across ~200 commits of daily use, every one of those hours spent tuning the same target: more agentic signal, less noise. free, open source, maintained by one person.
 
 disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, force you to push git before ending a session, and reject any execute call without an explicit timeout. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep sitting down.
 
 ## install
 
 ```
-bun x skills add AnEntrypoint/gm -y -g
+bun x skills add AnEntrypoint/gm -y
 ```
 
 then add this line to your agent's global memory / system prompt:
@@ -32,18 +34,18 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 
 ```
 gm/
-├── skills/gm-skill/   <- the skill (SKILL.md + index.js, ~12 lines of prose)
-├── bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
-├── lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
-├── agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
-├── prompts/           <- bash-deny, session-start, prompt-submit, pre-compact
-├── lang/              <- language packs (browser, ssh)
-├── gm-plugkit/        <- separate npm package that ships the wasm-wrapper
-├── gm.json            <- version + plugkit pin
-├── package.json       <- npm publish manifest
-├── AGENTS.md          <- architectural rules (present-tense, no history)
-├── CHANGELOG.md       <- release history
-└── site/              <- flatspace site source (built to dist/ by CI)
+|-- skills/gm-skill/   <- the skill (SKILL.md + index.js, ~12 lines of prose)
+|-- bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
+|-- lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
+|-- agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
+|-- prompts/           <- bash-deny, session-start, prompt-submit, pre-compact
+|-- lang/              <- language packs (browser, ssh)
+|-- gm-plugkit/        <- separate npm package that ships the wasm-wrapper
+|-- gm.json            <- version + plugkit pin
+|-- package.json       <- npm publish manifest
+|-- AGENTS.md          <- architectural rules (present-tense, no history)
+|-- CHANGELOG.md       <- release history
+`-- site/              <- flatspace site source (built to dist/ by CI)
 ```
 
 The two npm packages this repo publishes:

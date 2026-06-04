@@ -45,13 +45,13 @@ available_skills:
 
 ```
 1. Agent doesn't know which skills are needed for the task
-         ↓
+         ->
 2. Run the command above to get the available_skills list
-         ↓
+         ->
 3. Read the description fields to identify the right skill
-         ↓
+         ->
 4. Read the SKILL.md file at the skill's location path
-         ↓
+         ->
 5. Complete the task following the instructions in SKILL.md
 ```
 

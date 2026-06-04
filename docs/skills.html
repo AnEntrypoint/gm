@@ -62,7 +62,7 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    There is exactly one shipped skill: <code>gm-skill</code>. Its <code>SKILL.md</code> is roughly twelve lines and contains no phase prose. The state machine, <strong>PLAN -&gt; EXECUTE -&gt; EMIT -&gt; VERIFY -&gt; COMPLETE</strong>, lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    There is exactly one shipped skill: <code>gm-skill</code> (the harness of gm, glootius maximus). Its <code>SKILL.md</code> is roughly twelve lines and contains no phase prose, which is the point: a 12-line skill is maximal signal density, the smallest prose that elicits the whole discipline, every token in it load-bearing. The state machine, <strong>PLAN -&gt; EXECUTE -&gt; EMIT -&gt; VERIFY -&gt; COMPLETE</strong>, lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 

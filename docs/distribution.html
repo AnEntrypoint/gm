@@ -98,7 +98,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <div class="abstract-block">
   <div class="abstract-title">Thesis</div>
   <div class="abstract-text">
-    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> applies the same combination to coding-agent infrastructure: the user gets one npm package, <code>gm-skill</code>, whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The artifact&rsquo;s entire genealogy, every Rust crate, every workflow, every published wasm, is open source under one organization, one cascade, one push at a time.
+    A coding agent should install in one command and never need a build toolchain on the user&rsquo;s machine. It should also have no proprietary core: every artifact in the distribution must be built, in public, by CI, from source repositories anyone can fork. SQLite achieved this combination twenty-five years ago for an embedded database. <em>gm</em> (glootius maximus) applies the same combination to coding-agent infrastructure: the user gets one npm package, <code>gm-skill</code>, whose body is roughly twelve lines and whose engine is a single wasm module loaded under any Node-capable harness. The single-package, no-fanout shape is also a maintenance decision in the same spirit as the harness's token austerity, a smaller shipped surface is a smaller source of drift, so every part that does not need to ship does not ship. The artifact&rsquo;s entire genealogy, every Rust crate, every workflow, every published wasm, is open source under one organization, one cascade, one push at a time.
   </div>
 </div>
 
@@ -116,7 +116,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p class="first"><code>gm-skill</code> is one npm package. Any harness that can resolve a Claude-style skill folder installs it the same way:</p>
 
-<pre><code>bun x skills add AnEntrypoint/gm-skill -y -g</code></pre>
+<pre><code>bun x skills add AnEntrypoint/gm -y</code></pre>
 
 <p>Then add this line to your agent&rsquo;s global memory / system prompt:</p>
 
