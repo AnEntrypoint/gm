@@ -1419,7 +1419,7 @@
 - id: commit-push-install-fix
   title: 'git_finalize: commit + porcelain-gate + push the install-metadata fix to origin main'
   status: completed
-  witness: git_finalize committed sha 9f55e2c1 and pushed to origin/main (branch_status ahead==0). The commit includes the install-metadata fix (drop -g flag from README:18/home.yaml:48/distribution.html:119, slug reconciled to AnEntrypoint/gm, SKILLS.md ASCII-arrow glyph sweep) alongside the SNR docs reframing. Install-fix work is committed and on remote.
+  witness: git_finalize committed=true pushed=true sha=6d6dd620 branch=main
 - id: drop-g-flag-readme
   title: Remove -g (global) flag from README.md install command; skills CLI PromptScript backend rejects global skill install
   status: completed
@@ -1455,7 +1455,7 @@
 - id: commit-push-install-fix
   title: git_finalize commit+push install-metadata fix to origin main
   status: completed
-  witness: git_finalize committed sha 9f55e2c1 and pushed to origin/main (branch_status ahead==0). The commit includes the install-metadata fix (drop -g flag from README:18/home.yaml:48/distribution.html:119, slug reconciled to AnEntrypoint/gm, SKILLS.md ASCII-arrow glyph sweep) alongside the SNR docs reframing. Install-fix work is committed and on remote.
+  witness: git_finalize committed=true pushed=true sha=6d6dd620 branch=main
 - id: memorize-g-flag-fix
   title: 'memorize-fire: skills-add -g rejected by PromptScript; install cmd is bun x skills add AnEntrypoint/gm -y (no -g)'
   status: completed
