@@ -69,5 +69,6 @@ tmp/
 .gm/disciplines/codeinsight-vec/
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
+.claude/worktrees/*/.gm/
 # <<< plugkit managed
 .gm/pw-sock-*/
