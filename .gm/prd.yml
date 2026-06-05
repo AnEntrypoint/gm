@@ -1725,3 +1725,12 @@
   witness_evidence: git ls-files .claude/worktrees/agent-a78cca00a249fa70a/ = 3 tracked blobs (rs-learn.db/-shm/-wal); git worktree list grep a78cca = empty (orphan confirmed)
   status: completed
   witness: git rm -r --cached removed 3 orphan blobs (staged D in porcelain); .gitignore managed block now carries .claude/worktrees/*/.gm/ to block re-tracking; live worktrees unaffected (160000 gitlinks). audit-loop.js workflow validated in practice - caught real pollution on first run.
+- id: clean-fire-verdict-iter2-0814
+  title: '30m verdict (iter-loop 2 2026-06-05 ~08:14 watcher-tz): CLEAN STEADY-STATE for gm/rs-*. gmsniff 35m: 3 deviations ALL FOREIGN gate-positives (cwd-2638 long-gap-no-instruction codesearch gap~6.2min; cwd-6836 gate-deny stop-gate residuals=1 = NEW class for this foreign session, gate correctly refused a dirty-residual stop = predictability-regardless-of-LLM extending to stop-gate surface; cwd-f7c2 NEW foreign session mid-chain-stall EXECUTE prd_pending:4 idle~5.5min). Zero own-session (claude-loop). ccsniff 4 disciplines 0 gm-flags. All 6 repos porcelain=0 ahead=0 (gm 13cf87bc=my prior-fire commit live, rs-plugkit 6ecb553, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804).'
+  witness_evidence: 'gmsniff --since 35m: 3 deviation lines cwd-2638/6836/f7c2 all foreign; ccsniff 4x grep C--dev-gm empty; 6 repos porcelain=0 ahead=0 via git status --porcelain + rev-list'
+  status: completed
+- id: validate-gitignore-guard-live
+  title: 'VALIDATE IN PRACTICE: the .claude/worktrees/*/.gm/ managed-gitignore guard added in 495f690c (prior fire) actually prevents re-tracking orphan worktree DBs. Test: git check-ignore against a representative orphan path under .claude/worktrees/<any>/.gm/rs-learn.db must return the path (ignored). Confirms the prior commit functions as designed, not just that it was written.'
+  witness_evidence: pending
+  status: completed
+  witness: git check-ignore .claude/worktrees/agent-deadbeef00000000/.gm/rs-learn.db + .db-wal returned both paths exit=0 (matched/ignored). The 495f690c managed-gitignore guard .claude/worktrees/*/.gm/ functions as designed - future orphan worktree .gm DBs auto-ignored, pollution class prevented from recurring. Prior commit validated in practice.
