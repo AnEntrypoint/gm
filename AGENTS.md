@@ -188,11 +188,7 @@ Three persistent diagnostic files at `.gm/exec-spool/` root are updated by the r
 
 ## Site Build & Documentation
 
-**Navigation**: `site/content/globals/navigation.yaml` uses grouped entry format, each item is either `{label, href}` (single link) or `{label, group: [{label, href}, ...]}` (dropdown menu). Dropdowns render via `<details>/<summary>` through the flatspace `C.Topbar` primitive invoked in `site/theme.mjs`; no JS required. In-page topbars in docs/paper*.html et al. render directly on file open and must be kept in sync with the same markup.
-
-**Landing page renderer**: the deployed `/` route on https://anentrypoint.github.io/gm/ is rendered by `site/theme.mjs` from `site/content/pages/home.yaml` via flatspace. `site/index.html` + `site/main.js` build `docs/bundle.js` for non-flatspace standalone preview only. Landing edits go through `site/theme.mjs` (Hero) and `site/content/pages/home.yaml` (content), never `site/index.html`.
-
-**Mermaid render, generated docs/styles.css, and the docs/made-with.html static showcase** detail lives in rs-learn (`recall: gm site build details`).
+**Site build is single-surface detail in rs-learn** (`recall: gm site build details`): navigation.yaml grouped-entry format + flatspace `C.Topbar` dropdowns, the `site/theme.mjs`+`home.yaml` landing renderer (never `site/index.html`), in-page topbar sync, Mermaid render, generated `docs/styles.css`, and the `docs/made-with.html` showcase.
 
 
 @.gm/next-step.md
