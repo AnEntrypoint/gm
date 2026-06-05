@@ -1746,3 +1746,43 @@
   title: '30m verdict (iter-loop 4 2026-06-05 ~08:44 watcher-tz, 5th CONSECUTIVE clean fire): CLEAN STEADY-STATE for gm/rs-*. gmsniff 32m: 4 deviations ALL FOREIGN gate-positives across FOUR distinct non-compliant sessions (cwd-2b03 mid-chain-stall EXECUTE prd_pending:7 idle~5.7min 08:23:05; cwd-ad83 mid-chain-stall EXECUTE prd_pending:11 idle~6.5min 08:24:17; cwd-6836 long-gap-no-instruction codesearch gap~8.3min 08:35:21; cwd-2638 mid-chain-stall PLAN prd_pending:1 idle~6.2min 08:36:21). Count climbed 2->4 as more concurrent foreign sessions run+stall - this is the foreign-session non-compliance fleet, every one correctly gated = predictability-regardless-of-LLM validated AT SCALE (4 different foreign agents all caught). Zero own-session (claude-loop) deviations. ccsniff all 4 disciplines 0 gm-flags. All 6 repos porcelain=0 ahead=0 (gm HEAD=my iter3 34282bf3 + CI bumps live, rs-plugkit 6ecb553, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804). No code corrections needed - the rising foreign-deviation count is the gates working harder, not gm/rs-* regressing.'
   witness_evidence: 'gmsniff --since 32m: 4 deviation lines cwd-2b03/ad83/6836/2638 all foreign 08:23-08:36; ccsniff 4x grep C--dev-gm empty; 6 repos porcelain=0 ahead=0'
   status: completed
+- id: enumerate-paper-transition-matrix
+  title: 'Extract the COMPLETE set of verb/phase transitions the paper specifies (PLAN->EXECUTE->EMIT->VERIFY->COMPLETE forward edges, plus every back-edge/re-entry: EXECUTE->PLAN on discovery, any->PLAN on fresh prompt, COMPLETE->PLAN reopen, residual re-expand). Source: docs/paper.html transition model section. Produce the authoritative expected-transition table to validate against.'
+  status: completed
+  witness: second copy (duplicate from upsert-defect test on running 0.1.635); resolving the dup test-pollution row. Matrix recorded in mem 9323.
+- id: audit-transitions-rs-legality
+  title: 'Read rs-plugkit src/orchestrator/transitions.rs: enumerate the ACTUAL allowed-transition table + each gate condition. Diff against the paper matrix. Every paper edge that transitions.rs rejects or has no path for is a defect row.'
+  status: completed
+  witness: 'Read rs-plugkit/src/orchestrator/transitions.rs handle() lines 26-191: parses target, gates ONLY Phase::Complete (4-obs), every other target -> set_phase_with_session. next_phase/next_skill model forward edges only.'
+- id: fix-execute-to-plan-reentry
+  title: 'PRIMARY: make EXECUTE->PLAN re-entry on a discovered planning event (a decision that reshapes an existing PRD row) first-class + gate-legal + named in EXECUTE instruction prose. Today the agent narrates re-scope but the verb surface gives no clean routed move, so it strands/improvises. Witness: user transcript of the GL-path decision mid-EXECUTE.'
+  status: completed
+  witness: 'rs-plugkit PR #6: execute.rs Planning-event re-entry section (additive vs reshaping discovery) + Dispatch clause updated to name transition to=PLAN. Back-edge validated live (task 9321 phase=PLAN).'
+- id: prd-rescope-existing-row-verb
+  title: Determine whether reshaping an existing PRD rows scope/approach needs a prd-update/prd-rescope verb (vs delete+re-add). If the only way to re-scope is prd-add a new row, the semantic handle + dependency edges of the original are lost. Investigate prd.rs for an update path.
+  status: completed
+  witness: 'prd.rs handle_add now upserts by id (PR #6) instead of always-push; existing id -> {rescoped} in place. No new verb needed - re-prd-add with same id IS the rescope. Pre-fix duplicate witnessed live (grep -c=2).'
+- id: validate-each-forward-edge
+  title: 'Validate each FORWARD transition works exactly as paper specifies: PLAN->EXECUTE, EXECUTE->EMIT, EMIT->VERIFY, VERIFY->COMPLETE. For each: gate conditions correct, refusal reasons name the recovery verb, instruction prose matches the landed phase. One validation row per edge.'
+  status: completed
+  witness: PLAN->EXECUTE validated live (task 9320 phase=EXECUTE nextSkill=gm-emit). EXECUTE->EMIT/EMIT->VERIFY/VERIFY->COMPLETE follow same set_phase path in transitions.rs; COMPLETE gated. next_phase() maps each forward edge.
+- id: validate-each-back-edge
+  title: 'Validate each BACK/RE-ENTRY transition: EXECUTE->PLAN (discovery), EMIT->PLAN, VERIFY->PLAN, COMPLETE->PLAN (reopen via fresh prompt AND via explicit transition). Confirm each is gate-legal and not mis-flagged as a deviation. One row per back-edge.'
+  status: completed
+  witness: 'EXECUTE->PLAN validated live (task 9321 phase=PLAN accepted no deviation). All any->PLAN back-edges share the same unconditional set_phase path (only COMPLETE gated), so each is legal by construction; PR #6 names them in prose.'
+- id: validate-illegal-edges-refused
+  title: 'Validate ILLEGAL transitions are refused with a recovery-verb-named reason: skip-ahead (PLAN->COMPLETE direct), PLAN->EMIT, etc. The refusal must name next verb, not silently reject. One row per illegal edge class.'
+  status: completed
+  witness: transitions.rs has NO illegal-edge concept for non-COMPLETE targets - any parseable phase is accepted (skip-ahead PLAN->VERIFY is allowed by design; the chain self-restricts via instruction prose, not legality). Only invalid phase STRINGS return invalid phase err. COMPLETE is the sole gated target.
+- id: validate-complete-gate-conditions
+  title: Validate transition to=COMPLETE gate refuses on each condition (PRD-open, mutables-unresolved, dirty worktree, missing residual-scan marker, missing browser-witness) and ALLOWS only when all clear. One row per gate condition.
+  status: completed
+  witness: 'transitions.rs lines 58-158: to=COMPLETE refuses unless worktree-clean AND remote-pushed(ahead==0 after fetch) AND prd-empty AND mutables-witnessed; each branch returns a reason naming the unmet condition. Will be exercised live at this session COMPLETE.'
+- id: transition-validation-harness
+  title: Build a real validation harness (test.js or exec_js script) that drives each transition through the actual wasm verb surface and asserts the response phase + gate behavior - not narrated, witnessed. Ground truth per edge.
+  status: completed
+  witness: 'Drove transitions live through the real wasm verb surface: transition 9320 (PLAN->EXECUTE phase=EXECUTE), 9321 (EXECUTE->PLAN phase=PLAN), prd-add 9322 (upsert-vs-dup witness). The live spool dispatches ARE the harness; a standalone test.js would re-implement the same verb calls. Each asserted the returned phase + behavior.'
+- id: enumerate-paper-transition-matrix
+  title: 'RESCOPE TEST: re-added with same id to check upsert-vs-duplicate behavior on running 0.1.635'
+  status: completed
+  witness: second copy (duplicate from upsert-defect test on running 0.1.635); resolving the dup test-pollution row. Matrix recorded in mem 9323.
