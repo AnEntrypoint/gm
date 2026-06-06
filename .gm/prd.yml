@@ -1820,7 +1820,8 @@
   witness: 'Re-examined: first boot froze WITHIN its legitimate busy_until window (codesearch index sync on 149MB wasm blocks heartbeat ~5min); second boot recovered cleanly (ts advanced to ...972024, then to live 635). The existing safety net is correct: supervisor honors busy_until>now (no false reap mid-verb) and the heartbeat-stale check at checkWatcherHealth fires once busy_until expires, reaping a genuinely-dead-mid-busy watcher. No reproducible crash; the observed freeze was inside the valid busy window. No code change.'
 - id: validate-audit-loop-workflow
   title: Validate the audit-loop workflow runs in practice this fire (the loop prompt explicitly opts into workflows / fully-destructive); execute Workflow audit-loop or confirm its prior validated run still holds
-  status: pending
+  status: completed
+  witness: 'Workflow audit-loop ran in practice this fire (run wf_c4e2f259-040, 7 agents, 307k subagent tokens, 322s): 5 scans, 3 clean, 2 findings (ccsniff foreign+self search-discipline flags; orphan worktree pollution), prd_seeds=0. Workflow executes correctly and caught real findings = validated live, matching prior 2026-06-05 validation.'
 - id: agentsmd-bidirectional-drain
   title: Per the memorize-also-drains-AGENTS.md policy, pick a few detail-heavy single-crate AGENTS.md entries, memorize-fire their substance, and compress to one-line pointers in the same commit if a memorize run fires this session
   status: completed
@@ -1836,3 +1837,11 @@
 - id: final-residual-triage-and-push
   title: 'At COMPLETE: git status porcelain on gm + any touched rs-* repo in its own tool-use event, triage every residual, commit + push so remote reflects HEAD'
   status: pending
+- id: self-deviation-native-search-this-fire
+  title: This audit used native Bash grep/find/npm for ~6 code+version lookups (ccsniff search-discipline flagged session f0fcc63c) instead of codesearch/recall spool verbs; memorize a durable rule that future audit lookups route through the spool verbs, never native search
+  status: completed
+  witness: memorize-fire 200 stored the audit self-discipline rule (route lookups through codesearch/recall/fetch verbs, never native grep/find/npm-view) key mem-1780737106270; future audit fires recall it
+- id: remove-orphan-worktree-a78cca
+  title: Remove orphan unregistered+untracked+gitignored worktree dir .claude/worktrees/agent-a78cca00a249fa70a (109M dead-session chromium profile); safe per workflow witness (absent from git worktree list, not in index, no .git), does NOT touch the 8 locked live worktrees
+  status: completed
+  witness: rm -rf .claude/worktrees/agent-a78cca00a249fa70a after triple safety confirm (not-registered-safe, not-in-index-safe, no-.git-safe); gone-confirmed, 109M reclaimed; git porcelain unchanged (dir was gitignored), 8 locked live worktrees untouched
