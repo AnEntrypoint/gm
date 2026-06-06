@@ -2210,3 +2210,22 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize 17617524 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter17
+  title: 'Triage last-30m: boot-summary deviations_30m=1 but gmsniff --list-deviations --since 30m=0 (the 1 was a foreign deviation aging out of the precise window between boot-summary computation and the gmsniff query). Authoritative gmsniff=0; ccsniff zero gm flags. 8th consecutive true-zero window'
+  status: completed
+  witness: 'boot-summary deviations_30m=1 but gmsniff --list-deviations --since 30m=0 (foreign deviation aged out of precise window between boot-summary compute and gmsniff query). ccsniff zero gm flags. Authoritative = 0; 8th consecutive true-zero. Window-lag is benign: boot-summary count uses a slightly lagged window vs gmsniff --since.'
+- id: validate-635-durable-iter17
+  title: 'Validate 635 durable: watcher pid 7900 0.1.635 version_drifted=false uptime ~192min stable'
+  status: completed
+  witness: 'Boot probe: watcher pid 7900 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=11523193 (~192min stable). No 634 regression = version-drift recycle fix holds.'
+- id: validate-6repo-clean-iter17
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm c9c60108 (CI bump past iter16 eb2d5eae live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm c9c60108 (CI bump past iter16 eb2d5eae live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: memorize-iter17-findings
+  title: At VERIFY memorize-fire iter17 (17th consecutive clean, 8th true-zero; note boot-summary-vs-gmsniff window-lag nuance)
+  status: completed
+  witness: memorize-fire 3340 stored iter17 result + the boot-summary-vs-gmsniff window-lag resolution rule (key mem-1780769456623). 17th consecutive clean fire, 8th true-zero. AGENTS.md drain at steady floor.
+- id: final-residual-push-iter17
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
