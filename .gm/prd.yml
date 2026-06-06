@@ -2020,4 +2020,5 @@
   witness: 'memorize-fire 1540 stored iter8 result (key mem-1780747702979, 8th consecutive clean fire, 635 durable ~170min). Drain assessment: AGENTS.md at steady floor (36705 bytes) - remaining ** entries are cross-cutting core MO rules that must stay per the drain policy (''top-level cross-cutting rules stay''); no single-crate/single-platform candidates remain, so forcing a drain would harm the doc. Honoring the policy = recognizing the floor, not over-draining core. ~2.8KB shed across the 8-fire run, every drained fact recallable.'
 - id: final-residual-push-iter8
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
-  status: pending
+  status: completed
+  witness: git_finalize ce3bc200 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
