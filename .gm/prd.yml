@@ -2142,3 +2142,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize d24861ef committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter14
+  title: 'Triage last-30m deviations: ZERO (5th consecutive true-zero-deviation window). deviations_30m=0 at boot, gmsniff --list-deviations --since 30m empty.'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: total=0 (5th consecutive true-zero-deviation window). deviations_30m=0 at boot. Zero own-session, zero foreign deviations.'
+- id: validate-635-durable-iter14
+  title: 'Validate 635 durable: watcher pid 7900 0.1.635 version_drifted=false uptime ~101min stable, no 634 regression'
+  status: completed
+  witness: 'Boot probe: watcher pid 7900 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=6081316 (~101min stable). No 634 regression = version-drift recycle fix holds.'
+- id: validate-6repo-clean-iter14
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm c1f9c3f8 (CI bump past iter13 7857706d live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm c1f9c3f8 (CI bump past iter13 7857706d live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter14
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero violations. Clean conduct iter14.'
+- id: memorize-iter14-findings
+  title: At VERIFY memorize-fire iter14 (14th consecutive clean fire, 5th consecutive true-zero-deviation, 635 durable)
+  status: completed
+  witness: memorize-fire 2740 stored iter14 result (key mem-1780763819328, 14th consecutive clean fire, 5th consecutive true-zero-deviation). AGENTS.md drain at steady floor (36705, core MO rules only); no drain this fire.
+- id: final-residual-push-iter14
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
