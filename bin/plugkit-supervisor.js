@@ -282,6 +282,30 @@ function checkWatcherHealth() {
         severity: 'info',
       });
       killChild('supervisor-killed-wrapper-sha-drift');
+      return;
+    }
+    // The watcher reads the wasm's embedded instance_version at load and compares it to the
+    // plugkit.version text file (file_version), exposing version_drifted when they disagree.
+    // This catches a bumped version text sitting next to a stale wasm build (text claims 635
+    // while the binary embeds 634), which ensureReady's text-only drift check never re-downloads.
+    // Evict the stale cached wasm so the next bootstrap fails isReady() and redownloads, then recycle.
+    if (status.version_drifted === true) {
+      logEvent('supervisor.version-drift', {
+        watcher_pid: currentChildPid,
+        instance_version: status.instance_version || null,
+        file_version: status.file_version || null,
+        severity: 'critical',
+      });
+      try {
+        const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
+        const gmTools = fs.existsSync(path.join(home, '.gm-tools'))
+          ? path.join(home, '.gm-tools')
+          : path.join(home, '.claude', 'gm-tools');
+        for (const f of ['plugkit.wasm', 'plugkit.version', 'plugkit.wasm.sha256']) {
+          try { fs.unlinkSync(path.join(gmTools, f)); } catch (_) {}
+        }
+      } catch (_) {}
+      killChild('supervisor-killed-version-drift');
     }
   }
 }

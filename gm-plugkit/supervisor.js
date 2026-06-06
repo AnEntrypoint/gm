@@ -298,6 +298,35 @@ function checkWatcherHealth() {
     if (process.platform === 'win32') {
       try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
     }
+    return;
+  }
+  // The watcher reads the wasm's embedded instance_version at load and compares it to the
+  // plugkit.version text file (file_version), exposing version_drifted when they disagree.
+  // This catches the case where the version text was bumped (e.g. ensureReady's remote-latest
+  // override) but the cached plugkit.wasm bytes are a different build -- the text claims 635
+  // while the binary embeds 634, so ensureReady's text-only drift check never re-downloads.
+  // On that drift, evict the stale cached wasm so the next bootstrap fails isReady() and
+  // redownloads the correct build, then recycle the child to load it.
+  if (status.version_drifted === true) {
+    logEvent('supervisor.version-drift', {
+      watcher_pid: currentChildPid,
+      instance_version: status.instance_version || null,
+      file_version: status.file_version || null,
+      severity: 'critical',
+    });
+    try {
+      const home = process.env.USERPROFILE || process.env.HOME || require('os').homedir();
+      const gmTools = fs.existsSync(path.join(home, '.gm-tools'))
+        ? path.join(home, '.gm-tools')
+        : path.join(home, '.claude', 'gm-tools');
+      for (const f of ['plugkit.wasm', 'plugkit.version', 'plugkit.wasm.sha256']) {
+        try { fs.unlinkSync(path.join(gmTools, f)); } catch (_) {}
+      }
+    } catch (_) {}
+    try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
+    if (process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+    }
   }
 }
 

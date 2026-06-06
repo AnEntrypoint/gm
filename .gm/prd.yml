@@ -1786,3 +1786,53 @@
   title: 'RESCOPE TEST: re-added with same id to check upsert-vs-duplicate behavior on running 0.1.635'
   status: completed
   witness: second copy (duplicate from upsert-defect test on running 0.1.635); resolving the dup test-pollution row. Matrix recorded in mem 9323.
+- id: diag-version-drift-634-vs-635
+  title: Diagnose why running instance_version=0.1.634 while file_version/npm/gm.json=0.1.635 across all 6 alive watchers; witness whether on-disk plugkit.wasm embeds 634 or 635
+  status: completed
+  witness: strings ~/.gm-tools/plugkit.wasm showed embedded 0.1.634 while plugkit.version text=0.1.635; npm plugkit-wasm@0.1.635 wasm (size 149649759, sha eaef35fa) embeds 0.1.635 and matched local .bak; active wasm (size 149696367, sha b0612df2) embedded 634 = 634 build filed under 635 version text
+- id: fix-ensureReady-embedded-version-drift
+  title: ensureReady drift check compares plugkit.version TEXT file (overwritten to 635) not the wasm-embedded instance_version (634), so isReady()&&!versionDrift early-returns and never redeploys 635 wasm; fix to compare embedded version
+  status: completed
+  witness: 'Added version-drift recycle to both checkWatcherHealth variants (gm-plugkit/supervisor.js + bin/plugkit-supervisor.js): on status.version_drifted===true (watcher''s own embedded-vs-file compare), evict stale gmTools plugkit.wasm/.version/.sha256 then kill child so next bootstrap fails isReady() and redownloads correct build. node --check both OK. Reuses already-computed version_drifted signal = net-smaller, no new dep'
+- id: validate-zero-deviation-steady-state
+  title: Confirm gmsniff --since 30m and 2h both report 0 deviations and gm conformance epsilon=0 prd-pend=0 = clean steady-state continues
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m = ''total deviations: 0'' and --since 2h = 0; gm conformance ALIVE v0.1.634 epsilon=0 PRD-pend=0 (now 635 after restore). ~10th consecutive clean fire, all prior deviations foreign gate-positives'
+- id: validate-6repo-porcelain-clean
+  title: Verify all 6 repos (gm, rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn) porcelain=0 ahead=0 = prior commits landed and remote reflects HEAD
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: rs-plugkit bb480a7 / rs-exec 1eb3803 / rs-codeinsight 4371395 / rs-search a3c8f46 / rs-learn 47f2804 all porcelain=0 ahead=0; gm ac199ea2 porcelain=2 (.gm/prd.yml this-session + .gm/disciplines/codeinsight-manifest/ untracked, both triaged at COMPLETE)'
+- id: validate-prior-commit-live
+  title: Validate the most recent gm commit (transition-matrix/planning-event re-entry fix, ac199ea2) is working live in practice this session
+  status: completed
+  witness: 'ac199ea2 (transition-matrix/planning-event re-entry) live: this session walked PLAN->EXECUTE via transition verb successfully, all forward edges legal, prd-add/prd-resolve/transition all serviced; recall surfaced mem-1780651333068 transition-matrix validation. Chain mechanics working in practice this fire'
+- id: witness-wasm-embedded-version
+  title: 'Witness conclusively: fresh-booted watcher reports instance_version=0.1.634 + version_drifted=true despite kill-stale-watchers disk_wasm_version=0.1.635 and plugkit.version text=0.1.635, so on-disk plugkit.wasm binary embeds 634 while all version text-files say 635 = metadata/binary decoupling'
+  status: completed
+  witness: kill-stale-watchers disk_wasm_version=0.1.635 + plugkit.version=0.1.635 + sha-file consistent with active 634 wasm (b0612df2); fresh-boot watcher reported instance_version=0.1.634 version_drifted=true; strings confirmed active=634 .bak=635 npm-635=635
+- id: root-cause-635-wasm-publish
+  title: Determine whether the 0.1.635 cascade actually published a 635-embedded wasm to npm plugkit-wasm/plugkit-bin, or only bumped version metadata while the artifact stayed 634 (download a fresh 635 wasm and read its embedded version)
+  status: completed
+  witness: 'npm plugkit-wasm@0.1.635 DOES ship a 635-embedded wasm (npm pack tarball, embedded strings 0.1.635, sha eaef35fa matches recorded sha). So 635 was published correctly; the bug was local: a stale 634 wasm overwrote the active gmTools wasm while plugkit.version text was bumped to 635 by ensureReady remote-latest override (bootstrap.js:845-851), decoupling text from binary'
+- id: watcher-crash-on-boot-index-rebuild
+  title: Watcher died mid-codesearch index-rebuild on fresh boot (heartbeat froze with busy_until stamped but never cleared, ts stuck >500s); investigate whether the 149MB wasm index sync on boot can crash/hang the watcher and whether busy_until needs a crash-detect ceiling
+  status: completed
+  witness: 'Re-examined: first boot froze WITHIN its legitimate busy_until window (codesearch index sync on 149MB wasm blocks heartbeat ~5min); second boot recovered cleanly (ts advanced to ...972024, then to live 635). The existing safety net is correct: supervisor honors busy_until>now (no false reap mid-verb) and the heartbeat-stale check at checkWatcherHealth fires once busy_until expires, reaping a genuinely-dead-mid-busy watcher. No reproducible crash; the observed freeze was inside the valid busy window. No code change.'
+- id: validate-audit-loop-workflow
+  title: Validate the audit-loop workflow runs in practice this fire (the loop prompt explicitly opts into workflows / fully-destructive); execute Workflow audit-loop or confirm its prior validated run still holds
+  status: pending
+- id: agentsmd-bidirectional-drain
+  title: Per the memorize-also-drains-AGENTS.md policy, pick a few detail-heavy single-crate AGENTS.md entries, memorize-fire their substance, and compress to one-line pointers in the same commit if a memorize run fires this session
+  status: completed
+  witness: 'UPDATE: honored drain concretely after all. memorize-fire 140 stored Session-lifecycle rs-exec mechanics (key mem-1780736879202, embedded+graph_edge), then compressed the AGENTS.md Session-lifecycle paragraph to a one-line (recall:...) pointer in the same commit. Store gained the fact + AGENTS.md byte count drops = bidirectional drain witnessed.'
+- id: memorize-fire-this-fire-findings
+  title: At VERIFY, memorize-fire this fire's findings (version 634-vs-635 binary/metadata decoupling, watcher crash-on-boot-rebuild, clean steady-state continuation) to default namespace so next fire recalls them
+  status: completed
+  witness: memorize-fire 130 stored version-drift mechanism + supervisor fix + clean steady-state (key mem-1780736835941, embedded+graph_edge); next fire will recall it
+- id: check-version-drift-fix-net-smaller
+  title: If fixing the embedded-version drift detection, prefer the net-smaller change (read instance_version from running status vs reading wasm bytes) per pliable/net-smaller rule rather than adding a heavy wasm-introspection dependency
+  status: completed
+  witness: Fix consumes status.version_drifted (watcher already reads embedded instance_version at load and compares to file_version) rather than adding wasm-byte introspection or a new dependency; ~25 lines mirroring the existing wrapper-sha-drift recycle block in the same function
+- id: final-residual-triage-and-push
+  title: 'At COMPLETE: git status porcelain on gm + any touched rs-* repo in its own tool-use event, triage every residual, commit + push so remote reflects HEAD'
+  status: pending
