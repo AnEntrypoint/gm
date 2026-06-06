@@ -2046,3 +2046,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize bee8bcef committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter10
+  title: 'Triage last-30m deviations: ZERO deviations (true zero-deviation window) - even recurring foreign cwd-6836 quiet this fire. deviations_30m=0 at boot, gmsniff --list-deviations --since 30m empty'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: total=0 (true zero-deviation window). deviations_30m=0 at boot. Even recurring foreign cwd-6836 quiet this fire (idle during the longer real-time gap). Zero own-session, zero foreign deviations.'
+- id: validate-635-survives-recycle-iter10
+  title: 'Validate 635 survives watcher recycle: new watcher pid 7900 (~41s uptime, replaced prior ~200min watcher) came up instance_version=0.1.635 version_drifted=false = version-drift recycle fix holds across a fresh supervisor respawn, not just continuous uptime'
+  status: completed
+  witness: 'Boot probe: NEW watcher pid 7900 (uptime ~41s, replaced prior ~200min pid 12520) reports instance_version=0.1.635 file_version=0.1.635 version_drifted=false boot_reason=unplanned-restart-after-exit. The version-drift recycle fix holds across a fresh supervisor respawn = validated beyond continuous uptime, the fleet stays on correct build through recycle.'
+- id: validate-6repo-clean-iter10
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm e0c037d3 (CI bump past iter9 e3987adb live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm e0c037d3 (CI bump past iter9 e3987adb live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter10
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero violations. Clean conduct iter10.'
+- id: memorize-iter10-findings
+  title: At VERIFY memorize-fire iter10 (10th consecutive clean fire, TRUE zero-deviation window, 635 survives watcher recycle)
+  status: completed
+  witness: memorize-fire 1940 stored iter10 result (key mem-1780757840050, 10th consecutive clean fire, TRUE zero-deviation window, 635 survives watcher recycle = strongest validation yet). AGENTS.md drain at steady floor (36705, core MO rules only); no drain this fire.
+- id: final-residual-push-iter10
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
