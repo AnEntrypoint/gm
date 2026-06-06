@@ -2022,3 +2022,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize ce3bc200 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter9
+  title: 'Triage last-30m deviations: 1 FOREIGN cwd-6836 mid-chain-stall PLAN prd_pending:0 idle~5.4min 12:06 (recurring non-compliant session). Gate fired correctly = gate-positive, not gm/rs-*'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 1 total = FOREIGN cwd-6836 mid-chain-stall PLAN prd_pending:0 idle_ms:326233 at 12:06:03 (recurring non-compliant session). Gate fired correctly = gate-positive, not gm/rs-*. Zero own-session deviations.'
+- id: validate-635-durable-iter9
+  title: 'Validate 635 durable to ~200min (3.3h): watcher 0.1.635 version_drifted=false uptime ~200min stable, no restart-loop, no 634 regression'
+  status: completed
+  witness: 'Boot probe: watcher pid 12520 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=12019648 (~200min/3.3h). Stable on 635, no restart-loop, no 634 regression = version-drift recycle fix permanently resolved across 3.3h continuous uptime.'
+- id: validate-6repo-clean-iter9
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm 0ecf8704 (CI bump past iter8 d2881185 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm 0ecf8704 (CI bump past iter8 d2881185 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter9
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero own-session violations. Clean conduct iter9.'
+- id: memorize-iter9-findings
+  title: At VERIFY memorize-fire iter9 (9th consecutive clean fire, 635 durable ~200min, 1 foreign deviation)
+  status: completed
+  witness: memorize-fire 1740 stored iter9 result (key mem-1780749435753, 9th consecutive clean fire, 635 durable ~200min/3.3h, run-summary of the version-drift fix lifecycle). AGENTS.md drain at steady floor 36705 (core MO rules only); no drain this fire honors 'top-level cross-cutting rules stay'.
+- id: final-residual-push-iter9
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
