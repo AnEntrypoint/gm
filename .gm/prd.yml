@@ -1836,7 +1836,8 @@
   witness: Fix consumes status.version_drifted (watcher already reads embedded instance_version at load and compares to file_version) rather than adding wasm-byte introspection or a new dependency; ~25 lines mirroring the existing wrapper-sha-drift recycle block in the same function
 - id: final-residual-triage-and-push
   title: 'At COMPLETE: git status porcelain on gm + any touched rs-* repo in its own tool-use event, triage every residual, commit + push so remote reflects HEAD'
-  status: pending
+  status: completed
+  witness: git status --porcelain empty after git_finalize 62920d7a (pushed true); two commits this fire pushed to origin/main (262a1c9f version-drift fix + 62920d7a audit cleanup); all gm residuals triaged+committed, orphan worktree removed, 5 rs-* repos already clean ahead=0. Remote reflects HEAD.
 - id: self-deviation-native-search-this-fire
   title: This audit used native Bash grep/find/npm for ~6 code+version lookups (ccsniff search-discipline flagged session f0fcc63c) instead of codesearch/recall spool verbs; memorize a durable rule that future audit lookups route through the spool verbs, never native search
   status: completed
