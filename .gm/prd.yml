@@ -1878,3 +1878,26 @@
   title: 'At COMPLETE: porcelain witness in own tool-use event, triage residuals (this fire''s prd.yml + memorize JSONs), commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize 07211461 committed+pushed (pushed true); git status --porcelain empty post-push; all rs-* clean. Remote reflects HEAD.
+- id: triage-30m-deviations-iter3
+  title: 'Triage last-30m deviations: 2 BOTH FOREIGN gate-positives - cwd-b951 long-gap-no-instruction browser 09:11 (carried from iter2 window) + cwd-6836 mid-chain-stall PLAN prd_pending:3 idle~5.6min 09:19 (NEW, the recurring non-compliant foreign session). Neither gm/rs-*; gates fired correctly'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 2 total, BOTH FOREIGN - cwd-b951 long-gap-no-instruction verb=browser 09:11:21 (carried from iter2 window) + cwd-6836 mid-chain-stall PLAN prd_pending:3 idle_ms:336678 09:19:37 (NEW, recurring non-compliant foreign session). Gates fired correctly = gate-positive predictability-regardless-of-LLM, neither gm/rs-*. Zero own-session deviations.'
+- id: validate-635-durable-iter3
+  title: 'Validate 635 restore durable: watcher 0.1.635 version_drifted=false uptime ~20min stable (no restart-loop, no regression to 634) = the version-drift recycle fix is holding the fleet on the correct build over time'
+  status: completed
+  witness: 'Boot probe: watcher pid 12520 instance_version=0.1.635 file_version=0.1.635 version_drifted=false watcher_uptime_ms=1203824 (~20min). Stable on 635 over 20min with no restart-loop and no 634 regression = the version-drift recycle fix holds the fleet on correct build durably over time, not just at boot.'
+- id: validate-6repo-clean-iter3
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm 990ff332 (CI bump past my iter2 263d2795 = prior commits live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm 990ff332 (CI auto-bump past my iter2 263d2795 = prior commits live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter3
+  title: Run ccsniff 4 disciplines last 30m; confirm zero NEW gm own-session flags this fire (route audit lookups through verbs per mem-1780737106270)
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd (C--dev-gm / [gm]) flags, zero violations in the window for own session. The prior fire''s native-search flags aged out. Self-discipline correction (mem-1780737106270) holding; clean own-session conduct.'
+- id: memorize-iter3-findings
+  title: At VERIFY memorize-fire iter3 result (3rd consecutive clean fire, 635 durable, 2 foreign deviations) + drain a detail-heavy AGENTS.md entry per bidirectional-drain policy
+  status: completed
+  witness: 'memorize-fire 541 stored iter3 result (key mem-1780738616110, 3rd consecutive clean fire, 635 durable, 2 foreign deviations). Drain: memorize-fire 540 stored cascade-repos-involved roles (key mem-1780738610933) + compressed the AGENTS.md repos-involved bullet list to a one-line pointer = bidirectional drain witnessed (store gained fact, AGENTS.md byte count drops from 39240).'
+- id: final-residual-push-iter3
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals (prd.yml + memorize JSONs), commit+push so remote reflects HEAD'
+  status: pending

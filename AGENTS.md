@@ -148,13 +148,7 @@ Push to any rs-* sibling triggers `cascade.yml` -> rs-plugkit `release.yml` -> s
 
 Three npm packages publish from this repo: `gm-skill` (the skill harness), `gm-plugkit` (bootstrap + watcher), `plugkit-wasm` (wasm binary). publish.yml + the rs-plugkit cascade ships all three on every version-bump commit. The legacy 15 downstream repos are archived on GitHub, no further releases, no orphan-commit publish step.
 
-**Repos involved (push to every possible one triggers cascade):**
-- `AnEntrypoint/rs-exec`, exec runner, browser sessions, idle cleanup, session task isolation
-- `AnEntrypoint/rs-codeinsight`, code search backend, symbol indexing
-- `AnEntrypoint/rs-search`, file search backend, embedding and sweep
-- `AnEntrypoint/rs-plugkit`, CLI entry point, spool watcher dispatcher; version source of truth in `Cargo.toml`
-- `AnEntrypoint/rs-learn`, memory backend, recall/ingest via HTTP RPC
-- `AnEntrypoint/gm`, `gm.json` holds `plugkitVersion`; CI publishes the single `gm-skill` npm package
+**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, rs-learn, gm}` — rs-plugkit Cargo.toml is the version source-of-truth, gm.json holds plugkitVersion. Per-repo roles in rs-learn (`recall: cascade repos involved roles`).
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local cargo builds. Never run `cargo update` or `cargo build` locally, push and let CI build.
 
