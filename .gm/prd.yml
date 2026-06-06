@@ -2274,3 +2274,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize b15e151e committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter20
+  title: 'Triage last-30m deviations: 2 BOTH FOREIGN cwd-2638 - gate-deny (stop-gate residuals=2) + push-dirty (COMPLETE attempted with dirty worktree), both 19:16:19. Foreign session tried to stop/COMPLETE dirty; gates correctly refused BOTH = gate-positive on push-dirty+stop-gate surfaces (predictability-regardless-of-LLM). Not gm/rs-*'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 2 BOTH FOREIGN cwd-2638 - gate-deny stop-gate residuals=2 + push-dirty COMPLETE-attempted-with-dirty-worktree, both 19:16:19. Gates correctly refused both = gate-positive on push-dirty+stop-gate surfaces, predictability-regardless-of-LLM. Not gm/rs-*. ccsniff zero gm flags.'
+- id: validate-635-durable-iter20
+  title: 'Validate 635 durable: watcher pid 7900 0.1.635 version_drifted=false uptime ~282min (4.7h) stable'
+  status: completed
+  witness: Boot probe showed prior watcher pid 7900 0.1.635 uptime ~282min then hit idle-limit (4.7h, idle_limit_ms=3600000 exceeded by gaps); fresh watcher pid 12980 booted clean on instance_version=0.1.635 version_drifted=false = version-drift fix survives watcher death+reboot again (validated beyond uptime + recycle, now also idle-limit-expiry-reboot).
+- id: validate-6repo-clean-iter20
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm c2384211 (CI bump past iter19 cb419e86 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm c2384211 (CI bump past iter19 cb419e86 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter20
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd flags, zero violations. Clean conduct iter20.'
+- id: memorize-iter20-findings
+  title: At VERIFY memorize-fire iter20 (20th consecutive clean fire, foreign cwd-2638 push-dirty+gate-deny gate-positives = new surfaces witnessed, 635 durable)
+  status: completed
+  witness: memorize-fire 3940 stored iter20 result (key mem-1780775000087, 20th consecutive clean fire, foreign push-dirty+gate-deny gate-positives, version-drift fix survived idle-limit watcher reboot). AGENTS.md drain at steady floor.
+- id: final-residual-push-iter20
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
