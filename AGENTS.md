@@ -176,9 +176,7 @@ Orchestration state is tracked via marker files in `.gm/` instead of hook events
 
 ## Spool observability surface
 
-Every possible agent has a one-shot system-state probe: dispatch `plugkit health` via the file-spool (write `.gm/exec-spool/in/health/<N>.txt` empty body, read `out/<N>.json`). Returns plugkit version + pin-match, watcher liveness, runner state, rs-learn status, cache dirs, inbox/outbox counts, recent hook fires, recent errors. Use before assuming every possible component is broken.
-
-Three persistent diagnostic files at `.gm/exec-spool/` root are updated by the running stack (not the agent): `.status.json` (watcher state each tick; stale mtime = dead watcher), `.last-session-start.json` (most recent session-start spawn result), `.bootstrap-error.json` (pin-mismatch / fetch-fail surface, absent = healthy). Reading these directly via Read is allowed (runtime data exception); spool dispatch isn't needed to inspect them.
+One-shot system-state probe: dispatch `plugkit health` via the file-spool before assuming any component is broken. Three runtime diagnostic files at `.gm/exec-spool/` root (`.status.json`, `.last-session-start.json`, `.bootstrap-error.json`) are readable directly via Read (runtime-data exception). Return-field enumeration + per-file semantics in rs-learn (`recall: plugkit health verb fields`).
 
 ## Site Build & Documentation
 

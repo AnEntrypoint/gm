@@ -1902,3 +1902,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals (prd.yml + memorize JSONs), commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize c20db093 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter4
+  title: 'Triage last-30m deviations: 3 ALL FOREIGN cwd-6836 (recurring non-compliant session) - 2x mid-chain-stall PLAN prd_pending:3 idle~5.7min (09:41,09:47) + 1x long-gap-no-instruction browser gap~7.4min (10:03). All same foreign session, gates fired correctly = gate-positive, not gm/rs-*'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 3 total, ALL FOREIGN cwd-6836 (recurring non-compliant) - mid-chain-stall PLAN prd_pending:3 idle~5.7min at 09:41:39 + 09:47:39, long-gap-no-instruction browser gap~7.4min at 10:03:39. Same foreign session, gates fired correctly = gate-positive predictability-regardless-of-LLM, not gm/rs-* defect. Zero own-session deviations.'
+- id: validate-635-durable-iter4
+  title: 'Validate 635 durable extending: watcher 0.1.635 version_drifted=false uptime ~50min stable (no restart-loop, no 634 regression) = version-drift recycle fix holds the fleet on correct build across an extended window'
+  status: completed
+  witness: 'Boot probe: watcher pid 12520 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=2997262 (~50min). Stable on 635 across an extended ~50min window, no restart-loop, no 634 regression = version-drift recycle fix durable over time. Drained memories (mem-1780738610933 cascade-repos, mem-1780736879202 session-lifecycle) surfaced in recall = iter2/iter3 drains persisted+recallable.'
+- id: validate-6repo-clean-iter4
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm affe73a8 (CI bump past iter3 bd5a8964 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm affe73a8 (CI bump past iter3 bd5a8964 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter4
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero violations for own session. Self-discipline holding; clean own-session conduct iter4.'
+- id: memorize-iter4-findings
+  title: At VERIFY memorize-fire iter4 (4th consecutive clean fire, 635 durable ~50min, 3 foreign cwd-6836 deviations) + drain a detail-heavy AGENTS.md entry per bidirectional-drain policy
+  status: completed
+  witness: 'memorize-fire 741 stored iter4 result (key mem-1780740420217... 4th consecutive clean fire, 635 durable ~50min, 3 foreign cwd-6836 deviations). Drain: memorize-fire 740 stored plugkit-health-verb fields + compressed the AGENTS.md health-verb + diagnostic-files paragraphs to a one-line pointer = bidirectional drain witnessed (store gained fact, AGENTS.md byte count drops from 38937).'
+- id: final-residual-push-iter4
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
