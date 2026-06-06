@@ -164,7 +164,7 @@ Three npm packages publish from this repo: `gm-skill` (the skill harness), `gm-p
 
 Orchestration state is tracked via marker files in `.gm/` instead of hook events. `SpoolDispatcher` reads these markers via `checkDispatchGates(sessionId, operation)` and gates tool use, writes, and git operations:
 
-**Marker files**: `.gm/prd.yml` (existence triggers needs-gm gate), `.gm/mutables.yml` (every possible unresolved entry blocks Write/Edit/git), `.gm/needs-gm` (written by bootstrap, read by dispatcher), `.gm/gm-fired-<sessionId>` (written by gm skill/agent, cleared at turn start), `.gm/residual-check-fired` (ensures one-shot residual-scan per stop window).
+**Marker files**: `.gm/{prd.yml, mutables.yml, needs-gm, gm-fired-<sessionId>, residual-check-fired}` gate Write/Edit/git via `checkDispatchGates`. Per-marker semantics in rs-learn (`recall: spool dispatch gates marker files`).
 
 **Gate enforcement**: the CLI layer calls `checkDispatchGates()` before tool execution; marker-driven dispatch replaces the hook event pump entirely. Detail in rs-learn (`recall: gate enforcement layer`).
 
