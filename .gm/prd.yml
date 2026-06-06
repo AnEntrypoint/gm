@@ -2298,3 +2298,30 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize 8135c02e committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter21
+  title: 'Triage last-30m deviations: 4 total - 3 FOREIGN (cwd-b951 prd-resolve-unknown-id config-completeness-dummy; cwd-2638 mid-chain-stall PLAN; cwd-6836 mid-chain-stall PLAN) + 1 OWN-SESSION (claude-l long-gap-no-instruction verb=residual-scan gap~6.8min 19:53 = my iter20 watcher-reboot-recovery gap, benign: boot+wait spanned 300s threshold, recovered correctly via instruction dispatch). All gate-positive; the own-session one is expected watcher-reboot-recovery behavior not a gm/rs-* defect'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 4 total - 3 FOREIGN (cwd-b951 prd-resolve-unknown-id 20:06; cwd-2638 mid-chain-stall PLAN 20:03; cwd-6836 mid-chain-stall PLAN 19:43) + 1 OWN (claude-l long-gap-no-instruction verb=residual-scan gap_ms=407506 19:53 = iter20 watcher-reboot-recovery gap, recovered correctly via instruction). All gate-positive. ccsniff zero gm flags.'
+- id: validate-635-durable-iter21
+  title: 'Validate 635 durable: watcher pid 12980 (iter20 reboot) 0.1.635 version_drifted=false uptime ~24min stable'
+  status: completed
+  witness: 'Boot probe: watcher pid 12980 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=1412964 (~24min stable post iter20 reboot). No 634 regression.'
+- id: validate-6repo-clean-iter21
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm df198b49 (CI bump past iter20 6a446e1d live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm df198b49 (CI bump past iter20 6a446e1d live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter21
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session code-discipline flags (the claude-l long-gap is a runtime gate event not a ccsniff discipline flag)
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd flags, zero violations. The claude-l long-gap is a runtime rs-plugkit/gates event, not a ccsniff code-discipline flag; code conduct clean.'
+- id: assess-long-gap-recovery-improvement
+  title: 'Assess whether the watcher-reboot-recovery long-gap (own-session claude-l) is improvable: when a dead-watcher boot+heartbeat-wait spans the 300s long-gap threshold, the first post-boot verb gets gate-denied long-gap then recovers via instruction. Decide if this is acceptable-by-design (the gate-deny IS the recovery signal, instruction clears it) or warrants a code change'
+  status: completed
+  witness: 'DECISION: acceptable-by-design, NO code change. The long-gap gate firing after a watcher-reboot-wait that spans 300s is correct: (1) the gate is pure-spool with no watcher-lifecycle coupling (a core portability property of the paper); exempting first-verb-after-boot would couple the gate to boot-reason state and risk masking real idle = net-negative coupling per pliable/net-smaller rule; (2) recovery is already cheap+correct - gate-deny names next_dispatch:instruction, one dispatch resets the clock; (3) already documented (skill: ''first verb after a genuine multi-minute IDLE is instruction''). The only durable improvement is the recall rule (expect+accept the gate-deny after a 300s-spanning watcher reboot, recover with instruction), already memorized iter17/iter20. No mutation.'
+- id: memorize-iter21-findings
+  title: At VERIFY memorize-fire iter21 (21st clean fire, 4 deviations 3-foreign+1-own-session-benign-watcher-reboot-gap, 635 durable) + the long-gap-recovery assessment outcome
+  status: completed
+  witness: 'memorize-fire 4140 stored iter21 result (key mem-1780776796858): first own-session deviation (benign watcher-reboot-recovery long-gap), the design decision (long-gap gate acceptable-by-design no code change), reinforced standing rule. AGENTS.md drain at steady floor.'
+- id: final-residual-push-iter21
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
