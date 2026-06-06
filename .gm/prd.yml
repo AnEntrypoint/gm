@@ -2230,3 +2230,22 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize 2569103b committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter18
+  title: 'Triage last-30m: ZERO deviations (9th consecutive true-zero window). gmsniff empty, ccsniff zero gm flags'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: total=0 (9th consecutive true-zero). ccsniff zero gm flags. Zero own-session, zero foreign deviations.'
+- id: validate-635-durable-iter18
+  title: 'Validate 635 durable: watcher pid 7900 0.1.635 version_drifted=false uptime ~221min stable'
+  status: completed
+  witness: 'Boot probe: watcher pid 7900 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=13277881 (~221min stable). No 634 regression.'
+- id: validate-6repo-clean-iter18
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm 44a9289a (CI bump past iter17 602bdc8b live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm 44a9289a (CI bump past iter17 602bdc8b live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: memorize-iter18-findings
+  title: At VERIFY memorize-fire iter18 (18th consecutive clean fire, 9th consecutive true-zero-deviation, 635 durable)
+  status: completed
+  witness: memorize-fire 3540 stored iter18 result (key mem-1780771009573, 18th consecutive clean fire, 9th true-zero). AGENTS.md drain at steady floor.
+- id: final-residual-push-iter18
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
