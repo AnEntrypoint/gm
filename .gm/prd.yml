@@ -1974,3 +1974,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize d3ffe0e4 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter7
+  title: 'Triage last-30m deviations: 1 FOREIGN cwd-6836 long-gap-no-instruction browser gap~7.8min 11:26 (recurring non-compliant session). Gate fired correctly = gate-positive, not gm/rs-*'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: 1 total = FOREIGN cwd-6836 long-gap-no-instruction verb=browser gap_ms=466628 at 11:26:56 (recurring non-compliant session). Gate fired correctly = gate-positive, not gm/rs-*. Zero own-session deviations.'
+- id: validate-635-durable-iter7
+  title: 'Validate 635 durable to ~140min: watcher 0.1.635 version_drifted=false uptime ~140min stable, no restart-loop, no 634 regression = version-drift recycle fix permanently resolved across 2.3h'
+  status: completed
+  witness: 'Boot probe: watcher pid 12520 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=8408200 (~140min/2.3h). Stable on 635, no restart-loop, no 634 regression = version-drift recycle fix permanently resolved across 2.3h continuous uptime.'
+- id: validate-6repo-clean-iter7
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm d8e59663 (CI bump past iter6 62284440 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm d8e59663 (CI bump past iter6 62284440 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter7
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero own-session violations. Clean conduct iter7.'
+- id: memorize-iter7-findings
+  title: At VERIFY memorize-fire iter7 (7th consecutive clean fire, 635 durable ~140min, 1 foreign deviation) + drain a detail-heavy AGENTS.md entry if a genuine single-crate candidate remains
+  status: completed
+  witness: 'memorize-fire 1340 stored iter7 result (key mem-1780745929616, 7th consecutive clean fire, 635 durable ~140min). Drain: memorize-fire 1350 stored instruction-verb behavioral-discipline invariants (key mem-1780745955563) + compressed the AGENTS.md entry that self-contradictingly enumerated the very list it said ''do not duplicate here'' to directive+pointer = bidirectional drain witnessed (store gained fact, AGENTS.md byte count drops from 36842).'
+- id: final-residual-push-iter7
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
