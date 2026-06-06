@@ -2094,3 +2094,26 @@
   title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
   status: completed
   witness: git_finalize 511cf4b4 committed+pushed (pushed true); porcelain empty post-push; all rs-* clean ahead=0. Remote reflects HEAD.
+- id: triage-30m-deviations-iter12
+  title: 'Triage last-30m deviations: ZERO (3rd consecutive true-zero-deviation window). deviations_30m=0 at boot, gmsniff --list-deviations --since 30m empty. Foreign fleet quiet 3 windows running.'
+  status: completed
+  witness: 'gmsniff --list-deviations --since 30m: total=0 (3rd consecutive true-zero-deviation window). deviations_30m=0 at boot. Foreign fleet quiet 3 windows. Zero own-session, zero foreign deviations.'
+- id: validate-635-durable-iter12
+  title: 'Validate 635 durable: watcher pid 7900 0.1.635 version_drifted=false uptime ~41min stable, no 634 regression'
+  status: completed
+  witness: 'Boot probe: watcher pid 7900 instance_version=0.1.635 version_drifted=false watcher_uptime_ms=2492765 (~41min stable). No 634 regression = version-drift recycle fix holds.'
+- id: validate-6repo-clean-iter12
+  title: 'Confirm all 6 repos porcelain=0 ahead=0: gm 3bd170db (CI bump past iter11 b9042302 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804'
+  status: completed
+  witness: 'git status --porcelain + rev-list per repo: gm 3bd170db (CI bump past iter11 b9042302 live), rs-plugkit bb480a7, rs-exec 1eb3803, rs-codeinsight 4371395, rs-search a3c8f46, rs-learn 47f2804 - all porcelain=0 ahead=0'
+- id: validate-ccsniff-clean-iter12
+  title: Run ccsniff 4 disciplines last 30m; confirm zero gm own-session flags this fire
+  status: completed
+  witness: 'ccsniff --git/continuation/glyph/search-discipline --since 30m: zero gm-cwd ([gm]/C--dev-gm) flags, zero violations. Clean conduct iter12.'
+- id: memorize-iter12-findings
+  title: At VERIFY memorize-fire iter12 (12th consecutive clean fire, 3rd consecutive true-zero-deviation, 635 durable)
+  status: completed
+  witness: memorize-fire 2340 stored iter12 result (key mem-1780760263309, 12th consecutive clean fire, 3rd consecutive true-zero-deviation, terminal steady-state). AGENTS.md drain at steady floor (36705, core MO rules only); no drain this fire.
+- id: final-residual-push-iter12
+  title: 'At COMPLETE: porcelain witness own tool-use event, triage residuals, commit+push so remote reflects HEAD'
+  status: pending
