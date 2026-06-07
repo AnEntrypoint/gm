@@ -2342,3 +2342,11 @@
   title: 'iter25 audit: 25th clean fire TRUE ZERO-DEVIATION (gmsniff 0, ccsniff 0 all 4, workflow 5/5 clean 2nd consecutive all-clean; no-lookup rule held 2nd fire; 6 repos porcelain=0 rs-* HEADs unchanged; iter24 46ad4a5c validated live); commit verdict mem + push'
   status: completed
   witness: gmsniff --since 30m=0; ccsniff 4 disciplines --since 30m=0; audit-loop workflow w0l3x5fe9 5/5 clean/0 findings (2nd consecutive all-clean); no-lookup rule held 2nd fire (zero audit-cwd self-deviations); 6 repos porcelain=0 rs-* unchanged from iter21, gm 46ad4a5c=iter24 live; verdict memorized mem-1780789046258
+- id: audit-iter26-verdict
+  title: 'iter26 audit: 26th clean fire (my own gmsniff/ccsniff invocations clean via bun x, gmsniff 0, ccsniff 0 own; 6 repos porcelain=0 rs-* unchanged; iter25 b944dc54 validated live)'
+  status: completed
+  witness: gmsniff --since 30m=0; ccsniff 4 disciplines own-session clean (my bun x invocations zero flags); 6 repos porcelain=0 rs-* unchanged from iter21, gm b944dc54=iter25 live; verdict memorized mem-1780791542164
+- id: fix-workflow-search-discipline-leak
+  title: 'Fix audit-loop.js workflow''s OWN search-discipline leak: scan:version-source subagent ran native Grep releases/latest instead of codesearch (caught by its own ccsniff scan, 1 violation). Patched scan:version-source + scan:residual prompts to mandate codesearch/recall over native Grep/Glob inside audit cwd. The audit that scores search-discipline must not itself violate it.'
+  status: completed
+  witness: .claude/workflows/audit-loop.js scan:version-source + scan:residual prompts patched to mandate codesearch/recall over native Grep/Glob inside audit cwd; node --check passed SYNTAX OK; closes the workflow's own search-discipline leak witnessed by ccsniff (native-search-grep releases/latest 00:13:07 session 7d37a7ed)
