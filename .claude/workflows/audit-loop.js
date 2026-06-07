@@ -42,7 +42,7 @@ const scans = await parallel([
     { label: 'scan:gmsniff', phase: 'Scan', schema: SCAN_SCHEMA }
   ),
   () => agent(
-    'Run ccsniff for all four disciplines (--git-discipline, --continuation-discipline, --glyph-discipline, --search-discipline) over the past 35 minutes. Report any flags with their cwd and timestamp. search-discipline native-search-grep flags in the audit cwd are self-deviations (code lookup must route through the codesearch verb). Report finding + verdict + evidence.',
+    'Run ccsniff for all four disciplines over the past 35 minutes. Invoke ccsniff ONLY via the stable published form `bun x ccsniff@latest --git-discipline --since 35m` (and the same for --continuation-discipline, --glyph-discipline, --search-discipline) - this needs ZERO binary lookup. NEVER use native Bash find/grep/Glob to locate the ccsniff binary or to filter its output; a native search in the [gm] audit cwd is itself a search-discipline self-deviation this very scan reports. If you need to inspect a file, route through the codesearch verb. Report any flags with their cwd and timestamp; search-discipline native-search flags in the audit cwd are self-deviations (lookup must route through codesearch/recall or the stable npx form). Report finding + verdict + evidence.',
     { label: 'scan:ccsniff', phase: 'Scan', schema: SCAN_SCHEMA }
   ),
   () => agent(

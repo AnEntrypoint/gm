@@ -2354,3 +2354,11 @@
   title: 'iter27 audit: 27th clean fire (gmsniff 2 FOREIGN gate-positive, ccsniff own-session 0, workflow 5/5 clean - iter26 search-discipline fix VALIDATED IN PRACTICE scan:version-source no longer self-flags; 6 repos porcelain=0 rs-* unchanged; iter26 7b170e02+workflow fix live); commit verdict mem + push'
   status: completed
   witness: gmsniff --since 30m=2 FOREIGN cwd-6836 gate-positive; ccsniff 4 disciplines own-session=0; audit-loop workflow wrqvot111 5/5 clean/0 findings - iter26 search-discipline fix validated in practice (scan:version-source no self-flag); 6 repos porcelain=0 rs-* unchanged from iter21, gm 7ab34647 descends from 7b170e02 iter26+fix live; verdict memorized mem-1780812705601
+- id: audit-iter28-verdict
+  title: 'iter28 audit: 28th clean fire (my own snifftool invocations clean via bun x; gmsniff 2 FOREIGN cwd-2638/cwd-6836 gate-positive, ccsniff own-session 0; 6 repos porcelain=0 rs-* unchanged; iter27 a628b453+4c4bcb41 live validated in practice)'
+  status: completed
+  witness: gmsniff --since 30m=2 FOREIGN cwd-2638/cwd-6836 gate-positive; my own snifftool invocations clean via bun x; ccsniff own-session search-discipline=0 for MY calls; 6 repos porcelain=0 rs-* unchanged from iter21, gm c1062392=iter27 caveat commit live (grandparent a628b453=iter27 verdict); verdict memorized mem-1780815429258
+- id: fix-workflow-scan-ccsniff-binary-lookup
+  title: 'Fix audit-loop.js scan:ccsniff subagent''s native-find binary-lookup leak: it ran `find C:/dev/gm -iname *ccsniff*` to locate the ccsniff binary (caught by its own search-discipline scan, same class as iter26 scan:version-source but different subagent). Patched scan:ccsniff prompt to mandate stable bun x ccsniff@latest invocation (zero binary lookup), never native find/grep. The binary-location reflex is the recurring workflow-subagent leak.'
+  status: completed
+  witness: .claude/workflows/audit-loop.js scan:ccsniff prompt patched to mandate stable bun x ccsniff@latest invocation (zero binary lookup) + never native find/grep/Glob; node --check passed SYNTAX OK; closes the binary-location leak witnessed by the workflow's own scan (native-search-bash find C:/dev/gm -iname *ccsniff* 06:52:45 session 7d37a7ed). Same fix-class as iter26 scan:version-source, different subagent.
