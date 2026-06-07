@@ -3668,7 +3668,44 @@ async function tryInstantiate(wasmPath) {
   return { instance, instanceRef };
 }
 
-(async () => {
+// In-process API. Lets a host (e.g. freddie) drive memorize/recall/auto-recall against
+// .gm/rs-learn.db WITHOUT running the spool daemon loop: the wasm instance is created once
+// and cached, and dispatch() returns parsed JSON. The wasm host functions resolve the project
+// .gm dir from CLAUDE_PROJECT_DIR/cwd, so set those in the host process before first dispatch.
+let _sharedPlugkit = null;
+export async function createPlugkit(opts = {}) {
+  if (_sharedPlugkit && !opts.fresh) return _sharedPlugkit;
+  const wasmPath = opts.wasmPath || path.join(GM_TOOLS_ROOT, 'plugkit.wasm');
+  if (!fs.existsSync(wasmPath)) throw new Error(`plugkit wasm not installed at ${wasmPath} -- run: bun x gm-plugkit@latest spool`);
+  let instance;
+  try {
+    ({ instance } = await tryInstantiate(wasmPath));
+  } catch (e) {
+    const healed = await selfHeal(`${e && e.name || 'instantiate'}: ${e && e.message}`);
+    if (!healed) throw e;
+    ({ instance } = await tryInstantiate(wasmPath));
+  }
+  const api = {
+    dispatch(verb, body) {
+      const raw = dispatchVerbToWasmInternal(instance, verb, typeof body === 'string' ? body : JSON.stringify(body || {}));
+      if (raw == null) return null;
+      try { return JSON.parse(raw); } catch (_) { return raw; }
+    },
+    version() { return resolveVersion(instance); },
+    _instance: instance,
+  };
+  if (!opts.fresh) _sharedPlugkit = api;
+  return api;
+}
+
+const _isCliEntry = (() => {
+  try {
+    if (!process.argv[1]) return false;
+    return path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]);
+  } catch (_) { return false; }
+})();
+
+if (_isCliEntry) (async () => {
   try {
     const wasmPath = path.join(GM_TOOLS_ROOT, 'plugkit.wasm');
 

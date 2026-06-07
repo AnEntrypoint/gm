@@ -72,3 +72,6 @@ tmp/
 .claude/worktrees/*/.gm/
 # <<< plugkit managed
 .gm/pw-sock-*/
+
+# in-process plugkit probe artifact (transient)
+gm-plugkit/.gm/
