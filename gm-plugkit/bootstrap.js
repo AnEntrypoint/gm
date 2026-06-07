@@ -838,10 +838,6 @@ async function ensureReady(opts) {
     ensureSkillMdFresh();
     return { ok: true, wasmPath, binaryPath: wasmPath, status: (wrapperUpdated || versionMarkerUpdated) ? 'wrapper-refreshed' : 'already-ready', version: installed };
   }
-  if (versionDrift) {
-    try { killRunningDaemons(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
-  }
-
   if (targetVersion && targetVersion !== pinnedVersion) {
     try {
       const verFilePath = path.join(wrapperDir, 'plugkit.version');
@@ -850,7 +846,24 @@ async function ensureReady(opts) {
     } catch (e) { log(`could not override plugkit.version: ${e.message}`); }
   }
 
-  const wasmPath = await bootstrap();
+  let wasmPath;
+  try {
+    wasmPath = await bootstrap();
+  } catch (bootErr) {
+    if (versionDrift && isReady()) {
+      log(`bootstrap for ${targetVersion} failed (${bootErr.message || bootErr}); keeping running watcher on installed ${installed} (no kill, serve cached wasm)`);
+      const cachedPath = getWasmPath();
+      ensureWrapperFresh();
+      ensureSkillMdFresh();
+      return { ok: true, wasmPath: cachedPath, binaryPath: cachedPath, status: 'bootstrap-failed-served-cached', version: installed };
+    }
+    throw bootErr;
+  }
+
+  if (versionDrift) {
+    try { killRunningDaemons(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
+  }
+
   ensureWrapperFresh();
   ensureSkillMdFresh();
   return { ok: true, wasmPath, binaryPath: wasmPath, status: 'bootstrapped', version: targetVersion || installed };
