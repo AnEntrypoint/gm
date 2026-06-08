@@ -2516,3 +2516,43 @@
   blockedBy:
   - out-of-reach
   witness: 'Follow-up durably captured in mem-1780921381801 (precise root cause + fix direction: Name-verify lock-holder pid). Persistence achieved via the portable memory surface, not a perpetually-pending PRD row that would wedge COMPLETE. A future session recalls it and opens a fresh repro-harness chain. Per P7, not shipping a blind fix this session.'
+- id: merge-rs-plugkit-pr5-digest
+  title: 'Merge rs-plugkit PR #5 (fix/codeinsight-digest-stability) into main via gh pr merge --merge (or squash), so the cascade ships it. First in sequence (least conflict).'
+  status: completed
+  witness: 'PR #5 SUPERSEDED: rs-plugkit main already has digest-stability (current_digest + indexable_porcelain/skipped_path/porcelain_path + tests landed independently). Closed #5 + deleted branch fix/codeinsight-digest-stability. Not merged - redundant.'
+- id: merge-rs-plugkit-pr6-reentry
+  title: 'Merge rs-plugkit PR #6 (fix/planning-event-reentry-and-prd-upsert) into main. Touches execute.rs + prd.rs + plan.rs - may conflict with #7 depending on merge order; merge #6 before #7 since #7 builds on the same execute.rs region.'
+  status: completed
+  witness: 'Merged origin/fix/planning-event-reentry-and-prd-upsert into rs-plugkit main (commit 121a976, clean ort merge: execute.rs+plan.rs+prd.rs), pushed 77769e0..d689d98. Branch auto-detected merged + deleted.'
+- id: merge-rs-plugkit-pr7-dna
+  title: 'Merge rs-plugkit PR #7 (feat/engineering-dna-invariants) into main. Touches execute.rs/plan.rs/verify.rs. If it conflicts with #6 (both add execute.rs sections), rebase #7 on the post-#6 main and resolve, then merge.'
+  status: completed
+  witness: 'Merged origin/feat/engineering-dna-invariants into main (commit d689d98, clean ort merge: execute.rs+plan.rs+verify.rs, no conflict - #6 and #7 anchored at different points). Pushed. Branch deleted.'
+- id: resolve-rs-plugkit-merge-conflicts
+  title: '#6 and #7 both insert sections into execute.rs (#6 Planning-event re-entry, #7 Engineering invariants). Merging both will conflict. Resolve by keeping BOTH sections in execute.rs, in a sensible order. Verify the merged execute.rs TEXT const is valid Rust raw-string (no stray r#) and both sections present.'
+  status: completed
+  witness: 'No textual conflict between #6 and #7 (ort auto-merged - Planning-event re-entry at line 31, Engineering invariants at line 41, distinct anchors). Verified BOTH sections present in merged execute.rs (grep count 3 incl Dispatch ref) + raw-string integrity (1 r#open, 1 close). The only conflict was #5 vs main (superseded, aborted).'
+- id: decide-gm-pr19-gemini
+  title: 'gm PR #19 (fix-gemini-cli-gc, Gemini CLI extension fix) is FOREIGN work (gm-gc, a retired downstream per AGENTS.md - the 15-platform fanout is archived). Decide: merge per the merge-all directive, OR close as belonging to an archived surface. Read the PR diff to judge relevance to current gm.'
+  status: completed
+  witness: 'gm PR #19 CLOSED not merged: targets retired gm-gc downstream (archived per AGENTS.md), diff is -6591 deletions of live .gm/exec-spool runtime state + tracked-file reverts that would corrupt main. Closed + deleted branch.'
+- id: codify-no-branch-no-pr-rule
+  title: 'Add a standing AGENTS.md rule: gm/rs-* workflow is direct-push-to-main, NEVER a feature branch or PR. The git verbs (git_finalize/git_push) already push to main; codify branch-PR-free explicitly so future sessions stop opening PRs (this sessions own PRs #5/#6/#7 were the deviation this rule prevents). All work commits straight to main and pushes; the cascade ships from main.'
+  status: completed
+  witness: 'Added Direct-push-to-main-never-a-branch-never-a-PR rule to AGENTS.md after the Push-is-part-of-COMPLETE rule: gm/rs-* commits straight to main+pushes, git verbs target main, cascade ships from main, branch/PR/fork is a deviation, only main+gh-pages admissible. Inline structural-rule edit per the hard-rule guidance.'
+- id: audit-instruction-prose-for-pr-language
+  title: Grep AGENTS.md + rs-plugkit instruction prose (verify.rs/emit.rs/etc) + SKILL.md for any branch/PR language that could prompt an agent to open a PR. The CI/push prose says push IS the validation dispatch - confirm nothing instructs branch-then-PR. If found, convert to direct-push.
+  status: completed
+  witness: 'grep AGENTS.md = 0 PR/branch/fork matches (workflow was always direct-push; my PRs #5/#6/#7 were the pure deviation). grep rs-plugkit src/orchestrator/instructions/ for pull-request/feature-branch/git-checkout-b/--head = empty. CI prose (verify.rs) says push IS validation dispatch, no branch step. No prose conversion needed - surface was already PR-free.'
+- id: cleanup-stale-worktree-branches
+  title: 'Triage local worktree-agent-* branches (a12d.../a429.../a48a.../a4a4.../a78c.../a83f.../ae7d... etc): these are transient agent-worktree branches. If they hold no unmerged real work, delete them; only origin/main + gh-pages should remain as durable. Do NOT delete a branch with unpushed real commits.'
+  status: completed
+  witness: 'The 9 worktree-agent-* branches are LOCKED active worktrees under .claude/worktrees/ owned by concurrent agent sessions (harness-managed, not gm-tracked residual). 8 have 0 unpushed commits; ad834a9 has 1 stale chore(prd) commit for archived gm-thebird (already-live per its own witness, superseded). Deleting locked worktrees of live sessions is out-of-reach (other sessions authority). Triage: LEAVE - harness-managed, not this sessions junk. Not a gm tree residual.'
+- id: verify-cascade-after-merges
+  title: 'After merging the 3 rs-plugkit PRs to main, the rs-plugkit Release fires and the cascade bumps gm.json plugkitVersion. Verify the merges landed on rs-plugkit main (git_log/branch_status ahead==0) and the prose changes are in the shipped wasm prose path. Note: cascade build is async - confirm push landed, not full CI green.'
+  status: completed
+  witness: rs-plugkit main advanced d689d98 -> 3070a4e9 (cascade auto-bump CI commit fired on top of my merge push = Release triggered). Zero open PRs on gm + rs-plugkit (gh pr list empty both). Merges landed, cascade firing - build is async, push confirmed landed.
+- id: memorize-no-pr-workflow
+  title: 'memorize-fire the standing no-branch/no-PR/direct-push-to-main workflow rule + that PRs #5/#6/#7 were merged this session, so the next session does not re-open PRs or look for them.'
+  status: completed
+  witness: 'memorize-fire dispatched (9538): standing direct-push-to-main no-branch-no-PR rule + the disposition of all 4 PRs (#6/#7 merged, #5 superseded-closed, #19 closed) so next session does not re-open or hunt for them.'
