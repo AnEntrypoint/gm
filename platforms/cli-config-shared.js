@@ -1373,7 +1373,7 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
     const dropKeys = new Set(['agent', 'enforce', 'allowed-tools']);
     const out = [];
     for (const line of fmText.split(/\r?\n/)) {
-      const km = line.match(/^([a-zA-Z_-]+):\s*(.*)$/);
+      const km = line.match(/^\s*([a-zA-Z_-]+):\s*(.*)$/);
       if (!km) { out.push(line); continue; }
       const [, key] = km;
       if (dropKeys.has(key)) continue;
@@ -1390,14 +1390,14 @@ const gc = factory('gc', 'Gemini CLI', 'gemini-extension.json', 'GEMINI.md', {
       author: pluginSpec.author, license: pluginSpec.license,
       ...repoFields('gm-gc'), engines: pluginSpec.engines, publishConfig: pluginSpec.publishConfig,
       bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
-      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'prompts/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
+      files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'prompts/', '.github/', 'README.md', 'GEMINI.md', 'AGENTS.md', '.mcp.json', 'gemini-extension.json', 'cli.js', 'install.js'],
       ...(pluginSpec.scripts && { scripts: pluginSpec.scripts }), ...extraFields
     });
   },
 getPackageJsonFields() {
      return {
        bin: { 'gm-gc': './cli.js', 'gm-gc-install': './install.js' },
-       files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'prompts/', '.github/', 'README.md', 'GEMINI.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
+       files: ['agents/', 'bin/', 'hooks/', 'scripts/', 'skills/', 'prompts/', '.github/', 'README.md', 'GEMINI.md', 'AGENTS.md', '.mcp.json', 'gemini-extension.json', 'cli.js']
      };
    },
 getAdditionalFiles(spec) {

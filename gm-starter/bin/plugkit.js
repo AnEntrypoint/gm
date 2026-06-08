@@ -104,7 +104,9 @@ function main() {
 
   const bin = toolsBin();
   const r = spawnSync(bin, args, { stdio: 'inherit', windowsHide: true });
-  process.exit(r.status ?? 1);
+  let status = r.status ?? 1;
+  if (isHook && status === 2) status = 0;
+  process.exit(status);
 }
 
 main();

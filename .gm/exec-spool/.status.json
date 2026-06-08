@@ -2,13 +2,14 @@
   "binary_version": "0.1.365",
   "errors_last_5": [],
   "last_dispatched_task": {
-    "at": "2026-05-14T13:06:35.279Z",
-    "id": 2,
-    "input_path": "C:/dev/gm\\.gm\\exec-spool\\in\\codesearch\\2.txt",
-    "lang_or_verb": "codesearch"
+    "at": "2026-06-08T14:26:09.341Z",
+    "id": 1002,
+    "input_path": "/app/.gm/exec-spool/in/bash/1002.sh",
+    "lang_or_verb": "bash"
   },
-  "last_tick_at": "2026-05-14T13:44:19.779Z",
-  "pending_in_inbox": 79,
-  "pid": 78220,
-  "started_at": "2026-05-14T10:23:41.953Z",
-  "tasks_dispatched_this_session"
+  "last_tick_at": "2026-06-08T14:28:07.701Z",
+  "pending_in_inbox": 81,
+  "pid": 1479636,
+  "started_at": "2026-05-15T17:08:08.710Z",
+  "tasks_dispatched_this_session": 8
+}

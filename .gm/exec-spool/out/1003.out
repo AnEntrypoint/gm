@@ -1,1 +1,82 @@
-ingested (156 bytes) source=project/clean-build-required discipline=default
+{
+  "bootstrap_error": null,
+  "cache_dirs": {
+    "gm_log_root": "/home/jules/.claude/gm-log",
+    "spool_root": "/app/.gm/exec-spool"
+  },
+  "last_session_start": {
+    "plugkit_version": "0.1.365",
+    "spawn_error": "",
+    "spawn_ok": true,
+    "ts": "2026-05-14T10:23:41Z",
+    "watcher_pid_attempted": 24112
+  },
+  "plugkit": {
+    "binary_path": "/home/jules/.claude/gm-tools/plugkit",
+    "pin_match": false,
+    "pinned_version": "",
+    "version": "0.1.365"
+  },
+  "recent_errors": [],
+  "recent_hook_fires": [
+    "{\"action\":\"fired\",\"event\":\"stop.fired\",\"hook_name\":\"stop\",\"pid\":1530514,\"sub\":\"hook\",\"ts\":\"2026-06-08T14:23:15.622Z\"}",
+    "",
+    "{\"event\":\"stop-git\",\"phase\":\"start\",\"pid\":1530749,\"sub\":\"hook\",\"ts\":\"2026-06-08T14:23:16.128Z\"}",
+    "",
+    "{\"dur_ms\":21,\"event\":\"stop-git\",\"phase\":\"end\",\"pid\":1530749,\"sub\":\"hook\",\"ts\":\"2026-06-08T14:23:16.149Z\"}"
+  ],
+  "rs_learn": {
+    "acp_status": "unknown",
+    "db_path": "/app/.gm/rs-learn.db",
+    "http_status": "unknown"
+  },
+  "runner": {
+    "alive": true,
+    "pid": true,
+    "port": 45813
+  },
+  "spool_inbox": {
+    "pending": 81,
+    "subdirs": [
+      "health",
+      "recall",
+      "nodejs",
+      "memorize",
+      "wait",
+      "runner",
+      "codesearch",
+      "status",
+      "bash"
+    ]
+  },
+  "spool_outbox": {
+    "recent": [
+      "1001.json",
+      "1002.json",
+      "1003.json",
+      "5.json",
+      "30.json"
+    ]
+  },
+  "watcher": {
+    "alive": false,
+    "heartbeat_age_ms": 246,
+    "pid": 78220,
+    "status_json": {
+      "binary_version": "0.1.365",
+      "errors_last_5": [],
+      "last_dispatched_task": {
+        "at": "2026-06-08T14:19:38.284Z",
+        "id": 1003,
+        "input_path": "/app/.gm/exec-spool/in/health/1003.txt",
+        "lang_or_verb": "health"
+      },
+      "last_tick_at": "2026-06-08T14:26:09.649Z",
+      "pending_in_inbox": 81,
+      "pid": 101647,
+      "started_at": "2026-05-15T12:42:02.986Z",
+      "tasks_dispatched_this_session": 1
+    },
+    "tasks_dispatched_session": 1
+  }
+}

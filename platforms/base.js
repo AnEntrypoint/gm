@@ -51,12 +51,19 @@ class PlatformAdapter {
 
   writeFiles(outputDir, structure) {
     const written = [];
-    Object.entries(structure).forEach(([filePath, content]) => {
+    const entries = Object.entries(structure);
+    for (const [filePath, content] of entries) {
       if (content) {
-        writeFile(path.join(outputDir, filePath), content);
+        let finalContent = content;
+        if (typeof content === 'string' && content.startsWith('@')) {
+          const target = content.slice(1);
+          const found = entries.find(([path]) => path === target);
+          if (found) finalContent = found[1];
+        }
+        writeFile(path.join(outputDir, filePath), finalContent);
         written.push(filePath);
       }
-    });
+    }
     return written;
   }
 
