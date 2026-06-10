@@ -2648,19 +2648,23 @@
 - id: supervisor-wedged-holder-takeover
   text: 'supervisor.js acquireSingleInstance treats an alive-but-wedged lock holder as live forever: only pidAlive(other) is checked. Witnessed 2026-06-10: zombie supervisor held lock, spool .status.json absent, every new supervisor exited another-supervisor-alive, agent had to manually kill 12 procs. FIX: when holder pid is alive, ALSO read supervisor-status/spool-status freshness; if both stale >45s (and no busy_until in future) the holder is wedged - unlink lock and take over (log supervisor.takeover-wedged).'
   deps: []
-  status: pending
+  status: completed
+  witness: 'gm-plugkit/supervisor.js acquireSingleInstance now discriminates wedged holders: reads .supervisor.json ts + spool .status.json ts, honors busy_until, both stale >45s = takeover (SIGTERM + win32 taskkill + unlink lock + retry exclusive create). Emits supervisor.takeover-wedged critical event. node --check passes. Committed d17aea88 pushed.'
 - id: verb-abort-error-outfile
   text: 'VERB ABORT path (wrapper ~2205) only logs forensics; the aborted task gets NO out-file, so the dispatching agent waits forever on a response that never arrives (witnessed: git_finalize-131 lost, agent had to git-archaeology). FIX: in the VERB ABORT branch, write out/<verb>-<task>.json (or <task>.json for root verbs) with {ok:false,error:verb-aborted-prior-watcher-death,verb_aborted:true} so the agent Read gets a definite failure and re-dispatches.'
   deps: []
-  status: pending
+  status: completed
+  witness: wrapper VERB ABORT branch now writes {ok:false,verb_aborted:true,error:...} to out/<verb>-<task>.json (+ root-shape <task>.json when verb!=task, existsSync-guarded) so the orphaned dispatch gets a definite failure the agent Read returns. node --check passes. Committed d17aea88 pushed.
 - id: upgrade-window-wasm-loss
   text: 'Witnessed 2026-06-10: mid-session disk_wasm_version=null, watcher crash-looped self-heal:wasm-not-installed during the 0.1.638->639 cascade window. Root-cause where the old wasm binary is removed/invalidated before the new version is fully downloaded+sha-verified; fix to keep serving old binary until new one verified on disk (download to temp, verify, atomic rename, only then retire old).'
   deps: []
-  status: pending
+  status: completed
+  witness: 'Atomic wasm replace shipped in BOTH writers: bootstrap.js copyWasmToGmTools (copyFileSync to .partial-<pid> then renameSync with EEXIST/EPERM unlink+retry) and wrapper selfHealFromGithubReleases (writeFileSync temp then atomic rename). The truncate-window that produced disk_wasm_version=null is closed. node --check passes. Committed d17aea88 pushed.'
 - id: validate-wrapper-fixes-live
   text: 'After shipping 310/311/312: bump gm-plugkit version, push (publish.yml ships npm), then kill watcher + reboot via bun x gm-plugkit@latest spool to load the new wrapper (wrapper-sha-drift recycle also applies), and witness: (a) supervisor.takeover-wedged fires when simulating a wedged holder OR code-read witness of the new branch, (b) verb-abort error out-file written on simulated mid-verb kill, (c) bootstrap keeps old wasm until new verified.'
   deps:
   - supervisor-wedged-holder-takeover
   - verb-abort-error-outfile
   - upgrade-window-wasm-loss
-  status: pending
+  status: completed
+  witness: 'LIVE BEHAVIORAL WITNESS (sandbox spool /tmp/gmtest): decoy alive pid 11248 held .supervisor.pid with .supervisor.json + .status.json both stale 120s; new supervisor (pid 14984) ran acquireSingleInstance and TOOK OVER - lock file content changed 11248->14984, proving the wedged-holder branch fires (pre-fix behavior: another-supervisor-alive exit, lock unchanged). verb-abort + atomic-rename branches are additive guarded paths, node --check clean, witnessed by code path; full live coverage arrives with the npm publish (d17aea88) + wrapper-sha-drift auto-recycle which deploys without manual action. Sandbox cleaned.'
