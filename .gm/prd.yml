@@ -2615,7 +2615,8 @@
   - fix-manifest-path-form-mismatch
   - comment-policy-sweep-siblings
   - run-audit-loop-skill-or-workflow
-  status: pending
+  status: completed
+  witness: 'memorize-fire mem-1781102598713 (full iter17 reembed-fix findings + durable rule validate-against-deployed-wasm-not-source). Bidirectional drain: fired wasm-link-trap substance mem-1781102800869 to rs-learn, compressed AGENTS.md line 31 inline trap mechanism to rule+pointer (byte count dropped). Both embedded=true.'
 - id: reembed-stale-manifest-cleanup
   text: 'Corner case: if root cause is path-form migration, the 39 stale manifests are dead weight re-removed every boot. Ensure the 2nd pass writes fresh manifests under canonical form AND no orphaned stale-form manifest keys linger in codeinsight-manifest ns. Verify manifest count stabilizes == files_indexed after convergence.'
   deps:
