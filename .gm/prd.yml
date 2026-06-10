@@ -2683,4 +2683,5 @@
   text: 'After cascade publishes the fixed wasm and watcher upgrades: trigger digest-mismatch reindex twice; FIRST pass writes hash-keyed manifests, SECOND pass must show reused>0 reused_files>0 in watcher.log done-line = the cache db finally works. This is the user-visible acceptance: no more 5-min busy_until on unchanged trees.'
   deps:
   - manifest-fix-ci-green
-  status: pending
+  status: completed
+  witness: 'LIVE ACCEPTANCE under deployed 0.1.640: pass1 (digest mismatch, legacy pathless manifests skipped) full re-embed wrote path-embedded manifests (path:agents/gm.md witnessed on disk); pass2 (fresh digest mismatch via commit) done-line: files_indexed=58 chunks=372 embedded=0 reused=372 reused_files=54 removed_files=0, completed ~15s vs prior 240-270s. The 5-min busy_until reindex on unchanged trees is eliminated.'
