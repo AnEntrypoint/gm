@@ -2668,3 +2668,19 @@
   - upgrade-window-wasm-loss
   status: completed
   witness: 'LIVE BEHAVIORAL WITNESS (sandbox spool /tmp/gmtest): decoy alive pid 11248 held .supervisor.pid with .supervisor.json + .status.json both stale 120s; new supervisor (pid 14984) ran acquireSingleInstance and TOOK OVER - lock file content changed 11248->14984, proving the wedged-holder branch fires (pre-fix behavior: another-supervisor-alive exit, lock unchanged). verb-abort + atomic-rename branches are additive guarded paths, node --check clean, witnessed by code path; full live coverage arrives with the npm publish (d17aea88) + wrapper-sha-drift auto-recycle which deploys without manual action. Sandbox cleaned.'
+- id: manifest-hash-key-fix
+  text: 'rs-plugkit code_index.rs: manifest KV key is the raw file path; host kv store sanitizes / to _ in the on-disk filename (witness: .gm/disciplines/codeinsight-manifest/agents_gm.md.json = agents/gm.md) so load_manifests returns mangled keys and prior.get(fp) NEVER hits for subdirectory files = reused=0 forever, 5-min busy_until reindex on every digest change persists despite 059dfc0. FIX: key = stable path hash (m{crc32:08x}), real path stored INSIDE manifest JSON (path field); load_manifests maps embedded-path->manifest; reaping deletes by hash key; old pathless manifests skipped (reaped naturally).'
+  deps: []
+  status: completed
+  witness: 'rs-plugkit code_index.rs: manifest_to_json now embeds path field; parse_manifest returns (path, FileManifest) skipping legacy pathless values; load_manifests keys map by embedded path not sanitized kv row key (witness of mangling: .gm/disciplines/codeinsight-manifest/agents_gm.md.json for agents/gm.md; safeName replace [^A-Za-z0-9._-] with _ at wrapper kvFilePath; host_kv_query returns filename as key). Write/reap unchanged (safeName deterministic). Committed 9b60607 pushed rs-plugkit main.'
+- id: manifest-fix-ci-green
+  text: Push manifest-hash-key fix to rs-plugkit main, watch Build-WASM CI to GREEN (wasm-only repo, CI is the only type gate).
+  deps:
+  - manifest-hash-key-fix
+  status: completed
+  witness: 'rs-plugkit Build CI run 27288355806 on 9b60607: SUCCESS (gh run watch --exit-status exit 0). Strict Linux rust-lld link gate passed.'
+- id: manifest-fix-live-reuse-witness
+  text: 'After cascade publishes the fixed wasm and watcher upgrades: trigger digest-mismatch reindex twice; FIRST pass writes hash-keyed manifests, SECOND pass must show reused>0 reused_files>0 in watcher.log done-line = the cache db finally works. This is the user-visible acceptance: no more 5-min busy_until on unchanged trees.'
+  deps:
+  - manifest-fix-ci-green
+  status: pending
