@@ -2645,3 +2645,22 @@
   - validate-incremental-reembed-convergence
   status: completed
   witness: '2nd+ index passes witnessed in deployed 0.1.638 watcher.log: reused=0 persisted across 3 separate digest-mismatch rebuilds (removed_files 39/19/39) confirming PERMANENT not migration. This drove the fix-manifest-path-form-mismatch fix 059dfc0. Post-fix convergence will be witnessable once 0.1.638+ cascades with the canonical-path fix.'
+- id: supervisor-wedged-holder-takeover
+  text: 'supervisor.js acquireSingleInstance treats an alive-but-wedged lock holder as live forever: only pidAlive(other) is checked. Witnessed 2026-06-10: zombie supervisor held lock, spool .status.json absent, every new supervisor exited another-supervisor-alive, agent had to manually kill 12 procs. FIX: when holder pid is alive, ALSO read supervisor-status/spool-status freshness; if both stale >45s (and no busy_until in future) the holder is wedged - unlink lock and take over (log supervisor.takeover-wedged).'
+  deps: []
+  status: pending
+- id: verb-abort-error-outfile
+  text: 'VERB ABORT path (wrapper ~2205) only logs forensics; the aborted task gets NO out-file, so the dispatching agent waits forever on a response that never arrives (witnessed: git_finalize-131 lost, agent had to git-archaeology). FIX: in the VERB ABORT branch, write out/<verb>-<task>.json (or <task>.json for root verbs) with {ok:false,error:verb-aborted-prior-watcher-death,verb_aborted:true} so the agent Read gets a definite failure and re-dispatches.'
+  deps: []
+  status: pending
+- id: upgrade-window-wasm-loss
+  text: 'Witnessed 2026-06-10: mid-session disk_wasm_version=null, watcher crash-looped self-heal:wasm-not-installed during the 0.1.638->639 cascade window. Root-cause where the old wasm binary is removed/invalidated before the new version is fully downloaded+sha-verified; fix to keep serving old binary until new one verified on disk (download to temp, verify, atomic rename, only then retire old).'
+  deps: []
+  status: pending
+- id: validate-wrapper-fixes-live
+  text: 'After shipping 310/311/312: bump gm-plugkit version, push (publish.yml ships npm), then kill watcher + reboot via bun x gm-plugkit@latest spool to load the new wrapper (wrapper-sha-drift recycle also applies), and witness: (a) supervisor.takeover-wedged fires when simulating a wedged holder OR code-read witness of the new branch, (b) verb-abort error out-file written on simulated mid-verb kill, (c) bootstrap keeps old wasm until new verified.'
+  deps:
+  - supervisor-wedged-holder-takeover
+  - verb-abort-error-outfile
+  - upgrade-window-wasm-loss
+  status: pending

@@ -2212,6 +2212,32 @@ async function runSpoolWatcher(instance, spoolDir) {
           detected_at: Date.now(),
         });
         try { console.error(`[plugkit-wasm] VERB ABORT detected: prior watcher pid=${priorVerb.pid} died inside verb=${priorVerb.verb} task=${priorVerb.task}`); } catch (_) {}
+        // The aborted dispatch otherwise gets NO response file: the in-file was consumed,
+        // the prior watcher died before writing out/, and the agent waits forever on a
+        // Read that never lands (then must git-archaeology whether the verb's side effects
+        // happened). Write a definite failure response so the agent's Read returns
+        // immediately and it re-dispatches. Both out-name shapes are written because
+        // .verb-active.json does not record whether the dispatch was root or nested;
+        // the agent reads whichever its dispatch shape expects, the other is swept.
+        if (priorVerb.verb && priorVerb.task) {
+          try {
+            const abortBody = JSON.stringify({
+              ok: false,
+              error: `verb aborted: watcher pid=${priorVerb.pid} died mid-verb; side effects may be partial -- verify state, then re-dispatch`,
+              verb_aborted: true,
+              verb: priorVerb.verb,
+              task: priorVerb.task,
+            });
+            const abortOutDir = path.join(path.dirname(STATUS_PATH_FOR_VERB_ABORT), 'out');
+            fs.mkdirSync(abortOutDir, { recursive: true });
+            const nestedName = path.join(abortOutDir, `${priorVerb.verb}-${priorVerb.task}.json`);
+            if (!fs.existsSync(nestedName)) fs.writeFileSync(nestedName, abortBody);
+            if (priorVerb.verb !== priorVerb.task) {
+              const rootName = path.join(abortOutDir, `${priorVerb.task}.json`);
+              if (!fs.existsSync(rootName)) fs.writeFileSync(rootName, abortBody);
+            }
+          } catch (_) {}
+        }
       }
       try { fs.unlinkSync(VERB_ACTIVE_PATH); } catch (_) {}
     }
@@ -3628,7 +3654,24 @@ async function selfHealFromGithubReleases() {
         }
         const toolsDir = GM_TOOLS_ROOT;
         fs.mkdirSync(toolsDir, { recursive: true });
-        fs.writeFileSync(path.join(toolsDir, 'plugkit.wasm'), wasm);
+        // Replace the live wasm atomically. A direct writeFileSync truncates the target
+        // before streaming ~149MB, so a crash mid-write or a concurrent watcher load in
+        // that window sees a truncated or absent wasm ("self-heal: wasm not installed"
+        // crash-loop). Write to a pid-suffixed temp and rename over the target; rename
+        // on the same volume is atomic, with the Windows EEXIST/EPERM unlink+retry.
+        const wasmTarget = path.join(toolsDir, 'plugkit.wasm');
+        const wasmTmp = `${wasmTarget}.partial-${process.pid}`;
+        fs.writeFileSync(wasmTmp, wasm);
+        try { fs.renameSync(wasmTmp, wasmTarget); }
+        catch (renameErr) {
+          if (renameErr.code === 'EEXIST' || renameErr.code === 'EPERM') {
+            try { fs.unlinkSync(wasmTarget); } catch (_) {}
+            fs.renameSync(wasmTmp, wasmTarget);
+          } else {
+            try { fs.unlinkSync(wasmTmp); } catch (_) {}
+            throw renameErr;
+          }
+        }
         fs.writeFileSync(path.join(toolsDir, 'plugkit.version'), version);
         const wrapperSrc = __filename;
         const wrapperDst = path.join(toolsDir, 'plugkit-wasm-wrapper.js');

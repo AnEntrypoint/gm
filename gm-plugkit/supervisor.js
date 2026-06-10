@@ -85,10 +85,39 @@ function acquireSingleInstance() {
         let other = NaN;
         try { other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10); } catch (_) {}
         if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
-          logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
-          return false;
+          // An alive holder pid is not the same as a working holder: a wedged supervisor
+          // (event loop stuck, watcher dead, neither .supervisor.json nor .status.json
+          // advancing) blocks every newcomer forever under a pidAlive-only check, forcing
+          // manual process kills to recover the spool. Discriminate by progress, not
+          // liveness: holder is wedged only when its own status heartbeat AND the spool
+          // status are both stale past the takeover window, honoring a future busy_until
+          // exactly as checkWatcherHealth does.
+          const TAKEOVER_STALE_MS = 45_000;
+          const now = Date.now();
+          let supTs = 0;
+          try { supTs = (JSON.parse(fs.readFileSync(SUPERVISOR_PATH, 'utf-8')).ts) || 0; } catch (_) {}
+          const spool = readStatus();
+          const spoolBusy = spool && spool.busy_until && spool.busy_until > now;
+          const spoolTs = (spool && spool.ts) || 0;
+          const holderWedged = !spoolBusy
+            && (now - supTs) > TAKEOVER_STALE_MS
+            && (now - spoolTs) > TAKEOVER_STALE_MS;
+          if (!holderWedged) {
+            logEvent('supervisor.refused-duplicate', { existing_pid: other, severity: 'warn' });
+            return false;
+          }
+          logEvent('supervisor.takeover-wedged', {
+            existing_pid: other,
+            supervisor_status_age_ms: now - supTs,
+            spool_status_age_ms: now - spoolTs,
+            severity: 'critical',
+          });
+          try { process.kill(other, 'SIGTERM'); } catch (_) {}
+          if (process.platform === 'win32') {
+            try { spawnSync('taskkill', ['/F', '/T', '/PID', String(other)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+          }
         }
-        // Holder is dead/stale: remove and retry the exclusive create once.
+        // Holder is dead/stale/wedged: remove and retry the exclusive create once.
         try { fs.unlinkSync(SUPERVISOR_PID_PATH); } catch (_) {}
         continue;
       }

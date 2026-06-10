@@ -606,7 +606,25 @@ function copyWasmToGmTools(wasmPath, version) {
       if (cur === src) wasmFresh = true;
     } catch (_) {}
   }
-  if (!wasmFresh) fs.copyFileSync(wasmPath, target);
+  if (!wasmFresh) {
+    // copyFileSync truncates the target before streaming ~149MB, leaving a window where
+    // a crash or a concurrent watcher load sees a truncated/absent wasm (the
+    // "self-heal: wasm not installed" crash-loop during an upgrade). Copy to a
+    // pid-suffixed temp and rename over the target: same-volume rename is atomic,
+    // with the Windows EEXIST/EPERM unlink+retry.
+    const tmp = `${target}.partial-${process.pid}`;
+    fs.copyFileSync(wasmPath, tmp);
+    try { fs.renameSync(tmp, target); }
+    catch (err) {
+      if (err.code === 'EEXIST' || err.code === 'EPERM') {
+        try { fs.unlinkSync(target); } catch (_) {}
+        fs.renameSync(tmp, target);
+      } else {
+        try { fs.unlinkSync(tmp); } catch (_) {}
+        throw err;
+      }
+    }
+  }
   fs.writeFileSync(path.join(dst, 'plugkit.version'), version);
 
   try {
