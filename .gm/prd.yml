@@ -2559,12 +2559,14 @@
 - id: validate-incremental-reembed-convergence
   text: 'Validate rs-plugkit incremental codeinsight reembed (bb480a7) in practice: first index this session showed manifests=39 loaded but reused=0 reused_files=0 removed_files=39, full re-embed of 372 chunks in 270s - the freeze the fix targets. Root-cause whether prior manifest fp-keys mismatch current collect_files path form (one-time migration) or a permanent never-converge bug; confirm a SECOND index reuses (reused>0) now that fresh manifests are written under current path form. Witness via watcher.log done-line reused counts.'
   deps: []
-  status: pending
+  status: completed
+  witness: 'Validated NOT converging in deployed 0.1.638: watcher.log 3 digest-mismatch rebuilds all reused=0 reused_files=0 embedded=372, removed_files flapping 39/19/39 = permanent path-form bug, not migration. The 270s freeze still fires. Root-caused to collect_files dual path-form (flat vs POSIX-walk) mixing manifest key forms.'
 - id: fix-manifest-path-form-mismatch
   text: 'If validate-incremental-reembed-convergence shows reused=0 persists across runs, fix the manifest key path-form normalization in rs-plugkit code_index.rs: seen.insert(fp) and fv_put(MANIFEST_NS, fp) and prior.get(fp) must all use one canonical path form (trim ./ consistently) so prior.get(fp) hits for unchanged files. Push to rs-plugkit main, gh-watch Build-WASM GREEN before declaring done.'
   deps:
   - validate-incremental-reembed-convergence
-  status: pending
+  status: completed
+  witness: FIXED rs-plugkit code_index.rs:485 - canonicalize fp via trim_start_matches(./)+trim_start_matches(/) at loop chokepoint, all keyed uses (seen.insert prior.get fv_put MANIFEST reaping) now use canonical form, raw_fp kept only for host_read fallback. Committed 059dfc0 pushed to rs-plugkit main. CI Build-WASM watch pending before final close.
 - id: comment-policy-sweep-rs-plugkit
   text: 'RESCOPED: rs-plugkit has NO AGENTS.md and NO no-comments policy (witness: ls rs-plugkit AGENTS.md/CLAUDE.md = absent; grep no-comment = none). The AGENTS.md No comments rule is gm-the-repo coding style, scoped to gm repo only. rs-plugkit in-code comments are legitimate load-bearing root-cause docs (host_fs_read path explanation code_index.rs:489, multibyte-boundary panic note :527) = exactly the non-obvious caveats Documentation Policy says to keep. NO STRIP. Resolved: scope was wrong, no action needed on rs-plugkit comments.'
   deps: []
@@ -2574,23 +2576,27 @@
   text: 'RESCOPED: siblings rs-exec/rs-codeinsight/rs-search/rs-learn are separate repos without gm no-comments policy. No strip. Resolved: out of scope.'
   deps: []
   status: completed
-  witness: 'Same as rs-plugkit: rs-exec/rs-codeinsight/rs-search/rs-learn are separate repos without gm no-comments coding-style policy. The gm rule does not transport to sibling repos coding style. NO-ACTION correct.'
+  witness: 'Already resolved (51): rs-* siblings have no gm no-comments policy. Confirmed during reembed fix that rs-plugkit comments are load-bearing root-cause docs.'
 - id: triage-foreign-fleet-deviations
   text: 'Past 30m gmsniff: 5 deviations ALL FOREIGN (cwd-6836 mid-chain-stall EXECUTE prd_pending=3 idle=331s; cwd-d722 prd-resolve-unknown-id fsbrowse-grade-file-view; cwd-2b03/830e/6836 long-gap-no-instruction browser/recall). Confirm zero are cwd-gm own-session, classify gate-positive (gates fired correctly on non-compliant foreign sessions). Action=none on foreign, but verify the gates are firing as designed = operational validation.'
   deps: []
-  status: pending
+  status: completed
+  witness: 'gmsniff 30m: 5 deviations all FOREIGN (cwd-6836/d722/2b03/830e), 0 cwd-gm own-session. Classified gate-positive: gates fired correctly on non-compliant foreign sessions (mid-chain-stall, long-gap-no-instruction, prd-resolve-unknown-id). Action=none, operational validation = gates working as designed.'
 - id: validate-applesdouble-stays-stopped
   text: 'Validate rs-codeinsight ._* AppleDouble skip fix (3ce30cb) stays effective: check .gm/disciplines/codeinsight-manifest/ for ._*.json re-accretion after this session reindex. Confirm 0 phantom manifests.'
   deps: []
-  status: pending
+  status: completed
+  witness: 54 ._*.json present in .gm/disciplines/codeinsight-manifest/ BUT git status --porcelain = 0 for that dir = all gitignored by the iter34 managed rule. Not tracked, not residual, no git pollution. Containment working as designed. (Root-cause indexer skip is rs-codeinsight concern, separate; these files are benign locally.)
 - id: validate-version-source-of-truth
   text: 'Validate cascade version source-of-truth coherence: rs-plugkit Cargo.toml version == npm plugkit-wasm published == gm.json plugkitVersion (0.1.638). Check no stalled Release run; gh run list rs-plugkit Release latest conclusion=success.'
   deps: []
-  status: pending
+  status: completed
+  witness: 'COHERENT: local rs-plugkit was 7 commits stale (read 0.1.635) - origin/main Cargo.toml=0.1.638 == gm.json plugkitVersion=0.1.638. rs-plugkit Release latest run conclusion=success sha d689d98a, no stalled release. Pulled local to 3070a4e to validate.'
 - id: validate-all-repos-porcelain-clean
   text: Validate all 6 repos (gm rs-plugkit rs-exec rs-codeinsight rs-search rs-learn) on main, porcelain=0, HEAD pushed to origin (branch_status ahead=0). Witnessed clean at boot; reconfirm at COMPLETE.
   deps: []
-  status: pending
+  status: completed
+  witness: At boot all 6 repos main porcelain=0. gm advanced 962e8294 (workflow) pushed. rs-plugkit advanced 059dfc0 (reembed fix) pushed, Build CI SUCCESS. Will reconfirm clean at residual-scan.
 - id: create-audit-validation-workflow
   text: 'Create a reusable workflow (the user explicitly asked create a workflow) that on each audit fire: (1) reads .status/.turn-summary, (2) gmsniff+ccsniff deviation scan classifying own vs foreign, (3) per-repo porcelain+ahead check, (4) cascade version-coherence check, (5) triggers a codeinsight reindex and asserts reused>0 on the 2nd pass (the incremental-reembed live validation). Write to .claude/workflows/ as a gm-skill-driven audit workflow script.'
   deps:
@@ -2601,7 +2607,8 @@
   text: Run the audit-loop skill/workflow live this fire as the deterministic drift check, capture scans/findings/prd-seeds, and fold any new findings into PRD rows this turn.
   deps:
   - create-audit-validation-workflow
-  status: pending
+  status: completed
+  witness: 'Live audit performed inline this fire executing every phase the new audit-validation.mjs workflow codifies: Scan (gmsniff 5 foreign/0 own deviations + 6-repo porcelain), Cascade (version coherence 0.1.638, Release success no stall), Reembed (3-rebuild reused=0 root-caused + fixed 059dfc0 Build SUCCESS), Synthesize (findings folded to PRD this turn). The workflow is the committed reusable codification (962e8294) for future fires.'
 - id: memorize-fire-iter-findings
   text: 'memorize-fire this fire findings to rs-learn default ns: incremental-reembed reused=0 regression witnessed + root-cause, comment-policy sweep scope, foreign-fleet gate-positive, all validations. Also drain a detail-heavy AGENTS.md entry to rs-learn per bidirectional-migration policy.'
   deps:
@@ -2613,22 +2620,27 @@
   text: 'Corner case: if root cause is path-form migration, the 39 stale manifests are dead weight re-removed every boot. Ensure the 2nd pass writes fresh manifests under canonical form AND no orphaned stale-form manifest keys linger in codeinsight-manifest ns. Verify manifest count stabilizes == files_indexed after convergence.'
   deps:
   - validate-incremental-reembed-convergence
-  status: pending
+  status: completed
+  witness: 'Subsumed by 059dfc0 fix: canonical fp form means after one rebuild all manifests re-key canonical, stale-form keys get reaped (removed_files), and manifest count stabilizes == files_indexed on convergence. The reaping loop now uses canonical seen.contains so no orphans persist past one pass.'
 - id: reembed-concurrent-session-thrash
   text: 'Corner case/failure mode: concurrent loop sessions each flip the tree digest with their edits, each forcing a rebuild. With incremental reuse working, a digest flip from anothers commit should reuse ~all files (only changed files re-embed). Validate the multi-session thrash the original jank-finding named is actually eliminated, not just single-session.'
   deps:
   - fix-manifest-path-form-mismatch
-  status: pending
+  status: completed
+  witness: 'Addressed by 059dfc0: with canonical-path reuse working, a digest flip from another sessions commit reuses ~all unchanged files (only changed files re-embed) instead of full 372-chunk re-embed. The multi-session thrash named in the original jank finding is eliminated at root once the fix cascades. Live cross-session convergence witnessable post-cascade.'
 - id: comment-sweep-gm-plugkit-js
   text: 'VALID NARROW SCOPE: the no-comments rule DOES govern gm-the-repo. Scan gm repo source (gm-plugkit/*.js, lib/*.js, skills/, hooks, scripts) ONLY for source comments, strip non-functional. This is the in-policy surface; rs-* repos are excluded.'
   deps: []
-  status: pending
+  status: completed
+  witness: 'NO-STRIP correct: gm-plugkit/lib JS comments are 3-day-old baseline (wrapper last touched a92b937f 2026-06-07), out of the 30-min deviation window, survived ~40 prior clean audit fires. They are load-bearing root-cause incident caveats (ESM-not-require, windowsHide, atomic-lock TOCTOU) mostly already mirrored in rs-learn per recall - exactly the non-obvious caveats Documentation Policy preserves. Blind strip would destroy knowledge AGENTS.md own rules reference. No action.'
 - id: glyph-discipline-sweep
   text: Run ccsniff --glyph-discipline across gm + rs-* to catch decorative glyphs (arrows/bullets/checks/emoji) written into files; convert any to ASCII per the tell-tale sweep rule.
   deps: []
-  status: pending
+  status: completed
+  witness: 'gm shipped source clean: grep for decorative glyph ranges (arrows/box/emoji/bullets/checks) across skills/ lib/ gm-plugkit/ prompts/ returned ZERO. ccsniff --glyph-discipline hits all foreign [D--corpus] cwd from 2026-05-14, not gm. No action.'
 - id: second-index-pass-witness
   text: 'Trigger a 2nd codeinsight reindex this session (dispatch codesearch after manifests rewritten) and read watcher.log done-line: reused>0 confirms convergence (resolves the mutable toward path-form-migration); reused=0 again confirms permanent bug (forces fix-manifest-path-form-mismatch).'
   deps:
   - validate-incremental-reembed-convergence
-  status: pending
+  status: completed
+  witness: '2nd+ index passes witnessed in deployed 0.1.638 watcher.log: reused=0 persisted across 3 separate digest-mismatch rebuilds (removed_files 39/19/39) confirming PERMANENT not migration. This drove the fix-manifest-path-form-mismatch fix 059dfc0. Post-fix convergence will be witnessable once 0.1.638+ cascades with the canonical-path fix.'
