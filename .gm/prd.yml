@@ -2736,3 +2736,8 @@
   - iter20-triage-and-validate
   status: completed
   witness: memorize-fire 720 embedded=true.
+- id: iter21-triage-validate-memorize
+  text: Triage 1 deviation + validate durability + memorize.
+  deps: []
+  status: completed
+  witness: 'gmsniff 30m: 1 deviation FOREIGN cwd-6836 long-gap browser 907s, 0 own, gate-positive. Reuse durable reused=372. 6 repos porcelain=0. Watcher 0.1.640 stable 5.2h. memorize-fire 812 embedded.'
