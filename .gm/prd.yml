@@ -2708,3 +2708,20 @@
   - iter18-validate-triad-live
   status: completed
   witness: memorize-fire dispatched, embedded=true (key in out/memorize-fire-530.json).
+- id: iter19-deviation-triage
+  text: 'Triage 5 past-30m deviations: own vs foreign classification.'
+  deps: []
+  status: completed
+  witness: 'gmsniff 30m: 5 deviations ALL FOREIGN (cwd-6836 x3 mid-chain-stall EXECUTE prd_pending=8 + long-gap git_reset; cwd-0623 + cwd-26f2 mid-chain-stall EXECUTE). 0 cwd-gm own. Gate-positive recurring foreign fleet; no gm/rs-* code defect implicated - the gates detected exactly the stalls they exist to detect.'
+- id: iter19-validations
+  text: Validate reuse durability + 6-repo cleanliness + triad wrapper stability.
+  deps: []
+  status: completed
+  witness: 'Reuse durable: latest done-line still embedded=0 reused=372 reused_files=54 (no regression, no thrash since acceptance). 6 repos porcelain=0. Watcher 0.1.640 pid 10964 uptime ~4h wrapper 59331fecea27, single supervisor, no churn.'
+- id: iter19-memorize
+  text: memorize-fire iter19 findings.
+  deps:
+  - iter19-deviation-triage
+  - iter19-validations
+  status: completed
+  witness: memorize-fire 620 dispatched, response embedded=true.
