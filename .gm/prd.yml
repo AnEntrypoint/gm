@@ -2685,3 +2685,26 @@
   - manifest-fix-ci-green
   status: completed
   witness: 'LIVE ACCEPTANCE under deployed 0.1.640: pass1 (digest mismatch, legacy pathless manifests skipped) full re-embed wrote path-embedded manifests (path:agents/gm.md witnessed on disk); pass2 (fresh digest mismatch via commit) done-line: files_indexed=58 chunks=372 embedded=0 reused=372 reused_files=54 removed_files=0, completed ~15s vs prior 240-270s. The 5-min busy_until reindex on unchanged trees is eliminated.'
+- id: iter18-deviation-triage
+  text: 'Triage past-30m deviations: classify own vs foreign, confirm gate-positive.'
+  deps: []
+  status: completed
+  witness: 'gmsniff --since 30m: 1 deviation, FOREIGN cwd-26f2 (mid-chain-stall PLAN turn_idx=1 idle=322s) - gate-positive, 0 own-session (cwd-gm).'
+- id: iter18-validate-manifest-reuse-durable
+  text: 'Validate 0.1.640 manifest-cache reuse durability across the 3.4h window: watcher.log done-lines show no regression to reused=0 after acceptance pass.'
+  deps: []
+  status: completed
+  witness: 'watcher.log done-lines: last reindex is the acceptance pass embedded=0 reused=372 reused_files=54 (~15s); NO reindex events in the 3.4h idle window (digest stable, no thrash), no regression to reused=0. 0.1.640 fix durable.'
+- id: iter18-validate-triad-live
+  text: 'Validate resilience-triad wrapper live: wrapper_sha 59331fecea27 (changed from 66dbf3eac2da), watcher uptime multi-hour with no supervisor churn events in window.'
+  deps: []
+  status: completed
+  witness: status.json wrapper_sha=59331fecea27 (was 66dbf3eac2da pre-triad) = d17aea88 wrapper deployed via wrapper-sha-drift recycle; watcher pid 10964 uptime 12416s (~3.4h) boot_reason=initial, single supervisor 26004, no churn/takeover/refused-duplicate events in window.
+- id: iter18-memorize
+  text: memorize-fire iter18 steady-state validation findings.
+  deps:
+  - iter18-deviation-triage
+  - iter18-validate-manifest-reuse-durable
+  - iter18-validate-triad-live
+  status: completed
+  witness: memorize-fire dispatched, embedded=true (key in out/memorize-fire-530.json).
