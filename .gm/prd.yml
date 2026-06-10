@@ -2725,3 +2725,14 @@
   - iter19-validations
   status: completed
   witness: memorize-fire 620 dispatched, response embedded=true.
+- id: iter20-triage-and-validate
+  text: Triage 3 past-30m deviations + validate fix durability + repo cleanliness.
+  deps: []
+  status: completed
+  witness: 'gmsniff 30m: 3 deviations ALL FOREIGN (cwd-6836 x2 mid-chain-stall EXECUTE prd_pending=6; cwd-b951 long-gap browser 956s), 0 own. Gate-positive. Reuse durable (reused=372 embedded=0 latest done-line, no new thrash). 6 repos porcelain=0. Watcher 0.1.640 uptime ~4.6h wrapper 59331fecea27 stable.'
+- id: iter20-memorize
+  text: memorize-fire iter20 findings.
+  deps:
+  - iter20-triage-and-validate
+  status: completed
+  witness: memorize-fire 720 embedded=true.
