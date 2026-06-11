@@ -3001,3 +3001,34 @@
   text: After deletions+commit, witness clean worktree via git_status porcelain-empty, then git_finalize push to origin/main. The push IS the validation dispatch.
   status: completed
   witness: 'git_finalize-18: committed=true pushed=true sha=bd77ce8d branch=main'
+- id: add-wiring-fn-gm-plugkit
+  text: 'Add ensureNextStepWiring(cwd) to gm-plugkit/bootstrap.js mirroring bin/bootstrap.js:68-115 — seed .gm/next-step.md if absent, create CLAUDE.md with ''@AGENTS.md\n'' (or prepend if missing the line), append ''@.gm/next-step.md'' to existing AGENTS.md. Use existing log/obsEvent helpers. ROOT CAUSE: gm-plugkit (the watcher that boots in consumer projects like tv8) has ensureSkillMdFresh but no per-project next-step/CLAUDE.md wiring; the wiring exists only in repo-root bin/bootstrap.js + lib/skill-bootstrap.js which do not run the tv8 watcher.'
+  status: completed
+  witness: 'gm-plugkit/bootstrap.js: ensureNextStepWiring(cwd) added after clearBootstrapError, mirrors bin/bootstrap.js:68-115 (next-step seed + CLAUDE.md @AGENTS.md + AGENTS.md back-link), uses existing log/obsEvent'
+- id: call-wiring-in-ensureReady
+  text: 'Call ensureNextStepWiring(process.env.CLAUDE_PROJECT_DIR || process.cwd()) unconditionally near the TOP of gm-plugkit/bootstrap.js ensureReady(), BEFORE the isReady() early-return at ~853 — otherwise the warm-boot (already-ready) path skips wiring and the common case never seeds CLAUDE.md. Witness: ensureReady early-returns at line 853 when isReady()&&!versionDrift.'
+  status: completed
+  witness: 'gm-plugkit/bootstrap.js ensureReady: ''try { ensureNextStepWiring(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch(_){}'' inserted right after offline const, before isReady early-return'
+- id: idempotency-no-clobber
+  text: 'Verify wiring is idempotent and non-destructive: existing CLAUDE.md with user content is preserved (only ''@AGENTS.md\n'' prepended when the line is absent), a CLAUDE.md already containing @AGENTS.md is untouched, next-step.md is only seeded when absent (never overwrites the orchestrator''s running rewrite), AGENTS.md back-link appended once. Witnessed by a dry-run against temp dirs covering: no-CLAUDE, CLAUDE-without-line, CLAUDE-with-line, existing-next-step.'
+  status: completed
+  witness: 'fixture exec: case3 ''@AGENTS.md\nfoo\n'' untouched; case2 content prepended not clobbered; case4 next-step ''RUNNING ORCH STATE'' preserved + AGENTS backlink appended once, rerun no-op'
+- id: verify-fix-exec
+  text: Node-load gm-plugkit/bootstrap.js (syntax valid) and exec the new ensureNextStepWiring against 4 temp-dir fixtures, asserting CLAUDE.md == '@AGENTS.md\n' for empty, prepend for content-without-line, no-op for with-line, and next-step.md seeded. Real-input witness that the fix works before push.
+  status: completed
+  witness: 'node --check gm-plugkit/bootstrap.js => SYNTAX OK; 4 temp-dir fixtures via required real ensureNextStepWiring: case1 CLAUDE.md==''@AGENTS.md\n'' & next-step seeded, case2 prepend, case3 no-op, case4 preserve+backlink all correct'
+- id: wire-tv8-now
+  text: Immediately create C:/dev/tv8/CLAUDE.md with '@AGENTS.md\n' so the user's current project is fixed now without waiting for the gm-plugkit republish cycle. tv8 already has AGENTS.md (16KB) and a live watcher but no CLAUDE.md. Low-risk courtesy fix + live witness of correct content.
+  status: completed
+  witness: printf '@AGENTS.md\n' > C:/dev/tv8/CLAUDE.md; cat confirms content '@AGENTS.md'
+- id: commit-push-gm
+  text: Commit + push gm to main via git_finalize. publish.yml triggers on push to main for non-ignored paths (gm-plugkit/bootstrap.js is .js, not in paths-ignore) -> auto-bump bumps gm-plugkit/package.json -> publish-gm-plugkit republishes, so the JS-only fix reaches consumers. The push IS the validation dispatch.
+  status: pending
+- id: memorize-rootcause
+  text: 'memorize-fire the root cause: CLAUDE.md/@AGENTS.md + next-step.md project wiring (ensureNextStepWiring) must live in gm-plugkit/bootstrap.js ensureReady (the watcher boot path that runs in consumer projects), NOT only in repo-root bin/bootstrap.js + lib/skill-bootstrap.js which never run a foreign project''s watcher. Symptom: tv8 got next-step.md + live watcher but no CLAUDE.md.'
+  status: completed
+  witness: memorize-fire-43 embedded=true key=mem-1781185699764-2-927 namespace=default
+- id: drain-agents-md
+  text: 'Bidirectional-drain back-pressure: this memorize run must also drain a few detail-heavy/single-platform AGENTS.md entries — memorize-fire their substance, compress the paragraph to a one-line pointer in the same commit, witness byte-count drop. Conservative: most paragraphs are already pointer-ized; pick genuinely un-drained detail.'
+  status: completed
+  witness: 'AGENTS.md: collapsed two adjacent bootstrap-mechanism entries (SKILL.md auto-refresh + skill-init contract) into one combined pointer, folded in the project-wiring rule; byte count dropped from 37096'

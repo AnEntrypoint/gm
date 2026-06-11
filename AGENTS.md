@@ -140,9 +140,7 @@ Every possible skill's `allowed-tools:` frontmatter is reduced to `Skill, Read, 
 
 **rs-learn observability**: every learning-pipeline state change emits a structured `evt:{event,sess,ts,...}` line into `.gm/exec-spool/.watcher.log` + gm-log; recall replies carry `mode`/`namespace`/`derived_query`/per-hit `score`; gmsniff/ccsniff expose the taxonomy. Learning quality is observable, not a black box. Full event taxonomy + flag list in rs-learn (`recall: rs-learn observability taxonomy`).
 
-**SKILL.md auto-refresh**: `bootstrapPlugkit` sha256-compares the bundled SKILL.md against installed copies and atomically rewrites on mismatch, so the agent always sees the latest prose. Mechanism detail in rs-learn (`recall: SKILL.md auto-refresh`).
-
-**Skill-initiated bootstrap contract**: `lib/skill-bootstrap.js::bootstrapPlugkit(sessionId)` initializes wasm for skill-driven dispatch without hooks; failures are non-fatal (degraded fallback). Mechanism detail in rs-learn (`recall: skill-initiated bootstrap contract`).
+**Bootstrap contract (skill-init + SKILL.md auto-refresh + project wiring)**: `bootstrapPlugkit`/`ensureReady` initialize wasm hook-free (failures non-fatal), sha256-rewrite stale installed SKILL.md, and seed per-project `CLAUDE.md` (`@AGENTS.md`) + `.gm/next-step.md` — the wiring must live in `gm-plugkit/bootstrap.js::ensureReady` (the consumer-project watcher boot path), not only repo-root `bin`/`lib`. Detail in rs-learn (`recall: skill-initiated bootstrap contract`, `recall: SKILL.md auto-refresh`).
 
 ## Cascade pipeline
 
