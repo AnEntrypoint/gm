@@ -2949,3 +2949,22 @@
   text: 'Validate the 216-comment-strip did not break the build IN PRACTICE: watch rs-plugkit cascade CI run (gh run) for the 03342cb push; confirm wasm build + release succeeds and produces a new plugkit-wasm version. A red build = string-literal corruption or doc-comment dependency missed; would require revert.'
   status: completed
   witness: rs-plugkit Build run 27343942470 (sha 03342cb) completed SUCCESS in 1m33s = the 216-comment strip compiles cleanly, no string-literal corruption or doc-comment dependency broke. Deploy GH Pages success. Release in_progress (cascade publish, e2e already validated this fire via 0.1.642 chain).
+- id: correct-own-longgap-prevent
+  text: 'Correct the one own deviation (long-gap-no-instruction at iter18 git_finalize, gap 323s from blocking on comment-strip workflow). Add a PREVENTIVE clause to AGENTS.md long-gap rule: before any self-inflicted multi-minute blocking wait you control (workflow TaskOutput, gh run watch), dispatch instruction FIRST to reset the clock - recovery-after is the existing rule, prevention-before closes the class. One clause, no bloat.'
+  status: completed
+  witness: 'AGENTS.md long-gap rule L169 extended with preventive clause: dispatch instruction BEFORE a self-inflicted blocking TaskOutput/gh-run-watch wait, not only after. Closes the own-deviation class (iter18 git_finalize 323s gap) by prevention vs recovery.'
+- id: validate-0643-live
+  text: 'Validate the 216-comment-strip-derived plugkit-wasm 0.1.643 IN PRACTICE (beyond CI-green): health ok 0.1.643, recall returns hits, codesearch returns hits - the stripped orchestrator/code_index code runs correctly at runtime.'
+  status: completed
+  witness: 'plugkit-wasm 0.1.643 (216-comment-strip derived) validated live: health ok 15 imports, recall 8 hits, codesearch 10 hits querying node_text/manifest_to_json (the stripped code_index.rs functions index+serve correctly at runtime, not just CI-green).'
+- id: workflow-confirm-all-clean
+  text: 'Run rs-fleet-audit workflow: expect ALL 5 rs-* repos now comment-clean (validates rs-plugkit 03342cb strip + rs-codeinsight 29dd849 fix landed, no new violations crept in). Workflow deliverable this fire.'
+  status: completed
+  witness: rs-fleet-audit (w490wyqjl, 10 agents) confirmedCount=0, all 5 rs-* clean (rs-search+rs-learn explicit clean; plugkit/exec/codeinsight no surviving findings). 216-comment strip 03342cb + rs-codeinsight fix 29dd849 held; no new violations.
+- id: record-fire-643
+  text: 'memorize-fire iter19: own:1 (recovered+now-prevented long-gap), 0.1.643 validated live, all repos clean, no upgrade (ahead of latest tag).'
+  status: completed
+  witness: memorize-fire-9365 stored iter19 summary (preventive long-gap clause validated own:0, 0.1.643 live, all repos clean) to default ns.
+- id: finalize-643
+  text: 'git_finalize gm: commit AGENTS.md preventive clause + PRD artifacts, push origin main porcelain-gated.'
+  status: pending
