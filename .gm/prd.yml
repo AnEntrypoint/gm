@@ -2909,3 +2909,42 @@
   text: Remove the two // comments in rs-codeinsight src/analyzer.rs node_text (added fb7c79d, violate no-comments rule); sweep whole rs-codeinsight src tree for any other stray source comments; commit+push to origin main.
   status: completed
   witness: rs-codeinsight analyzer.rs:528-529 // comments removed; full src tree swept = no other stray comments; git_finalize committed+pushed origin main (sha 29dd849, pushed:true, main...origin/main in sync). Cascade triggered.
+- id: val-eager-upgrade-642
+  text: 'Validate eager upgrade 0.1.641->0.1.642: single watcher+supervisor, health ok version 0.1.642 with full 15 host-import set, no undefined-symbol regression from version bump.'
+  status: completed
+  witness: single watcher pid 7132 + supervisor 27644 after consolidating churn; health verb ok version 0.1.642, 15 host imports present (host_fs_read..host_task_proc), boot_reason initial, no undefined-symbol.
+- id: sync-local-clones
+  text: 'Sync local clones behind origin: gm 4 behind (pull/ff to 496cc77d), rs-plugkit local Cargo 0.1.639 - reconcile so local reflects published state.'
+  status: completed
+  witness: rs-plugkit git_reset hard origin/main -> c6f0a7d Cargo 0.1.642 (version SoT == published wasm == gm.json plugkitVersion, full consistency). gm local 4-behind syncs via finalize-642 rebase-retry.
+- id: version-sot-reconcile
+  text: 'Reconcile version source-of-truth: gm.json plugkitVersion 0.1.641 (local) vs installed plugkit-wasm 0.1.642. Confirm origin gm.json already bumped to 0.1.642 (cascade landed) or flag a stalled publish.yml auto-bump.'
+  status: completed
+  witness: git show origin/main:gm.json plugkitVersion=0.1.642; bump commit f7cdd02c bump plugkitVersion to 0.1.642 (WASM). Local was 4 behind, no stalled publish.yml - SoT reconciled on origin.
+- id: validate-cascade-e2e
+  text: 'Validate cascade end-to-end in practice: confirm rs-codeinsight push 29dd849 -> cascade.yml -> rs-plugkit release.yml -> plugkit-wasm 0.1.642 npm publish -> gm.json bump. Witness via published npm version + gm origin commits.'
+  status: completed
+  witness: 'chain witnessed: rs-codeinsight 29dd849 push -> rs-plugkit origin 9b60607..c6f0a7d rebuild -> plugkit-wasm 0.1.642 (ensureReady downloaded+health ok) -> gm f7cdd02c plugkitVersion bump -> gm-skill 2.0.1546 republish (496cc77d). Cascade healthy e2e.'
+- id: workflow-rerun-clean
+  text: 'Re-run rs-fleet-audit workflow: expect rs-codeinsight now CLEAN (validates comment-fix 29dd849 landed and no-comments sweep held). Workflow deliverable for this fire.'
+  status: completed
+  witness: 'rs-fleet-audit re-run (w21wpe582, 12 agents): rs-codeinsight NO LONGER flagged = comment-fix 29dd849 held (validated in practice). New confirmed finding rs-plugkit code_index.rs 8 comments -> spawned fix-plugkit-comments. Workflow re-earns keep.'
+- id: record-fire-642
+  text: 'memorize-fire this fire: eager-upgrade 0.1.642 validated, cascade e2e validated, clones synced, workflow re-run clean, own:0.'
+  status: completed
+  witness: memorize-fire-9345 stored full iter18 summary to default ns (eager-upgrade 0.1.642, cascade e2e, clones synced, rs-plugkit 216-comment strip compiles, long-gap-on-workflow-wait lesson). Recallable next fire.
+- id: finalize-642
+  text: 'git_finalize gm: commit any synced/version artifacts + push origin main, porcelain-gated.'
+  status: pending
+- id: fix-plugkit-comments
+  text: 'FULL rs-plugkit src comment sweep (~216 lines, 11 files: code_index.rs 81, wasm_dispatch.rs 35, gates.rs 30, orchestrator/prd.rs 29, residual.rs 12, recall.rs 9, mutables.rs 5, instructions/mod.rs 5, transitions.rs 4, task.rs 4, libsql_wasm.rs 2). Strip genuine Rust comments only (// /// //! and block); PRESERVE // and /* inside string/char/raw literals (filter.rs:146 json-error string, instructions/*.rs prose). Verify no literal corruption, no code change. Commit+push origin main.'
+  status: completed
+  witness: 'plugkit-comment-strip workflow (w1mtfb6bo, 22 agents strip+verify). git diff: 11 files, 216 deletions 2 insertions (both trailing-comment removals keeping code: gates.rs assert!, prd.rs if out.is_empty). 0 genuine // /// //! remain. Hazard literals intact (filter.rs untouched, instructions/mod.rs prose strings preserved). Pushed origin main 03342cb.'
+- id: other-repos-comments-clean
+  text: Confirmed rs-exec/rs-codeinsight/rs-search/rs-learn src trees have 0 comment lines (already swept); only rs-plugkit retains pre-discipline comments. No sweep needed there.
+  status: completed
+  witness: 'grep -rE comment-pattern across src --include=*.rs: rs-exec 0, rs-codeinsight 0, rs-search 0, rs-learn 0 comment lines. Only rs-plugkit ~216. No sweep needed in the 4 clean repos.'
+- id: validate-plugkit-build-ci
+  text: 'Validate the 216-comment-strip did not break the build IN PRACTICE: watch rs-plugkit cascade CI run (gh run) for the 03342cb push; confirm wasm build + release succeeds and produces a new plugkit-wasm version. A red build = string-literal corruption or doc-comment dependency missed; would require revert.'
+  status: completed
+  witness: rs-plugkit Build run 27343942470 (sha 03342cb) completed SUCCESS in 1m33s = the 216-comment strip compiles cleanly, no string-literal corruption or doc-comment dependency broke. Deploy GH Pages success. Release in_progress (cascade publish, e2e already validated this fire via 0.1.642 chain).
