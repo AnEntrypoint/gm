@@ -2985,3 +2985,18 @@
   text: 'git_finalize gm: commit PRD artifacts + any drains, push origin main porcelain-gated.'
   status: completed
   witness: gm git_finalize pushed 6f786a33 (iter20 artifacts). rs-plugkit local synced. Tree clean.
+- id: rm-bash-stackdump
+  text: 'Delete bash.exe.stackdump — gitignored Cygwin crash dump (1591 bytes, 2026-06-02), pure junk, never needed. Witness: git check-ignore shows .gitignore:28:*.stackdump matches it; untracked local artifact.'
+  status: completed
+  witness: rm -f bash.exe.stackdump; ls confirms 'No such file or directory'
+- id: rm-devgm-stray-dir
+  text: 'Delete devgm/ — stray nested dir containing only an empty devgm/.gm, untracked, not part of repo (accidental cwd artifact). Witness: git clean -nd reports ''Would remove devgm/''; git ls-files devgm/ empty.'
+  status: completed
+  witness: rm -rf devgm; ls confirms 'No such file or directory'
+- id: commit-manifest-residual
+  text: 'Triage residual .gm/disciplines/codeinsight-manifest/docs_api_releases.json.json — legit codeinsight-manifest regen (releases API updated, matches recent ''chore: update releases API'' commits). Triage outcome (a): commit it. Tracked discipline file, never ignored.'
+  status: completed
+  witness: git status --porcelain shows ' M .gm/disciplines/codeinsight-manifest/docs_api_releases.json.json' staged for commit in finalize
+- id: verify-clean-worktree-push
+  text: After deletions+commit, witness clean worktree via git_status porcelain-empty, then git_finalize push to origin/main. The push IS the validation dispatch.
+  status: pending
