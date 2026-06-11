@@ -2861,3 +2861,50 @@
   title: 'memorize-fire the gmsniff/ccsniff expressiveness upgrade: gmsniff=event-aggregator (own/foreign+severity+recovery-verb+rates added), ccsniff=transcript-detector (spool-dispatch-shape + verb-bypass disciplines added on top of bash/git/search/glyph/continuation). Plus: NEW deviation CLASSES that need EMISSION (deferred-intent already in continuation; fabricated-chain/sparse-PLAN/PRD-N-unchanged would need rs-plugkit to emit events - noted as a separate rs-plugkit emission task, not shippable from the sniffers alone).'
   status: completed
   witness: 'memorize-fire mem-1781170792914: full architecture (gmsniff=aggregator/ccsniff=detector) + the 4 shipped changes + the rs-plugkit-emission follow-up for fabricated-chain/sparse-PLAN/PRD-N-unchanged classes.'
+- id: val-plugkit-codeindex
+  text: 'Validate rs-plugkit 9b60607/059dfc0 code_index manifest-cache keying: trigger codesearch, confirm rebuild then a second codesearch reuses manifests (cache hit, no full reindex). Witness via watcher.log reuse line.'
+  status: completed
+  witness: 'watcher.log: 22 reuse/cache lines; digest-mismatch rebuild then codesearch-9003 served from index'
+- id: val-codeinsight-appledouble
+  text: 'Validate rs-codeinsight 3ce30cb AppleDouble skip: confirm no ._* phantom manifests under .gm/disciplines/*/codeinsight-manifest/ and main .gm/code-search/.'
+  status: completed
+  witness: find .gm -path *codeinsight-manifest* -name ._* = empty; no phantom manifests
+- id: val-rsexec-timeout0
+  text: 'Validate rs-exec 58e0948 hard-reject timeoutMs=0: dispatch exec_js with timeoutMs:0, confirm hard error not silent run.'
+  status: completed
+  witness: exec_js timeoutMs:0 -> {error:missing timeoutMs, paper_ref:§20, ok:false}
+- id: val-wasm-link-live
+  text: 'Validate wasm_import_module=env cascade fix (rs-exec 1eb3803/rs-search a3c8f46/rs-learn 47f2804): confirm live plugkit.wasm 0.1.641 healthy via plugkit health verb, no undefined-symbol degradation.'
+  status: completed
+  witness: health verb ok version 0.1.641, 15 host imports present (host_fs_read..host_task_proc), no undefined-symbol
+- id: val-rslearn-adapter
+  text: 'Validate rs-learn 9aef129 apply_adapter target-label namespace mapping: recall returns correct namespace field, memorize-fire to default lands recallable.'
+  status: completed
+  witness: codesearch-9003 hits carry namespace:codeinsight + recall-9002 namespace:default; apply_adapter label->namespace mapping correct
+- id: audit-workflow
+  text: 'Author/run audit workflow fanning out across rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn: per-repo deviation+jank+commit-validation scan, adversarial verify, synthesize findings into prd-add seeds.'
+  status: completed
+  witness: rs-fleet-audit workflow ran live (w5ogvl8pb, 10 agents, 5 repos scanned + adversarial verify). cleanRepos=[rs-search]; 1 confirmed finding (rs-codeinsight analyzer.rs comment violation) -> spawned fix-codeinsight-comments row. Workflow authored at .claude/workflows scriptdir; deliverable met.
+- id: codesearch-verb-health
+  text: Confirm codesearch verb returns a response after the digest-mismatch rebuild completes; ensure no hung verb left in spool.
+  status: completed
+  witness: codesearch-9003.json landed with hits after rebuild; no hung verb in spool
+- id: foreign-deviation-finding
+  text: 'Triage the 9 foreign deviations (own:0): confirm all are gate-positive (gate fired+named recovery) not instruction-design gaps; record whether any class warrants a preventive prose/gate change in rs-plugkit.'
+  status: completed
+  witness: 'gmsniff 30m: own:0 foreign:9 (long-gap-no-instruction x4, mid-chain-stall, push-dirty[critical], gate-deny, prd-resolve-unknown-id, long-gap-retry). Each gate fired with named recovery in reason field = gate-positive. All in foreign cwds (830e/d722/6836/728c/b951). No instruction-design gap; classes are exactly what gates are built to catch. No preventive prose/gate change warranted (Nothing Fake).'
+- id: record-audit-finding
+  text: memorize-fire the audit-fire result (own:0, foreign:9 gate-positive, commits validated, workflow authored) to default namespace.
+  status: completed
+  witness: memorize-fire-9803 stored full audit-fire summary to default namespace (own:0, foreign:9 gate-positive, 5 commits validated in practice, rs-fleet-audit workflow ran+found+fixed 1 comment violation, AGENTS.md drain). Recallable next turn.
+- id: agents-md-drain
+  text: 'Per bidirectional-migration policy: exfiltrate 1-3 detail-heavy single-crate AGENTS.md entries to rs-learn via memorize-fire and compress to one-line pointers in same commit.'
+  status: completed
+  witness: 'memorize-fire-9501 stored gate-enforcement mechanism to default ns; AGENTS.md SpoolDispatcher section compressed 3 paras -> 1 pointer line (recall: gate enforcement layer). Bidirectional drain witnessed: store gained fact + AGENTS.md bytes dropped.'
+- id: finalize-push
+  text: 'git_finalize: commit all real session artifacts (workflow file, memory files, any drains) and push to origin main; porcelain-gated clean.'
+  status: pending
+- id: fix-codeinsight-comments
+  text: Remove the two // comments in rs-codeinsight src/analyzer.rs node_text (added fb7c79d, violate no-comments rule); sweep whole rs-codeinsight src tree for any other stray source comments; commit+push to origin main.
+  status: completed
+  witness: rs-codeinsight analyzer.rs:528-529 // comments removed; full src tree swept = no other stray comments; git_finalize committed+pushed origin main (sha 29dd849, pushed:true, main...origin/main in sync). Cascade triggered.
