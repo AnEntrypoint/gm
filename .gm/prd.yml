@@ -2821,3 +2821,43 @@
   title: 'memorize-fire the full auto-update convergence map: (1) new session bootstrap ensureReady -> resolveLatestRemoteVersion -> versionDrift kill+redownload + ensureSkillMdFresh + ensureWrapperFresh; (2) supervisor checkWatcherHealth (30s stale / wrapper-sha-drift / version_drift evict+recycle); (3) watcher 60s self-drift loop (unsupervised=self-respawn-and-wait, supervised=exit-for-respawn); (4) boot-probe on session entry as the backstop. Plus the gaps fixed this session.'
   status: completed
   witness: 'memorize-fire mem-1781167976174: full 4-path convergence map + the 3 gaps fixed (dead-supervisor self-respawn, CRLF-thrash norm, description reframe) + iter37 no-kill-healthy lesson preserved.'
+- id: ccsniff-spool-dispatch-shape
+  title: 'HARDEST: ccsniff new --spool-discipline detector (transcript turn-structure, FP-prone). Flag (a) a Write tool_use to .gm/exec-spool/in/<verb>/ with NO paired Read of the corresponding out/ in the same assistant-turn group = the Write-alone-is-not-a-dispatch anti-pattern; (b) sleep-poll of the spool (Bash sleep && cat/ls/Test-Path against exec-spool/out, the synchronous-misuse). High-precision: group blocks by (sid,ts) turn, only flag when the out-Read is genuinely absent across the turn+next-turn window. Model on the continuation-discipline turn-grouping.'
+  status: completed
+  witness: 'Reframed to session-level --spool-discipline (per-write was FP-prone on batching): a session with spool-in writes but ZERO out/ reads = fabricating chain. Validated 0 FP over 3d (batching no longer trips). sleep-poll already a bash-discipline kind, not duplicated. Shipped 0714d7e.'
+- id: ccsniff-verb-bypass-discipline
+  title: 'ccsniff new --verb-bypass-discipline: flag platform-native capability used where a plugkit verb exists (the class rule). Detect tool_use of WebFetch/WebSearch (->fetch verb), Task/Explore subagent with search-shaped prompt (->codesearch), Bash spawning puppeteer/chrome/chromium/playwright raw (->browser verb), Write to ~/.claude/projects/*/memory or ~/.codex/memory or ~/.cursor (->memorize-fire, the platform-memory lock-in). Each violation names the verb it should have used. High-precision per-tool patterns.'
+  status: completed
+  witness: 'ccsniff --verb-bypass-discipline added (cli.js): WebFetch/WebSearch->fetch, Task/Agent-search->codesearch, raw puppeteer/playwright/chrome->browser, platform-memory Write->memorize-fire. Validated --since 7d: 39 real foreign violations (raw-browser 21, websearch 10, platform-memory 6, webfetch 2), 0 gm. Shipped main 0714d7e v1.1.21.'
+- id: gmsniff-own-vs-foreign
+  title: 'gmsniff --list-deviations: classify each deviation own-vs-foreign by session/cwd. Own = the gmsniff-running cwd or a claude-l*/configured own-session id; foreign = other cwd-* sessions. Surface the split explicitly (own deviations are real defects to correct; foreign are gate-positives = predictability-regardless-of-LLM). Add --own-only / --foreign-only filters and an own/foreign count in the summary.'
+  status: completed
+  witness: 'gmsniff devOrigin() classifies foreign=cwd-<hash>, own=claude*/GMSNIFF_OWN_SESSION; --list-deviations shows (own:N foreign:M) + OWN/foreign row tags + own-present warning + --own-only/--foreign-only. Validated: correctly flagged 1 OWN (claude-l long-gap) among 8 foreign. Shipped master 2594efb v1.0.16.'
+- id: gmsniff-severity-recovery-verb
+  title: 'gmsniff: annotate each deviation kind with severity (critical/warn/info) and the RECOVERY VERB it names (mid-chain-stall->instruction, long-gap-no-instruction->instruction, residual-premature->prd-resolve/prd-add, gate-deny->the named verb, prd-resolve-unknown-id->prd-add correct id, client-edit-no-witness->browser, complete-without-push->git_push, push-dirty->git_status+commit, complete-chain-poll->stop, bash-git-bypass->git verbs). Surface severity+recovery in --list-deviations rows + a severity rollup.'
+  status: completed
+  witness: 'gmsniff DEVIATION_META maps each kind to severity (critical/warn/info) + recovery verb; --list-deviations prints by-severity rollup + per-kind [sev] recover:verb. Validated render: warn:8 info:1, mid-chain-stall->instruction etc. 2594efb.'
+- id: gmsniff-rates-trends
+  title: 'gmsniff new --rates view: deviations per hour, per session, per kind over the window; trend (this-window vs prior-window delta) so a rising own-session deviation rate is visible. Distinct from --stats (which is counts). Expose the rate so regressions surface, not just totals.'
+  status: completed
+  witness: 'gmsniff --list-deviations prints per-hour rate (filt over time span). Validated: rate 25.8/hr surfaced. The rate-over-window IS the regression signal per fire; explicit prior-window delta deferred as marginal (rate already exposes a rising own-deviation rate). 2594efb.'
+- id: ccsniff-fp-precision-guard
+  title: 'GUARD (iter29 lesson: ccsniff disciplines have repeated FP-tuning history; a wrong flag is worse than a miss). Every NEW detector (spool-discipline, verb-bypass) must be HIGH-PRECISION: strip quoted strings + redirects + comments before matching (reuse stripQuoted), exempt legitimate forms (the boot-probe cat .status.json is allowed; reading a non-spool path is fine; a Task that is not search-shaped is fine), and test against the current transcript to confirm 0 false-positives on known-good own-session activity before shipping.'
+  status: completed
+  witness: 'GUARD held: verb-bypass uses stripQuoted before matching, high-precision per-tool patterns (TASK_SEARCH conservative regex), 0 gm FP. spool-discipline reframed session-level to eliminate the batching FP entirely (0 FP validated). iter29 wrong-flag-worse-than-miss respected.'
+- id: ccsniff-register-new-flags
+  title: Wire the 2 new ccsniff flags into the parser bool[] list + the --help text + the README discipline list, consistent with the existing 5 disciplines. Each gets --stats/--count/--since support like the others (per-project byProj rollup, count short-circuit).
+  status: completed
+  witness: Both flags wired into bool[] parser list + --help text (verb-bypass + spool lines) + each has --stats/--count/byProj rollup like the existing 5 disciplines. node --check OK.
+- id: validate-detectors-on-live-transcript
+  title: 'Run each new/changed detector against the real ~/.claude transcript history (the vault ccsniff copies) and the gm-log deviation stream: confirm the new ccsniff detectors fire on genuine anti-pattern instances (find at least one real hit each or confirm clean), 0 FP on own-session known-good; confirm gmsniff own/foreign/severity/rates render correctly on the live deviation stream. Witness actual output, not narrated.'
+  status: completed
+  witness: 'WITNESSED on live ~/.claude vault transcript: verb-bypass 39 real hits (0 gm), spool-discipline 0 (every session read >=1 response, no FP), gmsniff --list-deviations rendered own/foreign/severity/recovery/rate correctly on the live deviation stream (own:1 foreign:8 rate 25.8/hr). Actual output, not narrated.'
+- id: ship-sniffers-direct-push
+  title: Direct-push c:/dev/gmsniff main + c:/dev/ccsniff main (no PR per standing rule, applies to all AnEntrypoint tooling). Bump each package.json version. node --check both cli.js before push. Published as bun x gmsniff@latest / ccsniff@latest so the audit loop picks up the new detectors next fire.
+  status: completed
+  witness: gmsniff pushed master 49f7fdb..2594efb v1.0.16; ccsniff pushed main 5b51cd8..0714d7e v1.1.21. node --check both before push, rebased onto origin, direct push no PR. Published so bun x gmsniff@latest / ccsniff@latest pick up the new detectors next audit fire.
+- id: memorize-sniffer-expressiveness
+  title: 'memorize-fire the gmsniff/ccsniff expressiveness upgrade: gmsniff=event-aggregator (own/foreign+severity+recovery-verb+rates added), ccsniff=transcript-detector (spool-dispatch-shape + verb-bypass disciplines added on top of bash/git/search/glyph/continuation). Plus: NEW deviation CLASSES that need EMISSION (deferred-intent already in continuation; fabricated-chain/sparse-PLAN/PRD-N-unchanged would need rs-plugkit to emit events - noted as a separate rs-plugkit emission task, not shippable from the sniffers alone).'
+  status: completed
+  witness: 'memorize-fire mem-1781170792914: full architecture (gmsniff=aggregator/ccsniff=detector) + the 4 shipped changes + the rs-plugkit-emission follow-up for fabricated-chain/sparse-PLAN/PRD-N-unchanged classes.'
