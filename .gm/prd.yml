@@ -2969,3 +2969,18 @@
   text: 'git_finalize gm: commit AGENTS.md preventive clause + PRD artifacts, push origin main porcelain-gated.'
   status: completed
   witness: gm git_finalize pushed 8e1be89b (AGENTS.md preventive clause + iter19 artifacts). Tree clean.
+- id: validate-fleet-ci-green
+  text: 'Validate each rs-* repos latest commit works in practice via workflow: per repo confirm latest HEAD CI run (gh run) is green AND published version (npm/crate) matches the source-of-truth (Cargo.toml/package.json). Covers rs-exec/rs-search/rs-learn not yet exercised this conversation, plus rs-plugkit/rs-codeinsight.'
+  status: completed
+  witness: 'rs-fleet-ci-validate workflow (wwxvyz4i3, 5 agents): all 5 rs-* CI-green at HEAD (rs-plugkit 03342cb, rs-exec 1eb3803, rs-codeinsight 29dd849, rs-search a3c8f46, rs-learn 47f2804 all conclusion=success). Flagged rs-plugkit version: confirmed LOCAL-LAG not drift - origin a64ea90 Cargo 0.1.643 == npm 0.1.643 == gm.json 0.1.643, SoT consistent; synced local via git_reset to 0.1.643.'
+- id: triage-foreign-longgap
+  text: 'Triage the 1 foreign deviation (cwd-ad83 long-gap-no-instruction gap 336M ms = ~4-day-idle session dispatching memorize-fire): confirm gate-positive (fired+named recovery), foreign cwd, no own-action or instruction-design change needed.'
+  status: completed
+  witness: 'gmsniff: cwd-ad83 long-gap-no-instruction gap_ms=336227804 (~93h/4-day idle session) dispatching memorize-fire. Foreign cwd, gate fired with recover:instruction named. Gate-positive; no own action, no instruction-design change (a 4-day-idle session is genuine idle the gate is built to catch).'
+- id: record-fire-iter20
+  text: 'memorize-fire iter20: own:0, preventive long-gap held, fleet CI validated green, foreign deviation gate-positive.'
+  status: completed
+  witness: memorize-fire-9395 stored iter20 summary + the local-lag-vs-drift distinction to default ns.
+- id: finalize-iter20
+  text: 'git_finalize gm: commit PRD artifacts + any drains, push origin main porcelain-gated.'
+  status: pending
