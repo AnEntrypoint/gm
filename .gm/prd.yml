@@ -2903,7 +2903,8 @@
   witness: 'memorize-fire-9501 stored gate-enforcement mechanism to default ns; AGENTS.md SpoolDispatcher section compressed 3 paras -> 1 pointer line (recall: gate enforcement layer). Bidirectional drain witnessed: store gained fact + AGENTS.md bytes dropped.'
 - id: finalize-push
   text: 'git_finalize: commit all real session artifacts (workflow file, memory files, any drains) and push to origin main; porcelain-gated clean.'
-  status: pending
+  status: completed
+  witness: gm git_finalize committed+pushed sha 5948a567 (committed:true pushed:true main); rs-codeinsight earlier pushed 29dd849. Both remotes reflect HEAD.
 - id: fix-codeinsight-comments
   text: Remove the two // comments in rs-codeinsight src/analyzer.rs node_text (added fb7c79d, violate no-comments rule); sweep whole rs-codeinsight src tree for any other stray source comments; commit+push to origin main.
   status: completed
