@@ -2560,6 +2560,17 @@ async function runSpoolWatcher(instance, spoolDir) {
   setTimeout(probeGmPlugkitSelfStale, 5000);
   setInterval(probeGmPlugkitSelfStale, 300_000);
 
+  // A supervised watcher self-exits on drift assuming the supervisor respawns it. If the
+  // supervisor has died, that bare exit leaves the spool dead (worse than staying up). Treat a
+  // dead/absent supervisor as unsupervised so the drift loops take the self-respawn-and-wait path
+  // (spawn replacement, wait for its heartbeat, then exit) instead. False-negative is self-correcting:
+  // if both the supervisor and this watcher respawn, the single-instance lock admits exactly one.
+  function _supervisorIsDead() {
+    try {
+      const sp = parseInt(fs.readFileSync(path.join(spoolDir, '.supervisor.pid'), 'utf8').trim(), 10);
+      return !(Number.isFinite(sp) && isProcessAliveSync(sp));
+    } catch (_) { return true; }
+  }
   const _instanceVersionAtBoot = readInstanceVersion(instance);
   let _driftLoggedOnce = false;
   setInterval(() => {
@@ -2568,7 +2579,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const instV = _instanceVersionAtBoot;
       if (!fileV || !instV || fileV === instV) return;
       const bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
-      const unsupervised = bootReason === 'direct-no-supervisor';
+      const unsupervised = bootReason === 'direct-no-supervisor' || _supervisorIsDead();
       if (unsupervised) {
         if (_driftLoggedOnce) return;
         _driftLoggedOnce = true;
@@ -2665,7 +2676,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const cur = crypto.createHash('sha256').update(fs.readFileSync(_wrapperPathInstalled)).digest('hex');
       if (cur === _wrapperShaAtBoot) return;
       const bootReason = process.env.PLUGKIT_BOOT_REASON || 'unknown';
-      const unsupervised = bootReason === 'direct-no-supervisor';
+      const unsupervised = bootReason === 'direct-no-supervisor' || _supervisorIsDead();
       if (unsupervised) {
         if (_wrapperDriftLoggedOnce) return;
         _wrapperDriftLoggedOnce = true;

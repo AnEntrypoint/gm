@@ -716,7 +716,8 @@ function ensureSkillMdFresh() {
     }
     const bundled = fs.readFileSync(bundledPath, 'utf-8');
     const crypto = require('crypto');
-    const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+    const _norm = s => s.replace(/\r\n/g, '\n');
+    const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
     const home = process.env.HOME || process.env.USERPROFILE || require('os').homedir();
     const targets = [
       path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
@@ -728,7 +729,7 @@ function ensureSkillMdFresh() {
         let needsWrite = true;
         if (fs.existsSync(target)) {
           const existing = fs.readFileSync(target, 'utf-8');
-          const existingHash = crypto.createHash('sha256').update(existing).digest('hex');
+          const existingHash = crypto.createHash('sha256').update(_norm(existing)).digest('hex');
           if (existingHash === bundledHash) needsWrite = false;
         }
         if (needsWrite) {

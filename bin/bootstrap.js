@@ -27,7 +27,8 @@ function ensureSkillMdCurrent(wrapperDir) {
     const bundledPath = candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
     if (!bundledPath) return { skipped: 'bundled-not-found' };
     const bundled = fs.readFileSync(bundledPath, 'utf8');
-    const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
+    const _norm = s => s.replace(/\r\n/g, '\n');
+    const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
     const home = os.homedir();
     const targets = [
       path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
@@ -39,7 +40,7 @@ function ensureSkillMdCurrent(wrapperDir) {
         let needsWrite = true;
         if (fs.existsSync(target)) {
           const existing = fs.readFileSync(target, 'utf8');
-          const existingHash = crypto.createHash('sha256').update(existing).digest('hex');
+          const existingHash = crypto.createHash('sha256').update(_norm(existing)).digest('hex');
           if (existingHash === bundledHash) needsWrite = false;
         }
         if (needsWrite) {
