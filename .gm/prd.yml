@@ -2741,3 +2741,43 @@
   deps: []
   status: completed
   witness: 'gmsniff 30m: 1 deviation FOREIGN cwd-6836 long-gap browser 907s, 0 own, gate-positive. Reuse durable reused=372. 6 repos porcelain=0. Watcher 0.1.640 stable 5.2h. memorize-fire 812 embedded.'
+- id: reframe-L1-cost-not-effort-ceiling
+  title: 'entry.rs:15 L1 currently reads amortized cost <= prior-best envelope / unmeasured marginal = not admitted - an EFFICIENCY CEILING that an agent can read as do the cheaper thing. Reframe: L1 admits on WITNESS/measurement of a mutation candidate (an unmeasured speedup claim is the only thing it rejects), and the EFFORT/work envelope is explicitly UNBOUNDED - maximal-effort, fully-destructive, no amount of work too much. Cost here = the correctness-cost of an unverified claim, NEVER the effort-cost of doing more.'
+  status: completed
+  witness: 'entry.rs:15 rewritten: L1 admits on witness not cheapness; rejects unmeasured optimization CLAIM, admits correct witnessed mutation however expensive; cost L1 weighs = correctness-cost of unverified claim never effort-cost; work envelope unbounded, maximal-effort fully-destructive. Committed a0fbd8b.'
+- id: reframe-L2-bounds-floor-not-ceiling
+  title: 'entry.rs:16 L2 hard cap per resource + backpressure reads as a coverage ceiling. Keep the LOAD-BEARING single-writer |F|=1 (unreconcilable-state prevention) but reframe bounds: the only bound is concurrent-writers-per-surface (safety); the COVERAGE/effort bound is a FLOOR you expand past, never a ceiling. Expand the bounds = expand the cover maximally. The hard-cap is about not corrupting a surface, not about doing less work.'
+  status: completed
+  witness: 'entry.rs:16 rewritten: kept single-writer |F|=1 (unreconcilable-state prevention) + backpressure; reframed as crash-safety floor on concurrent writers, never a coverage ceiling; expand-the-bounds is the move not stay-under. a0fbd8b.'
+- id: relabel-admission-diagram-L1
+  title: 'entry.rs:12 diagram candidate -> [L1 cost] -> [L2 bounds] -> [L3 direction]: the L1 cost label is the cost-framing the user objects to. Relabel to witness/measurement semantics (e.g. [L1 witness]) so the filter no longer reads as a cost-brake, keeping L2/L3. Keep coherent with plan.rs L1-baseline phase label.'
+  status: completed
+  witness: entry.rs:12 diagram relabeled candidate -> [L1 witness] -> [L2 single-writer] -> [L3 direction]; cost label gone. a0fbd8b.
+- id: clarify-bounds-prevent-cascades-invariant
+  title: entry.rs:24 Bounds prevent cascades / explicit capacity converts crash to graceful degradation - this is RESOURCE-CAPACITY safety (keep, it is worst-case-resilience) but must not read as an effort ceiling. Clarify it governs resource capacity / single-writer crash-safety, and explicitly state the work/effort envelope is unbounded (maximal effort).
+  status: completed
+  witness: 'entry.rs:24 clarified: per-surface writer capacity = crash-to-graceful-degradation safety, bounds concurrent writers NOT coverage, effort+cover unbounded. a0fbd8b.'
+- id: add-maximal-effort-no-cost-gate-rule
+  title: 'Add an explicit invariant to entry.rs: never evaluate the cost-in-work as a reason to do less; always expand to the maximal-effort fully-destructive run; no amount of work is too much. This is the directive made a first-class invariant alongside the others (consistent with standing-approval / every-possible / finish-everything).'
+  status: completed
+  witness: 'entry.rs:25 new invariant Effort-is-unbounded: never weigh cost-in-work, maximal-effort fully-destructive default, no amount of work too much; only maintenance-surface + correctness-cost weighed, never labor. Plus filter-summary line 19 never-on-effort. a0fbd8b.'
+- id: audit-keep-measurement-gates-optimization
+  title: 'GUARD: do NOT gut the genuinely-useful invariants while stripping the cost-brake. Measurement-gates-optimization (entry.rs:23 unprofiled claim = hallucinated speedup) stays - it gates UNVERIFIED optimization CLAIMS, not effort. Single-writer |F|=1 stays. Direction/Lyapunov L3 stays. emit.rs:13 L1-bluff (stale-index admit) is correctness, stays. Verify each survives the reframe.'
+  status: completed
+  witness: 'GUARD held: measurement-gates-optimization (entry.rs:23) KEPT + clarified gates-claims-not-effort; single-writer |F|=1 KEPT (L2); L3 Lyapunov direction UNCHANGED; emit.rs:13 L1-bluff stale-index = correctness, unchanged + still coherent with new L1=witness; monotonic-closure + witness invariants intact. Nothing useful gutted.'
+- id: check-agents-md-cost-language
+  title: Grep AGENTS.md for cost/bounds/effort-ceiling language that pushes the agent toward doing less. AGENTS.md already has standing-approval + every-possible + pliable-net-smaller. The Behavioral-discipline pointer references the Three-Layer Admission Filter (L1 cost...) - update that pointer text if it names L1 as cost. Add the maximal-effort/no-cost-gate rule to AGENTS.md if not implied.
+  status: completed
+  witness: 'grep AGENTS.md cost/bounds/effort: line 53 = doc-policy (cost-to-discover), 119 = instruction-cheap, 129 = filter pointer (does NOT name L1 as cost). No cost-ceiling language to strip. Per AGENTS.md:129 do-not-duplicate-instruction-prose rule, the effort-unbounded invariant correctly homes in entry.rs not AGENTS.md. No AGENTS.md edit needed.'
+- id: check-phase-labels-coherent
+  title: 'plan.rs:5 L1-baseline + L2-covering-family, execute.rs L3-distance, emit.rs L3-audit, verify.rs L3-trajectory: after relabeling L1, confirm the per-phase L1/L2/L3 distance labels still read coherently (they reference the filter layers as a distance metric). No contradiction introduced.'
+  status: completed
+  witness: 'plan.rs:5 L1-baseline+L2-covering-family, execute.rs L3-distance, emit.rs L3-audit/L1-bluff, verify.rs L3-trajectory: these use L1/L2/L3 as per-phase distance/coverage labels and stay coherent - L1-baseline=witness baseline, L2-covering=the cover, L3=direction. No contradiction with the reframe; left unchanged.'
+- id: reconcile-pliable-net-smaller-vs-maximal-effort
+  title: 'TENSION CHECK: AGENTS.md pliable rule says replace bespoke-with-library ONLY when net-smaller, and a heavy dep to delete a few lines net-grows maintenance = guarded. The new maximal-effort/no-cost rule is about EFFORT not codebase-size - they do not conflict (maximal effort can still produce net-smaller code). Confirm the reframe does not accidentally license code-bloat; cost-of-MAINTENANCE-surface stays a real consideration, only cost-of-EFFORT is unbounded.'
+  status: completed
+  witness: 'Tension resolved IN the new invariant text: Effort-is-unbounded explicitly preserves maintenance-surface cost as a real consideration (net-smaller wins, heavy-dep-for-few-lines loses) - only effort-LABOR is unbounded, codebase-SIZE cost stays weighed. No code-bloat license; pliable/net-smaller rule intact.'
+- id: ship-and-memorize-maximal-effort
+  title: Direct-push the rs-plugkit entry.rs/AGENTS.md changes to main (no PR per the standing rule); cascade ships the new instruction prose. memorize-fire the reframe decision so next session knows L1 is witness-not-cost and effort is unbounded.
+  status: completed
+  witness: Direct-pushed rs-plugkit entry.rs to main a0fbd8b (f6cb9fb..a0fbd8b, no branch/no PR per standing rule); cascade fires to ship the prose. memorize-fire mem-1781166187213 records the reframe (L1=witness, effort unbounded, next-session guidance).
