@@ -2935,7 +2935,8 @@
   witness: memorize-fire-9345 stored full iter18 summary to default ns (eager-upgrade 0.1.642, cascade e2e, clones synced, rs-plugkit 216-comment strip compiles, long-gap-on-workflow-wait lesson). Recallable next fire.
 - id: finalize-642
   text: 'git_finalize gm: commit any synced/version artifacts + push origin main, porcelain-gated.'
-  status: pending
+  status: completed
+  witness: gm git_finalize committed+pushed d004dff8 (rebased onto origin, behind-state reconciled). rs-codeinsight 29dd849 + rs-plugkit 03342cb pushed earlier. All remotes reflect HEAD.
 - id: fix-plugkit-comments
   text: 'FULL rs-plugkit src comment sweep (~216 lines, 11 files: code_index.rs 81, wasm_dispatch.rs 35, gates.rs 30, orchestrator/prd.rs 29, residual.rs 12, recall.rs 9, mutables.rs 5, instructions/mod.rs 5, transitions.rs 4, task.rs 4, libsql_wasm.rs 2). Strip genuine Rust comments only (// /// //! and block); PRESERVE // and /* inside string/char/raw literals (filter.rs:146 json-error string, instructions/*.rs prose). Verify no literal corruption, no code change. Commit+push origin main.'
   status: completed
