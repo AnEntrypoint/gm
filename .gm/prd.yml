@@ -3023,7 +3023,8 @@
   witness: printf '@AGENTS.md\n' > C:/dev/tv8/CLAUDE.md; cat confirms content '@AGENTS.md'
 - id: commit-push-gm
   text: Commit + push gm to main via git_finalize. publish.yml triggers on push to main for non-ignored paths (gm-plugkit/bootstrap.js is .js, not in paths-ignore) -> auto-bump bumps gm-plugkit/package.json -> publish-gm-plugkit republishes, so the JS-only fix reaches consumers. The push IS the validation dispatch.
-  status: pending
+  status: completed
+  witness: 'git_finalize-48: committed=true pushed=true sha=10a48c70 branch=main; publish.yml will auto-bump+republish gm-plugkit'
 - id: memorize-rootcause
   text: 'memorize-fire the root cause: CLAUDE.md/@AGENTS.md + next-step.md project wiring (ensureNextStepWiring) must live in gm-plugkit/bootstrap.js ensureReady (the watcher boot path that runs in consumer projects), NOT only in repo-root bin/bootstrap.js + lib/skill-bootstrap.js which never run a foreign project''s watcher. Symptom: tv8 got next-step.md + live watcher but no CLAUDE.md.'
   status: completed
