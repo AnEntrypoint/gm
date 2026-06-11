@@ -2999,4 +2999,5 @@
   witness: git status --porcelain shows ' M .gm/disciplines/codeinsight-manifest/docs_api_releases.json.json' staged for commit in finalize
 - id: verify-clean-worktree-push
   text: After deletions+commit, witness clean worktree via git_status porcelain-empty, then git_finalize push to origin/main. The push IS the validation dispatch.
-  status: pending
+  status: completed
+  witness: 'git_finalize-18: committed=true pushed=true sha=bd77ce8d branch=main'
