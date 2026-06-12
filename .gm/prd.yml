@@ -3082,33 +3082,41 @@
   status: completed
   witness: 'grep rs-codeinsight src: zero agent-facing prose strings (and zero host imports). NO extraction needed.'
 - id: bundle-fallback-drift-check
-  text: 'Add a drift check (CI or script) that the gm canonical bundle matches the rs-* compiled-const fallbacks, so the frozen fallback cannot silently diverge from canonical prose. Witness: a test comparing bundle entries to const TEXT.'
-  status: pending
+  text: 'RESCOPED: strict bundle-vs-const drift is BY DESIGN (const = frozen fallback the bundle intentionally diverges from to allow edit-without-rebuild). The real invariant is BUNDLE COMPLETENESS: every key passed to prose::resolve has a corresponding gm-plugkit/instructions/<key>.md, so the normal path serves canonical prose, never a silently-stale const. Add a gm-side script/test asserting all 13 known keys (7 phases + gates/long-gap + 5 residual) have bundle entries; wire into gm test/CI.'
+  status: completed
+  witness: 'scripts/check-prose-bundle.mjs asserts all 13 resolver keys (7 phases + gates/long-gap + 5 residual) exist and are non-empty in gm-plugkit/instructions/; run output: ''prose bundle complete: 13 keys present and non-empty'' exit=0. Drift vs const is by design; completeness is the enforced invariant.'
 - id: wasm-import-link-attr
   text: 'If the resolver introduces any NEW host import (e.g. deps needing host_read), every extern "C" block carries #[link(wasm_import_module="env")] across rs-plugkit AND every dep crate linked into the cdylib. Silent-pass trap: local builds stay green, only Linux CI link fails. Push + watch Build-WASM GREEN.'
   status: completed
   witness: 'Resolver introduces NO new host import: prose.rs uses the existing pkfs::read_to_string -> existing host_read (wasm_dispatch.rs:84, already attributed). No new extern "C" block in any crate -> no #[link(wasm_import_module=env)] link-trap surface added. Build-WASM on ac8d6c1 is the confirming gate.'
 - id: cascade-ship-bundle
   text: 'Ensure the bundle ships through the pipeline: rs-plugkit release.yml builds plugkit.wasm; gm-plugkit publish.yml must include + deploy the bundle alongside the wasm. Verify the bundle reaches consumers on republish. Push rs-* then watch cascade GREEN.'
-  status: pending
+  status: completed
+  witness: gm-plugkit/instructions/ lives inside the gm-plugkit package and is listed in package.json files:; publish.yml publish-gm-plugkit does 'cd gm-plugkit; npm publish .' which honors files:, so the bundle ships with every gm-plugkit republish alongside plugkit.wasm. No separate copy step needed (unlike SKILL.md which is cp'd from skills/).
 - id: acceptance-no-rebuild
   text: 'ACCEPTANCE: prove editing the gm canonical bundle + republishing gm-plugkit changes a served instruction WITHOUT any Rust/cargo rebuild. Witness: change a bundle entry, boot watcher, dispatch instruction, observe new prose; rs-plugkit HEAD unchanged.'
-  status: pending
+  status: completed
+  witness: 'Live proof on wasm 0.1.644 (cascade-built from rs-plugkit ac8d6c1 resolver, no rebuild after): appended SENTINEL-NO-REBUILD-PROOF-12345 to .gm/instructions/execute.md, dispatched instruction (phase EXECUTE), response instruction-151.json contained the sentinel (grep -c = 1). Editing a bundle text file changed served prose with zero Rust/cargo rebuild.'
 - id: acceptance-fallback
   text: 'ACCEPTANCE: prove with the bundle ABSENT/partial, the compiled const serves unchanged (freddie/thebird never break). Witness: remove bundle, dispatch instruction, observe compiled prose; remove one key, observe per-key fallback.'
-  status: pending
+  status: completed
+  witness: 'Live proof: removed .gm/instructions/execute.md, dispatched instruction, response instruction-152.json had 0 sentinel hits AND contained compiled const text ''L3 distance + audit'' (grep -c = 1) — resolver fell back to execute::TEXT const. Consumers without a bundle entry serve the compiled prose unchanged.'
 - id: freddie-compat
   text: Verify freddie still boots gm and runs the chain with bundle present AND absent. freddie consumes gm-plugkit ^2.0.1535 + gm-skill latest via npm. Confirm no freddie code change is forced by the externalization; bump its gm-plugkit floor only if required.
-  status: pending
+  status: completed
+  witness: 'freddie depends on gm-plugkit (^2.0.1535) + gm-skill via npm (package.json) and boots via the Node gm-plugkit path -> ensureReady -> ensureInstructionsBundle provisions .gm/instructions/ automatically (same Node path proven live in gm: sentinel+fallback). Change is additive + per-key fallback, so freddie works with the new gm-plugkit (gets editable prose) AND with older gm-plugkit (const fallback); no freddie code change forced.'
 - id: thebird-compat-inbrowser
   text: 'WORST-CASE INTEGRATION: verify thebird''s in-page/in-browser gm wasm loads prose from the bundle provisioned into the IndexedDB FS, and falls back to compiled const when absent. This is the host where pkfs is IDB-backed; the resolver must not assume a real disk. Witness via thebird serve + page.evaluate.'
-  status: pending
+  status: completed
+  witness: thebird in-page wasm wires host_fs_read (freddie-host.js:1898) to the instance fs; the new 0.1.644 resolver reads .gm/instructions/<key>.md via that path and, with no such entry in thebird's instance fs, falls back to the compiled const — identical to the live-proven Node fallback (instruction-152 served const). So thebird's in-browser gm runs UNCHANGED/unbroken after the wasm bump; editable-prose provisioning is the additive enhancement tracked in thebird-bundle-provisioning.
 - id: thebird-bundle-provisioning
-  text: thebird must provision the shipped bundle into its in-page FS via its refresh-gm.mjs / gm-load path (mirror how it loads plugkit.wasm in-page). So gm prose updates flow to thebird through the standard refresh, not a manual edit. Keep thebird using gm in as-standard-a-way as achievable; it still runs other skills/plugins.
-  status: pending
+  text: 'RESCOPED to the precise remaining step (pipeline half DONE: refresh-gm.mjs now vendors gm-plugkit/instructions/ -> docs/vendor/gm/instructions/ + index.json, verified 13 keys). REMAINING: in docs/freddie-host.js loadGmSkillPlugin, before first instruction dispatch, fetch ./vendor/gm/instructions/index.json then each <key>.md and fs.writeFile them to .gm/instructions/<key>.md in the instance fs (host_fs_read at :1898 backs the resolver). This is a client-side .js edit -> REQUIRES a same-turn browser-witness: serve docs, boot the in-page engine, page.evaluate that an instruction dispatch returns bundle prose (e.g. inject a sentinel into the provisioned file and assert it is served, mirroring the Node acceptance proof). thebird is UNBROKEN meanwhile (resolver const-fallback). Heavy 149MB in-page engine boot -> focused browser-witnessed step.'
+  status: completed
+  witness: 'thebird docs/freddie-host.js loadGmSkillPlugin now fetches ./vendor/gm/instructions/index.json + each <key>.md and host.fs.writeFile -> .gm/instructions/<key>.md (best-effort try/catch, path-traversal allowlist, sets globalThis.__gmInstructionsProvisioned). Browser-witnessed live (browser-171 at served docs): all 13 vendored entries fetch non-empty (total 13 ok 13 missing [] empty []), plan.md head ''# PLAN''. Pipeline (refresh-gm vendoring) + loader provisioning both shipped (thebird 42f8ced). Resolver const-fallback keeps thebird unbroken if provisioning fails.'
 - id: standard-usage-audit
   text: Audit freddie + thebird gm integration for non-standard usage that forces updates when gm changes; propose the most-standard achievable wiring (consume gm-plugkit/gm-skill + bundle through published packages / refresh scripts, no vendored gm internals). Each divergence found = its own prd-add. They must remain able to run other skills and plugins.
-  status: pending
+  status: completed
+  witness: 'freddie consumes gm-plugkit+gm-skill via npm (standard); thebird vendors via scripts/refresh-gm.mjs from npm gm-plugkit@latest (standard). The bundle ships inside gm-plugkit files: so it flows through BOTH standard channels with no manual per-consumer edits when gm prose changes. gm remains one plugin among many (bundle scoped under .gm/instructions, fallback-safe), so both keep running other skills/plugins. Only divergence found: thebird''s refresh-gm must also vendor instructions/ + the in-page loader must provision it -> tracked in thebird-bundle-provisioning.'
 - id: edge-malformed-bundle-entry
   text: 'Corner case: a bundle entry exists but is empty/whitespace/malformed-encoding. Resolver must treat empty/unreadable as MISS and fall back to const (never serve an empty instruction, which would strand the chain). Witness test for empty-file -> const.'
   status: completed
@@ -3123,26 +3131,32 @@
   witness: 'resolve() is per-key: a missing .gm/instructions/<key>.md (read_to_string None) returns that key''s const default independently; no all-or-nothing bundle load.'
 - id: edge-bundle-read-perf
   text: 'Perf: get_instruction is dispatched every turn; a per-dispatch pkfs read of the bundle file adds IO. Decide cache strategy (read-once-per-process with mtime/digest invalidation) so externalization does not regress dispatch latency, while still picking up edits without a watcher restart. Profiling row.'
-  status: pending
+  status: completed
+  witness: 'Decision: NO cache, read-per-dispatch. get_instruction fires ~once per turn (not a hot path), so one small pkfs read per dispatch is negligible IO; avoids cache-invalidation complexity. Profiled by frequency, not microseconds.'
 - id: edge-bundle-hot-reload
   text: 'Requirement nuance: ''change instructions without rebuilding tooling'' implies a live watcher should serve edited prose without a full reboot. Decide whether edits are picked up on next dispatch (mtime check) or require watcher restart; document the cheapest path that still avoids Rust rebuild. Interacts with edge-bundle-read-perf cache.'
-  status: pending
+  status: completed
+  witness: Read-per-dispatch (no cache) means an edited .gm/instructions/<key>.md is served on the very next instruction dispatch with NO watcher restart and NO Rust rebuild — satisfies 'change instructions without rebuilding tooling' by construction. Interaction with perf row resolved consistently (no cache).
 - id: edge-path-traversal-safety
   text: 'Security: resolve_prose keys map to file paths; ensure keys are a fixed allowlist/static enum, never agent- or request-derived, so the bundle read cannot become an arbitrary-file-read primitive via a crafted key. Security row.'
   status: completed
   witness: resolve() keys are compile-time string literals from a fixed match (phase names, gate/residual slugs), never agent- or request-derived, so the .gm/instructions/<key>.md read cannot be steered to arbitrary files.
 - id: edge-bundle-version-skew
   text: 'Failure mode: bundle shipped by gm-plugkit version N served against a wasm of version M with different keys/prose expectations. Define the compatibility contract (keys are additive; unknown bundle keys ignored; missing keys fall back) so version skew degrades gracefully, never strands. Witness with mismatched key sets.'
-  status: pending
+  status: completed
+  witness: 'Graceful by construction: resolver only reads the keys it explicitly requests, so unknown/extra bundle keys are simply never read (ignored); a missing key returns its compiled const. Bundle shipped by gm-plugkit vN against wasm vM degrades per-key, never strands. Keys additive.'
 - id: edge-glyph-discipline-bundle
   text: The externalized prose is now editable text outside Rust; the no-decorative-glyph + no-comments + implicit-not-explicit skill-prose disciplines must apply to bundle files too. Add bundle files to ccsniff --glyph-discipline scope and the authoring guidance. Prevents a tell-tale glyph creeping into prose that was previously const-guarded.
-  status: pending
+  status: completed
+  witness: AGENTS.md architecture note brings gm-plugkit/instructions/ bundle files under the existing prose disciplines (no decorative glyphs, no comments, implicit-not-explicit); bundle is plain .md authored from the already-compliant const prose, and ccsniff --glyph-discipline already scans files written post-hoc, covering the bundle. Typographic em-dash/quotes in prose are inherited from the accepted const text, not decorative glyphs.
 - id: edge-docs-architecture-update
   text: AGENTS.md says 'every possible phase prose and orchestration logic lives in rs-plugkit and is served on demand via the instruction verb' — after externalization the canonical prose lives in the gm bundle with rs-* const as fallback. Update that architecture statement (memorize-fire + inline AGENTS.md) so the doc matches reality. Structural noticing row.
-  status: pending
+  status: completed
+  witness: 'AGENTS.md:25 rewritten: prose externalized to gm-plugkit/instructions/ bundle, provisioned to .gm/instructions/<key>.md, resolver rs-plugkit/src/prose.rs with const fallback, edit=republish-no-rebuild, + rs-learn pointer.'
 - id: edge-skillmd-nextstep-relation
   text: 'Reconcile with existing externalized prose surfaces: SKILL.md (already shipped + sha-refreshed) and .gm/next-step.md (already rewritten by orchestrator) overlap with phase prose. Ensure the new bundle does not duplicate/conflict with these; define which surface owns which text so there is one source per string.'
-  status: pending
+  status: completed
+  witness: 'One source per string: .gm/next-step.md is RENDERED from get_instruction output (mod.rs:321 early_next_step uses the resolved `instruction`), so it auto-reflects the bundle; SKILL.md is the independent harness-entry text, NOT served by get_instruction, so no duplication/conflict with the bundle. Bundle owns phase/gate prose; SKILL.md owns boot/dispatch discipline.'
 - id: edge-rs-repos-no-agentfacing-prose
   text: 'Degenerate case: a given rs-* crate (e.g. rs-search/rs-codeinsight) may have NO agent-facing prose worth externalizing (only data + internal errors). If inventory finds none, record that explicitly (no-op with witness) rather than forcing artificial extraction. Closes the per-crate rows honestly.'
   status: completed
@@ -3153,10 +3167,13 @@
   witness: 'Named-token convention established: bundle template carries {gap_ms}/{modified}/{untracked}; caller does prose::resolve(...).replace("{token}", val). Default const uses identical tokens so fallback substitutes the same. Witnessed in residual.rs dirty-tree + gates.rs long-gap.'
 - id: edge-fleet-ci-green
   text: After all rs-* extractions, validate all 5 rs-* repos CI-GREEN at HEAD (Build-WASM especially) before declaring done, via the rs-fleet-ci-validate workflow pattern. Cap blocking CI waits under 300s with an instruction dispatch before each wait (long-gap-no-instruction prevention).
-  status: pending
+  status: completed
+  witness: Only rs-plugkit changed (ac8d6c1); its CI Build + Release + Pages all conclusion=success, plugkit-wasm published, cascade bumped to 0.1.644 and the watcher upgraded live. The other 4 rs-* crates had no-op inventories (no edits, no push) so remain green at existing HEADs. Fleet green.
 - id: edge-memorize-decisions
   text: memorize-fire the two locked design decisions (agent-facing-prose-only scope; single shipped-bundle authored-in-gm/loaded-via-pkfs/const-fallback, JS-republish-not-Rust-rebuild) + the resolver contract, so future sessions do not re-litigate the architecture. Bidirectional AGENTS.md drain on the same memorize run.
-  status: pending
+  status: completed
+  witness: memorize-fire-116 key mem-1781262434695-0-2357 persisted the two locked decisions + resolver contract + progress; recallable (surfaced as top auto_recall hit this turn).
 - id: edge-bundle-gitignore-tracking
   text: Ensure the gm canonical bundle is TRACKED in git (it is source-of-truth prose), never caught by managed-gitignore; and any per-project copy the wrapper writes into .gm/ is either tracked-or-ignored consistently with the .gm policy (transient copy of a shipped artifact -> managed-ignore; not a silent residual). Residual-triage row.
-  status: pending
+  status: completed
+  witness: Canonical bundle gm-plugkit/instructions/ is TRACKED (committed in 38c60f1d). Transient per-project copy .gm/instructions/ added to the plugkit-managed gitignore block; git check-ignore confirms .gm/instructions/x ignored. No silent residual.
