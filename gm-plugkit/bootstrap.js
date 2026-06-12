@@ -74,6 +74,33 @@ function clearBootstrapError() {
   } catch (_) {}
 }
 
+function ensureInstructionsBundle(cwd) {
+  const srcDir = path.join(__dirname, 'instructions');
+  if (!fs.existsSync(srcDir)) return;
+  const dstDir = path.join(cwd, '.gm', 'instructions');
+  let copied = 0;
+  const walk = (rel) => {
+    const from = path.join(srcDir, rel);
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+      const childRel = rel ? path.join(rel, entry.name) : entry.name;
+      if (entry.isDirectory()) { walk(childRel); continue; }
+      const dst = path.join(dstDir, childRel);
+      try {
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        const next = fs.readFileSync(path.join(srcDir, childRel));
+        let prev = null;
+        try { prev = fs.readFileSync(dst); } catch (_) {}
+        if (!prev || !prev.equals(next)) { fs.writeFileSync(dst, next); copied++; }
+      } catch (e) { obsEvent('bootstrap', 'instructions-bundle.target-failed', { target: dst, error: e.message }); }
+    }
+  };
+  try { walk(''); } catch (e) { obsEvent('bootstrap', 'instructions-bundle.walk-failed', { error: e.message }); }
+  if (copied > 0) {
+    log(`instructions bundle provisioned: ${copied} file(s)`);
+    obsEvent('bootstrap', 'instructions-bundle.provisioned', { copied });
+  }
+}
+
 function ensureNextStepWiring(cwd) {
   const changes = [];
   const gmDir = path.join(cwd, '.gm');
@@ -862,6 +889,7 @@ async function ensureReady(opts) {
   const offline = opts.offline === true;
 
   try { ensureNextStepWiring(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
+  try { ensureInstructionsBundle(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
 
   if (!offline) {
     try {
@@ -1052,6 +1080,7 @@ module.exports = {
   bootstrap,
   ensureReady,
   ensureNextStepWiring,
+  ensureInstructionsBundle,
   gmToolsDir,
   getWasmPath,
   getBinaryPath,

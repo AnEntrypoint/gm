@@ -1,0 +1,1 @@
+Residual scan. Worktree clean, remote pushed, PRD empty, mutables witnessed — the four checks. Anything reachable and in-spirit expands the PRD and runs. Out-of-reach is credentials, down service, product decision.

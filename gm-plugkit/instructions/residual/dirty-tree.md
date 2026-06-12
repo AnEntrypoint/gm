@@ -1,0 +1,1 @@
+worktree dirty — modified={modified} untracked={untracked} — commit or revert before residual scan; a push from a dirty tree orphans the unstaged delta

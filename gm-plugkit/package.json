@@ -16,7 +16,8 @@
     "plugkit-wasm-wrapper.js",
     "plugkit.version",
     "plugkit.sha256",
-    "SKILL.md"
+    "SKILL.md",
+    "instructions/"
   ],
   "keywords": [
     "gm",

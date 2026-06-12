@@ -54,6 +54,7 @@ tmp/
 .gm/learning-state.md
 .gm/git-block-counter.json
 .gm/next-step.md
+.gm/instructions/
 .gm/last-instruction-ts
 .gm/last-dispatch-ts
 .gm/boot*.err
@@ -76,3 +77,6 @@ tmp/
 
 # in-process plugkit probe artifact (transient)
 gm-plugkit/.gm/
+
+# tessl tooling marker (foreign, not shipped)
+skills/gm-skill/.tessl-plugin/

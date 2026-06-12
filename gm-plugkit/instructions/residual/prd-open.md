@@ -1,0 +1,1 @@
+PRD still has items; complete or remove them before residual scan.

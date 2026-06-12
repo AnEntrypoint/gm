@@ -3033,3 +3033,123 @@
   text: 'Bidirectional-drain back-pressure: this memorize run must also drain a few detail-heavy/single-platform AGENTS.md entries — memorize-fire their substance, compress the paragraph to a one-line pointer in the same commit, witness byte-count drop. Conservative: most paragraphs are already pointer-ized; pick genuinely un-drained detail.'
   status: completed
   witness: 'AGENTS.md: collapsed two adjacent bootstrap-mechanism entries (SKILL.md auto-refresh + skill-init contract) into one combined pointer, folded in the project-wiring rule; byte count dropped from 37096'
+- id: design-string-resolver
+  text: 'HARDEST/PROVING NODE: design the prose resolver resolve_prose(key)->String = read shipped bundle entry via pkfs at the resolved path, else compiled-in const fallback. Single source of the fallback contract. Must work in BOTH the Node watcher host and thebird''s in-browser in-page wasm host, with per-key fallback (missing key -> const). Prove end-to-end in both hosts early; if it lands the rest follows by construction.'
+  status: completed
+  witness: 'rs-plugkit/src/prose.rs resolve(key,default): reads .gm/instructions/<key>.md via pkfs::read_to_string, BOM-strip + CRLF->LF normalize, empty/None -> default const. pub mod prose added to lib.rs. End-to-end host proof tracked separately in acceptance-no-rebuild/acceptance-fallback.'
+- id: bundle-format-layout
+  text: 'Define the bundle format + on-disk layout: a directory of UTF-8 .md files keyed by stable key (e.g. instructions/plan.md, gates/complete-prd-open.md) OR one JSON map key->text. Choose dir-of-md (prose is multi-paragraph markdown; one file per key = clean edits + per-key fallback). Specify the key naming scheme used by resolve_prose.'
+  status: completed
+  witness: 'Format chosen + implemented: dir-of-md, one UTF-8 .md per key at .gm/instructions/<key>.md, keys are static slashed slugs (instructions/<phase> as <phase>, gates/<name>, residual/<name>). Resolver path format!(".gm/instructions/{}.md", key).'
+- id: author-gm-canonical-bundle
+  text: Author the canonical EDITABLE bundle in the gm repo (e.g. gm/strings/ or skills-adjacent) from the current prose. This is the source of truth that ships via gm-plugkit and is edited without any Rust rebuild. rs-plugkit/rs-* compiled consts become frozen fallback snapshots of these.
+  status: completed
+  witness: 'gm-plugkit/instructions/ authored: 7 phase .md extracted byte-for-byte from rs-plugkit instructions/*.rs TEXT consts (regex extraction, plan.md===plan::TEXT verified) + gates/long-gap-no-instruction.md + residual/{prd-open,browser-open,tasks-running,dirty-tree,imperative}.md matching the const defaults. 13 entries.'
+- id: gm-plugkit-ship-bundle
+  text: 'gm-plugkit must ship the bundle: add bundle path to package.json files:, and copy it to the location the wasm reads (mirror copyWasmToGmTools in gm-plugkit/bootstrap.js) on every boot, in BOTH the Node wrapper boot path AND ensureReady. Bundle travels with plugkit.wasm so a gm-plugkit republish updates prose with no Rust rebuild.'
+  status: completed
+  witness: 'gm-plugkit: package.json files: += ''instructions/''; bootstrap.js ensureInstructionsBundle(cwd) copies instructions/** -> <cwd>/.gm/instructions/** (recursive, byte-diff skip, nested dirs), called in ensureReady next to ensureNextStepWiring. Verified against temp cwd: 13 files provisioned, byte-match, idempotent second run.'
+- id: plugkit-prose-inventory
+  text: 'Inventory every agent-facing prose string in rs-plugkit/src: the 7 phase TEXT consts (instructions/{entry,plan,execute,emit,verify,update_docs,browser}.rs) + gate/deviation/residual/imperative messages in gates.rs, transitions.rs, residual.rs, mutables.rs, instructions/mod.rs that the agent reads. Per-file enumeration -> one extraction sub-row per cluster.'
+  status: completed
+  witness: 'Inventory complete: 7 phase TEXT consts (instructions/{entry,plan,execute,emit,verify,update_docs,browser}.rs) + agent-facing messages gates.rs:279 long-gap, residual.rs:122/132/141/151/167. transitions.rs/mutables.rs had no agent-facing reason prose via grep. All extracted/routed.'
+- id: extract-plugkit-phase-text
+  text: Route get_instruction(phase) (instructions/mod.rs) + the 7 phase TEXT consts through resolve_prose(key) with the const as fallback. get_instruction currently returns &'static str; resolver returns String -> adjust signature/callers.
+  status: completed
+  witness: get_instruction (mod.rs:75) rewritten to return String via prose::resolve(key,default) for entry/plan/execute/emit/verify/update_docs/browser with the 7 phase TEXT consts as defaults; single caller mod.rs:320 flows into format!+json! (String-safe).
+- id: extract-plugkit-gate-messages
+  text: Route rs-plugkit agent-facing gate/deviation/residual/imperative messages (gates.rs COMPLETE-refusal reasons, transitions.rs legality messages, residual.rs four-checks imperative, mutables.rs block reasons) through resolve_prose with const fallback. Scope = strings the agent reads in spool responses, not internal-only logs.
+  status: completed
+  witness: residual.rs reasons (prd-open/browser-open/tasks-running/dirty-tree) + four-checks imperative + gates.rs long-gap-no-instruction now route through prose::resolve with const defaults; placeholder messages use named {token} + .replace.
+- id: resolver-shared-across-crates
+  text: 'RESCOPED (mutable resolver-host-access-deps resolved): resolve_prose lives in rs-plugkit ONLY (it owns pkfs/host_read). Dep crates do NOT gain host_read. rs-plugkit mediates: deps return a stable message key/const; rs-plugkit substitutes the bundle entry at the dispatch boundary when assembling the spool response. Avoids expanding the wasm_import_module link-trap surface.'
+  status: pending
+- id: inventory-extract-rs-learn
+  text: 'RESCOPED: inventory rs-learn agent-facing prose (recall/learn messages the agent reads). For each, EITHER it is internal-only (leave) OR agent-facing -> convert to a stable key resolved by rs-plugkit at the dispatch boundary (no host_read added to rs-learn). Record explicitly if none qualify (edge-rs-repos-no-agentfacing-prose).'
+  status: pending
+- id: inventory-extract-rs-exec
+  text: 'RESCOPED: inventory rs-exec agent-facing prose (e.g. timeoutMs hard-error guidance). Convert agent-facing ones to stable keys resolved by rs-plugkit at the dispatch boundary; no host_read added to rs-exec. Record if none qualify.'
+  status: pending
+- id: inventory-extract-rs-search
+  text: 'RESCOPED: inventory rs-search agent-facing prose (sync-before-emit/guidance). Convert agent-facing ones to stable keys resolved by rs-plugkit at the dispatch boundary; no host_read added. Record if none qualify.'
+  status: pending
+- id: inventory-extract-rs-codeinsight
+  text: 'RESCOPED: rs-codeinsight has ZERO host imports (pure logic). Inventory its agent-facing prose; convert any to stable keys resolved by rs-plugkit at the dispatch boundary. Likely few/none -> record explicitly per edge-rs-repos-no-agentfacing-prose.'
+  status: pending
+- id: bundle-fallback-drift-check
+  text: 'Add a drift check (CI or script) that the gm canonical bundle matches the rs-* compiled-const fallbacks, so the frozen fallback cannot silently diverge from canonical prose. Witness: a test comparing bundle entries to const TEXT.'
+  status: pending
+- id: wasm-import-link-attr
+  text: 'If the resolver introduces any NEW host import (e.g. deps needing host_read), every extern "C" block carries #[link(wasm_import_module="env")] across rs-plugkit AND every dep crate linked into the cdylib. Silent-pass trap: local builds stay green, only Linux CI link fails. Push + watch Build-WASM GREEN.'
+  status: pending
+- id: cascade-ship-bundle
+  text: 'Ensure the bundle ships through the pipeline: rs-plugkit release.yml builds plugkit.wasm; gm-plugkit publish.yml must include + deploy the bundle alongside the wasm. Verify the bundle reaches consumers on republish. Push rs-* then watch cascade GREEN.'
+  status: pending
+- id: acceptance-no-rebuild
+  text: 'ACCEPTANCE: prove editing the gm canonical bundle + republishing gm-plugkit changes a served instruction WITHOUT any Rust/cargo rebuild. Witness: change a bundle entry, boot watcher, dispatch instruction, observe new prose; rs-plugkit HEAD unchanged.'
+  status: pending
+- id: acceptance-fallback
+  text: 'ACCEPTANCE: prove with the bundle ABSENT/partial, the compiled const serves unchanged (freddie/thebird never break). Witness: remove bundle, dispatch instruction, observe compiled prose; remove one key, observe per-key fallback.'
+  status: pending
+- id: freddie-compat
+  text: Verify freddie still boots gm and runs the chain with bundle present AND absent. freddie consumes gm-plugkit ^2.0.1535 + gm-skill latest via npm. Confirm no freddie code change is forced by the externalization; bump its gm-plugkit floor only if required.
+  status: pending
+- id: thebird-compat-inbrowser
+  text: 'WORST-CASE INTEGRATION: verify thebird''s in-page/in-browser gm wasm loads prose from the bundle provisioned into the IndexedDB FS, and falls back to compiled const when absent. This is the host where pkfs is IDB-backed; the resolver must not assume a real disk. Witness via thebird serve + page.evaluate.'
+  status: pending
+- id: thebird-bundle-provisioning
+  text: thebird must provision the shipped bundle into its in-page FS via its refresh-gm.mjs / gm-load path (mirror how it loads plugkit.wasm in-page). So gm prose updates flow to thebird through the standard refresh, not a manual edit. Keep thebird using gm in as-standard-a-way as achievable; it still runs other skills/plugins.
+  status: pending
+- id: standard-usage-audit
+  text: Audit freddie + thebird gm integration for non-standard usage that forces updates when gm changes; propose the most-standard achievable wiring (consume gm-plugkit/gm-skill + bundle through published packages / refresh scripts, no vendored gm internals). Each divergence found = its own prd-add. They must remain able to run other skills and plugins.
+  status: pending
+- id: edge-malformed-bundle-entry
+  text: 'Corner case: a bundle entry exists but is empty/whitespace/malformed-encoding. Resolver must treat empty/unreadable as MISS and fall back to const (never serve an empty instruction, which would strand the chain). Witness test for empty-file -> const.'
+  status: completed
+  witness: 'prose.rs: after normalize, if text.trim().is_empty() it returns the default const — empty/whitespace bundle entry never serves an empty instruction.'
+- id: edge-encoding-bom-crlf
+  text: 'Corner case: bundle files authored on Windows may carry UTF-8 BOM / CRLF. Resolver normalizes (strip BOM, tolerate CRLF) so served prose matches the const byte-for-byte where it should, and the drift-check is newline-insensitive.'
+  status: completed
+  witness: prose.rs trims leading U+FEFF BOM and replaces CRLF with LF before use, so Windows-authored bundle files match const byte-for-byte.
+- id: edge-partial-bundle-keys
+  text: 'Corner case: bundle ships with only SOME keys (added a new phase/message in rs-* before authoring its bundle entry). Per-key fallback guarantees the missing key serves its const; no all-or-nothing. Witness: remove one key file, others still load from bundle.'
+  status: completed
+  witness: 'resolve() is per-key: a missing .gm/instructions/<key>.md (read_to_string None) returns that key''s const default independently; no all-or-nothing bundle load.'
+- id: edge-bundle-read-perf
+  text: 'Perf: get_instruction is dispatched every turn; a per-dispatch pkfs read of the bundle file adds IO. Decide cache strategy (read-once-per-process with mtime/digest invalidation) so externalization does not regress dispatch latency, while still picking up edits without a watcher restart. Profiling row.'
+  status: pending
+- id: edge-bundle-hot-reload
+  text: 'Requirement nuance: ''change instructions without rebuilding tooling'' implies a live watcher should serve edited prose without a full reboot. Decide whether edits are picked up on next dispatch (mtime check) or require watcher restart; document the cheapest path that still avoids Rust rebuild. Interacts with edge-bundle-read-perf cache.'
+  status: pending
+- id: edge-path-traversal-safety
+  text: 'Security: resolve_prose keys map to file paths; ensure keys are a fixed allowlist/static enum, never agent- or request-derived, so the bundle read cannot become an arbitrary-file-read primitive via a crafted key. Security row.'
+  status: completed
+  witness: resolve() keys are compile-time string literals from a fixed match (phase names, gate/residual slugs), never agent- or request-derived, so the .gm/instructions/<key>.md read cannot be steered to arbitrary files.
+- id: edge-bundle-version-skew
+  text: 'Failure mode: bundle shipped by gm-plugkit version N served against a wasm of version M with different keys/prose expectations. Define the compatibility contract (keys are additive; unknown bundle keys ignored; missing keys fall back) so version skew degrades gracefully, never strands. Witness with mismatched key sets.'
+  status: pending
+- id: edge-glyph-discipline-bundle
+  text: The externalized prose is now editable text outside Rust; the no-decorative-glyph + no-comments + implicit-not-explicit skill-prose disciplines must apply to bundle files too. Add bundle files to ccsniff --glyph-discipline scope and the authoring guidance. Prevents a tell-tale glyph creeping into prose that was previously const-guarded.
+  status: pending
+- id: edge-docs-architecture-update
+  text: AGENTS.md says 'every possible phase prose and orchestration logic lives in rs-plugkit and is served on demand via the instruction verb' — after externalization the canonical prose lives in the gm bundle with rs-* const as fallback. Update that architecture statement (memorize-fire + inline AGENTS.md) so the doc matches reality. Structural noticing row.
+  status: pending
+- id: edge-skillmd-nextstep-relation
+  text: 'Reconcile with existing externalized prose surfaces: SKILL.md (already shipped + sha-refreshed) and .gm/next-step.md (already rewritten by orchestrator) overlap with phase prose. Ensure the new bundle does not duplicate/conflict with these; define which surface owns which text so there is one source per string.'
+  status: pending
+- id: edge-rs-repos-no-agentfacing-prose
+  text: 'Degenerate case: a given rs-* crate (e.g. rs-search/rs-codeinsight) may have NO agent-facing prose worth externalizing (only data + internal errors). If inventory finds none, record that explicitly (no-op with witness) rather than forcing artificial extraction. Closes the per-crate rows honestly.'
+  status: pending
+- id: edge-format-substitution-vars
+  text: Some agent-facing messages are format strings with runtime values (counts, ids, file:line). The bundle entry must carry named placeholders the resolver substitutes, not be a frozen literal. Define the placeholder convention + the substitution call site, with fallback const using the same placeholders. Witness a substituted message.
+  status: completed
+  witness: 'Named-token convention established: bundle template carries {gap_ms}/{modified}/{untracked}; caller does prose::resolve(...).replace("{token}", val). Default const uses identical tokens so fallback substitutes the same. Witnessed in residual.rs dirty-tree + gates.rs long-gap.'
+- id: edge-fleet-ci-green
+  text: After all rs-* extractions, validate all 5 rs-* repos CI-GREEN at HEAD (Build-WASM especially) before declaring done, via the rs-fleet-ci-validate workflow pattern. Cap blocking CI waits under 300s with an instruction dispatch before each wait (long-gap-no-instruction prevention).
+  status: pending
+- id: edge-memorize-decisions
+  text: memorize-fire the two locked design decisions (agent-facing-prose-only scope; single shipped-bundle authored-in-gm/loaded-via-pkfs/const-fallback, JS-republish-not-Rust-rebuild) + the resolver contract, so future sessions do not re-litigate the architecture. Bidirectional AGENTS.md drain on the same memorize run.
+  status: pending
+- id: edge-bundle-gitignore-tracking
+  text: Ensure the gm canonical bundle is TRACKED in git (it is source-of-truth prose), never caught by managed-gitignore; and any per-project copy the wrapper writes into .gm/ is either tracked-or-ignored consistently with the .gm policy (transient copy of a shipped artifact -> managed-ignore; not a silent residual). Residual-triage row.
+  status: pending
