@@ -1,31 +1,27 @@
 # EMIT
 
-YOU are the state machine. Plugkit is the synchronous library serving this prose; advancing the chain is your dispatch, not its action. Every possible write lands only through the verb you dispatch to land it.
+YOU are the state machine. Plugkit is the synchronous library serving this prose; advancing the chain is your dispatch. Every write lands only through the verb you dispatch to land it.
 
-L3 audit on disk. You land every possible node of the covering family; your first emit = closure.
+L3 audit on disk. Land every node of the covering family; your first emit = closure.
 
 ## Read-before-write
 
-You treat the target file's on-disk content as the goal-relative reference. If you diff against an unread file, you diff against an imagined baseline and your candidate mutation is unmeasured. When you observe disk-state divergence, you dispatch `transition` back to PLAN.
+The target file's on-disk content is the goal-relative reference; diffing an unread file diffs an imagined baseline, leaving your candidate unmeasured. On observed disk divergence, `transition` back to PLAN.
 
 ## Fresh index
 
-You feed search outputs into EMIT only when the digest matches live filesystem. Admitting stale-index results = L1 bluff.
+Feed search outputs into EMIT only when the digest matches the live filesystem; a stale-index result is an L1 bluff.
 
 ## Write-then-verify
 
-You issue one write per artifact; you then dispatch a disk Read against every possible touched path to assert the change. Verified disk state IS your witness, not the tool-call return. On discrepancy, you regress to root cause, not retry.
+One write per artifact, then a disk Read against every touched path to assert the change -- verified disk state IS the witness, not the tool-call return. On discrepancy, regress to root cause, do not retry.
 
-**Client-side artifacts: write-then-browser-witness, in the same turn.** If the artifact is `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.mjs`, `.css`, or every possible other path loaded by a browser, the disk Read is necessary but not sufficient — you also dispatch a `browser` verb that `page.evaluate`s the invariant the artifact establishes. The page-side assertion is the actual witness; the disk Read just witnesses serialization. Skip the browser dispatch on a client-side emit and you have a green-checked stub: the file landed, you don't know the page works. the COMPLETE gate refuses without the paired browser-witness for every client-side file edited this session — the `deviation.client-edit-no-witness` event fires (gates.rs, complete branch) and you regress to dispatch the missing `browser` witness before re-attempting COMPLETE.
+**Client-side artifacts: write-then-browser-witness, same turn.** If the artifact is `.html .js .jsx .ts .tsx .vue .svelte .mjs .css` or any browser-loaded path, the disk Read is necessary but not sufficient -- also dispatch a `browser` verb that `page.evaluate`s the invariant the artifact establishes (the page-side assertion is the real witness; the disk Read only witnesses serialization). Skipping it ships a green-checked stub. The COMPLETE gate refuses without the paired browser-witness for every client-side file edited this session (`deviation.client-edit-no-witness`, gates.rs), and you regress to dispatch the missing witness.
 
 ## Artifact scope
 
-PRD names the artifacts you may write. You direct closure narrative to commit message + `memorize-fire`. Every possible file you write that PRD does not name = your response body displacing the dispatch surface.
-
-If during write-then-verify you notice an adjacent artifact the user clearly meant included, or an improvement the act of writing exposes (a generated file the build needs, a doc that names the new artifact, a witness script the artifact deserves) — you dispatch `prd-add` for it this turn, not as a follow-on. The same noticing-to-PRD discipline applies in EMIT: an observation that does not land as a PRD row evaporates with the turn.
-
-Between artifacts, between disk-Read checks, between a write you're uncertain about and the next — you re-dispatch `instruction`. Closure is the EMIT discipline; re-reading the prose between artifacts is how you avoid partial emits.
+PRD names the artifacts you may write; direct closure narrative to the commit message + `memorize-fire`. A file PRD does not name is your response body displacing the dispatch surface. If write-then-verify exposes an adjacent artifact the user meant included or an improvement the act of writing reveals (a generated file the build needs, a doc naming the new artifact, a witness script), `prd-add` it this turn -- an observation that does not land as a row evaporates with the turn. Between artifacts and uncertain writes, re-dispatch `instruction`.
 
 ## Dispatch
 
-You dispatch `transition` when every planned artifact is written and you have disk-verified it. On new unknown, you dispatch `transition` back to PLAN.
+`transition` when every planned artifact is written and disk-verified. On a new unknown, `transition` back to PLAN.

@@ -3177,3 +3177,43 @@
   text: Ensure the gm canonical bundle is TRACKED in git (it is source-of-truth prose), never caught by managed-gitignore; and any per-project copy the wrapper writes into .gm/ is either tracked-or-ignored consistently with the .gm policy (transient copy of a shipped artifact -> managed-ignore; not a silent residual). Residual-triage row.
   status: completed
   witness: Canonical bundle gm-plugkit/instructions/ is TRACKED (committed in 38c60f1d). Transient per-project copy .gm/instructions/ added to the plugkit-managed gitignore block; git check-ignore confirms .gm/instructions/x ignored. No silent residual.
+- id: compress-skill-md
+  text: 'HARDEST/PRIMARY: halve skills/gm-skill/SKILL.md (7568 tok -> ~3800) preserving EVERY rule, gate condition, verb name, constraint, mechanism, and the elicitation style (skill prose elicits behavior, does not describe it — no numbered manuals). Cut only obvious/already-known-by-any-capable-agent words + redundant 2-4x restatement of the same point; keep one load-bearing clause per rule. Frontmatter allowed-tools MUST stay verbatim (harness-enforced). No new ambiguity, no lost explicitness.'
+  status: completed
+  witness: 'skills/gm-skill/SKILL.md 30273B/7568tok -> 15765B/3941tok (48% cut, halved). No-loss grep: every verb (instruction/transition/codesearch/recall/fetch/exec_js/browser/memorize-fire/memorize-prune/git_finalize/git_push/branch_status/phase-status/prd-add), deviation kind (complete-chain-poll/client-edit-no-witness/bash-git-bypass/push-dirty/spool.body-encoding-recoded), path/field (turn-browser-witnessed/edits, auto_recall, deviations_30m, long_gap_threshold_ms, busy_until, verify.rs), threshold (15000, 8s) present; ''300'' literal was absent in original too (0 hits). Glyph-clean (no non-printable/decorative bytes; uses -- and ->). Frontmatter + allowed-tools verbatim. Elicitation style + every rule header preserved.'
+- id: compress-bundle-phase-prose
+  text: Compress the 7 phase prose files (canonical gm-plugkit/instructions/{entry,plan,execute,emit,verify,update_docs,browser}.md; entry 2898 + verify 3232 are the heaviest) by ~half, same rules as SKILL.md (keep every verb/gate/constraint/mechanism + elicitation style). These drive the agent live, so zero meaning loss. Edit canonical .md; do NOT touch the live .gm/instructions/ provisioned copy mid-session.
+  status: pending
+- id: sync-consts-from-bundle
+  text: 'Keep rs-plugkit src/orchestrator/instructions/*.rs const TEXT byte-aligned with the compressed bundle .md: write a script that regenerates each <key>.rs as `pub const TEXT: &str = r#"<md>"#;` from gm-plugkit/instructions/<key>.md (inverse of the extraction), run it so consts == compressed bundle (fallback also gets compressed). Guard the raw-string delimiter (use r##"..."## if any md contains the sequence quote-hash).'
+  status: pending
+- id: compress-agents-md
+  text: 'Compress AGENTS.md (9391 tok) by ~half: collapse each present-tense rule to its load-bearing clause + rs-learn pointer, drop obvious framing/repetition, keep every top-level cross-cutting rule, every recall-pointer, every hard constraint. Honor the existing drain policy (detail-heavy single-crate material already points to rs-learn). No changelog framing, no glyphs.'
+  status: pending
+- id: compress-prompt-files
+  text: Compress prompts/prompt-submit.txt (2816 tok) + session-start.txt + pre-compact.txt + bash-deny.txt by ~half each, same terse-no-loss rules, preserving every behavioral trigger/gate. prompt-submit/session-start elicit behavior — keep elicitation phrasing, drop obvious recipe steps.
+  status: pending
+- id: validate-no-loss
+  text: 'Per-file no-loss validation: build a checklist of every verb name, gate condition, deviation kind, constraint, file path, and mechanism present in each ORIGINAL file; confirm each survives the compressed version (grep/diff the token set). A dropped verb/gate/constraint is a regression -> restore. Witness: checklist pass per file.'
+  status: pending
+- id: measure-halved
+  text: Measure before/after token size (chars/4) of every compressed file; SKILL.md must reach ~half (<=~3900 tok) and each other file materially reduced. Record the table. If a file did not approach half, re-pass for more obvious-cut removal (without meaning loss).
+  status: pending
+- id: glyph-and-frontmatter-check
+  text: 'Confirm compression introduced NO decorative glyphs (ccsniff --glyph-discipline / grep for non-ASCII decorative) and that SKILL.md frontmatter (name/description/allowed-tools: Skill,Read,Write) is intact and unchanged. Both are hard harness/discipline constraints.'
+  status: pending
+- id: ship-compressed-cascade
+  text: 'Ship: push rs-plugkit (compressed consts -> wasm rebuild via cascade, watch Build-WASM green), push gm (compressed SKILL.md + bundle + AGENTS.md + prompts; cascade republishes gm-plugkit + SKILL.md mirror), re-vendor thebird via refresh-gm (picks up compressed bundle), freddie auto via npm. Cap CI waits <300s with instruction-before-wait.'
+  status: pending
+- id: skill-md-mirror-flow
+  text: 'After compression, the SKILL.md propagation paths carry it automatically: ensureSkillMdFresh sha-rewrites ~/.claude + ~/.agents installed copies; publish.yml mirrors to AnEntrypoint/gm-skill + embeds into gm-plugkit. Verify no manual mirror edit needed; the compressed SKILL.md is the single source.'
+  status: pending
+- id: entry-skill-consistency
+  text: entry.md (ENTRY-phase served prose) and SKILL.md (harness-entry doc) overlap in rules; after compressing each independently, cross-check they remain mutually consistent (same verbs/gates/mechanisms, no contradiction). One source per fact where they truly duplicate.
+  status: pending
+- id: memorize-compression
+  text: 'memorize-fire: the instruction-prose compression pass (SKILL.md + bundle + consts + AGENTS.md + prompts halved, no meaning loss) + the .md->.rs const sync script as the new alignment tool. Bidirectional AGENTS.md drain on the same run.'
+  status: pending
+- id: fix-entry-git-direct-contradiction
+  text: 'entry.md (ORCHESTRATOR served prose) says ''drive git/gh direct via Bash'' (Spool ABI + Inspection routing) — STALE, contradicts the authoritative git-verb rule (any bash/sh/powershell git body is gated deviation.bash-git-bypass; git_finalize/git_push are the surfaces). Shipping the contradiction = error/ambiguity the user forbids. Align entry.md git statements to the git-verb rule during its compression. Witness: SKILL.md class-rule + bash-git-bypass gate.'
+  status: pending
