@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-This repo IS the published `gm-skill` npm package. The repo root is the package root, no factory, no build step that generates a separate output dir. `skills/gm-skill/SKILL.md` is the ~12-line entry point; every possible phase prose and orchestration logic lives in rs-plugkit and is served on demand via the `instruction` verb.
+This repo IS the published `gm-skill` npm package. The repo root is the package root, no factory, no build step that generates a separate output dir. `skills/gm-skill/SKILL.md` is the ~12-line entry point; orchestration logic lives in rs-plugkit and is served on demand via the `instruction` verb. Agent-facing prose (phase instruction text + gate/residual messages) is externalized to an editable bundle in `gm-plugkit/instructions/`, shipped by gm-plugkit and provisioned into `.gm/instructions/<key>.md`; the wasm resolver (`rs-plugkit/src/prose.rs`) serves the bundle entry per key and falls back to the compiled `const` when absent — so editing prose is a gm-plugkit republish with no Rust rebuild, and consumers without the bundle are unaffected. Detail in rs-learn (`recall: string-externalization project`).
 
 ## WASM-only
 

@@ -3063,25 +3063,31 @@
   witness: residual.rs reasons (prd-open/browser-open/tasks-running/dirty-tree) + four-checks imperative + gates.rs long-gap-no-instruction now route through prose::resolve with const defaults; placeholder messages use named {token} + .replace.
 - id: resolver-shared-across-crates
   text: 'RESCOPED (mutable resolver-host-access-deps resolved): resolve_prose lives in rs-plugkit ONLY (it owns pkfs/host_read). Dep crates do NOT gain host_read. rs-plugkit mediates: deps return a stable message key/const; rs-plugkit substitutes the bundle entry at the dispatch boundary when assembling the spool response. Avoids expanding the wasm_import_module link-trap surface.'
-  status: pending
+  status: completed
+  witness: 'No cross-crate sharing needed: dep crates have no agent-facing prose, so resolve_prose lives in rs-plugkit ONLY and no dep mediation is required. Confirmed by the four no-op inventories.'
 - id: inventory-extract-rs-learn
   text: 'RESCOPED: inventory rs-learn agent-facing prose (recall/learn messages the agent reads). For each, EITHER it is internal-only (leave) OR agent-facing -> convert to a stable key resolved by rs-plugkit at the dispatch boundary (no host_read added to rs-learn). Record explicitly if none qualify (edge-rs-repos-no-agentfacing-prose).'
-  status: pending
+  status: completed
+  witness: 'grep rs-learn src+crates: only internal ''session lock poisoned'' error (wasm_export.rs:42), no agent-facing prose/guidance. Out of prose-only scope -> NO extraction needed.'
 - id: inventory-extract-rs-exec
   text: 'RESCOPED: inventory rs-exec agent-facing prose (e.g. timeoutMs hard-error guidance). Convert agent-facing ones to stable keys resolved by rs-plugkit at the dispatch boundary; no host_read added to rs-exec. Record if none qualify.'
-  status: pending
+  status: completed
+  witness: 'grep rs-exec: only terse error labels ''missing timeoutMs''/''timeoutMs below floor'' (wasm_spool.rs:72,82) — error tokens, not prose/guidance. Out of prose-only scope -> NO extraction needed.'
 - id: inventory-extract-rs-search
   text: 'RESCOPED: inventory rs-search agent-facing prose (sync-before-emit/guidance). Convert agent-facing ones to stable keys resolved by rs-plugkit at the dispatch boundary; no host_read added. Record if none qualify.'
-  status: pending
+  status: completed
+  witness: 'grep rs-search src: zero agent-facing reason/message/hint/error prose strings. NO extraction needed.'
 - id: inventory-extract-rs-codeinsight
   text: 'RESCOPED: rs-codeinsight has ZERO host imports (pure logic). Inventory its agent-facing prose; convert any to stable keys resolved by rs-plugkit at the dispatch boundary. Likely few/none -> record explicitly per edge-rs-repos-no-agentfacing-prose.'
-  status: pending
+  status: completed
+  witness: 'grep rs-codeinsight src: zero agent-facing prose strings (and zero host imports). NO extraction needed.'
 - id: bundle-fallback-drift-check
   text: 'Add a drift check (CI or script) that the gm canonical bundle matches the rs-* compiled-const fallbacks, so the frozen fallback cannot silently diverge from canonical prose. Witness: a test comparing bundle entries to const TEXT.'
   status: pending
 - id: wasm-import-link-attr
   text: 'If the resolver introduces any NEW host import (e.g. deps needing host_read), every extern "C" block carries #[link(wasm_import_module="env")] across rs-plugkit AND every dep crate linked into the cdylib. Silent-pass trap: local builds stay green, only Linux CI link fails. Push + watch Build-WASM GREEN.'
-  status: pending
+  status: completed
+  witness: 'Resolver introduces NO new host import: prose.rs uses the existing pkfs::read_to_string -> existing host_read (wasm_dispatch.rs:84, already attributed). No new extern "C" block in any crate -> no #[link(wasm_import_module=env)] link-trap surface added. Build-WASM on ac8d6c1 is the confirming gate.'
 - id: cascade-ship-bundle
   text: 'Ensure the bundle ships through the pipeline: rs-plugkit release.yml builds plugkit.wasm; gm-plugkit publish.yml must include + deploy the bundle alongside the wasm. Verify the bundle reaches consumers on republish. Push rs-* then watch cascade GREEN.'
   status: pending
@@ -3139,7 +3145,8 @@
   status: pending
 - id: edge-rs-repos-no-agentfacing-prose
   text: 'Degenerate case: a given rs-* crate (e.g. rs-search/rs-codeinsight) may have NO agent-facing prose worth externalizing (only data + internal errors). If inventory finds none, record that explicitly (no-op with witness) rather than forcing artificial extraction. Closes the per-crate rows honestly.'
-  status: pending
+  status: completed
+  witness: 'Confirmed via grep across all 4 dep crates: none carry agent-facing PROSE, only terse internal error labels (out of scope). Recorded as the honest no-op outcome; all agent-facing prose lives in rs-plugkit, which is fully extracted.'
 - id: edge-format-substitution-vars
   text: Some agent-facing messages are format strings with runtime values (counts, ids, file:line). The bundle entry must carry named placeholders the resolver substitutes, not be a frozen literal. Define the placeholder convention + the substitution call site, with fallback const using the same placeholders. Witness a substituted message.
   status: completed
