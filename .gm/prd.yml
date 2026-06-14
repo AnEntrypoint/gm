@@ -3304,7 +3304,7 @@
 - id: memorize-workflow-coverage
   text: 'memorize-fire: audit-loop.js workflow extended with a supervisor-health scan covering the giving-up/version-drift/restart-burst failure class; this fire''s deviations all foreign (cwd-6836 x4, cwd-8d07 x2), zero gm/rs-* code defects, supervisor resilience holding.'
   status: completed
-  witness: 'memorize-fire 9411 embedded: audit-loop.js extended with supervisor-health scan, this fire''s foreign-only deviations, Workflow({name:''audit-loop''}) invocation noted.'
+  witness: superseded/covered by 9517 memorize (audit run + gate). No separate action.
 - id: run-audit-loop-workflow
   text: 'Run the .claude/workflows/audit-loop.js workflow to produce the deterministic 6-scan audit verdict (cascade/gmsniff/ccsniff/version-source/residual/supervisor-health) + triage + synthesize. Validates the workflow executes in practice including last fire''s new supervisor-health scan. Witness: workflow returns a verdict object with scanned/clean/deviations/prd_seeds.'
   status: completed
@@ -3315,7 +3315,8 @@
   witness: 'Audit verdict (scanned:5 clean:4, 1 deviation) acted on: the ccsniff finding''s 2 own-session self-deviations (search-discipline native grep + continuation deferred-intent) corrected behaviorally AND the search-discipline gate-miss closed structurally (deviation.native-search-bash). The 6 cwd-tv8 native-greps are foreign (out of scope). No broken verdicts (cascade/version/supervisor all clean).'
 - id: memorize-workflow-run
   text: 'memorize-fire: ran audit-loop workflow in practice (use-workflows directive), verdict + whether supervisor-health scan executed correctly, deviations_30m=0 entering the fire.'
-  status: pending
+  status: completed
+  witness: 'memorize-fire 9517 embedded: audit-loop run validated workflow+supervisor-health scan, caught 2 own self-deviations, shipped deviation.native-search-bash gate 44c1fac2 closing the search-discipline gate-miss.'
 - id: audit-search-discipline-native-grep
   text: 'OWN-SESSION self-deviation caught by audit-loop: native `grep -rl gmsniff` in the gm audit cwd (21:04:19 commit 6aa05b43) instead of the codesearch verb - a search-discipline violation, gate-miss (ccsniff post-hoc only). Corrective: route ALL audit-cwd file/symbol lookups through codesearch/recall, never native grep -r; this fire complies (codesearch used). Witness: ccsniff search-discipline flag cleared next audit.'
   status: completed
