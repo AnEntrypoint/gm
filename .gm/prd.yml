@@ -3349,3 +3349,15 @@
   text: 'Confirm fully-clean steady-state: gmsniff 35m shows ZERO deviations (own=0, foreign=0, no supervisor giving-up/version-drift/native-search-bash). All shipped fixes holding in practice: supervisor two-layer resilience (2.0.1553/1554), native-search gate (2.0.1556), prose compression + contradiction fixes, audit-loop supervisor-health scan, inline-vs-workflow model. No gm/rs-* code defect; no change warranted. Witness: gmsniff deviation filter empty over 35m.'
   status: completed
   witness: 'gmsniff 35m: zero deviation lines (own=0 foreign=0), no supervisor giving-up/version-drift/native-search-bash. All prior commits holding. Fully-clean steady-state confirmed; no change needed.'
+- id: validate-cascade-version-bookkeeping
+  text: 'Deep validation: version chain fully consistent - rs-plugkit Cargo.toml (source-of-truth) origin/main 0.1.645, npm plugkit-wasm 0.1.645, gm.json plugkitVersion 0.1.645, running+installed wasm 0.1.645, gm-plugkit 2.0.1556. CI correctly bumps Cargo.toml patch + commits back to rs-plugkit main (commit 3f3ccc5) so source-of-truth tracks published; no dark cascade, no version drift. Local rs-plugkit was 1 commit stale (261c686, Cargo 0.1.644) - ff-synced to 3f3ccc5. Witness: git show origin/main:Cargo.toml + npm versions all 0.1.645.'
+  status: completed
+  witness: 'All versions 0.1.645: rs-plugkit origin/main Cargo.toml (git show), npm plugkit-wasm, gm.json plugkitVersion, running+installed wasm; gm-plugkit 2.0.1556. CI bump-back commit 3f3ccc5 on rs-plugkit main. Local synced 261c686->3f3ccc5 (ff). No dark cascade, no drift.'
+- id: confirm-deviation-clean-9901
+  text: 'Standard deviation scan: deviations_30m=0, gmsniff 35m zero deviations (own/foreign/supervisor all clean). All prior fixes holding. Witness: turn-summary deviations_30m=0.'
+  status: completed
+  witness: deviations_30m=0; gmsniff 35m zero deviation lines. Clean steady-state, all prior fixes holding.
+- id: memorize-sibling-pull-hygiene
+  text: 'memorize-fire: (1) cascade version-bookkeeping validated - CI bumps rs-plugkit Cargo.toml patch + commits the bump back to main, so the source-of-truth tracks the published wasm (no drift). (2) HYGIENE: a local rs-* sibling checkout goes stale after CI''s bump-back commit; pull (ff) the sibling before working in it - pushing from a stale local would try to revert the CI version bump (git_push rebase-retry catches it, but pull-first is cleaner). Validated this fire: all versions 0.1.645 consistent.'
+  status: completed
+  witness: 'memorize-fire 9908 embedded: cascade version-bookkeeping validated + sibling-pull hygiene lesson.'
