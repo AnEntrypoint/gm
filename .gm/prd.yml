@@ -3271,7 +3271,9 @@
   witness: 'gm-plugkit/supervisor.js: added const VERSION_DRIFT_COOLDOWN_MS=60_000 + let lastVersionDriftActionAt=0; checkWatcherHealth version_drifted branch now returns early if now-lastVersionDriftActionAt<cooldown, else sets lastVersionDriftActionAt=now before evict+kill (lines 343-358). Throttles the per-10s-poll evict/kill churn to once/60s during upgrades; cooldown only delays, never permanently blocks recycle. Defense-in-depth with the shipped restart-burst backoff.'
 - id: ship-eviction-cooldown
   text: 'Commit+push gm with the eviction cooldown; cascade republishes gm-plugkit. Witness: git_finalize pushed, ahead==0.'
-  status: pending
+  status: completed
+  witness: git_finalize committed+pushed gm main 589bed80 (gm-plugkit/supervisor.js version-drift cooldown). Cascade republishes gm-plugkit. committed:true pushed:true.
 - id: memorize-fire-validation
   text: 'memorize-fire: supervisor backoff fix validated published as gm-plugkit 2.0.1553; pre-fix giving-up events do not recur post-fix; added version-drift eviction cooldown as defense-in-depth. Note cwd-6836 remains a recurring foreign non-compliant session (mid-chain-stall + long-gap-no-instruction) - not gm/rs-* code, not actionable here.'
-  status: pending
+  status: completed
+  witness: 'memorize-fire 9211 embedded: supervisor fix validated published (2.0.1553), giving-up events pre-fix only, version-drift cooldown added (589bed80), cwd-6836 foreign non-compliant noted as out-of-scope.'
