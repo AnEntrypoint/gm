@@ -3289,3 +3289,17 @@
   text: 'memorize-fire: supervisor upgrade resilience is SOLID (backoff 2.0.1553 + version-drift cooldown 2.0.1554) and validated holding (no post-fix giving-up). OPERATIONAL DISCIPLINE: the 30-min audit loop shipping a gm change every fire itself triggers a cascade republish -> upgrade window across all projects every fire. Once steady-state is reached, fires must be VALIDATION-ONLY (no speculative commits) to let the fleet stabilize - shipping marginal tweaks is churn-on-churn. This fire is validation-only by design.'
   status: completed
   witness: 'memorize-fire 9308 embedded: steady-state confirmed, two-layer resilience holding, validation-only-fire discipline to avoid churn-on-churn.'
+- id: add-supervisor-health-scan
+  text: 'audit-loop.js workflow has 5 parallel scans (cascade/gmsniff/ccsniff/version-source/residual) but NO supervisor-health scan, despite supervisor.giving-up + version-drift crash-loop being the dominant gm/rs-* operational defect of the last 3 fires. Add a 6th parallel Scan-phase agent that checks gmsniff for supervisor.giving-up / supervisor.version-drift / supervisor.watcher-exited-unexpectedly / restart-burst-exceeded in the window, and verifies the two-layer upgrade resilience (restart-burst backoff + version-drift 60s cooldown) is present in the running gm-plugkit. Verdict broken if any supervisor is in giving-up state; deviation if churn observed. Witness: audit-loop.js scans array has scan:supervisor-health.'
+  status: completed
+  witness: .claude/workflows/audit-loop.js Scan phase now has 6 parallel agents (grep phase:'Scan' = 6); added scan:supervisor-health checking gmsniff for supervisor.giving-up/version-drift/watcher-exited-unexpectedly/heartbeat-stale/restart-burst-backoff + verifying the two-layer resilience (backoff reschedule not exit(2); version-drift cooldown guard) present in running supervisor.js. meta.phases Scan detail updated. Mirrors existing parallel-agent + SCAN_SCHEMA pattern.
+- id: validate-audit-workflow-current
+  text: 'Validate the rest of audit-loop.js matches current MO: cascade-health (npm plugkit-wasm source-of-truth), gmsniff own-vs-foreign, ccsniff 4 disciplines via stable npx form, version-source (no bare releases/latest), residual triage - all current and correct. Confirm no stale verb/path references. Witness: read-through, each scan prompt aligns with AGENTS.md rules.'
+  status: completed
+  witness: 'Read-through of audit-loop.js: cascade-health (npm plugkit-wasm source-of-truth, dark-cascade detection), gmsniff (own-vs-foreign, codesearch-not-grep), ccsniff (4 disciplines via stable bun x form, search-discipline self-deviation guard), version-source (no bare releases/latest, asset-filter), residual (porcelain+worktree, codesearch-routed) - all align with current AGENTS.md MO. No stale verb/path references. Workflow current.'
+- id: ship-supervisor-health-scan
+  text: 'Commit+push gm with the supervisor-health scan added to audit-loop.js. Witness: git_finalize pushed, ahead==0.'
+  status: pending
+- id: memorize-workflow-coverage
+  text: 'memorize-fire: audit-loop.js workflow extended with a supervisor-health scan covering the giving-up/version-drift/restart-burst failure class; this fire''s deviations all foreign (cwd-6836 x4, cwd-8d07 x2), zero gm/rs-* code defects, supervisor resilience holding.'
+  status: pending

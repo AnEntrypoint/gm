@@ -3,7 +3,7 @@ export const meta = {
   description: 'Periodic gm/rs-* audit: cascade health, deviation scan, version-source-of-truth, residual triage',
   whenToUse: 'Run on the recurring /loop audit fire to deterministically check gm + rs-* for drift from the paper MO',
   phases: [
-    { title: 'Scan', detail: 'parallel: cascade health, gmsniff/ccsniff deviations, version-source check' },
+    { title: 'Scan', detail: 'parallel: cascade health, gmsniff/ccsniff deviations, version-source, residual, supervisor health' },
     { title: 'Triage', detail: 'classify each finding own/foreign and gate-correct/gate-miss' },
     { title: 'Synthesize', detail: 'merge into one audit verdict with corrective PRD seeds' },
   ],
@@ -52,6 +52,10 @@ const scans = await parallel([
   () => agent(
     'Residual triage for the gm repo. You run inside the [gm] audit cwd where ccsniff scores tool calls: any file/pattern/symbol lookup goes through the codesearch verb or recall, never native Grep/Glob/find (git inspection commands are fine). Run git status --porcelain and git worktree list. Stale sqlite sidecars (-shm/-wal) and orphan agent-worktree .gm databases committed into .claude/worktrees/ are pollution. Locked live worktrees belong to concurrent agent sessions and must not be mutated. Report finding + verdict + evidence + a corrective for any safely-removable orphan.',
     { label: 'scan:residual', phase: 'Scan', schema: SCAN_SCHEMA }
+  ),
+  () => agent(
+    'Supervisor upgrade-resilience health check. Run gmsniff over the past 35 minutes (stable form `bun x gmsniff@latest --since 35m`, never native grep on source) and look for supervisor.* criticals: supervisor.giving-up (restart-burst-exceeded), supervisor.version-drift, supervisor.watcher-exited-unexpectedly, supervisor.heartbeat-stale, supervisor.restart-burst-backoff. For each, report the project cwd, timestamp, and whether it predates or postdates the running gm-plugkit. The failure class to catch: a supervisor permanently dead in giving-up state (pre-2.0.1553 behavior) or churning version-drift crash-loops during a cascade upgrade window. Verify the two-layer resilience is present in the running gm-plugkit/supervisor.js: (1) restart-burst-exceeded reschedules via setTimeout(spawnWatcher, BURST_BACKOFF_MS) and does NOT process.exit(2); (2) checkWatcherHealth version_drifted is throttled by a VERSION_DRIFT_COOLDOWN_MS / lastVersionDriftActionAt guard. Find those via the codesearch verb, never native Grep. Verdict: broken if any supervisor is currently in giving-up state OR either resilience layer is missing; deviation if post-fix churn observed; clean otherwise. Report finding + verdict + evidence with the supervisor.js mechanism.',
+    { label: 'scan:supervisor-health', phase: 'Scan', schema: SCAN_SCHEMA }
   ),
 ])
 
