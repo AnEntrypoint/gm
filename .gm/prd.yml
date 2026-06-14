@@ -3255,7 +3255,9 @@
   witness: 'Provisioned .gm/instructions/ (written this session boot from gm-plugkit 2.0.1552) is the compressed bundle: execute.md 6793, plan.md 4729, update_docs.md 5024, verify.md 7505, browser.md 5111, entry.md 9294 - byte-identical sizes to the compressed sources. wasm 0.1.645 live (synced consts compiled, cascade Build-WASM green since publish). Prior compression commit works in practice; the instruction verb serves compressed prose.'
 - id: ship-supervisor-fix
   text: 'Ship the supervisor resilience fix: commit+push gm (gm-plugkit/supervisor.js ships via publish.yml on version-bump). Cascade republishes gm-plugkit; running supervisors pick up the new supervisor.js on next restart/bootstrap. Witness: git_finalize pushed, branch_status ahead==0.'
-  status: pending
+  status: completed
+  witness: git_finalize committed+pushed gm main 5696a5fd (gm-plugkit/supervisor.js). Cascade republishes gm-plugkit; running supervisors load the resilient supervisor.js on next bootstrap/restart. Push succeeded (committed:true pushed:true).
 - id: memorize-supervisor-burst-finding
   text: 'memorize-fire the version-upgrade crash-burst finding + fix: checkWatcherHealth wasm-eviction + selfHeal-download-lag during a cascade version bump bursts the supervisor restart budget and exit(2) gives up permanently; fixed by long-backoff reschedule. This is the mechanism behind every ''watcher dead after a release'' incident.'
-  status: pending
+  status: completed
+  witness: 'memorize-fire 9114 embedded: full mechanism (checkWatcherHealth wasm-eviction + selfHeal download-lag + burst exit(2) permanent give-up) + fix (60s backoff reschedule) + lesson. Recallable for the next ''watcher dead after release'' incident.'
