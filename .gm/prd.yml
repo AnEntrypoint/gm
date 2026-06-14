@@ -3277,3 +3277,15 @@
   text: 'memorize-fire: supervisor backoff fix validated published as gm-plugkit 2.0.1553; pre-fix giving-up events do not recur post-fix; added version-drift eviction cooldown as defense-in-depth. Note cwd-6836 remains a recurring foreign non-compliant session (mid-chain-stall + long-gap-no-instruction) - not gm/rs-* code, not actionable here.'
   status: completed
   witness: 'memorize-fire 9211 embedded: supervisor fix validated published (2.0.1553), giving-up events pre-fix only, version-drift cooldown added (589bed80), cwd-6836 foreign non-compliant noted as out-of-scope.'
+- id: validate-cooldown-published-holding
+  text: 'Validate version-drift cooldown shipped + two-layer resilience holding: gm-plugkit published 2.0.1554 (cooldown commit bc4d97d2 + auto-bump c0a5b6b3). gmsniff 60m: 4 supervisor.giving-up events ALL pre-fix (19:55-19:57, before fix 20:05); ZERO post-fix giving-up. Witness: npm 2.0.1554 + giving-up timestamps all <20:05.'
+  status: completed
+  witness: 'gm-plugkit npm 2.0.1554 (cooldown commit bc4d97d2 + auto-bump c0a5b6b3 in main). gmsniff 60m giving-up timestamps: 19:55:12, 19:55:13, 19:57:04, 19:57:04 - all pre-fix (fix 20:05); zero post-fix. Two-layer resilience (restart-burst backoff + version-drift cooldown) shipped and holding.'
+- id: confirm-clean-steady-state
+  text: 'Confirm clean gm/rs-* steady-state this fire: gmsniff 35m shows ZERO non-foreign deviations; the only deviations are recurring foreign cwd-6836 (mid-chain-stall + long-gap-no-instruction x2) = another agent''s non-compliant session, not gm/rs-* code, not actionable here. No gm/rs-* code defects to fix. Witness: gmsniff deviation. filter minus cwd-6836 = empty.'
+  status: completed
+  witness: 'gmsniff 35m: deviation. filter excluding cwd-6836 returned empty - zero gm/rs-* code deviations. Only foreign cwd-6836 (mid-chain-stall prd_pending:3 idle 309s + long-gap-no-instruction browser gaps 714s/777s) = another agent''s non-compliant session, not gm/rs-* code. No defects to fix this fire.'
+- id: memorize-steady-state-churn-discipline
+  text: 'memorize-fire: supervisor upgrade resilience is SOLID (backoff 2.0.1553 + version-drift cooldown 2.0.1554) and validated holding (no post-fix giving-up). OPERATIONAL DISCIPLINE: the 30-min audit loop shipping a gm change every fire itself triggers a cascade republish -> upgrade window across all projects every fire. Once steady-state is reached, fires must be VALIDATION-ONLY (no speculative commits) to let the fleet stabilize - shipping marginal tweaks is churn-on-churn. This fire is validation-only by design.'
+  status: completed
+  witness: 'memorize-fire 9308 embedded: steady-state confirmed, two-layer resilience holding, validation-only-fire discipline to avoid churn-on-churn.'
