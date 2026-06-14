@@ -32,6 +32,7 @@ const STATUS_STALE_MS = 30_000;
 const MAX_RESTART_BURST = 5;
 const RESTART_WINDOW_MS = 60_000;
 const BURST_BACKOFF_MS = 60_000;
+const VERSION_DRIFT_COOLDOWN_MS = 60_000;
 
 function logEvent(event, fields) {
   try {
@@ -147,6 +148,7 @@ function readShutdownReason() {
 }
 
 let lastSpawnedAt = 0;
+let lastVersionDriftActionAt = 0;
 let restartTimestamps = [];
 let currentChildPid = null;
 let currentBootReason = 'initial';
@@ -341,10 +343,15 @@ function checkWatcherHealth() {
   // On that drift, evict the stale cached wasm so the next bootstrap fails isReady() and
   // redownloads the correct build, then recycle the child to load it.
   if (status.version_drifted === true) {
+    if (now - lastVersionDriftActionAt < VERSION_DRIFT_COOLDOWN_MS) {
+      return;
+    }
+    lastVersionDriftActionAt = now;
     logEvent('supervisor.version-drift', {
       watcher_pid: currentChildPid,
       instance_version: status.instance_version || null,
       file_version: status.file_version || null,
+      cooldown_ms: VERSION_DRIFT_COOLDOWN_MS,
       severity: 'critical',
     });
     try {

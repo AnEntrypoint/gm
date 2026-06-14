@@ -3261,3 +3261,17 @@
   text: 'memorize-fire the version-upgrade crash-burst finding + fix: checkWatcherHealth wasm-eviction + selfHeal-download-lag during a cascade version bump bursts the supervisor restart budget and exit(2) gives up permanently; fixed by long-backoff reschedule. This is the mechanism behind every ''watcher dead after a release'' incident.'
   status: completed
   witness: 'memorize-fire 9114 embedded: full mechanism (checkWatcherHealth wasm-eviction + selfHeal download-lag + burst exit(2) permanent give-up) + fix (60s backoff reschedule) + lesson. Recallable for the next ''watcher dead after release'' incident.'
+- id: validate-supervisor-fix-published
+  text: 'Validate the supervisor restart-burst backoff fix shipped: gm-plugkit published 2.0.1553 (auto-bump 0b5a2e0a follows fix commit 534fa654 ''fix(supervisor): back off + retry...''). Confirm the published supervisor.js contains the BURST_BACKOFF reschedule not process.exit(2). All giving-up events in gmsniff predate the fix (19:55-19:57 vs fix 20:05). Witness: npm version 2.0.1553 + commit in main + fix code present.'
+  status: completed
+  witness: 'npm gm-plugkit version 2.0.1553; gm main has fix commit 534fa654 ''fix(supervisor): back off + retry on restart-burst-exceeded'' followed by auto-bump 0b5a2e0a (2.0.1553). Local supervisor.js confirms backoff path (supervisor.restart-burst-backoff + setTimeout reschedule, no process.exit(2)). All gmsniff giving-up events (19:55-19:57) predate the fix (20:05); none recur post-fix. Fix shipped + live.'
+- id: add-version-drift-eviction-cooldown
+  text: 'checkWatcherHealth (gm-plugkit/supervisor.js) evicts the installed wasm + SIGTERMs the child on EVERY 10s poll while version_drifted persists, producing the per-10s 8s-crash churn gmsniff showed during the 0.1.644->0.1.645 upgrade (before backoff engaged). Add a module-level cooldown (e.g. 60s) so version_drift evict+kill fires at most once per cooldown, giving the redownload time to complete between attempts. Defense-in-depth with the shipped restart-burst backoff. Low-risk localized guard; cooldown only delays, never permanently blocks recycle. Witness: code shows lastVersionDriftActionAt guard.'
+  status: completed
+  witness: 'gm-plugkit/supervisor.js: added const VERSION_DRIFT_COOLDOWN_MS=60_000 + let lastVersionDriftActionAt=0; checkWatcherHealth version_drifted branch now returns early if now-lastVersionDriftActionAt<cooldown, else sets lastVersionDriftActionAt=now before evict+kill (lines 343-358). Throttles the per-10s-poll evict/kill churn to once/60s during upgrades; cooldown only delays, never permanently blocks recycle. Defense-in-depth with the shipped restart-burst backoff.'
+- id: ship-eviction-cooldown
+  text: 'Commit+push gm with the eviction cooldown; cascade republishes gm-plugkit. Witness: git_finalize pushed, ahead==0.'
+  status: pending
+- id: memorize-fire-validation
+  text: 'memorize-fire: supervisor backoff fix validated published as gm-plugkit 2.0.1553; pre-fix giving-up events do not recur post-fix; added version-drift eviction cooldown as defense-in-depth. Note cwd-6836 remains a recurring foreign non-compliant session (mid-chain-stall + long-gap-no-instruction) - not gm/rs-* code, not actionable here.'
+  status: pending
