@@ -31,6 +31,7 @@ const POLL_INTERVAL_MS = 10_000;
 const STATUS_STALE_MS = 30_000;
 const MAX_RESTART_BURST = 5;
 const RESTART_WINDOW_MS = 60_000;
+const BURST_BACKOFF_MS = 60_000;
 
 function logEvent(event, fields) {
   try {
@@ -155,15 +156,18 @@ function spawnWatcher(bootReason) {
   restartTimestamps.push(Date.now());
   restartTimestamps = restartTimestamps.filter(t => Date.now() - t < RESTART_WINDOW_MS);
   if (restartTimestamps.length > MAX_RESTART_BURST) {
-    logEvent('supervisor.giving-up', {
+    logEvent('supervisor.restart-burst-backoff', {
       reason: 'restart-burst-exceeded',
       restarts_in_window: restartTimestamps.length,
       window_ms: RESTART_WINDOW_MS,
       max: MAX_RESTART_BURST,
-      severity: 'critical',
+      backoff_ms: BURST_BACKOFF_MS,
+      severity: 'warn',
     });
-    writeSupervisorStatus('giving-up', { reason: 'restart-burst-exceeded' });
-    process.exit(2);
+    writeSupervisorStatus('backoff', { reason: 'restart-burst-exceeded', backoff_ms: BURST_BACKOFF_MS });
+    restartTimestamps = [];
+    setTimeout(() => spawnWatcher('post-burst-backoff'), BURST_BACKOFF_MS);
+    return;
   }
 
   const primaryWrapper = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
