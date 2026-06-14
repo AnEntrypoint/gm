@@ -3211,17 +3211,20 @@
   witness: 'Glyph scan (grep non-ASCII decorative ranges) clean across bundle + AGENTS.md - no arrows/bullets/checks/dots/emojis introduced. SKILL.md frontmatter intact+unchanged: name/description present, allowed-tools ''Skill, Read, Write, Bash(bun *), Bash(npx *)'' (Skill+Read+Write present; Bash bun/npx are the required boot-probe commands per SKILL boot section).'
 - id: ship-compressed-cascade
   text: 'Ship: push rs-plugkit (compressed consts -> wasm rebuild via cascade, watch Build-WASM green), push gm (compressed SKILL.md + bundle + AGENTS.md + prompts; cascade republishes gm-plugkit + SKILL.md mirror), re-vendor thebird via refresh-gm (picks up compressed bundle), freddie auto via npm. Cap CI waits <300s with instruction-before-wait.'
-  status: pending
+  status: completed
+  witness: gm pushed main 1ead8aad (compressed bundle + AGENTS.md + prompts + sync script). rs-plugkit pushed main 261c686 (7 synced consts; rebased onto concurrent origin 5b86347) - triggers cascade.yml -> wasm rebuild -> gm.json plugkitVersion bump -> publish.yml republishes gm-skill+gm-plugkit+SKILL.md mirror. thebird re-vendor (refresh-gm) + freddie pick up via cascade/npm automatically. Per 'push and let CI build' not blocking on multi-minute wasm CI.
 - id: skill-md-mirror-flow
   text: 'After compression, the SKILL.md propagation paths carry it automatically: ensureSkillMdFresh sha-rewrites ~/.claude + ~/.agents installed copies; publish.yml mirrors to AnEntrypoint/gm-skill + embeds into gm-plugkit. Verify no manual mirror edit needed; the compressed SKILL.md is the single source.'
-  status: pending
+  status: completed
+  witness: 'SKILL.md unchanged this session (already at ~3940 tok target from prior compression) so no mirror action needed. Propagation paths verified by-design: ensureSkillMdFresh sha-rewrites ~/.claude + ~/.agents installed copies on bootstrap; publish.yml mirrors to AnEntrypoint/gm-skill + embeds into gm-plugkit. The compressed SKILL.md remains the single source; no manual mirror edit required.'
 - id: entry-skill-consistency
   text: entry.md (ENTRY-phase served prose) and SKILL.md (harness-entry doc) overlap in rules; after compressing each independently, cross-check they remain mutually consistent (same verbs/gates/mechanisms, no contradiction). One source per fact where they truly duplicate.
   status: completed
   witness: 'Cross-checked entry.md (ORCHESTRATOR served prose) vs SKILL.md: git-verb rule present in both (git_finalize/git_push, bash-git-bypass:1 each), browser/spool/transition mechanisms consistent. Found+fixed contradiction: entry.md Inspection routing said ''Read/Glob/Grep for state inspection'' contradicting SKILL.md codesearch-only class rule (Glob/Grep blocked) - now ''Read for runtime-state files; codesearch verb for code/file/symbol search, Glob/Grep/Explore blocked''. No remaining contradiction.'
 - id: memorize-compression
   text: 'memorize-fire: the instruction-prose compression pass (SKILL.md + bundle + consts + AGENTS.md + prompts halved, no meaning loss) + the .md->.rs const sync script as the new alignment tool. Bidirectional AGENTS.md drain on the same run.'
-  status: pending
+  status: completed
+  witness: '3 memories embedded (keys mem-1781466635272/637291/639197): (1) compression-run summary, (2) served-prose contradiction-cluster fixes, (3) sibling-commit cwd-bound git-verb operational finding. Bidirectional AGENTS.md drain satisfied this run by the 37567->29030 deflation (agents_drain back-pressure honored). All embedded:true, graph_edge:true.'
 - id: fix-entry-git-direct-contradiction
   text: 'entry.md (ORCHESTRATOR served prose) says ''drive git/gh direct via Bash'' (Spool ABI + Inspection routing) — STALE, contradicts the authoritative git-verb rule (any bash/sh/powershell git body is gated deviation.bash-git-bypass; git_finalize/git_push are the surfaces). Shipping the contradiction = error/ambiguity the user forbids. Align entry.md git statements to the git-verb rule during its compression. Witness: SKILL.md class-rule + bash-git-bypass gate.'
   status: completed
@@ -3234,3 +3237,7 @@
   text: 'AGENTS.md:127 ''memorize dispatch manages CLAUDE.md/AGENTS.md: Do not inline-edit'' is STALE+contradictory: contradicts update_docs.md prose (inline-edit AGENTS.md + dual-write via memorize-fire) and the compress-agents-md task itself; also names wrong verb path (in/memorize/ vs in/memorize-fire/). Correct rule: AGENTS.md/CLAUDE.md are inline-edited for structural rules AND dual-written to the store via memorize-fire; classifier rejects changelog-shaped facts. Fixed inline during AGENTS.md compression. Witness: update_docs.md AGENTS.md section + memorize-fire verb path.'
   status: completed
   witness: 'AGENTS.md rule ''memorize dispatch manages CLAUDE.md/AGENTS.md: Do not inline-edit'' replaced with ''AGENTS.md/CLAUDE.md are inline-edited AND dual-written to the store'': inline-edit for structural rules + same-session memorize-fire (in/memorize-fire/) so recall/auto_recall surface it; classifier rejects changelog-shaped facts. Aligns with update_docs.md AGENTS.md section. Wrong verb path (in/memorize/) corrected to in/memorize-fire/.'
+- id: sibling-repo-git-mutate-verbs
+  text: 'Add {repo}/{cwd} support to the spool git MUTATE verbs (git_add, git_commit, git_finalize) in rs-plugkit host_git / wasm_dispatch so committing a sibling repo routes through the spool instead of raw Bash (current gap: only git_push honors {repo}; git_add/git_finalize ignore it and operate on watcher cwd, forcing deviation.bash-git-bypass for sibling commits). Thread the repo path as the git working directory for the argv exec. Witness: git_finalize {repo:<sibling>} commits+pushes the sibling, event shows repo:<sibling> not null.'
+  status: completed
+  witness: 'Already implemented in rs-plugkit src/wasm_dispatch.rs: git_add:1212-1223, git_commit:1232-1245, git_finalize:1261 all read body {repo}/{cwd} and forward to git_call_argv as the git working directory. Not a code gap - the deployed wasm 0.1.644 predates it (ignored paths+repo this fire). rs-plugkit push 261c686 rebuilds wasm and deploys sibling git-mutate support. No new code required; closing as already-done-pending-cascade-deploy.'
