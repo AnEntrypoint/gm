@@ -29,15 +29,15 @@ The five phases are scheduling; the filter is the engine on every candidate, gat
 
 ## Code Invariants (every possible emission)
 
-- **State minimized:** sequential downward flow; explicit state flags evaluated in one phase; external input through a unified queue before mutation; state changes are explicit assignment, not buried side effect; no init hidden in helpers.
-- **Hardware reality:** benchmark before abstracting; pass scope explicitly (closures hide scope cost in hot loops); mutate in place, pools over allocation; native data flow on hot paths -- no Promise chains / class hierarchies / operator overloading there.
+- **State minimized:** sequential downward flow; explicit state flags; external input through a unified queue before mutation; state changes are explicit assignment, never a buried side effect or init hidden in helpers.
+- **Hardware reality:** benchmark before abstracting; pass scope explicitly (closures hide scope cost in hot loops); mutate in place, pools over allocation; native data flow on hot paths (no Promise chains / class hierarchies / operator overloading there).
 - **Flat structure:** denormalized graphs over nested documents; partial-field over whole-document writes; bytes over JSON for transport (pre-compute size, allocate once); lexical ordering for deterministic tie-breaking.
 - **200-line vertical slices:** one responsibility per file; input->process->output complete in the module; zero-config defaults correct for 90%; universal runtime (browser/Node/mobile/Bare).
 - **Async boundary explicit:** sequential awaitable primitives; no implicit callback ordering; unified error channel, never swallow rejections; tests await real ops, mock-free.
-- **Naming by scale:** <50 lines single-letter algebraic; 50-200 short descriptors; >200 full names; iterators/temp short, public APIs explicit.
-- **Fail fast, loud, deterministic:** halt on precondition violation with exact state; assert on emitted semantics (diagnostic logs), not return values; sentinel words + checksum headers on critical structures, verified on every access; never silently degrade.
-- **Binary transport, append-only persistence:** varint variable-width fields; lexical cursors for sparse reads; append-only sequence for replay; chunked by lexical range, modify only the touched chunk.
-- **Single focused task per session:** no drive-by refactors; pre-compute and inline; saturation = internalization.
+- **Naming by scale:** <50 lines single-letter algebraic; 50-200 short descriptors; >200 full names; public APIs explicit.
+- **Fail fast, loud, deterministic:** halt on precondition violation with exact state; assert on emitted semantics, not return values; sentinel words + checksum headers on critical structures, verified on every access; never silently degrade.
+- **Binary transport, append-only persistence:** varint fields; lexical cursors for sparse reads; append-only sequence for replay; chunked by lexical range, modify only the touched chunk.
+- **Single focused task per session:** no drive-by refactors; pre-compute and inline.
 
 ## Token Discipline
 
@@ -81,7 +81,7 @@ Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. `@<name>` prefix sets namespac
 
 ## Inspection routing
 
-Read/Glob/Grep for state inspection; Bash only for shell-only non-git tooling (`npm`, `bun x`, `curl`). Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
+`Read` for runtime-state files (spool response JSON, `.status.json`); `codesearch` verb for every code/file/symbol search -- Glob/Grep/Explore and host-native search are blocked, the verb is the surface. Bash only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
 
 ## Memorize
 

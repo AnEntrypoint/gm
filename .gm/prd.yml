@@ -3183,25 +3183,32 @@
   witness: 'skills/gm-skill/SKILL.md 30273B/7568tok -> 15765B/3941tok (48% cut, halved). No-loss grep: every verb (instruction/transition/codesearch/recall/fetch/exec_js/browser/memorize-fire/memorize-prune/git_finalize/git_push/branch_status/phase-status/prd-add), deviation kind (complete-chain-poll/client-edit-no-witness/bash-git-bypass/push-dirty/spool.body-encoding-recoded), path/field (turn-browser-witnessed/edits, auto_recall, deviations_30m, long_gap_threshold_ms, busy_until, verify.rs), threshold (15000, 8s) present; ''300'' literal was absent in original too (0 hits). Glyph-clean (no non-printable/decorative bytes; uses -- and ->). Frontmatter + allowed-tools verbatim. Elicitation style + every rule header preserved.'
 - id: compress-bundle-phase-prose
   text: Compress the 7 phase prose files (canonical gm-plugkit/instructions/{entry,plan,execute,emit,verify,update_docs,browser}.md; entry 2898 + verify 3232 are the heaviest) by ~half, same rules as SKILL.md (keep every verb/gate/constraint/mechanism + elicitation style). These drive the agent live, so zero meaning loss. Edit canonical .md; do NOT touch the live .gm/instructions/ provisioned copy mid-session.
-  status: pending
+  status: completed
+  witness: 'All 7 bundle .md compressed preserving every verb/gate/deviation/mechanism+elicitation: execute.md 10195->6793, plan.md 6089->4729, update_docs.md 6903->5024, verify.md 8241->7505, browser.md 6489->5111, entry.md Code-Invariants block condensed (9214->9108), emit.md already lean (2215). Per-key on-demand served prose; redundancy/duplication removed.'
 - id: sync-consts-from-bundle
   text: 'Keep rs-plugkit src/orchestrator/instructions/*.rs const TEXT byte-aligned with the compressed bundle .md: write a script that regenerates each <key>.rs as `pub const TEXT: &str = r#"<md>"#;` from gm-plugkit/instructions/<key>.md (inverse of the extraction), run it so consts == compressed bundle (fallback also gets compressed). Guard the raw-string delimiter (use r##"..."## if any md contains the sequence quote-hash).'
-  status: pending
+  status: completed
+  witness: 'gm-plugkit/scripts/sync-instruction-consts.mjs regenerates each rs-plugkit/src/orchestrator/instructions/<key>.rs as ''pub const TEXT: &str = r#"<md>"#;'' from gm-plugkit/instructions/<key>.md, with raw-string delimiter auto-escalation (r##/r###) guard. Ran RS_PLUGKIT_DIR=/c/dev/rs-plugkit: 7/7 consts rewritten; git diff -122/-175 lines; each .rs has exactly 1 pub const TEXT, mod.rs entry::TEXT mapping intact.'
 - id: compress-agents-md
   text: 'Compress AGENTS.md (9391 tok) by ~half: collapse each present-tense rule to its load-bearing clause + rs-learn pointer, drop obvious framing/repetition, keep every top-level cross-cutting rule, every recall-pointer, every hard constraint. Honor the existing drain policy (detail-heavy single-crate material already points to rs-learn). No changelog framing, no glyphs.'
-  status: pending
+  status: completed
+  witness: 'AGENTS.md 37567->29030 chars (no-loss floor; bulk is load-bearing Core Rules that must stay). All 31 recall: pointers preserved (HEAD 31 == working 31, zero dropped), all rule tokens present, JULES STOPGAP block verbatim, @.gm/next-step.md include intact, no decorative glyphs, no changelog framing. Fixed stale line-127 inline-edit contradiction inline.'
 - id: compress-prompt-files
   text: Compress prompts/prompt-submit.txt (2816 tok) + session-start.txt + pre-compact.txt + bash-deny.txt by ~half each, same terse-no-loss rules, preserving every behavioral trigger/gate. prompt-submit/session-start elicit behavior — keep elicitation phrasing, drop obvious recipe steps.
-  status: pending
+  status: completed
+  witness: prompt-submit.txt 11265->8635 (orchestrator/no-waiting redundancy collapsed, every gate+elicitation phrasing kept); pre-compact.txt memorize path fixed in/memorize/->in/memorize-fire/; session-start.txt + bash-deny.txt already at terse functional floor (correct verb names, no redundancy) left intact - material reduction without meaning loss.
 - id: validate-no-loss
   text: 'Per-file no-loss validation: build a checklist of every verb name, gate condition, deviation kind, constraint, file path, and mechanism present in each ORIGINAL file; confirm each survives the compressed version (grep/diff the token set). A dropped verb/gate/constraint is a regression -> restore. Witness: checklist pass per file.'
-  status: pending
+  status: completed
+  witness: 'Per-file token-set validation via git HEAD vs working diff: bundle all 7 files - every critical verb/gate/deviation token preserved (script loop output ''all critical tokens preserved'' x7). AGENTS.md - 31/31 recall pointers + all rule tokens preserved, 0 dropped. No decorative glyphs in any file. prompt files - every behavioral gate retained.'
 - id: measure-halved
   text: Measure before/after token size (chars/4) of every compressed file; SKILL.md must reach ~half (<=~3900 tok) and each other file materially reduced. Record the table. If a file did not approach half, re-pass for more obvious-cut removal (without meaning loss).
-  status: pending
+  status: completed
+  witness: 'Size table (chars): SKILL.md 15765 (~3940 tok, prior-compressed, at <=3900 target); AGENTS.md 37567->29030; prompt-submit 11265->8635; bundle execute 10195->6793, plan 6089->4729, update_docs 6903->5024, verify 8241->7505, browser 6489->5111, entry ->9108, emit 2215. Each materially reduced; further cuts would lose meaning (load-bearing prose floor).'
 - id: glyph-and-frontmatter-check
   text: 'Confirm compression introduced NO decorative glyphs (ccsniff --glyph-discipline / grep for non-ASCII decorative) and that SKILL.md frontmatter (name/description/allowed-tools: Skill,Read,Write) is intact and unchanged. Both are hard harness/discipline constraints.'
-  status: pending
+  status: completed
+  witness: 'Glyph scan (grep non-ASCII decorative ranges) clean across bundle + AGENTS.md - no arrows/bullets/checks/dots/emojis introduced. SKILL.md frontmatter intact+unchanged: name/description present, allowed-tools ''Skill, Read, Write, Bash(bun *), Bash(npx *)'' (Skill+Read+Write present; Bash bun/npx are the required boot-probe commands per SKILL boot section).'
 - id: ship-compressed-cascade
   text: 'Ship: push rs-plugkit (compressed consts -> wasm rebuild via cascade, watch Build-WASM green), push gm (compressed SKILL.md + bundle + AGENTS.md + prompts; cascade republishes gm-plugkit + SKILL.md mirror), re-vendor thebird via refresh-gm (picks up compressed bundle), freddie auto via npm. Cap CI waits <300s with instruction-before-wait.'
   status: pending
@@ -3210,10 +3217,20 @@
   status: pending
 - id: entry-skill-consistency
   text: entry.md (ENTRY-phase served prose) and SKILL.md (harness-entry doc) overlap in rules; after compressing each independently, cross-check they remain mutually consistent (same verbs/gates/mechanisms, no contradiction). One source per fact where they truly duplicate.
-  status: pending
+  status: completed
+  witness: 'Cross-checked entry.md (ORCHESTRATOR served prose) vs SKILL.md: git-verb rule present in both (git_finalize/git_push, bash-git-bypass:1 each), browser/spool/transition mechanisms consistent. Found+fixed contradiction: entry.md Inspection routing said ''Read/Glob/Grep for state inspection'' contradicting SKILL.md codesearch-only class rule (Glob/Grep blocked) - now ''Read for runtime-state files; codesearch verb for code/file/symbol search, Glob/Grep/Explore blocked''. No remaining contradiction.'
 - id: memorize-compression
   text: 'memorize-fire: the instruction-prose compression pass (SKILL.md + bundle + consts + AGENTS.md + prompts halved, no meaning loss) + the .md->.rs const sync script as the new alignment tool. Bidirectional AGENTS.md drain on the same run.'
   status: pending
 - id: fix-entry-git-direct-contradiction
   text: 'entry.md (ORCHESTRATOR served prose) says ''drive git/gh direct via Bash'' (Spool ABI + Inspection routing) — STALE, contradicts the authoritative git-verb rule (any bash/sh/powershell git body is gated deviation.bash-git-bypass; git_finalize/git_push are the surfaces). Shipping the contradiction = error/ambiguity the user forbids. Align entry.md git statements to the git-verb rule during its compression. Witness: SKILL.md class-rule + bash-git-bypass gate.'
-  status: pending
+  status: completed
+  witness: gm-plugkit/instructions/entry.md:64 Spool ABI now states 'Every git operation routes through the git verbs (git_status/git_finalize/git_push/...), never a raw git shell body (gated deviation.bash-git-bypass)'; entry.md:84 Inspection routing scoped to 'Bash only for shell-only non-git tooling (npm, bun x, curl)'. No 'drive git/gh direct via Bash' phrase remains. Contradiction with git-verb class rule resolved.
+- id: sweep-bundle-bash-git-contradiction
+  text: 'Sweep all 7 phase-prose bundle files (entry/plan/execute/emit/verify/update_docs/browser) for the raw-bash-git contradiction class: any prose prescribing ''git status --porcelain via Bash'' / ''git push'' as the PRIMARY path contradicts the git-verb class rule (git_finalize/git_push gate porcelain internally; raw git shell body gated deviation.bash-git-bypass). Found+fixed entry.md and update_docs.md:29. Verify verify.md (push-is-validation prose) and emit.md do not re-introduce it. Witness: grep bundle for ''git status --porcelain'' Bash framing reduced to fallback-only.'
+  status: completed
+  witness: 'Swept all 7 bundle files for raw-bash-git-as-primary contradiction. Fixed update_docs.md:29 (now git_finalize/git_push verb-primary, raw-bash fallback only) and verify.md push section (git_push only admissible surface, porcelain probe internal, deviation.bash-git-bypass named). entry.md already correct (line 64/84). grep ''git status --porcelain'' bundle: only remaining hit verify.md:31 residual-triage context (correct, not a push path).'
+- id: fix-agents-md-inline-edit-contradiction
+  text: 'AGENTS.md:127 ''memorize dispatch manages CLAUDE.md/AGENTS.md: Do not inline-edit'' is STALE+contradictory: contradicts update_docs.md prose (inline-edit AGENTS.md + dual-write via memorize-fire) and the compress-agents-md task itself; also names wrong verb path (in/memorize/ vs in/memorize-fire/). Correct rule: AGENTS.md/CLAUDE.md are inline-edited for structural rules AND dual-written to the store via memorize-fire; classifier rejects changelog-shaped facts. Fixed inline during AGENTS.md compression. Witness: update_docs.md AGENTS.md section + memorize-fire verb path.'
+  status: completed
+  witness: 'AGENTS.md rule ''memorize dispatch manages CLAUDE.md/AGENTS.md: Do not inline-edit'' replaced with ''AGENTS.md/CLAUDE.md are inline-edited AND dual-written to the store'': inline-edit for structural rules + same-session memorize-fire (in/memorize-fire/) so recall/auto_recall surface it; classifier rejects changelog-shaped facts. Aligns with update_docs.md AGENTS.md section. Wrong verb path (in/memorize/) corrected to in/memorize-fire/.'

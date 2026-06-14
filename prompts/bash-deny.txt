@@ -6,11 +6,11 @@ Everything else -- code execution AND utility verbs -- goes through the file-spo
 
 Examples:
   in/nodejs/42.js              in/python/43.py            in/bash/44.sh
-  in/codesearch/45.txt         in/recall/46.txt           in/memorize/47.md
+  in/codesearch/45.txt         in/recall/46.txt           in/memorize-fire/47.md
   in/wait/48.txt               in/browser/49.js           in/runner/50.txt
 
 Languages: nodejs, python, bash, typescript, go, rust, c, cpp, java, deno
-Verbs: codesearch, recall, memorize, wait, sleep, status, close, browser, runner, type, kill-port, forget, feedback, learn-status, learn-debug, learn-build, discipline, pause
+Verbs: codesearch, recall, memorize-fire, memorize, wait, sleep, status, close, browser, runner, type, kill-port, forget, feedback, learn-status, learn-debug, learn-build, discipline, pause
 
 The spool watcher executes the request and streams output:
   - .gm/exec-spool/out/<N>.out      (stdout, written line-by-line)
