@@ -3299,7 +3299,9 @@
   witness: 'Read-through of audit-loop.js: cascade-health (npm plugkit-wasm source-of-truth, dark-cascade detection), gmsniff (own-vs-foreign, codesearch-not-grep), ccsniff (4 disciplines via stable bun x form, search-discipline self-deviation guard), version-source (no bare releases/latest, asset-filter), residual (porcelain+worktree, codesearch-routed) - all align with current AGENTS.md MO. No stale verb/path references. Workflow current.'
 - id: ship-supervisor-health-scan
   text: 'Commit+push gm with the supervisor-health scan added to audit-loop.js. Witness: git_finalize pushed, ahead==0.'
-  status: pending
+  status: completed
+  witness: git_finalize committed+pushed gm main 7ad8f1c2 (.claude/workflows/audit-loop.js supervisor-health scan). committed:true pushed:true.
 - id: memorize-workflow-coverage
   text: 'memorize-fire: audit-loop.js workflow extended with a supervisor-health scan covering the giving-up/version-drift/restart-burst failure class; this fire''s deviations all foreign (cwd-6836 x4, cwd-8d07 x2), zero gm/rs-* code defects, supervisor resilience holding.'
-  status: pending
+  status: completed
+  witness: 'memorize-fire 9411 embedded: audit-loop.js extended with supervisor-health scan, this fire''s foreign-only deviations, Workflow({name:''audit-loop''}) invocation noted.'
