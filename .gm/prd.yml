@@ -3389,3 +3389,7 @@
   text: 'Inline audit: gmsniff 35m zero deviations (own/foreign/supervisor/version/native-search all clean). Watcher 0.1.645 healthy, all prior fixes holding. No gm/rs-* defect; no change. Witness: gmsniff deviation filter empty 35m.'
   status: completed
   witness: gmsniff 35m zero deviations; watcher 0.1.645, all prior commits holding. Clean steady-state.
+- id: confirm-clean-steady-10401
+  text: 'Inline audit: gmsniff 40m has 1 deviation, FOREIGN (cwd-6836 residual-premature - gate correctly denied a premature residual-scan with open PRD; gate-POSITIVE). Zero own-session, zero gm/rs-* code defects. Watcher 0.1.645, all prior fixes holding. No change. Witness: gmsniff deviation = 1 foreign gate-positive.'
+  status: completed
+  witness: 'gmsniff 40m: 1 foreign deviation (cwd-6836 residual-premature, gate-positive); zero own, zero gm/rs-* defects. Watcher 0.1.645, all prior commits holding. Clean steady-state.'
