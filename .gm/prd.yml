@@ -3426,9 +3426,9 @@
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
 - id: deviation-triage
-  text: 'Triage deviations_30m=1 + confirm prior corrections held. RESULT: single deviation = deviation.long-gap-no-instruction at FOREIGN cwd-6836(tv8) verb=browser gap 1179763ms, gate-positive, not gm/rs-*. ccsniff --bash-discipline 35m = zero C--dev-gm (sleep-poll corrective HELD); --search/--git/--continuation-discipline all zero C--dev-gm. Clean steady-state for gm/rs-*.'
+  text: 'Triage deviations_30m=2 + confirm all corrections held. RESULT: both deviations FOREIGN cwd-6836(tv8) - long-gap-no-instruction browser x2 (gap 1.18M/1.62M ms) + mid-chain-stall (EXECUTE prd_pending 11), all gate-positive, not gm/rs-*. ALL SEVEN ccsniff disciplines (bash/search/git/glyph/continuation/verb-bypass + gmsniff) = zero C--dev-gm own deviations. Every prior correction (native-search, mid-chain-stall, boot_reason, sleep-poll, close-ordering) holds in practice. Clean steady-state.'
   status: completed
-  witness: 'gmsniff 35m: only deviation = long-gap-no-instruction cwd-6836(tv8) browser gap 1179763ms (foreign, gate-positive); ccsniff --bash/--search/--git/--continuation-discipline each zero C--dev-gm = sleep-poll + all prior corrections held'
+  witness: 'gmsniff 35m: 2 deviations both foreign cwd-6836(tv8) long-gap-browser + mid-chain-stall, gate-positive; ccsniff bash/search/git/glyph/continuation/verb-bypass disciplines all zero C--dev-gm = every prior correction held'
 - id: cascade-version-health
   text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
   status: completed
@@ -3438,9 +3438,9 @@
   status: completed
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
-  text: memorize-fire the fire outcome (clean steady-state, sleep-poll corrective held, close-ordering fix adopted) + resolve THIS row before the single final git_finalize to demonstrate the ordering fix; then finalize/push once; transition through VERIFY to COMPLETE (tree clean, no second finalize).
+  text: memorize-fire the fire outcome (clean steady-state all 7 disciplines, supervisor convergence decision + evidence) to default namespace; resolve all rows before the single final git_finalize (close-ordering fix); finalize/push once; transition through VERIFY to COMPLETE.
   status: completed
-  witness: memos 9620 (mem-1781528878000) fired; all prior rows resolved; about to run the SINGLE final git_finalize per the ordering fix (witness is memo keys + resolve-completeness, not a post-hoc push sha)
+  witness: memo 9730 (mem-1781530845692) stored; all rows resolved before the single final git_finalize per close-ordering fix; finalizing+pushing next
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
@@ -3522,6 +3522,10 @@
   status: completed
   witness: memorize-prune-9616 deleted mem-1781521708287-4-879 (superseded risky candidate); memorize 9620 (mem-1781528878000) stored the ordering corrective; demonstrated this fire by resolving all rows incl this+close before a single git_finalize
 - id: cascade-health-validate
-  text: 'Cascade health + prior-fix validation: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health 15 imports; 6 repos clean; gm-plugkit npm 2.0.1558 (supervisor label fix shipped); ccsniff 1.1.23 live. Confirm in practice.'
+  text: 'Cascade health + prior-fix-shipped validation: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health 15 imports; 6 repos clean; gm-plugkit 2.0.1558 + ccsniff 1.1.23 live. Confirm in practice.'
   status: completed
-  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-9615.json 15 imports ok; 6 repos porcelain clean (gm only runtime residual); gm-plugkit npm 2.0.1558 + ccsniff 1.1.23 confirmed prior fire
+  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-9720.json 15 imports ok; rs-* 5 repos porcelain clean; gm-plugkit 2.0.1558 + ccsniff 1.1.23 confirmed live prior fire
+- id: supervisor-convergence
+  text: 'HARDEST/last-known-improvement: resolve the two-divergent-supervisor drift (bin/plugkit-supervisor.js installed by lib/skill-bootstrap.js ensureSupervisorInstalled = generic schema vs gm-plugkit/supervisor.js used by `bun x gm-plugkit spool` = granular schema + restart-burst + version-drift cooldown + my boot_reason fix). Investigate whether gm-plugkit/supervisor.js is STANDALONE-runnable (no sibling-module require/import that breaks a ~/.gm-tools standalone spawn). IF standalone -> point ensureSupervisorInstalled at gm-plugkit/supervisor.js and delete bin/plugkit-supervisor.js, unifying to ONE supervisor + one event schema (closes the observability blind spot). IF gm-plugkit/supervisor.js has sibling deps that prevent standalone install -> do NOT force it; document the exact blocker (the require lines) as the precise reason it stays separate, so it is a determined-blocker not a blind defer. Decide from evidence, not assumption.'
+  status: completed
+  witness: gm-plugkit/supervisor.js:4-8 imports only node builtins (standalone); lib/skill-bootstrap.js:506-518 ensureSupervisorInstalled now resolves gm-plugkit/supervisor.js (require base + bundled fallback); git_rm-9718 removed bin/plugkit-supervisor.js; exec_js-9716 syntax OK + only consumer was ensureSupervisorInstalled; gm files[] ships gm-plugkit/ + depends on it. Unified to one supervisor + one schema
