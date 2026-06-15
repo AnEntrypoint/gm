@@ -3577,3 +3577,15 @@
   text: Memorize-fire the audit finding (10th fire, clean gm/rs-* + 1 own stall blip corrected by completing chain), then residual-scan + git_finalize so remote reflects HEAD. Push is part of COMPLETE.
   status: completed
   witness: memorize-fire returned key mem-1781550538525-9-1017 embedded:true graph_edge:true namespace default; residual-scan + git_finalize is the closing dispatch of this VERIFY->COMPLETE walk
+- id: audit-30m-clean
+  text: 'Audit gmsniff+ccsniff last 35m. RESULT: own deviations=0 (CLEAN); foreign=4 all cwd-6836/tv8 chronic (mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction x2, gate-positive). ccsniff git/search/glyph discipline: zero C--dev-gm. 11th consecutive clean fire.'
+  status: completed
+  witness: 'gmsniff --list-deviations --own-only --since 35m: ''total deviations: 0 (own:0 foreign:0)''; --foreign-only: ''4 (own:0 foreign:4) cwd-6836 mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction x2''; ccsniff --git/search/glyph-discipline --since 35m grep dev-gm = empty (clean)'
+- id: validate-prior-fire-correction
+  text: 'Validate previous commit in practice: the prior fire (38d2466c) corrected the own mid-chain-stall by walking a full chain. Witness via gmsniff --list-sessions: gm claude-loop-iter now shows full P E E V C walk prd:5/5 dev blank = the loop finished work, correction held. Own deviations 0 this window confirms no regression.'
+  status: completed
+  witness: 'gmsniff --list-sessions --since 35m: ''2026-06-15T19:33:22 [full bar] ev:93 disp:27 prd:5/5 mut:0 dev:(blank) gm claude-loop-iter v0.1.645 ALIVE'' = prior fire 38d2466c walked full P E E V C with all 5 PRD rows resolved, zero own deviations this window = correction held, no regression'
+- id: validate-cascade-and-close
+  text: 'Confirm cascade alignment (live watcher 0.1.645, no version_drift) and close: memorize-fire the clean fire result, residual-scan, git_finalize so remote reflects HEAD. Push is part of COMPLETE.'
+  status: completed
+  witness: .status.json version 0.1.645 version_drifted:false; memorize-fire returned key mem-1781552204949-10-771 embedded:true graph_edge:true; AGENTS.md at drained floor (29183 bytes, every detail entry pointered). residual-scan + git_finalize is the closing dispatch.
