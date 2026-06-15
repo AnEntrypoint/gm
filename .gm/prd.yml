@@ -3426,9 +3426,9 @@
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
 - id: deviation-triage
-  text: 'Triage deviations_30m=2. RESULT: both FOREIGN cwd-6836(tv8) mid-chain-stall (14:35 + 14:54, EXECUTE prd_pending 11), gate-positive. The tv8 session is in a very long EXECUTE (turns 26-33, prd_pending stuck 11) - chronically slow foreign agent, gates correctly catching stalls, not gm/rs-*. ccsniff bash/search/git-discipline all zero C--dev-gm. 4th consecutive fully-clean fire for gm/rs-*; all prior corrections hold.'
+  text: 'Triage deviations_30m=2. RESULT: both FOREIGN cwd-6836(tv8) mid-chain-stall (15:08 + 15:30, EXECUTE prd_pending 11), gate-positive. The tv8 session has been stuck in EXECUTE for ~40 turns / 2+ hours (turn_idx 16->39) with prd_pending frozen at 11 - a session NOT finishing work, surfaced only as individual stalls not a stuck-loop meta-signal. ccsniff bash/search/git-discipline all zero C--dev-gm. 5th consecutive clean fire for gm/rs-*; all corrections hold.'
   status: completed
-  witness: 'gmsniff 35m: 2 deviations cwd-6836(tv8) mid-chain-stall 14:35 + 14:54 (EXECUTE prd_pending 11), foreign gate-positive; ccsniff bash/search/git-discipline zero C--dev-gm; my claude-l deviations:0'
+  witness: 'gmsniff 35m: 2 deviations cwd-6836(tv8) mid-chain-stall 15:08 + 15:30 (EXECUTE prd_pending 11, turn_idx 34-39); foreign gate-positive; ccsniff bash/search/git-discipline zero C--dev-gm; my claude-l deviations:0'
 - id: cascade-version-health
   text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
   status: completed
@@ -3438,9 +3438,9 @@
   status: completed
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
-  text: memorize-fire the fire outcome (4th clean fire, supervisor-install validation result, cascade healthy) to default namespace; resolve all rows before the single final git_finalize; finalize/push once; transition through VERIFY to COMPLETE.
+  text: memorize-fire the fire outcome (5th clean fire, gmsniff stuck-loop detection decision+outcome, cascade healthy) to default namespace; resolve all rows before the single final git_finalize; finalize/push once (gmsniff separately if changed); transition through VERIFY to COMPLETE.
   status: completed
-  witness: memo 10020 (mem-1781536052924) stored; health-10015 15 imports 0.1.645; all rows resolved before the single final git_finalize per close-ordering; finalizing+pushing next
+  witness: memo 10120 (mem-1781537870965) stored; all rows resolved before the single final git_finalize per close-ordering; finalizing+pushing next
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
@@ -3482,9 +3482,9 @@
   status: completed
   witness: memorize 9330 (mem-1781523602280 predecessor) stored the interleave-instruction-during-non-spool-stretch corrective to default namespace
 - id: cascade-health
-  text: 'Cascade health: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health 15 imports; 6 repos porcelain clean; gm prior pushes landed (c9aeb42e/c4028420). Confirm in practice.'
+  text: 'Cascade health: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health 15 imports; 6 repos clean; gm-skill/gm-plugkit npm 2.0.1559. Confirm.'
   status: completed
-  witness: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; health-9433.json 15 imports ok; rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn porcelain empty; gm/gm-plugkit version 2.0.1557
+  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-10116.json 15 imports ok; 5 rs-* repos porcelain clean, gm only prd.yml runtime residual; npm 2.0.1559
 - id: supervisor-bootreason-label
   text: 'ROOT: gm-plugkit/supervisor.js spawnWatcher child.on(''exit'') sets respawnReason = reason===''version-change'' ? ''planned-restart-version-change'' : ''unplanned-restart-after-exit''. A CLEAN/PLANNED exit (reason in plannedReasons set {idle,sigterm,version-change,wrapper-change,peer-stale-takeover,external-planned,process-exit} or exit_code 0 => isPlanned true) still becomes boot_reason ''unplanned-restart-after-exit'', which misreads as a crash (it false-alarmed this audit). Fix: when isPlanned, set an honest respawnReason like ''planned-restart-after-<reason||clean-exit>''; reserve ''unplanned-restart-after-exit'' for genuinely unplanned exits (non-zero code, no shutdown-reason file, not in plannedReasons). Validate the branch logic; isPlanned is in scope at the respawnReason line.'
   status: completed
@@ -3545,3 +3545,7 @@
   text: 'SAFE non-disruptive validation of the supervisor convergence reaching the install location: compare the installed ~/.gm-tools/plugkit-supervisor.js (and ~/.claude/gm-tools fallback) against gm-plugkit/supervisor.js (converged source) and detect whether it carries the granular event schema (watcher-exited-clean/idle/for-update/lock-rejected/unexpectedly) + the isPlanned boot_reason branch (planned-restart-after-). If installed==converged -> next supervisor spawn runs the unified code (convergence live at install layer); if still the old generic one -> the bootstrap has not yet re-run ensureSupervisorInstalled from 2.0.1559. Read-only sha + content check, no restart forced.'
   status: completed
   witness: 'exec_js-10014: installed ~/.gm-tools/plugkit-supervisor.js hasGranular=true + hasIsPlanned=true (convergence + boot_reason fix present at install layer, runs on next supervisor spawn); ~/.claude/gm-tools absent; sha 1d24ca45 vs repo 79a4eebb (earlier build, resynced by ensureSupervisorInstalled sha-compare). Runtime label emission still pending supervisor restart'
+- id: gmsniff-stuck-loop
+  text: 'INVESTIGATED + DECIDED NOT TO IMPLEMENT (determined, not deferred): a gmsniff stuck-loop rollup (group consecutive mid-chain-stall by sid + unchanged prd_pending) is GOLD-PLATING. Evidence: (1) gmsniff is a generic event-aggregator (src cli.js/index.js/server.js v1.0.16; does not hardcode mid-chain-stall - it displays whatever deviation.* events appear), so the stuck-session signal is ALREADY fully visible in the raw event stream I just read (tv8 turn_idx 16->39 stuck is plainly legible); (2) a rollup adds convenience not capability; (3) it would predominantly flag FOREIGN sessions that are un-actionable from gm/rs-* (the agent-is-orchestrator design: gates inform, only the owning agent acts), while OUR own sessions all finish work every fire. Per nothing-fake/don''t-fabricate, not implementing a low-value change to a clean system is the correct call. Recorded as a considered-and-declined candidate.'
+  status: completed
+  witness: 'exec_js-10115: gmsniff src = cli.js/index.js/server.js v1.0.16, generic event-aggregator (no hardcoded mid-chain-stall); raw event stream already shows tv8 turn_idx 16->39 stuck plainly. Decision: considered-and-declined as gold-plating (convenience not capability, mostly flags un-actionable foreign sessions); memorized mem-1781537870965'
