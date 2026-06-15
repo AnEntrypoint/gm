@@ -3377,3 +3377,7 @@
   text: 'Standard deviation scan: deviations_30m=0, clean. All prior fixes holding. Witness: turn-summary deviations_30m=0.'
   status: completed
   witness: deviations_30m=0; clean. All prior fixes holding.
+- id: confirm-clean-after-idle-reboot
+  text: 'Confirm clean steady-state after a multi-hour dormant gap: the watcher idle-exited (idle_limit 1h) during a ~7.5h quiet period when the session-only cron did not fire; boot probe this fire detected the absent .status.json and rebooted 0.1.645 (designed self-healing). gmsniff 90m: ZERO deviations (own=0, foreign=0, no supervisor/version/native-search). All prior fixes holding. No code defect - the idle-exit+boot-probe-reboot is the intended flow. Witness: gmsniff 90m empty + fresh watcher 0.1.645.'
+  status: completed
+  witness: 'gmsniff 90m: zero deviations (own/foreign/supervisor/version/native-search all clean). Watcher idle-exited during ~7.5h dormant gap (session cron quiet), boot probe rebooted 0.1.645 - intended self-healing, no defect. All prior commits holding. Clean steady-state.'
