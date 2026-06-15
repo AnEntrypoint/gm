@@ -168,7 +168,7 @@ One-shot system-state probe: dispatch `plugkit health` via the file-spool before
 
 ## Site Build & Documentation
 
-Site build is single-surface detail in rs-learn (`recall: gm site build details`): navigation.yaml grouped-entry format + flatspace `C.Topbar` dropdowns, the `site/theme.mjs`+`home.yaml` landing renderer (never `site/index.html`), in-page topbar sync, Mermaid render, generated `docs/styles.css`, and the `docs/made-with.html` showcase.
+Site build + landing render is single-surface detail, fully drained to rs-learn (`recall: gm site build details`).
 
 
 @.gm/next-step.md
