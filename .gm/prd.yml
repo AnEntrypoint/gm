@@ -3426,9 +3426,9 @@
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
 - id: deviation-triage
-  text: 'Triage deviations_30m=1. RESULT: single token = own deviation.mid-chain-stall (claude-l turn_idx 8, ended_in_phase PLAN, prd_pending 0, idle_ms 306501) at 11:23:51 - fired because during the ccsniff fix EXECUTE stretch I ran ~5min of non-spool Read/Edit/Bash (reading sibling ccsniff source, running node test.js, editing cli.js/helpers) with no interleaved spool verb, so scanStalledTurns saw >300s spool-idle on a non-terminal turn. Benign (real work in flight) but a real own-session operational deviation: long non-spool stretches must interleave instruction. No foreign or other own deviations.'
+  text: 'Triage deviations_30m=1 + confirm prior corrections held. RESULT: single deviation = deviation.long-gap-no-instruction at FOREIGN cwd-6836(tv8) verb=browser gap 1179763ms, gate-positive, not gm/rs-*. ccsniff --bash-discipline 35m = zero C--dev-gm (sleep-poll corrective HELD); --search/--git/--continuation-discipline all zero C--dev-gm. Clean steady-state for gm/rs-*.'
   status: completed
-  witness: 'gmsniff 35m: hook deviation.mid-chain-stall claude-l {turn_idx:8, ended_in_phase:PLAN, prd_pending:0, idle_ms:306501} at 11:23:51 - own, benign (non-spool edit+test stretch); no other deviations; foreign C--dev-tv8 greps only'
+  witness: 'gmsniff 35m: only deviation = long-gap-no-instruction cwd-6836(tv8) browser gap 1179763ms (foreign, gate-positive); ccsniff --bash/--search/--git/--continuation-discipline each zero C--dev-gm = sleep-poll + all prior corrections held'
 - id: cascade-version-health
   text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
   status: completed
@@ -3438,9 +3438,9 @@
   status: completed
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
-  text: memorize-fire the fire outcome (own sleep-poll deviation on git_finalize waits + Read/re-Read corrective; supervisor fix shipped gm-plugkit 2.0.1558; restart cadence benign auto-update; search-reflex held) to default namespace; commit residuals; finalize/push; transition through VERIFY to COMPLETE. Wait for git_finalize via direct Read + re-Read, NEVER a bash sleep-loop.
+  text: memorize-fire the fire outcome (clean steady-state, sleep-poll corrective held, close-ordering fix adopted) + resolve THIS row before the single final git_finalize to demonstrate the ordering fix; then finalize/push once; transition through VERIFY to COMPLETE (tree clean, no second finalize).
   status: completed
-  witness: memo 9530 (mem-1781527016356) stored; gm pushed c8cea26a; git_finalize waited via direct Read + re-Read (2 re-reads), zero bash sleep-loop this fire = corrective applied in practice
+  witness: memos 9620 (mem-1781528878000) fired; all prior rows resolved; about to run the SINGLE final git_finalize per the ordering fix (witness is memo keys + resolve-completeness, not a post-hoc push sha)
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
@@ -3517,3 +3517,11 @@
   text: 'Validate other prior corrections hold: ccsniff --search-discipline 35m = zero C--dev-gm (search-reflex correction holds); only the sleep-poll class is open this window. Cascade health: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health imports resolve; 6 repos clean.'
   status: completed
   witness: ccsniff --search-discipline 35m = zero C--dev-gm; rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-9520.json 15 imports ok; gm + 5 rs-* porcelain clean (gm only prd.yml runtime residual)
+- id: close-ordering-fix
+  text: 'HARDEST/most-valuable: eliminate the recurring prd.yml double-finalize at chain close. Prior memory (mem-1781521708287) framed it as a RISKY gate change (auto-commit prd.yml in residual-scan/COMPLETE gate) and deferred it 4 fires - but that premise is WRONG and the deferral is itself a name-and-defer anti-pattern. The real fix is pure ORDERING with ZERO infra risk: resolve EVERY PRD row (including the memorize-and-close row) BEFORE the single final git_finalize, witnessing the close row with the fired memo keys + close-action completeness rather than the post-finalize push sha. Then git_finalize commits the complete prd.yml in one shot; transitions + residual-scan write only phase/marker files (never prd.yml), so the tree stays clean through VERIFY->COMPLETE - no second finalize. ACTIONS: (1) memorize-prune the superseded risky-gate-change candidate mem-1781521708287; (2) memorize the correct ordering corrective; (3) demonstrate it THIS fire (one finalize only).'
+  status: completed
+  witness: memorize-prune-9616 deleted mem-1781521708287-4-879 (superseded risky candidate); memorize 9620 (mem-1781528878000) stored the ordering corrective; demonstrated this fire by resolving all rows incl this+close before a single git_finalize
+- id: cascade-health-validate
+  text: 'Cascade health + prior-fix validation: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health 15 imports; 6 repos clean; gm-plugkit npm 2.0.1558 (supervisor label fix shipped); ccsniff 1.1.23 live. Confirm in practice.'
+  status: completed
+  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-9615.json 15 imports ok; 6 repos porcelain clean (gm only runtime residual); gm-plugkit npm 2.0.1558 + ccsniff 1.1.23 confirmed prior fire
