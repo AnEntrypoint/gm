@@ -3426,9 +3426,9 @@
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
 - id: deviation-triage
-  text: 'Triage deviations_30m=0. RESULT: zero deviations in-window across all sessions - even the chronic foreign cwd-6836(tv8) session went quiet (last turn.end deviations:0, no new stall). ccsniff search/bash-discipline zero C--dev-gm. 9th consecutive clean fire for gm/rs-* and the cleanest yet (0 own + 0 foreign). All corrections hold. No watcher restart so boot_reason runtime label remains pending the frozen supervisor restart (fix installed+verified).'
+  text: 'Triage deviations_30m=2. RESULT: both FOREIGN cwd-6836(tv8) mid-chain-stall (turn_idx 50,51, EXECUTE prd_pending 11, ~4h stuck), gate-positive, not gm/rs-*. ccsniff search/bash/git-discipline all zero C--dev-gm. 10th consecutive clean fire for gm/rs-*; all corrections hold. No watcher restart so boot_reason runtime label remains pending the frozen supervisor restart (fix installed+verified).'
   status: completed
-  witness: 'gmsniff 35m: zero in-window deviation tokens (16:59 stall just outside window); tv8 turn.end 17:31 deviations:0; ccsniff search/bash-discipline zero C--dev-gm; claude-l clean'
+  witness: 'gmsniff 35m: 2 deviations cwd-6836(tv8) mid-chain-stall turn 50/51 (EXECUTE prd_pending 11), foreign gate-positive; ccsniff search/bash/git-discipline zero C--dev-gm; claude-l clean'
 - id: cascade-version-health
   text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
   status: completed
@@ -3438,9 +3438,9 @@
   status: completed
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
-  text: memorize-fire the fire outcome (9th clean fire, 0 deviations in-window, cascade healthy, no fabricated work) to default namespace; resolve all rows before the single final git_finalize; finalize/push once; transition through VERIFY to COMPLETE.
+  text: memorize-fire the fire outcome (10th clean fire, cascade healthy, no fabricated work) to default namespace; resolve all rows before the single final git_finalize; finalize/push once; transition through VERIFY to COMPLETE.
   status: completed
-  witness: memo 10520 (mem-1781544993047) stored; all rows resolved before the single final git_finalize per close-ordering; finalizing+pushing next
+  witness: memo 10620 (mem-1781546835920) stored; all rows resolved before the single final git_finalize per close-ordering; finalizing+pushing next
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
@@ -3482,9 +3482,9 @@
   status: completed
   witness: memorize 9330 (mem-1781523602280 predecessor) stored the interleave-instruction-during-non-spool-stretch corrective to default namespace
 - id: cascade-health
-  text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health 15 imports; 6 repos clean. Confirm.'
+  text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; plugkit health 15 imports; 6 repos clean. Confirm.'
   status: completed
-  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-10514.json 15 imports ok; 5 rs-* porcelain clean
+  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-10614.json 15 imports ok; 5 rs-* porcelain clean
 - id: supervisor-bootreason-label
   text: 'ROOT: gm-plugkit/supervisor.js spawnWatcher child.on(''exit'') sets respawnReason = reason===''version-change'' ? ''planned-restart-version-change'' : ''unplanned-restart-after-exit''. A CLEAN/PLANNED exit (reason in plannedReasons set {idle,sigterm,version-change,wrapper-change,peer-stale-takeover,external-planned,process-exit} or exit_code 0 => isPlanned true) still becomes boot_reason ''unplanned-restart-after-exit'', which misreads as a crash (it false-alarmed this audit). Fix: when isPlanned, set an honest respawnReason like ''planned-restart-after-<reason||clean-exit>''; reserve ''unplanned-restart-after-exit'' for genuinely unplanned exits (non-zero code, no shutdown-reason file, not in plannedReasons). Validate the branch logic; isPlanned is in scope at the respawnReason line.'
   status: completed
