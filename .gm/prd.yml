@@ -3406,9 +3406,9 @@
   status: completed
   witness: 'C:/dev/rs-plugkit/Cargo.toml: version = "0.1.645"; C:/dev/gm/gm.json: "plugkitVersion": "0.1.645"'
 - id: validate-recent-commits
-  text: 'Validate recent commits work in practice: wasm_import_module=env link fixes landed across rs-exec/rs-search/rs-learn. RESULT: plugkit health 0.1.645 returns all 15 host imports resolved (host_fs_*/fetch/kv_*/vec_search/exec_js/log/now_ms/env_get/browser_exec/task_proc) = wasm links and runs, fix validated.'
+  text: 'Validate recent commits in practice: no new cascade commits since prior fire (latest gm 16c3a0e0; rs-* heads unchanged - wasm-link fixes 1eb3803/a3c8f46/47f2804). health verb confirms the shipped wasm still links+runs all 15 host imports = prior fixes hold in practice.'
   status: completed
-  witness: 'health-9002.json: {"version":"0.1.645","imports":[15 host_* fns],"ok":true} = wasm_import_module=env fix links+runs'
+  witness: 'git log -1: gm 16c3a0e0, rs-exec 1eb3803, rs-search a3c8f46, rs-learn 47f2804 unchanged since prior fire; health-9101.json 15 imports resolve = shipped wasm links+runs, fixes hold'
 - id: repo-porcelain-clean
   text: 'All 6 cascade repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn) git status --porcelain empty. RESULT: all clean, no orphaned residual.'
   status: completed
@@ -3425,3 +3425,18 @@
   text: Commit the memorize-fire mem-*.json residual and finalize/push; transition through VERIFY to COMPLETE with clean worktree and residual-scan marker.
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
+- id: deviation-triage
+  text: 'Triage deviations_30m=1. RESULT: single deviation is deviation.long-gap-no-instruction at FOREIGN cwd-6836(tv8) verb=browser gap_ms=397658 - gate fired correctly (gate-positive predictability), not gm/rs-*. Recurring foreign-fleet class. Zero own gm/rs-* deviations; ccsniff git/glyph/search empty.'
+  status: completed
+  witness: 'gmsniff 35m: hook deviation.long-gap-no-instruction cwd-6836 {verb=browser gap_ms=397658} at 10:59:31; all claude-l turn.end deviations:0; ccsniff empty'
+- id: cascade-version-health
+  text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
+  status: completed
+  witness: rs-plugkit/Cargo.toml version=0.1.645; gm.json plugkitVersion 0.1.645; health-9101.json 15 imports ok version 0.1.645; 6 repos porcelain []
+- id: own-friction-noticing
+  text: 'Noticing: prior fire''s own claude-l session hit 2 gate-positive recoveries - (a) prd-resolve refused on field-name (used ''note'' not ''witness_evidence'', recovered same turn), (b) residual.skipped worktree-dirty (prd.yml dirtied by post-finalize resolve, recovered via 2nd finalize). Both are the gate working as designed = predictability-regardless-of-LLM evidence, NOT defects. Strict witness_evidence field is intentional (prevents narrative-note passing as evidence); the error hint already gives exact body shape and one-step recovery. No code change - weakening the field would erode the discipline. Logged so future fires do not re-open as a bug.'
+  status: completed
+  witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
+- id: memorize-and-close
+  text: memorize-fire this fire's outcome (clean steady-state, 1 foreign gate-positive deviation, version 0.1.645 aligned, health 15 imports, prior wasm-link commits hold) to default namespace; perform the AGENTS.md drain back-pressure if a genuine non-pointer detail entry remains; commit residuals + finalize/push; transition through VERIFY to COMPLETE.
+  status: pending
