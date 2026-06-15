@@ -3439,7 +3439,8 @@
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
   text: memorize-fire the fire outcome (own mid-chain-stall from non-spool stretch + interleave-instruction corrective; prior search-discipline correction held; ccsniff 1.1.22 shipped) to default namespace; commit residuals; finalize/push; transition through VERIFY to COMPLETE. Interleave an instruction dispatch during this fire if any non-spool stretch exceeds a few minutes.
-  status: pending
+  status: completed
+  witness: memos 9330/9331 stored; gm pushed c9aeb42e; ccsniff@1.1.23 published; all validation rows resolved with witnesses
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
