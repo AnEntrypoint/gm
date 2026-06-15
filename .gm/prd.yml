@@ -3589,3 +3589,15 @@
   text: 'Confirm cascade alignment (live watcher 0.1.645, no version_drift) and close: memorize-fire the clean fire result, residual-scan, git_finalize so remote reflects HEAD. Push is part of COMPLETE.'
   status: completed
   witness: .status.json version 0.1.645 version_drifted:false; memorize-fire returned key mem-1781552204949-10-771 embedded:true graph_edge:true; AGENTS.md at drained floor (29183 bytes, every detail entry pointered). residual-scan + git_finalize is the closing dispatch.
+- id: audit-30m-clean-12th
+  text: 'Audit gmsniff+ccsniff last 35m. RESULT: own deviations=0 (12th consecutive clean); foreign=4 all cwd-6836/tv8 chronic (mid-chain-stall x2 EXECUTE prd_pending ticked 11->12 + long-gap-no-instruction x2 browser, gate-positive). ccsniff git/search/glyph/bash discipline zero C--dev-gm. gm claude-loop-iter shows full P E E V C walk prd:3/3.'
+  status: completed
+  witness: 'gmsniff --list-deviations --own-only --since 35m: ''total deviations: 0 (own:0 foreign:0)''; --foreign-only: ''4 cwd-6836 mid-chain-stall x2 prd_pending 12 + long-gap x2''; ccsniff git/search/glyph/bash/continuation-discipline --since 35m grep dev-gm = all empty; --list-sessions gm claude-loop-iter prd:3/3 full P E E V C'
+- id: investigate-remaining-improvements
+  text: 'User asks to look hard for remaining improvements. Investigate the only persistent signal: foreign tv8 (cwd-6836) chronically frozen in EXECUTE prd_pending 11->12 ~3h+, repeatedly tripping mid-chain-stall+long-gap. Determine whether this exposes a gm/plugkit-side gap (should plugkit do more than detect?) or is correctly detection-only per the agent-is-orchestrator/plugkit-synchronous design. Resolve with the design witness, no fabricated artifact.'
+  status: completed
+  witness: 'Finding: no gm-side gap. The tv8 stall is correctly DETECTION-ONLY: per AGENTS.md ''The agent is the orchestrator; plugkit is the brain it drives'' + ''plugkit does not act autonomously, advance phases in the background'' - gates fire mid-chain-stall+long-gap (gate-positive) but cannot force a foreign session whose LLM ignores the recover:instruction hint. This is the design boundary of predictability-regardless-of-LLM: gm detects+instructs, cannot compel a non-compliant LLM to dispatch. No corrective artifact; correctly working as designed.'
+- id: validate-and-close-12th
+  text: Confirm cascade alignment (live watcher 0.1.645, version_drifted false) and prior commit 604a6af1 held (own deviations 0 = no regression). Memorize-fire the clean fire, residual-scan, git_finalize so remote reflects HEAD.
+  status: completed
+  witness: .status.json version 0.1.645 version_drifted:false; own deviations 0 this window = 604a6af1 held no regression; memorize-fire key mem-1781554061608-11-924 embedded:true; residual-scan + git_finalize is the closing dispatch
