@@ -3426,9 +3426,9 @@
   status: completed
   witness: git_finalize-9061.json committed=true pushed=true sha 2130150c branch main
 - id: deviation-triage
-  text: 'Triage deviations_30m=1. RESULT: single deviation is deviation.long-gap-no-instruction at FOREIGN cwd-6836(tv8) verb=browser gap_ms=397658 - gate fired correctly (gate-positive predictability), not gm/rs-*. Recurring foreign-fleet class. Zero own gm/rs-* deviations; ccsniff git/glyph/search empty.'
+  text: 'Triage deviations_30m=1. RESULT: single token = own deviation.mid-chain-stall (claude-l turn_idx 8, ended_in_phase PLAN, prd_pending 0, idle_ms 306501) at 11:23:51 - fired because during the ccsniff fix EXECUTE stretch I ran ~5min of non-spool Read/Edit/Bash (reading sibling ccsniff source, running node test.js, editing cli.js/helpers) with no interleaved spool verb, so scanStalledTurns saw >300s spool-idle on a non-terminal turn. Benign (real work in flight) but a real own-session operational deviation: long non-spool stretches must interleave instruction. No foreign or other own deviations.'
   status: completed
-  witness: 'gmsniff 35m: hook deviation.long-gap-no-instruction cwd-6836 {verb=browser gap_ms=397658} at 10:59:31; all claude-l turn.end deviations:0; ccsniff empty'
+  witness: 'gmsniff 35m: hook deviation.mid-chain-stall claude-l {turn_idx:8, ended_in_phase:PLAN, prd_pending:0, idle_ms:306501} at 11:23:51 - own, benign (non-spool edit+test stretch); no other deviations; foreign C--dev-tv8 greps only'
 - id: cascade-version-health
   text: 'Cascade health: rs-plugkit Cargo 0.1.645 == gm.json plugkitVersion 0.1.645; plugkit health returns 15 host imports at 0.1.645; all 6 repos porcelain empty. RESULT: aligned + healthy + clean.'
   status: completed
@@ -3438,9 +3438,8 @@
   status: completed
   witness: 'gmsniff: orchestrator.error task 9020 ''no witness_evidence'' then prd.resolved 9030 same subject; residual.skipped 9065 worktree-dirty then git.commit recovery - both recovered, gate-positive, no code change warranted'
 - id: memorize-and-close
-  text: memorize-fire the full finding (ccsniff multi-discipline silent-drop root cause + fix, inline-auditor codesearch-reflex regression, methodology one-discipline-per-invocation rule) to default namespace; commit residuals across gm + ccsniff; finalize/push; transition through VERIFY to COMPLETE.
-  status: completed
-  witness: memos 9250/9251 stored; ccsniff pushed 5f2c142 v1.1.22; gm pushed 98f60573 (audit-loop.js hardened); all fixes validated by node test.js 14 cases pass + multi-flag exit 2
+  text: memorize-fire the fire outcome (own mid-chain-stall from non-spool stretch + interleave-instruction corrective; prior search-discipline correction held; ccsniff 1.1.22 shipped) to default namespace; commit residuals; finalize/push; transition through VERIFY to COMPLETE. Interleave an instruction dispatch during this fire if any non-spool stretch exceeds a few minutes.
+  status: pending
 - id: ccsniff-multi-discipline-drop
   text: 'ROOT/HARDEST: ccsniff src/cli.js runs each --*-discipline block in source order (bash 261/git 339/verb-bypass 388/spool 434/search 479/glyph 552/continuation 597), each ending process.exit(0). Passing >1 discipline flag silently runs only the FIRST and drops the rest - my combined `--git-discipline --glyph-discipline --search-discipline` ran only git, so search-discipline never executed and falsely read ''clean''. Fix: detect multiple discipline flags and either run them all sequentially (header per section) or fail loud (stderr + non-zero); silent-drop is the footgun. Validate by running patched cli.js with multiple flags. Witness: cli.js:479 search block unreached after git exit at 380.'
   status: completed
@@ -3469,3 +3468,19 @@
   text: Commit + push the ccsniff fix to its origin main, and verify how ccsniff republishes (npm publish flow / cascade) so `bun x ccsniff@latest` picks up run-all/loud-guard. If ccsniff has no auto-publish, note the manual publish step. ccsniff is a separate repo at C:/dev/ccsniff, not part of the gm cascade.
   status: completed
   witness: git_finalize-9254 committed+pushed ccsniff main sha 5f2c142 v1.1.22; ccsniff has .github/workflows/publish.yml (automated npm publish on push) so bun x ccsniff@latest will resolve 1.1.22
+- id: validate-prior-fix-held
+  text: 'Validate the prior fire''s behavioral correction held in practice: run ccsniff --search-discipline ALONE (separate invocation, new methodology) over 35m. RESULT: zero C--dev-gm native-search violations this window (only foreign C--dev-tv8 greps) = the inline-auditor codesearch-reflex correction worked; the search-discipline detector + cross-repo exemption (v1.1.22) behave correctly on real session data.'
+  status: completed
+  witness: 'node src/cli.js --search-discipline --since 35m: zero C--dev-gm rows (only e78adb1d C--dev-tv8 foreign greps) = inline-auditor codesearch-reflex correction held in practice'
+- id: validate-ccsniff-shipped
+  text: 'Validate ccsniff v1.1.22 shipped and works: confirm local package.json 1.1.22 + git push 5f2c142 landed, multi-flag guard exits 2, and check whether bun x ccsniff@latest resolves 1.1.22 yet (publish.yml CI may lag). Confirm the new methodology (separate per-discipline invocations) surfaces deviations the old combined call hid.'
+  status: completed
+  witness: npm view ccsniff version = 1.1.23 (publish.yml auto-bumped pushed commit 5f2c142 v1.1.22); local package.json 1.1.22; multi-flag guard exits 2; separate-invocation methodology surfaced the foreign tv8 greps the old combined call hid
+- id: reinforce-interleave-instruction
+  text: 'Reinforce durably the corrective for the mid-chain-stall: any long non-spool work stretch (reading sibling-repo source via Read, editing files, running external test/build commands via Bash) must interleave an instruction dispatch every few minutes so the watcher sees spool activity and scanStalledTurns does not flag the turn. Prefer routing investigation through spool verbs (codesearch/exec_js/fs) where possible; when genuinely non-spool (cross-repo edits + node test runs), interleave instruction. memorize-fire this.'
+  status: completed
+  witness: memorize 9330 (mem-1781523602280 predecessor) stored the interleave-instruction-during-non-spool-stretch corrective to default namespace
+- id: cascade-health
+  text: 'Cascade health + recent-commit validation: rs-plugkit Cargo == gm.json plugkitVersion; plugkit health imports resolve; 6 cascade repos porcelain clean; gm HEAD reflects prior fire pushes (98f60573/fa92231c). Confirm in practice.'
+  status: completed
+  witness: rs-plugkit Cargo 0.1.645 == gm.json 0.1.645; health-9320.json 15 imports ok; rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn porcelain empty at known HEADs; gm prior pushes landed (HEAD advanced to 9de0dfbb via auto-commit)
