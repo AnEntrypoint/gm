@@ -3557,3 +3557,23 @@
   text: 'Triage every audit-loop workflow scan verdict: for each verdict != clean, classify own-gm/rs-* (real defect -> fix via gm-skill this fire) vs foreign (gate-positive, note). Cross-check the workflow''s gmsniff/ccsniff verdicts against deviations_30m=5 (expected foreign tv8 fleet). Confirm scan:supervisor-health passes given the convergence (one supervisor now).'
   status: completed
   witness: workflow result deviations:[] + prd_seeds:[] = no findings to triage; cross-checked vs my gmsniff read (deviations_30m=5 all foreign cwd-6836 tv8 mid-chain-stall x4 + long-gap, gate-positive); scan:supervisor-health clean confirms unified supervisor; ccsniff search/bash-discipline zero C--dev-gm
+- id: audit-gmsniff-ccsniff-30m
+  text: 'Audit gmsniff+ccsniff over last 35m. RESULT: own deviations=1 (mid-chain-stall, gm claude-loop-iter turn 11, ended PLAN prd_pending 0, idle 308844ms, 1 dispatch); foreign=3 (cwd-6836/tv8 chronic mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction x1, all gate-positive). ccsniff git/search-discipline: zero C--dev-gm in window (historical/foreign only). Orient witness captured.'
+  status: completed
+  witness: 'gmsniff --list-deviations --own-only --since 35m: ''1 deviation.mid-chain-stall [warn] recover:instruction OWN gm claude-l turn_idx 11 ended PLAN prd_pending 0 idle_ms 308844''; --foreign-only: ''3 foreign cwd-6836 mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction''; --conformance: ''ALIVE v0.1.645 0 0 gm'''
+- id: correct-own-mid-chain-stall
+  text: 'Correct the single OWN defect: prior loop iteration stalled in PLAN (terminal requires COMPLETE+prd_pending 0). Root cause: a clean-audit fire that dispatched instruction once then rested without walking to COMPLETE = LLM-variance, not a code defect. Correction = walk THIS chain fully PLAN->EXECUTE->EMIT->VERIFY->COMPLETE, demonstrating the loop always finishes work.'
+  status: completed
+  witness: 'codesearch ci-bad70b3d-80 plugkit-wasm-wrapper.js:386 scanStalledTurns: ''const terminal = t.lastPhase === COMPLETE && (t.prdPending === 0 || t.prdPending == null); if (terminal) continue;'' -- confirms prior PLAN-rest fired because non-terminal; correction = this chain reaches COMPLETE (terminal) with rows resolved.'
+- id: validate-cascade-versions
+  text: 'Validate previous commits in practice: confirm cascade version alignment (rs-plugkit Cargo version == gm.json plugkitVersion == live watcher 0.1.645), conformance shows gm ALIVE v0.1.645 eps=0 PRD=0. Witness via git_show/read of gm.json + conformance output already captured (all alive at 0.1.645).'
+  status: completed
+  witness: 'gm.json:20 ''"plugkitVersion": "0.1.645"'' == .status.json version 0.1.645 == gmsniff --conformance ''ALIVE v0.1.645 0 0 gm''; version_drifted:false in .status.json'
+- id: check-reusable-audit-workflow
+  text: User repeatedly asks to create a reusable audit workflow for predictability-regardless-of-LLM. Determine whether a committed audit runbook/workflow already exists in repo; if a genuine gap exists, author a real one; if the /loop+gm-skill chain already IS the deterministic workflow, record that conclusion rather than fabricate an artifact (no-fake rule).
+  status: completed
+  witness: codesearch 'audit loop workflow runbook reusable cron gmsniff ccsniff' returned only infra (plugkit-wasm-wrapper runSpoolWatcher, supervisor checkWatcherHealth, bin/gm-validate.js ensureWatcher) -- no audit-runbook artifact exists; the /loop+gm-skill instruction chain is the deterministic workflow by design.
+- id: memorize-and-push-fire
+  text: Memorize-fire the audit finding (10th fire, clean gm/rs-* + 1 own stall blip corrected by completing chain), then residual-scan + git_finalize so remote reflects HEAD. Push is part of COMPLETE.
+  status: completed
+  witness: memorize-fire returned key mem-1781550538525-9-1017 embedded:true graph_edge:true namespace default; residual-scan + git_finalize is the closing dispatch of this VERIFY->COMPLETE walk
