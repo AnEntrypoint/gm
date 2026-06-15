@@ -3397,3 +3397,30 @@
   text: 'Inline audit: gmsniff 40m 1 deviation, FOREIGN (cwd-6836 long-gap-no-instruction, gate-positive). Zero own, zero gm/rs-* defects. Watcher 0.1.645, all prior fixes holding. No change. Witness: gmsniff own-count=0.'
   status: completed
   witness: 'gmsniff 40m: 1 foreign deviation (cwd-6836 long-gap, gate-positive); zero own, zero gm/rs-* defects. All prior commits holding. Clean steady-state.'
+- id: audit-deviation-scan
+  text: 'gmsniff+ccsniff 35m deviation scan, classify own vs foreign. RESULT: 0 deviations gm/rs-*; foreign cwd-6836(tv8) walked full clean chain PLAN->COMPLETE zero deviations; own claude-l prior turn deviations:0; ccsniff git/glyph/search-discipline empty.'
+  status: completed
+  witness: gmsniff --since 35m | grep deviat = 0 deviation.* tokens; turn.end cwd-6836 deviations:0; turn.end claude-l turn_idx5 deviations:0; ccsniff --since 35m --git-discipline --glyph-discipline --search-discipline empty
+- id: cascade-version-align
+  text: 'Version source-of-truth alignment: rs-plugkit Cargo.toml version == gm.json plugkitVersion. RESULT: both 0.1.645, aligned.'
+  status: completed
+  witness: 'C:/dev/rs-plugkit/Cargo.toml: version = "0.1.645"; C:/dev/gm/gm.json: "plugkitVersion": "0.1.645"'
+- id: validate-recent-commits
+  text: 'Validate recent commits work in practice: wasm_import_module=env link fixes landed across rs-exec/rs-search/rs-learn. RESULT: plugkit health 0.1.645 returns all 15 host imports resolved (host_fs_*/fetch/kv_*/vec_search/exec_js/log/now_ms/env_get/browser_exec/task_proc) = wasm links and runs, fix validated.'
+  status: completed
+  witness: 'health-9002.json: {"version":"0.1.645","imports":[15 host_* fns],"ok":true} = wasm_import_module=env fix links+runs'
+- id: repo-porcelain-clean
+  text: 'All 6 cascade repos (gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn) git status --porcelain empty. RESULT: all clean, no orphaned residual.'
+  status: completed
+  witness: git -C each of gm/rs-plugkit/rs-exec/rs-codeinsight/rs-search/rs-learn status --porcelain = empty output for all 6
+- id: workflow-coverage-check
+  text: Verify the audit-loop workflow deliverable exists and covers the failure classes. Check .claude/workflows/audit-loop.js present with cascade/gmsniff/ccsniff/version-source/residual/supervisor-health scans; note any scan gap as new prd row.
+  status: completed
+  witness: .claude/workflows/audit-loop.js:38,42,46,50,54,58 labels scan:cascade/scan:gmsniff/scan:ccsniff/scan:version-source/scan:residual/scan:supervisor-health + Triage phase line 67
+- id: memorize-fire-outcome
+  text: 'memorize-fire this fire''s outcome to default namespace: clean steady-state, version 0.1.645 aligned, health 15 imports, 0 gm/rs-* deviations, recent wasm-link commits validated.'
+  status: completed
+  witness: memorize-fire-9040.json key mem-1781519839739-0-787 embedded=true; plus drain memo mem-1781519912504-1-483 + AGENTS.md:119 compressed to recall pointer
+- id: close-audit-fire
+  text: Commit the memorize-fire mem-*.json residual and finalize/push; transition through VERIFY to COMPLETE with clean worktree and residual-scan marker.
+  status: pending
