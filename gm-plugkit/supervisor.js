@@ -264,7 +264,11 @@ function spawnWatcher(bootReason) {
       try { fs.unlinkSync(SUPERVISOR_PATH); } catch (_) {}
       process.exit(0);
     }
-    const respawnReason = reason === 'version-change' ? 'planned-restart-version-change' : 'unplanned-restart-after-exit';
+    const respawnReason = reason === 'version-change'
+      ? 'planned-restart-version-change'
+      : isPlanned
+        ? `planned-restart-after-${reason || (cleanExit ? 'clean-exit' : 'exit')}`
+        : 'unplanned-restart-after-exit';
     writeSupervisorStatus('restarting', {
       prior_watcher_pid: currentChildPid,
       prior_exit_code: code,
