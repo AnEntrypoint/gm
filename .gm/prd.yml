@@ -3614,9 +3614,9 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: health verb 0.1.645, 15 host imports present; gm.json plugkitVersion == rs-plugkit Cargo.toml; watcher version_drifted false, update_available null.
+  text: health verb 0.1.645, 15 host imports; gm.json plugkitVersion == rs-plugkit Cargo.toml; watcher version_drifted false, update_available null.
   status: completed
-  witness: health verb 0.1.645, 15 host imports present; status.json version_drifted false, update_available null; gm.json plugkitVersion == rs-plugkit Cargo.toml
+  witness: health verb version 0.1.645, 15 host imports present (host_fs_read..host_task_proc); status.json version_drifted false, update_available null; gm.json plugkitVersion == rs-plugkit Cargo.toml
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
@@ -3630,17 +3630,17 @@
   status: completed
   witness: chain walked PLAN->EXECUTE gap-free, every turn ended in a chain-advancing verb (instruction/prd-add/transition/codesearch/git verbs/memorize-fire); COMPLETE transition follows
 - id: classify-foreign-tv8
-  text: 'Foreign tv8 cwd-6836: 2 mid-chain-stall in 30m, EXECUTE prd_pending frozen at 14, idle ~356s, dispatches 1 -- chronic stall, gate-positive, foreign not own. Gates correctly contain it; not actionable by this session (foreign chain authority).'
+  text: 'Foreign tv8 cwd-6836: 4 deviations in 30m (2 long-gap-no-instruction verb=browser gap 447-727s + 2 mid-chain-stall EXECUTE prd_pending frozen 14). Chronic stalled foreign chain, gate-positive, not own/actionable; gates contain it.'
   status: completed
-  witness: tv8 cwd-6836 EXECUTE prd_pending frozen 14, idle ~356s, 2 mid-chain-stall in 30m (09:43, 10:08), dispatches 1, gate-positive foreign; gates contain it, not own/actionable
+  witness: 'tv8 cwd-6836: 4 deviations in 30m (2 long-gap-no-instruction verb=browser gap 447775/727014ms + 2 mid-chain-stall EXECUTE prd_pending frozen 14 idle 339-356s); chronic stalled foreign, gate-positive, gates contain it, not own/actionable'
 - id: probe-search-degenerate
   text: Degenerate no-match codesearch returns graceful result (ok:true), not a crash.
   status: completed
   witness: codesearch on nonsense '..._61244' returned ok:true with 1 weak nearest-neighbor (cos 0.559, sub-threshold) -- graceful, no crash.
 - id: memorize-fire-result
-  text: 'memorize-fire iter-10: FOUND+FIXED gmsniff --embed-failures time-filter defect (watcher.log fallback ignored --since, showed 26d-old stale model.forward F16/F32 failures as current with blank LAST). Confirmed embed dtype bug itself is stale/self-resolved (healthy embed path). Own-clean (433 unchanged, 2 foreign tv8 in 30m). iter-9 2e96d39f validated (correctly no-publish: AGENTS.md+.gm paths-ignored). ccsniff 7-disc 0, cascade 0.1.645. Plus AGENTS.md drain.'
+  text: 'memorize-fire iter-11: CORRECTED the long-PLAN-investigation false-positive mid-chain-stall (own 10:12:18, turn 16) -- audit Bash/Read/Edit investigation >300s with no interleaved spool verb trips scanStalledTurns; fix is interleave prd-add/instruction (clock reset only by spool verbs). iter-10 gmsniff fix validated published (1.0.18, --since 30m -> 0). Own-clean otherwise (433 base, 4 foreign tv8). ccsniff 7-disc 0, cascade 0.1.645. Plus AGENTS.md work-verbs clarification + drain.'
   status: completed
-  witness: mem-1781605768573 (iter-10 gmsniff fix result) embedded:true; drain mem-1781605771776 (spool runtime diagnostic files) embedded:true; AGENTS.md observability line compressed (3 filenames drained to store), byte-count drops
+  witness: mem-1781606683726 (iter-11 stall-correction result) embedded:true graph_edge:true; drain mem-1781606687530 (bootstrap contract) embedded:true; AGENTS.md bootstrap-contract line compressed (single-crate detail drained to store)
 - id: residual-triage-and-push
   text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin main (rebases onto remote auto-bump). Close-ordering.'
   status: completed
@@ -3764,9 +3764,9 @@
   status: completed
   witness: 'LIVE: the boot skill prose this fire contains the iter-5 dispatch caveat (a Write to in/<verb>/ that errors ENOENT has STILL dispatched). Confirmed in practice: this fire''s ENOENT-erroring Write-tool prd-adds all dispatched (12 rows landed). Auto-refresh picked up the local committed SKILL.md; npm ships next cascade.'
 - id: validate-ccsniff-codeinsight
-  text: 'ccsniff 1.1.24 fast 7-disc all 0 for gm (13088ms). codeinsight+search flawless NOW: live codesearch fresh-index hits + degenerate nonsense-symbol graceful; embed path healthy (model-loaded/cache-hit/init_ok counts high, recall cos real).'
+  text: 'ccsniff 1.1.24 fast 7-disc all 0 for gm (12824ms). codeinsight+search flawless: live codesearch fresh-index hits + degenerate nonsense-symbol graceful (witness this fire).'
   status: completed
-  witness: ccsniff 1.1.24 fast 7-disc all 0 (13088ms); codesearch live 'embed_text forward bert dtype' -> 7 fresh-index hits recency 0.9999996; degenerate nonsense-symbol -> 2 low-cos 0.55-0.57 graceful no crash
+  witness: ccsniff 1.1.24 fast 7-disc all 0 for gm (12824ms); codesearch live 'scanStalledTurns mid-chain-stall turnTick lastTs' -> 8 fresh-index hits recency 0.9999992 real source bodies; degenerate nonsense-symbol -> 2 low-cos 0.57-0.59 graceful no crash
 - id: note-iter6-followups-tracked
   text: 'iter-6 follow-ups KNOWN/tracked, not re-investigated: (a) workflow-subagent native-search is recurring (generic workflow agents cannot be prompt-disciplined into codesearch; ccsniff catches them post-hoc, gate-positive); (b) SKILL.md/AGENTS.md publish latency ships on next cascade (documented mem-1781598106607). Deferred to focused fires; not blind-editing the committed workflow or CI config in this long session.'
   status: completed
@@ -3820,6 +3820,30 @@
   status: completed
   witness: gh run list publish.yml top = 71e1c10f (iter-8) success; 2e96d39f absent = correct since its only changes were AGENTS.md + .gm/** (both paths-ignore'd) -> iter-8 fix bidirectional (SKILL.md triggers, doc/state does not)
 - id: residual-triage-push
-  text: 'Triage git status at COMPLETE for BOTH repos: gmsniff (cli.js fix -> commit+push+publish) and gm (mem JSON + prd/mutables state + AGENTS.md drain -> git_finalize origin main). Close-ordering: resolve every row before the single gm git_finalize.'
+  text: 'Triage git status at COMPLETE: gm (AGENTS.md work-verbs clarification + .gm state + mem JSON) -> single git_finalize origin main. Close-ordering: resolve every row before the finalize.'
   status: completed
-  witness: gmsniff committed+pushed b479525 (separate repo); gm tree residual = .gm prd/mutables state + mem-*.json + AGENTS.md drain = real session work, committed via the single gm git_finalize that follows; residual-scan before COMPLETE gate
+  witness: gm tree residual = AGENTS.md (work-verbs clarification + bootstrap-contract drain) + .gm prd/mutables state + mem-*.json = real session work, committed via the single gm git_finalize that follows; residual-scan before COMPLETE gate
+- id: correct-long-plan-investigation-stall
+  text: 'THE iter-11 correction. Own mid-chain-stall 2026-06-16 10:12:18 (claude-loop-iter turn 16, ended PLAN, prd_pending 0, idle 323260ms, dispatches 1) is a FALSE-POSITIVE stall: during iter-10''s PLAN the embed-failures investigation (gmsniff/ccsniff runs + watcher.log greps + reading/editing gmsniff source) ran >300s as pure Bash/Read/Grep/Edit -- NONE of which are spool dispatches -- so the orchestrator clock (turnTick lastTs, reset only by spool verbs) went cold and scanStalledTurns flagged the turn though the chain provably continued to COMPLETE. Correction: long self-inflicted PLAN investigation must INTERLEAVE spool verbs (convert each finding to prd-add AS it emerges per density-grows-along-the-walk, or dispatch instruction between long Bash rounds); investigate-all-then-bulk-prd-add lets the clock go cold past 300s. Non-obvious: ''active back-to-back work verbs keep the chain alive'' means SPOOL verbs, not platform Bash/Read/Edit. memorize-fire + AGENTS.md clarification; apply live this fire.'
+  status: completed
+  witness: AGENTS.md long-gap rule clarified inline (work-verbs=SPOOL verbs; Bash/Read/Edit don't reset clock; interleave prd-add/instruction); mem-1781606683726 fired; mechanism confirmed via codesearch (scanStalledTurns honors busy_until set by verbs not Bash; turnTick lastTs updated only on orchestrator dispatch); applied LIVE this fire
+- id: clarify-agents-md-work-verbs
+  text: 'AGENTS.md line-159 rule (''active back-to-back work verbs keep the chain alive without an interleaved instruction'') is ambiguous: a reader assumes any tool activity counts, but only SPOOL verbs reset the long-gap/stall clock. Add a concise clause: a long investigation conducted purely in platform Bash/Read/Edit (e.g. the audit gmsniff/ccsniff runs + source reading) dispatches no spool verb and trips a false mid-chain-stall past 300s -- interleave prd-add/instruction. Edit inline + dual-write to store.'
+  status: completed
+  witness: 'AGENTS.md edited inline: ''Work verbs/any verb here means SPOOL dispatches -- platform Bash/Read/Edit/Grep do NOT reset the clock... interleave a prd-add or instruction to keep the clock warm''; dual-written mem-1781606683726'
+- id: classify-deviations-iter11
+  text: 'deviations_30m=5 = own:1 + foreign:4. Own:1 = the 10:12:18 mid-chain-stall (false-positive long-PLAN-investigation, corrected this fire). Foreign:4 = tv8 cwd-6836: 2 long-gap-no-instruction (verb=browser gap 447775/727014ms) + 2 mid-chain-stall (EXECUTE prd_pending 14, idle ~339-356s), all gate-positive chronic. own-only --since 3h also surfaces the iter-6 tail (08:21-08:23, 2 prd-resolve-unknown-id + 1 stall) + a 07:56 long-gap-memorize-prune (iter-5 era), all out of 30m window.'
+  status: completed
+  witness: gmsniff --list-deviations --since 30m = 5 (own:1 foreign:4); own = 10:12:18 mid-chain-stall turn 16 PLAN prd_pending 0 idle 323s (corrected); foreign = tv8 cwd-6836 2 long-gap-no-instruction browser (gap 447775/727014ms) + 2 mid-chain-stall EXECUTE prd_pending 14
+- id: validate-iter10-gmsniff-published
+  text: 'iter-10 gmsniff embed-failures time-filter fix (b479525) PUBLISHED + works in practice: npm gmsniff 1.0.18 (auto-bumped from 1.0.16); bun x gmsniff@latest --embed-failures --since 30m -> 0 (was 7 pre-fix). The published binary correctly time-filters the stale 2026-05-21 failures.'
+  status: completed
+  witness: npm view gmsniff version = 1.0.18 (auto-bumped from 1.0.16); bun x gmsniff@latest --embed-failures --since 30m -> 0 embed failures (was 7 pre-fix); published binary correctly time-filters the stale 2026-05-21 failures
+- id: validate-iter10-gm-commit
+  text: iter-10 gm commit 20e237d2 on origin main (AGENTS.md observability drain + .gm prd/mutables state + mem JSON); correctly NOT triggering publish (only AGENTS.md + .gm/** changed, both paths-ignore'd) -- iter-8 fix still bidirectional.
+  status: completed
+  witness: iter-10 git_finalize returned committed:true pushed:true sha 20e237d2 on origin main (AGENTS.md drain + .gm state + mem JSON); doc/state-only change so correctly no publish (AGENTS.md + .gm/** paths-ignore'd)
+- id: counter-mid-chain-stall-live
+  text: 'Apply the correction LIVE this fire: interleave prd-add/verb dispatches through investigation so the orchestrator clock stays <300s warm; walk PLAN->COMPLETE gap-free with zero NEW own stall. Witness transition to COMPLETE.'
+  status: completed
+  witness: 'applied correction LIVE: interleaved orchestrator verbs through investigation (prd-add batches 3+4+4, codesearch live+degenerate, health, 2 memorize-fire) keeping now-lastTs < 300s warm; no NEW own stall this fire; transition COMPLETE follows'
