@@ -40,7 +40,7 @@ Agents dispatch verbs by writing `.gm/exec-spool/in/<verb>/<N>.txt` and reading 
 
 - **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 - **Wasm-direct verbs**: fs/kv/exec/fetch/env, recall, codesearch, memorize(+prune), health, filter, full git verb family. Enumeration in rs-learn (`recall: wasm-direct plugkit verbs full list`).
-- **memorize-prune**: deletes bad/superseded memories (a wrong recall hit is worse than a miss). `{key}`/`{keys:[...]}` deletes; `{query}` returns review-only candidates to judge before re-dispatching stale keys -- never a blind similarity-delete. Spec in rs-learn (`recall: memorize-prune verb two-mode spec`).
+- **memorize-prune**: prunes bad/superseded memories (`{key}`/`{keys}` deletes; `{query}` returns review-only candidates to judge first). Spec in rs-learn (`recall: memorize-prune verb two-mode spec`).
 - **git verbs**: git is a first-class spool surface, never a shell command; `git_finalize {message}` is the bundled COMPLETE-phase push surface, `git_push` the only admissible raw push (porcelain-gated, rebase-retry). A git-dominant `bash`/`powershell` body is gated (`deviation.bash-git-bypass`). Per-verb shapes + host_git `.exe` resolution in rs-learn (`recall: git verbs rs-plugkit spool surface`).
 - **filter**: pure stdout -> compact-stdout transform, in-wasm, no subprocess; pipe raw command output through it before it enters context. Spec in rs-learn (`recall: filter verb rs-plugkit spool spec`).
 

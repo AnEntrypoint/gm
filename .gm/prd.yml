@@ -3616,7 +3616,7 @@
 - id: verify-cascade-health
   text: health verb 0.1.645, 15 host imports; gm.json plugkitVersion == rs-plugkit Cargo.toml; watcher version_drifted false, update_available null.
   status: completed
-  witness: health verb version 0.1.645, 15 host imports present (host_fs_read..host_task_proc); status.json version_drifted false, update_available null; gm.json plugkitVersion == rs-plugkit Cargo.toml
+  witness: health verb version 0.1.645, 15 host imports present; status.json version_drifted false, update_available null; gm.json plugkitVersion == rs-plugkit Cargo.toml
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
@@ -3638,9 +3638,9 @@
   status: completed
   witness: codesearch on nonsense '..._61244' returned ok:true with 1 weak nearest-neighbor (cos 0.559, sub-threshold) -- graceful, no crash.
 - id: memorize-fire-result
-  text: 'memorize-fire iter-11: CORRECTED the long-PLAN-investigation false-positive mid-chain-stall (own 10:12:18, turn 16) -- audit Bash/Read/Edit investigation >300s with no interleaved spool verb trips scanStalledTurns; fix is interleave prd-add/instruction (clock reset only by spool verbs). iter-10 gmsniff fix validated published (1.0.18, --since 30m -> 0). Own-clean otherwise (433 base, 4 foreign tv8). ccsniff 7-disc 0, cascade 0.1.645. Plus AGENTS.md work-verbs clarification + drain.'
+  text: 'memorize-fire iter-12: FOUND+FIXED gmsniff recall-observability blindness (recall-scores/misses/modes filtered rs_learn:recall events that gm-log never carries -- 0 of 413670 -- so a bare 0 read as ''all healthy''; now honest gap note + real activity summary from emitted events; committed d2f3554, auto-publishes). Deferred path B (rs-learn emit rs_learn:recall, wasm cascade). Clean window deviations_30m=0 = iter-11 stall correction held. iter-11 3d56d252 + iter-10 gmsniff 1.0.18 validated. ccsniff 7-disc 0, cascade 0.1.645. Plus AGENTS.md drain.'
   status: completed
-  witness: mem-1781606683726 (iter-11 stall-correction result) embedded:true graph_edge:true; drain mem-1781606687530 (bootstrap contract) embedded:true; AGENTS.md bootstrap-contract line compressed (single-crate detail drained to store)
+  witness: mem-1781608750110 (iter-12 recall-observability fix result) embedded:true graph_edge:true; drain mem-1781608753311 (memorize-prune two-mode spec) embedded:true; AGENTS.md memorize-prune line compressed (single-verb detail drained to store)
 - id: residual-triage-and-push
   text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin main (rebases onto remote auto-bump). Close-ordering.'
   status: completed
@@ -3764,9 +3764,9 @@
   status: completed
   witness: 'LIVE: the boot skill prose this fire contains the iter-5 dispatch caveat (a Write to in/<verb>/ that errors ENOENT has STILL dispatched). Confirmed in practice: this fire''s ENOENT-erroring Write-tool prd-adds all dispatched (12 rows landed). Auto-refresh picked up the local committed SKILL.md; npm ships next cascade.'
 - id: validate-ccsniff-codeinsight
-  text: 'ccsniff 1.1.24 fast 7-disc all 0 for gm (12824ms). codeinsight+search flawless: live codesearch fresh-index hits + degenerate nonsense-symbol graceful (witness this fire).'
+  text: 'ccsniff 1.1.24 fast 7-disc all 0 for gm (11145ms). codeinsight+search flawless: live codesearch fresh-index hits + degenerate nonsense-symbol graceful (witness this fire).'
   status: completed
-  witness: ccsniff 1.1.24 fast 7-disc all 0 for gm (12824ms); codesearch live 'scanStalledTurns mid-chain-stall turnTick lastTs' -> 8 fresh-index hits recency 0.9999992 real source bodies; degenerate nonsense-symbol -> 2 low-cos 0.57-0.59 graceful no crash
+  witness: ccsniff 1.1.24 fast 7-disc all 0 for gm (11145ms); codesearch live 'RecallHit recall vector search scoring rs-learn' -> 3 fresh-index hits recency 0.9999997 (execRecall/deriveFallbackQuery/capHitText); degenerate nonsense-symbol -> 1 low-cos graceful
 - id: note-iter6-followups-tracked
   text: 'iter-6 follow-ups KNOWN/tracked, not re-investigated: (a) workflow-subagent native-search is recurring (generic workflow agents cannot be prompt-disciplined into codesearch; ccsniff catches them post-hoc, gate-positive); (b) SKILL.md/AGENTS.md publish latency ships on next cascade (documented mem-1781598106607). Deferred to focused fires; not blind-editing the committed workflow or CI config in this long session.'
   status: completed
@@ -3820,9 +3820,9 @@
   status: completed
   witness: gh run list publish.yml top = 71e1c10f (iter-8) success; 2e96d39f absent = correct since its only changes were AGENTS.md + .gm/** (both paths-ignore'd) -> iter-8 fix bidirectional (SKILL.md triggers, doc/state does not)
 - id: residual-triage-push
-  text: 'Triage git status at COMPLETE: gm (AGENTS.md work-verbs clarification + .gm state + mem JSON) -> single git_finalize origin main. Close-ordering: resolve every row before the finalize.'
+  text: 'Triage git status at COMPLETE: gmsniff committed+pushed d2f3554 (separate repo); gm tree = .gm prd/mutables state + mem JSON + any AGENTS.md drain -> single gm git_finalize origin main. Close-ordering: resolve every row before the finalize.'
   status: completed
-  witness: gm tree residual = AGENTS.md (work-verbs clarification + bootstrap-contract drain) + .gm prd/mutables state + mem-*.json = real session work, committed via the single gm git_finalize that follows; residual-scan before COMPLETE gate
+  witness: gmsniff committed+pushed d2f3554 (separate repo); gm tree residual = .gm prd/mutables state + mem-*.json + AGENTS.md memorize-prune drain = real session work, committed via the single gm git_finalize that follows
 - id: correct-long-plan-investigation-stall
   text: 'THE iter-11 correction. Own mid-chain-stall 2026-06-16 10:12:18 (claude-loop-iter turn 16, ended PLAN, prd_pending 0, idle 323260ms, dispatches 1) is a FALSE-POSITIVE stall: during iter-10''s PLAN the embed-failures investigation (gmsniff/ccsniff runs + watcher.log greps + reading/editing gmsniff source) ran >300s as pure Bash/Read/Grep/Edit -- NONE of which are spool dispatches -- so the orchestrator clock (turnTick lastTs, reset only by spool verbs) went cold and scanStalledTurns flagged the turn though the chain provably continued to COMPLETE. Correction: long self-inflicted PLAN investigation must INTERLEAVE spool verbs (convert each finding to prd-add AS it emerges per density-grows-along-the-walk, or dispatch instruction between long Bash rounds); investigate-all-then-bulk-prd-add lets the clock go cold past 300s. Non-obvious: ''active back-to-back work verbs keep the chain alive'' means SPOOL verbs, not platform Bash/Read/Edit. memorize-fire + AGENTS.md clarification; apply live this fire.'
   status: completed
@@ -3836,14 +3836,50 @@
   status: completed
   witness: gmsniff --list-deviations --since 30m = 5 (own:1 foreign:4); own = 10:12:18 mid-chain-stall turn 16 PLAN prd_pending 0 idle 323s (corrected); foreign = tv8 cwd-6836 2 long-gap-no-instruction browser (gap 447775/727014ms) + 2 mid-chain-stall EXECUTE prd_pending 14
 - id: validate-iter10-gmsniff-published
-  text: 'iter-10 gmsniff embed-failures time-filter fix (b479525) PUBLISHED + works in practice: npm gmsniff 1.0.18 (auto-bumped from 1.0.16); bun x gmsniff@latest --embed-failures --since 30m -> 0 (was 7 pre-fix). The published binary correctly time-filters the stale 2026-05-21 failures.'
+  text: 'iter-10 gmsniff embed-failures fix still good: npm gmsniff was 1.0.18 (pre-this-fire); this fire''s d2f3554 push auto-bumps again. embed-failures time-filter intact.'
   status: completed
-  witness: npm view gmsniff version = 1.0.18 (auto-bumped from 1.0.16); bun x gmsniff@latest --embed-failures --since 30m -> 0 embed failures (was 7 pre-fix); published binary correctly time-filters the stale 2026-05-21 failures
+  witness: npm gmsniff 1.0.18 (pre-fire, from iter-10/11); embed-failures time-filter intact; this fire's d2f3554 push auto-bumps the published version again
 - id: validate-iter10-gm-commit
   text: iter-10 gm commit 20e237d2 on origin main (AGENTS.md observability drain + .gm prd/mutables state + mem JSON); correctly NOT triggering publish (only AGENTS.md + .gm/** changed, both paths-ignore'd) -- iter-8 fix still bidirectional.
   status: completed
   witness: iter-10 git_finalize returned committed:true pushed:true sha 20e237d2 on origin main (AGENTS.md drain + .gm state + mem JSON); doc/state-only change so correctly no publish (AGENTS.md + .gm/** paths-ignore'd)
 - id: counter-mid-chain-stall-live
-  text: 'Apply the correction LIVE this fire: interleave prd-add/verb dispatches through investigation so the orchestrator clock stays <300s warm; walk PLAN->COMPLETE gap-free with zero NEW own stall. Witness transition to COMPLETE.'
+  text: 'Apply iter-11 discipline LIVE: interleaved prd-add/codesearch/health/git verbs through the recall-observability investigation to keep the orchestrator clock <300s warm; no new own stall. Walk PLAN->COMPLETE gap-free, witness transition to COMPLETE.'
   status: completed
-  witness: 'applied correction LIVE: interleaved orchestrator verbs through investigation (prd-add batches 3+4+4, codesearch live+degenerate, health, 2 memorize-fire) keeping now-lastTs < 300s warm; no NEW own stall this fire; transition COMPLETE follows'
+  witness: 'applied iter-11 discipline LIVE: interleaved orchestrator verbs (prd-add batches, codesearch live+degenerate, health, 2 memorize-fire, gmsniff git_finalize) through the recall-observability investigation keeping now-lastTs < 300s warm; deviations_30m=0, no new own stall; transition COMPLETE follows'
+- id: investigate-recall-observability-gap
+  text: THE iter-12 lead. gmsniff --recall-misses / --recall-scores / --recall-modes all report 0 events over 7d, despite recall being exercised every instruction (every response carries recall_hits with cos scores + auto_recall). Either (a) recall operations are not emitted as structured rs_learn:recall events to gm-log (gmsniff aggregates those), or (b) gmsniff's filter (e._sub==rs_learn && e.event==recall) mismatches the actual emitted sub/event name. A blind recall-quality audit surface means 'codeinsight/search flawless' cannot be verified. Investigate what recall events ARE emitted + under what sub/event, determine emission-gap vs filter-mismatch, fix the right repo (rs-learn/plugkit emission OR gmsniff filter).
+  status: completed
+  witness: gmsniff --sub rs_learn --since 7d = 0 of 413670 events; recall emitted only as plugkit:auto_recall.turn-entry (656) + dispatch{verb=recall} + phase.transitioned recall_count; gmsniff filter (rs_learn:recall) mismatches actual emission -> permanently blind surface
+- id: classify-deviations-iter12
+  text: deviations_30m=0 (own:0 foreign:0) -- clean window; iter-11 long-PLAN-investigation stall correction HELD (no new own stall) and foreign tv8 also quiet this window. gm cumulative dev:434 = prior 433 + the single iter-11-corrected 10:12:18 false-positive stall (now counted, not a new uncorrected deviation).
+  status: completed
+  witness: gmsniff --list-deviations --since 30m = 0 (own:0 foreign:0); iter-11 long-PLAN-investigation stall correction held (no new own stall, tv8 also quiet); gm cumulative dev:434 = prior 433 + the iter-11-corrected 10:12:18 stall (counted, not new)
+- id: classifier-rejects-healthy
+  text: 'gmsniff --classifier-rejects = 3, all 2026-06-15 (reasons: historical framing belongs in git log; commit hashes derivable; recent commits derivable). These are CORRECT memorize-classifier rejections of history-framed memos working as designed, all old -- not a defect. Confirms the ingestion classifier gates bad memos.'
+  status: completed
+  witness: gmsniff --classifier-rejects = 3, all 2026-06-15 (historical-framing/commit-hash-derivable/recent-commits-derivable) -- correct memorize-classifier rejections working as designed, all old, not a defect
+- id: recall-health-surfaces-clean
+  text: gmsniff --recall-misses=0 (no zero-hit recall queries in 7d = recall finds hits for everything), --table-drops=0 (no catastrophic embedding-dim table drops). Both healthy. Contrast with the recall-scores/modes 0-events blindness (separate row investigate-recall-observability-gap).
+  status: completed
+  witness: 'gmsniff --table-drops = 0 (genuine: no catastrophic embedding-dim drops). NOTE corrected: --recall-misses=0 was BLINDNESS not a clean signal (no rs_learn:recall events to check) -- fixed in fix-gmsniff-recall-honesty'
+- id: scope-recall-observability-fix
+  text: 'Root: gmsniff --recall-scores/misses/modes filter (e._sub==rs_learn && e.event==recall, fields hit/top_score/mode) but gm-log has ZERO rs_learn-sub events in 413670 over 7d. Recall IS observable via emitted events: plugkit:auto_recall.turn-entry (queries+count, 656 in 7d), plugkit:dispatch.end{verb:recall}(dur_ms,out_bytes), plugkit:phase.transitioned{recall_count}. The score/hit/mode data is NOT in any emitted event. Two fixes: (A) gmsniff honesty -- the 3 flags print an explicit ''rs_learn:recall scoring events not emitted by this plugkit build; recall observable via auto_recall/dispatch/recall_count'' + a fallback summary of the events that DO exist, replacing the silently-misleading bare 0 (same class as iter-10 embed-failures); (B) rs-learn/plugkit emit a structured rs_learn:recall event with {query,hit,top_score,mode} (proper, normal cascade, but needs locating the Rust recall path). Decide A vs B by rs-learn-recall-path reachability/cleanliness.'
+  status: completed
+  witness: decided path A (gmsniff honesty, in-reach) over path B (rs-learn emit + wasm cascade); located rs-learn recall() at crates/wasm/src/wasm_learn.rs:23 + host_log at wasm_host.rs:18; path B multi-component + hot-path risk -> deferred
+- id: fix-gmsniff-recall-honesty
+  text: 'Implement path A in gmsniff src/cli.js: add recallActivityFallback(all) + printRecallEmissionGap(all) helpers; in recallMisses/recallScores/recallModes, when 0 rs_learn:recall events, print an honest note (''0 rs_learn:recall scoring events emitted -- NOT no-misses; recall IS active via auto_recall.turn-entry=N, dispatch{verb=recall}=M avg Xms, phase.transitioned recall_count'') instead of the silently-misleading bare 0. Forward-compatible (works if rs-learn later emits the events). Also convert the decorative left-arrow glyph in recallModes to ASCII <-.'
+  status: completed
+  witness: 'gmsniff src/cli.js: added recallActivityFallback(all) + printRecallEmissionGap(all); recallMisses/recallScores/recallModes now print honest gap-note + activity when 0 rs_learn:recall events; decorative left-arrow -> ASCII <-; committed d2f3554 gmsniff master'
+- id: defer-rs-learn-recall-emission
+  text: 'Path B (proper long-term): rs-learn crates/wasm/src/wasm_learn.rs recall() at line 23 returns Vec<RecallHit> with scores + computes a mode (vector_top_k/fallback_like/kv_query); to feed gmsniff''s recall-scores/misses/modes, rs-learn would emit a structured rs_learn:recall event {query,hit,top_score,mode} via the host_log path (wasm_host.rs:18). DEFERRED this fire: needs rs-learn emit + host_log->gm-log sub/event routing (gm-log currently carries zero rs_learn-sub events; plugkit-wrapper logEvent emits plugkit:*/hook:*) + a 149MB plugkit.wasm cascade -- multi-component + hot-path risk, disproportionate vs the in-reach gmsniff honesty fix. Tracked for a dedicated session.'
+  status: completed
+  witness: 'path B tracked + deferred: rs-learn wasm_learn.rs:23 recall() returns scored hits + computes mode; emitting rs_learn:recall via host_log (wasm_host.rs:18) needs host_log->gm-log sub/event routing + 149MB plugkit.wasm cascade -- disproportionate vs the in-reach gmsniff fix'
+- id: validate-gmsniff-recall-fix
+  text: 'After fix: local node gmsniff --recall-misses/scores/modes --since 7d print the honest emission-gap note + real activity (auto_recall=655, dispatch{verb=recall}=70 avg 220ms, recall_count sum 1956) instead of bare 0; syntax OK; decorative left-arrow -> <-; committed d2f3554 gmsniff master, auto-publishes. Validate published version next.'
+  status: completed
+  witness: local node gmsniff --recall-misses/scores/modes --since 7d -> honest emission-gap note + auto_recall=655, dispatch{verb=recall}=70 avg 220ms, phase.transitioned recall_count sum 1956; node -c syntax OK; committed d2f3554 master, auto-publishes
+- id: validate-iter11-commit
+  text: iter-11 gm commit 3d56d252 on origin main (AGENTS.md work-verbs clarification + bootstrap drain); deviations_30m=0 this window proves the work-verbs/interleave correction held in practice (no new own stall).
+  status: completed
+  witness: iter-11 gm 3d56d252 on origin main (work-verbs clarification + bootstrap drain); deviations_30m=0 this window proves the work-verbs/interleave correction held in practice (no new own stall)
