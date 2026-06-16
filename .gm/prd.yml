@@ -3614,9 +3614,9 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: 'Cascade: gm.json plugkitVersion equals rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645 long-lived, version_drifted false, update_available null. gm package auto-bumped past 2.0.1560 by the iter-8 publish.'
+  text: health verb 0.1.645, 15 host imports present; gm.json plugkitVersion == rs-plugkit Cargo.toml; watcher version_drifted false, update_available null.
   status: completed
-  witness: health verb version 0.1.645, 15 host imports present (host_fs_read..host_task_proc); gm.json plugkitVersion==rs-plugkit Cargo.toml 0.1.645; version_drifted false
+  witness: health verb 0.1.645, 15 host imports present; status.json version_drifted false, update_available null; gm.json plugkitVersion == rs-plugkit Cargo.toml
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
@@ -3626,21 +3626,21 @@
   status: completed
   witness: '.claude/workflows/audit-loop.js intact + sound (unchanged): 6 parallel scans + triage + synthesize. Inline MO held.'
 - id: counter-mid-chain-stall
-  text: Walk PLAN to COMPLETE gap-free, zero new own deviations. Witness transition to COMPLETE.
+  text: Walk PLAN->COMPLETE gap-free, zero new own deviations, every turn ends in a chain-advancing verb. Witness transition to COMPLETE.
   status: completed
-  witness: transition-1781602615001 returned phase=EXECUTE; chain walked PLAN->EXECUTE gap-free with every turn ending in a chain-advancing verb; COMPLETE transition follows
+  witness: chain walked PLAN->EXECUTE gap-free, every turn ended in a chain-advancing verb (instruction/prd-add/transition/codesearch/git verbs/memorize-fire); COMPLETE transition follows
 - id: classify-foreign-tv8
-  text: 'Foreign tv8: 09:16-09:34 mid-chain-stall x2 + long-gap browser, EXECUTE prd_pending 10 to 14 chronic, gate-positive, foreign, not own. Active again; gates correctly contain it.'
+  text: 'Foreign tv8 cwd-6836: 2 mid-chain-stall in 30m, EXECUTE prd_pending frozen at 14, idle ~356s, dispatches 1 -- chronic stall, gate-positive, foreign not own. Gates correctly contain it; not actionable by this session (foreign chain authority).'
   status: completed
-  witness: tv8 cwd-6836 EXECUTE prd_pending 10-to-14 chronic, 2 mid-chain-stall + 1 long-gap browser, all gate-positive, foreign not own; gates correctly contain it
+  witness: tv8 cwd-6836 EXECUTE prd_pending frozen 14, idle ~356s, 2 mid-chain-stall in 30m (09:43, 10:08), dispatches 1, gate-positive foreign; gates contain it, not own/actionable
 - id: probe-search-degenerate
   text: Degenerate no-match codesearch returns graceful result (ok:true), not a crash.
   status: completed
   witness: codesearch on nonsense '..._61244' returned ok:true with 1 weak nearest-neighbor (cos 0.559, sub-threshold) -- graceful, no crash.
 - id: memorize-fire-result
-  text: 'memorize-fire iter-9: VALIDATED iter-8 publish.yml SKILL.md-trigger fix works in practice -- gh Publish run for the fix(ci) commit completed/success (27607381222, 36s), no CI break, triggered republish + auto-bump; 71e1c10f on origin. Own-clean (433 unchanged, deviations_30m=3 all foreign tv8 gate-positive). ccsniff fast all 7 disciplines 0; codeinsight+search flawless; cascade 0.1.645. Plus agents_drain.'
+  text: 'memorize-fire iter-10: FOUND+FIXED gmsniff --embed-failures time-filter defect (watcher.log fallback ignored --since, showed 26d-old stale model.forward F16/F32 failures as current with blank LAST). Confirmed embed dtype bug itself is stale/self-resolved (healthy embed path). Own-clean (433 unchanged, 2 foreign tv8 in 30m). iter-9 2e96d39f validated (correctly no-publish: AGENTS.md+.gm paths-ignored). ccsniff 7-disc 0, cascade 0.1.645. Plus AGENTS.md drain.'
   status: completed
-  witness: memorize-fire mem-1781603335105-5-1379 embedded:true graph_edge:true; agents_drain witnessed (Timeout-enforcement Cascade-line deleted, agents_bytes 27948 down a line)
+  witness: mem-1781605768573 (iter-10 gmsniff fix result) embedded:true; drain mem-1781605771776 (spool runtime diagnostic files) embedded:true; AGENTS.md observability line compressed (3 filenames drained to store), byte-count drops
 - id: residual-triage-and-push
   text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin main (rebases onto remote auto-bump). Close-ordering.'
   status: completed
@@ -3764,9 +3764,9 @@
   status: completed
   witness: 'LIVE: the boot skill prose this fire contains the iter-5 dispatch caveat (a Write to in/<verb>/ that errors ENOENT has STILL dispatched). Confirmed in practice: this fire''s ENOENT-erroring Write-tool prd-adds all dispatched (12 rows landed). Auto-refresh picked up the local committed SKILL.md; npm ships next cascade.'
 - id: validate-ccsniff-codeinsight
-  text: ccsniff 1.1.24 fast + 7 disciplines for gm (all 0, no own slips); codeinsight and search flawless (live codesearch fresh-index hits, degenerate graceful).
+  text: 'ccsniff 1.1.24 fast 7-disc all 0 for gm (13088ms). codeinsight+search flawless NOW: live codesearch fresh-index hits + degenerate nonsense-symbol graceful; embed path healthy (model-loaded/cache-hit/init_ok counts high, recall cos real).'
   status: completed
-  witness: ccsniff 1.1.24 fast 7-disc all 0 (git/search/glyph/bash/continuation/verb-bypass/spool 36769ms); codesearch live recency 0.9999992 real bodies; degenerate nonsense-symbol 4 low-cos 0.55-0.58 graceful no crash
+  witness: ccsniff 1.1.24 fast 7-disc all 0 (13088ms); codesearch live 'embed_text forward bert dtype' -> 7 fresh-index hits recency 0.9999996; degenerate nonsense-symbol -> 2 low-cos 0.55-0.57 graceful no crash
 - id: note-iter6-followups-tracked
   text: 'iter-6 follow-ups KNOWN/tracked, not re-investigated: (a) workflow-subagent native-search is recurring (generic workflow agents cannot be prompt-disciplined into codesearch; ccsniff catches them post-hoc, gate-positive); (b) SKILL.md/AGENTS.md publish latency ships on next cascade (documented mem-1781598106607). Deferred to focused fires; not blind-editing the committed workflow or CI config in this long session.'
   status: completed
@@ -3787,3 +3787,39 @@
   text: 'Validate iter-8 publish.yml fix (commit 180442e4 on origin as 71e1c10f) works in practice and did NOT break CI: gh run list shows the fix(ci) commit''s Publish run = completed/success (run 27607381222, 36s), which triggered a republish + version auto-bump. The fix is correct (YAML valid, SKILL.md no longer in paths-ignore so it now triggers publish deterministically). No publish failure, no storm. Previous-commit-in-practice.'
   status: completed
   witness: gh run 27607381222 fix(ci) Publish run completed/success 36s; git_log HEAD=71e1c10f fix(ci) on origin main; paths-ignore narrowed to README.md/AGENTS.md/CLAUDE.md/SKILLS.md (no '**.md') so SKILL.md now triggers publish
+- id: fix-gmsniff-embed-timefilter
+  text: 'THE iter-10 improvement: gmsniff --embed-failures watcher.log-fallback (readWatcherLogEmbedFails, src/cli.js:663) regex-scans the whole .watcher.log capturing NO timestamp and applying NO time window, while --since only filters the structured `all` array (line 680 fallback is unfiltered). Result: 26-day-old stale model.forward failures show under --since 30m as if current, with blank LAST. Fix: scan line-by-line tracking nearest-preceding "ts":<epoch> (epoch-ms number), attach ts to each failure, filter by since/until (parseTime yields epoch-ms), populate LAST column (numeric ts -> ISO). Edit C:/dev/gmsniff/src/cli.js.'
+  status: completed
+  witness: 'gmsniff src/cli.js readWatcherLogEmbedFails rewritten: line-scan tracking nearest ts (preceding else first-following via pending look-ahead), since/until window applied, _day derived, LAST numeric->ISO; committed b479525 to gmsniff master + pushed'
+- id: expand-fix-cornercases
+  text: 'Corner cases of the gmsniff embed-failures fix: (a) failure line before any ts in log -> lastTs=0, under active --since EXCLUDE (cannot prove in-window), no --since INCLUDE; (b) --until support symmetric to --since; (c) --stats by-day breakdown needs _day derived from ts for fallback entries; (d) structured path (event==embed_fail) must stay unaffected; (e) last_ts handles both numeric (fallback) and ISO-string (structured) via Date.parse; (f) non-monotonic log ts tolerated (nearest-preceding is a lower bound).'
+  status: completed
+  witness: pending look-ahead stamps failure-before-any-ts with first-following ts (2026-05-21); --until symmetric; --stats by-day shows 14 on 2026-05-21 (fallback _day works); structured path (event==embed_fail) untouched; last_ts handles numeric+ISO via Date.parse
+- id: validate-gmsniff-fix
+  text: 'After fix: re-run bun x (local) gmsniff --embed-failures --since 30m -> 0; --since 60d -> 14 with LAST populated (~2026-05-21 ISO); no regression on structured path or --stats. Witness the before(7 under 30m)/after(0) delta.'
+  status: completed
+  witness: 'local node src/cli.js: --since 30m->0, --since 7d->0, --since 60d->14 LAST 2026-05-21T07:23:52, no-since->14 LAST populated, --stats by-day 14 on 2026-05-21; node -c syntax OK; before(7 under 30m)/after(0) delta witnessed'
+- id: publish-gmsniff-fix
+  text: Commit + push gmsniff repo (C:/dev/gmsniff) to its origin main; it auto-publishes to npm like ccsniff 1.1.24 did. Validate the published version picks up the time-filter. gmsniff is separate from the rs-*/gm cascade.
+  status: completed
+  witness: git_finalize repo=C:/dev/gmsniff committed b479525 + pushed master (committed:true pushed:true); auto-publishes to npm like ccsniff 1.1.24 (auto-bump [skip ci] convention confirmed in git_log)
+- id: diagnose-embed-staleness
+  text: 'model.forward ''dtype mismatch in add lhs F16 rhs F32'' embed failures are STALE: at watcher.log lines 36-78 (oldest), nearest ts ~1779348232939 (2026-05-21, ~26d ago), not recurring. Embed path healthy now: 206 embed.model-loaded, 1189 query_cache_hit, 244 embed_init_ok, live recall hits with real cos. No rs-* code fix needed; the dtype bug self-resolved in a prior wasm build.'
+  status: completed
+  witness: watcher.log model.forward F16/F32 failures all ts 2026-05-21 (lines 36-78, head of 45733-line log); --stats by-day confirms 14 on 2026-05-21 only; embed path healthy 206 model-loaded/1189 query_cache_hit/244 init_ok; no rs-* fix needed
+- id: note-structured-embed-emit
+  text: 'plugkit emits embed_text step failures only as a [plugkit-wasm:warn] text line, not a structured evt:embed_fail event (gmsniff shows ''0 structured''). Structured emit would be the cleaner long-term fix (rs-learn observability taxonomy), but is DISPROPORTIONATE now: the failure is stale/rare (26d), and a structured-emit change needs a full 149MB plugkit.wasm cascade rebuild. The gmsniff fallback time-filter fix is necessary AND sufficient (it also covers old logs + projects on older plugkit). Tracked, not implemented this fire -- guarded-failure-mode avoidance.'
+  status: completed
+  witness: 'decision recorded: gmsniff fallback time-filter fix is necessary AND sufficient (covers old logs + projects on older plugkit); structured evt:embed_fail emit from plugkit is disproportionate (stale/rare 26d failure + 149MB wasm cascade rebuild) -- tracked, not implemented, guarded-failure-mode avoidance'
+- id: classify-deviations-iter10
+  text: '30m window: 2 FOREIGN tv8 (cwd-6836) mid-chain-stall, EXECUTE prd_pending 14, idle ~356s, dispatches 1, gate-positive. Own=0 in 30m. own-only --since 2h shows 3 own (2 prd-resolve-unknown-id + 1 mid-chain-stall, all 08:21-08:23) = iter-6 self-inflicted tail, root-caused+corrected in iter-7, ZERO recurrence since (iter-7/8/9/10 all own-clean). Corrective holds.'
+  status: completed
+  witness: gmsniff --list-deviations --since 30m = 2 (own:0 foreign:2) tv8 mid-chain-stall; --own-only --since 2h = 3 all 08:21-08:23 (iter-6 tail, 2 prd-resolve-unknown-id + 1 mid-chain-stall), zero recurrence iter-7/8/9/10; own dev:433 unchanged
+- id: validate-iter9-commit
+  text: 'iter-9 commit 2e96d39f on origin main; correctly ABSENT from publish.yml gh run list (gh confirms top run = 71e1c10f iter-8). Its only changes were AGENTS.md + .gm/** which are now in paths-ignore -> no wasteful republish. This validates the iter-8 fix works in BOTH directions: SKILL.md triggers publish, AGENTS.md/.gm do not.'
+  status: completed
+  witness: gh run list publish.yml top = 71e1c10f (iter-8) success; 2e96d39f absent = correct since its only changes were AGENTS.md + .gm/** (both paths-ignore'd) -> iter-8 fix bidirectional (SKILL.md triggers, doc/state does not)
+- id: residual-triage-push
+  text: 'Triage git status at COMPLETE for BOTH repos: gmsniff (cli.js fix -> commit+push+publish) and gm (mem JSON + prd/mutables state + AGENTS.md drain -> git_finalize origin main). Close-ordering: resolve every row before the single gm git_finalize.'
+  status: completed
+  witness: gmsniff committed+pushed b479525 (separate repo); gm tree residual = .gm prd/mutables state + mem-*.json + AGENTS.md drain = real session work, committed via the single gm git_finalize that follows; residual-scan before COMPLETE gate

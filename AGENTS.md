@@ -162,7 +162,7 @@ Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI
 
 ## Spool observability surface
 
-One-shot system-state probe: dispatch `plugkit health` via the file-spool before assuming any component is broken. Three runtime diagnostic files at `.gm/exec-spool/` root (`.status.json`, `.last-session-start.json`, `.bootstrap-error.json`) are readable directly via Read (runtime-data exception). Field enumeration in rs-learn (`recall: plugkit health verb fields`).
+One-shot system-state probe: dispatch `plugkit health` via the file-spool before assuming any component is broken; the runtime diagnostic files at `.gm/exec-spool/` root are readable directly via Read (runtime-data exception). File list + health fields in rs-learn (`recall: spool runtime diagnostic files`, `recall: plugkit health verb fields`).
 
 ## Site Build & Documentation
 
