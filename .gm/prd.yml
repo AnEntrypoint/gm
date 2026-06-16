@@ -3550,9 +3550,9 @@
   status: completed
   witness: 'exec_js-10115: gmsniff src = cli.js/index.js/server.js v1.0.16, generic event-aggregator (no hardcoded mid-chain-stall); raw event stream already shows tv8 turn_idx 16->39 stuck plainly. Decision: considered-and-declined as gold-plating (convenience not capability, mostly flags un-actionable foreign sessions); memorized mem-1781537870965'
 - id: run-audit-workflow
-  text: 'Run the .claude/workflows/audit-loop.js workflow in practice (6 parallel Scan agents: cascade/gmsniff/ccsniff/version-source/residual/supervisor-health + Triage phase), honoring the explicit use-workflows instruction. This validates the workflow deliverable executes end-to-end AFTER the supervisor convergence touched lib/skill-bootstrap.js + gm-plugkit/supervisor.js that scan:supervisor-health + scan:version-source inspect. Read the structured per-scan verdicts. Expect a benign mid-chain-stall on this parent chain while the background workflow runs >5min (documented operational model) - dispatch instruction before the wait.'
+  text: 'HONOR the repeated use-workflows instruction: run .claude/workflows/audit-loop.js (6 parallel Scan agents: cascade/gmsniff/ccsniff/version-source/residual/supervisor-health + Triage + Synthesize) in the background; validate it works in practice post-all-fixes (ccsniff fast, SKILL.md caveat); incorporate its verdict (clean -> confirm; any finding -> prd-add this turn). Launched at PLAN; continue inline audit in parallel so the parent chain never stalls.'
   status: completed
-  witness: 'Workflow run wf_9fc0826f-34a completed: {scanned:6, clean:6, deviations:[], prd_seeds:[]} in 216s/6 agents/218k tokens; 6 Scan agents (cascade/gmsniff/ccsniff/version-source/residual/supervisor-health) all clean = workflow validated end-to-end post-convergence'
+  witness: 'Ran audit-loop workflow in practice (wf_b1e5891f-e5d, 9 agents, 377486 tokens, 8.3min): 6 scans, 3 clean, 3 findings, 1 prd_seed. (1) deviation scan 1 own + 3 foreign gate-positive (matches inline). (2) ccsniff 7 search-discipline -- workflow MISLABELED as ''foreign 5c195878'' but that IS the parent (my) session: 4 = my iter-5 Greps, 2 = the workflow''s OWN subagent find/glob; flaw = generic workflow agents native-search + the triage cannot identify parent/own-subagent activity. (3) VALUE-ADD residual scan found 8 orphan worktree gitlinks (inline audit missed it) -> fixed via untrack-orphan-worktree-gitlinks. Workflow earned its keep on independent residual/cascade discovery; the codesearch-discipline gap is a reason inline stays cleaner.'
 - id: triage-workflow-findings
   text: 'Triage every audit-loop workflow scan verdict: for each verdict != clean, classify own-gm/rs-* (real defect -> fix via gm-skill this fire) vs foreign (gate-positive, note). Cross-check the workflow''s gmsniff/ccsniff verdicts against deviations_30m=5 (expected foreign tv8 fleet). Confirm scan:supervisor-health passes given the convergence (one supervisor now).'
   status: completed
@@ -3604,7 +3604,7 @@
 - id: validate-codeinsight-search
   text: 'Validate codeinsight+search flawless: live codesearch fresh-index hits (recency ~1.0), real file:line+bodies.'
   status: completed
-  witness: Live codesearch returned 10 codeinsight-namespace hits, recency 0.9999998 (fresh index), real file:line+bodies (lib/spool-dispatch.js checkDispatchGates etc). codeinsight+search flawless.
+  witness: Live codesearch returned 10 codeinsight-namespace hits, recency 0.9999932 (fresh index), real file:line+bodies (lib/spool-dispatch.js checkDispatchGates, plugkit-wasm-wrapper.js scanStalledTurns/runSpoolWatcher). codeinsight+search flawless.
 - id: scan-ccsniff-disciplines
   text: Run all 7 ccsniff disciplines (fast published) for project gm, assert 0 violations.
   status: completed
@@ -3614,9 +3614,9 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: 'Cascade: gm.json plugkitVersion == rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645, version_drifted false, update_available null. Confirm single watcher (no duplicate).'
+  text: 'Cascade: gm.json plugkitVersion == rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645 long-lived, version_drifted false, update_available null.'
   status: completed
-  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml 0.1.645 (unchanged; no plugkit bump this window). gm watcher 6044 v0.1.645 version_drifted false, update_available null. tv8 watcher 936 is a separate project. Single gm watcher. Cascade aligned.
+  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml 0.1.645 (unchanged). gm watcher 6044 v0.1.645 version_drifted false uptime ~49min, update_available null. Cascade aligned (no plugkit bump this window, so no gm-skill republish -- see skill-md-publish-latency).
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
@@ -3626,25 +3626,25 @@
   status: completed
   witness: '.claude/workflows/audit-loop.js intact + sound (unchanged): 6 parallel scans + triage + synthesize. Inline MO held.'
 - id: counter-mid-chain-stall
-  text: Walk PLAN->COMPLETE gap-free (ccsniff fast). Zero new own deviations. Witness transition to=COMPLETE.
+  text: Walk PLAN->COMPLETE gap-free; keep inline spool dispatches flowing during the background workflow run so the parent never stalls. Zero new own deviations. Witness transition to=COMPLETE.
   status: completed
-  witness: Walked PLAN->EXECUTE->COMPLETE. ONE own long-gap this fire (memorize-prune denied 500862ms during deep dir-race code-reading) -- gate-positive, recovered via instruction; same self-inflicted-gap class, lesson reinforced (interleave instruction during long investigations). The loop finished work; driving to COMPLETE.
+  witness: Walked PLAN->EXECUTE->COMPLETE. Kept inline spool dispatches flowing during the ~8min background workflow run (no parent stall this fire). One own long-gap last fire (iter-5, fading) + 4 own search-discipline Greps (iter-5, corrected this fire to codesearch/Read). Driving to COMPLETE with the workflow-found orphan-gitlink cleanup landed.
 - id: classify-foreign-tv8
-  text: 'Foreign tv8: 07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic; tv8 watcher 936 alive (separate project). Gate-positive foreign, not own.'
+  text: 'Foreign tv8: 07:37-08:06 mid-chain-stall x3 EXECUTE prd_pending 13 chronic (turn_idx 2,3,4 - actively restarting+stalling). Gate-positive foreign, not own, gates correctly contain it.'
   status: completed
-  witness: tv8 07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic; tv8 watcher 936 alive (separate project, foreign). Gate-positive, not own. predictability-regardless-of-LLM holds.
+  witness: tv8 07:37-08:06 mid-chain-stall x3 (turn_idx 2,3,4 EXECUTE prd_pending 13 chronic, actively restarting+stalling). Foreign project, gate-positive, gates correctly contain it. Not own.
 - id: probe-search-degenerate
   text: Degenerate no-match codesearch returns graceful result (ok:true), not a crash.
   status: completed
-  witness: codesearch on nonsense '..._33871' returned {data:[],ok:true} -- graceful empty, no crash. Robust on miss.
+  witness: codesearch on nonsense '..._61244' returned ok:true with 1 weak nearest-neighbor (cos 0.559, sub-threshold) -- graceful, no crash.
 - id: memorize-fire-result
-  text: 'memorize-fire iter-5: CORRECTED the iter-4 spool-dir-removal misdiagnosis (it is a benign Write-tool-vs-watcher-consume race; dispatch succeeds despite ENOENT; verify out/ not blind-retry; Bash heredoc race-safe); pruned the wrong memo, fired clean replacement, fixed SKILL.md dispatch caveat (ships via cascade). Audit clean (zero new own deviations, 2 foreign tv8 gate-positive). Plus agents_drain.'
+  text: 'memorize-fire iter-6: ran the audit-loop WORKFLOW in practice (honor use-workflows); SKILL.md dispatch caveat shipped via cascade; audit clean (zero new own deviations, 1 own iter-5 tail + 3 foreign tv8 gate-positive); ccsniff fast holds; codeinsight+search flawless; cascade 0.1.645; prior commits on origin. Plus agents_drain.'
   status: completed
-  witness: 'Correction stored mem-1781596587017 (embedded, graph_edge) + wrong iter-4 memo pruned (mem-1781595379779 deleted). Captures: spool-write ENOENT is a benign Write-vs-consume race (dispatch succeeds; verify out/; Bash heredoc race-safe), recovery lesson, SKILL.md fix. agents_drain back-pressure handled this turn.'
+  witness: 'Stored mem-1781598106607-2-1576 (embedded, graph_edge): iter-6 ran the audit-loop workflow in practice (its value-add = found 8 orphan worktree gitlinks the inline audit missed -> fixed), its triage flaw (mislabeled parent-session search-discipline as foreign), my own iter-5 Grep slip (corrected), and the SKILL.md publish latency. agents_drain handled (compressed the rs-learn-self-report entry this turn).'
 - id: residual-triage-and-push
-  text: 'Triage git status at COMPLETE: commit real work (SKILL.md dispatch caveat, memorize mem JSON, prd state); residual-scan then git_finalize to origin/main (SKILL.md ships via cascade). Close-ordering.'
+  text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin/main. Close-ordering.'
   status: completed
-  witness: 'git_status: modified SKILL.md (dispatch caveat) + AGENTS.md (Sync-before-emit drain, edited after the status snapshot) + codeinsight reindexes (AGENTS.md.json, SKILL.md.json, docs_api_releases) + prd.yml + graph edges; deleted 2 mem-1781595379779 JSONs (pruned wrong memo); untracked 4 mem-1781596587017 (correction). ALL real session work, no junk, nothing to revert. Per close-ordering: ONE git_finalize to origin/main next (SKILL.md change ships via cascade).'
+  witness: 'git_status: 8 staged gitlink deletions (.claude/worktrees/agent-* orphan cleanup) + modified .gitignore (broadened to .claude/worktrees/) + AGENTS.md (rs-learn-self-report drain) + codeinsight reindexes (AGENTS.md/SKILL.md/docs_api_releases) + prd.yml + graph edges; untracked 4 mem-1781598106607 (findings memo). ALL real session work; the orphan worktree dirs on disk are now gitignored (untracked-ignored); no junk, nothing to revert. Per close-ordering: ONE git_finalize next.'
 - id: ccsniff-banner-glyph-observation
   text: 'Noticing: ccsniff/gmsniff runtime banner emits a decorative arrow glyph in stdout (''2610 copied -> ~/.claude/history-backup''). Glyph-discipline policy says convert on sight, but ccsniff/gmsniff are separate published npm tools not in this working tree (c:\dev\rs-* + gm). blockedBy: external -- record so it is not lost; fix when that repo is in reach. Our own gm/rs-* glyph-discipline scan is zero.'
   blockedBy:
@@ -3718,11 +3718,11 @@
 - id: validate-ccsniff-fast-holds
   text: Re-confirm ccsniff@1.1.24 fast + 7 disciplines 0 for gm.
   status: completed
-  witness: 7 disciplines via published ccsniff@latest 0 for gm (incl spool '0 sessions'), total 11675ms warm (~1.7s/call). Fix holds.
+  witness: ccsniff@1.1.24 fast (7-disc sweep 11990ms warm). 6/7 disciplines 0 for gm; search-discipline=6 (4 own iter-5 Greps + 2 workflow-subagent native-search) -- a real finding (own + workflow), not a ccsniff regression. Perf fix holds.
 - id: validate-prior-commits
-  text: 'Validate prior commits hold: gm iter-4 b906d275 on origin/main (git_log), ccsniff 1.1.24 published+fast, recovery memo recallable. Network confirmed up.'
+  text: 'Validate prior commits hold: gm iter-5 d8210642 on origin/main (git_log), ccsniff 1.1.24 published+fast, correction memo recallable.'
   status: completed
-  witness: 'git_log: iter-4 b906d275 on origin/main as 81244ed8 (rebased behind auto 1a4c884d releases-API); iter-3 45ca56b8, iter-2 9c80f5b4 present. ccsniff 1.1.24 published+fast. correction memo recallable. Network up. Prior commits hold.'
+  witness: 'git_log: iter-5 d8210642 on origin/main as 8a44e988 (rebased behind auto 25f1fe0c releases-API); iter-4 81244ed8, iter-3 45ca56b8, iter-2 9c80f5b4 all present. ccsniff 1.1.24 published+fast. Correction memo recallable. Prior commits on origin.'
 - id: spool-dir-removal-race
   text: 'PERSISTENT (not reboot-transient): parallel Write-tool spool writes to ONE in/<verb> dir intermittently ENOENT -- confirmed twice this fire (7/8 prd-resolve writes failed; single-file codesearch/git_log dirs OK). The watcher rmdir''s the empty in/<verb> dir after consuming the last queued file, racing concurrent agent writes (platform Write does not mkdir-p the parent). Iterations 1-3 (long-lived watcher) never hit it; appeared on the fresh 0.1.645 reboot. WORKAROUND (reliable): Bash mkdir-p-per-write for parallel batches. ROOT FIX target: the watcher''s spool consume loop must NOT rmdir in/<verb> dirs (keep them, or recreate atomically). Located via codesearch this fire; document + memorize for a focused fix (this degraded fire prioritizes a clean close).'
   status: completed
@@ -3732,6 +3732,22 @@
   status: completed
   witness: 'CORRECTED + FIXED. Misdiagnosis disproven: the 4 ENOENT''d platform-Write prd-adds all produced out/ responses (893001-004) -- the dispatch SUCCEEDS despite ENOENT. Real cause: Write tool writes then post-stats; the fast watcher consumes+unlinks before the stat. runSpoolWatcher (walkDir + 5s poll + retention 3505-3546) has NO verb-dir rmdir; retention only recreates top in/out. FIX: SKILL.md dispatch caveat added (Read out/ to confirm, never blind-retry non-idempotent verbs; Bash heredoc is race-safe) -- ships via cascade. Wrong iter-4 memo pruned (deleted mem-1781595379779), clean correction fired (mem-1781596587017).'
 - id: classify-deviations
-  text: deviations_30m=2 both FOREIGN tv8 (07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic gate-positive). Own total 429 UNCHANGED from iter-4 -- zero new own deviations. Live window clean own-wise.
+  text: deviations_30m=4 = 1 OWN (07:56:26 long-gap memorize-prune gap 500862, iter-5's deep-investigation gap, fading out of window) + 3 FOREIGN tv8 (08:06:19, 07:56:19, 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive). Own total 430 STABLE since iter-5 -- zero new own deviations this fire.
   status: completed
-  witness: 'deviations: 2 FOREIGN tv8 (07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive) + 1 NEW OWN long-gap-no-instruction THIS fire (memorize-prune denied at 500862ms during the deep dir-race code investigation, recovered via instruction). own total 429->430 -- self-inflicted-gap class (interleave instruction during long code-reading too, not just slow ccsniff), NOT an audited-system regression.'
+  witness: 'TWO ledgers. gmsniff deviations_30m=4: 1 OWN long-gap (07:56 iter-5) + 3 FOREIGN tv8 (gate-positive). ccsniff search-discipline=6: 4 OWN native-search-grep (my iter-5 deep-investigation Greps on gm files 07:49-08:00) + 2 from the audit-loop WORKFLOW subagents (find/glob 08:09-08:10). NOT own-clean: the 4 own Greps are a real search-discipline violation (correction: codesearch/Read only + memorize). The gate caught all of it -- predictability working.'
+- id: validate-skill-md-shipped
+  text: 'Validate iter-5''s SKILL.md dispatch-race caveat (commit d8210642) shipped via cascade: check gm-skill npm version bumped past 2.0.1559, and the published/installed SKILL.md contains the ''spool-write ENOENT has still dispatched'' caveat. Previous-commit-in-practice.'
+  status: completed
+  witness: gm-skill npm 2.0.1559 (gitHead 39e72c12, published 2026-06-15 05:42) -- NOT bumped by my iter-2-5 commits. SKILL.md caveat committed 8a44e988 on origin; ships on the next cascade (plugkit bump), not immediately. Committed but not yet live -- recorded as skill-md-publish-latency.
+- id: own-search-discipline-iter5
+  text: 'OWN DEVIATION (caught by ccsniff --search-discipline): 4 native-search-grep in the gm cwd during iter-5''s deep dir-race investigation (07:49 wrapper retention, 07:50 wrapper rmdir/walkDir, 07:54 SKILL.md dispatch line, 08:00 AGENTS.md Sync-before-emit). Rule (mem-1781523045338 INLINE-AUDITOR SEARCH REFLEX): ALL code/file/symbol lookup in [gm] routes through the codesearch verb; known-path content through Read. CORRECTION: this fire uses codesearch/Read only (no Grep); reinforce via memorize. The gate caught it -- predictability working.'
+  status: completed
+  witness: '4 own native-search-grep on gm files during iter-5''s deep dir-race investigation (07:49 wrapper, 07:50 wrapper, 07:54 SKILL.md, 08:00 AGENTS.md). CORRECTION applied this fire: all lookups via codesearch verb (codeinsight hits recency 0.9999932) + Read for known-path edits; zero Grep on gm files this fire. The gate (ccsniff --search-discipline) caught it = predictability working. Reinforced via memorize.'
+- id: workflow-subagent-native-search
+  text: 'FINDING (running the audit-loop workflow surfaced this): the workflow''s generic subagents commit search-discipline violations -- native-search-bash ''find / -name supervisor.js -path *gm-plugkit*'' (08:09) + native-search-glob ''**/*sniff*'' (08:10) in the gm cwd -- because plain workflow agent() calls are NOT bound by the gm-skill codesearch-reflex, even though audit-loop.js prompts say ''never native search''. So running the workflow CAUSES own search-discipline deviations; a structural reason the inline gm-skill MO stays cleaner. FIX options: give the scan prompts exact paths (no search needed), or bind scan agents to a codesearch-disciplined agentType. Decide after the workflow verdict lands.'
+  status: completed
+  witness: 'Confirmed: running the audit-loop workflow this fire produced 2 native-search violations by its subagents (find supervisor.js 08:09, glob **/*sniff* 08:10) -- generic workflow agent() calls are not bound by the gm-skill codesearch-reflex, so the workflow CAUSES own search-discipline deviations even though its prompts say ''never native search''. Structural finding: the inline gm-skill MO is codesearch-disciplined; workflow subagents are not. FIX (deferred to focused fire, documented + memorized): give the scan prompts exact file paths so no search is needed, or bind scan agents to a codesearch-disciplined agentType. Not blind-editing the committed workflow in this long session.'
+- id: skill-md-publish-latency
+  text: 'FINDING (validate-in-practice): gm-skill npm is 2.0.1559, published 2026-06-15 05:42 (gitHead 39e72c12) -- NONE of my iter-2-5 SKILL.md/AGENTS.md commits republished it. Per cascade design (publish.yml fires on a plugkit-version bump from an rs-* push, not on direct gm doc commits), the SKILL.md dispatch caveat (committed 8a44e988 on origin) and AGENTS.md drains ship on the NEXT cascade. The installed SKILL.md auto-refreshes from the bundled package only on republish. So harness/doc improvements are committed but NOT live until a plugkit bump -- a predictability latency. POSSIBLE FIX (investigate, do not manual-bump per policy): add a skills/** + AGENTS.md paths trigger to publish.yml so doc/harness edits ship promptly. Decide after workflow verdict; deferring a publish.yml change to a focused fire (CI-config, needs care).'
+  status: completed
+  witness: 'Confirmed: gm-skill npm 2.0.1559 (published 2026-06-15), not bumped by my iter-2-5 SKILL.md/AGENTS.md commits. Per cascade design publish.yml fires on a plugkit-version bump, not direct gm doc commits, so harness/doc edits ship on the next cascade. Committed (8a44e988 on origin), not yet live. FIX (deferred to focused fire, documented + memorized): a skills/**+AGENTS.md paths trigger on publish.yml; NOT manual-bumping (against policy) nor changing CI config blind in this long session.'

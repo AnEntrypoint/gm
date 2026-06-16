@@ -120,7 +120,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **Behavioral discipline lives in plugkit's `instruction` verb**: dispatch `instruction` for the live phase-specific prose (Three-Layer Admission Filter, maturity-first emit, closure anti-shapes, code invariants); do not duplicate it here. Enumeration in rs-learn (`recall: instruction-verb behavioral discipline invariants`).
 
-**The agent IS the LLM rs-learn calls**: rs-learn never reaches a separate judge model for a quality score, relevance call, prune decision, route outcome, or loss signal -- plugkit IS the harness and the agent IS the model, so each is an inline decision reported through the spool. Heavy `recall`+`learn` grounds the judgments. Per-core internals (MicroLoRA self-report logit, FastGRNN router, deep-core record_loss, attention nudge_relation, memorize-prune) in rs-learn (`recall: rs-learn self-report core internals`).
+**The agent IS the LLM rs-learn calls**: rs-learn never reaches a separate judge model for a quality score, relevance, prune, route, or loss signal -- plugkit IS the harness and the agent IS the model, each an inline decision reported through the spool. Per-core internals in rs-learn (`recall: rs-learn self-report core internals`).
 
 **host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error). Detail in rs-learn (`recall: host_exec_js synchronous`).
 

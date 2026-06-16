@@ -71,7 +71,7 @@ tmp/
 .gm/disciplines/codeinsight-manifest/._*
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
-.claude/worktrees/*/.gm/
+.claude/worktrees/
 # <<< plugkit managed
 .gm/pw-sock-*/
 
