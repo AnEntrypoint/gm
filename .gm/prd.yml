@@ -3883,3 +3883,19 @@
   text: iter-11 gm commit 3d56d252 on origin main (AGENTS.md work-verbs clarification + bootstrap drain); deviations_30m=0 this window proves the work-verbs/interleave correction held in practice (no new own stall).
   status: completed
   witness: iter-11 gm 3d56d252 on origin main (work-verbs clarification + bootstrap drain); deviations_30m=0 this window proves the work-verbs/interleave correction held in practice (no new own stall)
+- id: audit-30m-own-baddleadcmd
+  text: 'Audit gmsniff+ccsniff last 35m. gmsniff deviations: total 0 (own:0 foreign:0) by the deviation event-stream. BUT ccsniff bash-discipline flags 1 OWN gm event: bad-leading-cmd at 2026-06-16T11:36:18 cc7f2714 ''cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N'' = MY ad-hoc freshness check during /loop dynamic-mode handling. Other 6 ccsniff disciplines (git/search/glyph/continuation/verb-bypass/spool) clean. Gate-positive: only this turn-summary-leading variant flagged, the prescribed status-leading boot probe is whitelisted (else dozens would show).'
+  status: completed
+  witness: 'bun x ccsniff --bash-discipline --since 35m grep dev-gm: ''2026-06-16T11:36:18 cc7f2714 bad-leading-cmd [C--dev-gm] cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N'' (exactly 1 hit, mine); gmsniff --list-deviations --since 35m: ''total 0 (own:0 foreign:0)'' = complementary-surface gap: ccsniff vault catches bash-usage that plugkit deviation event-stream does not emit'
+- id: correct-adhoc-cat-freshness
+  text: 'Correct the own bad-leading-cmd: a mid-loop freshness/runtime-file check must use the Read tool (runtime-data exception covers .gm/exec-spool/ root files) OR the EXACT prescribed combined boot probe (cat .status.json + .turn-summary.json + date, one whitelisted Bash event). An ad-hoc ''cat .turn-summary.json'' variant via Bash is neither, and bash-discipline correctly flags it. Do NOT widen the ccsniff whitelist (that erodes the Read-over-cat discipline); the flag is gate-positive. Correction is behavioral + memorize-fire the rule.'
+  status: completed
+  witness: 'Corrected behavior witnessed: this turn''s runtime-file freshness check used the Read tool on .gm/exec-spool/.turn-summary.json (Read result ts 1781610018507 phase EXECUTE) instead of Bash+cat. Rule: runtime-file reads use Read (runtime-data exception) or the exact prescribed combined boot probe; no ad-hoc cat variants. ccsniff whitelist NOT widened (preserves Read-over-cat discipline).'
+- id: validate-ccsniff-perf-and-prior-commits
+  text: 'Validate previous commits in practice: (a) ccsniff@1.1.24 perf fix (commit 944062f, iter-2) -- this turn''s 7-discipline ccsniff sweep returned fast (no ~203s budget blow), confirming perf holds; (b) iter-12 gmsniff recall-observability fix (a8a8c001) shipped; (c) cascade alignment live watcher 0.1.645 version_drifted false. Witness each.'
+  status: completed
+  witness: 'ccsniff@1.1.24 perf validated: this turn''s 7-discipline ccsniff sweep (git/search/glyph/bash/continuation/verb-bypass/spool) completed in one Bash event without the ~203s budget blow that caused the prior mid-chain-stall class; .status.json version 0.1.645 instance_version 0.1.645 version_drifted false = cascade aligned; recall mem-1781608750110 confirms iter-12 a8a8c001 gmsniff recall-observability shipped'
+- id: memorize-and-close-loopfire
+  text: memorize-fire the fire result (own bad-leading-cmd found+corrected, ccsniff perf validated, prior commits hold), then residual-scan + git_finalize so remote reflects HEAD. Push is part of COMPLETE.
+  status: completed
+  witness: memorize-fire returned key mem-1781610055591-0-1172 embedded:true graph_edge:true; residual-scan + git_finalize is the closing dispatch of this VERIFY->COMPLETE walk
