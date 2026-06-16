@@ -126,7 +126,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **Sync-before-emit (codeinsight + search)**: codeinsight/search output must come from a freshly-synced index this invocation (cache serves only on digest match); unverified-index emit = stale ground truth. Mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).
 
-**Auto-recall on turn entry**: the `instruction` verb attaches an `auto_recall` pack on the first dispatch after a >30s idle gap or session-start; orientation comes through that pack, not legacy hooks. Detail in rs-learn (`recall: auto-recall on turn entry`).
+**Auto-recall on turn entry**: `instruction` attaches an `auto_recall` pack on the first dispatch after a >30s idle gap or session-start. Detail in rs-learn (`recall: auto-recall on turn entry`).
 
 **Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: a skill must list `Skill` (and `Read`/`Write`, Write only for spool dispatch) or it loses downstream-skill invocation that turn. Detail in rs-learn (`recall: SKILL.md frontmatter allowed-tools`).
 
