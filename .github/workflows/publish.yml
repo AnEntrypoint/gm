@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'docs/**', 'site/**', 'LICENSE', '.gitignore', 'CHANGELOG.md', '.gm/**']
+    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', 'SKILLS.md', 'docs/**', 'site/**', 'LICENSE', '.gitignore', 'CHANGELOG.md', '.gm/**']
   workflow_dispatch:
 
 concurrency:
