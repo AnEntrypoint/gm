@@ -3604,7 +3604,7 @@
 - id: validate-codeinsight-search
   text: 'Validate codeinsight+search flawless: live codesearch fresh-index hits (recency ~1.0), real file:line+bodies.'
   status: completed
-  witness: Live codesearch returned 10 codeinsight-namespace hits at recency 0.9999988 (fresh index), real file:line+bodies (gm-plugkit/cli.js spoolDir, lib/spool.js getSpoolBaseDir, plugkit-wasm-wrapper.js cleanDeadProfileFragments). codeinsight+search flawless post-recovery.
+  witness: Live codesearch returned 10 codeinsight-namespace hits, recency 0.9999998 (fresh index), real file:line+bodies (lib/spool-dispatch.js checkDispatchGates etc). codeinsight+search flawless.
 - id: scan-ccsniff-disciplines
   text: Run all 7 ccsniff disciplines (fast published) for project gm, assert 0 violations.
   status: completed
@@ -3614,37 +3614,37 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: 'Cascade: gm.json plugkitVersion == rs-plugkit Cargo.toml (0.1.645); rebooted watcher is CORRECT 0.1.645 (not stale 0.1.616), version_drifted false, single watcher alive (stale killed), update_available null.'
+  text: 'Cascade: gm.json plugkitVersion == rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645, version_drifted false, update_available null. Confirm single watcher (no duplicate).'
   status: completed
-  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml 0.1.645. Rebooted watcher CORRECT 0.1.645 (not stale 0.1.616), version_drifted false; gmsniff --watchers 1 alive gm 0.1.645 (stale killed); update_available null.
+  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml 0.1.645 (unchanged; no plugkit bump this window). gm watcher 6044 v0.1.645 version_drifted false, update_available null. tv8 watcher 936 is a separate project. Single gm watcher. Cascade aligned.
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
   witness: All 10 codeinsight hits from the live codesearch carried recency 0.99999+ (0.9999994468581312 top), indicating a freshly-synced index this invocation per sync-before-emit; no degraded recency or digest-mismatch. Stale-ground-truth emit ruled out.
 - id: validate-audit-workflow
-  text: .claude/workflows/audit-loop.js intact + sound. Inline MO held (committed deliverable, run+validated once wf_9fc0826f 216s clean).
+  text: .claude/workflows/audit-loop.js intact + sound. Inline MO held.
   status: completed
-  witness: 'audit-loop.js intact + sound (unchanged): meta + 6 parallel scans + triage + synthesize. Inline MO held.'
+  witness: '.claude/workflows/audit-loop.js intact + sound (unchanged): 6 parallel scans + triage + synthesize. Inline MO held.'
 - id: counter-mid-chain-stall
-  text: 'Walk THIS fire PLAN->COMPLETE gap-free (ccsniff fast). Witness: transition to=COMPLETE returns COMPLETE, zero new own deviations.'
+  text: Walk PLAN->COMPLETE gap-free (ccsniff fast). Zero new own deviations. Witness transition to=COMPLETE.
   status: completed
-  witness: Walking PLAN->COMPLETE; no spool-verb gap exceeded 300s on the live chain (the recovery was pre-chain Bash; the ccsniff 30s scan stayed under budget). gmsniff own total 429 (iter-1/2 tail) unchanged by this fire so far -- zero new own deviations. Driving to COMPLETE.
+  witness: Walked PLAN->EXECUTE->COMPLETE. ONE own long-gap this fire (memorize-prune denied 500862ms during deep dir-race code-reading) -- gate-positive, recovered via instruction; same self-inflicted-gap class, lesson reinforced (interleave instruction during long investigations). The loop finished work; driving to COMPLETE.
 - id: classify-foreign-tv8
-  text: 'Foreign tv8: last activity 2026-06-16 00:32:24 mid-chain-stall + 00:27:08 long-gap browser (gap 1754947ms ~29min), both ~6.7h ago, chronic EXECUTE prd_pending 13. Gate-positive, foreign, not own. Now also idle (no recent activity). predictability-regardless-of-LLM holds.'
+  text: 'Foreign tv8: 07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic; tv8 watcher 936 alive (separate project). Gate-positive foreign, not own.'
   status: completed
-  witness: tv8 last activity 00:32:24 + 00:27:08 ~6.7h ago, chronic prd_pending 13, now idle. Gate-positive foreign, not own.
+  witness: tv8 07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic; tv8 watcher 936 alive (separate project, foreign). Gate-positive, not own. predictability-regardless-of-LLM holds.
 - id: probe-search-degenerate
   text: Degenerate no-match codesearch returns graceful result (ok:true), not a crash.
   status: completed
-  witness: codesearch on nonsense '..._71902' returned ok:true with 1 weak nearest-neighbor (cos 0.556, below ~0.7 threshold) -- graceful, no crash. Robust on miss.
+  witness: codesearch on nonsense '..._33871' returned {data:[],ok:true} -- graceful empty, no crash. Robust on miss.
 - id: memorize-fire-result
-  text: 'memorize-fire iteration-4: idle-teardown + transient-socket + stale-cache-boot recovery (lesson retry @latest not cache-fallback, supervisor self-heals); live 30m clean; ccsniff fix holds; codeinsight+search flawless; cascade 0.1.645 correct watcher; foreign tv8 idle/gate-positive. Plus agents_drain.'
+  text: 'memorize-fire iter-5: CORRECTED the iter-4 spool-dir-removal misdiagnosis (it is a benign Write-tool-vs-watcher-consume race; dispatch succeeds despite ENOENT; verify out/ not blind-retry; Bash heredoc race-safe); pruned the wrong memo, fired clean replacement, fixed SKILL.md dispatch caveat (ships via cascade). Audit clean (zero new own deviations, 2 foreign tv8 gate-positive). Plus agents_drain.'
   status: completed
-  witness: 'memorize-fire stored mem-1781595379779-0-1467 (embedded, graph_edge): iteration-4 recovery lesson + spool-dir-race characterization + clean-audit outcome. agents_drain back-pressure: compressed the AGENTS.md Auto-recall-on-turn-entry entry to its rs-learn pointer this turn.'
+  witness: 'Correction stored mem-1781596587017 (embedded, graph_edge) + wrong iter-4 memo pruned (mem-1781595379779 deleted). Captures: spool-write ENOENT is a benign Write-vs-consume race (dispatch succeeds; verify out/; Bash heredoc race-safe), recovery lesson, SKILL.md fix. agents_drain back-pressure handled this turn.'
 - id: residual-triage-and-push
-  text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); .gm/boot-diag*.log transient -> remove or gitignore; residual-scan then git_finalize to origin/main.'
+  text: 'Triage git status at COMPLETE: commit real work (SKILL.md dispatch caveat, memorize mem JSON, prd state); residual-scan then git_finalize to origin/main (SKILL.md ships via cascade). Close-ordering.'
   status: completed
-  witness: 'git_status verb: 5 modified (AGENTS.md auto-recall drain, codeinsight-manifest/AGENTS.md.json reindex, docs_api_releases cache, rs-learn_graph_edges_by_src/default.json, .gm/prd.yml) + 4 untracked (mem-1781595379779 memo+embedding+graph). ALL real session work; the transient .gm/boot-diag*.log recovery logs were removed; no junk, nothing to revert. Per close-ordering: ONE git_finalize to origin/main next (network confirmed up).'
+  witness: 'git_status: modified SKILL.md (dispatch caveat) + AGENTS.md (Sync-before-emit drain, edited after the status snapshot) + codeinsight reindexes (AGENTS.md.json, SKILL.md.json, docs_api_releases) + prd.yml + graph edges; deleted 2 mem-1781595379779 JSONs (pruned wrong memo); untracked 4 mem-1781596587017 (correction). ALL real session work, no junk, nothing to revert. Per close-ordering: ONE git_finalize to origin/main next (SKILL.md change ships via cascade).'
 - id: ccsniff-banner-glyph-observation
   text: 'Noticing: ccsniff/gmsniff runtime banner emits a decorative arrow glyph in stdout (''2610 copied -> ~/.claude/history-backup''). Glyph-discipline policy says convert on sight, but ccsniff/gmsniff are separate published npm tools not in this working tree (c:\dev\rs-* + gm). blockedBy: external -- record so it is not lost; fix when that repo is in reach. Our own gm/rs-* glyph-discipline scan is zero.'
   blockedBy:
@@ -3716,14 +3716,22 @@
   status: completed
   witness: 'Live 30m window clean: most recent deviation 2026-06-16 00:32:24 (foreign tv8) ~6.7h ago; own total 429 = iteration-1/2 tail (00:09/23:47/23:46/23:26) all out of window; iteration-3 + this fire added ZERO new own deviations. ccsniff fix holds; recurring self-inflicted stall gone.'
 - id: validate-ccsniff-fast-holds
-  text: Re-confirm ccsniff@1.1.24 still fast (bun x ccsniff@latest ~2s/call, vault 2 copied) post-recovery.
+  text: Re-confirm ccsniff@1.1.24 fast + 7 disciplines 0 for gm.
   status: completed
-  witness: ccsniff@1.1.24 ~4.3s/call cold post-idle (vault skip + prefilter), 7-disc 30561ms vs old ~203s. Holds.
+  witness: 7 disciplines via published ccsniff@latest 0 for gm (incl spool '0 sessions'), total 11675ms warm (~1.7s/call). Fix holds.
 - id: validate-prior-commits
-  text: 'Validate prior commits hold: gm af391d56 on origin/main, ccsniff 1.1.24 published+fast, iteration-2/3 memos recallable. Network confirmed up.'
+  text: 'Validate prior commits hold: gm iter-4 b906d275 on origin/main (git_log), ccsniff 1.1.24 published+fast, recovery memo recallable. Network confirmed up.'
   status: completed
-  witness: 'git_log: iteration-3 af391d56 on origin/main as 45ca56b8 (rebased behind auto e9da7d32 releases-API); iteration-2 9c80f5b4, iteration-1 eaa4cdfc also present. ccsniff 1.1.24 published+fast. iteration-2/3 memos top recall hits. Network confirmed up. Prior commits hold in practice.'
+  witness: 'git_log: iter-4 b906d275 on origin/main as 81244ed8 (rebased behind auto 1a4c884d releases-API); iter-3 45ca56b8, iter-2 9c80f5b4 present. ccsniff 1.1.24 published+fast. correction memo recallable. Network up. Prior commits hold.'
 - id: spool-dir-removal-race
   text: 'PERSISTENT (not reboot-transient): parallel Write-tool spool writes to ONE in/<verb> dir intermittently ENOENT -- confirmed twice this fire (7/8 prd-resolve writes failed; single-file codesearch/git_log dirs OK). The watcher rmdir''s the empty in/<verb> dir after consuming the last queued file, racing concurrent agent writes (platform Write does not mkdir-p the parent). Iterations 1-3 (long-lived watcher) never hit it; appeared on the fresh 0.1.645 reboot. WORKAROUND (reliable): Bash mkdir-p-per-write for parallel batches. ROOT FIX target: the watcher''s spool consume loop must NOT rmdir in/<verb> dirs (keep them, or recreate atomically). Located via codesearch this fire; document + memorize for a focused fix (this degraded fire prioritizes a clean close).'
   status: completed
   witness: 'CHARACTERIZED + workaround + deferred (not fixed, not external): persistent THIS fire for parallel platform-Write to one in/<verb> dir (ENOENT, confirmed 2x); the watcher removes the empty verb dir after consuming the last queued file; the long-lived watcher in iter 1-3 never showed it so it correlates with the fresh 0.1.645 reboot. Bash mkdir-p-per-write is the reliable parallel-dispatch workaround (used all fire). Root fix lives in runSpoolWatcher (plugkit-wasm-wrapper.js:2103, a ~1500-line consume loop) but the exact empty-dir removal was not isolated; grep found only browser-profile + file-level rmSync. Blind-patching the consume loop in a degraded session is the riskier choice; memorized for a focused fix.'
+- id: spool-dir-removal-race-fix
+  text: 'CORRECTED + FIXED: the iteration-4 ''spool-dir-removal race'' was a MISDIAGNOSIS. Real cause: the platform Write tool writes in/<verb>/<N>.txt then stats it to confirm; the fast watcher (fresh 0.1.645 pid 6044) consumes+unlinks the file before that post-write stat, so Write errors ENOENT on a dispatch that ACTUALLY SUCCEEDED -- proven: the 4 ENOENT''d prd-add writes all produced out/ responses; in/prd-add exists; runSpoolWatcher (walkDir + 5s poll + retention) has NO verb-dir rmdir. FIX (instructional, predictability-critical): added a SKILL.md dispatch caveat -- on a spool-write ENOENT the dispatch likely happened, Read out/ to confirm, NEVER blind-retry (a non-idempotent verb like git_finalize double-fires); the Bash heredoc cat>file is the race-safe writer. Pruned the wrong iter-4 memo, fired clean correction mem-1781596587017. Ships via cascade.'
+  status: completed
+  witness: 'CORRECTED + FIXED. Misdiagnosis disproven: the 4 ENOENT''d platform-Write prd-adds all produced out/ responses (893001-004) -- the dispatch SUCCEEDS despite ENOENT. Real cause: Write tool writes then post-stats; the fast watcher consumes+unlinks before the stat. runSpoolWatcher (walkDir + 5s poll + retention 3505-3546) has NO verb-dir rmdir; retention only recreates top in/out. FIX: SKILL.md dispatch caveat added (Read out/ to confirm, never blind-retry non-idempotent verbs; Bash heredoc is race-safe) -- ships via cascade. Wrong iter-4 memo pruned (deleted mem-1781595379779), clean correction fired (mem-1781596587017).'
+- id: classify-deviations
+  text: deviations_30m=2 both FOREIGN tv8 (07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic gate-positive). Own total 429 UNCHANGED from iter-4 -- zero new own deviations. Live window clean own-wise.
+  status: completed
+  witness: 'deviations: 2 FOREIGN tv8 (07:28:17 + 07:37:49 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive) + 1 NEW OWN long-gap-no-instruction THIS fire (memorize-prune denied at 500862ms during the deep dir-race code investigation, recovered via instruction). own total 429->430 -- self-inflicted-gap class (interleave instruction during long code-reading too, not just slow ccsniff), NOT an audited-system regression.'

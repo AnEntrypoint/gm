@@ -124,7 +124,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error). Detail in rs-learn (`recall: host_exec_js synchronous`).
 
-**Sync-before-emit (codeinsight + search)**: codeinsight/search output must come from a freshly-synced index this invocation (cache serves only on digest match); unverified-index emit = stale ground truth. Mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).
+**Sync-before-emit (codeinsight + search)**: output must come from a freshly-synced index this invocation (cache serves only on digest match). Mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).
 
 **Auto-recall on turn entry**: `instruction` attaches an `auto_recall` pack on the first dispatch after a >30s idle gap or session-start. Detail in rs-learn (`recall: auto-recall on turn entry`).
 
