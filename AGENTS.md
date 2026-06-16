@@ -130,7 +130,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **Skill SKILL.md frontmatter `allowed-tools:` is harness-enforced**: a skill must list `Skill` (and `Read`/`Write`, Write only for spool dispatch) or it loses downstream-skill invocation that turn. Detail in rs-learn (`recall: SKILL.md frontmatter allowed-tools`).
 
-**rs-learn observability**: every learning-pipeline state change emits a structured `evt:{event,sess,ts,...}` line into `.gm/exec-spool/.watcher.log` + gm-log; recall replies carry `mode`/`namespace`/`derived_query`/per-hit `score`; gmsniff/ccsniff expose the taxonomy. Taxonomy + flag list in rs-learn (`recall: rs-learn observability taxonomy`).
+**rs-learn observability**: learning-pipeline state changes emit `evt:` lines to `.gm/exec-spool/.watcher.log` + gm-log; recall replies carry per-hit scoring fields. Surface + taxonomy + flags in rs-learn (`recall: rs-learn observability taxonomy`).
 
 **Bootstrap contract (skill-init + SKILL.md auto-refresh + project wiring)**: `bootstrapPlugkit`/`ensureReady` initialize wasm hook-free (failures non-fatal), sha256-rewrite stale installed SKILL.md, and seed per-project `CLAUDE.md` (`@AGENTS.md`) + `.gm/next-step.md`; the wiring lives in `gm-plugkit/bootstrap.js::ensureReady` (the consumer-project watcher boot path), not only repo-root `bin`/`lib`. Detail in rs-learn (`recall: skill-initiated bootstrap contract`, `recall: SKILL.md auto-refresh`).
 

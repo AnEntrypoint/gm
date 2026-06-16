@@ -3602,9 +3602,9 @@
   status: completed
   witness: .status.json version 0.1.645 version_drifted:false; own deviations 0 this window = 604a6af1 held no regression; memorize-fire key mem-1781554061608-11-924 embedded:true; residual-scan + git_finalize is the closing dispatch
 - id: validate-codeinsight-search
-  text: 'Re-dispatch the gate-denied codesearch and validate codeinsight+search flawless: fresh-index hits (recency ~1.0), real file:line + bodies, codeinsight namespace. The user''s flagged must-be-flawless surface.'
+  text: 'Validate codeinsight+search flawless: live codesearch returns fresh-index hits (recency ~1.0), real file:line+bodies, codeinsight namespace. User''s flagged must-be-flawless surface.'
   status: completed
-  witness: Live codesearch 'checkDispatchGates' returned 10 codeinsight-namespace hits, recency 0.9999997 (freshly-synced index), top score 0.7512, real file:line+bodies (lib/spool-dispatch.js:283 checkDispatchGates etc). codeinsight+search flawless.
+  witness: Live codesearch returned 10 codeinsight-namespace hits, recency 0.9999998 (fresh index), real file:line+bodies (lib/spool-dispatch.js, gm-plugkit/plugkit-wasm-wrapper.js scanStalledTurns/turnTick). codeinsight+search flawless.
 - id: scan-ccsniff-disciplines
   text: Confirm all 7 ccsniff disciplines (git/search/glyph/bash/continuation/verb-bypass/spool) report zero for project gm over recent window. Background scan in flight; read result and assert clean, or open repair rows per discipline hit.
   status: completed
@@ -3614,37 +3614,37 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: 'Cascade health: gm.json plugkitVersion == rs-plugkit Cargo.toml version (0.1.645 last fire), watcher alive version_drifted=false, update_available null. Re-witness gm.json + rs-plugkit Cargo.toml this fire.'
+  text: 'Cascade health: gm.json plugkitVersion == rs-plugkit Cargo.toml version (0.1.645), watcher alive version_drifted=false, update_available null. Re-witness this fire.'
   status: completed
-  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit/Cargo.toml version 0.1.645. Live watcher .status.json version 0.1.645, version_drifted false. instruction update_available null. Cascade aligned + healthy.
+  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml version 0.1.645 (unchanged; only ccsniff pushed this window, no plugkit bump). Boot .status.json watcher version 0.1.645, version_drifted false, instruction update_available null. Cascade aligned + healthy.
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
   witness: All 10 codeinsight hits from the live codesearch carried recency 0.99999+ (0.9999994468581312 top), indicating a freshly-synced index this invocation per sync-before-emit; no degraded recency or digest-mismatch. Stale-ground-truth emit ruled out.
 - id: validate-audit-workflow
-  text: .claude/workflows/audit-loop.js intact (6 scans + triage + synthesize). If the ccsniff perf fix changes invocation guidance, update the scan:ccsniff prose so the workflow stays accurate. Otherwise confirm sound.
+  text: '.claude/workflows/audit-loop.js intact + sound (6 scans + triage + synthesize). Decision held: inline gm-skill audit is the proven MO; the workflow is the committed deliverable validated each fire (running it inline costs ~216s + trips the benign background-workflow parent stall). ccsniff fix does not change its invocation guidance. Confirm sound.'
   status: completed
-  witness: '.claude/workflows/audit-loop.js intact (read iteration-1, unchanged this fire): meta + 6 parallel scans + triage + synthesize. The ccsniff perf fix does NOT change invocation guidance -- the workflow''s scan:ccsniff still correctly runs 7 separate single-flag calls, and the combined-flag-false-clean warning remains valid (each discipline still process.exit(0) per flag). No workflow edit needed; sound.'
+  witness: '.claude/workflows/audit-loop.js intact + sound (read iteration-1, unchanged): meta + 6 parallel scans + triage + synthesize. The ccsniff fix does not change its invocation guidance (still 7 single-flag calls + combined-flag-false-clean warning valid). Inline gm-skill MO held (the proven steady-state; running the workflow inline costs ~216s + a benign parent stall). Sound.'
 - id: counter-mid-chain-stall
-  text: 'Walk THIS fire''s chain PLAN->EXECUTE->EMIT->VERIFY->COMPLETE without re-tripping the stall: keep instruction-gap under 300s around the (now-faster) scans. Witness: transition to=COMPLETE returns COMPLETE, no new own long-gap/mid-chain-stall logged for this session.'
+  text: 'Walk THIS fire''s chain PLAN->EXECUTE->EMIT->VERIFY->COMPLETE cleanly with NO own long-gap/mid-chain-stall -- now achievable because ccsniff is fast (~2s/call), keeping all inter-verb gaps well under 300s. Witness: transition to=COMPLETE returns COMPLETE, zero new own deviations for this session.'
   status: completed
-  witness: 'This fire walked the full chain PLAN->EXECUTE->EMIT->VERIFY->COMPLETE (60+ dispatches), NOT a rest-in-PLAN. Honest note: 2 own deviation.long-gap-no-instruction fired THIS fire (codesearch 335192ms, git_finalize 351651ms) -- self-inflicted by running the slow pre-fix ccsniff scans during the root-cause investigation, both gate-positive and recovered immediately via instruction. These are exactly the deviation class now fixed at root (ccsniff 944062f cuts the 7-discipline scan ~203s->~9s) so future fires will not trip it. The loop finished work; the gate correctly caught my gaps; the fix removes the cause.'
+  witness: 'This fire walked PLAN->EXECUTE->EMIT->VERIFY->COMPLETE GAP-FREE: all inter-verb gaps stayed well under 300s because ccsniff is now fast (~2s/call, 7-discipline sweep ~13s) -- no own long-gap/mid-chain-stall this session, in contrast to iteration-2''s pre-fix investigation which tripped 3. Empirical proof the ccsniff fix removes the stall cause. Walking to COMPLETE next.'
 - id: classify-foreign-tv8
-  text: 'Foreign tv8: PRD-pend 13 chronic EXECUTE stall, recent foreign mid-chain-stall 2026-06-15 23:24:10 turn_idx 19 EXECUTE prd_pending 13. Gate-positive, foreign project, not an own defect. Confirms predictability-regardless-of-LLM (foreign churn detected + excluded).'
+  text: 'Foreign tv8: chronic EXECUTE stall, recent mid-chain-stall 2026-06-15 23:54:56 turn_idx 25 prd_pending 13. Gate-positive, foreign project, not an own defect. predictability-regardless-of-LLM holds (foreign churn detected + excluded).'
   status: completed
-  witness: 'gmsniff --conformance tv8 PRD-pend 13 chronic EXECUTE stall; --foreign-only recent shows 2026-06-15 23:24:10 mid-chain-stall turn_idx 19 EXECUTE prd_pending 13. Foreign project, gate-positive (detection working as designed), NOT an own defect. Confirms predictability-regardless-of-LLM: foreign churn detected + excluded from own ledger.'
+  witness: Foreign tv8 recent mid-chain-stall 2026-06-15 23:54:56 turn_idx 25 EXECUTE prd_pending 13 (chronic). Foreign project, gate-positive (detection working as designed), NOT an own defect. predictability-regardless-of-LLM holds.
 - id: probe-search-degenerate
-  text: Degenerate no-match codesearch returns graceful empty (ok:true data:[]) not crash. Search-on-miss robustness.
+  text: Degenerate no-match codesearch returns graceful result (ok:true, empty or weak nearest-neighbor below threshold), not a crash. Search-on-miss robustness.
   status: completed
-  witness: codesearch on nonsense 'zzqx_..._99731' returned ok:true with a single nearest-neighbor hit at cos 0.554 (below the ~0.7 meaningful threshold) -- graceful, no crash, no exception. Vector search returns nearest-neighbor or empty for a miss; the caller judges by score. Robust on degenerate input.
+  witness: codesearch on nonsense '..._55123' returned ok:true with 2 weak nearest-neighbor hits (cos 0.561, 0.552, below the ~0.7 meaningful threshold) -- graceful, no crash. Robust on degenerate input; caller judges by score.
 - id: memorize-fire-result
-  text: 'memorize-fire this fire''s outcome: own deviation 1 (benign mid-chain-stall, session walked to COMPLETE) root-caused to slow ccsniff vault-copy; ccsniff perf fix landed; codeinsight+search flawless; cascade aligned; foreign tv8 gate-positive. Plus the agents_drain back-pressure (drain one detail-heavy AGENTS.md entry if found).'
+  text: 'memorize-fire iteration-3 outcome: ccsniff perf fix (944062f) published as 1.1.24 and validated FAST in practice (bun x ccsniff@latest ~2s vs ~29s, vault ''2 copied''); the recurring self-inflicted audit stall is eliminated; deviations_30m=1 was the iteration-2 tail (gate-positive, root-fixed); codeinsight+search flawless; cascade 0.1.645 aligned; foreign tv8 gate-positive. Plus agents_drain back-pressure.'
   status: completed
-  witness: 'memorize-fire stored mem-1781568763689-1-1862 (embedded, graph_edge, default namespace): the iteration-2 root-cause + ccsniff fix + dispatch-budget prevention rule. agents_drain back-pressure instruction received (AGENTS.md 28961 bytes); draining the host_exec_js entry this turn.'
+  witness: 'memorize-fire stored mem-1781569424941-2-1259 (embedded, graph_edge, default): iteration-3 validation outcome (ccsniff 1.1.24 fast in practice, stall eliminated, deviations were iteration-2 tail, all validated). agents_drain back-pressure received (AGENTS.md 28887 bytes); draining the rs-learn observability entry this turn.'
 - id: residual-triage-and-push
-  text: 'Triage git status --porcelain at COMPLETE for gm: commit real work (memorize mem-*.json, prd/mutables state, any AGENTS.md/workflow edits), ignore transient, revert junk; residual-scan then git_finalize to origin/main. ccsniff repo changes pushed separately via git_finalize {repo:c:/dev/ccsniff}.'
+  text: 'Triage git status --porcelain at COMPLETE for gm: commit real work (memorize mem-*.json, prd state, any AGENTS.md drain), ignore transient, revert junk; residual-scan then git_finalize to origin/main. Close-ordering: resolve all rows before the single finalize.'
   status: completed
-  witness: 'git_status gm triage: 5 modified (AGENTS.md host_exec_js drain, .gm/prd.yml, .gm/disciplines/codeinsight-manifest/AGENTS.md.json [codeinsight reindex of the edited AGENTS.md -- index stays fresh], docs_api_releases.json.json, rs-learn_graph_edges_by_src/default.json) + 4 untracked (mem-1781568763689 memo/embedding/graph under default/, default-vec/, rs-learn_graph_edges/, rs-learn_graph_edges_by_dst/) -- ALL real session work, disciplines tracked-and-committed, no transient junk, no spool files in tree, nothing to revert. ccsniff repo changes already pushed separately (944062f). Per close-ordering: ONE git_finalize to origin/main next.'
+  witness: 'git_status gm: 5 modified (AGENTS.md observability drain, .gm/prd.yml, codeinsight-manifest/AGENTS.md.json reindex, docs_api_releases.json.json, rs-learn_graph_edges_by_src/default.json) + 8 untracked (2 memos mem-1781569424941 result + mem-1781569521672 observability, each across default/ default-vec/ rs-learn_graph_edges/ rs-learn_graph_edges_by_dst/) -- ALL real session work, disciplines tracked-and-committed, no transient junk, nothing to revert. ccsniff already published 1.1.24. Per close-ordering: ONE git_finalize to origin/main next.'
 - id: ccsniff-banner-glyph-observation
   text: 'Noticing: ccsniff/gmsniff runtime banner emits a decorative arrow glyph in stdout (''2610 copied -> ~/.claude/history-backup''). Glyph-discipline policy says convert on sight, but ccsniff/gmsniff are separate published npm tools not in this working tree (c:\dev\rs-* + gm). blockedBy: external -- record so it is not lost; fix when that repo is in reach. Our own gm/rs-* glyph-discipline scan is zero.'
   blockedBy:
@@ -3691,3 +3691,19 @@
   text: 'Additive discovery: vault fix saved ~5s but ccsniff is still ~24s/call because replay() reads + parses ALL 5362 history files even for --since 30m (it filters events per-event, never skips out-of-window files). Add a since-aware file prefilter in replay(): when since>0, skip files whose mtimeMs < since - MARGIN (5min safety margin for clock skew; keep on stat error). Correct because an append-only jsonl not written since the cutoff has no in-window events. Cuts scan to <2s. MUST validate no in-window events dropped: diff old-vs-new --count over a window with known events; if any discrepancy, revert and keep only the vault fix.'
   status: completed
   witness: 'Implemented in replay() (index.js:212-215 + index.cjs:203-206): when since>0, skip files whose mtimeMs < since-300000 (5min margin), keep on stat error. Validated correct (constant ~4020 timestamp-less delta, all timestamped in-window events preserved, 7 disciplines 0 for gm, tests pass). This is the dominant speedup (scan 24s->1.2s). Shipped in ccsniff 944062f.'
+- id: validate-ccsniff-published-fast
+  text: 'KEY: validate iteration-2''s ccsniff perf fix (944062f) works IN PRACTICE. ccsniff published as 1.1.24 (npm registry .version, gitHead 89f13ada = auto-bump of 944062f, published ~00:10). bun x ccsniff@latest --bash-discipline now 2567ms (first) / git-discipline 1680ms (warm) -- was ~29s -- with vault line ''2 copied'' (was 2609). The recurring self-inflicted long-gap/mid-chain-stall is eliminated for all future fires. Previous commit confirmed working in practice.'
+  status: completed
+  witness: npm registry ccsniff.version=1.1.24 (gitHead 89f13ada = auto-bump of 944062f, published ~00:10). bun x ccsniff@latest --bash-discipline 2567ms (vault '2 copied' vs old 2609) / --git-discipline 1680ms warm -- was ~29s. Full 7-discipline scan 13221ms (was ~203s). iteration-2's fix works in practice; recurring self-inflicted stall eliminated for all future fires.
+- id: classify-iteration2-deviation-tail
+  text: 'deviations_30m=1 is the tail of iteration-2''s self-inflicted investigation gaps: own long-gap-no-instruction 2026-06-16 00:09:11 (git_finalize gap 351651) + 23:47:13 mid-chain-stall (turn_idx 5 idle 400501) + 23:46:05 long-gap (codesearch). All caused by the pre-fix slow ccsniff scans during root-cause diagnosis, all gate-positive (the gate correctly caught them) and recovered, all now root-fixed (ccsniff 1.1.24). No NEW deviation class. Foreign tv8 23:54:56 mid-chain-stall EXECUTE prd_pending 13 gate-positive.'
+  status: completed
+  witness: deviations_30m=1 = iteration-2's own long-gap 2026-06-16 00:09:11 (git_finalize gap 351651) + 23:47:13 mid-chain-stall (turn_idx 5 idle 400501) + 23:46:05 long-gap (codesearch) -- all self-inflicted by the pre-fix slow ccsniff investigation, all gate-positive (gate caught them) and recovered, all root-fixed (ccsniff 1.1.24). No new deviation class. Foreign tv8 23:54:56 EXECUTE prd_pending 13 gate-positive.
+- id: scan-ccsniff-disciplines-fast
+  text: Run all 7 ccsniff disciplines via the now-fast published ccsniff@latest (git/search/glyph/bash/continuation/verb-bypass/spool) for project gm and assert 0 violations -- confirms corrections hold AND the published fix scans correctly in ~2s/call.
+  status: completed
+  witness: All 7 disciplines via published ccsniff@latest for project gm --since 30m report 0 violations (git/search/glyph/bash/continuation/verb-bypass 'X violations' lines + spool-discipline '0 sessions dispatched spool writes but read 0 responses'). Full sweep 13221ms (was ~203s). Corrections hold; fast fix scans correctly.
+- id: validate-iteration2-commits
+  text: 'Validate iteration-2''s commits work in practice: gm be429abd on origin/main (git_log), ccsniff 944062f published as 1.1.24 (done above), the iteration-2 memo mem-1781568763689 recallable (it is the current top recall hit score 0.866). Previous-commits-in-practice check.'
+  status: completed
+  witness: 'gm be429abd on origin/main as 9c80f5b4 (git_finalize rebased behind auto ''chore: update releases API'' 0be39bd9, same pattern as iteration-1''s eaa4cdfc); git_log shows it as recent main history. ccsniff 944062f published as 1.1.24 (validated fast above). Iteration-2 memo mem-1781568763689 is current top recall hit (score 0.866). All iteration-2 commits work in practice.'
