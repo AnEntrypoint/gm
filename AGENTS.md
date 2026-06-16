@@ -122,7 +122,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **The agent IS the LLM rs-learn calls**: rs-learn never reaches a separate judge model for a quality score, relevance call, prune decision, route outcome, or loss signal -- plugkit IS the harness and the agent IS the model, so each is an inline decision reported through the spool. Heavy `recall`+`learn` grounds the judgments. Per-core internals (MicroLoRA self-report logit, FastGRNN router, deep-core record_loss, attention nudge_relation, memorize-prune) in rs-learn (`recall: rs-learn self-report core internals`).
 
-**host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error); long subprocesses block the watcher; no async/background exec under wasm. Detail in rs-learn (`recall: host_exec_js synchronous`).
+**host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error). Detail in rs-learn (`recall: host_exec_js synchronous`).
 
 **Sync-before-emit (codeinsight + search)**: codeinsight/search output must come from a freshly-synced index this invocation (cache serves only on digest match); unverified-index emit = stale ground truth. Mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).
 
