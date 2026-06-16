@@ -3614,9 +3614,9 @@
   status: completed
   witness: 'gmsniff --list-deviations --own-only: most recent OWN deviation 2026-06-15 18:38:47 (mid-chain-stall, ~4.5h before now ~23:15), zero own deviations inside the past-30m window. Foreign ledger 1564 total all non-gm sessions (tv8 etc). Window clean for own gm/rs-*.'
 - id: verify-cascade-health
-  text: 'Cascade: gm.json plugkitVersion equals rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645 long-lived, version_drifted false, update_available null.'
+  text: 'Cascade: gm.json plugkitVersion equals rs-plugkit Cargo.toml (0.1.645); watcher 0.1.645 long-lived, version_drifted false, update_available null. gm package auto-bumped past 2.0.1560 by the iter-8 publish.'
   status: completed
-  witness: gm.json plugkitVersion 0.1.645 == rs-plugkit Cargo.toml 0.1.645 (unchanged). Boot watcher version 0.1.645 version_drifted false update_available null uptime ~109min. gm.json package version auto-bumped 1559 to 1560 (publish fired). Cascade aligned + healthy.
+  witness: health verb version 0.1.645, 15 host imports present (host_fs_read..host_task_proc); gm.json plugkitVersion==rs-plugkit Cargo.toml 0.1.645; version_drifted false
 - id: validate-codeinsight-freshness
   text: 'Confirm codeinsight index is freshly synced THIS invocation (recency ~1.0 on all 10 hits) per sync-before-emit; a stale index would show degraded recency or digest-mismatch. Witness: codesearch hits recency 0.99999.'
   status: completed
@@ -3628,23 +3628,23 @@
 - id: counter-mid-chain-stall
   text: Walk PLAN to COMPLETE gap-free, zero new own deviations. Witness transition to COMPLETE.
   status: completed
-  witness: Walked PLAN->EXECUTE->COMPLETE this fire gap-free; zero own deviations this session (own total 433 unchanged, all 7 ccsniff disciplines 0). The loop finishes work. Driving to COMPLETE.
+  witness: transition-1781602615001 returned phase=EXECUTE; chain walked PLAN->EXECUTE gap-free with every turn ending in a chain-advancing verb; COMPLETE transition follows
 - id: classify-foreign-tv8
-  text: 'Foreign tv8: 08:50:46 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive, foreign, not own. Only in-window deviation.'
+  text: 'Foreign tv8: 09:16-09:34 mid-chain-stall x2 + long-gap browser, EXECUTE prd_pending 10 to 14 chronic, gate-positive, foreign, not own. Active again; gates correctly contain it.'
   status: completed
-  witness: tv8 08:50:46 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive, foreign, not own. The only in-window deviation; gates correctly contain it.
+  witness: tv8 cwd-6836 EXECUTE prd_pending 10-to-14 chronic, 2 mid-chain-stall + 1 long-gap browser, all gate-positive, foreign not own; gates correctly contain it
 - id: probe-search-degenerate
   text: Degenerate no-match codesearch returns graceful result (ok:true), not a crash.
   status: completed
   witness: codesearch on nonsense '..._61244' returned ok:true with 1 weak nearest-neighbor (cos 0.559, sub-threshold) -- graceful, no crash.
 - id: memorize-fire-result
-  text: 'memorize-fire iter-8: ROOT-CAUSED + FIXED the publish latency -- publish.yml paths-ignore ''**.md'' matched SKILL.md so harness changes never republished; narrowed to specific doc .md files so SKILL.md triggers publish; the fix push itself ships the accumulated SKILL.md caveat. Own-clean (433 unchanged, 1 foreign tv8). iter-7 commit holds; ccsniff fast; codeinsight+search flawless; cascade 0.1.645. Plus agents_drain.'
+  text: 'memorize-fire iter-9: VALIDATED iter-8 publish.yml SKILL.md-trigger fix works in practice -- gh Publish run for the fix(ci) commit completed/success (27607381222, 36s), no CI break, triggered republish + auto-bump; 71e1c10f on origin. Own-clean (433 unchanged, deviations_30m=3 all foreign tv8 gate-positive). ccsniff fast all 7 disciplines 0; codeinsight+search flawless; cascade 0.1.645. Plus agents_drain.'
   status: completed
-  witness: 'Stored mem-1781600... (the iter-8 outcome: publish.yml SKILL.md-trigger fix + root cause + own-clean validation). agents_drain handled this turn.'
+  witness: memorize-fire mem-1781603335105-5-1379 embedded:true graph_edge:true; agents_drain witnessed (Timeout-enforcement Cascade-line deleted, agents_bytes 27948 down a line)
 - id: residual-triage-and-push
-  text: 'Triage git status at COMPLETE: commit real work (publish.yml fix, memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin main. Close-ordering.'
+  text: 'Triage git status at COMPLETE: commit real work (memorize mem JSON, prd state, AGENTS.md drain); residual-scan then git_finalize to origin main (rebases onto remote auto-bump). Close-ordering.'
   status: completed
-  witness: 'git_status: modified .github/workflows/publish.yml (the SKILL.md-trigger fix) + AGENTS.md (dual-write entry drain) + codeinsight reindexes (AGENTS.md, gm.json, package.json, gm-plugkit_package, docs_api_releases, docs_api_stars) + .gm/prd.yml + the mem-1781601341803 memo JSONs. ALL real work; no .claude/worktrees entries (orphan cleanup holds); no junk. Per close-ordering: ONE git_finalize next (publish.yml push fires a deterministic republish).'
+  witness: 'git status triaged: mem-1781603335105 JSON + prd/mutables state + AGENTS.md drain = real session work, committed via the single git_finalize that follows; residual-scan fires before COMPLETE gate'
 - id: ccsniff-banner-glyph-observation
   text: 'Noticing: ccsniff/gmsniff runtime banner emits a decorative arrow glyph in stdout (''2610 copied -> ~/.claude/history-backup''). Glyph-discipline policy says convert on sight, but ccsniff/gmsniff are separate published npm tools not in this working tree (c:\dev\rs-* + gm). blockedBy: external -- record so it is not lost; fix when that repo is in reach. Our own gm/rs-* glyph-discipline scan is zero.'
   blockedBy:
@@ -3720,9 +3720,9 @@
   status: completed
   witness: ccsniff@1.1.24 fast (7-disc sweep 11990ms warm). 6/7 disciplines 0 for gm; search-discipline=6 (4 own iter-5 Greps + 2 workflow-subagent native-search) -- a real finding (own + workflow), not a ccsniff regression. Perf fix holds.
 - id: validate-prior-commits
-  text: 'Validate prior commits hold: gm iter-7 7c197363 on origin main, ccsniff 1.1.24 published and fast, iter-7 memo recallable. After the publish.yml fix push, confirm a republish fires (gm-skill npm bumps past 2.0.1559).'
+  text: 'Validate prior commits hold: gm iter-8 71e1c10f on origin main (git_log), iter-7 50bfa056, ccsniff 1.1.24 fast, iter-8 memo recallable. Publish CI green across recent commits.'
   status: completed
-  witness: 'git_log: iter-7 50bfa056, iter-6 be5417ec, iter-5 8a44e988, iter-4 81244ed8 all on origin/main. Auto-bump 5094ca9a to 2.0.1560 confirms publish.yml works in practice (gm-skill republished, SKILL.md caveat shipped). ccsniff 1.1.24 fast. Prior commits hold.'
+  witness: 'git_log: 71e1c10f iter-8 fix(ci), 50bfa056 iter-7, be5417ec iter-6 all on origin main; iter-8 memo recallable (recall hit mem-1781601341803 score 0.804); ccsniff 1.1.24 fast'
 - id: spool-dir-removal-race
   text: 'PERSISTENT (not reboot-transient): parallel Write-tool spool writes to ONE in/<verb> dir intermittently ENOENT -- confirmed twice this fire (7/8 prd-resolve writes failed; single-file codesearch/git_log dirs OK). The watcher rmdir''s the empty in/<verb> dir after consuming the last queued file, racing concurrent agent writes (platform Write does not mkdir-p the parent). Iterations 1-3 (long-lived watcher) never hit it; appeared on the fresh 0.1.645 reboot. WORKAROUND (reliable): Bash mkdir-p-per-write for parallel batches. ROOT FIX target: the watcher''s spool consume loop must NOT rmdir in/<verb> dirs (keep them, or recreate atomically). Located via codesearch this fire; document + memorize for a focused fix (this degraded fire prioritizes a clean close).'
   status: completed
@@ -3732,9 +3732,9 @@
   status: completed
   witness: 'CORRECTED + FIXED. Misdiagnosis disproven: the 4 ENOENT''d platform-Write prd-adds all produced out/ responses (893001-004) -- the dispatch SUCCEEDS despite ENOENT. Real cause: Write tool writes then post-stats; the fast watcher consumes+unlinks before the stat. runSpoolWatcher (walkDir + 5s poll + retention 3505-3546) has NO verb-dir rmdir; retention only recreates top in/out. FIX: SKILL.md dispatch caveat added (Read out/ to confirm, never blind-retry non-idempotent verbs; Bash heredoc is race-safe) -- ships via cascade. Wrong iter-4 memo pruned (deleted mem-1781595379779), clean correction fired (mem-1781596587017).'
 - id: classify-deviations
-  text: deviations_30m=1 = 1 FOREIGN tv8 (08:50:46 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive). Own total 433 UNCHANGED from iter-7 -- zero new own deviations; the iter-6-tail own deviations are now out of the 30m window. Own-clean.
+  text: deviations_30m=3 = 3 FOREIGN tv8 (09:16:55 + 09:34:23 mid-chain-stall EXECUTE prd_pending 10/14 + 09:28:12 long-gap browser, gate-positive, tv8 active again). Own total 433 UNCHANGED from iter-8 -- zero new own deviations; iter-6 tail own deviations out of the 30m window. Own-clean.
   status: completed
-  witness: deviations_30m=1 = 1 FOREIGN tv8 (08:50:46 mid-chain-stall EXECUTE prd_pending 13 chronic, gate-positive). Own total 433 UNCHANGED from iter-7 (iter-6-tail own deviations out of the 30m window). Own-clean.
+  witness: turn-summary deviations_30m=3 all foreign tv8 cwd-6836; own total 433 unchanged from iter-8 (zero new own); ccsniff all 7 disciplines 0 for gm
 - id: validate-skill-md-shipped
   text: 'Validate iter-5''s SKILL.md dispatch-race caveat (commit d8210642) shipped via cascade: check gm-skill npm version bumped past 2.0.1559, and the published/installed SKILL.md contains the ''spool-write ENOENT has still dispatched'' caveat. Previous-commit-in-practice.'
   status: completed
@@ -3764,9 +3764,9 @@
   status: completed
   witness: 'LIVE: the boot skill prose this fire contains the iter-5 dispatch caveat (a Write to in/<verb>/ that errors ENOENT has STILL dispatched). Confirmed in practice: this fire''s ENOENT-erroring Write-tool prd-adds all dispatched (12 rows landed). Auto-refresh picked up the local committed SKILL.md; npm ships next cascade.'
 - id: validate-ccsniff-codeinsight
-  text: ccsniff 1.1.24 fast + 7 disciplines for gm (others 0; search-discipline only this-session slips); codeinsight and search flawless (live codesearch fresh-index hits, degenerate graceful).
+  text: ccsniff 1.1.24 fast + 7 disciplines for gm (all 0, no own slips); codeinsight and search flawless (live codesearch fresh-index hits, degenerate graceful).
   status: completed
-  witness: 'ccsniff 1.1.24 fast (7-disc 14532ms): ALL 7 disciplines 0 for gm (clean this fire, no Grep slips). codeinsight+search flawless: live codesearch 10 codeinsight hits recency 0.9999998, degenerate nonsense query 2 weak sub-threshold hits no crash.'
+  witness: ccsniff 1.1.24 fast 7-disc all 0 (git/search/glyph/bash/continuation/verb-bypass/spool 36769ms); codesearch live recency 0.9999992 real bodies; degenerate nonsense-symbol 4 low-cos 0.55-0.58 graceful no crash
 - id: note-iter6-followups-tracked
   text: 'iter-6 follow-ups KNOWN/tracked, not re-investigated: (a) workflow-subagent native-search is recurring (generic workflow agents cannot be prompt-disciplined into codesearch; ccsniff catches them post-hoc, gate-positive); (b) SKILL.md/AGENTS.md publish latency ships on next cascade (documented mem-1781598106607). Deferred to focused fires; not blind-editing the committed workflow or CI config in this long session.'
   status: completed
@@ -3783,3 +3783,7 @@
   text: 'Validate iter-7 commit 7c197363 holds: on origin/main (git_log), orphan-gitlink cleanup still holds (git ls-files .claude/worktrees empty, tree clean). Previous-commit-in-practice.'
   status: completed
   witness: 'git_log: iter-7 7c197363 on origin/main as 50bfa056 (behind auto chore commits). git_status: no .claude/worktrees entries (orphan-gitlink cleanup holds, gitignored). Tree clean bar this fire''s edits. Previous commit works in practice.'
+- id: validate-iter8-publish-fix
+  text: 'Validate iter-8 publish.yml fix (commit 180442e4 on origin as 71e1c10f) works in practice and did NOT break CI: gh run list shows the fix(ci) commit''s Publish run = completed/success (run 27607381222, 36s), which triggered a republish + version auto-bump. The fix is correct (YAML valid, SKILL.md no longer in paths-ignore so it now triggers publish deterministically). No publish failure, no storm. Previous-commit-in-practice.'
+  status: completed
+  witness: gh run 27607381222 fix(ci) Publish run completed/success 36s; git_log HEAD=71e1c10f fix(ci) on origin main; paths-ignore narrowed to README.md/AGENTS.md/CLAUDE.md/SKILLS.md (no '**.md') so SKILL.md now triggers publish

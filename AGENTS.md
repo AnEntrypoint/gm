@@ -144,8 +144,6 @@ Three npm packages publish from this repo: `gm-skill` (harness), `gm-plugkit` (b
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local cargo builds -- never run `cargo update`/`cargo build` locally, push and let CI build.
 
-**Timeout enforcement**: every `exec_js` dispatch carries a positive `timeoutMs`; the host treats missing or zero as a hard error.
-
 ## Spool-dispatch architecture replaces hooks
 
 Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI layer calls `checkDispatchGates()` before tool execution to gate Write/Edit/git. Marker set (`prd.yml, mutables.yml, needs-gm, gm-fired-<sessionId>, residual-check-fired`) + SpoolDispatcher mechanism in rs-learn (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
