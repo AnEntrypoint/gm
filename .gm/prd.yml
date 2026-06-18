@@ -3993,8 +3993,8 @@
   status: completed
 - id: complete-push
   text: 'COMPLETE: git_finalize (add->commit->porcelain-gate->push) every changed tracked file to origin main. Push IS the validation dispatch, never optional, never asked. Direct to main. Chain not COMPLETE until remote reflects HEAD.'
-  witness: AGENTS.md push-is-COMPLETE; git_finalize bundled push surface
-  status: pending
+  witness: 'git_finalize 181: committed:true pushed:true sha 8acc444e0 branch main (rebased onto origin d5061fcd, push accepted). Remote reflects HEAD. FIX 1 (gm-plugkit/plugkit-wasm-wrapper.js touchActiveTurn) ships via gm publish.yml -> gm-plugkit republish -> live fleet-wide via ensureWrapperFresh + supervisor wrapper-sha-drift recycle. A final close-out commit will sweep the prd-resolve tail.'
+  status: completed
 - id: audit-window-clean-confirm
   text: Confirm gm/rs-* has zero OWN code-defect deviations in the strict 30m window -- the only window events are fleet boot churn (watcher reboots after idle teardown) plus my one self-induced mid-chain-stall (covered by own-audit-stall rows). Resolve when gmsniff/ccsniff confirm no gm/rs-* code-origin deviation.
   witness: 'Zero gm/rs-* code-defect deviations in the strict 30m window: gmsniff --since 30m deviation grep returned only a turn.end {deviations:0} + the auto_recall query string (both non-deviations). Window events = fleet boot churn (idle-teardown reboots) + my one self-induced mid-chain-stall (07:44:52, root-caused + fixed via touchActiveTurn, rows 132/138/142). ccsniff 30m replay shows no gm/rs-* discipline violation. The only real finding (dstate spool-poll) is FOREIGN. gm/rs-* steady-state clean.'
