@@ -3551,6 +3551,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         try {
           const fp = path.join(outDir, entry);
           const s = fs.statSync(fp);
+          if (!s.isFile()) continue;
           if (s.mtimeMs < cutoff) { fs.unlinkSync(fp); swept++; }
         } catch (e) { console.error(`[retention] failed to sweep ${entry}: ${e.message}`); }
       }

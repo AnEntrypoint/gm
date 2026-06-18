@@ -32,7 +32,7 @@ The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` unde
 
 **`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** (throws silently under bun's ESM inside `catch(_){}`). Incident in rs-learn (`recall: wrapper require not defined under bun`).
 
-**Every single-instance/lock guard is atomic** (`fs.openSync(path,'wx')` O_EXCL or atomic-rename), never check-then-act; count plugkit processes by executable Name, not command-line substring. Incident in rs-learn (`recall: supervisor churn TOCTOU atomic guard`).
+**Every single-instance/lock guard is atomic** (O_EXCL / atomic-rename), never check-then-act; count plugkit processes by executable Name. Mechanics + incident in rs-learn (`recall: supervisor churn TOCTOU atomic guard`).
 
 ## Spool dispatch ABI
 
