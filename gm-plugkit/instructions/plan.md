@@ -12,6 +12,8 @@ First non-trivial dispatch = a single-message parallel fan-out of `recall` + `co
 
 Write the PRD as the central plan-item store (`|F|=1`): enumerate every content node as the closure of the destructive transform admissible over the session, a dependency DAG partitioned along dependency edges, not schedule. Reach permits the next node; the next node is in-scope. Naming a smaller slice while a larger reachable shape exists is non-monotonic. Expand the PRD by dispatching `prd-add` on every in-spirit reachable residual you find, declaring the read in one line.
 
+**Inherited rows resume first.** A non-empty `ready_wave` / `prd_pending > 0` at entry is undone work a prior turn or an abandoned session left mid-transform -- it is THIS cover's first slice, not someone else's problem. Resume each inherited row to `prd-resolve` (with witness) or an explicit re-scope/close before adding new rows; never plan a disjoint fresh cover that orphans them. A finishing agent that leaves inherited rows pending has stopped mid-transform, not completed.
+
 "Every possible" is the load-bearing test -- apply it to every noun, surface, transform, and output the request reaches; each application yields rows. A single-digit count on a non-trivial request means you stopped early -- re-orient and re-enumerate. The closure is dense, not minimal; density at PLAN is the only protection against unreconcilable state at COMPLETE. An inline TODO in the response body violates `|F|=1`.
 
 ## Expansion
