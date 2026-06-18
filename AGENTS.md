@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-This repo IS the published `gm-skill` npm package: repo root = package root, no factory, no build step generating a separate output dir. `skills/gm-skill/SKILL.md` is the entry point; orchestration logic lives in rs-plugkit, served on demand via the `instruction` verb. Agent-facing prose (phase instruction text + gate/residual messages) is externalized to an editable bundle in `gm-plugkit/instructions/`, shipped by gm-plugkit and provisioned into `.gm/instructions/<key>.md`; `rs-plugkit/src/prose.rs` serves the bundle entry per key and falls back to the compiled `const` when absent -- so editing prose is a gm-plugkit republish with no Rust rebuild. The bundle .md and the rs-plugkit `src/orchestrator/instructions/<key>.rs` consts are kept byte-aligned by `gm-plugkit/scripts/sync-instruction-consts.mjs` (regenerates each `<key>.rs` as `pub const TEXT` from the .md). Detail in rs-learn (`recall: string-externalization project`).
+This repo IS the published `gm-skill` npm package: repo root = package root, no factory, no build step generating a separate output dir. `skills/gm-skill/SKILL.md` is the entry point; orchestration logic lives in rs-plugkit, served on demand via the `instruction` verb. Agent-facing prose (phase instruction + gate/residual text) is externalized to an editable `gm-plugkit/instructions/` bundle, so editing prose is a gm-plugkit republish with no Rust rebuild. Mechanism (prose.rs per-key fallback to compiled const; sync-instruction-consts.mjs byte-aligns the .md and the rs-plugkit consts) in rs-learn (`recall: string-externalization project`).
 
 ## WASM-only
 

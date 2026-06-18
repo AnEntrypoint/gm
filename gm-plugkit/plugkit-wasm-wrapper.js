@@ -411,6 +411,17 @@ function scanStalledTurns() {
   }
 }
 
+// Every spool dispatch is the agent actively driving the chain, including wasm-direct verbs
+// (recall/codesearch/exec_js/git/fetch) that never reach turnTick. Refresh the open turn's stall
+// clock so a Bash-free stretch of pure wasm-direct verbs does not trip a false mid-chain-stall
+// (the recurring audit-fire own-defect). Never create or split a turn -- that stays turnTick's job.
+function touchActiveTurn(sess) {
+  const t = _turns.get(sess || '(no-session)');
+  if (!t) return;
+  t.lastTs = Date.now();
+  t.stallEmitted = false;
+}
+
 let __sessCache = { value: '', mtimeMs: 0, readAt: 0, srcMtimeMs: 0 };
 function readCurrentSess() {
   const now = Date.now();
@@ -479,10 +490,14 @@ function logEvent(sub, event, fields) {
 }
 
 function emitOrchestratorEvents(verb, taskBase, resultStr) {
-  if (!ORCHESTRATOR_VERBS.has(verb)) return;
   let parsed;
-  try { parsed = JSON.parse(resultStr); } catch (_) { return; }
-  if (!parsed || parsed.ok !== true) {
+  try { parsed = JSON.parse(resultStr); } catch (_) { parsed = null; }
+  if (!ORCHESTRATOR_VERBS.has(verb)) {
+    if (parsed && parsed.ok === true) { try { touchActiveTurn(readCurrentSess()); } catch (_) {} }
+    return;
+  }
+  if (!parsed) return;
+  if (parsed.ok !== true) {
     let errData = null;
     if (parsed && typeof parsed.stdout === 'string' && parsed.stdout.length > 0) {
       try { errData = JSON.parse(parsed.stdout); } catch (_) {}
