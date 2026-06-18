@@ -81,7 +81,7 @@ Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. `@<name>` prefix sets namespac
 
 ## Inspection routing
 
-`Read` for runtime-state files (spool response JSON, `.status.json`); `codesearch` verb for every code/file/symbol search -- Glob/Grep/Explore and host-native search are blocked, the verb is the surface. Bash only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
+`Read` for runtime-state files (spool response JSON, `.status.json`); `codesearch` verb for every code/file/symbol search (it indexes the CURRENT cwd only -- sibling-repo source is `Read` by path, never expected from `codesearch`) -- Glob/Grep/Explore and host-native search are blocked, the verb is the surface. Bash only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
 
 ## Memorize
 
