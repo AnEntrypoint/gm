@@ -30,7 +30,7 @@ The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` unde
 
 **Every wasm host-import `extern "C"` block carries `#[link(wasm_import_module = "env")]`** -- in rs-plugkit AND every dep crate linked into the cdylib (rs-learn) AND any sibling building wasm (rs-exec, rs-search); miss it anywhere and the cascade goes dark (local builds stay green, only Linux CI link fails). Incident + host-fn enumeration in rs-learn (`recall: cascade outage wasm import module link`, `recall: wasm host-import link-module trap`).
 
-**`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** (throws silently under bun's ESM inside `catch(_){}`). Incident in rs-learn (`recall: wrapper require not defined under bun`).
+**`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** -- silent throw under bun ESM. Incident + mechanics in rs-learn (`recall: wrapper require not defined under bun`).
 
 **Every single-instance/lock guard is atomic** (O_EXCL / atomic-rename), never check-then-act; count plugkit processes by executable Name. Mechanics + incident in rs-learn (`recall: supervisor churn TOCTOU atomic guard`).
 
