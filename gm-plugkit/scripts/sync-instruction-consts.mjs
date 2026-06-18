@@ -27,7 +27,7 @@ for (const key of keys) {
   const mdPath = join(bundleDir, `${key}.md`);
   const rsPath = join(rsDir, `${key}.rs`);
   if (!existsSync(mdPath)) { console.error(`missing bundle: ${mdPath}`); process.exit(1); }
-  const md = readFileSync(mdPath, 'utf8');
+  const md = readFileSync(mdPath, 'utf8').replace(/\r\n/g, '\n');
   const next = `pub const TEXT: &str = ${rawString(md)};\n`;
   const prev = existsSync(rsPath) ? readFileSync(rsPath, 'utf8') : '';
   if (prev !== next) { writeFileSync(rsPath, next); changed++; console.log(`synced ${key}.rs (${md.length} chars)`); }

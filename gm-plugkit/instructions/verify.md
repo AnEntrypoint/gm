@@ -20,7 +20,7 @@ The push IS the validation dispatch. Local proof covers one platform; the matrix
 
 ## Integration witness
 
-Write `test.js` at root, 200-line ceiling, real services only. Pass = integration witness; on fail `transition` back to EXECUTE. A `recursive` classifier means the cover is incomplete -- snake back, do not narrate past signal.
+Write `test.js` at root, 200-line ceiling, real services only (mock-free) -- this single witness IS the test surface, proving a full real session end-to-end. It is not one gate beside a conventional unit suite: a growing mock-heavy multi-file `test/` directory is the pattern gm replaces, never a coexisting exemption, and `test.js` being capped does not bless a parallel suite. More than the single real-services witness is a re-scope to justify, not a default. Pass = integration witness; on fail `transition` back to EXECUTE. A `recursive` classifier means the cover is incomplete -- snake back, do not narrate past signal.
 
 ## Residual-scan
 
