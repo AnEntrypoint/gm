@@ -4547,3 +4547,133 @@
   description: 'fn is_rejected(_lang: &str) -> bool { false } is never called, has a misleading name implying rejection logic exists, and the #![allow(dead_code)] on line 1 suppresses the warning. P2 subtractive + nothing-fake: remove the function and the dead_code suppression if no other dead code remains.'
   status: completed
   witness: 'rs-exec/src/wasm_spool.rs: removed is_rejected stub (lines 17-19) and #![allow(dead_code)] at line 1; kv_put return value now logged on failure (line 34). Committed dcb8ce8 to rs-exec/main.'
+- id: workflow-repo-audit
+  title: 'Fan-out multi-agent workflow: audit all 6 repos with synthesized-engineering-dna discipline'
+  description: 'Launch Workflow with per-repo subagents (gm, rs-plugkit, rs-learn, rs-codeinsight, rs-search, rs-exec), each applying all 12 engineering principles: Data First, Subtractive Engineering, Evolutionary Production, Composition Spine, Physics-First, Adversarial Design, Empirical Decision Making, Automated Correctness, Worst-Case Resilience, Honest Interfaces, Crucible, Human Value Terminal. Each agent reads the repo source and produces concrete findings.'
+  acceptance: Workflow completes, each repo has a findings report, actionable items are fed as PRD rows
+  status: pending
+- id: audit-host-kv-put-callers
+  title: Audit all host_kv_put callers across all wasm crates for inverted rc check
+  description: 'Pattern: if rc != 0 { Ok(()) } is inverted -- host_kv_put returns 0 on success. Today''s fixes covered rs-learn/crates/wasm/src/wasm_host.rs and rs-plugkit/src/wasm_dispatch.rs close+feedback verbs. Must verify no remaining callers have inverted rc. Every silent-fail path is a data-corruption risk (Principle 9: Worst-Case Resilience).'
+  acceptance: grep for host_kv_put across all rs-* wasm crates, verify every rc check is == 0 for Ok
+  status: pending
+- id: audit-wasm-link-module-attrs
+  title: 'Verify every extern C host-import block in all wasm crates carries #[link(wasm_import_module = env)]'
+  description: 'The silent CI-only failure: bare extern blocks pass local cargo build but fail Linux release link. Every extern C block in rs-plugkit, rs-learn, rs-exec, rs-search must carry the attribute. This is the Automated Correctness principle -- make invalid state structurally impossible to ship.'
+  acceptance: Read extern C blocks in all 4 wasm-building crates; confirm attribute present on every block
+  status: pending
+- id: audit-data-models
+  title: 'Audit data model quality across all 6 repos: hidden state, unconstrained types, implicit dependencies'
+  description: 'Principle 1 (Data First): identify any structs with boolean flags instead of enum variants, optional fields that encode state machines, raw string types where newtypes should enforce invariants, or public mutable fields that should be private. Each is a PRD finding row.'
+  acceptance: Per-repo report of data model violations with file:line witnesses
+  status: pending
+- id: audit-abstractions
+  title: 'Audit abstractions in all repos for Principle 2 (Subtractive Engineering): cost > benefit'
+  description: 'Find abstractions where the abstraction costs more cognitive load than it saves: trait objects used for single implementations, wrapper types that just delegate, intermediate types that exist only to satisfy a pattern. Each over-abstraction is a finding. Also find missing abstractions where duplication signals an extraction opportunity.'
+  acceptance: Per-repo list of over-abstractions and missing extractions with file:line
+  status: pending
+- id: audit-error-handling
+  title: Audit error handling paths across all repos for Principle 9 (Worst-Case Resilience)
+  description: 'Find: unwrap()/expect() calls that can panic in production paths (not tests), silent error swallowing (catch(_) {} or .unwrap_or_default() on IO), missing degraded-mode paths, hard-coded timeouts that may fail under load, error types that lose information by converting to String too early.'
+  acceptance: Per-repo list of fragile error paths with file:line and fix recommendation
+  status: pending
+- id: audit-interfaces
+  title: 'Audit public APIs for Principle 10 (Honest Interfaces): claimed vs actual guarantees'
+  description: 'Find: functions that claim to succeed but silently swallow errors, async functions that claim to be pure but have hidden IO, public spool verb shapes that accept invalid states the type system could reject, verb response shapes where ok:true can accompany a partial failure. Each is a broken contract.'
+  acceptance: Per-repo list of dishonest interfaces with proposed fix
+  status: pending
+- id: audit-composition-spine
+  title: 'Audit dependency layer violations (Principle 4: Composition Spine)'
+  description: 'Find: circular dependencies between crates, modules that reach down past their layer, cross-cutting utilities that should be primitives but are duplicated, crates that add more than one capability. The rs-plugkit wasm cdylib dependency chain (rs-exec, rs-codeinsight, rs-search, rs-learn) must form a strict spine not a web.'
+  acceptance: Dependency graph per crate; violations with fix recommendation
+  status: pending
+- id: audit-nothing-fake
+  title: 'Audit for stub/mock/placeholder code (AGENTS.md: nothing fake in source)'
+  description: 'Find: functions that always return Ok(()), hardcoded return values, is_rejected-style stubs (like rs-exec''s is_rejected fixed today), placeholder error types, unimplemented!() in non-prototype code, cfg(test) gating that hides real behavior in production. Each is a production correctness risk.'
+  acceptance: All-repos grep for unimplemented!/todo!/placeholder patterns; every hit is a row
+  status: pending
+- id: audit-gm-harness
+  title: Audit gm harness (lib/, bin/, gm-plugkit/) for jank, subtractive opportunities, adversarial design gaps
+  description: 'Apply all 12 principles to gm itself: spool-dispatch.js gate logic, plugkit-wasm-wrapper.js bootstrap/selfHeal/watcher paths, supervisor.js restart logic, lib/browser.js event emission. Check: CRLF in source files (codesearch showed CRLF in JS), catch(_) swallows vs logs, hardcoded paths, feature flags masking behavior, misleading default configs.'
+  acceptance: Concrete finding list with file:line for every jank item in gm
+  status: pending
+- title: fix close() rc inversion in rs-plugkit
+  description: 'wasm_dispatch.rs:584 uses `if rc == 0 { ok }` but host_kv_put returns 1 on success; every successful close() returns an error, corrupting task lifecycle. Fix: change to `if rc != 0 { ok }`.'
+  repo: rs-plugkit
+  file: src/wasm_dispatch.rs
+  line: 584
+  severity: high
+  id: fix-close-rc-inversion-in-rs-plugkit
+  status: pending
+- title: fix kv_put rc inversion in rs-exec
+  description: 'wasm_host.rs:57 returns `r == 0` as success bool, but host returns 1 on success; every successful KV write appears as failure. Fix: change to `r != 0`.'
+  repo: rs-exec
+  file: src/wasm_host.rs
+  line: 57
+  severity: high
+  id: fix-kv-put-rc-inversion-in-rs-exec
+  status: pending
+- title: fix kv_put rc inversion in rs-learn wasm_host
+  description: 'wasm_host.rs:69 uses `if rc == 0 { Ok(()) }` but host returns 1 on success; every successful KV write returns Err. Fix: change to `if rc != 0 { Ok(()) }`.'
+  repo: rs-learn
+  file: crates/wasm/src/wasm_host.rs
+  line: 69
+  severity: high
+  id: fix-kv-put-rc-inversion-in-rs-learn-wasm-host
+  status: pending
+- title: add missing link attr on host_env_get extern block in rs-learn pipeline.rs
+  description: 'pipeline.rs:13 extern block for host_env_get lacks #[link(wasm_import_module = "env")]; Linux CI wasm linker fails to resolve, causing cascade outage invisible locally. Fix: add attribute above extern block.'
+  repo: rs-learn
+  file: crates/wasm/src/pipeline.rs
+  line: 13
+  severity: critical
+  id: add-missing-link-attr-on-host-env-get-extern-block-in-rs-learn-p
+  status: pending
+- title: fix sessionId code injection in gm lib/spool.js
+  description: 'spool.js:52 embeds sessionId via bare template literal `''${sessionId}''`; a quote or newline in sessionId breaks or injects JS running under watcher''s Node process. Fix: use JSON.stringify(sessionId).'
+  repo: gm
+  file: lib/spool.js
+  line: 52
+  severity: high
+  id: fix-sessionid-code-injection-in-gm-lib-spool-js
+  status: pending
+- title: fix acquireLock TOCTOU race in plugkit-wasm-wrapper.js
+  description: 'acquireLock() uses existsSync+writeFileSync (TOCTOU), not O_EXCL. Two racing watchers can both pass the exists check. Fix: use fs.openSync(LOCK_PATH,''wx'') in try/catch to make acquisition atomic.'
+  repo: gm
+  file: gm-plugkit/plugkit-wasm-wrapper.js
+  line: 2141-2188
+  severity: high
+  id: fix-acquirelock-toctou-race-in-plugkit-wasm-wrapper-js
+  status: pending
+- title: fix rs-codeinsight formatter.rs emoji glyph violation
+  description: formatter.rs:63 emits emoji chars (e.g. '## Target:' with glyph). AGENTS.md forbids decorative glyphs; convert to ASCII equivalents.
+  repo: rs-codeinsight
+  file: src/formatter.rs
+  line: 63
+  severity: medium
+  id: fix-rs-codeinsight-formatter-rs-emoji-glyph-violation
+  status: pending
+- title: fix rs-search tokenize non-deterministic ordering
+  description: 'tokenize.rs:35-39 collects from HashSet giving non-deterministic token order. Fix: sort before returning.'
+  repo: rs-search
+  file: src/tokenize.rs
+  line: 35-39
+  severity: medium
+  id: fix-rs-search-tokenize-non-deterministic-ordering
+  status: pending
+- title: fix rs-codeinsight extract_object_keys truncation on nested JSON
+  description: 'project.rs:379-407 uses find(''}'') to find object end, truncating nested objects. Already has find_matching_brace() helper. Fix: use find_matching_brace for both extract_object_keys and extract_script.'
+  repo: rs-codeinsight
+  file: src/project.rs
+  line: 370-407
+  severity: high
+  id: fix-rs-codeinsight-extract-object-keys-truncation-on-nested-json
+  status: pending
+- title: fix rs-plugkit TurnState.phase as String not Phase enum
+  description: 'orchestrator/state.rs:37-47 stores phase as String, allowing invalid phase values to round-trip. Fix: change to Phase enum with serde rename.'
+  repo: rs-plugkit
+  file: src/orchestrator/state.rs
+  line: 37-47
+  severity: medium
+  id: fix-rs-plugkit-turnstate-phase-as-string-not-phase-enum
+  status: pending

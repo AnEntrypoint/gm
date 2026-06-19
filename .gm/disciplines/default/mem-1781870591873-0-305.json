@@ -1,0 +1,3 @@
+## Resolved mutable: workflow-findings
+
+wf_c82ee6fd-1c1 completed: 78 findings across 6 repos; critical: close() rc inversion rs-plugkit:584, kv_put rc inversion rs-exec:57 and rs-learn:69, missing link attr rs-learn/pipeline.rs:13, sessionId injection gm/lib/spool.js:52; confirmed by exec_js-10,11 scans

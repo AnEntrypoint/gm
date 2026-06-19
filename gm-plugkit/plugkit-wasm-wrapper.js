@@ -2139,8 +2139,8 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   function lockBody() { return `${process.pid}|${Date.now()}|${_ownWrapperSha12}`; }
   function acquireLock() {
-    try {
-      if (fs.existsSync(LOCK_PATH)) {
+    function checkExistingHolder() {
+      try {
         const content = fs.readFileSync(LOCK_PATH, 'utf-8').trim();
         const parts = content.split('|');
         const pidStr = parts[0];
@@ -2164,6 +2164,7 @@ async function runSpoolWatcher(instance, spoolDir) {
               }));
             } catch (_) {}
             try { process.kill(parseInt(pidStr, 10), 'SIGTERM'); } catch (_) {}
+            return 'takeover';
           } else {
             const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
             console.error(`[plugkit-wasm] ${msg}; refusing to start`);
@@ -2181,11 +2182,32 @@ async function runSpoolWatcher(instance, spoolDir) {
         } else if (!holderAlive) {
           console.error(`[plugkit-wasm] stale lock (holder pid=${pidStr} dead, age=${age}ms); taking over`);
           try { logEvent('plugkit', 'watcher.lock-pid-dead-takeover', { stale_pid: pidStr, lock_age_ms: age }); } catch (_) {}
+          return 'takeover';
         } else {
           console.error(`[plugkit-wasm] stale lock (age=${age}ms); taking over`);
+          return 'takeover';
         }
+      } catch (_) {
+        return 'takeover';
       }
-      fs.writeFileSync(LOCK_PATH, lockBody());
+    }
+    try {
+      let fd;
+      try {
+        fd = fs.openSync(LOCK_PATH, 'wx');
+      } catch (e) {
+        if (e.code !== 'EEXIST') throw e;
+        const action = checkExistingHolder();
+        if (action !== 'takeover') return;
+        try { fs.unlinkSync(LOCK_PATH); } catch (_) {}
+        fd = fs.openSync(LOCK_PATH, 'wx');
+      }
+      try {
+        const body = Buffer.from(lockBody(), 'utf-8');
+        fs.writeSync(fd, body);
+      } finally {
+        fs.closeSync(fd);
+      }
     } catch (e) {
       console.error(`[plugkit-wasm] lock acquire failed: ${e.message}`);
       process.exit(1);

@@ -278,3 +278,8 @@
   status: witnessed
   question: 'Can rs-learn/rs-exec/rs-search/rs-codeinsight (deps linked into the cdylib) reach the bundle/pkfs to resolve their own agent-facing prose, or must rs-plugkit mediate (resolver lives in a shared low-level crate vs rs-plugkit exposes it)? Witness: each crate''s host-import blocks + whether pkfs/host_read is accessible to deps.'
   witness_evidence: 'rs-learn/crates/wasm/src/wasm_host.rs, rs-exec/src/wasm_host.rs, rs-search/src/wasm_host.rs host-import blocks list host_kv_*/host_vec_search/host_bm25_search/host_git_search/host_exec_js/host_log/host_now_ms but NO host_read; rs-codeinsight has zero host imports. DECISION: do NOT add host_read to the dep crates (would expand the #[link(wasm_import_module=env)] link-trap surface across 4 crates and the cascade goes dark on any miss). rs-plugkit (which already owns pkfs/host_read) MEDIATES: it resolves prose for its own strings, and any agent-facing prose the deps surface is resolved at the rs-plugkit dispatch boundary (deps return a stable key/const, rs-plugkit substitutes from the bundle). Reshapes resolver-shared-across-crates (row 79) + per-crate extraction rows 80-83 to mediation, not per-crate file reads.'
+- id: workflow-findings
+  description: 'Synthesized engineering-dna audit workflow result: per-repo findings, top fixes, themes'
+  status: witnessed
+  blockedBy: workflow:wf_c82ee6fd-1c1
+  witness_evidence: 'wf_c82ee6fd-1c1 completed: 78 findings across 6 repos; critical: close() rc inversion rs-plugkit:584, kv_put rc inversion rs-exec:57 and rs-learn:69, missing link attr rs-learn/pipeline.rs:13, sessionId injection gm/lib/spool.js:52; confirmed by exec_js-10,11 scans'
