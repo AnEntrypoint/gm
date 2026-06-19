@@ -4604,7 +4604,8 @@
   line: 584
   severity: high
   id: fix-close-rc-inversion-in-rs-plugkit
-  status: pending
+  status: completed
+  witness: rs-plugkit/src/wasm_dispatch.rs:584 changed rc==0 to rc!=0; pushed sha c6ceb63
 - title: fix kv_put rc inversion in rs-exec
   description: 'wasm_host.rs:57 returns `r == 0` as success bool, but host returns 1 on success; every successful KV write appears as failure. Fix: change to `r != 0`.'
   repo: rs-exec
@@ -4612,7 +4613,8 @@
   line: 57
   severity: high
   id: fix-kv-put-rc-inversion-in-rs-exec
-  status: pending
+  status: completed
+  witness: rs-exec/src/wasm_host.rs:57 changed r==0 to r!=0; pushed sha 3508dc1
 - title: fix kv_put rc inversion in rs-learn wasm_host
   description: 'wasm_host.rs:69 uses `if rc == 0 { Ok(()) }` but host returns 1 on success; every successful KV write returns Err. Fix: change to `if rc != 0 { Ok(()) }`.'
   repo: rs-learn
@@ -4620,7 +4622,8 @@
   line: 69
   severity: high
   id: fix-kv-put-rc-inversion-in-rs-learn-wasm-host
-  status: pending
+  status: completed
+  witness: rs-learn/crates/wasm/src/wasm_host.rs:69 changed rc==0 to rc!=0 for Ok; pushed sha 9942e28
 - title: add missing link attr on host_env_get extern block in rs-learn pipeline.rs
   description: 'pipeline.rs:13 extern block for host_env_get lacks #[link(wasm_import_module = "env")]; Linux CI wasm linker fails to resolve, causing cascade outage invisible locally. Fix: add attribute above extern block.'
   repo: rs-learn
@@ -4628,7 +4631,8 @@
   line: 13
   severity: critical
   id: add-missing-link-attr-on-host-env-get-extern-block-in-rs-learn-p
-  status: pending
+  status: completed
+  witness: 'rs-learn/crates/wasm/src/pipeline.rs:13 #[link(wasm_import_module = "env")] added above extern C block; pushed sha 9942e28'
 - title: fix sessionId code injection in gm lib/spool.js
   description: 'spool.js:52 embeds sessionId via bare template literal `''${sessionId}''`; a quote or newline in sessionId breaks or injects JS running under watcher''s Node process. Fix: use JSON.stringify(sessionId).'
   repo: gm
@@ -4636,7 +4640,8 @@
   line: 52
   severity: high
   id: fix-sessionid-code-injection-in-gm-lib-spool-js
-  status: pending
+  status: completed
+  witness: gm/lib/spool.js:52 bare template literal replaced with JSON.stringify(sessionId); pushed sha 4993fee70
 - title: fix acquireLock TOCTOU race in plugkit-wasm-wrapper.js
   description: 'acquireLock() uses existsSync+writeFileSync (TOCTOU), not O_EXCL. Two racing watchers can both pass the exists check. Fix: use fs.openSync(LOCK_PATH,''wx'') in try/catch to make acquisition atomic.'
   repo: gm
@@ -4644,7 +4649,8 @@
   line: 2141-2188
   severity: high
   id: fix-acquirelock-toctou-race-in-plugkit-wasm-wrapper-js
-  status: pending
+  status: completed
+  witness: gm/gm-plugkit/plugkit-wasm-wrapper.js acquireLock rewritten with fs.openSync(LOCK_PATH,'wx') O_EXCL; pushed sha 4993fee70
 - title: fix rs-codeinsight formatter.rs emoji glyph violation
   description: formatter.rs:63 emits emoji chars (e.g. '## Target:' with glyph). AGENTS.md forbids decorative glyphs; convert to ASCII equivalents.
   repo: rs-codeinsight
@@ -4652,7 +4658,8 @@
   line: 63
   severity: medium
   id: fix-rs-codeinsight-formatter-rs-emoji-glyph-violation
-  status: pending
+  status: completed
+  witness: rs-codeinsight/src/formatter.rs all emoji/arrow glyphs replaced with ASCII; pushed sha a29d7a6
 - title: fix rs-search tokenize non-deterministic ordering
   description: 'tokenize.rs:35-39 collects from HashSet giving non-deterministic token order. Fix: sort before returning.'
   repo: rs-search
@@ -4660,7 +4667,8 @@
   line: 35-39
   severity: medium
   id: fix-rs-search-tokenize-non-deterministic-ordering
-  status: pending
+  status: completed
+  witness: rs-search/src/tokenize.rs:38 vec.sort() added before return; pushed sha 871bce4
 - title: fix rs-codeinsight extract_object_keys truncation on nested JSON
   description: 'project.rs:379-407 uses find(''}'') to find object end, truncating nested objects. Already has find_matching_brace() helper. Fix: use find_matching_brace for both extract_object_keys and extract_script.'
   repo: rs-codeinsight
@@ -4668,7 +4676,8 @@
   line: 370-407
   severity: high
   id: fix-rs-codeinsight-extract-object-keys-truncation-on-nested-json
-  status: pending
+  status: completed
+  witness: rs-codeinsight/src/project.rs:379-407 extract_object_keys and extract_script now use depth-tracking brace match; pushed sha a29d7a6
 - title: fix rs-plugkit TurnState.phase as String not Phase enum
   description: 'orchestrator/state.rs:37-47 stores phase as String, allowing invalid phase values to round-trip. Fix: change to Phase enum with serde rename.'
   repo: rs-plugkit
@@ -4676,4 +4685,5 @@
   line: 37-47
   severity: medium
   id: fix-rs-plugkit-turnstate-phase-as-string-not-phase-enum
-  status: pending
+  status: completed
+  witness: rs-plugkit/src/orchestrator/state.rs TurnState.phase changed from String to Phase; serde rename attrs added; all write sites updated; pushed sha 2c5b269
