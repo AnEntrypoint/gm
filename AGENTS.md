@@ -74,7 +74,7 @@ Plugkit is the stateful library the agent drives by dispatching verbs -- it does
 
 ## gm-skill is the canonical universal harness
 
-`skills/gm-skill/SKILL.md` is the single source of truth for harness behavior and the only skill shipped; the legacy 15-platform fanout (gm-cc/gm-gc/gm-oc/gm-codex/gm-kilo/gm-qwen/gm-hermes/gm-thebird/gm-vscode/gm-cursor/gm-zed/gm-jetbrains/gm-copilot-cli/gm-antigravity/gm-windsurf) is retired and those repos archived. Users install gm-skill directly into whatever harness they use.
+`skills/gm-skill/SKILL.md` is the single source of truth; one skill shipped, legacy 15-platform fanout retired+archived. Canonical install: `bun x skills add AnEntrypoint/gm`. Detail in rs-learn (`recall: legacy gm-skill variants retired`).
 
 ## Tool surface is plugkit-only
 
@@ -140,9 +140,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 Push to any rs-* sibling triggers `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill + gm-plugkit + the SKILL.md mirror. Step sequence + PUBLISHER_TOKEN setup in rs-learn (`recall: cascade pipeline`).
 
-Three npm packages publish from this repo: `gm-skill` (harness), `gm-plugkit` (bootstrap + watcher), `plugkit-wasm` (wasm binary) -- all shipped on every version-bump commit. The legacy 15 downstream repos are archived (no further releases).
-
-**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, rs-learn, gm}` -- rs-plugkit Cargo.toml is the version source-of-truth, gm.json holds plugkitVersion. Per-repo roles in rs-learn (`recall: cascade repos involved roles`).
+**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, rs-learn, gm}` -- rs-plugkit Cargo.toml is the version source-of-truth, gm.json holds plugkitVersion. Three npm packages ship: `gm-skill`, `gm-plugkit`, `plugkit-wasm`. Per-repo roles + legacy-retirement detail in rs-learn (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local cargo builds -- never run `cargo update`/`cargo build` locally, push and let CI build.
 

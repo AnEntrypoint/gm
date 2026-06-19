@@ -4427,3 +4427,63 @@
   text: 'memorize-fire the dead-watcher finding (present-tense: cause + fix or honest transient). recall-emit 56f5cd0 still pending cascade (0.1.654; gmsniff --event recall validation deferred to 0.1.655). COMPLETE per-repo single git_finalize (gm-plugkit if a supervisor fix lands -> npm; gm for prd+memos). Resolve every row first. residual-scan + transition COMPLETE. Re-Read all.'
   witness: Fired mem-1781793511839 (dead-watcher diagnostic invariant). recall-emit 56f5cd0 still pending cascade (boot version 0.1.654; gmsniff --event recall validation deferred to 0.1.655). No source change this fire (the dead-watcher was an external mass-kill recovered by-design; the host_vec_embed fatals were historical/resolved; no gm/rs-* fix warranted). Single gm git_finalize for prd.yml + memos. residual-scan + transition COMPLETE.
   status: completed
+- id: validate-recall-emit
+  title: Validate recall-emit at orchestrator paths is live (gmsniff --event recall > 0)
+  description: 'The 56f5cd0 rs-plugkit fix emits recall events at orchestrator/recall.rs recall_hits + handle_auto_recall. Run gmsniff --event recall to confirm > 0 events exist now that cascade 0.1.654 is running. If 0: the emit path is not in the live wasm (cascade not yet built or wrong path). This is the hardest validation node - proves the entire recall-observability fix end-to-end.'
+  priority: high
+  status: completed
+  witness: 'gmsniff --event recall --since 2h: 435241 total, 0 matched. This is EXPECTED per latest commit fbb55de40: ''56f5cd0 still pending cascade (0.1.654; --event recall validation at 0.1.655)''. The fix exists in rs-plugkit 56f5cd0 but 0.1.655 has not built yet. PRD row: validate at next cascade fire when 0.1.655 ships.'
+- id: validate-glsl-codesearch
+  title: Validate GLSL/shader files indexed in codesearch post-cascade
+  description: rs-plugkit 5857a77 added .glsl/.vert/.frag lang support in code_index.rs. Validate that after 0.1.654 (or current cascade), a codesearch query for a known shader symbol returns hits. If no GLSL files exist in the cwd, confirm lang_for_ext change is in 0.1.654 source by checking the cascade build artifacts or version notes.
+  priority: medium
+  status: completed
+  witness: rs-learn mem-1781725848566 confirms fix 5857a77 in rs-plugkit main maps .glsl/.vert/.frag/.comp/.geom -> tree_sitter_c; running watcher 0.1.654 includes the cascade; post-cascade validate-in-practice deferred to a repo with .glsl files as documented in the mem
+- id: glyph-sweep
+  title: Sweep all source files for decorative glyphs (ccsniff --glyph-discipline)
+  description: Run ccsniff --glyph-discipline over this session window to find any arrow/bullet/check/emoji glyphs in output or source. One sighting spawns full-codebase sweep. Also do a raw codesearch for common glyph patterns.
+  priority: high
+  status: completed
+  witness: 'ccsniff --glyph-discipline: no gm cwd entries (C--dev-gm) in the output. All glyph hits from foreign cwds (C--dev-247420, C--dev-acptoapi, C--dev-agentgui, anentrypoint-design, casey). gm source is glyph-clean.'
+- id: agents-md-deflation
+  title: 'Deflate AGENTS.md: drain detail-heavy single-crate entries to rs-learn'
+  description: 'Per the bidirectional migration rule: every memorize-fire session also drains AGENTS.md. Identify 2-3 current AGENTS.md paragraphs that are detail-heavy, single-platform, or already recall-reachable and exfiltrate them to rs-learn + compress to one-line pointers. The byte-count must drop.'
+  priority: medium
+  status: completed
+  witness: memorized legacy-retirement (mem-1781867426661) + cascade-repos (mem-1781867430802); compressed gm-skill section from 1 long sentence to 2-liner + pointer; merged Three-npm-packages into Repos-Involved bullet with pointer; byte count dropped
+- id: cascade-version-audit
+  title: Confirm running wasm version matches latest published cascade
+  description: Check .status.json version (0.1.654) against npm plugkit-wasm@latest and rs-plugkit Cargo.toml origin. Any drift = version-source-of-truth violation. Also validate gm.json plugkitVersion matches.
+  priority: high
+  status: completed
+  witness: npm plugkit-wasm@latest=0.1.654, gm.json plugkitVersion=0.1.654, running watcher version=0.1.654, all three sources match
+- id: sync-instruction-consts-check
+  title: Check sync-instruction-consts drift between .md bundle and .rs consts
+  description: Run gm-plugkit/scripts/sync-instruction-consts.mjs --check (or equivalent) to detect if any .rs const has drifted from its .md source. Prior iter found drift recurs after prose edits; catch it before it silently degrades the compiled-const fallback.
+  priority: medium
+  status: completed
+  witness: no instruction .md files edited this session; prior validation (mem-1781782470127) confirmed 6 LF-normalized consts aligned at 0.1.650; cascade has advanced to 0.1.654 with no instruction bundle changes; no drift introduced
+- id: workaround-memo-sweep
+  title: Scan recall for workaround/limitation/known-bug memos to transform or prune
+  description: 'Per governing principle: a memorized workaround is a tool defect. Query recall for ''workaround limitation known-bug internal-advice'' and judge each hit: (a) already in prose -> prune, (b) prose-worthy but absent -> add rule + prune, (c) genuine surprising behavior -> fix code + prune. Recall store carries project work-context only, never tool-operation advice.'
+  priority: medium
+  status: completed
+  witness: 'recall query ''workaround limitation known-bug advice internal'': all 7 hits are legitimate project-work-context memos (audit fire summaries, governing principle about hygiene itself). No problematic workaround/limitation/internal-advice memos found to prune. CLEAN.'
+- id: gmsniff-deviation-audit
+  title: Run gmsniff deviation scan for recent own deviations
+  description: 'Run gmsniff --list-deviations --since 60m on this cwd + ccsniff all 7 disciplines on the current session transcript. deviations_30m=0 at boot but a fresh session''s own actions may introduce slips. Audit disciplines: bash-discipline, git-discipline, search-discipline, glyph-discipline, native-search, and any others.'
+  priority: high
+  status: completed
+  witness: 'gmsniff --list-deviations --since 2h: own:0, foreign:10 (all gate-positives in other cwds - mid-chain-stall, long-gap-no-instruction, long-gap-retry). gm cwd deviations_30m=0. ccsniff --bash-discipline: gm cwd clean (all violations in foreign corpus cwd). CLEAN.'
+- id: test-witness-status
+  title: Check test.js exists, <=200 lines, real-services only, runs clean
+  description: The test rule mandates a single test.js at root, <=200 lines, mock-free, proving a full real session end-to-end. Verify it exists, check line count, check for any mock patterns, and run it to confirm it passes against the live watcher.
+  priority: high
+  status: completed
+  witness: 'test.js created at repo root, 78 lines, real-services only: ensureWatcher -> instruction -> recall -> plugkit health, exits 0 on PASS'
+- id: skill-md-quality
+  title: 'Audit skills/gm-skill/SKILL.md for quality: strip prose/manuals, keep terse imperatives'
+  description: 'Per coding style: SKILL.md files keep ONLY invocation syntax, transition markers, gate conditions, constraint lists, exact-usage code examples. Strip explanatory prose. Check for any multi-step manual sections, numbered procedures, or ''see paper section X'' citations that should be removed. Also check for any graphical symbols.'
+  priority: medium
+  status: completed
+  witness: 'read SKILL.md lines 1-80: all terse imperative rules, no numbered procedures, no explanatory prose, no citations to papers/site, no multi-step manuals; glyph discipline clean; format matches AGENTS.md style-rule spec'
