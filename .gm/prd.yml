@@ -4487,3 +4487,51 @@
   priority: medium
   status: completed
   witness: 'read SKILL.md lines 1-80: all terse imperative rules, no numbered procedures, no explanatory prose, no citations to papers/site, no multi-step manuals; glyph discipline clean; format matches AGENTS.md style-rule spec'
+- id: workflow-multi-repo-quality-scan
+  title: Fan out 6 subagents (one per repo) applying synthesized-engineering-dna to find real quality issues
+  description: 'Workflow fans: gm + rs-plugkit + rs-learn + rs-exec + rs-search + rs-codeinsight. Each agent reads key source files and applies the 12 principles to surface actionable findings.'
+  status: pending
+- id: rs-plugkit-unwrap-audit
+  title: 'rs-plugkit: audit all .unwrap()/.expect() calls (P6 adversarial + P9 worst-case) -- panic paths in wasm cdylib are silent aborts'
+  description: wasm_dispatch.rs, gates.rs, embed.rs, pipeline.rs -- unwrap in wasm context = silent abort with no recovery. Replace with explicit error propagation.
+  status: pending
+- id: rs-exec-wasm-error-propagation
+  title: 'rs-exec: audit wasm_host.rs + wasm_spool.rs for panic paths and error swallowing (P6+P9)'
+  description: JS execution host must surface errors honestly; silent panics or swallowed errors violate P10 honest interfaces.
+  status: pending
+- id: rs-search-fusion-correctness
+  title: 'rs-search: audit fusion.rs ranking logic for correctness and edge cases (P7 empirical + P1 data-first)'
+  description: Search fusion combines multiple signals; verify the score normalization handles empty results, NaN, and degenerate inputs without panic.
+  status: pending
+- id: rs-codeinsight-scanner-completeness
+  title: 'rs-codeinsight: audit scanner.rs + analyzer.rs for incomplete language coverage and FIXME/TODO markers (P3 evolutionary + P2 subtractive)'
+  description: rs-codeinsight has its own TODO/FIXME scanner; check if its own source has unresolved TODOs in scanner/analyzer that signal incomplete paths.
+  status: pending
+- id: gm-lib-error-handling
+  title: 'gm/lib/: audit JS error handling for swallowed errors, missing .catch(), unhandled promise rejections (P6+P9)'
+  description: lib/spool-dispatch.js, lib/skill-bootstrap.js, gm-plugkit/plugkit-wasm-wrapper.js -- verify all async paths have explicit error handling.
+  status: pending
+- id: rs-plugkit-data-model-audit
+  title: 'rs-plugkit: audit PRD/mutable/phase state model for invariant violations (P1 data-first) -- invalid states representable?'
+  description: prd.yml, mutables.yml data shapes; gates.rs validation; check if invalid state transitions or partial states can be constructed.
+  status: pending
+- id: cross-repo-wasm-import-module-audit
+  title: 'Verify every extern C block in rs-exec + rs-search + rs-codeinsight carries #[link(wasm_import_module = env)] (WASM-only rule)'
+  description: Missing this on any dep crate causes cascade CI failure on Linux. Check all extern blocks in wasm_host.rs files across rs-exec and rs-search.
+  status: pending
+- id: rs-plugkit-dead-code-subtractive
+  title: 'rs-plugkit: identify dead code, unused imports, over-abstracted helpers (P2 subtractive)'
+  description: 'wasm cdylib dead code adds size and maintenance burden; audit for #[allow(dead_code)] suppressions and unused pub functions.'
+  status: pending
+- id: implement-fixes-from-workflow
+  title: Implement all actionable fixes surfaced by the multi-repo workflow subagents
+  description: After workflow completes, triage findings by impact, implement real fixes (not stubs), verify each, commit per-repo.
+  status: pending
+- id: memorize-fire-quality-findings
+  title: memorize-fire actionable quality patterns discovered this session into rs-learn
+  description: New quality invariants found by the workflow that aren't yet in recall should be memorized for future audit sessions.
+  status: pending
+- id: rs-exec-is-rejected-stub
+  title: rs-exec/src/wasm_spool.rs:17 is_rejected() always returns false -- dead stub violating nothing-fake rule
+  description: 'fn is_rejected(_lang: &str) -> bool { false } is never called, has a misleading name implying rejection logic exists, and the #![allow(dead_code)] on line 1 suppresses the warning. P2 subtractive + nothing-fake: remove the function and the dead_code suppression if no other dead code remains.'
+  status: pending
