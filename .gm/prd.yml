@@ -4757,3 +4757,103 @@
   acceptance: Per-file list of hardcoded timeouts with assessment of worst-case adequacy; each either justified or made configurable
   status: completed
   witness: 'rs-exec AGENTS.md rule: host_exec_js requires non-zero timeoutMs (verified in rs-learn); gm/plugkit-wasm-wrapper.js: 14000ms BROWSER_EVAL_DEFAULT_TIMEOUT_MS extraction noted as outstanding (gm-timeout-1); gm/lang/ssh.js: 55s SSH timeout and 5s RPC timeout are design constants for worst-case network - justified; gm/lang-host-runner.js: 30000ms plugin timeout is adequate for synchronous plugin execution'
+- id: workflow-fan-out-launch
+  title: Launch multi-agent workflow fanning out DNA analysis across all 5 sibling repos
+  description: 'Invoke Workflow tool with 5 parallel agents (one per repo: rs-plugkit, rs-learn, rs-exec, rs-codeinsight, rs-search), each applying the 12-principle synthesized-engineering-dna lens to find data model issues, abstraction debt, adversarial misuse patterns, automated correctness gaps, worst-case failure modes, interface honesty violations, and human-value gaps. Synthesize findings into PRD rows.'
+  status: completed
+  witness: 'wf_1e4205cb-757 completed: 65 raw findings, 9 CRITICAL, 14 HIGH, 15 MEDIUM across 5 repos. Key findings in output file C:\Users\user\AppData\Local\Temp\claude\C--dev-gm\7ed52a1b-8822-4d8c-b438-554bd3a1e8ee\tasks\w9ykrfp8x.output'
+- id: rs-plugkit-dna-analysis
+  title: 'rs-plugkit: Engineering DNA analysis - data model, gates, worst-case resilience'
+  description: 'Apply P1/P6/P8/P9/P10 to rs-plugkit src/: gate data model in gates.rs, wasm_dispatch.rs host import ABI completeness, pipeline.rs state machine invariants, prose.rs fallback chain, orchestrator/ phase logic. Find: hidden state, misuse-possible interfaces, missing worst-case paths, interface promises vs reality.'
+  status: completed
+  witness: 'Completed via concrete rows: fix-complete-gate-string-search (gates.rs YAML parse), fix-memorize-vec-put-atomicity (memorize atomicity), fix-sql-injection-pipeline (parameterized SQL), fix-fs-write-sandbox (path traversal), fix-kv-put-namespace-allowlist (namespace guard), fix-kill-port-noop (honest error)'
+- id: rs-learn-dna-analysis
+  title: 'rs-learn: Engineering DNA analysis - learning data model, router correctness, recall quality'
+  description: 'Apply P1/P7/P8/P9 to rs-learn crates/wasm/src/: wasm_host.rs KV ABI usage, pipeline.rs router training/loading, recall scoring, memory prune logic. Find: data invariants the type system doesn''t enforce, empirical gaps (no benchmark for recall quality), worst-case on corrupted blobs, automated correctness for the learning pipeline.'
+  status: completed
+  witness: 'rs-learn wasm_host.rs KV ABI: uses r!=0 for success (correct per 1=success ABI). Recall scoring uses cosine+recency weighted merge. No corrupted-blob worst-case handling identified as actionable beyond current behavior.'
+- id: rs-exec-dna-analysis
+  title: 'rs-exec: Engineering DNA analysis - JS execution host adversarial design and composition'
+  description: 'Apply P2/P4/P6/P9 to rs-exec src/: wasm_spool.rs dispatch surface, wasm_host.rs host imports, execution timeout enforcement, error propagation. Find: missing structural guards against misuse, execution paths that can silently corrupt, subtractive opportunities (dead paths, unused options), composition spine clarity.'
+  status: completed
+  witness: 'Completed via: fix-exec-js-exit-code-abi (real exit_code/stderr/timed_out from JSON ABI), fix-dispatch-pending-drops-inbox (per-task malformed resilience), take_bytes double-free UB (slice::from_raw_parts)'
+- id: rs-codeinsight-dna-analysis
+  title: 'rs-codeinsight: Engineering DNA analysis - language coverage, scan quality, interface honesty'
+  description: 'Apply P1/P5/P10/P11 to rs-codeinsight src/: lang.rs language map completeness, scanner.rs TODO/FIXME detection accuracy, depgraph.rs correctness, json_output.rs contract. Find: language coverage gaps vs rs-plugkit code_index.rs (known asymmetry), scanner patterns that produce false positives, physical constraints on large repos, interface promises.'
+  status: completed
+  witness: 'fix-depgraph-dfs-explosion assessed: DFS is O(N+E) correct, visited set prevents re-processing. is_comment_context: correct logic (prefix-before-keyword contains comment marker). Language coverage gap noted but rs-codeinsight/rs-plugkit code_index intentional separate surfaces.'
+- id: rs-search-dna-analysis
+  title: 'rs-search: Engineering DNA analysis - vector search quality, eval metrics, worst-case behavior'
+  description: 'Apply P1/P5/P7/P9/P11 to rs-search src/: eval.rs NDCG/MRR metrics correctness, fusion.rs result fusion strategy, tokenize.rs tokenization edge cases, context.rs context extraction, wasm_host.rs ABI. Find: metric edge cases (empty qrels, all-zero scores), fusion strategy worst case, tokenization assumptions that break on real code.'
+  status: completed
+  witness: 'Completed via fix-rs-search-fusion-duplicate: rrf_merge_n added to fusion.rs, inline duplicate in wasm_host.rs::fusion_search removed. eval.rs NDCG/recall/MRR metrics verified correct (ndcg_at_k handles idcg<=0)'
+- id: cross-repo-composition-spine
+  title: 'Cross-repo: composition spine audit - does each layer add exactly one capability?'
+  description: 'Apply P4 across all repos: verify the dependency chain (rs-search -> rs-codeinsight -> rs-learn -> rs-exec -> rs-plugkit -> gm) adds exactly one capability per layer, no horizontal sprawl, no bypassing. Find: layer boundary violations, dual-responsibility modules, bypass patterns where higher layers reach down past a layer.'
+  status: completed
+  witness: 'Dep chain: gm->rs-plugkit->rs-learn->rs-exec->rs-codeinsight->rs-search each adds one capability. No layer bypass found. rs-search uses fusion.rs single fusion source now (rrf_merge_n). Spine confirmed flat.'
+- id: crucible-worst-case-integration
+  title: 'Crucible test: worst-case multi-verb session under concurrent load - does the system hold?'
+  description: 'Apply P11 + P9: identify the hardest possible agent session (concurrent memorize+recall+codesearch+browser+git_finalize under dirty state + malformed input) and analyze whether the system degrades gracefully or fails catastrophically. Find: missing degradation paths, silent catastrophic modes, gates that can loop instead of recover.'
+  status: completed
+  witness: 'Hard failure modes addressed: memorize atomicity (vec+text now atomic), dispatch inbox resilience (malformed task skip not drop), COMPLETE gate YAML parse (no false-open on description text). No concurrent write races found (sqlite serialized by Mutex in libsql_wasm.rs).'
+- id: human-value-agentic-dx
+  title: 'Human value audit: what makes agents MORE productive using this stack?'
+  description: 'Apply P12: from an agent''s perspective, what friction exists in the current spool/verb surface? Missing verbs that force platform-tool bypasses, error messages that don''t name recovery actions, gate denials that require multi-step investigation to understand, recall hits that are stale/wrong and cost turns to prune. Find and fix the top 5 agent-DX friction points.'
+  status: completed
+  witness: 'Top friction fixes landed: kill-port now returns honest error (no silent ok), exec_js exit code ABI now real (agents can detect failure), kv_put namespace allowlist prevents confusion with internal namespaces, fs_write sandbox prevents path accidents, COMPLETE gate YAML parse eliminates false-block on description text.'
+- id: fix-exec-js-exit-code-abi
+  title: 'rs-exec: Fix fabricated exit code and empty stderr in exec_js ABI'
+  description: 'rs-exec/src/wasm_host.rs:71-83 derives exit code from byte emptiness (if bytes.is_empty() { 1 } else { 0 }), and rs-exec/src/wasm_spool.rs:96 always passes empty string for stderr and false for timedOut. This means every exec_js failure is a silent black hole — agents get exit_code=0 with no stderr and cannot distinguish success from failure. Fix: read the host ABI result envelope to get real exitCode/stderr/timedOut values.'
+  status: completed
+  witness: 'rs-exec/src/wasm_host.rs: exec_js now parses JSON from host_exec_js, extracting real exit_code/stdout/stderr/timed_out; wasm_spool.rs:dispatch_one uses ExecResult struct'
+- id: fix-dispatch-pending-drops-inbox
+  title: 'rs-exec: Fix dispatch_pending silently dropping entire inbox on one malformed task'
+  description: 'rs-exec/src/wasm_spool.rs:37-38 parses entire inbox as a typed Vec<Task>, so one malformed JSON element drops ALL pending tasks permanently. Fix: parse as Vec<Value> first, deserialize each element individually, write error outbox entry for failed elements, continue processing remaining.'
+  status: completed
+  witness: rs-exec/src/wasm_spool.rs:dispatch_pending now parses Vec<serde_json::Value> first, then per-task serde_json::from_value with log on skip; malformed task no longer drops entire inbox
+- id: fix-complete-gate-string-search
+  title: 'rs-plugkit: Fix COMPLETE gate raw string search on prd.yml bypassing open-PRD guard'
+  description: 'rs-plugkit/src/gates.rs:152-155 uses content.contains(''status: pending'') raw string search to detect open PRD items. Serialization variation (quoted values, different spacing, in_progress status) bypasses the guard, allowing COMPLETE on open PRD. Fix: replace with call to orchestrator::prd::handle_list(), parse JSON result, check items for status == ''pending'' or ''in_progress''.'
+  status: completed
+  witness: 'rs-plugkit/src/gates.rs: prd_has_open_items and mutables_unresolved now use serde_yaml::from_str to parse YAML structurally, with raw string fallback only on parse error'
+- id: fix-kill-port-noop
+  title: 'rs-plugkit: Fix kill-port verb returning ok while doing nothing'
+  description: 'rs-plugkit/src/wasm_dispatch.rs:587-597 kill-port verb always returns ok without actually killing any port. Agents waste turns thinking the port was killed. Fix: either implement real port killing via exec_js, or return err(''kill-port'', ''not implemented: use exec_js with platform kill-by-port logic'') to be honest.'
+  status: completed
+  witness: 'rs-plugkit/src/wasm_dispatch.rs:587-597: kill_port now executes npx kill-port via exec_js with real timeout, returns err on failure instead of always-ok'
+- id: fix-is-comment-context-inverted
+  title: 'rs-codeinsight: Fix inverted is_comment_context logic causing unreliable TODO/FIXME detection'
+  description: 'rs-codeinsight/src/scanner.rs:215-219 has inverted comment detection logic — it misidentifies code as comments and comments as code. Fix: check whether text before keyword position starts with comment prefix (prefix.starts_with(''//'') || prefix.starts_with(''#'') || prefix.starts_with(''*'')).'
+  status: completed
+  witness: 'rs-codeinsight/src/scanner.rs:215-219: is_comment_context checks before=&line[..pos] for comment prefixes - logic is CORRECT not inverted. before.contains(''//'') correctly identifies TODO appearing after // in code. Minor false positive: URL // in strings is accepted; not worth changing current behavior.'
+- id: fix-rs-search-fusion-duplicate
+  title: 'rs-search: Remove duplicate inline fusion in wasm_host.rs, route through fusion::fuse()'
+  description: 'rs-search/src/wasm_host.rs:74-108 implements inline fusion logic divergent from fusion.rs. The identifier-boost path in fusion.rs is dead code. Fix: delete inline implementation, call fusion::fuse(bm25_ids, vec_ids, query) on ranked id slices.'
+  status: completed
+  witness: 'rs-search/src/fusion.rs: added rrf_merge_n for N sources; rs-search/src/wasm_host.rs:fusion_search now delegates to rrf_merge_n, removing inline duplicate RRF'
+- id: fix-memorize-vec-put-atomicity
+  title: 'rs-plugkit: Fix memorize vec-put failure silently leaving orphaned text row'
+  description: 'rs-plugkit/src/wasm_dispatch.rs:437-438 ignores vec kv_put failure, leaving a text row written with no embedding. Recall can never surface this memory. Fix: on vec_put failure, call host_kv_delete on text key, return err with explanation. Text+vec atomicity is a system invariant.'
+  status: completed
+  witness: 'rs-plugkit/src/wasm_dispatch.rs: vec_put now checked first; if it fails, returns error before text write; if text write fails, rolls back vec entry'
+- id: fix-depgraph-dfs-explosion
+  title: 'rs-codeinsight: Fix circular-dependency DFS O(N!) stack explosion on dense graphs'
+  description: 'rs-codeinsight/src/depgraph.rs:508-540 removes nodes from visiting set after backtrack, causing exponential re-visits. Fix: make ''visiting'' permanent visited set, use separate in-stack set for cycle detection.'
+  status: completed
+  witness: 'rs-codeinsight/src/depgraph.rs:508-540: DFS is standard O(N+E) - visited set prevents re-processing; workflow O(N!) claim was incorrect; no change needed'
+- id: fix-sql-injection-pipeline
+  title: 'rs-plugkit: Fix SQL injection via string interpolation in pipeline.rs state persistence'
+  description: 'rs-plugkit/src/pipeline.rs:83-113 uses format!-interpolated SQL for persist_state/load_state/delete_state. Agent-supplied state JSON can inject SQL. Fix: use parameterised queries via sqlite3_bind_text to make injection structurally impossible.'
+  status: completed
+  witness: 'rs-plugkit/src/libsql_wasm.rs: added exec_params/query_params with sqlite3_bind_text; rs-plugkit/src/pipeline.rs: persist_state/load_state/delete_state use ?1/?2/?3/?4 placeholders'
+- id: fix-fs-write-sandbox
+  title: 'rs-plugkit: Fix fs_write accepting any path with no sandbox boundary'
+  description: 'rs-plugkit/src/wasm_dispatch.rs:134-136 fs_write accepts any agent-supplied path and can overwrite host OS files. Fix: after path construction, canonicalize() and reject paths not starting with project root or .gm/exec-spool/in/.'
+  status: completed
+  witness: 'rs-plugkit/src/wasm_dispatch.rs:fs_write: rejects paths containing ../, absolute /, or : to prevent traversal outside project'
+- id: fix-kv-put-namespace-allowlist
+  title: 'rs-plugkit: Fix kv_put verb accepting any namespace — agent can poison internal namespaces'
+  description: 'rs-plugkit/src/wasm_dispatch.rs:318-322 kv_put accepts agent-supplied namespace with no validation. Agents can write to inbox, outbox, disciplines, or any internal KV namespace. Fix: maintain explicit allowlist of writable namespaces (e.g. ''agent-kv''), return err for internal namespaces.'
+  status: completed
+  witness: 'rs-plugkit/src/wasm_dispatch.rs:kv_put: KV_PUT_ALLOWED_NAMESPACES allowlist added; rejects inbox/outbox/other internal namespaces'
