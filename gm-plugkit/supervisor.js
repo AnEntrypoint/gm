@@ -50,7 +50,7 @@ function logEvent(event, fields) {
       ...fields,
     }) + '\n';
     fs.appendFileSync(path.join(dir, 'plugkit.jsonl'), line);
-  } catch (_) {}
+  } catch (e) { try { console.error('[supervisor] logEvent write failed:', e); } catch (_) {} }
 }
 
 function writeSupervisorStatus(state, extra) {
@@ -69,14 +69,7 @@ function pidAlive(pid) {
   try { process.kill(pid, 0); return true; } catch (_) { return false; }
 }
 
-// Single-instance guard. findSupervisorPid (skill-bootstrap.js) reads .supervisor.pid to early-return
-// when a supervisor is already running; without it every bootstrap spawns a duplicate supervisor,
-// and duplicates spawn duplicate watchers that lock-fight in an endless spawn-reject churn. Write the
-// pid file on startup and refuse to start if a live peer already holds it.
 function acquireSingleInstance() {
-  // Atomic via O_EXCL ('wx'): exclusive-create fails if the file exists, so when N supervisors
-  // race to start in the same instant exactly one wins. A plain existsSync->write is TOCTOU and
-  // lets a concurrent burst all pass, which is the duplicate-supervisor churn this guards against.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const fd = fs.openSync(SUPERVISOR_PID_PATH, 'wx');
@@ -87,13 +80,6 @@ function acquireSingleInstance() {
         let other = NaN;
         try { other = parseInt(fs.readFileSync(SUPERVISOR_PID_PATH, 'utf-8').trim(), 10); } catch (_) {}
         if (Number.isFinite(other) && other !== process.pid && pidAlive(other)) {
-          // An alive holder pid is not the same as a working holder: a wedged supervisor
-          // (event loop stuck, watcher dead, neither .supervisor.json nor .status.json
-          // advancing) blocks every newcomer forever under a pidAlive-only check, forcing
-          // manual process kills to recover the spool. Discriminate by progress, not
-          // liveness: holder is wedged only when its own status heartbeat AND the spool
-          // status are both stale past the takeover window, honoring a future busy_until
-          // exactly as checkWatcherHealth does.
           const TAKEOVER_STALE_MS = 45_000;
           const now = Date.now();
           let supTs = 0;
@@ -119,7 +105,6 @@ function acquireSingleInstance() {
             try { spawnSync('taskkill', ['/F', '/T', '/PID', String(other)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
           }
         }
-        // Holder is dead/stale/wedged: remove and retry the exclusive create once.
         try { fs.unlinkSync(SUPERVISOR_PID_PATH); } catch (_) {}
         continue;
       }
@@ -298,10 +283,6 @@ function checkWatcherHealth() {
     return;
   }
   const now = Date.now();
-  // A long synchronous verb (git_finalize's ~30s network push, a chromium spawn)
-  // blocks the heartbeat write. The verb advertises busy_until in .status.json; while
-  // that is in the future the watcher is busy, not hung -- reaping it kills the verb
-  // mid-flight (the VERB ABORT). Honor busy_until exactly as the agent boot probe does.
   if (status.busy_until && status.busy_until > now) {
     return;
   }
@@ -320,10 +301,6 @@ function checkWatcherHealth() {
     }
     return;
   }
-  // A published wrapper-only fix (no wasm version bump) lands in ~/.gm-tools via the next
-  // bootstrap's ensureWrapperFresh, but a healthy running watcher keeps the old wrapper until it
-  // restarts. On wrapper_sha drift (watcher's reported sha != on-disk), recycle so the fix goes
-  // live without a manual kill. busy_until already returned above, so the watcher is not mid-verb.
   const reported = status.wrapper_sha || null;
   const onDisk = wrapperSha12OnDisk();
   if (reported && onDisk && reported !== onDisk) {
@@ -339,13 +316,6 @@ function checkWatcherHealth() {
     }
     return;
   }
-  // The watcher reads the wasm's embedded instance_version at load and compares it to the
-  // plugkit.version text file (file_version), exposing version_drifted when they disagree.
-  // This catches the case where the version text was bumped (e.g. ensureReady's remote-latest
-  // override) but the cached plugkit.wasm bytes are a different build -- the text claims 635
-  // while the binary embeds 634, so ensureReady's text-only drift check never re-downloads.
-  // On that drift, evict the stale cached wasm so the next bootstrap fails isReady() and
-  // redownloads the correct build, then recycle the child to load it.
   if (status.version_drifted === true) {
     if (now - lastVersionDriftActionAt < VERSION_DRIFT_COOLDOWN_MS) {
       return;

@@ -146,7 +146,6 @@ module.exports = {
       if (!cmd) return '[no command provided]';
       const target = loadTarget(targetName);
 
-      // Detect background-only commands (fire-and-forget: ends with & or uses nohup/systemd-run)
       const isBackground = /(&\s*$|^\s*(nohup|systemd-run|setsid)\s)/m.test(cmd);
 
       if (isBackground) {

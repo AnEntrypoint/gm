@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 'use strict';
 
 const fs = require('fs');
@@ -7,10 +7,6 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 
-// Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
-// shim chains re-enter conhost (visible window flash) even with
-// windowsHide:true on the parent. Spawning the real .exe directly lets
-// CREATE_NO_WINDOW propagate. See [[windows-spawn-cmd-shim-flash]].
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
   try {
@@ -683,11 +679,6 @@ function copyWasmToGmTools(wasmPath, version) {
     } catch (_) {}
   }
   if (!wasmFresh) {
-    // copyFileSync truncates the target before streaming ~149MB, leaving a window where
-    // a crash or a concurrent watcher load sees a truncated/absent wasm (the
-    // "self-heal: wasm not installed" crash-loop during an upgrade). Copy to a
-    // pid-suffixed temp and rename over the target: same-volume rename is atomic,
-    // with the Windows EEXIST/EPERM unlink+retry.
     const tmp = `${target}.partial-${process.pid}`;
     fs.copyFileSync(wasmPath, tmp);
     try { fs.renameSync(tmp, target); }

@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Legacy fallback. The canonical surface for lang/*.js plugins is the wasm
-// `lang` verb in rs-plugkit, dispatched via .gm/exec-spool/in/lang/<N>.txt.
-// This standalone runner is kept for direct CLI debug + pre-cascade situations.
 'use strict';
 const fs = require('fs');
 const path = require('path');

@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
@@ -13,16 +13,8 @@ const _httpModule = http;
 const _httpsModule = https;
 import { fileURLToPath } from 'url';
 
-// Set by the spool watcher's writeStatus closure once it is live. Lets long synchronous verbs
-// (browser/chromium spawn, long exec) stamp a busy_until window into .status.json before the
-// blocking call, so a liveness probe reads "busy" not "dead" while the event loop is blocked.
 let _writeStatusBusy = () => {};
-// Latest busy_until epoch ms stamped by a long synchronous verb (codesearch rebuild, chromium
-// spawn). scanStalledTurns reads it so a busy watcher is not mis-flagged as an idle stall.
 let _lastBusyUntil = 0;
-// First 12 hex of sha256 of this watcher's own gmTools wrapper. Module-scoped so writeStatus
-// (a different function scope) can stamp status.wrapper_sha, which the supervisor compares
-// against the on-disk wrapper to recycle a watcher running a stale wrapper-only fix.
 let _ownWrapperSha12 = '';
 
 function spawnSync(cmd, args, opts) {
@@ -346,18 +338,12 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
   const key = sess || '(no-session)';
   const now = Date.now();
   let t = _turns.get(key);
-  // Any verb arriving after an idle gap closes the stale turn -- not just instruction.
-  // Otherwise a non-instruction verb (prd-add, mutable-resolve, transition) landing
-  // after an overnight sleep stamps t.lastTs forward without splitting, and dur_ms
-  // (lastTs - startTs) balloons to wall-clock-with-sleep instead of active work time.
   if (t && (now - t.lastTs) > TURN_IDLE_MS) {
     endTurn(sess, t, true);
     _turns.delete(key);
     t = null;
   }
   if (!t) {
-    // Only an instruction dispatch opens a new turn; a stray non-instruction verb after
-    // idle is recorded against no turn (the next instruction starts the real turn).
     if (verb !== 'instruction') return;
     const idx = ((_turns.get(key + ':lastIdx') || 0) + 1);
     _turns.set(key + ':lastIdx', idx);
@@ -367,27 +353,15 @@ function turnTick(sess, verb, taskBase, phase, prdPending) {
   }
   t.lastTs = now;
   t.dispatches++;
-  // A verb arriving resumes the turn -- clear any prior stall flag so a later re-stall
-  // is a fresh episode, not silently suppressed by the one-shot guard.
   t.stallEmitted = false;
   t.verbs.set(verb, (t.verbs.get(verb) || 0) + 1);
   if (phase) { t.phases.add(phase); t.lastPhase = phase; }
   if (typeof prdPending === 'number') t.prdPending = prdPending;
 }
 
-// turn.end fires only when a NEW verb arrives after idle, so a turn that simply never
-// receives another verb stays open forever and emits no signal -- a permanent stall is
-// silence, not an event, which is how a mid-EXECUTE stop stays invisible for days. The
-// heartbeat scan closes that hole: for each open turn idle past STALL_MS whose last phase
-// is non-terminal (or carries open PRD rows), emit turn.stalled once. One-shot per episode
-// (stallEmitted), reset when a verb resumes the turn. A COMPLETE turn with no open rows
-// idling is the authorized prose-only state and never stalls.
 const STALL_MS = 300_000;
 function scanStalledTurns() {
   const now = Date.now();
-  // A long synchronous verb (codesearch index rebuild, chromium spawn) stamps busy_until and
-  // blocks the spool -- the agent is legitimately waiting, not stalled. Honor it exactly as
-  // supervisor.js checkWatcherHealth does, so a busy watcher never emits a false mid-chain-stall.
   if (_lastBusyUntil && _lastBusyUntil > now) return;
   for (const [key, t] of _turns) {
     if (!t || typeof t !== 'object' || !Number.isFinite(t.startTs)) continue;
@@ -396,9 +370,6 @@ function scanStalledTurns() {
     const terminal = t.lastPhase === 'COMPLETE' && (t.prdPending === 0 || t.prdPending == null);
     if (terminal) continue;
     t.stallEmitted = true;
-    // key is the _turns map key (sess || '(no-session)'). When it is the sentinel, the turn was
-    // unattributed, so do not override logEvent's own cwd+sess base fields with '(no-session)' --
-    // let the cwd-based attribution stand. Pass an explicit sess only when key is a real session.
     const fields = {
       turn_idx: t.idx,
       ended_in_phase: t.lastPhase || null,
@@ -411,10 +382,6 @@ function scanStalledTurns() {
   }
 }
 
-// Every spool dispatch is the agent actively driving the chain, including wasm-direct verbs
-// (recall/codesearch/exec_js/git/fetch) that never reach turnTick. Refresh the open turn's stall
-// clock so a Bash-free stretch of pure wasm-direct verbs does not trip a false mid-chain-stall
-// (the recurring audit-fire own-defect). Never create or split a turn -- that stays turnTick's job.
 function touchActiveTurn(sess) {
   const t = _turns.get(sess || '(no-session)');
   if (!t) return;
@@ -888,8 +855,6 @@ function runBrowserRunner(pw, args, timeoutMs, cwd, claudeSessionId) {
   const sockDir = playwriterHomeFor(cwd, claudeSessionId);
   try { fs.mkdirSync(sockDir, { recursive: true }); } catch (_) {}
   env.PLAYWRITER_HOME = sockDir;
-  // Stamp a busy window before the synchronous spawn so the blocked event loop's stale heartbeat
-  // is not misread as a dead watcher. Pad past the spawn timeout for teardown.
   _writeStatusBusy((timeoutMs || 30000) + 5000);
   return spawnSync(spawnCmd, spawnArgs, {
     encoding: 'utf-8',
@@ -911,9 +876,6 @@ function scrubBrowserRunnerText(s) {
   return t;
 }
 
-// Standard OS install locations for a Chrome/Chromium that speaks CDP. Used as a
-// fallback when the managed ms-playwright cache is absent (e.g. cache evicted),
-// so the browser verb keeps working off the system browser instead of failing.
 function findSystemChromiumBinary() {
   const candidates = process.platform === 'win32'
     ? [
@@ -1721,8 +1683,6 @@ function makeHostFunctions(instanceRef) {
         const key = readWasmStr(instanceRef.value, keyPtr, keyLen);
         if (!ns || !key) return 0;
         let removed = 0;
-        // Delete the key from the namespace AND its -vec sibling across every enabled discipline dir,
-        // so a pruned memory leaves no orphan embedding that host_vec_search would still surface.
         for (const baseNs of [ns, `${ns}-vec`]) {
           for (const dir of kvNamespaceDirs(baseNs)) {
             const fp = path.join(dir, safeName(key) + '.json');
@@ -2249,13 +2209,6 @@ async function runSpoolWatcher(instance, spoolDir) {
           detected_at: Date.now(),
         });
         try { console.error(`[plugkit-wasm] VERB ABORT detected: prior watcher pid=${priorVerb.pid} died inside verb=${priorVerb.verb} task=${priorVerb.task}`); } catch (_) {}
-        // The aborted dispatch otherwise gets NO response file: the in-file was consumed,
-        // the prior watcher died before writing out/, and the agent waits forever on a
-        // Read that never lands (then must git-archaeology whether the verb's side effects
-        // happened). Write a definite failure response so the agent's Read returns
-        // immediately and it re-dispatches. Both out-name shapes are written because
-        // .verb-active.json does not record whether the dispatch was root or nested;
-        // the agent reads whichever its dispatch shape expects, the other is swept.
         if (priorVerb.verb && priorVerb.task) {
           try {
             const abortBody = JSON.stringify({
@@ -2535,10 +2488,6 @@ async function runSpoolWatcher(instance, spoolDir) {
                 child.unref();
                 try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest, cache_busted: bustCache, attempt: (respawnGuard.attempts || 0) + 1 }); } catch (_) {}
                 try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'gm-plugkit-self-stale', ts: Date.now(), pid: process.pid, running_version: own, latest_version: latest })); } catch (_) {}
-                // Wait for the replacement's fresh heartbeat before exiting (mirror the
-                // version-drift path) instead of a blind 2s exit: the gm-plugkit download can
-                // take many seconds, and exiting early lets the supervisor relaunch the SAME
-                // stale version before the new one lands, so the update never sticks.
                 const myPid = process.pid;
                 const respawnDeadline = Date.now() + 90000;
                 const exitSelfStale = () => { try { process.exit(0); } catch (_) {} };
@@ -2597,11 +2546,6 @@ async function runSpoolWatcher(instance, spoolDir) {
   setTimeout(probeGmPlugkitSelfStale, 5000);
   setInterval(probeGmPlugkitSelfStale, 300_000);
 
-  // A supervised watcher self-exits on drift assuming the supervisor respawns it. If the
-  // supervisor has died, that bare exit leaves the spool dead (worse than staying up). Treat a
-  // dead/absent supervisor as unsupervised so the drift loops take the self-respawn-and-wait path
-  // (spawn replacement, wait for its heartbeat, then exit) instead. False-negative is self-correcting:
-  // if both the supervisor and this watcher respawn, the single-instance lock admits exactly one.
   function _supervisorIsDead() {
     try {
       const sp = parseInt(fs.readFileSync(path.join(spoolDir, '.supervisor.pid'), 'utf8').trim(), 10);
@@ -3073,11 +3017,6 @@ async function runSpoolWatcher(instance, spoolDir) {
       const relPath = path.relative(inDir, filePath);
       const dir = path.dirname(relPath);
       const verb = dir === '.' ? path.basename(filePath, path.extname(filePath)) : dir;
-      // Defense-in-depth beyond walkDir's dot-dir skip: a real verb is a single clean
-      // segment (e.g. instruction, prd-resolve). A derived verb containing a path
-      // separator or a dot-segment means the file lives under a stray nested spool
-      // (in/prd-resolve/.gm/exec-spool/...); dispatching it builds a bogus verb+outName
-      // and ENOENT-storms every tick. Skip + unmark so it never re-enters the loop.
       if (/[\\/]/.test(verb) || verb.split(/[\\/]/).some(seg => seg.startsWith('.'))) {
         try { logEvent('plugkit', 'spool.skip-nested-verb', { rel: relPath, derived_verb: verb }); } catch (_) {}
         unmarkProcessed(key);
@@ -3097,15 +3036,6 @@ async function runSpoolWatcher(instance, spoolDir) {
       console.log(`[dispatch] -> verb=${verb} task=${taskBase} body=${bodyBytes.length}b`);
       logEvent('plugkit', 'dispatch.start', { verb, task: taskBase, body_bytes: bodyBytes.length, cwd: process.cwd() });
 
-      // Network-bound git verbs block the event loop for the duration of a push/fetch (~30s),
-      // so the 5s heartbeat cannot fire and the supervisor would reap the watcher as hung
-      // (the VERB ABORT). Stamp a busy_until window before the synchronous dispatch so the
-      // supervisor's heartbeat-stale check honors it, exactly as the browser runner does.
-      // codesearch is the longest synchronous verb: a cold first call loads the 133MB bge-small
-      // bert model AND re-indexes the tree. A cold build was witnessed at ~252s (dispatch log
-      // codesearch ms=251772), so a 180s window let the supervisor reap the watcher mid-index and
-      // respawn it, cold-loading again = respawn-thrash that never completes (the codeinsight-stale
-      // symptom). codesearch gets a 360s window; the bounded git verbs keep 180s.
       if (verb === 'codesearch') {
         try { _writeStatusBusy(360000); } catch (_) {}
       } else if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
@@ -3210,11 +3140,6 @@ async function runSpoolWatcher(instance, spoolDir) {
     try {
       for (const entry of fs.readdirSync(dir)) {
         if (/\.tmp\.\d+(\.|$)/.test(entry)) continue;
-        // The verb tree is in/<verb>/[<sub>/]<N>.<ext> -- at most two levels deep. A
-        // dot-prefixed dir (e.g. a stray nested .gm/exec-spool/ created by a misfire)
-        // is never a verb dir; recursing into it derives a bogus verb like
-        // `prd-resolve\.gm\exec-spool` and dispatch-errors on every tick forever.
-        // Skip dot-dirs and cap depth so a spool-inside-spool cannot wedge the watcher.
         if (entry.startsWith('.')) continue;
         const fullPath = path.join(dir, entry);
         let stat;
@@ -3251,12 +3176,6 @@ async function runSpoolWatcher(instance, spoolDir) {
         wrapper_sha: _ownWrapperSha12 || null,
         idle_limit_ms: IDLE_LIMIT_MS,
       };
-      // A synchronous verb (chromium spawn, long exec) blocks the event loop, so the 5s
-      // heartbeat interval cannot fire for the duration. Without a hint, a liveness probe that
-      // checks ts-within-15s reads the busy watcher as dead and may kill/respawn it mid-verb.
-      // busy_until tells probes "alive but synchronously busy until this epoch ms" -- read it
-      // alongside ts: a stale ts whose busy_until is still in the future is a busy watcher, not
-      // a dead one. The pre-verb writeStatus(busyMs) stamps it before the blocking call.
       if (busyMs && busyMs > 0) { rec.busy_until = now + busyMs; _lastBusyUntil = rec.busy_until; }
       fs.writeFileSync(STATUS_PATH, JSON.stringify(rec));
     } catch (_) {}
@@ -3457,9 +3376,6 @@ async function runSpoolWatcher(instance, spoolDir) {
       logEvent('plugkit', 'update.available', { installed, latest });
       _lastKnownDrift = latest;
     }
-    // NOTE: no version-file bump here either -- see the network-path comment above. Bumping the version
-    // file ahead of a verified binary download poisons installedVersionAtTools() and causes an infinite
-    // drift-respawn thrash. Auto-update is notify-only until a sha-verified force-download path exists.
   }
   function checkUpdateViaNpm(installed) {
     const req = https.get({
@@ -3637,9 +3553,6 @@ async function runSpoolWatcher(instance, spoolDir) {
   watch(inDir, { recursive: true }, (eventType, filename) => {
     if (!filename) return;
     if (/\.tmp\.\d+(\.|$)/.test(filename)) return;
-    // Skip any path with a dot-prefixed segment (e.g. a stray nested
-    // prd-resolve/.gm/exec-spool/...): it is not a real verb dispatch and walking it
-    // derives a bogus verb that dispatch-errors on every tick. Matches walkDir's guard.
     if (filename.split(/[\\/]/).some(seg => seg.startsWith('.'))) return;
     const fullPath = path.join(inDir, filename);
     markActivity('watch');
@@ -3703,11 +3616,6 @@ async function selfHealFromGithubReleases() {
         }
         const toolsDir = GM_TOOLS_ROOT;
         fs.mkdirSync(toolsDir, { recursive: true });
-        // Replace the live wasm atomically. A direct writeFileSync truncates the target
-        // before streaming ~149MB, so a crash mid-write or a concurrent watcher load in
-        // that window sees a truncated or absent wasm ("self-heal: wasm not installed"
-        // crash-loop). Write to a pid-suffixed temp and rename over the target; rename
-        // on the same volume is atomic, with the Windows EEXIST/EPERM unlink+retry.
         const wasmTarget = path.join(toolsDir, 'plugkit.wasm');
         const wasmTmp = `${wasmTarget}.partial-${process.pid}`;
         fs.writeFileSync(wasmTmp, wasm);
@@ -3760,10 +3668,6 @@ async function tryInstantiate(wasmPath) {
   return { instance, instanceRef };
 }
 
-// In-process API. Lets a host (e.g. freddie) drive memorize/recall/auto-recall against
-// .gm/rs-learn.db WITHOUT running the spool daemon loop: the wasm instance is created once
-// and cached, and dispatch() returns parsed JSON. The wasm host functions resolve the project
-// .gm dir from CLAUDE_PROJECT_DIR/cwd, so set those in the host process before first dispatch.
 let _sharedPlugkit = null;
 export async function createPlugkit(opts = {}) {
   if (_sharedPlugkit && !opts.fresh) return _sharedPlugkit;
