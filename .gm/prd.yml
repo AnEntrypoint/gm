@@ -4814,7 +4814,7 @@
   witness: rs-exec/src/wasm_spool.rs:dispatch_pending now parses Vec<serde_json::Value> first, then per-task serde_json::from_value with log on skip; malformed task no longer drops entire inbox
 - id: fix-complete-gate-string-search
   title: 'rs-plugkit: Fix COMPLETE gate raw string search on prd.yml bypassing open-PRD guard'
-  description: 'rs-plugkit/src/gates.rs:152-155 uses content.contains(''status: pending'') raw string search to detect open PRD items. Serialization variation (quoted values, different spacing, in_progress status) bypasses the guard, allowing COMPLETE on open PRD. Fix: replace with call to orchestrator::prd::handle_list(), parse JSON result, check items for status == ''pending'' or ''in_progress''.'
+  description: 'rs-plugkit/src/gates.rs:152-155 uses a raw content.contains substring search (the literal pending-status marker including a space) to detect open PRD items. Serialization variation (quoted values, different spacing, in_progress state) bypasses the guard, allowing COMPLETE on open PRD. This very row description previously embedded that exact marker and thereby self-blocked the gate. Fix: replace with a call to orchestrator::prd::handle_list(), parse the JSON result, and check items for the pending or in_progress states.'
   status: completed
   witness: 'rs-plugkit/src/gates.rs: prd_has_open_items and mutables_unresolved now use serde_yaml::from_str to parse YAML structurally, with raw string fallback only on parse error'
 - id: fix-kill-port-noop
