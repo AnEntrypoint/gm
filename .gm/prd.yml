@@ -3985,7 +3985,8 @@
   status: completed
 - id: residual-triage
   text: 'Triage all git status entries: 8 untracked .gm/disciplines/**/mem-*.json (new memorize-fire => commit, tracked per AGENTS.md), modified .gm/disciplines/rs-learn_graph_edges_by_src/default.json (commit), modified AGENTS.md (review/commit). No new managed-gitignore entries unless transient runtime emission appears.'
-  status: pending
+  status: completed
+  witness: 'git_status pre-push showed only session work: gm (marketplace/disciplines/mutables/prd/AGENTS/bootstrap/wrapper/test.js + untracked discipline mem-*.json) + sibling src edits, all committed via git_finalize x5. No junk, no transient runtime emission needing gitignore. All triaged to commit.'
 - id: memorize-findings
   text: 'Write this fire''s findings + corrections to the recall index via memorize-fire (default namespace): the recurring own audit-stall durable fix, the spool-poll-antipattern cross-LLM finding + its correction, cascade/version/supervisor validation result, GLSL-commit validation, workflow run result. One substantive memo, witnessed.'
   witness: 'Fired 3 substantive memos to default ns: mem-1781770834884 (FIX 1 touchActiveTurn durable stall fix + dormant-gate confirmation + this-fire validations), mem-1781770934957 (string-externalization drain substance), mem-1781771194553 (audit cross-check lesson: codesearch is cwd-only/inspect siblings via Read; Grep/Glob bypass + post-hoc-by-design; workflow caught own slip). All embedded + graph_edge.'
@@ -4878,7 +4879,8 @@
   witness: 'memorize-fire-1 (BOM regression incident + hard rule); AGENTS.md Coding Style now carries ''No UTF-8 BOM in any tracked source file'' rule dual-written. Cause: PowerShell default UTF-16/UTF-8-BOM encoding on a JS source edit.'
 - id: verify-republish-path
   text: 'After BOM fix lands, the cascade auto-bumps and republishes gm-plugkit (>2.0.1578) clean. Verify the fix flows: push triggers cascade.yml -> publish.yml. Confirm next published bootstrap.js head is #!/ not efbbbf. blockedBy CI completion is acceptable witness deferral, not a stop.'
-  status: pending
+  status: completed
+  witness: BOM fix committed (gm 576d1a745); test.js checkNoBom guard ensures next publish ships clean bootstrap.js (#!/ not efbbbf). gm publish.yml ships gm-plugkit from source. Published-artifact witness deferred to CI completion (acceptable per row scope); source guarantees clean output, guard prevents regression.
 - id: workflow-author
   text: 'Author a multi-agent Workflow (user explicitly opted in: ''make a workflow and fan out subagents''). Each agent operates under the synthesized-engineering-dna 12-principle lens. Fan-out: one analysis agent per sibling repo (rs-plugkit, rs-learn, rs-codeinsight, rs-search, rs-exec) reading by path (cross-repo, codesearch cwd-only cannot), plus one per research angle (context-rot, chatgpt-memory, arxiv-2512.24601). Each returns structured concrete improvement findings with file:line witness + DNA-principle tag + risk/confidence.'
   status: completed
@@ -4929,7 +4931,8 @@
   witness: 'node test.js => PASS: no-BOM guard, watcher alive, instruction phase=EXECUTE, recall hits=8, health ok version=0.1.654'
 - id: commit-push
   text: 'git_finalize the session: BOM fixes + guardrail + safe findings + disciplines + memorize JSON. Push to origin main (cascade ships). Clean-worktree witnessed before push. This IS the validation dispatch, never optional.'
-  status: pending
+  status: completed
+  witness: 'git_finalize pushed all 5 repos to origin main: gm 576d1a745, rs-plugkit a0b9ce6, rs-learn 856efd3, rs-exec d9b469e, rs-search d53c05f. Each committed:true pushed:true.'
 - id: bom-guard-scope
   text: 'Corner case for bom-guardrail-test: the guard must read bytes (not text), only over tracked text globs, and must NOT false-positive on binary stores (.gm/rs-learn.db, code-search index, .wasm) or legit BOM-bearing product files. Exclude binaries; assert the 3 known offenders are clean post-fix.'
   status: completed
@@ -4948,7 +4951,8 @@
   witness: JSON.parse(.agents/plugins/marketplace.json) => JSON OK after BOM strip; only 3 bytes removed via tail -c +4, content otherwise identical
 - id: self-report-quality
   text: 'VERIFY: self-report turn quality 0.0-1.0 via rs-learn feedback verbs (record_outcome / record_loss) before COMPLETE; >=2 enabled disciplines gate the MicroLoRA init. Without it the cores stay untrained. Account for the recovered dead-watcher + broken-latest deviations in the score.'
-  status: pending
+  status: completed
+  witness: 'learn record_outcome target=claude-opus-4-8 quality=0.82 (ok:true). Convergent walk: crucible BOM fix + guardrail + 8 cross-repo bug fixes + 67-agent DNA workflow + all 5 repos pushed; minor environment-forced recoveries (dead watcher x2, broken @latest now fixed, one wrong verb). MicroLoRA init skipped (default-only, <2 disciplines, correct no-op).'
 - id: context-rot-instruction-budget
   text: 'Degenerate case of research-context-rot: the gm instruction prose AND AGENTS.md are themselves long contexts re-injected every turn. Measure byte budgets; flag sections that are recall-reachable and could drain to rs-learn (AGENTS.md bidirectional-drain rule). Propose concrete drains.'
   status: completed
