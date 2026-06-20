@@ -58,6 +58,8 @@ Record only non-obvious technical caveats that cost multiple runs to discover; r
 
 **No comments in code** -- no inline, block, or JSDoc comments anywhere (source, generated output, hooks, scripts).
 
+**No UTF-8 BOM in any tracked source file.** A leading `efbbbf` breaks `node` (`SyntaxError: Invalid or unexpected token`) and strict `JSON.parse`; a BOM in `gm-plugkit/bootstrap.js` shipped a `bun x gm-plugkit@latest spool` that was unbootable for every user. Cause is editing JS/JSON with PowerShell's default UTF-16/UTF-8-BOM encoding -- always `-Encoding utf8` (no BOM) or the `Write` tool. `test.js checkNoBom()` is the structural guard (fails on any leading BOM over tracked text exts); one sighting spawns the full-tree sweep. Mechanics in rs-learn (`recall: BOM regression incident`).
+
 **No graphical symbols; convert to industry-standard text on sight.** Decorative glyphs are forbidden in all output and source: arrows, box/geometric glyphs, stars, filled/hollow dots and bullets, checks/crosses, emojis, any non-ASCII decorative symbol. Convert on sight in the same turn (arrow -> `->`, bullet -> `-`/`*`, check/cross -> `[x]`/`[ ]` or done/todo/pass/fail, status dot -> the word). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
 
 **Skill SKILL.md files:** strip explanatory prose; keep ONLY invocation syntax, transition markers (`->`), gate conditions, constraint lists, exact-usage code examples.
@@ -88,7 +90,7 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **Nothing fake in source the user runs**: every stub, mock, placeholder return, fixture-only path, demo-mode short-circuit, and "TODO: implement" body is forbidden in shipped code. Scaffolds/shims are permitted only when they delegate to real behavior (real upstream API, subprocess, disk); before adding a shim, check whether a published library already provides the surface. Detection is behavioral: code that always succeeds, returns the same value regardless of input, or short-circuits a real call to satisfy a type signature is a stub. Acceptance is real input through real code into real output, witnessed.
 
-**Spool dispatch gates**: `lib/spool-dispatch.js::checkDispatchGates(sessionId, operation)` reads `.gm/` marker files and returns `{allowed, reason}`; denials surface the reason as imperative instruction, never mutate args. Marker semantics in rs-learn (`recall: spool dispatch gates marker files`).
+**Spool dispatch gates**: gate denials surface the reason as imperative instruction, never mutate args. Implementation + marker semantics in rs-learn (`recall: spool dispatch gates marker files`).
 
 **Done is plugkit's pronouncement, never the agent's claim**: the chain is COMPLETE only when `transition to=COMPLETE` returns COMPLETE phase and the on-disk state file reflects it. The COMPLETE gate (gates.rs) is the single arbiter -- it refuses on PRD-open, mutables-unresolved, dirty worktree, or missing residual-scan marker. The agent drives the chain into a gate-allowing state, dispatches the verb, reads the response; every alternative is narration.
 

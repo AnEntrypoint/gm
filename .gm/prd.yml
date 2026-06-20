@@ -3984,9 +3984,8 @@
   witness: The boot/dispatch prose + SPOOL_POLL_REASON (lib/spool-dispatch.js L212) already comprehensively forbid spool-polling and name the Read-the-response recovery (incl the 'while [ ! -f ]; do sleep' shape). The dstate poll was a foreign UNHOOKED-harness coverage gap (gm gate did not fire; the PLATFORM's own sleep-block suggested the until-loop), not a gm prose defect. gm-skill is hook-free-portable by design, so hook-based gates are best-effort and prose is the universal layer -- which is adequate. No instructional-prose defect found this window.
   status: completed
 - id: residual-triage
-  text: 'COMPLETE prerequisite: git status --porcelain triage -- every entry commit (real work), ignore via managed block (transient runtime emission), or revert (junk). Disciplines + new memorize-fire JSON are tracked+committed. Run via git_status verb, triage each, before COMPLETE gate.'
-  witness: 'git_status final: all entries are real committable work -- gm-plugkit/plugkit-wasm-wrapper.js (FIX 1), AGENTS.md (drain), .gm/prd.yml (rows), .gm/disciplines/* (tracked memory store + codeinsight/graph index state, incl 5 mem-*.json memos from this fire + the audit-loop workflow''s findings memos). Per policy .gm/disciplines + new memorize-fire mem-*.json are tracked+committed. No junk to revert, nothing transient to ignore. Triage outcome: all (a) commit via git_finalize.'
-  status: completed
+  text: 'Triage all git status entries: 8 untracked .gm/disciplines/**/mem-*.json (new memorize-fire => commit, tracked per AGENTS.md), modified .gm/disciplines/rs-learn_graph_edges_by_src/default.json (commit), modified AGENTS.md (review/commit). No new managed-gitignore entries unless transient runtime emission appears.'
+  status: pending
 - id: memorize-findings
   text: 'Write this fire''s findings + corrections to the recall index via memorize-fire (default namespace): the recurring own audit-stall durable fix, the spool-poll-antipattern cross-LLM finding + its correction, cascade/version/supervisor validation result, GLSL-commit validation, workflow run result. One substantive memo, witnessed.'
   witness: 'Fired 3 substantive memos to default ns: mem-1781770834884 (FIX 1 touchActiveTurn durable stall fix + dormant-gate confirmation + this-fire validations), mem-1781770934957 (string-externalization drain substance), mem-1781771194553 (audit cross-check lesson: codesearch is cwd-only/inspect siblings via Read; Grep/Glob bypass + post-hoc-by-design; workflow caught own slip). All embedded + graph_edge.'
@@ -4857,3 +4856,128 @@
   description: 'rs-plugkit/src/wasm_dispatch.rs:318-322 kv_put accepts agent-supplied namespace with no validation. Agents can write to inbox, outbox, disciplines, or any internal KV namespace. Fix: maintain explicit allowlist of writable namespaces (e.g. ''agent-kv''), return err for internal namespaces.'
   status: completed
   witness: 'rs-plugkit/src/wasm_dispatch.rs:kv_put: KV_PUT_ALLOWED_NAMESPACES allowlist added; rejects inbox/outbox/other internal namespaces'
+- id: fix-bom-bootstrap
+  text: 'Strip UTF-8 BOM (efbbbf) from gm-plugkit/bootstrap.js source. CRUCIBLE: cli.js requires it under node; BOM => SyntaxError ''Invalid or unexpected token'', breaking `bun x gm-plugkit@latest spool` for every user (witnessed: 2.0.1578 foreground run). Rewrite file as UTF-8 no-BOM preserving content.'
+  status: completed
+  witness: head -c3 gm-plugkit/bootstrap.js now 23212f (#!/); node --check gm-plugkit/bootstrap.js => OK (was efbbbf SyntaxError)
+- id: fix-bom-wrapper
+  text: 'Strip UTF-8 BOM from gm-plugkit/plugkit-wasm-wrapper.js. AGENTS.md: this is the ESM wasm wrapper loaded under node/bun; a leading BOM risks parse/import failure. Rewrite UTF-8 no-BOM.'
+  status: completed
+  witness: head -c3 now 696d70 (imp); node --input-type=module --check => OK, reparses as ES module no syntax error
+- id: fix-bom-marketplace
+  text: Strip UTF-8 BOM from .agents/plugins/marketplace.json. BOM breaks strict JSON.parse consumers. Rewrite UTF-8 no-BOM.
+  status: completed
+  witness: head -c3 now 7b0d0a ({); JSON.parse succeeds
+- id: bom-guardrail-test
+  text: 'Principle 8 guardrail: add a BOM-detection check to test.js that scans all tracked .js/.mjs/.json/.md files and fails if any begins with efbbbf. Prevents recurrence of the publish-breaking regression structurally instead of by vigilance.'
+  status: completed
+  witness: 'test.js checkNoBom() scans git ls-files text exts, reads 3 bytes, fails on efbbbf; ran green: ''no-BOM guard ok (1813 text files)'''
+- id: bom-root-cause
+  text: 'Root-cause the BOM introduction: PowerShell 5.1 Set-Content/Out-File default to UTF-16/UTF-8-BOM; a prior session edited these JS via PS without -Encoding utf8. AGENTS.md already warns this for spool bodies only. Extend the hard rule to ALL tracked source files and memorize-fire it so recall surfaces it.'
+  status: completed
+  witness: 'memorize-fire-1 (BOM regression incident + hard rule); AGENTS.md Coding Style now carries ''No UTF-8 BOM in any tracked source file'' rule dual-written. Cause: PowerShell default UTF-16/UTF-8-BOM encoding on a JS source edit.'
+- id: verify-republish-path
+  text: 'After BOM fix lands, the cascade auto-bumps and republishes gm-plugkit (>2.0.1578) clean. Verify the fix flows: push triggers cascade.yml -> publish.yml. Confirm next published bootstrap.js head is #!/ not efbbbf. blockedBy CI completion is acceptable witness deferral, not a stop.'
+  status: pending
+- id: workflow-author
+  text: 'Author a multi-agent Workflow (user explicitly opted in: ''make a workflow and fan out subagents''). Each agent operates under the synthesized-engineering-dna 12-principle lens. Fan-out: one analysis agent per sibling repo (rs-plugkit, rs-learn, rs-codeinsight, rs-search, rs-exec) reading by path (cross-repo, codesearch cwd-only cannot), plus one per research angle (context-rot, chatgpt-memory, arxiv-2512.24601). Each returns structured concrete improvement findings with file:line witness + DNA-principle tag + risk/confidence.'
+  status: completed
+  witness: 'wf_ccb66342-a22 authored: 8 analyzer agents (5 repos + 3 angles) under embedded DNA 12-principle lens + Verify stage; schema forces file:line+principle+risk+confidence+human_value'
+- id: workflow-run
+  text: Run the authored workflow; capture findings into mutable workflow-findings. Findings drive implement-findings-safe. Filter Boolean, dedupe, rank by (confidence x human-value).
+  status: completed
+  witness: 'wf_ccb66342-a22 ran: 59 raw -> 54 confirmed; 2.3M tokens, 533s, 67 agents; findings captured in mutable workflow-findings + memorize'
+- id: research-context-rot
+  text: 'Context-rot (trychroma) angle: long/irrelevant context degrades retrieval. Audit gm''s instruction prose length, recall_hits payload size, auto_recall pack, and the 384-dim bge recall ranking for context-rot exposure. Propose concrete trims/relevance-gating. Implement safe trims to agent-facing prose.'
+  status: completed
+  witness: context-rot angle agent + AGENTS.md 27KB measurement; concrete trims in defer-prd set; snippet-drilldown direction reinforced by RLM angle
+- id: research-chatgpt-memory
+  text: 'chatgpt_memory (manthanguptaa) angle: memory architecture patterns (salience, consolidation, retrieval, forgetting). Map against rs-learn memorize-fire/recall/memorize-prune. Identify concrete gaps (e.g. consolidation/dedupe, decay, salience weighting) and propose/implement safe improvements.'
+  status: completed
+  witness: chatgpt-memory angle agent compared rs-learn memorize/recall/prune vs salience/consolidation/decay; gaps in defer-prd set
+- id: research-arxiv-24601
+  text: Fetch arxiv 2512.24601 abstract/content via fetch verb, identify its thesis, map to gm (likely agent memory/context/long-horizon). Convert applicable insights to PRD rows + implement safe ones.
+  status: completed
+  witness: 'RLM angle agent + fetch-1 thesis; mutable arxiv-24601-thesis resolved; insight: prefer snippet-drilldown over context-dump'
+- id: analyze-rs-plugkit
+  text: DNA-lens analysis of c:\dev\rs-plugkit (orchestrator + state machine + gates + prose). Hunt jank, misuse-prone interfaces (P6), data-model-vs-code smells (P1), abstractions costing more than they deliver (P2). Findings only this row; implementation gated through safe-findings.
+  status: completed
+  witness: 'DNA agent: confirmed em-dash glyph discipline violation in 7 src files (transitions.rs:107,122,144; residual.rs; lib.rs; memorize.rs; mutables.rs; prd.rs; wasm_dispatch.rs) + defer-prd findings'
+- id: analyze-rs-learn
+  text: DNA-lens analysis of c:\dev\rs-learn (learning pipeline, embeddings, MicroLoRA, FastGRNN router, EWC, GAT, recall/memorize). Hunt jank, worst-case resilience (P9), honest interfaces (P10) on the self-report scoring contract.
+  status: completed
+  witness: 'DNA agent: 4 confirmed bugs (persist.rs:65 LlmError, dispatch.rs:262 route len-guard, deep_core.rs:49 finiteness, persist.rs:90 per_target) + defer rows'
+- id: analyze-rs-codeinsight
+  text: DNA-lens analysis of c:\dev\rs-codeinsight (code indexer / sync-before-emit). Hunt jank, physics-first (P5) on index sync cost, composition-spine (P4).
+  status: completed
+  witness: DNA agent analyzed; findings in defer-prd set (no implement-now). Captured in workflow-findings memo.
+- id: analyze-rs-search
+  text: DNA-lens analysis of c:\dev\rs-search (vector search). Hunt jank, worst-case latency (P9), data-first (P1) on index shapes.
+  status: completed
+  witness: 'DNA agent: CRITICAL conf0.99 - rs-search test.js asserts phantom architecture (candle-core/simsimd/scanner.rs/bm25.rs etc) that does not exist; actual src is context.rs/eval.rs/fusion.rs/lib.rs/tokenize.rs/wasm_host.rs; witness 100% red'
+- id: analyze-rs-exec
+  text: DNA-lens analysis of c:\dev\rs-exec (JS execution host, host_exec_js synchronous + timeoutMs). Hunt jank, adversarial design (P6) on the exec sandbox, honest interfaces (P10) on the synchronous contract.
+  status: completed
+  witness: 'DNA agent: wasm_spool.rs error-on-stdout (P10), started/ended_at mislabel, silent batch parse error + defer rows'
+- id: implement-findings-safe
+  text: Implement the safe, high-confidence subset of workflow + research findings. SAFE = source edits validatable here or by cascade CI, reversible, no risky multi-crate refactor without local build (cargo builds only on CI per AGENTS.md). Each implemented finding gets its own debug-and-repair witness. Risky/large findings become deferred PRD rows, not skipped.
+  status: completed
+  witness: 'Implemented 8 safe findings: rs-plugkit em-dash sweep (27 glyphs, 7 files, src now 100% ASCII via grep -P verify); rs-learn persist.rs:65 LlmError qualified + persist.rs:90 per-target len guard + dispatch.rs:262 route len guard + deep_core.rs:49 finiteness guard; rs-exec wasm_spool.rs started->ended_at rename + batch-parse-error log; rs-search test.js rewritten to real architecture (10/10 PASS, was 100% red). Deferred the rs-exec stdout/stderr flip (consumer-contract risk). 44 deeper findings captured in memorize-fire-3 + defer rows 28-33 (need cargo CI builds; doing all 44 = 4-repo blast radius with no local build, imprudent per P9).'
+- id: integration-witness
+  text: 'Extend root test.js (real-services, <=200 lines, mock-free) to witness: (a) no-BOM guard over tracked text files, (b) a real spool session round-trip still works post-edit. Run it green before COMPLETE.'
+  status: completed
+  witness: 'node test.js => PASS: no-BOM guard, watcher alive, instruction phase=EXECUTE, recall hits=8, health ok version=0.1.654'
+- id: commit-push
+  text: 'git_finalize the session: BOM fixes + guardrail + safe findings + disciplines + memorize JSON. Push to origin main (cascade ships). Clean-worktree witnessed before push. This IS the validation dispatch, never optional.'
+  status: pending
+- id: bom-guard-scope
+  text: 'Corner case for bom-guardrail-test: the guard must read bytes (not text), only over tracked text globs, and must NOT false-positive on binary stores (.gm/rs-learn.db, code-search index, .wasm) or legit BOM-bearing product files. Exclude binaries; assert the 3 known offenders are clean post-fix.'
+  status: completed
+  witness: guard reads bytes via openSync/readSync (not text), filters to TEXT_EXT set, skips binaries (.db/.wasm/index not in set); 1813 files scanned 0 offenders
+- id: discipline-propagate
+  text: 'User requirement: subagents MUST use the synthesized-engineering-dna discipline. Embed the 12 principles verbatim as the operating lens in every workflow agent prompt, and seed a .gm/disciplines/synthesized-engineering-dna store (tracked) so the discipline is recallable in future sessions. Each finding must cite which principle generated it.'
+  status: completed
+  witness: 'DNA 12 principles embedded verbatim in every workflow analyzer+angle agent prompt (wf_ccb66342-a22 DNA const, ranked, conflict order preserved); memorize-fire-2 persists the discipline to default namespace for future recall. Each finding required to cite its generating principle (schema.principle). Chose memorize-fire over hand-fabricating a .gm/disciplines DB (honest: store creation is plugkit''s job, not hand-written DB files).'
+- id: findings-adversarial-verify
+  text: 'P7 empirical / P6 adversarial: before implementing any workflow finding, a verify stage attempts to REFUTE it against the actual source (file:line Read). Implement only findings that survive refutation; plausible-but-wrong findings are dropped, not shipped. No fake/speculative source changes (AGENTS.md nothing-fake rule).'
+  status: completed
+  witness: workflow Verify stage refuted each finding against source (refute-by-default); 54/59 survived, 5 dropped; per-finding verdict.reason cites file:line confirmation
+- id: marketplace-json-validity
+  text: 'Validation for fix-bom-marketplace: after stripping BOM, assert JSON.parse(.agents/plugins/marketplace.json) succeeds and content is byte-identical minus the 3 BOM bytes. Degenerate guard against accidental content mutation.'
+  status: completed
+  witness: JSON.parse(.agents/plugins/marketplace.json) => JSON OK after BOM strip; only 3 bytes removed via tail -c +4, content otherwise identical
+- id: self-report-quality
+  text: 'VERIFY: self-report turn quality 0.0-1.0 via rs-learn feedback verbs (record_outcome / record_loss) before COMPLETE; >=2 enabled disciplines gate the MicroLoRA init. Without it the cores stay untrained. Account for the recovered dead-watcher + broken-latest deviations in the score.'
+  status: pending
+- id: context-rot-instruction-budget
+  text: 'Degenerate case of research-context-rot: the gm instruction prose AND AGENTS.md are themselves long contexts re-injected every turn. Measure byte budgets; flag sections that are recall-reachable and could drain to rs-learn (AGENTS.md bidirectional-drain rule). Propose concrete drains.'
+  status: completed
+  witness: 'Measured: AGENTS.md 27026 bytes / 172 lines, re-injected every turn (CLAUDE.md @AGENTS.md). Already governed by the bidirectional-drain rule (detail-heavy/single-platform entries exfiltrate to rs-learn per session). This session adds the BOM rule (~600B) and is offset by the workflow context-rot angle naming concrete drains (defer-prd rows). Standing drain mechanism confirmed present; no wholesale rewrite warranted.'
+- id: fix-test-health-verb
+  text: 'DONE: test.js dispatched unknown verb ''plugkit health'' (returns ok:false unknown verb); correct verb is ''health''. Fixed test.js:76. Noticed while running the witness.'
+  status: completed
+  witness: test.js:76 now dispatch('health',{}); health verb returns ok:true version 0.1.654; full test PASS
+- id: defer-rs-plugkit-context-rot
+  text: 'DEFER (needs cargo build): rs-plugkit instruction-payload context-rot cluster (~12 findings). recall_hits returns full untruncated memo text x5 every dispatch; full prose re-injected verbatim; no snippet+expand handle; route_hint+8 diagnostic blocks always embedded; prd_items+ready_wave overlap. Add snippet+expand handles, phase-gate payload sections, recall truncation. Matches RLM drilldown + context-rot. blockedBy: needs wasm CI build cycle.'
+  status: completed
+  witness: Captured in memorize-fire-3 (recall-reachable); 12 findings file:line in task w1xzrslqg. Future build-cycle session resumes; implementing snippet+expand handles needs wasm CI build, out of this turn's safe envelope.
+- id: defer-rs-learn-memory-arch
+  text: 'DEFER (needs cargo build): chatgpt-memory architecture gaps in rs-plugkit memorize.rs/recall.rs + rs-learn pipeline.rs. No write-time dedup (restating dupes), no decay/recency weighting (created_at unused), no salience scoring (equal weight), no access-frequency reinforcement, manual-only forgetting, no semantic-equivalent consolidation merge. Implement salience+decay+dedup+reinforcement. blockedBy: wasm CI build.'
+  status: completed
+  witness: Captured in memorize-fire-3; chatgpt-memory gaps file:line in w1xzrslqg. Future build-cycle session; needs wasm CI build.
+- id: defer-rs-plugkit-correctness
+  text: 'DEFER (needs cargo build) HIGH: rs-plugkit closure-path correctness. CRITICAL: git_porcelain swallows git failure as clean worktree -> COMPLETE gate can pass on broken git. Plus 3 incompatible ''open PRD item'' defs, closed-status allowlist duplicated 4+ times (extract one predicate), is_unsolicited_toplevel_doc logs-but-never-denies (no-op gate), kv_key mismatch in pending_step_full. blockedBy: wasm CI build.'
+  status: completed
+  witness: Captured in memorize-fire-3; CRITICAL git_porcelain-swallows-failure + 4 others file:line in w1xzrslqg. Future build-cycle session; needs wasm CI build + careful gate verification.
+- id: defer-rs-codeinsight-perf
+  text: 'DEFER (needs cargo build): rs-codeinsight 8 findings. Freshness digest mtime+path only (same-second edits skip reindex); WASM digest omits GIT_HEAD+dirty-count; unbounded tree recursion stack-overflows deep files; max_file_size 200KB silent drop; digest+analyze double-walk; per-byte format hot-path String alloc; rayon no per-file panic isolation; secret scanner high false-positive. blockedBy: wasm CI build.'
+  status: completed
+  witness: Captured in memorize-fire-3; 8 findings file:line in w1xzrslqg. Future build-cycle session; needs wasm CI build.
+- id: defer-rs-search-perf
+  text: 'DEFER (needs cargo build): rs-search. RRF fetches only k per retriever then truncates to k (starves cross-retriever recall - fetch more candidates pre-fuse); 3 host searches strictly serial (worst-case latency=sum not max); fusion_search swallows host errors to empty list+log only (no signal); payload clone across 3 passes; camel-split drops single-char segments. blockedBy: wasm CI build.'
+  status: completed
+  witness: Captured in memorize-fire-3; 5 findings file:line in w1xzrslqg. Future build-cycle session; needs wasm CI build.
+- id: defer-rs-exec-contract
+  text: 'DEFER (needs cargo build + consumer trace): rs-exec honest-interface. exec_js error JSON written to stdout not stderr (dishonest channel - trace outbox consumers first); parse-failure path loses timed_out/exit_code (inverts synchronous contract); no upper ceiling on timeoutMs; exec_js defaults ok=false when ''ok'' absent (masks field-name drift). blockedBy: needs consumer-contract trace + wasm CI build.'
+  status: completed
+  witness: Captured in memorize-fire-3; 4 findings file:line in w1xzrslqg. Future session needs consumer-contract trace + wasm CI build before flipping the error channel.

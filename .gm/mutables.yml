@@ -283,3 +283,11 @@
   status: witnessed
   blockedBy: workflow:wf_c82ee6fd-1c1
   witness_evidence: 'wf_c82ee6fd-1c1 completed: 78 findings across 6 repos; critical: close() rc inversion rs-plugkit:584, kv_put rc inversion rs-exec:57 and rs-learn:69, missing link attr rs-learn/pipeline.rs:13, sessionId injection gm/lib/spool.js:52; confirmed by exec_js-10,11 scans'
+- id: workflow-findings
+  status: witnessed
+  text: Concrete improvement findings from the fanned-out DNA-lens workflow across 5 rs-* repos + 3 research angles. Witness = workflow return payload + per-finding file:line Read confirmation.
+  witness_evidence: 'wf_ccb66342-a22 completed: 67 agents, 59 raw findings, 54 confirmed (9 implement-now, 44 defer-prd). Implement-now: rs-plugkit em-dash glyph sweep (7 files); rs-learn router/persist.rs:65 unqualified LlmError, dispatch.rs:262 handle_route no len-check wasm trap, deep_core.rs:49 record_loss non-finite EWC poison, persist.rs:90 per_target len; rs-search test.js asserts phantom architecture (100% red); rs-exec wasm_spool.rs error-on-stdout, started/ended_at mislabel, silent batch parse error.'
+- id: arxiv-24601-thesis
+  status: witnessed
+  text: Thesis of arxiv 2512.24601 and its applicability to gm. Witness = fetch verb response content.
+  witness_evidence: 'fetch-1 arxiv.org/abs/2512.24601 body: ''Recursive Language Models'' (Zhang/Kraska/Khattab, cs.AI, v3 2026-05-11). Abstract: treat long prompts as an external environment the LLM programmatically examines, decomposes, recursively self-calls over snippets; processes inputs 2 orders of magnitude beyond context window; beats compaction/CodeAct/Claude-Code on long-context. Maps to gm: spool recall/codesearch is already RLM-shaped.'

@@ -1,0 +1,3 @@
+## Resolved mutable: arxiv-24601-thesis
+
+fetch-1 arxiv.org/abs/2512.24601 body: 'Recursive Language Models' (Zhang/Kraska/Khattab, cs.AI, v3 2026-05-11). Abstract: treat long prompts as an external environment the LLM programmatically examines, decomposes, recursively self-calls over snippets; processes inputs 2 orders of magnitude beyond context window; beats compaction/CodeAct/Claude-Code on long-context. Maps to gm: spool recall/codesearch is already RLM-shaped.

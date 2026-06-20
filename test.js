@@ -58,7 +58,25 @@ function assert(cond, msg) {
   if (!cond) { console.error('FAIL:', msg); process.exit(1); }
 }
 
+const TEXT_EXT = new Set(['.js', '.mjs', '.cjs', '.json', '.md', '.ts', '.tsx', '.jsx', '.css', '.html', '.yml', '.yaml', '.txt', '.sh']);
+function checkNoBom() {
+  const out = cp.execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const files = out.split('\n').map(s => s.trim()).filter(Boolean).filter(f => TEXT_EXT.has(path.extname(f).toLowerCase()));
+  const offenders = [];
+  for (const f of files) {
+    const abs = path.join(ROOT, f);
+    let fd;
+    try { fd = fs.openSync(abs, 'r'); } catch (_) { continue; }
+    const head = Buffer.alloc(3);
+    try { fs.readSync(fd, head, 0, 3, 0); } finally { fs.closeSync(fd); }
+    if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) offenders.push(f);
+  }
+  assert(offenders.length === 0, 'UTF-8 BOM in tracked text files (breaks node/JSON): ' + offenders.join(', '));
+  console.log('no-BOM guard ok (' + files.length + ' text files)');
+}
+
 async function main() {
+  checkNoBom();
   await ensureWatcher();
   console.log('watcher alive');
 
@@ -73,7 +91,7 @@ async function main() {
   assert(rec.data.hits.length > 0, 'recall hits non-empty for spool dispatch');
   console.log('recall ok hits=' + rec.data.hits.length);
 
-  const health = await dispatch('plugkit health', {});
+  const health = await dispatch('health', {});
   assert(health.ok, 'health ok');
   console.log('health ok version=' + (health.data.version || '?'));
 
