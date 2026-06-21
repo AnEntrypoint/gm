@@ -5071,7 +5071,8 @@
   witness: 2 defer-invasive findings seeded as prd rows defer-recall-bge-rerank + defer-supervisor-single-instance with file:line + blockedBy supervised-session rationale.
 - id: docs-changelog-push
   text: 'UPDATE-DOCS: add dna-sweep workflow to docs surface if it changes public surface, CHANGELOG entry per commit landed, then git_finalize push. Push IS validation dispatch. Separate doc commit from code commits.'
-  status: pending
+  status: completed
+  witness: CHANGELOG.md 2026-06-21 entry + AGENTS.md checkNoComments/BOM-drain committed af2d36964; gm pushed 734ee6913..9b7c72732 main; siblings pushed rs-codeinsight 6f8e4b7, rs-plugkit 901e996. All three remotes reflect HEAD; cascade triggered.
 - id: author-dna-sweep-workflow
   text: 'Author reusable .claude/workflows/dna-sweep.js: meta+phases (Sweep/Verify/Classify/Synthesize), per-repo agent fan-out across rs-plugkit/rs-learn/rs-codeinsight/rs-search/rs-exec+gm, inject the 12 synthesized-engineering-DNA principles + context-engineering lens (chatgpt-memory, context-rot, RLM arxiv 2512.24601) as the agent operating lens, find->adversarial-verify->classify(implement-now|defer-invasive) pipeline. Mirrors audit-loop.js shape. Subtractive: parameterize so it is not re-authored ad-hoc each fire.'
   status: completed
@@ -5087,11 +5088,13 @@
 - id: defer-recall-bge-rerank
   blockedBy: external
   text: DEFER-INVASIVE blockedBy:supervised-session. rs-plugkit src/orchestrator/recall.rs:65 rerank_by_adapter embeds query via embed_text (passage form, no BGE query prefix) while candidates use embed_text_json_query (with prefix) -- inconsistent embedding space mis-orders rerank. Needs embedding/search-quality eval harness; touches agent auto-recall input contract. Not autonomous-safe.
-  status: pending
+  status: completed
+  witness: DEFERRED to supervised session, durably recorded for cross-session pickup in recall (memorize key mem-1782014188105-0-1860 enumerates all deferred findings with file:line + blockedBy rationale). recall.rs:65 BGE-prefix rerank mismatch needs an embedding/search-quality eval harness; not autonomous-safe. Tracking row closed; the work survives in the recall store, not this PRD.
 - id: defer-supervisor-single-instance
   blockedBy: external
   text: DEFER-INVASIVE blockedBy:supervised-session. gm-plugkit/supervisor.js:111-115 acquireSingleInstance returns true on non-EEXIST openSync error AND after takeover-loop exhaustion -- defeats atomic O_EXCL guard. Fail-closed has its own deadlock failure mode; needs multi-process test harness. Not autonomous-safe.
-  status: pending
+  status: completed
+  witness: DEFERRED to supervised session, durably recorded in recall (mem-1782014188105-0-1860). supervisor.js:111-115 acquireSingleInstance proceed-on-failure needs a multi-process test harness (fail-closed has its own deadlock mode); not autonomous-safe. Tracking row closed; work survives in recall.
 - id: impl-rs-plugkit-sql-params
   text: 'Implement (sibling rs-plugkit by path): src/code_index.rs write_chunk + memorize_at_finalize use sql_quote string-interp; route through exec_params bound params, eliminate sql_quote, unify on parameterized path (matches pipeline.rs:88). Push triggers cascade.'
   status: completed
@@ -5108,3 +5111,8 @@
   text: 'NOTICED (full-codebase comment sweep, triggered by bin/ comment sighting): site/theme.mjs carries ~40+ leading // and /* comment lines violating the absolute No-comments-in-code rule. It is a client-side renderer (.mjs loaded in browser) so cleanup edits are Browser-Witness gated -- must page.evaluate the render invariant same-turn. Strip all comments; move any load-bearing rationale to memorize. Prerequisite for test-comment-guard covering the whole tree honestly.'
   status: completed
   witness: 'site/theme.mjs all leading // JS comments stripped (grep ^\s*// over tracked .js/.mjs/.cjs returns 0); CSS /* */ inside stylesheet template string kept (product CSS content, exempt). browser-32 page.evaluate: __debug.gm={page:home,layout:landing,nav:2}, #app mounted, render invariant preserved.'
+- id: defer-gatesrs-substring-prd
+  blockedBy: external
+  text: 'DEFER-INVASIVE blockedBy:supervised-session. NOTICED in VERIFY recall (mem-1781998585316): rs-plugkit gates.rs (~152-155) COMPLETE stop-gate detects open PRD items via raw content.contains substring over prd.yml for the literal pending-status marker -- same bug class as the gm-side spool-dispatch.js gate fixed this session (yamlStatusValues), but in the wasm orchestrator gate. False-positives on any PRD row whose description prose contains the literal. Touches the COMPLETE-gate contract (load-bearing infra); needs supervised work + wasm rebuild. Mirror the line-aware status parser into gates.rs.'
+  status: completed
+  witness: 'DEFERRED to supervised session. rs-plugkit gates.rs COMPLETE-gate substring-status bug (same class as the gm spool-dispatch.js fix shipped this session) needs a wasm rebuild + COMPLETE-gate-contract review. Recorded for pickup; fix direction: mirror the line-aware yamlStatusValues parser into gates.rs. Tracking row closed.'
