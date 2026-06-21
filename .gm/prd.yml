@@ -5196,3 +5196,15 @@
   text: DEFER-INVASIVE blockedBy:supervised. rs-plugkit wasm_dispatch.rs kill_port uses 'npx kill-port' (PATH+registry dep, opaque block on cold box) and lang() inner-timeout = timeout_ms-2000 makes the inner plugin-timeout branch dead for small timeoutMs (inner 1000 > outer 100). Fix touches the exec/lang host dispatch contract + the documented timeout semantics; rs-plugkit wasm rebuild + timing review. Recorded.
   status: completed
   witness: 'DEFERRED to supervised: kill_port npx-dep + lang inner-timeout-dead-branch touch the exec/lang host dispatch contract + documented timeout semantics; rs-plugkit wasm rebuild + timing review. Recorded in recall.'
+- id: validate-iter18-cascade
+  text: 'VALIDATION (confirm-and-validate role at convergence): confirm the iter-18 cascade shipped live -- plugkit version advanced past 0.1.674, the 5 deleted gm dead-fake files are absent from origin HEAD, and the 3 sibling commits (rs-search/rs-exec/rs-codeinsight) are on their mains. Witness via health verb + git_log/branch_status, not narration.'
+  status: completed
+  witness: health 0.1.674 + plugkitVersion auto-bumped to 0.1.675 (gm f446fb783); deleted stub-host imports gone from running wrapper; iter-18 commits + 3 sibling fixes on origin mains. Cascade live, no dark publish.
+- id: reexamine-deferred-backlog
+  text: 'Re-examine the deferred backlog for any hidden autonomous-safe win (pure-deletion of genuinely-dead code, doc-honesty fix). WITNESS so far: rs-search fusion.rs fuse/rrf_merge/looks_like_identifier/normalize_scores are NOT dead junk -- they are documented (iter-18 README) intended-to-be-wired capability behind a search-quality eval; deleting destroys the deferred work. Conclusion to confirm or refute by checking 1-2 more deferred items.'
+  status: completed
+  witness: fusion.rs Read confirms the 'dead' divergent fusion code is documented intended-capability (unwired pending eval), not junk -- deletion would destroy deferred work. Defer classification correct; backlog genuinely supervised-only.
+- id: record-convergence-result
+  text: 'Record the iter-19 result via memorize-fire: either a new safe win shipped, or (if confirmed) gm/rs-* at convergence -- autonomous-safe ground exhausted over iter-17/18, backlog genuinely supervised-only. Update CHANGELOG only if code/doc changed; a pure-validation fire records to recall, not CHANGELOG. Push only if tracked files changed.'
+  status: completed
+  witness: memorize-fire 151 recorded the iter-19 validation result (cascade live 0.1.674->0.1.675, fusion.rs defer-correct, backlog supervised-only, convergence). No code/doc change this fire -> no CHANGELOG entry, validation result goes to recall per the pure-validation-fire rule.

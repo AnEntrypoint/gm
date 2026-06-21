@@ -310,3 +310,13 @@
   question: After 6 prior fires shipped the isolated safe wins across all 5 rs-* + gm and deferred the invasive clusters, does a targeted dna-sweep of rs-search+rs-exec surface any NEW isolated real-services-witnessable fix not already shipped or in the supervised-only defer set?
   witness: ''
   witness_evidence: 'task w4udosf5b.output: targeted sweep of rs-search+rs-exec (expanded to 6 repos) found 83 candidates -> 27 verified -> 20 implement-now (NEW: critical gm stub-wasm-host dead-fake cluster, rs-search README honesty + context regex, rs-exec dead anyhow, rs-codeinsight double-config, gm checkNoComments weak, mutables-gate substring, bootstrap atomics-sleep, skill-bootstrap runtime/redirect), 7 defer-invasive. YES new safe ground exists; concentrated in the gm dead-fake cluster the prior whole-repo sweep missed.'
+- id: iter18-cascade-live
+  status: witnessed
+  question: Did the iter-18 cascade (commits 45f92539a gm + 6021f53 rs-search + a0ed6b0 rs-exec + 5ef3a08 rs-codeinsight) ship live -- plugkit version advanced and the deleted stub-host cluster + sibling fixes present in the running artifact?
+  witness: ''
+  witness_evidence: 'health verb: version 0.1.674 live, imports list shows host_browser_exec/host_task_proc (real wrapper) NOT the deleted stub''s host_browser_spawn/eval/close. gm git_log: b0e9c87a1 (delete stub-host), bfaa8ed6e (docs), 36e635177 (close PRD) on origin; cascade auto-bumped plugkitVersion to 0.1.675 (f446fb783) -- iter-18 shipped through CI cleanly. 5 deleted files absent on disk. Siblings: rs-search 6021f53, rs-exec a0ed6b0, rs-codeinsight c0868e7 -- all on main.'
+- id: backlog-truly-supervised
+  status: witnessed
+  question: Is every remaining deferred finding genuinely supervised-only (host-ABI / search-quality-eval / agent-input-contract / multi-process), or is any a hidden autonomous-safe pure-deletion or doc-fix the loop should take this fire?
+  witness: ''
+  witness_evidence: 'Tested the hypothesis on rs-search/src/fusion.rs (Read): fuse/rrf_merge/looks_like_identifier/IDENTIFIER_BOOST/normalize_scores are NOT dead junk -- they are intended-to-be-wired capability the iter-18 README now documents as ''available but unwired pending a search-quality eval''. Deleting them destroys the deferred work, so the defer classification is correct. Backlog (context-rot orchestration core, chatgpt-memory arch, rs-plugkit correctness needing wasm rebuild, search-quality items) is genuinely supervised-only; no hidden autonomous-safe win this fire.'
