@@ -5208,3 +5208,15 @@
   text: 'Record the iter-19 result via memorize-fire: either a new safe win shipped, or (if confirmed) gm/rs-* at convergence -- autonomous-safe ground exhausted over iter-17/18, backlog genuinely supervised-only. Update CHANGELOG only if code/doc changed; a pure-validation fire records to recall, not CHANGELOG. Push only if tracked files changed.'
   status: completed
   witness: memorize-fire 151 recorded the iter-19 validation result (cascade live 0.1.674->0.1.675, fusion.rs defer-correct, backlog supervised-only, convergence). No code/doc change this fire -> no CHANGELOG entry, validation result goes to recall per the pure-validation-fire rule.
+- id: freddie-gmskill-verify
+  scope: Verify freddie's plugins/gm-skill/plugin.js registers exactly one skill named gm-skill via real host boot (node), matching test.js assertion; witness the registration list.
+  status: completed
+  witness: node boot of freddie/plugins/gm-skill/plugin.js registered exactly ["gm-skill"] from ~/.claude/skills/gm-skill/SKILL.md — matches test.js assertion.
+- id: freddie-gmskill-silent-failure
+  scope: freddie plugins/gm-skill/plugin.js returns silently when SKILL.md is unresolvable and has no try/catch around read+parse — a gm-doesnt-work-in-freddie failure with zero diagnostic. Add ctx.log diagnostics on miss and on read/parse error so the integration is debuggable; verify registration still works.
+  status: completed
+  witness: 'freddie/plugins/gm-skill/plugin.js now destructures {pi,log}, emits ctx.log.warn (console.warn fallback) on unresolvable SKILL.md and on read/parse error instead of silent return. Verified: registers ["gm-skill"] with HOME present (0 warns); registers [] + 1 warn with HOME=/tmp/nonexistent. node --check passes.'
+- id: untrack-status-json
+  scope: .gm/exec-spool/.status.json is a transient watcher heartbeat tracked in git despite .gm/exec-spool/ being in the managed gitignore block, producing recurring residual churn every session. git rm --cached it so the ignore takes effect.
+  status: completed
+  witness: git rm --cached .gm/exec-spool/.status.json; now shows 'D' staged and the file is covered by the existing .gm/exec-spool/ managed-ignore entry, ending the per-session heartbeat churn.
