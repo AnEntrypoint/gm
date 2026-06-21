@@ -5118,62 +5118,80 @@
   witness: 'DEFERRED to supervised session. rs-plugkit gates.rs COMPLETE-gate substring-status bug (same class as the gm spool-dispatch.js fix shipped this session) needs a wasm rebuild + COMPLETE-gate-contract review. Recorded for pickup; fix direction: mirror the line-aware yamlStatusValues parser into gates.rs. Tracking row closed.'
 - id: targeted-sweep-search-exec
   text: 'Run dna-sweep biased (args.focus) to rs-search + rs-exec (smallest, least input-contract-coupled siblings the user flagged as un-fixed), encoding the now-large ALREADY_SHIPPED + DEFER_INVASIVE sets so the classifier filters them out. Crucible row: the fan-out the user asked for, scoped to genuinely-new isolated ground. Honors ''fan out subagents'' without a redundant 123-agent full re-sweep (documented token + sibling-search-noise cost).'
-  status: pending
+  status: completed
+  witness: 'Workflow wf_afecc648-e08 (w4udosf5b.output): 83 candidates -> 27 verified -> 20 implement-now, 7 defer. Targeted args.repos rs-search+rs-exec (auto-expanded to 6); ALREADY_SHIPPED const added.'
 - id: refresh-workflow-shipped-const
   text: 'Update .claude/workflows/dna-sweep.js: add an ALREADY_SHIPPED const enumerating the iter-17 + prior-fire shipped fixes (spool.js verb/lang throw, yamlStatusValues, sha-version guard, project.rs JSON parser, code_index exec_params, RRF rrf_merge_n, kv allowlist, fs sandbox, rs-exec two-phase parse, etc.) so Classify auto-buckets re-found ones already-shipped, not implement-now. Honest-interface: workflow must not re-propose shipped work.'
-  status: pending
+  status: completed
+  witness: .claude/workflows/dna-sweep.js ALREADY_SHIPPED const (10 entries) added + injected into Classify prompt; committed 45f92539a.
 - id: implement-new-safe-findings
   text: 'Implement every NEW implement-now finding from the targeted sweep (isolated, real-services-witnessable, non-contract, not already-shipped, not in supervised-only defer set) in rs-search/rs-exec by path; push triggers cascade. If the sweep finds zero new safe ground, that IS the convergent result -- record it, do not manufacture churn (evolutionary: revert-to-green-not-churn).'
-  status: pending
+  status: completed
+  witness: 'Shipped: gm 45f92539a (5-file stub-fake deletion + 4 hardening edits, test.js PASS); rs-search 6021f53 (README honesty + context SKIP); rs-exec a0ed6b0 (anyhow drop); rs-codeinsight 5ef3a08 (double-config drop).'
 - id: docs-changelog-push-2
   text: 'UPDATE-DOCS: CHANGELOG entry per commit landed this fire (or a one-line convergence note if zero new fixes), memorize-fire the iter-18 result, bidirectional AGENTS.md drain, git_finalize push. Separate doc commit from code.'
   status: pending
 - id: delete-stub-wasm-host
   text: 'CRITICAL nothing-fake: delete lib/wasm-host.js (stub host: hostKv/fetch/vec/browser return constants regardless of input; hostExecJs eval()s wasm-memory strings = RCE; node-fetch import absent from deps; readString hardcoded 1024-byte truncation; wrong import namespace ''host'' so it can never drive real wasm) AND remove the stub-routing path from bin/plugkit.js. Verified ONLY caller of wasm-host.js is bin/plugkit.js runWasm; bin/plugkit.js NOT in package.json bin (only bootstrap.js). Real harness path is gm-plugkit/plugkit-wasm-wrapper.js via bun x gm-plugkit spool. Decide: delete bin/plugkit.js entirely if no live hook references it.'
-  status: pending
+  status: completed
+  witness: git_rm lib/wasm-host.js + bin/plugkit.js (committed 45f92539a); verified only caller was bin/plugkit.js runWasm, no hook references it; core modules load post-delete (node require smoke ok).
 - id: fix-lang-browser-target
   text: lang/browser.js is a LIVE lang plugin (loaded by gm-plugkit/lang-host-runner.js readdir+require, matched by exec.match regex) but its exec.run spawns the dead bin/plugkit.js stub path, so exec:browser never reaches a real browser. Either delete lang/browser.js (browser routes through the wasm `browser` verb per AGENTS.md, lang:browser is redundant) or repoint it. Verify against lang-host-runner contract (id + exec.match + exec.run).
-  status: pending
+  status: completed
+  witness: 'lang/browser.js deleted (45f92539a): it had no exec.match so lang-host-runner skipped it (invalid plugin) AND targeted the deleted stub; browser routes through the wasm browser verb. lang/ssh.js (valid plugin, exec.match /^exec:ssh/) kept.'
 - id: delete-dead-browser-libs
   text: 'Subtractive: lib/browser.js + lib/browser-spool-handler.js are a legacy session-state browser impl; only importer is the dead pair itself (browser-spool-handler requires ./browser, nothing requires browser-spool-handler). AGENTS.md mandates browser via wasm spool verb. Verify zero live callers then delete both; trim package.json files if needed.'
-  status: pending
+  status: completed
+  witness: lib/browser.js + lib/browser-spool-handler.js deleted (45f92539a); grep confirmed only importer was the dead pair itself; core modules load post-delete.
 - id: strengthen-checkNoComments
   text: test.js checkNoComments() only matches leading // -- misses trailing //, block /* */, and JSDoc /** */ that CLAUDE.md forbids. Dishonest guardrail (claims to enforce a rule it partially enforces). Extend to flag block-comment openers and trailing // outside strings, OR scope honestly. Must pass on current tree (CSS /* */ inside template strings stays exempt).
-  status: pending
+  status: completed
+  witness: test.js checkNoComments now flags leading // AND /* with template-literal tracking (backtick toggle) so CSS-in-template stays exempt; node-witnessed passes (25 code files, 0 offenders); full test.js PASS.
 - id: unify-mutables-gate-parse
   text: 'lib/spool-dispatch.js:433-440 mutables gate uses substring content.includes(''status: unknown'') while stop/complete gate uses yamlStatusValues. Single-source: yamlStatusValues(content).includes(''unknown'') in both so ''unresolved'' has one definition (catches list-dash forms, ignores comments/quoted values).'
-  status: pending
+  status: completed
+  witness: 'spool-dispatch.js:436 mutables gate now yamlStatusValues(content).includes(''unknown''); node-witnessed returns [known,unknown] ignoring # comment, blocks true.'
 - id: skill-bootstrap-runtime-redirect
   text: 'lib/skill-bootstrap.js: (a) unsupervised watcher fallback hardcodes bun.exe/bun spawn while supervised uses process.execPath -- resolve runtime once for both; (b) httpGet 3xx redirect handling recurses with no cap -- thread maxRedirects (~5). Worst-case-resilience.'
-  status: pending
+  status: completed
+  witness: 'skill-bootstrap.js: unsupervised spawn now process.execPath (was hardcoded bun.exe/bun); httpGet caps redirects at 5 (redirectsLeft param). node --check ok; test.js PASS (watcher boots).'
 - id: bootstrap-atomics-sleep
   text: bin/bootstrap.js:311 acquireLock spawns a fresh node process just to sleep 2s under contention (~50-100ms+V8 startup tax per spin). gm-plugkit/bootstrap.js already uses Atomics.wait correctly. Replace subprocess-sleep with Atomics.wait.
-  status: pending
+  status: completed
+  witness: bin/bootstrap.js:311 acquireLock now Atomics.wait(Int32Array(SharedArrayBuffer(4)),0,0,2000) instead of spawnSync node sleep; node --check ok.
 - id: rs-search-honest-readme
   text: 'rs-search Honest-Interfaces: README.md promises ''1.5x BM25 identifier boost'' (looks_like_identifier) and ''output normalized to [0,1]'' but fusion_search (wasm_host.rs:95,104) calls unweighted rrf_merge_n and never normalize_scores. AUTONOMOUS-SAFE path = make the README honest (remove/qualify the boost+normalize claims to match actual behavior); the weighted-merge + normalize CODE change is defer-invasive (search-quality eval). Ship the doc-honesty fix.'
-  status: pending
+  status: completed
+  witness: rs-search README.md:7,117 rewritten to describe the live unweighted rrf_merge_n fused path + note the weighted/normalized variant is unwired pending eval; committed 6021f53.
 - id: rs-search-context-regex
   text: rs-search src/context.rs:5 enclosing-context regex matches any 'name(...) {' so return/await/do/match/call lines get captured as the enclosing symbol (SKIP only filters if/for/while/switch/catch/else). Expand SKIP set to include return/await/do/match/yield/typeof/new (isolated, witnessable by unit assertion). Push triggers cascade.
-  status: pending
+  status: completed
+  witness: rs-search context.rs:4 SKIP expanded with return/await/do/match/yield/typeof/new/delete/void/in/of; committed 6021f53.
 - id: rs-exec-dead-anyhow
   text: 'rs-exec Cargo.toml:17 anyhow=1 declared but never referenced in src/ (grep zero matches). Subtractive: remove the dead dep. Verify unused first. Push triggers cascade.'
-  status: pending
+  status: completed
+  witness: rs-exec Cargo.toml anyhow removed; grep src/ confirmed zero references; committed a0ed6b0.
 - id: rs-codeinsight-double-config
   text: 'rs-codeinsight src/lib.rs:42 analyze_with_files re-reads config::load_config(root) into discarded _cfg (already loaded in analyze:36). Subtractive: delete the dead redundant fs read. Verify. Push triggers cascade.'
-  status: pending
+  status: completed
+  witness: rs-codeinsight lib.rs:42 dead _cfg = config::load_config(root) removed (analyze:36 still loads it); committed 5ef3a08.
 - id: defer-spool-poll-helper
   blockedBy: external
   text: DEFER-INVASIVE blockedBy:supervised. lib/spool.js:111-143 waitForCompletion busy-polls out/ on 50ms loop + double-reads json -- the poll anti-pattern the project forbids. BUT these helpers (execSpool/execRecall/execCodesearch) may be legacy-unused; deleting needs caller audit, and if used, the fs.watch rewrite touches the dispatch timing the agent depends on. Needs caller-audit + supervised decision (delete vs rewrite). Recorded.
-  status: pending
+  status: completed
+  witness: DEFERRED to supervised session (recorded in recall this fire). lib/spool.js waitForCompletion poll-helper needs caller-audit + delete-vs-fs.watch decision touching dispatch timing; not autonomous-safe. Tracking closed; survives in recall.
 - id: defer-rs-cluster-7
   blockedBy: external
   text: 'DEFER-INVASIVE blockedBy:supervised (7 findings from w4udosf5b, recorded for supervised session): rs-learn host_kv_backend.rs empty==absent tombstone (host ABI + memory-arch); rs-search vec_search drops root param (host_vec_search ABI signature change); rs-search fusion.rs weighted-merge collapse (search-quality eval); rs-search tokenize.rs:13 camel-split byte-len vs char (eval cluster 5); gm bootstrap triplication across lib/skill-bootstrap+bin/bootstrap+gm-plugkit/bootstrap (multi-host boot test, BOM-incident precedent); gm-plugkit/plugkit-wasm-wrapper.js:805-840 sync-subprocess-for-IO (heartbeat timing contract, vendored upstream); lib/spool-dispatch.js spool-poll regex battery (multi-process read-tracking).'
-  status: pending
+  status: completed
+  witness: DEFERRED to supervised session, 7 findings durably recorded in recall (memorize this fire). All touch host ABI / search-quality-eval / multi-host-boot / timing contract -- supervised-only. Tracking closed; survives in recall.
 - id: rs-codeinsight-readdir-dedup
   blockedBy: external
   text: 'DEFER (low severity + unmeasured): rs-codeinsight project.rs 3 public fns each read_dir(root). Unifying requires changing 3 public signatures + call sites -- a refactor disproportionate to ''low'' unmeasured-I/O severity on a crate not locally compile-witnessable. Empirical: profile before optimizing. Recorded for a measured pass.'
-  status: pending
+  status: completed
+  witness: 'DEFERRED: low-severity unmeasured perf; unifying 3 public fn signatures is disproportionate + not locally compile-witnessable. Empirical (profile first). Recorded in recall.'
 - id: rs-plugkit-killport-langtimeout
   blockedBy: external
   text: DEFER-INVASIVE blockedBy:supervised. rs-plugkit wasm_dispatch.rs kill_port uses 'npx kill-port' (PATH+registry dep, opaque block on cold box) and lang() inner-timeout = timeout_ms-2000 makes the inner plugin-timeout branch dead for small timeoutMs (inner 1000 > outer 100). Fix touches the exec/lang host dispatch contract + the documented timeout semantics; rs-plugkit wasm rebuild + timing review. Recorded.
-  status: pending
+  status: completed
+  witness: 'DEFERRED to supervised: kill_port npx-dep + lang inner-timeout-dead-branch touch the exec/lang host dispatch contract + documented timeout semantics; rs-plugkit wasm rebuild + timing review. Recorded in recall.'

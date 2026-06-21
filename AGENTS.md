@@ -26,7 +26,7 @@ This repo IS the published `gm-skill` npm package: repo root = package root, no 
 
 ## WASM-only
 
-The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun -- no native binaries built, downloaded, or published. The shipped `plugkit.wasm` is fetched at bootstrap from `plugkit-wasm` npm / `plugkit-bin` gh-releases, sha256-pinned. Size (~149MB) + embedded-model (offline in-wasm embeddings) mechanics in rs-learn (`recall: WASM-only plugkit size mechanics`).
+The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun -- no native binaries built, downloaded, or published. The shipped `plugkit.wasm` is fetched at bootstrap from `plugkit-wasm` npm / `plugkit-bin` gh-releases, sha256-pinned. Size + embedded-model (offline in-wasm embeddings) mechanics in rs-learn (`recall: WASM-only plugkit size mechanics`).
 
 **Every wasm host-import `extern "C"` block carries `#[link(wasm_import_module = "env")]`** -- in rs-plugkit AND every dep crate linked into the cdylib (rs-learn) AND any sibling building wasm (rs-exec, rs-search); miss it anywhere and the cascade goes dark (local builds stay green, only Linux CI link fails). Incident + host-fn enumeration in rs-learn (`recall: cascade outage wasm import module link`, `recall: wasm host-import link-module trap`).
 
