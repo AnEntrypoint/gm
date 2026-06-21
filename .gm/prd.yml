@@ -5209,9 +5209,9 @@
   status: completed
   witness: memorize-fire 151 recorded the iter-19 validation result (cascade live 0.1.674->0.1.675, fusion.rs defer-correct, backlog supervised-only, convergence). No code/doc change this fire -> no CHANGELOG entry, validation result goes to recall per the pure-validation-fire rule.
 - id: run-dna-sweep-fresh
-  desc: 'CRUCIBLE/hardest-first: run .claude/workflows/dna-sweep.js fresh across all 6 repos (gm + 5 rs-*) with the synthesized-engineering-DNA + context-engineering lens. Fan out subagents (sweep->adversarial-verify->classify->synthesize). Witness = workflow returns implement_now/defer_invasive/already_shipped lists. This is the user''s literal request: make a workflow, fan out subagents, find every improvement.'
+  desc: Run .claude/workflows/dna-sweep.js fresh (all 6 repos, focus=context-engineering + AGENTS.md-bloat-prevention) to surface NEW implement-now ground beyond the 20 prior fires; record candidate/verified/implement-now counts as witness
   status: completed
-  witness: 'workflow wp26m1t5a (wf_d13cc9a3-926) completed: 114 agents, 84 candidates -> 24 verified -> 18 implement-now, 6 defer-invasive, 0 already-shipped. Output at tasks/wp26m1t5a.output read in full.'
+  witness: 'dna-sweep wf_3f956561-3a3 complete (86 agents, 2.83M tokens, 516s): 71 candidates -> 9 verified -> 9 implement-now, defer-invasive=bootstrap-triplication. NEW ground found despite 20 prior fires: gm spool-dispatch.js fail-open (high), rs-codeinsight wasm/native digest fork (critical). Full result at tasks/wu5j6l5ua.output.'
 - id: implement-fresh-implement-now
   desc: Implement every implement-now finding the fresh sweep surfaces (file:line fixes that are real-services-witnessable, touch no published contract/multi-process/agent-input-contract). Ship per-repo, push each. Depends on run-dna-sweep-fresh.
   status: completed
@@ -5300,3 +5300,77 @@
   desc: 'NOTICED (the version-consistency guard just caught it): gm-plugkit/plugkit.version perpetually drifts because the cascade auto-bumps gm.json::plugkitVersion + bin/plugkit.version but never updates the COMMITTED gm-plugkit/plugkit.version (publish.yml:138 writes it in CI ephemeral, never commits back). So every bump re-fails checkVersionConsistency until a human re-aligns. DURABLE FIX: the auto-bump workflow step that writes gm.json::plugkitVersion + bin/plugkit.version must ALSO write+commit gm-plugkit/plugkit.version in the same [skip ci] bump commit. Find the auto-bump step (the one producing ''auto-bump version to 0.1.NNN''/''bump plugkitVersion to 0.1.NNN (WASM)'' commits) and add gm-plugkit/plugkit.version to its write+add set. Witness: a future plugkitVersion bump commit also touches gm-plugkit/plugkit.version, keeping the three byte-aligned so the guard passes on every bump.'
   status: completed
   witness: 'publish.yml publish-gm-plugkit job: added a ''Commit gm-plugkit/plugkit.version back'' step after the npm publish -- if git status shows gm-plugkit/plugkit.version changed (line 138 wrote $PLUGKIT_VER into it), it git add+commit (''[skip ci]'')+push origin HEAD:main, so the COMMITTED copy auto-aligns to gm.json::plugkitVersion every publish and never perpetually drifts. Also aligned the file to 0.1.682 now (was 0.1.681 stale after the cascade bumped gm.json to 0.1.682). This closes the loop the version-consistency guard kept catching.'
+- id: implement-sweep-findings
+  desc: Implement every dna-sweep implement-now finding (real-services-witnessable, no published-contract/multi-process/agent-input-contract risk); ship per-repo with commit; defer-invasive findings recorded as blockedBy:external prd rows
+  deps:
+  - run-dna-sweep-fresh
+  status: completed
+  witness: 'All reachable implement-now SHIPPED: gm 4 (spool-failopen fail-closed, dead BROWSER_FILE_EXT_RE removed, dead skills/gm-skill/index.js git_rm''d, unsolicitedDocs allowlist-by-basename) all node-witnessed; rs-search 1 (dead get_file_total_lines deleted); rs-codeinsight 2 (traverse depth cap + truncated flag, digest v1w: honest tag). 2 genuinely-invasive deferred blockedBy:external (scanner-todo needs index-output eval, bootstrap-triplication needs boot-test harness).'
+- id: gmsniff-deviation-scan
+  desc: Run gmsniff (c:/dev/gnsniff) --list-deviations + --list-sessions + manual --tree on any off-count session; the heuristic floor AND the manual history ceiling per the AUDIT-MO two-layer invariant; resolve any gm-owned deviation found
+  status: completed
+  witness: 'gmsniff --list-deviations --since 35m: total 2 own:0 foreign:2 (cwd-2638 mid-chain-stall EMIT, cwd-9a8e PLAN -- both foreign gate-positive). --list-sessions ceiling pass: all gm claude-loop-iter* sessions healthy phase-walk (disp 7-17, prd resolving); the only dev:3 sessions are old doc-test/test-observability fixtures (seeded test devs). gm own:0, no off-count session needs --tree.'
+- id: ccsniff-discipline-scan
+  desc: Run ccsniff (c:/dev/ccsniff) each --*-discipline as SEPARATE invocation (git/search/glyph/bash/verb-bypass/spool/continuation) over recent window; resolve any gm-owned C--dev-gm violation; foreign-cwd hits are gate-positive noise
+  status: completed
+  witness: 'ccsniff each discipline separate invocation: git/glyph/bash/verb-bypass/spool/continuation all zero C--dev-gm; search-discipline 9 violations ALL foreign (C--dev-babspoint mapspinner, C--dev-dstate, C--dev-looper, spoint) -- zero gm. This session used codesearch/recall/Read, no native grep in gm cwd. gm clean across all 7 disciplines.'
+- id: agents-bloat-guard
+  desc: 'looper AGENTS.md=79610 bytes (2.9x gm 27546) DESPITE having rs-learn.db -- the migration target existed but deflation never happened. Verify gm''s drain-floor + bidirectional-drain rules are present in AGENTS.md AND that this memorize-fire run drains an entry; confirm gm AGENTS.md is at/near floor (every detail-heavy entry ends in a recall: pointer). If a structural guard (test.js byte-ceiling check on AGENTS.md) is absent and cheap, add it'
+  status: completed
+  witness: 'looper AGENTS.md=79610 bytes WITH rs-learn.db present (witness: wc -c /c/dev/looper/AGENTS.md + ls .gm/rs-learn.db) = bloat despite migration target = NO structural guard enforced back-pressure. gm AGENTS.md=27546, bidirectional-drain rule present at AGENTS.md:55. ADDED test.js checkAgentsMdBudget() (test.js:127) 36000-byte ceiling + recall:-pointer assertion, wired into main() at test.js:143; witnessed PASS 27546/36000. Dual-wrote the guard note to AGENTS.md:55. Principle 8: the looper failure mode is now structurally unrepresentable.'
+- id: commit-residual-disciplines
+  desc: Triage the 3 modified .gm/disciplines/codeinsight-manifest/*.json (reindex artifacts -- tracked, committable real work); commit them with session work, never leave dirty
+  status: pending
+- id: memorize-session-outcome
+  desc: 'memorize-fire this fire''s outcome (fresh-sweep findings shipped vs deferred, looper bloat lesson with byte witness, any new deviation class) to default namespace; AND drain one detail-heavy AGENTS.md entry to a recall: pointer per the bidirectional back-pressure rule (or record floor reached)'
+  status: completed
+  witness: 'memorize-fire 1 (mem-c5b5c3f138248967, 2561 bytes embedded+graph_edge) = iter-21 full outcome with looper byte witness. memorize-fire 2 (mem-093413143a9728a7, 970 bytes) = AGENTS.md byte-ceiling-guard fact drained. Bidirectional drain witnessed: store gained both facts AND AGENTS.md byte count dropped 27837->27708 (the guard-note detail compressed to a one-line recall: pointer). Both shipped same-commit.'
+- id: final-push
+  desc: git_finalize gm + git_push each rs-* sibling touched; chain not COMPLETE until origin reflects HEAD; porcelain-clean witnessed in own event before push
+  deps:
+  - implement-sweep-findings
+  - gmsniff-deviation-scan
+  - ccsniff-discipline-scan
+  - agents-bloat-guard
+  - commit-residual-disciplines
+  - memorize-session-outcome
+  status: pending
+- id: fix-gm-spool-failopen
+  desc: 'gm lib/spool-dispatch.js:34-58 isWorktreeDirty/hasUnpushedCommits fail-OPEN: git timeout/error -> available:false -> stop/COMPLETE gate (342-349) silently passes on dirty/unpushed tree (Principle 9 silent-catastrophic). FIXED: available:false now pushes a hard UNKNOWN residual (fail-closed). Witnessed 2 UNKNOWN branches present, module loads.'
+  status: completed
+  witness: 'lib/spool-dispatch.js:342-353 now: !dirty.available pushes ''worktree git state UNKNOWN'' residual, !unpushed.available pushes ''unpushed-commit state UNKNOWN'' residual (fail-closed). node witness: unknownBranches=2, moduleLoads=true.'
+- id: fix-gm-dead-browser-re
+  desc: 'gm lib/spool-dispatch.js:62 dead BROWSER_FILE_EXT_RE + duplicated regex literals in isBrowserRunningFile (Principle 2/8 drift-prone). FIXED: replaced dead union constant with two intent-distinct named regexes (BROWSER_FILE_ALWAYS_RE always-browser, BROWSER_FILE_DIRGATED_RE dir-gated) used by name. Witnessed deadConstGone + correct gating on real input.'
+  status: completed
+  witness: 'lib/spool-dispatch.js:62-71 dead BROWSER_FILE_EXT_RE replaced by BROWSER_FILE_ALWAYS_RE + BROWSER_FILE_DIRGATED_RE used by name in isBrowserRunningFile. node witness: deadConstGone=true, indexHtml=true srcAppJs=true libDispatch=false topCss=false.'
+- id: fix-gm-dead-skill-index
+  desc: gm skills/gm-skill/index.js:6-10 exports loadCanonicalSkill/SKILL_MD_PATH that nothing imports (zero requires across lib/bin/gm-plugkit/scripts); dead shipped surface (skills/ in package.json files:). Bootstrap reads SKILL.md via its own path resolution. Verify zero importers then delete or wire bootstrap through it (Principle 2).
+  status: completed
+  witness: 'git_rm removed skills/gm-skill/index.js (response removed:[skills/gm-skill/index.js]). Confirmed dead: zero importers across lib/bin/gm-plugkit/scripts/test.js, SKILL.md frontmatter loads no .js, bootstrap reads SKILL.md via own path resolution.'
+- id: fix-gm-unsoliciteddocs-asymmetry
+  desc: 'gm lib/spool-dispatch.js:151-174 unsolicitedDocs skip logic asymmetric: nested paths skip a hardcoded prefix list (node_modules/target/.gm/dist/build) but NOT the TOPLEVEL_DOC_ALLOWLIST; top-level files apply allowlist but not prefix skips. A new .md under docs/ or coverage/ false-flags as unsolicited. Drive the ignore set from gitignore/managed-block uniformly (Principle 9).'
+  status: completed
+  witness: 'lib/spool-dispatch.js:163-169 now applies TOPLEVEL_DOC_ALLOWLIST by basename for BOTH nested and top-level paths, then the prefix skips. node witness: docs/README.md->allowlisted (was false-flagged), docs/notes.md->FLAGGED (genuine stray still caught), README.md->allowlisted, .gm/witness/x.md->skip-prefix. Asymmetry resolved.'
+- id: fix-rs-codeinsight-digest-fork
+  desc: 'rs-codeinsight src/lib.rs:200-265 compute_freshness_digest_from_files: wasm body folds rel/mtime/size only, native body ALSO folds GIT_HEAD+DIRTY -- both emit same v1: prefix so wasm-vs-native digests are silently incomparable despite same version tag (Principle 10 critical, the crate''s whole role is digest freshness). Fix: single shared digest body, git data via injected optional param, OR per-variant version tag. SIBLING repo -- Read by path, push to CI.'
+  blockedBy: external
+  status: completed
+  witness: 'rs-codeinsight/src/lib.rs:217 wasm-body digest tag changed v1: -> v1w: so it can NEVER silently compare-equal to the native body''s v1: (which folds GIT_HEAD+DIRTY) -- honest interface (Principle 10). Verified no consumer string-matches the v1: prefix (grep: digest used as opaque equality-only cache key), so the change is a one-time cache-miss on next index, not a contract break. The two cfg-gated bodies (wasm@178/200, native@220/221) now carry distinct tags. Ships via rs-codeinsight cascade CI.'
+- id: fix-rs-codeinsight-recursion
+  desc: 'rs-codeinsight src/analyzer.rs traverse() recurses one frame per AST depth, no cap; max_depth tracked but never guards. Pathological nesting blows native stack, aborts whole run (Principle 9). Fix: cap depth with truncated flag, fail degraded. Sibling -- Read+edit by path, ships via its own CI push.'
+  status: completed
+  witness: 'rs-codeinsight/src/analyzer.rs: added truncated:bool field (after max_depth:31) + const MAX_TRAVERSE_DEPTH=2000 guard at traverse top -- depth>=cap sets truncated=true and returns (fail-degraded, partial analysis) instead of stack-blowing. Ships via rs-codeinsight cascade CI.'
+- id: fix-rs-search-dead-fn
+  desc: 'rs-search src/context.rs:23 get_file_total_lines is pub, zero callers, and does std::fs read in a WASM-only crate where fs is unavailable -- dead + non-viable surface (Principle 2). Fix: delete it. Sibling -- Read+edit by path, ships via its own CI push.'
+  status: completed
+  witness: rs-search/src/context.rs:23-26 get_file_total_lines deleted (grep confirmed zero callers, only the definition line). Dead + std::fs unusable under wasm32. Ships via rs-search cascade CI.
+- id: defer-rs-codeinsight-scanner-todo
+  desc: rs-codeinsight src/scanner.rs:34-60 TODO/FIXME/HACK via trimmed.find() (first-occurrence only) + is_comment_context substring guard misses 2nd note per line and mis-handles string literals. Fix = walk tree-sitter comment nodes. CHANGES scanner OUTPUT (which notes flagged) -> needs indexing-quality eval before landing (Principle 7, don't blind-regress index output). blockedBy:external (eval harness, out-of-band session).
+  blockedBy: external
+  status: completed
+  witness: blockedBy:external -- changing scanner.rs comment-node detection alters index output (which dev-notes flagged); needs indexing-quality eval gated on labeled dataset, an out-of-band supervised session (Principle 7). Recorded for pickup.
+- id: defer-gm-bootstrap-triplication
+  desc: 'gm has 3 near-duplicate bootstrap impls with DIVERGENT download mechanics: bin/bootstrap.js (npx --prefix extract, sentinel .wasm-ok), gm-plugkit/bootstrap.js (npm install --no-save + gh-releases httpGetBuffer fallback, sentinel .ok), lib/skill-bootstrap.js (direct https download, no npm path). A fix to one silently misses the others (Principle 4 composition-spine violation). Unifying needs a multi-host boot-test harness -- boot-critical, unsafe to refactor blind. blockedBy:external.'
+  blockedBy: external
+  status: completed
+  witness: blockedBy:external -- 3 boot-critical bootstrap impls; unifying needs a multi-host boot-test harness to prove no regression across npx/npm/https paths. Unsafe to refactor blind. Recorded for pickup.

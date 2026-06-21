@@ -134,12 +134,23 @@ function checkUpdateWarningWired() {
   console.log('update-warning-wired guard ok');
 }
 
+function checkAgentsMdBudget() {
+  const CEILING = 36000;
+  const abs = path.join(ROOT, 'AGENTS.md');
+  const bytes = fs.statSync(abs).size;
+  assert(bytes <= CEILING, 'AGENTS.md is ' + bytes + ' bytes, over the ' + CEILING + '-byte ceiling -- a detail-heavy/single-crate/single-platform entry has accreted instead of draining to an rs-learn recall: pointer. The looper failure mode (AGENTS.md grew to ~79k despite having rs-learn.db) is exactly this guard going unenforced. Drain a detail-heavy entry to a one-line recall: pointer (memorize-fire the substance) until under ceiling; never compress a top-level cross-cutting rule to make budget');
+  const src = fs.readFileSync(abs, 'utf8');
+  assert(/recall:/.test(src), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn, not live inline');
+  console.log('agents-md-budget guard ok (' + bytes + '/' + CEILING + ' bytes)');
+}
+
 async function main() {
   checkNoBom();
   checkNoComments();
   checkVersionConsistency();
   checkWasmNotPublished();
   checkUpdateWarningWired();
+  checkAgentsMdBudget();
   await ensureWatcher();
   console.log('watcher alive');
 
