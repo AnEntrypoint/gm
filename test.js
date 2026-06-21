@@ -124,6 +124,16 @@ function checkWasmNotPublished() {
   console.log('wasm-not-published guard ok');
 }
 
+function checkNoTestFilesShipped() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const files = Array.isArray(pkg.files) ? pkg.files : [];
+  const shipsPlugkitDir = files.some(f => f === 'gm-plugkit' || f === 'gm-plugkit/' || f === 'gm-plugkit/*' || f === 'gm-plugkit/**');
+  assert(!shipsPlugkitDir, 'package.json files[] ships the whole gm-plugkit/ dir, which carries *.test.js dev fixtures into the npm tarball (.npmignore cannot subtract from a files[] dir inclusion). Enumerate the specific gm-plugkit runtime files instead, excluding *.test.js');
+  const shipsTest = files.some(f => /\.test\.js$/.test(f));
+  assert(!shipsTest, 'package.json files[] explicitly lists a *.test.js file -- dev fixtures must not ship');
+  console.log('no-test-files-shipped guard ok');
+}
+
 function checkUpdateWarningWired() {
   const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
   assert(/function injectUpdateWarning\s*\(/.test(src), 'injectUpdateWarning() missing -- the running runtime must continuously warn when a newer version is published but not running');
@@ -149,6 +159,7 @@ async function main() {
   checkNoComments();
   checkVersionConsistency();
   checkWasmNotPublished();
+  checkNoTestFilesShipped();
   checkUpdateWarningWired();
   checkAgentsMdBudget();
   await ensureWatcher();

@@ -10,6 +10,18 @@ const { pathToFileURL } = require('url');
 const ROOT = process.cwd();
 const WITNESS_DIR = path.join(ROOT, '.gm', 'witness');
 
+function freePort() {
+  const net = require('net');
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const p = srv.address().port;
+      srv.close(() => resolve(p));
+    });
+  });
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 function rmrf(p) { try { fs.rmSync(p, { recursive: true, force: true }); } catch (_) {} }
 function write(file, text) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); }
@@ -26,7 +38,7 @@ function which(cmds) {
 async function renderPreview() {
   const preview = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-shell-preview-'));
   fs.mkdirSync(path.join(preview, 'vendor'), { recursive: true });
-  cp.execSync(`powershell.exe -NoProfile -NonInteractive -Command "Copy-Item -Recurse -Force '${path.join(ROOT, 'site', 'vendor', '*')}' '${path.join(preview, 'vendor')}'"`, { stdio: 'ignore', windowsHide: true });
+  fs.cpSync(path.join(ROOT, 'site', 'vendor'), path.join(preview, 'vendor'), { recursive: true });
 
   const renderScript = `
     import { writeFileSync } from 'fs';
@@ -44,17 +56,18 @@ async function renderPreview() {
       }
     };
     const out = await mod.default.render(ctx);
-    writeFileSync(resolve('${preview.replace(/\\/g, '\\\\')}', 'index.html'), out[0].html);
+    writeFileSync(resolve(process.env.GM_SHELL_PREVIEW, 'index.html'), out[0].html);
   `;
   const tmp = path.join(os.tmpdir(), `gm-shell-render-${Date.now()}.mjs`);
   fs.writeFileSync(tmp, renderScript);
-  cp.execFileSync('node', [tmp], { stdio: 'inherit', windowsHide: true });
+  cp.execFileSync('node', [tmp], { stdio: 'inherit', windowsHide: true, env: { ...process.env, GM_SHELL_PREVIEW: preview } });
   try { fs.unlinkSync(tmp); } catch (_) {}
 
-  const server = cp.spawn('python', ['-m', 'http.server', '4210', '--directory', preview], { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true });
+  const port = await freePort();
+  const server = cp.spawn('python', ['-m', 'http.server', String(port), '--directory', preview], { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true });
   server.unref();
   await sleep(1500);
-  return { preview, port: 4210, serverPid: server.pid };
+  return { preview, port, serverPid: server.pid };
 }
 
 function killServer(pid) {
@@ -96,7 +109,7 @@ return JSON.stringify(result);
   const response = await fetch(relayUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: '9', code: script, timeout: 60000, cwd: ROOT }),
+    body: JSON.stringify({ sessionId: `gm-shell-${process.pid}-${Date.now()}`, code: script, timeout: 60000, cwd: ROOT }),
   });
   const result = await response.json();
   const out = result.text || '';
