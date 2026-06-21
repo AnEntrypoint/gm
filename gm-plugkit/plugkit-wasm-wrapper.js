@@ -165,6 +165,11 @@ function dispatchVerbToWasmInternal(instance, verb, body) {
   const bodyBytes = new TextEncoder().encode(body || '');
   const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
   const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
+  if ((verbBytes.length > 0 && verbPtr === 0) || (bodyBytes.length > 0 && bodyPtr === 0)) {
+    try { if (verbPtr !== 0) instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
+    try { if (bodyPtr !== 0) instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
+    throw new Error(`wasm-alloc-failed for dispatch_verb(${verb}): plugkit_alloc returned 0 (wasm OOM); refusing to write to a null offset and corrupt the heap`);
+  }
   try {
     new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
     new Uint8Array(instance.exports.memory.buffer, bodyPtr, bodyBytes.length).set(bodyBytes);

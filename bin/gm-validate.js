@@ -230,7 +230,12 @@ async function validateBrowserEmbed() {
   if (!fs.existsSync(path.join(tbDir, 'docs'))) { v.skipped = true; v.errors.push('repo docs/ missing -- cannot serve a fixture page'); return v; }
 
   let serveProc = null;
-  const port = 3088;
+  let port;
+  try {
+    const r = cp.spawnSync(process.execPath, ['-e', "const net=require('net');const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>process.stdout.write(String(p)));});s.on('error',e=>{process.stderr.write(e.message);process.exit(1);});"], { encoding: 'utf-8', timeout: 5000 });
+    if (r.status !== 0) throw new Error('could not allocate free port: ' + (r.stderr || 'unknown'));
+    port = parseInt(r.stdout.trim(), 10);
+  } catch (e) { v.errors.push('free-port alloc: ' + e.message); return v; }
   try {
     serveProc = cp.spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['serve', 'docs', '-l', String(port)], {
       cwd: tbDir, detached: true, stdio: 'ignore', windowsHide: true, shell: process.platform === 'win32',

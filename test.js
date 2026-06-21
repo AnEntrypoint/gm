@@ -102,9 +102,33 @@ function checkNoComments() {
   console.log('no-comments guard ok (' + files.length + ' code files)');
 }
 
+function checkVersionConsistency() {
+  const gmJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'gm.json'), 'utf8'));
+  const canonical = String(gmJson.plugkitVersion || '').trim();
+  assert(canonical, 'gm.json missing plugkitVersion');
+  for (const rel of ['bin/plugkit.version', 'gm-plugkit/plugkit.version']) {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    const got = fs.readFileSync(abs, 'utf8').trim();
+    assert(got === canonical, 'version drift: ' + rel + '=' + got + ' but gm.json.plugkitVersion=' + canonical);
+  }
+  console.log('version-consistency guard ok (plugkitVersion ' + canonical + ')');
+}
+
+function checkWasmNotPublished() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const files = Array.isArray(pkg.files) ? pkg.files : [];
+  const reincludesBinDir = files.some(f => f === 'bin' || f === 'bin/' || f === 'bin/*' || f === 'bin/**');
+  assert(!reincludesBinDir, 'package.json files[] re-includes the whole bin/ dir, which ships bin/plugkit.wasm (149MB) in the npm tarball -- list specific bin/* files instead, excluding plugkit.wasm (the bootstrap re-fetches it sha256-pinned)');
+  assert(!files.includes('bin/plugkit.wasm'), 'package.json files[] explicitly lists bin/plugkit.wasm -- the 149MB binary must not ship; only its sha256 pin does');
+  console.log('wasm-not-published guard ok');
+}
+
 async function main() {
   checkNoBom();
   checkNoComments();
+  checkVersionConsistency();
+  checkWasmNotPublished();
   await ensureWatcher();
   console.log('watcher alive');
 
