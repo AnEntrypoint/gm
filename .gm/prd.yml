@@ -5130,7 +5130,8 @@
   witness: 'Shipped: gm 45f92539a (5-file stub-fake deletion + 4 hardening edits, test.js PASS); rs-search 6021f53 (README honesty + context SKIP); rs-exec a0ed6b0 (anyhow drop); rs-codeinsight 5ef3a08 (double-config drop).'
 - id: docs-changelog-push-2
   text: 'UPDATE-DOCS: CHANGELOG entry per commit landed this fire (or a one-line convergence note if zero new fixes), memorize-fire the iter-18 result, bidirectional AGENTS.md drain, git_finalize push. Separate doc commit from code.'
-  status: pending
+  status: completed
+  witness: CHANGELOG 2026-06-21 stub-host entry + AGENTS.md wasm-size drain committed edef3fe7a + pushed; memorize-fire mem-1782015942333 (iter-18 result). gm code 45f92539a + 3 siblings (6021f53/a0ed6b0/5ef3a08) all on origin; cascade triggered.
 - id: delete-stub-wasm-host
   text: 'CRITICAL nothing-fake: delete lib/wasm-host.js (stub host: hostKv/fetch/vec/browser return constants regardless of input; hostExecJs eval()s wasm-memory strings = RCE; node-fetch import absent from deps; readString hardcoded 1024-byte truncation; wrong import namespace ''host'' so it can never drive real wasm) AND remove the stub-routing path from bin/plugkit.js. Verified ONLY caller of wasm-host.js is bin/plugkit.js runWasm; bin/plugkit.js NOT in package.json bin (only bootstrap.js). Real harness path is gm-plugkit/plugkit-wasm-wrapper.js via bun x gm-plugkit spool. Decide: delete bin/plugkit.js entirely if no live hook references it.'
   status: completed
