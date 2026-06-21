@@ -56,9 +56,9 @@ Record only non-obvious technical caveats that cost multiple runs to discover; r
 
 ## Coding Style
 
-**No comments in code** -- no inline, block, or JSDoc comments anywhere (source, generated output, hooks, scripts).
+**No comments in code** -- no inline, block, or JSDoc comments anywhere (source, generated output, hooks, scripts). `test.js checkNoComments()` is the structural guard (fails on any leading `//` over tracked `.js/.mjs/.cjs`); one sighting spawns the full-tree sweep.
 
-**No UTF-8 BOM in any tracked source file.** A leading `efbbbf` breaks `node` (`SyntaxError: Invalid or unexpected token`) and strict `JSON.parse`; a BOM in `gm-plugkit/bootstrap.js` shipped a `bun x gm-plugkit@latest spool` that was unbootable for every user. Cause is editing JS/JSON with PowerShell's default UTF-16/UTF-8-BOM encoding -- always `-Encoding utf8` (no BOM) or the `Write` tool. `test.js checkNoBom()` is the structural guard (fails on any leading BOM over tracked text exts); one sighting spawns the full-tree sweep. Mechanics in rs-learn (`recall: BOM regression incident`).
+**No UTF-8 BOM in any tracked source file.** A leading `efbbbf` breaks `node` and strict `JSON.parse`; cause is PowerShell's default UTF-16/UTF-8-BOM encoding -- always `-Encoding utf8` (no BOM) or the `Write` tool. `test.js checkNoBom()` is the structural guard; one sighting spawns the full-tree sweep. Incident + mechanics in rs-learn (`recall: BOM regression incident`).
 
 **No graphical symbols; convert to industry-standard text on sight.** Decorative glyphs are forbidden in all output and source: arrows, box/geometric glyphs, stars, filled/hollow dots and bullets, checks/crosses, emojis, any non-ASCII decorative symbol. Convert on sight in the same turn (arrow -> `->`, bullet -> `-`/`*`, check/cross -> `[x]`/`[ ]` or done/todo/pass/fail, status dot -> the word). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
 
