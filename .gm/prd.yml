@@ -5320,7 +5320,8 @@
   witness: 'looper AGENTS.md=79610 bytes WITH rs-learn.db present (witness: wc -c /c/dev/looper/AGENTS.md + ls .gm/rs-learn.db) = bloat despite migration target = NO structural guard enforced back-pressure. gm AGENTS.md=27546, bidirectional-drain rule present at AGENTS.md:55. ADDED test.js checkAgentsMdBudget() (test.js:127) 36000-byte ceiling + recall:-pointer assertion, wired into main() at test.js:143; witnessed PASS 27546/36000. Dual-wrote the guard note to AGENTS.md:55. Principle 8: the looper failure mode is now structurally unrepresentable.'
 - id: commit-residual-disciplines
   desc: Triage the 3 modified .gm/disciplines/codeinsight-manifest/*.json (reindex artifacts -- tracked, committable real work); commit them with session work, never leave dirty
-  status: pending
+  status: completed
+  witness: the 3+ .gm/disciplines/codeinsight-manifest/*.json reindex artifacts + new mem-*.json + prd.yml all committed in gm finalize d55fdcbd1 (git_status pre-finalize listed them as modified/untracked, all real session work, triaged to commit).
 - id: memorize-session-outcome
   desc: 'memorize-fire this fire''s outcome (fresh-sweep findings shipped vs deferred, looper bloat lesson with byte witness, any new deviation class) to default namespace; AND drain one detail-heavy AGENTS.md entry to a recall: pointer per the bidirectional back-pressure rule (or record floor reached)'
   status: completed
@@ -5334,7 +5335,8 @@
   - agents-bloat-guard
   - commit-residual-disciplines
   - memorize-session-outcome
-  status: pending
+  status: completed
+  witness: '3 surfaces committed+pushed to origin/main: gm d55fdcbd1 (fail-closed gate, dead-code removal, AGENTS.md byte-ceiling guard), rs-search 89a7579 (dead fn removed), rs-codeinsight 013617c (recursion cap + honest digest tag). All git_finalize responses pushed:true. rs-* changes build via their own cascade CI.'
 - id: fix-gm-spool-failopen
   desc: 'gm lib/spool-dispatch.js:34-58 isWorktreeDirty/hasUnpushedCommits fail-OPEN: git timeout/error -> available:false -> stop/COMPLETE gate (342-349) silently passes on dirty/unpushed tree (Principle 9 silent-catastrophic). FIXED: available:false now pushes a hard UNKNOWN residual (fail-closed). Witnessed 2 UNKNOWN branches present, module loads.'
   status: completed
