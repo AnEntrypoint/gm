@@ -114,11 +114,6 @@ function ensureNextStepWiring(cwd) {
   }
 }
 
-// Resolve a bare command name to its actual .exe on Windows. cmd.exe + .cmd
-// shim chains re-enter conhost (visible window flash) even with
-// windowsHide:true on the parent. Spawning the real .exe directly lets
-// CREATE_NO_WINDOW propagate. Falls back to .cmd or the original name when
-// no .exe is found. See [[windows-spawn-cmd-shim-flash]].
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
   try {
@@ -212,13 +207,6 @@ function gmToolsDir() {
   if (fs.existsSync(fallback)) return fallback;
   return primary;
 }
-
-// Copy the freshly-resolved plugkit binary + its version+sha manifests to
-// ~/.gm-tools (or ~/.claude/gm-tools for legacy installs) so hooks.json can
-// invoke plugkit directly without going through node. Self-update inside the
-// Rust binary keeps gm-tools fresh from
-// here on. Skipped silently on any error -- the next session-start hook will
-// retry via ensure_tools_current.
 
 function copyWasmToGmTools(wasmPath, wrapperDir, version) {
   const dst = gmToolsDir();
@@ -583,17 +571,6 @@ function getWasmPath(opts) {
   if (fs.existsSync(wasmPath) && fs.existsSync(okSentinel)) return wasmPath;
   return null;
 }
-
-// ---------------------------------------------------------------------------
-// Daemon kill on version change.
-//
-// The plugin tarball pins `plugkit.version`. When that pin advances and we
-// install a newer cached binary, any long-running daemon (the runner) holds
-// stale code and serves stale RPCs until killed. We track which version the
-// daemon was last started under via `.daemon-version`; on every wrapper
-// invocation, if the wrapper-pinned version differs, we kill the daemon so
-// the next exec spawns it fresh under the new binary.
-// ---------------------------------------------------------------------------
 
 function daemonVersionSentinel() {
   const root = (() => {

@@ -75,8 +75,29 @@ function checkNoBom() {
   console.log('no-BOM guard ok (' + files.length + ' text files)');
 }
 
+const CODE_EXT = new Set(['.js', '.mjs', '.cjs']);
+function checkNoComments() {
+  const out = cp.execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const files = out.split('\n').map(s => s.trim()).filter(Boolean)
+    .filter(f => CODE_EXT.has(path.extname(f).toLowerCase()))
+    .filter(f => !f.startsWith('.gm/'));
+  const offenders = [];
+  for (const f of files) {
+    const abs = path.join(ROOT, f);
+    let text;
+    try { text = fs.readFileSync(abs, 'utf8'); } catch (_) { continue; }
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      if (/^\s*\/\//.test(lines[i])) { offenders.push(f + ':' + (i + 1)); break; }
+    }
+  }
+  assert(offenders.length === 0, 'leading // comments in tracked code (No-comments rule): ' + offenders.slice(0, 10).join(', '));
+  console.log('no-comments guard ok (' + files.length + ' code files)');
+}
+
 async function main() {
   checkNoBom();
+  checkNoComments();
   await ensureWatcher();
   console.log('watcher alive');
 

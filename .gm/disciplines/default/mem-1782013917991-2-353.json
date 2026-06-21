@@ -1,0 +1,3 @@
+## Resolved mutable: dna-workflow-shape
+
+.claude/workflows/dna-sweep.js authored (meta+4 phases Sweep/Verify/Classify/Synthesize, REPOS+PRINCIPLES+CONTEXT_LENS+DEFER_INVASIVE consts, FINDING/VERDICT/CLASS schemas, parallel sweep + pipeline verify + parallel classify, mirrors audit-loop.js:34-81); run wf_8fdef217-73c produced 101->16->14 implement-now.

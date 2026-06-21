@@ -226,8 +226,8 @@ async function validateBrowserEmbed() {
   const pw = which('playwriter') || which('playwriter.cmd');
   if (!pw) { v.skipped = true; v.errors.push('playwriter not found'); return v; }
 
-  const tbDir = 'C:/dev/thebird';
-  if (!fs.existsSync(path.join(tbDir, 'docs'))) { v.skipped = true; v.errors.push('thebird docs missing'); return v; }
+  const tbDir = path.resolve(__dirname, '..');
+  if (!fs.existsSync(path.join(tbDir, 'docs'))) { v.skipped = true; v.errors.push('repo docs/ missing -- cannot serve a fixture page'); return v; }
 
   let serveProc = null;
   const port = 3088;
@@ -250,7 +250,7 @@ async function validateBrowserEmbed() {
       ready = true; break;
     } catch (_) { await sleep(500); }
   }
-  if (!ready) { v.errors.push('thebird serve never came up on ' + port); return v; }
+  if (!ready) { v.errors.push('docs serve never came up on ' + port); return v; }
 
   let sessionId = '';
   try {

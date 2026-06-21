@@ -38,7 +38,6 @@ function readExpectedSha() {
   return null;
 }
 
-// Returns true if gm-tools WASM matches pinned version by sha. Fast: no network.
 function isReady() {
   const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
   const primaryWasm = path.join(home, '.gm-tools', 'plugkit.wasm');
@@ -51,9 +50,6 @@ function isReady() {
   return actual && actual.toLowerCase() === expected;
 }
 
-// Synchronously run bootstrap.js in a child node. Blocks until install finishes
-// (or fails). Bootstrap itself is cache-aware: re-download only when sha differs
-// from manifest. Wraps stdio:inherit so the user sees progress.
 function ensureReady(silent) {
   if (isReady()) return true;
   const bootstrap = path.join(wrapperDir, 'bootstrap.js');

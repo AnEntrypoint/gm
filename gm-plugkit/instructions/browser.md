@@ -1,6 +1,6 @@
 # BROWSER
 
-## Hard Rule: Browser Witness Mandate (paper section 23)
+## Hard Rule: Browser Witness Mandate
 
 **Every edit to code that runs in a browser requires a live `browser` dispatch in the same turn as the edit.** Client-side surfaces -- `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.mjs`, `.css`, web components, service workers, every asset loaded by `<script>`, every path reached by `import` from a browser-side entry -- must be witnessed by a live `page.evaluate` of the specific invariant the edit establishes. A passing node test, build, `curl` of the HTML, or static-analysis pass witnesses server delivery, not browser behavior, and is non-substitutive. The witness IS the proof; prose is not.
 

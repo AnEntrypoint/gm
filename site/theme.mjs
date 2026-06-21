@@ -1,7 +1,3 @@
-// gm site renderer: delegates to anentrypoint-design SDK (window.ds.components).
-// Mirrors C:/dev/247420/lib/components.js: load the SDK from unpkg, render every
-// page via C.AppShell + C.Topbar + C.Crumb + C.Panel + C.Status. No vendored
-// RippleUI/XState. No inline tokens. Pages render at runtime in the browser.
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -57,10 +53,6 @@ function flattenNav(nav) {
 const SDK_CSS = 'https://unpkg.com/anentrypoint-design@latest/dist/247420.css';
 const SDK_JS  = 'https://unpkg.com/anentrypoint-design@latest/dist/247420.js';
 
-// Client renderer: runs in the browser. Reads __site__ JSON, builds the page
-// via window.ds.components (C), mounts into #app. Every surface is an SDK
-// primitive: Topbar, AppShell, Crumb, Panel, Section, Install, Receipt,
-// Manifesto, Chip, Heading, Lede, Status. No hand-rolled HTML.
 const CLIENT_SCRIPT = `
 import * as ds from '${SDK_JS}';
 window.ds = ds;
@@ -83,11 +75,6 @@ const activeLabel = (() => {
   return hit ? hit[0] : (navItems[0] && navItems[0][0]) || '';
 })();
 
-// Nav hrefs from navigation.yaml are root-relative ("./paper/"). location.href on a relative
-// href resolves against the CURRENT page, so from /gm/paper/ a link to "./skills/" wrongly lands
-// at /gm/paper/skills/. Resolve every nav href against the SITE ROOT (the deployment base, which
-// is /gm/ on Pages and / locally), derived by stripping the active page's own path from the
-// current pathname so it works under any base.
 const siteRoot = (() => {
   const segNorm = (p) => String(p).replace(/[#?].*$/, '').replace(/^\\.\\//, '').replace(/^\\/+|\\/+$/g, '');
   const here = location.pathname.replace(/[#?].*$/, '');
@@ -96,7 +83,6 @@ const siteRoot = (() => {
   if (activeRel && here.replace(/\\/+$/, '').endsWith('/' + activeRel)) {
     return here.replace(/\\/+$/, '').slice(0, here.replace(/\\/+$/, '').length - activeRel.length) || '/';
   }
-  // active page is root ("./") or unmatched: root is the dir of the current path
   return here.endsWith('/') ? here : here.replace(/[^/]*$/, '');
 })();
 const toRootHref = (href) => {
@@ -146,7 +132,6 @@ const buildArticleMain = () => {
   if (C.Heading) main.push(C.Heading({ level: 1, children: page.title || site.title || '' }));
   if (page.subtitle && C.Lede) main.push(C.Lede({ children: page.subtitle }));
   else if (page.description && C.Lede) main.push(C.Lede({ children: page.description }));
-  // Article HTML: empty host now; innerHTML injected after applyDiff mounts.
   main.push(h('div', { class: 'ds-prose', id: 'ds-article-host' }));
   return main;
 };
@@ -160,7 +145,6 @@ const buildLandingMain = () => {
     main.push(h('p', { class: 'ds-prose' }, hero.body));
   }
 
-  // Hero CTAs + badges
   const ctas = (hero.ctas || []).map((c) => h('a', {
     class: c.primary ? 'btn-primary' : 'btn',
     href: c.href,
@@ -170,7 +154,6 @@ const buildLandingMain = () => {
   const badges = (hero.badges || []).map((b, i) => C.Chip ? C.Chip({ key: i, tone: 'dim', children: b.label }) : h('span', { key: i }, b.label));
   if (badges.length) main.push(h('div', { class: 'work-detail-chips' }, ...badges));
 
-  // Features panel: every item becomes a .row.
   const features = page.features;
   if (features && features.items && features.items.length && C.Panel) {
     main.push(C.Panel({
@@ -184,7 +167,6 @@ const buildLandingMain = () => {
     }));
   }
 
-  // Quickstart: single CLI block (no SDK Install widget; that duplicates the cmd that already lives inline in lines).
   const qs = page.quickstart;
   if (qs && qs.lines && qs.lines.length) {
     main.push(h('h3', {}, qs.heading || 'quick start'));
@@ -203,7 +185,6 @@ const buildLandingMain = () => {
     ));
   }
 
-  // Examples / "read further": Panel of .row links.
   const ex = page.examples;
   if (ex && ex.items && ex.items.length && C.Panel) {
     main.push(C.Panel({
@@ -222,7 +203,6 @@ const buildLandingMain = () => {
 
 const main = page.layout === 'article' ? buildArticleMain() : buildLandingMain();
 
-// Prose articles read best narrow; list/grid pages (showcase, stats) need width.
 const WIDE_ARTICLES = ['made-with', 'stats', 'paper'];
 const shell = C.AppShell ? C.AppShell({
   topbar, crumb, main, status,
@@ -237,9 +217,6 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
 }
-// Landing pages have no measure cap from the SDK, so prose runs edge-to-edge at
-// desktop width (unreadable ~1300px lines). Cap prose landings to a readable measure;
-// grid/table pages (made-with, stats) stay full-width.
 const GRID_PAGES = ['made-with', 'stats'];
 if (page.layout !== 'article' && !GRID_PAGES.includes(page.id)) {
   document.documentElement.classList.add('landing-capped');
@@ -248,17 +225,12 @@ if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
   if (host) {
     host.innerHTML = page.articleHtml;
-    // The crumb already renders the page title; the article markdown carries its own leading
-    // <h1> too, so the title appears twice. Drop the article's leading h1 when it duplicates
-    // the page title (prefix match handles the article's longer subtitle form).
     const firstH1 = host.querySelector('h1');
     if (firstH1) {
       const norm = (s) => String(s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const a = norm(firstH1.textContent), t = norm(page.title);
       if (t && (a === t || a.startsWith(t) || t.startsWith(a))) firstH1.remove();
     }
-    // When the article carries a Contents block, hoist it to a direct child of the host
-    // and switch the host to the two-column grid so the .toc sits in a sticky side rail.
     const toc = host.querySelector('.toc');
     if (toc) {
       if (toc.parentElement !== host) host.insertBefore(toc, host.firstChild);

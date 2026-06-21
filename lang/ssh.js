@@ -83,7 +83,12 @@ function runSsh(target, cmd, onData) {
     };
 
     const timeout = setTimeout(() => {
-      if (!done) { done = true; try { ssh.end(); } catch (_) {} resolve(out.trimEnd() || '[timeout after 55s]'); }
+      if (!done) {
+        done = true;
+        try { ssh.end(); } catch (_) {}
+        const partial = out.trimEnd();
+        resolve(partial ? `${partial}\n[ssh timed out after 55s; output above is partial]` : '[ssh timed out after 55s; no output]');
+      }
     }, 55000);
 
     ssh.on('ready', () => {

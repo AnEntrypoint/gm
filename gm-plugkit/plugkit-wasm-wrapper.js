@@ -2342,8 +2342,6 @@ async function runSpoolWatcher(instance, spoolDir) {
     lastActivityMs = Date.now();
   }
 
-  /* killPidQuiet, purgeProfileLockFiles, gracefulCloseBrowser are module-scope (defined above spool()). */
-
   function teardownAll(reason) {
     try {
       logEvent('plugkit', 'watcher.teardown', { reason, idle_ms: Date.now() - lastActivityMs });
