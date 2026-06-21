@@ -1959,16 +1959,16 @@ function makeHostFunctions(instanceRef) {
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
         stampBrowserLastUse(cwd, sessionId);
         let evalBody = body;
-        let timeoutMs = 14000;
+        let timeoutMs = 120000;
         const timeoutMatch = body.match(/^timeout=(\d+)\s*\n([\s\S]*)$/);
         if (timeoutMatch) {
           const requested = parseInt(timeoutMatch[1], 10);
           if (Number.isFinite(requested) && requested > 0) {
-            timeoutMs = Math.min(requested, 50000);
+            timeoutMs = Math.min(requested, 120000);
             evalBody = timeoutMatch[2];
           }
         }
-        const outerTimeoutMs = Math.min(timeoutMs + 6000, 60000);
+        const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
         const ok = r.status === 0;
         if (!ok && r.status === null) {
