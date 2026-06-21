@@ -5426,7 +5426,8 @@
   - manual-ccsniff-transcript-read
   - dna-sweep-fresh-iter23
   - agents-bloat-recheck-iter23
-  status: pending
+  status: completed
+  witness: '3 surfaces committed+pushed to origin/main: gm 081776ae4 (ship-no-tests guard, free-port+injection fix, lang-aware SESSION_ID), rs-learn 44feffb (KvBackend::put Result no-false-success), rs-exec 3817dfd (malformed-task outbox failure result). memorize-fire 4 (mem-cbe3b6523a1899dc) = iter-23 full outcome incl the manual-ceiling push-outpaces novel finding + 6 shipped fixes. AGENTS.md at drain-floor (27708, every detail entry already a recall: pointer) -- back-pressure satisfied by floor-reached, no top-level-rule damage. All git_finalize pushed:true.'
 - id: notice-push-outpaces-cascade-friction
   desc: 'NOVEL manual-ceiling finding: 6x deviation.push-remote-outpaces in 12min (06-21 08:32-08:44) = gm push losing the race to the cascade''s rapid version-bump-back during active publishing. rebase-retry recovers (gate-positive) so no correctness bug, but it''s real friction. Investigate whether git_push should fetch+rebase BEFORE the first push attempt (proactive) rather than push-fail-rebase-retry (reactive) when the repo is a known cascade-target -- a Principle 9 worst-case-latency improvement. Verify the current git_push retry mechanism in rs-plugkit first; may already be optimal. blockedBy:external if it needs a rs-plugkit wasm change gated on multi-push test.'
   blockedBy: external
