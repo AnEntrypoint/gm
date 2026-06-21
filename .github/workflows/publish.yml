@@ -146,6 +146,20 @@ jobs:
           fi
           echo "[done] Published gm-plugkit@${{ needs.prepare.outputs.version }} (plugkit v$PLUGKIT_VER) to npm"
 
+      - name: Commit gm-plugkit/plugkit.version back so the committed copy never drifts
+        run: |
+          set -e
+          if [ -n "$(git status --porcelain gm-plugkit/plugkit.version)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add gm-plugkit/plugkit.version
+            git commit -m "chore: sync gm-plugkit/plugkit.version to $PLUGKIT_VER [skip ci]"
+            git push origin HEAD:main
+            echo "[done] committed gm-plugkit/plugkit.version=$PLUGKIT_VER back to main"
+          else
+            echo "[skip] gm-plugkit/plugkit.version already aligned"
+          fi
+
   mirror-gm-skill-repo:
     needs: prepare
     runs-on: ubuntu-latest

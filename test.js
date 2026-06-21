@@ -124,11 +124,22 @@ function checkWasmNotPublished() {
   console.log('wasm-not-published guard ok');
 }
 
+function checkUpdateWarningWired() {
+  const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
+  assert(/function injectUpdateWarning\s*\(/.test(src), 'injectUpdateWarning() missing -- the running runtime must continuously warn when a newer version is published but not running');
+  assert(/\.update-available\.json/.test(src), 'injectUpdateWarning must read .update-available.json as the staleness source');
+  assert(/update_warning/.test(src), 'injectUpdateWarning must set an update_warning imperative on the response');
+  const callCount = (src.match(/injectUpdateWarning\s*\(/g) || []).length;
+  assert(callCount >= 3, 'injectUpdateWarning must be defined AND called in both the autoRecall and instruction/transition/phase-status post-process branches (>=3 references), so the warning fires on every agent-facing response; found ' + callCount);
+  console.log('update-warning-wired guard ok');
+}
+
 async function main() {
   checkNoBom();
   checkNoComments();
   checkVersionConsistency();
   checkWasmNotPublished();
+  checkUpdateWarningWired();
   await ensureWatcher();
   console.log('watcher alive');
 

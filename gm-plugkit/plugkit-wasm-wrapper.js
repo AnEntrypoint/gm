@@ -308,6 +308,18 @@ function capInstructionPacks(parsed) {
   }
 }
 
+function injectUpdateWarning(parsed) {
+  if (!parsed || typeof parsed !== 'object') return;
+  let upd;
+  try {
+    upd = JSON.parse(fs.readFileSync(path.join(spoolDir, '.update-available.json'), 'utf-8'));
+  } catch (_) { return; }
+  if (!upd || !upd.installed || !upd.latest || upd.installed === upd.latest) return;
+  const target = (parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+  target.update_available = { installed: upd.installed, latest: upd.latest, update_url: upd.update_url || null };
+  target.update_warning = `STALE RUNTIME: running plugkit ${upd.installed} but ${upd.latest} is published and not yet running. Restart onto the new version now: bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool. This warning repeats every turn until the running version catches up.`;
+}
+
 function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
   if (!autoRecall) return resultStr;
   let parsed;
@@ -3089,11 +3101,19 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       if (autoRecallPayload) {
         resultStr = mergeAutoRecallIntoInstructionResponse(resultStr, autoRecallPayload);
-      } else if (verb === 'instruction' || verb === 'transition') {
+        try {
+          const parsed = JSON.parse(resultStr);
+          if (parsed && typeof parsed === 'object') {
+            injectUpdateWarning(parsed);
+            resultStr = JSON.stringify(parsed);
+          }
+        } catch (_) {}
+      } else if (verb === 'instruction' || verb === 'transition' || verb === 'phase-status') {
         try {
           const parsed = JSON.parse(resultStr);
           if (parsed && typeof parsed === 'object') {
             capInstructionPacks(parsed);
+            injectUpdateWarning(parsed);
             resultStr = JSON.stringify(parsed);
           }
         } catch (_) {}
