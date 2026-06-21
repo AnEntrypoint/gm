@@ -171,7 +171,9 @@ function dispatchVerbToWasmInternal(instance, verb, body) {
     const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
     const ptr = Number(result & 0xffffffffn);
     const len = Number(result >> 32n);
-    const out = new TextDecoder().decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
+    const buffer = instance.exports.memory.buffer;
+    guardWasmRange(buffer, ptr, len, `dispatch_verb(${verb})`);
+    const out = new TextDecoder().decode(new Uint8Array(buffer, ptr, len));
     try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
     return out;
   } finally {
@@ -1234,7 +1236,7 @@ function createWasiShim(instanceRef) {
           const base = iovs_ptr + i * 8;
           const ptr = dv.getUint32(base, true);
           const len = dv.getUint32(base + 4, true);
-          if (len > 0) {
+          if (len > 0 && ptr + len <= buf.byteLength) {
             chunks.push(new Uint8Array(buf, ptr, len).slice());
             total += len;
           }
@@ -1300,14 +1302,25 @@ function createWasiShim(instanceRef) {
   });
 }
 
+function guardWasmRange(buffer, ptr, len, where) {
+  const total = buffer.byteLength;
+  if (!Number.isInteger(ptr) || !Number.isInteger(len) || ptr < 0 || len < 0 || ptr + len > total) {
+    throw new Error(`wasm-memory-read-out-of-bounds at ${where}: ptr=${ptr} len=${len} buffer=${total} -- corrupt (ptr,len) from wasm, refusing the read instead of crashing the dispatch loop`);
+  }
+}
+
 function readWasmBytes(instance, ptr, len) {
   if (ptr === 0 || len === 0) return new Uint8Array(0);
-  return new Uint8Array(instance.exports.memory.buffer, ptr, len).slice();
+  const buffer = instance.exports.memory.buffer;
+  guardWasmRange(buffer, ptr, len, 'readWasmBytes');
+  return new Uint8Array(buffer, ptr, len).slice();
 }
 
 function readWasmStr(instance, ptr, len) {
   if (ptr === 0 || len === 0) return '';
-  const bytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
+  const buffer = instance.exports.memory.buffer;
+  guardWasmRange(buffer, ptr, len, 'readWasmStr');
+  const bytes = new Uint8Array(buffer, ptr, len);
   return new TextDecoder('utf-8').decode(bytes);
 }
 
