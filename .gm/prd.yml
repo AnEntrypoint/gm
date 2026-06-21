@@ -5029,3 +5029,19 @@
   text: git_finalize rs-exec + rs-codeinsight with the implemented safe fixes; push origin main, cascade rebuilds. Commit gm session residual + COMPLETE.
   status: completed
   witness: git_finalize rs-exec 263b2d5 + rs-codeinsight af7ab95 committed+pushed origin main; cascade rebuilds. gm residual next.
+- id: fix-rrf-candidate-pool
+  text: 'rs-search fusion_search: fetch a larger candidate pool per retriever (k*multiplier, floored) before rrf_merge_n, then take(k). Currently each retriever fetches only k then fuse+take(k), starving cross-retriever recall (a doc ranked k+1 in one list but #1 in another cannot surface). Standard RRF practice. wasm_host.rs:74.'
+  status: completed
+  witness: wasm_host.rs fusion_search now fetches cand_k = k*5 floored at 50 per retriever (CANDIDATE_MULTIPLIER/CANDIDATE_FLOOR), fuses via rrf_merge_n, then take(k). Cross-retriever recall no longer starved by per-list top-k truncation. test.js 10/10 PASS.
+- id: defer-camel-single-char
+  text: 'DEFER (judgment, regression risk): split_camel + add_word_tokens drop single-char segments (len>1 guards at tokenize.rs:13,19,25,29,32). Keeping single chars would index i/j/k loop-var noise; not a clear win (P7 measure / P2 subtractive). Needs a real benchmark before changing - defer to a measured eval, do not blind-change.'
+  status: completed
+  witness: 'Deferred: keeping single-char camel segments risks i/j/k loop-var index noise; len>1 guards are consistent across tokenize.rs:13,19,25,29,32 (intentional). Needs a measured search-quality eval before changing (P7) - not a blind win. Captured for an eval-driven increment.'
+- id: defer-fusion-error-signal
+  text: 'DEFER (signature change ripples to Searcher): fusion_search returns Vec<HostHit>, swallowing all-retriever-failure into an empty list (indistinguishable from no-results) with only a log. A real fix changes the return to carry an error/degraded signal, rippling to lib.rs Searcher.search + callers. Moderate; defer to a contract-change increment.'
+  status: completed
+  witness: 'Deferred: fusion_search Vec<HostHit> return swallows all-fail as empty; a real signal needs a Result/degraded return rippling to lib.rs Searcher.search:25-39 + callers. Moderate contract change, defer to a dedicated increment.'
+- id: push-rrf-fix
+  text: git_finalize rs-search with the RRF candidate-pool fix; push origin main, cascade rebuilds. Commit gm session residual + COMPLETE.
+  status: completed
+  witness: git_finalize rs-search 6546a9e committed+pushed origin main; cascade rebuilds. gm residual next.
