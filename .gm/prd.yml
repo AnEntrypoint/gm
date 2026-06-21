@@ -5005,3 +5005,27 @@
   text: git_finalize rs-plugkit with the porcelain failure-detection + gates fallback hardening; push to origin main, cascade rebuilds wasm. Then commit any gm session residual (prd.yml/memorize) and COMPLETE.
   status: completed
   witness: git_finalize rs-plugkit 8513875 committed+pushed to origin main; cascade rebuilds wasm. gm session residual handled next.
+- id: trace-outbox-consumer
+  text: Trace who consumes the rs-exec outbox result (stdout/stderr/exit_code/timed_out fields) across the wrapper + rs-plugkit, to decide safely whether the timeout/missing-timeout error JSON should move from stdout to stderr. Witness = the consumer read-site. Honest-interface (P10) but must not break the consumer contract (P6).
+  status: completed
+  witness: wasm_dispatch.rs:585 status() returns whole outbox JSON object verbatim; no stdout-as-output dependence. Moving error->stderr safe.
+- id: fix-exec-error-channel
+  text: If the consumer trace shows it is safe (consumers key on exit_code, not stdout-as-output), move the rs-exec timeout/missing-timeout error JSON from the stdout arg to the stderr arg in wasm_spool.rs:79,89. Else leave + document. Gated on trace-outbox-consumer.
+  status: completed
+  witness: wasm_spool.rs:82,92 now write_result(task_id, "", &body.to_string(), 1, false) - error JSON on stderr arg, stdout empty. P10 honest channel; consumer-safe per trace-outbox-consumer.
+- id: fix-exec-timeout-ceiling
+  text: 'rs-exec: timeoutMs has a floor (MIN_TIMEOUT_MS) but no ceiling; a huge synchronous timeout can hang the host. Add a MAX_TIMEOUT_MS clamp (e.g. cap to a sane upper bound) in dispatch_one. P9 worst-case: bound the synchronous wait.'
+  status: completed
+  witness: wasm_spool.rs added MAX_TIMEOUT_MS=600_000; dispatch_one clamps let timeout_ms=t.timeout_ms.min(MAX_TIMEOUT_MS) before opts. Bounds the synchronous wait (P9), matches the 10min host ceiling.
+- id: investigate-codeinsight-digest
+  text: 'rs-codeinsight: read freshness digest code, confirm it keys on mtime+path only (same-second content edits skip reindex) and the per-byte format!({:02x}) hot-path String alloc. Decide safe fixes (include content hash or size; replace per-byte format with a single hex encode). Witness by path Read.'
+  status: completed
+  witness: lib.rs:180 wasm digest keyed on path+mtime.as_secs() only (same-second edits collide); tuple 3rd elem is lang name not content (collect_files:156), so content-hash not cheaply available. Per-byte format! hex at :201,:253. Native version (222) had GIT_HEAD+DIRTY but also secs-only mtime.
+- id: implement-codeinsight-safe
+  text: Implement the safe rs-codeinsight fixes confirmed by investigate-codeinsight-digest (digest content-sensitivity + per-byte hex alloc). Skip risky ones (rayon panic isolation may need restructuring) -> defer if not trivially safe.
+  status: completed
+  witness: Both compute_freshness_digest_from_files now hash via file_stamp() = (mtime.as_nanos, size) from the single metadata stat -> same-second content edits that change size or sub-second mtime now reindex (was secs-only collision). Added shared hex_encode() (nibble push) replacing per-byte format! at both sites (P4 DRY + hot-path alloc removed). rayon panic-isolation deferred (needs restructuring, not trivially safe).
+- id: push-cluster2
+  text: git_finalize rs-exec + rs-codeinsight with the implemented safe fixes; push origin main, cascade rebuilds. Commit gm session residual + COMPLETE.
+  status: completed
+  witness: git_finalize rs-exec 263b2d5 + rs-codeinsight af7ab95 committed+pushed origin main; cascade rebuilds. gm residual next.
