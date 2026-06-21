@@ -5045,3 +5045,15 @@
   text: git_finalize rs-search with the RRF candidate-pool fix; push origin main, cascade rebuilds. Commit gm session residual + COMPLETE.
   status: completed
   witness: git_finalize rs-search 6546a9e committed+pushed origin main; cascade rebuilds. gm residual next.
+- id: fix-emb-finiteness
+  text: 'rs-learn dispatch.rs: add a finiteness guard rejecting non-finite embedding values at handle_feedback (156), handle_apply_adapter (184), handle_route (262). A NaN/Inf value silently corrupts the MicroLoRA adapter / FastGRNN router weights permanently. Shared check, P9 fail-fast-loud.'
+  status: completed
+  witness: dispatch.rs handle_feedback:158, handle_apply_adapter:186, handle_route:267 now reject embeddings with non-finite values (emb.iter().any(|x| !x.is_finite())) before they reach core.feedback/apply_adapter/route. Prevents NaN/Inf corrupting MicroLoRA/FastGRNN weights (P9 fail-fast-loud), matching record_loss/route-len pattern.
+- id: push-emb-finiteness
+  text: git_finalize rs-learn with the embedding finiteness guards; push origin main, cascade rebuilds. Commit gm residual + COMPLETE.
+  status: completed
+  witness: git_finalize rs-learn 82e5b8a committed+pushed origin main; cascade rebuilds.
+- id: capture-remaining-clusters
+  text: 'Memorize the wind-down decision: remaining DNA-sweep clusters (context-rot orchestration-core payload trimming, supervisor version-transition self-heal lifecycle, rs-learn memory-arch dedup/decay/salience, fusion error-signal, camel-split eval) are invasive to load-bearing infra the agent depends on + need careful supervised work, not autonomous loop iteration. Captured for explicit-approval future sessions.'
+  status: completed
+  witness: memorize-fire-6 records the wind-down decision + full shipped list + the 5 remaining deferred clusters with rationale (invasive to load-bearing infra, need supervised work). Recall-reachable for future explicit-approval sessions.
