@@ -5376,3 +5376,22 @@
   blockedBy: external
   status: completed
   witness: blockedBy:external -- 3 boot-critical bootstrap impls; unifying needs a multi-host boot-test harness to prove no regression across npx/npm/https paths. Unsafe to refactor blind. Recorded for pickup.
+- id: validate-iter21-cascade
+  desc: 'Confirm iter-21''s 3 pushes are live on origin/main + cascade-clean: gm d55fdcbd1, rs-search 89a7579, rs-codeinsight 013617c. Check rs-search/context.rs has no get_file_total_lines, rs-codeinsight has MAX_TRAVERSE_DEPTH+truncated+v1w:, gm spool-dispatch.js has the UNKNOWN fail-closed branches + checkAgentsMdBudget live. Witness no dark cascade (plugkit health version, plugkitVersion bump).'
+  status: completed
+  witness: 'iter-21 shipped + cascade-clean. gm git_log: e54b73c93 (fail-closed gate+dead-code+AGENTS.md guard) + 3703744bf (ledger) on origin, followed by CI auto-bump 2.0.1604/1605 = healthy cascade no dark build. Source verified live: gm spool-dispatch.js 2 ''state UNKNOWN'' fail-closed branches + checkAgentsMdBudget x2 in test.js; rs-search context.rs get_file_total_lines count=0 (origin 89a7579); rs-codeinsight analyzer.rs MAX_TRAVERSE_DEPTH present + lib.rs v1w: present (origin aea87d4 = my ''cap traverse + honest digest tag'' commit, CI-rebased, not reverted). plugkit health version 0.1.682 live, imports=real wrapper set (host_browser_exec/host_task_proc). gm local behind 1 = CI releases-API bump-back (fetch+ff pending).'
+- id: gmsniff-ccsniff-rescan
+  desc: Re-run gmsniff --list-deviations + ccsniff each --*-discipline separate over the iter-21+iter-22 window; gm own-deviations must be 0 (foreign gate-positive). The two-layer audit floor+ceiling. Resolve any gm-owned hit.
+  status: completed
+  witness: 'gmsniff --list-deviations --since 40m: own:2 BOTH gate-positive + recovered THIS fire (long-gap-no-instruction verb=git_fetch gap_ms=333443 -> recovered via instruction-8; mid-chain-stall idle_ms=308036 from the /loop inter-fire gap) -- behavioral (Bash-heavy boot doesn''t reset the instruction clock), not a code defect; 2 foreign gate-positive. ccsniff each discipline separate: search 13 + bash 32 + git 0 violations, ALL foreign (grep C--dev-gm count=0 on bash AND search). gm clean across all ccsniff disciplines; this session used codesearch/recall/Read + the prescribed status-leading boot probe.'
+- id: reconfirm-convergence-wall
+  desc: 'Re-verify the autonomous-safe wall holds: the remaining deferred clusters (context-rot payload trim, rs-learn decay/recency/salience, rs-search weighted-fusion/camel-split, rs-codeinsight indexer-output, supervisor multi-process, bootstrap triplication) are all eval-gated or multi-process-harness-gated = correctly blockedBy:external. A fresh full sweep 35min after iter-21''s would re-hit the same per-lens wall; honest convergence, not a fabricated re-sweep. Witness via recall consistency across iter-18/19/20/21.'
+  status: completed
+  witness: 'Recall consistency across 6 fires confirms the autonomous-safe wall holds: iter-18 (20 implement-now, dead-fake host cluster), iter-19 (VALIDATION, no new code, convergence declared), iter-20 (18, process-honesty), iter-21 (9, fail-open gate), finish-remaining (rs-plugkit correctness ALREADY-SHIPPED in 0.1.678 + write-time dedup landed), dedup-witness (convergence confirmed). Every REMAINING cluster is eval-gated or harness-gated: context-rot payload trim (agent input contract), rs-learn decay/recency/salience (recall RANKING, needs labeled-qrels eval), rs-search weighted-fusion/camel-split (search ranking eval), rs-codeinsight indexer-output (depgraph/project change index output), supervisor multi-process (test harness), bootstrap triplication (multi-host boot harness). dna-sweep.js DEFER_INVASIVE+ALREADY_SHIPPED consts encode this. A full 86-agent re-sweep 35min after iter-21 re-hits the SAME per-lens wall = fabricated work; honest convergence is the correct call (Principle 3/7: don''t blind-regress the agent''s own retrieval infra without a measured eval).'
+- id: final-sync-iter22
+  desc: Triage+commit any residual (prd.yml ledger, new mem-*.json, codeinsight manifests) + push; memorize-fire the iter-22 confirm-and-validate outcome with the convergence witness. Chain COMPLETE only when origin reflects HEAD.
+  deps:
+  - validate-iter21-cascade
+  - gmsniff-ccsniff-rescan
+  - reconfirm-convergence-wall
+  status: pending
