@@ -308,7 +308,7 @@ function acquireLock(lockPath) {
         continue;
       }
       if (Date.now() - start > ATTEMPT_TIMEOUT_MS) throw new Error(`lock wait timeout: ${lockPath}`);
-      try { const { spawnSync } = require('child_process'); spawnSync(process.execPath, ['-e', 'setTimeout(()=>{}, 2000)'], { timeout: 2500, killSignal: 'SIGKILL', stdio: 'ignore', windowsHide: true }); } catch (_) {}
+      try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000); } catch (_) {}
     }
   }
 }

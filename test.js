@@ -87,11 +87,18 @@ function checkNoComments() {
     let text;
     try { text = fs.readFileSync(abs, 'utf8'); } catch (_) { continue; }
     const lines = text.split(/\r?\n/);
+    let inTemplate = false;
     for (let i = 0; i < lines.length; i++) {
-      if (/^\s*\/\//.test(lines[i])) { offenders.push(f + ':' + (i + 1)); break; }
+      const line = lines[i];
+      if (!inTemplate && /^\s*(\/\/|\/\*)/.test(line)) { offenders.push(f + ':' + (i + 1)); break; }
+      let backticks = 0;
+      for (let j = 0; j < line.length; j++) {
+        if (line[j] === '`' && line[j - 1] !== '\\') backticks++;
+      }
+      if (backticks % 2 === 1) inTemplate = !inTemplate;
     }
   }
-  assert(offenders.length === 0, 'leading // comments in tracked code (No-comments rule): ' + offenders.slice(0, 10).join(', '));
+  assert(offenders.length === 0, 'leading // or /* comments in tracked code (No-comments rule): ' + offenders.slice(0, 10).join(', '));
   console.log('no-comments guard ok (' + files.length + ' code files)');
 }
 

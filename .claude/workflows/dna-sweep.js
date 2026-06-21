@@ -50,6 +50,19 @@ const DEFER_INVASIVE = [
   'camel-split single-char segment handling -- needs a measured search-quality eval first',
 ]
 
+const ALREADY_SHIPPED = [
+  'gm spool.js validateVerb/validateLang throw on unknown input (no silent coerce)',
+  'gm spool-dispatch.js session-scoped instruction-seen check + line-aware yamlStatusValues PRD/mutable gate + paper-citation strip',
+  'gm skill-bootstrap.js never verifies newer download vs manifest older-version hash + 3s pid-probe timeout',
+  'gm ssh.js timeout-marks partial output; browser-spool-handler.js honest error; gm-validate.js repo-docs fixture; renderPlatformSkill deleted; code comments stripped + test.js checkNoComments',
+  'rs-codeinsight project.rs top-level JSON field parser (object_body + top_level_fields) + walkdir dep removed + digest content-sensitivity + hex_encode',
+  'rs-plugkit code_index.rs write_chunk + memorize_at_finalize use exec_params bound params (sql_quote eliminated on those INSERTs) + em-dash glyph sweep + git_porcelain fail->dirty + gates YAML fail-safe',
+  'rs-plugkit kv_put namespace allowlist + fs_write path-traversal sandbox + forget host_kv_delete + close/feedback rc-inversion fix',
+  'rs-learn LlmError qualification + route len-check + record_loss finiteness + per_target len + router trained-on-mismatch guard + host_kv_put rc-inversion fix',
+  'rs-exec wasm_spool.rs error-channel stdout->stderr + timeout-ceiling + started/ended rename + batch-log + is_rejected stub removed + two-phase inbox parse',
+  'rs-search RRF rrf_merge_n canonical N-source fusion (delegated, f64 1-indexed) + candidate-pool + test.js phantom-arch rewrite',
+]
+
 const FINDING_SCHEMA = {
   type: 'object',
   required: ['findings'],
@@ -122,9 +135,10 @@ log(`dna-sweep: ${real.length}/${candidates.length} findings survived adversaria
 
 phase('Classify')
 const deferText = DEFER_INVASIVE.map((d, i) => `${i + 1}. ${d}`).join('\n')
+const shippedText = ALREADY_SHIPPED.map((d, i) => `${i + 1}. ${d}`).join('\n')
 const classified = await parallel(real.map(f => () =>
   agent(
-    `Classify this verified finding into one bucket. KNOWN DEFER-INVASIVE clusters (prior guidance: invasive to load-bearing infra the agent depends on; need supervised work, NOT autonomous loop iteration):\n${deferText}\n\nIf the finding matches or directly touches any cluster above, bucket=defer-invasive. If it is isolated, real-services-witnessable, touches no published contract or multi-process concurrency or the agent own input contract, bucket=implement-now. If it is already fixed in current source, bucket=already-shipped. Finding: [${f.repo}] ${f.file}:${f.line} -- ${f.description}. Fix: ${f.fix_sketch}.`,
+    `Classify this verified finding into one bucket.\n\nALREADY-SHIPPED in prior fires (if the finding matches or is the same fix as any below, bucket=already-shipped -- do NOT re-propose it; Read the current source to confirm the fix is present):\n${shippedText}\n\nKNOWN DEFER-INVASIVE clusters (invasive to load-bearing infra the agent depends on; need supervised work, NOT autonomous loop iteration):\n${deferText}\n\nIf the finding matches a shipped fix, bucket=already-shipped. If it matches/touches a defer cluster, bucket=defer-invasive. Else if it is isolated, real-services-witnessable, touches no published contract or multi-process concurrency or the agent own input contract, bucket=implement-now. Finding: [${f.repo}] ${f.file}:${f.line} -- ${f.description}. Fix: ${f.fix_sketch}.`,
     { label: `classify:${f.repo}`, phase: 'Classify', schema: CLASS_SCHEMA }
   ).then(c => ({ ...f, klass: c }))
 ))
