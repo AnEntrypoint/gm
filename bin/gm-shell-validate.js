@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
 const os = require('os');
+const { pathToFileURL } = require('url');
 
 const ROOT = process.cwd();
 const WITNESS_DIR = path.join(ROOT, '.gm', 'witness');
@@ -30,7 +31,7 @@ async function renderPreview() {
   const renderScript = `
     import { writeFileSync } from 'fs';
     import { resolve } from 'path';
-    const mod = await import('file:///C:/dev/gm/site/theme.mjs');
+    const mod = await import(${JSON.stringify(pathToFileURL(path.join(ROOT, 'site', 'theme.mjs')).href)});
     const ctx = {
       readGlobal: (k) => {
         if (k === 'site') return { title: 'gm', tagline: "more coushin' for the pushin'", description: 'local browser OS surface', glyph: 'g', accent_from: '#7ee787', accent_to: '#56d364' };
@@ -53,11 +54,20 @@ async function renderPreview() {
   const server = cp.spawn('python', ['-m', 'http.server', '4210', '--directory', preview], { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true });
   server.unref();
   await sleep(1500);
-  return { preview, port: 4210 };
+  return { preview, port: 4210, serverPid: server.pid };
+}
+
+function killServer(pid) {
+  if (!pid) return;
+  try {
+    if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true });
+    else process.kill(pid, 'SIGTERM');
+  } catch (_) {}
 }
 
 async function main() {
-  const { preview, port } = await renderPreview();
+  const { preview, port, serverPid } = await renderPreview();
+  try {
   const witness = path.join(os.tmpdir(), `gm-shell-witness-${Date.now()}.js`);
   const witnessOut = path.join(WITNESS_DIR, `gm-shell-${Date.now()}.json`);
   write(witness, `
@@ -112,6 +122,9 @@ return JSON.stringify(result);
   fs.writeFileSync(witnessOut, JSON.stringify({ preview, port, output: out.trim(), parsed }, null, 2));
   try { fs.unlinkSync(witness); } catch (_) {}
   rmrf(preview);
+  } finally {
+    killServer(serverPid);
+  }
 }
 
 main().catch((e) => {

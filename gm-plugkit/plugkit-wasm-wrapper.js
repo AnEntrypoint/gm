@@ -836,7 +836,7 @@ function isPortAliveSync(port) {
 }
 
 function sleepSync(ms) {
-  spawnSync(process.execPath, ['-e', `setTimeout(()=>{}, ${ms})`], { timeout: ms + 2000 });
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(0, ms | 0));
 }
 
 function playwriterHomeFor(cwd, claudeSessionId) {
@@ -1049,7 +1049,7 @@ function purgeProfileLockFiles(profileDir) {
 
 function sleepSyncMs(ms) {
   if (ms <= 0) return;
-  spawnSync(process.execPath, ['-e', `setTimeout(()=>process.exit(0),${ms})`], { timeout: ms + 500, windowsHide: true });
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms | 0);
 }
 
 function gracefulCloseBrowser(entry, reason) {

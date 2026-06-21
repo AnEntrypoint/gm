@@ -101,7 +101,7 @@ function killStaleWatchers() {
     for (const s of stale) {
       try {
         if (process.platform === 'win32') {
-          cp.execFileSync('taskkill', ['/F', '/PID', String(s.pid)], { stdio: 'ignore', windowsHide: true });
+          cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(s.pid)], { stdio: 'ignore', windowsHide: true });
         } else {
           process.kill(s.pid, 'SIGTERM');
         }

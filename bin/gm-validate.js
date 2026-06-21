@@ -189,7 +189,7 @@ async function validateEmbed() {
   }
   const lats = v.calls.map(c => c.latency_ms).sort((a, b) => a - b);
   v.p50_ms = lats[Math.floor(lats.length * 0.5)] || 0;
-  v.p95_ms = lats[Math.max(0, lats.length - 1)] || 0;
+  v.p95_ms = lats[Math.max(0, Math.ceil(lats.length * 0.95) - 1)] || 0;
 
   const r = await dispatch('recall', { query: 'gm-validate witness', namespace: 'validate', limit: 3 }, 60000);
   const rd = (r.response && (r.response.data || r.response)) || {};
@@ -238,6 +238,7 @@ async function validateBrowserEmbed() {
     serveProc.unref();
   } catch (e) { v.errors.push('serve spawn: ' + e.message); return v; }
 
+  try {
   const t0 = Date.now();
   let ready = false;
   while (Date.now() - t0 < 20000) {
@@ -278,7 +279,7 @@ return out;
   try {
     const tmpScript = path.join(os.tmpdir(), 'gm-validate-' + Date.now() + '.js');
     fs.writeFileSync(tmpScript, script);
-    const out = cp.execSync('playwriter -s ' + sessionId + ' --timeout 60000 -e "' + script.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ') + '"', { encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
+    const out = cp.execFileSync(pw, ['-s', sessionId, '--timeout', '60000', '-f', tmpScript], { encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
     try { fs.unlinkSync(tmpScript); } catch (_) {}
     const m = out.match(/\{[\s\S]*\}\s*$/);
     if (m) { try { res = JSON.parse(m[0]); } catch (_) {} }
@@ -290,7 +291,7 @@ return out;
     v.calls = res.mems;
     const lats = res.mems.map(c => c.latency_ms).sort((a, b) => a - b);
     v.p50_ms = Math.round(lats[Math.floor(lats.length * 0.5)] || 0);
-    v.p95_ms = Math.round(lats[Math.max(0, lats.length - 1)] || 0);
+    v.p95_ms = Math.round(lats[Math.max(0, Math.ceil(lats.length * 0.95) - 1)] || 0);
     const rows = (res.recall && (res.recall.rows || res.recall.hits)) || [];
     v.recall_top_text = (rows[0] && (rows[0].text || rows[0].content)) || '';
     const allOk = v.calls.every(c => c.ok);
@@ -298,6 +299,14 @@ return out;
     if (!allOk) v.errors.push('not all browser memorize calls ok');
   }
   return v;
+  } finally {
+    if (serveProc && serveProc.pid) {
+      try {
+        if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(serveProc.pid)], { stdio: 'ignore', windowsHide: true });
+        else process.kill(serveProc.pid, 'SIGTERM');
+      } catch (_) {}
+    }
+  }
 }
 
 (async () => {

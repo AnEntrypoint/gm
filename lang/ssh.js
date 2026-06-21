@@ -75,19 +75,23 @@ function runSsh(target, cmd, onData) {
   return new Promise((resolve, reject) => {
     const { Client } = resolveSsh2();
     const ssh = new Client();
-    let out = '';
+    let stdout = '';
+    let stderr = '';
     let done = false;
 
-    const finish = (text) => {
-      if (!done) { done = true; ssh.end(); resolve(text != null ? text : out.trimEnd()); }
+    const finish = (extra) => {
+      if (!done) {
+        done = true;
+        ssh.end();
+        resolve({ stdout: stdout.trimEnd(), stderr: stderr.trimEnd(), timedOut: false, ...extra });
+      }
     };
 
     const timeout = setTimeout(() => {
       if (!done) {
         done = true;
         try { ssh.end(); } catch (_) {}
-        const partial = out.trimEnd();
-        resolve(partial ? `${partial}\n[ssh timed out after 55s; output above is partial]` : '[ssh timed out after 55s; no output]');
+        resolve({ stdout: stdout.trimEnd(), stderr: (stderr + '\n[ssh timed out after 55s; output is partial]').trimEnd(), timedOut: true });
       }
     }, 55000);
 
@@ -96,12 +100,12 @@ function runSsh(target, cmd, onData) {
         if (err) { clearTimeout(timeout); ssh.end(); reject(err); return; }
         stream.on('data', d => {
           const s = d.toString();
-          out += s;
+          stdout += s;
           if (onData) onData(s, 'stdout');
         });
         stream.stderr.on('data', d => {
           const s = d.toString();
-          out += s;
+          stderr += s;
           if (onData) onData(s, 'stderr');
         });
         stream.on('close', () => { clearTimeout(timeout); finish(); });
@@ -133,8 +137,8 @@ async function runBackground(target, cmd) {
     rpcCall(port, 'appendOutput', { taskId, type, data }).catch(() => {});
   };
 
-  runSsh(target, cmd, onData).then(out => {
-    rpcCall(port, 'completeTask', { taskId, result: { success: true, exitCode: 0, stdout: out, stderr: '', error: null } }).catch(() => {});
+  runSsh(target, cmd, onData).then(r => {
+    rpcCall(port, 'completeTask', { taskId, result: { success: !r.timedOut, exitCode: r.timedOut ? 124 : 0, stdout: r.stdout, stderr: r.stderr, error: r.timedOut ? 'ssh timed out after 55s' : null } }).catch(() => {});
   }).catch(err => {
     rpcCall(port, 'completeTask', { taskId, result: { success: false, exitCode: 1, stdout: '', stderr: err.message, error: err.message } }).catch(() => {});
   });
@@ -163,7 +167,9 @@ module.exports = {
         }
       }
 
-      return await runSsh(target, cmd, null);
+      const r = await runSsh(target, cmd, null);
+      const combined = [r.stdout, r.stderr].filter(Boolean).join('\n');
+      return combined || (r.timedOut ? '[ssh timed out after 55s; no output]' : '');
     }
   },
   context: `=== exec:ssh ===
