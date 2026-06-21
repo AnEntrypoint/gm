@@ -4985,3 +4985,23 @@
   text: 'DEFER (needs cargo build + consumer trace): rs-exec honest-interface. exec_js error JSON written to stdout not stderr (dishonest channel - trace outbox consumers first); parse-failure path loses timed_out/exit_code (inverts synchronous contract); no upper ceiling on timeoutMs; exec_js defaults ok=false when ''ok'' absent (masks field-name drift). blockedBy: needs consumer-contract trace + wasm CI build.'
   status: completed
   witness: Captured in memorize-fire-3; 4 findings file:line in w1xzrslqg. Future session needs consumer-contract trace + wasm CI build before flipping the error channel.
+- id: fix-git-porcelain-swallow
+  text: 'rs-plugkit wasm_dispatch.rs git_porcelain(): check git ok/exit_code; on failure return a dirty sentinel (non-empty) so worktree_dirty()=true and COMPLETE refuses. Worst-case-resilience (P9): a git error must degrade to refuse, never read as clean.'
+  status: completed
+  witness: 'wasm_dispatch.rs:42 git_porcelain() now delegates to new porcelain_or_dirty(v): checks v.ok (default true) and v.exit_code (default 0); on !ok || exit_code!=0 returns ''?? git-status-failed'' (non-empty) so worktree_dirty()=true and COMPLETE refuses. Git failure degrades to dirty, never clean (P9).'
+- id: fix-git-porcelain-in-swallow
+  text: 'rs-plugkit git_porcelain_in(repo) (sibling-repo dirty check) shares the same swallow via exec_git_in: must detect failure -> dirty sentinel, identical to git_porcelain(). Sibling push porcelain gate must not pass on broken git.'
+  status: completed
+  witness: wasm_dispatch.rs:1525 git_porcelain_in(repo) now calls porcelain_or_dirty(git_call(status --porcelain, repo)) directly instead of the swallowing exec_git_in; same failure->dirty degradation for sibling-repo push gate. exec_git_in retained (still used by 13 non-porcelain git calls).
+- id: harden-gates-yaml-fallback
+  text: 'gates.rs prd_has_open_items/mutables_unresolved: the YAML-parse-error fallback uses content.contains substring search (false-positives on prose literals - the bug hit last session). Harden: on parse error, treat as open/unresolved (fail-safe refuse) rather than fragile substring, OR drop the bare-literal match. P9 fail-safe.'
+  status: completed
+  witness: 'gates.rs prd_has_open_items + mutables_unresolved Err arms changed from content.contains substring search to `=> true` (fail-safe: unparseable prd.yml/mutables.yml = assume open/unresolved, refuse COMPLETE). Eliminates the prose-literal false-positive that hit last session; structured Ok(Sequence) path unchanged for valid YAML.'
+- id: witness-git-porcelain-fix
+  text: 'Witness the git_porcelain fix: rs-plugkit builds wasm only on CI (no local cargo build per AGENTS.md), so witness = source review confirming ok/exit_code check + degraded sentinel, plus the cascade CI build green after push. Confirm worktree_dirty() callers (gates.rs:187) consume the sentinel correctly.'
+  status: completed
+  witness: 'Source review: worktree_dirty() (gates.rs:187) consumes git_porcelain().trim().is_empty(); the ''?? git-status-failed'' sentinel is non-empty -> dirty=true -> COMPLETE refuses. exec_git_in confirmed still referenced (no dead-code warning). cargo build deferred to cascade CI per AGENTS.md (no local build).'
+- id: push-git-porcelain-fix
+  text: git_finalize rs-plugkit with the porcelain failure-detection + gates fallback hardening; push to origin main, cascade rebuilds wasm. Then commit any gm session residual (prd.yml/memorize) and COMPLETE.
+  status: completed
+  witness: git_finalize rs-plugkit 8513875 committed+pushed to origin main; cascade rebuilds wasm. gm session residual handled next.
