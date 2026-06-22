@@ -377,11 +377,14 @@
   text: Does editing gm-plugkit/instructions/*.md require re-running sync-instruction-consts.mjs to byte-align rs-plugkit/src/prose.rs consts, and committing BOTH repos? Is there a CI/test guard on the alignment that a bundle-only edit would break?
   witness_evidence: 'gm-plugkit/scripts/sync-instruction-consts.mjs:6-33 reads gm-plugkit/instructions/<key>.md (CRLF->LF), writes rs-plugkit/src/orchestrator/instructions/<key>.rs as ''pub const TEXT: &str = r#"<md>"#;'' for keys entry/plan/execute/emit/verify/update_docs/browser (rsDir default ../../../rs-plugkit or RS_PLUGKIT_DIR). The wasm serves the .rs const (prose.rs) with .md fallback, so a bundle-only edit ships nothing until the .rs const is re-synced and rs-plugkit pushed (cascade rebuild). REQUIREMENT: edit .md -> run sync -> commit gm-plugkit .md AND rs-plugkit .rs -> push both. residual/* and gates/* are NOT in the sync list (md-only).'
 - id: node-profile-capability
-  status: unknown
+  status: witnessed
   text: Can exec_js genuinely profile+debug node? It runs arbitrary JS and returns stdout/stderr/exit_code/timed_out -- so process.hrtime/performance.now/process.memoryUsage profiling SHOULD work via console.log. Witness by running real exec_js profiling code; find any gap (e.g. console capture, async/await, require, large-output truncation).
+  witness_evidence: 'WORKS (out/exec_js-176.json): exec_js stdout returned loop_ms 56.04 (hrtime.bigint), perf_now 92, rss_mb 52/heapUsed_mb 4 (memoryUsage), full captured_error_stack; separate stderr channel returned the stack line. Genuine node profiler+debugger, no gap.'
 - id: browser-profile-debug-capability
-  status: unknown
+  status: witnessed
   text: 'Can the browser verb genuinely profile+debug? Need: page.evaluate returns values, console.log/error capture from the page, performance API (performance.now/getEntriesByType/PerformanceObserver), network timing, uncaught-error capture, window.* globals. Witness by running a real browser session against a real URL; find which of these are exposed vs missing.'
+  witness_evidence: 'WORKS (out/browser-178.json): page.evaluate returns values, page.on(''console'') captured ''GM-PROBE console works'', page.on(''pageerror'') captured ''GM-uncaught-probe'', performance.getEntriesByType(''navigation'') gave domContentLoaded_ms 162/load_ms 164, window.__gmProbe global round-tripped (title ''Example Domain''). All profile+debug primitives present.'
 - id: browser-console-network-surface
-  status: unknown
+  status: witnessed
   text: Does the browser runner (playwriter) surface page console messages, page errors, and network/request timing back to the agent, or only page.evaluate return values + screenshot/snapshot? If console/network/errors are not captured, profiling+debugging is half-blind -- that is the likely gap to roll out.
+  witness_evidence: 'SURFACED in-script, no runner change needed: page.on(''console''/''pageerror''/''requestfinished'') all fire and are returnable from the browser script (out/browser-178/179.json). Network timing works with the corrected recipe Math.round(timing.responseEnd) (dur_ms:2 re-witnessed; the responseEnd-startTime form gave garbage). console/error/network/perf capture lives in the agent''s script via page.on + page.evaluate; playwriter exposes the real Playwright page.'

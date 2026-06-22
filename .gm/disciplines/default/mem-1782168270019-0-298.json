@@ -1,0 +1,3 @@
+## Resolved mutable: node-profile-capability
+
+WORKS (out/exec_js-176.json): exec_js stdout returned loop_ms 56.04 (hrtime.bigint), perf_now 92, rss_mb 52/heapUsed_mb 4 (memoryUsage), full captured_error_stack; separate stderr channel returned the stack line. Genuine node profiler+debugger, no gap.

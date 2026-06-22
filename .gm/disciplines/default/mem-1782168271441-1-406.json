@@ -1,0 +1,3 @@
+## Resolved mutable: browser-profile-debug-capability
+
+WORKS (out/browser-178.json): page.evaluate returns values, page.on('console') captured 'GM-PROBE console works', page.on('pageerror') captured 'GM-uncaught-probe', performance.getEntriesByType('navigation') gave domContentLoaded_ms 162/load_ms 164, window.__gmProbe global round-tripped (title 'Example Domain'). All profile+debug primitives present.
