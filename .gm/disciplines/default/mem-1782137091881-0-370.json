@@ -1,0 +1,3 @@
+## Resolved mutable: status-write-atomicity
+
+ELIMINATED: gm-plugkit/plugkit-wasm-wrapper.js:594 atomicWriteJson writes temp+renameSync (atomic), :620 writeJsonFile wraps it, :617 readJsonFile is parse-safe (returns fallback on JSON error). Writer cannot emit empty/partial .status.json; my earlier empty read was a genuinely-dead watcher (file absent), not a write race.

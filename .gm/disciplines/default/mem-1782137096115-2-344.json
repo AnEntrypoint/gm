@@ -1,0 +1,3 @@
+## Resolved mutable: busy-until-coverage
+
+NOT ROOT: witnessed LIVE this session - the first codesearch after the long gap stamped .status.json busy_until ~360s out (index rebuild) so the heartbeat gap was not misread; runBrowserRunner _writeStatusBusy((timeoutMs||30000)+5000) covers chromium spawn. Long synchronous verbs advertise busy_until.
