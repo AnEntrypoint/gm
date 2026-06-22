@@ -376,3 +376,12 @@
   status: witnessed
   text: Does editing gm-plugkit/instructions/*.md require re-running sync-instruction-consts.mjs to byte-align rs-plugkit/src/prose.rs consts, and committing BOTH repos? Is there a CI/test guard on the alignment that a bundle-only edit would break?
   witness_evidence: 'gm-plugkit/scripts/sync-instruction-consts.mjs:6-33 reads gm-plugkit/instructions/<key>.md (CRLF->LF), writes rs-plugkit/src/orchestrator/instructions/<key>.rs as ''pub const TEXT: &str = r#"<md>"#;'' for keys entry/plan/execute/emit/verify/update_docs/browser (rsDir default ../../../rs-plugkit or RS_PLUGKIT_DIR). The wasm serves the .rs const (prose.rs) with .md fallback, so a bundle-only edit ships nothing until the .rs const is re-synced and rs-plugkit pushed (cascade rebuild). REQUIREMENT: edit .md -> run sync -> commit gm-plugkit .md AND rs-plugkit .rs -> push both. residual/* and gates/* are NOT in the sync list (md-only).'
+- id: node-profile-capability
+  status: unknown
+  text: Can exec_js genuinely profile+debug node? It runs arbitrary JS and returns stdout/stderr/exit_code/timed_out -- so process.hrtime/performance.now/process.memoryUsage profiling SHOULD work via console.log. Witness by running real exec_js profiling code; find any gap (e.g. console capture, async/await, require, large-output truncation).
+- id: browser-profile-debug-capability
+  status: unknown
+  text: 'Can the browser verb genuinely profile+debug? Need: page.evaluate returns values, console.log/error capture from the page, performance API (performance.now/getEntriesByType/PerformanceObserver), network timing, uncaught-error capture, window.* globals. Witness by running a real browser session against a real URL; find which of these are exposed vs missing.'
+- id: browser-console-network-surface
+  status: unknown
+  text: Does the browser runner (playwriter) surface page console messages, page errors, and network/request timing back to the agent, or only page.evaluate return values + screenshot/snapshot? If console/network/errors are not captured, profiling+debugging is half-blind -- that is the likely gap to roll out.

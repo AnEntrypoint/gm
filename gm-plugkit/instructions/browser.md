@@ -36,6 +36,27 @@ The window opens on the user's screen -- that IS the witness. `GM_BROWSER_HEADLE
 
 `session new` (or a bare expression with no live session) spawns a locally-profiled Chromium at `<cwd>/.gm/browser-profile/`; the runner attaches via `--direct <wsEndpoint>`. Cookies/storage/extensions persist across sessions, turns, and runs. A second concurrent launch contends the SingletonLock; the watcher reuses the live CDP rather than re-launching. The runner's extension-attach mode ("Waiting for extension to connect") is never the default or what you want -- seeing it in `stderr` means the host failed to spawn local Chromium; dispatch `instruction` for recovery, not a blind retry.
 
+## Profile and debug recipes
+
+The page is a genuine profiler and debugger -- use it, never guess-and-restart. Attach the listeners BEFORE `page.goto`, then return the captured arrays from one script (all witnessed live):
+
+```
+const logs=[],errs=[],net=[];
+page.on('console',m=>logs.push({type:m.type(),text:m.text()}));
+page.on('pageerror',e=>errs.push(String(e&&e.message||e)));
+page.on('requestfinished',r=>{const t=r.timing();net.push({url:r.url(),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});});
+await page.goto(URL,{waitUntil:'load'});
+const perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0]||{};return {load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())};});
+return {logs,errs,net,perf};
+```
+
+- **Console + uncaught errors**: `page.on('console')` captures every page `console.*`; `page.on('pageerror')` captures uncaught exceptions (a `try/catch` in the page swallows them -- they surface as a console.error instead). This is your debug log.
+- **Performance**: `performance.getEntriesByType('navigation')[0]` gives `loadEventEnd`/`domContentLoadedEventEnd`; `getEntriesByType('resource')` gives per-asset timing; `performance.now()`/`PerformanceObserver` for in-page measures. This is your profiler.
+- **Network timing**: `request.timing()` fields (`responseEnd`, `responseStart`, ...) are ALREADY relative to `startTime` -- use `Math.round(t.responseEnd)` directly for duration; subtracting `startTime` yields a garbage huge-negative (witnessed). `-1` means N/A.
+- **State**: expose any runtime value as `window.__x` in the app or via `page.evaluate(()=>{window.__x=...})`, then read it with another `page.evaluate` -- the live global beats a restart. Surface relevant state as a global on purpose so a single evaluate observes it.
+
+Profile to LOCATE (which call/resource is slow), then eliminate hypotheses by live measurement -- never a/b-test by restarting. The node side mirrors this: `exec_js` with `process.hrtime.bigint()`/`performance.now()` timing, `process.memoryUsage()`, and `stderr` stack capture is a genuine node profiler+debugger.
+
 ## Discipline
 
 Never spawn Chromium yourself, `npm i puppeteer`, or shell `chrome.exe`; the verb owns the handle, and bypassing it orphans state plugkit cannot reap and breaks the next session's first read. Navigate by evaluating `location.href = '...'` through the spool; screenshot by dispatching the verb that returns one. A dispatch returning `ok:false` with a launch error is plugkit reporting the environment refused -- read `stderr`, dispatch `instruction`, do not loop the same body.
