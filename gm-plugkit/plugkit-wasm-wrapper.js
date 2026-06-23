@@ -1876,6 +1876,7 @@ function makeHostFunctions(instanceRef) {
         else if (lang === 'bash') { cmd = 'bash'; args = ['-c', code]; }
         else if (lang === 'deno') { cmd = 'deno'; args = ['eval', code]; }
         else { return writeWasmJson(instanceRef.value, { ok: false, error: `unsupported lang: ${lang}` }); }
+        const __execT0 = Date.now();
         const result = spawnSync(cmd, args, { encoding: 'utf-8', timeout: timeoutMs, cwd, env: process.env });
         return writeWasmJson(instanceRef.value, {
           ok: result.status === 0,
@@ -1883,6 +1884,7 @@ function makeHostFunctions(instanceRef) {
           stderr: result.stderr || '',
           exit_code: result.status === null ? -1 : result.status,
           timed_out: result.signal === 'SIGTERM',
+          duration_ms: Date.now() - __execT0,
         });
       } catch (e) {
         return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
@@ -1997,6 +1999,17 @@ function makeHostFunctions(instanceRef) {
             timeoutMs = Math.min(requested, 120000);
             evalBody = timeoutMatch[2];
           }
+        }
+        const captureMatch = evalBody.match(/^(?:capture|profile)[ \t]*\n([\s\S]*)$/);
+        if (captureMatch) {
+          const userScript = captureMatch[1];
+          evalBody = `const __logs=[],__errs=[],__net=[];\n`
+            + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
+            + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
+            + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`
+            + `const __result = await (async () => {\n${userScript}\n})();\n`
+            + `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`
+            + `return {result:__result,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);

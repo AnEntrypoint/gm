@@ -1,0 +1,3 @@
+## Resolved mutable: wrapper-ships-via-cascade
+
+host_exec_js + host_browser_exec are JS host functions in gm-plugkit/plugkit-wasm-wrapper.js makeHostFunctions (1845-2018), NOT wasm-internal -- the wasm calls out to them. So editing the wrapper + publishing gm-plugkit (cascade) ships them via ensureWrapperFresh + supervisor wrapper-sha-drift recycle, no wasm rebuild. The running watcher uses the installed ~/.gm-tools wrapper, so live-witness of the auto-wrap is deferred to post-cascade; the injected wrap STRING is witnessable now by dispatching the equivalent wrapped script through the current browser verb.
