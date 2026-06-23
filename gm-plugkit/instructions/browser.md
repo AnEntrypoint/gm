@@ -4,7 +4,7 @@
 
 **Every edit to code that runs in a browser requires a live `browser` dispatch in the same turn as the edit.** Client-side surfaces -- `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.mjs`, `.css`, web components, service workers, every asset loaded by `<script>`, every path reached by `import` from a browser-side entry -- must be witnessed by a live `page.evaluate` of the specific invariant the edit establishes. A passing node test, build, `curl` of the HTML, or static-analysis pass witnesses server delivery, not browser behavior, and is non-substitutive. The witness IS the proof; prose is not.
 
-Protocol: (1) boot the real surface -- server up, page reachable, HTTP 200 witnessed; (2) `browser` dispatch -> navigate -> poll for the global the change affects; (3) `page.evaluate` asserting the invariant, capturing witnessed values into `stdout`; (4) variance -> fix at root cause, re-witness. Never advance on unwitnessed client behavior, never queue validation for "later" -- the same turn that edits a client-side file dispatches the browser verb validating it.
+The witness is a live `page.evaluate` asserting the specific invariant against the real surface -- server up, HTTP 200, the global the change affects polled until present -- values captured into `stdout`; variance means a root-cause fix and re-witness, not advance. Anything short of the live assertion -- unwitnessed behavior, an assert fired before the global is present, validation queued for "later" -- leaves the edit unproven, and an unproven client edit is forced closure.
 
 Fires across phases: **EXECUTE** edit -> same-turn browser dispatch asserting the invariant; **EMIT** post-emit re-witness (page still passes after the full diff); **VERIFY** final gate -- `deviation.browser-witness-hash-mismatch` fires if a witnessed file changed without re-witnessing. Pure-prose static-document edits (no JS, no CSS-driven behavior, no DOM mutation) are the ONLY exempt category, and the exemption must be named explicitly in the response so the skip is auditable. Silent skip on actual behavior change is forced closure.
 
@@ -41,7 +41,7 @@ The window opens on the user's screen -- that IS the witness. `GM_BROWSER_HEADLE
 
 ## Profile and debug recipes
 
-The page is a genuine profiler and debugger -- use it, never guess-and-restart. The `capture\n` prefix above does all of this for free; reach for the manual recipe below only for custom capture. Attach the listeners BEFORE `page.goto`, then return the captured arrays from one script (all witnessed live):
+The page is a genuine profiler and debugger -- use it, never guess-and-restart. The `capture\n` prefix above does all of this for free; reach for the manual recipe below only for custom capture. Attach the listeners, then navigate, in one script so nothing fires before they are listening -- the captured arrays are the live witness:
 
 ```
 const logs=[],errs=[],net=[];

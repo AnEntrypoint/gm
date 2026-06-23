@@ -81,7 +81,7 @@ Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. `@<name>` prefix sets namespac
 
 ## Inspection routing
 
-`Read` for runtime-state files (spool response JSON, `.status.json`); `codesearch` verb for every code/file/symbol search (it indexes the CURRENT cwd only -- sibling-repo source is `Read` by path, never expected from `codesearch`) -- Glob/Grep/Explore and host-native search are blocked, the verb is the surface. Bash only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
+Every capability has exactly one sanctioned surface and the platform's native tools are never it: code/file/symbol search is the `codesearch` verb (cwd-indexed -- a sibling repo is `Read` by path, never expected from `codesearch`), runtime-state files (spool response JSON, `.status.json`) are `Read`, and Bash survives only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Reaching for Glob/Grep/Explore or any host-native search is reaching around the surface -- it is blocked; the verb IS the surface. Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
 
 ## Memorize
 
@@ -89,6 +89,6 @@ Write the recall index only via `memorize-fire`; surfaces outside it produce mem
 
 ## Return to plugkit
 
-Against every drift, gate denial, "what now", uncertain next step, or N elapsed actions without one in a non-trivial phase: dispatch `instruction`. Your memory of the prose is stale the moment phase/PRD/mutables shift. It is cheap, synchronous, idempotent -- unbounded cost to under-dispatching. Every gate denial names the next verb in its `reason` field; read it and dispatch that verb, do not improvise around the denial. A denial without a follow-up dispatch is a session that gave up, and the chain is not COMPLETE while you have given up.
+Any uncertainty about the next move -- drift, a gate denial, a silent stretch in a non-trivial phase -- is itself the signal to dispatch `instruction`, because your memory of the prose went stale the moment phase/PRD/mutables shifted. It is cheap, synchronous, idempotent; the cost is all on the under-dispatch side. Every gate denial names the next verb in its `reason` field; read it and dispatch that verb, never improvise around the denial -- a denial with no follow-up dispatch is a session that gave up, and the chain is not COMPLETE while you have given up.
 
 Transition: SESSION_ID threaded AND spool reachable -> dispatch `instruction` with `{"prompt":"<user request>"}` so plugkit derives orient_nouns + recall_hits; later same-chain dispatches may use empty body.

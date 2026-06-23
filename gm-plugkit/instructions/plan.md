@@ -24,7 +24,7 @@ Cut the cover so the hardest reachable node comes first: the row exercising the 
 
 ## Noticing-to-PRD
 
-Anything noticed during orient or expansion that is not yet a row -- outstanding work, an unfinished surface, an improvable shape, a preference misalignment, an adjacent concern -- is a `prd-add` this turn. Observations carried only in the response body evaporate; only the store survives. "We should also..." / "worth noting..." belongs in a row with the witness that motivated it. Structural noticing (no test coverage on X, docs missing on Y, prior commit Z violates a rule) and preference-aware noticing (state diverging from density-at-PLAN, residual-triage, push-on-clean, every-possible expansion, browser-witness coverage) convert the same way -- each its own row describing the aligned state.
+Anything noticed during orient or expansion that is not yet a row -- outstanding work, an unfinished surface, an improvable shape, a preference misalignment, an adjacent concern -- is a `prd-add` this turn. Observations carried only in the response body evaporate; only the store survives. "We should also..." / "worth noting..." is a row with the witness that motivated it, not a remark. A noticing that is structural (a coverage gap, a missing doc, a prior commit that broke a rule) or preference-aware (state drifting from density-at-PLAN, residual-triage, push-on-clean, every-possible expansion, or browser-witness coverage) is the same event: each its own row describing the aligned state.
 
 ## Mutables
 

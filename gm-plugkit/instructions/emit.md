@@ -16,7 +16,7 @@ Feed search outputs into EMIT only when the digest matches the live filesystem; 
 
 One write per artifact, then a disk Read against every touched path to assert the change -- verified disk state IS the witness, not the tool-call return. On discrepancy, regress to root cause, do not retry.
 
-**Client-side artifacts: write-then-browser-witness, same turn.** If the artifact is `.html .js .jsx .ts .tsx .vue .svelte .mjs .css` or any browser-loaded path, the disk Read is necessary but not sufficient -- also dispatch a `browser` verb that `page.evaluate`s the invariant the artifact establishes (the page-side assertion is the real witness; the disk Read only witnesses serialization). Skipping it ships a green-checked stub. The COMPLETE gate refuses without the paired browser-witness for every client-side file edited this session (`deviation.client-edit-no-witness`, gates.rs), and you regress to dispatch the missing witness.
+**Client-side artifacts: write-then-browser-witness, same turn.** If the artifact is `.html .js .jsx .ts .tsx .vue .svelte .mjs .css` or any browser-loaded path, the disk Read is necessary but not sufficient -- also dispatch a `browser` verb that `page.evaluate`s the invariant the artifact establishes (the page-side assertion is the real witness; the disk Read only witnesses serialization). Skipping it ships a green-checked stub. The COMPLETE gate refuses while any client-side file edited this session lacks its paired browser-witness (`deviation.client-edit-no-witness`, gates.rs); the missing witness is the next dispatch.
 
 ## Artifact scope
 
