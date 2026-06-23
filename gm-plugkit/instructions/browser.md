@@ -12,18 +12,20 @@ YOU drive the browser through the spool: plugkit holds the Chromium handle, per-
 
 ## Body shapes
 
-The body is a string, six shapes only:
+The body is a string, these shapes:
 
 ```
 session new
 session list
 session close <id>
 <arbitrary JS expression evaluated in page context>
+<https://... bare URL>
+url=<url>\n<expression>
 timeout=<ms>\n<expression>
 capture\n<expression>
 ```
 
-A bare expression with no live session opens one against `about:blank`; with a live session it reuses it. `session new` returns the id you carry; with more than one open, target it via `session=<id>\n<expr>`. (`session close` and `session kill` are aliases.) Default per-eval timeout 120000ms; operations that legitimately exceed it prefix `timeout=<ms>\n` (wrapper clamps to 120000ms). The response carries `timeout_ms_used`; `browser.runner-timeout` fires at the cap -- read `stderr`, narrow or raise, never retry blind at the same budget.
+**Open on the page you want to test, not a blank one.** A bare `https://...` URL body navigates the session straight to that page and returns `{url, title}` -- the simplest "show me this page." `url=<url>\n<expression>` navigates first, then runs your expression on the loaded page, so the global/DOM you assert is already there in one dispatch instead of a blank surface you must `page.goto` yourself. `url=` composes with `timeout=` and `capture` -- stack the prefix lines in order `timeout=`, then `url=`, then `capture`, the expression last; the prepended `page.goto` rides inside the capture so its navigation console/network is captured too. A bare expression with no URL prefix and no live session opens against `about:blank`; with a live session it reuses it. `session new` returns the id you carry; with more than one open, target it via `session=<id>\n<expr>`. (`session close` and `session kill` are aliases.) Default per-eval timeout 120000ms; operations that legitimately exceed it prefix `timeout=<ms>\n` (wrapper clamps to 120000ms). The response carries `timeout_ms_used`; `browser.runner-timeout` fires at the cap -- read `stderr`, narrow or raise, never retry blind at the same budget.
 
 **`capture\n<expression>` is the zero-boilerplate debug path -- prefer it.** Prefix your script with `capture` (or `profile`) on its own line and the wrapper auto-attaches `page.on('console'|'pageerror'|'requestfinished')` before your code runs, runs your script in an async wrapper (your top-level `await`/`return` work unchanged), and returns `{result: <your return>, debug: {console, pageErrors, network, performance}}` -- page console logs, uncaught errors, per-request network timing, and navigation performance, captured for free. Combine with timeout via `timeout=<ms>\ncapture\n<expr>`. Use the bare expression only when you do not want the capture overhead.
 

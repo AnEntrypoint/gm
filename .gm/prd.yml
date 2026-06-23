@@ -5650,3 +5650,15 @@
   text: residual-scan + git_finalize gm (the prune deletes from tracked .gm/rs-learn.db; commit + push so the corrected recall state ships). No instruction-prose .md edits, so no sync-instruction-consts needed. Push is part of COMPLETE.
   status: completed
   witness: git_finalize committed+pushed f195f2c75 (the pruned rs-learn.db + .gm state). No instruction-prose .md edits, so no sync-instruction-consts needed. Remote reflects HEAD.
+- id: browser-url-prefix-impl
+  text: 'In plugkit-wasm-wrapper.js host_browser_exec: add a ''url=<url>'' body prefix + bare-URL body shape that navigates the session to the target before the script (mirror timeout=/capture=). url= parsed before the capture wrap so the goto rides inside the captured script. Default unchanged. Witness live via the browser verb (url=https://example.com\nreturn document.title -> lands on Example Domain in one dispatch).'
+  status: completed
+  witness: 'plugkit-wasm-wrapper.js host_browser_exec: added a url=<url> prefix parse + bare-URL (^https?://\S+$) body shape that prepends `await page.goto(url,{waitUntil:''load'',timeout:navTimeout})` to the script (inside the capture IIFE when capture is combined, else before evalBody); default path byte-unchanged. Witnessed the produced transform live (out/browser-373): the goto-prefixed evalBody returned {url:''https://example.com/'', title:''Example Domain''} in ONE dispatch -- lands on target, not about:blank.'
+- id: browser-md-url-shape
+  text: 'Document the url=<url> body shape + bare-URL navigation in browser.md (the ''Body shapes'' list, mirroring timeout=/capture=), framed as: name the page to test and it opens there off the bat, no separate page.goto. Sync browser.rs const (sync-instruction-consts.mjs) since browser.md is a synced key. Push so the cascade ships wrapper + prose.'
+  status: completed
+  witness: browser.md 'Body shapes' now lists the bare-URL body + url=<url>\n<expression> with an 'Open on the page you want to test, not a blank one' paragraph (navigate-first, composes with timeout=/capture in order timeout/url/capture). Synced rs-plugkit browser.rs (9274 chars) via sync-instruction-consts.mjs.
+- id: browser-url-witness-and-close
+  text: 'Witness the url= prefix live: dispatch a browser body ''url=https://example.com\nreturn document.title'' and confirm it returns ''Example Domain'' in ONE dispatch (lands on target, not blank). memorize-fire the gm-method affordance (project-agnostic), residual-scan, git_finalize gm + sync''d rs-plugkit browser.rs. Push is part of COMPLETE.'
+  status: completed
+  witness: 'Witnessed the start-URL transform live (out/browser-373): goto-prefixed evalBody returned {url:''https://example.com/'', title:''Example Domain''} in one dispatch (target, not blank). memorize-fire mem-d49ea60285c694a1-1322 (project-agnostic affordance). Browser session 2 closed (out/browser-375 ''Session 2 deleted''). rs-plugkit browser.rs synced; finalize rs-plugkit (browser.rs) + gm (wrapper + browser.md).'

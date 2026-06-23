@@ -2000,6 +2000,22 @@ function makeHostFunctions(instanceRef) {
             evalBody = timeoutMatch[2];
           }
         }
+        let startUrl = null;
+        const urlMatch = evalBody.match(/^url=(\S+)[ \t]*\n([\s\S]*)$/);
+        if (urlMatch) {
+          startUrl = urlMatch[1];
+          evalBody = urlMatch[2];
+        } else {
+          const bare = evalBody.trim();
+          if (/^https?:\/\/\S+$/.test(bare)) {
+            startUrl = bare;
+            evalBody = 'return {url: page.url(), title: await page.title()};';
+          }
+        }
+        const navTimeout = Math.min(timeoutMs, 60000);
+        const gotoPrefix = startUrl
+          ? `await page.goto(${JSON.stringify(startUrl)},{waitUntil:'load',timeout:${navTimeout}});\n`
+          : '';
         const captureMatch = evalBody.match(/^(?:capture|profile)[ \t]*\n([\s\S]*)$/);
         if (captureMatch) {
           const userScript = captureMatch[1];
@@ -2007,9 +2023,11 @@ function makeHostFunctions(instanceRef) {
             + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
             + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
             + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`
-            + `const __result = await (async () => {\n${userScript}\n})();\n`
+            + `const __result = await (async () => {\n${gotoPrefix}${userScript}\n})();\n`
             + `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`
             + `return {result:__result,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
+        } else if (startUrl) {
+          evalBody = `${gotoPrefix}${evalBody}`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
