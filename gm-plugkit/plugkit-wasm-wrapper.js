@@ -3109,6 +3109,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       const ptr = Number(result & 0xffffffffn);
       const len = Number(result >> 32n);
+      guardWasmRange(instance.exports.memory.buffer, ptr, len, `spool-dispatch:${verb}`);
       const resultBytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
       let resultStr = new TextDecoder().decode(resultBytes);
 
@@ -3818,6 +3819,7 @@ if (_isCliEntry) (async () => {
       const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
       const ptr = Number(result & 0xffffffffn);
       const len = Number(result >> 32n);
+      guardWasmRange(instance.exports.memory.buffer, ptr, len, `cli-dispatch:${verb}`);
       const out = new TextDecoder().decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
       process.stdout.write(out);
       let parsed;

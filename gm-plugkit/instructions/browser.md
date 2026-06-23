@@ -57,6 +57,7 @@ return {logs,errs,net,perf};
 - **Performance**: `performance.getEntriesByType('navigation')[0]` gives `loadEventEnd`/`domContentLoadedEventEnd`; `getEntriesByType('resource')` gives per-asset timing; `performance.now()`/`PerformanceObserver` for in-page measures. This is your profiler.
 - **Network timing**: `request.timing()` fields (`responseEnd`, `responseStart`, ...) are ALREADY relative to `startTime` -- use `Math.round(t.responseEnd)` directly for duration; subtracting `startTime` yields a garbage huge-negative (witnessed). `-1` means N/A.
 - **State**: expose any runtime value as `window.__x` in the app or via `page.evaluate(()=>{window.__x=...})`, then read it with another `page.evaluate` -- the live global beats a restart. Surface relevant state as a global on purpose so a single evaluate observes it.
+- **Screenshots**: to actually SEE a screenshot, save it to a file and `Read` that path -- `await page.screenshot({path:'<abs>/shot.png'})` then `Read <abs>/shot.png` (the Read tool renders the PNG visually; witnessed). NEVER `return` the screenshot Buffer inline -- it stringifies to useless bytes in the envelope. The same applies to any binary: write it to a path, then Read the path.
 
 Profile to LOCATE (which call/resource is slow), then eliminate hypotheses by live measurement -- never a/b-test by restarting. The node side mirrors this: `exec_js` with `process.hrtime.bigint()`/`performance.now()` timing, `process.memoryUsage()`, and `stderr` stack capture is a genuine node profiler+debugger.
 

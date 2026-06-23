@@ -1,0 +1,3 @@
+## Resolved mutable: journal-prd-unbounded-growth
+
+rs-plugkit/src/orchestrator/state.rs read_state/write_state is a single small next-step state file (serde_json), no separate journal file found (grep journal/ledger/jsonl in src/ = none). The 2GB overflow is wasm linear-memory / accumulated-allocation growth over an unusually long session, not a literal 2GB text journal. The DEEP growth root needs a multi-GB session to reproduce (cannot witness here); the guardWasmRange fix prevents the BRICK regardless (the read returns a catchable error, orchestrator survives). Deep growth-cap is a separate follow-up requiring repro.

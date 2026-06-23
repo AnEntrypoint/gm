@@ -1,0 +1,3 @@
+## Resolved mutable: wasm-state-read-overflow
+
+ROOT: plugkit-wasm-wrapper.js had TWO unguarded state-read decode paths -- the watcher dispatch (3110-3112: ptr/len from dispatch result -> new Uint8Array WITHOUT guardWasmRange) and the CLI dispatch (3820-3822). The main dispatch_verb path (180) WAS guarded. The diagen 'Start offset -2GB outside buffer' is the raw V8 Uint8Array error from these unguarded paths when the wasm returns an overflowed ptr/len on large state. FIX: added guardWasmRange before both Uint8Array reads -> the watcher try/catch (3170) now writes {ok:false,error:'wasm-memory-read-out-of-bounds'} instead of bricking; orchestrator survives 'any state-reading verb', reboots no longer re-brick.
