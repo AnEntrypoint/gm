@@ -3643,7 +3643,8 @@
   witness: mem-1781608750110 (iter-12 recall-observability fix result) embedded:true graph_edge:true; drain mem-1781608753311 (memorize-prune two-mode spec) embedded:true; AGENTS.md memorize-prune line compressed (single-verb detail drained to store)
 - id: residual-triage-and-push
   scope: Triage every git status --porcelain entry (commit/ignore/revert), then commit + push gm and (if instruction .md edited) rs-plugkit to main. Push is part of COMPLETE; porcelain clean witnessed in its own event before push. rs-plugkit push triggers the cascade that rebuilds wasm with the new served prose.
-  status: pending
+  status: completed
+  witness: 'All worktree entries triaged to commit (real session work: 9 prose surfaces, AGENTS.md, prd/mutables state, disciplines DB, new memorize-fire mem-*.json - all tracked per rule; nothing to revert/ignore). gm git_finalize -> committed 293895bdb + pushed main. rs-plugkit git_finalize -> committed e8924e8 + pushed main (cascade triggered, rebuilds wasm with new served prose). Both via git_finalize (porcelain-gated).'
 - id: ccsniff-banner-glyph-observation
   text: 'Noticing: ccsniff/gmsniff runtime banner emits a decorative arrow glyph in stdout (''2610 copied -> ~/.claude/history-backup''). Glyph-discipline policy says convert on sight, but ccsniff/gmsniff are separate published npm tools not in this working tree (c:\dev\rs-* + gm). blockedBy: external -- record so it is not lost; fix when that repo is in reach. Our own gm/rs-* glyph-discipline scan is zero.'
   blockedBy:
