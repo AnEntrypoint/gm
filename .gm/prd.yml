@@ -5648,4 +5648,5 @@
   witness: 'Read all 7 served prose files (entry/plan/execute/browser/verify/update_docs .md + prompt-submit.txt): each elicits via predicament, ABI explicit only where non-derivable, no meta-description of implicitness, no project-implicivity framing. AGENTS.md:69 is the correctly-scoped durable policy. No prose edit needed.'
 - id: close-implicivity-correction
   text: residual-scan + git_finalize gm (the prune deletes from tracked .gm/rs-learn.db; commit + push so the corrected recall state ships). No instruction-prose .md edits, so no sync-instruction-consts needed. Push is part of COMPLETE.
-  status: pending
+  status: completed
+  witness: git_finalize committed+pushed f195f2c75 (the pruned rs-learn.db + .gm state). No instruction-prose .md edits, so no sync-instruction-consts needed. Remote reflects HEAD.
