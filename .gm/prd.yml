@@ -3578,9 +3578,9 @@
   status: completed
   witness: memorize-fire returned key mem-1781550538525-9-1017 embedded:true graph_edge:true namespace default; residual-scan + git_finalize is the closing dispatch of this VERIFY->COMPLETE walk
 - id: audit-30m-clean
-  text: 'Audit gmsniff+ccsniff last 35m. RESULT: own deviations=0 (CLEAN); foreign=4 all cwd-6836/tv8 chronic (mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction x2, gate-positive). ccsniff git/search/glyph discipline: zero C--dev-gm. 11th consecutive clean fire.'
+  text: Audit gmsniff+ccsniff last 35m. own deviations=0 (gmsniff total 2, both FOREIGN cwd-830e long-gap recall, gate-positive). ccsniff git/search/glyph/bash zero C--dev-gm. Clean own-state; the concurrent prose-implicivity session edits land alongside without tripping own deviations.
   status: completed
-  witness: 'gmsniff --list-deviations --own-only --since 35m: ''total deviations: 0 (own:0 foreign:0)''; --foreign-only: ''4 (own:0 foreign:4) cwd-6836 mid-chain-stall x2 EXECUTE prd_pending 11 + long-gap-no-instruction x2''; ccsniff --git/search/glyph-discipline --since 35m grep dev-gm = empty (clean)'
+  witness: 'bun x gmsniff --list-deviations --since 35m: ''total 2 (own:0 foreign:2)'' -- long-gap-no-instruction + long-gap-retry, both foreign cwd-830e (recall, gate-positive). ccsniff --git/search/glyph/bash-discipline --since 35m grep dev-gm = all clean. Own gm state clean.'
 - id: validate-prior-fire-correction
   text: 'Validate previous commit in practice: the prior fire (38d2466c) corrected the own mid-chain-stall by walking a full chain. Witness via gmsniff --list-sessions: gm claude-loop-iter now shows full P E E V C walk prd:5/5 dev blank = the loop finished work, correction held. Own deviations 0 this window confirms no regression.'
   status: completed
@@ -5630,3 +5630,7 @@
   text: 'memorize-fire the clean-fire result + the watcher-recycle gm-method diagnosis (project-agnostic: watcher deaths after a push-heavy session are wrapper-sha-drift recycles + peer-takeovers, designed self-healing, recovered by re-boot -- not a crash), residual-scan, git_finalize gm. Push is part of COMPLETE.'
   status: completed
   witness: memorize-fire key mem-d71ef90fa58ed2e1-1293 (watcher-recycle gm-method diagnosis, project-agnostic). Clean audit (own 0). gm git_finalize is the closing dispatch (memo JSON + prd/mutables state); rebase-retry co-lands alongside the concurrent prose session.
+- id: validate-and-close-clean
+  text: 'Validate prior commits live: .status.json wrapper_sha 8cffc3e09fb5 (guardWasmRange wrapper installed); injected SKILL.md carries the memo-discipline clause (6cb1fdc4c live). memorize-fire the clean-fire (project-agnostic), residual-scan, git_finalize gm (rebase-retry co-lands with the concurrent session). Push is part of COMPLETE.'
+  status: completed
+  witness: .status.json wrapper_sha 8cffc3e09fb5 (guardWasmRange wrapper installed/running); injected SKILL.md carries the 'memorize gm/rs-* method only -- never other-project specifics' clause (6cb1fdc4c live). Clean-fire memo mem-62acc1fc620e2cbe fired (project-agnostic). gm git_finalize is the closing dispatch; rebase-retry co-lands with the concurrent prose session.
