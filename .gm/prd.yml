@@ -3578,9 +3578,9 @@
   status: completed
   witness: memorize-fire returned key mem-1781550538525-9-1017 embedded:true graph_edge:true namespace default; residual-scan + git_finalize is the closing dispatch of this VERIFY->COMPLETE walk
 - id: audit-30m-clean
-  text: Audit gmsniff+ccsniff last 35m. own deviations=0 (gmsniff total 2, both FOREIGN cwd-830e long-gap recall, gate-positive). ccsniff git/search/glyph/bash zero C--dev-gm. Clean own-state; the concurrent prose-implicivity session edits land alongside without tripping own deviations.
+  text: 'Audit gmsniff+ccsniff last 35m. CLEANEST: gmsniff total 0 (own:0 foreign:0), ccsniff git/search/glyph/bash zero C--dev-gm. Watcher stable (uptime ~35min, recycling settled). Prior commits live: wrapper_sha 8cffc3e09fb5, memo-discipline + steady-state gm-method memos recallable. No correction needed; the audit-loop has converged to clean steady-state. Re-memorize skipped (the steady-state memo mem-62acc1fc620e2cbe exists + content-addressed dedups).'
   status: completed
-  witness: 'bun x gmsniff --list-deviations --since 35m: ''total 2 (own:0 foreign:2)'' -- long-gap-no-instruction + long-gap-retry, both foreign cwd-830e (recall, gate-positive). ccsniff --git/search/glyph/bash-discipline --since 35m grep dev-gm = all clean. Own gm state clean.'
+  witness: 'bun x gmsniff --list-deviations --since 35m: ''total 0 (own:0 foreign:0) rate 0/hr''. ccsniff --git/search/glyph/bash-discipline --since 35m grep dev-gm = all clean. .status.json wrapper_sha 8cffc3e09fb5 + watcher_uptime ~35min (stable). Steady-state gm-method memo mem-62acc1fc620e2cbe in this turn''s recall (live). Cleanest fire; no correction needed.'
 - id: validate-prior-fire-correction
   text: 'Validate previous commit in practice: the prior fire (38d2466c) corrected the own mid-chain-stall by walking a full chain. Witness via gmsniff --list-sessions: gm claude-loop-iter now shows full P E E V C walk prd:5/5 dev blank = the loop finished work, correction held. Own deviations 0 this window confirms no regression.'
   status: completed
