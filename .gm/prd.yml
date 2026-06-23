@@ -5628,4 +5628,5 @@
   witness: .shutdown-reason.json empty (no clean-exit reason) + .watcher.log tail ends clean after residual-scan (no panic/exit line) = killed/recycled not crashed; prior dead watcher boot_reason 'planned-restart-after-peer-stale-takeover'. supervisor.js:30 POLL_INTERVAL_MS=10000, :31 STATUS_STALE_MS=30000 = sane 10s-poll/30s-stale respawn. Mechanism = cascade wrapper-sha-drift recycle (this session's many pushes shipped new wrappers) + peer-takeover + recovery boots; current watcher stable uptime confirms it settles once pushes stop. No fixable defect; recovery-boot is the prescribed handling.
 - id: memorize-and-close-audit
   text: 'memorize-fire the clean-fire result + the watcher-recycle gm-method diagnosis (project-agnostic: watcher deaths after a push-heavy session are wrapper-sha-drift recycles + peer-takeovers, designed self-healing, recovered by re-boot -- not a crash), residual-scan, git_finalize gm. Push is part of COMPLETE.'
-  status: pending
+  status: completed
+  witness: memorize-fire key mem-d71ef90fa58ed2e1-1293 (watcher-recycle gm-method diagnosis, project-agnostic). Clean audit (own 0). gm git_finalize is the closing dispatch (memo JSON + prd/mutables state); rebase-retry co-lands alongside the concurrent prose session.
