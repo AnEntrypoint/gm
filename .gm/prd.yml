@@ -5558,3 +5558,23 @@
   text: memorize-fire the diagnoses+fixes (wasm overflow guard, screenshot recipe, terrain thrashing, journal-growth follow-up, watcher-death noticing), residual-scan, git_finalize gm (wrapper + browser.md) + rs-plugkit (browser.rs). Push is part of COMPLETE.
   status: completed
   witness: memorize-fire key mem-24c0c7b188f54d50-2226; rs-plugkit pushed 2569515 (browser.rs screenshot recipe); browser session 2 closed; shot-test.png artifact removed. gm git_finalize is the closing dispatch (plugkit-wasm-wrapper.js guardWasmRange x2 + browser.md + .gm state).
+- id: prune-other-project-memos
+  text: 'PRUNE the two other-project-specific memos from gm''s default store: mem-1782179190497-2-835 (terrain-false-completion) + mem-24c0c7b188f54d50-2226 (PLUGKIT FIXES, has diagen/terrain specifics). memorize-prune {keys:[...]} deletes text+embedding. Re-scan with another prune {query} for any remaining tv8/diagen/mapspinner-specific memos and prune those too.'
+  status: completed
+  witness: memorize-prune {keys} returned deleted:['mem-1782179190497-2-835','mem-24c0c7b188f54d50-2226'] (terrain-false-completion + PLUGKIT-FIXES-with-diagen/terrain), mode explicit-key, both text+embedding removed from default store.
+- id: rememorize-gm-only-lessons
+  text: 'Re-memorize the gm-ONLY knowledge lost by pruning mem-24c0c7b188f54d50: the guardWasmRange lesson (every new Uint8Array on a wasm-RETURNED ptr/len must guardWasmRange; the watcher+CLI decode paths were unguarded, fixed) + the screenshot recipe (screenshot to a path then Read renders the PNG, never return the Buffer inline) -- NO project names/paths. Also a project-agnostic gm-method insight from the terrain memo: chains can falsely-COMPLETE via self-cancelling re-plans (do X, a later row reverts X, redo) each honestly completed + narrative (unverified) witnesses -- no terrain/tv8 names.'
+  status: completed
+  witness: 're-fired gm-ONLY (project-agnostic) memos: mem-c0648ea429e3ff5b-969 (guardWasmRange ptr/len read-guard invariant + screenshot-to-path-then-Read recipe), mem-0b67e15c928f3e07-839 (false-completion failure mode: self-cancelling re-plans + narrative witnesses) -- the gm-method knowledge preserved with no project names/paths.'
+- id: agentsmd-no-other-project-memos
+  text: 'AGENTS.md hard rule: gm''s default-namespace rs-learn store holds gm/rs-* method, tooling, and invariants ONLY -- never other-project specifics (their file paths, line numbers, prd.yml/mutables.yml contents, app/shader internals). A finding ABOUT a project gm is used ON belongs in THAT project''s own .gm store, not gm''s; scrub project names/paths from gm memos and keep only the generalizable gm-method lesson. The mutable/prd-resolve auto-memo inherits this -- write gm-method witnesses, not other-project state.'
+  status: completed
+  witness: 'AGENTS.md edited (after the ''Detail-heavy caveats live in rs-learn'' rule): added "gm''s recall store ... holds gm/rs-* method, tooling, and invariants ONLY -- never specifics of other projects gm is merely used ON" incl. the auto-memo binding + the classifier-too-brittle note. AGENTS.md 30675/36000 bytes.'
+- id: skillmd-memory-clause
+  text: 'Add the other-project clause to the SKILL.md ''Memory is project-resident'' rule: memorize gm/rs-* method only; never other-project specifics into gm''s store; project findings go to that project''s .gm store. (Classifier code-rejection judged too brittle -- would false-reject gm-method memos citing .gm/prd.yml mechanisms; discipline is the robust enforcement.) No bundle key for SKILL.md; ships via SKILL.md refresh on cascade.'
+  status: completed
+  witness: 'SKILL.md ''Memory is project-resident'' rule extended: ''memorize gm/rs-* method only -- never the specifics of a project gm is merely used ON ... scrub project names/paths ... (binds the mutable-resolve/prd-resolve auto-memo)''. Ships via SKILL.md refresh on cascade.'
+- id: memorize-and-close-memo-discipline
+  text: memorize-fire the discipline rule itself (gm-store = gm/rs-* method only, no other-project specifics) as a present-tense gm rule, residual-scan, git_finalize gm (AGENTS.md + SKILL.md). Push is part of COMPLETE.
+  status: completed
+  witness: 'discipline rule memorized as present-tense gm rule: mem-86503bc7ed0bbc5e-935 (gm recall-store discipline: gm/rs-* method only, no other-project specifics, scrub names/paths, prune foreign memos on sight). gm git_finalize (AGENTS.md + SKILL.md + .gm) is the closing dispatch.'
