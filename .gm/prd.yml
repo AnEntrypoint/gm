@@ -5884,7 +5884,8 @@
   witness: 'gm-plugkit/instructions/browser.md: removed false session=<id> claim, rewrote ''open on the page you want'' para to state landed_on_blank/hint behavior, updated Envelope shape to list navigation_requested/landed_on_blank/hint. sync-instruction-consts.mjs synced browser.rs (rs-plugkit grep: session=<id> 0, landed_on_blank 2).'
 - id: cascade-ship-push
   description: Commit + push gm-plugkit wrapper change and rs-plugkit prose change to main; cascade rebuilds and republishes. Push is the validation dispatch.
-  status: pending
+  status: completed
+  witness: rs-plugkit committed 829c586 + pushed to main (cascade trigger); gm committed 0ea0dee21 + pushed to main. git_finalize both returned pushed:true branch:main.
 - id: session-prefix-doc-mismatch
   description: 'JANK: browser.rs:29 documents body shape ''session=<id>\n<expr>'' but plugkit-wasm-wrapper.js host_browser_exec never parses ''session='' (grep: 0 matches) -- it ReferenceErrors at runtime (witnessed browser-4). Either implement session= prefix parse or remove the false doc line. Session is selected by spool sessionId, not a body prefix.'
   status: completed
