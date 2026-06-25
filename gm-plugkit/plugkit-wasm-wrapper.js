@@ -1062,6 +1062,13 @@ function startManagedBrowser(pw, profileDir) {
     '--disable-default-apps',
     '--disable-gpu-process-crash-limit',
   ];
+  // In containers where unprivileged user namespaces are disabled, Chromium's
+  // sandbox cannot initialize and the remote-debugging port never binds (the CDP
+  // "did not become ready" failure). Opt in to running without the sandbox (plus
+  // the small-/dev/shm workaround common in containers) via GM_BROWSER_NO_SANDBOX=1.
+  if (process.env.GM_BROWSER_NO_SANDBOX === '1') {
+    args.push('--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage');
+  }
   if (headless) {
     args.push('--headless=new');
   } else {
