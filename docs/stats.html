@@ -177,7 +177,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
       }
     };
 
-    const SITE_ROOT = location.href.split('#')[0].split('?')[0].replace(/(?:stats(?:\.html)?|index\.html)?\/?$/, '');
+    const siteCfg = (() => { try { return JSON.parse(document.getElementById('__site__').textContent).site; } catch (e) { return null; } })();
+    const SITE_ROOT = (siteCfg && siteCfg.url ? siteCfg.url.replace(/\/?$/, '/') : location.href.split('#')[0].split('?')[0].replace(/(?:stats(?:\.html)?|index\.html)?\/?$/, ''));
     const API_BASE = `${SITE_ROOT}docs/api`;
     const ENDPOINTS = {
       stars: `${API_BASE}/stars.json`,
