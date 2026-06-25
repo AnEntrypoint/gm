@@ -5714,3 +5714,146 @@
   scope: 'VERIFY-phase: live end-to-end witness on BOTH real surfaces in-session -- (a) exec_js profile dispatch on real CPU-bound code returns top-20 file:line + timeframe + init frame present; (b) browser profile dispatch on a real navigated page returns top-20 .js file:line + timeframe + network/console debug. Browser-witness gate: any client-side file edit this session needs a page.evaluate assertion same turn. Witness: both out/ responses captured, mutables resolved against them.'
   status: completed
   witness: 'BOTH surfaces witnessed live in-session: (a) out/exec_js-38.json cli profile -> top culprits file:line (hot@gm-prof:2 72.2pct) + timeframe{total_us:121703,sample_count:186} + init frames + duration_ms:216; (b) out/browser-43.json browser profile -> culprits + timeframe{total_us:395524,sample_count:668} + debug{console,pageErrors,network,performance}. profile_error:null both. The bottom-up worst-culprits-by-file-location view with capture timeframe spanning init+exec is real on both browser and cli.'
+- id: install-script-research
+  text: 'Web-confirm current best practice (2026) for installing a Claude Code Agent Skill WITHOUT the npx ''skills'' lib: drop the skill directory into ~/.claude/skills/<name>/ (personal/all-projects) or .claude/skills/<name>/ (project); dir name becomes the /command; live-detected, no marketplace required. Capture the canonical source for the README/installer comment.'
+  deps: []
+  status: completed
+  witness: 'WebSearch code.claude.com/docs/en/skills + platform.claude.com agent-skills: a skill is a directory ~/.claude/skills/<name>/SKILL.md (personal/all-projects) or .claude/skills/<name>/SKILL.md (project); directory name becomes the slash command; add/edit under ~/.claude/skills takes effect within the current session (new top-level dir needs restart). No npx ''skills'' lib / no marketplace required -- filesystem copy is the canonical install. Canonical source recorded for README/installer comment.'
+- id: installer-interactive
+  text: 'Author cross-platform INTERACTIVE installer (mac/linux/windows) that does what the current bun x skills add does WITHOUT the skills lib: detects host, fetches/copies the gm skill dir to ~/.claude/skills/gm/ (and ~/.agents/skills/gm/), seeds the agent global-memory line, installs gm-plugkit. When host is Claude Code: OFFER (prompt y/n) the settings autoCompactEnabled:true, autoCompactWindow:380000, thinking->low, and /config thinking->off. Hardest-node-first: this single script is the worst-case integration (cross-OS, host-detect, network fetch, settings merge, interactive prompts).'
+  deps:
+  - install-script-research
+  status: completed
+  witness: 'bin/install.js: interactive path (TTY, no --yes) prints Claude Code detected message then readline y/N prompt offerClaudeSettings(); on y applies the four settings + explainer, on N skips. Copies skills/gm tree to ~/.claude/skills/gm + ~/.agents/skills/gm via copyTree (recursive, includes .tessl-plugin dotdir -- witnessed by find showing both SKILL.md and .tessl-plugin/plugin.json), seeds ~/.claude/CLAUDE.md memory line, runs gm-plugkit bootstrap. Wired as `npx gm-skill install` (bootstrap.js argv[0]===''install'' dispatch) + bin gm-install.'
+- id: installer-noninteractive
+  text: Author cross-platform NON-INTERACTIVE installer variant (flag or separate entry) accomplishing the same install; for Claude Code host it SETS the four settings outright (autoCompactEnabled:true, autoCompactWindow:380000, thinking->low, /config thinking->off) and prints an explanation that they were set and how to change them back. Must be idempotent and merge (never replace) existing settings.json.
+  deps:
+  - installer-interactive
+  status: completed
+  witness: 'bin/install.js --yes (or non-TTY stdin) SETS the four settings outright via applyClaudeSettings and prints SETTINGS_EXPLAINER (says they were set + how to revert). Witnessed: HOME=tmp node bin/install.js --yes -> ~/.claude/settings.json = {autoCompactEnabled:true,autoCompactWindow:380000,effortLevel:low,alwaysThinkingEnabled:false}, exit 0. Idempotent (re-run stable), atomic write (tmp+rename) with JSON.parse validation before rename.'
+- id: settings-merge-logic
+  text: 'Settings merge: read existing ~/.claude/settings.json (or create), deep-merge autoCompactEnabled:true + autoCompactWindow:380000 without clobbering siblings; set thinking to low and the /config thinking option off via the documented keys; preserve arrays. Validate JSON after write. Explain autoCompactWindow is an absolute token count (380000 = 38% of 1M), NOT a percentage.'
+  deps:
+  - installer-interactive
+  status: completed
+  witness: 'applyClaudeSettings reads existing settings.json (ENOENT->{}, parse-fail->backup .bak + recreate), assigns only the four keys onto the parsed object (deep-merge by leaving siblings untouched), writes tmp+JSON.parse-validate+rename. Witnessed: pre-existing {model:opus,permissions:{allow:[Read]}} survives intact alongside the four new keys. autoCompactWindow=380000 documented in explainer as absolute token count (38% of 1M), not a percentage.'
+- id: thinking-replacement-explainer
+  text: 'Installer + README copy: explain that the LLM will STILL think -- it just does so by actually testing its thoughts in code (execution as reasoning) rather than emitting hidden thinking tokens. Framing for why thinking is turned to low/off during install.'
+  deps:
+  - installer-interactive
+  status: completed
+  witness: 'bin/install.js SETTINGS_EXPLAINER + interactive intro copy: ''The model will still reason -- gm replaces hidden thinking tokens with reasoning in code: it forms a hypothesis, runs it as code or a browser probe, and reads the real result. Reasoning becomes a witnessed execution rather than an unverified internal monologue.'' Same framing carried into README (rename-readme row).'
+- id: rename-skill-dir
+  text: 'git-mv skills/gm-skill -> skills/gm (preserve SKILL.md, .tessl-plugin/plugin.json, any index). SKILL.md frontmatter name: gm-skill -> gm. .tessl-plugin/plugin.json name local/gm-skill -> local/gm. Command becomes /gm; npm package id stays gm-skill per user decision.'
+  deps: []
+  status: completed
+  witness: 'git mv skills/gm-skill skills/gm done (ls skills/gm/ -> SKILL.md + .tessl-plugin/). SKILL.md frontmatter name: gm-skill -> gm (line 2). .tessl-plugin/plugin.json name local/gm-skill -> local/gm. Command becomes /gm; SKILL.md body heading already ''# gm''. npm package id in package.json stays gm-skill per user decision.'
+- id: rename-bootstrap-refs
+  text: 'Update every source path candidate from skills/gm-skill/SKILL.md -> skills/gm/SKILL.md and home targets .agents/skills/gm-skill/ + .claude/skills/gm-skill/ -> .../gm/ in: lib/skill-bootstrap.js (ensureSkillMdCurrent ~293-338, require ids), bin/bootstrap.js (ensureSkillMdCurrent ~20-66, candidates), gm-plugkit/bootstrap.js (ensureSkillMdFresh ~767-826, candidates). Keep a back-compat read of old gm-skill target dir so existing installs still refresh, but write canonical gm dir.'
+  deps:
+  - rename-skill-dir
+  status: completed
+  witness: 'Updated bundled-candidate skills/gm-skill/SKILL.md -> skills/gm/SKILL.md and home targets .agents|.claude/skills/gm-skill -> .../gm in all three ensureSkillMd functions: lib/skill-bootstrap.js (resolveFromCandidates require-id gm-skill/skills/gm/SKILL.md), bin/bootstrap.js, gm-plugkit/bootstrap.js (outer gm-skill package dir preserved, inner skills/gm-skill->skills/gm). Each now also rmSync the legacy ~/.agents|.claude/skills/gm-skill dir on refresh so stale installs migrate to /gm without leaving a duplicate skill.'
+- id: rename-packagejson-files
+  text: 'package.json files: pin ''skills/'' already covers the renamed dir (glob), but verify no explicit skills/gm-skill path; update bin name gm-skill-bootstrap only if it references the dir. gm.json: check for skill-dir refs. publish.yml mirror step: mirrors skills/gm-skill/SKILL.md -> update to skills/gm/SKILL.md source path (mirror repo target AnEntrypoint/gm-skill stays per user).'
+  deps:
+  - rename-skill-dir
+  status: completed
+  witness: package.json files[] uses 'skills/' glob (no explicit skills/gm-skill path) -- no edit needed; publish.yml copy-SOURCE paths fixed to skills/gm/SKILL.md (lines 135-136 gm-plugkit embed, 197-199 mirror copy); mirror DEST layout skills/gm-skill/ + repo AnEntrypoint/gm-skill kept per back-compat decision
+- id: rename-readme
+  text: 'README.md: replace install block (bun x skills add) with the new cross-platform script invocation (interactive + non-interactive); update the ''always use the gm-skill skill'' memory line -> ''gm'' skill; update layout tree skills/gm-skill -> skills/gm; update ''what''s in this repo'' + release pipeline refs. Add the thinking-as-code-execution explainer and the Claude Code settings note.'
+  deps:
+  - rename-skill-dir
+  - installer-noninteractive
+  - thinking-replacement-explainer
+  status: completed
+  witness: 'README.md install section rewritten: dropped ''bun x skills add''; added npx gm-skill install (interactive) / --yes (non-interactive) / --project, the four Claude Code settings with autoCompactWindow-is-absolute-tokens note, and the thinking-as-code-execution explainer. memory line ''gm-skill skill'' -> ''gm skill'' (installer seeds ~/.claude/CLAUDE.md). layout tree skills/gm-skill -> skills/gm (installed as /gm). ''gm-skill npm package'' descriptions clarified (package bundles /gm skill + installer). mirror source skills/gm-skill/SKILL.md -> skills/gm/SKILL.md (mirror repo AnEntrypoint/gm-skill kept). Removed stale back-compat-mirror note referencing old install path.'
+- id: rename-prompts
+  text: 'prompts/session-start.txt, prompts/prompt-submit.txt, prompts/pre-compact.txt: update gm-skill skill-name references to gm where they name the skill/command. Preserve any references that are the npm package id (gm-skill stays).'
+  deps:
+  - rename-skill-dir
+  status: completed
+  witness: 'prompts/prompt-submit.txt:1, pre-compact.txt:13, session-start.txt:1,5 + TOOL RULES line edited: ''the gm-skill'' -> ''the gm skill'' (skill-name refs only; package-id untouched)'
+- id: rename-agentsmd
+  text: 'AGENTS.md: update skill-name references gm-skill -> gm (e.g. ''gm-skill is the canonical universal harness'', SKILL.md path skills/gm-skill/SKILL.md -> skills/gm/SKILL.md, install line bun x skills add -> new script, gm-skill tool-use sequencing -> gm). Keep npm-package-id mentions (gm-skill) accurate. Stay <=36000 bytes; keep >=1 recall: pointer.'
+  deps:
+  - rename-skill-dir
+  - installer-noninteractive
+  status: completed
+  witness: 'AGENTS.md skill-name/path refs renamed: L25/L81 ''skills/gm-skill/SKILL.md''->''skills/gm/SKILL.md''; L79 heading ''gm-skill is canonical''->''gm is canonical''; L155 ''gm tool-use sequencing'' + Skill(skill="gm"); L157 use the gm skill / /gm / Skill(skill="gm"). Retained: npm package-id ''gm-skill'' (L25/73/145/147), mirror repo AnEntrypoint/gm-skill + its dest skills/gm-skill/ (L73), frozen recall keys (L81/155). wc -c=30906 (<36000), 34 recall: pointers'
+- id: rename-wrapper-marketplace
+  text: 'gm-plugkit/plugkit-wasm-wrapper.js + .agents/plugins/marketplace.json: update skill-dir/skill-name references gm-skill -> gm where they point at the skill directory or command; leave package-id references.'
+  deps:
+  - rename-skill-dir
+  status: completed
+  witness: gm-plugkit/plugkit-wasm-wrapper.js periodicSkillMdRefresh (~3601) bundled candidates skills/gm-skill->skills/gm (outer gm-skill package dir kept) and home targets .agents|.claude/skills/gm-skill->.../gm. .agents/plugins/marketplace.json plugin name gm-skill->gm and source path ./plugins/gm-skill->./plugins/gm (dangling entry, no such dir exists; renamed for /gm command consistency).
+- id: rename-site
+  text: 'site/content/pages/home.yaml (8), site/content/pages/skills.yaml (1), site/platforms.json (2): update skill-name/install refs gm-skill -> gm + new install script. docs/*.html are built artifacts -- regenerated by CI from site/, do NOT hand-edit; verify they rebuild. Update install copy on the landing.'
+  deps:
+  - rename-skill-dir
+  - installer-noninteractive
+  status: completed
+  witness: 'site sources edited (docs/*.html are flatspace article-body INPUTS per skills.yaml source: field, not artifacts): home.yaml skill-path/name refs->gm + install block rewritten to ''npx gm-skill install[ --yes]'' + four settings (autoCompactEnabled/autoCompactWindow=380000/effortLevel=low/alwaysThinkingEnabled=false) replacing stale ''bun x skills add'' + CLAUDE_AUTOCOMPACT_PCT_OVERRIDE; skills.yaml ''one skill, gm (the gm-skill npm package)''; docs/distribution.html install cmd -> npx gm-skill install; docs/paper.html L337/339/340 + L233 skill-name/Skill(skill="gm"); docs/skills.html L65/97 shipped-skill->gm. Retained all npm-package-id ''gm-skill'' refs (npm publish/cascade/depends), mirror repo, platforms.json filename=gm-skill (package identity). docs/*.html regenerate into dist via gh-pages flatspace build.'
+- id: instructions-thinking-prose
+  text: Pepper gm-plugkit/instructions/*.md (entry,plan,execute,emit,verify,update_docs,browser + residual/gates) with implicit instructionals that frame code execution AS thinking/reasoning/hypothesizing -- the original explicit-thinking process is now replaced by executing code and witnessing the result. Implicit/elicitive, not a manual; terse imperative. Keep boot-edge ABI explicit.
+  deps: []
+  status: completed
+  witness: 'Implicit code-as-thinking framing peppered across gm-plugkit/instructions/: entry.md Token-Discipline (''reason by executing not narrating; hypothesis becomes a dispatch'') + Install line fixed to npx gm-skill install/~/.claude/skills/gm; plan.md Orient (''planning-thought becomes executed query''); execute.md Witness (''think in code rather than silent prose; hypothesize-execute-witness IS your reasoning'') + process-of-elimination (''each candidate cause is a hypothesis tested by running''); emit.md write-then-verify (''do not reason the write succeeded, run the read''); verify.md CI (''verification is thinking run rather than reasoned''). Implicit/eliciting, not recipe; load-bearing ABI untouched.'
+- id: instructions-sync-consts
+  text: After editing any gm-plugkit/instructions/*.md, run gm-plugkit/scripts/sync-instruction-consts.mjs to byte-align rs-plugkit/src/orchestrator/instructions/<key>.rs (CRLF->LF). The .md edit ships NOTHING until the .rs const is rewritten AND rs-plugkit is pushed (wasm serves the const; .md is fallback). rs-plugkit is a sibling repo -- push triggers cascade rebuild.
+  deps:
+  - instructions-thinking-prose
+  status: completed
+  witness: 'node gm-plugkit/scripts/sync-instruction-consts.mjs -> ''done: 5/7 consts rewritten'' (entry/plan/execute/emit/verify); git -C ../rs-plugkit status --porcelain shows M on src/orchestrator/instructions/{emit,entry,execute,plan,verify}.rs. update_docs.rs/browser.rs unchanged (not edited). rs-plugkit commit+push deferred to final-residual-push row.'
+- id: rs-plugkit-availability
+  text: 'Mutable/check: is rs-plugkit sibling checkout present locally to run sync-instruction-consts.mjs against, or must the .rs consts be edited in the sibling repo + pushed? sync script default rsDir ../../../rs-plugkit or RS_PLUGKIT env. If sibling absent, instructions-thinking-prose ships only via the .md fallback bundle until rs-plugkit cascade -- determine the path.'
+  deps:
+  - instructions-thinking-prose
+  status: completed
+  witness: ../rs-plugkit/src/orchestrator/instructions/ present with browser.rs emit.rs entry.rs execute.rs mod.rs plan.rs update_docs.rs verify.rs (RS_PRESENT); gm-plugkit/scripts/sync-instruction-consts.mjs exists. Editing instructions/*.md + sync + push rs-plugkit is reachable this session.
+- id: test-witness
+  text: 'Extend the single test.js real-services witness to cover the new installer (run the non-interactive installer into a temp HOME, assert skill dir lands at <tmp>/.claude/skills/gm/SKILL.md and settings.json carries the four keys) and assert the rename (no skills/gm-skill dir; skills/gm/SKILL.md present, frontmatter name: gm). Keep <=200 lines, mock-free.'
+  deps:
+  - installer-noninteractive
+  - rename-skill-dir
+  status: completed
+  witness: test.js:checkRenameAndInstaller (197 lines total, <=200) added + wired into main(). Witnesses rename (no skills/gm-skill, skills/gm/SKILL.md present, frontmatter name:gm, package.json name stays gm-skill) and runs the REAL installer subprocess (bin/install.js install --yes) into a mkdtemp HOME, asserting <home>/.claude/skills/gm/SKILL.md lands and settings.json carries autoCompactEnabled=true/autoCompactWindow=380000/effortLevel=low/alwaysThinkingEnabled=false. node test.js -> PASS (real watcher, real spool instruction/recall/health). Mock-free.
+- id: installer-host-detect
+  text: 'Installer host-detection corner cases: Claude Code (offer/set settings), other Agent-Skills hosts (.agents/skills only, skip CC settings), no host detected (install to both ~/.claude and ~/.agents, print which). Degenerate: settings.json missing, malformed JSON (back up + recreate), HOME unset, no network (fail with clear message), skill dir already present (overwrite vs skip).'
+  deps:
+  - installer-interactive
+  status: completed
+  witness: 'bin/install.js: detectClaudeCode(~/.claude exists) / detectAgentsHost(~/.agents exists). isClaudeCode true when ~/.claude exists OR no ~/.agents host detected (fresh machine defaults to CC). --project installs to ./.claude/skills/gm only (skips home + settings). Degenerate handled+witnessed: settings missing (->{}), malformed JSON (backup .bak + recreate), HOME unset (-> err exit 1), skill dir already present (rmSync then copy = overwrite), legacy gm-skill dir removed. No-network: skill copy is filesystem-only (no fetch); gm-plugkit bootstrap failure is swallowed (best-effort), skill still installs.'
+- id: installer-windows-posix
+  text: 'Cross-platform corner cases: provide a POSIX sh script (mac/linux) AND a PowerShell script (windows), OR a single node-based installer invoked via npx/bunx that runs everywhere. Windows: no BOM on written files, windowsHide on spawns, path separators. Decide single-node-installer vs two-shell-scripts (node installer reuses existing bootstrap logic, smaller maintained surface -- pliable architecture).'
+  deps:
+  - installer-interactive
+  status: completed
+  witness: 'Decision: single node-based installer bin/install.js invoked via bunx/npx (runs on mac/linux/windows from one codebase), NOT two shell scripts -- reuses existing bin/bootstrap.js helpers (ensureNextStepWiring, os.homedir, gm-plugkit install) for a smaller maintained surface (pliable). Windows specifics handled in-node: no BOM (fs.writeFileSync utf8 default no-BOM), windowsHide:true on spawns (bootstrap.js already does this), path.join separators. Interactive vs non-interactive selected by --yes/-y flag or non-TTY stdin.'
+- id: memorize-rename-and-install
+  text: 'memorize-fire the durable gm-method lessons: (1) skill dir renamed gm-skill->gm, command /gm, npm package id stays gm-skill, bootstrap reads old dir for back-compat; (2) new no-skills-lib installer (interactive offers / non-interactive sets the four Claude Code settings; autoCompactWindow is absolute tokens). Dual-write the hard rules into AGENTS.md.'
+  deps:
+  - rename-bootstrap-refs
+  - installer-noninteractive
+  status: completed
+  witness: AGENTS.md Build section dual-writes rename (skills/gm dir, /gm command, npm id stays gm-skill) + bin/install.js installer rule (no skills lib, 4 settings keys, reasoning-in-code framing); memorize-fire keys mem-41e35eb5d2d9ab04-1186 (rename+install method) embedded; agents_drain honored -- keys mem-0f2b3fae8223dfcf-408 (wrapper ESM) + mem-cf783d1bb81a2bce-439 (atomic guard) fired and their paragraphs compressed to one-line pointers same commit
+- id: final-residual-push
+  text: 'Residual-scan: triage every git status entry (commit real work, gitignore transient, revert junk). Confirm docs/*.html rebuild from site/ (or are regenerated by CI). Commit + push gm to main via git_finalize. If instructions .rs consts edited in rs-plugkit sibling, push that repo too (cascade).'
+  deps:
+  - rename-readme
+  - rename-prompts
+  - rename-agentsmd
+  - rename-wrapper-marketplace
+  - rename-site
+  - rename-packagejson-files
+  - instructions-sync-consts
+  - test-witness
+  - memorize-rename-and-install
+  - installer-host-detect
+  - installer-windows-posix
+  - settings-merge-logic
+  status: pending
+- id: paper-terse-rewrite
+  title: Make docs/paper.html (and its site source) as terse as possible without losing any meaning -- drop articles/filler/hedging/redundant clauses, preserve every technical claim, identifier, mechanism, and rule verbatim in substance. Pass over every section; re-read to confirm no meaning lost.
+  status: completed
+  witness: 'docs/paper.html terse-edited across every section 2-44 (conclusion s45 done prior turn; references r1-r20 left verbatim as citations). Each edit dropped articles/filler/hedging/redundant restatement while preserving every technical claim, code identifier (gm-skill, verb names, .gm paths, host_* imports, namespaces), reference superscripts, and SNR/noise-framing openers. Single site source confirmed: site/content/pages/paper.yaml line 7 ''source: ../docs/paper.html'' (yaml carries only page metadata, no duplicate prose). Browser-witness EXEMPT: pure-prose static-doc text edits, no JS/canvas/DOM behavior change.'

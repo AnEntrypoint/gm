@@ -132,8 +132,8 @@ jobs:
           fi
           # Embed SKILL.md into gm-plugkit so ensureSkillMdFresh finds it
           # without depending on gm-skill being installed as a sibling.
-          cp skills/gm-skill/SKILL.md gm-plugkit/SKILL.md
-          echo "[done] Embedded skills/gm-skill/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
+          cp skills/gm/SKILL.md gm-plugkit/SKILL.md
+          echo "[done] Embedded skills/gm/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
           cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}
@@ -194,9 +194,9 @@ jobs:
           git remote add origin "https://github.com/${REPO}.git"
 
           mkdir -p skills/gm-skill
-          cp "${GITHUB_WORKSPACE}/skills/gm-skill/SKILL.md" skills/gm-skill/SKILL.md
-          if [ -f "${GITHUB_WORKSPACE}/skills/gm-skill/index.js" ]; then
-            cp "${GITHUB_WORKSPACE}/skills/gm-skill/index.js" skills/gm-skill/index.js
+          cp "${GITHUB_WORKSPACE}/skills/gm/SKILL.md" skills/gm-skill/SKILL.md
+          if [ -f "${GITHUB_WORKSPACE}/skills/gm/index.js" ]; then
+            cp "${GITHUB_WORKSPACE}/skills/gm/index.js" skills/gm-skill/index.js
           fi
 
           cat > README.md <<'EOF'

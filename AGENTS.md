@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-This repo IS the published `gm-skill` npm package: repo root = package root, no factory, no build step generating a separate output dir. `skills/gm-skill/SKILL.md` is the entry point; orchestration logic lives in rs-plugkit, served on demand via the `instruction` verb. Agent-facing prose (phase instruction + gate/residual text) is externalized to an editable `gm-plugkit/instructions/` bundle, so editing prose is a gm-plugkit republish with no Rust rebuild. Mechanism (prose.rs per-key fallback to compiled const; sync-instruction-consts.mjs byte-aligns the .md and the rs-plugkit consts) in rs-learn (`recall: string-externalization project`).
+This repo IS the published `gm-skill` npm package: repo root = package root, no factory, no build step generating a separate output dir. `skills/gm/SKILL.md` is the entry point; orchestration logic lives in rs-plugkit, served on demand via the `instruction` verb. Agent-facing prose (phase instruction + gate/residual text) is externalized to an editable `gm-plugkit/instructions/` bundle, so editing prose is a gm-plugkit republish with no Rust rebuild. Mechanism (prose.rs per-key fallback to compiled const; sync-instruction-consts.mjs byte-aligns the .md and the rs-plugkit consts) in rs-learn (`recall: string-externalization project`).
 
 ## WASM-only
 
@@ -30,9 +30,9 @@ The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` unde
 
 **Every wasm host-import `extern "C"` block carries `#[link(wasm_import_module = "env")]`** -- in rs-plugkit AND every dep crate linked into the cdylib (rs-learn) AND any sibling building wasm (rs-exec, rs-search); miss it anywhere and the cascade goes dark (local builds stay green, only Linux CI link fails). Incident + host-fn enumeration in rs-learn (`recall: cascade outage wasm import module link`, `recall: wasm host-import link-module trap`).
 
-**`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** -- silent throw under bun ESM. Incident + mechanics in rs-learn (`recall: wrapper require not defined under bun`).
+**`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** (rs-learn: `recall: wrapper require not defined under bun`).
 
-**Every single-instance/lock guard is atomic** (O_EXCL / atomic-rename), never check-then-act; count plugkit processes by executable Name. Mechanics + incident in rs-learn (`recall: supervisor churn TOCTOU atomic guard`).
+**Every single-instance/lock guard is atomic** (O_EXCL / atomic-rename), never check-then-act (rs-learn: `recall: supervisor churn TOCTOU atomic guard`).
 
 ## Spool dispatch ABI
 
@@ -70,15 +70,17 @@ Record only non-obvious technical caveats that cost multiple runs to discover; r
 
 ## Build
 
-No build step; the repo root is the published artifact. `npm publish` from root publishes `gm-skill`; `package.json` `files:` pins the shipped paths. `AnEntrypoint/gm-skill` is a back-compat mirror receiving only `skills/gm-skill/SKILL.md` per release. Canonical install: `bun x skills add AnEntrypoint/gm`.
+No build step; the repo root is the published artifact. `npm publish` from root publishes `gm-skill` (npm package id is permanent; only the skill DIRECTORY is `skills/gm`, so the command is `/gm`). `package.json` `files:` pins the shipped paths. `AnEntrypoint/gm-skill` is a back-compat mirror receiving only `skills/gm/SKILL.md` per release.
+
+`bin/install.js` is the canonical installer -- no npx `skills` library, no marketplace. It copies `skills/gm` into `<home>/.claude/skills/gm/` (personal) or `.claude/skills/gm/` (`--project`); the dir name IS the `/command`. Non-interactive (`-y`/`--yes` or non-TTY) SETS four Claude Code settings (`autoCompactEnabled:true`, `autoCompactWindow:380000` -- an ABSOLUTE token count = 38% of 1M, not a percentage -- `effortLevel:"low"`, `alwaysThinkingEnabled:false`) and explains the revert; interactive OFFERS them. The reasoning-in-code framing it prints is load-bearing: the LLM still thinks, it tests its thoughts in code (execution as reasoning). `test.js checkRenameAndInstaller()` is the structural guard (asserts no `skills/gm-skill`, package id stays `gm-skill`, installer lands the skill + writes the four keys into an isolated temp HOME).
 
 ## The agent is the orchestrator; plugkit is the brain it drives
 
 Plugkit is the stateful library the agent drives by dispatching verbs -- it does not act autonomously, advance phases in the background, or validate transitions while the agent waits. Every state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`; the dispatch ledger is ground truth, so zero dispatches with a narrated PLAN->COMPLETE walk = a fabricated walk. The PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE state machine lives natively in rs-plugkit (phase/mutables/memorize/transition-legality as data + gate checks), but the agent triggers every operation; plugkit is synchronous from the agent's view, so polling the output dir instead of reading the response file is the canonical misuse. File paths + verb enumeration in rs-learn (`recall: rs-plugkit state-machine internals`).
 
-## gm-skill is the canonical universal harness
+## gm is the canonical universal harness
 
-`skills/gm-skill/SKILL.md` is the single source of truth; one skill shipped, legacy 15-platform fanout retired+archived. Canonical install: `bun x skills add AnEntrypoint/gm`. Detail in rs-learn (`recall: legacy gm-skill variants retired`).
+`skills/gm/SKILL.md` is the single source of truth; one skill shipped, legacy 15-platform fanout retired+archived. Canonical install: `bun x skills add AnEntrypoint/gm`. Detail in rs-learn (`recall: legacy gm-skill variants retired`).
 
 ## Tool surface is plugkit-only
 
@@ -152,9 +154,9 @@ Push to any rs-* sibling triggers `cascade.yml` -> rs-plugkit `release.yml` -> s
 
 Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI layer calls `checkDispatchGates()` before tool execution to gate Write/Edit/git. Marker set (`prd.yml, mutables.yml, needs-gm, gm-fired-<sessionId>, residual-check-fired`) + SpoolDispatcher mechanism in rs-learn (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
 
-**gm-skill tool-use sequencing**: `Skill(skill="gm-skill")` clears the needs-gm gate. One shipped skill, no subagent variant. Marker mechanics in rs-learn (`recall: gm-skill tool-use sequencing mechanics`).
+**gm tool-use sequencing**: `Skill(skill="gm")` clears the needs-gm gate. One shipped skill, no subagent variant. Marker mechanics in rs-learn (`recall: gm-skill tool-use sequencing mechanics`).
 
-**The skill is the driver, not a post-hoc witness**: when a request carries the standing instruction to use gm-skill (every `/loop` fire, any prompt naming `/gm-skill`), the FIRST working action is `Skill(skill="gm-skill")`, and the skill prose drives the chain PLAN->COMPLETE. Dispatching spool verbs directly without first entering the skill executes the work outside the skill the user asked to drive it; entering only at the end to confirm terminal state does NOT satisfy the instruction. The boot probe (`cat .gm/exec-spool/.status.json` ...) is prescribed by the skill and may precede invocation; everything that mutates state happens inside the skill-driven session.
+**The skill is the driver, not a post-hoc witness**: when a request carries the standing instruction to use the gm skill (every `/loop` fire, any prompt naming `/gm`), the FIRST working action is `Skill(skill="gm")`, and the skill prose drives the chain PLAN->COMPLETE. Dispatching spool verbs directly without first entering the skill executes the work outside the skill the user asked to drive it; entering only at the end to confirm terminal state does NOT satisfy the instruction. The boot probe (`cat .gm/exec-spool/.status.json` ...) is prescribed by the skill and may precede invocation; everything that mutates state happens inside the skill-driven session.
 
 **Dead-watcher recovery uses `bun x gm-plugkit@latest spool`, never direct-node boot** (mechanism in rs-learn: `recall: dead-watcher recovery bun x not direct-node`).
 

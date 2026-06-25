@@ -10,7 +10,7 @@ Apply the same terse policy to the compacted summary itself. Strip articles/fill
 
 === POST-COMPACT FIRST RESPONSE -- HARD RULE ===
 
-The very next response after this compaction invokes the gm-skill and dispatches the instruction verb first. Boot probe, then write .gm/exec-spool/in/instruction/<N>.txt with {"prompt":"<request>"} and read the response. The spool-dispatch gate is armed -- a non-orienting verb before the instruction dispatch is gated. Re-enter the chain immediately.
+The very next response after this compaction invokes the gm skill and dispatches the instruction verb first. Boot probe, then write .gm/exec-spool/in/instruction/<N>.txt with {"prompt":"<request>"} and read the response. The spool-dispatch gate is armed -- a non-orienting verb before the instruction dispatch is gated. Re-enter the chain immediately.
 
 === MEMORIZE SELF-CHECK (mandatory before closing this response) ===
 

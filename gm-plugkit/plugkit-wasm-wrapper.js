@@ -3598,9 +3598,9 @@ async function runSpoolWatcher(instance, spoolDir) {
     try {
       const skillCandidates = [
         path.join(wrapperDir, 'SKILL.md'),
-        path.join(wrapperDir, '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
-        path.join(wrapperDir, '..', '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
-        path.join(wrapperDir, '..', 'skills', 'gm-skill', 'SKILL.md'),
+        path.join(wrapperDir, '..', 'gm-skill', 'skills', 'gm', 'SKILL.md'),
+        path.join(wrapperDir, '..', '..', 'gm-skill', 'skills', 'gm', 'SKILL.md'),
+        path.join(wrapperDir, '..', 'skills', 'gm', 'SKILL.md'),
       ];
       const bundledPath = skillCandidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
       if (!bundledPath) return;
@@ -3608,8 +3608,8 @@ async function runSpoolWatcher(instance, spoolDir) {
       const bundledHash = crypto.createHash('sha256').update(bundled).digest('hex');
       const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
       const targets = [
-        path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
-        path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+        path.join(home, '.agents', 'skills', 'gm', 'SKILL.md'),
+        path.join(home, '.claude', 'skills', 'gm', 'SKILL.md'),
       ];
       const refreshed = [];
       for (const target of targets) {

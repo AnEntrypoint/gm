@@ -768,9 +768,9 @@ function ensureSkillMdFresh() {
   try {
     const candidates = [
       path.join(__dirname, 'SKILL.md'),
-      path.join(__dirname, '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
-      path.join(__dirname, '..', '..', 'gm-skill', 'skills', 'gm-skill', 'SKILL.md'),
-      path.join(__dirname, '..', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(__dirname, '..', 'gm-skill', 'skills', 'gm', 'SKILL.md'),
+      path.join(__dirname, '..', '..', 'gm-skill', 'skills', 'gm', 'SKILL.md'),
+      path.join(__dirname, '..', 'skills', 'gm', 'SKILL.md'),
     ];
     const bundledPath = candidates.find(p => {
       try { return fs.existsSync(p); } catch (_) { return false; }
@@ -787,9 +787,15 @@ function ensureSkillMdFresh() {
     const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
     const home = process.env.HOME || process.env.USERPROFILE || require('os').homedir();
     const targets = [
-      path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
-      path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(home, '.agents', 'skills', 'gm', 'SKILL.md'),
+      path.join(home, '.claude', 'skills', 'gm', 'SKILL.md'),
     ];
+    for (const legacy of [
+      path.join(home, '.agents', 'skills', 'gm-skill'),
+      path.join(home, '.claude', 'skills', 'gm-skill'),
+    ]) {
+      try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
+    }
     const refreshed = [];
     for (const target of targets) {
       try {

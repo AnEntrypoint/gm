@@ -41,11 +41,11 @@ The five phases are scheduling; the filter is the engine on every candidate, gat
 
 ## Token Discipline
 
-English describing intent is liability when code can encode it; comments are liability when names + structure encode the same; duplication that must sync is liability. Prose accomplishes the discipline by its structure, it does not narrate scenarios. Recognize the closure anti-shape by structure (a claim composed in prose displacing a dispatch). The response body is not a mutation surface.
+English describing intent is liability when code can encode it; comments are liability when names + structure encode the same; duplication that must sync is liability. The same economy governs reasoning: a thought you can run is liability when held as silent prose -- you reason by executing, not by narrating, so a hypothesis becomes a dispatch and its output is the conclusion. Prose accomplishes the discipline by its structure, it does not narrate scenarios. Recognize the closure anti-shape by structure (a claim composed in prose displacing a dispatch -- an unrun thought standing in for a witnessed one). The response body is not a mutation surface.
 
 ## Install
 
-`bun x skills add AnEntrypoint/gm-skill` -> `~/.agents/skills/<name>/SKILL.md` symlinked into `~/.claude/skills/<name>/`.
+`npx gm-skill install` copies the skill directory into `~/.claude/skills/gm/` (and `~/.agents/skills/gm/`), installed as `/gm`; `--yes` is the non-interactive form. No `skills` library.
 
 ## Bootstrap
 

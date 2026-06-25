@@ -1,5 +1,5 @@
 ---
-name: gm-skill
+name: gm
 description: Plugkit-served instruction stream. Three-layer admission (witness, single-writer, direction) over every possible mutation; effort unbounded, never gated on cost. Closure on first emit; partial = non-monotonic.
 allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *)
 ---

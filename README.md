@@ -14,19 +14,40 @@ disclaimer: this is extremely opinionated. it will block bash, redirect your too
 
 ## install
 
-```
-bun x skills add AnEntrypoint/gm -y -g
-```
+A Claude Code Agent Skill is just a directory at `~/.claude/skills/<name>/SKILL.md` (personal, all projects) or `.claude/skills/<name>/SKILL.md` (one project). The directory name becomes the slash command. No marketplace, no `npx skills` library -- the installer copies the directory into place.
 
-then add this line to your agent's global memory / system prompt:
+Interactive (offers Claude Code settings):
 
 ```
-always use the gm-skill skill for everything, always fan out subagents
+npx gm-skill install
 ```
 
-you need bun installed: `curl -fsSL https://bun.sh/install | bash`
+Non-interactive (sets Claude Code settings outright, prints how to revert):
 
-> The legacy `AnEntrypoint/gm-skill` repo is now a back-compat mirror that only contains `skills/gm-skill/SKILL.md`. New installs should prefer `AnEntrypoint/gm`.
+```
+npx gm-skill install --yes
+```
+
+Project-local instead of home (`./.claude/skills/gm`):
+
+```
+npx gm-skill install --project
+```
+
+The skill installs as `/gm`. On Claude Code the installer also offers (interactive) or sets (`--yes`):
+
+- `autoCompactEnabled: true`
+- `autoCompactWindow: 380000` -- an absolute token count (38% of a 1M window), not a percentage
+- `effortLevel: "low"`
+- `alwaysThinkingEnabled: false`
+
+The model still reasons -- gm replaces hidden thinking tokens with reasoning in code: form a hypothesis, run it as code or a browser probe, read the real result. Reasoning becomes a witnessed execution rather than an unverified internal monologue. Change any of these back in `~/.claude/settings.json` or via `/config` at any time.
+
+then add this line to your agent's global memory / system prompt (the installer seeds it into `~/.claude/CLAUDE.md` for you):
+
+```
+always use the gm skill for everything, always fan out subagents
+```
 
 ## what's in this repo
 
@@ -34,7 +55,7 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 
 ```
 gm/
-|-- skills/gm-skill/   <- the skill (SKILL.md + index.js, ~12 lines of prose)
+|-- skills/gm/        <- the skill (SKILL.md), installed as /gm
 |-- bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
 |-- lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
 |-- agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
@@ -50,7 +71,7 @@ gm/
 
 The two npm packages this repo publishes:
 
-- **`gm-skill`**: the skill bundle, installed via `bun x skills`
+- **`gm-skill`**: the npm package that bundles the `/gm` skill + installer (`npx gm-skill install`)
 - **`gm-plugkit`**: the wasm-wrapper daemon, dependency of `gm-skill`
 
 ## how it works
@@ -92,7 +113,7 @@ A push to `main` triggers `.github/workflows/publish.yml`:
 1. auto-bump `gm.json::version` + `package.json::version` + `gm-plugkit/package.json::version`
 2. publish `gm-skill` to npm from repo root (no build step)
 3. publish `gm-plugkit` to npm from `gm-plugkit/`
-4. mirror `skills/gm-skill/SKILL.md` to the `AnEntrypoint/gm-skill` repo (back-compat)
+4. mirror `skills/gm/SKILL.md` to the `AnEntrypoint/gm-skill` repo (back-compat)
 
 `.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
 

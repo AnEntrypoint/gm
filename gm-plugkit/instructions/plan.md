@@ -6,7 +6,7 @@ L1 baseline + L2 covering family. You loaded prior memory on entry via `instruct
 
 ## Orient
 
-First non-trivial dispatch = a single-message parallel fan-out of `recall` + `codesearch` against the request's nouns. Hits are your baseline; misses delimit fresh ground to investigate. Skip orient and you commit to an unobserved envelope.
+First non-trivial dispatch = a single-message parallel fan-out of `recall` + `codesearch` against the request's nouns. This is where planning-thought becomes executed query rather than recalled-from-memory assumption: what you would otherwise assume about the codebase, you instead hypothesize and look up. Hits are your baseline; misses delimit fresh ground to investigate. Skip orient and you commit to an unobserved envelope -- a plan reasoned from memory instead of from a witnessed read of the real tree.
 
 ## Cover
 

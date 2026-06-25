@@ -468,3 +468,15 @@
   question: Where in the timeout=/url=/capture= prefix parse chain (browser ~1993-2031) and the exec_js host (~1845-1888) does a new 'profile' sub-mode parse cleanly so default byte path stays unchanged?
   witness: pending Read+Edit of wrapper, parse-order verified by witness dispatch with no prefix returning identical legacy shape
   witness_evidence: 'Read plugkit-wasm-wrapper.js 1995-2031: browser parses timeout=(1995) -> url=(2004) -> captureMatch regex /^(?:capture|profile)[ \t]*\n/ at 2019 ALREADY matches ''profile'', so profile must split out of that single branch into capture-vs-profile. exec_js host 1845-1888 has NO body prefix; add opts.profile flag wrapping spawned node code in inspector Session, default (no flag) path 1880-1888 byte-identical.'
+- id: thinking-low-config-keys
+  text: 'Exact settings keys for ''thinking to low'' and ''/config thinking option off''. update-config schema shows alwaysThinkingEnabled (boolean). Need the documented key/value for thinking-effort=low and the thinking on/off /config option. Witness: settings schema or claude-code-guide.'
+  status: witnessed
+  witness_evidence: 'WebSearch code.claude.com/docs/en/model-config: thinking effort is settings.json key effortLevel with values low|medium|high|xhigh (user ''thinking to low'' -> effortLevel:''low''). Thinking on/off is alwaysThinkingEnabled boolean -- set false to disable (user ''/config thinking option off'' -> alwaysThinkingEnabled:false). autoCompactEnabled (boolean) + autoCompactWindow (absolute token count, 380000) are the user-stated schema keys. Installer writes these four to ~/.claude/settings.json via deep-merge.'
+- id: skill-command-name-source
+  text: 'Confirm the /command name derives from the skill DIRECTORY name vs SKILL.md frontmatter name -- so renaming dir to gm yields /gm. Witness: Claude Code skills docs.'
+  status: witnessed
+  witness_evidence: 'WebSearch code.claude.com/docs/en/skills: a skill is a directory ~/.claude/skills/<name>/SKILL.md (personal) or .claude/skills/<name>/SKILL.md (project); the DIRECTORY name becomes the slash command; SKILL.md frontmatter requires name+description; add/edit/remove under ~/.claude/skills takes effect within the current session without restart (new top-level dir needs restart). Renaming dir skills/gm-skill->skills/gm yields /gm. No marketplace/npx lib required.'
+- id: rs-plugkit-sibling-present
+  text: 'Whether rs-plugkit is checked out as a local sibling so sync-instruction-consts.mjs can write the .rs consts, or instructions changes must be pushed to the rs-plugkit repo separately. Witness: filesystem check of ../rs-plugkit and the sync script rsDir default.'
+  status: witnessed
+  witness_evidence: Bash ls ../rs-plugkit -> SIBLING-PRESENT; src/orchestrator/instructions/{entry,plan,execute,emit,verify,update_docs,browser,mod}.rs present. sync-instruction-consts.mjs rsDir defaults to here/../../../rs-plugkit (from gm-plugkit/scripts/ == gm/../rs-plugkit), or RS_PLUGKIT_DIR. So sync-instruction-consts.mjs can write the .rs consts locally; rs-plugkit must then be committed+pushed to trigger cascade wasm rebuild.

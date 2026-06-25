@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
+const os = require('os');
 
 const ROOT = process.cwd();
 const SPOOL = path.join(ROOT, '.gm', 'exec-spool');
@@ -16,21 +17,18 @@ function nextId(verb) { return `test-${process.pid}-${++SEQ}-${verb}`; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; } }
 
+function alive(st, maxAge) {
+  if (!(st && st.pid && (Date.now() - (st.ts || 0)) < maxAge)) return false;
+  try { process.kill(st.pid, 0); return true; } catch (_) { return false; }
+}
+
 async function ensureWatcher() {
-  let st = readJson(STATUS);
-  if (st && st.pid && (Date.now() - (st.ts || 0)) < 15000) {
-    try { process.kill(st.pid, 0); return; } catch (_) {}
-  }
-  const child = cp.spawn('bun', ['x', 'gm-plugkit@latest', 'spool'], {
-    cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true, shell: true,
-  });
-  child.unref();
+  if (alive(readJson(STATUS), 15000)) return;
+  cp.spawn('bun', ['x', 'gm-plugkit@latest', 'spool'],
+    { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true, shell: true }).unref();
   const t0 = Date.now();
   while (Date.now() - t0 < 60000) {
-    st = readJson(STATUS);
-    if (st && st.pid && (Date.now() - (st.ts || 0)) < 10000) {
-      try { process.kill(st.pid, 0); return; } catch (_) {}
-    }
+    if (alive(readJson(STATUS), 10000)) return;
     await sleep(500);
   }
   throw new Error('watcher boot timeout');
@@ -144,6 +142,25 @@ function checkUpdateWarningWired() {
   console.log('update-warning-wired guard ok');
 }
 
+function checkRenameAndInstaller() {
+  assert(!fs.existsSync(path.join(ROOT, 'skills', 'gm-skill')), 'skills/gm-skill must not exist after rename');
+  const skillMd = path.join(ROOT, 'skills', 'gm', 'SKILL.md');
+  assert(fs.existsSync(skillMd), 'skills/gm/SKILL.md missing');
+  assert(/^name:\s*gm\s*$/m.test(fs.readFileSync(skillMd, 'utf8').split(/\r?\n/).slice(0, 12).join('\n')), 'SKILL.md frontmatter name must be gm');
+  assert(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).name === 'gm-skill', 'npm package id must stay gm-skill');
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-install-'));
+  try {
+    cp.execFileSync(process.execPath, [path.join(ROOT, 'bin', 'install.js'), 'install', '--yes'],
+      { env: Object.assign({}, process.env, { HOME: tmpHome, USERPROFILE: tmpHome }), stdio: 'ignore', timeout: 25000 });
+  } catch (e) { if (e.code !== 'ETIMEDOUT') throw e; }
+  assert(fs.existsSync(path.join(tmpHome, '.claude', 'skills', 'gm', 'SKILL.md')), 'installer must land skill at <home>/.claude/skills/gm/SKILL.md');
+  const s = JSON.parse(fs.readFileSync(path.join(tmpHome, '.claude', 'settings.json'), 'utf8'));
+  assert(s.autoCompactEnabled === true && s.autoCompactWindow === 380000 && s.effortLevel === 'low' && s.alwaysThinkingEnabled === false,
+    'installer must set autoCompactEnabled=true, autoCompactWindow=380000, effortLevel=low, alwaysThinkingEnabled=false');
+  fs.rmSync(tmpHome, { recursive: true, force: true });
+  console.log('rename+installer guard ok (skills/gm, package gm-skill, skill + 4 settings keys)');
+}
+
 function checkAgentsMdBudget() {
   const CEILING = 36000;
   const abs = path.join(ROOT, 'AGENTS.md');
@@ -161,25 +178,19 @@ async function main() {
   checkWasmNotPublished();
   checkNoTestFilesShipped();
   checkUpdateWarningWired();
+  checkRenameAndInstaller();
   checkAgentsMdBudget();
   await ensureWatcher();
   console.log('watcher alive');
-
   const inst = await dispatch('instruction', { prompt: 'test integration probe' });
-  assert(inst.ok, 'instruction ok');
-  assert(inst.data && typeof inst.data === 'object', 'instruction data is object');
+  assert(inst.ok && inst.data && typeof inst.data === 'object', 'instruction ok + data object');
   console.log('instruction ok phase=' + (inst.data.phase || '?'));
-
   const rec = await dispatch('recall', { query: 'spool dispatch architecture' });
-  assert(rec.ok, 'recall ok');
-  assert(Array.isArray(rec.data.hits), 'recall hits array');
-  assert(rec.data.hits.length > 0, 'recall hits non-empty for spool dispatch');
+  assert(rec.ok && Array.isArray(rec.data.hits) && rec.data.hits.length > 0, 'recall ok + non-empty hits');
   console.log('recall ok hits=' + rec.data.hits.length);
-
   const health = await dispatch('health', {});
   assert(health.ok, 'health ok');
   console.log('health ok version=' + (health.data.version || '?'));
-
   console.log('PASS');
 }
 

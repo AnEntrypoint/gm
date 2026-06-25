@@ -16,7 +16,7 @@ The `git_push` verb is the only admissible push surface, any repo, any cwd; it r
 
 ## CI
 
-The push IS the validation dispatch. Local proof covers one platform; the matrix covers all. Red = a divergent observation that holds the trajectory until you name the cause and push green; toolchain skew is an observation to converge, not stop.
+Verification is thinking run rather than reasoned: the question "is this correct?" is not argued in prose, it is executed -- the real test, the real matrix, the real page answer it. The push IS the validation dispatch. Local proof covers one platform; the matrix covers all. Red = a divergent observation that holds the trajectory until you name the cause and push green; toolchain skew is an observation to converge, not stop.
 
 ## Integration witness
 

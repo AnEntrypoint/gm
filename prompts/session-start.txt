@@ -1,8 +1,8 @@
-BLOCKING REQUIREMENT -- READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the gm-skill (the single shipped skill). Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking it. This is non-negotiable. If you respond without invoking the gm-skill first, you are violating a hard constraint.
+BLOCKING REQUIREMENT -- READ THIS FIRST: Your VERY FIRST action on EVERY user message MUST be to invoke the gm skill (the single shipped skill). Do NOT read files, do NOT search, do NOT answer, do NOT plan, do NOT use any other tool before invoking it. This is non-negotiable. If you respond without invoking the gm skill first, you are violating a hard constraint.
 
 === TOOL RULES ===
 
-Skill tool: invoke the gm-skill by name. Never use the Agent tool to load skills.
+Skill tool: invoke the gm skill by name. Never use the Agent tool to load skills.
 
 Every capability with a plugkit verb routes through the spool, never a platform-native tool:
   code/file/symbol search -> codesearch verb (.gm/exec-spool/in/codesearch/<N>.txt)

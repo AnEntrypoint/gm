@@ -20,8 +20,8 @@ function log(msg) {
 function ensureSkillMdCurrent(wrapperDir) {
   try {
     const candidates = [
-      path.join(wrapperDir, '..', 'skills', 'gm-skill', 'SKILL.md'),
-      path.join(wrapperDir, '..', '..', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(wrapperDir, '..', 'skills', 'gm', 'SKILL.md'),
+      path.join(wrapperDir, '..', '..', 'skills', 'gm', 'SKILL.md'),
       path.join(wrapperDir, '..', 'SKILL.md'),
     ];
     const bundledPath = candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
@@ -31,9 +31,15 @@ function ensureSkillMdCurrent(wrapperDir) {
     const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
     const home = os.homedir();
     const targets = [
-      path.join(home, '.agents', 'skills', 'gm-skill', 'SKILL.md'),
-      path.join(home, '.claude', 'skills', 'gm-skill', 'SKILL.md'),
+      path.join(home, '.agents', 'skills', 'gm', 'SKILL.md'),
+      path.join(home, '.claude', 'skills', 'gm', 'SKILL.md'),
     ];
+    for (const legacy of [
+      path.join(home, '.agents', 'skills', 'gm-skill'),
+      path.join(home, '.claude', 'skills', 'gm-skill'),
+    ]) {
+      try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
+    }
     const refreshed = [];
     for (const target of targets) {
       try {
@@ -663,6 +669,10 @@ module.exports = { bootstrap, getWasmPath, cacheRoot, obsEvent, killRunningDaemo
 
 if (require.main === module) {
   const argv = process.argv.slice(2);
+  if (argv[0] === 'install') {
+    require('./install.js');
+    return;
+  }
   bootstrap({ silent: false })
     .then(p => { process.stdout.write(p + '\n'); process.exit(0); })
     .catch(err => {

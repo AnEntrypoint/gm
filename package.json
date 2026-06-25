@@ -23,7 +23,8 @@
   },
   "main": "bin/bootstrap.js",
   "bin": {
-    "gm-skill-bootstrap": "./bin/bootstrap.js"
+    "gm-skill-bootstrap": "./bin/bootstrap.js",
+    "gm-install": "./bin/install.js"
   },
   "files": [
     "skills/",
@@ -33,6 +34,7 @@
     "lang/",
     "scripts/",
     "bin/bootstrap.js",
+    "bin/install.js",
     "bin/gm-validate.js",
     "bin/gm-shell-validate.js",
     "bin/plugkit.sha256",

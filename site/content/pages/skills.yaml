@@ -1,5 +1,5 @@
 id: skills
 title: skills
-description: gm (glootius maximus) ships one skill, gm-skill, a 12-line entry point that is maximal signal density, every harness, minimal prose, highest signal per token. You dispatch plugkit's instruction verb each turn to read phase prose, orchestration state, and guardrails; you are the state machine, plugkit is the durable memory and gate you drive. What used to be a fourteen-skill chain is now a single dispatch surface.
+description: gm (glootius maximus) ships one skill, gm (the gm-skill npm package), a 12-line entry point that is maximal signal density, every harness, minimal prose, highest signal per token. You dispatch plugkit's instruction verb each turn to read phase prose, orchestration state, and guardrails; you are the state machine, plugkit is the durable memory and gate you drive. What used to be a fourteen-skill chain is now a single dispatch surface.
 layout: article
 source: ../docs/skills.html

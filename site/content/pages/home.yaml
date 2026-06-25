@@ -22,9 +22,9 @@ features:
     - name: "a state machine the agent has to walk"
       desc: "PLAN, EXECUTE, EMIT, VERIFY, COMPLETE lives in rs-plugkit as native rust. four verbs (transition, mutable-resolve, memorize-fire, phase-status) drive the agent. the harness asks plugkit what phase it's in and what's still unknown. there is no skip button. out-of-order action and premature closure are the loudest noise an agent makes; the gate removes both. a written PRD is your authorization for the agent to stop asking and start doing."
     - name: "one skill, every harness"
-      desc: "skills/gm-skill/SKILL.md is the single skill shipped as the gm-skill npm package. install it into any harness that loads claude-style skill directories: claude code, gemini cli, opencode, codex, kilo, copilot cli, vscode, cursor, zed, jetbrains, antigravity, windsurf. same skill, same orchestration, zero per-platform drift. add behavior once in skills/gm-skill/ and every harness inherits it on the next install."
+      desc: "skills/gm/SKILL.md is the single skill shipped as the gm-skill npm package, installed as /gm. install it into any harness that loads claude-style skill directories: claude code, gemini cli, opencode, codex, kilo, copilot cli, vscode, cursor, zed, jetbrains, antigravity, windsurf. same skill, same orchestration, zero per-platform drift. add behavior once in skills/gm/ and every harness inherits it on the next install."
     - name: "plugkit-only tool surface"
-      desc: "gm-skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. an agent inventing a tool that does not exist is pure noise; one surface, audited, removes it. missing capability becomes a new verb, not a skill-side escape hatch."
+      desc: "the gm skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. an agent inventing a tool that does not exist is pure noise; one surface, audited, removes it. missing capability becomes a new verb, not a skill-side escape hatch."
     - name: "every unknown is resolved by running code"
       desc: "exec:<lang> for proofs, exec:codesearch for whereabouts, exec:recall for what we already learned. \"I think this should work\" is physically blocked at the hook layer. an unverified assertion is noise dressed as signal; the agent runs the check, reads the output, and writes it as evidence."
     - name: "covering family of bounded subsets"
@@ -44,24 +44,27 @@ features:
 quickstart:
   heading: install
   lines:
-    - { kind: "cmt", text: "# install the one skill globally into your agent host" }
-    - { kind: "cmd", text: "bun x skills add AnEntrypoint/gm -y -g" }
+    - { kind: "cmt", text: "# install the one skill (/gm) -- copies the dir into ~/.claude/skills/gm, no skills library" }
+    - { kind: "cmd", text: "npx gm-skill install" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# then add this line to your agent's global memory / system prompt:" }
-    - { kind: "cmt", text: "# always use the gm-skill skill for everything, always fan out subagents" }
+    - { kind: "cmt", text: "# non-interactive (sets the claude code settings below outright, prints how to revert):" }
+    - { kind: "cmd", text: "npx gm-skill install --yes" }
     - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# recommended ~/.claude/settings.json for claude code:" }
-    - { kind: "cmt", text: '# { "env": { "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "62" },' }
-    - { kind: "cmt", text: '#   "alwaysThinkingEnabled": false,' }
-    - { kind: "cmt", text: '#   "effortLevel": "low" }' }
-    - { kind: "cmt", text: "# token austerity, made concrete: every setting below trades noise for signal." }
-    - { kind: "cmt", text: "# autocompact at 62% keeps PRD + mutables in-context longer;" }
-    - { kind: "cmt", text: "# thinking off + low effort because plugkit is the reasoning surface," }
-    - { kind: "cmt", text: "# so the model's tokens go to the work, not to narrating around it." }
+    - { kind: "cmt", text: "# the installer seeds this line into ~/.claude/CLAUDE.md for you:" }
+    - { kind: "cmt", text: "# always use the gm skill for everything, always fan out subagents" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# claude code settings it offers (interactive) or sets (--yes):" }
+    - { kind: "cmt", text: '#   autoCompactEnabled: true' }
+    - { kind: "cmt", text: '#   autoCompactWindow: 380000   (absolute token count, 38% of a 1M window, not a percent)' }
+    - { kind: "cmt", text: '#   effortLevel: "low"' }
+    - { kind: "cmt", text: '#   alwaysThinkingEnabled: false' }
+    - { kind: "cmt", text: "# the model still reasons -- gm replaces hidden thinking tokens with reasoning in code:" }
+    - { kind: "cmt", text: "# form a hypothesis, run it as code or a browser probe, read the real result." }
+    - { kind: "cmt", text: "# thinking becomes witnessed execution, not an unverified internal monologue." }
 examples:
   heading: read further
   items:
     - { name: "the complete discipline", desc: "lifecycle control, governance, and operational hard rules, every section read as one more way to lift signal over noise. one paper, every rule the agent runs under.", cta: "open paper", href: "./paper/" }
     - { name: "every rust crate", desc: "rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit. what each does, why it exists, what it kills if it misbehaves.", cta: "open crates", href: "./crates/" }
-    - { name: "the one skill", desc: "gm-skill is the single shipped skill, a 12-line entry point that names the agent as the state machine. each turn you dispatch the instruction verb to read the active phase, the pending mutables, and the guardrails. plugkit is the durable memory and gate you drive, not an autonomous worker.", cta: "open skills", href: "./skills/" }
+    - { name: "the one skill", desc: "gm is the single shipped skill, a 12-line entry point that names the agent as the state machine. each turn you dispatch the instruction verb to read the active phase, the pending mutables, and the guardrails. plugkit is the durable memory and gate you drive, not an autonomous worker.", cta: "open skills", href: "./skills/" }
     - { name: "distribution", desc: "the cascade pipeline that puts a fresh gm-skill on npm every time anyone touches a rust crate.", cta: "open distribution", href: "./distribution/" }
