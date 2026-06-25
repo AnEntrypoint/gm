@@ -6203,4 +6203,10 @@
 - id: fix-stats-api-base-pathprefix
   subject: stats.html API_BASE='/docs/api' is root-absolute and 404s under the GitHub Pages /gm/ project subpath -- live /gm/stats fetches https://anentrypoint.github.io/docs/api/*.json (missing /gm), all 5 endpoints 404 so every metric stays '--'. Derive API_BASE relative to the deployed page so it resolves to /gm/docs/api/ on Pages and /docs/api/ at root.
   acceptance: 'browser page.evaluate on live /gm/stats after deploy: api fetches 200 (network shows /gm/docs/api/*.json), metrics show real numbers not ''--'', >=1 data row'
-  status: pending
+  status: completed
+  witness: 'resolved by ba95fcf23: API_BASE now derived from embedded #__site__ site.url; live witness on /gm/stats/ confirms all 5 endpoints fetch /gm/docs/api/*.json and return 200, metrics show real numbers not ''--''.'
+- id: witness-stats-live-after-deploy
+  subject: after ba95fcf23 Pages deploy completes, browser page.evaluate on live https://anentrypoint.github.io/gm/stats/ must show all 5 api fetches 200 (network shows /gm/docs/api/*.json with /gm), summary cards real numbers not '--', fetchError null, charts drawn
+  acceptance: 'live witness: fetchError null, openIssues numeric, network shows /gm/docs/api path'
+  status: completed
+  witness: 'live browser page.evaluate on https://anentrypoint.github.io/gm/stats/ after ba95fcf23 deploy: network shows all 5 fetches to /gm/docs/api/*.json (with /gm subpath, no 404), fetchError null, apiKeys all 5 present, cards real (openIssues 1, commitsPerWeek 1011, contributors 7, avgMergeTime 0d, npmTotal text), 3 charts drawn, pageErrors empty. Root cause was location.href path-stripping during transient SPA-routing state computing root-absolute /docs/api; fix sources canonical deployed base from embedded site.url (timing-independent).'
