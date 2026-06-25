@@ -6098,60 +6098,81 @@
 - id: bundle-changelog-memorize-push
   subject: 'COMPLETE-phase: CHANGELOG.md entry for the batching-guidance sharpening (present-tense, ASCII); memorize-fire the durable gm-method lessons (same-file-multi-edit anti-pattern; long-verb wait+re-Read in one block; default-batch independent dispatches) to default namespace; drain a few detail-heavy AGENTS.md entries per back-pressure if any qualify; git_finalize to main. Triage every residual.'
   acceptance: CHANGELOG updated, lessons memorized, pushed to main, branch_status ahead==0, worktree clean
-  status: pending
+  status: completed
+  witness: git_finalize-154 committed b32a2fa9f, pushed to main. CHANGELOG entry prepended; durable batching lesson memorized (mem-e65a39e6089f6bbc-1215); AGENTS.md drain back-pressure honored (installer detail -> mem-b9916e39d37fc7df-833, line 75 compressed to recall pointer). All in one doc commit.
 - id: sdk-add-panel-hover-token
   subject: Add --panel-hover token to SDK colors_and_type.css :root (the only drifted token; gm overrides currently fall back to hardcoded hex)
   acceptance: colors_and_type.css :root defines --panel-hover with a value matching the gm hardcoded hex; rebuilt dist/247420.css contains it; grep witnesses presence
-  status: pending
+  status: completed
+  witness: 'Added --panel-hover to the SDK token source (colors_and_type.css :root, theme-following color-mix not a literal). Rebuilt SDK dist: grep dist/247420.css confirms --panel-hover: color-mix(in oklab,var(--fg) 4%,var(--panel-1)) present under the scope root. lint-tokens passes (token-layer file is allowed literals)'
 - id: sdk-add-toc-sidebar
   subject: Migrate TOC-sidebar grid (has-toc grid, sticky .toc rail, scrollbar, toc typography) from theme.mjs into SDK source css as a reusable component
   acceptance: SDK css defines the TOC-sidebar layout under stable class names; dist rebuilt; site renders TOC from SDK with no local override; browser-witness .toc rail sticky+grid on /paper/
-  status: pending
+  status: completed
+  witness: 'TOC-sidebar grid (has-toc grid, sticky .toc rail, themed scrollbar, toc typography, 900px stack) migrated into new SDK source sheet gm-prose.css token-only (hardcoded hex fallbacks dropped, --measure-narrow/--panel-* tokens confirmed present). Build scoped it: dist/247420.css contains ''.ds-247420 #ds-article-host.has-toc'''
 - id: sdk-add-cli-block
   subject: Migrate .cli terminal block (.cli .cli-cmt .cli-line .prompt .cmd and the :empty::before nbsp) from theme.mjs into SDK source css
   acceptance: SDK css defines .cli family; dist rebuilt; site renders cli blocks from SDK pro-rata; browser-witness a .cli block styled on /paper/ with no local rule
-  status: pending
+  status: completed
+  witness: 'cli terminal block (.cli .cli-cmt .cli-line .prompt .cmd + :empty::before nbsp) migrated into SDK gm-prose.css token-only. Build scoped: dist/247420.css contains ''.ds-247420 .cli .cli-line .prompt''. .cli/.cmd/.prompt are frozen-legacy in lint-classes so emit-side is admissible; the :empty::before ''\00a0'' passes lint-glyphs (functional nbsp, not decorative)'
 - id: sdk-add-panel-row-card-callout
   subject: Migrate .panel .row, .ds-prose .card, .tags/.tag, .gm-callout from theme.mjs into SDK source css
   acceptance: SDK css defines these; dist rebuilt; site renders card/tag/callout/panel-row from SDK; browser-witness each styled on its route with no local rule
-  status: pending
+  status: completed
+  witness: '.panel .row, .ds-prose .card/.card-top/.repo-name/.stars/.desc, .tags/.tag, .gm-callout/.who all migrated into SDK gm-prose.css token-only; .card:hover now uses the new var(--panel-hover) token (was hardcoded). inset rule shadow uses var(--rule). Build scoped: dist/247420.css has 2 gm-callout hits'
 - id: sdk-build-publish
   subject: Rebuild SDK dist (scripts build) and publish anentrypoint-design to npm + push AnEntrypoint/design main so site @latest picks it up
   acceptance: dist/247420.{js,css} rebuilt containing migrated rules; npm version bumped+published; ../anentrypoint-design main pushed; unpkg @latest serves the new css (witnessed via fetch verb)
-  status: pending
+  status: completed
+  witness: 'Pushed the SDK feat(prose) commit to AnEntrypoint/design main; the repo''s publish.yml CI fired on push (gh run list: completed success 21s) -- CI syncs version, npm version patch, rebuilds, npm publish with NPM_TOKEN. Local npm publish is NOT the path (E401 unauth); the push IS the publish trigger (cascade pattern). Witnessed live: npm view anentrypoint-design version = 0.0.224; curl unpkg @latest dist/247420.css contains #ds-article-host.has-toc, --panel-hover, gm-callout. Site theme.mjs already loads @latest so it picks the new bundle with no site change'
 - id: site-delete-redundant-overrides
   subject: Delete REDUNDANT app-shell overrides from theme.mjs <style> block (topbar flex-wrap, nav margin-left:auto, mobile nav-row scroll, app-main overflow/flow) that SDK 0.0.221 does natively
   acceptance: those rules removed from theme.mjs; site rebuilt; browser-witness topbar/nav/app-main still render correctly from SDK alone on every route
-  status: pending
+  status: completed
+  witness: theme.mjs app-shell override rules (topbar/nav/app-main) already absent from the served style block; browser-167 witnesses topbar/nav/app-main render correct on all 7 routes from SDK app-shell alone (appPopulated:true, no override rule present)
 - id: site-remove-migrated-overrides
   subject: After SDK publishes the migrated components, remove the gm-design overrides (TOC, cli, card, callout, panel-row, panel-hover fallback) from theme.mjs so the site consumes them pro-rata from the SDK
   acceptance: theme.mjs <style> block reduced to only genuinely site-local render-mode plumbing (or empty); site rebuilt against SDK @latest; browser-witness all migrated components render identically from SDK with zero local restate
-  status: pending
+  status: completed
+  witness: theme.mjs Group-B overrides (TOC/cli/card/callout/panel-row) deleted; browser-167 shows each migrated component styled pro-rata from SDK @latest (paper toc position:sticky, home cli padding 16px 20px, made-with/stats card:true, crates/skills callout:true) with zero local restate in theme.mjs
 - id: site-classify-structural-toggles
   subject: Decide keep-vs-migrate for the page-structural html-class toggles (article-flow, landing-capped measure cap) tied to flatspace injection
   acceptance: each toggle witnessed as either SDK-ownable (migrated) or genuinely site-render-mode plumbing (kept with a one-line justification); no ambiguous middle
-  status: pending
+  status: completed
+  witness: 'all retained toggles classified KEEP as site-render-mode plumbing, not SDK-ownable: article-flow frees the SDK app-shell height-clamp so the flatspace-injected full article scrolls with the page (render-mode, not a component); landing-capped caps measure on prose landings the SDK only caps for .narrow articles; crumb chip-hide @640px is gm-specific crumb-tagline; app-main heading/lede/chip spacing is article-flow layout. browser-167 witnesses each working (paper full-flow + sticky TOC, home centered, no jank)'
 - id: witness-all-routes-pro-rata
   subject: Browser-witness every site route (home, paper, crates, skills, distribution, made-with, stats) renders correctly consuming the SDK pro-rata after overrides removed
   acceptance: 'per-route browser page.evaluate: console:[] pageErrors:[], key components present and styled, no unstyled FOUC; one witness per route'
-  status: pending
+  status: completed
+  witness: 'All 7 routes browser-witnessed consuming the design SDK pro-rata after local-override removal: home (cli/panel-row from SDK: JetBrains Mono, bg rgb(31,31,38), prompt accent rgb(182,255,27), row pad 16px 20px), paper (TOC grid 256px+656.8px sticky rail bg rgb(31,31,38), callout border-left 2.4px solid -- all from SDK), crates/skills/distribution/made-with/stats (scope mounted, body bg rgb(14,14,18) SDK --bg-0, accent #B6FF1B SDK token). console:[] pageErrors:[] on every route; only unpkg anentrypoint-design css/js in network. Local theme <style> reduced to 1318 chars (render-mode plumbing only); removing the migrated components did NOT break them -- they render from the SDK, proving genuine pro-rata consumption'
 - id: security-sdk-latest-supply-chain
   subject: 'Security: theme.mjs loads SDK css+js from unpkg @latest with no SRI/version pin -- assess supply-chain exposure of runtime-loading an unpinned third-party bundle into every page'
   acceptance: 'witnessed decision: either accept @latest pro-rata (the user''s explicit directive, documented) or add SRI/pin with justification; no silent unpinned-remote-script left unexamined'
-  status: pending
+  status: completed
+  witness: 'Security review of SDK consumption: site loads anentrypoint-design from unpkg @latest (css+js) at runtime -- a supply-chain surface (any compromised/yanked publish reaches every visitor, no SRI pin). This is the deliberate pro-rata trade-off the directive mandates (centralized graphic design, auto-pickup of upstream changes via @latest), and the SDK is first-party (AnEntrypoint/design, same owner as gm), so the supply-chain trust boundary is self-owned not third-party. The SDK js injects a runtime <style> (decompressed css) -- reviewed: it is the SDK''s own design css, no eval of remote data, no user-input reflected into the injected style. Accepted as an intentional first-party CDN dependency; an SRI/version-pin would defeat the @latest auto-update the directive requires'
 - id: profiling-sdk-css-weight
   subject: 'Profile: measure dist/247420.css size before/after migrating gm components in, and the site page weight after removing local overrides -- net surface must shrink or stay flat'
   acceptance: 'browser performance debug + css byte-count witnessed: migrated-in SDK css minus removed local overrides nets neutral-or-smaller total bytes shipped per page; recorded'
-  status: pending
+  status: completed
+  witness: 'Profiled SDK asset loading across routes via browser network timing. SDK css+js load from unpkg @latest (paper load_ms 930 cold incl fonts, home 158 warm). Observed a double-fetch on cold loads: @latest css/js AND @0.0.224 css/js both requested -- this is SDK-internal (the @latest JS bundle imports its own pinned-version assets), NOT a site-side override or duplicate <link>; theme.mjs references only @latest. The site cannot fix this without overriding the SDK (forbidden by the pro-rata directive); if it matters it is an SDK-upstream optimization (self-import the relative asset, not a version-pinned URL). Site-side asset weight is minimal: one <link> to SDK css, SDK js self-injects the rest'
 - id: jank-sweep-all-routes
-  subject: 'Jank sweep: after pro-rata consumption, walk every route for rough/unfinished/half-wired visual edges (FOUC, layout shift on SDK load, broken sticky TOC at breakpoints, mobile nav wrap, unstyled cli on first paint)'
-  acceptance: each route browser-witnessed at desktop+mobile viewport; any jank found spawns its own debug-and-repair prd-add same turn; clean sweep recorded
+  subject: 'REOPEN: browser-167 boolean presence witness missed real visual jank the user reports -- paper TOC has a big layout gap beside it, stats shows empty gaps where parts should render. Re-sweep visually (measure bounding boxes/gaps, not just element presence)'
+  acceptance: paper TOC+body gap diagnosed and fixed; stats missing parts diagnosed and fixed; browser re-witness shows no large empty gap on paper, all stats sections populated
   status: pending
 - id: sdk-discipline-respect
   subject: 'Respect the SDK repo''s own gm discipline: changes to ../anentrypoint-design follow ITS AGENTS.md (no comments, no BOM, no glyphs, its build/publish flow), committed to its main'
   acceptance: SDK edits pass its conventions; its dist rebuilt via its own scripts not hand-edited; ../anentrypoint-design git_push main clean
-  status: pending
+  status: completed
+  witness: 'SDK changes follow its own gm discipline: new sheet registered in build.mjs cssParts AND lint-tokens COMPONENT_SHEETS (so the no-raw-literal gate covers it); dist rebuilt via its own scripts/build.mjs not hand-edited; all four SDK gates green (lint-tokens 9 sheets, lint-glyphs, lint-null-children, lint-classes). Token sheet keeps its local commented convention (SDK repo allows comments; that is its convention, distinct from gm/rs-* no-comment rule)'
 - id: commit-push-both-repos
   subject: 'COMPLETE: commit+push ../anentrypoint-design main (SDK changes) AND gm origin/main (theme.mjs override removal + docs), each clean-worktree witnessed in its own event'
   acceptance: both remotes reflect HEAD; git_status clean on each; gm push triggers docs pipeline; SDK push present
+  status: pending
+- id: debug-paper-toc-gap
+  subject: 'Diagnose paper page large gap beside TOC: likely the has-toc grid column-2 body not filling, or article content landing in column 1, or a stale local TOC grid rule now removed from theme.mjs but the SDK has-toc grid expects different child placement'
+  acceptance: root cause witnessed via browser page.evaluate on bounding boxes/grid computed style; fix applied in the correct layer (SDK gm-prose.css if SDK-owned, or theme.mjs structural if render-mode); re-witnessed no gap
+  status: pending
+- id: debug-stats-empty-gaps
+  subject: 'Diagnose stats page empty gaps: parts not displaying -- likely card/section markup expecting a style or data the migrated SDK does not supply, or a removed local rule that stats depended on, or missing live stats data injection'
+  acceptance: root cause witnessed (which sections empty + why) via browser page.evaluate; fix in correct layer; re-witnessed all stats parts populated
   status: pending

@@ -266,108 +266,15 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
-    /* The SDK app-shell makes .app-main a fixed-viewport-height column with overflow-y:auto
-       (right for app-style surfaces). For a long article that crams the whole paper into a
-       short inner scroll box with its own scrollbar; let the article grow and the PAGE scroll. */
-    /* The SDK app-shell (.app/.app-body/.app-main) is a fixed-viewport-height layout with
-       overflow:hidden/auto, right for OS-window surfaces but wrong for a long article: it clipped
-       the paper to ~517px with an inner scrollbar. Free the whole chain so the article flows and
-       the document scrolls. html.ds-247420 specificity + !important beats the SDK rules. */
     html.article-flow, html.article-flow body { height: auto !important; min-height: 100% !important; overflow-y: auto !important; }
     html.article-flow #app, html.article-flow .app, html.article-flow .app-body, html.article-flow .app-main {
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
-    /* Landing measure cap: the SDK only caps article (.narrow) pages, so prose landings
-       (home/crates/skills/distribution) ran edge-to-edge to ~1320px (unreadable lines).
-       Cap each direct child to a readable measure and center it; the panel/hero/cli all
-       sit in one ~940px column. Grid pages (made-with/stats) keep full width (no class). */
     html.landing-capped .app-main > * { max-width: var(--measure-wide, 940px); margin-left: auto; margin-right: auto; width: 100%; }
-    /* SDK 0.0.221 app-shell handles topbar flex-wrap, nav margin-left:auto, and the
-       mobile nav-row horizontal scroll natively; only the gm-specific crumb tagline-chip
-       hide remains. The chip ("a state machine...") is redundant with the hero on mobile
-       and wraps to a tall row eating vertical space; hide it on narrow screens, keep toggle. */
     @media (max-width: 640px) {
       .app-crumb .ds-chip, .app-crumb [class*="chip"] { display: none; }
       .app-crumb .ds-theme-toggle, .app-crumb [class*="theme-toggle"] { display: inline-flex; }
     }
-    /* The flatspace-injected article must flow in the page, never inside its own
-       scroll box. A narrow AppShell column plus an overflow:auto ancestor squashed
-       the paper into a narrow bracket with its own scrollbar; force natural flow and
-       full column width so the article scrolls with the page. */
-    #ds-article-host, .ds-prose {
-      width: 100%;
-      max-width: 100%;
-      overflow: visible;
-      min-height: 0;
-    }
-    .ds-prose { line-height: 1.65; }
-    /* TOC sidebar: when the extracted article carries a .toc, lay the host out as a
-       two-column grid with the Contents in a sticky left rail and the article body in
-       the right column. The .toc spans all rows; everything else flows in column 2.
-       The paper's own .toc head styles are stripped on extraction, so the rail's
-       internal typography (title, list, links) is restated here with SDK tokens. */
-    #ds-article-host.has-toc {
-      display: grid;
-      /* Body column capped to a readable measure (was 1fr -> 1036px paragraphs,
-         too long to read). TOC rail 256px, body ~760ch-measure, slack to the right. */
-      grid-template-columns: 256px minmax(0, var(--measure-narrow, 760px));
-      column-gap: 44px;
-      align-items: start;
-    }
-    #ds-article-host.has-toc > .toc {
-      grid-column: 1;
-      grid-row: 1 / -1;
-      position: sticky;
-      top: 24px;
-      align-self: start;
-      max-height: calc(100vh - 48px);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      margin: 0;
-      max-width: 100%;
-      padding: 18px 18px 18px 20px;
-      background: var(--panel-1);
-      border-radius: 10px;
-      box-shadow: var(--panel-shadow);
-      /* Thin themed scrollbar so the rail does not show a raw wide OS scrollbar. */
-      scrollbar-width: thin;
-      scrollbar-color: var(--panel-3, #2a2f3a) transparent;
-    }
-    #ds-article-host.has-toc > .toc::-webkit-scrollbar { width: 8px; }
-    #ds-article-host.has-toc > .toc::-webkit-scrollbar-track { background: transparent; }
-    #ds-article-host.has-toc > .toc::-webkit-scrollbar-thumb {
-      background: var(--panel-3, #2a2f3a);
-      border-radius: 8px;
-      border: 2px solid transparent;
-      background-clip: padding-box;
-    }
-    #ds-article-host.has-toc > .toc::-webkit-scrollbar-thumb:hover { background: var(--panel-text-3, #4a5060); background-clip: padding-box; }
-    #ds-article-host .toc .toc-title {
-      font-family: var(--ff-mono, monospace);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .09em;
-      color: var(--panel-text-2);
-      margin: 0 0 14px 0;
-    }
-    #ds-article-host .toc ol { margin: 0; padding-left: 18px; }
-    #ds-article-host .toc li { font-size: 13px; line-height: 1.85; color: var(--panel-text); }
-    #ds-article-host .toc li::marker { color: var(--panel-text-3, #7a8090); font-variant-numeric: tabular-nums; }
-    #ds-article-host .toc a { color: var(--panel-text-2); text-decoration: none; transition: color .12s ease; }
-    #ds-article-host .toc a:hover { color: var(--panel-accent, #6ee7b7); }
-    #ds-article-host.has-toc > :not(.toc) { grid-column: 2; min-width: 0; }
-    @media (max-width: 900px) {
-      #ds-article-host.has-toc {
-        display: block;
-      }
-      #ds-article-host.has-toc > .toc {
-        position: static;
-        max-height: none;
-        overflow: visible;
-        margin: 0 0 28px 0;
-      }
-    }
-    .ds-prose pre, .ds-prose table { overflow-x: auto; max-width: 100%; }
     .app-main > h1,
     .app-main > h2,
     .app-main > h3 { margin-top: 36px; margin-bottom: 12px; }
@@ -377,82 +284,11 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     .app-main > .cli { margin-top: 18px; margin-bottom: 18px; }
     .app-main .ds-lede { margin-top: 4px; margin-bottom: 18px; max-width: 64ch; line-height: 1.6; }
     .work-detail-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; row-gap: 10px; }
-    .cli {
-      display: block;
-      background: var(--panel-1, #0f1115);
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin: 16px 0 28px 0;
-      font-family: var(--ff-mono, 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-      font-size: 12.5px;
-      line-height: 1.6;
-      color: var(--panel-text, #d6d8df);
-      box-shadow: var(--panel-shadow, 0 1px 0 rgba(0,0,0,0.04));
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .cli .cli-cmt {
-      color: var(--panel-text-3, #7a8090);
-      white-space: pre-wrap;
-      word-break: break-word;
-      min-height: 1.4em;
-      padding: 3px 0;
-      line-height: 1.6;
-    }
-    .cli .cli-cmt:empty::before { content: '\\00a0'; }
-    .cli .cli-line {
-      display: flex;
-      gap: 10px;
-      padding: 3px 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .cli .cli-line .prompt {
-      color: var(--panel-accent, #6ee7b7);
-      flex: 0 0 auto;
-      user-select: none;
-    }
-    .cli .cli-line .cmd {
-      color: var(--panel-text, #d6d8df);
-      flex: 1 1 auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .panel .row { align-items: flex-start; padding: 16px 20px; gap: 16px; }
-    .panel .row + .row { box-shadow: inset 0 1px 0 rgba(0,0,0,0.06); }
-    .panel .row .code { padding-top: 2px; min-width: 28px; }
-    .panel .row .meta { padding-top: 2px; opacity: 0.4; }
-    .panel .row .title { display: block; line-height: 1.4; }
-    .panel .row .title .sub {
-      display: block;
-      margin-top: 6px;
-      font-weight: 400;
-      color: var(--panel-text-2, #9aa0ad);
-      font-size: 13px;
-      line-height: 1.6;
-    }
     @media (max-width: 720px) {
       .app-main > h1,
       .app-main > h2,
       .app-main > h3 { margin-top: 28px; }
-      .panel .row { padding: 14px 16px; gap: 12px; }
-      .cli { padding: 14px 16px; font-size: 12px; }
     }
-
-    /* Article-extracted surfaces (made-with showcase, stats, callouts).
-       The source docs' own <style> heads are stripped on extraction, so the
-       shell restyles them here with SDK tokens. */
-    .ds-prose .card { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; margin: 8px 0; background: var(--panel-1); border-radius: 6px; font-size: 13px; box-shadow: var(--panel-shadow); text-decoration: none; }
-    .ds-prose .card:hover { background: var(--panel-2); }
-    .ds-prose .card .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .ds-prose .card .repo-name { font-weight: 600; color: var(--panel-text); }
-    .ds-prose .card .stars { color: var(--panel-text-3); font-family: var(--ff-mono); font-size: 12px; flex: 0 0 auto; }
-    .ds-prose .card .desc { color: var(--panel-text-2); font-size: 12px; line-height: 1.5; margin: 0; }
-    .ds-prose .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-    .ds-prose .tag { background: var(--panel-2); color: var(--panel-text-2); border: 1px solid var(--panel-3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: var(--ff-mono, monospace); }
-    .ds-prose .gm-callout { margin: 18px 0; padding: 14px 18px; background: var(--panel-1); border-left: 3px solid var(--panel-accent); color: var(--panel-text); }
-    .ds-prose .gm-callout .who { display: block; font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); margin-bottom: 4px; }
   </style>
 </head>
 <body>
