@@ -177,7 +177,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
       }
     };
 
-    const API_BASE = '/docs/api';
+    const SITE_ROOT = location.href.split('#')[0].split('?')[0].replace(/(?:stats(?:\.html)?|index\.html)?\/?$/, '');
+    const API_BASE = `${SITE_ROOT}docs/api`;
     const ENDPOINTS = {
       stars: `${API_BASE}/stars.json`,
       metrics: `${API_BASE}/metrics.json`,

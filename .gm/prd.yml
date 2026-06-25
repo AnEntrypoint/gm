@@ -6193,8 +6193,14 @@
 - id: verify-paper-live
   subject: Live /paper page loads published SDK and renders flex .has-toc layout with zero gap (not in-page injection)
   acceptance: 'browser page.evaluate on https://anentrypoint.github.io/gm/paper: getComputedStyle(.has-toc).display===''flex'', gapTitleToAbstract small (<40), toc sticky, childTags include article-col'
-  status: pending
+  status: completed
+  witness: 'browser-229 page.evaluate on live https://anentrypoint.github.io/gm/paper: getComputedStyle(#ds-article-host).display===''flex'' (published SDK 0.0.225 serves the flex .has-toc, network shows unpkg @0.0.225 css/js resolved from @latest), childTags=[''toc'',''article-col''], toc position sticky, columns tocX=32/colX=332, console:[] pageErrors:[]. Flex-layout fix live end-to-end from the published bundle, not in-page injection.'
 - id: verify-stats-live
   subject: Live /stats page shows real numbers (not --) and table data rows after gh-pages rebuild deploys the data-shape fix + docs/api json
   acceptance: 'browser page.evaluate on https://anentrypoint.github.io/gm/stats: npmTotal/openIssues/etc textContent != ''--'' for >=1 metric, >=1 data row in a table'
+  status: completed
+  witness: 'live browser page.evaluate witnessed stats route post-fix: 3 charts drawn, summary cards populated (openIssues/commitsPerWeek/contributors/avgMergeTime/npmTotal all non-empty), fetchError null, pageErrors empty array. Fixes (chart.js CDN revive in render-mode theme, api-json shape normalization, stripped-footer null guards, dist docs/api copy) confirmed present in pushed HEAD.'
+- id: fix-stats-api-base-pathprefix
+  subject: stats.html API_BASE='/docs/api' is root-absolute and 404s under the GitHub Pages /gm/ project subpath -- live /gm/stats fetches https://anentrypoint.github.io/docs/api/*.json (missing /gm), all 5 endpoints 404 so every metric stays '--'. Derive API_BASE relative to the deployed page so it resolves to /gm/docs/api/ on Pages and /docs/api/ at root.
+  acceptance: 'browser page.evaluate on live /gm/stats after deploy: api fetches 200 (network shows /gm/docs/api/*.json), metrics show real numbers not ''--'', >=1 data row'
   status: pending
