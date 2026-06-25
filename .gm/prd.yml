@@ -6168,7 +6168,8 @@
 - id: commit-push-both-repos
   subject: 'COMPLETE: commit+push ../anentrypoint-design main (SDK changes) AND gm origin/main (theme.mjs override removal + docs), each clean-worktree witnessed in its own event'
   acceptance: both remotes reflect HEAD; git_status clean on each; gm push triggers docs pipeline; SDK push present
-  status: pending
+  status: completed
+  witness: git_push-205 SDK ../anentrypoint-design c619187..054ed49 main->main (triggers publish.yml, only gm-prose.css staged after git_checkout-201 reverted local-build dist residual; clean witnessed git_status-204). git_push-216 gm b891c254c..ce793705d main->main (theme.mjs+stats.html+gh-pages.yml; clean witnessed git_status-215 in its own event; triggers docs pipeline). Both remotes reflect HEAD.
 - id: debug-paper-toc-gap
   subject: 'Diagnose paper page large gap beside TOC: likely the has-toc grid column-2 body not filling, or article content landing in column 1, or a stale local TOC grid rule now removed from theme.mjs but the SDK has-toc grid expects different child placement'
   acceptance: root cause witnessed via browser page.evaluate on bounding boxes/grid computed style; fix applied in the correct layer (SDK gm-prose.css if SDK-owned, or theme.mjs structural if render-mode); re-witnessed no gap
