@@ -2277,13 +2277,14 @@ function readInstanceVersion(instance) {
     const result = fn();
     let ptr, len;
     if (typeof result === 'bigint') {
-      ptr = Number(result & 0xffffffffn);
-      len = Number(result >> 32n);
+      const u = BigInt.asUintN(64, result);   // normalize the i64 to unsigned before splitting (signed-ptr fix)
+      ptr = Number(u & 0xffffffffn);
+      len = Number(u >> 32n);
     } else {
-      ptr = Number(result) & 0xffffffff;
+      ptr = Number(result) >>> 0;   // unsigned 32-bit
       len = 0;
     }
-    const buf = new Uint8Array(instance.exports.memory.buffer, ptr, 64);
+    const buf = new Uint8Array(instance.exports.memory.buffer, ptr, 64);   // fresh buffer (post fn() grow)
     if (len === 0) {
       let end = 0;
       while (end < buf.length && buf[end] !== 0) end++;
@@ -3274,20 +3275,17 @@ async function runSpoolWatcher(instance, spoolDir) {
         }
       }
 
-      const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
-      const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
-      new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
-      new Uint8Array(instance.exports.memory.buffer, bodyPtr, bodyBytes.length).set(bodyBytes);
+      // writeWasmInput re-reads memory.buffer fresh after each alloc (detached-buffer write fix).
+      const verbPtr = writeWasmInput(instance, verbBytes, `spool-dispatch:${verb}.verb`);
+      const bodyPtr = writeWasmInput(instance, bodyBytes, `spool-dispatch:${verb}.body`);
 
       writeVerbActive(verb, taskBase);
       const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
       clearVerbActive();
 
-      const ptr = Number(result & 0xffffffffn);
-      const len = Number(result >> 32n);
-      guardWasmRange(instance.exports.memory.buffer, ptr, len, `spool-dispatch:${verb}`);
-      const resultBytes = new Uint8Array(instance.exports.memory.buffer, ptr, len);
-      let resultStr = new TextDecoder().decode(resultBytes);
+      // decodeWasmResult normalizes the i64 (BigInt.asUintN), re-reads the buffer FRESH (post-grow),
+      // guards the range, AND frees the result ptr -- so the (ptr,len) free below is dropped.
+      let resultStr = decodeWasmResult(instance, result, `spool-dispatch:${verb}`);
 
       if (autoRecallPayload) {
         resultStr = mergeAutoRecallIntoInstructionResponse(resultStr, autoRecallPayload);
@@ -3340,7 +3338,7 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
-      try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
+      // (the result ptr is freed inside decodeWasmResult above)
 
       try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);
@@ -3988,15 +3986,12 @@ if (_isCliEntry) (async () => {
       const dispatch = instance.exports.dispatch_verb;
       const verbBytes = new TextEncoder().encode(verb);
       const bodyBytes = new TextEncoder().encode(body);
-      const verbPtr = instance.exports.plugkit_alloc(verbBytes.length);
-      const bodyPtr = instance.exports.plugkit_alloc(bodyBytes.length);
-      new Uint8Array(instance.exports.memory.buffer, verbPtr, verbBytes.length).set(verbBytes);
-      new Uint8Array(instance.exports.memory.buffer, bodyPtr, bodyBytes.length).set(bodyBytes);
+      const verbPtr = writeWasmInput(instance, verbBytes, `cli-dispatch:${verb}.verb`);
+      const bodyPtr = writeWasmInput(instance, bodyBytes, `cli-dispatch:${verb}.body`);
       const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
-      const ptr = Number(result & 0xffffffffn);
-      const len = Number(result >> 32n);
-      guardWasmRange(instance.exports.memory.buffer, ptr, len, `cli-dispatch:${verb}`);
-      const out = new TextDecoder().decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
+      const out = decodeWasmResult(instance, result, `cli-dispatch:${verb}`);   // normalized i64 + fresh buffer
+      try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
+      try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
       process.stdout.write(out);
       let parsed;
       try { parsed = JSON.parse(out); } catch (_) { parsed = null; }
