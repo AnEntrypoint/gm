@@ -6045,3 +6045,113 @@
   acceptance: CHANGELOG updated; git_finalize pushes to main; branch_status ahead==0; worktree clean
   status: completed
   witness: CHANGELOG.md:1 new '2026-06-25 - paper gen-3 currency pass + site-render triage' entry prepended (present-tense, ASCII-only); residuals triaged = all commit (docs/paper.html + prior-segment site files + tracked .gm/disciplines memory/state; dist/ gitignored confirmed via git check-ignore). git_finalize to follow as the single close push.
+- id: bundle-audit-history
+  subject: 'Audit THIS run''s tool-call history for missed call-bundling (witness for the skill edits). Confirmed misses: (1) 6 Edits to docs/paper.html in ONE block -> each invalidated the next''s read-state, only the first applied, rest errored ''file modified since read'', forcing serial re-read+re-edit (the costliest miss); (2) several long-verb Write+Read blocks that missed, then a blocking Bash wait, then a SEPARATE-turn re-Read instead of wait+Read in one block; (3) independent inspection calls (grep/Read/sed) issued across turns that had no data dependency and could have shared a block. The history is the witness; each genuine pattern becomes a skill-prose clause.'
+  acceptance: each missed-bundling pattern named with its in-session witness; informs the skill-prose rows
+  status: completed
+  witness: 'This run''s tool-call history: (1) docs/paper.html 6-Edit single block -> only first applied, rest ''File has been modified since read'', re-Read+serial re-edit forced; (2) long-verb (browser/build/finalize) Write+Read miss then separate-turn re-Read; (3) serial inspection Reads/codesearch with no data dependency. Three patterns -> three skill-prose clauses now in SKILL.md line 59 cluster.'
+- id: skill-samefile-edit-antipattern
+  subject: 'Add a skill-prose clause: multiple Edits to the SAME file in one block is an anti-pattern, not batching -- each Edit invalidates the file''s read-state so later same-file Edits in the same block fail ''file modified since read''. Collapse same-file changes into ONE Edit (or replace_all / one Write of the whole file); reserve in-block batching for Edits across DIFFERENT files. This is the precise inverse of the fan-out rule and must sit beside it so the reader does not over-generalize ''batch everything''.'
+  acceptance: skill prose distinguishes cross-file batch (good) from same-file multi-edit (serializes/fails); names the 'file modified since read' failure
+  status: completed
+  witness: 'SKILL.md line 59: ''Same-file batching inverts it: two Edits to the SAME file in one block is not fan-out -- the first invalidates the file''s read-state and the rest fail File has been modified since read ... reserve in-block batching for Edits across DIFFERENT files.'' Failure string explicit; cross-file good / same-file fails distinguished.'
+- id: skill-longverb-wait-read-oneblock
+  subject: 'Add a skill-prose clause: for a long verb (browser/exec_js-build/git_finalize) whose response is not ready on the Write+Read block, the recovery is ONE block = the wait probe AND the re-Read together (Bash ''until [ -f out/<verb>-<N>.json ]; do sleep N; done'' + Read in the same message), never a bare wait turn followed by a separate Read turn. Honor an advertised busy_until the same way. This removes one full round-trip per long verb.'
+  acceptance: skill prose prescribes wait+re-Read in a single block for not-yet-ready long-verb responses
+  status: completed
+  witness: 'SKILL.md line 59: ''a long verb ... whose response is not ready on the Write+Read block: the recovery is one block carrying both the wait probe and the re-Read (the until [ -f ... ] ... and the Read together, or honoring an advertised busy_until), never a bare wait turn followed by a separate Read turn.'' Removes one round-trip per long verb; until-loop path explicit.'
+- id: skill-fanout-default-sharpen
+  subject: 'Sharpen the existing ''Batch writes and reads together'' rule into a default-batching imperative: independent dispatches (N prd-add, N prd-resolve, N codesearch, N mutable-add, parallel recall+codesearch at orient, multi-file Reads/Greps for inspection) are ALWAYS one block of Writes then one block of Reads. Serial single-dispatch turns are the default-drift to correct; the test is ''does B consume A''s response?'' -- only a true data dependency forces separate turns. State it as the expected shape (a turn issuing one independent verb when three were ready is the miss), not a permission.'
+  acceptance: skill prose frames batching as the default with serial-single-dispatch as the named drift; lists the concrete independent-dispatch classes
+  status: completed
+  witness: SKILL.md line 59 lead-in rewritten to 'one block is the default, the serial single dispatch is the drift'; enumerates the independent-dispatch classes (N prd-add/prd-resolve/mutable-add, orient recall+codesearch, inspection Read/codesearch); frames 'a turn that issues one independent verb while three were ready is the miss', data-dependency as the only separator. Default-framing not permission.
+- id: skill-spotcheck-batch-reads
+  subject: 'Add a skill-prose clause: when batching N identical-shape resolve/add dispatches (e.g. 13 prd-resolve), Read all N responses in one block (or a representative spot-check of first+last) rather than reading them one-per-turn -- the responses are independent so the Reads carry no ordering dependency. Names the efficient confirmation pattern used well this run (101+113 spot-check) as the prescribed shape.'
+  acceptance: skill prose prescribes batched/spot-check Reads for homogeneous N-dispatch fan-out
+  status: completed
+  witness: 'SKILL.md line 59 final sentence: ''Reading a homogeneous fan-out''s responses is itself batched: Read all N in one block, or spot-check first and last -- they carry no ordering dependency.'' Prescribes the batched/spot-check Read pattern (used this run on prd-add 127/137).'
+- id: skill-prose-implicit-discipline
+  subject: 'Constraint row: the new batching clauses must obey AGENTS.md ''Implicit, not explicit, in skill prose'' -- terse imperative principles that elicit, NOT a numbered recipe/manual. Keep the non-derivable boot-edge ABI explicit (exact failure string ''file modified since read'', the until-loop path shape) but convert derivable procedure to principle. No step-by-step. Verify against the SKILL.md house style (bold lead-in clause + dense single paragraph).'
+  acceptance: added clauses match house style, no numbered recipe, ABI specifics stay explicit, elicitation not description
+  status: completed
+  witness: 'recall mem-1782200490565 (implicit-not-explicit is the durable policy: skill prose elicits, only derivable procedure converts, boot-edge ABI stays explicit). New clause is one dense paragraph, no numbered steps, no recipe; ABI specifics kept explicit (the failure string, the until-loop glob path, busy_until); derivable procedure stated as principle (''one block is the default'', ''the miss to correct''). Matches bold-lead-in + dense-paragraph house style.'
+- id: skill-byte-budget-check
+  subject: 'Caveat row: SKILL.md additions must not bloat -- the file is the always-visible budget-protected surface (test.js checkAgentsMdBudget guards AGENTS.md; SKILL.md has its own implicit terseness pressure). Prefer SHARPENING the existing line 59 ''Batch writes and reads together'' rule in place over appending many new paragraphs; fold same-file-antipattern + long-verb-wait + default-batching into a tightened cluster. Witness final line count delta is modest.'
+  acceptance: net SKILL.md growth is modest; existing batch rule sharpened in place not duplicated
+  status: completed
+  witness: Sharpened the existing line-59 rule IN PLACE (single paragraph replaced one paragraph), not appended new paragraphs; net SKILL.md growth is one paragraph's expansion (~3 sentences added), modest. No duplicate batch rule introduced.
+- id: skill-edit-the-repo-source
+  subject: 'Mechanism row: edit skills/gm/SKILL.md (repo source of truth, LF), NOT the installed ~/.claude/skills/gm/SKILL.md (CRLF mirror) -- diff confirmed content-identical, line-ending-only difference; the cascade/ensureReady sha256-rewrites the install from the repo copy. Editing the install would be lost on next bootstrap.'
+  acceptance: edit lands in skills/gm/SKILL.md; no edit to the installed copy
+  status: completed
+  witness: Edit applied to C:\dev\gm\skills\gm\SKILL.md (repo source, LF), not the installed ~/.claude/skills/gm/SKILL.md (CRLF mirror, diff confirmed content-identical line-ending-only). ensureReady sha256-rewrites the install from repo copy on bootstrap.
+- id: skill-glyph-bom-guard
+  subject: 'Validation row: after editing SKILL.md, verify no decorative non-ASCII glyph and no UTF-8 BOM introduced (test.js checkNoComments/checkNoBom/glyph-discipline class). SKILL.md is tracked source. grep non-ASCII = 0 in the edited region.'
+  acceptance: edited SKILL.md is ASCII-clean, no BOM
+  status: completed
+  witness: 'exec_js-150: skills/gm/SKILL.md bom=false, nonAsciiCount=0 over full file (88 lines, 20676 bytes). ASCII-clean, no UTF-8 BOM. Passes checkNoBom/glyph-discipline class.'
+- id: skill-served-prose-mirror-check
+  subject: 'Investigate whether the batching guidance ALSO belongs in the served plugkit prose (gm-plugkit/instructions/*.md, e.g. execute.md) so it reaches the agent mid-EXECUTE not just at skill-load -- AGENTS.md says cross-cutting behavioral discipline lives in the instruction verb. Batching is cross-phase (orient fan-out at PLAN, prd-resolve fan-out at EXECUTE, finalize at VERIFY). Decide: skill-only (always-visible, per user''s explicit ask) vs also-served. Witness the served prose surface before deciding; default to skill-only per the literal request unless served-mirror is cheap and additive.'
+  acceptance: explicit decision with witness on whether served prose also gets the clause; if yes it is a tracked sibling edit, if no the reason is recorded
+  status: completed
+  witness: 'Decision: skill-only, no served-prose (instructions/*.md) edit. Rationale (a) user''s literal ask is ''in the skill file itself so its always visible''; (b) recall mem-1782200490565 -- batching is a dispatch-mechanics rule whose home is the SKILL.md dispatch cluster (lines 47-59) it now sits in, not phase-specific EXECUTE behavioral prose; served prose carries process-of-elimination/maturity-first, not transport mechanics. No tracked sibling edit; reason recorded.'
+- id: bundle-changelog-memorize-push
+  subject: 'COMPLETE-phase: CHANGELOG.md entry for the batching-guidance sharpening (present-tense, ASCII); memorize-fire the durable gm-method lessons (same-file-multi-edit anti-pattern; long-verb wait+re-Read in one block; default-batch independent dispatches) to default namespace; drain a few detail-heavy AGENTS.md entries per back-pressure if any qualify; git_finalize to main. Triage every residual.'
+  acceptance: CHANGELOG updated, lessons memorized, pushed to main, branch_status ahead==0, worktree clean
+  status: pending
+- id: sdk-add-panel-hover-token
+  subject: Add --panel-hover token to SDK colors_and_type.css :root (the only drifted token; gm overrides currently fall back to hardcoded hex)
+  acceptance: colors_and_type.css :root defines --panel-hover with a value matching the gm hardcoded hex; rebuilt dist/247420.css contains it; grep witnesses presence
+  status: pending
+- id: sdk-add-toc-sidebar
+  subject: Migrate TOC-sidebar grid (has-toc grid, sticky .toc rail, scrollbar, toc typography) from theme.mjs into SDK source css as a reusable component
+  acceptance: SDK css defines the TOC-sidebar layout under stable class names; dist rebuilt; site renders TOC from SDK with no local override; browser-witness .toc rail sticky+grid on /paper/
+  status: pending
+- id: sdk-add-cli-block
+  subject: Migrate .cli terminal block (.cli .cli-cmt .cli-line .prompt .cmd and the :empty::before nbsp) from theme.mjs into SDK source css
+  acceptance: SDK css defines .cli family; dist rebuilt; site renders cli blocks from SDK pro-rata; browser-witness a .cli block styled on /paper/ with no local rule
+  status: pending
+- id: sdk-add-panel-row-card-callout
+  subject: Migrate .panel .row, .ds-prose .card, .tags/.tag, .gm-callout from theme.mjs into SDK source css
+  acceptance: SDK css defines these; dist rebuilt; site renders card/tag/callout/panel-row from SDK; browser-witness each styled on its route with no local rule
+  status: pending
+- id: sdk-build-publish
+  subject: Rebuild SDK dist (scripts build) and publish anentrypoint-design to npm + push AnEntrypoint/design main so site @latest picks it up
+  acceptance: dist/247420.{js,css} rebuilt containing migrated rules; npm version bumped+published; ../anentrypoint-design main pushed; unpkg @latest serves the new css (witnessed via fetch verb)
+  status: pending
+- id: site-delete-redundant-overrides
+  subject: Delete REDUNDANT app-shell overrides from theme.mjs <style> block (topbar flex-wrap, nav margin-left:auto, mobile nav-row scroll, app-main overflow/flow) that SDK 0.0.221 does natively
+  acceptance: those rules removed from theme.mjs; site rebuilt; browser-witness topbar/nav/app-main still render correctly from SDK alone on every route
+  status: pending
+- id: site-remove-migrated-overrides
+  subject: After SDK publishes the migrated components, remove the gm-design overrides (TOC, cli, card, callout, panel-row, panel-hover fallback) from theme.mjs so the site consumes them pro-rata from the SDK
+  acceptance: theme.mjs <style> block reduced to only genuinely site-local render-mode plumbing (or empty); site rebuilt against SDK @latest; browser-witness all migrated components render identically from SDK with zero local restate
+  status: pending
+- id: site-classify-structural-toggles
+  subject: Decide keep-vs-migrate for the page-structural html-class toggles (article-flow, landing-capped measure cap) tied to flatspace injection
+  acceptance: each toggle witnessed as either SDK-ownable (migrated) or genuinely site-render-mode plumbing (kept with a one-line justification); no ambiguous middle
+  status: pending
+- id: witness-all-routes-pro-rata
+  subject: Browser-witness every site route (home, paper, crates, skills, distribution, made-with, stats) renders correctly consuming the SDK pro-rata after overrides removed
+  acceptance: 'per-route browser page.evaluate: console:[] pageErrors:[], key components present and styled, no unstyled FOUC; one witness per route'
+  status: pending
+- id: security-sdk-latest-supply-chain
+  subject: 'Security: theme.mjs loads SDK css+js from unpkg @latest with no SRI/version pin -- assess supply-chain exposure of runtime-loading an unpinned third-party bundle into every page'
+  acceptance: 'witnessed decision: either accept @latest pro-rata (the user''s explicit directive, documented) or add SRI/pin with justification; no silent unpinned-remote-script left unexamined'
+  status: pending
+- id: profiling-sdk-css-weight
+  subject: 'Profile: measure dist/247420.css size before/after migrating gm components in, and the site page weight after removing local overrides -- net surface must shrink or stay flat'
+  acceptance: 'browser performance debug + css byte-count witnessed: migrated-in SDK css minus removed local overrides nets neutral-or-smaller total bytes shipped per page; recorded'
+  status: pending
+- id: jank-sweep-all-routes
+  subject: 'Jank sweep: after pro-rata consumption, walk every route for rough/unfinished/half-wired visual edges (FOUC, layout shift on SDK load, broken sticky TOC at breakpoints, mobile nav wrap, unstyled cli on first paint)'
+  acceptance: each route browser-witnessed at desktop+mobile viewport; any jank found spawns its own debug-and-repair prd-add same turn; clean sweep recorded
+  status: pending
+- id: sdk-discipline-respect
+  subject: 'Respect the SDK repo''s own gm discipline: changes to ../anentrypoint-design follow ITS AGENTS.md (no comments, no BOM, no glyphs, its build/publish flow), committed to its main'
+  acceptance: SDK edits pass its conventions; its dist rebuilt via its own scripts not hand-edited; ../anentrypoint-design git_push main clean
+  status: pending
+- id: commit-push-both-repos
+  subject: 'COMPLETE: commit+push ../anentrypoint-design main (SDK changes) AND gm origin/main (theme.mjs override removal + docs), each clean-worktree witnessed in its own event'
+  acceptance: both remotes reflect HEAD; git_status clean on each; gm push triggers docs pipeline; SDK push present
+  status: pending

@@ -72,7 +72,7 @@ Record only non-obvious technical caveats that cost multiple runs to discover; r
 
 No build step; the repo root is the published artifact. `npm publish` from root publishes `gm-skill` (npm package id is permanent; only the skill DIRECTORY is `skills/gm`, so the command is `/gm`). `package.json` `files:` pins the shipped paths. `AnEntrypoint/gm-skill` is a back-compat mirror receiving only `skills/gm/SKILL.md` per release.
 
-`bin/install.js` is the canonical installer -- no npx `skills` library, no marketplace. It copies `skills/gm` into `<home>/.claude/skills/gm/` (personal) or `.claude/skills/gm/` (`--project`); the dir name IS the `/command`. Non-interactive (`-y`/`--yes` or non-TTY) SETS four Claude Code settings (`autoCompactEnabled:true`, `autoCompactWindow:380000` -- an ABSOLUTE token count = 38% of 1M, not a percentage -- `effortLevel:"low"`, `alwaysThinkingEnabled:false`) and explains the revert; interactive OFFERS them. The reasoning-in-code framing it prints is load-bearing: the LLM still thinks, it tests its thoughts in code (execution as reasoning). `test.js checkRenameAndInstaller()` is the structural guard (asserts no `skills/gm-skill`, package id stays `gm-skill`, installer lands the skill + writes the four keys into an isolated temp HOME).
+`bin/install.js` is the canonical installer (no npx `skills` library, no marketplace); the dir name it lands IS the `/command`, and `test.js checkRenameAndInstaller()` is the structural guard. Copy-target, the four Claude Code settings it sets non-interactively, the reasoning-in-code framing, and the guard assertions in rs-learn (`recall: gm installer detail`).
 
 ## The agent is the orchestrator; plugkit is the brain it drives
 

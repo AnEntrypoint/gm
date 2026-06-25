@@ -1,0 +1,3 @@
+## Resolved mutable: sdk-repo-location
+
+sibling checkout at ../anentrypoint-design/ (git remote origin https://github.com/AnEntrypoint/design.git, package anentrypoint-design@0.0.221, main bundle dist/247420.js + ./css dist/247420.css, exports kits/spoint + kits/os). It is itself a gm-driven repo (.gm/, AGENTS.md present). Reachable this session by path (Read/exec_js) and pushable via git_push {repo:'../anentrypoint-design', branch:'main'}; source css files at repo root (app-shell.css, colors_and_type.css, app-surfaces.css) build into dist/247420.css
