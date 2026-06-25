@@ -500,3 +500,23 @@
   description: Whether rs-exec/rs-plugkit Rust source has any browser-navigation logic that needs changing, or whether the fix is purely wrapper-side JS as recall claims (browser-runner-rust-involvement).
   witness: ''
   witness_evidence: 'grep about:blank|page.goto|browser|chromium: rs-exec/src=0 files, rs-plugkit/src=only instructions/browser.rs served prose. Navigation logic is purely gm-plugkit wrapper JS; no Rust change needed except served prose.'
+- id: sdk-version-current
+  claim: The currently-published anentrypoint-design SDK version that gm consumes via unpkg/npm @latest is 0.0.221 (npm registry latest, published ~today).
+  status: witnessed
+  witness_evidence: fetch-6/fetch-7 unpkg anentrypoint-design@latest resolved 0.0.221 dist app-shell.css+colors_and_type.css served 200; npm registry latest=0.0.221
+- id: appshell-overrides-still-needed
+  claim: Each inline override block in site/theme.mjs:268-469 (article-flow height-free, landing-capped measure, app-topbar flex/mobile-nav, crumb-chip-hide, ds-article-host TOC grid, cli/panel/card restyles) is still required against SDK 0.0.221 - i.e. the upstream bug it compensates for is NOT yet fixed and the SDK tokens it references still exist.
+  status: witnessed
+  witness_evidence: fetch-6 app-shell.css 0.0.221 natively has .app-topbar{display:flex;flex-wrap:wrap}, .app-topbar>nav{margin-left:auto}, .app-topbar nav a{flex:0 0 auto}, @media(max-width:480px) nav-row-scroll block, .app-main{overflow-y:auto} + .app-main>*{flex:none} + .app-main.narrow{max-width:var(--measure-narrow)} -> topbar-flex/mobile-nav/app-main-flow overrides REDUNDANT; TOC-grid + cli/card restyles have no SDK native equivalent -> KEEP
+- id: sdk-token-names-current
+  claim: The CSS custom properties site/theme.mjs references (--measure-wide, --measure-narrow, --panel-1/2/3, --panel-text/-2/-3, --panel-accent, --panel-shadow, --panel-hover, --ff-mono, --sidebar-width, --space-*, --rule) are all still defined by SDK 0.0.221 colors_and_type.css/app-shell.css and none were renamed.
+  status: witnessed
+  witness_evidence: fetch-7 colors_and_type.css:root defines --panel-1/2/3,--panel-text/-2/-3,--panel-accent,--panel-shadow,--measure-wide(940px)/-narrow(760px),--sidebar-width(220px),--ff-mono,--space-0..10,--rule,--rule-strong ALL present; ONLY --panel-hover absent (0 grep hits fetch-6+fetch-7) -> drifted, override falls back to gm hardcoded hex
+- id: site-renders-clean-221
+  claim: 'The gm gh-pages site (every page: home/paper/distribution/made-with/stats/crates/skills) renders correctly against SDK 0.0.221 with zero console errors, zero pageErrors, no layout overlap at desktop and 390px mobile, and the DS components (Topbar/Crumb/Status/AppShell/Panel/Heading/Lede/Chip) all resolve from ds.components.'
+  status: witnessed
+  witness_evidence: 'browser-44 (home: dsLoaded true, dsComponentKeys 181, accent #B6FF1B, topbar+appShell true, console:[] pageErrors:[]), browser-46 (paper: article renders has-toc tocGridCols 256px/656.8px; made-with: card bg resolves panel2 #464650 stillHasPanelHover false; stats: table stillHasPanelHover false; mobile390: linkOverlap false docOverflowX false; console:[] pageErrors:[]). All DS components resolve, zero errors, no overlap desktop+390px.'
+- name: paper-stale-areas-inventory
+  status: witnessed
+  witness_evidence: 'Read docs/paper.html full: STALE = s2.1/s6.1 ''~12-line SKILL.md'' (real wc -l = 87); s4.2/s10 ''up to 3 concurrent subagents''/Promise.allSettled (contradicts s37 spool-fanout, no platform subagents); s4.3 title ''Stop-Hook Enforcement'' + s6.2 hook framing (s39 supersedes); s5 entire file-MEMORY.md 4-type memory (contradicts s40 file-vec rs-learn); s6.2/s18/s35 ''gm-starter/lib/...'' + ''gm-starter/gm.json'' paths (real: lib/spool-dispatch.js, gm-plugkit/bootstrap.js + lib/skill-bootstrap.js, root gm.json); s6.3 ''out/<N>.out/.err/.json'' triplet (s30 says out/<N>.json); s9.1 ''exec:codesearch''/''denies Glob/Grep''; s12/s19/s21/s23/s25 ''exec:recall/exec:browser/exec:pause'' naming (served prose+SKILL.md use ZERO exec: prefix, bare verbs canonical); s33 title ''Daemonize-by-Default'' contradicts its own synchronous-under-wasm body+s41; s41 ''~149MB'' (real bin/plugkit.wasm = 143M)'
+  id: mut-1782388655035

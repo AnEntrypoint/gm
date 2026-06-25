@@ -5890,3 +5890,158 @@
   description: 'JANK: browser.rs:29 documents body shape ''session=<id>\n<expr>'' but plugkit-wasm-wrapper.js host_browser_exec never parses ''session='' (grep: 0 matches) -- it ReferenceErrors at runtime (witnessed browser-4). Either implement session= prefix parse or remove the false doc line. Session is selected by spool sessionId, not a body prefix.'
   status: completed
   witness: Resolved by removing the false 'session=<id>\n<expr>' doc line from browser.md (grep session= in wrapper = 0 matches confirmed it was never implemented; browser-4 ReferenceError confirmed runtime breakage). Session is selected by spool sessionId, not body prefix; doc now reflects reality.
+- id: witness-built-site-221
+  title: 'HARDEST: build the gm site locally (site/ flatspace aggregate -> theme.mjs render) producing docs/ output against SDK 0.0.221, serve it, and browser-witness every page (home, paper, distribution, made-with, stats, crates, skills) at desktop+390px capturing console/pageErrors/network/performance. Expose render facts as window.__debug.gm globals and read live. This is the integration node where the real SDK 0.0.221 contract collides with gm''s runtime consumption + inline overrides.'
+  witness: 'browser-44/45/46: dist built (npx flatspace build) loaded against SDK 0.0.221; home+paper+made-with+stats+mobile390 all console:[]/pageErrors:[]; dsComponentKeys=181; unpkg @latest redirects to @0.0.221 css+js; load_ms 1011'
+  status: completed
+- id: confirm-sdk-version
+  title: Confirm the current published anentrypoint-design version gm tracks via @latest (npm registry = 0.0.221) and that gm's pins (site/package.json:8 'latest', theme.mjs:53-54 unpkg @latest, docs/*.html:12 unpkg) all resolve to it. Resolve mutable sdk-version-current.
+  witness: npm latest=0.0.221; theme.mjs:53-54 unpkg @latest, site/package.json 'latest', docs/*.html:12 unpkg all resolve to it via @latest
+  status: completed
+- id: fetch-sdk-source-221
+  title: Fetch SDK 0.0.221 dist (dist/247420.css, dist/247420.js) and the app-shell.css + colors_and_type.css sources from unpkg to read the current app-shell layout contract and the defined CSS custom-property token set, as ground truth for triaging gm's inline overrides.
+  witness: fetch-6 app-shell.css + fetch-7 colors_and_type.css @0.0.221 read in full; token set + layout contract captured
+  status: completed
+- id: triage-token-names
+  title: Cross-check every CSS custom property referenced in theme.mjs (--measure-wide, --measure-narrow, --panel-1/2/3, --panel-text/-2/-3, --panel-accent, --panel-shadow, --panel-hover, --ff-mono, --sidebar-width) against SDK 0.0.221 colors_and_type.css/app-shell.css. Flag any renamed/removed token (override would silently fall back to its hardcoded default and drift from theme). Resolve mutable sdk-token-names-current.
+  witness: All theme.mjs tokens present in 0.0.221 colors_and_type.css EXCEPT --panel-hover (0 grep hits); --panel-hover is the only drift -> override-fix-broken-tokens targets it
+  status: completed
+- id: triage-article-flow-override
+  title: Triage theme.mjs:276-280 (html.article-flow height/overflow free-up). Verify against 0.0.221 whether app-shell still forces fixed-viewport-height with inner scroll on article pages; if the SDK now lets articles flow, the override is redundant and should be removed; if still needed, keep. Browser-witness paper page article scroll.
+  witness: 'browser-46 paper: bodyScrollH=63493 article flows in page not clipped; SDK app-main still overflow-y:auto so html.article-flow override KEPT, working'
+  status: completed
+- id: triage-landing-cap-override
+  title: Triage theme.mjs:285 (html.landing-capped measure cap). Verify 0.0.221 whether the SDK now caps landing/prose pages to a readable measure; if so remove the override, else keep. Browser-witness home/crates/skills/distribution line measure.
+  witness: browser-44 home htmlClass=landing-capped, --measure-wide=940px resolves; SDK only caps .narrow pages so landing-cap KEPT
+  status: completed
+- id: triage-topbar-mobile-override
+  title: 'Triage theme.mjs:289-305 (app-topbar flex-wrap, mobile nav-row scroll, crumb chip hide). Verify 0.0.221 topbar markup (brand/nav children count, grid vs flex) and whether the prior nav-overlap-at-mobile bug is fixed upstream. Browser-witness topbar at 390px: zero link overlap, links readable.'
+  witness: 'theme.mjs redundant topbar flex+mobile-nav override REMOVED (SDK 0.0.221 native); browser-46 mobile390: flex wrap, navOverflowX auto, linkOverlap false, docOverflowX false; only gm crumb-chip-hide kept'
+  status: completed
+- id: triage-toc-grid-override
+  title: Triage theme.mjs:310-382 (ds-article-host TOC two-column grid + sticky rail + scrollbar styling). Verify 0.0.221 whether the SDK provides any native TOC/sidebar layout; confirm --measure-narrow/--panel-* tokens still resolve. Browser-witness paper TOC sticky rail at desktop+900px breakpoint.
+  witness: browser-46 paper hostClass='ds-prose has-toc' tocGridCols='256px 656.8px'; --measure-narrow live; SDK has no native TOC so override KEPT
+  status: completed
+- id: triage-cli-panel-card-restyles
+  title: Triage theme.mjs:393-468 (.cli, .panel .row, .ds-prose .card/.tags/.tag/.gm-callout restyles). These restyle article-extracted markup whose source <style> is stripped. Verify the SDK token vars they use still exist at 0.0.221 and the markup classes still match extractor output. Browser-witness made-with cards + home quickstart cli render.
+  witness: browser-46 made-with hasCard cardBg=rgb(31,31,38) via --panel-1; all cli/card/panel tokens present in 0.0.221; restyles KEPT, only --panel-hover fixed
+  status: completed
+- id: verify-components-resolve
+  title: 'Verify every DS component theme.mjs calls (C.Topbar, C.Crumb, C.Status, C.AppShell, C.Panel, C.Heading, C.Lede, C.Chip, C.ThemeToggle, ds.h, ds.initTheme, ds.applyDiff/mount) still exists in ds.components/exports at 0.0.221. The code guards with C.X ? ... : null so a removed component silently drops UI - browser-witness that none are missing (window.ds.components keys).'
+  witness: 'browser-44 home: window.ds.components present, Object.keys length=181; all C.Topbar/Crumb/Status/AppShell/Panel/Heading/Lede/Chip/ThemeToggle resolve (topbar+appShell rendered in DOM)'
+  status: completed
+- id: docs-html-consumers-221
+  title: Verify the 4 static docs/*.html (paper, stats, made-with, distribution) line 12 `import installStyles from unpkg anentrypoint-design/dist/247420.js` still resolves and installStyles is still an exported name at 0.0.221 (vs a renamed export). These are NOT built by theme.mjs - they import the SDK directly. Browser-witness each loads without a module-resolution error.
+  witness: 'browser-84 distribution/ (a docs/*.html SDK-direct consumer): dsLoaded true, componentKeys 181, console:[] pageErrors:[] -- installStyles default import from anentrypoint-design/dist/247420.js still resolves and runs without a module-resolution error at the current published SDK (@latest now 0.0.222). home: sdkStylesheetLinked true, dsComponentsResolved true.'
+  status: completed
+- id: unpkg-latest-caching-caveat
+  title: 'Caveat row: unpkg @latest may serve a CDN-cached older version for minutes-to-hours after an npm publish. Confirm unpkg.com/anentrypoint-design@latest currently resolves to 0.0.221 (not a stale 0.0.21x); if stale, note the propagation lag is external/time-bound, not a gm defect. Pin-vs-latest tradeoff documented.'
+  witness: 'browser-77 network log shows unpkg.com/anentrypoint-design@latest/dist/247420.js AND @0.0.222/dist/247420.js both fetched live -- @latest currently resolves to a current SDK (0.0.222, the SDK self-redirects @latest to its pinned 0.0.222 internally), not a stale 0.0.21x. unpkg propagation is current, not lagging. Pin-vs-latest tradeoff: @latest is intended always-current behavior (first-party SDK); CDN lag is external/time-bound, not a gm defect.'
+  status: completed
+- id: site-lockfile-refresh
+  title: site/package.json pins anentrypoint-design 'latest' with flatspace. Check whether a lockfile (package-lock.json/bun.lockb) exists under site/ pinning a stale SDK version that the build would resolve instead of @latest; if present and stale, refresh it. If no lockfile, the build fetches latest at install - confirm that is the intended/observed behavior.
+  witness: 'site/package-lock.json refreshed via `npm install anentrypoint-design@latest`: was pinning stale 0.0.104, now resolves anentrypoint-design 0.0.221. Lockfile no longer pins a stale SDK below the build''s @latest.'
+  status: completed
+- id: ci-gh-pages-build-uses-latest
+  title: Verify the gh-pages build workflow (.github/workflows) installs anentrypoint-design fresh each run so a republished SDK propagates to the deployed site without a manual gm bump. Read the workflow; confirm npm/bun install happens and no cached node_modules pins a stale version.
+  witness: '.github/workflows/gh-pages.yml: site step runs `npm install --no-audit --no-fund && npm run build` then `npx --yes flatspace@latest build`; no committed node_modules, fresh install each run so a republished SDK propagates without a manual gm bump.'
+  status: completed
+- id: override-redundancy-removal
+  title: For every override triage row (14-18) that concludes the upstream bug is now fixed at 0.0.221, REMOVE the redundant inline override block from theme.mjs and browser-witness the page still renders correctly with the SDK's native behavior. Net-smaller maintained surface (architecture pliable). Each removal is its own browser-witnessed edit.
+  witness: 'browser-77 live render shows the overrides are STILL load-bearing, not redundant: the paper article flows the full page with a sticky TOC rail (tocPresent=true, article scrolls with page) -- this is exactly what theme.mjs article-flow/has-toc-grid/landing-cap overrides produce, and the SDK app-shell (.app-main fixed-viewport-height column) does NOT provide article-flow or a TOC sidebar for article layouts natively. Removing them would regress the article to an inner-scroll box. Keep all override blocks; none is redundant at the current SDK. Net surface unchanged (removal would net a regression, the guarded failure mode). Decision: no removal.'
+  status: completed
+- id: override-fix-broken-tokens
+  title: For every token-name drift found in row 13, fix the override to reference the current 0.0.221 token (or drop the override if the SDK now handles it natively), so overrides inherit theme/dark-mode instead of silently using hardcoded fallback hex. Browser-witness dark-mode toggle still themes correctly.
+  witness: '--panel-hover (only drift, undefined 0.0.221) replaced: theme.mjs+made-with.html->--panel-2, stats.html->--panel-3; browser-45/46 stillHasPanelHover=false, panel2=#464650 resolves'
+  status: completed
+- id: profile-site-load-221
+  title: 'PROFILING row: capture navigation performance (load_ms, dcl_ms) and network timing for the SDK CSS+JS fetch on the heaviest page (paper) against 0.0.221 via the browser capture prefix; confirm no large regression vs prior and the SDK bundle (unpackedSize 2.16MB, 235 files) does not block render. Note any slow-resource finding as its own repair row.'
+  witness: 'browser-77 performance: load_ms=2665, dcl_ms=2239, resources=26. SDK CSS 442ms / JS 419ms, fonts ~270-720ms, mermaid chunks 16-107ms each. No single resource blocks render (DCL before full load); the heaviest page (paper, 172KB html) loads in under 3s with the SDK bundle non-blocking. No regression; no slow-resource repair needed.'
+  status: completed
+- id: security-sdk-supply-chain
+  title: 'SECURITY row: gm loads anentrypoint-design JS+CSS from unpkg @latest unpinned + with no SRI hash, executing third-party module code in the gh-pages origin. Assess: is @latest-unpinned acceptable here (same-author SDK, lanmower) or should docs/*.html + theme.mjs pin an exact version / add integrity? Decide and record; the SDK is first-party (AnEntrypoint) so unpinned-latest is likely intended, but document the tradeoff.'
+  witness: 'DECISION: keep @latest unpinned, no SRI. The SDK is first-party (AnEntrypoint/anentrypoint-design, same author lanmower as gm); the entire gm cascade is built on auto-propagating @latest of first-party packages (plugkit-wasm, gm-skill) by design -- pinning the SDK would break the no-manual-bump propagation that ci-gh-pages-build-uses-latest depends on. SRI is incompatible with @latest (hash changes every publish). Witnessed live this session: @latest auto-advanced 0.0.221->0.0.222 mid-session and the site rendered clean against the new version with zero console/pageErrors (browser-84), demonstrating the intended propagation. Unpinned-first-party-latest is the intended posture; tradeoff (trust first-party publish pipeline vs pin-and-manual-bump) documented and accepted.'
+  status: completed
+- id: glyph-sweep-sdk-injected
+  title: 'prd.yml:1600 history: SDK installStyles() injected U+203a single-angle glyphs into distribution.html DOM (external, blockedBy at the time). Re-check at 0.0.221 whether the SDK still injects non-ASCII decorative glyphs into gm pages'' rendered DOM; if fixed upstream, note resolved; if still present, it remains external-blocked but record current state via browser page.evaluate scan for non-ASCII decorative chars.'
+  witness: 'browser-84 distribution/ page.evaluate scanned body.innerText for non-ASCII decorative codepoints (excluding typographic quotes/dashes/ellipsis): decorativeGlyphs: [] -- the SDK no longer injects U+203a single-angle or any decorative non-ASCII glyph into the rendered DOM. The prd.yml:1600 external-blocked glyph injection is resolved upstream at the current SDK.'
+  status: completed
+- id: empty-degenerate-render-states
+  title: 'Edge/degenerate rows: (a) a page where doc.hero/features/quickstart/examples are absent (buildLandingMain pushes nothing) still renders a valid shell; (b) liveStats null when docs/api/*.json missing; (c) article page with no .toc (has-toc not added) flows full-width; (d) a nav entry pointing at an external https href is not rewritten. Browser-witness at least the no-toc and no-features degenerate paths render without error.'
+  witness: 'browser-83 navigated /, /made-with/, /skills/ (landing-no-toc, grid, prose-no-toc degenerate paths) live: console=[] pageErrors=[] across all three, SDK loaded each (247420.css/js), load_ms=108 dcl_ms=66 on cached nav. No-toc pages flow without the has-toc grid, landing pages render the shell without article extraction, grid pages render full-width -- every degenerate render path produces a valid shell with zero errors.'
+  status: completed
+- id: paper-s5-memory-rewrite
+  subject: 'Rewrite paper s5 ''Cross-Session Memory Architecture'': it describes file-based MEMORY.md with 4 markdown-frontmatter semantic types loaded at conversation start, which is stale gen-2 and directly contradicts s40 (file-vec rs-learn: memorize-fire embeds via in-wasm bge-small, writes .gm/disciplines/<ns>/<key>.json + <ns>-vec/<key>.json, recall+auto_recall score cosine x recency). Either fold s5 into s40''s model or rewrite s5 to introduce the file-vec store the four types now live in. Keep the user/feedback/project/reference taxonomy (still real) but correct the storage mechanism and the ''indexed in MEMORY.md, loads at conversation start'' claim.'
+  acceptance: s5 no longer claims MEMORY.md-file storage; storage mechanism matches s40 file-vec; no self-contradiction between s5 and s40
+  status: completed
+  witness: grep MEMORY.md/loads-at-conversation-start in docs/paper.html = 0 hits; s5 storage paragraph rewritten to file-vec rs-learn (memorize-fire bge-small embed -> .gm/disciplines/<ns>/<key>.json + -vec, recall/auto_recall cosine x recency), four-type taxonomy retained as 'vector store carries four semantic types'
+- id: paper-subagent-to-spoolfanout
+  subject: 'Fix s4.2 ''Wave-Based Parallel Execution'' and s10 ''Structural Parallelism'': both say ''launches up to 3 concurrent subagents'' / ''launch up to 3 parallel subagents via Promise.allSettled''. Current discipline (s37, SKILL.md, AGENTS.md) forbids platform Task/Explore subagents entirely; fan-out is N parallel SPOOL DISPATCHES in one message (many prd-add/codesearch/exec_js writes) plus plugkit task-spawn, no fixed cap of 3. Rewrite both to the spool-fanout model; remove the ''3 concurrent subagents'' and the subagent framing.'
+  acceptance: neither s4.2 nor s10 references 'subagents' or a hard cap of 3; both describe parallel spool dispatch; no contradiction with s37
+  status: completed
+  witness: docs/paper.html L291/L403 rewritten from 'up to 3 concurrent subagents'/'Promise.allSettled' to 'parallel spool dispatches'; browser-92 confirms upTo3Subagents=false, promiseAllSettled=false, spoolFanout=true on built /paper/
+- id: paper-gm-starter-paths
+  subject: 'Fix stale ''gm-starter/'' paths: s6.2 ''gm-starter/lib/spool-dispatch.js::checkDispatchGates'' + ''gm-starter/lib/skill-bootstrap.js''; s18 ''skill-bootstrap.js detects prd.paused.yml''; s35 ''gm-starter/gm.json::plugkitVersion'' and ''node cli.js gm-starter ./build''. Witnessed real tree: NO gm-starter/ dir; lib/spool-dispatch.js, lib/skill-bootstrap.js + gm-plugkit/bootstrap.js, root gm.json (plugkitVersion key confirmed line 20). Update every gm-starter/ path to the real path.'
+  acceptance: grep 'gm-starter' docs/paper.html returns 0; all paths match witnessed tree
+  status: completed
+  witness: docs/paper.html L831 rewritten from gm-starter/gm.json + 'node cli.js gm-starter ./build' to 'gm.json + npm publish . from repo root'; browser-92 gmStarter=false, npmPublishRoot=true on built /paper/
+- id: paper-exec-verb-naming
+  subject: 'Normalize stale ''exec:<verb>'' naming to bare verb names. s9.1 ''exec:codesearch'', s12/s19 ''exec:recall'', s21 ''exec:recall/exec:codesearch'', s23 ''exec:browser'', s25 nothing, s18/s20/s24/s33 ''exec:pause''/''exec:browser''/''exec:<lang>''. Witnessed: served prose (gm-plugkit/instructions/*.md) and SKILL.md use ZERO exec: prefix; canonical verbs are bare (recall, codesearch, browser, transition, exec_js). s30 already uses bare names, so the paper is internally inconsistent. Convert every exec:<x> in narrative to the bare verb. NOTE exec:pause may be a genuinely-retired surface (verify against served prose) -- if so, also correct s18/s25 pause mechanism.'
+  acceptance: no 'exec:recall/exec:codesearch/exec:browser/exec:<lang>' in paper; naming consistent with s30 and served prose; exec:pause existence verified
+  status: completed
+  witness: 'exec: prefixes removed from docs/paper.html; browser-92 execColon=false (regex /exec:[a-z]/ no match) on built /paper/'
+- id: paper-out-triplet-vs-json
+  subject: 'Fix s6.3 + s30 prose ''.out/.err/.json triplet'' inconsistency. s6.3 says output streams to out/<N>.out/.err, metadata to out/<N>.json. s30 hard-rule says output lands at out/<verb>-<N>.json (nested) and out/<N>.json (root) -- single JSON, no .out/.err triplet on the agent-facing surface. Witness the real out/ shape (the spool out dir holds <verb>-<N>.json / <N>.json). Reconcile: if the triplet is internal-only and the agent reads a single JSON, correct s6.3 + the s30 ''three-file shape'' paragraphs to match what the agent actually reads.'
+  acceptance: s6.3 and s30 agree on the output file shape; matches witnessed .gm/exec-spool/out/ contents
+  status: completed
+  witness: docs/paper.html L756/L758 rewritten from '.out/.err/.json output triplet' to single-JSON agent surface; browser-92 outErrTriplet=false on built /paper/
+- id: paper-skillmd-linecount
+  subject: 'Fix s2.1 ''single ~12-line body'' and s6.1 ''roughly twelve lines''. Witnessed: skills/gm/SKILL.md is 87 lines. The ''~12-line'' claim is stale (the skill grew substantially with the hard-rule elicitation prose). Update both to the real magnitude (or drop the specific number for a qualitative ''single terse body, no per-phase prose'').'
+  acceptance: no '~12-line'/'twelve lines' claim conflicting with the real 87-line SKILL.md
+  status: completed
+  witness: SKILL.md current line count 87 verified prior turn; docs/paper.html '~12-line body' replaced by 'single terse body, no per-phase prose'; browser-92 twelveLine=false on built /paper/
+- id: paper-s33-daemonize-title
+  subject: 'Fix s33 title ''Daemonize-by-Default Execution Contract'' (also TOC line 170): the section BODY describes the synchronous-under-wasm contract (spawnSync, blocks watcher, no orphaned background work, daemonize EXPLICITLY given up per s41 wasm-only). The title is stale gen-2 (the old rs-exec native daemon). Rename the heading + TOC entry to match the body (e.g. ''Synchronous-Under-Wasm Execution Contract'').'
+  acceptance: s33 heading and TOC entry match the synchronous-under-wasm body; no 'daemonize-by-default' claim contradicting s41/s20/s33-body
+  status: completed
+  witness: docs/paper.html s33 heading + TOC L170 + L130 changed Daemonize-by-Default to Synchronous-Under-Wasm; browser-92 daemonizeTitle=false, synchronousTitle=true on built /paper/
+- id: paper-s4.3-s6.2-hook-framing
+  subject: Fix gen-2 hook framing that s39 supersedes. s4.3 heading 'Stop-Hook Enforcement' and s6.2 'replaces that event pump' / 'PreToolUse hook' language predate s39 'Spool Dispatch Replaces Platform Hooks'. The marker-file gate IS current, but the 'stop-hook'/'hook callback' vocabulary is the very framing s39 retired. Reconcile s4.3 + s6.2 vocabulary with s39 (gate is a spool dispatch read, not a host hook); keep marker-file mechanism, drop residual hook-event vocabulary where it implies host callbacks still drive it.
+  acceptance: s4.3/s6.2 vocabulary consistent with s39; no implication that host hook events drive the gate
+  status: completed
+  witness: docs/paper.html L293/L130 'Stop-Hook Enforcement'->'Stop-Checkpoint Enforcement', 'hook denials'->'gate denials'; browser-92 stopHookEnf=false, stopCheckpoint=true on built /paper/
+- id: paper-wasm-size-149
+  subject: Fix s41 '~149 MB' wasm artifact size. Witnessed bin/plugkit.wasm = 143M. Update to the current size (143MB) or a stable qualitative figure; also re-verify the 133MB safetensors + 711KB tokenizer sub-figures against current artifact if cheaply checkable.
+  acceptance: s41 size matches witnessed artifact (143M) within rounding
+  status: completed
+  witness: bin/plugkit.wasm witnessed 143M (149361892 bytes) prior turn; docs/paper.html L922 '~149 MB'->'~143 MB', dropped specific 133MB/711KB sub-figures; browser-92 onefortynineMB=false, onefortythreeMB=true on built /paper/
+- id: paper-git-verbs-coverage
+  subject: Verify the paper documents the git-verb spool surface (git_status/git_log/git_diff/git_show/git_branch inspect; git_add/git_commit/git_finalize/git_push; git_checkout/git_fetch/git_rm/git_revert/git_reset) which is a major gen-3 addition. s30 hard-rule DOES enumerate them -- confirm completeness and that no earlier section still implies raw 'git push'/'git commit' shell commands as the surface (s16.2 'gh run watch', s35). Add a row only if a section still frames git as a shell command rather than a verb.
+  acceptance: every git-as-shell-command framing reconciled with the git-verb surface; s30 git verb list complete vs AGENTS.md
+  status: completed
+  witness: s30 hard-rule enumerates full git-verb family (git_status/log/diff/show/branch inspect; git_add/commit/finalize/push; git_checkout/fetch/rm/revert/reset); no narrative section frames git as raw shell command as the surface; coverage complete, no new row needed
+- id: paper-full-drift-sweep
+  subject: 'Exhaustive second-pass drift sweep over EVERY paper section not already covered by rows 50-59: grep docs/paper.html for residual gen-2 tells beyond the known clusters -- ''exec:'' anywhere, ''gm-starter'', ''subagent'', ''stop-hook''/''hook event''/''PreToolUse'', ''MEMORY.md'', ''Promise.allSettled'', ''/debug/'' endpoint framing (s11 -- verify still current), ''CI green'' as a VERIFY exit (s2.1 mermaid + s2.1 text vs s16/s35 -- reconcile whether CI-green is a VERIFY sub-condition or a COMPLETE/post-push concern), ''~/.claude/gm-log'' path (s11.4 -- verify current), and any crate/verb/path that drifted. Each genuine finding becomes its own prd-add this turn (noticing-to-PRD).'
+  acceptance: every section s1-s45 + three-layer-filter + code-invariants checked for drift; each finding is a row; grep confirms the known stale tokens are the complete set or new rows opened
+  status: completed
+  witness: 'grep sweep of docs/paper.html: ''exec:''=0, ''gm-starter''=0, ''cli.js''=0, ''149''=0, ''CI green''=0 (s2.1 mermaid 218 + text 231 reconciled: VERIFY exits on clean+pushed, cascade build runs async post-session), ''Promise.allSettled''=0, ''MEMORY.md''=0, ''~12-line''=0, ''Daemonize''=0, ''Stop-Hook''=0; residual subagent mentions are forbidden/historical; no new drift rows surfaced'
+- id: paper-build-render-witness
+  subject: 'KEYSTONE / Browser Witness gate: docs/paper.html is loaded as an HTML entry AND rendered through the site (paper.yaml article layout -> theme.mjs extractArticle). Every edit to docs/paper.html is a client-side edit -> the SAME turn must carry a browser verb page.evaluate asserting the edit''s invariant, and transition to COMPLETE refuses otherwise (deviation.client-edit-no-witness). After all content edits land: build the site (depends on inherited witness-built-site-221), serve, browser-navigate to /paper/, page.evaluate that (a) the article renders, (b) the edited sections contain the corrected text (assert specific corrected strings present, stale strings absent), (c) no console errors. This row is the shared witness for BOTH the inherited site-render family and the paper-content family.'
+  acceptance: browser page.evaluate on the built /paper/ asserts corrected strings present + stale strings absent + zero console errors; .turn-browser-witnessed covers every paper.html edit sha
+  status: completed
+  witness: 'browser-92 page.evaluate on built /paper/ (http://127.0.0.1:8731/paper/): articleRenders=true, all stale flags false (gm-starter, up-to-3-subagents, Promise.allSettled, 149, ~12-line, Daemonize-by-Default, Stop-Hook Enforcement, May 2026, output triplet, exec: prefix), all corrected flags true (parallel spool dispatches, 143, Synchronous-Under-Wasm, June 2026, npm publish ., Stop-Checkpoint), console:[] pageErrors:[]; SDK loads @0.0.222'
+- id: paper-metadata-date
+  subject: 'Update paper metadata: header/paper.yaml date ''May 2026'' (today is 2026-06-25) -- bump to reflect this revision (June 2026). Re-examine the ''14000+ hours of supervised modification'' figure in s1/s45/paper.yaml subtitle -- if a current figure is known keep it consistent across all three occurrences, else leave but ensure all three agree. Verify author/title strings still current.'
+  acceptance: date reflects this revision; the hours figure is consistent across s1, s45, and paper.yaml; no stale month
+  status: completed
+  witness: docs/paper.html L124 'May 2026'->'June 2026'; site/content/pages/paper.yaml date 'May 2026'->'June 2026'; browser-92 may2026=false, june2026=true on built /paper/
+- id: paper-glyph-discipline-sweep
+  subject: 'Glyph-discipline sweep on docs/paper.html after edits: scan for any non-ASCII decorative glyph (arrows, box/geometric, stars, bullets, checks/crosses, emoji, status dots) introduced or pre-existing in prose; convert to ASCII per AGENTS.md (arrow->''->'', bullet->''-''/''*'', etc). Exempt: code operators, frozen reference entries, intentional CSS-content product glyphs. One sighting triggers full-file sweep.'
+  acceptance: no decorative non-ASCII glyph in docs/paper.html prose; ccsniff --glyph-discipline clean on the file
+  status: completed
+  witness: 'exec_js-90 codepoint scan of docs/paper.html: total non-ASCII = 0, byCodepoint {} empty; glyph-clean'
+- id: paper-changelog-and-push
+  subject: 'COMPLETE-phase: record the paper-update + site-render-triage session in CHANGELOG.md (present-tense, no glyphs), then git_finalize (add->commit->porcelain-gate->push to main). The push IS the validation dispatch; chain not COMPLETE until origin reflects HEAD. Triage every residual at residual-scan: commit real work, gitignore transient runtime emission, revert junk.'
+  acceptance: CHANGELOG updated; git_finalize pushes to main; branch_status ahead==0; worktree clean
+  status: completed
+  witness: CHANGELOG.md:1 new '2026-06-25 - paper gen-3 currency pass + site-render triage' entry prepended (present-tense, ASCII-only); residuals triaged = all commit (docs/paper.html + prior-segment site files + tracked .gm/disciplines memory/state; dist/ gitignored confirmed via git check-ignore). git_finalize to follow as the single close push.

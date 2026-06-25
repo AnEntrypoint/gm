@@ -277,29 +277,16 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     html.article-flow #app, html.article-flow .app, html.article-flow .app-body, html.article-flow .app-main {
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
-    .app-main > * { flex-shrink: 0; }
     /* Landing measure cap: the SDK only caps article (.narrow) pages, so prose landings
        (home/crates/skills/distribution) ran edge-to-edge to ~1320px (unreadable lines).
        Cap each direct child to a readable measure and center it; the panel/hero/cli all
        sit in one ~940px column. Grid pages (made-with/stats) keep full width (no class). */
     html.landing-capped .app-main > * { max-width: var(--measure-wide, 940px); margin-left: auto; margin-right: auto; width: 100%; }
-    /* Mobile topbar: the SDK topbar squeezed 9 nav links into a collapsed grid cell
-       so they overlapped unreadably. Make the topbar a wrapping flex row; nav drops to
-       its own full-width row and scrolls horizontally with real link spacing. */
-    .app-topbar { display: flex; flex-wrap: wrap; align-items: center; }
-    .app-topbar > nav { margin-left: auto; }
-    .app-topbar nav a { flex: 0 0 auto; }
+    /* SDK 0.0.221 app-shell handles topbar flex-wrap, nav margin-left:auto, and the
+       mobile nav-row horizontal scroll natively; only the gm-specific crumb tagline-chip
+       hide remains. The chip ("a state machine...") is redundant with the hero on mobile
+       and wraps to a tall row eating vertical space; hide it on narrow screens, keep toggle. */
     @media (max-width: 640px) {
-      .app-topbar > nav {
-        flex: 1 1 100%; max-width: none; margin-left: 0; order: 3;
-        display: flex; flex-wrap: nowrap; gap: 2px;
-        overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-      }
-      .app-topbar > nav::-webkit-scrollbar { display: none; }
-      .app-topbar nav a { flex: 0 0 auto; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
-      /* The crumb's tagline chip ("a state machine...") is redundant with the hero
-         on mobile and wraps to a tall row eating ~127px of vertical space. Hide it
-         on narrow screens; keep the theme toggle. */
       .app-crumb .ds-chip, .app-crumb [class*="chip"] { display: none; }
       .app-crumb .ds-theme-toggle, .app-crumb [class*="theme-toggle"] { display: inline-flex; }
     }
@@ -457,7 +444,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
        The source docs' own <style> heads are stripped on extraction, so the
        shell restyles them here with SDK tokens. */
     .ds-prose .card { display: flex; flex-direction: column; gap: 8px; padding: 14px 18px; margin: 8px 0; background: var(--panel-1); border-radius: 6px; font-size: 13px; box-shadow: var(--panel-shadow); text-decoration: none; }
-    .ds-prose .card:hover { background: var(--panel-hover); }
+    .ds-prose .card:hover { background: var(--panel-2); }
     .ds-prose .card .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
     .ds-prose .card .repo-name { font-weight: 600; color: var(--panel-text); }
     .ds-prose .card .stars { color: var(--panel-text-3); font-family: var(--ff-mono); font-size: 12px; flex: 0 0 auto; }

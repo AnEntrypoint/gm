@@ -5,7 +5,7 @@
     "build": "node node_modules/flatspace/bin/flatspace.js aggregate --input platforms.json --output platforms-out.json"
   },
   "dependencies": {
-    "anentrypoint-design": "latest",
+    "anentrypoint-design": "^0.0.221",
     "flatspace": "^1.0.11"
   }
 }
