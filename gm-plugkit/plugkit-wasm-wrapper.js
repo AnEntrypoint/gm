@@ -2127,6 +2127,7 @@ function makeHostFunctions(instanceRef) {
           + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
           + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`;
         const perfRead = `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`;
+        const blankProbe = startUrl ? '' : `try{const __u=page.url();if(__u==='about:blank'||__u===''){console.error('__GM_BLANK__');}}catch(_){}\n`;
         if (modeMatch && modeMatch[1] === 'profile') {
           const userScript = modeMatch[2];
           const intervalUs = 100;
@@ -2134,7 +2135,7 @@ function makeHostFunctions(instanceRef) {
             + `let __profile=null,__profileError=null;\n`
             + `let __cdp=null;\n`
             + `try{__cdp=await page.context().newCDPSession(page);await __cdp.send('Profiler.enable');await __cdp.send('Profiler.setSamplingInterval',{interval:${intervalUs}});await __cdp.send('Profiler.start');}catch(e){__profileError=String(e&&e.message||e);__cdp=null;}\n`
-            + `const __result = await (async () => {\n${gotoPrefix}${userScript}\n})();\n`
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}${userScript}\n})();\n`
             + `if(__cdp){try{const __r=await __cdp.send('Profiler.stop');__profile=__r&&__r.profile||null;}catch(e){__profileError=String(e&&e.message||e);}}\n`
             + perfRead
             + AGGREGATE_CPU_PROFILE_SRC + `\n`
@@ -2143,11 +2144,13 @@ function makeHostFunctions(instanceRef) {
         } else if (modeMatch && modeMatch[1] === 'capture') {
           const userScript = modeMatch[2];
           evalBody = debugSetup
-            + `const __result = await (async () => {\n${gotoPrefix}${userScript}\n})();\n`
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}${userScript}\n})();\n`
             + perfRead
             + `return {result:__result,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
         } else if (startUrl) {
           evalBody = `${gotoPrefix}${evalBody}`;
+        } else if (blankProbe) {
+          evalBody = `${blankProbe}${evalBody}`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
@@ -2155,14 +2158,22 @@ function makeHostFunctions(instanceRef) {
         if (!ok && r.status === null) {
           logEvent('plugkit', 'browser.runner-timeout', { session_id: pwSessionId, timeout_ms: timeoutMs, body_bytes: evalBody.length });
         }
-        return writeWasmJson(instanceRef.value, {
+        const rawStderr = r.stderr || '';
+        const landedOnBlank = !startUrl && rawStderr.includes('__GM_BLANK__');
+        const envelope = {
           ok,
           stdout: scrubBrowserRunnerText(r.stdout || ''),
-          stderr: scrubBrowserRunnerText(r.stderr || ''),
+          stderr: scrubBrowserRunnerText(rawStderr.replace(/^__GM_BLANK__\r?\n?/gm, '')),
           exit_code: r.status === null ? -1 : r.status,
           session_id: pwSessionId,
           timeout_ms_used: timeoutMs,
-        });
+        };
+        envelope.navigation_requested = !!startUrl;
+        if (landedOnBlank) {
+          envelope.landed_on_blank = true;
+          envelope.hint = "page is about:blank: this dispatch did not navigate, so the expression evaluated against an empty page. Prefix the body with 'url=<target>' (or send a bare 'https://...' URL) to open the page you want before evaluating.";
+        }
+        return writeWasmJson(instanceRef.value, envelope);
       } catch (e) {
         return writeWasmJson(instanceRef.value, { ok: false, error: scrubBrowserRunnerText(e.message) });
       }

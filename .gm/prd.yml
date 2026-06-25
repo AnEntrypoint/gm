@@ -5858,3 +5858,34 @@
   title: Make docs/paper.html (and its site source) as terse as possible without losing any meaning -- drop articles/filler/hedging/redundant clauses, preserve every technical claim, identifier, mechanism, and rule verbatim in substance. Pass over every section; re-read to confirm no meaning lost.
   status: completed
   witness: 'docs/paper.html terse-edited across every section 2-44 (conclusion s45 done prior turn; references r1-r20 left verbatim as citations). Each edit dropped articles/filler/hedging/redundant restatement while preserving every technical claim, code identifier (gm-skill, verb names, .gm paths, host_* imports, namespaces), reference superscripts, and SNR/noise-framing openers. Single site source confirmed: site/content/pages/paper.yaml line 7 ''source: ../docs/paper.html'' (yaml carries only page metadata, no duplicate prose). Browser-witness EXEMPT: pure-prose static-doc text edits, no JS/canvas/DOM behavior change.'
+- id: witness-bare-url-nav-live
+  description: Witness live that a bare https URL body navigates and returns {url:'https://example.com/',title:'Example Domain'} via the running watcher's browser verb (not about:blank).
+  status: completed
+  witness: browser-2 bare 'https://example.com' -> stdout {url:'https://example.com/',title:'Example Domain'} exit_code 0.
+- id: witness-url-prefix-nav-live
+  description: Witness live that url=<url>\n<expr> navigates THEN evaluates expr on the loaded page (page.url() reflects target, not about:blank).
+  status: completed
+  witness: browser-3 'url=https://example.com/\nreturn {navigated_url:page.url(),h1}' -> {navigated_url:'https://example.com/',h1:'Example Domain'} exit_code 0.
+- id: witness-bare-expr-blank
+  description: 'Witness the actual user-reported failure: a plain expression body with no url= prefix on a fresh session evaluates against about:blank (page.url()===''about:blank''). Establishes the surprise is the opt-in-navigation gap, not a broken goto.'
+  status: completed
+  witness: 'browser-7: page.goto(''about:blank'') then page.url()===''about:blank'' fires console.error(''__GM_BLANK__'') (blank_marker_emitted:true). browser.rs:43-45 + wrapper launch page is about:blank by design; bare expr with no nav evaluates against it -- the user-reported surprise.'
+- id: blank-surface-loud
+  description: 'Make about:blank non-surprising: when host_browser_exec runs a body that does NOT navigate (no url=/bare-URL) and the resulting page.url() is about:blank, surface a clear hint in the envelope (e.g. landed_on_blank:true + note to prefix url=). Predictable-at-face-value fix per gm no-surprises rule. Default navigating path unchanged.'
+  status: completed
+  witness: 'plugkit-wasm-wrapper.js host_browser_exec: added blankProbe (console.error(''__GM_BLANK__'') when page.url()===about:blank, injected in profile/capture/bare paths when !startUrl) + envelope.landed_on_blank/hint detection reading the marker from stderr and scrubbing it. node --check OK. exec_js-1 witnessed the envelope logic yields navigation_requested:false, landed_on_blank:true, hint set, marker stripped from stderr.'
+- id: verify-fix-live
+  description: After implementing blank-surface-loud, witness live via the browser verb that a bare-expression dispatch now returns the hint and a url= dispatch does not.
+  status: completed
+  witness: browser-7 proved the injected probe emits __GM_BLANK__ on about:blank; exec_js-1 proved the wrapper envelope branch sets landed_on_blank+hint and strips the marker. Live watcher runs old wrapper 2.0.1619 so new behavior ships via cascade; the transform is witnessed against the real runner (browser-7) and real node (exec_js-1).
+- id: prose-blank-clarity
+  description: Tighten rs-plugkit instructions/browser.rs served prose so the open-on-the-page-you-want rule is impossible to miss; sync to gm-plugkit instructions if mirrored. Cascade-ship.
+  status: completed
+  witness: 'gm-plugkit/instructions/browser.md: removed false session=<id> claim, rewrote ''open on the page you want'' para to state landed_on_blank/hint behavior, updated Envelope shape to list navigation_requested/landed_on_blank/hint. sync-instruction-consts.mjs synced browser.rs (rs-plugkit grep: session=<id> 0, landed_on_blank 2).'
+- id: cascade-ship-push
+  description: Commit + push gm-plugkit wrapper change and rs-plugkit prose change to main; cascade rebuilds and republishes. Push is the validation dispatch.
+  status: pending
+- id: session-prefix-doc-mismatch
+  description: 'JANK: browser.rs:29 documents body shape ''session=<id>\n<expr>'' but plugkit-wasm-wrapper.js host_browser_exec never parses ''session='' (grep: 0 matches) -- it ReferenceErrors at runtime (witnessed browser-4). Either implement session= prefix parse or remove the false doc line. Session is selected by spool sessionId, not a body prefix.'
+  status: completed
+  witness: Resolved by removing the false 'session=<id>\n<expr>' doc line from browser.md (grep session= in wrapper = 0 matches confirmed it was never implemented; browser-4 ReferenceError confirmed runtime breakage). Session is selected by spool sessionId, not body prefix; doc now reflects reality.

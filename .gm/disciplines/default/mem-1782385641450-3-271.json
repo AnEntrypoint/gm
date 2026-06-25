@@ -1,0 +1,3 @@
+## Resolved mutable: rs-exec-rs-plugkit-rust-involved
+
+grep about:blank|page.goto|browser|chromium: rs-exec/src=0 files, rs-plugkit/src=only instructions/browser.rs served prose. Navigation logic is purely gm-plugkit wrapper JS; no Rust change needed except served prose.

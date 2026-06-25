@@ -480,3 +480,23 @@
   text: 'Whether rs-plugkit is checked out as a local sibling so sync-instruction-consts.mjs can write the .rs consts, or instructions changes must be pushed to the rs-plugkit repo separately. Witness: filesystem check of ../rs-plugkit and the sync script rsDir default.'
   status: witnessed
   witness_evidence: Bash ls ../rs-plugkit -> SIBLING-PRESENT; src/orchestrator/instructions/{entry,plan,execute,emit,verify,update_docs,browser,mod}.rs present. sync-instruction-consts.mjs rsDir defaults to here/../../../rs-plugkit (from gm-plugkit/scripts/ == gm/../rs-plugkit), or RS_PLUGKIT_DIR. So sync-instruction-consts.mjs can write the .rs consts locally; rs-plugkit must then be committed+pushed to trigger cascade wasm rebuild.
+- id: live-wrapper-has-url-prefix
+  status: witnessed
+  description: Does the LIVE running watcher's plugkit-wasm-wrapper.js have the url=/bare-URL goto-prefix navigation logic (host_browser_exec ~2101-2144)?
+  witness: ''
+  witness_evidence: Live watcher wrapper_sha bef693645386 == sha256(gm-plugkit@2.0.1619 plugkit-wasm-wrapper.js); that file lines 2108-2150 contain startUrl/urlMatch/gotoPrefix/page.goto navigation logic.
+- id: bare-url-navigates-live
+  status: witnessed
+  description: Dispatching a bare https URL body to the browser verb actually navigates and returns {url,title} rather than landing on about:blank.
+  witness: ''
+  witness_evidence: browser-2 (bare body 'https://example.com') returned stdout {url:'https://example.com/',title:'Example Domain'}, exit_code 0. Live navigation works.
+- id: url-prefix-navigates-live
+  status: witnessed
+  description: Dispatching url=<url>\n<expr> to the browser verb navigates before evaluating expr.
+  witness: ''
+  witness_evidence: browser-3 (body 'url=https://example.com/\nreturn {navigated_url:page.url(),h1:...}') returned {navigated_url:'https://example.com/',h1:'Example Domain'}, exit_code 0. url= prefix navigates then evaluates.
+- id: rs-exec-rs-plugkit-rust-involved
+  status: witnessed
+  description: Whether rs-exec/rs-plugkit Rust source has any browser-navigation logic that needs changing, or whether the fix is purely wrapper-side JS as recall claims (browser-runner-rust-involvement).
+  witness: ''
+  witness_evidence: 'grep about:blank|page.goto|browser|chromium: rs-exec/src=0 files, rs-plugkit/src=only instructions/browser.rs served prose. Navigation logic is purely gm-plugkit wrapper JS; no Rust change needed except served prose.'

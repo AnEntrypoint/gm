@@ -1,0 +1,3 @@
+## Resolved mutable: bare-url-navigates-live
+
+browser-2 (bare body 'https://example.com') returned stdout {url:'https://example.com/',title:'Example Domain'}, exit_code 0. Live navigation works.
