@@ -324,6 +324,8 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       .app-main > h2,
       .app-main > h3 { margin-top: 28px; }
     }
+    #ds-article-host section { position: relative; }
+    #ds-article-host canvas { display: block; width: 100% !important; max-width: 100%; height: 300px !important; max-height: 300px; }
   </style>
 </head>
 <body>

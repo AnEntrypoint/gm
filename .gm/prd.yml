@@ -6210,3 +6210,11 @@
   acceptance: 'live witness: fetchError null, openIssues numeric, network shows /gm/docs/api path'
   status: completed
   witness: 'browser-242 live /gm/stats/ page.evaluate: fetchErr null, openIssues numeric (1), network shows /gm/docs/api/*.json path with /gm prefix on all 5 endpoints 200, summary cards real numbers, dbgApiKeys all 5 present'
+- id: fix-stats-canvas-unbounded-stretch
+  subject: 'docs/stats.html: ''main canvas{max-width:100%}'' gives canvas no height/width box; with Chart.js responsive:true+maintainAspectRatio:false and no fixed-height parent, the canvas grows horizontally each render tick (the documented unbounded-growth loop). Fix: CSS-determine the canvas box (width:100% !important;height:300px !important;max-height:300px) so resize settles into a stable box.'
+  acceptance: 'live browser: each canvas rectW stable across two reads 3s apart (no growth), rectH ~300, 3 charts still drawn'
+  status: pending
+- id: rebuild-rewitness-push-canvas-fix
+  subject: rebuild site (site/ npm run build then root npx flatspace build), deploy via push to main, then browser-witness the live /gm/stats canvases are stable (no horizontal stretch) after Pages deploy completes
+  acceptance: git_finalize pushed, gh-pages deploy success, live witness canvas rectW stable + rectH ~300
+  status: pending
