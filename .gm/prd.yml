@@ -5852,7 +5852,8 @@
   - installer-host-detect
   - installer-windows-posix
   - settings-merge-logic
-  status: pending
+  status: completed
+  witness: git_status-80 dirty=false (clean worktree); gm committed+pushed main sha 399a30d0a (git_finalize-78 pushed=true); rs-plugkit instruction consts committed+pushed main sha 5e3ee56 (git_finalize-79 pushed=true) triggering cascade wasm rebuild; .tessl-plugin/ tooling sidecar added to .gitignore (triaged ignore, not session work); all other residuals committed as session work + tracked memo/manifest/db state
 - id: paper-terse-rewrite
   title: Make docs/paper.html (and its site source) as terse as possible without losing any meaning -- drop articles/filler/hedging/redundant clauses, preserve every technical claim, identifier, mechanism, and rule verbatim in substance. Pass over every section; re-read to confirm no meaning lost.
   status: completed
