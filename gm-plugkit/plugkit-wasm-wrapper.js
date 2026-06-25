@@ -621,6 +621,56 @@ function writeJsonFile(fp, value) {
   try { atomicWriteJson(fp, value); } catch (_) {}
 }
 
+const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN) {
+  const N = topN || 20;
+  if (!profile || !Array.isArray(profile.nodes) || !Array.isArray(profile.samples)) {
+    return { timeframe: null, culprits: [] };
+  }
+  const byId = new Map();
+  for (const node of profile.nodes) byId.set(node.id, node);
+  const deltas = Array.isArray(profile.timeDeltas) ? profile.timeDeltas : [];
+  const acc = new Map();
+  let total = 0;
+  const sampleCount = profile.samples.length;
+  for (let i = 0; i < profile.samples.length; i++) {
+    const node = byId.get(profile.samples[i]);
+    const dt = deltas[i] || 0;
+    total += dt;
+    if (!node) continue;
+    const cf = node.callFrame || {};
+    let url = cf.url || '';
+    if (!url) url = cf.functionName ? '(native)' : '(program)';
+    const line = (typeof cf.lineNumber === 'number' && cf.lineNumber >= 0) ? cf.lineNumber + 1 : 0;
+    const loc = url + ':' + line;
+    let e = acc.get(loc);
+    if (!e) { e = { location: loc, function: cf.functionName || '(anonymous)', self_us: 0, hits: 0 }; acc.set(loc, e); }
+    e.self_us += dt;
+    e.hits += 1;
+  }
+  const culprits = Array.from(acc.values())
+    .sort((a, b) => b.self_us - a.self_us)
+    .slice(0, N)
+    .map(c => ({ location: c.location, function: c.function, self_us: c.self_us, self_pct: total ? Math.round((c.self_us / total) * 1000) / 10 : 0, hits: c.hits }));
+  return {
+    timeframe: {
+      start_us: typeof profile.startTime === 'number' ? profile.startTime : 0,
+      end_us: typeof profile.endTime === 'number' ? profile.endTime : 0,
+      total_us: total,
+      sample_count: sampleCount,
+    },
+    culprits,
+  };
+}`;
+
+let execProfileSeq = 0;
+let _aggregateCpuProfileFn = null;
+function aggregateCpuProfile(profile, topN) {
+  if (!_aggregateCpuProfileFn) {
+    _aggregateCpuProfileFn = new Function(AGGREGATE_CPU_PROFILE_SRC + '\nreturn aggregateCpuProfile;')();
+  }
+  return _aggregateCpuProfileFn(profile, topN);
+}
+
 const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
 
 function findBrowserRunner() {
@@ -1870,14 +1920,62 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const timeoutMs = rawTimeout;
+        const wantProfile = opts.profile === true && (lang === 'nodejs' || lang === 'js' || lang === undefined);
+        let profileUserFile = null;
         let cmd, args;
-        if (lang === 'nodejs' || lang === 'js') { cmd = process.execPath; args = ['-e', code]; }
+        if (lang === 'nodejs' || lang === 'js') {
+          if (wantProfile) {
+            profileUserFile = path.join(os.tmpdir(), `gm-prof-${process.pid}-${execProfileSeq++}.js`);
+            fs.writeFileSync(profileUserFile, `module.exports = (async () => {\n${code}\n});`, 'utf-8');
+            const runnerCode = `${AGGREGATE_CPU_PROFILE_SRC}\n`
+              + `const __inspector = require('inspector');\n`
+              + `const __session = new __inspector.Session();\n`
+              + `__session.connect();\n`
+              + `const __post = (m, p) => new Promise((res, rej) => __session.post(m, p || {}, (e, r) => e ? rej(e) : res(r)));\n`
+              + `(async () => {\n`
+              + `  let __profile = null, __profileError = null, __userResult = null, __userError = null;\n`
+              + `  try {\n`
+              + `    await __post('Profiler.enable');\n`
+              + `    await __post('Profiler.setSamplingInterval', { interval: ${Number.isFinite(opts.sampleIntervalUs) && opts.sampleIntervalUs > 0 ? Math.floor(opts.sampleIntervalUs) : 100} });\n`
+              + `    await __post('Profiler.start');\n`
+              + `    try { __userResult = await require(${JSON.stringify(profileUserFile)})(); } catch (ue) { __userError = String(ue && ue.stack || ue); }\n`
+              + `    const __r = await __post('Profiler.stop');\n`
+              + `    __profile = __r && __r.profile || null;\n`
+              + `  } catch (pe) { __profileError = String(pe && pe.message || pe); }\n`
+              + `  const __agg = __profile ? aggregateCpuProfile(__profile) : { timeframe: null, culprits: [] };\n`
+              + `  process.stdout.write('__GM_PROFILE__' + JSON.stringify({ result: __userResult, user_error: __userError, profile: __agg, profile_error: __profileError }));\n`
+              + `  __session.disconnect();\n`
+              + `})();\n`;
+            cmd = process.execPath; args = ['-e', runnerCode];
+          } else {
+            cmd = process.execPath; args = ['-e', code];
+          }
+        }
         else if (lang === 'python') { cmd = 'python'; args = ['-c', code]; }
         else if (lang === 'bash') { cmd = 'bash'; args = ['-c', code]; }
         else if (lang === 'deno') { cmd = 'deno'; args = ['eval', code]; }
         else { return writeWasmJson(instanceRef.value, { ok: false, error: `unsupported lang: ${lang}` }); }
         const __execT0 = Date.now();
         const result = spawnSync(cmd, args, { encoding: 'utf-8', timeout: timeoutMs, cwd, env: process.env });
+        if (profileUserFile) { try { fs.unlinkSync(profileUserFile); } catch (_) {} }
+        if (wantProfile) {
+          const raw = result.stdout || '';
+          const idx = raw.indexOf('__GM_PROFILE__');
+          let parsed = null;
+          if (idx >= 0) { try { parsed = JSON.parse(raw.slice(idx + '__GM_PROFILE__'.length)); } catch (_) {} }
+          return writeWasmJson(instanceRef.value, {
+            ok: result.status === 0 && parsed !== null && !parsed.user_error,
+            stdout: idx >= 0 ? raw.slice(0, idx) : raw,
+            stderr: result.stderr || '',
+            exit_code: result.status === null ? -1 : result.status,
+            timed_out: result.signal === 'SIGTERM',
+            duration_ms: Date.now() - __execT0,
+            result: parsed ? parsed.result : null,
+            profile: parsed ? parsed.profile : { timeframe: null, culprits: [] },
+            profile_error: parsed ? parsed.profile_error : 'profile sentinel not found in stdout',
+            user_error: parsed ? parsed.user_error : null,
+          });
+        }
         return writeWasmJson(instanceRef.value, {
           ok: result.status === 0,
           stdout: result.stdout || '',
@@ -2016,15 +2114,30 @@ function makeHostFunctions(instanceRef) {
         const gotoPrefix = startUrl
           ? `await page.goto(${JSON.stringify(startUrl)},{waitUntil:'load',timeout:${navTimeout}});\n`
           : '';
-        const captureMatch = evalBody.match(/^(?:capture|profile)[ \t]*\n([\s\S]*)$/);
-        if (captureMatch) {
-          const userScript = captureMatch[1];
-          evalBody = `const __logs=[],__errs=[],__net=[];\n`
-            + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
-            + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
-            + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`
+        const modeMatch = evalBody.match(/^(capture|profile)[ \t]*\n([\s\S]*)$/);
+        const debugSetup = `const __logs=[],__errs=[],__net=[];\n`
+          + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
+          + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
+          + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`;
+        const perfRead = `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`;
+        if (modeMatch && modeMatch[1] === 'profile') {
+          const userScript = modeMatch[2];
+          const intervalUs = 100;
+          evalBody = debugSetup
+            + `let __profile=null,__profileError=null;\n`
+            + `let __cdp=null;\n`
+            + `try{__cdp=await page.context().newCDPSession(page);await __cdp.send('Profiler.enable');await __cdp.send('Profiler.setSamplingInterval',{interval:${intervalUs}});await __cdp.send('Profiler.start');}catch(e){__profileError=String(e&&e.message||e);__cdp=null;}\n`
             + `const __result = await (async () => {\n${gotoPrefix}${userScript}\n})();\n`
-            + `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`
+            + `if(__cdp){try{const __r=await __cdp.send('Profiler.stop');__profile=__r&&__r.profile||null;}catch(e){__profileError=String(e&&e.message||e);}}\n`
+            + perfRead
+            + AGGREGATE_CPU_PROFILE_SRC + `\n`
+            + `const __agg = __profile ? aggregateCpuProfile(__profile) : {timeframe:null,culprits:[]};\n`
+            + `return {result:__result,profile:__agg,profile_error:__profileError,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
+        } else if (modeMatch && modeMatch[1] === 'capture') {
+          const userScript = modeMatch[2];
+          evalBody = debugSetup
+            + `const __result = await (async () => {\n${gotoPrefix}${userScript}\n})();\n`
+            + perfRead
             + `return {result:__result,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
         } else if (startUrl) {
           evalBody = `${gotoPrefix}${evalBody}`;

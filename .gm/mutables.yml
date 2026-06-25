@@ -448,3 +448,23 @@
   status: witnessed
   text: 'Are rs-exec/rs-plugkit involved? host_browser_exec (wrapper JS, :1937) runs runBrowserRunner(pw,[''-s'',sid,''-e'',evalBody]) -- the external BROWSER_RUNNER_BIN agent-browser tool evaluates evalBody in the session page. A page.goto is just JS in evalBody, so the start-URL fix is purely wrapper-side; no rs-exec or rs-plugkit Rust change needed. Witness: :2015 the runner invocation passes -e evalBody; navigation rides in evalBody.'
   witness_evidence: plugkit-wasm-wrapper.js:2015 runBrowserRunner(pw,['-s',pwSessionId,'--timeout',...,'-e',evalBody]) -- the external agent-browser runner evaluates evalBody (raw JS) in the session page. A page.goto rides inside evalBody, so the start-URL fix is purely wrapper-side JS; rs-exec/rs-plugkit are NOT involved. No Rust change.
+- id: cdp-profiler-through-playwriter
+  status: witnessed
+  question: Does page.context().newCDPSession(page) + Profiler.start/stop work inside playwriter -e evalBody and return a v8 CPU profile with callFrame.url+lineNumber?
+  witness: pending live browser dispatch
+  witness_evidence: 'browser out/browser-30.json: page.context().newCDPSession(page) + Profiler.enable/setSamplingInterval(200)/start/stop ran inside playwriter -e evalBody and returned a real v8 CPU profile -- node_count 13, sample_count 524, startTime 38585996371 endTime 38586337643 (timeframe present). callFrame data present on nodes; page.evaluate frames have empty url (anonymous injected context) so aggregator buckets them to (program)/(native), while real .js-file page scripts carry callFrame.url+lineNumber (consistent with node witness exec_js-22). CDP profiling through the browser verb is viable; gotoPrefix must precede Profiler.start to capture page init.'
+- id: node-inspector-session-init-capture
+  status: witnessed
+  question: Can a node inspector Session CPU profiler wrap the spawned exec_js code so it captures BOTH module-init and the user code-execution calls, attributing self-time to file:line via callFrame.url+lineNumber?
+  witness: pending live exec_js dispatch
+  witness_evidence: 'exec_js out/exec_js-22.json: node inspector Session (connect; Profiler.enable; setSamplingInterval 100us; start; user loop; stop->{profile}) produced a real v8 CPU profile; aggregator attributed 68.3pct self_us to the user loop at file-url line 49 with file:line. duration_ms 391. inspector Session captures code-exec with callFrame.url+lineNumber; to also capture module-init, Profiler.start must precede the first user statement (row profile-init-capture-proof).'
+- id: cpu-profile-aggregation-self-time
+  status: witnessed
+  question: How to aggregate a v8 CPU profile (nodes[].callFrame, samples[], timeDeltas[]) into self-time-per-(url:line), sort desc, take top 20, including the capture timeframe (start/end/total_us)?
+  witness: pending exec_js witness of aggregation fn against a real profile
+  witness_evidence: 'exec_js out/exec_js-22.json: aggregateCpuProfile walks samples[i]->byId(nodeId).callFrame, key=url+'':''+(lineNumber+1), sums timeDeltas[i] into self_us, hits++, total accumulates; sort desc slice(0,20) self_pct=round(self_us/total*1000)/10. timeframe {start_us:38146273562,end_us:38146383918,total_us:110004,sample_count:133}. Degenerate(null)->{timeframe:null,culprits:[]}, empty->{timeframe:{total_us:0},culprits:[]} no throw. Native frames bucket to (native):0.'
+- id: profile-prefix-parse-order
+  status: witnessed
+  question: Where in the timeout=/url=/capture= prefix parse chain (browser ~1993-2031) and the exec_js host (~1845-1888) does a new 'profile' sub-mode parse cleanly so default byte path stays unchanged?
+  witness: pending Read+Edit of wrapper, parse-order verified by witness dispatch with no prefix returning identical legacy shape
+  witness_evidence: 'Read plugkit-wasm-wrapper.js 1995-2031: browser parses timeout=(1995) -> url=(2004) -> captureMatch regex /^(?:capture|profile)[ \t]*\n/ at 2019 ALREADY matches ''profile'', so profile must split out of that single branch into capture-vs-profile. exec_js host 1845-1888 has NO body prefix; add opts.profile flag wrapping spawned node code in inspector Session, default (no flag) path 1880-1888 byte-identical.'
