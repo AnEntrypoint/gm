@@ -235,6 +235,15 @@ if (page.layout === 'article' && page.articleHtml) {
     if (toc) {
       if (toc.parentElement !== host) host.insertBefore(toc, host.firstChild);
       host.classList.add('has-toc');
+      const col = document.createElement('div');
+      col.className = 'article-col';
+      let node = toc.nextSibling;
+      while (node) {
+        const next = node.nextSibling;
+        col.appendChild(node);
+        node = next;
+      }
+      host.appendChild(col);
     }
     const blocks = host.querySelectorAll('.mermaid');
     if (blocks.length) {
@@ -244,6 +253,32 @@ if (page.layout === 'article' && page.articleHtml) {
         mermaid.run({ nodes: blocks });
       }).catch(() => {});
     }
+    const loadExternal = (src) => new Promise((res) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = res;
+      s.onerror = res;
+      document.head.appendChild(s);
+    });
+    const reviveScripts = async (root) => {
+      const olds = [...root.querySelectorAll('script')];
+      const externals = olds.filter((s) => s.src);
+      const inlines = olds.filter((s) => !s.src);
+      const needsChart = inlines.some((s) => /new\\s+Chart\\b/.test(s.textContent));
+      if (needsChart && typeof window.Chart === 'undefined') {
+        await loadExternal('https://cdn.jsdelivr.net/npm/chart.js');
+      }
+      const swap = (old) => new Promise((res) => {
+        const fresh = document.createElement('script');
+        for (const a of old.attributes) fresh.setAttribute(a.name, a.value);
+        fresh.textContent = old.textContent;
+        if (old.src) { fresh.onload = res; fresh.onerror = res; } else { queueMicrotask(res); }
+        old.replaceWith(fresh);
+      });
+      for (const s of externals) await swap(s);
+      for (const s of inlines) await swap(s);
+    };
+    reviveScripts(host);
   }
 }
 

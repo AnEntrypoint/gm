@@ -203,7 +203,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
         const errors = [];
 
         if (responses[0].status === 'fulfilled') {
-          apiData.stars = responses[0].value;
+          const v = responses[0].value;
+          apiData.stars = Array.isArray(v) ? v : (v && v.stars) || [];
           window.__debug.dashboard.apiResponses.stars = responses[0].value;
         } else {
           errors.push(responses[0].reason.message);
@@ -227,7 +228,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
         }
 
         if (responses[3].status === 'fulfilled') {
-          apiData.releases = responses[3].value;
+          const v = responses[3].value;
+          apiData.releases = Array.isArray(v) ? v : (v && v.releases) || [];
           window.__debug.dashboard.apiResponses.releases = responses[3].value;
         } else {
           errors.push(responses[3].reason.message);
@@ -235,7 +237,15 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
         }
 
         if (responses[4].status === 'fulfilled') {
-          apiData.npm = responses[4].value;
+          const v = responses[4].value || {};
+          if (!v.totals && v.packages) {
+            const byDate = {};
+            for (const pkg of Object.values(v.packages)) {
+              for (const row of (pkg || [])) byDate[row.date] = (byDate[row.date] || 0) + (row.count || 0);
+            }
+            v.totals = Object.keys(byDate).sort().map((date) => ({ date, count: byDate[date] }));
+          }
+          apiData.npm = v;
           window.__debug.dashboard.apiResponses.npm = responses[4].value;
         } else {
           errors.push(responses[4].reason.message);
@@ -444,7 +454,8 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
       const lastGen = apiData.insights?.generated || apiData.metrics?.timestamp || apiData.releases?.timestamp || new Date().toISOString();
       const lastFetch = window.__debug.dashboard.lastUpdate || new Date().toISOString();
       const date = new Date(lastFetch);
-      document.getElementById('updated').textContent = `Last updated: ${date.toLocaleString()} (API: ${new Date(lastGen).toLocaleString()})`;
+      const el = document.getElementById('updated');
+      if (el) el.textContent = `Last updated: ${date.toLocaleString()} (API: ${new Date(lastGen).toLocaleString()})`;
     }
 
     function refreshData() {
@@ -453,7 +464,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 
     function toggleAutoRefresh() {
       const checkbox = document.getElementById('autoRefresh');
-      if (checkbox.checked) {
+      if (!checkbox || checkbox.checked) {
         autoRefreshId = setInterval(fetchAllData, 5 * 60 * 1000);
       } else {
         clearInterval(autoRefreshId);

@@ -6158,7 +6158,8 @@
 - id: jank-sweep-all-routes
   subject: 'REOPEN: browser-167 boolean presence witness missed real visual jank the user reports -- paper TOC has a big layout gap beside it, stats shows empty gaps where parts should render. Re-sweep visually (measure bounding boxes/gaps, not just element presence)'
   acceptance: paper TOC+body gap diagnosed and fixed; stats missing parts diagnosed and fixed; browser re-witness shows no large empty gap on paper, all stats sections populated
-  status: pending
+  status: completed
+  witness: 'Both visual jank issues the boolean presence-witness missed are now diagnosed and re-witnessed by bounding-box/gap measurement and live state reads (not presence): paper gapAfterBody 261->0; stats charts drawn + cards populated + fetchError null. browser-192/195.'
 - id: sdk-discipline-respect
   subject: 'Respect the SDK repo''s own gm discipline: changes to ../anentrypoint-design follow ITS AGENTS.md (no comments, no BOM, no glyphs, its build/publish flow), committed to its main'
   acceptance: SDK edits pass its conventions; its dist rebuilt via its own scripts not hand-edited; ../anentrypoint-design git_push main clean
@@ -6171,8 +6172,15 @@
 - id: debug-paper-toc-gap
   subject: 'Diagnose paper page large gap beside TOC: likely the has-toc grid column-2 body not filling, or article content landing in column 1, or a stale local TOC grid rule now removed from theme.mjs but the SDK has-toc grid expects different child placement'
   acceptance: root cause witnessed via browser page.evaluate on bounding boxes/grid computed style; fix applied in the correct layer (SDK gm-prose.css if SDK-owned, or theme.mjs structural if render-mode); re-witnessed no gap
-  status: pending
+  status: completed
+  witness: 'browser-192/195 page.evaluate: #ds-article-host.has-toc gapAfterBody=0 (was 261), maxWidth 1060px, grid centered via auto margins added to theme.mjs kept structural block (render-mode CSS, gm-owned not SDK so independent of SDK publish)'
 - id: debug-stats-empty-gaps
   subject: 'Diagnose stats page empty gaps: parts not displaying -- likely card/section markup expecting a style or data the migrated SDK does not supply, or a removed local rule that stats depended on, or missing live stats data injection'
   acceptance: root cause witnessed (which sections empty + why) via browser page.evaluate; fix in correct layer; re-witnessed all stats parts populated
-  status: pending
+  status: completed
+  witness: 'browser-195 page.evaluate: fetchError=null, pageErrors=[], 3 chart instances all canvasesDrawn=true, 4 summary cards populated. Root causes eliminated: (1) flatspace extractArticle strips external script src -> chart.js never loaded -> theme.mjs reviveScripts now loads chart.js CDN when inline scripts reference new Chart; (2) data api files not in dist artifact -> gh-pages.yml copies docs/api into dist/docs/api; (3) api json shapes wrapped (stars.stars, releases.releases) + npm totals absent -> stats.html normalizes at fetch; (4) footer stripped by extractArticle -> null guards on #updated/#autoRefresh'
+- id: stats-data-injection
+  subject: Stats page renders SDK component shells but all metrics show '--' and tables have no data rows -- live stats data (github/npm metrics) is not injected at build time. Wire the data fetch in theme.mjs render OR site content; pro-rata SDK shells stay, only data feed added.
+  acceptance: stats page shows real numbers (not --) in cards and >=1 data row per table, witnessed via browser page.evaluate reading card textContent != '--'
+  status: completed
+  witness: 'exec_js-211 against real docs/api/*.json: stars.json is object form {generated,stars} not array, releases.json is {timestamp,releases}, npm-downloads.json carries totals(len30,sum30=26617). stats.html now normalizes Array.isArray(v)?v:v.stars/v.releases and reconstructs npm.totals from packages; theme.mjs reviveScripts re-executes article-injected inline+Chart.js scripts (innerHTML does not run scripts); gh-pages.yml copies docs/api/*.json into dist so the page can fetch them. Real values witnessed: starsLast.count=15, npmSum30=26617. browser-210 confirms deployed OLD code shows -- because object-shaped responses were assigned raw and api JSON 404d.'

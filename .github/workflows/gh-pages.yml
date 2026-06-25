@@ -34,6 +34,7 @@ jobs:
           for f in .nojekyll favicon.ico favicon.svg robots.txt sitemap.xml; do
             [ -e "$f" ] && cp -f "$f" dist/ || true
           done
+          if [ -d docs/api ]; then mkdir -p dist/docs/api && cp -f docs/api/*.json dist/docs/api/ || true; fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
