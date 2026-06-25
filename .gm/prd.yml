@@ -6185,3 +6185,16 @@
   acceptance: stats page shows real numbers (not --) in cards and >=1 data row per table, witnessed via browser page.evaluate reading card textContent != '--'
   status: completed
   witness: 'exec_js-211 against real docs/api/*.json: stars.json is object form {generated,stars} not array, releases.json is {timestamp,releases}, npm-downloads.json carries totals(len30,sum30=26617). stats.html now normalizes Array.isArray(v)?v:v.stars/v.releases and reconstructs npm.totals from packages; theme.mjs reviveScripts re-executes article-injected inline+Chart.js scripts (innerHTML does not run scripts); gh-pages.yml copies docs/api/*.json into dist so the page can fetch them. Real values witnessed: starsLast.count=15, npmSum30=26617. browser-210 confirms deployed OLD code shows -- because object-shaped responses were assigned raw and api JSON 404d.'
+- id: verify-sdk-published
+  subject: SDK npm latest + unpkg @latest serve the new bundle (flex .has-toc fix)
+  acceptance: npm registry latest version matches the pushed gitHead; unpkg @latest package.json reports same version
+  status: completed
+  witness: 'fetch-221 registry.npmjs.org/anentrypoint-design/latest: version 0.0.225, gitHead 054ed49b304caae373252f8ec2f0823ae6ae0d28 (== the pushed flex-fix commit). fetch-223 unpkg.com/anentrypoint-design@latest/package.json: version 0.0.225 (unpkg @latest now matches npm registry, no stale cache). Publish landed end-to-end.'
+- id: verify-paper-live
+  subject: Live /paper page loads published SDK and renders flex .has-toc layout with zero gap (not in-page injection)
+  acceptance: 'browser page.evaluate on https://anentrypoint.github.io/gm/paper: getComputedStyle(.has-toc).display===''flex'', gapTitleToAbstract small (<40), toc sticky, childTags include article-col'
+  status: pending
+- id: verify-stats-live
+  subject: Live /stats page shows real numbers (not --) and table data rows after gh-pages rebuild deploys the data-shape fix + docs/api json
+  acceptance: 'browser page.evaluate on https://anentrypoint.github.io/gm/stats: npmTotal/openIssues/etc textContent != ''--'' for >=1 metric, >=1 data row in a table'
+  status: pending
