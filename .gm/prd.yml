@@ -6219,3 +6219,22 @@
   subject: 'SDK canvas-clamp committed d589c66 + pushed; npm latest is 0.0.226 (gitHead b3db89a, an EARLIER commit) so d589c66''s publish is still building in SDK publish.yml. No gm rebuild/redeploy needed -- the deployed /gm/stats consumes anentrypoint-design@latest at runtime, so it auto-picks the new SDK once unpkg serves the version whose gitHead==d589c66 (0.0.227+). Witness: re-navigate deployed /gm/stats with cache-bust, assert starsChart canvas getBoundingClientRect height ~300px (was 3215px, browser-258), and the loaded SDK version has the clamp. Awaiting CI publish + unpkg propagation (minutes).'
   status: completed
   witness: 'SDK canvas-clamp landed as origin/main b3db89a, published npm anentrypoint-design@0.0.226 (gitHead b3db89a, the publish CI rebased the local short-sha d589c66 to b3db89a). browser-270 live https://anentrypoint.github.io/gm/stats/?cb=270 page.evaluate: starsCanvasHeight 300, npmCanvasHeight 300, computed maxHeight ''300px'', chartDrawn true, fetchErr null -- the 3215px infinite-grow (browser-258) is fixed live, served by @latest via unpkg. No gm redeploy needed (runtime @latest consumption).'
+- id: audit-floor-scan
+  title: 'FLOOR: gmsniff --list-deviations + ccsniff git/search/glyph disciplines over 30-60m window'
+  detail: 'Witnessed: own deviations=0 over 60m; the single 30m hit is foreign casey mid-chain-stall (gate-positive). ccsniff git/glyph empty; search-discipline hits all foreign [casey] cwd. Zero gm/rs-* own-state violations.'
+  status: completed
+  witness: 'gmsniff --list-deviations 30m: total 1 own:0 foreign:1 (casey mid-chain-stall, gate-positive). ccsniff git-discipline empty, glyph-discipline empty, search-discipline hits all foreign [casey] cwd. Zero gm/rs-* own-state violations over 60m own-only window.'
+- id: audit-manual-ceiling
+  title: 'CEILING: manual fleet read of sessions/watchers/conformance, not just heuristic floor'
+  detail: 'Witnessed: --watchers all 6 alive on v0.1.684; --conformance gm ε(mut)=0 PRD-pend=0; --list-sessions 30m shows no own gm dark/stuck chain. No dark cascade, no version drift.'
+  status: completed
+  witness: 'gmsniff --watchers: 6 alive all v0.1.684. --conformance: gm ε(mut)=0 PRD-pend=0. --list-sessions 30m: gm own sessions show no dark/stuck chain. No version drift, no dark cascade.'
+- id: validate-shipped-wrapper
+  title: 'Confirm-and-validate: installed wrapper_sha == running watcher wrapper (no dark cascade)'
+  detail: 'Witnessed: ~/.gm-tools wrapper sha f476e3ac5e07 == running watcher wrapper_sha f476e3ac5e07. The pushed wrapper is the running wrapper. AGENTS.md 30941b under 36000 ceiling.'
+  status: completed
+  witness: sha256(~/.gm-tools wrapper)=f476e3ac5e07 == running watcher status.json wrapper_sha f476e3ac5e07; pushed wrapper is running wrapper. AGENTS.md 30941 bytes < 36000 ceiling.
+- id: triage-codeinsight-manifest-residual
+  title: Triage+commit the 5 modified .gm/disciplines/codeinsight-manifest/*.json index manifests
+  detail: Residual from this session's codesearch sync-before-emit regenerating the codeinsight index manifests. Tracked discipline state; triage outcome (a) commit as real session state so the index shares across machines.
+  status: pending
