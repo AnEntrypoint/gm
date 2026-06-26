@@ -6237,4 +6237,5 @@
 - id: triage-codeinsight-manifest-residual
   title: Triage+commit the 5 modified .gm/disciplines/codeinsight-manifest/*.json index manifests
   detail: Residual from this session's codesearch sync-before-emit regenerating the codeinsight index manifests. Tracked discipline state; triage outcome (a) commit as real session state so the index shares across machines.
-  status: pending
+  status: completed
+  witness: git_finalize committed 3e07746f3 (5 codeinsight-manifest json files) and pushed to main; pushed:true. Worktree now clean, residual triaged via outcome (a) commit-as-real-state.
