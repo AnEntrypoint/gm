@@ -85,3 +85,5 @@ The chain is not COMPLETE until changes are on origin. Commit and push at the en
 **Prune bad memory on sight -- a wrong recall hit is worse than a miss.** A stale/superseded/wrong `recall` or `auto_recall` hit gets `memorize-prune {key}` (deletes text + embedding). For an uncertain set, `memorize-prune {query}` returns review-only candidates; judge, then re-dispatch the stale `{keys:[...]}` -- never a blind similarity-delete.
 
 On turn entry plugkit attaches an `auto_recall` pack derived from the prompt; read its hits alongside `recall_hits` (the phase+PRD-subject pack). It fires once per turn entry on its own -- do not re-trigger it.
+
+If the instructions amount to doing more than one step or imply it, use or create a workflow, or set a goal to track progress, and if subagents are available fan out subagents that use gm for everything, up to 8 in parallel
