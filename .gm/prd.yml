@@ -6239,3 +6239,18 @@
   detail: Residual from this session's codesearch sync-before-emit regenerating the codeinsight index manifests. Tracked discipline state; triage outcome (a) commit as real session state so the index shares across machines.
   status: completed
   witness: git_finalize committed 3e07746f3 (5 codeinsight-manifest json files) and pushed to main; pushed:true. Worktree now clean, residual triaged via outcome (a) commit-as-real-state.
+- id: remove-compact-from-installer
+  title: Remove autoCompactEnabled+autoCompactWindow from bin/install.js
+  description: Delete AUTOCOMPACT_WINDOW const; remove obj.autoCompactEnabled and obj.autoCompactWindow lines from applyClaudeSettings; update SETTINGS_EXPLAINER to only mention effortLevel+alwaysThinkingEnabled; update offerClaudeSettings prompt to not mention autoCompact keys; update printHelp text
+  status: completed
+  witness: 'bin/install.js: removed AUTOCOMPACT_WINDOW const, removed obj.autoCompactEnabled and obj.autoCompactWindow from applyClaudeSettings, updated SETTINGS_EXPLAINER and offerClaudeSettings prompt to 2-setting form; installer witness: settings={effortLevel:low,alwaysThinkingEnabled:false}, no compact keys'
+- id: update-test-installer-guard
+  title: Update test.js checkRenameAndInstaller assertion to not check autoCompact keys
+  description: Remove autoCompactEnabled and autoCompactWindow from the assertion at test.js:158; keep effortLevel+alwaysThinkingEnabled check; update the console.log message
+  status: completed
+  witness: 'test.js checkRenameAndInstaller: asserts effortLevel=low and alwaysThinkingEnabled=false, plus asserts autoCompactWindow===undefined and autoCompactEnabled===undefined; node test.js PASS confirmed'
+- id: update-recall-memo-installer
+  title: Update rs-learn recall memo for installer to not mention autoCompact
+  description: The recall hit mem-b9916e39d37fc7df-833 and mem-41e35eb5d2d9ab04-1186 both describe the four settings including autoCompactWindow; prune+re-memorize with updated 2-setting description
+  status: completed
+  witness: memorize-prune deleted mem-b9916e39d37fc7df-833 and mem-41e35eb5d2d9ab04-1186 (both described 4-setting installer with autoCompact); memorize-fire issued new memo gm-installer-detail with 2-setting installer (effortLevel+alwaysThinkingEnabled only)

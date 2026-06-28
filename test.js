@@ -155,10 +155,12 @@ function checkRenameAndInstaller() {
   } catch (e) { if (e.code !== 'ETIMEDOUT') throw e; }
   assert(fs.existsSync(path.join(tmpHome, '.claude', 'skills', 'gm', 'SKILL.md')), 'installer must land skill at <home>/.claude/skills/gm/SKILL.md');
   const s = JSON.parse(fs.readFileSync(path.join(tmpHome, '.claude', 'settings.json'), 'utf8'));
-  assert(s.autoCompactEnabled === true && s.autoCompactWindow === 380000 && s.effortLevel === 'low' && s.alwaysThinkingEnabled === false,
-    'installer must set autoCompactEnabled=true, autoCompactWindow=380000, effortLevel=low, alwaysThinkingEnabled=false');
+  assert(s.effortLevel === 'low' && s.alwaysThinkingEnabled === false,
+    'installer must set effortLevel=low, alwaysThinkingEnabled=false');
+  assert(s.autoCompactWindow === undefined && s.autoCompactEnabled === undefined,
+    'installer must not set autoCompactWindow or autoCompactEnabled');
   fs.rmSync(tmpHome, { recursive: true, force: true });
-  console.log('rename+installer guard ok (skills/gm, package gm-skill, skill + 4 settings keys)');
+  console.log('rename+installer guard ok (skills/gm, package gm-skill, skill + 2 settings keys)');
 }
 
 function checkAgentsMdBudget() {

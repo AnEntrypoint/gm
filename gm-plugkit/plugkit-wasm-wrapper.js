@@ -163,7 +163,6 @@ function dispatchVerbToWasmInternal(instance, verb, body) {
   if (!dispatch) return null;
   const verbBytes = new TextEncoder().encode(verb);
   const bodyBytes = new TextEncoder().encode(body || '');
-  // writeWasmInput re-reads memory.buffer fresh after each alloc (avoids the detached-buffer write bug).
   let verbPtr = 0, bodyPtr = 0;
   try { verbPtr = writeWasmInput(instance, verbBytes, `dispatch_verb(${verb}).verb`); }
   catch (e) { throw new Error(`wasm-alloc-failed for dispatch_verb(${verb}): ${e.message}`); }
@@ -1054,10 +1053,6 @@ function startManagedBrowser(pw, profileDir) {
     '--disable-default-apps',
     '--disable-gpu-process-crash-limit',
   ];
-  // In containers where unprivileged user namespaces are disabled, Chromium's
-  // sandbox cannot initialize and the remote-debugging port never binds (the CDP
-  // "did not become ready" failure). Opt in to running without the sandbox (plus
-  // the small-/dev/shm workaround common in containers) via GM_BROWSER_NO_SANDBOX=1.
   if (process.env.GM_BROWSER_NO_SANDBOX === '1') {
     args.push('--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage');
   }
@@ -1375,33 +1370,18 @@ function guardWasmRange(buffer, ptr, len, where) {
   }
 }
 
-// Decode a packed (ptr,len) i64 dispatch result into a JS string, the ONE correct way.
-// Two bugs this consolidates (they only surface once the wasm memory grows past a threshold --
-// e.g. a large .gm state file -> a big plugkit_alloc -> the memory grows past ~2GB / the linear
-// memory is re-grown mid-dispatch):
-//   1. SIGNED i64 result. dispatch_verb returns an i64; a high bit set (large ptr or a packed
-//      len in the top 32 bits) makes `result` a NEGATIVE BigInt. `result >> 32n` on a negative
-//      BigInt arithmetic-shifts in sign bits -> a garbage/negative len, and the low-word mask can
-//      misread too. Normalize to unsigned 64-bit FIRST: BigInt.asUintN(64, result).
-//   2. DETACHED buffer. `instance.exports.memory.buffer` captured before plugkit_alloc/dispatch is
-//      a STALE ArrayBuffer once the wasm linear memory grows (the old buffer detaches). Reading the
-//      result against it throws 'Start offset N is outside the bounds of the buffer'. Always re-read
-//      instance.exports.memory.buffer FRESH at the moment of the view, never reuse a captured one.
 function decodeWasmResult(instance, result, where) {
-  const u = BigInt.asUintN(64, BigInt(result));   // (1) normalize the i64 to unsigned before splitting
+  const u = BigInt.asUintN(64, BigInt(result));
   const ptr = Number(u & 0xffffffffn);
   const len = Number(u >> 32n);
   if (ptr === 0 || len === 0) return '';
-  const buffer = instance.exports.memory.buffer;  // (2) FRESH buffer (post-grow), never a stale capture
+  const buffer = instance.exports.memory.buffer;
   guardWasmRange(buffer, ptr, len, where);
   const out = new TextDecoder().decode(new Uint8Array(buffer, ptr, len));
   try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
   return out;
 }
 
-// Write input bytes into wasm memory, re-reading memory.buffer FRESH after the alloc so a memory
-// grow during plugkit_alloc never leaves us writing into a detached buffer (the write-side half of
-// the detached-buffer bug). Returns the ptr (caller frees) or throws on alloc failure.
 function writeWasmInput(instance, bytes, where) {
   if (bytes.length === 0) return 0;
   const ptr = instance.exports.plugkit_alloc(bytes.length);
@@ -3275,7 +3255,6 @@ async function runSpoolWatcher(instance, spoolDir) {
         }
       }
 
-      // writeWasmInput re-reads memory.buffer fresh after each alloc (detached-buffer write fix).
       const verbPtr = writeWasmInput(instance, verbBytes, `spool-dispatch:${verb}.verb`);
       const bodyPtr = writeWasmInput(instance, bodyBytes, `spool-dispatch:${verb}.body`);
 
@@ -3283,8 +3262,6 @@ async function runSpoolWatcher(instance, spoolDir) {
       const result = dispatch(verbPtr, verbBytes.length, bodyPtr, bodyBytes.length);
       clearVerbActive();
 
-      // decodeWasmResult normalizes the i64 (BigInt.asUintN), re-reads the buffer FRESH (post-grow),
-      // guards the range, AND frees the result ptr -- so the (ptr,len) free below is dropped.
       let resultStr = decodeWasmResult(instance, result, `spool-dispatch:${verb}`);
 
       if (autoRecallPayload) {
@@ -3338,7 +3315,6 @@ async function runSpoolWatcher(instance, spoolDir) {
 
       try { instance.exports.plugkit_free(verbPtr, verbBytes.length); } catch (_) {}
       try { instance.exports.plugkit_free(bodyPtr, bodyBytes.length); } catch (_) {}
-      // (the result ptr is freed inside decodeWasmResult above)
 
       try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);

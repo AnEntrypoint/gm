@@ -7,7 +7,6 @@ const os = require('os');
 const readline = require('readline');
 
 const SKILL_NAME = 'gm';
-const AUTOCOMPACT_WINDOW = 380000;
 
 function out(msg) { process.stdout.write(msg + '\n'); }
 function err(msg) { process.stderr.write(msg + '\n'); }
@@ -102,8 +101,6 @@ function applyClaudeSettings(home) {
     const backup = settingsPath + '.bak';
     try { fs.copyFileSync(settingsPath, backup); err(`existing settings.json was malformed; backed up to ${backup}`); } catch (_) {}
   }
-  obj.autoCompactEnabled = true;
-  obj.autoCompactWindow = AUTOCOMPACT_WINDOW;
   obj.effortLevel = 'low';
   obj.alwaysThinkingEnabled = false;
   fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
@@ -116,8 +113,6 @@ function applyClaudeSettings(home) {
 
 const SETTINGS_EXPLAINER = [
   'Claude Code settings applied:',
-  '  autoCompactEnabled = true      keep long sessions coherent by auto-compacting context',
-  `  autoCompactWindow  = ${AUTOCOMPACT_WINDOW}  absolute token count (38% of a 1M window), not a percentage`,
   "  effortLevel        = low       thinking effort lowered",
   '  alwaysThinkingEnabled = false  explicit thinking turned off',
   '',
@@ -136,7 +131,7 @@ async function offerClaudeSettings(home) {
   try {
     out('');
     out('Claude Code detected. gm works best with reasoning-in-code rather than hidden thinking tokens.');
-    out('Offer to set: autoCompactEnabled=true, autoCompactWindow=' + AUTOCOMPACT_WINDOW + ', effortLevel=low, alwaysThinkingEnabled=false.');
+    out('Offer to set: effortLevel=low, alwaysThinkingEnabled=false.');
     const ans = (await ask(rl, 'Apply these Claude Code settings now? [y/N] ')).trim().toLowerCase();
     if (ans === 'y' || ans === 'yes') {
       const r = applyClaudeSettings(home);
