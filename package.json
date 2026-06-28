@@ -57,7 +57,9 @@
     "gm.json"
   ],
   "dependencies": {
-    "gm-plugkit": "^2.0.1310"
+    "gm-plugkit": "^2.0.1310",
+    "gmsniff": "^1.0.0",
+    "ccsniff": "^1.1.0"
   },
   "engines": {
     "node": ">=16.0.0"

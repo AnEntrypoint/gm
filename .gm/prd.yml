@@ -6254,3 +6254,28 @@
   description: The recall hit mem-b9916e39d37fc7df-833 and mem-41e35eb5d2d9ab04-1186 both describe the four settings including autoCompactWindow; prune+re-memorize with updated 2-setting description
   status: completed
   witness: memorize-prune deleted mem-b9916e39d37fc7df-833 and mem-41e35eb5d2d9ab04-1186 (both described 4-setting installer with autoCompact); memorize-fire issued new memo gm-installer-detail with 2-setting installer (effortLevel+alwaysThinkingEnabled only)
+- id: enhance-browser-error-capture
+  title: Enhance browser verb error capture for unhandled exceptions
+  description: 'Browser verb currently captures page.on(''console''/''pageerror'') but misses unhandled promise rejections and async handler exceptions. Add global error listeners: page.on(''error''), process unhandled rejections via page.evaluateOnNewDocument, integrate fetch/response error boundary. Wrap all execution in try-catch and surface full stack traces to harness.'
+  scope: rs-exec or plugkit-wasm-wrapper.js browser verb
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js:2132-2139 enhanced debugSetup with 5 error listeners: page.on(''error''), page.on(''pageerror'' with typed struct), page.on(''requestfailed'' for fetch errors), page.evaluateOnNewDocument with window.onerror + window.onunhandledrejection handlers. Profile/capture modes now collect window.__gmErrors and merge into pageErrors array in debug response. Uncaught exceptions, async rejections, and fetch failures now surface in response envelope.'
+  status: completed
+- id: build-install-gmsniff-ccsniff
+  title: Build and install gmsniff/ccsniff diagnostics
+  description: gmsniff and ccsniff are not in PATH or not built. Locate source in rs-learn/rs-plugkit, build them, and verify they are callable. Add to PATH or create wrapper shell scripts in bin/ for discoverability.
+  scope: C:\dev\rs-learn, C:\dev\rs-plugkit
+  witness: 'Added gmsniff@^1.0.0 and ccsniff@^1.1.0 to package.json dependencies. Ran npm install. Both tools now in ./node_modules/.bin/ and callable: ./node_modules/.bin/gmsniff --help and ./node_modules/.bin/ccsniff --help both return usage. Created wrapper scripts in ./bin/gmsniff.ps1 and ./bin/ccsniff.ps1 for discoverability.'
+  status: completed
+- id: resolve-rs-exec-uncommitted
+  title: Triage and resolve rs-exec uncommitted changes
+  description: git status shows modified files in C:\dev\rs-exec. Determine if changes are in-progress work, stale junk, or unfinished integration. Commit real work or discard stale files. Leave worktree clean.
+  scope: C:\dev\rs-exec
+  witness: 'git -C /c/dev/rs-exec status: clean working tree, nothing to commit. ABI fix from prior session already merged to main. No outstanding changes or stale files.'
+  status: completed
+- id: browser-error-capture-enhance
+  title: Enhance browser verb error capture in plugkit-wasm-wrapper.js
+  description: 'Current error capture at lines 2132-2135 sets up page.on(''console'') and page.on(''pageerror''). Enhance to: (1) add page.on(''error'') for uncaught exceptions, (2) add unhandledrejection listener via page.evaluateOnNewDocument, (3) add fetch/response error boundary, (4) wrap eval in try-catch. Surface all error payloads in JSON response alongside result in debug.errors or similar structure.'
+  witness: lines 2132-2135 debugSetup, 2138-2150 profile path, 2151-2156 capture path, 2150/2156 envelope return - analyzed current capture shape and proposed enhancements
+  scope: propose error-listener additions to debugSetup and envelope structure; do not land code, only analysis and proposal
+  depends_on: []
+  status: completed

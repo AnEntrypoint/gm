@@ -2131,8 +2131,12 @@ function makeHostFunctions(instanceRef) {
         const modeMatch = evalBody.match(/^(capture|profile)[ \t]*\n([\s\S]*)$/);
         const debugSetup = `const __logs=[],__errs=[],__net=[];\n`
           + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
-          + `page.on('pageerror',e=>{try{__errs.push(String(e&&e.message||e));}catch(_){}});`
-          + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});}catch(_){}\n`;
+          + `page.on('pageerror',e=>{try{__errs.push({type:'pageerror',msg:String(e&&e.message||e)});}catch(_){}});`
+          + `page.on('error',e=>{try{__errs.push({type:'uncaught',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});}catch(_){}});`
+          + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});`
+          + `page.on('requestfailed',r=>{try{const err=r.failure();__errs.push({type:'fetch',msg:String(err&&err.errorText||'request failed'),url:String(r.url()).slice(0,120)});}catch(_){}});`
+          + `page.evaluateOnNewDocument(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
+          + `}catch(_){}\n`;
         const perfRead = `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`;
         const blankProbe = startUrl ? '' : `try{const __u=page.url();if(__u==='about:blank'||__u===''){console.error('__GM_BLANK__');}}catch(_){}\n`;
         if (modeMatch && modeMatch[1] === 'profile') {
@@ -2142,18 +2146,22 @@ function makeHostFunctions(instanceRef) {
             + `let __profile=null,__profileError=null;\n`
             + `let __cdp=null;\n`
             + `try{__cdp=await page.context().newCDPSession(page);await __cdp.send('Profiler.enable');await __cdp.send('Profiler.setSamplingInterval',{interval:${intervalUs}});await __cdp.send('Profiler.start');}catch(e){__profileError=String(e&&e.message||e);__cdp=null;}\n`
-            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}${userScript}\n})();\n`
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
             + `if(__cdp){try{const __r=await __cdp.send('Profiler.stop');__profile=__r&&__r.profile||null;}catch(e){__profileError=String(e&&e.message||e);}}\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + perfRead
             + AGGREGATE_CPU_PROFILE_SRC + `\n`
             + `const __agg = __profile ? aggregateCpuProfile(__profile) : {timeframe:null,culprits:[]};\n`
-            + `return {result:__result,profile:__agg,profile_error:__profileError,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `return {result:__result,profile:__agg,profile_error:__profileError,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
         } else if (modeMatch && modeMatch[1] === 'capture') {
           const userScript = modeMatch[2];
           evalBody = debugSetup
-            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}${userScript}\n})();\n`
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + perfRead
-            + `return {result:__result,debug:{console:__logs,pageErrors:__errs,network:__net.slice(0,30),performance:__perf}};`;
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `return {result:__result,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
         } else if (startUrl) {
           evalBody = `${gotoPrefix}${evalBody}`;
         } else if (blankProbe) {
