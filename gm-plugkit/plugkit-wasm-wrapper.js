@@ -308,7 +308,7 @@ function injectUpdateWarning(parsed) {
   if (!upd || !upd.installed || !upd.latest || upd.installed === upd.latest) return;
   const target = (parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
   target.update_available = { installed: upd.installed, latest: upd.latest, update_url: upd.update_url || null };
-  target.update_warning = `STALE RUNTIME: running plugkit ${upd.installed} but ${upd.latest} is published and not yet running. Restart onto the new version now: bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool. This warning repeats every turn until the running version catches up.`;
+  target.update_warning = `STALE RUNTIME: running plugkit ${upd.installed} but ${upd.latest} is published. The watcher auto-updates when idle (cache-busted self-respawn to latest), so this usually clears on its own within a few minutes; just keep working. If it persists, re-run the idempotent boot to land latest now: bun x gm-plugkit@latest spool (add --kill-stale-watchers first only if it stays stuck). Set PLUGKIT_NO_AUTO_UPDATE=1 to pin. This warning repeats until the running version catches up.`;
 }
 
 function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {
@@ -2904,6 +2904,10 @@ async function runSpoolWatcher(instance, spoolDir) {
   let _selfStaleProbeErrorLogged = false;
   function probeGmPlugkitSelfStale() {
     try {
+      if (process.env.PLUGKIT_NO_AUTO_UPDATE === '1') return;
+      const { sids: _ifSids } = (typeof inflightPids === 'function') ? inflightPids() : { sids: new Set() };
+      if (_ifSids.size > 0) return;
+      if ((Date.now() - lastActivityMs) < 30000) return;
       const ownPkgVersionFile = path.join(GM_TOOLS_ROOT, 'gm-plugkit.version');
       const ownPkgJsonFile = path.join(__dirname, 'package.json');
       let own = null;
@@ -2975,7 +2979,7 @@ async function runSpoolWatcher(instance, spoolDir) {
               try {
                 const cp = _childProcess;
                 const bunPath = process.env.GM_BUN_PATH || 'bun';
-                const bustCache = sameStaleAsBefore || cameFromSelfRespawn;
+                const bustCache = true;
                 if (bustCache) {
                   try { cp.execFileSync(bunPath, ['pm', 'cache', 'rm'], { stdio: 'ignore', timeout: 30000, windowsHide: true }); } catch (_) {}
                   try {
@@ -3002,7 +3006,7 @@ async function runSpoolWatcher(instance, spoolDir) {
                   env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-self-stale' },
                 });
                 child.unref();
-                try { logEvent('plugkit', 'gm-plugkit.self-stale-respawn', { running_version: own, latest_version: latest, cache_busted: bustCache, attempt: (respawnGuard.attempts || 0) + 1 }); } catch (_) {}
+                try { logEvent('plugkit', 'update.auto-applying', { running_version: own, latest_version: latest, cache_busted: bustCache, attempt: (respawnGuard.attempts || 0) + 1, note: 'auto-update: cache-busted self-respawn to latest' }); } catch (_) {}
                 try { fs.writeFileSync(path.join(spoolDir, '.shutdown-reason.json'), JSON.stringify({ reason: 'gm-plugkit-self-stale', ts: Date.now(), pid: process.pid, running_version: own, latest_version: latest })); } catch (_) {}
                 const myPid = process.pid;
                 const respawnDeadline = Date.now() + 90000;
