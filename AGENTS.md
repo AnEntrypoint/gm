@@ -174,6 +174,8 @@ Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI
 
 **Session lifecycle**: background tasks + browser sessions persist across turn-stops; cleanup fires only on real-exit reasons; residual-scan fires when PRD empty AND no open browser sessions AND no running tasks. Detail in rs-learn (`recall: session lifecycle killSessionTasks residual-scan`).
 
+**Browser session state is rooted at the git common dir, never `process.cwd()`**: a workflow worktree fan-out runs each parallel agent in its own worktree (distinct cwd); keying the browser ports-registry + profile dir on cwd opens one chromium per worktree (the "meant one, got N browsers" defect). `browserRootDir(cwd)` resolves the worktree to its main repo via `git rev-parse --git-common-dir`, and `browserStateDir`/`sessionProfileDir`/`acquireProfileDir` route through it, so all worktrees of one workflow share ONE browser while separate repos stay isolated. The cross-agent spawn is guarded by an atomic O_EXCL single-flight lock (loser attaches to the winner's chromium). Detail in rs-learn (`recall: browser session state worktree common-dir rooting`).
+
 ## Spool observability surface
 
 One-shot system-state probe: dispatch `plugkit health` via the file-spool before assuming any component is broken; the runtime diagnostic files at `.gm/exec-spool/` root are readable directly via Read (runtime-data exception). File list + health fields in rs-learn (`recall: spool runtime diagnostic files`, `recall: plugkit health verb fields`).

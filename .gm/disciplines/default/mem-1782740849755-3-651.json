@@ -1,0 +1,3 @@
+## Resolved mutable: spoint-actual-witness-evidence
+
+LIVE witness (Win32_Process now): distinct managed user-data-dirs = C:\dev\babspoint\.claude\worktrees\wf_b7706de2-add-5\.gm\browser-profile-default AND ...wf_b7706de2-add-8\... -- two visible managed windows, each in a DIFFERENT workflow worktree. gm-log 2026-06-29 shows wf_b7706de2-add-1,2,4,5,6,8 each firing browser.start/chromium-launched with its own profileDir under its worktree. So the multiple browsers are one-per-parallel-agent-worktree, NOT a single-request burst. babspoint, not spoint, is the affected target. Profile path is sessionProfileDir(cwd,...) and cwd is the worktree root.

@@ -1,0 +1,3 @@
+## Resolved mutable: browser-getorcreate-toctou-race
+
+ELIMINATED as the live cause: live PowerShell Win32_Process shows each managed chromium has exactly ONE top-level process per distinct user-data-dir (parent=a watcher pid); the extra chrome.exe are children of the one launch (gpu/renderer/utility, same port, no own --user-data-dir). No two top-level chromiums share one profile -> the read-check-spawn-write path did not double-spawn within a single cwd. The race is a latent hardening target but NOT what opened the multiple browsers.

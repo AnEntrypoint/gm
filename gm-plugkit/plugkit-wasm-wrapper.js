@@ -549,8 +549,26 @@ const TMP_DIR = os.tmpdir();
 const LEGACY_BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json');
 const LEGACY_BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
 
+const __browserRootCache = new Map();
+function browserRootDir(cwd) {
+  const start = path.resolve(cwd || process.cwd());
+  if (__browserRootCache.has(start)) return __browserRootCache.get(start);
+  let root = start;
+  try {
+    const r = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: start, encoding: 'utf-8', windowsHide: true, timeout: 1500 });
+    if (r.status === 0 && r.stdout && r.stdout.trim()) {
+      let commonDir = r.stdout.trim();
+      if (!path.isAbsolute(commonDir)) commonDir = path.resolve(start, commonDir);
+      if (/(^|[\\/])\.git$/.test(commonDir)) root = path.dirname(commonDir);
+    }
+  } catch (_) {}
+  root = path.resolve(root);
+  __browserRootCache.set(start, root);
+  return root;
+}
+
 function browserStateDir(cwd) {
-  const dir = path.join(cwd || process.cwd(), '.gm', 'exec-spool');
+  const dir = path.join(browserRootDir(cwd), '.gm', 'exec-spool');
   try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
   return dir;
 }
@@ -752,14 +770,15 @@ function sessionProfileSlug(claudeSessionId) {
 }
 
 function sessionProfileDir(cwd, claudeSessionId) {
-  return path.join(cwd, '.gm', `browser-profile-${sessionProfileSlug(claudeSessionId)}`);
+  return path.join(browserRootDir(cwd), '.gm', `browser-profile-${sessionProfileSlug(claudeSessionId)}`);
 }
 
 function acquireProfileDir(cwd, claudeSessionId) {
-  const gmDir = path.join(cwd, '.gm');
+  const root = browserRootDir(cwd);
+  const gmDir = path.join(root, '.gm');
   try { fs.mkdirSync(gmDir, { recursive: true }); } catch (_) {}
-  ensureGitignored(cwd, '.gm/browser-profile/');
-  ensureGitignored(cwd, '.gm/browser-profile-*/');
+  ensureGitignored(root, '.gm/browser-profile/');
+  ensureGitignored(root, '.gm/browser-profile-*/');
   const primary = sessionProfileDir(cwd, claudeSessionId);
   try { fs.mkdirSync(primary, { recursive: true }); } catch (_) {}
   if (!isProfileLocked(primary)) return primary;
@@ -770,7 +789,7 @@ function acquireProfileDir(cwd, claudeSessionId) {
 
 function cleanDeadProfileFragments(cwd) {
   try {
-    const gmDir = path.join(cwd, '.gm');
+    const gmDir = path.join(browserRootDir(cwd), '.gm');
     if (!fs.existsSync(gmDir)) return { cleaned: 0 };
     let cleaned = 0;
     for (const name of fs.readdirSync(gmDir)) {
@@ -1202,6 +1221,41 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
       try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
     }
   }
+  const spawnLock = path.join(browserStateDir(cwd), `.browser-spawn-${sessionProfileSlug(claudeSessionId)}.lock`);
+  let lockFd = null;
+  const spawnDeadline = Date.now() + 35000;
+  for (;;) {
+    try { lockFd = fs.openSync(spawnLock, 'wx'); break; }
+    catch (e) {
+      if (e.code !== 'EEXIST') break;
+      let stale = false;
+      try {
+        const owner = parseInt(String(fs.readFileSync(spawnLock, 'utf-8')).split('|')[0], 10);
+        const ageOk = (Date.now() - fs.statSync(spawnLock).mtimeMs) < 40000;
+        if (!ageOk || !(Number.isFinite(owner) && isProcessAliveSync(owner))) stale = true;
+      } catch (_) { stale = true; }
+      if (stale) { try { fs.unlinkSync(spawnLock); } catch (_) {} continue; }
+      const winner = readJsonFile(portsFile, {})[claudeSessionId];
+      if (winner && winner.pid && winner.wsEndpoint && isProcessAliveSync(winner.pid)
+          && fetchJsonSync(`http://127.0.0.1:${winner.port}/json/version`, 1000)) {
+        const a = runBrowserRunner(pw, ['session', 'new', '--direct', winner.wsEndpoint], 30000, cwd, claudeSessionId);
+        const sid = a && a.status === 0 ? parseSessionId(a.stdout || '') : null;
+        if (sid) { logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-wait' }); return sid; }
+      }
+      if (Date.now() > spawnDeadline) break;
+      sleepSyncMs(300);
+    }
+  }
+  try { if (lockFd !== null) { fs.writeSync(lockFd, `${process.pid}|${Date.now()}`); fs.closeSync(lockFd); } } catch (_) {}
+  const releaseSpawnLock = () => { try { const o = parseInt(String(fs.readFileSync(spawnLock, 'utf-8')).split('|')[0], 10); if (o === process.pid) fs.unlinkSync(spawnLock); } catch (_) {} };
+  try {
+  const winner2 = readJsonFile(portsFile, {})[claudeSessionId];
+  if (winner2 && winner2.pid && winner2.wsEndpoint && isProcessAliveSync(winner2.pid)
+      && fetchJsonSync(`http://127.0.0.1:${winner2.port}/json/version`, 1000)) {
+    const a = runBrowserRunner(pw, ['session', 'new', '--direct', winner2.wsEndpoint], 30000, cwd, claudeSessionId);
+    const sid = a && a.status === 0 ? parseSessionId(a.stdout || '') : null;
+    if (sid) { logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-recheck' }); return sid; }
+  }
   cleanDeadProfileFragments(cwd);
   reapOrphanBrowserSessions(pw, cwd, claudeSessionId, 'pre-spawn');
   const profileDir = acquireProfileDir(cwd, claudeSessionId);
@@ -1243,6 +1297,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   writeJsonFile(sessionsFile, sessions);
   logEvent('plugkit', 'browser.attached', { pwSessionId, pid: browserPid, port });
   return pwSessionId;
+  } finally { releaseSpawnLock(); }
 }
 
 function parseSessionId(rawOut) {
