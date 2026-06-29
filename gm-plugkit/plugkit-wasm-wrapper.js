@@ -874,6 +874,39 @@ function reapOrphanBrowserSessions(pw, cwd, claudeSessionId, reason) {
 }
 
 const __openedSessionIds = new Set();
+const __idleClosedSessions = new Set();
+const __inflightDispatch = new Map();
+const __launchingPids = new Map();
+const INFLIGHT_MAX_MS = 130000;
+const LAUNCH_GRACE_MS = 30000;
+function markInflight(sessionId, pid) {
+  __inflightDispatch.set(sessionId, { pid: pid || null, ts: Date.now() });
+}
+function clearInflight(sessionId) {
+  __inflightDispatch.delete(sessionId);
+}
+function inflightPids() {
+  const now = Date.now();
+  const pids = new Set();
+  const sids = new Set();
+  for (const [sid, v] of __inflightDispatch) {
+    if (now - v.ts > INFLIGHT_MAX_MS) { __inflightDispatch.delete(sid); continue; }
+    sids.add(sid);
+    if (Number.isFinite(v.pid)) pids.add(v.pid);
+  }
+  return { pids, sids };
+}
+function markLaunching(pid) { if (Number.isFinite(pid)) __launchingPids.set(pid, Date.now()); }
+function clearLaunching(pid) { __launchingPids.delete(pid); }
+function launchingPidsFresh() {
+  const now = Date.now();
+  const pids = new Set();
+  for (const [pid, ts] of __launchingPids) {
+    if (now - ts > LAUNCH_GRACE_MS) { __launchingPids.delete(pid); continue; }
+    pids.add(pid);
+  }
+  return pids;
+}
 function enumerateManagedChromiums(profileRootMarker) {
   const marker = String(profileRootMarker || '').toLowerCase().replace(/\\/g, '/');
   const out = [];
@@ -918,9 +951,11 @@ function reapOrphanChromiums(cwd, reason) {
     for (const ent of Object.values(ports)) {
       if (ent && Number.isFinite(ent.pid) && isProcessAliveSync(ent.pid)) livePids.add(ent.pid);
     }
+    const { pids: protectedInflight } = inflightPids();
+    const launching = launchingPidsFresh();
     let reaped = 0;
     for (const { pid } of procs) {
-      if (livePids.has(pid)) continue;
+      if (livePids.has(pid) || protectedInflight.has(pid) || launching.has(pid)) continue;
       try { killPidQuiet(pid); reaped++; logEvent('plugkit', 'browser.os-orphan-reaped', { pid, reason: reason || 'sweep' }); } catch (_) {}
     }
     return { reaped };
@@ -1348,6 +1383,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     logEvent('plugkit', 'browser.start', { profileDir });
     ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir));
   }
+  markLaunching(browserPid);
   const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000, cwd, claudeSessionId);
   if (!r || r.status !== 0) {
     const errTxt = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || 'unknown');
@@ -1363,6 +1399,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
   writeJsonFile(sessionsFile, sessions);
+  clearLaunching(browserPid);
   if (!__openedSessionIds.has(claudeSessionId) && __openedSessionIds.size >= 1) {
     logEvent('hook', 'deviation.browser-multi-session', { sid: claudeSessionId, already_open: Array.from(__openedSessionIds), reason: 'a 2nd distinct browser sessionId launched its own chromium this run -- reuse one session per run and close it when done' });
   }
@@ -2281,8 +2318,13 @@ function makeHostFunctions(instanceRef) {
           });
         }
 
+        const wasIdleClosed = __idleClosedSessions.has(sessionId);
         const pwSessionId = getOrCreateBrowserSession(cwd, sessionId, pw);
+        const curPid = (() => { try { const e = readJsonFile(browserPortsFile(cwd), {})[sessionId]; return e && e.pid; } catch (_) { return null; } })();
+        const wasRelaunched = wasIdleClosed;
+        __idleClosedSessions.delete(sessionId);
         stampBrowserLastUse(cwd, sessionId);
+        markInflight(sessionId, curPid);
         let evalBody = body;
         let timeoutMs = 120000;
         const timeoutMatch = body.match(/^timeout=(\d+)\s*\n([\s\S]*)$/);
@@ -2409,7 +2451,13 @@ function makeHostFunctions(instanceRef) {
           evalBody = `const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
-        const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
+        let r;
+        try {
+          r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
+        } finally {
+          clearInflight(sessionId);
+          stampBrowserLastUse(cwd, sessionId);
+        }
         const ok = r.status === 0;
         if (!ok && r.status === null) {
           logEvent('plugkit', 'browser.runner-timeout', { session_id: pwSessionId, timeout_ms: timeoutMs, body_bytes: evalBody.length });
@@ -2436,6 +2484,10 @@ function makeHostFunctions(instanceRef) {
           timeout_ms_used: timeoutMs,
         };
         if (resultParsed) envelope.result = parsedResult;
+        if (wasRelaunched) {
+          envelope.session_relaunched = true;
+          envelope.relaunch_note = 'This session was closed (idle/orphan reaper) and re-launched fresh -- any window.* globals or in-page state from earlier dispatches are gone. Re-establish them before relying on them.';
+        }
         envelope.navigation_requested = !!startUrl;
         if (__openedSessionIds.size > 1) {
           envelope.multi_session_warning = `${__openedSessionIds.size} distinct browser sessions opened this run, each its own chromium -- reuse ONE sessionId per run and 'session close' it when done to avoid leaking browsers.`;
@@ -2824,6 +2876,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       }
       try { fs.unlinkSync(portsFile); } catch (_) {}
       try { fs.unlinkSync(sessionsFile); } catch (_) {}
+      try { __inflightDispatch.clear(); __launchingPids.clear(); reapOrphanChromiums(process.cwd(), `teardown:${reason}`); } catch (_) {}
     } catch (_) {}
 
     try {
@@ -3189,7 +3242,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 3 * 60 * 1000;
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 15 * 60 * 1000;
   setInterval(() => {
     try {
       const portsFile = browserPortsFile(process.cwd());
@@ -3197,13 +3250,15 @@ async function runSpoolWatcher(instance, spoolDir) {
       const ports = readJsonFile(portsFile, {});
       const sessions = readJsonFile(sessionsFile, {});
       const now = Date.now();
-      const idle = selectIdleBrowserSessions(ports, now, BROWSER_IDLE_LIMIT_MS);
+      const { sids: inflightSids } = inflightPids();
+      const idle = selectIdleBrowserSessions(ports, now, BROWSER_IDLE_LIMIT_MS).filter((x) => !inflightSids.has(x.sid));
       const idleSids = new Set(idle.map((x) => x.sid));
       let mutated = false;
       for (const { sid, entry, idleMs } of idle) {
         if (Number.isFinite(entry.pid) && isProcessAliveSync(entry.pid)) {
           try { gracefulCloseBrowser(entry, 'browser-idle'); } catch (_) {}
         }
+        try { __idleClosedSessions.add(sid); } catch (_) {}
         delete ports[sid];
         delete sessions[sid];
         mutated = true;
