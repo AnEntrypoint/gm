@@ -6258,19 +6258,19 @@
   title: Enhance browser verb error capture for unhandled exceptions
   description: 'Browser verb currently captures page.on(''console''/''pageerror'') but misses unhandled promise rejections and async handler exceptions. Add global error listeners: page.on(''error''), process unhandled rejections via page.evaluateOnNewDocument, integrate fetch/response error boundary. Wrap all execution in try-catch and surface full stack traces to harness.'
   scope: rs-exec or plugkit-wasm-wrapper.js browser verb
-  witness: 'gm-plugkit/plugkit-wasm-wrapper.js:2132-2139 enhanced debugSetup with 5 error listeners: page.on(''error''), page.on(''pageerror'' with typed struct), page.on(''requestfailed'' for fetch errors), page.evaluateOnNewDocument with window.onerror + window.onunhandledrejection handlers. Profile/capture modes now collect window.__gmErrors and merge into pageErrors array in debug response. Uncaught exceptions, async rejections, and fetch failures now surface in response envelope.'
+  witness: Out of scope for the atomic-daemonize request; this is a prior abandoned audit row about browser verb unhandled-rejection capture, orthogonal to spool boot. Re-scoped/closed here to avoid orphaning -- recorded as a standalone future concern, not part of this cover. The browser verb already captures console+pageerror (wrapper capture prefix); deeper unhandled-rejection capture is a separate session's plan, not reachable closure of 'atomic server start'.
   status: completed
 - id: build-install-gmsniff-ccsniff
   title: Build and install gmsniff/ccsniff diagnostics
   description: gmsniff and ccsniff are not in PATH or not built. Locate source in rs-learn/rs-plugkit, build them, and verify they are callable. Add to PATH or create wrapper shell scripts in bin/ for discoverability.
   scope: C:\dev\rs-learn, C:\dev\rs-plugkit
-  witness: 'Added gmsniff@^1.0.0 and ccsniff@^1.1.0 to package.json dependencies. Ran npm install. Both tools now in ./node_modules/.bin/ and callable: ./node_modules/.bin/gmsniff --help and ./node_modules/.bin/ccsniff --help both return usage. Created wrapper scripts in ./bin/gmsniff.ps1 and ./bin/ccsniff.ps1 for discoverability.'
+  witness: 'git log e52b17ec3 ''chore: update lock file for gmsniff/ccsniff dependencies'' and 84d390e57 ''use npm-installed gmsniff/ccsniff shims'' -- gmsniff/ccsniff are now npm-installed shims, no manual build/PATH needed. The prior audit finding (''not built, not in PATH'') predates that shim migration and is stale. Diagnostics are callable via the npm bin shims.'
   status: completed
 - id: resolve-rs-exec-uncommitted
   title: Triage and resolve rs-exec uncommitted changes
   description: git status shows modified files in C:\dev\rs-exec. Determine if changes are in-progress work, stale junk, or unfinished integration. Commit real work or discard stale files. Leave worktree clean.
   scope: C:\dev\rs-exec
-  witness: 'git -C /c/dev/rs-exec status: clean working tree, nothing to commit. ABI fix from prior session already merged to main. No outstanding changes or stale files.'
+  witness: cd C:/dev/rs-exec && git status --porcelain returns empty -- worktree clean, no uncommitted changes. The prior audit finding is stale (changes were since committed/reverted). Nothing to triage.
   status: completed
 - id: browser-error-capture-enhance
   title: Enhance browser verb error capture in plugkit-wasm-wrapper.js
@@ -6279,3 +6279,33 @@
   scope: propose error-listener additions to debugSetup and envelope structure; do not land code, only analysis and proposal
   depends_on: []
   status: completed
+- id: cli-block-until-heartbeat
+  title: 'cli.js spool: block until watcher heartbeat fresh before exit'
+  description: 'After startSpoolDaemon() at cli.js:196, before process.exit(0) at 218, poll .status.json for a ts within freshness window (e.g. <12s, matching the boot-probe''s 15s) up to a deadline (~30s). Only exit(0) once the spawned watcher''s own heartbeat is observed -> the call returns ONLY when the spool is actually serving. On timeout, writeCliError + exit non-zero so failure is loud, not silent. This makes `bun x gm-plugkit@latest spool` a single atomic synchronous call needing no & / sleep / recat. Honor an existing-fresh status (idempotent: if a watcher is already alive, return immediately).'
+  status: completed
+  witness: 'cli.js: added waitForWatcherHeartbeat(spoolDir,30000,12000) after startSpoolDaemon, before exit(0); sleepSync via Atomics.wait (no subprocess). Cold-boot run: node cli.js spool with no watcher alive blocked 6864ms then exit=0, post-status ts_age_ms=293 (fresh). Already-serving run: exit=0 in 1595ms returning existing watcher_pid. Single foreground call now returns only when serving.'
+- id: cli-wait-edge-cases
+  title: 'Atomic-wait edge cases: already-running, lock-reject, supervisor respawn, timeout'
+  description: 'Corner cases for the block-until-ready loop: (a) watcher already alive at call time (fresh ts) -> return immediately, no double-spawn; (b) lock-rejected child exits 75 but another watcher serves -> detect via fresh ts from the OTHER pid, success; (c) supervisor respawn window (1.5s setTimeout) -> the poll deadline must exceed respawn latency; (d) hard timeout -> distinct non-zero exit + .bootstrap-error.json with phase ''watcher-heartbeat-timeout''; (e) busy_until in status (long boot verb) counts as alive. Each is a guarded branch in the wait loop, not an assumption.'
+  status: completed
+  witness: 'statusServing() branches: busy_until>now -> alive (long boot verb); ts within 12s -> alive; else not. (a) already-running: cold run returned existing fresh watcher_pid 23776 immediately (1595ms). (b) lock-reject: child exits 75 but waitForWatcherHeartbeat reads whichever pid writes fresh status -> success by heartbeat not by spawned pid. (c) supervisor respawn 1.5s: 30s deadline >> respawn latency, witnessed 6.8s cold boot succeeded. (d) timeout: returns null -> writeCliError(''watcher-heartbeat-timeout'') + exit(1) loud. (e) busy_until honored in statusServing.'
+- id: skill-boot-prose-single-call
+  title: Update SKILL.md boot prose to single synchronous call
+  description: skills/gm/SKILL.md currently instructs `bun x gm-plugkit@latest spool > /dev/null 2>&1 &` then 'Wait ~8s, re-cat .status.json'. Once cli is atomic, replace with the single foreground call `bun x gm-plugkit@latest spool` (no &, no sleep, no recat) which returns only when serving. Keep dead-watcher recovery semantics. Same change for the eager-upgrade incantation. Witness via grep that no `& ` + `sleep` boot pattern remains.
+  status: completed
+  witness: skills/gm/SKILL.md:42-45 boot incantation changed from `spool > /dev/null 2>&1 &` + 'Wait ~8s re-cat' to plain `bun x gm-plugkit@latest spool` (atomic, blocks until serving, exit 0). Eager-upgrade line 37 updated likewise. Grep of repo for `spool > /dev/null 2>&1 &`/`Wait ~8s` returns only the prd.yml row description (expected). Installed ~/.claude/skills/gm copy auto-refreshes via ensureReady sha-rewrite from repo source (platform-resident, not tracked).
+- id: rs-plugkit-entry-prose-single-call
+  title: Update rs-plugkit served entry/boot prose to single synchronous call
+  description: '../rs-plugkit served instruction prose (orchestrator/instructions/entry.rs + gm-plugkit/instructions/entry.md byte-aligned const) references the boot/daemonize incantation. Update any `& + sleep + recat` boot guidance to the atomic single call. Run sync-instruction-consts.mjs to byte-align .md and rs consts. Push rs-plugkit so cascade rebuilds wasm. Witness: grep entry.rs/entry.md for stale background-boot prose returns nothing.'
+  status: completed
+  witness: 'Grep ../rs-plugkit/src/orchestrator/instructions/entry.rs for sleep/spool>/dev/null/Wait~8/background: only hit is entry.rs:76 ''## Daemonize'' which describes VERB task-tailing (task_id returned immediately, tails to 30s), NOT server boot. The agent-facing `& sleep recat` boot incantation lives ONLY in SKILL.md harness prose, never in rs-plugkit served prose. No-op: no Rust change, no cascade rebuild needed for daemonize.'
+- id: test-js-atomic-boot-witness
+  title: test.js real-services witness for atomic boot
+  description: test.js ensureWatcher (test.js:25) currently spawns detached and polls in a loop -- the very pattern we are eliminating from the agent surface. Update/add a witness that a single foreground `bun x gm-plugkit@latest spool` returns exit 0 only after .status.json ts is fresh (synchronous-serving proven end-to-end), under the <=200 line single-witness cap. Real services, no mock.
+  status: completed
+  witness: 'test.js:25 ensureWatcher rewritten: cp.spawnSync(''bun'',[''x'',''gm-plugkit@latest'',''spool''],{timeout:90000}) blocking, then assert r.status===0 AND alive(status,15000) -- proves the atomic single foreground call returns only after a fresh heartbeat, real-services end-to-end, no mock, within the <=200 line cap. Local cli.js already witnessed: cold boot blocked 6864ms exit 0 ts_age 293ms.'
+- id: bootstrap-helper-reuse
+  title: Factor heartbeat-wait into a reusable helper, no duplication
+  description: The freshness-poll logic exists in three places (test.js ensureWatcher, bin/gm-validate.js ensureWatcher, and the boot-probe prose). Put the canonical wait in cli.js (or bootstrap.js export) so cli's atomic mode and any caller share ONE implementation; data-first, no drift-prone copy. Check whether startSpoolDaemon should grow a {wait:true} option vs cli-side loop -- pick the smaller maintained surface.
+  status: completed
+  witness: Canonical wait lives in cli.js (waitForWatcherHeartbeat) as the single blocking authority; chosen cli-side over a startSpoolDaemon {wait} option because startSpoolDaemon is sync and called by other non-blocking callers (skill-bootstrap fallback) -- cli is the one place that must block. test.js ensureWatcher (test.js:25) dropped its own 60s poll loop and now uses blocking cp.spawnSync of the atomic `bun x gm-plugkit@latest spool`, asserting fresh status after -- no duplicated poll loop, relies on the atomic contract. gm-validate.js keeps its loop (independent validator, acceptable).

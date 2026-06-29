@@ -160,6 +160,8 @@ Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI
 
 **Dead-watcher recovery uses `bun x gm-plugkit@latest spool`, never direct-node boot** (mechanism in rs-learn: `recall: dead-watcher recovery bun x not direct-node`).
 
+**Starting the spool is one atomic blocking call -- `bun x gm-plugkit@latest spool` daemonizes the watcher AND blocks until `.status.json` heartbeats fresh, returning exit 0 only when serving (loud non-zero on timeout).** No `& + sleep + re-cat` boot dance; the agent writes to `instruction/` the moment the call returns. The wait lives in `gm-plugkit/cli.js` (`waitForWatcherHeartbeat`, `Atomics.wait` sync-sleep), cli-side because `startSpoolDaemon` is sync and shared by non-blocking callers. rs-plugkit carries no server-boot logic -- the daemonize lifecycle is entirely gm-plugkit JS, so this change needs no Rust/cascade rebuild.
+
 **Apparent tooling failure is mechanical self-recovery, NEVER a question for the user and never an a/b-test/blind-restart.** A missing spool response / stale watcher is the agent's own job: honor a future `busy_until` else boot the watcher and re-dispatch -- the spooler is sound by construction, so asking the user to do what a verb can do is a paper-spirit violation. Recovery mechanics (atomic `.status.json`, `FailedToOpenSocket` retry, debug-via-`window.*`-globals) in rs-learn (`recall: spooler self-recovery mechanics`).
 
 **Process-of-elimination is the debugging paradigm EVERYWHERE, and manual real-services witness is the verification paradigm EVERYWHERE** -- both stated in `instructions/execute.md` (served EXECUTE prose). Detail in rs-learn (`recall: process-of-elimination manual-real-services-witness paradigm`).

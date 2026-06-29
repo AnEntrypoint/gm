@@ -24,14 +24,11 @@ function alive(st, maxAge) {
 
 async function ensureWatcher() {
   if (alive(readJson(STATUS), 15000)) return;
-  cp.spawn('bun', ['x', 'gm-plugkit@latest', 'spool'],
-    { cwd: ROOT, detached: true, stdio: 'ignore', windowsHide: true, shell: true }).unref();
-  const t0 = Date.now();
-  while (Date.now() - t0 < 60000) {
-    if (alive(readJson(STATUS), 10000)) return;
-    await sleep(500);
+  const r = cp.spawnSync('bun', ['x', 'gm-plugkit@latest', 'spool'],
+    { cwd: ROOT, stdio: 'ignore', windowsHide: true, shell: true, timeout: 90000 });
+  if (r.status !== 0 || !alive(readJson(STATUS), 15000)) {
+    throw new Error('atomic spool boot did not leave a fresh watcher (status=' + (r && r.status) + ')');
   }
-  throw new Error('watcher boot timeout');
 }
 
 async function dispatch(verb, body, timeoutMs = 30000) {

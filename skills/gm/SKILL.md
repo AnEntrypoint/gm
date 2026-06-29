@@ -34,15 +34,15 @@ Every turn: dispatch `instruction`, read it, follow the imperative, dispatch the
 cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N
 ```
 
-`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`, `update_available`, `deviations_30m`, `watcher_uptime_ms`. Age over threshold: your next non-orienting verb is gated, dispatch `instruction` first. `update_available` non-null: eager-upgrade with `bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool > /dev/null 2>&1 &`, then re-read `.status.json` after 8s to confirm `version`. `deviations_30m` non-zero indicates active drift to investigate before continuing.
+`.turn-summary.json` carries `phase`, `last_skill`, `prd_pending`, `last_instruction_ts`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `browser_sessions_alive`, `update_available`, `deviations_30m`, `watcher_uptime_ms`. Age over threshold: your next non-orienting verb is gated, dispatch `instruction` first. `update_available` non-null: eager-upgrade with `bun x gm-plugkit@latest --kill-stale-watchers; bun x gm-plugkit@latest spool` (the spool call blocks until serving), then read `.status.json` to confirm `version`. `deviations_30m` non-zero indicates active drift to investigate before continuing.
 
 Compare `.status.json` `ts` to the printed epoch: gap > 15000 = dead, boot it. Exception: a future `busy_until` means a long verb (browser/chromium spawn blocks the heartbeat ~15-18s) -- wait, do not boot a second watcher.
 
 ```bash
-bun x gm-plugkit@latest spool > /dev/null 2>&1 &
+bun x gm-plugkit@latest spool
 ```
 
-(`npx -y gm-plugkit@latest spool > /dev/null 2>&1 &` if `bun` missing.) Wait ~8s, re-`cat .status.json` for a fresh `ts`, and only then write to `instruction/`.
+(`npx -y gm-plugkit@latest spool` if `bun` missing.) This call is atomic: it daemonizes the watcher and blocks until `.status.json` reports a fresh heartbeat, returning only once the spool is serving (exit 0) or failing loud on timeout. No `&`, no `sleep`, no re-`cat` -- when it returns you write to `instruction/` directly. (An already-alive watcher makes it return at once.)
 
 **Dispatch shape: Write request + Read response in the SAME tool-call block.** The shape is `Write .gm/exec-spool/in/instruction/<N>.txt` AND `Read .gm/exec-spool/out/instruction-<N>.json` (or `out/<N>.json` for nested verbs) in one block. A first-read "file does not exist" while plugkit is mid-verb is normal -- re-Read next message. Do not proceed, narrate readiness, or begin work before reading the response and following its `instruction` field. Never poll with `sleep && ls`: plugkit is synchronous, so a missing response means dead watcher (re-check `ts`) or slow verb (check `.gm/exec-spool/.watcher.log`), not "still processing."
 

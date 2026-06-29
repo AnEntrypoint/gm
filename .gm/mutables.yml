@@ -540,3 +540,18 @@
   subject: 'The canvas height-clamp was placed in docs/stats.html <style> (line 25), but the site build strips <style> from the page source -- articleHtml is only <main>+<script>, witnessed: dist/stats/index.html has zero ''height: 300px'' and no ''main canvas'' rule, and deployed fetch-241 articleHtml carried no <style>. So the clamp is inert on the deployed page (deployed starsChart canvas measured 3215px, browser-258). The deployed page''s CSS comes from the anentrypoint-design SDK + theme.mjs render plumbing, so per the SDK pro-rata rule a chart-canvas sizing rule belongs in the SDK gm-prose.css (../anentrypoint-design), not in stats.html.'
   status: witnessed
   witness_evidence: 'Fix relocated to the SDK: ../anentrypoint-design/gm-prose.css now has .ds-prose canvas { display:block; width:100%; max-width:100%; height:300px; max-height:300px } (literal-free, the deployed stats canvas mounts inside .ds-prose). Inert stats.html <style> edit reverted via git_checkout-262 (HEAD). dist/stats/index.html had zero ''height:300px'' confirming the build strips stats.html <style>, so SDK is the correct pro-rata home.'
+- id: spool-exit-before-heartbeat
+  status: witnessed
+  description: 'cli.js spool command exits(0) immediately after startSpoolDaemon() spawns detached watcher, before .status.json heartbeat is written. This is why agents must background with & and sleep+recat. Fix: block until heartbeat fresh before exit. Witness exact exit point and whether bootstrap or cli is the right home.'
+  witness: gm-plugkit/cli.js:196-218
+  witness_evidence: 'gm-plugkit/cli.js:196 startSpoolDaemon() spawns detached and returns pid; cli.js:218 process.exit(0) runs immediately with no wait for heartbeat. The watcher writes .status.json only at wrapper:3394 (initial writeStatus) after its own boot. Gap confirmed: parent exits before child heartbeat -> agents must & + sleep + recat. Fix belongs in cli.js: poll STATUS_PATH for fresh ts after startSpoolDaemon before exit.'
+- id: rs-plugkit-boot-wait-involvement
+  status: witnessed
+  description: User says ../rs-plugkit might also be affected. Determine if rs-plugkit (Rust wasm) has any server/watcher start-and-wait logic, or if daemonize is purely JS in gm-plugkit cli/bootstrap/supervisor. Witness by reading ../rs-plugkit for spool/daemon/watcher boot code.
+  witness: unknown
+  witness_evidence: 'Grep ../rs-plugkit/src for spawn/daemon/watcher/status.json/fn main: zero server-boot logic. Only refs are code_index.rs/poll_detect.rs treating .status.json as a skip/detect file, and entry.rs served prose. The daemonize/spawn/heartbeat lifecycle is entirely JS (gm-plugkit cli.js/bootstrap.js/supervisor.js/wrapper). rs-plugkit affected ONLY via served boot prose (entry.rs/entry.md and SKILL.md) which instructs agents to ''& + sleep 8 + recat'' -- must update to single synchronous call once cli is atomic.'
+- id: status-json-write-point
+  status: witnessed
+  description: Where does the watcher write .status.json with fresh ts heartbeat after boot? cli must poll THIS file to know the watcher is serving. Witness the write location in plugkit-wasm-wrapper.js runSpoolWatcher.
+  witness: unknown
+  witness_evidence: plugkit-wasm-wrapper.js:3367 STATUS_PATH=.status.json; writeStatus() at 3368 writes {pid,ts,version,...}; called initially at 3394 and every 5s at 3392. The watcher process owns the heartbeat. cli.js must poll this file for ts within ~15s freshness after spawning to confirm serving.

@@ -132,6 +132,31 @@ function spoolDir() {
   return path.join(projectDir, '.gm', 'exec-spool');
 }
 
+function readStatus(dir) {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, '.status.json'), 'utf-8')); } catch (_) { return null; }
+}
+
+function statusServing(st, freshMs) {
+  if (!st || !st.pid) return false;
+  const now = Date.now();
+  if (Number.isFinite(st.busy_until) && st.busy_until > now) return true;
+  return Number.isFinite(st.ts) && (now - st.ts) < freshMs;
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function waitForWatcherHeartbeat(dir, deadlineMs, freshMs) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < deadlineMs) {
+    const st = readStatus(dir);
+    if (statusServing(st, freshMs)) return st;
+    sleepSync(300);
+  }
+  return null;
+}
+
 function ensureSpoolDir() {
   try { fs.mkdirSync(spoolDir(), { recursive: true }); } catch (_) {}
 }
@@ -207,13 +232,22 @@ function writeCliError(phase, err) {
     process.exit(1);
   }
 
-  writeCliStatus({ phase: 'ready', version: bootstrapResult.version, daemon_pid: daemon.pid, log: daemon.logPath });
+  const serving = waitForWatcherHeartbeat(spoolDir(), 30000, 12000);
+  if (!serving) {
+    const errMsg = `watcher spawned (pid=${daemon.pid}) but .status.json heartbeat not fresh within 30s`;
+    writeCliError('watcher-heartbeat-timeout', new Error(errMsg));
+    console.error('Daemon start failed:', errMsg);
+    process.exit(1);
+  }
+
+  writeCliStatus({ phase: 'ready', version: bootstrapResult.version, daemon_pid: daemon.pid, watcher_pid: serving.pid, log: daemon.logPath });
 
   console.log(JSON.stringify({
     ok: true,
     binary: bootstrapResult.binaryPath,
     daemon,
-    message: 'plugkit ready, spool watcher running'
+    watcher_pid: serving.pid,
+    message: 'plugkit ready, spool watcher serving'
   }));
   process.exit(0);
 })().catch((err) => {
