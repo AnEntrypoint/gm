@@ -672,6 +672,18 @@ const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN) {
 }`;
 
 let execProfileSeq = 0;
+function sweepStaleProfileTmp() {
+  try {
+    const dir = os.tmpdir();
+    const cutoff = Date.now() - 3600000;
+    for (const name of fs.readdirSync(dir)) {
+      if (!/^gm-prof-\d+-\d+\.js$/.test(name)) continue;
+      const fp = path.join(dir, name);
+      try { if (fs.statSync(fp).mtimeMs < cutoff) fs.unlinkSync(fp); } catch (_) {}
+    }
+  } catch (_) {}
+}
+try { sweepStaleProfileTmp(); } catch (_) {}
 let _aggregateCpuProfileFn = null;
 function aggregateCpuProfile(profile, topN) {
   if (!_aggregateCpuProfileFn) {
@@ -2032,6 +2044,18 @@ function makeHostFunctions(instanceRef) {
               + `  __session.disconnect();\n`
               + `})();\n`;
             cmd = process.execPath; args = ['-e', runnerCode];
+          } else if (opts.mem === true) {
+            const memRunner = `const { performance: __perf } = require('perf_hooks');\n`
+              + `(async () => {\n`
+              + `  const __mb = process.memoryUsage(); const __w0 = __perf.now();\n`
+              + `  let __r = null, __err = null;\n`
+              + `  try { __r = await (async () => {\n${code}\n})(); } catch (e) { __err = { name: e && e.name || 'Error', message: String(e && e.message || e), stack: String(e && e.stack || '') }; }\n`
+              + `  const __wallMs = Math.round((__perf.now() - __w0) * 1000) / 1000; const __ma = process.memoryUsage();\n`
+              + `  const __mem = { rss_mb: Math.round(__ma.rss/10485.76)/100, heapUsed_mb: Math.round(__ma.heapUsed/10485.76)/100, heapUsed_delta_mb: Math.round((__ma.heapUsed-__mb.heapUsed)/10485.76)/100, external_mb: Math.round(__ma.external/10485.76)/100 };\n`
+              + `  process.stdout.write('__GM_META__' + JSON.stringify({ result: __r === undefined ? null : __r, error: __err, mem: __mem, wall_ms: __wallMs }));\n`
+              + `  if (__err) process.exitCode = 1;\n`
+              + `})();\n`;
+            cmd = process.execPath; args = ['-e', memRunner];
           } else {
             cmd = process.execPath; args = ['-e', code];
           }
@@ -2041,8 +2065,12 @@ function makeHostFunctions(instanceRef) {
         else if (lang === 'deno') { cmd = 'deno'; args = ['eval', code]; }
         else { return writeWasmJson(instanceRef.value, { ok: false, error: `unsupported lang: ${lang}` }); }
         const __execT0 = Date.now();
-        const result = spawnSync(cmd, args, { encoding: 'utf-8', timeout: timeoutMs, cwd, env: process.env });
-        if (profileUserFile) { try { fs.unlinkSync(profileUserFile); } catch (_) {} }
+        let result;
+        try {
+          result = spawnSync(cmd, args, { encoding: 'utf-8', timeout: timeoutMs, cwd, env: process.env });
+        } finally {
+          if (profileUserFile) { try { fs.unlinkSync(profileUserFile); } catch (_) {} }
+        }
         if (wantProfile) {
           const raw = result.stdout || '';
           const idx = raw.indexOf('__GM_PROFILE__');
@@ -2061,6 +2089,24 @@ function makeHostFunctions(instanceRef) {
             user_error: parsed ? parsed.user_error : null,
             mem: parsed ? parsed.mem : null,
             wall_vs_cpu: parsed ? parsed.wall_vs_cpu : null,
+          });
+        }
+        if (opts.mem === true && isJsLang) {
+          const raw = result.stdout || '';
+          const idx = raw.indexOf('__GM_META__');
+          let meta = null;
+          if (idx >= 0) { try { meta = JSON.parse(raw.slice(idx + '__GM_META__'.length)); } catch (_) {} }
+          return writeWasmJson(instanceRef.value, {
+            ok: result.status === 0 && !!meta && !meta.error,
+            stdout: idx >= 0 ? raw.slice(0, idx) : raw,
+            stderr: result.stderr || '',
+            exit_code: result.status === null ? -1 : result.status,
+            timed_out: result.signal === 'SIGTERM',
+            duration_ms: Date.now() - __execT0,
+            result: meta ? meta.result : null,
+            mem: meta ? meta.mem : null,
+            wall_ms: meta ? meta.wall_ms : null,
+            ...(meta && meta.error ? { error: meta.error } : {}),
           });
         }
         return writeWasmJson(instanceRef.value, {
@@ -2198,6 +2244,22 @@ function makeHostFunctions(instanceRef) {
             evalBody = 'return {url: page.url(), title: await page.title()};';
           }
         }
+        let screenshotPath = null;
+        const shotMatch = evalBody.match(/^screenshot(?:=(\S+))?[ \t]*\n([\s\S]*)$/);
+        if (shotMatch) {
+          const witnessDir = path.join(browserRootDir(cwd), '.gm', 'witness');
+          try { fs.mkdirSync(witnessDir, { recursive: true }); } catch (_) {}
+          const reqName = shotMatch[1] ? path.basename(shotMatch[1]).replace(/[^A-Za-z0-9._-]/g, '_') : '';
+          const fname = (reqName && /\.png$/i.test(reqName)) ? reqName : `shot-${process.pid}-${execProfileSeq++}.png`;
+          screenshotPath = path.join(witnessDir, fname);
+          evalBody = shotMatch[2];
+        }
+        let domSelector = null;
+        const domMatch = evalBody.match(/^dom=(.+?)[ \t]*\n([\s\S]*)$/);
+        if (domMatch) {
+          domSelector = domMatch[1];
+          evalBody = domMatch[2] && domMatch[2].trim() ? domMatch[2] : 'return null;';
+        }
         const navTimeout = Math.min(timeoutMs, 60000);
         const gotoPrefix = startUrl
           ? `await page.goto(${JSON.stringify(startUrl)},{waitUntil:'load',timeout:${navTimeout}});\n`
@@ -2212,12 +2274,15 @@ function makeHostFunctions(instanceRef) {
           + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
           + `page.on('pageerror',e=>{try{__errs.push({type:'pageerror',msg:String(e&&e.message||e)});}catch(_){}});`
           + `page.on('error',e=>{try{__errs.push({type:'uncaught',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});}catch(_){}});`
-          + `page.on('requestfinished',r=>{try{const t=r.timing();__net.push({url:String(r.url()).slice(0,120),dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});`
+          + `page.on('requestfinished',r=>{try{const t=r.timing();let __st=0,__sz=0;try{__st=(r.response()&&r.response().status())||0;}catch(_){}__net.push({url:String(r.url()).slice(0,120),method:r.method(),status:__st,dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});`
           + `page.on('requestfailed',r=>{try{const err=r.failure();__errs.push({type:'fetch',msg:String(err&&err.errorText||'request failed'),url:String(r.url()).slice(0,120)});}catch(_){}});`
           + `page.evaluateOnNewDocument(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
           + `}catch(_){}\n`;
-        const perfRead = `let __perf=null;try{__perf=await page.evaluate(async()=>{const n=performance.getEntriesByType('navigation')[0];const paints={};for(const p of performance.getEntriesByType('paint')){paints[p.name]=Math.round(p.startTime);}let lcp=0;try{const le=performance.getEntriesByType('largest-contentful-paint');if(le.length)lcp=Math.round(le[le.length-1].startTime);}catch(_){}let cls=0;try{for(const ls of performance.getEntriesByType('layout-shift')){if(!ls.hadRecentInput)cls+=ls.value;}}catch(_){}let longtasks=0;try{longtasks=performance.getEntriesByType('longtask').length;}catch(_){}const fps=await new Promise(res=>{let f=0;const s=performance.now();function tick(){f++;if(performance.now()-s>=500)return res(Math.round(f/((performance.now()-s)/1000)));requestAnimationFrame(tick);}requestAnimationFrame(tick);});return{load_ms:n?Math.round(n.loadEventEnd||0):0,dcl_ms:n?Math.round(n.domContentLoadedEventEnd||0):0,resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now()),first_paint_ms:paints['first-paint']||0,first_contentful_paint_ms:paints['first-contentful-paint']||0,largest_contentful_paint_ms:lcp,cumulative_layout_shift:Math.round(cls*1000)/1000,longtasks,fps};});}catch(_){}\n`;
+        const perfRead = `let __perf=null;try{__perf=await page.evaluate(async()=>{const n=performance.getEntriesByType('navigation')[0];const paints={};for(const p of performance.getEntriesByType('paint')){paints[p.name]=Math.round(p.startTime);}let lcp=0;try{const le=performance.getEntriesByType('largest-contentful-paint');if(le.length)lcp=Math.round(le[le.length-1].startTime);}catch(_){}let cls=0;try{for(const ls of performance.getEntriesByType('layout-shift')){if(!ls.hadRecentInput)cls+=ls.value;}}catch(_){}let longtasks=0;try{longtasks=performance.getEntriesByType('longtask').length;}catch(_){}let heapU=0,heapT=0;try{if(performance.memory){heapU=Math.round(performance.memory.usedJSHeapSize/10485.76)/100;heapT=Math.round(performance.memory.totalJSHeapSize/10485.76)/100;}}catch(_){}const fps=await new Promise(res=>{let f=0;const s=performance.now();function tick(){f++;if(performance.now()-s>=500)return res(Math.round(f/((performance.now()-s)/1000)));requestAnimationFrame(tick);}requestAnimationFrame(tick);});return{load_ms:n?Math.round(n.loadEventEnd||0):0,dcl_ms:n?Math.round(n.domContentLoadedEventEnd||0):0,resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now()),first_paint_ms:paints['first-paint']||0,first_contentful_paint_ms:paints['first-contentful-paint']||0,largest_contentful_paint_ms:lcp,cumulative_layout_shift:Math.round(cls*1000)/1000,longtasks,fps,heap_used_mb:heapU,heap_total_mb:heapT};});}catch(_){}\n`;
         const blankProbe = startUrl ? '' : `try{const __u=page.url();if(__u==='about:blank'||__u===''){console.error('__GM_BLANK__');}}catch(_){}\n`;
+        const netFmt = `__net.slice().sort((a,b)=>(b.dur_ms||0)-(a.dur_ms||0)).slice(0,30)`;
+        const consoleFmt = `(__logs.length>50?[...__logs.slice(0,50),{type:'meta',text:'... '+(__logs.length-50)+' more console entries dropped'}]:__logs)`;
+        const emitResult = `try{console.log('__GM_RESULT__'+JSON.stringify(__RET===undefined?null:__RET));}catch(__se){console.log('__GM_RESULT__'+JSON.stringify({__unserializable:String(__se&&__se.message||__se)}));}\n`;
         if (modeMatch && modeMatch[1] === 'profile') {
           const userScript = modeMatch[3];
           const intervalUs = sampleIntervalUs;
@@ -2236,7 +2301,8 @@ function makeHostFunctions(instanceRef) {
             + `const __cpuUs=__agg.timeframe?__agg.timeframe.total_us:0;\n`
             + `const __wallVsCpu={wall_us:__wallUs,cpu_self_us:__cpuUs,offcpu_us:Math.max(0,__wallUs-__cpuUs),note:'offcpu_us = wall minus on-CPU JS self time = GPU/compositor/raster/IO/idle the CPU sampler is blind to; use trace mode to attribute GPU activity'};\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `return {result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
+            + `const __RET={result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'trace') {
           const userScript = modeMatch[3];
           evalBody = debugSetup
@@ -2255,7 +2321,8 @@ function makeHostFunctions(instanceRef) {
             + `const __topCats=Object.entries(__byCat).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([cat,us])=>({cat,wall_us:us}));\n`
             + `const __spanUs=(isFinite(__minTs)&&__maxTs>0)?(__maxTs-__minTs):0;\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `return {result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
+            + `const __RET={result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'capture') {
           const userScript = modeMatch[3];
           evalBody = debugSetup
@@ -2263,11 +2330,22 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `return {result:__result,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
+            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + emitResult + `return __RET;`;
+        } else if (screenshotPath) {
+          evalBody = `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${evalBody}}catch(e){throw e;}\n})();\n`
+            + `let __shotErr=null;try{await page.screenshot({path:${JSON.stringify(screenshotPath)},fullPage:false});}catch(e){__shotErr=String(e&&e.message||e);}\n`
+            + `const __RET={result:__result,screenshot_path:${JSON.stringify(screenshotPath)},screenshot_error:__shotErr};\n`
+            + emitResult + `return __RET;`;
+        } else if (domSelector) {
+          evalBody = `${blankProbe}${gotoPrefix}let __RET;try{__RET=await page.evaluate((sel)=>{const out=[];const els=document.querySelectorAll(sel);for(let i=0;i<Math.min(els.length,20);i++){const e=els[i];const r=e.getBoundingClientRect();const attrs={};for(const a of e.attributes)attrs[a.name]=String(a.value).slice(0,120);out.push({tag:e.tagName.toLowerCase(),text:(e.textContent||'').trim().slice(0,200),attrs,visible:!!(r.width&&r.height),rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});}return{selector:sel,match_count:els.length,elements:out};},${JSON.stringify(domSelector)});}catch(e){__RET={selector:${JSON.stringify(domSelector)},error:String(e&&e.message||e),match_count:0,elements:[]};}\n`
+            + emitResult + `return __RET;`;
         } else if (startUrl) {
-          evalBody = `${gotoPrefix}${evalBody}`;
+          evalBody = `${gotoPrefix}const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
         } else if (blankProbe) {
-          evalBody = `${blankProbe}${evalBody}`;
+          evalBody = `${blankProbe}const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
+        } else {
+          evalBody = `const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         const r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
@@ -2277,14 +2355,26 @@ function makeHostFunctions(instanceRef) {
         }
         const rawStderr = r.stderr || '';
         const landedOnBlank = !startUrl && rawStderr.includes('__GM_BLANK__');
+        let rawStdout = r.stdout || '';
+        let parsedResult;
+        let resultParsed = false;
+        const resIdx = rawStdout.lastIndexOf('__GM_RESULT__');
+        if (resIdx >= 0) {
+          const tail = rawStdout.slice(resIdx + '__GM_RESULT__'.length);
+          const nl = tail.indexOf('\n');
+          const jsonStr = nl >= 0 ? tail.slice(0, nl) : tail;
+          try { parsedResult = JSON.parse(jsonStr); resultParsed = true; } catch (_) {}
+          rawStdout = (rawStdout.slice(0, resIdx) + (nl >= 0 ? tail.slice(nl + 1) : '')).replace(/\n+$/, '\n');
+        }
         const envelope = {
           ok,
-          stdout: scrubBrowserRunnerText(r.stdout || ''),
+          stdout: scrubBrowserRunnerText(rawStdout),
           stderr: scrubBrowserRunnerText(rawStderr.replace(/^__GM_BLANK__\r?\n?/gm, '')),
           exit_code: r.status === null ? -1 : r.status,
           session_id: pwSessionId,
           timeout_ms_used: timeoutMs,
         };
+        if (resultParsed) envelope.result = parsedResult;
         envelope.navigation_requested = !!startUrl;
         if (landedOnBlank) {
           envelope.landed_on_blank = true;

@@ -203,6 +203,15 @@ async function main() {
   assert(pd && pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
     'exec_js profile must return mem (rss/heap) and wall_vs_cpu with offcpu_us>0 (the ~150ms setTimeout the CPU sampler cannot see)');
   console.log('profile witness ok (culprits=' + pd.profile.culprits.length + ' offcpu_us=' + pd.wall_vs_cpu.offcpu_us + ')');
+  const memRun = await dispatch('exec_js', { code: 'const a=[];for(let i=0;i<5e4;i++)a.push(i);return {len:a.length};', opts: { mem: true }, timeoutMs: 10000 });
+  const md = memRun.ok && memRun.data ? (typeof memRun.data === 'string' ? JSON.parse(memRun.data) : memRun.data) : null;
+  assert(md && md.result && md.result.len === 50000 && md.mem && typeof md.mem.rss_mb === 'number' && typeof md.wall_ms === 'number',
+    'exec_js opts.mem must return structured result + mem.rss_mb + wall_ms');
+  const errRun = await dispatch('exec_js', { code: 'const x=null;return x.y.z;', opts: { mem: true }, timeoutMs: 10000 });
+  const ed = errRun.data ? (typeof errRun.data === 'string' ? JSON.parse(errRun.data) : errRun.data) : null;
+  assert(ed && ed.error && ed.error.name === 'TypeError' && /Cannot read properties of null/.test(ed.error.message),
+    'exec_js opts.mem must return a structured error{name,message} on a throw');
+  console.log('mem+error witness ok (rss=' + md.mem.rss_mb + ' err=' + ed.error.name + ')');
   console.log('PASS');
 }
 

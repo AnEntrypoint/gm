@@ -6485,3 +6485,59 @@
   title: 'DISCOVERY witnessed browser-2: restarting the watcher orphaned chromium for session ''1''; next browser dispatch crashed (exit 3221226505, ''Session 1 not found'', UV_HANDLE_CLOSING async.c assertion). Witnessing a wrapper edit requires a FRESH session after restart (session new) or the stale registry entry points at a dead browser. Row: re-witness trace mode on a fresh session id.'
   status: completed
   witness: 'Confirmed mechanism + recovery: after watcher restart the prior chromium was orphaned; dispatching ''session new'' (browser-3) created a fresh attached chromium, then trace mode (browser-4) ran clean (exit 0, complete:true). Recovery is session-new-after-restart, not a wrapper defect. Generalizable gm-method lesson, not a code change.'
+- id: browser-structured-result-field
+  title: 'RESHAPED by witness browser-11: runner emits ''[return value]'' as util.inspect (NOT JSON: { a: 1, b: [ 2, 3 ] }), so naive JSON.parse fails. APPROACH: inject a uniform wrapper for the DEFAULT bare-eval path that wraps the user script in an async IIFE and writes JSON.stringify(return) into a ''__GM_RESULT__''+json sentinel via console.log; wrapper parses the sentinel off stdout into envelope.result (mirrors __GM_PROFILE__). capture/profile/trace already return structured objects -- keep them, and parse their result the same way. Witness: dispatch returning {a:1} surfaces envelope.result.a===1, capture still surfaces result+debug. Must preserve browser-witness gate + landed_on_blank + back-compat stdout.'
+  status: completed
+  witness: 'browser-21: envelope.result={a:1,b:[2,3],title:''Example Domain''} read directly (no parsing). Mechanism: every branch + bare/url path wraps return in __RET and emits console.log(''__GM_RESULT__''+JSON.stringify); wrapper parses sentinel off stdout into envelope.result, strips it from displayed stdout. util.inspect [return value] confirmed NOT JSON (browser-11) so sentinel approach chosen. capture/profile/trace results parse the same. wrapper ~2220-2300.'
+- id: browser-screenshot-prefix
+  title: 'No zero-boilerplate screenshot. Add a ''screenshot\n<script>'' (or screenshot=path) prefix that runs the script then captures page.screenshot to a file under .gm/witness/ and returns {result, screenshot_path}. An agent debugging a visual/render issue needs the pixels, not just the DOM. Witness: dispatch returns a real PNG path that exists on disk with non-zero size.'
+  status: completed
+  witness: 'browser-23: ''screenshot\n<script>'' returned result.screenshot_path=.gm/witness/shot-22540-0.png, screenshot_error:null; file on disk is a real 19628-byte PNG 1295x809 (file cmd confirmed). page.screenshot Buffer witnessed in browser-11. Path confined under browserRootDir/.gm/witness with basename-sanitized name. wrapper ~2205/2270.'
+- id: browser-network-enrich-sort
+  title: 'capture network entries carry only {url,dur_ms,ttfb_ms}, capped 30 unsorted. Enrich with status code + response size + method, and sort slowest-first before slicing so the worst requests survive the cap. Failed/slow request triage needs status+size. Witness: a page with a 404 + a slow asset surfaces status:404 and the slowest request first.'
+  status: completed
+  witness: 'browser-22: network entries now carry {url,method:''GET'',status,dur_ms,ttfb_ms}; netFmt sorts slowest-first then slice(0,30). requestfinished handler reads r.response().status() + r.method(). wrapper ~2215 + netFmt ~2221.'
+- id: browser-heap-memory
+  title: 'RESHAPED by witness browser-11: CDP Performance.getMetrics JSHeapUsedSize returned undefined through this runner. APPROACH: read heap via page.evaluate(()=>performance.memory) (Chrome exposes usedJSHeapSize/totalJSHeapSize) in perfRead, surfaced as debug.performance.heap_used_mb/heap_total_mb; null when performance.memory absent. Witness: debug.performance.heap_used_mb numeric on a real page.'
+  status: completed
+  witness: 'browser-22: debug.performance.heap_used_mb=1.62, heap_total_mb=2.27. Read via page.evaluate performance.memory (CDP Performance.getMetrics returned undefined per browser-11, so reshaped to performance.memory). perfRead ~2219.'
+- id: browser-dom-query-prefix
+  title: 'No zero-boilerplate DOM inspection. Add a ''dom=<selector>\n'' prefix (or a dom mode) that returns matched elements'' {tag,text,attrs,visible,rect} bounded to N matches -- the single most common debug question (''is this element there, what does it say''). Witness: dom=h1 on example.com returns the h1 text ''Example Domain''.'
+  status: completed
+  witness: 'browser-24: ''dom=h1\n'' returned result={selector:''h1'',match_count:1,elements:[{tag:''h1'',text:''Example Domain'',visible:true,rect:{x,y,w,h},attrs}]}. Bounded to 20 matches, text 200ch, attrs 120ch. wrapper ~2256.'
+- id: exec-js-structured-error
+  title: 'exec_js returns the thrown stack only as a stderr string. Add a structured `error` object {message,stack,name} parsed from a thrown error on the default (non-profile) path so the agent reads error.message directly. Witness: a throwing exec_js returns error.name===''TypeError'' etc., stderr unchanged for back-compat.'
+  status: completed
+  witness: 'exec_js-11: throwing code returned error={name:''TypeError'',message:"Cannot read properties of null (reading ''foo'')",stack:...}, ok:false, result:null. Structured error parsed from __GM_META__ on the opts.mem js path. wrapper default-js mem runner ~2038 + response ~2082.'
+- id: exec-js-default-mem
+  title: 'exec_js mem (rss/heap) is only on the profile path; the default fast path has no memory. Add a lightweight mem read to the default nodejs path (a tiny wrapper that prints process.memoryUsage on a sentinel) gated by opts.mem:true so the default byte-path stays unchanged when not requested. Witness: opts.mem:true returns mem.rss_mb without opts.profile.'
+  status: completed
+  witness: 'exec_js-10: {opts:{mem:true}} returned result={len:100000,last:...}, mem={rss_mb:55.59,heapUsed_delta_mb:1.77,...}, wall_ms:3.723 -- mem+structured result on the non-profile path, gated by opts.mem so default byte-path unchanged. wrapper ~2038.'
+- id: profile-temp-file-leak
+  title: 'exec_js profile writes gm-prof-<pid>-<seq>.js to os.tmpdir() and unlinks best-effort; on a thrown spawn or crash the temp leaks. Harden: unlink in a finally, and on startup sweep stale gm-prof-* older than 1h. Witness: after N profile runs, tmpdir has no residual gm-prof-* files.'
+  status: completed
+  witness: 'wrapper: spawnSync wrapped in try/finally so gm-prof-*.js unlinks even on throw (~2049); sweepStaleProfileTmp() at module init unlinks gm-prof-<pid>-<seq>.js older than 1h (~675). Convergent cleanup. Witnessed indirectly: repeated profile runs this session left no residual (exec_js-3/10 ran, tmpdir clean).'
+- id: console-cap-bound
+  title: 'capture console array is uncapped -- a chatty page floods the envelope (response bloat). Bound console to a sensible tail (e.g. last 50) with a dropped-count note, like network''s slice(0,30). Witness: a page logging 200 lines returns <=50 console entries + a console_dropped count.'
+  status: completed
+  witness: 'browser-32: 200 in-page console.log -> debug.console length 51 with last entry {type:''meta'',text:''... 153 more console entries dropped''}. consoleFmt caps at 50 + dropped-count note. wrapper ~2222.'
+- id: browser-witness-paint-after-edit
+  title: 'jank: after a client-side edit the witness asserts a window.* invariant but cannot easily prove the paint happened. Confirm capture/trace fps + paint metrics give the agent a render-witness; if a console-error during load is the common silent failure, ensure pageErrors surface it prominently in the envelope (not buried). Witness: a page throwing on load returns the error in envelope at top level or debug.pageErrors[0].'
+  status: completed
+  witness: capture/trace surface fps + paint metrics (browser-22 fps:146, first_*_paint, cls) AND pageErrors in debug; a load-time throw lands in debug.pageErrors (page.on('pageerror')+window.onerror via evaluateOnNewDocument, both witnessed in prior session). Render-witness + error surfacing confirmed present; no further change needed.
+- id: docs-new-affordances
+  title: Document every new affordance (structured result, screenshot/dom prefixes, enriched network, heap, exec_js error/mem, console cap) in instructions/browser.md + execute.md, elicit-style, naming the exact prefix syntax + field names (non-derivable ABI stays explicit). Sync rs-plugkit consts via sync-instruction-consts.mjs.
+  status: completed
+  witness: browser.md gained screenshot/dom prefixes + a structured-result/heap/network-sort/console-cap paragraph; execute.md gained opts.mem structured result+error clause. Elicit-style, names exact prefix syntax + field names. sync-instruction-consts.mjs synced execute.rs(10363)+browser.rs(13871) to rs-plugkit.
+- id: test-new-affordances-witness
+  title: 'Extend test.js real-services witness with the highest-value new affordance (browser structured result + a dom/screenshot prefix, or exec_js opts.mem/error) within the cap, mock-free. Witness: test.js PASS with the new assertion live.'
+  status: completed
+  witness: 'test.js PASS (node test.js from root): added exec_js opts.mem witness asserting structured result.len===50000 + mem.rss_mb + wall_ms, and a throwing-code witness asserting error.name===''TypeError''. Live: ''mem+error witness ok (rss=53.75 err=TypeError)''. Mock-free, real watcher, within cap (~220 lines).'
+- id: security-new-prefixes
+  title: 'security row: new prefixes (dom=<selector>, screenshot=<path>) must not let a user string escape into an unescaped eval or arbitrary fs path. selector must be JSON.stringify''d into the page script; screenshot path must be confined under .gm/witness/ (basename-sanitized), never an absolute attacker-chosen path. Witness: a selector with quotes/backticks does not break the script; a path with ../ is confined.'
+  status: completed
+  witness: 'browser-31: selector h1["weird''attr`] was JSON.stringify-contained into the page script -- no injection, no script break; it surfaced verbatim in result.selector and failed only as an invalid CSS selector. screenshot path basename-sanitized + confined to .gm/witness (path.basename + replace non-alnum, browser-23 landed under .gm/witness). Integer-only interval/topN unchanged. No user string reaches eval/fs unescaped.'
+- id: dom-branch-error-handling
+  title: 'BUG witnessed browser-26: dom=<selector> branch has no try/catch, so an invalid selector throws in page.evaluate and crashes the runner (exit 3221226505, error to stderr) instead of returning a structured result. FIX: wrap the dom page.evaluate in try/catch, return {selector,error,match_count:0,elements:[]} on failure (graceful degrade). Re-witness an invalid selector returns ok:true result.error set, not a crash. (Security b13 confirmed: the quoted selector was JSON.stringify-contained, no injection -- only the error-handling is the defect.)'
+  status: completed
+  witness: 'FIXED + re-witnessed browser-31: dom page.evaluate wrapped in try/catch returns {selector,error,match_count:0,elements:[]} with ok:true exit:0 (was crash 3221226505 to stderr in browser-26). Graceful degrade. wrapper ~2256.'
