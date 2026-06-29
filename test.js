@@ -196,6 +196,13 @@ async function main() {
   assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key,
     'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key, never a duplicate row -- both the memorize and memorize-fire verbs use the content-hash + dedup contract');
   console.log('idempotency witness ok (memorize deduped key=' + m2.data.key + ')');
+  const prof = await dispatch('exec_js', { code: 'let s=0;for(let i=0;i<2e6;i++){s+=Math.sqrt(i);}await new Promise(r=>setTimeout(r,150));return{s};', opts: { profile: true, profileTopN: 5 }, timeoutMs: 20000 });
+  const pd = prof.ok && prof.data ? (typeof prof.data === 'string' ? JSON.parse(prof.data) : prof.data) : null;
+  assert(pd && pd.profile && Array.isArray(pd.profile.culprits) && pd.profile.culprits.length > 0 && pd.profile.culprits.length <= 5,
+    'exec_js profile must return culprits[] capped by profileTopN=5');
+  assert(pd && pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
+    'exec_js profile must return mem (rss/heap) and wall_vs_cpu with offcpu_us>0 (the ~150ms setTimeout the CPU sampler cannot see)');
+  console.log('profile witness ok (culprits=' + pd.profile.culprits.length + ' offcpu_us=' + pd.wall_vs_cpu.offcpu_us + ')');
   console.log('PASS');
 }
 

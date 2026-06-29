@@ -1989,7 +1989,12 @@ function makeHostFunctions(instanceRef) {
           });
         }
         const timeoutMs = rawTimeout;
-        const wantProfile = opts.profile === true && (lang === 'nodejs' || lang === 'js' || lang === undefined);
+        const isJsLang = lang === 'nodejs' || lang === 'js' || lang === undefined;
+        const wantProfile = opts.profile === true && isJsLang;
+        const profileSkipped = opts.profile === true && !isJsLang
+          ? { reason: `profile requested but lang=${lang} is not js/nodejs; CPU profiling only supported on the node surface`, lang }
+          : null;
+        const profileTopN = Number.isFinite(opts.profileTopN) && opts.profileTopN > 0 ? Math.floor(opts.profileTopN) : 20;
         let profileUserFile = null;
         let cmd, args;
         if (lang === 'nodejs' || lang === 'js') {
@@ -1998,21 +2003,32 @@ function makeHostFunctions(instanceRef) {
             fs.writeFileSync(profileUserFile, `module.exports = (async () => {\n${code}\n});`, 'utf-8');
             const runnerCode = `${AGGREGATE_CPU_PROFILE_SRC}\n`
               + `const __inspector = require('inspector');\n`
+              + `const { performance: __perf } = require('perf_hooks');\n`
               + `const __session = new __inspector.Session();\n`
               + `__session.connect();\n`
               + `const __post = (m, p) => new Promise((res, rej) => __session.post(m, p || {}, (e, r) => e ? rej(e) : res(r)));\n`
               + `(async () => {\n`
-              + `  let __profile = null, __profileError = null, __userResult = null, __userError = null;\n`
+              + `  let __profile = null, __profileError = null, __userResult = null, __userError = null, __wallMs = 0;\n`
+              + `  const __memBefore = process.memoryUsage();\n`
               + `  try {\n`
               + `    await __post('Profiler.enable');\n`
               + `    await __post('Profiler.setSamplingInterval', { interval: ${Number.isFinite(opts.sampleIntervalUs) && opts.sampleIntervalUs > 0 ? Math.floor(opts.sampleIntervalUs) : 100} });\n`
               + `    await __post('Profiler.start');\n`
+              + `    const __w0 = __perf.now();\n`
               + `    try { __userResult = await require(${JSON.stringify(profileUserFile)})(); } catch (ue) { __userError = String(ue && ue.stack || ue); }\n`
+              + `    __wallMs = Math.round((__perf.now() - __w0) * 1000) / 1000;\n`
               + `    const __r = await __post('Profiler.stop');\n`
               + `    __profile = __r && __r.profile || null;\n`
               + `  } catch (pe) { __profileError = String(pe && pe.message || pe); }\n`
-              + `  const __agg = __profile ? aggregateCpuProfile(__profile) : { timeframe: null, culprits: [] };\n`
-              + `  process.stdout.write('__GM_PROFILE__' + JSON.stringify({ result: __userResult, user_error: __userError, profile: __agg, profile_error: __profileError }));\n`
+              + `  const __memAfter = process.memoryUsage();\n`
+              + `  const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopN}) : { timeframe: null, culprits: [] };\n`
+              + `  const __userFile = ${JSON.stringify('file:///' + profileUserFile.replace(/\\/g, '/'))};\n`
+              + `  const __cpuTotalUs = __agg.timeframe ? __agg.timeframe.total_us : 0;\n`
+              + `  const __cpuUserUs = (__agg.culprits || []).filter(c => c.location && c.location.indexOf(__userFile) === 0).reduce((a, c) => a + c.self_us, 0);\n`
+              + `  const __wallUs = Math.round(__wallMs * 1000);\n`
+              + `  const __mem = { rss_mb: Math.round(__memAfter.rss/10485.76)/100, heapUsed_mb: Math.round(__memAfter.heapUsed/10485.76)/100, heapUsed_delta_mb: Math.round((__memAfter.heapUsed-__memBefore.heapUsed)/10485.76)/100, external_mb: Math.round(__memAfter.external/10485.76)/100 };\n`
+              + `  const __wallVsCpu = { wall_us: __wallUs, cpu_user_self_us: __cpuUserUs, cpu_total_sampled_us: __cpuTotalUs, offcpu_us: Math.max(0, __wallUs - __cpuUserUs), note: 'offcpu_us = inner wall minus on-CPU user-code JS self time = IO/async/GPU/idle the CPU sampler is blind to; cpu_total_sampled_us includes node-init/inspector overhead' };\n`
+              + `  process.stdout.write('__GM_PROFILE__' + JSON.stringify({ result: __userResult, user_error: __userError, profile: __agg, profile_error: __profileError, mem: __mem, wall_vs_cpu: __wallVsCpu }));\n`
               + `  __session.disconnect();\n`
               + `})();\n`;
             cmd = process.execPath; args = ['-e', runnerCode];
@@ -2043,6 +2059,8 @@ function makeHostFunctions(instanceRef) {
             profile: parsed ? parsed.profile : { timeframe: null, culprits: [] },
             profile_error: parsed ? parsed.profile_error : 'profile sentinel not found in stdout',
             user_error: parsed ? parsed.user_error : null,
+            mem: parsed ? parsed.mem : null,
+            wall_vs_cpu: parsed ? parsed.wall_vs_cpu : null,
           });
         }
         return writeWasmJson(instanceRef.value, {
@@ -2052,6 +2070,7 @@ function makeHostFunctions(instanceRef) {
           exit_code: result.status === null ? -1 : result.status,
           timed_out: result.signal === 'SIGTERM',
           duration_ms: Date.now() - __execT0,
+          ...(profileSkipped ? { profile_skipped: profileSkipped } : {}),
         });
       } catch (e) {
         return writeWasmJson(instanceRef.value, { ok: false, error: e.message });
@@ -2183,7 +2202,12 @@ function makeHostFunctions(instanceRef) {
         const gotoPrefix = startUrl
           ? `await page.goto(${JSON.stringify(startUrl)},{waitUntil:'load',timeout:${navTimeout}});\n`
           : '';
-        const modeMatch = evalBody.match(/^(capture|profile)[ \t]*\n([\s\S]*)$/);
+        const modeMatch = evalBody.match(/^(capture|profile|trace)((?:[ \t]+(?:interval|topN)=\d+)*)[ \t]*\n([\s\S]*)$/);
+        const modeOpts = modeMatch ? modeMatch[2] : '';
+        const __intervalM = modeOpts.match(/interval=(\d+)/);
+        const __topNM = modeOpts.match(/topN=(\d+)/);
+        const sampleIntervalUs = __intervalM && parseInt(__intervalM[1], 10) > 0 ? parseInt(__intervalM[1], 10) : 100;
+        const profileTopNBrowser = __topNM && parseInt(__topNM[1], 10) > 0 ? parseInt(__topNM[1], 10) : 20;
         const debugSetup = `const __logs=[],__errs=[],__net=[];\n`
           + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
           + `page.on('pageerror',e=>{try{__errs.push({type:'pageerror',msg:String(e&&e.message||e)});}catch(_){}});`
@@ -2192,25 +2216,48 @@ function makeHostFunctions(instanceRef) {
           + `page.on('requestfailed',r=>{try{const err=r.failure();__errs.push({type:'fetch',msg:String(err&&err.errorText||'request failed'),url:String(r.url()).slice(0,120)});}catch(_){}});`
           + `page.evaluateOnNewDocument(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
           + `}catch(_){}\n`;
-        const perfRead = `let __perf=null;try{__perf=await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return n?{load_ms:Math.round(n.loadEventEnd||0),dcl_ms:Math.round(n.domContentLoadedEventEnd||0),resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now())}:null;});}catch(_){}\n`;
+        const perfRead = `let __perf=null;try{__perf=await page.evaluate(async()=>{const n=performance.getEntriesByType('navigation')[0];const paints={};for(const p of performance.getEntriesByType('paint')){paints[p.name]=Math.round(p.startTime);}let lcp=0;try{const le=performance.getEntriesByType('largest-contentful-paint');if(le.length)lcp=Math.round(le[le.length-1].startTime);}catch(_){}let cls=0;try{for(const ls of performance.getEntriesByType('layout-shift')){if(!ls.hadRecentInput)cls+=ls.value;}}catch(_){}let longtasks=0;try{longtasks=performance.getEntriesByType('longtask').length;}catch(_){}const fps=await new Promise(res=>{let f=0;const s=performance.now();function tick(){f++;if(performance.now()-s>=500)return res(Math.round(f/((performance.now()-s)/1000)));requestAnimationFrame(tick);}requestAnimationFrame(tick);});return{load_ms:n?Math.round(n.loadEventEnd||0):0,dcl_ms:n?Math.round(n.domContentLoadedEventEnd||0):0,resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now()),first_paint_ms:paints['first-paint']||0,first_contentful_paint_ms:paints['first-contentful-paint']||0,largest_contentful_paint_ms:lcp,cumulative_layout_shift:Math.round(cls*1000)/1000,longtasks,fps};});}catch(_){}\n`;
         const blankProbe = startUrl ? '' : `try{const __u=page.url();if(__u==='about:blank'||__u===''){console.error('__GM_BLANK__');}}catch(_){}\n`;
         if (modeMatch && modeMatch[1] === 'profile') {
-          const userScript = modeMatch[2];
-          const intervalUs = 100;
+          const userScript = modeMatch[3];
+          const intervalUs = sampleIntervalUs;
           evalBody = debugSetup
             + `let __profile=null,__profileError=null;\n`
             + `let __cdp=null;\n`
             + `try{__cdp=await page.context().newCDPSession(page);await __cdp.send('Profiler.enable');await __cdp.send('Profiler.setSamplingInterval',{interval:${intervalUs}});await __cdp.send('Profiler.start');}catch(e){__profileError=String(e&&e.message||e);__cdp=null;}\n`
+            + `const __wallT0=Date.now();\n`
             + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
+            + `const __wallUs=(Date.now()-__wallT0)*1000;\n`
             + `if(__cdp){try{const __r=await __cdp.send('Profiler.stop');__profile=__r&&__r.profile||null;}catch(e){__profileError=String(e&&e.message||e);}}\n`
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + perfRead
             + AGGREGATE_CPU_PROFILE_SRC + `\n`
-            + `const __agg = __profile ? aggregateCpuProfile(__profile) : {timeframe:null,culprits:[]};\n`
+            + `const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopNBrowser}) : {timeframe:null,culprits:[]};\n`
+            + `const __cpuUs=__agg.timeframe?__agg.timeframe.total_us:0;\n`
+            + `const __wallVsCpu={wall_us:__wallUs,cpu_self_us:__cpuUs,offcpu_us:Math.max(0,__wallUs-__cpuUs),note:'offcpu_us = wall minus on-CPU JS self time = GPU/compositor/raster/IO/idle the CPU sampler is blind to; use trace mode to attribute GPU activity'};\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `return {result:__result,profile:__agg,profile_error:__profileError,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
+            + `return {result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
+        } else if (modeMatch && modeMatch[1] === 'trace') {
+          const userScript = modeMatch[3];
+          evalBody = debugSetup
+            + `let __traceEvents=[],__traceError=null,__cdp=null,__traceComplete=false;\n`
+            + `const __traceCats=['gpu','disabled-by-default-gpu.service','viz','cc','blink','devtools.timeline','toplevel','rail'];\n`
+            + `try{__cdp=await page.context().newCDPSession(page);__cdp.on('Tracing.dataCollected',p=>{if(p&&p.value)__traceEvents.push(...p.value);});await __cdp.send('Tracing.start',{traceConfig:{includedCategories:__traceCats},transferMode:'ReportEvents',bufferUsageReportingInterval:0});}catch(e){__traceError='start:'+String(e&&e.message||e);__cdp=null;}\n`
+            + `const __wallT0=Date.now();\n`
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
+            + `const __wallUs=(Date.now()-__wallT0)*1000;\n`
+            + `if(__cdp){const __done=new Promise(res=>{__cdp.once('Tracing.tracingComplete',()=>res(true));setTimeout(()=>res(false),Math.min(${Math.min(navTimeout, 10000)},10000));});try{await __cdp.send('Tracing.end');}catch(e){__traceError=(__traceError||'')+' end:'+String(e&&e.message||e);}__traceComplete=await __done;}\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + perfRead
+            + `const __byCat={};let __minTs=Infinity,__maxTs=-Infinity;for(const ev of __traceEvents){if(typeof ev.ts==='number'){__minTs=Math.min(__minTs,ev.ts);if(typeof ev.dur==='number')__maxTs=Math.max(__maxTs,ev.ts+ev.dur);}if(typeof ev.dur==='number'&&ev.dur>0){const c=ev.cat||'?';__byCat[c]=(__byCat[c]||0)+ev.dur;}}\n`
+            + `const __sum=(re)=>Object.entries(__byCat).filter(([k])=>re.test(k)).reduce((a,[,v])=>a+v,0);\n`
+            + `const __gpuUs=__sum(/gpu|graphics\\.pipeline/),__vizUs=__sum(/viz/),__ccUs=__sum(/\\bcc\\b/),__rasterUs=__sum(/raster/);\n`
+            + `const __topCats=Object.entries(__byCat).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([cat,us])=>({cat,wall_us:us}));\n`
+            + `const __spanUs=(isFinite(__minTs)&&__maxTs>0)?(__maxTs-__minTs):0;\n`
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `return {result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:__logs,pageErrors:__allErrors,network:__net.slice(0,30),performance:__perf}};`;
         } else if (modeMatch && modeMatch[1] === 'capture') {
-          const userScript = modeMatch[2];
+          const userScript = modeMatch[3];
           evalBody = debugSetup
             + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
