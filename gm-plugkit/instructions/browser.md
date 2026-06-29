@@ -44,9 +44,11 @@ dom=<css-selector>\n
 
 **`dom=<css-selector>\n` is the zero-boilerplate element probe.** Returns `{selector, match_count, elements:[{tag, text, attrs, visible, rect}]}` for up to 20 matches -- the fastest answer to "is this element there and what does it say." An invalid selector returns `result.error` (no crash). Composes with `url=`.
 
+**One session per run -- reuse it, then close it.** A browser session is keyed by its spool `sessionId`; every dispatch carrying the SAME sessionId reuses the SAME chromium. A DIFFERENT sessionId opens its OWN chromium -- so a run that invents `probe`/`w2`/`w3`/... names leaks one browser per name. Pick one sessionId, use it for every dispatch, and end with `session close` so nothing is left open; the eval envelope carries a `multi_session_warning` the moment a second distinct session opens. The idle reaper (closes sessions unused past the idle window) and the OS-orphan reaper (kills managed chromiums no live session owns, sparing in-use ones and your own Chrome) are backstops for crashes, not a license to leave sessions open -- close yours.
+
 ## Envelope
 
-`{ok, stdout, stderr, exit_code, session_id?, navigation_requested, landed_on_blank?, hint?}`. `stdout` = stringified eval result; `stderr` = page errors + launch diagnostics; `exit_code` non-zero = the dispatch did not land -- read `stderr` and re-dispatch, never blind. `navigation_requested` reflects whether the dispatch carried a `url=`/bare-URL navigation; `landed_on_blank: true` with a `hint` means the expression ran against `about:blank` -- prefix `url=<target>` and re-dispatch.
+`{ok, stdout, stderr, exit_code, session_id?, navigation_requested, landed_on_blank?, hint?, multi_session_warning?}`. `stdout` = stringified eval result; `stderr` = page errors + launch diagnostics; `exit_code` non-zero = the dispatch did not land -- read `stderr` and re-dispatch, never blind. `navigation_requested` reflects whether the dispatch carried a `url=`/bare-URL navigation; `landed_on_blank: true` with a `hint` means the expression ran against `about:blank` -- prefix `url=<target>` and re-dispatch.
 
 ## Headed by default
 

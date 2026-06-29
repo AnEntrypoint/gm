@@ -873,6 +873,62 @@ function reapOrphanBrowserSessions(pw, cwd, claudeSessionId, reason) {
   }
 }
 
+const __openedSessionIds = new Set();
+function enumerateManagedChromiums(profileRootMarker) {
+  const marker = String(profileRootMarker || '').toLowerCase().replace(/\\/g, '/');
+  const out = [];
+  try {
+    if (process.platform === 'win32') {
+      const ps = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | Where-Object { $_.CommandLine -like '*--remote-debugging-port*' -and $_.CommandLine -like '*browser-profile*' -and $_.CommandLine -notlike '*--type=*' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CommandLine }`;
+      const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true, timeout: 10000 });
+      if (r.status === 0 && r.stdout) {
+        for (const line of r.stdout.split(/\r?\n/).filter(Boolean)) {
+          const bar = line.indexOf('|');
+          if (bar < 0) continue;
+          const pid = parseInt(line.slice(0, bar), 10);
+          const cmd = line.slice(bar + 1);
+          if (/--type=/.test(cmd)) continue;
+          if (Number.isFinite(pid) && cmd.toLowerCase().replace(/\\/g, '/').includes(marker)) out.push({ pid, cmd });
+        }
+      }
+    } else {
+      const r = spawnSync('ps', ['-eo', 'pid,command'], { encoding: 'utf-8', timeout: 10000 });
+      if (r.status === 0 && r.stdout) {
+        for (const line of r.stdout.split('\n').slice(1)) {
+          if (!/--remote-debugging-port/.test(line) || !/browser-profile/.test(line)) continue;
+          if (/--type=/.test(line)) continue;
+          const m = line.match(/^\s*(\d+)\s+(.+)$/);
+          if (!m) continue;
+          const pid = parseInt(m[1], 10);
+          if (Number.isFinite(pid) && m[2].toLowerCase().replace(/\\/g, '/').includes(marker)) out.push({ pid, cmd: m[2] });
+        }
+      }
+    }
+  } catch (_) {}
+  return out;
+}
+function reapOrphanChromiums(cwd, reason) {
+  try {
+    const root = browserRootDir(cwd);
+    const marker = path.join(root, '.gm', 'browser-profile').toLowerCase().replace(/\\/g, '/');
+    const procs = enumerateManagedChromiums(marker);
+    if (procs.length === 0) return { reaped: 0 };
+    const ports = readJsonFile(browserPortsFile(cwd), {});
+    const livePids = new Set();
+    for (const ent of Object.values(ports)) {
+      if (ent && Number.isFinite(ent.pid) && isProcessAliveSync(ent.pid)) livePids.add(ent.pid);
+    }
+    let reaped = 0;
+    for (const { pid } of procs) {
+      if (livePids.has(pid)) continue;
+      try { killPidQuiet(pid); reaped++; logEvent('plugkit', 'browser.os-orphan-reaped', { pid, reason: reason || 'sweep' }); } catch (_) {}
+    }
+    return { reaped };
+  } catch (_) {
+    return { reaped: 0 };
+  }
+}
+
 function resolveWindowsExeLocal(cmd) {
   if (process.platform !== 'win32') return cmd;
   try {
@@ -1307,6 +1363,10 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   sessions[claudeSessionId] = [pwSessionId];
   writeJsonFile(portsFile, ports);
   writeJsonFile(sessionsFile, sessions);
+  if (!__openedSessionIds.has(claudeSessionId) && __openedSessionIds.size >= 1) {
+    logEvent('hook', 'deviation.browser-multi-session', { sid: claudeSessionId, already_open: Array.from(__openedSessionIds), reason: 'a 2nd distinct browser sessionId launched its own chromium this run -- reuse one session per run and close it when done' });
+  }
+  __openedSessionIds.add(claudeSessionId);
   logEvent('plugkit', 'browser.attached', { pwSessionId, pid: browserPid, port });
   return pwSessionId;
   } finally { releaseSpawnLock(); }
@@ -2187,6 +2247,7 @@ function makeHostFunctions(instanceRef) {
             stderr: '',
             exit_code: 0,
             session_id: pwSessionId,
+            hint: 'Reuse this same session for every browser dispatch this run (the spool sessionId selects it); a different sessionId opens its OWN chromium. Close it with `session close` when done -- the idle/orphan reaper is only a backstop.',
           });
         }
 
@@ -2376,6 +2437,9 @@ function makeHostFunctions(instanceRef) {
         };
         if (resultParsed) envelope.result = parsedResult;
         envelope.navigation_requested = !!startUrl;
+        if (__openedSessionIds.size > 1) {
+          envelope.multi_session_warning = `${__openedSessionIds.size} distinct browser sessions opened this run, each its own chromium -- reuse ONE sessionId per run and 'session close' it when done to avoid leaking browsers.`;
+        }
         if (landedOnBlank) {
           envelope.landed_on_blank = true;
           envelope.hint = "page is about:blank: this dispatch did not navigate, so the expression evaluated against an empty page. Prefix the body with 'url=<target>' (or send a bare 'https://...' URL) to open the page you want before evaluating.";
@@ -2488,6 +2552,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   } catch (_) {}
 
   try { reapOrphanBrowserSessions(findBrowserRunner(), process.cwd(), process.env.CLAUDE_SESSION_ID || 'claude-loop-iter', 'watcher-boot'); } catch (_) {}
+  try { reapOrphanChromiums(process.cwd(), 'watcher-boot'); } catch (_) {}
 
 
   const LOCK_PATH = path.join(spoolDir, '.watcher.lock');
@@ -3124,7 +3189,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 10 * 60 * 1000;
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 3 * 60 * 1000;
   setInterval(() => {
     try {
       const portsFile = browserPortsFile(process.cwd());
@@ -3168,6 +3233,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
       }
       try { reapOrphanBrowserSessions(findBrowserRunner(), process.cwd(), process.env.CLAUDE_SESSION_ID || 'claude-loop-iter', 'idle-sweep'); } catch (_) {}
+      try { reapOrphanChromiums(process.cwd(), 'idle-sweep'); } catch (_) {}
     } catch (e) {
       console.error(`[browser-idle] error: ${e.message}`);
     }
