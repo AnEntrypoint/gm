@@ -1,0 +1,3 @@
+## Resolved mutable: rs-codeinsight-index-idempotent
+
+.gm/exec-spool/.watcher.log: code_index done files_indexed=70 chunks=380 embedded=30 reused=350 reused_files=60 removed_files=0 digest=<commit>:0; rebuild reason=digest-mismatch only. A second sync at the SAME digest serves cache (no rebuild fired) -> no-op. Chunk keys are content-addressed (reused vs embedded split), removed_files prunes deletions. Convergent: same digest -> same index. f∘f≡f holds at the digest-gate level.

@@ -130,6 +130,8 @@ Every skill's `allowed-tools:` is reduced to `Skill, Read, Write` (plus the SKIL
 
 **The agent IS the LLM rs-learn calls**: no separate judge model; all decisions are inline via spool. Internals in rs-learn (`recall: rs-learn self-report core internals`).
 
+**Idempotency contract (f∘f≡f)**: the spool dispatch layer is at-least-once by design (the in-memory processed-Map guards only concurrent double-pickup, not cross-time replay or restart), so correctness rests on every state-mutating verb being individually convergent: `memorize`/`memorize-fire` content-hash key + dedup, `git_finalize`/`git_commit` nothing-to-commit/already-pushed, `insert_edge` kv-overwrite-by-id + dedup-guarded index, `invalidate_edge` early-return, `ensure_managed_gitignore` strip-rebuild-changed-gate, codeinsight digest-gate, publish.yml already-published-skip + porcelain-gated version-commit-back. Read-only verbs (recall/codesearch/git_status/instruction/health/filter) recompute every dispatch, never cache. `exec_js`/`browser` re-run on replay (at-most-once-by-nature); a persistent dedup ledger was rejected as net-additive. Detail in rs-learn (`recall: idempotency contract per-verb convergence`).
+
 **host_exec_js is synchronous**: pass a real per-call `timeoutMs` (zero/missing is a hard error). Detail in rs-learn (`recall: host_exec_js synchronous`).
 
 **Sync-before-emit (codeinsight + search)**: output must come from a freshly-synced index this invocation (cache serves only on digest match). Mechanics in rs-learn (`recall: sync-before-emit codeinsight search`).

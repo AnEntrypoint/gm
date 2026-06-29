@@ -555,3 +555,37 @@
   description: Where does the watcher write .status.json with fresh ts heartbeat after boot? cli must poll THIS file to know the watcher is serving. Witness the write location in plugkit-wasm-wrapper.js runSpoolWatcher.
   witness: unknown
   witness_evidence: plugkit-wasm-wrapper.js:3367 STATUS_PATH=.status.json; writeStatus() at 3368 writes {pid,ts,version,...}; called initially at 3394 and every 5s at 3392. The watcher process owns the heartbeat. cli.js must poll this file for ts within ~15s freshness after spawning to confirm serving.
+- id: spool-counter-replay-idempotent
+  status: witnessed
+  question: Does re-writing in/<verb>/N.txt with the same N (e.g. after ENOENT post-write-stat) cause the watcher to re-run the verb a second time, and is the out/<verb>-N.json overwritten? For non-idempotent verbs (git_finalize, exec_js, browser) what guards a double-fire?
+  witness: gm-plugkit/plugkit-wasm-wrapper.js runSpoolWatcher consume loop ci-3fe9a9a2-6
+  witness_evidence: 'gm-plugkit/plugkit-wasm-wrapper.js:3158-3176,3327-3328 processFile: `processed` is an in-MEMORY Map keyed by relpath (verb/N.txt), marked at pickup, unmarked (deleted) right after the input file is unlinked. Guards only concurrent double-pickup, NOT cross-time replay. Re-writing the same verb/N.txt after consume+unlink runs the verb AGAIN (the ENOENT-double-fire SKILL.md warns of); map also lost on watcher restart. Spool layer is AT-LEAST-ONCE, not exactly-once: non-idempotent verbs (git_finalize/exec_js/browser) are saved only by their own convergence + agent discipline. GAP: no persistent processed-ledger keyed by (verb,N,content-sha) to serve cached out on identical replay -> would make the whole spool f∘f≡f regardless of verb convergence.'
+- id: rs-exec-spool-side-effects-idempotent
+  status: witnessed
+  question: Does rs-exec/src/wasm_spool.rs perform any stateful side effect (file write, kv mutation, counter) that is non-idempotent under replay? exec is nominally pure-compute but may write spool/output files.
+  witness: C:/dev/rs-exec/src/wasm_spool.rs not yet read
+  witness_evidence: rs-exec/src/wasm_spool.rs:16-32 write_result does kv_put("outbox", task_id, body) -- overwrite-by-id, not append; re-dispatch of same task_id overwrites same outbox key with same result. Plumbing is idempotent; the executed user code's own side effects are outside the spool contract. f∘f≡f holds for the exec spool layer.
+- id: rs-codeinsight-index-idempotent
+  status: witnessed
+  question: 'Is the rs-codeinsight index rebuild idempotent: same repo digest -> byte-identical index, no duplicate chunk rows, removed_files handled? Witness from watcher.log shows reused=350 removed_files=0 on digest-match -- confirm a second sync at same digest is a no-op (cache serves).'
+  witness: .gm/exec-spool/.watcher.log code_index done digest match line
+  witness_evidence: '.gm/exec-spool/.watcher.log: code_index done files_indexed=70 chunks=380 embedded=30 reused=350 reused_files=60 removed_files=0 digest=<commit>:0; rebuild reason=digest-mismatch only. A second sync at the SAME digest serves cache (no rebuild fired) -> no-op. Chunk keys are content-addressed (reused vs embedded split), removed_files prunes deletions. Convergent: same digest -> same index. f∘f≡f holds at the digest-gate level.'
+- id: gitignore-managed-block-idempotent
+  status: witnessed
+  question: 'Is rs-plugkit/src/gitignore.rs ensureGitignored idempotent: running it twice produces byte-identical .gitignore (no duplicate managed-block markers, no duplicated entries, stable ordering)?'
+  witness: C:/dev/rs-plugkit/src/gitignore.rs not yet read
+  witness_evidence: 'rs-plugkit/src/gitignore.rs:88-140 ensure_managed_gitignore strips legacy + current managed block (strip_block, collapses \n\n), rebuilds canonical block from MANAGED_ENTRIES, gates write on changed = cleaned != original. Second run: original already canonical -> strip+rebuild reproduces identical -> changed=false -> no write. Fixed point in one step. f∘f≡f holds.'
+- id: version-bump-cascade-idempotent
+  status: witnessed
+  question: 'Is the CI version-bump (gm.json plugkitVersion auto-bump in publish.yml/cascade) idempotent: a re-run on an unchanged plugkit version is a no-op, not a churn commit? And does publish.yml write plugkit.version without committing back (prior drift incident)?'
+  witness: recall mem-7c06f4b00a3181ef-2529 publish.yml writes plugkit.version in CI but never commits back
+  witness_evidence: '.github/workflows/publish.yml: npm publish guarded by grep ''cannot publish over|previously published'' -> skip (idempotent re-run); plugkit.version commit-back step L149-161 is gated by `git status --porcelain gm-plugkit/plugkit.version` (no-op when aligned) -- the prior drift incident is FIXED. Auto-bump (L30-62) always increments patch per push by design (every cascade push = new publishable version) with [skip ci] preventing recursion -- intentional, not a defect. Pipeline is idempotent at the publish boundary.'
+- id: rs-search-side-effects-idempotent
+  status: witnessed
+  question: Does rs-search/src/wasm_host.rs hold any mutable state (index, cache, counters) whose double-invocation diverges, or is search a pure query over an externally-owned index?
+  witness: C:/dev/rs-search/src/wasm_host.rs not yet read
+  witness_evidence: 'rs-search/src/wasm_host.rs:77-107 fusion_search is a pure query over the host-owned index: no kv_put, no mutation, no counter. Deterministic with stable tiebreak (results.sort_by ... then_with a.id.cmp(b.id)). Stateless -> f∘f≡f trivially.'
+- id: memorize-verb-not-idempotent
+  status: witnessed
+  question: Does the `memorize` verb satisfy f∘f≡f?
+  witness_evidence: 'WITNESSED DEFECT via test.js run + spool probe: out/memorize-50.json key=mem-1782732901683-8-30 (TIMESTAMP+counter key, rs-plugkit/src/wasm_dispatch.rs:444-446 mem-{now}-{counter}-{len}, NO dedup check) vs out/memorize-fire-51.json key=mem-0d316e9e13a85bb3-35 (CONTENT-HASH key + dedup, memorize.rs:101-120 handle_fire). The `memorize` verb is NON-idempotent: same text twice -> two distinct rows. `memorize-fire` is correct. Two divergent memorize surfaces. FIX: make memorize_with_raw content-hash-keyed (fnv1a64(ns|text)) + dedup early-return matching handle_fire; MEMORIZE_COUNTER becomes dead code (subtractive).'

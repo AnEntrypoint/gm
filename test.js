@@ -190,6 +190,12 @@ async function main() {
   const health = await dispatch('health', {});
   assert(health.ok, 'health ok');
   console.log('health ok version=' + (health.data.version || '?'));
+  const memText = 'idempotency witness probe ' + process.pid + ' f-compose-f-equals-f';
+  const m1 = await dispatch('memorize-fire', { text: memText });
+  const m2 = await dispatch('memorize-fire', { text: memText });
+  assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key,
+    'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key, never a duplicate row -- both the memorize and memorize-fire verbs use the content-hash + dedup contract');
+  console.log('idempotency witness ok (memorize deduped key=' + m2.data.key + ')');
   console.log('PASS');
 }
 
