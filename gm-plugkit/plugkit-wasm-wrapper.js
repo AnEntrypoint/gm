@@ -1457,8 +1457,9 @@ function createWasiShim(instanceRef) {
         const dv = new DataView(buf);
         const chunks = [];
         let total = 0;
+        const iovsBase = iovs_ptr >>> 0;   // >>>0: high-bit iovs pointer is negative in JS -> getUint32 would throw
         for (let i = 0; i < iovs_len; i++) {
-          const base = iovs_ptr + i * 8;
+          const base = iovsBase + i * 8;
           const ptr = dv.getUint32(base, true);
           const len = dv.getUint32(base + 4, true);
           if (len > 0 && ptr + len <= buf.byteLength) {
@@ -1480,7 +1481,7 @@ function createWasiShim(instanceRef) {
     },
     random_get: (buf_ptr, buf_len) => {
       try {
-        crypto.randomFillSync(new Uint8Array(getMemory(), buf_ptr, buf_len));
+        crypto.randomFillSync(new Uint8Array(getMemory(), buf_ptr >>> 0, buf_len >>> 0));   // >>>0: high-bit ptr is negative in JS
         return 0;
       } catch (e) {
         return 28;
@@ -1489,7 +1490,7 @@ function createWasiShim(instanceRef) {
     clock_time_get: (clock_id, precision, time_ptr) => {
       try {
         const ns = BigInt(Date.now()) * 1000000n;
-        new DataView(getMemory()).setBigUint64(time_ptr, ns, true);
+        new DataView(getMemory()).setBigUint64(time_ptr >>> 0, ns, true);   // >>>0: high-bit ptr is negative in JS
         return 0;
       } catch (e) {
         return 28;
@@ -1548,8 +1549,15 @@ function decodeWasmResult(instance, result, where) {
 
 function writeWasmInput(instance, bytes, where) {
   if (bytes.length === 0) return 0;
-  const ptr = instance.exports.plugkit_alloc(bytes.length);
+  // COERCE the alloc pointer to UNSIGNED 32-bit: a wasm i32 return with the high bit set (a pointer
+  // > 0x7fffffff, which occurs once the linear memory grows past ~2GB in a long session) arrives in JS
+  // as a NEGATIVE number, and new Uint8Array(buffer, negativePtr, len) throws the raw V8 "Start offset
+  // <neg> is outside the bounds of the buffer" -- the deterministic long-session corruption that blocked
+  // dispatches. >>>0 reinterprets the i32 as the true unsigned offset. Guard the range too so a genuinely
+  // bad (ptr,len) raises the clean wasm-memory-read-out-of-bounds error instead of a raw typed-array throw.
+  const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
   if (ptr === 0) throw new Error(`wasm-alloc-failed at ${where}: plugkit_alloc returned 0 (wasm OOM)`);
+  guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, `${where}:writeWasmInput`);
   new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);   // fresh buffer post-alloc
   return ptr;
 }
@@ -1571,8 +1579,11 @@ function readWasmStr(instance, ptr, len) {
 
 function writeWasmBytes(instance, bytes) {
   if (bytes.length === 0) return 0n;
-  const ptr = instance.exports.plugkit_alloc(bytes.length);
+  // >>>0: same signed-pointer fix as writeWasmInput -- a high-bit alloc pointer is negative in JS and
+  // throws "Start offset <neg> is outside the bounds" on the Uint8Array write below.
+  const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
   if (ptr === 0) return 0n;
+  guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, 'writeWasmBytes');
   new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);
   return (BigInt(ptr) & 0xffffffffn) | (BigInt(bytes.length) << 32n);
 }
@@ -2256,7 +2267,7 @@ function makeHostFunctions(instanceRef) {
     host_random_fill: (ptr, len) => {
       try {
         const buf = instanceRef.value.exports.memory.buffer;
-        crypto.randomFillSync(new Uint8Array(buf, ptr, len));
+        crypto.randomFillSync(new Uint8Array(buf, ptr >>> 0, len >>> 0));   // >>>0: high-bit ptr is negative in JS
         return 1;
       } catch (_) {
         return 0;

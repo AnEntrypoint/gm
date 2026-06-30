@@ -34,6 +34,26 @@ const assert = require('assert');
   assert.ok(d.ptr >= 0 && d.len >= 0, 'decoded ptr/len are never negative');
 })();
 
+(function signedAllocPointerThrows() {
+  // THE BUG: a wasm i32 pointer with the high bit set (a real offset > 0x7fffffff, which happens once
+  // the linear memory grows past ~2GB in a long session) arrives in JS as a NEGATIVE number; using it
+  // directly as a typed-array offset throws "Start offset <neg> is outside the bounds of the buffer".
+  const mem = new WebAssembly.Memory({ initial: 1, maximum: 4 });
+  // simulate a wasm i32 alloc return for an offset with the high bit set (> 2^31). In JS such an i32
+  // export return / host-fn arg arrives NEGATIVE; any negative typed-array offset throws the same trap.
+  const trueOffset = 0x88000000;                       // 2.28 GB -- a real offset once memory grows past 2GB
+  const signedReturn = trueOffset | 0;                 // how a wasm i32 looks in JS once high-bit-set: negative
+  assert.ok(signedReturn < 0, 'a high-bit wasm i32 pointer is negative in JS (the trap)');
+  let threwRaw = false;
+  try { new Uint8Array(mem.buffer, signedReturn, 8); } catch (e) {
+    threwRaw = /outside the bounds/.test(String(e.message));
+  }
+  assert.ok(threwRaw, 'the raw negative pointer reproduces the "outside the bounds" throw');
+  // THE FIX: >>>0 reinterprets the i32 as the true unsigned offset (no longer negative).
+  assert.strictEqual(signedReturn >>> 0, trueOffset, '>>>0 recovers the true unsigned offset');
+  assert.ok((signedReturn >>> 0) >= 0, 'the coerced offset is non-negative');
+})();
+
 (function wrapperHasFix() {
   const fs = require('fs');
   const src = fs.readFileSync(require('path').join(__dirname, 'plugkit-wasm-wrapper.js'), 'utf8');
@@ -42,6 +62,11 @@ const assert = require('assert');
   const codeLines = src.split('\n').filter(l => !l.trimStart().startsWith('//') && !l.trimStart().startsWith('*'));
   const raw = codeLines.filter(l => l.includes('result & 0xffffffffn') || l.includes('result >> 32n'));
   assert.strictEqual(raw.length, 0, `no raw (un-normalized) i64 decode remains in code; found: ${raw.join(' | ')}`);
+  // the alloc-pointer signed-cast fix: plugkit_alloc returns MUST be coerced to unsigned before being
+  // used as a typed-array offset, else a >2GB pointer throws "outside the bounds" and blocks dispatches.
+  assert.ok(/plugkit_alloc\(bytes\.length\)\s*>>>\s*0/.test(src), 'writeWasmInput/writeWasmBytes coerce the alloc pointer with >>>0');
+  // and the alloc-write must be range-guarded so a bad (ptr,len) raises the clean error, not a raw throw.
+  assert.ok(src.includes(':writeWasmInput') || /guardWasmRange\([^)]*writeWasm/.test(src), 'the alloc write is range-guarded');
 })();
 
 console.log('wasm-buffer-decode: all PASS');
