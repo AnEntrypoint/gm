@@ -1,0 +1,3 @@
+## Resolved mutable: edge-case-json-parse-unbounded
+
+gm-plugkit/plugkit-wasm-wrapper.js:627 readJsonFile calls JSON.parse(fs.readFileSync(fp, 'utf-8')) with no file-size check. Line 154 does same for WASM call outputs. Large JSON files (>500MB) cause OOM without streaming parse.

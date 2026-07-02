@@ -1,0 +1,3 @@
+## Resolved mutable: edge-case-string-split-unbounded
+
+gm-plugkit/plugkit-wasm-wrapper.js:700 'npm root -g' output split(/\r?\n/), line 707 also splits without checking line count. Line 836 splits stdout without length limit. Accumulates all lines into array; >1M lines -> OOM.

@@ -1,0 +1,3 @@
+## Resolved mutable: mut-1783015090302
+
+Out of gm-repo edit scope (rs-search fusion.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.

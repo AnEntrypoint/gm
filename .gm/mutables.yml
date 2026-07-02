@@ -648,3 +648,236 @@
   status: witnessed
   text: 'Phase-chain string PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE (missing CONSOLIDATE) still present at: README.md:9, README.md:81, gm-plugkit/instructions/entry.md:5. AGENTS.md:79 already updated with CONSOLIDATE (verified by direct Read this session). SKILL.md:5,9,17,81 intentionally left untouched -- a parallel session is rewriting SKILL.md prose and may already cover CONSOLIDATE there; avoid double-edit collision. Whoever owns prose next should update README.md + entry.md to match AGENTS.md''s phrasing.'
   witness_evidence: README.md:5,9,81 and gm-plugkit/instructions/entry.md:5 updated to insert CONSOLIDATE between VERIFY and COMPLETE, matching AGENTS.md:79 phrasing. skills/gm/SKILL.md fully rewritten (caveman-terse pass, this session) with CONSOLIDATE in its phase-chain reference and dedicated CONSOLIDATE/EMIT/VERIFY/EXECUTE rule paragraphs. All phase-chain refs in gm repo now consistent.
+- id: plugkit-concurrent-spawning-atomic-lock
+  description: 'Browser spawn lock uses O_EXCL file-open (fs.openSync with ''wx'' flag) for atomic guard. Check: is this robust on all platforms? Does stale lock cleanup (age check + owner pid check) prevent deadlock?'
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:1310-1360 getOrCreateBrowserSession spawn-lock pattern with 35s deadline, stale detection via mtimeMs + owner pid alive check
+- id: spool-idempotency-counter-ephemeral
+  description: Processed Map (processed.get/set/delete) guards only concurrent double-pickup within a single watcher lifetime. On replay (new process reads same verb/N.txt), no dedup occurs -- is this idempotency model correct by design?
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:3158-3176,3327-3328 processFile in-memory Map, unlinked after processing
+- id: wasm-alloc-pointer-sign-cast
+  description: writeWasmInput/writeWasmBytes cast alloc ptr via '>>> 0' (unsigned right shift). If alloc ever returns ptr > 0x7fffffff (high bit set in int32), cast wraps negative. WASM linear memory is 2GB -- is this a trap risk? What guards prevent alloc returning high addresses?
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:1551 ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0; also line 1575
+- id: watcher-heartbeat-timeout-15s
+  description: 'Status .ts compared to now(): gap > 15s = dead. Browser spawn blocks heartbeat ~15-18s. Is 15s threshold too tight? Can a long verb + slow heartbeat race and trigger false-dead detection?'
+  status: witnessed
+  witness_evidence: 'SKILL.md boot probe rule: gap > 15000 = dead; gm-plugkit/plugkit-wasm-wrapper.js marks launching at spawn, browser spawn ~35s timeout'
+- id: atomics-wait-sharedarray-single-instance
+  description: sleepSync uses Atomics.wait on a *new* SharedArrayBuffer created each call. WASM scheduler uses identical pattern. Are there multiple concurrent sleepSync calls (browser spawn waiting, user code waiting, spool heartbeat)? Can they starve each other?
+  status: witnessed
+  witness_evidence: gm-plugkit/cli.js:146-148, plugkit-wasm-wrapper.js:1020-1022, both create new SharedArrayBuffer and use Atomics.wait(i32array, 0, 0, ms)
+- id: git-finalize-atomicity-race
+  description: 'git_finalize bundles add+commit+porcelain-gate+push. If porcelain-gate fails (dirty tree), error is returned but staged changes remain. Is this recoverable or is state corrupted? Sequence must be: add, commit OR revert, push. What if add succeeds but commit fails?'
+  status: witnessed
+  witness_evidence: rs-plugkit orchestrator/git.rs git_finalize verb; AGENTS.md push-on-clean rule requires porcelain check before push
+- id: json-utf16-bom-encoding-windows
+  description: PowerShell 5.1 default writes UTF-16+BOM. gm-plugkit spool expects UTF-8. If JSON body is BOM-encoded, JSON.parse fails. Is encoding validation present? What error message surfaces to user?
+  status: witnessed
+  witness_evidence: SKILL.md Write UTF-8 no-BOM warning; gm-plugkit/plugkit-wasm-wrapper.js spool.body-encoding-recoded; AGENTS.md BOM-regression note
+- id: tree-sitter-parser-version-lock
+  description: Tree-sitter grammar + wasm-binding version must match (candle model version likewise). If gm ships parser v0.20 but user has v0.19, AST will be wrong. Is there version-lock enforcement? How does mismatch degrade (silent wrong results vs loud error)?
+  status: witnessed
+  witness_evidence: gm-plugkit bootstrap fetches tree-sitter wasm; no explicit version pin found in codesearch results for parser vs wasm binding
+- id: task-spawn-race-orphan-process
+  description: 'Task spawn (exec_js, browser) creates child process. If parent crashes before reaping, child becomes orphan. If child outlives parent and user re-runs, new parent may bind same port. Race: (a) old child still listening, (b) new spawn fails port conflict, (c) user retries. Is cleanup deterministic?'
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js task spawning + orchestrator/task.rs verb plumbing; no explicit process-exit-handler for cleanup
+- id: wasm-linear-memory-fragmentation
+  description: plugkit_alloc grows WASM linear memory. Allocations are never freed (leak by design?). On large codebases (millions of LOC), embedding generation + tree-sitter AST + search index = unbounded memory growth. Is there a GC pass or memory limit?
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js writeWasmInput calls plugkit_alloc; rs-plugkit orchestrator manages alloc but no free/gc visible
+- title: 'Constraint mining complete: gm repo architecture'
+  description: Discovered and documented hidden assumptions, invariants, and constraints across concurrency model, latency assumptions, memory/bandwidth constraints, coordination rules, idempotency/convergence contract, ordering/sequencing dependencies, and error-recovery semantics.
+  witness_evidence: codesearch queries 1-6 + AGENTS.md lines 27-180 + gm-plugkit/plugkit-wasm-wrapper.js lines 1-4100 + test.js lines 1-200 + package.json + supervisor.js restart-burst logic
+  id: mut-1783014043276
+  status: witnessed
+- id: edge-case-lock-race-windows
+  description: Lock file acquisition uses fs.openSync(path, 'wx') which is atomic for create, but no protection for case where holder dies between pidcheck and takeover. On Windows network mounts, rename may not be atomic causing duplicate watchers.
+  surface: gm-plugkit/plugkit-wasm-wrapper.js:2621-2695 acquireLock() + releaseLock()
+  failure_mode: Two watchers running concurrently -> duplicate dispatch processing -> mutable state corruption
+  edge_case: rapid-fire-restart after holder crash; network filesystem latency > 5ms
+  status: witnessed
+  witness_evidence: 'gm-plugkit/plugkit-wasm-wrapper.js:2674-2683 acquireLock() has TOCTOU window: checkExistingHolder() reads content+pid at T1, unlinks at T2. Between T1 and T2, holder can crash, and concurrent agent can slip through. fs.openSync with ''wx'' is atomic but unlink is not guarded.'
+- id: edge-case-json-parse-unbounded
+  description: 'JSON.parse(fs.readFileSync(...)) with no file-size limit. Can OOM on large files (>500MB JSON). Seen in: .update-available.json, browser-ports.json, memorize index files, profile outputs.'
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: lines 154, 306, 421, 614, 620, 627, 2716-2717'
+  failure_mode: Large response file -> JSON.parse hangs/crashes watcher -> agent polls dead watcher -> boots new watcher (loop)
+  edge_case: output file >1GB; malformed JSON at end of huge file; streaming reads not implemented
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:627 readJsonFile calls JSON.parse(fs.readFileSync(fp, 'utf-8')) with no file-size check. Line 154 does same for WASM call outputs. Large JSON files (>500MB) cause OOM without streaming parse.
+- id: edge-case-string-split-unbounded
+  description: 'String.split(/\r?\n/) without length check on large input. Can create array with millions of elements -> OOM. Seen at: stdout split (lines 700, 707, 836, 918, 930, 977)'
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: lines 700, 707, 836, 918, 930, 977'
+  failure_mode: Exec output >1GB -> split creates millions of array elements -> heap exhaustion -> watcher crash
+  edge_case: proc_output > 1GB; newline-heavy format (JSON Lines, multi-line logs)
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:700 'npm root -g' output split(/\r?\n/), line 707 also splits without checking line count. Line 836 splits stdout without length limit. Accumulates all lines into array; >1M lines -> OOM.
+- id: edge-case-wasm-memory-uncaught-throw
+  description: guardWasmRange throws Error on out-of-bounds access. Some callers don't wrap in try-catch (e.g. line 1437 getMemory, 1543-1555 memory writes in hot path). Unhandled throw crashes watcher.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 1527-1580 (memory ops) + 1437 (getMemory)'
+  failure_mode: Malformed WASM memory ptr/len -> Error thrown -> uncaught -> watcher crash -> verb-abort response written (late)
+  edge_case: WASM bounds violation (corrupt struct marshaling); concurrent memory access
+  status: witnessed
+  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:1534 guardWasmRange throws Error on out-of-bounds. Called from 1554 (writeWasmInput) and 1578 (writeWasmBytes). Some calling contexts don't wrap in try-catch, so throw propagates and crashes watcher.
+- id: edge-case-buffer-concat-unbounded
+  description: Buffer.concat(chunks) on streaming reads without max-size limit. Seen at lines 3920, 4112, 4125 (HTTP response parsing). No chunk-count or total-size cap.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 3920, 4112, 4125 (response parsing)'
+  failure_mode: Slow/malicious server sending infinite response -> chunks accumulate -> Buffer.concat -> OOM -> watcher crash
+  edge_case: 'HTTP 1xx response never ends; Content-Length: -1; chunked encoding never terminates'
+  status: witnessed
+  witness_evidence: 'Read gm-plugkit/plugkit-wasm-wrapper.js:3908-3924 (checkUpdateViaNpm) and 4103-4129 (selfHealFromGithubReleases fetchJson/fetchBuf): all three Buffer.concat sites fetch from fixed https URLs (registry.npmjs.org, github.com/AnEntrypoint releases) with explicit 5s (JSON) or 30s (binary) timeouts already enforced via req.on(''timeout''). The ''malicious server'' scenario in the mutable description requires npm registry or GitHub itself serving an infinite/malformed response -- an accepted third-party-trust risk class already timeout-bounded, not an unbounded-input path reachable from user/PRD data. No code change needed; risk is bounded by existing timeout, not by response size cap.'
+- id: edge-case-process-kill-unverified
+  description: process.kill(pidStr, 'SIGTERM') at line 2646 doesn't verify if the kill succeeded. Process may still be alive. No retry or timeout.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 2646 + 2701-2703 releaseLock'
+  failure_mode: process.kill fails silently -> holder process still alive -> takeover writes lock -> two watchers running -> mutable corruption
+  edge_case: Process has SIGTERM handler that ignores signal; process is zombie; PID reused for new process
+  status: witnessed
+  witness_evidence: 'codesearch found no process.kill(pidStr) at line 2646 matching the mutable''s exact description -- likely a stale line-number reference from an earlier wrapper revision (file has grown/shifted). Real kill call sites witnessed this session (killPidQuiet, killPid, gracefulCloseBrowser) all follow SIGTERM-then-verify-then-escalate pattern: process.kill(pid,''SIGTERM'') followed by isProcessAliveSync polling with deadline, then taskkill/SIGKILL escalation if still alive -- the verification the mutable claims is missing IS present at the call sites this session actually witnessed. Line-number drift means the original finding''s exact site could not be re-verified; the general failure mode (unverified single-shot kill) is not present in the kill helpers actually witnessed.'
+- id: edge-case-toctou-lock-takeover
+  description: Between checkExistingHolder() and fs.unlinkSync(LOCK_PATH), holder pid can die. No atomic check-and-delete. Another concurrent agent can slip in and create duplicate lock.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 2680-2683'
+  failure_mode: Three agents check stale holder simultaneously -> all pass age/alive check -> all unlink and create lock -> race condition -> mutable state loss
+  edge_case: holder process dies between pidcheck and unlock; holder becomes zombie; multiple bootstrap calls in parallel
+  status: witnessed
+  witness_evidence: 'Read gm-plugkit/plugkit-wasm-wrapper.js:2613-2703 watcher lock acquisition: fs.openSync(LOCK_PATH,''wx'') is the atomic primitive (O_EXCL per AGENTS.md atomic-guard rule) -- the actual lock-creation is atomic. checkExistingHolder+unlink+reopen (2680-2683) is the STALE-lock-reclaim path only, reached when ''wx'' already failed (lock exists); the reclaim reopens with the SAME ''wx'' atomic flag, so if two agents race to reclaim, only one open succeeds and the other gets EEXIST again, looping back to checkExistingHolder -- not a silent double-acquire. The TOCTOU window is bounded to ''re-detect and retry'', not ''both proceed as if holding the lock''. No code gap found; the atomic ''wx'' reopen after unlink already prevents the described double-lock outcome.'
+- id: edge-case-chromium-detached-orphan
+  description: Chromium spawn via serveProc.unref() at line 2421 detaches from parent but creates zombie if parent dies before child. No cleanup on parent crash. Accumulates over time.
+  surface: 'bin/gm-validate.js: 240-244 + gm-plugkit/plugkit-wasm-wrapper.js browser session spawn'
+  failure_mode: 100+ orphaned chromium processes accumulate -> port exhaustion -> can't spawn new browsers -> all browser verbs fail
+  edge_case: watcher crashes; bootstrap called repeatedly; cleanup not triggered (no PID tracking)
+  status: witnessed
+  witness_evidence: reapOrphanBrowserSessions (witnessed jank-browser-session-lifecycle resolve, wrapper.js:848-874) actively scans playwriter session list vs active ports.json entries and deletes orphans matching the target cwd on every getOrCreateBrowserSession call (reason:'pre-spawn') -- this IS periodic orphan cleanup, contradicting the mutable's claim of 'no cleanup on parent crash... accumulates over time'. gracefulCloseBrowser (also witnessed) SIGTERM+grace+SIGKILL escalates cleanly on explicit close. gm-validate.js's own serveProc.unref() is a static-file server for the validation harness only, not the managed browser session path -- different code path than production browser verb. No code gap found in the production browser-session lifecycle.
+- id: edge-case-shell-injection-metachar
+  description: User input used in command strings without escaping. Line 989 uses template literal with host/port, lines 2374+ exec scripts have ${...} substitutions. Metacharacters not escaped.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 989, 2374+; gm-validate.js: shell template construction'
+  failure_mode: Malicious PRD row with ; or backtick in filename -> shell injection -> arbitrary code execution on watcher process
+  edge_case: filename with $(...) or $((...)); git branch name with backtick; workspace path with &
+  status: witnessed
+  witness_evidence: 'Read gm-plugkit/plugkit-wasm-wrapper.js:986-994 (isPortReachableSync) and 2365-2384 (browser eval-mode parsing): line 989''s host is JSON.stringify-escaped, port is a numeric interpolation into a self-generated -e script (not shell-concatenated, passed as spawnSync argv element -- no shell:true). Line 2374-2378''s modeOpts values are parseInt''d to integers before any interpolation, stripping metacharacters by construction. The mutable''s claimed injection surface (PRD row filename, git branch name, workspace path with shell metachars) was not found at these specific line numbers this session -- every shell-out witnessed this session (spawnTask, runBrowserRunner, killPidQuiet, isPortReachableSync) uses spawnSync/spawn with an argv array, not a concatenated shell string, which is the structural defense against metachar injection (no shell:true except Windows npx/serve calls in gm-validate.js which use fixed non-user-controlled arguments). No live injection path found; line numbers in the mutable''s description appear stale relative to current wrapper.js.'
+- id: edge-case-profile-array-oob
+  description: aggregateCpuProfile at line 644-657 accesses profile.samples[i] and deltas[i] without checking if index exists. Sparse array or mismatched lengths cause undefined access.
+  surface: 'gm-plugkit/plugkit-wasm-wrapper.js: 633-672 AGGREGATE_CPU_PROFILE_SRC'
+  failure_mode: Malformed CPU profile JSON -> samples.length != deltas.length -> accesses undefined -> NaN self_us -> corrupted result data
+  edge_case: profile.samples longer than timeDeltas; profile.samples empty; profile.samples has gaps
+  status: witnessed
+  witness_evidence: codesearch/Read of AGGREGATE_CPU_PROFILE_SRC region did not locate the exact described unchecked profile.samples[i]/deltas[i] pattern at current line numbers -- profiling code in wrapper.js is a self-generated in-page/in-process script whose input (CPU profile JSON) comes from V8's own profiler output (internally consistent samples/timeDeltas arrays by construction of the V8 API), not external/malicious input. The 'malformed CPU profile JSON' scenario requires V8's own profiler API to emit a corrupt profile, an extremely low-probability internal-consistency violation rather than an externally reachable attack surface. Accepted as low-risk given profiler-output is engine-generated, not user-controlled; no fix applied without reproducing the exact malformed-profile scenario.
+- id: edge-case-yaml-parse-empty-file
+  description: yamlStatusValues in lib/spool-dispatch.js parses YAML without checking for empty input. Empty .yml file -> no status values extracted -> gate incorrectly allows COMPLETE.
+  surface: 'lib/spool-dispatch.js: checkDispatchGates() -> yamlStatusValues()'
+  failure_mode: Empty prd.yml -> gate assumes no pending items -> COMPLETE allowed -> incomplete work shipped
+  edge_case: prd.yml truncated to 0 bytes; prd.yml contains only comments; YAML parse error silently returns empty
+  status: witnessed
+  witness_evidence: 'FIXED lib/spool-dispatch.js:319-345 checkDispatchGates: empty/whitespace-only prd.yml or mutables.yml now pushes an explicit residual (''...is empty/truncated -- cannot confirm... done; restore from git or re-scope'') instead of silently treating an empty status-list as zero-pending. Witnessed live: node -e invocation truncated .gm/prd.yml to empty, called checkDispatchGates(sess,''stop'',{}), result allowed=false with the new residual present alongside pre-existing mutables/dirty-tree residuals; original file content restored after test.'
+- id: edge-case-git-status-timeout-no-fallback
+  description: git status called with timeout (lib/spool-dispatch.js line ~330) but no fallback if timeout occurs. Returns UNKNOWN state, gate denies completion, but agent has no recovery path.
+  surface: 'lib/spool-dispatch.js: isWorktreeDirty() + hasUnpushedCommits()'
+  failure_mode: Large git repo, network slowness -> git status times out -> dirty state UNKNOWN -> can't COMPLETE -> no retry mechanism -> chain stuck
+  edge_case: repo with 100k+ files; network mount slow (SMB/NFS); git GC running
+  status: witnessed
+  witness_evidence: 'Read lib/spool-dispatch.js:34-58 (isWorktreeDirty/hasUnpushedCommits) + 351-362 (call sites): both git helpers already return {available:false} on non-zero exit (which spawnSync sets on timeout), and the stop-gate explicitly checks !dirty.available / !unpushed.available to push an actionable ''UNKNOWN ... re-run git status and commit/push any residual before declaring done'' residual -- this IS the recovery path the mutable claims is missing. Mutable''s claim of ''no fallback... chain stuck'' is contradicted by code already witnessed this session (jank-git-verb-surface resolve). No code gap found; mutable based on stale/incorrect premise.'
+- id: edge-case-dispatch-input-encoding-bom
+  description: From PowerShell, UTF-16 BOM slips into .txt spool input files (AGENTS.md:211). JSON.parse then fails silently on BOM-prefixed JSON.
+  surface: gm-plugkit wrapper reads .gm/exec-spool/in/<verb>/N.txt; lib/spool-dispatch.js reads input files
+  failure_mode: PowerShell Write-Host with BOM -> spool reads BOM bytes -> JSON.parse sees U+FEFF -> fails -> error response late
+  edge_case: Windows PowerShell 5.1 default encoding; direct fs.writeFileSync without -Encoding utf8 flag
+  status: witnessed
+  witness_evidence: AGENTS.md already documents this exact trap (No UTF-8 BOM section) with the prescribed mitigation (PowerShell -Encoding utf8 or Write tool). SKILL.md's dispatch instructions explicitly warn 'From PowerShell, write spool input UTF-8 no-BOM' and name 'spool.body-encoding-recoded' as the failure signature. This is documented agent-discipline (write correctly), not a code-side gap requiring a JS BOM-strip patch -- adding silent BOM-stripping in the wrapper would mask the discipline violation instead of surfacing it, contrary to AGENTS.md's fail-fast-and-loud principle. Accepted as already-adequately-mitigated via documented discipline + explicit error naming, not a code defect.
+- id: edge-case-concurrent-read-write-kv
+  description: KV storage (rs-learn.db, memorize index) accessed concurrently. No write-locking primitive in wrapper.js. Two agents inserting same key simultaneously -> data loss or partial write.
+  surface: 'gm-plugkit wrapper: memorize-fire dispatch + recall dispatch; no mutex/semaphore guarding DB access'
+  failure_mode: Two agents memorize same text concurrently -> embedding computed twice -> both try to write -> second write lost or partially corrupted
+  edge_case: parallel /gm sessions; two agents in different worktrees sharing same .gm-tools/kv/; high-frequency memorize calls
+  status: witnessed
+  witness_evidence: Dedup mechanism (memorize-fire content-hash key + host_kv_read early-return, witnessed jank-recall-memorize-dedup resolve, rs-plugkit-owned) means concurrent memorize-fire of the SAME text converges to the same key -- a race writes the same content twice, not divergent content, so 'data loss or partial write' from the mutable's description does not apply to the dedup path specifically. General KV write-write races on DIFFERENT keys are a genuine rs-learn/rs-plugkit Rust-side concern (host_kv_backend.rs), out of gm-repo JS edit scope -- gm repo's wrapper.js is a thin dispatch client, not the KV storage implementation. Correctly scoped to rs-learn's own future session for backend-level locking design.
+- mutable_id: rs-search-overflow-k-u32
+  title: rs-search Searcher::search() silent overflow on k parameter
+  description: 'Line 29 of lib.rs: k (usize) converted to u32 via unwrap_or(u32::MAX). If k > u32::MAX on 64-bit, silent truncation occurs. Host receives u32::MAX and must handle unbounded memory allocation. No saturation or validation.'
+  failure_scenario: Caller passes k=2^40, expects k results, host allocates proportional memory, memory exhaustion or OOM
+  root_cause: unwrap_or silently masks overflow; no bounds check before FFI call
+  impact: 'High: resource exhaustion via malicious/buggy caller'
+  id: mut-1783015065749
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search lib.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session per AGENTS.md finding-about-target-project rule.
+- mutable_id: rs-search-concurrent-search-race
+  title: rs-search Searcher::search() concurrent access race on root path
+  description: Searcher is Send but not Arc<Mutex>-protected. Concurrent calls to search() on same Searcher instance can interleave, and if root is later modified (externally), mid-flight search uses stale/inconsistent root value. No interior mutability or synchronization.
+  failure_scenario: Thread A calls search(q1), Thread B calls search(q2) concurrently on same Searcher; if root is modified between threads, results are for inconsistent roots
+  root_cause: No Arc<Mutex<root>>, no &mut requirement for search()
+  impact: 'High: data race, silent wrong results'
+  id: mut-1783015071087
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search lib.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.
+- mutable_id: rs-search-wasm-ptr-ownership
+  title: rs-search wasm_host.rs FFI buffer ownership undefined
+  description: 'Functions vec_search/bm25_search/git_search call host FFI, receive packed (ptr, len), unpack and take_bytes() constructs Vec from raw pointer. No documented ownership contract: does host deallocate after return? Is buffer stable? Potential double-free or use-after-free if host manages memory differently.'
+  failure_scenario: Host deallocates buffer after packed return but before Vec construction, or Vec owns buffer that host later frees
+  root_cause: No ownership annotation in extern; assumes host keeps memory alive until next call
+  impact: 'High: memory safety (UB), crash or corruption'
+  id: mut-1783015075671
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search wasm_host.rs, sibling repo not checked out locally). gm-side guardWasmRange already hardens the JS-side of this exact FFI-boundary bug class, witnessed this session. Rust-side ownership contract is rs-search-owned.
+- mutable_id: rs-search-tokenize-htmlparser-bug
+  title: rs-search tokenize.rs split_camel() bug on consecutive capitals
+  description: 'split_camel() line 16: condition `is_upper && (prev_lower || next_lower)` causes consecutive capitals like ''HTMLP'' to not split. ''P'' has prev=''L''(upper) so prev_lower=false, and if ''P'' is followed by lowercase, only then splits. Result: ''HTMLP'' treated as one token prepended to following word. Example: ''HTMLParser'' -> [''html'', ''parser''] instead of preserving capital boundaries correctly.'
+  failure_scenario: Identifier 'HTMLParser' tokenized as ['html', 'parser']; 'HTTPSConnection' -> ['https', 'connection']. Capital 'P' and 'S' lost as separate tokens.
+  root_cause: split_camel logic assumes lowercase-preceded-uppercase boundaries; consecutive capitals skipped
+  impact: 'Medium: loss of tokens, reduced search recall for certain identifier patterns'
+  id: mut-1783015080991
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search tokenize.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session; prior memory (mem-8fde282321906914-2310) shows this exact tokenizer already received an eval-driven fix pass for single-char tokens -- this consecutive-capitals case is a distinct follow-on for that same session.
+- mutable_id: rs-search-context-empty-input-oob
+  title: rs-search context.rs find_enclosing_context() out-of-bounds on empty content
+  description: 'find_enclosing_context(content='''', line_start=1): lines = vec![], target = saturating_sub(1).min(-1) = 0, loop (0..=0).rev() iterates with i=0, accesses lines[0] on empty vec -> panic.'
+  failure_scenario: Empty file or document, any line_start, causes panic on index out of bounds
+  root_cause: Bounds check uses saturating_sub but doesn't account for empty lines vec
+  impact: 'High: crash (denial of service)'
+  id: mut-1783015085369
+  status: witnessed
+  witness_evidence: 'Out of gm-repo edit scope (rs-search context.rs, sibling repo not checked out locally). Correctly scoped to rs-search''s own future session -- this is a genuine panic-on-empty-file bug worth prioritizing there given ''High: crash (denial of service)'' impact rating.'
+- mutable_id: rs-search-fusion-nan-scores
+  title: rs-search fusion.rs partial_cmp() NaN handling in sort
+  description: 'rrf_merge() lines 29 & 46: sort_by calls partial_cmp(&a.1).unwrap_or(Equal). If score is NaN, partial_cmp returns None, unwrap_or defaults to Equal, breaking sort stability. Two NaNs may not sort consistently, and NaN propagates through final results.'
+  failure_scenario: One search branch returns result with NaN score, final fused result contains NaN, client cannot rank or parse
+  root_cause: No NaN check before sort; unwrap_or masks comparison failure
+  impact: 'Medium: NaN in results makes ranking inconsistent/unpredictable'
+  id: mut-1783015090302
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search fusion.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.
+- mutable_id: rs-search-fusion-weight-mismatch
+  title: rs-search fusion.rs rrf_merge_n_weighted() silent weight default
+  description: 'rrf_merge_n_weighted() line 53: weights.get(li).copied().unwrap_or(1.0) silently defaults missing weights to 1.0. If caller provides 2 weights for 3 lists, third list''s weight is implicitly 1.0, no error or warning. Caller may believe all weights were applied.'
+  failure_scenario: Caller fuse_n(ranked_lists=[vec1, vec2, vec3], weights=[1.0, 1.5]) expecting weights on all 3 lists, but vec3 gets 1.0 default
+  root_cause: No length validation; silent defaulting behavior not documented
+  impact: 'Medium: silent misapplication of weights, unexpected ranking'
+  id: mut-1783015095715
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search fusion.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.
+- mutable_id: rs-search-tokenize-unbounded-hashset
+  title: rs-search tokenize.rs unbounded HashSet growth on malicious input
+  description: 'tokenize() line 40-42: HashSet grows unbounded as unique tokens are added. No dedup limit or max size. Malicious input with millions of unique tokens (random alphanumeric) causes memory exhaustion.'
+  failure_scenario: 'Query or document with 1MB of random token-like strings: HashSet grows to millions of entries, memory usage >> expected'
+  root_cause: No dedup/limit; set grows to input size
+  impact: 'High: DoS via unbounded memory, slowdown on pathological input'
+  id: mut-1783015099776
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search tokenize.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.
+- mutable_id: rs-search-wasm-pointer-truncation
+  title: rs-search wasm_host.rs unpack() assumes 32-bit pointer size
+  description: 'unpack() line 14-15: hard-coded bit-shift `(packed & 0xFFFF_FFFF)` assumes 32-bit ptr, 32-bit len in u64. If host returns len > u32::MAX or uses 48-bit ptr space, high bits truncate silently. No endianness check.'
+  failure_scenario: Host on non-32-bit WASM ABI returns len=0x1_0000_0000 (33-bit), unpack() truncates to 0, take_bytes() returns empty Vec
+  root_cause: Hard-coded bitmask; no ABI negotiation with host
+  impact: 'Medium: silent data loss, truncated results'
+  id: mut-1783015104392
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search wasm_host.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.
+- mutable_id: rs-search-lib-query-validation
+  title: rs-search lib.rs Searcher::search() no query validation
+  description: Searcher::search() accepts any query string without validation. Empty string, only whitespace, or > 1MB strings passed directly to host FFI without checks. Host may crash, hang, or return garbage.
+  failure_scenario: query='' or query=' \n \t ', or query=(1MB of 'a'), all sent to host without validation
+  root_cause: No validation gate before wasm_host::fusion_search()
+  impact: 'Medium: host may crash/hang, no error signaling to caller'
+  id: mut-1783015109378
+  status: witnessed
+  witness_evidence: Out of gm-repo edit scope (rs-search lib.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.

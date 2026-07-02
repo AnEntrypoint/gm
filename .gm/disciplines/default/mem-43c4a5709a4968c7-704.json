@@ -1,0 +1,3 @@
+## Resolved mutable: edge-case-git-status-timeout-no-fallback
+
+Read lib/spool-dispatch.js:34-58 (isWorktreeDirty/hasUnpushedCommits) + 351-362 (call sites): both git helpers already return {available:false} on non-zero exit (which spawnSync sets on timeout), and the stop-gate explicitly checks !dirty.available / !unpushed.available to push an actionable 'UNKNOWN ... re-run git status and commit/push any residual before declaring done' residual -- this IS the recovery path the mutable claims is missing. Mutable's claim of 'no fallback... chain stuck' is contradicted by code already witnessed this session (jank-git-verb-surface resolve). No code gap found; mutable based on stale/incorrect premise.

@@ -1,0 +1,3 @@
+## Resolved mutable: plugkit-concurrent-spawning-atomic-lock
+
+gm-plugkit/plugkit-wasm-wrapper.js:1310-1360 getOrCreateBrowserSession spawn-lock pattern with 35s deadline, stale detection via mtimeMs + owner pid alive check

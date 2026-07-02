@@ -1,0 +1,3 @@
+## Resolved mutable: spool-idempotency-counter-ephemeral
+
+gm-plugkit/plugkit-wasm-wrapper.js:3158-3176,3327-3328 processFile in-memory Map, unlinked after processing

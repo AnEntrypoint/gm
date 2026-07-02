@@ -1,0 +1,3 @@
+## Resolved mutable: mut-1783015075671
+
+Out of gm-repo edit scope (rs-search wasm_host.rs, sibling repo not checked out locally). gm-side guardWasmRange already hardens the JS-side of this exact FFI-boundary bug class, witnessed this session. Rust-side ownership contract is rs-search-owned.

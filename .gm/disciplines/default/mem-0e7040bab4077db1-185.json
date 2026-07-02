@@ -1,0 +1,3 @@
+## Resolved mutable: watcher-heartbeat-timeout-15s
+
+SKILL.md boot probe rule: gap > 15000 = dead; gm-plugkit/plugkit-wasm-wrapper.js marks launching at spawn, browser spawn ~35s timeout

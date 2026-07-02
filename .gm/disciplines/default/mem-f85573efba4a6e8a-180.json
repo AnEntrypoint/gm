@@ -1,0 +1,3 @@
+## Resolved mutable: mut-1783015099776
+
+Out of gm-repo edit scope (rs-search tokenize.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session.

@@ -1,0 +1,1 @@
+{"query":"unwrap|panic|todo|unimplemented|unreachable","max_results":50}
