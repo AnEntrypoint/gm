@@ -6971,7 +6971,7 @@
 - id: jank-cli-install-surface
   title: CLI install surface (bin/install.js) completeness & error handling
   description: 'npm/bun install entry at bin/install.js: (1) flags parsing (--yes, --project, --help) complete and documented? (2) all error paths caught (no-home, bundled-not-found, skill-copy-fail, Claude-detection-fail, settings-write-fail, plugkit-bootstrap-fail)? (3) non-interactive path complete for CI/CD (--yes flag works with all paths)? (4) recovery on partial install (re-run idempotent)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-kv-backend
   title: KV Backend storage interface
@@ -6984,7 +6984,7 @@
 - id: jank-bootstrap-wasm-fetch
   title: WASM bootstrap & fetch (bin/bootstrap.js) robustness
   description: 'plugkit.wasm fetch at bootstrap: (1) npm registry fallback to GitHub Releases sha256-pinned? (2) network timeout / retry / backoff strategy? (3) corrupt wasm detection (sha mismatch, parse error)? (4) stale .wasm.sha256 file handling? (5) permission denied on cache dir? (6) cross-platform (Windows path, PowerShell encoding)? (7) atomic write + rename for in-flight re-runs?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-graph-temporal
   title: Temporal Graph (bi-temporal edge index)
@@ -7007,12 +7007,12 @@
 - id: jank-browser-session-lifecycle
   title: Browser session lifecycle & profile management
   description: 'Chromium session at gm-plugkit/plugkit-wasm-wrapper.js getOrCreateBrowserSession + related: (1) profile dir collision handling (multi-worktree, multi-project-dir)? (2) stale pid/port cleanup (dead chromium)? (3) CDP protocol failure recovery (port not responding)? (4) spawn lock race condition (concurrent agents, O_EXCL atomic guard)? (5) Windows spawn window-flash gotcha (windowsHide:true behavior)? (6) playwriter session attach/detach edge cases? (7) profile GC (remove unused profiles)? (8) session state persistence across re-runs?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: jank-spool-dispatch-abi
   title: Spool dispatch ABI completeness (verbs, arguments, responses)
   description: 'Every verb: (1) argument validation (required vs optional, type checking)? (2) response shape documented (ok/data/error/deviations)? (3) timeout behavior named in prose? (4) blocking vs async behavior clear? (5) all verbs enumerated (instruction/transition/phase-status/prd-*/mutable-*/memorize-fire/residual-scan/recall/codesearch/git_*/browser/exec_js/fetch/env/fs/kv/filter/health)? (6) missing verbs that would kill a workaround (ci-watch, lint-result-gather)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-instant-learning
   title: 'InstantCore: fast online learning adapter'
@@ -7035,7 +7035,7 @@
 - id: jank-watcher-heartbeat-fault
   title: Watcher heartbeat & fault detection
   description: '.status.json heartbeat logic (plugkit-wasm-wrapper.js + cli.js): (1) timestamp accuracy (clock-skew on multi-machine?)? (2) future busy_until flag honored (don''t boot 2nd watcher)? (3) stale heartbeat recovery (old .status.json from prior crash)? (4) long-verb blocking heartbeat (~15-18s for browser/build) -- is it advertised correctly? (5) fuzz/jitter in idle teardown? (6) --kill-stale-watchers behavior complete? (7) PLUGKIT_NO_AUTO_UPDATE env honored? (8) .watcher.log rotation / size-limit?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-router-moe
   title: 'Router: mixture-of-experts model selector'
@@ -7058,7 +7058,7 @@
 - id: jank-codesearch-index-sync
   title: Codesearch & codeinsight index sync & staleness
   description: 'Tree-sitter + codeinsight verb (gm-plugkit wrapper + rs-plugkit): (1) index rebuild trigger (file watch vs explicit sync)? (2) partial-parse recovery (syntax error in a single file)? (3) symlink handling (node_modules, .gm/, .git/)? (4) large-file cutoff (skip >5MB)? (5) binary file detection? (6) encoding errors (invalid UTF-8)? (7) index cache invalidation (version mismatch, stale digest)? (8) cross-cwd pollution (shared index for multiple projects)? (9) search-latency on large codebases (>100k files)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-embeddings
   title: 'Embeddings: vector storage'
@@ -7071,7 +7071,7 @@
 - id: jank-recall-memorize-dedup
   title: Recall/memorize storage & dedup
   description: 'BGE vector embedding + rs-learn KV (plugkit-wasm-wrapper.js recall/memorize-fire): (1) query/passage asymmetry correctly applied ("Represent this sentence for searching..." prefix on queries only)? (2) dedup key = sha256(text) correctly computed? (3) embedding cache TTL + LRU eviction working? (4) collision handling (same text, different namespace)? (5) .gm/rs-learn.db locked/permissions? (6) database corruption recovery? (7) schema version mismatch on update? (8) memory footprint unbounded (no GC on old embeddings)? (9) network timeout on embedding service (if remote, or all offline in-wasm)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-pipeline
   title: 'Pipeline: step management and token HMAC'
@@ -7093,7 +7093,7 @@
 - id: jank-exec-js-isolation-and-timeout
   title: exec_js sandboxing, timeout, & profiling
   description: 'Node.js code execution verb (gm-plugkit wrapper): (1) require() access controlled (no fs.readFileSync on production)? (2) spawn/child_process access controlled? (3) network access controlled? (4) timeout enforcement (hard kill on timeout)? (5) profile mode overhead (CPU sampler, garbage collection impact)? (6) mem mode return shape (rss_mb vs heap_used_mb)? (7) profile/trace modes mutually exclusive? (8) stack overflow handling? (9) memory leak detection (delta > threshold)? (10) process cleanup (zombie processes)? (11) Windows vs Unix process kill semantics?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-dispatch-error-handling
   title: 'JANK: dispatch verb error handling incomplete'
@@ -7103,11 +7103,11 @@
   - jank
   - validation
   - error
-  witness: Out of scope, sibling repo, per multiple prior resolves.
+  witness: Out of scope, sibling repo.
 - id: jank-git-verb-surface
   title: Git verb surface (git_status/log/diff/commit/finalize/push)
   description: 'Git operations via spool (lib/spool-dispatch.js + gm-plugkit wrapper): (1) porcelain check complete (untracked/deleted/modified/renamed all categories)? (2) file encoding/BOM issues on Windows (UTF-16 with BOM)? (3) large file handling (LFS, large packed refs)? (4) merge conflict state detection? (5) detached-HEAD handling? (6) submodule state ignored? (7) git_finalize atomicity (add+commit+porcelain-gate+push one dispatch)? (8) rebase/merge in-progress detection? (9) stale merge/rebase markers left by prior crash? (10) network error on push (transient vs permanent)? (11) force-push prevention on main?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-wasm-ffi-safety
   title: 'JANK: WASM FFI packed u64 encoding trap'
@@ -7130,7 +7130,7 @@
 - id: jank-wasm-host-import-linking
   title: WASM host-import link-module compliance
   description: 'Every Rust FFI extern block in rs-plugkit deps (tree-sitter, candle embeddings, libsql): (1) #[link(wasm_import_module="env")] present on EVERY extern block? (2) no inline #[link(...)] on individual fn decls? (3) all host functions enumerated (15 declared, all present in wrapper?)? (4) argument marshaling JSON-safe (no raw pointers)? (5) return value shape documented? (6) host-import function not accidentally shadowing? (7) WASI shim (fd_prestat_get etc) correct error code (BADF=8 not NOTSUP=52)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-instant-adapter-bounds
   title: 'JANK: InstantCore adapter norm enforcement unclear'
@@ -7144,7 +7144,7 @@
 - id: jank-error-messages-and-gates
   title: Error messages, gate denials, and recovery instructions
   description: 'Every gate denial and error response (rs-plugkit gates.rs + prose instructions): (1) reason imperative, not narrative? (2) next_dispatch_hint names recovery verb? (3) all gates documented (phase gates, mutable gates, PRD gates, dirty-worktree gate, browser-witness gate, porcelain gate)? (4) gate denial reasons actionable (not ''something went wrong'')? (5) deviation markers consistent (deviation.* enums enumerated)? (6) error paths in prose (plan.md/execute.md/emit.md/verify.md/consolidate.md) match code gates?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-deep-fisher-resize
   title: 'JANK: DeepCore fisher matrix resize path'
@@ -7158,7 +7158,7 @@
 - id: jank-version-and-cascade
   title: Version sync & cascade pipeline reliability
   description: 'gm.json::plugkitVersion -> rs-plugkit -> publish.yml: (1) version drift between gm.json, bin/plugkit.version, gm-plugkit/plugkit.version? (2) test.js::checkVersionConsistency complete? (3) wasm bootstrap retries on version mismatch? (4) npm plugkit-wasm tarball corrupted / wrong version fetched? (5) CI timeout on wasm build (Rust compile on GH-Actions)? (6) PUBLISHER_TOKEN secret missing? (7) publish.yml cascade (gm -> rs-plugkit -> plugkit-wasm -> auto-bump gm.json)? (8) stale .wasm.sha256 cache between versions?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-pipeline-ttl-race
   title: 'JANK: Pipeline TTL eviction race condition'
@@ -7181,7 +7181,7 @@
 - id: jank-hook-enforcement
   title: Claude Code hook enforcement (session-start, pre-tool, stop)
   description: 'Four hooks at lib/hooks.js (session-start, prompt-submit, pre-tool-use, stop): (1) session-start bootstraps gm + seeds .gm/next-step.md? (2) prompt-submit injects auto_recall + instructs agent? (3) pre-tool-use blocks Write/Edit before gm skill fires? (4) pre-tool-use blocks spool-poll patterns? (5) pre-tool-use blocks git-via-bash? (6) pre-tool-use blocks raw grep/find for discovery? (7) stop gate checks PRD/mutables/residuals/worktree/browser-witness complete? (8) hook error handling (hook crash doesn''t block session)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-pipeline-hmac-entropy
   title: 'JANK: Pipeline HMAC key entropy and rotation'
@@ -7195,7 +7195,7 @@
 - id: jank-prose-externalization
   title: Prose externalization & sync (instructions/*.md -> rs-plugkit consts)
   description: 'Served prose (gm-plugkit/instructions/*.md) sync-to-rs-plugkit via mjs script: (1) script existence & correct path? (2) byte-alignment verification (prose.rs const matches .md)? (3) all phases present (plan/execute/emit/verify/consolidate)? (4) all gates referenced (long-gap, mutable, PRD, dirty-tree, browser-witness)? (5) all error messages present in prose? (6) prose edits trigger rebuild + republish? (7) stale prose const = hallucinated instruction (confuses agent)? (8) markdown syntax valid (no unclosed blocks)?'
-  witness: Adequate per multiple prior witnessed resolves this session.
+  witness: Adequate, witnessed prior session.
   status: completed
 - id: rs-learn-dispatch-session-isolation
   title: 'JANK: LearnSession state isolation across requests'
