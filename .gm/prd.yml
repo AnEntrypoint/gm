@@ -6691,3 +6691,73 @@
   description: wrapper 'spool' arg is the daemon child (intended foreground); supervisor.js is detached; ensure no doc/skill path tells agents to run wrapper directly. rs-plugkit confirmed no boot logic.
   status: completed
   witness: wrapper 'spool' arg is the detached daemon child spawned by bootstrap.js:1021 startSpoolDaemon (stdio to .watcher.log, unref); supervisor.js also detached; SKILL.md prescribes only 'bun x gm-plugkit@latest spool' which exits after heartbeat; rs-plugkit grep shows no boot logic
+- id: constraints-canonical-file
+  text: 'Author canonical CS-constraints file (verbatim user blurb: f.f=f idempotency, disjoint state/resources, no UB/races/leaks, contention->0, Clarke-compliant abstraction, no phantom/trunc AST, Gen=argmin(dSpec) minus sycophancy, exceptions handled-or-propagated, no secrets in AST, f|-Spec no vibe, monotone context; INVARIANTS block: ADT-isomorphic state, subtractive entropy, stochastic ontogeny, monoidal strict DAG, CAP-aware, affine typestate Byzantine boundaries, profiling Monte Carlo epistemology, Pi-type correctness, p99 resilience, zero-leak contracts, chaos crucible, utility-max teleology, uniform style, parameterized IO, min-K, IO-monad effects, no TODO/FIXME, ZeroTrust authz) at gm-plugkit/instructions/constraints.md as the shipped default'
+  status: pending
+- id: constraints-seed-if-absent
+  text: Bootstrap seeds .gm/constraints.md from bundled default ONLY if absent (like next-step.md seed), never overwrites -- user-editable per-project mutable config; ensureInstructionsBundle must NOT clobber it (exclude from byte-sync overwrite walk or place outside .gm/instructions/)
+  status: pending
+- id: skill-md-constraints-rule
+  text: 'SKILL.md gains standing rule: every design/code decision resolves against .gm/constraints.md (create from default if absent); SKILL.md is the persistent system-prompt reinforcing the CS blurb at all phases'
+  status: pending
+- id: skill-md-caveman-terse
+  text: 'Caveman-terse jargon rewrite of SKILL.md: tersest possible deepest CS jargon, maximum meaning per token, drop articles/preamble, preserve all boot-edge ABI (spool paths, verb names, JSON fields, gate names, deviation ids) verbatim'
+  status: pending
+- id: prose-plan-expansive-exec
+  text: 'plan.md rewrite: maximally expansive PLAN (every in-spirit item added), exec_js available during PLAN for exploration, search exclusively via codesearch/recall verbs; caveman-terse jargon'
+  status: pending
+- id: prose-execute-mutable-gate-rearchitect
+  text: 'execute.md rewrite: EXECUTE resolves ALL mutables before proceed, adds discovered mutables, returns to PLAN on any in-spirit architectural discovery -- always-rearchitect-immediately, max-effort over preservation; caveman-terse'
+  status: pending
+- id: prose-emit-file-changes
+  text: 'emit.md rewrite: EMIT = file mutation phase only (all mutables resolved precondition); caveman-terse'
+  status: pending
+- id: prose-verify-adversarial
+  text: 'verify.md rewrite: VERIFY = adversarial exec validation, flesh out every potential corner case, discover all problems in emitted code via real execution; caveman-terse'
+  status: pending
+- id: consolidate-phase-rust
+  text: 'Add CONSOLIDATE phase to rs-plugkit state machine between VERIFY and COMPLETE: phase enum, transition legality table, gate checks, instructions/consolidate.rs const + gm-plugkit/instructions/consolidate.md (git consolidation + CI/CD validation prose), next_phase_hint chain, sync-instruction-consts.mjs key list gains consolidate'
+  status: pending
+- id: consolidate-downstream-refs
+  text: 'Sweep every reference to the phase chain (PLAN->EXECUTE->EMIT->VERIFY->COMPLETE) across gm repo: SKILL.md, AGENTS.md, wrapper phaseQueryMap in tryAutoRecallForTurnEntry, entry.md/other prose, docs -- add CONSOLIDATE consistently'
+  status: pending
+- id: prose-all-keys-caveman
+  text: 'Caveman-terse jargon pass over remaining prose keys entry.md, update_docs.md, browser.md and gates/residual md-only texts: shorter deeper jargon, ABI verbatim'
+  status: pending
+- id: search-tool-discipline-correction
+  text: 'Correction rows for non-search-tool exploration observed in recent sessions: strengthen SKILL.md + prose so codesearch/recall are the ONLY code-exploration surfaces (no Grep/Glob/cat exploration); prose states it at PLAN and EXECUTE'
+  status: pending
+- id: agents-md-update
+  text: 'AGENTS.md: add CONSOLIDATE to phase-chain references, add constraints-file rule (per-project .gm/constraints.md, seed-if-absent, decision arbiter), caveman-terse the touched paragraphs, drain detail to memorize-fire per bidirectional-migration rule'
+  status: pending
+- id: sync-consts-run
+  text: Run gm-plugkit/scripts/sync-instruction-consts.mjs after all .md edits; verify rs-plugkit/src/orchestrator/instructions/*.rs consts byte-aligned incl new consolidate.rs; ensure mod.rs exports consolidate
+  status: pending
+- id: test-js-guards
+  text: 'test.js: add witness that .gm/constraints.md seeds if absent and is NOT overwritten when user-modified; keep <=200 lines real-services; verify existing guards still pass'
+  status: pending
+- id: consolidate-gate-semantics
+  text: 'Define CONSOLIDATE gate semantics: entry requires VERIFY passed (all mutables resolved, PRD work rows done); exit to COMPLETE requires clean porcelain + push + CI/CD validation witnessed (git_finalize surface moves to CONSOLIDATE); COMPLETE gate updated accordingly; transition legality rejects VERIFY->COMPLETE skip'
+  status: pending
+- id: verify-adversarial-corner-cases
+  text: 'VERIFY prose enumerates adversarial corner-case classes: empty/overflow/reentry, concurrency, partial failure, degenerate input, boundary conditions, injection, resource exhaustion -- each exercised by exec_js/browser witness before transition'
+  status: pending
+- id: constraints-instruction-attach
+  text: 'instruction verb prose (or wrapper) references .gm/constraints.md so every phase serving reminds: gauge decisions against constraints file; implement as line in each phase .md pointing at .gm/constraints.md'
+  status: pending
+- id: ascii-discipline-constraints-file
+  text: Constraints file uses the user's mathematical notation verbatim (functional formal glyphs are semantic operators, not decorative) -- document exemption vs glyph-discipline sweep so ccsniff --glyph-discipline does not flag it; verify exemption mechanism exists or add it
+  status: pending
+- id: cascade-ship
+  text: Commit+push gm (SKILL.md, gm-plugkit bundle, AGENTS.md, test.js) AND rs-plugkit (state machine + consts) to main; cascade rebuilds wasm; CI/CD green witnessed via gh run watch or fetch
+  status: pending
+- id: boot-prose-skill-md-entry-md-out-of-sync
+  body: 'WITNESSED DIVERGENCE: gm-plugkit/cli.js:186-253 spool call already atomically daemonizes + hot-holds: startSpoolDaemon() -> waitForWatcherHeartbeat(spoolDir,30000,12000) blocking until .status.json fresh or timeout, returns exit 0 only when serving (idempotent, fresh watcher returns immediately). SKILL.md and entry.md both prescribe the OLD boot dance: & + sleep 8 + recat .status.json. The CLI code and agent-facing prose diverged. FIX: update SKILL.md (boot before dispatching section) to prescribe the one atomic call `bun x gm-plugkit@latest spool` (or npx fallback), kill the & + sleep + recat antipattern. Entry.md boot prose similarly updated. Result: agents boot once atomically instead of polling, faster and cleaner. Witness: codesearch shows atomic call + comment ''blocks until serving'' at cli.js:220, the method exists and is live.'
+  witness_evidence: codesearch-1 hit 4 (cli.js:186-253), codesearch-1 hit 3 (supervisor.js:141), recall-1 hit 4 (spool-cli-returns-after-heartbeat), recall-1 hit 5 (ATOMIC SPOOL BOOT gm-method memkey)
+  status: completed
+  witness: codesearch-1 hit 4 cli.js:186-253 + recall-1 hits confirm atomic behavior already implemented; SKILL.md lines 41-45 already prescribe correct call; no actual prose divergence found on verification
+- id: boot-behavior-already-correct
+  body: 'CONFIRMATION from EXECUTE: boot behavior is already atomic + correct. cli.js:186-253 spool call (1) spawns daemon detached via startSpoolDaemon(), (2) blocks via waitForWatcherHeartbeat() until .status.json fresh or 30s timeout, (3) exits 0 only when serving. SKILL.md lines 41-45 correctly prescribe the call (`bun x gm-plugkit@latest spool` blocks until serving, no & + sleep + recat). test.js:25-32 ensureWatcher() validates: spawnSync the call, verify watcher alive after return. User concern ''dont get stuck waiting'' is already satisfied: the CLI blocks intentionally until the watcher is ready, then returns immediately (idempotent: fresh watcher returns instantly). No change needed; closing as verified-correct.'
+  witness_evidence: cli.js:186-253, test.js:25-32, SKILL.md:41-45, recall-1 hit 4+5 (spool-cli-returns-after-heartbeat + ATOMIC SPOOL BOOT)
+  status: completed
+  witness: cli.js:235 waitForWatcherHeartbeat blocks until .status.json fresh; test.js:25-32 ensureWatcher validates atomic boot via spawnSync + alive check; SKILL.md:41-45 prescribes single blocking call; no changes needed, behavior verified correct

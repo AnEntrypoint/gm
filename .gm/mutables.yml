@@ -624,3 +624,15 @@
   description: Does ../rs-plugkit contain any server-boot/bind logic needing change?
   status: witnessed
   witness_evidence: 'exec_js grep of ../rs-plugkit/src for bind|listen|TcpListener|spawn|daemon|fn main: 14 hits, all SQL bind-param errors (libsql_wasm.rs:161,192), served prose (instructions/browser.rs), task-spawn verb plumbing (orchestrator/task.rs) -- zero server-boot or socket-bind logic; daemonize lifecycle is entirely gm-plugkit JS'
+- id: phase-enum-location
+  text: Where in rs-plugkit is the phase enum + transition legality defined (file:line) and what changes does adding CONSOLIDATE require
+  status: unknown
+- id: complete-gate-location
+  text: Where does the COMPLETE gate (gates.rs) enforce push/porcelain/residual and how does CONSOLIDATE split that responsibility (file:line)
+  status: unknown
+- id: bundle-overwrite-path
+  text: Does ensureInstructionsBundle overwrite user edits under .gm/instructions/ (byte-compare walk) -- confirm and choose constraints.md placement (.gm/constraints.md outside walk) with file:line witness
+  status: unknown
+- id: phase-chain-hardcode-sites
+  text: Every hardcoded phase-chain site (PLAN/EXECUTE/EMIT/VERIFY/COMPLETE strings) across gm + rs-plugkit needing CONSOLIDATE insertion -- enumerate via codesearch/exec_js grep
+  status: unknown
