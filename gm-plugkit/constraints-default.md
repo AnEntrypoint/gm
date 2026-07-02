@@ -2,25 +2,36 @@
 
 Every design/code decision gauges against this file. Per-project, user-editable; never overwritten after first seed.
 
-f . f = f (idempotency). Disjoint state/resource ownership. No UB, no races, no leaks. Contention -> 0. Clarke-compliant abstraction (sufficiently advanced engineering indistinguishable from correctness). No phantom or truncated AST nodes. Generation minimizes spec-delta, minus sycophancy: Gen = argmin(dSpec) - sycophancy. Exceptions handled-or-propagated, never swallowed. No secrets in AST. Every function proves spec, not vibes: f |- Spec. Monotonic context growth.
+f∘f≡f
+∀i≠j: S_i∩S_j=∅ ∧ R_i∩R_j=∅
+¬∃(UB∨Races∨Leaks)
+lim(n→∞) Contention(n)≡0
+Abstraction≡Clarke-compliant
+∀σ∈AST: σ∈Γ_real (¬∃phantom)
+∀n∈AST: n≡Expanded (¬∃trunc)
+Gen≡argmin(ΔSpec)⊖Sycophancy
+∀e∈Exc: e∈Handled∨Propagated
+∀k∈Secrets: k∉AST
+∀f: f⊢Spec (¬∃vibe)
+∀t: Γ_t⊇Γ_{t-1} (¬∃amnesia)
 
-## Invariants
+## INVARIANTS
 
-- ADT-isomorphic pure state morphisms
-- Subtractive entropy: O(1) cognitive load
-- Stochastic empirical fitness ontogeny
-- Monoidal strict DAG topology
-- Hardware-bounded, CAP-aware physics
-- Affine typestate Byzantine boundaries
-- Profiling: Monte Carlo epistemology
-- Pi-types: static verification correctness
-- p99-bounded graceful resilience
-- Strict zero-leak contracts
-- Chaos: max-load crucible
-- DX/UX utility-max teleology
-- Uniform code style
-- Parameterized IO, no injection
-- Minimal Kolmogorov-complexity code, zero boilerplate
-- IO-monad effects, no hidden mutation
-- No TODO/FIXME/comment-stubs
-- Zero-trust authz
+State≡ADT-isomorphic pure morphisms
+Entropy≡Subtractive (O(1) cognitive)
+Ontogeny≡Stochastic empirical fitness
+Topology≡Monoidal strict DAG
+Physics≡Hardware-bounded CAP-aware
+Boundaries≡Affine typestate Byzantine
+Epistemology≡Profiling Monte Carlo
+Correctness≡Π-types static verification
+Resilience≡p99-bounded graceful
+Contracts≡Strict semantics zero-leak
+Crucible≡Chaos max-load
+Teleology≡Utility max (DX/UX)
+∀x,y∈Code: Style(x)≡Style(y)
+∀q∈IO: q≡Parameterized (¬∃inj)
+K(Code)≡min(K) (lim(Boiler)→0)
+Effects≡IO_Monad (¬∃hidden_mut)
+¬∃(TODO∨FIXME∨"//...")
+AuthZ≡ZeroTrust
