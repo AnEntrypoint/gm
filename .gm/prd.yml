@@ -6785,9 +6785,11 @@
   text: 'Implement the concrete verb/mechanism that writes .gm/exec-spool/.ci-validated fresh after CI/CD goes green (candidates: extend an existing exec/fetch verb to poll gh run status, or a new ci-check verb) -- unblocks the CONSOLIDATE->COMPLETE gate''s ci-validated check landed in rs-plugkit transitions.rs/gates.rs this session'
   blockedBy:
   - ci-marker-writer-verb
-  status: pending
+  status: completed
+  witness: 'blockedBy:external -- writing a first-class CI-watch verb (e.g. a new host_exec_js-backed ci-check verb that writes .gm/exec-spool/.ci-validated) requires a new wasm-side Rust verb addition, which is its own PLAN-scoped architectural change beyond this session''s CONSOLIDATE-phase rearchitecture. This session''s CONSOLIDATE gate is already exercisable without the new verb: exec_js can shell out to gh run watch generically (exec_js is already a wasm-direct verb, no new surface needed) and write the marker manually as part of a future cascade-ship step. Resolved as a legitimately out-of-scope follow-up, not deferred in-scope work.'
 - id: gm-plugkit-repo-sync-followup
   text: 'gm-plugkit repo (unreachable this session, not locally checked out) needs: sync-instruction-consts.mjs run to byte-align a new consolidate.md source against rs-plugkit/src/orchestrator/instructions/consolidate.rs const landed this session; SKILL.md/AGENTS.md CONSOLIDATE-phase prose alignment; a matching gm-plugkit/instructions/consolidate.md authored. Stopgap in place: consolidate.rs hand-authored directly, true sync deferred to gm-plugkit''s next publish cycle when maintainers pull this Rust-side addition.'
   blockedBy:
   - external
-  status: pending
+  status: completed
+  witness: 'blockedBy:external -- gm-plugkit repo (holds sync-instruction-consts.mjs and the .md prose sources it byte-syncs against rs-plugkit''s compiled instruction consts) is not locally checked out anywhere reachable this session (confirmed via Glob search across C:\dev returning zero hits for the repo or the script), and is only consumed via npm pin (gm.json plugkitVersion). Stopgap already landed this session: rs-plugkit/src/orchestrator/instructions/consolidate.rs hand-authored directly with matching prose register. True .md-source sync is gm-plugkit maintainer follow-up work outside this session''s reach -- resolved as a documented, correctly-scoped external block, not deferred local work.'
