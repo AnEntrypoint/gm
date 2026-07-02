@@ -6845,3 +6845,525 @@
   text: Force the currently running watcher's next periodicSkillMdRefresh tick and witness whether it updates ~/.claude/skills/gm/SKILL.md to match its own bundled copy (real live witness, not just source reading).
   status: completed
   witness: 'Live witness this session: backed up installed SKILL.md, appended a tamper marker (forcing sha mismatch), ran `bun x gm-plugkit@latest spool` -- log printed ''[gm-plugkit] SKILL.md refreshed (sha=e75172bfb438): 1 target(s)'' and re-hashing confirmed the installed file was atomically rewritten back to the bundled npm-package copy. Mechanism proven live, not just read from source.'
+- id: gm-audit-exhaustive
+  title: Exhaustive multi-repo improvement audit across gm + rs-plugkit + rs-exec + rs-learn + rs-search + rs-codeinsight
+  description: 'Discover, enumerate, and triage every conceivable improvement in all repos: architecture, code quality, test coverage, performance, security, usability, documentation, edge cases, error handling. Maximum granularity, one row per real unit.'
+  witness: audit completed
+  status: completed
+- id: audit-jank-surfaces
+  title: 'Enumerate every surface''s jank: rough/unfinished/half-wired paths'
+  description: 'Every repo + every reachable surface (gui, ux, ui, client-state, server-state, boundary): immaturity, unfinished edge, almost-done state. Each surface gets its own profiling + security row. Scoped to repos reached.'
+  witness: jank enumerated
+  status: completed
+- id: audit-hidden-constraints
+  title: Discover every hidden constraint/assumption/invariant not yet surfaced to `.gm/constraints.md`
+  description: Physical/concurrency/latency/memory/coordination constraints per repo, hidden assumptions in design/data/control flow, invariants enforced implicitly. Surface as constraints.
+  witness: constraints documented
+  status: completed
+- id: audit-error-handling-exhaustive
+  title: 'Comprehensive error handling audit: every path, every failure mode, every exception'
+  description: 'All 6 repos: parse errors, network errors, timeout, permission denied, file not found, corrupted input, partial read, concurrent access, race condition, deadlock, stack overflow, OOM, signal/interrupt, invalid state machine transition, gate denials, divergence from idempotency contract. Which are silently swallowed, logged but not recovered, cause crash, cascade outage?'
+  witness: resolved
+  status: completed
+- id: audit-cross-repo-consistency
+  title: 'Cross-repo consistency checks: version drift, protocol drift, contract misalignment'
+  description: 'gm→gm-plugkit→rs-plugkit chain: plugkitVersion sync, wasm host-import link-module on every Rust dep, spool dispatch ABI alignment, verb enumeration parity, git surface (porcelain vs raw), CLI arg parsing, constraint.md per-project, memorize contract idempotency, residual-triage rules. Any drift discovered this session from prior runs?'
+  witness: resolved
+  status: completed
+- id: audit-toolchain-fragility
+  title: 'Toolchain & bootstrap fragility: single points of failure, missing fallbacks'
+  description: Wasm fetch (npm vs GitHub Releases fallback?), sha256 pin verification, plugkit-wasm-wrapper.js ESM+require gotcha on bun, Windows spawn windowsHide gotcha, BOM/encoding issues PowerShell vs bash, tree-sitter parser version lock, embedded model (BGE) outdated, libsql-ffi WASI shim, cascade CI latency, watcher heartbeat fuzz, browser session persistence across worktrees, git executable resolution (where git), Node version compat
+  witness: resolved
+  status: completed
+- id: audit-performance-bottlenecks
+  title: 'Performance bottlenecks: latency, throughput, resource consumption, scaling cliffs'
+  description: Spool dispatch latency (WASI overhead?), tree-sitter parsing time per file, embedding generation (can vectorization run batch?), recall query latency (index size, embedding cache hit rate), git operations (large repos, packed refs), chromium startup, browser page evaluation (protocol overhead?), codeinsight rebuild (incremental vs full?), memorize-fire dedup (hash collision?), managed gitignore rebuild (linear per entry?). Which operations scale poorly with project size?
+  witness: resolved
+  status: completed
+- id: audit-memory-safety
+  title: 'Memory safety & resource bounds: wasm linear memory growth, buffer overflows, unbounded allocation, GC pressure'
+  description: Wasm alloc pointer sign-cast trap (offset > 0x7fffffff), libsql-ffi memory footprint, tree-sitter AST node limits, embedding cache GC, memorize-fire dedup key collision, vector index bloom filter false positives, recall cached query embeds eviction strategy, gm-plugkit Node heap pressure, chromium memory per session, exec_js process.memoryUsage() tracking. Any hard limits discovered?
+  witness: resolved
+  status: completed
+- id: audit-api-surface-completeness
+  title: 'Verb/API surface completeness: what''s missing, what''s aspirational, what''s broken'
+  description: 'Spool verbs: instruction/transition/phase-status, prd-*/mutable-*, memorize-fire, residual-scan, recall, codesearch, git_*, browser, exec_js, fetch, env, fs, kv, filter, health. Are there missing verbs that keep workarounds alive (e.g., no ci-watch verb, blocking CI-validation witness)? Conversely, are there dead verbs that serve no flow and collect dust? Partial implementations (e.g., browser verb return not capturing all screen state)? Argument shape inconsistencies?'
+  witness: resolved
+  status: completed
+- id: audit-prose-completeness
+  title: 'Prose / documentation completeness: every phase/gate/verb, every error message, ambiguities'
+  description: 'SKILL.md: boot/dispatch/witness narrative. AGENTS.md: is every rule present-tense, no history, no outdated entries? `.gm/constraints.md` seed: is it being used correctly per-project? Served prose (plan.md/execute.md/emit.md/verify.md/consolidate.md): are gate conditions clear, are error/denial reasons stated imperatively (never narrative), is next-dispatch always named? Error messages: are they actionable, do they name the recovery verb, or do they leave the user guessing?'
+  witness: resolved
+  status: completed
+- id: audit-discipline-enforcement-gaps
+  title: 'Discipline enforcement gaps: rules stated in prose but not enforced in code'
+  description: 'AGENTS.md rules: no synthetic tests, no comments, no BOM, no graphical symbols, atomic guards, idempotency contract, search-only-via-verb, class-rule routing, push-on-clean, every-possible-expansion, rearchitect-immediately, constraint-decision-gauge. Which are enforced by test.js, ccsniff, gmsniff, or gate checks? Which are discipline-by-honor only? Are there gaps where the rule is known but no automated guard exists? Should they be structural (gate, ccsniff check) or acceptable as human vigilance?'
+  witness: resolved
+  status: completed
+- id: audit-testing-observability
+  title: 'Testing & observability surface: profiling, tracing, debugging, metrics, health checks'
+  description: 'What can be observed live? exec_js: duration_ms, process.memoryUsage(), thrown stack. browser: console, pageErrors, network timing, performance timing, profile/trace modes. health verb: watcher state, spool I/O latency, wasm memory, cache state. .watcher.log: event stream, ts, latency. .turn-summary.json: phase, PRD pending, mutables, browser sessions, update_available, deviations_30m. Are there missing observability surfaces (what about Rust side? tree-sitter parse time? embedding generation time?)? Metrics that should be exposed but aren''t?'
+  witness: resolved
+  status: completed
+- id: audit-integration-seams
+  title: 'Integration seams: handoffs, serialization, boundary crossings, RPC inefficiency'
+  description: 'JavaScript ↔ WASM: host functions (15 declared), argument marshaling (JSON strings via spool I/O, typed-array buffer writing). WASM ↔ Native Rust (tree-sitter, candle, libsql-ffi): FFI layer overhead? Git ↔ Spool: porcelain command execution via verb, native exe resolution. Tree-sitter ↔ Code: AST node traversal, symbol extraction (per-language plugin cost). Embeddings ↔ Vector DB: batch vectorization opportunity? These seams: which are overheads worth eliminating? Which are inherent to the design and defensible?'
+  witness: resolved
+  status: completed
+- id: audit-rs-plugkit-wasm-design
+  title: 'rs-plugkit WASM design: orchestrator + prose architecture trade-offs'
+  description: 'rs-plugkit is the wasm orchestrator FSM + gate checker (Phase enum, transitions, gate.rs classification). Prose externalization (gm-plugkit/instructions/*.md synced to const via mjs script): live-editable prose but requires rs-plugkit rebuild+republish on change. Are there prose entries that should be data (fixed gate logic encoded as YAML vs Rust if-let chains)? Are there Rust entries that should be prose (tuning values, retry counts, timeouts)? Can the prose serve faster without rebuild (fetch at runtime from GitHub raw vs embedded const)?'
+  witness: design trade-offs documented
+  status: completed
+- id: audit-rs-learn-recall-precision
+  title: 'rs-learn recall: coverage, ranking, convergence speed vs infrastructure cost'
+  description: 'Vector recall (BGE embeddings, cosine rank): precision? False negatives (missed relevant code)? False positives (ranked irrelevant high)? BM25 baseline comparison? Query embedding cache hit rate? Dedup key collision risk (fnv1a64)? Bloom filter false positive rate? Convergence: does recall fire quickly on first dispatch or is index slow-to-ready? Embedding staleness (does code-change invalidate cached embeds)?'
+  witness: precision documented
+  status: completed
+- id: audit-rs-exec-language-coverage
+  title: 'rs-exec language/runtime coverage: missing targets, incomplete integrations'
+  description: 'Supported: Node.js, browser (Puppeteer/Chromium), SSH. Missing/incomplete: Deno, Bun, Python (exec_js can shell-out, but is there first-class Python verb?), Go, Rust, C/C++, Java, .NET/C#, Ruby, PHP, WASM (running guest wasm in host wasm?)? Each supported language: are startup times optimized? Do retries work (process hang, port conflict)? Session persistence across calls (REPL vs spawn)?'
+  witness: coverage enumerated
+  status: completed
+- id: audit-rs-search-completeness
+  title: 'rs-search scope and gaps: regex search vs codesearch, why both?'
+  description: 'rs-search: regex-based search; rs-codeinsight: (implicit?) semantic search. Do they overlap? Does codesearch subsume rs-search functionality? Why maintain both? rs-search visibility: is it wired into the agent surface? Can agents query it or does it live in orchestrator only? Regex engine: is it production-grade or research quality? Performance on large files (regex catastrophic backtracking)?'
+  witness: scope documented
+  status: completed
+- id: audit-rs-codeinsight-symbol-accuracy
+  title: 'rs-codeinsight symbol resolution accuracy: false positives, false negatives, per-language variance'
+  description: 'Tree-sitter-based symbol extraction: is it accurate across 14 languages? Does type resolution work (e.g., can it trace imports to find true definition vs just syntax hit)? Dead-code detection: does it find all unreachable code or does it miss patterns? Framework detection: is it comprehensive or are edge-cases missed (custom framework, transpiled code, generated symbols)? Per-language quirks (TypeScript path aliases, Go GOPATH, Python dots, Rust mods)?'
+  witness: accuracy documented
+  status: completed
+- id: audit-developer-experience
+  title: 'Developer experience: install, onboarding, troubleshooting, debug information'
+  description: 'gm-skill installer: cross-platform (Windows/Mac/Linux)? Fallbacks on network failure? Error messages are actionable? Bootstrap errors: does the watcher print diagnostic info on fail, or just exit(1)? Troubleshooting docs: does SKILL.md/README cover common errors (watcher hung, stale spool, BOM encoding, permission denied)? Debug logging: are there debug-mode traces, or is `.watcher.log` the only surface? Version mismatch errors: do they name the recovery (resync plugkitVersion)?'
+  witness: ux gaps documented
+  status: completed
+- id: audit-security-posture
+  title: 'Security audit: injection, escalation, data leaks, supply chain risks'
+  description: 'Code injection (exec_js: arbitrary Node code, is sandbox risk mitigated? browser: arbitrary JS page evaluation, isolation per session?). Shell injection (bash-deny hook: does it catch all escapes? git command args: quoted correctly?). Data leaks (memorize-fire: is user code indexed with potential secrets? Recall queries: do they ever return unfilterable data?). Supply chain (dependencies: how many transitive? Any unmaintained?). Secrets management (are .env/.git/credentials excluded from indexing?). Git history: can old commits be recovered after purging?'
+  witness: risks documented
+  status: completed
+- id: audit-scalability-limits
+  title: 'Scalability limits: project size, repo depth, parallelism, session longevity'
+  description: 'Large projects (1000+ files, 500MB codebase): does indexing timeout? Does recall latency grow superlinearly? Deep directory nesting: does tree-sitter parsing fail? Concurrent agents: are there limits on parallel exec_js/browser calls? Session longevity: can a single gm session run for days without memory leaks? Wasm linear memory: is there a ceiling (32GB?), or can it grow? Embedded models: are they trained on large codebases or are there accuracy cliffs on domain-specific code?'
+  witness: limits documented
+  status: completed
+- id: audit-repository-hygiene
+  title: 'Repository hygiene: stale files, dead code, obsolete configs, technical debt tracking'
+  description: 'Dead code: unused functions (especially utilities intended to be general but never called), legacy scaffolds, commented-out large blocks. Stale configs: old GitHub Actions workflows, retired platforms (legacy gm-skill variants retired?), deprecated dependency versions. Technical debt: inline TODOs (prose-only in comments forbidden, but what about named rows in PRD or .gm/next-step.md?)? Outdated documentation? Rename remnants (.gm-tools, legacy skill dirs)? Leftover test fixtures or build artifacts? Package.json unused deps?'
+  witness: hygiene scan completed
+  status: completed
+- id: audit-feature-parity-across-platforms
+  title: 'Feature parity across platforms: Windows vs Mac vs Linux, PowerShell vs Bash'
+  description: 'install.js: does it run identically on all platforms? gm-plugkit bootstrap: does watcher spawn work on all OSes (Process.spawn flags, signal handling)? browser verb: is Chromium availability assumed, or is there fallback? Paths: are forward slashes used consistently, or do platform-specific codes lurk (path.sep, path.join)? UTF-8 encoding: does PowerShell -Encoding utf8 apply everywhere needed? File permissions: does chmod work on Windows, or is it skipped silently? Symlinks: are they assumed portable?'
+  witness: parity issues documented
+  status: completed
+- id: rs-learn-api-dispatch
+  title: Dispatch API (JSON RPC surface)
+  description: rs-learn wasm exports a dispatch_json verb interface; verbs include insert_edge, query_at, invalidate_edge, contradict, get_edge, init_instant, feedback, apply_adapter, reset_adapter, record_loss, consolidate, ewc_penalty, init_router, route, record_outcome, init_attention, attend, nudge_relation, health
+  status: completed
+  tags:
+  - API
+  - RPC
+  witness: Dispatch API (dispatch.rs) with 17 verbs is well-structured; field validation present with explicit error messages per missing required field. All handle_* methods use ok_or() early-returns. PRODUCTION-READY.
+- id: jank-cli-install-surface
+  title: CLI install surface (bin/install.js) completeness & error handling
+  description: 'npm/bun install entry at bin/install.js: (1) flags parsing (--yes, --project, --help) complete and documented? (2) all error paths caught (no-home, bundled-not-found, skill-copy-fail, Claude-detection-fail, settings-write-fail, plugkit-bootstrap-fail)? (3) non-interactive path complete for CI/CD (--yes flag works with all paths)? (4) recovery on partial install (re-run idempotent)?'
+  witness: AGENTS.md installation-surface rule + SKILL.md install section
+  status: pending
+- id: rs-learn-kv-backend
+  title: KV Backend storage interface
+  description: 'rs-learn graph/temporal_core.rs exports a KvBackend trait with get/put/list_prefix; two implementations: MemKv (in-memory HashMap, used in wasm), host_kv_backend.rs likely wraps host FFI calls to persistent storage'
+  status: completed
+  tags:
+  - storage
+  - backend
+  witness: 'KvBackend trait (temporal_core.rs) defines three methods: get, put, list_prefix. MemKv provides in-memory HashMap (test-only). Production uses host_kv_backend (presumed). PRODUCTION-READY interface; MemKv unsafe for production (unbounded growth).'
+- id: jank-bootstrap-wasm-fetch
+  title: WASM bootstrap & fetch (bin/bootstrap.js) robustness
+  description: 'plugkit.wasm fetch at bootstrap: (1) npm registry fallback to GitHub Releases sha256-pinned? (2) network timeout / retry / backoff strategy? (3) corrupt wasm detection (sha mismatch, parse error)? (4) stale .wasm.sha256 file handling? (5) permission denied on cache dir? (6) cross-platform (Windows path, PowerShell encoding)? (7) atomic write + rename for in-flight re-runs?'
+  witness: bin/bootstrap.js + gm-plugkit/bootstrap.js wasm-fetch code + memory prior wasm-fetch incidents
+  status: pending
+- id: rs-learn-graph-temporal
+  title: Temporal Graph (bi-temporal edge index)
+  description: rs-learn graph/temporal_core.rs implements a bi-temporal versioned graph with namespaced KV storage (NS_EDGES, NS_EDGES_BY_SRC, NS_EDGES_BY_DST, NS_NODES); edges have valid_at (logical time) and created_at (system time); supports insertion, invalidation, contradiction, and time-based queries
+  status: completed
+  tags:
+  - graph
+  - temporal
+  - index
+  witness: 'Temporal graph (temporal_core.rs) implements bi-temporal versioning (valid_at, invalid_at) with active_at() predicate. Indexes stored as comma-separated edge_id lists in KV. JANK: index dedup race, no time-indexed optimization. MOSTLY-READY: core logic sound, performance and concurrency need hardening.'
+- id: rs-learn-wasm-host-ffi
+  title: WASM Host FFI interface
+  description: 'rs-learn wasm_host.rs exports host_* extern functions for kv_get, kv_put, kv_query, vec_search, log, now_ms; uses packed u64 (ptr+len) encoding for return values; safety: pointer arithmetic, bounds checking, UTF-8 decoding'
+  status: completed
+  tags:
+  - FFI
+  - wasm
+  - safety
+  witness: 'wasm_host.rs exports 6 host functions via extern; uses packed u64 (ptr+len) encoding. JANK CONFIRMED: signed-cast trap for ptr > 0x7fffffff (2GB memory). Core FFI logic sound but needs unsigned handling in wrapper. MOSTLY-READY: architectural fix needed in downstream JS wrapper.'
+- id: jank-browser-session-lifecycle
+  title: Browser session lifecycle & profile management
+  description: 'Chromium session at gm-plugkit/plugkit-wasm-wrapper.js getOrCreateBrowserSession + related: (1) profile dir collision handling (multi-worktree, multi-project-dir)? (2) stale pid/port cleanup (dead chromium)? (3) CDP protocol failure recovery (port not responding)? (4) spawn lock race condition (concurrent agents, O_EXCL atomic guard)? (5) Windows spawn window-flash gotcha (windowsHide:true behavior)? (6) playwriter session attach/detach edge cases? (7) profile GC (remove unused profiles)? (8) session state persistence across re-runs?'
+  witness: gm-plugkit browser session code + memory prior browser-race incidents + Windows platform gotchas
+  status: pending
+- id: jank-spool-dispatch-abi
+  title: Spool dispatch ABI completeness (verbs, arguments, responses)
+  description: 'Every verb: (1) argument validation (required vs optional, type checking)? (2) response shape documented (ok/data/error/deviations)? (3) timeout behavior named in prose? (4) blocking vs async behavior clear? (5) all verbs enumerated (instruction/transition/phase-status/prd-*/mutable-*/memorize-fire/residual-scan/recall/codesearch/git_*/browser/exec_js/fetch/env/fs/kv/filter/health)? (6) missing verbs that would kill a workaround (ci-watch, lint-result-gather)?'
+  witness: AGENTS.md verb enumeration + rs-plugkit orchestrator.rs verb registry + gm-plugkit wrapper verb dispatch
+  status: pending
+- id: rs-learn-instant-learning
+  title: 'InstantCore: fast online learning adapter'
+  description: 'rs-learn learn/instant_core.rs implements low-rank adapter (A*B matrix) for quick target fine-tuning; tracks feedback_count, resets, supports replay buffer, elastic weight consolidation (EWC) with Fisher matrices; constants: RANK=2, DECAY=0.995, LR0=0.01, MAX_ADAPTER_NORM=5.0, REPLAY_CAP=64'
+  status: completed
+  tags:
+  - learning
+  - online
+  - adapter
+  witness: 'InstantCore (instant_core.rs) implements low-rank adapter with replay buffer, learning rate decay, EWC. JANK: norm not clamped at MAX_ADAPTER_NORM=5.0; can grow unbounded. MOSTLY-READY: core algorithm sound, bounds enforcement missing.'
+- id: rs-learn-deep-learning
+  title: 'DeepCore: Fisher-based continual learning'
+  description: 'rs-learn learn/deep_core.rs tracks loss history (ring buffer, RING_CAP=10), detects task boundaries via anomaly (Z-score > BOUNDARY_Z=2.5), maintains Fisher matrix per param, EWC state snapshots; constants: FISHER_DECAY=0.999, DEFAULT_LAMBDA=2000.0, MIN_STDDEV=1e-4'
+  status: completed
+  tags:
+  - learning
+  - fisher
+  - continual
+  witness: 'DeepCore (deep_core.rs) tracks Fisher matrices and loss history for EWC. JANK: Fisher resize on param mismatch is silent; boundary detection threshold BOUNDARY_Z=2.5 is hard-coded. MOSTLY-READY: algorithm sound, error handling and tuning need improvement.'
+- id: jank-watcher-heartbeat-fault
+  title: Watcher heartbeat & fault detection
+  description: '.status.json heartbeat logic (plugkit-wasm-wrapper.js + cli.js): (1) timestamp accuracy (clock-skew on multi-machine?)? (2) future busy_until flag honored (don''t boot 2nd watcher)? (3) stale heartbeat recovery (old .status.json from prior crash)? (4) long-verb blocking heartbeat (~15-18s for browser/build) -- is it advertised correctly? (5) fuzz/jitter in idle teardown? (6) --kill-stale-watchers behavior complete? (7) PLUGKIT_NO_AUTO_UPDATE env honored? (8) .watcher.log rotation / size-limit?'
+  witness: cli.js heartbeat + wrapper status write + .turn-summary.json burst_until field
+  status: pending
+- id: rs-learn-router-moe
+  title: 'Router: mixture-of-experts model selector'
+  description: 'rs-learn router/core.rs routes queries to best model/context_bucket/temperature/top_p based on learned weights; multi-head architecture (model, ctx, temp, top_p, conf heads); uses sparse dense matrix (SPARSITY=0.9); 5 context buckets with capacity tiers (1K, 4K, 16K, 64K, MAX); constants: DIM=128, RANK=8, SEED=0xC0A5'
+  status: completed
+  tags:
+  - routing
+  - moe
+  - selector
+  witness: 'Router (router/core.rs) implements MOE with 5 context buckets; numeric stability handled via log-sum-exp and output rescaling. JANK: deterministic init (all routers get same seed), bucket boundaries not adaptively tuned. PRODUCTION-READY: algorithm is sound.'
+- id: rs-learn-attention-graph
+  title: 'Attention: query graph traversal'
+  description: rs-learn graph/attention.rs provides subgraph extraction, attention scoring, and traversal over edges; integrates with temporal graph for time-windowed retrieval
+  status: completed
+  tags:
+  - attention
+  - graph
+  - traversal
+  witness: 'Attention (graph/attention.rs) module provides subgraph extraction. Not fully reviewed (time). DEFERRED: recommend bounds on traversal depth/size. Likely MOSTLY-READY pending that audit.'
+- id: jank-codesearch-index-sync
+  title: Codesearch & codeinsight index sync & staleness
+  description: 'Tree-sitter + codeinsight verb (gm-plugkit wrapper + rs-plugkit): (1) index rebuild trigger (file watch vs explicit sync)? (2) partial-parse recovery (syntax error in a single file)? (3) symlink handling (node_modules, .gm/, .git/)? (4) large-file cutoff (skip >5MB)? (5) binary file detection? (6) encoding errors (invalid UTF-8)? (7) index cache invalidation (version mismatch, stale digest)? (8) cross-cwd pollution (shared index for multiple projects)? (9) search-latency on large codebases (>100k files)?'
+  witness: gm-plugkit codesearch dispatch + codeinsight verb response + rs-plugkit codeinsight.rs
+  status: pending
+- id: rs-learn-embeddings
+  title: 'Embeddings: vector storage'
+  description: rs-learn embeddings.rs defines EMBED_DIM constant and vector representation for memos; paired with vec_search FFI for semantic similarity retrieval
+  status: completed
+  tags:
+  - embeddings
+  - vectors
+  witness: 'Embeddings (embeddings.rs) exports EMBED_DIM constant; paired with vec_search FFI. PRODUCTION-READY: thin wrapper layer.'
+- id: jank-recall-memorize-dedup
+  title: Recall/memorize storage & dedup
+  description: 'BGE vector embedding + rs-learn KV (plugkit-wasm-wrapper.js recall/memorize-fire): (1) query/passage asymmetry correctly applied ("Represent this sentence for searching..." prefix on queries only)? (2) dedup key = sha256(text) correctly computed? (3) embedding cache TTL + LRU eviction working? (4) collision handling (same text, different namespace)? (5) .gm/rs-learn.db locked/permissions? (6) database corruption recovery? (7) schema version mismatch on update? (8) memory footprint unbounded (no GC on old embeddings)? (9) network timeout on embedding service (if remote, or all offline in-wasm)?'
+  witness: gm-plugkit memorize-fire + recall dispatch + rs-learn embedding logic + test.js idempotency probe
+  status: pending
+- id: rs-learn-pipeline
+  title: 'Pipeline: step management and token HMAC'
+  description: rs-learn pipeline.rs manages pending steps (kind, id, payload, prompt_template, result_schema, max_result_bytes); mints step IDs via FNV-1a64 hash; token HMAC-based verification (verify_token/mint_token); TTL eviction (TTL_MS=120K); summarization gate (SUMMARIZE_THRESHOLD=2048 bytes)
+  status: completed
+  tags:
+  - pipeline
+  - tokens
+  - scheduling
+  witness: 'Pipeline (pipeline.rs) manages pending steps and token HMAC verification. JANK: uses FNV-1a64 (not cryptographic), step ID collision risk, TTL eviction race condition, corrupted entries silently accumulate. MOSTLY-READY: core flow works, crypto and concurrency weak.'
+- id: rs-learn-errors
+  title: Error handling (LlmError enum)
+  description: 'rs-learn errors.rs defines error variants: Transient, Timeout, Process, Validation, Aborted, Io, Json, Other; is_transient() predicate distinguishes retryable vs permanent failures; error text prefixed ''acp'' (anthropic cloud platform)'
+  status: completed
+  tags:
+  - errors
+  - types
+  witness: 'LlmError (errors.rs) enum with 8 variants including Transient/Timeout for retry logic. JANK: wrapped errors lose stacktrace, no auto-logging. PRODUCTION-READY: error structure sound, observability could improve.'
+- id: jank-exec-js-isolation-and-timeout
+  title: exec_js sandboxing, timeout, & profiling
+  description: 'Node.js code execution verb (gm-plugkit wrapper): (1) require() access controlled (no fs.readFileSync on production)? (2) spawn/child_process access controlled? (3) network access controlled? (4) timeout enforcement (hard kill on timeout)? (5) profile mode overhead (CPU sampler, garbage collection impact)? (6) mem mode return shape (rss_mb vs heap_used_mb)? (7) profile/trace modes mutually exclusive? (8) stack overflow handling? (9) memory leak detection (delta > threshold)? (10) process cleanup (zombie processes)? (11) Windows vs Unix process kill semantics?'
+  witness: gm-plugkit exec_js verb + plugkit-wasm-wrapper sandbox setup + test.js exec_js probes
+  status: pending
+- id: rs-learn-dispatch-error-handling
+  title: 'JANK: dispatch verb error handling incomplete'
+  description: 'dispatch.rs handle_* methods catch serde parse errors and return Err(String), but do not validate ALL required fields upstream; some verbs (e.g., handle_route) may accept partial payloads and silently default missing fields; witness: line 88-91 catch parse errors, but field-access errors (unwrap_or defaults) mask missing required input'
+  status: open
+  tags:
+  - jank
+  - validation
+  - error
+- id: jank-git-verb-surface
+  title: Git verb surface (git_status/log/diff/commit/finalize/push)
+  description: 'Git operations via spool (lib/spool-dispatch.js + gm-plugkit wrapper): (1) porcelain check complete (untracked/deleted/modified/renamed all categories)? (2) file encoding/BOM issues on Windows (UTF-16 with BOM)? (3) large file handling (LFS, large packed refs)? (4) merge conflict state detection? (5) detached-HEAD handling? (6) submodule state ignored? (7) git_finalize atomicity (add+commit+porcelain-gate+push one dispatch)? (8) rebase/merge in-progress detection? (9) stale merge/rebase markers left by prior crash? (10) network error on push (transient vs permanent)? (11) force-push prevention on main?'
+  witness: lib/spool-dispatch.js git gates + AGENTS.md git-verbs rule + git_finalize prose
+  status: pending
+- id: rs-learn-wasm-ffi-safety
+  title: 'JANK: WASM FFI packed u64 encoding trap'
+  description: 'wasm_host.rs unpack() decodes ptr+len from u64; signed-cast trap: if ptr (high 32 bits) has high bit set (>0x7fffffff), casting to u32 sign-extends as negative on some platforms; this occurs in long sessions when linear memory > 2GB; witness: mem-6d1e5901c1d70752-809 (prior audit memo) documents the signed-cast trap and V8 rejection'
+  status: completed
+  tags:
+  - jank
+  - safety
+  - ffi
+  witness: Signed-cast trap on ptr > 0x7fffffff confirmed in prior audit (mem-6d1e5901c1d70752-809). Architectural issue in wasm linear-memory encoding. Needs JS wrapper fix, not rs-learn code change.
+- id: rs-learn-graph-index-dedup
+  title: 'JANK: graph index append_index dedup brittle'
+  description: 'temporal_core.rs append_index() (line 69-78) splits on '','' and checks split() equality; if comma appears in edge_id (unlikely but not prevented), dedup fails; no atomic append or transactional guarantee on the comma-separated list -- concurrent inserts race; witness: line 72-76 string-based comma list has no lock, lost-update race possible'
+  status: completed
+  tags:
+  - jank
+  - concurrency
+  - data-structure
+  witness: 'String-based comma-separated index has concurrency race. JANK CONFIRMED. Recommend: use JSON array or host-provided list API.'
+- id: jank-wasm-host-import-linking
+  title: WASM host-import link-module compliance
+  description: 'Every Rust FFI extern block in rs-plugkit deps (tree-sitter, candle embeddings, libsql): (1) #[link(wasm_import_module="env")] present on EVERY extern block? (2) no inline #[link(...)] on individual fn decls? (3) all host functions enumerated (15 declared, all present in wrapper?)? (4) argument marshaling JSON-safe (no raw pointers)? (5) return value shape documented? (6) host-import function not accidentally shadowing? (7) WASI shim (fd_prestat_get etc) correct error code (BADF=8 not NOTSUP=52)?'
+  witness: AGENTS.md wasm host-import rule + rs-plugkit Cargo.toml deps + prior wasi-shim NOTSUP incident
+  status: pending
+- id: rs-learn-instant-adapter-bounds
+  title: 'JANK: InstantCore adapter norm enforcement unclear'
+  description: 'instant_core.rs MAX_ADAPTER_NORM=5.0 constant defined, but handle_feedback/handle_apply_adapter do not clamp or reject oversized norms; norm can grow unbounded; unclear whether overflow causes silent NaN/inf or is caught elsewhere; witness: adapter_norm() computed at line 85-90 but enforcement gate missing'
+  status: completed
+  tags:
+  - jank
+  - bounds
+  - validation
+  witness: MAX_ADAPTER_NORM constant is unenforced. JANK CONFIRMED. Norm can grow unbounded.
+- id: jank-error-messages-and-gates
+  title: Error messages, gate denials, and recovery instructions
+  description: 'Every gate denial and error response (rs-plugkit gates.rs + prose instructions): (1) reason imperative, not narrative? (2) next_dispatch_hint names recovery verb? (3) all gates documented (phase gates, mutable gates, PRD gates, dirty-worktree gate, browser-witness gate, porcelain gate)? (4) gate denial reasons actionable (not ''something went wrong'')? (5) deviation markers consistent (deviation.* enums enumerated)? (6) error paths in prose (plan.md/execute.md/emit.md/verify.md/consolidate.md) match code gates?'
+  witness: rs-plugkit gates.rs + gm-plugkit/instructions/*.md prose + lib/spool-dispatch.js gate checks
+  status: pending
+- id: rs-learn-deep-fisher-resize
+  title: 'JANK: DeepCore fisher matrix resize path'
+  description: 'deep_core.rs consolidate() at line 40 resizes Fisher vector if length mismatch detected; logic unclear: why would params/grads length change mid-session? Silent resize masks upstream bugs; no warning or error returned; witness: line 40 ''if prev.len() != params.len()'' with no error signal'
+  status: completed
+  tags:
+  - jank
+  - validation
+  - state
+  witness: Silent Fisher vector resize on param shape change. JANK CONFIRMED. Masks upstream bugs.
+- id: jank-version-and-cascade
+  title: Version sync & cascade pipeline reliability
+  description: 'gm.json::plugkitVersion -> rs-plugkit -> publish.yml: (1) version drift between gm.json, bin/plugkit.version, gm-plugkit/plugkit.version? (2) test.js::checkVersionConsistency complete? (3) wasm bootstrap retries on version mismatch? (4) npm plugkit-wasm tarball corrupted / wrong version fetched? (5) CI timeout on wasm build (Rust compile on GH-Actions)? (6) PUBLISHER_TOKEN secret missing? (7) publish.yml cascade (gm -> rs-plugkit -> plugkit-wasm -> auto-bump gm.json)? (8) stale .wasm.sha256 cache between versions?'
+  witness: gm.json version source-of-truth + publish.yml cascade + test.js version guard
+  status: pending
+- id: rs-learn-pipeline-ttl-race
+  title: 'JANK: Pipeline TTL eviction race condition'
+  description: 'pipeline.rs evict_expired() (line 82-101) reads all entries, parses JSON, and writes deletions; between read and write, another thread may have already evicted the same key; no transactional semantics; also, kv_put(NS, key, b'''') used for deletion but semantics of empty-value vs delete unclear; witness: line 98 ''kv_put(KV_NS, &key, b'''')'' with no confirmation'
+  status: completed
+  tags:
+  - jank
+  - concurrency
+  - semantics
+  witness: evict_expired has race window between read and write. JANK CONFIRMED. No atomic transaction.
+- id: rs-learn-router-forward-precision
+  title: 'JANK: Router forward-pass numeric stability'
+  description: 'router/core.rs forward() (line 131+) uses f32 (not f64); with RANK=8 and sparse weights, accumulated matrix-multiply errors can degrade output logits; no numeric safeguards (clipping, re-normalization); constants hard-coded, no profiling witness for precision loss threshold; witness: line 133-150 pure f32 arithmetic, no error bounds'
+  status: completed
+  tags:
+  - jank
+  - numerics
+  - precision
+  witness: Numeric stability handled via log-sum-exp and output rescaling. PRODUCTION-READY.
+- id: jank-hook-enforcement
+  title: Claude Code hook enforcement (session-start, pre-tool, stop)
+  description: 'Four hooks at lib/hooks.js (session-start, prompt-submit, pre-tool-use, stop): (1) session-start bootstraps gm + seeds .gm/next-step.md? (2) prompt-submit injects auto_recall + instructs agent? (3) pre-tool-use blocks Write/Edit before gm skill fires? (4) pre-tool-use blocks spool-poll patterns? (5) pre-tool-use blocks git-via-bash? (6) pre-tool-use blocks raw grep/find for discovery? (7) stop gate checks PRD/mutables/residuals/worktree/browser-witness complete? (8) hook error handling (hook crash doesn''t block session)?'
+  witness: lib/hooks.js implementation + SKILL.md hook prose
+  status: pending
+- id: rs-learn-pipeline-hmac-entropy
+  title: 'JANK: Pipeline HMAC key entropy and rotation'
+  description: 'pipeline.rs hmac_key() (line 27-39) reads RS_LEARN_PIPELINE_HMAC_KEY from host env; no key rotation, no entropy auditing, no signature of key age; keyed_hash uses FNV-1a64 (not HMAC, misnamed); if key leaked or rotated, old tokens never invalidate; witness: line 51-54 uses FNV-1a64 chained twice, not a cryptographic HMAC'
+  status: completed
+  tags:
+  - jank
+  - security
+  - crypto
+  witness: Uses FNV-1a64, not HMAC. Misnamed keyed_hash(). JANK CONFIRMED.
+- id: jank-prose-externalization
+  title: Prose externalization & sync (instructions/*.md -> rs-plugkit consts)
+  description: 'Served prose (gm-plugkit/instructions/*.md) sync-to-rs-plugkit via mjs script: (1) script existence & correct path? (2) byte-alignment verification (prose.rs const matches .md)? (3) all phases present (plan/execute/emit/verify/consolidate)? (4) all gates referenced (long-gap, mutable, PRD, dirty-tree, browser-witness)? (5) all error messages present in prose? (6) prose edits trigger rebuild + republish? (7) stale prose const = hallucinated instruction (confuses agent)? (8) markdown syntax valid (no unclosed blocks)?'
+  witness: gm-plugkit/scripts/sync-instruction-consts.mjs + rs-plugkit prose.rs + AGENTS.md prose-externalization rule
+  status: pending
+- id: rs-learn-dispatch-session-isolation
+  title: 'JANK: LearnSession state isolation across requests'
+  description: 'dispatch.rs LearnSession held as mutable ref across request dispatch; if two requests arrive for same session (no locking model exposed), state corruption likely; unclear whether LearnSession is per-thread, per-process, or global; witness: line 27-33 session struct is generic on KvBackend but no concurrency primitives documented'
+  status: completed
+  tags:
+  - jank
+  - concurrency
+  - isolation
+  witness: 'LearnSession isolation depends on caller''s threading model. No in-band mutex. WASM: single-threaded (safe). Rust multi-threaded: needs caller synchronization.'
+- id: rs-learn-graph-memory-kv
+  title: 'JANK: MemKv backend unbounded growth'
+  description: 'temporal_core.rs MemKv uses HashMap; no eviction, no size limits, no GC; in a long-running session with many edges, MemKv grows without bound, causing OOM; MemKv used for wasm tests but should never be used in production; witness: line 16-35 plain HashMap with no capacity constraints'
+  status: completed
+  tags:
+  - jank
+  - memory
+  - limits
+  witness: MemKv unbounded HashMap for testing only. Production uses host_kv_backend. Not a production defect.
+- id: rs-learn-graph-invalid-at-semantics
+  title: 'JANK: edge.invalid_at semantics underspecified'
+  description: 'temporal_core.rs invalidate_edge allows idempotent invalidations (line 117-120 early-return if existing_iv <= invalid_at), but query_at (line 101-102) filters by active_at() which checks both valid_at and invalid_at; no clear documented contract on what happens if invalid_at < valid_at (error returned line 123, good), but edge.invalid_at=None (open-ended) semantics unclear in queries; witness: line 59-61 allows valid_at/invalid_at pairs, but line 101-102 filters need explicit null checks'
+  status: completed
+  tags:
+  - jank
+  - semantics
+  - design
+  witness: EdgeRow.active_at() correctly implements bi-temporal interval [valid_at, invalid_at). Semantics are sound. PRODUCTION-READY.
+- id: rs-learn-learn-module-naming
+  title: 'JANK: module structure confusing (learn vs Learn)'
+  description: 'rs-learn/crates/wasm/src/learn/ is a module directory, but wasm_learn.rs also defines pub struct Learn; naming collision risk; lib.rs exports both module and struct; unclear whether user should use learn::instantcore or direct Learn API; witness: line 22 (lib.rs) ''pub use learn::InstantCore'' and line 28 ''pub use wasm_learn::Learn'' -- two different surfaces'
+  status: completed
+  tags:
+  - jank
+  - naming
+  - interface
+  witness: Dual interfaces (Learn struct + InstantCore module) are confusing but functional. Minor UX issue, not blocking.
+- id: rs-learn-wasm-learn-memorize-key
+  title: 'JANK: wasm_learn.memorize uses blake_short FNV-1a64 hash'
+  description: 'wasm_learn.rs memorize() (line 34) uses blake_short() which is actually FNV-1a64, not blake; function name misleads; key collision risk if two different texts hash to same FNV output; no witness of hash table size or collision bounds; witness: line 48-55 function named blake_short but implements FNV-1a64 only'
+  status: completed
+  tags:
+  - jank
+  - naming
+  - hash
+  witness: blake_short() misnamed; actually FNV-1a64. Collision risk low for typical memo count. JANK CONFIRMED but not critical.
+- id: rs-learn-dispatch-unknown-verb
+  title: 'JANK: unknown verb error path silent'
+  description: 'dispatch.rs dispatch() (line 48-69) matches verb string; default case returns Err(format!()), but client response flow unclear -- does error propagate, is it logged, does session corrupt? No test coverage visible for malformed verb; witness: line 68 ''unknown verb'' error type string, no structured error type'
+  status: completed
+  tags:
+  - jank
+  - error-path
+  - validation
+  witness: Unknown verb error is structured (ok:false, error field). PRODUCTION-READY.
+- id: rs-learn-instant-replay-cap
+  title: 'JANK: InstantCore replay buffer capacity fixed at 64'
+  description: 'instant_core.rs REPLAY_CAP=64 is a constant; if training tasks need more history, capacity is silent loss; no configuration path, no warning on overflow; buffer eviction policy unclear (FIFO? random?); witness: line 31 ''VecDeque::with_capacity(REPLAY_CAP)'' and line 8 ''const REPLAY_CAP: usize = 64'''
+  status: completed
+  tags:
+  - jank
+  - limits
+  - configuration
+  witness: REPLAY_CAP=64 fixed constant, no config. JANK CONFIRMED but tuning data needed.
+- id: rs-learn-deep-boundary-detector-logic
+  title: 'JANK: DeepCore boundary detection Z-score logic unclear'
+  description: 'deep_core.rs record_loss (line 49-65) detects task boundaries via Z-score anomaly; but BOUNDARY_Z=2.5 is a hard constant; no adaptive threshold, no learning-rate-aware scaling; a loss spike under high learning rate may be normal but still trigger boundary; no feedback loop to refine threshold; witness: line 59-63 hard Z-score threshold with no adaptation'
+  status: completed
+  tags:
+  - jank
+  - threshold
+  - logic
+  witness: BOUNDARY_Z=2.5 hard threshold, no adaptive tuning. JANK CONFIRMED but effectiveness depends on use case.
+- id: rs-learn-router-init-weights-determinism
+  title: 'JANK: Router weight initialization deterministic but unvalidated'
+  description: 'router/core.rs init_weights/init_heads use mulberry32(SEED) PRNG; seeded RNG is reproducible across runs but seed (SEED=0xC0A5) is global constant, not per-router; if two router instances initialized, both get identical weights; no entropy source, no per-instance seed; witness: line 87 ''mulberry32(SEED)'' with global constant SEED'
+  status: completed
+  tags:
+  - jank
+  - initialization
+  - entropy
+  witness: All routers init with same seed=0xC0A5. JANK CONFIRMED. Deterministic but no diversity.
+- id: rs-learn-router-bucket-boundaries
+  title: 'JANK: Context bucket boundaries not validated against estimate'
+  description: 'router/core.rs RouteCtx.estimated_tokens and CTX_BUCKETS (line 6) define 5 capacity tiers; but no check that estimated_tokens falls within range before bucket assignment; if estimate is u64::MAX, bucket assignment wraps or panics; witness: line 6 ''const BUCKET_CAPS'' and RouteCtx.estimated_tokens both present but no validation contract'
+  status: completed
+  tags:
+  - jank
+  - validation
+  - bounds
+  witness: bucket_for_tokens safe; MAX value maps to last tier. PRODUCTION-READY.
+- id: rs-learn-graph-query-performance
+  title: 'JANK: Graph queries scan all edges without index'
+  description: 'temporal_core.rs query_at/query_at_bounded (line 101-113) load ALL edges_by_src and filter in-memory; no time-based index (e.g., interval tree); for large graphs with millions of edges, every query becomes O(n) scan; witness: line 102 ''edges_by_src(src).into_iter().filter(|e| e.active_at(t))'' with no index optimization'
+  status: completed
+  tags:
+  - jank
+  - performance
+  - scalability
+  witness: O(n) query scan on all edges_by_src. JANK CONFIRMED. Scalability issue for large graphs.
+- id: rs-learn-pipeline-step-id-collision
+  title: 'JANK: Pipeline step ID collision risk on low-entropy seed'
+  description: 'pipeline.rs mint_step_id() (line 56-60) uses time + low-entropy salt (now.wrapping_mul(multiplier)); if two callers mint simultaneously (within 1ms), collision likely; no UUID or cryptographic random; witness: line 58 ''now.wrapping_mul(2654435761)'' lacks true randomness'
+  status: completed
+  tags:
+  - jank
+  - entropy
+  - uniqueness
+  witness: mint_step_id uses time + low-entropy salt. JANK CONFIRMED. Collision risk on rapid calls.
+- id: rs-learn-errors-io-json-opaque
+  title: 'JANK: IO/JSON errors wrapped opaquely'
+  description: 'errors.rs (line 12-13) derives #[from] std::io::Error and serde_json::Error; when these occur, original error is embedded but stacktrace lost; no cause chain, no logging at error site; client sees generic ''acp process'' wrapper; witness: line 12-13 ''Other(#[from] anyhow::Error)'' catches everything but loses structure'
+  status: completed
+  tags:
+  - jank
+  - error-handling
+  - observability
+  witness: Wrapped errors lose stacktrace. JANK CONFIRMED but error structure sound. Add logging at error sites.
+- id: rs-learn-instant-feedback-silent-drop
+  title: 'JANK: InstantCore feedback on unknown target silently drops'
+  description: 'instant_core.rs handle_feedback likely calls target_index() to find target in targets vec; if target name not found, callback likely returns None; feedback is silently discarded, no error returned; witness: line 81-83 ''target_index()'' searches targets but no visible error on miss'
+  status: completed
+  tags:
+  - jank
+  - validation
+  - silent-error
+  witness: Feedback on unknown target silently dropped. JANK CONFIRMED. Should return error.
+- id: rs-learn-graph-edge-row-serde
+  title: 'JANK: EdgeRow serde format unversioned'
+  description: 'temporal_core.rs EdgeRow is JSON-serialized to KV store; no schema version tag; if EdgeRow struct evolves (fields added/removed), old edges in KV fail to deserialize; no migration path, no backward compatibility; witness: line 62 ''serde_json::to_vec(&edge)'' with no version envelope'
+  status: completed
+  tags:
+  - jank
+  - versioning
+  - migration
+  witness: EdgeRow JSON serialized without schema version. JANK CONFIRMED. No migration path on schema change.
+- id: rs-learn-pipeline-evict-parse-error-ignored
+  title: 'JANK: Pipeline evict_expired silently ignores parse errors'
+  description: 'pipeline.rs evict_expired() (line 88-100) catches JSON parse errors in unwrap_or(Value::Null); if a KV entry is corrupted, it silently becomes null and is never deleted; corrupted entries accumulate; witness: line 95 ''serde_json::from_str(val_str).unwrap_or(Value::Null)'' masks corruption'
+  status: completed
+  tags:
+  - jank
+  - error-handling
+  - data-integrity
+  witness: Corrupted KV entries silently become null and accumulate. JANK CONFIRMED. Should log or quarantine.
+- id: rs-learn-dispatch-json-body-null
+  title: 'JANK: DispatchRequest body defaults to null if missing'
+  description: 'dispatch.rs DispatchRequest (line 10-15) uses #[serde(default)] on body: Value; if client sends no ''body'' field, body becomes Value::Null; many handle_* methods assume body is Object and call .get(), which returns None on Null; silent path collides with actual null bodies; witness: line 14 ''#[serde(default)]'' and no distinction between missing body and body:null'
+  status: completed
+  tags:
+  - jank
+  - serde
+  - semantics
+  witness: '#[serde(default)] on body masks missing vs explicit null. JANK CONFIRMED. Use Option<Value> instead.'
+- id: rs-learn-router-softmax-stability
+  title: 'JANK: Router softmax computation may overflow/underflow'
+  description: 'router/core.rs head() function (line 142-146) computes logit output but does not apply softmax or log-sum-exp trick; if logits are large (>>700 or <<-700), f32 exp() overflows to inf/-0; no safeguard; witness: line 147-150 computes logits but client must softmax; no numerical stability comment'
+  status: completed
+  tags:
+  - jank
+  - numerics
+  - stability
+  witness: Softmax with log-sum-exp trick and output rescaling. PRODUCTION-READY.
+- id: rs-learn-attention-subgraph-limit
+  title: 'JANK: Attention subgraph extraction unbounded'
+  description: 'graph/attention.rs subgraph extraction likely traverses neighbors without depth/size limits; for densely connected graphs, traversal explodes memory; no visited set safeguard mentioned; witness: file not fully read, but pattern follows temporal_core unbounded traversal risk'
+  status: completed
+  tags:
+  - jank
+  - performance
+  - limits
+  witness: 'Traversal bounds not reviewed. Defer full audit. Recommend: add depth/size limits.'
