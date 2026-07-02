@@ -42,10 +42,35 @@ article pre code { padding: 0; background: transparent; }
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose', themeVariables: { fontFamily: 'Inter, Segoe UI, sans-serif', fontSize: '13px' } });
+window.addEventListener('DOMContentLoaded', () => {
+  const lb = document.createElement('div');
+  lb.className = 'gm-mermaid-lightbox';
+  lb.innerHTML = '<div class="lb-close">close [x]</div><div class="lb-inner"></div>';
+  document.body.appendChild(lb);
+  const lbInner = lb.querySelector('.lb-inner');
+  const closeLb = () => { lb.classList.remove('open'); lbInner.innerHTML = ''; };
+  lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lb-close')) closeLb(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
+  document.addEventListener('click', (e) => {
+    const host = e.target.closest('.mermaid');
+    if (!host) return;
+    const svg = host.querySelector('svg');
+    if (!svg) return;
+    lbInner.innerHTML = '';
+    lbInner.appendChild(svg.cloneNode(true));
+    lb.classList.add('open');
+  });
+});
 </script>
 <style>
-.mermaid{margin:18px 0;padding:14px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);text-align:center;overflow-x:auto}
-.mermaid svg{max-width:100%;height:auto}
+.mermaid{margin:18px 0;padding:14px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);text-align:center;overflow-x:auto;cursor:zoom-in}
+.mermaid svg{max-width:100%;min-width:min(720px,100%);height:auto}
+.gm-mermaid-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:zoom-out;align-items:center;justify-content:center;padding:24px}
+.gm-mermaid-lightbox.open{display:flex}
+.gm-mermaid-lightbox .lb-inner{background:var(--panel-1);border-radius:8px;padding:24px;max-width:96vw;max-height:96vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.gm-mermaid-lightbox .lb-inner svg{width:auto;height:auto;max-width:none;min-width:900px}
+.gm-mermaid-lightbox .lb-close{position:fixed;top:20px;right:28px;color:#fff;font-family:var(--ff-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:6px}
+@media (max-width:640px){.gm-mermaid-lightbox .lb-inner svg{min-width:0;width:100%}}
 .gm-callout{margin:18px 0;padding:14px 18px;background:var(--panel-1);border-left:3px solid var(--panel-accent);color:var(--panel-text)}
 .gm-callout .who{display:block;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-text-2);font-style:normal;margin-bottom:4px}
 .cross-footer{margin:32px 0 12px 0;padding:18px;background:var(--panel-1);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;font-family:var(--ff-mono);font-size:12px}
