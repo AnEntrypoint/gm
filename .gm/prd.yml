@@ -6681,3 +6681,13 @@
   title: 'safety: an env opt-out (PLUGKIT_NO_AUTO_UPDATE=1) disables the auto-update, falling back to existing warn-only behavior for users who pin a version. Default auto-update ON (the user''s request). Witness: with PLUGKIT_NO_AUTO_UPDATE set, only the warning fires, no self-spawn.'
   status: completed
   witness: 'probeGmPlugkitSelfStale returns early if process.env.PLUGKIT_NO_AUTO_UPDATE===''1'' (wrapper ~2907, grep=1). exec_js-50: optout->skip. Default ON; pinned users set the env -> warn-only fallback (injectUpdateWarning still fires).'
+- id: spool-daemonize-returns-verify
+  title: Verify bun x gm-plugkit spool daemonizes and returns (no foreground bind)
+  description: 'cli.js spool path must spawn detached watcher, wait for heartbeat, exit 0. Witness: live boot this session returned JSON and exited.'
+  status: completed
+  witness: 'cli.js:220-253: startSpoolDaemon + waitForWatcherHeartbeat + exit(0); witnessed live this session (boot call returned JSON, watcher_pid=9520 serving)'
+- id: spool-no-residual-bind-paths
+  title: Confirm no other entrypoint binds foreground for agent boot
+  description: wrapper 'spool' arg is the daemon child (intended foreground); supervisor.js is detached; ensure no doc/skill path tells agents to run wrapper directly. rs-plugkit confirmed no boot logic.
+  status: completed
+  witness: wrapper 'spool' arg is the detached daemon child spawned by bootstrap.js:1021 startSpoolDaemon (stdio to .watcher.log, unref); supervisor.js also detached; SKILL.md prescribes only 'bun x gm-plugkit@latest spool' which exits after heartbeat; rs-plugkit grep shows no boot logic

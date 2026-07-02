@@ -616,3 +616,11 @@
   status: witnessed
   title: 'Confirm rs-plugkit wasm_dispatch.rs exec_js forwards body.opts verbatim (so profileTopN/sampleIntervalUs/new profile knobs ride opts with no Rust change). Witness: codesearch/Read of rs-plugkit src exec_js dispatch showing opts passed through untouched.'
   witness_evidence: 'rs-plugkit/src/wasm_dispatch.rs:291-298 exec_js(): let mut opts_obj = body.get("opts").cloned().unwrap_or(json!({})); inserts only timeoutMs; opts_obj.to_string() -> host_exec_js verbatim. New opts (profileTopN/sampleIntervalUs/profile) ride opts with NO Rust change. browser() :880 passes raw code through. Cascade = wrapper-only + served-prose const sync.'
+- id: spool-cli-returns-after-heartbeat
+  description: Does gm-plugkit cli.js 'spool' return after daemonize+heartbeat instead of binding?
+  status: witnessed
+  witness_evidence: 'gm-plugkit/cli.js:186-253 spool path: startSpoolDaemon (detached spawn, bootstrap.js:1021) -> waitForWatcherHeartbeat(spoolDir,30000,12000) at cli.js:150 -> process.exit(0); live boot this session returned exit 0 with ''plugkit ready, spool watcher serving'', watcher_pid=9520 serving after return -- no foreground bind'
+- id: rs-plugkit-involvement-none
+  description: Does ../rs-plugkit contain any server-boot/bind logic needing change?
+  status: witnessed
+  witness_evidence: 'exec_js grep of ../rs-plugkit/src for bind|listen|TcpListener|spawn|daemon|fn main: 14 hits, all SQL bind-param errors (libsql_wasm.rs:161,192), served prose (instructions/browser.rs), task-spawn verb plumbing (orchestrator/task.rs) -- zero server-boot or socket-bind logic; daemonize lifecycle is entirely gm-plugkit JS'
