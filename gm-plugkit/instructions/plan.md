@@ -6,32 +6,40 @@ L1 baseline + L2 covering family. You loaded prior memory on entry via `instruct
 
 ## Orient
 
-First non-trivial dispatch = a single-message parallel fan-out of `recall` + `codesearch` against the request's nouns. This is where planning-thought becomes executed query rather than recalled-from-memory assumption: what you would otherwise assume about the codebase, you instead hypothesize and look up. Hits are your baseline; misses delimit fresh ground to investigate. Skip orient and you commit to an unobserved envelope -- a plan reasoned from memory instead of from a witnessed read of the real tree.
+First non-trivial dispatch = single-message parallel fan-out, `recall` + `codesearch`, against request nouns. Query beats recalled-from-memory assumption. Hits = baseline; misses = fresh ground. Skip orient -> plan reasoned from stale memory, not witnessed tree-read.
+
+**Search-only-via-verb, hard rule.** `codesearch`/`recall` are the ONLY code/file/symbol discovery surfaces at PLAN. Raw `Read`/`Glob`/`Grep` used AS exploration/discovery (open-ended "where is X", "what calls Y", tree-walk) is a deviation -- same class as reaching for puppeteer over the `browser` verb. Exempt: `Read` on a SPECIFIC already-located path (e.g. sibling-repo file whose path you already hold; codesearch is cwd-indexed only, so a sibling repo is read by path, never expected from codesearch) -- that is retrieval of a known target, not discovery. `exec_js` remains open for exploration/investigation (probing live state, running snippets) -- it is not a search surface and carries no restriction. The line: known-path fetch = `Read` OK; discovery/search = verb only, always.
 
 ## Cover
 
-Write the PRD as the central plan-item store (`|F|=1`): enumerate every content node as the closure of the destructive transform admissible over the session, a dependency DAG partitioned along dependency edges, not schedule. Reach permits the next node; the next node is in-scope. Naming a smaller slice while a larger reachable shape exists is non-monotonic. Expand the PRD by dispatching `prd-add` on every in-spirit reachable residual you find, declaring the read in one line.
+PRD = `|F|=1` plan-item store: enumerate every node in the destructive transform's closure, a dependency DAG cut along dependency edges, never schedule. Reach admits the next node. Smaller-slice-while-larger-reachable = non-monotonic, rejected. `prd-add` every in-spirit reachable residual, one-line witness per add.
 
-**Inherited rows resume first.** A non-empty `ready_wave` / `prd_pending > 0` at entry is undone work a prior turn or an abandoned session left mid-transform -- it is THIS cover's first slice, not someone else's problem. Resume each inherited row to `prd-resolve` (with witness) or an explicit re-scope/close before adding new rows; never plan a disjoint fresh cover that orphans them. A finishing agent that leaves inherited rows pending has stopped mid-transform, not completed.
+**Maximal expansiveness, hard rule.** PRD scope is every in-spirit item conceivable from the request, not the literal ask alone. Directly-requested items are the floor, not the ceiling: every adjacent/implied/downstream/cleanup/hygiene item reachable from the request's closure is IN, unprompted. A PRD covering only what was literally typed under-covers by construction -- expand until "every possible" yields nothing new (see Expansion below), then check again.
 
-"Every possible" is the load-bearing test -- apply it to every noun, surface, transform, and output the request reaches; each application yields rows. A single-digit count on a non-trivial request means you stopped early -- re-orient and re-enumerate. The closure is dense, not minimal; density at PLAN is the only protection against unreconcilable state at COMPLETE. An inline TODO in the response body violates `|F|=1`.
+**Inherited rows resume first.** `ready_wave`/`prd_pending>0` at entry = undone transform, not someone else's -- THIS cover's first slice. Resume to `prd-resolve` (witnessed) or explicit re-scope/close before any fresh row; disjoint fresh cover orphaning inherited rows = stopped mid-transform, not finished.
+
+"Every possible" load-bears: apply to every noun/surface/transform/output the request reaches, each application a row. Single-digit count on non-trivial request = stopped early -- re-orient, re-enumerate. Density, not minimality, is the COMPLETE-time invariant. Inline TODO in response body violates `|F|=1`.
 
 ## Expansion
 
-Feed the first pass into a second transform: for every row, ask what every corner case, caveat, failure mode, adjacent-row interaction, degenerate input, and empty/overflow/reentry state looks like, and write those as new rows. Validations, edge cases, and anticipated mutables are first-class rows. Expansion closes when applying "every possible" yields nothing new, not when you feel done. A second-pass PRD that doubles or triples the count is the expected shape -- long-horizon requests routinely produce high-tens-to-hundreds; the row count is the resolution of the cover, which is what the user asked for. Sparse lists complete on a thin slice and leave silent residuals.
+Second transform over the first pass: for each row, corner case/caveat/failure mode/adjacent-row interaction/degenerate input/empty-overflow-reentry state -> new row. Validations, edge cases, anticipated mutables are first-class rows. Closes when "every possible" yields nothing new, not on feeling done. 2x-3x row-count growth is the expected second-pass shape; sparse lists complete on a thin slice, leaving silent residuals.
 
-Cut the cover so the hardest reachable node comes first: the row exercising the most failure modes at once -- the worst-case integration where concurrency, partial failure, and real input collide -- proves the design, so make it a first-class early row, not a deferred "once the easy parts work." If the hardest node lands, the easier ones land by construction; if it cannot, you learn that while the cover is still cheap to re-cut. Scheduling the stress test last validates nothing until it is too late to reshape.
+Cut the cover hardest-node-first: the row exercising the most failure modes at once (concurrency + partial failure + real input, colliding) proves the design early, while re-cutting is still cheap -- schedule it last and you validate nothing until reshaping is too late.
 
 ## Noticing-to-PRD
 
-Anything noticed during orient or expansion that is not yet a row -- outstanding work, an unfinished surface, an improvable shape, a preference misalignment, an adjacent concern -- is a `prd-add` this turn. Observations carried only in the response body evaporate; only the store survives. "We should also..." / "worth noting..." is a row with the witness that motivated it, not a remark. A noticing that is structural (a coverage gap, a missing doc, a prior commit that broke a rule) or preference-aware (state drifting from density-at-PLAN, residual-triage, push-on-clean, every-possible expansion, or browser-witness coverage) is the same event: each its own row describing the aligned state.
+Any observation not yet a row -- outstanding work, unfinished surface, improvable shape, preference misalignment, adjacent concern -- is `prd-add` this turn; response-body-only observations evaporate at turn end. Structural noticing (coverage gap, missing doc, rule-violating prior commit) and preference-aware noticing (drift from density-at-PLAN/residual-triage/push-on-clean/every-possible-expansion/browser-witness) are the same event: each its own row, witnessed by what surfaced it.
 
 ## Mutables
 
-Enter unknowns into `.gm/mutables.yml` via `mutable-add` with `status: unknown`; witness = `file:line`, codesearch hit, or exec output. Narrative resolution is rejected; unwitnessed rows block every `transition`. Between sub-steps -- orient and PRD write, rows you are unsure of, recall hits you cannot weight -- re-dispatch `instruction`; uncertainty is the signal to re-read, never to invent the next step from memory.
+Unknowns -> `.gm/mutables.yml` via `mutable-add`, `status: unknown`, witness = `file:line`/codesearch hit/exec output. Narrative resolution rejected; unwitnessed rows block every `transition`. Uncertain mid-plan (orient-to-PRD gap, unweighted recall hit) -> re-dispatch `instruction`, never invent the next step from memory.
+
+## Constraints
+
+Gauge every design/code decision against `.gm/constraints.md` (create from bundled default if absent) -- the standing decision-arbiter, checked at every phase.
 
 ## Dispatch
 
 Verbs: `recall`, `codesearch`, `prd-add`, `mutable-add`, `mutable-resolve`, `transition`. Plugkit holds phase on disk; you advance it by writing `transition`.
 
-`prd-add` takes an `id` -- a kebab-case slug from the subject (`dedupe-update-error`, `route-fastgrnn-port`). Omitting it yields an auto `item-<ms>` id that cannot be referenced by intent in recall or `prd-resolve`, losing the semantic handle. `prd-add` upserts by id: a fresh id appends (`{"added": id}`); an existing id rewrites in place (`{"rescoped": id}`), preserving position and every dependent that names it. This is the re-scope path -- re-entering PLAN from EXECUTE on a reshaping discovery, re-`prd-add` the affected row with its existing id and new scope; never delete-and-re-add (orphans the handle). Re-entry to PLAN is a first-class move, not a failure; the cover is meant to be re-cut whenever the work reveals the old shape was wrong.
+`prd-add` takes `id` -- kebab-case slug (`dedupe-update-error`). Omit it -> auto `item-<ms>` id, unaddressable by intent later. Upsert semantics: fresh id appends (`{"added": id}`), existing id rewrites in place (`{"rescoped": id}`) preserving position/dependents -- the re-scope path on EXECUTE->PLAN reshaping discovery; never delete-and-re-add (orphans the handle). Re-entry to PLAN is first-class, not failure.

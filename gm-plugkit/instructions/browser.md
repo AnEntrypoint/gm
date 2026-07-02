@@ -2,13 +2,13 @@
 
 ## Hard Rule: Browser Witness Mandate
 
-**Every edit to code that runs in a browser requires a live `browser` dispatch in the same turn as the edit.** Client-side surfaces -- `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.mjs`, `.css`, web components, service workers, every asset loaded by `<script>`, every path reached by `import` from a browser-side entry -- must be witnessed by a live `page.evaluate` of the specific invariant the edit establishes. A passing node test, build, `curl` of the HTML, or static-analysis pass witnesses server delivery, not browser behavior, and is non-substitutive. The witness IS the proof; prose is not.
+**Every edit to browser-run code requires a live `browser` dispatch, same turn as the edit.** Client-side surfaces -- `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, `.mjs`, `.css`, web components, service workers, every `<script>`-loaded asset, every `import`-reached path from a browser entry -- witnessed by live `page.evaluate` of the specific invariant the edit establishes. Passing node test / build / `curl` of HTML / static-analysis witnesses server delivery, not browser behavior -- non-substitutive. The witness IS the proof; prose is not.
 
 The witness is a live `page.evaluate` asserting the specific invariant against the real surface -- server up, HTTP 200, the global the change affects polled until present -- values captured into `stdout`; variance means a root-cause fix and re-witness, not advance. Anything short of the live assertion -- unwitnessed behavior, an assert fired before the global is present, validation queued for "later" -- leaves the edit unproven, and an unproven client edit is forced closure.
 
 Fires across phases: **EXECUTE** edit -> same-turn browser dispatch asserting the invariant; **EMIT** post-emit re-witness (page still passes after the full diff); **VERIFY** final gate -- `deviation.browser-witness-hash-mismatch` fires if a witnessed file changed without re-witnessing. Pure-prose static-document edits (no JS, no CSS-driven behavior, no DOM mutation) are the ONLY exempt category, and the exemption must be named explicitly in the response so the skip is auditable. Silent skip on actual behavior change is forced closure.
 
-YOU drive the browser through the spool: plugkit holds the Chromium handle, per-project profile, and session table; you advance by writing `.gm/exec-spool/in/browser/<N>.txt` and reading `out/<N>.json`. There is no library import, no puppeteer/playwright/CDP handle that shortcuts this. The verb is the surface; every other reach is fabrication.
+YOU drive the browser through the spool: plugkit holds Chromium handle, per-project profile, session table; advance by writing `.gm/exec-spool/in/browser/<N>.txt`, reading `out/<N>.json`. No library import, no puppeteer/playwright/CDP shortcut. The verb is the surface; every other reach = fabrication.
 
 ## Body shapes
 

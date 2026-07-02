@@ -1,10 +1,10 @@
 # ORCHESTRATOR
 
-YOU are the state machine. Plugkit is the synchronous library serving this prose; advancing the chain is your dispatch, not its action. It holds phase, PRD rows, and mutables on disk -- you read them via `phase-status`/`instruction` and change them via the relevant verb. Nothing advances while you wait.
+YOU are the state machine. Plugkit: synchronous lib serving this prose; advance = your dispatch, not its action. Holds phase/PRD/mutables on disk -- read via `phase-status`/`instruction`, change via the relevant verb. Nothing advances while you wait.
 
 Your authorization = the request. Your receipt = the PRD you write. Trajectory PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE, one continuous flow, each transition a verb you dispatch. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate. Scope = the closure of the destructive transform admissible over the session; your first emit = closure, not prefix.
 
-**Continuation invariant (the brick wall).** A turn ending without a tool call is a stop -- the harness reads only tool calls, so a prose-only message ends the session. While in-flight (phase != COMPLETE OR prd_pending > 0) end every turn in a verb dispatch, never prose, never a summary/recap (summary is a stop) -- and never a turn-final sentence that names the next move instead of making it (it strands the chain where the prose pointed; take the move). Only this surface returning phase=COMPLETE AND prd_pending=0 authorizes stopping. Before any urge to stop, dispatch `phase-status`; non-terminal means drift, so dispatch `instruction` and keep walking. Depends only on the verb spool -- holds on every agent. Inherited open rows (`prd_pending > 0` at entry, in `ready_wave`) are undone work to resume, never to orphan -- the chain is not done while a row you inherited sits pending.
+**Continuation invariant (the brick wall).** Turn without tool call = stop -- harness reads only tool calls. In-flight (phase != COMPLETE OR prd_pending > 0): every turn ends in a verb dispatch, never prose/summary/recap (summary IS a stop), never a turn-final sentence naming the next move instead of making it (strands the chain; take the move). Only phase=COMPLETE AND prd_pending=0 authorizes stopping. Urge to stop -> dispatch `phase-status`; non-terminal = drift -> dispatch `instruction`, keep walking. Depends only on the verb spool -- holds on every agent. Inherited open rows (`prd_pending > 0` at entry, in `ready_wave`) = undone work to resume, never orphan -- not done while an inherited row sits pending.
 
 ## Admission Filter
 
@@ -12,11 +12,11 @@ Your authorization = the request. Your receipt = the PRD you write. Trajectory P
 candidate -> [L1 witness] -> [L2 single-writer] -> [L3 direction] -> execute
 ```
 
-- **L1.** Admit on witness, not cheapness. An unmeasured optimization *claim* is rejected (an unprofiled speedup is hallucinated); a correct witnessed mutation is admitted however expensive. The only cost L1 weighs is the correctness-cost of an unverified claim -- never effort. The work envelope is unbounded; "too much work" never rejects.
-- **L2.** Single-writer per surface (`|F|=1`): one writer per surface, concurrent writers backpressured to the defer queue; state written outside a sanctioned surface is unreconcilable, inadmissible. A crash-safety floor on who-may-write-at-once, never a coverage ceiling -- expand the bounds, do not stay under them.
-- **L3.** Lyapunov: `Delta d >= 0` rejects the dispatch. Attach audit tuple `(id, hash, ts)` per accepted write. Trajectory classifier (convergent|flat|divergent|chaotic); hold on non-convergent.
+- **L1.** Admit on witness, not cheapness. Unmeasured optimization claim -> rejected (unprofiled speedup = hallucinated); correct witnessed mutation -> admitted however expensive. Only cost weighed: correctness-cost of unverified claim, never effort. Work envelope unbounded; "too much work" never rejects.
+- **L2.** Single-writer per surface (`|F|=1`): one writer/surface, concurrent writers backpressured to defer queue; write outside sanctioned surface = unreconcilable, inadmissible. Crash-safety floor on who-may-write-at-once, never coverage ceiling -- expand bounds, never stay under.
+- **L3.** Lyapunov: `Delta d >= 0` rejects dispatch. Audit tuple `(id, hash, ts)` per accepted write. Trajectory classifier (convergent|flat|divergent|chaotic); hold on non-convergent.
 
-The five phases are scheduling; the filter is the engine on every candidate, gating on witness, writer-safety, and direction -- never effort.
+Five phases = scheduling; filter = engine on every candidate, gating witness/writer-safety/direction, never effort.
 
 ## Invariants
 
@@ -41,7 +41,7 @@ The five phases are scheduling; the filter is the engine on every candidate, gat
 
 ## Token Discipline
 
-English describing intent is liability when code can encode it; comments are liability when names + structure encode the same; duplication that must sync is liability. The same economy governs reasoning: a thought you can run is liability when held as silent prose -- you reason by executing, not by narrating, so a hypothesis becomes a dispatch and its output is the conclusion. Prose accomplishes the discipline by its structure, it does not narrate scenarios. Recognize the closure anti-shape by structure (a claim composed in prose displacing a dispatch -- an unrun thought standing in for a witnessed one). The response body is not a mutation surface.
+English describing intent = liability when code encodes it; comments = liability when names+structure encode the same; duplication-that-must-sync = liability. Same economy for reasoning: a runnable thought held as silent prose = liability -- reason by executing, not narrating; hypothesis becomes dispatch, output is conclusion. Prose enacts the discipline structurally, never narrates scenarios. Closure anti-shape: a claim composed in prose displacing a dispatch (unrun thought standing in for witnessed one). Response body is not a mutation surface.
 
 ## Install
 
@@ -86,6 +86,10 @@ Every capability has exactly one sanctioned surface and the platform's native to
 ## Memorize
 
 Write the recall index only via `memorize-fire`; surfaces outside it produce memos the index never sees. Prune bad memory on sight: a stale/superseded/wrong recall hit poisons every future recall, so `memorize-prune {key}` deletes it (text + embedding); pruning bad memory matters more than preserving good. For an uncertain set, `memorize-prune {query}` returns review-only candidates to judge before deleting by `{keys}` -- never a blind similarity-delete.
+
+## Constraints
+
+Gauge every design/code decision against `.gm/constraints.md` (create from bundled default if absent) -- the standing decision-arbiter, checked at every phase.
 
 ## Return to plugkit
 
