@@ -58,6 +58,8 @@ Record only non-obvious multi-run-cost caveats; prune stale; never document the 
 
 ## Coding Style
 
+**No synthetic/unit test files, ever -- manual legwork through real code execution is the only test surface.** No `*.test.*`/`*.spec.*` files, no `test/`/`__tests__/`/`spec/` directories, no jest/mocha/vitest/pytest/unittest/junit or any assertion/mocking library, in this repo or any repo gm drives work in. Verification is running the real thing and reading the real output -- `exec_js`/`browser` witnessing a live invariant, or an addition to the single root `test.js` (<=200 lines, real services, mock-free, defined in `skills/gm/SKILL.md`). A PRD row for "add validation"/"handle edge case X" is closed by exercising that case live, never by authoring a test case that exercises it later. Rationale + measured impact on coder throughput: rs-learn (`recall: synthetic-test-file coder-performance regression`). Full phase-level enforcement (PLAN's edge-case rows, EXECUTE's hard rule, VERIFY's `deviation.synthetic-test-file` gate) lives in rs-plugkit's served `instruction` prose, not duplicated here.
+
 **No comments in code** -- no inline, block, or JSDoc comments anywhere (source, generated output, hooks, scripts). `test.js checkNoComments()` is the structural guard (fails on any leading `//` over tracked `.js/.mjs/.cjs`); one sighting spawns the full-tree sweep.
 
 **No UTF-8 BOM in any tracked source file** -- always `-Encoding utf8` (no BOM) or the `Write` tool; PowerShell defaults betray this. `test.js checkNoBom()` is the structural guard; one sighting spawns the full-tree sweep. Cause + breakage mechanics in rs-learn (`recall: BOM regression incident`).
