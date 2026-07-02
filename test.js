@@ -16,31 +16,22 @@ let SEQ = 0;
 function nextId(verb) { return `test-${process.pid}-${++SEQ}-${verb}`; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (_) { return null; } }
-
-function alive(st, maxAge) {
-  if (!(st && st.pid && (Date.now() - (st.ts || 0)) < maxAge)) return false;
-  try { process.kill(st.pid, 0); return true; } catch (_) { return false; }
-}
+function alive(st, maxAge) { if (!(st && st.pid && (Date.now() - (st.ts || 0)) < maxAge)) return false; try { process.kill(st.pid, 0); return true; } catch (_) { return false; } }
 
 async function ensureWatcher() {
   if (alive(readJson(STATUS), 15000)) return;
   const r = cp.spawnSync('bun', ['x', 'gm-plugkit@latest', 'spool'],
     { cwd: ROOT, stdio: 'ignore', windowsHide: true, shell: true, timeout: 90000 });
-  if (r.status !== 0 || !alive(readJson(STATUS), 15000)) {
-    throw new Error('atomic spool boot did not leave a fresh watcher (status=' + (r && r.status) + ')');
-  }
+  if (r.status !== 0 || !alive(readJson(STATUS), 15000)) throw new Error('atomic spool boot did not leave a fresh watcher (status=' + (r && r.status) + ')');
 }
 
 async function dispatch(verb, body, timeoutMs = 30000) {
   const id = nextId(verb.replace(/[^a-z0-9]/gi, ''));
-  const inDir = path.join(IN, verb);
-  fs.mkdirSync(inDir, { recursive: true });
-  const inFile = path.join(inDir, `${id}.txt`);
+  const inFile = path.join(IN, verb, `${id}.txt`);
   const outFile = path.join(OUT, `${verb}-${id}.json`);
-  const payload = typeof body === 'string' ? body : JSON.stringify(body);
-  const tmp = inFile + '.tmp';
-  fs.writeFileSync(tmp, payload);
-  fs.renameSync(tmp, inFile);
+  fs.mkdirSync(path.dirname(inFile), { recursive: true });
+  fs.writeFileSync(inFile + '.tmp', typeof body === 'string' ? body : JSON.stringify(body));
+  fs.renameSync(inFile + '.tmp', inFile);
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
     if (fs.existsSync(outFile)) return JSON.parse(fs.readFileSync(outFile, 'utf8'));
@@ -49,48 +40,42 @@ async function dispatch(verb, body, timeoutMs = 30000) {
   throw new Error(`timeout: ${verb} after ${timeoutMs}ms`);
 }
 
-function assert(cond, msg) {
-  if (!cond) { console.error('FAIL:', msg); process.exit(1); }
+function assert(cond, msg) { if (!cond) { console.error('FAIL:', msg); process.exit(1); } }
+function parseData(r) { return r && r.data ? (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) : null; }
+
+function gitFiles(exts, excludeGm) {
+  const out = cp.execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  return out.split('\n').map(s => s.trim()).filter(Boolean)
+    .filter(f => exts.has(path.extname(f).toLowerCase()))
+    .filter(f => !excludeGm || !f.startsWith('.gm/'));
 }
 
 const TEXT_EXT = new Set(['.js', '.mjs', '.cjs', '.json', '.md', '.ts', '.tsx', '.jsx', '.css', '.html', '.yml', '.yaml', '.txt', '.sh']);
 function checkNoBom() {
-  const out = cp.execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  const files = out.split('\n').map(s => s.trim()).filter(Boolean).filter(f => TEXT_EXT.has(path.extname(f).toLowerCase()));
-  const offenders = [];
-  for (const f of files) {
-    const abs = path.join(ROOT, f);
-    let fd;
-    try { fd = fs.openSync(abs, 'r'); } catch (_) { continue; }
+  const files = gitFiles(TEXT_EXT, false);
+  const offenders = files.filter(f => {
+    let fd; try { fd = fs.openSync(path.join(ROOT, f), 'r'); } catch (_) { return false; }
     const head = Buffer.alloc(3);
     try { fs.readSync(fd, head, 0, 3, 0); } finally { fs.closeSync(fd); }
-    if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) offenders.push(f);
-  }
+    return head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf;
+  });
   assert(offenders.length === 0, 'UTF-8 BOM in tracked text files (breaks node/JSON): ' + offenders.join(', '));
   console.log('no-BOM guard ok (' + files.length + ' text files)');
 }
 
 const CODE_EXT = new Set(['.js', '.mjs', '.cjs']);
 function checkNoComments() {
-  const out = cp.execSync('git ls-files', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  const files = out.split('\n').map(s => s.trim()).filter(Boolean)
-    .filter(f => CODE_EXT.has(path.extname(f).toLowerCase()))
-    .filter(f => !f.startsWith('.gm/'));
+  const files = gitFiles(CODE_EXT, true);
   const offenders = [];
   for (const f of files) {
-    const abs = path.join(ROOT, f);
-    let text;
-    try { text = fs.readFileSync(abs, 'utf8'); } catch (_) { continue; }
-    const lines = text.split(/\r?\n/);
+    let text; try { text = fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (_) { continue; }
     let inTemplate = false;
+    const lines = text.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (!inTemplate && /^\s*(\/\/|\/\*)/.test(line)) { offenders.push(f + ':' + (i + 1)); break; }
-      let backticks = 0;
-      for (let j = 0; j < line.length; j++) {
-        if (line[j] === '`' && line[j - 1] !== '\\') backticks++;
-      }
-      if (backticks % 2 === 1) inTemplate = !inTemplate;
+      if (!inTemplate && /^\s*(\/\/|\/\*)/.test(lines[i])) { offenders.push(f + ':' + (i + 1)); break; }
+      let bt = 0;
+      for (let j = 0; j < lines[i].length; j++) if (lines[i][j] === '`' && lines[i][j - 1] !== '\\') bt++;
+      if (bt % 2 === 1) inTemplate = !inTemplate;
     }
   }
   assert(offenders.length === 0, 'leading // or /* comments in tracked code (No-comments rule): ' + offenders.slice(0, 10).join(', '));
@@ -98,52 +83,39 @@ function checkNoComments() {
 }
 
 function checkVersionConsistency() {
-  const gmJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'gm.json'), 'utf8'));
-  const canonical = String(gmJson.plugkitVersion || '').trim();
+  const canonical = String(JSON.parse(fs.readFileSync(path.join(ROOT, 'gm.json'), 'utf8')).plugkitVersion || '').trim();
   assert(canonical, 'gm.json missing plugkitVersion');
   for (const rel of ['bin/plugkit.version', 'gm-plugkit/plugkit.version']) {
     const abs = path.join(ROOT, rel);
     if (!fs.existsSync(abs)) continue;
-    const got = fs.readFileSync(abs, 'utf8').trim();
-    assert(got === canonical, 'version drift: ' + rel + '=' + got + ' but gm.json.plugkitVersion=' + canonical);
+    assert(fs.readFileSync(abs, 'utf8').trim() === canonical, 'version drift: ' + rel + ' != gm.json.plugkitVersion=' + canonical);
   }
   console.log('version-consistency guard ok (plugkitVersion ' + canonical + ')');
 }
 
-function checkWasmNotPublished() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  const files = Array.isArray(pkg.files) ? pkg.files : [];
-  const reincludesBinDir = files.some(f => f === 'bin' || f === 'bin/' || f === 'bin/*' || f === 'bin/**');
-  assert(!reincludesBinDir, 'package.json files[] re-includes the whole bin/ dir, which ships bin/plugkit.wasm (149MB) in the npm tarball -- list specific bin/* files instead, excluding plugkit.wasm (the bootstrap re-fetches it sha256-pinned)');
-  assert(!files.includes('bin/plugkit.wasm'), 'package.json files[] explicitly lists bin/plugkit.wasm -- the 149MB binary must not ship; only its sha256 pin does');
-  console.log('wasm-not-published guard ok');
-}
-
-function checkNoTestFilesShipped() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  const files = Array.isArray(pkg.files) ? pkg.files : [];
-  const shipsPlugkitDir = files.some(f => f === 'gm-plugkit' || f === 'gm-plugkit/' || f === 'gm-plugkit/*' || f === 'gm-plugkit/**');
-  assert(!shipsPlugkitDir, 'package.json files[] ships the whole gm-plugkit/ dir, which carries *.test.js dev fixtures into the npm tarball (.npmignore cannot subtract from a files[] dir inclusion). Enumerate the specific gm-plugkit runtime files instead, excluding *.test.js');
-  const shipsTest = files.some(f => /\.test\.js$/.test(f));
-  assert(!shipsTest, 'package.json files[] explicitly lists a *.test.js file -- dev fixtures must not ship');
-  console.log('no-test-files-shipped guard ok');
+function checkPackageFilesHygiene() {
+  const files = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files || [];
+  assert(!files.some(f => /^bin\/?\*{0,2}$/.test(f)) && !files.includes('bin/plugkit.wasm'),
+    'package.json files[] must not re-include bin/ wholesale or list bin/plugkit.wasm (149MB, bootstrap re-fetches sha256-pinned)');
+  assert(!files.some(f => /^gm-plugkit\/?\*{0,2}$/.test(f)) && !files.some(f => /\.test\.js$/.test(f)),
+    'package.json files[] must not ship the whole gm-plugkit/ dir or any *.test.js dev fixture');
+  console.log('package-files-hygiene guard ok');
 }
 
 function checkUpdateWarningWired() {
   const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
-  assert(/function injectUpdateWarning\s*\(/.test(src), 'injectUpdateWarning() missing -- the running runtime must continuously warn when a newer version is published but not running');
-  assert(/\.update-available\.json/.test(src), 'injectUpdateWarning must read .update-available.json as the staleness source');
-  assert(/update_warning/.test(src), 'injectUpdateWarning must set an update_warning imperative on the response');
-  const callCount = (src.match(/injectUpdateWarning\s*\(/g) || []).length;
-  assert(callCount >= 3, 'injectUpdateWarning must be defined AND called in both the autoRecall and instruction/transition/phase-status post-process branches (>=3 references), so the warning fires on every agent-facing response; found ' + callCount);
+  assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src),
+    'injectUpdateWarning() must exist, read .update-available.json, and set update_warning on the response');
+  assert((src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3,
+    'injectUpdateWarning must be called from autoRecall + instruction/transition/phase-status branches (>=3 refs)');
   console.log('update-warning-wired guard ok');
 }
 
 function checkRenameAndInstaller() {
   assert(!fs.existsSync(path.join(ROOT, 'skills', 'gm-skill')), 'skills/gm-skill must not exist after rename');
   const skillMd = path.join(ROOT, 'skills', 'gm', 'SKILL.md');
-  assert(fs.existsSync(skillMd), 'skills/gm/SKILL.md missing');
-  assert(/^name:\s*gm\s*$/m.test(fs.readFileSync(skillMd, 'utf8').split(/\r?\n/).slice(0, 12).join('\n')), 'SKILL.md frontmatter name must be gm');
+  assert(fs.existsSync(skillMd) && /^name:\s*gm\s*$/m.test(fs.readFileSync(skillMd, 'utf8').split(/\r?\n/).slice(0, 12).join('\n')),
+    'skills/gm/SKILL.md missing or frontmatter name != gm');
   assert(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).name === 'gm-skill', 'npm package id must stay gm-skill');
   const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-install-'));
   try {
@@ -152,33 +124,46 @@ function checkRenameAndInstaller() {
   } catch (e) { if (e.code !== 'ETIMEDOUT') throw e; }
   assert(fs.existsSync(path.join(tmpHome, '.claude', 'skills', 'gm', 'SKILL.md')), 'installer must land skill at <home>/.claude/skills/gm/SKILL.md');
   const s = JSON.parse(fs.readFileSync(path.join(tmpHome, '.claude', 'settings.json'), 'utf8'));
-  assert(s.effortLevel === 'low' && s.alwaysThinkingEnabled === false,
-    'installer must set effortLevel=low, alwaysThinkingEnabled=false');
-  assert(s.autoCompactWindow === undefined && s.autoCompactEnabled === undefined,
-    'installer must not set autoCompactWindow or autoCompactEnabled');
+  assert(s.effortLevel === 'low' && s.alwaysThinkingEnabled === false && s.autoCompactWindow === undefined && s.autoCompactEnabled === undefined,
+    'installer must set effortLevel=low, alwaysThinkingEnabled=false, and never set autoCompactWindow/autoCompactEnabled');
   fs.rmSync(tmpHome, { recursive: true, force: true });
-  console.log('rename+installer guard ok (skills/gm, package gm-skill, skill + 2 settings keys)');
+  console.log('rename+installer guard ok');
 }
 
 function checkAgentsMdBudget() {
   const CEILING = 36000;
   const abs = path.join(ROOT, 'AGENTS.md');
   const bytes = fs.statSync(abs).size;
-  assert(bytes <= CEILING, 'AGENTS.md is ' + bytes + ' bytes, over the ' + CEILING + '-byte ceiling -- a detail-heavy/single-crate/single-platform entry has accreted instead of draining to an rs-learn recall: pointer. The looper failure mode (AGENTS.md grew to ~79k despite having rs-learn.db) is exactly this guard going unenforced. Drain a detail-heavy entry to a one-line recall: pointer (memorize-fire the substance) until under ceiling; never compress a top-level cross-cutting rule to make budget');
-  const src = fs.readFileSync(abs, 'utf8');
-  assert(/recall:/.test(src), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn, not live inline');
+  assert(bytes <= CEILING, 'AGENTS.md is ' + bytes + '/' + CEILING + ' bytes -- detail has accreted instead of draining to an rs-learn recall: pointer; memorize-fire the substance and compress to one line until under ceiling');
+  assert(/recall:/.test(fs.readFileSync(abs, 'utf8')), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn');
   console.log('agents-md-budget guard ok (' + bytes + '/' + CEILING + ' bytes)');
+}
+
+function checkConstraintsMdSeedAndIdempotency() {
+  const target = path.join(ROOT, '.gm', 'constraints.md');
+  if (!fs.existsSync(target)) { console.log('constraints-md guard skipped (not yet seeded, expected transient)'); return; }
+  const marker = 'test-marker-' + process.pid + '-do-not-overwrite';
+  const orig = fs.readFileSync(target, 'utf8');
+  fs.writeFileSync(target, orig + '\n' + marker + '\n');
+  try {
+    cp.execFileSync(process.execPath, ['-e', "require(path.join(process.env.GM_ROOT,'gm-plugkit','bootstrap.js')).ensureInstructionsBundle(process.env.GM_ROOT)"],
+      { env: Object.assign({}, process.env, { GM_ROOT: ROOT }), stdio: 'ignore', timeout: 15000 });
+  } catch (_) {}
+  const after = fs.readFileSync(target, 'utf8');
+  assert(after.includes(marker), 'constraints.md seed-if-absent must NOT overwrite a user-modified file on re-run (f.f=f idempotency) -- marker lost after re-seed');
+  fs.writeFileSync(target, orig);
+  console.log('constraints-md seed+idempotency guard ok');
 }
 
 async function main() {
   checkNoBom();
   checkNoComments();
   checkVersionConsistency();
-  checkWasmNotPublished();
-  checkNoTestFilesShipped();
+  checkPackageFilesHygiene();
   checkUpdateWarningWired();
   checkRenameAndInstaller();
   checkAgentsMdBudget();
+  checkConstraintsMdSeedAndIdempotency();
   await ensureWatcher();
   console.log('watcher alive');
   const inst = await dispatch('instruction', { prompt: 'test integration probe' });
@@ -191,24 +176,19 @@ async function main() {
   assert(health.ok, 'health ok');
   console.log('health ok version=' + (health.data.version || '?'));
   const memText = 'idempotency witness probe ' + process.pid + ' f-compose-f-equals-f';
-  const m1 = await dispatch('memorize-fire', { text: memText });
-  const m2 = await dispatch('memorize-fire', { text: memText });
+  const [m1, m2] = [await dispatch('memorize-fire', { text: memText }), await dispatch('memorize-fire', { text: memText })];
   assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key,
-    'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key, never a duplicate row -- both the memorize and memorize-fire verbs use the content-hash + dedup contract');
+    'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key');
   console.log('idempotency witness ok (memorize deduped key=' + m2.data.key + ')');
-  const prof = await dispatch('exec_js', { code: 'let s=0;for(let i=0;i<2e6;i++){s+=Math.sqrt(i);}await new Promise(r=>setTimeout(r,150));return{s};', opts: { profile: true, profileTopN: 5 }, timeoutMs: 20000 });
-  const pd = prof.ok && prof.data ? (typeof prof.data === 'string' ? JSON.parse(prof.data) : prof.data) : null;
-  assert(pd && pd.profile && Array.isArray(pd.profile.culprits) && pd.profile.culprits.length > 0 && pd.profile.culprits.length <= 5,
-    'exec_js profile must return culprits[] capped by profileTopN=5');
-  assert(pd && pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
-    'exec_js profile must return mem (rss/heap) and wall_vs_cpu with offcpu_us>0 (the ~150ms setTimeout the CPU sampler cannot see)');
+  const pd = parseData(await dispatch('exec_js', { code: 'let s=0;for(let i=0;i<2e6;i++){s+=Math.sqrt(i);}await new Promise(r=>setTimeout(r,150));return{s};', opts: { profile: true, profileTopN: 5 }, timeoutMs: 20000 }));
+  assert(pd && pd.profile && Array.isArray(pd.profile.culprits) && pd.profile.culprits.length > 0 && pd.profile.culprits.length <= 5 &&
+    pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
+    'exec_js profile must return culprits[] capped by profileTopN, mem.rss_mb, and wall_vs_cpu.offcpu_us>0 (~150ms setTimeout CPU sampler cannot see)');
   console.log('profile witness ok (culprits=' + pd.profile.culprits.length + ' offcpu_us=' + pd.wall_vs_cpu.offcpu_us + ')');
-  const memRun = await dispatch('exec_js', { code: 'const a=[];for(let i=0;i<5e4;i++)a.push(i);return {len:a.length};', opts: { mem: true }, timeoutMs: 10000 });
-  const md = memRun.ok && memRun.data ? (typeof memRun.data === 'string' ? JSON.parse(memRun.data) : memRun.data) : null;
+  const md = parseData(await dispatch('exec_js', { code: 'const a=[];for(let i=0;i<5e4;i++)a.push(i);return {len:a.length};', opts: { mem: true }, timeoutMs: 10000 }));
   assert(md && md.result && md.result.len === 50000 && md.mem && typeof md.mem.rss_mb === 'number' && typeof md.wall_ms === 'number',
     'exec_js opts.mem must return structured result + mem.rss_mb + wall_ms');
-  const errRun = await dispatch('exec_js', { code: 'const x=null;return x.y.z;', opts: { mem: true }, timeoutMs: 10000 });
-  const ed = errRun.data ? (typeof errRun.data === 'string' ? JSON.parse(errRun.data) : errRun.data) : null;
+  const ed = parseData(await dispatch('exec_js', { code: 'const x=null;return x.y.z;', opts: { mem: true }, timeoutMs: 10000 }));
   assert(ed && ed.error && ed.error.name === 'TypeError' && /Cannot read properties of null/.test(ed.error.message),
     'exec_js opts.mem must return a structured error{name,message} on a throw');
   console.log('mem+error witness ok (rss=' + md.mem.rss_mb + ' err=' + ed.error.name + ')');

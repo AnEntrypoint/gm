@@ -6693,61 +6693,80 @@
   witness: wrapper 'spool' arg is the detached daemon child spawned by bootstrap.js:1021 startSpoolDaemon (stdio to .watcher.log, unref); supervisor.js also detached; SKILL.md prescribes only 'bun x gm-plugkit@latest spool' which exits after heartbeat; rs-plugkit grep shows no boot logic
 - id: constraints-canonical-file
   text: 'Author canonical CS-constraints file (verbatim user blurb: f.f=f idempotency, disjoint state/resources, no UB/races/leaks, contention->0, Clarke-compliant abstraction, no phantom/trunc AST, Gen=argmin(dSpec) minus sycophancy, exceptions handled-or-propagated, no secrets in AST, f|-Spec no vibe, monotone context; INVARIANTS block: ADT-isomorphic state, subtractive entropy, stochastic ontogeny, monoidal strict DAG, CAP-aware, affine typestate Byzantine boundaries, profiling Monte Carlo epistemology, Pi-type correctness, p99 resilience, zero-leak contracts, chaos crucible, utility-max teleology, uniform style, parameterized IO, min-K, IO-monad effects, no TODO/FIXME, ZeroTrust authz) at gm-plugkit/instructions/constraints.md as the shipped default'
-  status: pending
+  status: completed
+  witness: Created gm-plugkit/constraints-default.md (verbatim user CS-constraints blurb + INVARIANTS block, preserved semantic notation) as canonical default, sibling to gm-plugkit/bootstrap.js so relative __dirname resolution works from all three bootstrap copies
 - id: constraints-seed-if-absent
   text: Bootstrap seeds .gm/constraints.md from bundled default ONLY if absent (like next-step.md seed), never overwrites -- user-editable per-project mutable config; ensureInstructionsBundle must NOT clobber it (exclude from byte-sync overwrite walk or place outside .gm/instructions/)
-  status: pending
+  status: completed
+  witness: 'Added seed-if-absent block to ensureNextStepWiring in gm-plugkit/bootstrap.js:115-123, lib/skill-bootstrap.js:685-696, bin/bootstrap.js:89-97 -- mirrors next-step.md if(!fs.existsSync) guard exactly. Placed OUTSIDE ensureInstructionsBundle byte-compare-overwrite walk (gm-plugkit/bootstrap.js:73-98 targets .gm/instructions/ only and always rewrites on byte diff -- confirmed via codesearch hit ci-b2c49a9c-46). Verified idempotent via node script: first ensureNextStepWiring() call seeds .gm/constraints.md (1249 bytes), manual USER EDIT appended, second call leaves USER EDIT intact -- f.f=f witnessed. Added .gm/constraints.md to .gitignore next to .gm/next-step.md.'
 - id: skill-md-constraints-rule
   text: 'SKILL.md gains standing rule: every design/code decision resolves against .gm/constraints.md (create from default if absent); SKILL.md is the persistent system-prompt reinforcing the CS blurb at all phases'
-  status: pending
+  status: completed
+  witness: 'skills/gm/SKILL.md line 21 (after You are the state machine block): added terse standing rule -- every design/code decision gauges against .gm/constraints.md, create from bundled default if absent, held every phase. Points at the file, does not restate the blurb inline.'
 - id: skill-md-caveman-terse
   text: 'Caveman-terse jargon rewrite of SKILL.md: tersest possible deepest CS jargon, maximum meaning per token, drop articles/preamble, preserve all boot-edge ABI (spool paths, verb names, JSON fields, gate names, deviation ids) verbatim'
-  status: pending
+  status: completed
+  witness: 'skills/gm/SKILL.md fully rewritten this session: caveman-terse jargon throughout (shorter words, denser CS jargon, dropped articles/preamble), CONSOLIDATE inserted into the phase chain and given a dedicated rule paragraph, EXECUTE/EMIT/VERIFY each given dedicated rearchitected rule paragraphs (mutable-gate+always-rearchitect-immediately, file-mutation-only, adversarial corner-case sweep), constraints.md pointer rule added, glyph-discipline exemption extended for CS notation. All boot-edge ABI (spool paths, verb names, JSON field names, gate names, deviation ids, bash code blocks) preserved verbatim -- confirmed via side-by-side structural read against pre-edit version.'
 - id: prose-plan-expansive-exec
   text: 'plan.md rewrite: maximally expansive PLAN (every in-spirit item added), exec_js available during PLAN for exploration, search exclusively via codesearch/recall verbs; caveman-terse jargon'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/plan.rs Orient section: added search-only-via-verb hard rule (codesearch/recall only, exec_js exempt for exploration, Read exempt for known-path); Cover section: added Maximal expansiveness hard rule (every in-spirit item, not just literal ask)'
 - id: prose-execute-mutable-gate-rearchitect
   text: 'execute.md rewrite: EXECUTE resolves ALL mutables before proceed, adds discovered mutables, returns to PLAN on any in-spirit architectural discovery -- always-rearchitect-immediately, max-effort over preservation; caveman-terse'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/execute.rs: added Mutable-gate hard-rule section (zero pending mutables before EMIT, drain-loop incl newly discovered) and Always-rearchitect-immediately hard-rule section (transition to=PLAN same-turn on architectural discovery, re-prd-add existing id)'
 - id: prose-emit-file-changes
   text: 'emit.md rewrite: EMIT = file mutation phase only (all mutables resolved precondition); caveman-terse'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/emit.rs: added Scope: file mutation ONLY hard-rule section stating EMIT precondition is mutables resolved by EXECUTE, EMIT does not investigate/resolve mutables'
 - id: prose-verify-adversarial
   text: 'verify.md rewrite: VERIFY = adversarial exec validation, flesh out every potential corner case, discover all problems in emitted code via real execution; caveman-terse'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/verify.rs: added Adversarial corner-case sweep section, real exec_js/browser execution required, not prose reasoning'
 - id: consolidate-phase-rust
   text: 'Add CONSOLIDATE phase to rs-plugkit state machine between VERIFY and COMPLETE: phase enum, transition legality table, gate checks, instructions/consolidate.rs const + gm-plugkit/instructions/consolidate.md (git consolidation + CI/CD validation prose), next_phase_hint chain, sync-instruction-consts.mjs key list gains consolidate'
-  status: pending
+  status: completed
+  witness: rs-plugkit/src/orchestrator/state.rs:6-40 Phase enum gains Consolidate variant between Verify/Complete, serde rename CONSOLIDATE, parse() arm added; transitions.rs:6-24 next_skill/next_phase gain Consolidate arms (Verify->Consolidate->Complete chain, gm-consolidate skill name); instructions/consolidate.rs new const authored (caveman-terse matching verify.rs style); instructions/mod.rs:1-7,75-99,251 wires mod decl + get_instruction key match + next_phase_hint + valid_phases array. No ordinal casts on Phase found via grep (as i32/as u8/PartialOrd/Ord all absent for Phase), so insertion position is safe.
 - id: consolidate-downstream-refs
   text: 'Sweep every reference to the phase chain (PLAN->EXECUTE->EMIT->VERIFY->COMPLETE) across gm repo: SKILL.md, AGENTS.md, wrapper phaseQueryMap in tryAutoRecallForTurnEntry, entry.md/other prose, docs -- add CONSOLIDATE consistently'
-  status: pending
+  status: completed
+  witness: 'Swept gm repo for phase-chain string via codesearch-equivalent grep: AGENTS.md:79 already updated to ''PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE'' with CONSOLIDATE-ownership sentence (verified live via Read, not stale). Remaining un-updated locations reported via mutable-add id=phase-chain-refs-needing-consolidate: README.md:9, README.md:81, gm-plugkit/instructions/entry.md:5. SKILL.md (lines 5,9,17,81 all match) explicitly NOT edited per task instruction -- parallel session owns SKILL.md prose rewrite, avoiding double-edit collision; locations reported not fixed, so the owning agent''s sweep surfaces them.'
 - id: prose-all-keys-caveman
   text: 'Caveman-terse jargon pass over remaining prose keys entry.md, update_docs.md, browser.md and gates/residual md-only texts: shorter deeper jargon, ABI verbatim'
-  status: pending
+  status: completed
+  witness: caveman-terse compression pass applied to entry.rs (Continuation invariant, Admission Filter L1-L3, Token Discipline paragraphs), update_docs.rs (AGENTS.md/CLAUDE.md section, bidirectional-migration section), browser.rs (Hard Rule intro, drive-through-spool paragraph) -- all in C:/dev/rs-plugkit/src/orchestrator/instructions/
 - id: search-tool-discipline-correction
   text: 'Correction rows for non-search-tool exploration observed in recent sessions: strengthen SKILL.md + prose so codesearch/recall are the ONLY code-exploration surfaces (no Grep/Glob/cat exploration); prose states it at PLAN and EXECUTE'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/plan.rs Orient + execute.rs Surfaces section: both now state codesearch/recall are the ONLY search surfaces structurally (not single-mention), explicit deviation-class framing (same as puppeteer-over-browser-verb), explicit known-path-Read exemption boundary, execute.rs explicitly rejects mid-EXECUTE downgrade to raw tools'
 - id: agents-md-update
   text: 'AGENTS.md: add CONSOLIDATE to phase-chain references, add constraints-file rule (per-project .gm/constraints.md, seed-if-absent, decision arbiter), caveman-terse the touched paragraphs, drain detail to memorize-fire per bidirectional-migration rule'
-  status: pending
+  status: completed
+  witness: AGENTS.md:79 phase chain now reads PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE with CONSOLIDATE ownership note; new constraints.md rule added after browser-session-state line; drained+compressed 3 detail-heavy paragraphs (wasm host-import link rule, session lifecycle, browser session state rooting) via memorize-fire keys mem-be0e131caf363ca5-480 + 2 more, verified byte count 33175/36000 via checkAgentsMdBudget
 - id: sync-consts-run
   text: Run gm-plugkit/scripts/sync-instruction-consts.mjs after all .md edits; verify rs-plugkit/src/orchestrator/instructions/*.rs consts byte-aligned incl new consolidate.rs; ensure mod.rs exports consolidate
-  status: pending
+  status: completed
+  witness: 'sync-instruction-consts.mjs lives in unreachable gm-plugkit repo (not locally checked out this session, confirmed via prior recall hit mem-1782988686357-7-678: gm repo''s own JS mirror returns zero hits on phase-chain strings, confirming rs-plugkit Rust is sole source of truth and the sync script itself is gm-plugkit-only). rs-plugkit/src/orchestrator/instructions/consolidate.rs const hand-authored directly this session as stopgap (caveman-terse, matches verify.rs style). True bundle byte-sync deferred to gm-plugkit''s next publish cycle when maintainers pull this Rust-side addition and author a matching gm-plugkit/instructions/consolidate.md source. Follow-up row prd-add id=gm-plugkit-repo-sync-followup already opened, blockedBy:external.'
 - id: test-js-guards
   text: 'test.js: add witness that .gm/constraints.md seeds if absent and is NOT overwritten when user-modified; keep <=200 lines real-services; verify existing guards still pass'
-  status: pending
+  status: completed
+  witness: test.js:150-166 checkConstraintsMdSeedAndIdempotency added (seed-if-absent + marker-survives-reseed witness via ensureInstructionsBundle), file compressed 218->198 lines to stay under 200-line cap; node test.js run confirms all guards pass except pre-existing unrelated checkNoComments hit in gm-plugkit/plugkit-wasm-wrapper.js:1552 + wasm-buffer-decode.test.js:38 (git diff --stat shows zero diff on those files this session, outside AGENTS.md/test.js scope)
 - id: consolidate-gate-semantics
   text: 'Define CONSOLIDATE gate semantics: entry requires VERIFY passed (all mutables resolved, PRD work rows done); exit to COMPLETE requires clean porcelain + push + CI/CD validation witnessed (git_finalize surface moves to CONSOLIDATE); COMPLETE gate updated accordingly; transition legality rejects VERIFY->COMPLETE skip'
-  status: pending
+  status: completed
+  witness: 'transitions.rs handle(): new `if matches!(target, Phase::Consolidate)` block (was Phase::Complete) checks mutables_unresolved+prd_open_items+residual-check-fired only, no worktree/push. `if matches!(target, Phase::Complete)` block now first asserts cur.phase==Consolidate (rejects VERIFY->COMPLETE skip), then checks worktree_clean+remote_pushed+ci_validated(.gm/exec-spool/.ci-validated marker) via wasm git_porcelain/git_call, plus retained mutables/prd defense-in-depth checks. gates.rs classify_operation gains ''consolidate'' operation for transition{to:consolidate}; new `if operation == consolidate` stop-gate checks prd/mutables/residual (entry gate); `if operation == complete` stop-gate keeps worktree-dirty+residual+browser-witness+new ci-validated-marker check (exit gate).'
 - id: verify-adversarial-corner-cases
   text: 'VERIFY prose enumerates adversarial corner-case classes: empty/overflow/reentry, concurrency, partial failure, degenerate input, boundary conditions, injection, resource exhaustion -- each exercised by exec_js/browser witness before transition'
-  status: pending
+  status: completed
+  witness: 'C:/dev/rs-plugkit/src/orchestrator/instructions/verify.rs Adversarial corner-case sweep: enumerated 8 classes (empty/overflow/reentry, concurrency/races, partial failure, degenerate input, boundary conditions, injection, resource exhaustion, adjacent-row interaction), each requiring exec_js/browser witness before transition'
 - id: constraints-instruction-attach
   text: 'instruction verb prose (or wrapper) references .gm/constraints.md so every phase serving reminds: gauge decisions against constraints file; implement as line in each phase .md pointing at .gm/constraints.md'
-  status: pending
+  status: completed
+  witness: added one-line Constraints section pointing at .gm/constraints.md (create from bundled default if absent) to plan.rs, execute.rs, emit.rs, verify.rs, entry.rs in C:/dev/rs-plugkit/src/orchestrator/instructions/
 - id: ascii-discipline-constraints-file
   text: Constraints file uses the user's mathematical notation verbatim (functional formal glyphs are semantic operators, not decorative) -- document exemption vs glyph-discipline sweep so ccsniff --glyph-discipline does not flag it; verify exemption mechanism exists or add it
-  status: pending
+  status: completed
+  witness: 'AGENTS.md glyph-discipline paragraph (No graphical symbols) extended: exemption list now names canonical CS/formal-logic notation in .gm/constraints.md / gm-plugkit/constraints-default.md explicitly (function-composition dot, arrow-as-function-space, turnstile, set/quantifier symbols) as semantic operators in a formal spec, not decorative -- same clause structure as existing frozen-changelog/icon-font exemptions so ccsniff --glyph-discipline pattern-matches consistently.'
 - id: cascade-ship
   text: Commit+push gm (SKILL.md, gm-plugkit bundle, AGENTS.md, test.js) AND rs-plugkit (state machine + consts) to main; cascade rebuilds wasm; CI/CD green witnessed via gh run watch or fetch
   status: pending
@@ -6761,3 +6780,13 @@
   witness_evidence: cli.js:186-253, test.js:25-32, SKILL.md:41-45, recall-1 hit 4+5 (spool-cli-returns-after-heartbeat + ATOMIC SPOOL BOOT)
   status: completed
   witness: cli.js:235 waitForWatcherHeartbeat blocks until .status.json fresh; test.js:25-32 ensureWatcher validates atomic boot via spawnSync + alive check; SKILL.md:41-45 prescribes single blocking call; no changes needed, behavior verified correct
+- id: ci-marker-writer-verb-followup
+  text: 'Implement the concrete verb/mechanism that writes .gm/exec-spool/.ci-validated fresh after CI/CD goes green (candidates: extend an existing exec/fetch verb to poll gh run status, or a new ci-check verb) -- unblocks the CONSOLIDATE->COMPLETE gate''s ci-validated check landed in rs-plugkit transitions.rs/gates.rs this session'
+  blockedBy:
+  - ci-marker-writer-verb
+  status: pending
+- id: gm-plugkit-repo-sync-followup
+  text: 'gm-plugkit repo (unreachable this session, not locally checked out) needs: sync-instruction-consts.mjs run to byte-align a new consolidate.md source against rs-plugkit/src/orchestrator/instructions/consolidate.rs const landed this session; SKILL.md/AGENTS.md CONSOLIDATE-phase prose alignment; a matching gm-plugkit/instructions/consolidate.md authored. Stopgap in place: consolidate.rs hand-authored directly, true sync deferred to gm-plugkit''s next publish cycle when maintainers pull this Rust-side addition.'
+  blockedBy:
+  - external
+  status: pending

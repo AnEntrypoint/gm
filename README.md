@@ -2,11 +2,11 @@
 
 > **more coushin' for the puhin'**
 
-**glootius maximus** (gm) exists to raise one number: the signal-to-noise ratio (SNR) of a coding agent. every failure an agent commits, narrating an unverified guess, forgetting a decision, shipping a placeholder, stopping early, is noise injected into the channel between what you asked and what gets built. gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up." every rule in it is one more noise source removed.
+**glootius maximus** (gm) exists to raise one number: the signal-to-noise ratio (SNR) of a coding agent. every failure an agent commits, narrating an unverified guess, forgetting a decision, shipping a placeholder, stopping early, is noise injected into the channel between what you asked and what gets built. gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up." every rule in it is one more noise source removed.
 
 that orientation is also why gm is built for token austerity: every token an agent spends should be signal toward the work, never narration, hedging, or busy-output. austerity is SNR enforced at the budget.
 
-it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
+it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
 built over 14000+ hours of supervised modification, across ~200 commits of daily use, every one of those hours spent tuning the same target: more agentic signal, less noise. free, open source, maintained by one person.
 
@@ -78,7 +78,7 @@ The two npm packages this repo publishes:
 
 ### the state machine
 
-PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
+PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
 
 ### tools
 

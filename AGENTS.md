@@ -28,7 +28,7 @@ This repo IS the published `gm-skill` npm package: repo root = package root, no 
 
 The plugkit stack runs as a wasm cdylib loaded by `plugkit-wasm-wrapper.js` under Node/bun -- no native binaries built, downloaded, or published. The shipped `plugkit.wasm` is fetched at bootstrap from `plugkit-wasm` npm / `plugkit-bin` gh-releases, sha256-pinned. Size + embedded-model (offline in-wasm embeddings) mechanics in rs-learn (`recall: WASM-only plugkit size mechanics`).
 
-**Every wasm host-import `extern "C"` block carries `#[link(wasm_import_module = "env")]`** -- in rs-plugkit AND every dep crate linked into the cdylib (rs-learn) AND any sibling building wasm (rs-exec, rs-search); miss it anywhere and the cascade goes dark (local builds stay green, only Linux CI link fails). Incident + host-fn enumeration in rs-learn (`recall: cascade outage wasm import module link`, `recall: wasm host-import link-module trap`).
+Wasm host-import link-module rule (`#[link(wasm_import_module="env")]` on every host-import extern block, every dep crate): rs-learn (`recall: wasm host-import link-module trap`).
 
 **`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** (rs-learn: `recall: wrapper require not defined under bun`).
 
@@ -62,7 +62,7 @@ Record only non-obvious technical caveats that cost multiple runs to discover; r
 
 **No UTF-8 BOM in any tracked source file** -- always `-Encoding utf8` (no BOM) or the `Write` tool; PowerShell defaults betray this. `test.js checkNoBom()` is the structural guard; one sighting spawns the full-tree sweep. Cause + breakage mechanics in rs-learn (`recall: BOM regression incident`).
 
-**No graphical symbols; convert to industry-standard text on sight.** Any non-ASCII decorative glyph (arrows, box/geometric glyphs, stars, dots, bullets, checks/crosses, emojis) is forbidden in all output and source -- convert it to its plain-ASCII equivalent the same turn (the word, `->`, `-`/`*`, `[x]`/`[ ]`, done/todo/pass/fail). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
+**No graphical symbols; convert to industry-standard text on sight.** Any non-ASCII decorative glyph (arrows, box/geometric glyphs, stars, dots, bullets, checks/crosses, emojis) is forbidden in all output and source -- convert it to its plain-ASCII equivalent the same turn (the word, `->`, `-`/`*`, `[x]`/`[ ]`, done/todo/pass/fail). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs, and canonical CS/formal-logic notation in `.gm/constraints.md` / `gm-plugkit/constraints-default.md` (`.`, `->` as function-space, `|-`, set/quantifier symbols) -- these are semantic operators in a formal constraints spec, not decorative flourish. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
 
 **Skill SKILL.md files:** strip explanatory prose; keep ONLY invocation syntax, transition markers (`->`), gate conditions, constraint lists, exact-usage code examples.
 
@@ -76,7 +76,7 @@ No build step; the repo root is the published artifact. `npm publish` from root 
 
 ## The agent is the orchestrator; plugkit is the brain it drives
 
-Plugkit is the stateful library the agent drives by dispatching verbs -- it does not act autonomously, advance phases in the background, or validate transitions while the agent waits. Every state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`; the dispatch ledger is ground truth, so zero dispatches with a narrated PLAN->COMPLETE walk = a fabricated walk. The PLAN -> EXECUTE -> EMIT -> VERIFY -> COMPLETE state machine lives natively in rs-plugkit (phase/mutables/memorize/transition-legality as data + gate checks), but the agent triggers every operation; plugkit is synchronous from the agent's view, so polling the output dir instead of reading the response file is the canonical misuse. File paths + verb enumeration in rs-learn (`recall: rs-plugkit state-machine internals`).
+Plugkit is the stateful library the agent drives by dispatching verbs -- it does not act autonomously, advance phases in the background, or validate transitions while the agent waits. Every state change is a verb the agent writes into `.gm/exec-spool/in/<verb>/<N>.txt`; the dispatch ledger is ground truth, so zero dispatches with a narrated PLAN->COMPLETE walk = a fabricated walk. The PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE state machine lives natively in rs-plugkit (phase/mutables/memorize/transition-legality as data + gate checks), but the agent triggers every operation; plugkit is synchronous from the agent's view, so polling the output dir instead of reading the response file is the canonical misuse. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate so COMPLETE checks only the consolidated result. File paths + verb enumeration in rs-learn (`recall: rs-plugkit state-machine internals`).
 
 ## gm is the canonical universal harness
 
@@ -172,9 +172,11 @@ Orchestration state is tracked via `.gm/` marker files, not hook events; the CLI
 
 **A stop-hook firing on a terminal chain does not authorize re-polling**: when a stop-hook fires while already at `phase=COMPLETE` AND `prd_pending_count=0`, re-dispatching `instruction`/`phase-status` to "re-confirm" is a deviation (`deviation.complete-chain-poll`, `instructions/mod.rs`). Two admissible responses: (a) a prose-only turn (COMPLETE is in hand), or (b) genuinely new planned work opened with a FRESH `{"prompt":...}` body (resets phase to PLAN, driven through the skill). Repeatedly answering the same hook is a loop; state the terminal facts once and stop, or open new work.
 
-**Session lifecycle**: background tasks + browser sessions persist across turn-stops; cleanup fires only on real-exit reasons; residual-scan fires when PRD empty AND no open browser sessions AND no running tasks. Detail in rs-learn (`recall: session lifecycle killSessionTasks residual-scan`).
+Session lifecycle (task/browser persistence across turn-stops, residual-scan trigger conditions): rs-learn (`recall: session lifecycle killSessionTasks residual-scan`).
 
-**Browser session state is rooted at the git common dir, never `process.cwd()`**: a workflow worktree fan-out runs each parallel agent in its own worktree (distinct cwd); keying the browser ports-registry + profile dir on cwd opens one chromium per worktree (the "meant one, got N browsers" defect). `browserRootDir(cwd)` resolves the worktree to its main repo via `git rev-parse --git-common-dir`, and `browserStateDir`/`sessionProfileDir`/`acquireProfileDir` route through it, so all worktrees of one workflow share ONE browser while separate repos stay isolated. The cross-agent spawn is guarded by an atomic O_EXCL single-flight lock (loser attaches to the winner's chromium). Detail in rs-learn (`recall: browser session state worktree common-dir rooting`).
+Browser session state roots at the git common dir, never `process.cwd()` (worktree fan-out shares one chromium, not N): rs-learn (`recall: browser session state worktree common-dir rooting`).
+
+**Per-project `.gm/constraints.md` is the standing decision arbiter**: seed-if-absent (bootstrap copies the bundled CS-constraints default only when missing), never overwrite on re-seed -- it is user-editable mutable config, same contract as `.gm/next-step.md`. Every design/code decision the agent makes gauges against it; the pointer rule lives in SKILL.md, this is only the existence/mechanism note. `test.js` witnesses both the seed and the no-clobber idempotency.
 
 ## Spool observability surface
 

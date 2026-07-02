@@ -1,0 +1,3 @@
+## Resolved mutable: phase-chain-refs-needing-consolidate
+
+README.md:5,9,81 and gm-plugkit/instructions/entry.md:5 updated to insert CONSOLIDATE between VERIFY and COMPLETE, matching AGENTS.md:79 phrasing. skills/gm/SKILL.md fully rewritten (caveman-terse pass, this session) with CONSOLIDATE in its phase-chain reference and dedicated CONSOLIDATE/EMIT/VERIFY/EXECUTE rule paragraphs. All phase-chain refs in gm repo now consistent.

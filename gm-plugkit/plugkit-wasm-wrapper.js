@@ -1549,16 +1549,10 @@ function decodeWasmResult(instance, result, where) {
 
 function writeWasmInput(instance, bytes, where) {
   if (bytes.length === 0) return 0;
-  // COERCE the alloc pointer to UNSIGNED 32-bit: a wasm i32 return with the high bit set (a pointer
-  // > 0x7fffffff, which occurs once the linear memory grows past ~2GB in a long session) arrives in JS
-  // as a NEGATIVE number, and new Uint8Array(buffer, negativePtr, len) throws the raw V8 "Start offset
-  // <neg> is outside the bounds of the buffer" -- the deterministic long-session corruption that blocked
-  // dispatches. >>>0 reinterprets the i32 as the true unsigned offset. Guard the range too so a genuinely
-  // bad (ptr,len) raises the clean wasm-memory-read-out-of-bounds error instead of a raw typed-array throw.
   const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
   if (ptr === 0) throw new Error(`wasm-alloc-failed at ${where}: plugkit_alloc returned 0 (wasm OOM)`);
   guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, `${where}:writeWasmInput`);
-  new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);   // fresh buffer post-alloc
+  new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);
   return ptr;
 }
 
@@ -1579,8 +1573,6 @@ function readWasmStr(instance, ptr, len) {
 
 function writeWasmBytes(instance, bytes) {
   if (bytes.length === 0) return 0n;
-  // >>>0: same signed-pointer fix as writeWasmInput -- a high-bit alloc pointer is negative in JS and
-  // throws "Start offset <neg> is outside the bounds" on the Uint8Array write below.
   const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
   if (ptr === 0) return 0n;
   guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, 'writeWasmBytes');

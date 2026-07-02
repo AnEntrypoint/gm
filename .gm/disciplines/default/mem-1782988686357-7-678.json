@@ -1,0 +1,3 @@
+## Resolved mutable: phase-chain-hardcode-sites
+
+codesearch (cwd=gm repo, indexes gm-plugkit JS mirrored into gm's own tree, not rs-plugkit Rust) returned zero hits on phase-chain strings -- confirms phase-chain logic is NOT duplicated in the gm repo's own JS; the sole source of truth is rs-plugkit Rust (state.rs Phase enum, transitions.rs next_phase/next_skill, gates.rs classify_operation). gm repo references to PLAN/EXECUTE/EMIT/VERIFY/COMPLETE are prose-only (SKILL.md, AGENTS.md, .gm/next-step.md) and must be updated textually to insert CONSOLIDATE between VERIFY and COMPLETE; no JS code hardcodes the chain in this repo, so the only code-side edit site is rs-plugkit.
