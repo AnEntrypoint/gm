@@ -605,10 +605,14 @@ function stampBrowserLastUse(cwd, claudeSessionId) {
   } catch (_) {}
 }
 
-function atomicWriteJson(filePath, obj) {
+function atomicWriteRaw(filePath, data) {
   const tmp = filePath + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8);
-  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2));
+  fs.writeFileSync(tmp, data);
   fs.renameSync(tmp, filePath);
+}
+
+function atomicWriteJson(filePath, obj) {
+  atomicWriteRaw(filePath, JSON.stringify(obj, null, 2));
 }
 
 function migrateLegacyBrowserState(cwd) {
@@ -1279,65 +1283,66 @@ function gracefulCloseBrowser(entry, reason) {
   try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
 }
 
+function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessionsFile, ports, sessions) {
+  const existing = ports[claudeSessionId];
+  if (!(existing && existing.pid && existing.wsEndpoint)) return null;
+  const wantProfile = sessionProfileDir(cwd, claudeSessionId);
+  const pidOk = isProcessAliveSync(existing.pid);
+  const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(wantProfile);
+  const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
+  if (pidOk && profileOk && cdpOk) {
+    const pwIds = sessions[claudeSessionId] || [];
+    if (pwIds.length > 0 && existing.pwSessionId) return existing.pwSessionId;
+    const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000, cwd, claudeSessionId);
+    if (r && r.status === 0) {
+      const sid = parseSessionId(r.stdout || '');
+      if (sid) {
+        existing.pwSessionId = sid;
+        existing.lastUse = Date.now();
+        ports[claudeSessionId] = existing;
+        sessions[claudeSessionId] = [sid];
+        writeJsonFile(portsFile, ports);
+        writeJsonFile(sessionsFile, sessions);
+        logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true });
+        return sid;
+      }
+    }
+    return null;
+  }
+  const reason = !pidOk ? 'pid-dead' : (!cdpOk ? 'cdp-dead' : 'profile-drift');
+  if (reason === 'pid-dead') {
+    logEvent('plugkit', 'browser.stale-reclaimed', {
+      sid: claudeSessionId,
+      stale_pid: existing.pid || null,
+      stale_profile: existing.profileDir || null,
+      want_profile: wantProfile,
+    });
+  } else {
+    logEvent('hook', 'deviation.browser-profile-collision', {
+      sid: claudeSessionId,
+      stale_pid: existing.pid || null,
+      stale_profile: existing.profileDir || null,
+      want_profile: wantProfile,
+      reason,
+    });
+  }
+  if (typeof gracefulCloseBrowser === 'function') {
+    try { gracefulCloseBrowser(existing, `collision:${reason}`); } catch (_) {}
+  } else if (pidOk && Number.isFinite(existing.pid)) {
+    try { killPidQuiet(existing.pid); } catch (_) {}
+  }
+  purgeProfileLockFiles(existing.profileDir);
+  delete ports[claudeSessionId];
+  delete sessions[claudeSessionId];
+  try { writeJsonFile(portsFile, ports); } catch (_) {}
+  try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
+  return null;
+}
+
 function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   migrateLegacyBrowserState(cwd);
   const portsFile = browserPortsFile(cwd);
   const sessionsFile = browserSessionsFile(cwd);
-  const ports = readJsonFile(portsFile, {});
-  const sessions = readJsonFile(sessionsFile, {});
-  const existing = ports[claudeSessionId];
-  if (existing && existing.pid && existing.wsEndpoint) {
-    const wantProfile = sessionProfileDir(cwd, claudeSessionId);
-    const pidOk = isProcessAliveSync(existing.pid);
-    const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(wantProfile);
-    const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
-    if (pidOk && profileOk && cdpOk) {
-      const pwIds = sessions[claudeSessionId] || [];
-      if (pwIds.length > 0 && existing.pwSessionId) return existing.pwSessionId;
-      const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000, cwd, claudeSessionId);
-      if (r && r.status === 0) {
-        const sid = parseSessionId(r.stdout || '');
-        if (sid) {
-          existing.pwSessionId = sid;
-          existing.lastUse = Date.now();
-          ports[claudeSessionId] = existing;
-          sessions[claudeSessionId] = [sid];
-          writeJsonFile(portsFile, ports);
-          writeJsonFile(sessionsFile, sessions);
-          logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true });
-          return sid;
-        }
-      }
-    } else {
-      const reason = !pidOk ? 'pid-dead' : (!cdpOk ? 'cdp-dead' : 'profile-drift');
-      if (reason === 'pid-dead') {
-        logEvent('plugkit', 'browser.stale-reclaimed', {
-          sid: claudeSessionId,
-          stale_pid: existing.pid || null,
-          stale_profile: existing.profileDir || null,
-          want_profile: wantProfile,
-        });
-      } else {
-        logEvent('hook', 'deviation.browser-profile-collision', {
-          sid: claudeSessionId,
-          stale_pid: existing.pid || null,
-          stale_profile: existing.profileDir || null,
-          want_profile: wantProfile,
-          reason,
-        });
-      }
-      if (typeof gracefulCloseBrowser === 'function') {
-        try { gracefulCloseBrowser(existing, `collision:${reason}`); } catch (_) {}
-      } else if (pidOk && Number.isFinite(existing.pid)) {
-        try { killPidQuiet(existing.pid); } catch (_) {}
-      }
-      purgeProfileLockFiles(existing.profileDir);
-      delete ports[claudeSessionId];
-      delete sessions[claudeSessionId];
-      try { writeJsonFile(portsFile, ports); } catch (_) {}
-      try { writeJsonFile(sessionsFile, sessions); } catch (_) {}
-    }
-  }
   const spawnLock = path.join(browserStateDir(cwd), `.browser-spawn-${sessionProfileSlug(claudeSessionId)}.lock`);
   let lockFd = null;
   const spawnDeadline = Date.now() + 35000;
@@ -1366,19 +1371,16 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
   try { if (lockFd !== null) { fs.writeSync(lockFd, `${process.pid}|${Date.now()}`); fs.closeSync(lockFd); } } catch (_) {}
   const releaseSpawnLock = () => { try { const o = parseInt(String(fs.readFileSync(spawnLock, 'utf-8')).split('|')[0], 10); if (o === process.pid) fs.unlinkSync(spawnLock); } catch (_) {} };
   try {
-  const winner2 = readJsonFile(portsFile, {})[claudeSessionId];
-  if (winner2 && winner2.pid && winner2.wsEndpoint && isProcessAliveSync(winner2.pid)
-      && fetchJsonSync(`http://127.0.0.1:${winner2.port}/json/version`, 1000)) {
-    const a = runBrowserRunner(pw, ['session', 'new', '--direct', winner2.wsEndpoint], 30000, cwd, claudeSessionId);
-    const sid = a && a.status === 0 ? parseSessionId(a.stdout || '') : null;
-    if (sid) { logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-recheck' }); return sid; }
-  }
+  const portsLocked = readJsonFile(portsFile, {});
+  const sessionsLocked = readJsonFile(sessionsFile, {});
+  const reused = resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessionsFile, portsLocked, sessionsLocked);
+  if (reused) { logEvent('plugkit', 'browser.attached', { pwSessionId: reused, reused: true, via: 'spawn-lock-recheck' }); return reused; }
   cleanDeadProfileFragments(cwd);
   reapOrphanBrowserSessions(pw, cwd, claudeSessionId, 'pre-spawn');
   const profileDir = acquireProfileDir(cwd, claudeSessionId);
   const aliveCdpForProfile = (() => {
-    for (const key of Object.keys(ports)) {
-      const ent = ports[key];
+    for (const key of Object.keys(portsLocked)) {
+      const ent = portsLocked[key];
       if (!ent || !ent.pid || !ent.port || !ent.wsEndpoint) continue;
       if (ent.profileDir !== profileDir && !(ent.profileDir || '').startsWith(profileDir)) continue;
       if (!isProcessAliveSync(ent.pid)) continue;
@@ -1409,10 +1411,10 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     logEvent('plugkit', 'browser.launch-failed', { reason: 'session-id-unparseable', stdout: r.stdout });
     throw new Error(`could not parse managed browser session id from: ${scrubBrowserRunnerText(r.stdout || '')}`);
   }
-  ports[claudeSessionId] = { profileDir, pid: browserPid, port, wsEndpoint, pwSessionId, lastUse: Date.now() };
-  sessions[claudeSessionId] = [pwSessionId];
-  writeJsonFile(portsFile, ports);
-  writeJsonFile(sessionsFile, sessions);
+  portsLocked[claudeSessionId] = { profileDir, pid: browserPid, port, wsEndpoint, pwSessionId, lastUse: Date.now() };
+  sessionsLocked[claudeSessionId] = [pwSessionId];
+  writeJsonFile(portsFile, portsLocked);
+  writeJsonFile(sessionsFile, sessionsLocked);
   clearLaunching(browserPid);
   if (!__openedSessionIds.has(claudeSessionId) && __openedSessionIds.size >= 1) {
     logEvent('hook', 'deviation.browser-multi-session', { sid: claudeSessionId, already_open: Array.from(__openedSessionIds), reason: 'a 2nd distinct browser sessionId launched its own chromium this run -- reuse one session per run and close it when done' });
@@ -1945,7 +1947,7 @@ function makeHostFunctions(instanceRef) {
         const key = readWasmStr(instanceRef.value, keyPtr, keyLen);
         const val = readWasmStr(instanceRef.value, valPtr, valLen);
         if (!ns || !key) return 0;
-        fs.writeFileSync(kvFilePath(ns, key, true), val);
+        atomicWriteRaw(kvFilePath(ns, key, true), val);
         return 1;
       } catch (e) {
         return 0;
@@ -2824,7 +2826,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       let reg = {};
       try { reg = JSON.parse(fs.readFileSync(PEER_REGISTRY_PATH, 'utf-8')); } catch (_) {}
       reg[process.cwd()] = { pid: process.pid, ts: Date.now(), sha: _ownWrapperSha12 };
-      fs.writeFileSync(PEER_REGISTRY_PATH, JSON.stringify(reg, null, 2));
+      atomicWriteJson(PEER_REGISTRY_PATH, reg);
     } catch (_) {}
   }
   registerSelfAsPeer();
