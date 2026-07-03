@@ -1164,6 +1164,29 @@ function fetchJsonSync(url, timeoutMs) {
   try { return JSON.parse(r.stdout); } catch (_) { return null; }
 }
 
+function closeExtraBlankTabs(port, keepWsEndpoint) {
+  try {
+    const targets = fetchJsonSync(`http://127.0.0.1:${port}/json/list`, 1500);
+    if (!Array.isArray(targets)) return { closed: 0 };
+    let closed = 0;
+    for (const t of targets) {
+      if (!t || t.type !== 'page') continue;
+      if (t.webSocketDebuggerUrl === keepWsEndpoint) continue;
+      if (t.url !== 'about:blank' && t.url !== '') continue;
+      const r = spawnSync(process.execPath, ['-e', `
+        const http = require('http');
+        const req = http.get(${JSON.stringify(`http://127.0.0.1:${port}/json/close/${t.id}`)}, res => { res.resume(); res.on('end', () => process.exit(0)); });
+        req.on('error', () => process.exit(1));
+        req.setTimeout(1500, () => { req.destroy(); process.exit(1); });
+      `], { timeout: 3000, windowsHide: true });
+      if (r.status === 0) closed++;
+    }
+    return { closed };
+  } catch (_) {
+    return { closed: 0 };
+  }
+}
+
 function startManagedBrowser(pw, profileDir) {
   const headless = process.env.GM_BROWSER_HEADLESS === '1';
   let browserBin = findInstalledChromiumBinary();
@@ -1391,13 +1414,15 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     }
     return null;
   })();
-  let browserPid, port, wsEndpoint;
+  let browserPid, port, wsEndpoint, freshLaunch;
   if (aliveCdpForProfile) {
     ({ pid: browserPid, port, wsEndpoint } = aliveCdpForProfile);
+    freshLaunch = false;
     logEvent('plugkit', 'browser.reused-existing-chromium', { pid: browserPid, port, profileDir });
   } else {
     logEvent('plugkit', 'browser.start', { profileDir });
     ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir));
+    freshLaunch = true;
   }
   markLaunching(browserPid);
   const r = runBrowserRunner(pw, ['session', 'new', '--direct', wsEndpoint], 30000, cwd, claudeSessionId);
@@ -1405,6 +1430,10 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     const errTxt = scrubBrowserRunnerText((r && (r.stderr || r.stdout)) || 'unknown');
     logEvent('plugkit', 'browser.launch-failed', { reason: 'session-attach-failed', pid: browserPid, port, error: errTxt });
     throw new Error(`playwriter session new --direct failed: ${errTxt}`);
+  }
+  if (freshLaunch) {
+    const { closed } = closeExtraBlankTabs(port, wsEndpoint);
+    if (closed > 0) logEvent('plugkit', 'browser.extra-blank-tabs-closed', { pid: browserPid, port, closed });
   }
   const pwSessionId = parseSessionId(r.stdout || '');
   if (!pwSessionId) {
