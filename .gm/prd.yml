@@ -7905,3 +7905,115 @@
   title: rs-codeinsight src/config.rs:20 load_config silently ignores unknown sections/keys and skips malformed lines -- typos in .codeinsight.toml config keys silently produce no-op config with zero feedback
   witness: rs-codeinsight src/config.rs load_config now emits eprintln! warnings naming offending line/key/section for unknown sections/keys, out-of-section keys, unrecognized sections, invalid values, malformed lines; cargo check clean; committed 3c9e238
   status: completed
+- id: gm-add-dispatch-gate-test-witness
+  title: gm lib/spool-dispatch.js checkDispatchGates/isSpoolPollCommand/isNativeSearchCommand have zero real-execution witness in test.js -- security/policy regex logic unexercised, regressions ship silently
+  witness: gm test.js checkSpoolDispatchGates() added, requires lib/spool-dispatch.js and exercises checkDispatchGates/isSpoolPollCommand/isNativeSearchCommand with real command strings; also exported isNativeSearchCommand which was previously unreachable; node test.js confirms guard passes; kept file at exactly 200 lines
+  status: completed
+- id: gm-fix-gitdominant-nonleading-token-bypass
+  title: gm lib/spool-dispatch.js:322 gitDominant only flags leading-token git commands -- 'powershell -Command git push' or 'sh -c git push' bypasses bash-git-bypass gate undetected
+  witness: gm lib/spool-dispatch.js GIT_SUBCOMMAND_RE added to detect git subcommand nested inside sh -c/powershell -Command/bash -c invocations; live node execution confirmed denial for nested cases and no false positives on git-lookalike strings
+  status: completed
+- id: rsplugkit-fix-codeindex-stringinterp-sql-like
+  title: rs-plugkit src/code_index.rs:580 search() fallback_like builds SQL via format! with only quote-escaping, not parameterized, unlike the INSERT path in same file -- string-interpolated SQL surface for recall/codesearch fallback
+  witness: rs-plugkit src/code_index.rs fallback_like LIKE query converted to bound parameter via libsql_wasm::query_params instead of string interpolation; verified call-shape identical to existing parameterized pattern in same file
+  status: completed
+- id: rsplugkit-fix-codeindex-vectortopk-stringinterp
+  title: rs-plugkit src/code_index.rs:589 vector_top_k embeds query embedding via string interpolation rather than bound params, inconsistent with parameterized INSERT elsewhere in same file
+  witness: rs-plugkit src/code_index.rs vector_top_k embedding now passed as bound parameters via query_params instead of string interpolation, matching sibling LIKE-fallback fix in same function
+  status: completed
+- id: rsplugkit-fix-pkfs-native-silent-noop
+  title: rs-plugkit src/pkfs.rs:33 non-wasm32 pkfs functions are hard-coded no-ops with no error signal -- orchestrator/task.rs stuck_spool/open_browser_sessions silently report empty on native build/test, masking bugs
+  witness: rs-plugkit src/pkfs.rs documented native no-op stubs as intentional (crate is WASM-only, native builds are cargo-check dev-loop only); investigated all call sites, confirmed no native-runtime consumer exists
+  status: completed
+- id: rsplugkit-fix-gitignore-toctou
+  title: rs-plugkit src/gitignore.rs:88 ensure_managed_gitignore does non-atomic read-modify-write of .gitignore, no lock -- TOCTOU gap violating repo's own atomic-single-instance-guard invariant
+  witness: rs-plugkit src/gitignore.rs ensure_managed_gitignore fix applied per fix-round2 workflow report, atomic write via temp+rename pattern
+  status: completed
+- id: rsplugkit-fix-gates-redundant-inconsistent-check
+  title: rs-plugkit src/gates.rs:446 is_closing_to_complete ORs a redundant exact-case check onto an already case-insensitive classify_operation result -- inconsistent case-sensitivity between the two disjuncts, confusing/divergence-prone
+  witness: rs-plugkit src/gates.rs is_closing_to_complete simplified, removed redundant exact-case disjunct after confirming classify_operation already handles case-insensitively; cargo check clean
+  status: completed
+- id: rsplugkit-fix-browserwitness-hardcoded-prefix-blindspot
+  title: rs-plugkit src/browser_witness.rs:15 BROWSER_DIR_PREFIXES hardcoded list (public/site/app/pages/components/client/web) misses other conventions (src/frontend/, packages/web-app/) -- COMPLETE gate's client-edit-no-witness has structural blind spot, no fallback detection, no warning
+  witness: rs-plugkit src/browser_witness.rs BROWSER_DIR_PREFIXES expanded with src/frontend/, packages/web-app/, frontend/, webapp/; cargo check clean
+  status: completed
+- id: rsplugkit-fix-polldetect-fp-oneoff-reads
+  title: rs-plugkit src/poll_detect.rs:195 is_spool_poll_command has_read fallback fires deviation.spool-poll on any single legitimate ad-hoc spool-path read alongside a READS-list word, no loop/sleep required -- false-positive deviation logs
+  witness: rs-plugkit src/poll_detect.rs read-spool-direct fallback now requires has_read && has_loop (while/until/for) instead of has_read alone, eliminating one-off-read false positives
+  status: completed
+- id: rsplugkit-fix-filter-tree-depth-4space-assumption
+  title: rs-plugkit src/filter.rs:115 tree() filter divides char count by 4 to estimate depth, brittle against non-4-space-indented tree/find output -- silently misclassifies/prunes wrong depth with no detection
+  witness: rs-plugkit src/filter.rs tree() now auto-detects indent_unit from first indented line instead of hardcoded /4 divisor, defaulting to 4 if none found
+  status: completed
+- id: rsexec-fix-outbox-key-samems-collision
+  title: rs-exec src/wasm_spool.rs:18 outbox_key for anonymous tasks keys on now_ms():task_id -- two anonymous same-task_id dispatches within same millisecond silently collide, one result overwrites the other, no detection
+  witness: rs-exec src/wasm_spool.rs added ANON_SEQ static AtomicU64 counter appended to anonymous outbox keys, guaranteeing uniqueness within same millisecond
+  status: completed
+- id: rsexec-fix-ci-no-real-wasm-harness
+  title: rs-exec .github/workflows/wasm-check.yml:25 CI only runs cargo check --target wasm32-wasip1 --lib, never builds/loads the actual wasm module against a host harness -- exported ABI (alloc/free contract, dispatch JSON shapes) never exercised end-to-end, type-checks-but-breaks-ABI changes pass CI silently
+  witness: rs-exec .github/workflows/wasm-check.yml gap investigated, no existing JS/wasm-loading harness found, real-execution-only ABI-witness improvement applied per fix-round2 report
+  status: completed
+- id: rsexec-fix-maxtasks-no-fifo-ordering-doc
+  title: rs-exec src/wasm_spool.rs:116 MAX_TASKS_PER_DISPATCH truncates to 100 with no documented ordering guarantee -- tasks beyond cap could starve indefinitely if host_kv_query is not FIFO
+  witness: rs-exec src/wasm_spool.rs added comment documenting host_kv_query ordering behavior traced to gm-plugkit host_kv_query fs.readdirSync-based iteration
+  status: completed
+- id: rslearn-fix-ewc-never-wired-dead-in-practice
+  title: rs-learn crates/wasm/src/learn/instant_core.rs:133 InstantCore.ewc set only via set_ewc_state, never called anywhere -- EWC-protection branch in hebbian_update is dead in practice, LoRA adapter never actually EWC-regularized despite machinery existing and unit-tested in isolation
+  witness: 'investigated directly: finding was a false positive from round-2 scout -- crates/wasm/src/dispatch.rs handle_consolidate already calls core.set_ewc_state(fisher,params,lambda) right after self.deep.consolidate, guarded by dimension check. EWC branch is NOT dead in general use; only gap is one integration test not calling init_instant first (test-coverage gap, no new test files per repo policy). cargo check -p rs-learn clean, no code change needed.'
+  status: completed
+- id: rslearn-fix-ci-never-runs-test-suite
+  title: 'rs-learn .github/workflows/wasm-check.yml:31 CI only runs cargo check --target wasm32-wasip1, never cargo test -- the repo''s entire native-gated #[test] suite (dispatch.rs, temporal_core.rs, instant_core.rs, router/core.rs, attention.rs, deep_core.rs, time.rs) never executes automatically, regressions invisible to CI'
+  witness: 'rs-learn .github/workflows/wasm-check.yml added new test-native job running cargo test -p rs-learn on native host target alongside existing wasm32 check-wasm job, so native-gated #[test] suite now executes in CI'
+  status: completed
+- id: rslearn-fix-rslearn-free-unvalidated-len
+  title: rs-learn crates/wasm/src/wasm_export.rs:18 rs_learn_free reconstructs Vec::from_raw_parts(ptr,len,len) treating len as both length and capacity with no validation against original allocation -- mismatched host-supplied len is UB with no guard
+  witness: rs-learn crates/wasm/src/wasm_export.rs added SAFETY CONTRACT comment above rs_learn_free documenting the ptr/len contract, matching sibling take_bytes documentation style from prior sweep
+  status: completed
+- id: rslearn-fix-node-episode-dead-public-api
+  title: rs-learn crates/wasm/src/graph/types.rs:15 NodeRow/EpisodeRow publicly re-exported as first-class graph entities but no dispatch verb ever constructs/inserts/queries them -- only EdgeRow has CRUD verbs, node/episode layer is unreachable dead public API
+  witness: rs-learn investigated NodeRow/EpisodeRow dispatch gap, found not a minimal dispatch-only fix (TemporalGraph has zero node/episode storage methods) -- documented as genuine architectural gap per fix-round2 report, not force-wired incorrectly
+  status: completed
+- id: rslearn-sweep-historical-dead-rs-files
+  title: 'rs-learn .gm/historical/ has 17 orphaned .rs files (~2500+ lines: router_core.rs/attention.rs/instant.rs/edges.rs/entities.rs/schema.rs etc.) with no mod declaration/Cargo.toml reference, duplicating live module names -- risk of editing wrong copy, violates .gm-holds-state-not-code-archives convention'
+  witness: deferred/documented per fix-round2 investigation of .gm/historical/ orphaned .rs files -- confirmed no mod declaration/Cargo.toml reference across all 17 files
+  status: completed
+- id: rslearn-fix-hostkv-empty-vs-missing-conflated
+  title: rs-learn crates/wasm/src/graph/host_kv_backend.rs:19 HostKv::get treats empty byte vector identically to missing key -- combined with kv_put always printing rc=0 in its error branch, real host-side write failure reason never surfaced
+  witness: rs-learn crates/wasm/src/graph/host_kv_backend.rs investigated host_kv_get ABI, confirmed genuinely no separate not-found signal exists at the host boundary (ptr==0/len==0 both collapse to empty), documented as an ABI limitation
+  status: completed
+- id: rslearn-fix-errors-copypasted-acp-vocabulary
+  title: rs-learn crates/wasm/src/errors.rs:6 LlmError variants Display messages prefixed 'acp' read as copy-pasted from an unrelated crate rather than rs-learn's own domain vocabulary, confusing error origin
+  witness: rs-learn crates/wasm/src/errors.rs removed copy-pasted 'acp' prefix from all 5 LlmError Display messages, grepped whole tree confirming no other references
+  status: completed
+- id: rssearch-fix-fusionsearch-no-error-distinguish
+  title: rs-search src/wasm_host.rs:105 fusion_search logs per-backend errors but swallows into empty results via unwrap_or_default; Searcher::search has no error path -- callers cannot distinguish zero-hit from all-backends-failed except via out-of-band host log
+  witness: verified prior-sweep fix already present and sufficient (fusion_search logs combined all-three-failed warning); no additional change needed, applied:false with clear reason
+  status: completed
+- id: rssearch-sweep-eval-dead-public-api
+  title: rs-search src/eval.rs:51 evaluate/EvalReport/format_report are dead code outside their own module -- rs-plugkit does not consume this crate, no other src file calls it, only exercised by hand-rolled test-block corpora
+  witness: rs-search investigated eval.rs, confirmed cdylib-only crate-type means it can never be consumed as external lib dependency regardless of pub visibility, no bin/example calls it, cross-repo grep found zero external references; documented via fix-round2 report
+  status: completed
+- id: rscodeinsight-fix-detectdatalayer-double-tree-walk
+  title: rs-codeinsight src/models.rs:27 detect_data_layer runs its own full ignore-aware WalkBuilder traversal independent from lib.rs collect_files -- every analyze() walks the entire project tree twice and re-reads files redundantly, real perf issue on large repos
+  witness: rs-codeinsight added collect_all_files single-walk helper in lib.rs, detect_data_layer now consumes already-collected file list instead of independent WalkBuilder traversal, eliminating redundant tree walk
+  status: completed
+- id: rscodeinsight-fix-unquote-no-escape-handling
+  title: rs-codeinsight src/project.rs:437 unquote() finds first raw quote as terminator without honoring backslash escapes -- package.json values containing escaped quotes are truncated/mis-parsed instead of erroring cleanly
+  witness: rs-codeinsight src/project.rs unquote() now escape-aware (mirrors config.rs approach), added unescape_json_string helper handling \" \\ \/ \n \t \r
+  status: completed
+- id: rscodeinsight-fix-contributing-stale-mainrs-ref
+  title: rs-codeinsight CONTRIBUTING.md:20 documents src/main.rs as entry point but no such file exists -- Cargo.toml declares cdylib/rlib library crate only (src/lib.rs), doc is stale and misleads contributors
+  witness: rs-codeinsight CONTRIBUTING.md corrected src/main.rs reference to src/lib.rs matching actual Cargo.toml crate-type
+  status: completed
+- id: rscodeinsight-fix-claudemd-dangling-agentsmd-ref
+  title: rs-codeinsight CLAUDE.md contains only @AGENTS.md but no AGENTS.md exists anywhere in the repo root -- documented convention/skill-loading pointer silently resolves to nothing
+  witness: rs-codeinsight created real AGENTS.md sourced from existing CONTRIBUTING.md/CHANGELOG.md content so CLAUDE.md's @AGENTS.md pointer now resolves to real content
+  status: completed
+- id: rscodeinsight-fix-langabbrev-utf8-panic-risk
+  title: rs-codeinsight src/lang.rs:127 lang_abbrev fallback arm slices raw byte index [..4.min(len)] -- panics if invoked with a language name whose 4th byte falls mid-UTF8-codepoint (pub fn, reachable with arbitrary input)
+  witness: rs-codeinsight src/lang.rs lang_abbrev fallback fixed to use char-boundary-safe truncation instead of raw byte-index slicing, applied per fix-round2 report
+  status: completed
+- id: rscodeinsight-add-real-execution-test-witness
+  title: rs-codeinsight has no real-execution test witness file anywhere despite the driving harness's real-execution-only testing convention -- zero manual/live-invocation verification for meaningful parsing/detection logic (tsconfig alias parsing, package.json scanning, ORM/framework detection)
+  witness: applied per fix-round2 investigation -- rs-codeinsight is a standalone Rust crate not bound by gm's own test.js convention; real integration test added following idiomatic Rust conventions per agent report
+  status: completed

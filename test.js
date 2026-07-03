@@ -8,9 +8,7 @@ const os = require('os');
 
 const ROOT = process.cwd();
 const SPOOL = path.join(ROOT, '.gm', 'exec-spool');
-const IN = path.join(SPOOL, 'in');
-const OUT = path.join(SPOOL, 'out');
-const STATUS = path.join(SPOOL, '.status.json');
+const IN = path.join(SPOOL, 'in'), OUT = path.join(SPOOL, 'out'), STATUS = path.join(SPOOL, '.status.json');
 
 let SEQ = 0;
 function nextId(verb) { return `test-${process.pid}-${++SEQ}-${verb}`; }
@@ -87,27 +85,22 @@ function checkVersionConsistency() {
   assert(canonical, 'gm.json missing plugkitVersion');
   for (const rel of ['bin/plugkit.version', 'gm-plugkit/plugkit.version']) {
     const abs = path.join(ROOT, rel);
-    if (!fs.existsSync(abs)) continue;
-    assert(fs.readFileSync(abs, 'utf8').trim() === canonical, 'version drift: ' + rel + ' != gm.json.plugkitVersion=' + canonical);
+    if (fs.existsSync(abs)) assert(fs.readFileSync(abs, 'utf8').trim() === canonical, 'version drift: ' + rel + ' != gm.json.plugkitVersion=' + canonical);
   }
   console.log('version-consistency guard ok (plugkitVersion ' + canonical + ')');
 }
 
 function checkPackageFilesHygiene() {
   const files = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files || [];
-  assert(!files.some(f => /^bin\/?\*{0,2}$/.test(f)) && !files.includes('bin/plugkit.wasm'),
-    'package.json files[] must not re-include bin/ wholesale or list bin/plugkit.wasm (149MB, bootstrap re-fetches sha256-pinned)');
-  assert(!files.some(f => /^gm-plugkit\/?\*{0,2}$/.test(f)) && !files.some(f => /\.test\.js$/.test(f)),
-    'package.json files[] must not ship the whole gm-plugkit/ dir or any *.test.js dev fixture');
+  assert(!files.some(f => /^bin\/?\*{0,2}$/.test(f)) && !files.includes('bin/plugkit.wasm') && !files.some(f => /^gm-plugkit\/?\*{0,2}$/.test(f)) && !files.some(f => /\.test\.js$/.test(f)),
+    'package.json files[] must not re-include bin/ wholesale, list bin/plugkit.wasm (149MB, bootstrap re-fetches sha256-pinned), ship whole gm-plugkit/ dir, or any *.test.js dev fixture');
   console.log('package-files-hygiene guard ok');
 }
 
 function checkUpdateWarningWired() {
   const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
-  assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src),
-    'injectUpdateWarning() must exist, read .update-available.json, and set update_warning on the response');
-  assert((src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3,
-    'injectUpdateWarning must be called from autoRecall + instruction/transition/phase-status branches (>=3 refs)');
+  assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src) && (src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3,
+    'injectUpdateWarning() must exist, read .update-available.json, set update_warning, and be called from autoRecall + instruction/transition/phase-status branches (>=3 refs)');
   console.log('update-warning-wired guard ok');
 }
 
@@ -131,9 +124,7 @@ function checkRenameAndInstaller() {
 }
 
 function checkAgentsMdBudget() {
-  const CEILING = 36000;
-  const abs = path.join(ROOT, 'AGENTS.md');
-  const bytes = fs.statSync(abs).size;
+  const CEILING = 36000, abs = path.join(ROOT, 'AGENTS.md'), bytes = fs.statSync(abs).size;
   assert(bytes <= CEILING, 'AGENTS.md is ' + bytes + '/' + CEILING + ' bytes -- detail has accreted instead of draining to an rs-learn recall: pointer; memorize-fire the substance and compress to one line until under ceiling');
   assert(/recall:/.test(fs.readFileSync(abs, 'utf8')), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn');
   console.log('agents-md-budget guard ok (' + bytes + '/' + CEILING + ' bytes)');
@@ -155,8 +146,19 @@ function checkConstraintsMdSeedAndIdempotency() {
   console.log('constraints-md seed+idempotency guard ok');
 }
 
+function checkSpoolDispatchGates() {
+  const { checkDispatchGates, isSpoolPollCommand, isNativeSearchCommand } = require('./lib/spool-dispatch.js');
+  const gb = checkDispatchGates('s', 'verb', { verb: 'bash', body: { command: 'git commit -am "wip"' } });
+  const pt = checkDispatchGates('s', 'verb', { verb: 'bash', body: { command: 'npm run build' } });
+  assert(gb.allowed === false && /bash-git-bypass/.test(gb.reason) && pt.allowed === true, 'git-bypass denied + clean bash allowed');
+  assert(!!isSpoolPollCommand('sleep 2; cat .gm/exec-spool/out/instruction-1.json') && isSpoolPollCommand('npm test') === null, 'spool-poll flagged, clean not');
+  assert(!!isNativeSearchCommand('grep -rn "TODO" src/') && isNativeSearchCommand('grep TODO src/index.js') === null, 'grep -r flagged, single-file not');
+  console.log('spool-dispatch-gates guard ok');
+}
+
 async function main() {
   checkNoBom();
+  checkSpoolDispatchGates();
   checkNoComments();
   checkVersionConsistency();
   checkPackageFilesHygiene();
