@@ -99,7 +99,9 @@ function applyClaudeSettings(home) {
   const { obj, existed, corrupt } = readSettings(settingsPath);
   if (corrupt) {
     const backup = settingsPath + '.bak';
-    try { fs.copyFileSync(settingsPath, backup); err(`existing settings.json was malformed; backed up to ${backup}`); } catch (_) {}
+    try { fs.copyFileSync(settingsPath, backup); } catch (_) {}
+    err(`existing settings.json was malformed; backed up to ${backup} and left untouched (not overwritten with defaults, to avoid discarding your other settings) -- fix the JSON manually, or delete it and re-run to get a fresh settings.json`);
+    return { settingsPath, existed, corrupt: true };
   }
   obj.effortLevel = 'low';
   obj.alwaysThinkingEnabled = false;

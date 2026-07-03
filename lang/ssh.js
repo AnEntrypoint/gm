@@ -11,6 +11,12 @@ function loadTarget(targetName) {
   ];
   const cfgPath = candidatesCfg.find(p => fsSync.existsSync(p));
   if (!cfgPath) throw new Error('No ssh-targets.json found at ' + candidatesCfg.join(' or '));
+  if (process.platform !== 'win32') {
+    try {
+      const mode = fsSync.statSync(cfgPath).mode & 0o777;
+      if (mode !== 0o600) fsSync.chmodSync(cfgPath, 0o600);
+    } catch (_) {}
+  }
   const cfg = JSON.parse(fsSync.readFileSync(cfgPath, 'utf8'));
   const name = targetName || 'default';
   if (!cfg[name]) throw new Error('No target \'' + name + '\' in ssh-targets.json. Available: ' + Object.keys(cfg).join(', '));

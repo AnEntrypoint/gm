@@ -550,9 +550,11 @@ const LEGACY_BROWSER_PORTS_FILE = path.join(TMP_DIR, 'plugkit-browser-ports.json
 const LEGACY_BROWSER_SESSIONS_FILE = path.join(TMP_DIR, 'plugkit-browser-sessions.json');
 
 const __browserRootCache = new Map();
+const BROWSER_ROOT_CACHE_TTL_MS = 60_000;
 function browserRootDir(cwd) {
   const start = path.resolve(cwd || process.cwd());
-  if (__browserRootCache.has(start)) return __browserRootCache.get(start);
+  const cached = __browserRootCache.get(start);
+  if (cached && Date.now() - cached.ts < BROWSER_ROOT_CACHE_TTL_MS) return cached.root;
   let root = start;
   try {
     const r = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: start, encoding: 'utf-8', windowsHide: true, timeout: 1500 });
@@ -563,14 +565,17 @@ function browserRootDir(cwd) {
     }
   } catch (_) {}
   root = path.resolve(root);
-  __browserRootCache.set(start, root);
+  __browserRootCache.set(start, { root, ts: Date.now() });
   return root;
 }
 
 function browserStateDir(cwd) {
-  const dir = path.join(browserRootDir(cwd), '.gm', 'exec-spool');
+  const dir = path.join(browserRootDir(cwd), '.gm', 'browser-state');
   try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
   return dir;
+}
+function browserStateDirLegacyCoLocated(cwd) {
+  return path.join(browserRootDir(cwd), '.gm', 'exec-spool');
 }
 function browserPortsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-ports.json'); }
 function browserSessionsFile(cwd) { return path.join(browserStateDir(cwd), 'browser-sessions.json'); }
@@ -609,14 +614,23 @@ function atomicWriteJson(filePath, obj) {
 function migrateLegacyBrowserState(cwd) {
   const dst1 = browserPortsFile(cwd);
   const dst2 = browserSessionsFile(cwd);
+  const coLocated = browserStateDirLegacyCoLocated(cwd);
+  const coLocatedPorts = path.join(coLocated, 'browser-ports.json');
+  const coLocatedSessions = path.join(coLocated, 'browser-sessions.json');
   try {
-    if (!fs.existsSync(dst1) && fs.existsSync(LEGACY_BROWSER_PORTS_FILE)) {
+    if (!fs.existsSync(dst1) && fs.existsSync(coLocatedPorts)) {
+      const legacy = JSON.parse(fs.readFileSync(coLocatedPorts, 'utf-8'));
+      if (legacy && typeof legacy === 'object') atomicWriteJson(dst1, legacy);
+    } else if (!fs.existsSync(dst1) && fs.existsSync(LEGACY_BROWSER_PORTS_FILE)) {
       const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_PORTS_FILE, 'utf-8'));
       if (legacy && typeof legacy === 'object') atomicWriteJson(dst1, legacy);
     }
   } catch (_) {}
   try {
-    if (!fs.existsSync(dst2) && fs.existsSync(LEGACY_BROWSER_SESSIONS_FILE)) {
+    if (!fs.existsSync(dst2) && fs.existsSync(coLocatedSessions)) {
+      const legacy = JSON.parse(fs.readFileSync(coLocatedSessions, 'utf-8'));
+      if (legacy && typeof legacy === 'object') atomicWriteJson(dst2, legacy);
+    } else if (!fs.existsSync(dst2) && fs.existsSync(LEGACY_BROWSER_SESSIONS_FILE)) {
       const legacy = JSON.parse(fs.readFileSync(LEGACY_BROWSER_SESSIONS_FILE, 'utf-8'));
       if (legacy && typeof legacy === 'object') atomicWriteJson(dst2, legacy);
     }
@@ -2820,8 +2834,10 @@ async function runSpoolWatcher(instance, spoolDir) {
     if (!_ownWrapperSha12) return;
     let reg = {};
     try { reg = JSON.parse(fs.readFileSync(PEER_REGISTRY_PATH, 'utf-8')); } catch (_) { return; }
+    const ownRoot = browserRootDir(process.cwd());
     for (const peerCwd of Object.keys(reg)) {
       if (peerCwd === process.cwd()) continue;
+      if (browserRootDir(peerCwd) !== ownRoot) continue;
       const peerLock = path.join(peerCwd, '.gm', 'exec-spool', '.watcher.lock');
       let content = '';
       try { content = fs.readFileSync(peerLock, 'utf-8').trim(); } catch (_) { continue; }

@@ -460,24 +460,6 @@ function killPid(pid) {
   return true;
 }
 
-function killRunningDaemons(reason) {
-  const tmp = os.tmpdir();
-  const killedPids = [];
-  for (const pidFile of ['glootie-runner.pid', 'plugkit-runner.pid']) {
-    const pidPath = path.join(tmp, pidFile);
-    if (!fs.existsSync(pidPath)) continue;
-    try {
-      const pid = parseInt(fs.readFileSync(pidPath, 'utf8').trim(), 10);
-      if (killPid(pid)) {
-        killedPids.push(pid);
-        obsEvent('bootstrap', 'daemon.killed', { pid, pidFile, reason });
-      }
-      try { fs.unlinkSync(pidPath); } catch (_) {}
-    } catch (_) {}
-  }
-  return killedPids;
-}
-
 function killSpoolWatcherInCwd(reason) {
   try {
     const pidPath = path.join(process.cwd(), '.gm', 'exec-spool', '.watcher.pid');
@@ -525,7 +507,6 @@ function pruneOldVersions(root, keepVersion) {
 function proactiveKillForNewInstall(installedVersion) {
   try {
     const reason = `install:v${installedVersion}`;
-    killRunningDaemons(reason);
     killSpoolWatcherInCwd(reason);
     writeDaemonVersion(installedVersion);
   } catch (_) {}
@@ -541,7 +522,7 @@ function killStaleDaemonIfVersionChanged() {
   }
   const recorded = readDaemonVersion();
   if (recorded === currentVersion) return;
-  if (recorded) killRunningDaemons(`version_change:${recorded}->${currentVersion}`);
+  if (recorded) killSpoolWatcherInCwd(`version_change:${recorded}->${currentVersion}`);
   writeDaemonVersion(currentVersion);
 }
 
@@ -967,7 +948,7 @@ async function ensureReady(opts) {
   }
 
   if (versionDrift) {
-    try { killRunningDaemons(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
+    try { killSpoolWatcherInCwd(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
   }
 
   ensureWrapperFresh();
@@ -1096,7 +1077,6 @@ module.exports = {
   isReady,
   cacheRoot,
   obsEvent,
-  killRunningDaemons,
   killStaleDaemonIfVersionChanged,
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,

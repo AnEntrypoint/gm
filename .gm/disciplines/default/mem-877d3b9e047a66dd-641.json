@@ -1,0 +1,3 @@
+## Resolved mutable: worktree-audit-findings-pending
+
+Workflow wf_eb3b162a-2ac completed: 74 agents, 65/66 findings confirmed via adversarial verify. Full breakdown read from synthesis output (summary.txt), critical worktree-class bugs identified: gm bootstrap.js killRunningDaemons (machine-global pidfile kills cross-worktree watchers), rs-learn dispatch.rs hardcoded KV key 'default' (concurrent worktrees clobber adapter/router state via unmergeable tracked SQLite), rs-plugkit gm_dir() cwd-relative with no git-common-dir awareness, rs-plugkit git_push pushes current branch not main (breaks in worktree checked out to non-main branch).

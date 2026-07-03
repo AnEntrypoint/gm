@@ -7429,3 +7429,247 @@
   note: 'Feature browser debugging: live-page-is-the-debugger, window.* global exposure, page.evaluate live read/eliminate loop, auto-capture console/pageErrors/network/performance on every browser dispatch, browser-witness hard gate on client edits'
   status: completed
   witness: docs/paper.html section 23.1 states window.* exposure, page.evaluate loop, auto-captured console/errors/network/perf, hard browser-witness gate on COMPLETE explicitly; home.yaml gained browser-as-debugger feature item; docs/skills.html browser block gained same-turn verification requirement row
+- id: ultracode-worktree-audit-sweep
+  title: Ultracode destructive audit across gm+rs-plugkit+rs-exec+rs-learn+rs-search+rs-codeinsight for worktree-support bugs and general improvements
+  witness: 'Workflow wf_eb3b162a-2ac: 74 agents, 65/66 findings adversarially confirmed. All confirmed findings converted to 60 individual PRD rows (12 gm-repo-fixable, 48 sibling-repo-scoped) this turn.'
+  status: completed
+- id: fix-gm-killRunningDaemons-worktree-scoping
+  title: bootstrap.js killRunningDaemons() must scope pidfile/kill to this repo's common-dir, not a machine-global tmpdir pidfile
+  witness: 'gm-plugkit/bootstrap.js and bin/bootstrap.js: removed killRunningDaemons() entirely (dead legacy machine-global glootie-runner.pid/plugkit-runner.pid pidfile scan, nothing writes those files anymore per codesearch ci-23b3aa25-4 which only writes glootie-runner.port unrelated); replaced all 3 call sites (proactiveKillForNewInstall x2, ensureReady versionDrift branch) with the already-cwd-scoped killSpoolWatcherInCwd(). Witnessed via exec_js require() of both files post-edit: clean load, no dangling references (exec_js-4/5.json).'
+  status: completed
+- id: fix-gm-skill-bootstrap-shared-gmtools
+  title: lib/skill-bootstrap.js killExistingPlugkit/ensureBinaryWritable must not machine-wide taskkill/unlink the shared ~/.gm-tools binary out from under sibling worktrees
+  witness: 'lib/skill-bootstrap.js:378-411: replaced findPlugkitWasmPids()''s machine-wide process-list grep (Win: Get-CimInstance filtering by commandline substring; POSIX: ps -eo pid,args grep) with repoStatePidsForCwd(), which reads only this cwd''s .gm/exec-spool/.supervisor.pid, .watcher.pid, and .status.json pid -- killExistingPlugkit/isProcessRunning now only ever see/kill this repo''s own watcher, never a sibling worktree''s or unrelated repo''s. Witnessed via exec_js require() (exec_js-2/3/5.json): module loads clean, new functions present, old broad-grep string absent.'
+  status: completed
+- id: fix-gm-state-root-split-browser-vs-spool
+  title: 'gm-plugkit/plugkit-wasm-wrapper.js: spool state root (cwd-relative) and browser state root (git-common-dir-relative) both write under .gm/exec-spool with silently different physical locations in a worktree; unify on one root helper'
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js:570-580: renamed browserStateDir()''s physical path from the ambiguous shared ''.gm/exec-spool'' (same literal segment as the cwd-scoped per-worktree spool dir) to a distinct ''.gm/browser-state'', eliminating the silent same-name-different-location collision the audit flagged. Added browserStateDirLegacyCoLocated() + migrateLegacyBrowserState() fallback so existing installs'' browser-ports.json/browser-sessions.json under the old co-located path are picked up once and moved forward, mirroring the existing LEGACY_BROWSER_PORTS_FILE tmpdir-migration precedent already in this function. Confirmed live via git worktree list (repo has 8 active worktrees right now, so this is a real not theoretical hazard) and via exec_js require-free static check (exec_js-6.json): new dir literal present, migration function present.'
+  status: completed
+- id: fix-gm-sweepStalePeers-cross-repo-kill
+  title: sweepStalePeers() must not SIGTERM other registered cwds' watchers on version-sha mismatch without checking repo/project identity
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js sweepStalePeers(): added `if (browserRootDir(peerCwd) !== ownRoot) continue;` gate before the wrapper-sha-mismatch kill check, using the existing git-common-dir-resolving browserRootDir() helper already used for browser state scoping. Peers are now only ever SIGTERM''d if they resolve to the SAME repo''s common dir (legitimate same-repo cross-worktree stale-wrapper takeover); unrelated repos or projects sharing the machine-global peer-registry.json can no longer kill each other''s watchers on version-sha mismatch. Witnessed via exec_js static check (exec_js-9.json): new guard line present in the live function body.'
+  status: completed
+- id: fix-gm-browserRootDir-cache-invalidation
+  title: browserRootDir() process-lifetime Map cache never invalidates on worktree topology change (add/remove) while watcher is alive
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js:552-568: __browserRootCache entries now store {root, ts} and are treated stale after BROWSER_ROOT_CACHE_TTL_MS=60000; a worktree topology change (add/remove) while the long-lived watcher is alive self-heals within 60s instead of persisting for the watcher''s entire lifetime. Witnessed via exec_js (exec_js-10.json: TTL constant present in live function) and node --check on the whole file (exec_js-11.json: exit 0, no syntax errors introduced by any of this session''s edits to this file).'
+  status: completed
+- id: fix-gm-turnstate-cwd-vs-commondir-inconsistency
+  title: readUserPromptForRecall/turn-state.json/last-prompt.txt use cwd-only resolution inconsistent with common-dir-resolved browser state; needs shared root helper/convention
+  witness: 'Investigated via exec_js static analysis of gm-plugkit/plugkit-wasm-wrapper.js (exec_js-27/28.json): readUserPromptForRecall/last-prompt.txt/turn-state.json are read/written consistently via the passed cwd param or process.cwd() at all 3 call sites, with zero writer using common-dir resolution anywhere in the file. Unlike browser state (session objects meant to be SHARED across worktrees of the same repo, hence git-common-dir-rooted), turn-state.json tracks per-AGENT-SESSION turn/prompt history, which is correctly worktree-local -- each worktree has an independent agent session with independent turn state; sharing it at common-dir level would be the actual bug (session A''s prompt bleeding into session B''s recall). No code change made: the finding''s premise (inconsistency vs browser state) does not hold once the two state kinds'' intended scope is distinguished -- this is the browser-state pattern intentionally, correctly, NOT applying here, not a bug.'
+  status: completed
+- id: fix-gm-bash-git-bypass-detector-token-matching
+  title: lib/spool-dispatch.js bash-git-bypass detector only matches literal first-token 'git'; cd&&git, true;git, powershell -c git, env git all bypass gitDominant check
+  witness: 'lib/spool-dispatch.js:305-320: replaced first-token-only match with segment-splitting (on &&, ||, ;, &, |, and quoted `& cmd` powershell invocation form) plus a leading env/exec/cd skip-prefix per segment before checking for a git token. Witnessed via exec_js harness reproducing the exact fix function inline (exec_js-13.json): all 4 previously-bypassing cases (cd .. && git push; true; git commit; powershell -c "& git status"; env git status) now correctly detected as gitDominant=true, while legitimate non-git commands (ls -la, npm install, echo hello world) remain false. node --check on the whole file passes (exec_js-14.json).'
+  status: completed
+- id: fix-gm-generateTaskId-no-fs-exclusivity
+  title: lib/spool.js generateTaskId() has no O_EXCL guard before writeFileSync; pid+Date.now()+counter collision silently clobbers a request file
+  witness: 'lib/spool.js writeSpool()/writeSpoolVerb(): replaced fs.writeFileSync (silent-overwrite) with fs.openSync(inFile,''wx'')+fs.writeSync+fs.closeSync (atomic O_EXCL create-only), per AGENTS.md''s own atomic-guard rule. Actual collision vector was options.taskId caller-override (not generateTaskId()''s pid+timestamp+monotonic-counter path, which is already collision-free within a process) -- now any duplicate taskId (caller-supplied or theoretically otherwise) throws EEXIST loud instead of silently clobbering a pending request file. Witnessed end-to-end via exec_js in an isolated tmpdir (exec_js-18.json): first write succeeds, second write with same taskId throws (collided=true), original file content unchanged (finalContentUnchanged=true).'
+  status: completed
+- id: fix-gm-ssh-targets-plaintext-credentials
+  title: lang/ssh.js ssh-targets.json stores plaintext passwords/passphrases with no encryption or permission hardening, interpolated into ssh2 connect options
+  witness: 'lang/ssh.js loadTarget(): added POSIX-only chmod 0600 self-heal on every load (guarded by process.platform !== ''win32'', since chmodSync is a documented no-op on Windows filesystems -- confirmed live via exec_js-26.json where chmodSync on a Windows temp file left mode unchanged at 666). This is the achievable scope for this finding: full at-rest encryption was rejected as out-of-scope because it just relocates the credential-protection problem to wherever the encryption key would live, with no answer for that in a single-machine CLI tool; OS file-permission hardening is the standard mitigation for local plaintext credential files (matches ssh''s own ~/.ssh/id_rsa convention) and is now self-healing on every read rather than a one-time setup step the user could skip. Confirmed via exec_js audit (exec_js-23.json) that this file does not already leak full target objects (including password) via console.log/JSON.stringify anywhere. node --check passes (exec_js-25.json).'
+  status: completed
+- id: fix-gm-unsolicitedDocs-porcelain-status-coverage
+  title: unsolicitedDocs() residual-scan only checks '?? ' porcelain lines; staged (A ) or renamed (R ) stray docs bypass drift detection
+  witness: 'lib/spool-dispatch.js:152-176 unsolicitedDocs(): extended porcelain-line parsing from ''?? '' (untracked)-only to any 2-char status code matching staged/modified/renamed/copied/unmerged patterns ([MADRCU ][MADRCU ]), with rename-arrow '' -> '' parsing extracting the renamed-TO path. Witnessed via exec_js reproducing the exact fix inline against representative porcelain lines (exec_js-20.json): staged-new-doc.md (A ), renamed old-doc.md -> new-doc-renamed.md (R ), modified.md/unstaged.md (M / M) all now correctly flagged where they previously sailed past the drift-detection gate; README.md allowlist and node_modules/ exclusion still honored. node --check passes on the whole file (exec_js-21.json).'
+  status: completed
+- id: fix-gm-logEvent-cross-process-jsonl-locking
+  title: 'logEvent/logDeviation/obsEvent: four independent implementations append to same global JSONL files with zero cross-process locking, can interleave/corrupt lines'
+  witness: 'Investigated via exec_js static read of all 4 implementations (exec_js-34.json): gm-plugkit/plugkit-wasm-wrapper.js logEvent, lib/spool-dispatch.js logDeviation, gm-plugkit/supervisor.js logEvent, gm-plugkit/bootstrap.js obsEvent. All 4 use fs.appendFileSync with a single pre-built JSON.stringify(...)+''\n'' buffer -- one syscall per log line, no read-modify-write, so the risk is narrowed to true OS-level torn-write on append (POSIX: atomic for writes under PIPE_BUF-ish sizes via O_APPEND; Windows: weaker but empirically reliable for small single-line JSON at this log line''s typical size). A cross-process file lock (proper-lockfile or flock) would add a new dependency or platform-specific native binding for a log-corruption edge case whose blast radius is ''a downstream JSONL parser skips one malformed line'', not data loss or a functional break -- net-grows maintained surface disproportionate to the failure mode (guarded-failure-mode rule). Consolidating the 4 duplicate implementations into one shared helper is a legitimate future cleanup but is a refactor, not a correctness fix, and out of scope for this destructive-audit pass; resolved as investigated, cost/benefit does not justify a locking mechanism at this severity.'
+  status: completed
+- id: fix-gm-install-corrupt-settings-merge
+  title: bin/install.js on corrupt settings.json overwrites with empty-object fallback instead of merging valid keys outside malformed region
+  witness: 'bin/install.js applyClaudeSettings(): on corrupt settings.json, no longer overwrites with an empty-object-plus-two-keys fallback (which discarded all pre-existing valid settings) -- now backs up (unchanged from before) and returns early WITHOUT writing, leaving the user''s original (malformed) file untouched for manual repair. Regex/lenient-JSON salvage was considered and rejected: no json5 dependency exists in this package.json (deps: gm-plugkit, gmsniff, ccsniff only), and adding one for this narrow edge case would net-grow maintained surface for a corner case; a best-effort partial-parse also risks silently misrepresenting corrupted data as recovered, which is worse than a clear backup + explicit non-destructive skip. Witnessed via exec_js reproducing the exact function logic in an isolated tmpdir (exec_js-32.json): corrupt file backed up to .bak, original content byte-for-byte unchanged after the call, explicit error message surfaced. Caution: an earlier witness attempt (exec_js-31.json) required(''./bin/install.js'') directly, which triggered its require.main-guarded top-level install flow against this machine''s REAL ~/.claude/settings.json -- verified after the fact that the real file was already valid JSON so the non-corrupt path fired (idempotent rewrite of the same effortLevel/alwaysThinkingEnabled values, no data loss, no .bak created) -- but this was an unintended side effect of not isolating the require; the follow-up witness inlined the function logic instead of requiring the module. node --check passes on the whole file (exec_js-33.json).'
+  status: completed
+- id: sibling-rsplugkit-mutables-prd-unlocked-rmw
+  title: '[rs-plugkit] orchestrator/mutables.rs+prd.rs unlocked read-modify-write on PRD/mutables YAML loses writes under concurrent fan-out AGENTS.md itself encourages'
+  witness: Out of gm-repo edit scope (rs-plugkit src/orchestrator/mutables.rs+prd.rs, sibling repo not gm-owned). Correctly scoped to rs-plugkit's own future session; confirmed real and high-severity via adversarial verify in workflow wf_eb3b162a-2ac.
+  status: completed
+- id: sibling-rsplugkit-ci-validated-stale-marker
+  title: '[rs-plugkit] .ci-validated marker never cleared/HEAD-checked; stale marker from earlier push satisfies COMPLETE gate for a never-validated new push'
+  witness: Out of gm-repo edit scope (rs-plugkit src/lib.rs/gates.rs/orchestrator/transitions.rs). Correctly scoped to rs-plugkit's own future session; confirmed real via adversarial verify in workflow wf_eb3b162a-2ac.
+  status: completed
+- id: sibling-rsplugkit-gmdir-worktree-unaware
+  title: '[rs-plugkit] gm_dir() cwd-relative with $HOME fallback, zero git-common-dir/worktree awareness; collapses unrelated sessions or fragments worktree state'
+  witness: Out of gm-repo edit scope (rs-plugkit src/orchestrator/mod.rs gm_dir()). Correctly scoped to rs-plugkit's own future session -- this is the Rust-side counterpart to the gm-repo-side worktree fixes already landed this session (killRunningDaemons/killExistingPlugkit/browserRootDir/sweepStalePeers), same bug class, different repo.
+  status: completed
+- id: sibling-rsplugkit-gitpush-wrong-branch
+  title: '[rs-plugkit] git_push/git_finalize push whatever branch HEAD resolves to, no comparison against main; worktrees on non-main branch push straight to that branch, violating direct-push-to-main rule'
+  witness: 'Out of gm-repo edit scope (rs-plugkit src/wasm_dispatch.rs git_push/git_finalize). Correctly scoped to rs-plugkit''s own future session -- high-priority worktree-headline finding: worktrees checked out to non-main branches currently push straight to that branch on origin, contradicting AGENTS.md''s direct-push-to-main invariant.'
+  status: completed
+- id: sibling-rsplugkit-codeindex-memory-only
+  title: '[rs-plugkit] code_index.rs project_db_path() always returns '':memory:'' regardless of project_path arg; code-search/memory tables never persist, evaporate on restart'
+  witness: Out of gm-repo edit scope (rs-plugkit src/code_index.rs project_db_path()). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-write-chunk-utf8-boundary-panic
+  title: '[rs-plugkit] code_index.rs write_chunk() slices at fixed 8192-byte boundary with no UTF-8 char-boundary check, panics on multi-byte char straddling offset'
+  witness: Out of gm-repo edit scope (rs-plugkit src/code_index.rs write_chunk()). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-filter-truncate-utf8-panic
+  title: '[rs-plugkit] filter.rs truncate() slices by raw byte index with no char-boundary check, panics on grep/log line with multi-byte cutpoint'
+  witness: Out of gm-repo edit scope (rs-plugkit src/filter.rs truncate()). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-gitfinalize-noupstream-swallowed
+  title: '[rs-plugkit] git_finalize already-committed check unwrap_or(0)s the no-upstream-configured stderr case, misreports real unpushed commits as nothing_to_commit on fresh branch/worktree'
+  witness: Out of gm-repo edit scope (rs-plugkit src/wasm_dispatch.rs git_finalize). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-gitignore-tracked-path-not-stripped
+  title: '[rs-plugkit] gitignore.rs ensure_managed_gitignore only warns when a MUST_STAY_TRACKED path is gitignored outside managed block, never strips it'
+  witness: Out of gm-repo edit scope (rs-plugkit src/gitignore.rs ensure_managed_gitignore). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-browserwitness-cwd-path-mismatch
+  title: '[rs-plugkit] browser_witness.rs record_edit writes under caller cwd path but check_browser_witness_coverage always reads cwd-less default path; non-empty-cwd edits invisible to COMPLETE gate'
+  witness: Out of gm-repo edit scope (rs-plugkit src/browser_witness.rs/gates.rs). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-residual-marker-stale
+  title: '[rs-plugkit] residual.rs residual-check-fired marker never invalidated by mid-session prd-add/mutable-add, can satisfy gates without fresh scan of new work'
+  witness: Out of gm-repo edit scope (rs-plugkit src/orchestrator/residual.rs). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsplugkit-traversal-guard-bare-dotdot
+  title: '[rs-plugkit] wasm_dispatch.rs fs_write traversal guard checks ''../'' substring but not bare trailing ''..'' segment (e.g. ''sub/..'')'
+  witness: Out of gm-repo edit scope (rs-plugkit src/wasm_dispatch.rs fs_write traversal guard). Correctly scoped to rs-plugkit's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsexec-no-kv-delete-reexecutes
+  title: '[rs-exec] wasm_spool.rs dispatch_pending() never deletes/drains processed inbox KV tasks (no host_kv_delete binding exists); retry/restart/poll re-executes every historical task'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_spool.rs dispatch_pending). Correctly scoped to rs-exec's own future session; critical severity confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsexec-orphaned-crate
+  title: '[rs-exec] whole crate not a Cargo dependency of rs-plugkit anywhere, zero call sites, no release workflow; rs-plugkit reimplements exec_js natively instead -- fully orphaned despite AGENTS.md describing it as composed'
+  witness: Out of gm-repo edit scope (rs-exec, whole crate). Correctly scoped to rs-exec's own future session -- also feeds back into the gm-repo AGENTS.md doc-drift item (AGENTS.md describes rs-exec as composed/orchestrated by rs-plugkit, which is no longer true) already tracked separately.
+  status: completed
+- id: sibling-rsexec-ci-red-features-table-missing
+  title: '[rs-exec] wasm-check.yml runs ''cargo check --features wasm'' but Cargo.toml has no [features] table (removed in c5f08e9 without CI update); permanently red CI gate'
+  witness: Out of gm-repo edit scope (rs-exec .github/workflows/wasm-check.yml + Cargo.toml). Correctly scoped to rs-exec's own future session; reproduced locally per workflow finding, high-severity permanently-red CI gate.
+  status: completed
+- id: sibling-rsexec-take-bytes-leak
+  title: '[rs-exec] wasm_host.rs take_bytes() copies host buffers via from_raw_parts+to_vec, never frees original host-allocated pointer; real per-call leak, worst on exec_js large stdout/stderr'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_host.rs take_bytes). Correctly scoped to rs-exec's own future session; confirmed via git history per workflow finding (swung from double-free fix to deliberate leak).
+  status: completed
+- id: sibling-rsexec-outbox-collision-across-worktrees
+  title: '[rs-exec] wasm_spool.rs outbox keyed by bare numeric task_id, zero worktree/session discriminator; colliding task_ids let one worktree read another''s exec result if KV shared'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_spool.rs outbox keying). Correctly scoped to rs-exec's own future session -- worktree-adjacent, same root cause class as gm-repo fixes landed this session.
+  status: completed
+- id: sibling-rsexec-execute-always-returns-0
+  title: '[rs-exec] wasm_spool.rs execute()/rs_exec_execute always returns 0 once JSON parses even when dispatch_one internally rejects the task; FFI return code unreliable success signal'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_spool.rs execute()/rs_exec_execute). Correctly scoped to rs-exec's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsexec-utf8-decode-silent-fail
+  title: '[rs-exec] wasm_spool.rs UTF-8 decode failure on inbox batch is only error path with no host_log() call, unlike every sibling error branch'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_spool.rs UTF-8 decode error path). Correctly scoped to rs-exec's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rsexec-unchecked-ffi-oob-read
+  title: '[rs-exec] wasm_spool.rs rs_exec_execute extern C entry does zero null/bounds check on caller (ptr,len) before from_raw_parts, unlike its own take_bytes(); unreachable today but unchecked OOB-read primitive'
+  witness: Out of gm-repo edit scope (rs-exec src/wasm_spool.rs rs_exec_execute extern C entry). Correctly scoped to rs-exec's own future session; unreachable-today-but-latent per workflow finding.
+  status: completed
+- id: sibling-rsexec-changelog-stale
+  title: '[rs-exec] CHANGELOG.md describes deleted crate shape (native RPC server, CLI, browser profile mgmt, RS_EXEC_PORT_FILE) that no longer exists in current 3-file ~240-line source; never pruned after wasm-only refactor'
+  witness: Out of gm-repo edit scope (rs-exec CHANGELOG.md). Correctly scoped to rs-exec's own future session; low-severity doc drift.
+  status: completed
+- id: sibling-rslearn-kv-key-default-hardcoded
+  title: '[rs-learn] dispatch.rs: every stateful verb persists under single hardcoded KV key ''default'', no session/worktree discriminator; backing store is tracked binary SQLite with no merge driver, concurrent worktrees clobber via last-writer-wins'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/dispatch.rs + .gm/rs-learn.db). Correctly scoped to rs-learn's own future session -- critical worktree-headline finding, duplicate root cause noted alongside gm-repo's own fixed worktree bugs this session.
+  status: completed
+- id: sibling-rslearn-append-index-race
+  title: '[rs-learn] temporal_core.rs append_index unlocked read-modify-write with no CAS; racing insert_edge on same src/dst silently drops one edge from index'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/graph/temporal_core.rs append_index). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rslearn-comma-id-index-corruption
+  title: '[rs-learn] temporal_core.rs insert_edge never rejects commas in edge.id; comma-joined index format corrupts on comma-containing caller-supplied ids'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/graph/temporal_core.rs insert_edge). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rslearn-dead-pipeline-mechanism
+  title: '[rs-learn] pipeline.rs: entire async pipeline (mint_token/verify_token/summarize/evict/HMAC scheme) fully implemented but never called from dispatch.rs; dead weight in every wasm build'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/pipeline.rs). Correctly scoped to rs-learn's own future session; dead code, low urgency.
+  status: completed
+- id: sibling-rslearn-mutex-poison-no-reset
+  title: '[rs-learn] wasm_export.rs: process-wide LearnSession guarded by std::sync::Mutex that poisons on panic, no clear_poison/reset verb; any panic permanently wedges module until reinstantiation'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/wasm_export.rs LearnSession Mutex). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rslearn-dead-recall-memorize-surface
+  title: '[rs-learn] wasm_learn.rs Learn::recall/memorize never called by dispatch.rs, no recall/memorize verb exists at all; also blake_short is actually FNV-1a not BLAKE, misleading name on dead code'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/wasm_learn.rs). Correctly scoped to rs-learn's own future session; dead code + misleading blake_short naming, low urgency.
+  status: completed
+- id: sibling-rslearn-kvput-error-branch-unreachable
+  title: '[rs-learn] wasm_host.rs kv_put''s error branch unreachable-by-construction (rc!=0 means success, Err arm always prints rc=0); README documents opposite polarity'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/wasm_host.rs kv_put). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify, README/impl polarity mismatch.
+  status: completed
+- id: sibling-rslearn-invalidate-edge-equal-timestamp-noop
+  title: '[rs-learn] temporal_core.rs invalidate_edge no-ops on equal invalid_at (should be < not <=), silently drops caller''s expired_at refresh'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/graph/temporal_core.rs invalidate_edge). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rslearn-feedback-typo-silent-noop
+  title: '[rs-learn] instant_core.rs feedback() on unknown/typo''d model name still increments feedback_count and returns Ok(()), caller can''t detect no-op'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/learn/instant_core.rs feedback()). Correctly scoped to rs-learn's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rslearn-format-iso-truncation
+  title: '[rs-learn] graph/time.rs format_iso truncates toward zero for millis (inconsistent with correct seconds handling), malformed negative-millis for pre-epoch timestamps; currently dead code'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/graph/time.rs format_iso). Correctly scoped to rs-learn's own future session; dead code, low urgency.
+  status: completed
+- id: sibling-rslearn-dead-graph-types
+  title: '[rs-learn] graph/types.rs EpisodeRow/NodeRow defined+re-exported with zero constructors/methods/call sites; dead public API implying unwired graph features'
+  witness: Out of gm-repo edit scope (rs-learn crates/wasm/src/graph/types.rs EpisodeRow/NodeRow). Correctly scoped to rs-learn's own future session; dead public API, low urgency.
+  status: completed
+- id: sibling-rssearch-orphaned-crate
+  title: '[rs-search] whole crate fully orphaned from live cascade; rs-plugkit implements own host_vec_search-based codesearch directly and confirms bypass intentional; BM25+vector RRF fusion.rs has no production caller'
+  witness: Out of gm-repo edit scope (rs-search, whole crate). Correctly scoped to rs-search's own future session; rs-plugkit's own docs confirm the bypass is intentional per workflow finding.
+  status: completed
+- id: sibling-rssearch-claudemd-stale-architecture
+  title: '[rs-search] CLAUDE.md documents deleted project shape (candle-core embeddings, GGUF loading, PDF ingestion, MCP stdio server, CLI subcommands, SIMD cosine) removed in wasm-only rewrite commit 2584d32, never updated'
+  witness: Out of gm-repo edit scope (rs-search CLAUDE.md). Correctly scoped to rs-search's own future session; critical onboarding-hazard doc drift per workflow finding (describes deleted candle-core/PDF/MCP architecture).
+  status: completed
+- id: sibling-rssearch-nightly-toolchain-stale
+  title: '[rs-search] rust-toolchain.toml still pins nightly for removed candle-core unstable-API requirement; CI stable-toolchain override may or may not win, masking real stable-compile status'
+  witness: Out of gm-repo edit scope (rs-search rust-toolchain.toml). Correctly scoped to rs-search's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rssearch-take-bytes-no-bounds-check
+  title: '[rs-search] wasm_host.rs take_bytes trusts host (ptr,len) with only null/zero guard, no upper-bound check before raw slice read; malformed host response traps wasm instance instead of surfacing Result error'
+  witness: Out of gm-repo edit scope (rs-search src/wasm_host.rs take_bytes). Correctly scoped to rs-search's own future session; gm-side guardWasmRange already hardens the JS-side of this exact FFI-boundary bug class per prior session's own recall memory (mem-c5c59b99801cc76f).
+  status: completed
+- id: sibling-rssearch-fusion-decimal-misclassified
+  title: '[rs-search] fusion.rs looks_like_identifier has_separator triggers 1.5x IDENTIFIER_BOOST for single-token query containing a period, misclassifies decimals like 3.14; confirmed live path Searcher::search->fusion_search->fuse_n'
+  witness: Out of gm-repo edit scope (rs-search src/fusion.rs looks_like_identifier). Correctly scoped to rs-search's own future session; workflow confirmed this path IS live (contradicts crate's stated orphaned status elsewhere -- worth flagging to rs-search's own session as a scoping contradiction too).
+  status: completed
+- id: sibling-rssearch-dead-fusion-functions
+  title: '[rs-search] fusion.rs rrf_merge/fuse(2-list) and normalize_scores fully superseded by fuse_n/rrf_merge_n_weighted (only path wasm_host.rs calls); dead code with no caller'
+  witness: Out of gm-repo edit scope (rs-search src/fusion.rs rrf_merge/fuse/normalize_scores). Correctly scoped to rs-search's own future session; dead code, low urgency.
+  status: completed
+- id: sibling-rssearch-abandoned-branch-binary-blobs
+  title: '[rs-search] abandoned remote branch release-plz-2026-04-20T15-32-16Z carries pre-refactor candle/PDF/MCP architecture plus ~84MB binary GGUF model blobs, never cleaned up post-refactor'
+  witness: Out of gm-repo edit scope (rs-search git remote branch release-plz-2026-04-20T15-32-16Z). Correctly scoped to rs-search's own future session; repo hygiene, low urgency.
+  status: completed
+- id: sibling-rscodeinsight-traverse-sibling-helpers-unguarded
+  title: '[rs-codeinsight] analyzer.rs+depgraph.rs traverse() has MAX_TRAVERSE_DEPTH=2000 guard but count_params::walk, structural_hash::walk, extract_import_path, and depgraph cycle-detection dfs remain unguarded; pathological/minified body still stack-overflows analyzer'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/analyzer.rs+depgraph.rs). Correctly scoped to rs-codeinsight's own future session; high-severity, confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-func-hashes-key-collision
+  title: '[rs-codeinsight] analyzer.rs func_hashes keyed only by name(paramCount); two same-named same-arity functions/methods in one file silently overwrite via HashMap::insert, dropping real duplicate-function findings'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/analyzer.rs func_hashes). Correctly scoped to rs-codeinsight's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-datalayer-ignores-config
+  title: '[rs-codeinsight] models.rs detect_data_layer runs own second full filesystem walk with hardcoded ignore-list, ignores .codeinsight.toml config honored by main collect_files walk; inconsistent behavior plus wasted full traversal on large repos'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/models.rs detect_data_layer). Correctly scoped to rs-codeinsight's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-import-resolvers-on-quadratic
+  title: '[rs-codeinsight] depgraph.rs resolve_go_import/resolve_python_import/resolve_alias_import each rebuild full top_dirs/files.keys() scan per call instead of hoisting once per build_dep_graph; O(imports x files) hotspot on large repos'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/depgraph.rs import resolvers). Correctly scoped to rs-codeinsight's own future session; performance hotspot, confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-nonutf8-silent-drop
+  title: '[rs-codeinsight] lib.rs files failing UTF-8 decode are silently dropped from all output (stats, dep graph, dead-code) with zero warning; analyzed-N-files undercounts silently'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/lib.rs UTF-8 decode). Correctly scoped to rs-codeinsight's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-config-array-comma-split
+  title: '[rs-codeinsight] config.rs parse_string_array splits on every comma with no quote-awareness; array element containing a comma silently corrupts into malformed entries'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/config.rs parse_string_array). Correctly scoped to rs-codeinsight's own future session; confirmed via adversarial verify.
+  status: completed
+- id: sibling-rscodeinsight-porcelain-rename-mangled
+  title: '[rs-codeinsight] git.rs porcelain status parsing assumes fixed 3-char prefix, mis-parses rename/copy entries (R old -> new) into garbled raw string instead of renamed-to path'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/git.rs porcelain parsing). Correctly scoped to rs-codeinsight's own future session -- same bug class as the gm-repo fix already landed this session (lib/spool-dispatch.js unsolicitedDocs), different implementation/repo.
+  status: completed
+- id: sibling-rscodeinsight-fileindex-offbyone-cliff
+  title: '[rs-codeinsight] formatter.rs File Index section off-by-one display cliff: 30 files shows all 30, 31 files drops display to only 20 instead of degrading smoothly'
+  witness: Out of gm-repo edit scope (rs-codeinsight src/formatter.rs File Index display). Correctly scoped to rs-codeinsight's own future session; low-severity UX cliff, confirmed via adversarial verify.
+  status: completed
+- id: gm-agentsmd-recall-worktree-bugclass-missing
+  title: 'AGENTS.md/recall: no prior recall/memory entries generalized the git-worktree multi-checkout correctness bug class beyond the one browser-specific common-dir rule; memorize the generalized lesson once fixes land'
+  witness: memorize-fire dispatched this session (see mem-877d3b9e047a66dd-641 recorded via mutable-resolve of worktree-audit-findings-pending) generalizing the worktree multi-checkout correctness bug class -- gm-repo side (bootstrap.js pidfile scoping, browser-vs-spool state root split, sweepStalePeers cross-repo kill, browserRootDir cache TTL) fixed and witnessed this session; sibling-repo side (rs-plugkit gm_dir/git_push branch, rs-exec outbox keying, rs-learn KV key 'default') tracked as sibling-scoped rows for their own sessions. The generalized lesson (worktree correctness requires distinguishing SHARED state -- common-dir-rooted -- from PER-WORKTREE state -- cwd-rooted -- and never conflating the two under a shared directory name) is the transferable gm-method takeaway from this whole audit.
+  status: completed
