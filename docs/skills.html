@@ -151,12 +151,14 @@ stateDiagram-v2
 <div class="skill">
   <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">PLAN, EXECUTE</span></div>
   <div class="row"><span class="k">role</span><span>Every unknown surfaced during PLAN lands here with <code>status: unknown</code>; <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time: name the hypothesis as a mutable, run exactly one real test against it, read the real result, and either cross it off or confirm it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">EXECUTE, EMIT</span></div>
   <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or rs-learn (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers, so the file keeps gaining facts without growing without bound.</span></div>
 </div>
 
 <div class="skill">
@@ -182,17 +184,20 @@ stateDiagram-v2
   <div class="skill-header"><h2>codesearch</h2><span class="role">project-local search</span></div>
   <div class="row"><span class="k">role</span><span>BM25 + embedding fusion over the project tree, plus tree-sitter symbol layer. Two-words-then-iterate query protocol; minimum four attempts before declaring absent. Emits <code>[index fully synced: ...]</code> so freshness is visible.</span></div>
   <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span>, the Bash gate denies these in favour of codesearch.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>Beyond plain text matching, results can be ranked by which git commits touched a file most relevantly or most recently, so a hot recent change outranks a stale untouched match. A hit returns the full matched content, not a truncated snippet, so the agent never has to go fetch the rest separately. The response body itself stays short and token-optimized either way.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>recall / memorize</h2><span class="role">read/write memory</span></div>
   <div class="row"><span class="k">role</span><span>Backed by <code>.gm/rs-learn.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>Memory does not keep a searchable index of raw text; it stores only vector embeddings, so recall works purely on semantic similarity, there is no keyword or full-text index sitting around to search instead. A hit returns the full matched content, never a truncated snippet. Identical content hashes to the same key, so re-learning a fact never creates a duplicate. Stale or wrong memories are pruned the moment they are noticed. Ranking blends similarity with recency, so an older memory fades unless something reinforces it again. A relevant pack of memories auto-attaches at the start of each turn without the agent asking for it.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>browser</h2><span class="role">live-page witness</span></div>
   <div class="row"><span class="k">role</span><span>The wasm host's managed browser session. Boot the surface, navigate, <code>page.evaluate</code> the invariant, capture witnessed values. Required for any edit to code that runs in a browser. The only sanctioned way to drive a live page; parallel browser tooling fragments witness state.</span></div>
   <div class="row"><span class="k">forbids</span><span><span class="tag danger">screenshot without page.evaluate</span>. Treating "node test.js passes" as substitute for a live witness.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>The live page is the debugger. Application state gets exposed as window.* globals so the agent reads and evaluates them directly in the running page instead of restarting the app and guessing what happened. Every browser interaction automatically captures console output, page errors, network timing, and performance data with zero extra setup. Any client-side edit needs a same-turn browser check proving the change actually works before it counts as done.</span></div>
 </div>
 
 <div class="skill">

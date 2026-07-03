@@ -231,6 +231,8 @@ sequenceDiagram
     <li>indexes PDFs as code (extracts text via <code>pdf-extract</code>, caches per-page under <code>.gm/code-search/pdf-cache/</code>)</li>
     <li>emits an <code>[index fully synced: ...]</code> line before the first result so freshness is visible</li>
     <li>tracks the index under <code>.gm/code-search/</code>, committed to git so the index travels with the project</li>
+    <li>can rank a hit by which git commits touched the file most relevantly or most recently, so a hot recent change outranks a stale untouched grep-alike match; a plain static grep never sees that signal</li>
+    <li>returns the full matched content on a hit, not a truncated snippet, so the agent never has to make a second call to fetch the rest</li>
   </ul>
 
   <h3>commandments it enforces</h3>
@@ -265,6 +267,10 @@ sequenceDiagram
     <li>graph search via <code>Searcher</code> with configurable result count plus relevance threshold</li>
     <li>fast-path ingest avoids re-embedding when content is identical</li>
     <li>called directly from the orchestrator's wasm imports, no rpc, no daemon, no <code>bun x rs-learn</code> shim</li>
+    <li>stores only vector embeddings, never a searchable copy of the raw text, so <code>recall</code> works purely on semantic similarity; there is no keyword or full-text index sitting alongside it to fall back on</li>
+    <li>identical content hashes to the same key, so re-learning a fact is a no-op instead of a duplicate row</li>
+    <li>ranks results by a blend of similarity and recency, so an older, unreinforced memory fades in ranking over time without being deleted</li>
+    <li>a relevant memory pack auto-attaches to the start of a turn (see <code>auto-recall</code>) so the agent never has to remember to ask</li>
   </ul>
 
   <h3>commandments it enforces</h3>

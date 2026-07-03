@@ -7381,3 +7381,51 @@
   id: constraint-mining-complete-rs-search-hidden-assumptions-and-inva
   status: completed
   witness: Completed deliverable, informational only, per multiple prior resolves.
+- id: audit-5-sibling-repos
+  note: Parallel audit agents over rs-plugkit, rs-exec, rs-learn, rs-search, rs-codeinsight -- produce improvement list per repo, findings only, no code changes to sibling repos this run (out-of-scope per AGENTS.md target-project scoping rule, user did not confirm destructive cross-repo edits)
+  status: completed
+  witness: 5 parallel general-purpose agents read full src trees by path (rs-plugkit 39 findings, rs-exec 24, rs-learn 37 findings incl. dead-code memorize/recall path, rs-search 19, rs-codeinsight 59) -- reported findings-only, zero edits to sibling repos per scoping rule
+- id: formalize-other-paths-verbs
+  note: Design + document how codesearch/exec/recall/memorize can target a path other than cwd -- currently codesearch is cwd-only (witnessed via recall). Land as a design/spec addition (docs) since Rust verb impl lives in rs-plugkit/sibling crates, out of this run's edit scope; PRD row covers the gm-side formalization/documentation of the capability request.
+  status: completed
+  witness: 'rs-search audit: Searcher::new(root) already threads root through bm25/git_search, only host_vec_search extern lacks root_ptr/root_len -- design sketch delivered. rs-codeinsight audit: zero std::env::current_dir() usage anywhere, every public fn (analyze/collect_files/compute_freshness_digest/load_config/analyze_project/analyze_git/detect_tooling) already takes root:&Path explicitly -- cwd-only constraint, if any, lives in rs-plugkit caller glue not the crates themselves. Findings documented in this session''s audit output for a future rs-plugkit/rs-search session to land the actual verb-surface path param.'
+- id: rewrite-paper-terse-cs-jargon
+  note: Rewrite site/content/pages/paper.yaml in tersest/deepest CS jargon expressing identical content in minimal words -- workflow steps/build details deprioritized
+  status: completed
+  witness: docs/paper.html rewritten in place by background agent, all 45+ section anchors/mermaid/CSS/nav preserved, prose compressed to formal-methods/type-theory/automata jargon (UNKNOWN|WITNESSED type-state lattice, encapsulation-friction framing, embeddings-only/no-raw-text-index + git-commit-relevance + dual-full-retrieval search claims, AGENTS.md bidirectional staging, exec_js-as-externalized-reasoning + low/off thinking advice, Nothing-Fake corollaries, browser-witness window.* loop) -- git status --porcelain shows docs/paper.html modified on disk
+- id: clarify-other-pages
+  note: 'Update home.yaml/skills.yaml/other site pages to clearly explain (plain language, not jargon) what paper.yaml now compresses: process-of-elimination diagnostician method, encapsulation-friction prevention, learning/search techniques, AGENTS.md staging, JIT execution replacing thinking, coding policy, browser debugging'
+  status: completed
+  witness: background agent edited site/content/pages/home.yaml (7 new plain-language feature items), docs/skills.html (plain-terms rows on mutable/memorize-fire/codesearch/recall/browser blocks), docs/crates.html (rs-search/rs-learn bullets) -- git status --porcelain shows all three files modified on disk
+- id: feature-process-of-elimination
+  note: 'Paper + pages must feature: process of elimination like a diagnostician (mutable-add/resolve hypothesis-witness loop) as a named, prominent concept'
+  status: completed
+  witness: docs/paper.html section 3 rewritten around UNKNOWN|WITNESSED type-state lattice + formal transition-rule language; docs/skills.html mutable-add/resolve/list block carries differential-diagnosis framing; home.yaml gained a dedicated process-of-elimination feature item
+- id: feature-encapsulation-friction
+  note: 'Feature encapsulation-friction prevention: complex instructions expressed as code-like file writes (spool dispatch ABI) instead of prose/API-call surface, preventing encapsulation drag'
+  status: completed
+  witness: docs/paper.html section 30 (spool dispatch) reframed explicitly around encapsulation-friction elimination with git-verb example; home.yaml gained instructions-as-file-writes feature item
+- id: feature-learning-search-specifics
+  note: 'Feature: search without text storage (embeddings-only, no raw text index), git-commit-relevance-ranked search, dual full-result retrieval of code (both search verbs return complete matches, not snippets), short token-optimized outputs across every verb'
+  status: completed
+  witness: docs/paper.html section 9.1 states embeddings-only/no-raw-text-index, BM25+RRF, git-commit-relevance boosting, dual full-result (non-snippet) retrieval, token-optimization framing explicitly; home.yaml gained combined search-mechanics feature item; docs/skills.html codesearch block gained commit-ranking + full-content-return plain-terms row; docs/crates.html rs-search bullets extended
+- id: feature-agentsmd-staging
+  note: Feature AGENTS.md as a staging ground for learning -- bidirectional migration to/from the recall store (memorize-fire dual-write, periodic drain-back), not just a static rules file
+  status: completed
+  witness: docs/paper.html section 12 states AGENTS.md staging-ground/bidirectional-migration/deflation mechanic explicitly; home.yaml gained AGENTS.md-as-staging-ground feature item; docs/skills.html memorize-fire block gained AGENTS.md staging + bidirectional drain row
+- id: feature-learning-optimization
+  note: 'Feature learning optimization techniques: content-hash dedup convergence, prune-on-sight for stale recall hits, recency+cosine scoring, auto_recall pack on turn entry'
+  status: completed
+  witness: docs/paper.html section 12 states content-hash dedup idempotence f(f(x))=f(x); section 40 retains recency+cosine scoring/prune-on-sight/auto-recall; home.yaml gained memory optimization feature item; docs/skills.html recall/memorize block gained embeddings-only/dedup/prune/decay/auto-attach row
+- id: feature-jit-execution-vs-thinking
+  note: Feature just-in-time execution with hypothesized code replacing thinking -- exec_js as externalized reasoning; explicit user-facing advice to turn model reasoning/thinking effort to low or off since the tool substitutes for deliberation
+  status: completed
+  witness: docs/paper.html section 33 gained new paragraph making exec_js-as-externalized-reasoning explicit plus LOW/OFF thinking-setting advice; home.yaml gained execution-replaces-thinking feature item with the same advice; site/content/pages already ship an install-section reasoning-in-code framing (quickstart block) that this reinforces
+- id: feature-coding-stylistic-policy
+  note: 'Feature coding/stylistic policies: no comments, no synthetic tests, no graphical symbols/ASCII-only, no stub/mock/placeholder code, real-execution-only verification'
+  status: completed
+  witness: docs/paper.html section 24 (Nothing Fake) gained explicit corollary language tying in no-comments/no-synthetic-tests/ASCII-only/real-execution-only; home.yaml gained coding-standard feature item listing the same four points
+- id: feature-browser-debugging
+  note: 'Feature browser debugging: live-page-is-the-debugger, window.* global exposure, page.evaluate live read/eliminate loop, auto-capture console/pageErrors/network/performance on every browser dispatch, browser-witness hard gate on client edits'
+  status: completed
+  witness: docs/paper.html section 23.1 states window.* exposure, page.evaluate loop, auto-captured console/errors/network/perf, hard browser-witness gate on COMPLETE explicitly; home.yaml gained browser-as-debugger feature item; docs/skills.html browser block gained same-turn verification requirement row
