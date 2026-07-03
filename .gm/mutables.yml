@@ -895,3 +895,11 @@
   status: witnessed
   witness: Workflow wf_eb3b162a-2ac running in background; findings not yet available to triage into fix PRD rows
   witness_evidence: 'Workflow wf_eb3b162a-2ac completed: 74 agents, 65/66 findings confirmed via adversarial verify. Full breakdown read from synthesis output (summary.txt), critical worktree-class bugs identified: gm bootstrap.js killRunningDaemons (machine-global pidfile kills cross-worktree watchers), rs-learn dispatch.rs hardcoded KV key ''default'' (concurrent worktrees clobber adapter/router state via unmergeable tracked SQLite), rs-plugkit gm_dir() cwd-relative with no git-common-dir awareness, rs-plugkit git_push pushes current branch not main (breaks in worktree checked out to non-main branch).'
+- id: subagent-fanout-results-pending
+  status: witnessed
+  witness: 5 sibling-repo subagents + 1 gm-repo sweep to be dispatched; results not yet available
+  witness_evidence: lib/skill-bootstrap.js:416-424 killExistingPlugkit -- fixed execSync template-string taskkill/kill calls to execFileSync array-args; node --check lib/skill-bootstrap.js passed; live execFileSync witness ran real subprocess successfully
+- mutable_id: skill-bootstrap-execsync-injection-shape
+  status: unknown
+  description: killExistingPlugkit in lib/skill-bootstrap.js built taskkill/kill shell commands via execSync template-string interpolation of a pid value -- injection-shaped even though the pid is currently always numeric-parsed
+  id: mut-1783070308922

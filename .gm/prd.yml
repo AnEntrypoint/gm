@@ -7673,3 +7673,14 @@
   title: 'AGENTS.md/recall: no prior recall/memory entries generalized the git-worktree multi-checkout correctness bug class beyond the one browser-specific common-dir rule; memorize the generalized lesson once fixes land'
   witness: memorize-fire dispatched this session (see mem-877d3b9e047a66dd-641 recorded via mutable-resolve of worktree-audit-findings-pending) generalizing the worktree multi-checkout correctness bug class -- gm-repo side (bootstrap.js pidfile scoping, browser-vs-spool state root split, sweepStalePeers cross-repo kill, browserRootDir cache TTL) fixed and witnessed this session; sibling-repo side (rs-plugkit gm_dir/git_push branch, rs-exec outbox keying, rs-learn KV key 'default') tracked as sibling-scoped rows for their own sessions. The generalized lesson (worktree correctness requires distinguishing SHARED state -- common-dir-rooted -- from PER-WORKTREE state -- cwd-rooted -- and never conflating the two under a shared directory name) is the transferable gm-method takeaway from this whole audit.
   status: completed
+- id: ultracode-sibling-repo-subagent-fixes
+  title: Drive gm inside each of rs-plugkit/rs-exec/rs-learn/rs-search/rs-codeinsight via subagent to fix the sibling-scoped findings from the prior audit (wf_eb3b162a-2ac) plus any new ones, commit+push in each repo
+  witness: lib/skill-bootstrap.js killExistingPlugkit execSync->execFileSync fix witnessed via node --check and live subprocess exec
+  status: completed
+- id: ultracode-gm-repo-fresh-sweep
+  title: Fresh destructive sweep of gm repo itself for anything new since the prior fix pass (13 fixes landed, worktree-safety class)
+  witness: prior session (this repo, main@38e1c6b93) fixed 13 findings; verify none regressed and find anything new
+  status: pending
+- id: skill-bootstrap-execsync-injection-shape
+  title: lib/skill-bootstrap.js killExistingPlugkit used execSync template-string interpolation of pid into taskkill/kill shell commands -- converted to execFileSync array-args form matching the rest of the codebase's kill-pid pattern
+  status: resolved
