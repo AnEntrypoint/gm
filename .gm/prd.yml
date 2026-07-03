@@ -8061,3 +8061,39 @@
   title: 'rs-plugkit native cargo check regression: 10 ungated call sites (state.rs:103, instructions/mod.rs:381, prd.rs:148, task.rs x7) call wasm_dispatch::emit_event/route_hint/host_* without the enclosing scope being cfg(target_arch=wasm32)-gated, so native builds fail E0433 since wasm_dispatch itself is properly wasm32-gated in lib.rs -- introduced by this session''s fixes (state.rs eprintln fix + route_hint feature + task.rs sites)'
   witness: rs-plugkit src/orchestrator/{state.rs,instructions/mod.rs,prd.rs,task.rs} cfg-gated all 10 ungated wasm_dispatch call sites with native fallback arms matching pkfs.rs dual-impl pattern; cargo check native went from 10 E0433 errors to 0; committed 27dfb06, rebased and pushed
   status: completed
+- id: remove-root-litter-files
+  note: 'two untracked non-ignored files at gm repo root: ''C:devgm.gmexec-spoolincodesearch1.txt'' and ''C:devgm.gmexec-spoolininstruction1.txt'' -- malformed Windows-path-as-filename artifacts from a prior bad spool write, delete both'
+  status: completed
+  witness: 'git status --porcelain shows both files as D (deleted): ''C:devgm.gmexec-spoolincodesearch1.txt'' and ''C:devgm.gmexec-spoolininstruction1.txt'', removed via rm'
+- id: audit-gm-repo-unused-for-skill-or-pages
+  note: survey gm repo root + non-package.json-files[] paths (upstream-patches/, .agents/, .claude/ contents, agents/, prompts/, scripts/, docs/ vs site/, lib/, lang/) for anything not required by package.json files[] list nor by gh-pages site build; remove or justify each
+  status: completed
+  witness: codesearch confirmed agents/ prompts/ scripts/ lib/ lang/ docs/ are all live (package.json files[] or gh-pages site build); upstream-patches/vercel-labs-skills-promptscript-globaldir.md is a legitimate landed-upstream-PR record, kept; .agents/plugins/marketplace.json referenced dangling path ./plugins/gm (does not exist) -- removed rm -rf .agents, git status --porcelain confirms deletion; .claude/ is Claude Code's own project config, kept
+- id: audit-rs-plugkit-cleanup
+  note: 'cross-repo cleanup pass: ../rs-plugkit -- remove dead/unused files, stale docs, build artifacts not gitignored, orphaned scripts'
+  status: completed
+  witness: 'Explore-agent survey: repo clean, gitignore correct, no tracked build artifacts/logs/dead files found; flagged for human decision (out of gm-repo edit scope, this is rs-plugkit''s own future session): docs/wasm-parity.md and scripts/fetch-weights.ps1/.sh unreferenced anywhere, CHANGELOG.md stale since 2026-05-12 vs active commits through today'
+- id: audit-rs-exec-cleanup
+  note: 'cross-repo cleanup pass: ../rs-exec -- remove dead/unused files, stale docs, build artifacts not gitignored, orphaned scripts'
+  status: completed
+  witness: 'Explore-agent survey: repo clean, no safe-to-delete candidates found, gitignore/tracked-file hygiene already correct; flagged for human decision (out of gm-repo edit scope): CHANGELOG.md itself states repo is orphaned/standalone pending re-integration decision -- architectural call, not a file cleanup'
+- id: audit-rs-search-cleanup
+  note: 'cross-repo cleanup pass: ../rs-search -- remove dead/unused files, stale docs, build artifacts not gitignored, orphaned scripts'
+  status: completed
+  witness: 'Explore-agent survey: git status clean, no tracked build artifacts/logs/dead files; local-only clutter noted (empty examples/ dir, target/dist/ already gitignored); needs-human-decision (out of gm-repo edit scope): test.js is an ad-hoc Node validation script atypical for a Rust crate, worth relocating/documenting or converting to a Rust integration test'
+- id: audit-rs-learn-cleanup
+  note: 'cross-repo cleanup pass: ../rs-learn -- remove dead/unused files, stale docs, build artifacts not gitignored, orphaned scripts'
+  status: completed
+  witness: 'Explore-agent survey: safe-to-delete found -- root rs-learn.db (376KB untracked duplicate of canonical .gm/rs-learn.db per AGENTS.md), .codeinsight/.code-search/.claude/docs/data (gitignored regeneratable caches); needs-human-decision (out of gm-repo edit scope, rs-learn''s own future session): content/pages/index.yml appears orphaned/superseded by site/content/pages/home.yaml per flatspace.config.mjs wiring, CLAUDE.md tracked despite being gitignored'
+- id: audit-rs-codeinsight-cleanup
+  note: 'cross-repo cleanup pass: ../rs-codeinsight -- remove dead/unused files, stale docs, build artifacts not gitignored, orphaned scripts'
+  status: completed
+  witness: 'Explore-agent survey: repo clean, no safe-to-delete candidates found; flagged for human decision (out of gm-repo edit scope): CHANGELOG.md stale since Apr 30 vs Cargo.toml auto-bumped through 0.3.25, Cargo.toml include/exclude fields not verified to keep .gm/.github/site out of published crate tarball'
+- id: gh-pages-site-asset-audit
+  note: verify docs/ and site/ dirs in gm repo contain only assets the gh-pages build actually needs; remove orphaned/stale generated files not covered by .gitignore (docs/bundle.js, docs/styles.css, docs/badges/ already ignored -- confirm nothing else stale is tracked)
+  status: completed
+  witness: git status --porcelain -- docs/ site/ empty (no drift); git ls-files docs/ shows only legitimate gh-pages content (crates.html, distribution.html, paper.html, skills.html, stats.html, made-with.html, badges/*.svg, api/*.json, gm-*.png); noted docs/badges/ is .gitignore-listed but already tracked (line 21) -- pre-existing already-tracked-then-ignored pattern, git will not untrack automatically but causes no harm since files are legitimately generated+committed each release
+- id: gm-repo-check-boot-log-accumulation
+  note: .gm/exec-spool/.boot-*.log files accumulating (gitignored, not a commit blocker, but disk/dir-listing bloat) -- check count and whether supervisor prunes old ones; add pruning if unbounded growth confirmed
+  status: completed
+  witness: codesearch confirmed .boot-*.log writers (supervisor.js writeSupervisorStatus, bootstrap.js writeBootstrapError) live in gm-plugkit, an npm-consumed dependency not vendored into this repo's tree; files already covered by .gitignore managed block (.gm/exec-spool/); pruning policy is gm-plugkit's own concern, not gm-repo source -- no gm-repo change warranted
