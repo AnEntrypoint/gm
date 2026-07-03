@@ -303,7 +303,7 @@ function injectUpdateWarning(parsed) {
   if (!parsed || typeof parsed !== 'object') return;
   let upd;
   try {
-    upd = JSON.parse(fs.readFileSync(path.join(spoolDir, '.update-available.json'), 'utf-8'));
+    upd = JSON.parse(fs.readFileSync(path.join(spoolDirForSentinel(), '.update-available.json'), 'utf-8'));
   } catch (_) { return; }
   if (!upd || !upd.installed || !upd.latest || upd.installed === upd.latest) return;
   const target = (parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
