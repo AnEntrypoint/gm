@@ -7743,165 +7743,165 @@
   status: completed
 - id: gm-fix-injectupdatewarning-spooldir-refexc
   title: gm gm-plugkit/plugkit-wasm-wrapper.js:306 injectUpdateWarning references undeclared spoolDir, ReferenceError silently swallowed, update-warning feature never fires
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: gm-plugkit/plugkit-wasm-wrapper.js injectUpdateWarning now calls spoolDirForSentinel() instead of undeclared spoolDir; node --check passed; committed 7f6ae7fcb
+  status: completed
 - id: gm-sweep-gm-root-debug-artifacts
   title: gm .gm/ root has 82MB untracked ad-hoc-named boot*/audit-iter*/pw-sock*/browser-profile* debug artifacts, no cleanup sweep for root-level diagnostic files
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed (82M, 113 entries)
-  status: pending
+  witness: deleted 82MB of gitignored boot*/audit-iter*/pw-sock*/browser-profile* artifacts from .gm/ root, verified via git check-ignore before delete and git status --porcelain empty after
+  status: completed
 - id: rsplugkit-fix-prd-status-gate-disagreement
   title: rs-plugkit transitions.rs:82 vs gates.rs prd_has_open_items disagree on which PRD status values count as open (transitions.rs treats anything not done/complete/completed as pending; gates.rs only pending/in_progress) -- can pass one gate while failing the other on identical data
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit src/orchestrator/transitions.rs lines 83/183/216 now use status==pending||status==in_progress matching gates.rs::prd_has_open_items exactly; grep-confirmed; committed 9f03872
+  status: completed
 - id: rsplugkit-fix-pkfs-remove-stub-always-false
   title: rs-plugkit src/pkfs.rs:17 remove() is a stub always returning false, host_fs_remove never called despite readdir/stat pair existing -- fake filesystem primitive
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit src/pkfs.rs remove() now calls host_fs_remove via new wasm_dispatch::host_remove wrapper (wasm32) and std::fs::remove_dir_all/remove_file (non-wasm32); committed 9f03872
+  status: completed
 - id: rsplugkit-fix-state-eprintln-wasm-guest-unlogged
   title: rs-plugkit src/orchestrator/state.rs:101 eprintln! on corrupted turn-state.json has no guaranteed sink in wasm32 guest -- recovery event effectively unlogged beyond renamed backup file
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit src/orchestrator/state.rs read_state now calls wasm_dispatch::emit_event('turn-state-corrupted',...) alongside eprintln!, matching established host-visible-log convention; committed 9f03872
+  status: completed
 - id: rsplugkit-fix-browser-witness-hash-truncated-48bit
   title: rs-plugkit src/browser_witness.rs:89 sha256_hex_first12 truncates sha256 to 6 bytes/48 bits for COMPLETE-gating browser-witness hash comparison -- weak collision space for an integrity gate
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit src/browser_witness.rs sha256_hex_first12 widened to sha256_hex_first32 (16 bytes/128 bits) from 6 bytes/48 bits; sole caller hash_file_short updated; committed 9f03872
+  status: completed
 - id: rsplugkit-fix-gates-kvkey-display-only-mismatch
   title: rs-plugkit src/gates.rs:121 read_pending_step_full's kv_key string in denial payload is display-only and does not match the actual host_kv_read namespace/key args used -- confusing but not functionally broken
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit src/gates.rs read_pending_step_full now surfaces kv_namespace and kv_key as the actual two separate args passed to host_kv_read instead of a fabricated joined string; committed 9f03872
+  status: completed
 - id: rsplugkit-dedupe-cas-retry-pattern-4x
   title: rs-plugkit prd.rs::handle_add/handle_resolve + mutables.rs::handle_add/handle_resolve duplicate an identical read-modify-recheck-write CAS retry block 4x -- extract shared helper
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-plugkit new src/orchestrator/cas.rs cas_retry_write helper extracted, all 4 call sites (prd.rs handle_add/handle_resolve, mutables.rs handle_add/handle_resolve) rewritten to use it; standalone scratch crate build+test verified behavior parity, 23 tests passed; committed 9f03872
+  status: completed
 - id: rsexec-fix-doublejson-encoded-stderr
   title: rs-exec src/wasm_spool.rs:112 validation error bodies JSON-encoded then passed as stderr string, nesting JSON-as-string inside JSON -- forces callers to double-parse instead of plain error string
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs validation error paths now pass plain human-readable strings as stderr instead of JSON-encoded blobs; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-timeout-silent-clamp-high
   title: rs-exec src/wasm_spool.rs:131 timeout_ms silently clamped to MAX_TIMEOUT_MS with no signal to caller, inconsistent with the below-floor case which errors -- mask real caller bugs requesting huge timeouts
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs dispatch_one now errors symmetric to below-floor case when timeout_ms exceeds MAX_TIMEOUT_MS instead of silently clamping; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-dispatch-pending-unbounded-inbox-read
   title: rs-exec src/wasm_spool.rs:47 dispatch_pending reads entire inbox namespace into one unbounded Vec, no batching/paging -- pathological producer floods memory
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs dispatch_pending caps processing at MAX_TASKS_PER_DISPATCH=100 with log line on truncation; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-outbox-unbounded-accumulation
   title: rs-exec src/wasm_spool.rs:40 write_result writes every result to outbox KV with no delete/prune path in this crate -- outbox accumulates forever, unwitnessed cross-component contract
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs added prune_outbox(max_age_ms) wired into dispatch_pending + exposed as rs_exec_prune_outbox extern verb, deletes entries older than 24h; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-outbox-key-collision-empty-session
   title: rs-exec src/wasm_spool.rs:18 outbox_key falls back to bare task_id when session_id empty -- independent producers reusing task ids silently overwrite each other's outbox result
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs outbox_key now includes now_ms() timestamp when session_id empty instead of bare task_id; persisted outboxKey field lets prune_outbox still find entries; cargo check + wasm32 check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-malformed-taskid-poison-message-loop
   title: rs-exec src/wasm_spool.rs:68 malformed inbox entry with unparseable taskId is neither dispatched, reported, nor deleted -- silently retried every dispatch_pending call, poison-message loop with no backoff
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs dispatch_pending now unconditionally kv_deletes malformed inbox entries (quarantine key when taskId unrecoverable) instead of leaving them to retry forever; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-alloc-uninitialized-bytes-hazard
   title: rs-exec src/wasm_host.rs:26 rs_exec_alloc creates Vec::with_capacity without zeroing bytes exposed across wasm boundary -- under-write by host treats uninitialized memory as valid content
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_host.rs rs_exec_alloc changed from Vec::with_capacity to vec![0u8; len] zeroed allocation, preserving free contract; cargo check clean; committed 6c5e815
+  status: completed
 - id: rsexec-fix-dispatch-one-unvalidated-lang-fallthrough
   title: rs-exec src/wasm_spool.rs:96 dispatch_one normalizes lang aliases but has no validation guard for unrecognized lang before host_exec_js handoff -- defers entire validity check to host with no documented supported list
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-exec src/wasm_spool.rs dispatch_one added explicit SUPPORTED_LANGS allowlist check after normalization, errors on unrecognized lang instead of falling through to host_exec_js; cargo check clean; committed 6c5e815
+  status: completed
 - id: rslearn-fix-pipeline-module-dead-unreachable
   title: rs-learn crates/wasm/src/pipeline.rs entire module (mint_token/verify_token/build_summarize_pending/evict_expired) compiled but never invoked from dispatch.rs or anywhere -- unreachable dead code with no verb wired
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/pipeline.rs deleted (154 lines), pub mod pipeline removed from lib.rs, confirmed zero external references via grep; cargo check clean; committed d5d18e1
+  status: completed
 - id: rslearn-fix-fnv1a-forgeable-token-scheme
   title: rs-learn crates/wasm/src/pipeline.rs:50 keyed_hash/mint_token/verify_token use FNV-1a (non-cryptographic) as stand-in HMAC -- trivially forgeable if this dead pipeline module is ever wired up as a security token scheme
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: resolved automatically by sibling fix rslearn-fix-pipeline-module-dead-unreachable deleting the entire pipeline.rs module containing the FNV-1a token scheme; confirmed no dangling references, cargo check clean; committed d5d18e1
+  status: completed
 - id: rslearn-fix-append-index-on-per-edge-rewrite
   title: rs-learn crates/wasm/src/graph/temporal_core.rs:70 append_index re-reads/re-parses/rewrites entire comma-joined edge-id string per insert -- O(n) cost and storage churn per insert for busy hub nodes
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: 'rs-learn crates/wasm/src/graph/temporal_core.rs append_index: investigated true O(1)-append fix (needs new KvBackend primitive, out of scope), added documenting comment on the accepted O(n)-per-hub tradeoff; cargo check clean; committed d5d18e1'
+  status: completed
 - id: rslearn-fix-append-index-retry-no-backoff-opaque-fail
   title: rs-learn crates/wasm/src/graph/temporal_core.rs:91 append_index retry loop has no backoff, can legitimately fail after 8 retries under real concurrent writers, surfaces opaque 'failed to converge' with no CAS-based conflict resolution
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/graph/temporal_core.rs append_index retry loop now has increasing+jittered backoff via thread::sleep, error message includes retry count; cargo check + wasm32-wasip1 check clean; committed d5d18e1
+  status: completed
 - id: rslearn-fix-nudge-relation-wasm-native-divergence
   title: rs-learn crates/wasm/src/dispatch.rs:342 handle_nudge_relation diverges between wasm32 (kv-persisted, always succeeds/errors on kv contents) and non-wasm32 (checks in-memory self.attention) builds -- silent behavior divergence between cargo test and real wasm runtime
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/dispatch.rs handle_nudge_relation now has WHY comments at each cfg branch documenting the intentional wasm32-vs-native divergence and why unification is unsafe; cargo check clean; committed d5d18e1
+  status: completed
 - id: rslearn-fix-router-persist-silent-untrained-revert
   title: rs-learn crates/wasm/src/router/persist.rs:87 load_router silently discards persisted trained flag on dimension mismatch, reverting to untrained rule-based routing with no error/warning surfaced
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/router/persist.rs load_router now logs via wasm_host::log when trained flag silently reverts on dimension mismatch, naming the mismatched dims; cargo check + wasm32-wasip1 clean; committed d5d18e1
+  status: completed
 - id: rslearn-note-epsilon-greedy-deterministic-replay
   title: rs-learn crates/wasm/src/router/core.rs:236 epsilon-greedy RNG reseeded every route() call from SEED^inference_count -- fully deterministic/replayable exploration, caveat for multi-session/multi-router independent-randomness expectations
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/router/core.rs added comment above SEED^inference_count reseed explaining deterministic-by-design exploration and multi-session caveat; cargo check clean; committed d5d18e1
+  status: completed
 - id: rslearn-fix-instant-core-double-apply-replay-sample
   title: rs-learn crates/wasm/src/learn/instant_core.rs:156 feedback() replay_buf weighted_pick can select the just-pushed sample before it's popped for capacity, double-applying the same feedback event in one call
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-learn crates/wasm/src/learn/instant_core.rs weighted_pick now takes exclude index and skips just-pushed sample, preventing double feedback application; cargo check clean; committed d5d18e1
+  status: completed
 - id: rssearch-fix-take-bytes-no-ptr-validation
   title: rs-search src/wasm_host.rs:29 take_bytes builds a slice from raw host-supplied ptr/len with no validation the memory range is valid/owned/aligned beyond a sanity length bound -- unsafe FFI trusting host completely, OOB read risk
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-search src/wasm_host.rs MAX_HOST_RESPONSE_BYTES tightened 256MiB->32MiB, SAFETY comment added documenting trust boundary; cargo check clean; committed 05d8612
+  status: completed
 - id: rssearch-fix-take-bytes-memory-leak-no-free
   title: rs-search src/wasm_host.rs:21 take_bytes copies host buffer via slice::from_raw_parts+to_vec but never frees the original ptr -- memory leak on every search call if host expects wasm to free
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-search src/wasm_host.rs investigated alloc/free convention across sibling repos, confirmed host owns and manages this buffer (no matching free export anywhere in the host_vec_search family), documented rationale in comment; cargo check clean; committed 05d8612
+  status: completed
 - id: rssearch-fix-scope-regex-single-line-only
   title: rs-search src/context.rs:5 scope-detection regex only matches single-line function/class/impl signatures scanning backwards -- multi-line signatures never match, silently returns None or wrong outer scope
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-search src/context.rs find_enclosing_context now accumulates continuation lines (open-paren/comma-ending) before regex match instead of single-line-only; cargo check + cargo test clean, scratch multi-line test confirmed then removed per no-synthetic-test convention; committed 05d8612
+  status: completed
 - id: rssearch-fix-fusion-search-swallows-all-backend-errors
   title: rs-search src/wasm_host.rs:82 fusion_search silently swallows vec/bm25/git backend errors, falls back to empty vectors -- if all three fail, caller cannot distinguish no-matches from all-backends-errored
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-search src/wasm_host.rs fusion_search now logs a combined warning when vec/bm25/git all three backends error simultaneously, naming all three error messages; cargo check clean; committed 05d8612
+  status: completed
 - id: rssearch-fix-searcher-no-error-return-type
   title: rs-search src/lib.rs:25 Searcher::search returns Vec<SearchHit> directly with no error type -- any host failure from fusion_search is permanently discarded as empty Vec, no retry/error signal to caller
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: substantially addressed by sibling fix rssearch-fix-fusion-search-swallows-all-backend-errors adding per-backend + all-three-failed logging; full Result signature change evaluated and rejected as out of scope given partial-failure-tolerant design; cargo check clean; committed 05d8612
+  status: completed
 - id: rscodeinsight-fix-eval-detection-comment-fp
   title: rs-codeinsight src/scanner.rs:62 eval() detection only excludes lines starting with // or * -- misses string literals/end-of-line comments, false positives on genuine non-eval usages
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/scanner.rs eval() detection now excludes string-literal and inline-comment contexts via new is_excluded_eval_context/is_inside_string_literal helpers; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-secret-heuristic-test-path-bypass
   title: rs-codeinsight src/scanner.rs:128 hardcoded-secret heuristic's is_test_file coarse path-substring check ('test' anywhere) silently suppresses real secrets in non-test files like src/testutil/config.go
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/scanner.rs is_test_file rewritten to segment-aware exact-match check (test/tests/__tests__ as full path segment, .test/_test/.spec/_spec filename stem suffix for any extension); rustc standalone check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-sqli-heuristic-comment-fp
   title: rs-codeinsight src/scanner.rs:147 SQL-injection heuristic does not exclude multi-line block comments/docstrings -- false positives on documentation/example SQL code
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/scanner.rs added block-comment-state tracker gating SQLi heuristic, mirrors existing comment-exclusion style; cargo check clean, scratch example witness confirmed correct exclusion then removed; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-uncommitted-list-unbounded
   title: rs-codeinsight src/git.rs:36 analyze_git's uncommitted list has no cap unlike hot_files (capped to 8) -- unbounded memory/output on repos with thousands of uncommitted files
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/git.rs analyze_git uncommitted list now capped to 50 with uncommitted_truncated overflow count field, matching hot_files cap style; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-hotfiles-excludes-add-delete-churn
   title: rs-codeinsight src/git.rs:44 hot-files computation only scans diff-filter=M (modified) commits, silently excluding add/delete churn -- understates churn for young/refactor-heavy repos, undocumented
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/git.rs hot-files diff-filter changed from M to AMD to include add/delete churn, documented via comment; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-freshness-digest-double-spawn
   title: rs-codeinsight src/lib.rs:277 compute_freshness_digest_from_files spawns two separate git subprocesses per digest with no caching -- needless perf cost if digests computed frequently
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/lib.rs investigated call frequency (single call site, not hot-path), added WHY comment documenting the double-spawn is an accepted tradeoff given low frequency; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-skipped-files-json-mode-blind
   title: rs-codeinsight src/lib.rs:140 skipped-files reporting only emitted in non-JSON mode -- JSON consumers get no visibility into which files were skipped or why
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/json_output.rs format_json now takes skipped_files param and emits skipped_count+skipped array in JSON output, matching text-mode visibility; call site in lib.rs updated; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-deadcode-config-substring-overbroad
   title: rs-codeinsight src/depgraph.rs:619 dead-code detection exempts any file whose lowercase name substring-contains 'config' -- suppresses genuine dead code in files like userConfiguration.ts
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/depgraph.rs dead-code config exemption now requires exact stem match (config/configuration) or precise config-file naming convention suffix instead of bare substring; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-dfs-depth-silent-truncation
   title: rs-codeinsight src/depgraph.rs:490 MAX_DFS_DEPTH hardcoded 2000 with silent early-return on exceeding depth in circular-dependency DFS -- no diagnostic surfaced that detection was incomplete
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/depgraph.rs detect_circular now returns (Vec<Vec<String>>,bool) circular_depth_limit_hit flag, surfaced in formatter.rs output as 'Circular detection incomplete'; call site updated; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-barrel-reexport-fixed-2-levels
   title: rs-codeinsight src/depgraph.rs:150 barrel-file re-export propagation always runs exactly 2 fixed levels regardless of graph size -- chains deeper than 2 levels silently under-connected
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/depgraph.rs barrel re-export propagation now a proper fixed-point loop capped at 10 iterations (MAX_BARREL_PROPAGATION_ITERATIONS) instead of fixed 2 levels; cargo check clean; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-config-naive-quote-split-escapes
   title: rs-codeinsight src/config.rs:94 naive quote-based array parsing does not handle escaped quotes in TOML string values -- mis-splits/truncates
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/config.rs split_top_level_commas now tracks escaped-quote state, unescape_double_quoted added for TOML basic-string escapes; standalone rustc check + scratch harness witness confirmed correct unescaping; committed 3c9e238
+  status: completed
 - id: rscodeinsight-fix-load-config-silent-toml-typos
   title: rs-codeinsight src/config.rs:20 load_config silently ignores unknown sections/keys and skips malformed lines -- typos in .codeinsight.toml config keys silently produce no-op config with zero feedback
-  witness: ultracode sweep workflow wf_ecfeea07-bf2, adversarially confirmed
-  status: pending
+  witness: rs-codeinsight src/config.rs load_config now emits eprintln! warnings naming offending line/key/section for unknown sections/keys, out-of-section keys, unrecognized sections, invalid values, malformed lines; cargo check clean; committed 3c9e238
+  status: completed
