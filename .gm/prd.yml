@@ -7709,3 +7709,31 @@
   title: 'rs-codeinsight repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote)'
   witness: 'Subagent a0c91b8c2a2ebb955: 1 already-ancestor-merged branch pruned locally+remotely (no actual merge needed, verified via merge-base --is-ancestor); cargo check green before+after; verified via git branch -a/git ls-remote/git worktree list, only main+origin/main+origin/gh-pages remain.'
   status: completed
+- id: replace-constraints-formal-spec
+  title: Replace .gm/constraints.md with the user-provided formal-logic coding policy spec (TYPES/STATE/FUNC/CONC/NET/SEC/PROOF/PERF/ERR/AST/AUTH/ALIGN/TOOL/RSCH/DECIDE/CREATE/SCOPE/DONE clauses)
+  witness: '.gm/constraints.md (the live per-project standing arbiter) and gm-plugkit/constraints-default.md (the bundled seed template read by ensureNextStepWiring when .gm/constraints.md is absent) both replaced with the user''s formal-logic spec verbatim. Witnessed via exec_js reading both files back (exec_js-1.json): both contain TYPES/DONE clauses. test.js''s checkConstraintsMdSeedAndIdempotency guard (which verifies seed-if-absent never overwrites a user-modified file) is unaffected since it operates on marker-append behavior, not content -- the new constraints content is orthogonal to that idempotency contract.'
+  status: completed
+- id: cleanup-gm-repo
+  title: 'gm repo: file/code-level cleanup sweep keeping only what''s needed (dead code, superseded files, stale docs) -- branches already handled separately'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
+- id: cleanup-rsplugkit
+  title: 'rs-plugkit repo: file/code-level cleanup sweep keeping only what''s needed, applying the new formal-spec constraints where relevant'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
+- id: cleanup-rsexec
+  title: 'rs-exec repo: file/code-level cleanup sweep keeping only what''s needed, applying the new formal-spec constraints where relevant'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
+- id: cleanup-rslearn
+  title: 'rs-learn repo: file/code-level cleanup sweep keeping only what''s needed, applying the new formal-spec constraints where relevant'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
+- id: cleanup-rssearch
+  title: 'rs-search repo: file/code-level cleanup sweep keeping only what''s needed, applying the new formal-spec constraints where relevant'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
+- id: cleanup-rscodeinsight
+  title: 'rs-codeinsight repo: file/code-level cleanup sweep keeping only what''s needed, applying the new formal-spec constraints where relevant'
+  witness: 'user request: sweep gm+5 sibling repos, clean up keeping only what we need'
+  status: pending
