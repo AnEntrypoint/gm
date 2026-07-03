@@ -1,0 +1,3 @@
+## Resolved mutable: subagent-fanout-results-pending
+
+lib/skill-bootstrap.js:416-424 killExistingPlugkit -- fixed execSync template-string taskkill/kill calls to execFileSync array-args; node --check lib/skill-bootstrap.js passed; live execFileSync witness ran real subprocess successfully

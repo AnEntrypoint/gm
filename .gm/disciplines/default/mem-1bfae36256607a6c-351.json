@@ -1,0 +1,3 @@
+## Resolved mutable: mut-1783070308922
+
+Already resolved and pushed by concurrent gm-repo-sweep subagent this session-cycle (commit b7ffc013e2120bf900a257d74dbcc2a4e861c44c): killExistingPlugkit converted from execSync template-string to execFileSync array-args, witnessed via node --check + live subprocess exec. Closing stale leftover mutable entry.

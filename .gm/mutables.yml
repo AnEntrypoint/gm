@@ -900,6 +900,7 @@
   witness: 5 sibling-repo subagents + 1 gm-repo sweep to be dispatched; results not yet available
   witness_evidence: lib/skill-bootstrap.js:416-424 killExistingPlugkit -- fixed execSync template-string taskkill/kill calls to execFileSync array-args; node --check lib/skill-bootstrap.js passed; live execFileSync witness ran real subprocess successfully
 - mutable_id: skill-bootstrap-execsync-injection-shape
-  status: unknown
+  status: witnessed
   description: killExistingPlugkit in lib/skill-bootstrap.js built taskkill/kill shell commands via execSync template-string interpolation of a pid value -- injection-shaped even though the pid is currently always numeric-parsed
   id: mut-1783070308922
+  witness_evidence: 'Already resolved and pushed by concurrent gm-repo-sweep subagent this session-cycle (commit b7ffc013e2120bf900a257d74dbcc2a4e861c44c): killExistingPlugkit converted from execSync template-string to execFileSync array-args, witnessed via node --check + live subprocess exec. Closing stale leftover mutable entry.'

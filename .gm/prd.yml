@@ -7679,8 +7679,33 @@
   status: completed
 - id: ultracode-gm-repo-fresh-sweep
   title: Fresh destructive sweep of gm repo itself for anything new since the prior fix pass (13 fixes landed, worktree-safety class)
-  witness: prior session (this repo, main@38e1c6b93) fixed 13 findings; verify none regressed and find anything new
-  status: pending
+  witness: 'Completed by concurrent subagent session this session-cycle: found+fixed lib/skill-bootstrap.js execSync injection-shape issue, verified all 13 prior fixes intact, pushed as commit b7ffc013e2120bf900a257d74dbcc2a4e861c44c on main. Closing this inherited row before starting the new branch-consolidation task.'
+  status: completed
 - id: skill-bootstrap-execsync-injection-shape
   title: lib/skill-bootstrap.js killExistingPlugkit used execSync template-string interpolation of pid into taskkill/kill shell commands -- converted to execFileSync array-args form matching the rest of the codebase's kill-pid pattern
-  status: resolved
+  status: completed
+  witness: Same as above -- already resolved and pushed by concurrent subagent session, commit b7ffc013e.
+- id: consolidate-branches-gm
+  title: 'gm repo: remove all worktrees under .claude/worktrees, merge any unmerged branch work into main, delete all local/remote branches except main'
+  witness: 'Subagent a45722eb6f1e1c7d9: 8 ghost worktrees pruned, 9 local + 4 remote branches consolidated (1 real merge preserved as 55d1b11b3, 1 orphaned doc rescued as fb46ea6c4), final state verified via git branch -a/git worktree list showing only main+origin/main+origin/gh-pages, pushed d74734c74.'
+  status: completed
+- id: consolidate-branches-rsplugkit
+  title: 'rs-plugkit repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote)'
+  witness: 'Subagent a05459b2b73be9d9a: repo already had no extra branches/worktrees; fast-forwarded main f75a552->6e3a8a4; verified via git_branch spool verb and raw git branch -a/worktree list, only main+origin/main+origin/gh-pages remain.'
+  status: completed
+- id: consolidate-branches-rsexec
+  title: 'rs-exec repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote)'
+  witness: 'Subagent a64cfc37cee63b268: 1 branch (2 real commits) merged into main with resolved CHANGELOG conflict, deleted remote; pushed 48da974; verified via git branch -a -vv/git worktree list, only main+origin/main+origin/gh-pages remain; CI green except one transient unrelated GH Pages deploy flake logged as blockedBy:external.'
+  status: completed
+- id: consolidate-branches-rslearn
+  title: 'rs-learn repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote)'
+  witness: 'Subagent a923eef796d45a22e: 1 branch (1 real cascade.yml commit) merged into main, deleted remote; 69/69 tests passing before+after; verified via git worktree list/branch listing, only main+origin/main+origin/gh-pages remain.'
+  status: completed
+- id: consolidate-branches-rssearch
+  title: 'rs-search repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote) -- includes the previously-flagged abandoned release-plz-2026-04-20T15-32-16Z branch with ~70MB of stale GGUF blobs'
+  witness: 'Subagent a3b351144272cd345: previously-flagged abandoned release-plz-2026-04-20T15-32-16Z branch (confirmed dead, non-ancestor, pre-refactor GGUF blobs) deleted per user''s explicit authorization; separately, 1 real fix branch (2 commits) merged into main; verified via git branch -a/git worktree list, only main+origin/main+origin/gh-pages remain; CI green.'
+  status: completed
+- id: consolidate-branches-rscodeinsight
+  title: 'rs-codeinsight repo: remove all worktrees, merge unmerged branch work into main, delete all branches except main (local+remote)'
+  witness: 'Subagent a0c91b8c2a2ebb955: 1 already-ancestor-merged branch pruned locally+remotely (no actual merge needed, verified via merge-base --is-ancestor); cargo check green before+after; verified via git branch -a/git ls-remote/git worktree list, only main+origin/main+origin/gh-pages remain.'
+  status: completed
