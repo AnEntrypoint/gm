@@ -198,6 +198,19 @@ function writeCliError(phase, err) {
   ensureSpoolDir();
   writeCliStatus({ phase: 'starting', args });
 
+  const already = readStatus(spoolDir());
+  if (statusServing(already, 12000)) {
+    writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
+    console.log(JSON.stringify({
+      ok: true,
+      already_serving: true,
+      watcher_pid: already.pid,
+      version: already.version,
+      message: 'plugkit already serving, no bootstrap/spawn needed',
+    }));
+    process.exit(0);
+  }
+
   let bootstrapResult;
   try {
     bootstrapResult = await ensureReady();
