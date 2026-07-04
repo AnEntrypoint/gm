@@ -1242,8 +1242,18 @@ function waitForCdpReady(port, deadlineMs) {
 }
 
 function startManagedBrowser(pw, profileDir) {
-  const headless = process.env.GM_BROWSER_HEADLESS === '1';
-  logEvent('plugkit', 'browser.headless-mode-resolved', { headless, source: headless ? 'GM_BROWSER_HEADLESS=1' : 'default-headful' });
+  const rawHeadlessEnv = process.env.GM_BROWSER_HEADLESS;
+  const headless = rawHeadlessEnv === '1';
+  const unexpectedHeadlessEnv = rawHeadlessEnv !== undefined && rawHeadlessEnv !== '1';
+  logEvent('plugkit', 'browser.headless-mode-resolved', {
+    headless,
+    source: headless ? 'GM_BROWSER_HEADLESS=1' : 'default-headful',
+    raw_env_value: rawHeadlessEnv === undefined ? null : rawHeadlessEnv,
+    unexpected_env_value: unexpectedHeadlessEnv,
+  });
+  if (unexpectedHeadlessEnv) {
+    logEvent('plugkit', 'browser.headless-env-unexpected-value', { raw_env_value: rawHeadlessEnv });
+  }
   let browserBin = findInstalledChromiumBinary();
   if (!browserBin) {
     logEvent('plugkit', 'browser.chromium-installing', {});

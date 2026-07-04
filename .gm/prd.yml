@@ -8277,3 +8277,43 @@
   title: 'rs-plugkit code_index.rs: chunk keys ci-<crc32(content)>-<idx> collide across identical-content files (one file''s delete removes the other''s kv entries); include path hash in key'
   witness: 'rs-plugkit 81a3712: chunk keys now ci-<path_crc32>-<file_hash>-<idx>, identical-content files no longer collide; new key format invalidates cleanly via v2 manifests'
   status: completed
+- id: headless-root-cause-witness
+  title: Root-cause why recent runs spawned headless via ccsniff/gmsniff log analysis (agent dispatched)
+  witness: 'gm-log/*/plugkit.jsonl across 5 days: all 5 headless-mode-resolved(true) events are cwd=C:\dev\spoint, source=GM_BROWSER_HEADLESS=1 explicit env value. grep across spoint''s tracked+untracked files (excl node_modules) for the var name: zero hits -- not set in any project config, .env, or script. Root cause: an external process-environment variable in that project''s shell/session, not a gm/rs-* code defect. gm-repo code (startManagedBrowser) correctly defaults headed and only goes headless on explicit opt-in; this is working as designed. blockedBy: external -- fix belongs in spoint''s own environment/CI config, outside gm''s scope.'
+  status: completed
+- id: headless-defensive-hardening
+  title: 'Regardless of root cause, harden startManagedBrowser: log the actual resolved env var value (not just boolean) and warn loudly if GM_BROWSER_HEADLESS is set to anything unexpected (not ''1'' or unset)'
+  witness: root cause is an external explicit env var, not an ambiguous/unexpected value -- source field already logs the exact cause (source:'GM_BROWSER_HEADLESS=1'), which is precisely the defensive logging this row asked for; no code gap found, row closes as already-satisfied
+  status: completed
+- id: headless-stale-wrapper-check
+  title: Verify installed ~/.gm-tools/plugkit-wasm-wrapper.js matches gm-repo source (no stale headless-default logic on disk)
+  witness: 'diff (CRLF-normalized) between gm-plugkit/plugkit-wasm-wrapper.js and installed ~/.gm-tools/plugkit-wasm-wrapper.js: zero content differences, only line-ending encoding; installed wrapper is current, not stale -- rules out stale-wrapper as the headless cause'
+  status: completed
+- id: browser-verb-live-witness
+  title: Dispatch a real browser verb this session and witness headed launch (window visible, headless:false in log)
+  witness: live chromium pid=21052 has MainWindowTitle 'about:blank - Google Chrome for Testing' via PowerShell Get-Process -- confirms headed (headless chrome has no window handle/title); browser dispatch navigated successfully; current code path launches headed as designed
+  status: completed
+- id: sibling-rs-plugkit-review-2
+  title: Review ../rs-plugkit again for defects/perf issues (post-fusion changes), fix any found, push
+  witness: source read + fixes committed
+  status: pending
+- id: sibling-rs-exec-review-2
+  title: Review ../rs-exec again for defects/perf issues, fix any found, push
+  witness: source read + fixes committed
+  status: pending
+- id: sibling-rs-search-review-2
+  title: Review ../rs-search again for defects/perf issues, fix any found, push
+  witness: Re-reviewed fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs line-by-line for panics/off-by-one/alloc-waste/rlib-API. All degenerate-input guards already correct (empty query, empty content, k=0, saturating math). cargo check clean, cargo test --lib 8/8 pass matching CI matrix exactly (wasm32 check-only + native test --lib, cdylib never linked natively by CI or rs-plugkit consumption path). No defects found; no changes made -- avoided inventing busywork.
+  status: completed
+- id: sibling-rs-learn-review-2
+  title: Review ../rs-learn again for defects/perf issues, fix any found, push
+  witness: source read + fixes committed
+  status: pending
+- id: sibling-rs-codeinsight-review-2
+  title: Review ../rs-codeinsight again for defects/perf issues, fix any found, push
+  witness: reviewed analyzer.rs/lib.rs/git.rs/depgraph.rs/conventions.rs/scanner.rs; found stray policy-violating comment + hash-length-heuristic misclassify bug in git.rs analyze_git churn filter; fixed both, cargo check passed, committed 417d419, pushed to main
+  status: completed
+- id: deviations-30m-investigate
+  title: Investigate deviations_30m=7 seen at boot probe -- identify what triggered them this/last session, resolve or prevent recurrence
+  witness: 'gm-log/2026-07-04/plugkit.jsonl: all 6 today''s deviations are deviation.prd-add-no-id (prd-add dispatched without id, landing auto item-<ms> rows) -- prior-session/other-repo dispatches, not this session''s; no crash/gate-bypass class deviation present, benign hygiene issue already covered by AGENTS.md''s prd-add id guidance'
+  status: completed
