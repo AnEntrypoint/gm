@@ -1,3 +1,0 @@
-## Resolved mutable: mut-1783015085369
-
-Out of gm-repo edit scope (rs-search context.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session -- this is a genuine panic-on-empty-file bug worth prioritizing there given 'High: crash (denial of service)' impact rating.

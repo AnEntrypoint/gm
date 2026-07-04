@@ -3814,6 +3814,23 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(() => { try { scanStalledTurns(); } catch (_) {} }, 30000);
   writeStatus();
 
+  setTimeout(() => {
+    try {
+      _writeStatusBusy(360000);
+      const vb = new TextEncoder().encode('codesearch');
+      const bb = new TextEncoder().encode(JSON.stringify({ query: 'index warmup', k: 1 }));
+      const vp = writeWasmInput(instance, vb, 'boot-warmup:codesearch.verb');
+      const bp = writeWasmInput(instance, bb, 'boot-warmup:codesearch.body');
+      const t0 = Date.now();
+      const r = dispatch(vp, vb.length, bp, bb.length);
+      decodeWasmResult(instance, r, 'boot-warmup:codesearch');
+      writeStatus();
+      logEvent('plugkit', 'boot.index-warmup', { ms: Date.now() - t0 });
+    } catch (e) {
+      try { logEvent('plugkit', 'boot.index-warmup-failed', { error: String(e && e.message || e) }); } catch (_) {}
+    }
+  }, 3000);
+
   const TURN_SUMMARY_PATH = path.join(spoolDir, '.turn-summary.json');
   function writeTurnSummary() {
     try {

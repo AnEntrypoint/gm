@@ -1,3 +1,0 @@
-## Resolved mutable: mut-1783015065749
-
-Out of gm-repo edit scope (rs-search lib.rs, sibling repo not checked out locally). Correctly scoped to rs-search's own future session per AGENTS.md finding-about-target-project rule.

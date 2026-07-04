@@ -132,7 +132,7 @@ Every skill's `allowed-tools:` reduced to `Skill, Read, Write` (plus SKILL.md bo
 
 **The agent IS the LLM rs-learn calls**: no separate judge model; decisions inline via spool. Internals: rs-learn (`recall: rs-learn self-report core internals`).
 
-**Idempotency contract (f∘f≡f)**: spool dispatch = at-least-once by design (in-memory processed-Map guards only concurrent double-pickup, not cross-time replay/restart), so correctness rests on per-verb convergence: `memorize`/`memorize-fire` content-hash-key+dedup, `git_finalize`/`git_commit` nothing-to-commit/already-pushed, `insert_edge` kv-overwrite-by-id+dedup-guarded-index, `invalidate_edge` early-return, `ensure_managed_gitignore` strip-rebuild-changed-gate, codeinsight digest-gate, publish.yml already-published-skip+porcelain-gated-version-commit-back. Read-only verbs (recall/codesearch/git_status/instruction/health/filter) recompute every dispatch, never cache. `exec_js`/`browser` re-run on replay (at-most-once-by-nature); persistent dedup ledger rejected as net-additive. Detail: rs-learn (`recall: idempotency contract per-verb convergence`).
+**Idempotency contract (f∘f≡f)**: spool dispatch is at-least-once; correctness rests on per-verb convergence (content-hash dedup, nothing-to-commit gates, digest gates); read-only verbs recompute, never cache. Per-verb enumeration: rs-learn (`recall: idempotency contract per-verb convergence`).
 
 **host_exec_js is synchronous**: real per-call `timeoutMs` required (zero/missing = hard error). Detail: rs-learn (`recall: host_exec_js synchronous`).
 
@@ -188,7 +188,7 @@ One-shot system-state probe: dispatch `plugkit health` before assuming any compo
 
 Site build + landing render: single-surface detail, drained to rs-learn (`recall: gm site build details`).
 
-**The site consumes the `anentrypoint-design` SDK pro-rata, never overriding it.** `site/theme.mjs` loads SDK at runtime (`unpkg.com/anentrypoint-design@latest`); local `<style>` carries ONLY render-mode plumbing (flatspace html-class toggles `article-flow`/`landing-cap`, crumb media query) + non-SDK site article-layout rhythm -- never a themed visual component. Every graphic-design change (token, component look, TOC/cli/panel/card/callout styling) made IN the SDK repo (`../anentrypoint-design`, GitHub `AnEntrypoint/design`, npm `anentrypoint-design`) as a token-only sheet, published; site picks up via `@latest`. New local CSS styling a visual component = deviation, belongs in SDK. SDK component sheets lint-gated literal-free (every color `var(--token)`); SDK build prefixes selectors `.ds-247420`-scoped. Mechanism: rs-learn (`recall: design SDK pro-rata consumption`).
+**The site consumes the `anentrypoint-design` SDK pro-rata, never overriding it.** Every visual change lands in the SDK repo, never local CSS; local `<style>` = render-mode plumbing only. Mechanism + repo pointers: rs-learn (`recall: design SDK pro-rata consumption`).
 
 
 @.gm/next-step.md

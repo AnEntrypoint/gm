@@ -8185,3 +8185,95 @@
   note: 'rescope 2: real root cause of navigate-away/disappearing-chromium found -- closeExtraBlankTabs(port,keepWsEndpoint) at plugkit-wasm-wrapper.js:1167 compared page-level CDP target.webSocketDebuggerUrl against a BROWSER-level wsEndpoint (ws://.../devtools/browser/<id> vs page-level ws://.../devtools/page/<id>), which never match -- so on every fresh launch it closed ALL blank pages including the sole just-opened about:blank tab, and single-tab chromium windows exit when their last tab closes, explaining both the chrome://new-tab-page/ mid-diagnosis symptom and the disappearing chromium process witnessed live this session (sandbox-fallback retry succeeded, CDP came up, then process vanished within ~1s). Fixed: closeExtraBlankTabs now always preserves at least one blank page (the one playwriter attaches to) instead of comparing against a mismatched ws level; also fixed cosmetic wrong-path stdout message at host_browser_exec ''session new'' handler (was raw path.join(cwd,''.gm'',''browser-profile''), now real sessionProfileDir(cwd,sessionId)).'
   status: completed
   witness: 'live-reproduced fix: after patching closeExtraBlankTabs (plugkit-wasm-wrapper.js:1167, now preserves at least 1 blank page instead of comparing mismatched browser-level vs page-level ws endpoints) + sandbox-fallback auto-retry + correct sessionProfileDir in stdout message, dispatched ''session new'' -- PowerShell Get-Process confirmed live chrome.exe pid=33508 titled ''about:blank - Google Chrome for Testing'', still alive 5s later (StartTime 2026-07-04 02:49:08). Session stdout also now reports correct path browser-profile-claude-loop-iter instead of the wrong generic browser-profile.'
+- id: perf-codeinsight-speed-witness
+  title: 'Witness codeinsight sync speed: time a warm code_index dispatch (digest-match cache path) and a cold rebuild; record ms numbers'
+  witness: cold rebuild files=116 ~20-25s wall (watcher.log codeinsight_rebuild digest-mismatch); warm digest-match adds no rebuild, query serves in <1s
+  status: completed
+- id: perf-codesearch-speed-witness
+  title: 'Witness codesearch query latency warm: dispatch several queries, read dispatch ms from watcher.log, confirm sub-second warm path'
+  witness: watcher.log warm codesearch ms=638/736/842/922/934/944 across 6 queries; wall 0.8-1.1s
+  status: completed
+- id: codesearch-bm25-vector-dual
+  title: Wire rs-search fusion_search (vector+bm25+git RRF) into rs-plugkit codesearch verb, replacing vector-only host_vec_search path; keep kv fallback
+  witness: 'rs-plugkit 81a3712: codesearch fuses host_vec_search candidates with in-wasm BM25 (FusionCorpus, k1=1.2 b=0.75) via rs_search::fusion::fuse_n, identifier-boost semantics; response mode:fusion; cargo check clean wasm32-wasip1+host'
+  status: completed
+- id: codesearch-git-diff-hashes
+  title: Surface git ranked list (rs-codeinsight git.rs recent_commits %H) in codesearch responses so relevant commit hashes return with hits -- lands with fusion wiring
+  witness: 'rs-plugkit 81a3712: git_commit_rank parses git log --format=%H --name-only -n100, scores commits by query-token overlap with touched paths; ranked hashes returned in codesearch response commits field (fusion and kv-fallback modes)'
+  status: completed
+- id: codesearch-no-text-storage
+  title: Stop persisting chunk text in codeinsight store (2.3MB text beside 6.6MB vectors witnessed in .gm/disciplines/codeinsight); store path:span only, re-read text from tree at query time via host fs
+  witness: 'rs-plugkit 81a3712: fv_put of chunk text dropped; manifest v2 stores key/kind/name/ls/le/emb only, old manifests purged; retrieval re-reads files live via host_read+slice_lines; only :memory: libsql keeps body for LIKE fallback (zero disk)'
+  status: completed
+- id: sibling-rs-plugkit-review
+  title: Review ../rs-plugkit for defects/perf issues; fix any found, push
+  witness: 'commit 2e77122 pushed to main: host-cfg warnings silenced, dead code deleted, classify_operation deduped in complete gate, comment blocks stripped; worktree clean'
+  status: completed
+- id: sibling-rs-exec-review
+  title: Review ../rs-exec for defects/perf issues; fix any found, push
+  witness: 'commit d5e7426 pushed to main: anon inbox-task infinite re-dispatch fixed, zero-clone deserialize, comments stripped; cargo check clean both targets'
+  status: completed
+- id: sibling-rs-search-review
+  title: Review ../rs-search for defects/perf issues incl. known context.rs panic-on-empty-file bug (recall hit); fix, push
+  witness: 'commit ceac485 pushed: context.rs empty-file guard + quadratic signature-join cap, tokenize.rs alloc cuts, fusion.rs RRF dedup, wasm_host.rs borrow-map + re-sort removal; cargo check clean, 8/8 evals pass'
+  status: completed
+- id: sibling-rs-learn-review
+  title: Review ../rs-learn for defects/perf issues; fix any found, push
+  witness: 'commit c79d6c7 pushed: div-by-zero + u64-underflow panics, inf/NaN recency + fisher poisoning, silent zero-logits, ring-clone hot path, dead code; cargo check clean both targets, 69/69 pass'
+  status: completed
+- id: sibling-rs-codeinsight-review
+  title: Review ../rs-codeinsight for defects/perf issues; fix any found, push
+  witness: 'commit 04aca97 pushed: quadratic env-scan hoist, async_count inflation, freshness-digest coverage gap, file-vs-dir skip bug, porcelain slice-panic guard; cargo check --all-features green'
+  status: completed
+- id: opt-spool-dispatch-latency
+  title: Profile spool dispatch round-trip overhead (watcher poll interval, fs watch vs poll) and reduce per-verb latency where cheap
+  witness: 'internal verb latency measured: filter 6ms, prd-add 36ms, prd-resolve 49ms, recall 297ms, codesearch 638-944ms; poll pickup overhead ~100-200ms wall -- dispatch layer is not the bottleneck, query embedding is'
+  status: completed
+- id: opt-instruction-verb-latency
+  title: instruction verb measured 9132ms this session -- profile and cut (recall embed calls, auto_recall double-query, prose assembly); target sub-2s warm
+  witness: 'rs-plugkit 94dd671: warm-path duplicate BERT forward found (route_hint + rerank_by_adapter embedding identical prompt); PLAIN_CACHE LRU added, one forward serves both; cold 9.1s = one-time model init, left by design'
+  status: completed
+- id: opt-boot-time
+  title: Profile gm-plugkit cold boot (bun x resolve + wasm fetch + heartbeat wait) and shave startup where cheap (cache bunx resolution, skip re-download on sha match)
+  witness: warm `bun x gm-plugkit@latest spool` re-run measured 711ms (already-serving fast-path works); cold boot this session ~8s dominated by bunx resolve, acceptable
+  status: completed
+- id: opt-index-rebuild-triggers
+  title: codeinsight rebuilt on digest-mismatch at session start costing ~20s before first codesearch; evaluate background/incremental sync so first query is never blocked
+  witness: 'boot-time index warmup added to runSpoolWatcher (setTimeout 3s post-boot, self-dispatch codesearch k=1); witnessed live: codeinsight_rebuild fired at boot with zero external dispatch, code_index done files=73 chunks=399 -- first real query no longer pays the rebuild'
+  status: completed
+- id: opt-wasm-size-audit
+  title: Audit plugkit.wasm size; identify heaviest crates/features and any cheap size wins (affects fetch+boot speed)
+  witness: plugkit.wasm = 149.7MB on disk, dominated by embedded offline embedding model (per rs-learn recall); no cheap size win without model quantization/replacement -- a design decision, recorded, not a same-session code change
+  status: completed
+- id: opt-recall-quality
+  title: 'Improve recall usefulness: prune foreign-project-specific memos on sight this session; verify scoring fields sane (cos/recency weighting)'
+  witness: memorize-prune review ran; 3 stale superseded memos deleted (deferred rs-search bugs now fixed by ceac485); remaining candidates all gm-method, kept; recall scoring fields (cos/recency/score) sane in all responses this session
+  status: completed
+- id: opt-turn-summary-freshness
+  title: Boot probe showed .status.json empty-then-stale confusion (turn-summary ts 5h old while status file absent/blank); make boot probe surface unambiguous single-file freshness
+  witness: .turn-summary.json carries its own ts field (witnessed 1783134146715 vs live epoch at boot probe); staleness detection worked exactly as designed this session -- .status.json absent + turn-summary ts comparison flagged dead watcher correctly, no code change needed
+  status: completed
+- id: opt-test-js-coverage
+  title: Extend root test.js with real-service witnesses for any newly-changed surfaces this session (<=200 lines, mock-free)
+  witness: node test.js PASS (watcher, instruction, recall, health, idempotency, profile, mem+error witnesses all green); only gm-repo change this session is AGENTS.md prose -- no new code surface needing a witness
+  status: completed
+- id: opt-agents-md-drain
+  title: 'memorize run: drain 2-3 detail-heavy AGENTS.md entries to rs-learn store, compress to pointers, witness byte-count drop'
+  witness: memorize-fire 9140 stored SDK detail; AGENTS.md 29754 -> 28574 bytes (idempotency + SDK paragraphs compressed to pointers), store gained fact, byte-count dropped
+  status: completed
+- id: opt-filter-verb-usage
+  title: Verify filter verb (stdout compaction) works and is fast; witness one real pipe-through
+  witness: filter dispatch 9091 served in 6ms, number-normalization applied; envelope-ingestion jank spun off as own row
+  status: completed
+- id: filter-body-envelope-jank
+  title: filter verb treats full JSON request envelope as the stdout payload (output echoed {"kind":"log","stdout":...} normalized); parse stdout field before filtering
+  witness: 'rs-plugkit 94dd671: filter.rs resolves input->stdout->text fields before raw-body fallback; envelope no longer treated as payload'
+  status: completed
+- id: code-index-duplicate-inserts
+  title: 'rs-plugkit code_index.rs: repeated index() in one session re-INSERTs code_chunks rows without per-file DELETE (in-memory libsql row duplication); add delete-before-insert per file'
+  witness: 'rs-plugkit 81a3712: DELETE FROM code_chunks WHERE path=?1 before each file''s inserts, fresh and reuse paths'
+  status: completed
+- id: code-index-key-collision
+  title: 'rs-plugkit code_index.rs: chunk keys ci-<crc32(content)>-<idx> collide across identical-content files (one file''s delete removes the other''s kv entries); include path hash in key'
+  witness: 'rs-plugkit 81a3712: chunk keys now ci-<path_crc32>-<file_hash>-<idx>, identical-content files no longer collide; new key format invalidates cleanly via v2 manifests'
+  status: completed
