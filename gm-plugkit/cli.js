@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile } = require('./bootstrap');
 
 const usage = `gm-plugkit -- Bootstrap and daemon-spawn for gm plugkit binary.
 
@@ -199,7 +199,10 @@ function writeCliError(phase, err) {
   writeCliStatus({ phase: 'starting', args });
 
   const already = readStatus(spoolDir());
-  if (statusServing(already, 12000)) {
+  let onDiskVersion = null;
+  try { onDiskVersion = readVersionFile(); } catch (_) { onDiskVersion = null; }
+  const versionDrifted = !!(already && onDiskVersion && already.version && already.version !== onDiskVersion);
+  if (statusServing(already, 12000) && !versionDrifted) {
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
     console.log(JSON.stringify({
       ok: true,
@@ -209,6 +212,14 @@ function writeCliError(phase, err) {
       message: 'plugkit already serving, no bootstrap/spawn needed',
     }));
     process.exit(0);
+  }
+  if (versionDrifted) {
+    writeCliStatus({ phase: 'version-drift-detected', running_version: already.version, disk_version: onDiskVersion });
+    console.error(`[gm-plugkit] running watcher (pid=${already.pid}) serves stale version ${already.version}, disk has ${onDiskVersion} -- forcing reboot`);
+    try {
+      if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
+      else process.kill(already.pid, 'SIGTERM');
+    } catch (_) {}
   }
 
   let bootstrapResult;

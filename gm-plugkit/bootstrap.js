@@ -1083,6 +1083,7 @@ module.exports = {
   readDaemonVersion,
   writeDaemonVersion,
   daemonVersionSentinel,
+  readVersionFile,
 };
 
 if (require.main === module) {

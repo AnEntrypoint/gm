@@ -18,8 +18,7 @@ function alive(st, maxAge) { if (!(st && st.pid && (Date.now() - (st.ts || 0)) <
 
 async function ensureWatcher() {
   if (alive(readJson(STATUS), 15000)) return;
-  const r = cp.spawnSync('bun', ['x', 'gm-plugkit@latest', 'spool'],
-    { cwd: ROOT, stdio: 'ignore', windowsHide: true, shell: true, timeout: 90000 });
+  const r = cp.spawnSync('bun', ['x', 'gm-plugkit@latest', 'spool'], { cwd: ROOT, stdio: 'ignore', windowsHide: true, shell: true, timeout: 90000 });
   if (r.status !== 0 || !alive(readJson(STATUS), 15000)) throw new Error('atomic spool boot did not leave a fresh watcher (status=' + (r && r.status) + ')');
 }
 
@@ -67,8 +66,7 @@ function checkNoComments() {
   const offenders = [];
   for (const f of files) {
     let text; try { text = fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (_) { continue; }
-    let inTemplate = false;
-    const lines = text.split(/\r?\n/);
+    let inTemplate = false; const lines = text.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
       if (!inTemplate && /^\s*(\/\/|\/\*)/.test(lines[i])) { offenders.push(f + ':' + (i + 1)); break; }
       let bt = 0;
@@ -99,26 +97,22 @@ function checkPackageFilesHygiene() {
 
 function checkUpdateWarningWired() {
   const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
-  assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src) && (src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3,
-    'injectUpdateWarning() must exist, read .update-available.json, set update_warning, and be called from autoRecall + instruction/transition/phase-status branches (>=3 refs)');
+  assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src) && (src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3, 'injectUpdateWarning() must exist, read .update-available.json, set update_warning, called >=3x');
   console.log('update-warning-wired guard ok');
 }
 
 function checkRenameAndInstaller() {
   assert(!fs.existsSync(path.join(ROOT, 'skills', 'gm-skill')), 'skills/gm-skill must not exist after rename');
   const skillMd = path.join(ROOT, 'skills', 'gm', 'SKILL.md');
-  assert(fs.existsSync(skillMd) && /^name:\s*gm\s*$/m.test(fs.readFileSync(skillMd, 'utf8').split(/\r?\n/).slice(0, 12).join('\n')),
-    'skills/gm/SKILL.md missing or frontmatter name != gm');
+  assert(fs.existsSync(skillMd) && /^name:\s*gm\s*$/m.test(fs.readFileSync(skillMd, 'utf8').split(/\r?\n/).slice(0, 12).join('\n')), 'skills/gm/SKILL.md missing or frontmatter name != gm');
   assert(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).name === 'gm-skill', 'npm package id must stay gm-skill');
   const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-install-'));
   try {
-    cp.execFileSync(process.execPath, [path.join(ROOT, 'bin', 'install.js'), 'install', '--yes'],
-      { env: Object.assign({}, process.env, { HOME: tmpHome, USERPROFILE: tmpHome }), stdio: 'ignore', timeout: 25000 });
+    cp.execFileSync(process.execPath, [path.join(ROOT, 'bin', 'install.js'), 'install', '--yes'], { env: Object.assign({}, process.env, { HOME: tmpHome, USERPROFILE: tmpHome }), stdio: 'ignore', timeout: 25000 });
   } catch (e) { if (e.code !== 'ETIMEDOUT') throw e; }
   assert(fs.existsSync(path.join(tmpHome, '.claude', 'skills', 'gm', 'SKILL.md')), 'installer must land skill at <home>/.claude/skills/gm/SKILL.md');
   const s = JSON.parse(fs.readFileSync(path.join(tmpHome, '.claude', 'settings.json'), 'utf8'));
-  assert(s.effortLevel === 'low' && s.alwaysThinkingEnabled === false && s.autoCompactWindow === undefined && s.autoCompactEnabled === undefined,
-    'installer must set effortLevel=low, alwaysThinkingEnabled=false, and never set autoCompactWindow/autoCompactEnabled');
+  assert(s.effortLevel === 'low' && s.alwaysThinkingEnabled === false && s.autoCompactWindow === undefined && s.autoCompactEnabled === undefined, 'installer must set effortLevel=low, alwaysThinkingEnabled=false, and never set autoCompact*');
   fs.rmSync(tmpHome, { recursive: true, force: true });
   console.log('rename+installer guard ok');
 }
@@ -137,13 +131,22 @@ function checkConstraintsMdSeedAndIdempotency() {
   const orig = fs.readFileSync(target, 'utf8');
   fs.writeFileSync(target, orig + '\n' + marker + '\n');
   try {
-    cp.execFileSync(process.execPath, ['-e', "require(path.join(process.env.GM_ROOT,'gm-plugkit','bootstrap.js')).ensureInstructionsBundle(process.env.GM_ROOT)"],
-      { env: Object.assign({}, process.env, { GM_ROOT: ROOT }), stdio: 'ignore', timeout: 15000 });
+    cp.execFileSync(process.execPath, ['-e', "require(path.join(process.env.GM_ROOT,'gm-plugkit','bootstrap.js')).ensureInstructionsBundle(process.env.GM_ROOT)"], { env: Object.assign({}, process.env, { GM_ROOT: ROOT }), stdio: 'ignore', timeout: 15000 });
   } catch (_) {}
   const after = fs.readFileSync(target, 'utf8');
   assert(after.includes(marker), 'constraints.md seed-if-absent must NOT overwrite a user-modified file on re-run (f.f=f idempotency) -- marker lost after re-seed');
   fs.writeFileSync(target, orig);
   console.log('constraints-md seed+idempotency guard ok');
+}
+
+function checkWrapperRegressions() {
+  const wrapper = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf-8');
+  assert(!/\bspawnSync\s*\(\s*process\.execPath\s*,\s*\[\s*['"]-e['"]\s*,\s*`[^`]*\b_(?:net|http|https|crypto|childProcess)Module\b[^`]*`/.test(wrapper), 'no spawnSync child-script template may reference a parent-scope _*Module alias (spawned child has no such binding)');
+  const ptr = 1000, len = 16, mem = new WebAssembly.Memory({ initial: 1, maximum: 100 });
+  new Uint8Array(mem.buffer, ptr, len).set(new Uint8Array(len).fill(0x41)); const stale = mem.buffer; mem.grow(50);
+  let threw = false; try { new Uint8Array(stale, ptr, len); } catch (_) { threw = true; }
+  assert(threw, 'a stale (pre-grow) buffer view must throw after a memory grow (guardWasmRange must re-derive buffer per-call, never cache it)');
+  console.log('wrapper-regressions guard ok');
 }
 
 function checkSpoolDispatchGates() {
@@ -158,6 +161,7 @@ function checkSpoolDispatchGates() {
 
 async function main() {
   checkNoBom();
+  checkWrapperRegressions();
   checkSpoolDispatchGates();
   checkNoComments();
   checkVersionConsistency();
@@ -179,20 +183,16 @@ async function main() {
   console.log('health ok version=' + (health.data.version || '?'));
   const memText = 'idempotency witness probe ' + process.pid + ' f-compose-f-equals-f';
   const [m1, m2] = [await dispatch('memorize-fire', { text: memText }), await dispatch('memorize-fire', { text: memText })];
-  assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key,
-    'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key');
+  assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key, 'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key');
   console.log('idempotency witness ok (memorize deduped key=' + m2.data.key + ')');
   const pd = parseData(await dispatch('exec_js', { code: 'let s=0;for(let i=0;i<2e6;i++){s+=Math.sqrt(i);}await new Promise(r=>setTimeout(r,150));return{s};', opts: { profile: true, profileTopN: 5 }, timeoutMs: 20000 }));
-  assert(pd && pd.profile && Array.isArray(pd.profile.culprits) && pd.profile.culprits.length > 0 && pd.profile.culprits.length <= 5 &&
-    pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
+  assert(pd && pd.profile && Array.isArray(pd.profile.culprits) && pd.profile.culprits.length > 0 && pd.profile.culprits.length <= 5 && pd.mem && typeof pd.mem.rss_mb === 'number' && pd.wall_vs_cpu && pd.wall_vs_cpu.offcpu_us > 0,
     'exec_js profile must return culprits[] capped by profileTopN, mem.rss_mb, and wall_vs_cpu.offcpu_us>0 (~150ms setTimeout CPU sampler cannot see)');
   console.log('profile witness ok (culprits=' + pd.profile.culprits.length + ' offcpu_us=' + pd.wall_vs_cpu.offcpu_us + ')');
   const md = parseData(await dispatch('exec_js', { code: 'const a=[];for(let i=0;i<5e4;i++)a.push(i);return {len:a.length};', opts: { mem: true }, timeoutMs: 10000 }));
-  assert(md && md.result && md.result.len === 50000 && md.mem && typeof md.mem.rss_mb === 'number' && typeof md.wall_ms === 'number',
-    'exec_js opts.mem must return structured result + mem.rss_mb + wall_ms');
+  assert(md && md.result && md.result.len === 50000 && md.mem && typeof md.mem.rss_mb === 'number' && typeof md.wall_ms === 'number', 'exec_js opts.mem must return structured result + mem.rss_mb + wall_ms');
   const ed = parseData(await dispatch('exec_js', { code: 'const x=null;return x.y.z;', opts: { mem: true }, timeoutMs: 10000 }));
-  assert(ed && ed.error && ed.error.name === 'TypeError' && /Cannot read properties of null/.test(ed.error.message),
-    'exec_js opts.mem must return a structured error{name,message} on a throw');
+  assert(ed && ed.error && ed.error.name === 'TypeError' && /Cannot read properties of null/.test(ed.error.message), 'exec_js opts.mem must return a structured error{name,message} on a throw');
   console.log('mem+error witness ok (rss=' + md.mem.rss_mb + ' err=' + ed.error.name + ')');
   console.log('PASS');
 }
