@@ -8381,3 +8381,15 @@
   note: 'live CI failure found: rs-plugkit-bot version-bump commits (e.g. e198b4b73 ''bump plugkitVersion to 0.1.759 (WASM)'') atomically update gm.json+bin/plugkit.version+bin/plugkit.wasm.sha256 but NEVER gm-plugkit/plugkit.version, guaranteeing test.js checkVersionConsistency() fails on every single such commit (confirmed 3 consecutive real failures v0.1.757/758/759). Fixed immediate symptom locally (gm-plugkit/plugkit.version synced to 0.1.759); dispatched subagent to fix root cause in rs-plugkit''s cross-repo bump script/workflow so all four files update atomically going forward.'
   status: completed
   witness: synced gm-plugkit/plugkit.version to 0.1.759 matching gm.json.plugkitVersion; node test.js confirms 'version-consistency guard ok (plugkitVersion 0.1.759)' and full PASS. Durable cross-repo fix (rs-plugkit's bump-script updating all 4 files atomically going forward) dispatched to a dedicated subagent, still in progress -- immediate CI-blocking symptom resolved now regardless.
+- id: fix-atomic-write-orphan-tmp
+  witness: gm-plugkit/plugkit-wasm-wrapper.js:608-616 atomicWriteRaw + 3944-3958 writeSharedUpdateCache + 3972-3980 writeSharedUpdateErrorKey swallowed renameSync failures leaving orphan .tmp files in GM_TOOLS_ROOT; 176 stale tmp files witnessed on this machine dating 6 weeks
+  status: pending
+- id: sweep-stale-gm-tools-tmp-startup
+  witness: added sweepStaleAtomicTmpFiles(GM_TOOLS_ROOT,10min) at wrapper.js:2921 startup, defense-in-depth for any future leaked tmp
+  status: pending
+- id: cleanup-accumulated-tmp-pile-this-machine
+  witness: C:\Users\user\.gm-tools has 176 orphan *.tmp.* files (peer-registry.json.tmp.* and .update-check-cache.json.tmp.*) to delete as one-time cleanup, no live process holds them (confirmed via directory listing timestamps 6wk old)
+  status: pending
+- id: gm-tools-missing-wasm-cache-env-issue
+  witness: defect1 GM_TOOLS_ROOT missing plugkit.wasm root-caused as environment bun/npx package-cache serving stale gm-plugkit tarball (2.0.1708 vs npm latest 2.0.1710), matching live .gm-plugkit-stale.json marker at turn-entry auto_recall; gm-plugkit/bootstrap.js copyWasmToGmTools (line 658) already unconditionally copies on every bootstrap success path per prior fix commit 32b0bb111 -- not a code defect in this repo, remediation is clearing local bun/npx cache
+  status: pending

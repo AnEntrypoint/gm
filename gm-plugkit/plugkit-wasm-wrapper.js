@@ -608,7 +608,12 @@ function stampBrowserLastUse(cwd, claudeSessionId) {
 function atomicWriteRaw(filePath, data) {
   const tmp = filePath + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8);
   fs.writeFileSync(tmp, data);
-  fs.renameSync(tmp, filePath);
+  try {
+    fs.renameSync(tmp, filePath);
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch (_) {}
+    throw err;
+  }
 }
 
 function atomicWriteJson(filePath, obj) {
@@ -2913,6 +2918,22 @@ async function runSpoolWatcher(instance, spoolDir) {
   }
   writeBootActive();
 
+  function sweepStaleAtomicTmpFiles(dir, maxAgeMs) {
+    try {
+      const entries = fs.readdirSync(dir);
+      const now = Date.now();
+      for (const name of entries) {
+        if (!/\.tmp(\.|$)/.test(name)) continue;
+        const full = path.join(dir, name);
+        try {
+          const st = fs.statSync(full);
+          if (now - st.mtimeMs > maxAgeMs) fs.unlinkSync(full);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+  sweepStaleAtomicTmpFiles(GM_TOOLS_ROOT, 10 * 60 * 1000);
+
   const PEER_REGISTRY_PATH = path.join(GM_TOOLS_ROOT, 'peer-registry.json');
   function registerSelfAsPeer() {
     try {
@@ -3942,12 +3963,15 @@ async function runSpoolWatcher(instance, spoolDir) {
     return null;
   }
   function writeSharedUpdateCache(latest, status) {
+    let tmp = null;
     try {
       fs.mkdirSync(path.dirname(UPDATE_CHECK_SHARED_CACHE), { recursive: true });
-      const tmp = UPDATE_CHECK_SHARED_CACHE + '.tmp.' + process.pid;
+      tmp = UPDATE_CHECK_SHARED_CACHE + '.tmp.' + process.pid;
       fs.writeFileSync(tmp, JSON.stringify({ ts: Date.now(), latest, status, by_pid: process.pid }));
       fs.renameSync(tmp, UPDATE_CHECK_SHARED_CACHE);
-    } catch (_) {}
+    } catch (_) {
+      if (tmp) { try { fs.unlinkSync(tmp); } catch (_) {} }
+    }
   }
   const UPDATE_CHECK_ERROR_MARKER = path.join(GM_TOOLS_ROOT, '.update-check-error.json');
   let _lastKnownUpdateError = null;
@@ -3962,11 +3986,13 @@ async function runSpoolWatcher(instance, spoolDir) {
     return null;
   }
   function writeSharedUpdateErrorKey(key) {
+    const tmp = UPDATE_CHECK_ERROR_MARKER + '.tmp.' + process.pid;
     try {
-      const tmp = UPDATE_CHECK_ERROR_MARKER + '.tmp';
       fs.writeFileSync(tmp, JSON.stringify({ ts: Date.now(), key, by_pid: process.pid }));
       fs.renameSync(tmp, UPDATE_CHECK_ERROR_MARKER);
-    } catch (_) {}
+    } catch (_) {
+      try { fs.unlinkSync(tmp); } catch (_) {}
+    }
   }
   function clearSharedUpdateErrorKey() {
     try { fs.unlinkSync(UPDATE_CHECK_ERROR_MARKER); } catch (_) {}
