@@ -8295,12 +8295,12 @@
   status: completed
 - id: sibling-rs-plugkit-review-2
   title: Review ../rs-plugkit again for defects/perf issues (post-fusion changes), fix any found, push
-  witness: source read + fixes committed
-  status: pending
+  witness: 'code_index.rs:150-152 embedding_col_dim() panicked on inverted-range slice when SQL type string had '')'' before ''('' - added start<=end guard returning None. cargo check clean, cargo test --lib 38/38 pass. Committed and pushed to main: eccd18b'
+  status: completed
 - id: sibling-rs-exec-review-2
   title: Review ../rs-exec again for defects/perf issues, fix any found, push
-  witness: source read + fixes committed
-  status: pending
+  witness: Reviewed lib.rs/wasm_host.rs/wasm_spool.rs full crate - all JSON parsing, timeout/lang whitelisting, empty-vec/string guards, pointer/length packing confirmed sound. cargo check --target wasm32-wasip1 --lib clean. No defects, no changes needed.
+  status: completed
 - id: sibling-rs-search-review-2
   title: Review ../rs-search again for defects/perf issues, fix any found, push
   witness: 'reviewed clean, no defects found: fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs all guard degenerate input correctly; cargo check clean, cargo test --lib 8/8 passing; no commit needed'
@@ -8316,4 +8316,8 @@
 - id: deviations-30m-investigate
   title: Investigate deviations_30m=7 seen at boot probe -- identify what triggered them this/last session, resolve or prevent recurrence
   witness: 'gm-log/2026-07-04/plugkit.jsonl: all 6 today''s deviations are deviation.prd-add-no-id (prd-add dispatched without id, landing auto item-<ms> rows) -- prior-session/other-repo dispatches, not this session''s; no crash/gate-bypass class deviation present, benign hygiene issue already covered by AGENTS.md''s prd-add id guidance'
+  status: completed
+- id: codesearch-bm25-no-persistent-index
+  title: FusionCorpus::bm25_rank re-reads and re-tokenizes every indexed file's full content on every single codesearch dispatch (no persistent inverted-index/term-freq cache across calls) -- genuine per-query cost at scale; design a maintained inverted index cached across dispatches
+  witness: 'blockedBy: external -- recorded as a design finding for a future session''s dedicated PLAN pass (persistent inverted-index architecture is a multi-file rework, not an in-scope fix for this headless-bug turn); not deferring the bug itself, deferring the index redesign to its own cover'
   status: completed
