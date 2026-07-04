@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh } = require('./bootstrap');
 
 const usage = `gm-plugkit -- Bootstrap and daemon-spawn for gm plugkit binary.
 
@@ -203,6 +203,7 @@ function writeCliError(phase, err) {
   try { onDiskVersion = readVersionFile(); } catch (_) { onDiskVersion = null; }
   const versionDrifted = !!(already && onDiskVersion && already.version && already.version !== onDiskVersion);
   if (statusServing(already, 12000) && !versionDrifted) {
+    try { ensureGmPlugkitVersionFresh(); } catch (_) {}
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
     console.log(JSON.stringify({
       ok: true,

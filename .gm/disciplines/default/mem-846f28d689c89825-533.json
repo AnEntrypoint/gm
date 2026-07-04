@@ -1,0 +1,3 @@
+## Resolved mutable: cli-fast-path-skips-gm-plugkit-version-check
+
+fixed gm-plugkit/cli.js:205 fast-path to call ensureGmPlugkitVersionFresh() (exported from bootstrap.js, added to module.exports) even on the already-serving fast-path -- cheap local file comparison, no network call, doesn't slow the common case. Live-verified: forced gm-plugkit.version marker back to stale 2.0.1719, ran node gm-plugkit/cli.js spool directly (fast-path hit, already_serving:true), marker self-healed to 2.0.1720 without a full bootstrap/reinstall.

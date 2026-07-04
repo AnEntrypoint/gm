@@ -1084,6 +1084,7 @@ module.exports = {
   writeDaemonVersion,
   daemonVersionSentinel,
   readVersionFile,
+  ensureGmPlugkitVersionFresh,
 };
 
 if (require.main === module) {
