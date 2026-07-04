@@ -8393,3 +8393,6 @@
 - id: gm-tools-missing-wasm-cache-env-issue
   witness: defect1 GM_TOOLS_ROOT missing plugkit.wasm root-caused as environment bun/npx package-cache serving stale gm-plugkit tarball (2.0.1708 vs npm latest 2.0.1710), matching live .gm-plugkit-stale.json marker at turn-entry auto_recall; gm-plugkit/bootstrap.js copyWasmToGmTools (line 658) already unconditionally copies on every bootstrap success path per prior fix commit 32b0bb111 -- not a code defect in this repo, remediation is clearing local bun/npx cache
   status: pending
+- id: verify-live-tmp-fix-witnessed
+  witness: 'live-verified: deleted GM_TOOLS_ROOT wasm/version, ran bun x gm-plugkit@latest spool fresh -- reproduced original v0.1.760 reboot scenario, GM_TOOLS_ROOT now populated (plugkit.wasm 150279009 bytes, plugkit.version=0.1.760), 0 tmp files before and after several dispatch cycles; simulated EPERM rename failure via node -e confirms atomicWriteRaw now unlinks tmp on failure (0 leftover vs prior unconditional leak)'
+  status: pending
