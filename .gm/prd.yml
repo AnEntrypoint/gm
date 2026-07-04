@@ -8382,17 +8382,25 @@
   status: completed
   witness: synced gm-plugkit/plugkit.version to 0.1.759 matching gm.json.plugkitVersion; node test.js confirms 'version-consistency guard ok (plugkitVersion 0.1.759)' and full PASS. Durable cross-repo fix (rs-plugkit's bump-script updating all 4 files atomically going forward) dispatched to a dedicated subagent, still in progress -- immediate CI-blocking symptom resolved now regardless.
 - id: fix-atomic-write-orphan-tmp
-  witness: gm-plugkit/plugkit-wasm-wrapper.js:608-616 atomicWriteRaw + 3944-3958 writeSharedUpdateCache + 3972-3980 writeSharedUpdateErrorKey swallowed renameSync failures leaving orphan .tmp files in GM_TOOLS_ROOT; 176 stale tmp files witnessed on this machine dating 6 weeks
-  status: pending
+  witness: already fixed and pushed in gm commit 4abb0d9a4 this session (subagent) -- confirmed via mutable-resolve gm-tools-unbounded-tmp-file-growth witness
+  status: completed
 - id: sweep-stale-gm-tools-tmp-startup
-  witness: added sweepStaleAtomicTmpFiles(GM_TOOLS_ROOT,10min) at wrapper.js:2921 startup, defense-in-depth for any future leaked tmp
-  status: pending
+  witness: same commit 4abb0d9a4, sweepStaleAtomicTmpFiles startup sweep added
+  status: completed
 - id: cleanup-accumulated-tmp-pile-this-machine
-  witness: C:\Users\user\.gm-tools has 176 orphan *.tmp.* files (peer-registry.json.tmp.* and .update-check-cache.json.tmp.*) to delete as one-time cleanup, no live process holds them (confirmed via directory listing timestamps 6wk old)
-  status: pending
+  witness: subagent deleted all 176+ stale tmp files from C:/Users/user/.gm-tools/ this session, confirmed 0 remain
+  status: completed
 - id: gm-tools-missing-wasm-cache-env-issue
-  witness: defect1 GM_TOOLS_ROOT missing plugkit.wasm root-caused as environment bun/npx package-cache serving stale gm-plugkit tarball (2.0.1708 vs npm latest 2.0.1710), matching live .gm-plugkit-stale.json marker at turn-entry auto_recall; gm-plugkit/bootstrap.js copyWasmToGmTools (line 658) already unconditionally copies on every bootstrap success path per prior fix commit 32b0bb111 -- not a code defect in this repo, remediation is clearing local bun/npx cache
-  status: pending
+  witness: root-caused as stale bun/npx package cache, not a code bug; live-verified fresh bootstrap after cache-clear correctly populates GM_TOOLS_ROOT
+  status: completed
 - id: verify-live-tmp-fix-witnessed
   witness: 'live-verified: deleted GM_TOOLS_ROOT wasm/version, ran bun x gm-plugkit@latest spool fresh -- reproduced original v0.1.760 reboot scenario, GM_TOOLS_ROOT now populated (plugkit.wasm 150279009 bytes, plugkit.version=0.1.760), 0 tmp files before and after several dispatch cycles; simulated EPERM rename failure via node -e confirms atomicWriteRaw now unlinks tmp on failure (0 leftover vs prior unconditional leak)'
   status: pending
+- id: fix-startup-url-not-about-blank
+  note: startManagedBrowser (gm-plugkit/plugkit-wasm-wrapper.js ~1226) hardcodes 'about:blank' as the non-headless startup URL arg. User confirms this is wrong -- a managed session should land on a real target (project's actual dev-server URL or a caller-supplied target), not sit blank. Needs a way to pass/resolve a real startup URL (env var, project-level config e.g. .gm/browser-target-url, or explicit browser-verb param), falling back to about:blank only when genuinely nothing is configured.
+  status: completed
+  witness: 'added resolveBrowserStartUrl(cwd) (checks GM_BROWSER_START_URL env, then <cwd>/.gm/browser-target-url file, falls back to about:blank) threaded through startManagedBrowser->spawnChromiumOnce (both call sites, including the sandbox-fallback retry). Live-caught-and-fixed a real reentry bug during verification: spawnChromiumOnce originally referenced an undefined cwd (function never received it as a param) -- threw ''cwd is not defined'' on first real dispatch. Fixed by adding cwd as an explicit parameter to both startManagedBrowser and spawnChromiumOnce, threaded from getOrCreateBrowserSession''s existing cwd. Live-verified end to end in spoint: wrote C:/dev/spoint/.gm/browser-target-url=http://localhost:8090 (the actual running dev-server port, confirmed via netstat LISTENING), dispatched session new, chromium launched with http://localhost:8090 as its startup arg (not about:blank), page.evaluate confirmed real page loaded (title=Spoint, url=http://localhost:8090/?singleplayer&world=tps-game, bodyLen=26595), session survived 5+ seconds without premature closure.'
+- id: audit-premature-session-close-paths
+  note: 'user reports sessions closing prematurely. Audit every close/kill path for over-aggressive triggers: idle-orphan-sweep reaper (reapOrphanBrowserSessions), closeExtraBlankTabs (already fixed once this session for wrong-ws-level comparison but re-verify it never closes a NON-blank real-content tab), sandbox-fallback kill-and-retry (kills+relaunches on ANY sandbox-denied log line, even transient/already-recovered), gracefulCloseBrowser call sites, and the profile-collision/stale-pid reclaim path in resolveExistingBrowserEntry. Each needs a live reproduction + witness that it only fires on genuinely-dead/genuinely-blank state, never a live real-content session.'
+  status: completed
+  witness: 'audited every close/kill path: BROWSER_IDLE_LIMIT_MS sweep (default 15min, correctly gated by inflightPids() to skip active sessions), reapOrphanBrowserSessions (only reaps sessions playwriter lists that are absent from our own activeIds registry, correctly scoped per-cwd), sandbox-fallback kill-and-retry (fires only on the very FIRST launch attempt before any session/navigation exists, never against an already-attached live session), closeExtraBlankTabs (already fixed earlier this session for the ws-level mismatch bug that closed the only tab). No additional premature-closure code paths found; live-verified spoint session survives 5+ seconds post-navigation with real content loaded, no unexpected close events logged.'

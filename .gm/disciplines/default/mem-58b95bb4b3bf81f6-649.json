@@ -1,0 +1,3 @@
+## Resolved mutable: watcher-boot-status-version-mismatch
+
+same root cause as gm-tools-missing-wasm-and-version-file (stale bunx cache, not a code bug) -- resolveVersion() correctly reads GM_TOOLS_ROOT/plugkit.version first; when that file was transiently absent due to the stale-cache serving, it fell through to instance-version fallback, producing the observed mismatch. Confirmed no longer reproduces after cache-clear+fresh-bootstrap: .gm/exec-spool/.status.json for the current gm watcher (pid 33024) and spoint watcher (pid 29476, freshly booted this turn) both show version=0.1.760 file_version=0.1.760 matching the running instance exactly.

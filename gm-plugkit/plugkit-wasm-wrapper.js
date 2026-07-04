@@ -1203,7 +1203,7 @@ function chromeLogHasSandboxDenied(chromeLogPath) {
   }
 }
 
-function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox) {
+function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox, cwd) {
   const args = [
     '--user-data-dir=' + profileDir,
     '--remote-debugging-port=' + port,
@@ -1219,7 +1219,7 @@ function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox) {
   if (headless) {
     args.push('--headless=new');
   } else {
-    args.push('about:blank');
+    args.push(resolveBrowserStartUrl(cwd));
   }
   const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
   let logFd;
@@ -1235,6 +1235,17 @@ function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox) {
   return { pid: child.pid, chromeLogPath };
 }
 
+function resolveBrowserStartUrl(cwd) {
+  if (process.env.GM_BROWSER_START_URL) return process.env.GM_BROWSER_START_URL;
+  try {
+    const root = cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const cfgPath = path.join(root, '.gm', 'browser-target-url');
+    const url = fs.readFileSync(cfgPath, 'utf-8').trim();
+    if (url) return url;
+  } catch (_) {}
+  return 'about:blank';
+}
+
 function waitForCdpReady(port, deadlineMs) {
   const start = Date.now();
   const deadline = start + deadlineMs;
@@ -1246,7 +1257,7 @@ function waitForCdpReady(port, deadlineMs) {
   return null;
 }
 
-function startManagedBrowser(pw, profileDir) {
+function startManagedBrowser(pw, profileDir, cwd) {
   const rawHeadlessEnv = process.env.GM_BROWSER_HEADLESS;
   const headless = rawHeadlessEnv === '1';
   const unexpectedHeadlessEnv = rawHeadlessEnv !== undefined && rawHeadlessEnv !== '1';
@@ -1278,7 +1289,7 @@ function startManagedBrowser(pw, profileDir) {
   }
   const port = findFreePortSync();
   let noSandbox = process.env.GM_BROWSER_NO_SANDBOX === '1';
-  let { pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox);
+  let { pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox, cwd);
   logEvent('plugkit', 'browser.chromium-launched', { pid, port, profileDir, headless, noSandbox, binary: browserBin, chromeLogPath });
   let ready = waitForCdpReady(port, 30000);
   if (!ready) {
@@ -1293,7 +1304,7 @@ function startManagedBrowser(pw, profileDir) {
     purgeProfileLockFiles(profileDir);
     noSandbox = true;
     const port2 = findFreePortSync();
-    ({ pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port2, headless, noSandbox));
+    ({ pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port2, headless, noSandbox, cwd));
     logEvent('plugkit', 'browser.chromium-launched', { pid, port: port2, profileDir, headless, noSandbox, binary: browserBin, chromeLogPath, retry: true });
     ready = waitForCdpReady(port2, 30000);
     if (!ready) {
@@ -1490,7 +1501,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
     logEvent('plugkit', 'browser.reused-existing-chromium', { pid: browserPid, port, profileDir });
   } else {
     logEvent('plugkit', 'browser.start', { profileDir });
-    ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir));
+    ({ pid: browserPid, port, wsEndpoint } = startManagedBrowser(pw, profileDir, cwd));
     freshLaunch = true;
   }
   markLaunching(browserPid);

@@ -1,0 +1,3 @@
+## Resolved mutable: gm-tools-unbounded-tmp-file-growth
+
+fixed in gm commit 4abb0d9a4 (subagent this session): 3 atomic-write helpers in gm-plugkit/plugkit-wasm-wrapper.js (atomicWriteRaw:608, writeSharedUpdateCache:~3944, writeSharedUpdateErrorKey:~3972) had fs.renameSync failures swallowed with no cleanup, permanently orphaning tmp files. Added unlink-on-failure to all three plus a bounded sweepStaleAtomicTmpFiles(GM_TOOLS_ROOT,10min) startup sweep. Verified via real fs.renameSync failure injection: 0 leftover tmp files post-fix vs unconditional leak before. Cleaned up all 176+ accumulated stale tmp files from C:/Users/user/.gm-tools/ directly. CI green on the fix commit.

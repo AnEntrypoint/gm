@@ -1,0 +1,3 @@
+## Resolved mutable: mutable-resolve-self-contradictory-rejection
+
+deferred, not independently reproduced -- treating as blockedBy:external until a live repro captures the exact echoed-key-then-rejected scenario; not fixable without reproduction, and current mutable-resolve usage this session has succeeded consistently for every real dispatch (multiple successful resolves witnessed directly). Not chasing further speculatively.
