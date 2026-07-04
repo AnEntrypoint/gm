@@ -8295,12 +8295,12 @@
   status: completed
 - id: sibling-rs-plugkit-review-2
   title: Review ../rs-plugkit again for defects/perf issues (post-fusion changes), fix any found, push
-  witness: user-requested audit resume
-  status: pending
+  witness: 'Post-fusion (81a3712) review of ../rs-plugkit code_index.rs + wasm_dispatch.rs codesearch fusion path complete: substantive defect (embedding_col_dim panic on inverted slice range) already fixed by eccd18b; re-audit found no unwrap panics, SQL paths properly parameterized/escaped, bounded retry recursion, cargo check clean, git status clean. No fixes required, nothing to push in rs-plugkit.'
+  status: completed
 - id: sibling-rs-exec-review-2
   title: Review ../rs-exec again for defects/perf issues, fix any found, push
-  witness: re-opened per fresh user request to re-review sibling rs-exec repo
-  status: pending
+  witness: 'reviewed clean, no source changes needed (wasm_spool.rs+wasm_host.rs, no unwraps/panics, timeout bounds validated); confirmed zero browser/env-passthrough surface -- rs-exec ruled out as headless-bug cause, that logic lives only in host JS wrapper; found+fixed CI wasm-tools PATH resolution bug (commits 49c5984, e780c1a); one remaining CI anomaly is a GitHub Actions runner-level flake (deterministic <10ms silent failure regardless of source/PATH/version, local repro passes clean) -- blockedBy: external, matches gh-pages-deploy-transient-failure precedent'
+  status: completed
 - id: sibling-rs-search-review-2
   title: Review ../rs-search again for defects/perf issues, fix any found, push
   witness: 'reviewed clean, no defects found: fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs all guard degenerate input correctly; cargo check clean, cargo test --lib 8/8 passing; no commit needed'
