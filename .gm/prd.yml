@@ -8327,5 +8327,5 @@
   status: completed
 - id: rs-exec-wasm-check-print-crash-fix
   title: 'Corrected wasm-check.yml: wasm-tools print re-invoked 6x under set -e+pipefail with no signal-crash guard (the class already handled for validate); found root cause was NOT the previously-assumed external runner flake but a real script bug -- fixed by calling print once and guarding it like validate'
-  witness: rs-exec commit dafed4b
-  status: pending
+  witness: 'commit 857ce25 pushed by resumed rs-exec review agent: root cause was grep -q closing stdin on first match, SIGPIPE-killing wasm-tools print under pipefail (confirmed via literal ''Broken pipe'' in CI log, same diagnosis independently reached this turn); fixed with here-string grep -qF <<< "$var" eliminating the pipe entirely. gh run list confirms Wasm Check + Cascade + Deploy GH Pages all success on 857ce25, worktree clean.'
+  status: completed
