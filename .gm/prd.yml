@@ -8303,15 +8303,15 @@
   status: pending
 - id: sibling-rs-search-review-2
   title: Review ../rs-search again for defects/perf issues, fix any found, push
-  witness: Re-reviewed fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs line-by-line for panics/off-by-one/alloc-waste/rlib-API. All degenerate-input guards already correct (empty query, empty content, k=0, saturating math). cargo check clean, cargo test --lib 8/8 pass matching CI matrix exactly (wasm32 check-only + native test --lib, cdylib never linked natively by CI or rs-plugkit consumption path). No defects found; no changes made -- avoided inventing busywork.
+  witness: 'reviewed clean, no defects found: fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs all guard degenerate input correctly; cargo check clean, cargo test --lib 8/8 passing; no commit needed'
   status: completed
 - id: sibling-rs-learn-review-2
   title: Review ../rs-learn again for defects/perf issues, fix any found, push
-  witness: source read + fixes committed
-  status: pending
+  witness: 'commit f7b76d7 pushed: parse_iso_ms out-of-range month/day validation added (prevented u64 underflow panic on malformed date input); all other prior scoring/math guards confirmed sound; cargo check clean host+wasm32-unknown-unknown'
+  status: completed
 - id: sibling-rs-codeinsight-review-2
   title: Review ../rs-codeinsight again for defects/perf issues, fix any found, push
-  witness: reviewed analyzer.rs/lib.rs/git.rs/depgraph.rs/conventions.rs/scanner.rs; found stray policy-violating comment + hash-length-heuristic misclassify bug in git.rs analyze_git churn filter; fixed both, cargo check passed, committed 417d419, pushed to main
+  witness: 'commit 417d419 pushed: git.rs churn-count 40-char-string misclassify guard added (hex-digit check distinguishes SHA-1 hashes from coincidentally-40-char filenames), stray comment stripped; cargo check --all-features clean'
   status: completed
 - id: deviations-30m-investigate
   title: Investigate deviations_30m=7 seen at boot probe -- identify what triggered them this/last session, resolve or prevent recurrence
