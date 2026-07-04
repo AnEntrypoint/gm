@@ -8369,3 +8369,7 @@
   title: Consolidate gm-plugkit/child-script-alias.test.js and gm-plugkit/wasm-buffer-decode.test.js (real, mock-free, repo-rule-violating *.test.js files) into root test.js, deleted originals, compacted to fit the 200-line cap
   witness: child-script-alias.test.js -> checkWrapperRegressions() alias-check; wasm-buffer-decode.test.js -> checkWrapperRegressions() stale-buffer-throws check (single sharpest assertion kept per file, secondary redundant assertions dropped to fit cap); both originals deleted. test.js compacted from 252 to exactly 200 lines via safe line-joins (no logic changes, only merging adjacent statements/multi-line asserts onto one line); node test.js run live, all 17 guards + integration dispatches PASS
   status: completed
+- id: fix-publish-workflow-test-glob
+  title: 'Fix .github/workflows/publish.yml ''Run gm-plugkit tests'' step: glob gm-plugkit/*.test.js now matches zero files after test-file consolidation, breaking every publish run (MODULE_NOT_FOUND on the literal glob string) -- replaced with running root test.js (added bun setup for the live watcher integration checks)'
+  witness: 'publish.yml ''Run gm-plugkit tests'' step replaced: added oven-sh/setup-bun@v2 + run node test.js (root, real end-to-end test), removed the now-zero-match gm-plugkit/*.test.js glob loop'
+  status: completed

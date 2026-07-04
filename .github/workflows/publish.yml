@@ -72,12 +72,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run gm-plugkit tests
-        run: |
-          for t in gm-plugkit/*.test.js; do
-            echo "running $t"
-            node "$t"
-          done
+      - uses: oven-sh/setup-bun@v2
+      - name: Run test.js
+        run: node test.js
 
   publish-gm-skill:
     needs: [prepare, test]
