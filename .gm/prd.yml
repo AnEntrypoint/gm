@@ -8295,12 +8295,12 @@
   status: completed
 - id: sibling-rs-plugkit-review-2
   title: Review ../rs-plugkit again for defects/perf issues (post-fusion changes), fix any found, push
-  witness: 'code_index.rs:150-152 embedding_col_dim() panicked on inverted-range slice when SQL type string had '')'' before ''('' - added start<=end guard returning None. cargo check clean, cargo test --lib 38/38 pass. Committed and pushed to main: eccd18b'
-  status: completed
+  witness: user-requested audit resume
+  status: pending
 - id: sibling-rs-exec-review-2
   title: Review ../rs-exec again for defects/perf issues, fix any found, push
-  witness: Reviewed lib.rs/wasm_host.rs/wasm_spool.rs full crate - all JSON parsing, timeout/lang whitelisting, empty-vec/string guards, pointer/length packing confirmed sound. cargo check --target wasm32-wasip1 --lib clean. No defects, no changes needed.
-  status: completed
+  witness: re-opened per fresh user request to re-review sibling rs-exec repo
+  status: pending
 - id: sibling-rs-search-review-2
   title: Review ../rs-search again for defects/perf issues, fix any found, push
   witness: 'reviewed clean, no defects found: fusion.rs/context.rs/tokenize.rs/eval.rs/wasm_host.rs all guard degenerate input correctly; cargo check clean, cargo test --lib 8/8 passing; no commit needed'
