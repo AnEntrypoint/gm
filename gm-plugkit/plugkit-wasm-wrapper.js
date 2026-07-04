@@ -1168,11 +1168,14 @@ function closeExtraBlankTabs(port, keepWsEndpoint) {
   try {
     const targets = fetchJsonSync(`http://127.0.0.1:${port}/json/list`, 1500);
     if (!Array.isArray(targets)) return { closed: 0 };
+    const pages = targets.filter(t => t && t.type === 'page');
+    const blank = pages.filter(t => t.url === 'about:blank' || t.url === '');
+    const nonBlankCount = pages.length - blank.length;
+    const keepCount = nonBlankCount > 0 ? 0 : 1;
+    const toClose = blank.slice(0, Math.max(0, blank.length - keepCount));
     let closed = 0;
-    for (const t of targets) {
-      if (!t || t.type !== 'page') continue;
+    for (const t of toClose) {
       if (t.webSocketDebuggerUrl === keepWsEndpoint) continue;
-      if (t.url !== 'about:blank' && t.url !== '') continue;
       const r = spawnSync(process.execPath, ['-e', `
         const http = require('http');
         const req = http.get(${JSON.stringify(`http://127.0.0.1:${port}/json/close/${t.id}`)}, res => { res.resume(); res.on('end', () => process.exit(0)); });
@@ -1187,8 +1190,60 @@ function closeExtraBlankTabs(port, keepWsEndpoint) {
   }
 }
 
+function chromeLogHasSandboxDenied(chromeLogPath) {
+  try {
+    return /Sandbox cannot access executable/.test(fs.readFileSync(chromeLogPath, 'utf-8'));
+  } catch (_) {
+    return false;
+  }
+}
+
+function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox) {
+  const args = [
+    '--user-data-dir=' + profileDir,
+    '--remote-debugging-port=' + port,
+    '--remote-debugging-address=127.0.0.1',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-default-apps',
+    '--disable-gpu-process-crash-limit',
+  ];
+  if (noSandbox) {
+    args.push('--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage');
+  }
+  if (headless) {
+    args.push('--headless=new');
+  } else {
+    args.push('about:blank');
+  }
+  const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
+  let logFd;
+  try { logFd = fs.openSync(chromeLogPath, 'a'); } catch (_) { logFd = null; }
+  const child = spawn(browserBin, args, {
+    detached: true,
+    stdio: ['ignore', logFd != null ? logFd : 'ignore', logFd != null ? logFd : 'ignore'],
+    windowsHide: false,
+    env: process.env,
+  });
+  try { if (typeof logFd === 'number') fs.closeSync(logFd); } catch (_) {}
+  child.unref();
+  return { pid: child.pid, chromeLogPath };
+}
+
+function waitForCdpReady(port, deadlineMs) {
+  const start = Date.now();
+  const deadline = start + deadlineMs;
+  while (Date.now() < deadline) {
+    const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 1500);
+    if (info && info.webSocketDebuggerUrl) return { wsEndpoint: info.webSocketDebuggerUrl, ms: Date.now() - start };
+    sleepSync(500);
+  }
+  return null;
+}
+
 function startManagedBrowser(pw, profileDir) {
   const headless = process.env.GM_BROWSER_HEADLESS === '1';
+  logEvent('plugkit', 'browser.headless-mode-resolved', { headless, source: headless ? 'GM_BROWSER_HEADLESS=1' : 'default-headful' });
   let browserBin = findInstalledChromiumBinary();
   if (!browserBin) {
     logEvent('plugkit', 'browser.chromium-installing', {});
@@ -1207,54 +1262,34 @@ function startManagedBrowser(pw, profileDir) {
     throw err;
   }
   const port = findFreePortSync();
-  const args = [
-    '--user-data-dir=' + profileDir,
-    '--remote-debugging-port=' + port,
-    '--remote-debugging-address=127.0.0.1',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-default-apps',
-    '--disable-gpu-process-crash-limit',
-  ];
-  if (process.env.GM_BROWSER_NO_SANDBOX === '1') {
-    args.push('--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage');
+  let noSandbox = process.env.GM_BROWSER_NO_SANDBOX === '1';
+  let { pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox);
+  logEvent('plugkit', 'browser.chromium-launched', { pid, port, profileDir, headless, noSandbox, binary: browserBin, chromeLogPath });
+  let ready = waitForCdpReady(port, 30000);
+  if (!ready) {
+    logEvent('plugkit', 'browser.launch-failed', { reason: 'cdp-not-ready', pid, port });
+    throw new Error(`chromium launched (pid=${pid}) but CDP at 127.0.0.1:${port} did not become ready within 30s`);
   }
-  if (headless) {
-    args.push('--headless=new');
-  } else {
-    args.push('about:blank');
-  }
-  const chromeLogPath = path.join(profileDir, '.chrome-launch.log');
-  let logFd;
-  try { logFd = fs.openSync(chromeLogPath, 'a'); } catch (_) { logFd = null; }
-  const child = spawn(browserBin, args, {
-    detached: true,
-    stdio: ['ignore', logFd != null ? logFd : 'ignore', logFd != null ? logFd : 'ignore'],
-    windowsHide: false,
-    env: process.env,
-  });
-  try { if (typeof logFd === 'number') fs.closeSync(logFd); } catch (_) {}
-  const pid = child.pid;
-  child.unref();
-  logEvent('plugkit', 'browser.chromium-launched', { pid, port, profileDir, headless, binary: browserBin, chromeLogPath });
-  const start = Date.now();
-  const deadline = start + 30000;
-  let wsEndpoint = null;
-  let lastErr = null;
-  while (Date.now() < deadline) {
-    const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 1500);
-    if (info && info.webSocketDebuggerUrl) {
-      wsEndpoint = info.webSocketDebuggerUrl;
-      break;
+  if (!noSandbox && chromeLogHasSandboxDenied(chromeLogPath)) {
+    logEvent('plugkit', 'browser.sandbox-fallback-engaged', { pid, port, profileDir, reason: 'sandbox-access-denied-detected-in-chrome-launch-log' });
+    try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+    sleepSyncMs(500);
+    try { killPidQuiet(pid); } catch (_) {}
+    purgeProfileLockFiles(profileDir);
+    noSandbox = true;
+    const port2 = findFreePortSync();
+    ({ pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port2, headless, noSandbox));
+    logEvent('plugkit', 'browser.chromium-launched', { pid, port: port2, profileDir, headless, noSandbox, binary: browserBin, chromeLogPath, retry: true });
+    ready = waitForCdpReady(port2, 30000);
+    if (!ready) {
+      logEvent('plugkit', 'browser.launch-failed', { reason: 'cdp-not-ready-after-sandbox-fallback', pid, port: port2 });
+      throw new Error(`chromium sandbox-fallback relaunch (pid=${pid}) but CDP at 127.0.0.1:${port2} did not become ready within 30s`);
     }
-    sleepSync(500);
+    logEvent('plugkit', 'browser.cdp-ready', { pid, port: port2, ms: ready.ms, wsEndpoint: ready.wsEndpoint, noSandbox: true });
+    return { pid, port: port2, wsEndpoint: ready.wsEndpoint };
   }
-  if (!wsEndpoint) {
-    logEvent('plugkit', 'browser.launch-failed', { reason: 'cdp-not-ready', pid, port, elapsed_ms: Date.now() - start });
-    throw new Error(`chromium launched (pid=${pid}) but CDP at 127.0.0.1:${port} did not become ready within 30s${lastErr ? ' :: ' + lastErr : ''}`);
-  }
-  logEvent('plugkit', 'browser.cdp-ready', { pid, port, ms: Date.now() - start, wsEndpoint });
-  return { pid, port, wsEndpoint };
+  logEvent('plugkit', 'browser.cdp-ready', { pid, port, ms: ready.ms, wsEndpoint: ready.wsEndpoint });
+  return { pid, port, wsEndpoint: ready.wsEndpoint };
 }
 
 function killPidQuiet(pid) {
@@ -1306,6 +1341,18 @@ function gracefulCloseBrowser(entry, reason) {
   try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
 }
 
+function checkSessionNavigatedAway(port, claudeSessionId) {
+  try {
+    const list = fetchJsonSync(`http://127.0.0.1:${port}/json/list`, 1000);
+    if (!Array.isArray(list)) return;
+    const pages = list.filter(t => t && t.type === 'page');
+    const stray = pages.filter(t => /^(chrome:\/\/new-tab-page|about:blank|chrome:\/\/newtab)/i.test(String(t.url || '')));
+    if (pages.length > 0 && stray.length === pages.length) {
+      logEvent('plugkit', 'browser.session-navigated-away', { sid: claudeSessionId, port, urls: pages.map(p => p.url) });
+    }
+  } catch (_) {}
+}
+
 function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessionsFile, ports, sessions) {
   const existing = ports[claudeSessionId];
   if (!(existing && existing.pid && existing.wsEndpoint)) return null;
@@ -1315,7 +1362,10 @@ function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessio
   const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
   if (pidOk && profileOk && cdpOk) {
     const pwIds = sessions[claudeSessionId] || [];
-    if (pwIds.length > 0 && existing.pwSessionId) return existing.pwSessionId;
+    if (pwIds.length > 0 && existing.pwSessionId) {
+      checkSessionNavigatedAway(existing.port, claudeSessionId);
+      return existing.pwSessionId;
+    }
     const r = runBrowserRunner(pw, ['session', 'new', '--direct', existing.wsEndpoint], 30000, cwd, claudeSessionId);
     if (r && r.status === 0) {
       const sid = parseSessionId(r.stdout || '');
@@ -1385,7 +1435,11 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
           && fetchJsonSync(`http://127.0.0.1:${winner.port}/json/version`, 1000)) {
         const a = runBrowserRunner(pw, ['session', 'new', '--direct', winner.wsEndpoint], 30000, cwd, claudeSessionId);
         const sid = a && a.status === 0 ? parseSessionId(a.stdout || '') : null;
-        if (sid) { logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-wait' }); return sid; }
+        if (sid) {
+          checkSessionNavigatedAway(winner.port, claudeSessionId);
+          logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-wait' });
+          return sid;
+        }
       }
       if (Date.now() > spawnDeadline) break;
       sleepSyncMs(300);
@@ -2328,7 +2382,7 @@ function makeHostFunctions(instanceRef) {
           stampBrowserLastUse(cwd, sessionId);
           return writeWasmJson(instanceRef.value, {
             ok: true,
-            stdout: `Session ${pwSessionId} attached to locally-profiled chromium at ${path.join(cwd, '.gm', 'browser-profile')}`,
+            stdout: `Session ${pwSessionId} attached to locally-profiled chromium at ${sessionProfileDir(cwd, sessionId)}`,
             stderr: '',
             exit_code: 0,
             session_id: pwSessionId,
