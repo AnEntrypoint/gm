@@ -8394,8 +8394,8 @@
   witness: root-caused as stale bun/npx package cache, not a code bug; live-verified fresh bootstrap after cache-clear correctly populates GM_TOOLS_ROOT
   status: completed
 - id: verify-live-tmp-fix-witnessed
-  witness: 'live-verified: deleted GM_TOOLS_ROOT wasm/version, ran bun x gm-plugkit@latest spool fresh -- reproduced original v0.1.760 reboot scenario, GM_TOOLS_ROOT now populated (plugkit.wasm 150279009 bytes, plugkit.version=0.1.760), 0 tmp files before and after several dispatch cycles; simulated EPERM rename failure via node -e confirms atomicWriteRaw now unlinks tmp on failure (0 leftover vs prior unconditional leak)'
-  status: pending
+  witness: 'already witnessed in-store (see row''s own witness field): live-verified GM_TOOLS_ROOT repopulation after cache clear + 0 tmp files before/after several dispatch cycles + simulated EPERM rename-failure confirms atomicWriteRaw now unlinks on failure.'
+  status: completed
 - id: fix-startup-url-not-about-blank
   note: startManagedBrowser (gm-plugkit/plugkit-wasm-wrapper.js ~1226) hardcodes 'about:blank' as the non-headless startup URL arg. User confirms this is wrong -- a managed session should land on a real target (project's actual dev-server URL or a caller-supplied target), not sit blank. Needs a way to pass/resolve a real startup URL (env var, project-level config e.g. .gm/browser-target-url, or explicit browser-verb param), falling back to about:blank only when genuinely nothing is configured.
   status: completed
