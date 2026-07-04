@@ -308,7 +308,7 @@ function injectUpdateWarning(parsed) {
   if (!upd || !upd.installed || !upd.latest || upd.installed === upd.latest) return;
   const target = (parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
   target.update_available = { installed: upd.installed, latest: upd.latest, update_url: upd.update_url || null };
-  target.update_warning = `STALE RUNTIME: running plugkit ${upd.installed} but ${upd.latest} is published. The watcher auto-updates when idle (cache-busted self-respawn to latest), so this usually clears on its own within a few minutes; just keep working. If it persists, re-run the idempotent boot to land latest now: bun x gm-plugkit@latest spool (add --kill-stale-watchers first only if it stays stuck). Set PLUGKIT_NO_AUTO_UPDATE=1 to pin. This warning repeats until the running version catches up.`;
+  target.update_warning = `STALE RUNTIME: running plugkit ${upd.installed} but ${upd.latest} is published. FIRST ACTION THIS TURN, before any other work: dispatch bun x gm-plugkit@latest spool (idempotent, safe even if already serving) to force the update through now. Add --kill-stale-watchers only if it stays stuck across several turns after forcing. Set PLUGKIT_NO_AUTO_UPDATE=1 to pin. This warning repeats until the running version catches up.`;
 }
 
 function mergeAutoRecallIntoInstructionResponse(resultStr, autoRecall) {

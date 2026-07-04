@@ -134,6 +134,49 @@ npx gm-skill install --yes    # non-interactive, sets them outright</code></pre>
   <li>No mandatory secrets at install. Embeddings run in-wasm via baked Q4 weights; LLM-tier work is offloaded to the host agent via callback. Offline use is the default.</li>
 </ul>
 
+<h3>2.2 When The Local Install Sticks On A Stale Version</h3>
+
+<p class="first">The watcher self-updates when idle, so most staleness clears within minutes without intervention. When it does not, the update path is idempotent and re-runnable:</p>
+
+<pre><code>bun x gm-plugkit@latest spool          # or: npx -y gm-plugkit@latest spool</code></pre>
+
+<p>An already-running watcher reports <code>already_serving</code> and returns immediately, which is correct when it is genuinely current. The failure mode worth documenting is a persistent bunx- or npx-cached extraction directory that survives the normal cache-clear commands and keeps re-serving an old <code>gm-plugkit</code>/<code>plugkit-wasm</code> pair even after npm has published a newer one. The fix is to clear every cache layer, not just one:</p>
+
+<pre><code># Windows (PowerShell)
+bun pm cache rm
+npm cache clean --force
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\npm-cache\_npx" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.bun\install\cache" -ErrorAction SilentlyContinue
+
+# macOS / Linux
+bun pm cache rm
+npm cache clean --force
+rm -rf ~/.npm/_npx
+rm -rf ~/.bun/install/cache</code></pre>
+
+<p>If the watcher is still stale after clearing those, the leftover is a specific extraction directory, not the cache index. Locate and delete it directly:</p>
+
+<pre><code># Windows
+Get-ChildItem "$env:LOCALAPPDATA\Temp" -Filter "bunx-*-gm-plugkit@latest" -Directory | Remove-Item -Recurse -Force
+
+# macOS / Linux
+rm -rf /tmp/bunx-*-gm-plugkit@latest</code></pre>
+
+<p>Then kill any stale watcher and reboot clean:</p>
+
+<pre><code>bun x gm-plugkit@latest --kill-stale-watchers
+bun x gm-plugkit@latest spool</code></pre>
+
+<p>The full emergency sequence in one block, safe to run unconditionally when a version mismatch is suspected:</p>
+
+<pre><code>bun pm cache rm && npm cache clean --force
+rm -rf ~/.npm/_npx ~/.bun/install/cache
+rm -rf /tmp/bunx-*-gm-plugkit@latest
+bun x gm-plugkit@latest --kill-stale-watchers
+bun x gm-plugkit@latest spool</code></pre>
+
+<p>Set <code>PLUGKIT_NO_AUTO_UPDATE=1</code> to pin the currently installed version deliberately; a watcher that never advances despite this variable being set is not a bug, it is honoring the pin.</p>
+
 <h2>3. Open All The Way Down</h2>
 
 <p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no "and then a private build server takes over" step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
