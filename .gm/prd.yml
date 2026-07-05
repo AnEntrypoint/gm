@@ -8520,3 +8520,21 @@
   text: 'rs-search noted residuals: context.rs:26-31 signature-join can prepend an unrelated extra line when a line ends with ''(''; Searcher/SearchHit/fusion_search facade has zero consumers (rs-plugkit uses only tokenize+fusion, re-implements 2-list fusion in wasm_dispatch.rs:573) -- either consume the facade from rs-plugkit or shrink it (witness: rs-search audit agent)'
   status: completed
   witness: 'both items resolved by surface deletion in rs-search 4a68c3a pushed to main: context.rs (zero callers, bug deleted with it), eval.rs, wasm_host.rs (host_bm25/git_search never implemented in wrapper), Searcher/SearchHit facade all deleted; lib.rs now pub mod fusion+tokenize only, crate dependency-free, rlib-only; rs-plugkit already consumes fuse_n (wasm_dispatch.rs:573) so no duplication existed. test.js retargeted 7/7 PASS, cargo check native+wasm32-wasip1 clean, live example witnessed tokenize+fuse_n'
+- id: verify-rs-plugkit-status-vocab-fix
+  text: Verify rs-plugkit commit a72c794 status_is_open fix is actually live on origin/main and its cascade-triggered wasm build succeeded (not just committed locally) -- witness via git_log/exec_js gh run check
+  status: pending
+- id: verify-rs-search-shrink-cascade
+  text: Verify rs-search 4a68c3a facade-shrink built clean through the full cascade (rs-plugkit consuming the now-dependency-free rlib) -- prior agent noted local wasm build couldn't fully validate due to missing clang toolchain; witness via CI run status
+  status: pending
+- id: verify-rs-learn-uh-removal-cascade
+  text: Verify rs-learn f1587ff Weights.uh removal + back-compat blob read builds clean through cascade and an old persisted router blob (with uh key) still loads without error -- witness via CI + exec_js if a sample blob is reachable
+  status: pending
+- id: verify-rs-exec-quarantine-fix-cascade
+  text: Verify rs-exec 9662abed cascade build succeeded end to end (plugkit.wasm published with rs-exec's quarantine-key + write_result fixes) -- witness via CI run status for the cascade chain
+  status: pending
+- id: gm-final-cascade-version-sync
+  text: Confirm gm's own gm.json plugkitVersion reflects the latest cascade-published plugkit.wasm version (0.1.77x range seen this session) after all the rs-* pushes -- no manual bump, but verify auto-bump landed and gm worktree is on the current wrapper
+  status: pending
+- id: gm-plugkitversion-stale-0.1.774
+  text: gm.json plugkitVersion=0.1.774 but plugkit-wasm npm latest is 0.1.776 and gh releases show 0.1.775/0.1.776 published after -- gm's cascade-triggered auto-bump did not land the last two bumps; investigate gm's publish.yml/auto-bump workflow trigger and land the correct version, or trigger it now
+  status: pending
