@@ -8483,7 +8483,7 @@
 - id: rs-learn-flagged-residuals
   text: 'rs-learn flagged residuals: router/core.rs:91 Weights.uh (16K floats) initialized+persisted+checked but never read in forward() -- remove with persisted-blob migration/back-compat read; temporal_core.rs:91 std::thread::sleep in retry backoff on wasm path -- verify WASI shim supports it or replace with host-yield (witness: rs-learn audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'both rs-learn residuals landed in f1587ff pushed to main: Weights.uh 16K-float dead matrix removed (router/core.rs:39-44, persist.rs) with keyed-JSON back-compat (serde ignores unknown fields, old blobs deserialize); thread::sleep gated off wasm (temporal_core.rs:89) after witnessing shim poll_oneoff/sched_yield are fake-success no-ops (plugkit-wasm-wrapper.js:1642-1643), bounded MAX_RETRIES=8 retry on wasm. cargo check clean both targets, 66/66 tests'
 - id: rs-plugkit-flagged-residuals
   text: 'rs-plugkit flagged residuals: unify open-item status predicate (lib.rs:186 stop-hook vs instructions/mod.rs item_is_open vs gates.rs:157-172/transitions.rs pending|in_progress -- hand-written ''open'' row passes gates but blocks prompt-submit count); decide+remove seven #[cfg(test)] modules (policy forbids synthetic tests, no CI runs cargo test); dedupe gates.rs read_pending_step/read_pending_step_full turn-state parsing (witness: rs-plugkit audit agent)'
   status: completed
@@ -8495,7 +8495,7 @@
 - id: gm-log-emitter-absent
   text: 'gmsniff reads ~/.gm/gm-log/<day>/<sub>.jsonl (src/index.js:24) but nothing on this machine writes it -- every gmsniff view returns zero; wire structured gm-log emission from the watcher (or repoint gmsniff at .gm/exec-spool/.watcher.log) so the designated observability surface is not blind (witness: sniff audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'closed gmsniff-side (smallest surface, zero gm changes): replayWatcherLog + discoverSpoolLogs in gmsniff src/index.js:117-176, --spool flag in cli.js; witnessed real output: --spool C:/dev/gm lists 2 sessions, 408 deviations across 14 kinds; auto-fallback discovers 18270 events across C:/dev projects. Commit 2d0d72a pushed to gmsniff default branch (master)'
 - id: sibling-git-bypass-gate-scope
   text: '61 raw git push/commit via Bash against sibling repos in 7d vs 1 deviation.bash-git-bypass fire -- gate is cwd-scoped to the gm tree; extend bash-git-bypass detection to sibling-repo git bodies (cd <repo> && git ...) in rs-plugkit gate layer (witness: sniff audit agent, watcher.log)'
   status: completed
@@ -8519,4 +8519,4 @@
 - id: rs-search-noted-residuals
   text: 'rs-search noted residuals: context.rs:26-31 signature-join can prepend an unrelated extra line when a line ends with ''(''; Searcher/SearchHit/fusion_search facade has zero consumers (rs-plugkit uses only tokenize+fusion, re-implements 2-list fusion in wasm_dispatch.rs:573) -- either consume the facade from rs-plugkit or shrink it (witness: rs-search audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only) -- targets sibling repo rs-search, requires its own dedicated session. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'both items resolved by surface deletion in rs-search 4a68c3a pushed to main: context.rs (zero callers, bug deleted with it), eval.rs, wasm_host.rs (host_bm25/git_search never implemented in wrapper), Searcher/SearchHit facade all deleted; lib.rs now pub mod fusion+tokenize only, crate dependency-free, rlib-only; rs-plugkit already consumes fuse_n (wasm_dispatch.rs:573) so no duplication existed. test.js retargeted 7/7 PASS, cargo check native+wasm32-wasip1 clean, live example witnessed tokenize+fuse_n'
