@@ -8479,7 +8479,7 @@
 - id: rs-codeinsight-residuals-sweep
   text: 'rs-codeinsight noted residuals: formatter.rs:54 dead npm/node badge branch (project.rs never sets those types); lib.rs:58 unused _config half-wired threading; lib.rs:39-46 double ext/lang lookup per file; scanner vs depgraph test-file classification inconsistency; formatter.rs:501 join(''], ['') oddity; formatter/json_output aggregate duplication -- fix each or witness why intentional (witness: rs-codeinsight audit agent)'
   status: completed
-  witness: Out of scope for this task (audit-gm-repo-productivity, JS harness only, cwd=C:devgm) and out of repo -- rs-codeinsight is a sibling Rust repo not checked out under this cwd; requires its own dedicated session with rs-codeinsight as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'all six rs-codeinsight residuals landed in commit 67ee593 pushed to main: badge wired to cli/library (formatter.rs:54), unused _config removed from public surface, filter_supported() dedup (lib.rs), shared is_test_path (scanner.rs:175 + depgraph.rs:608/645), exports join formatting bug fixed (formatter.rs:501), formatter/json_output aggregation shared (-20 lines net). cargo check clean, cargo test 2/2'
 - id: rs-learn-flagged-residuals
   text: 'rs-learn flagged residuals: router/core.rs:91 Weights.uh (16K floats) initialized+persisted+checked but never read in forward() -- remove with persisted-blob migration/back-compat read; temporal_core.rs:91 std::thread::sleep in retry backoff on wasm path -- verify WASI shim supports it or replace with host-yield (witness: rs-learn audit agent)'
   status: completed
