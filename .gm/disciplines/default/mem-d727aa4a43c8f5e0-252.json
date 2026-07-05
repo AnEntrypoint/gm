@@ -1,0 +1,3 @@
+## Resolved mutable: fs-write-field-name-mismatch
+
+rs-plugkit commit a60b709 pushed to main: src/wasm_dispatch.rs:141-146 fs_write now reads body.get("content") first (fallback to legacy "data"), fixing zero-byte writes. cargo check --lib passed clean.
