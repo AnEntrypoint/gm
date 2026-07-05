@@ -8690,8 +8690,8 @@
   status: completed
 - id: consolidate-push-gm
   title: 'gm repo end-of-session: residual triage, commit memos/disciplines, git_finalize push to main, CI green witness'
-  witness: push is part of COMPLETE, never optional
-  status: pending
+  witness: 'git_finalize dispatched: committed sha 44448c1e4 (message: cross-repo fleet audit summary), pushed to main successfully. git_status confirmed all residuals were legitimate tracked state (memorize-prune deletions, memorize-fire additions, mutables.yml/prd.yml churn from this session''s own dispatches) -- no junk, nothing reverted.'
+  status: completed
 - id: fix-digest-churn-idempotency
   title: 'Root-cause and fix recurring __digest__.json churn: .gm/disciplines/codeinsight/__digest__.json mutates in rs-search/rs-learn/rs-codeinsight worktrees without source change -- violates f.f=f idempotency (likely timestamp in digest); fix in owning repo so no-change sync leaves bytes identical'
   witness: 'Final synthesis across all 3 sibling subagent investigations (rs-search, rs-learn, rs-codeinsight): the shared .gm/disciplines/codeinsight/__digest__.json churn seen in rs-search/rs-learn''s residual triage is content=<HEAD-sha>:<count>, produced by rs-plugkit''s code_index.rs::current_digest() -- this IS legitimate churn (every commit changes HEAD sha by construction, so the digest necessarily changes too), NOT a bug, once correctly understood: it''s a git-state marker, not meant to be content-invariant across commits. rs-codeinsight''s OWN SEPARATE compute_freshness_digest_from_files function (dead code, zero callers, unrelated to the shared digest) DID have a genuine non-idempotency bug (mtime-keyed, wasm/non-wasm format mismatch) -- fixed and pushed (rs-codeinsight commit 48163a9). Net conclusion: no fix needed for the shared __digest__ churn pattern itself (working as designed); the one real idempotency bug found along the way (in unrelated dead code) is fixed. Original premise partially refuted, real adjacent bug fixed anyway -- correct EXECUTE-phase always-rearchitect-immediately behavior from the rs-codeinsight subagent.'
