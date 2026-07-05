@@ -8499,19 +8499,19 @@
 - id: sibling-git-bypass-gate-scope
   text: '61 raw git push/commit via Bash against sibling repos in 7d vs 1 deviation.bash-git-bypass fire -- gate is cwd-scoped to the gm tree; extend bash-git-bypass detection to sibling-repo git bodies (cd <repo> && git ...) in rs-plugkit gate layer (witness: sniff audit agent, watcher.log)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: gates.rs:290-298 git-dominance now splits body on ;/newline/|/& and flags any segment whose first token is git/git.exe/path-suffixed git -- cd <repo> && git push caught regardless of path. rs-plugkit commit 3bb317c pushed to main
 - id: consolidate-residual-scan-sequencing
   text: 'consolidate-without-residual-scan fired 17x in 7d incl. today (ts 1783234796377) -- CONSOLIDATE repeatedly attempted before residual triage; strengthen gate denial hint/prose sequencing in rs-plugkit consolidate gate so the denial names residual-scan as next_dispatch (witness: sniff audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: gates.rs:353-368 residual-scan check reordered first in CONSOLIDATE gate, denial next_dispatch now explicitly residual-scan with actionable text; verify.md:44 prose orders residual-scan before transition to=CONSOLIDATE. rs-plugkit 3bb317c + gm 97cf83f5c pushed to main
 - id: complete-ci-validation-drift
   text: 'complete-without-ci-validation fired 13x in 7d -- CONSOLIDATE''s CI-green ownership not exercised before COMPLETE attempts; audit consolidate.rs gate + prose so CI witness is structurally demanded (relates to known missing CI-watch verb) (witness: sniff audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: gates.rs:399-402 CI denial now names concrete recovery (witness green via exec_js/gh run, fs_write .ci-validated with head_sha JSON), next_dispatch exec_js; consolidate.md:13 specifies marker shape + pre-push-marker-is-stale contract. rs-plugkit 3bb317c + gm 97cf83f5c pushed
 - id: platform-search-drift
   text: '205 platform Grep/Glob discovery events in gm sessions over 7d vs 323 codesearch dispatches -- search-only-via-verb rule routinely sidestepped; consider a dispatch-gate or prompt-submit signal flagging open-ended Grep/Glob during in-flight gm chains (witness: sniff audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'lib.rs:99-121 hook_pre_tool_use now emits deviation.platform-search-drift evt via host_log for Grep/Glob during in-flight chain (allow-through signal); caveat logged: spool-only agents unobservable. rs-plugkit 3bb317c pushed. Bonus fixes: sync-instruction-consts.mjs missing consolidate key added; three synthetic-test-rule paragraphs back-ported into plan/execute/verify.md before re-sync'
 - id: glyph-drift-sweep
   text: '34 assistant messages in 7d contain decorative non-ASCII glyphs (mostly -> arrows rendered as U+2192) -- glyph rule drift in output; ccsniff --glyph-discipline mode (see ccsniff-discipline-flags-missing) is the post-hoc auditor to build (witness: sniff audit agent)'
   status: completed
