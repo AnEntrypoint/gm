@@ -1,0 +1,3 @@
+## Resolved mutable: cascade-ci-state
+
+exec_js-3.json (gh run list --limit 1 per repo): all 6 cascade repos green -- rs-exec (Wasm Check, success, 07:04:02Z), rs-codeinsight (Release, success, 08:52:18Z), rs-search (Cascade to rs-plugkit, success, 08:51:27Z), rs-plugkit (Release, success, 08:54:42Z), rs-learn (Deploy GH Pages, success, 08:52:02Z), gm (Publish Releases API, success, 08:54:03Z). No dark cascade, no failing CI.
