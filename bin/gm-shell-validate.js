@@ -121,10 +121,7 @@ return JSON.stringify(result);
   let parsed = null;
   const m = out.match(/\[return value\]\s*(\{[\s\S]*\})\s*$/);
   if (m) {
-    try { parsed = JSON.parse(m[0]); } catch (_) {}
-    if (!parsed) {
-      try { parsed = JSON.parse(m[1]); } catch (_) {}
-    }
+    try { parsed = JSON.parse(m[1]); } catch (_) {}
   }
   if (!parsed) {
     try {

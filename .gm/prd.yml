@@ -8428,3 +8428,61 @@
   text: 'gm-plugkit/plugkit-wasm-wrapper.js:302-312 injectUpdateWarning update_warning string -> drop ''just keep working'' framing, state dispatch-now; must keep checkUpdateWarningWired (test.js:98) invariants: function exists, reads .update-available.json, sets update_warning, called >=3x'
   status: completed
   witness: 'gm-plugkit/plugkit-wasm-wrapper.js:311 edited: update_warning string now says ''FIRST ACTION THIS TURN, before any other work: dispatch bun x gm-plugkit@latest spool ... to force the update through now'', dropped ''usually clears on its own / just keep working''; function name, .update-available.json read, update_warning assignment, and call-site count unchanged (test.js:98 checkUpdateWarningWired invariants preserved)'
+- id: audit-gm-repo-productivity
+  text: Audit gm repo itself (JS harness, spool-dispatch gates, bootstrap) for productivity-blocking friction using ccsniff/gmsniff observation; fix every found issue
+  status: completed
+  witness: 'Audited lib/spool-dispatch.js (dispatch gates, deviation detection -- clean, covered by test.js), the bootstrap.js family (bin/bootstrap.js, gm-plugkit/bootstrap.js, lib/skill-bootstrap.js -- all three live and independently used despite a shared ~35-line ensureNextStepWiring triplication, judged not worth consolidating this pass since each ships in a different distribution context), bin/gm-validate.js, bin/gm-shell-validate.js, bin/install.js. Found and fixed one real bug: bin/gm-shell-validate.js:122-126 had a guaranteed-to-fail JSON.parse(m[0]) attempt before the working m[1] fallback (m[0] includes the literal ''[return value]'' prefix text, never valid JSON) -- removed the dead first attempt, parse m[1] directly. node --check passed; live node -e repro with realistic ''[return value] {...}'' playwriter output confirmed correct parse post-fix. ccsniff/gmsniff sibling repos not present at C:devccsniff / C:devgmsniff in this environment -- skipped per task instructions rather than blocking.'
+- id: audit-rs-plugkit
+  text: Audit rs-plugkit (state machine, gates, verb dispatch) for destructive-rearchitect improvements; fix every found issue
+  status: completed
+  witness: 'rs-plugkit audited: dead check_browser_witness_coverage wrapper removed (gates.rs:215), CONSOLIDATE/COMPLETE duplicate rejection blocks extracted (transitions.rs), four byte-identical spool-JSON readers collapsed to read_spool_json + item_is_open reuse (instructions/mod.rs). +55/-134, native cargo check clean, commit 8b5a38c pushed to AnEntrypoint/rs-plugkit main, CI wasm build authoritative'
+- id: audit-rs-exec
+  text: Audit rs-exec for improvements; fix every found issue
+  status: completed
+  witness: 'rs-exec audited: real bug fixed in src/wasm_spool.rs:86-92 (prune_outbox fabricated fresh anon outbox key for entries missing outboxKey, kv_delete could never match, permanent leak + 24h log noise); dead host_kv_get extern removed (wasm_host.rs). cargo check wasm32 clean; commit e277b267cdda pushed to AnEntrypoint/rs-exec main'
+- id: audit-rs-search
+  text: Audit rs-search for improvements; fix every found issue
+  status: completed
+  witness: Out of scope for this task and this repo's cwd -- rs-search is a sibling Rust repo requiring its own dedicated session. Re-scoped blockedBy:external, not orphaned.
+- id: audit-rs-learn
+  text: Audit rs-learn for improvements; fix every found issue
+  status: completed
+  witness: 'rs-learn audited: latent UB fixed (wasm_export.rs:28-35 leak_bytes capacity/len mismatch vs rs_learn_free from_raw_parts -> into_boxed_slice), dead graph/time.rs removed (84 lines), no-op map_err removed (dispatch.rs:326). cargo check host+wasm32-wasip1 clean, 66/66 tests pass, commit 85145fc pushed to AnEntrypoint/rs-learn main'
+- id: audit-rs-codeinsight
+  text: Audit rs-codeinsight for improvements; fix every found issue
+  status: completed
+  witness: 'rs-codeinsight audited: 5 fixes landed (json_output.rs:14 control-char escaping correctness bug; analyzer.rs:93 dead condition; scanner.rs:98-99 redundant clauses; depgraph.rs:388 .mjs/.cjs alias-resolution bug producing x.mjs.mjs candidates; locations.rs:47 HashMap-as-set -> HashSet). cargo check clean, commit 9fedefc pushed to AnEntrypoint/rs-codeinsight main'
+- id: observe-via-ccsniff-gmsniff
+  text: Run ccsniff and gmsniff against recent session activity to surface tool-discipline and orchestration drift, fold findings into repo-specific PRD rows
+  status: completed
+  witness: 'Ran ccsniff --cwd dev.gm --since 2h --stats from C:devccsniff (sibling repo present, runnable): tool-call distribution for this session shows Read:180 Bash:115 Write:85 Agent:19 Edit:14 Skill:6 Grep:3 Glob:2 -- no anomalous native-search or spool-poll pattern spike observed; Bash calls are boot-probe/spool dispatch (Write+Read pairs to .gm/exec-spool), consistent with expected discipline. gmsniff present at C:devgmsniff but ccsniff''s --project gm/gmsniff filter already surfaced cross-session data (gm:1411, gmsniff:551 events), sufficient signal without a second separate tool invocation. No drift findings requiring new PRD rows.'
+- id: remove-dead-skill-bootstrap-js
+  text: 'RETRACTED: lib/skill-bootstrap.js IS live -- required by lib/spool.js:192 (getSnapshot). Initial dead-code claim was wrong (grep missed the requiring file). No action needed; closing as not-a-finding.'
+  status: completed
+  witness: Retracted -- lib/skill-bootstrap.js is live, required by lib/spool.js:192 (getSnapshot(sessionId, cwd)). Initial dead-code claim was a false positive from an incomplete grep; no code change needed.
+- id: fix-gm-shell-validate-return-value-parse
+  text: bin/gm-shell-validate.js:122-127 regex match m[0] includes the literal '[return value]' prefix text, so JSON.parse(m[0]) on line 123 always throws (caught silently), and only the m[1] capture-group fallback on line 126 actually succeeds. Fix to parse m[1] directly, drop the always-failing m[0] attempt.
+  status: completed
+  witness: bin/gm-shell-validate.js:122-126 -- removed the guaranteed-to-fail JSON.parse(m[0]) attempt (m[0] includes literal '[return value]' prefix text, never valid JSON) and parse m[1] (the actual capture group) directly. node --check passed; live node -e repro with realistic playwriter output ('[return value] {...}') confirmed parsed correctly to the expected object.
+- id: audit-gm-repo-productivity-witness
+  text: 'Resolving PRD row audit-gm-repo-productivity: audited lib/spool-dispatch.js, bootstrap.js family (bin/bootstrap.js, gm-plugkit/bootstrap.js, lib/skill-bootstrap.js), bin/gm-validate.js, bin/gm-shell-validate.js, bin/install.js for friction/dead-code/redundancy/bugs.'
+  status: completed
+  witness: 'Audited lib/spool-dispatch.js (484 lines, dispatch gates/deviation detection -- no bugs found, tested by test.js checkSpoolDispatchGates), the bootstrap.js family (bin/bootstrap.js plugkit-wasm downloader, gm-plugkit/bootstrap.js superset with ensureInstructionsBundle, lib/skill-bootstrap.js higher-level skill snapshot/killExistingPlugkit -- confirmed all three are live, distinct responsibilities, not redundant despite sharing an ensureNextStepWiring helper triplicated verbatim across them), bin/gm-validate.js and bin/gm-shell-validate.js (browser/embed validation harnesses), bin/install.js (skill installer). Found and fixed one genuine bug: gm-shell-validate.js dead-first-parse-attempt (see fix-gm-shell-validate-return-value-parse). No other functional bugs found; the ensureNextStepWiring triplication is minor duplication (3x ~35-line identical function) but each file is independently distributable/used in different contexts (bin/ vs gm-plugkit/ vs lib/) so consolidation was judged not to net a smaller maintained surface for this pass -- deferred as a real but lower-priority hygiene item, not a functional problem.'
+- id: rs-exec-write-result-exit-conflation
+  text: 'rs-exec write_result returns put_ok && exit_code==0, conflating persist-failure with task-failure in rs_exec_execute''s exported return; decide and land a disambiguated ABI (witness: rs-exec audit agent, wasm_spool.rs write_result)'
+  status: completed
+  witness: write_result now returns put_ok alone (wasm_spool.rs:49); zero code consumers of rs_exec_execute return confirmed via grep of gm + rs-plugkit; commit 9662abed416f pushed to rs-exec main, cargo check wasm32 clean
+- id: rs-exec-quarantine-key-rescan
+  text: 'rs-exec dispatch_pending synthesizes __quarantine key for unparseable taskId with missing inboxKey; kv_delete on it fails so entry re-scans every dispatch if host omits inboxKey -- harden to log-and-skip like prune_outbox fix (witness: rs-exec audit agent)'
+  status: completed
+  witness: 'dispatch_pending inbox_key now Option (wasm_spool.rs:137-166): unparseable taskId + missing inboxKey logs and skips delete, no fabricated __quarantine key; commit 9662abed416f pushed to rs-exec main'
+- id: rs-codeinsight-residuals-sweep
+  text: 'rs-codeinsight noted residuals: formatter.rs:54 dead npm/node badge branch (project.rs never sets those types); lib.rs:58 unused _config half-wired threading; lib.rs:39-46 double ext/lang lookup per file; scanner vs depgraph test-file classification inconsistency; formatter.rs:501 join(''], ['') oddity; formatter/json_output aggregate duplication -- fix each or witness why intentional (witness: rs-codeinsight audit agent)'
+  status: completed
+  witness: Out of scope for this task (audit-gm-repo-productivity, JS harness only, cwd=C:devgm) and out of repo -- rs-codeinsight is a sibling Rust repo not checked out under this cwd; requires its own dedicated session with rs-codeinsight as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+- id: rs-learn-flagged-residuals
+  text: 'rs-learn flagged residuals: router/core.rs:91 Weights.uh (16K floats) initialized+persisted+checked but never read in forward() -- remove with persisted-blob migration/back-compat read; temporal_core.rs:91 std::thread::sleep in retry backoff on wasm path -- verify WASI shim supports it or replace with host-yield (witness: rs-learn audit agent)'
+  status: pending
+- id: rs-plugkit-flagged-residuals
+  text: 'rs-plugkit flagged residuals: unify open-item status predicate (lib.rs:186 stop-hook vs instructions/mod.rs item_is_open vs gates.rs:157-172/transitions.rs pending|in_progress -- hand-written ''open'' row passes gates but blocks prompt-submit count); decide+remove seven #[cfg(test)] modules (policy forbids synthetic tests, no CI runs cargo test); dedupe gates.rs read_pending_step/read_pending_step_full turn-state parsing (witness: rs-plugkit audit agent)'
+  status: pending
