@@ -8,7 +8,7 @@ const rsDir = process.env.RS_PLUGKIT_DIR
   ? join(process.env.RS_PLUGKIT_DIR, 'src', 'orchestrator', 'instructions')
   : join(here, '..', '..', '..', 'rs-plugkit', 'src', 'orchestrator', 'instructions');
 
-const keys = ['entry', 'plan', 'execute', 'emit', 'verify', 'update_docs', 'browser'];
+const keys = ['entry', 'plan', 'execute', 'emit', 'verify', 'consolidate', 'update_docs', 'browser'];
 
 function rawString(md) {
   let pad = 1;
