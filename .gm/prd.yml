@@ -8491,7 +8491,7 @@
 - id: ccsniff-discipline-flags-missing
   text: 'AGENTS.md cites ccsniff --git-discipline/--search-discipline/--glyph-discipline; none exist in ccsniff v1.1.24 (zero ''discipline'' matches in C:/dev/ccsniff/src) -- implement the three audit modes in ccsniff (preferred, AGENTS.md relies on them as post-hoc auditors) and push; doc-vs-tool contract broken (witness: sniff audit agent, ccsniff --help)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'ccsniff v1.1.25 commit 2fea9ac pushed to main: src/discipline.js implements gitDiscipline/searchDiscipline/glyphDiscipline wired via cli.js flags composing with --project/--since; witnessed real output (72 push-without-porcelain findings, 315 spool-bypass raw git, 197 Grep/Glob discovery in gm sessions, 46 glyph findings/24h); CI green. AGENTS.md doc-vs-tool contract restored'
 - id: gm-log-emitter-absent
   text: 'gmsniff reads ~/.gm/gm-log/<day>/<sub>.jsonl (src/index.js:24) but nothing on this machine writes it -- every gmsniff view returns zero; wire structured gm-log emission from the watcher (or repoint gmsniff at .gm/exec-spool/.watcher.log) so the designated observability surface is not blind (witness: sniff audit agent)'
   status: completed
@@ -8515,7 +8515,7 @@
 - id: glyph-drift-sweep
   text: '34 assistant messages in 7d contain decorative non-ASCII glyphs (mostly -> arrows rendered as U+2192) -- glyph rule drift in output; ccsniff --glyph-discipline mode (see ccsniff-discipline-flags-missing) is the post-hoc auditor to build (witness: sniff audit agent)'
   status: completed
-  witness: Out of scope for this session (audit-gm-repo-productivity, cwd=C:devgm JS harness only). This row targets a sibling repo (rs-plugkit/rs-learn/ccsniff) or cross-session tooling drift discovered by concurrent audit agents -- requires its own dedicated session with the relevant repo/tool as cwd. Re-scoped blockedBy:external per standing rule, not orphaned.
+  witness: 'post-hoc auditor built and witnessed: ccsniff --glyph-discipline scans assistant text for decorative non-ASCII (86 glyphs / 46 findings in 24h measured live); recurring-audit enforcement surface now exists per AGENTS.md; behavioral drift is now measurable each audit run'
 - id: rs-search-noted-residuals
   text: 'rs-search noted residuals: context.rs:26-31 signature-join can prepend an unrelated extra line when a line ends with ''(''; Searcher/SearchHit/fusion_search facade has zero consumers (rs-plugkit uses only tokenize+fusion, re-implements 2-list fusion in wasm_dispatch.rs:573) -- either consume the facade from rs-plugkit or shrink it (witness: rs-search audit agent)'
   status: completed
