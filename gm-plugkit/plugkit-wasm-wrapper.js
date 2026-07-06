@@ -1558,6 +1558,20 @@ function cosineSim(a, b) {
 }
 
 let __wasmAbortFlag = { aborted: false, code: 0 };
+const WASI_FILESYSTEM_ROOT = path.join(GM_TOOLS_ROOT, 'wasi-fs');
+const wasiOpenFiles = new Map();
+let wasiNextFd = 100;
+
+function wasiResolvePath(relPath) {
+  const rel = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  const resolved = path.resolve(WASI_FILESYSTEM_ROOT, rel);
+  const rootResolved = path.resolve(WASI_FILESYSTEM_ROOT) + path.sep;
+  if (resolved !== path.resolve(WASI_FILESYSTEM_ROOT) && !resolved.startsWith(rootResolved)) {
+    throw new Error(`wasi-path-traversal-refused: ${relPath} escapes ${WASI_FILESYSTEM_ROOT}`);
+  }
+  return resolved;
+}
+
 function createWasiShim(instanceRef) {
   const getMemory = () => instanceRef.value.exports.memory.buffer;
   const shim = {
@@ -1623,25 +1637,247 @@ function createWasiShim(instanceRef) {
     },
     environ_get: () => 0,
     environ_sizes_get: () => 0,
-    fd_prestat_get: () => 8,
-    fd_prestat_dir_name: () => 8,
-    fd_close: () => 0,
-    fd_fdstat_get: () => 0,
+    fd_prestat_get: (fd, buf_ptr) => {
+      if (fd !== 3) return 8;
+      try {
+        const dv = new DataView(getMemory());
+        dv.setUint8(buf_ptr, 0);
+        dv.setUint32(buf_ptr + 4, 1, true);
+        return 0;
+      } catch (e) { return 8; }
+    },
+    fd_prestat_dir_name: (fd, path_ptr, path_len) => {
+      if (fd !== 3) return 8;
+      try {
+        const buf = getMemory();
+        new Uint8Array(buf, path_ptr >>> 0, Math.min(path_len, 1)).set([0x2e]);
+        return 0;
+      } catch (e) { return 8; }
+    },
+    fd_close: (fd) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) return 0;
+      try { fs.closeSync(entry.nodeFd); } catch (_) {}
+      wasiOpenFiles.delete(fd);
+      return 0;
+    },
+    fd_fdstat_get: (fd, stat_ptr) => {
+      try {
+        const dv = new DataView(getMemory());
+        const entry = wasiOpenFiles.get(fd);
+        dv.setUint8(stat_ptr, entry ? 4 : 0);
+        dv.setUint8(stat_ptr + 1, 0);
+        dv.setBigUint64(stat_ptr + 8, 0xffffffffffffffffn, true);
+        dv.setBigUint64(stat_ptr + 16, 0xffffffffffffffffn, true);
+        return 0;
+      } catch (e) { return 8; }
+    },
     fd_fdstat_set_flags: () => 0,
-    fd_filestat_get: () => 0,
-    fd_seek: (_fd, _offset_lo, _offset_hi, _whence, newoffset_ptr) => {
-      try { new DataView(getMemory()).setBigUint64(newoffset_ptr, 0n, true); } catch (_) {}
-      return 0;
+    fd_filestat_get: (fd, buf_ptr) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_get FAILED: no entry for fd=${fd}`); return 8; }
+      try {
+        const st = fs.fstatSync(entry.nodeFd);
+        const dv = new DataView(getMemory());
+        dv.setBigUint64(buf_ptr, 0n, true);
+        dv.setBigUint64(buf_ptr + 8, 0n, true);
+        dv.setUint8(buf_ptr + 16, 4);
+        dv.setBigUint64(buf_ptr + 24, 1n, true);
+        dv.setBigUint64(buf_ptr + 32, BigInt(st.size), true);
+        dv.setBigUint64(buf_ptr + 40, BigInt(Math.floor(st.atimeMs * 1e6)), true);
+        dv.setBigUint64(buf_ptr + 48, BigInt(Math.floor(st.mtimeMs * 1e6)), true);
+        dv.setBigUint64(buf_ptr + 56, BigInt(Math.floor(st.ctimeMs * 1e6)), true);
+        return 0;
+      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_get FAILED: ${e && e.message}`); return 8; }
     },
-    fd_read: (_fd, _iovs_ptr, _iovs_len, nread_ptr) => {
-      try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {}
-      return 0;
+    fd_seek: (fd, offset64, whence, newoffset_ptr) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) { try { new DataView(getMemory()).setBigUint64(newoffset_ptr, 0n, true); } catch (_) {} return 8; }
+      try {
+        const offset = BigInt.asIntN(64, BigInt(offset64));
+        let base;
+        if (whence === 0) base = 0n;
+        else if (whence === 1) base = BigInt(entry.pos);
+        else base = BigInt(fs.fstatSync(entry.nodeFd).size);
+        const next = base + offset;
+        entry.pos = Number(next < 0n ? 0n : next);
+        new DataView(getMemory()).setBigUint64(newoffset_ptr, BigInt(entry.pos), true);
+        return 0;
+      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_seek FAILED: ${e && e.message}`); return 8; }
     },
-    path_open: () => 8,
-    path_filestat_get: () => 8,
+    fd_read: (fd, iovs_ptr, iovs_len, nread_ptr) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) { try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {} return 8; }
+      try {
+        const buf = getMemory();
+        const dv = new DataView(buf);
+        let total = 0;
+        const iovsBase = iovs_ptr >>> 0;
+        for (let i = 0; i < iovs_len; i++) {
+          const base = iovsBase + i * 8;
+          const ptr = dv.getUint32(base, true) >>> 0;
+          const len = dv.getUint32(base + 4, true) >>> 0;
+          if (len === 0) continue;
+          const dest = Buffer.from(buf, ptr, len);
+          const n = fs.readSync(entry.nodeFd, dest, 0, len, entry.pos);
+          entry.pos += n;
+          total += n;
+          if (n < len) break;
+        }
+        dv.setUint32(nread_ptr, total, true);
+        return 0;
+      } catch (e) { return 8; }
+    },
+    fd_pread: (fd, iovs_ptr, iovs_len, offset64, nread_ptr) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) { try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {} return 8; }
+      try {
+        const offset = Number(BigInt.asUintN(64, BigInt(offset64)));
+        const buf = getMemory();
+        const dv = new DataView(buf);
+        let total = 0;
+        const iovsBase = iovs_ptr >>> 0;
+        let pos = offset;
+        for (let i = 0; i < iovs_len; i++) {
+          const base = iovsBase + i * 8;
+          const ptr = dv.getUint32(base, true) >>> 0;
+          const len = dv.getUint32(base + 4, true) >>> 0;
+          if (len === 0) continue;
+          const dest = Buffer.from(buf, ptr, len);
+          const n = fs.readSync(entry.nodeFd, dest, 0, len, pos);
+          pos += n;
+          total += n;
+          if (n < len) break;
+        }
+        dv.setUint32(nread_ptr, total, true);
+        return 0;
+      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_pread FAILED: ${e && e.message}`); return 8; }
+    },
+    fd_pwrite: (fd, iovs_ptr, iovs_len, offset64, nwritten_ptr) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) { try { new DataView(getMemory()).setUint32(nwritten_ptr, 0, true); } catch (_) {} return 8; }
+      try {
+        const offset = Number(BigInt.asUintN(64, BigInt(offset64)));
+        const buf = getMemory();
+        const dv = new DataView(buf);
+        let total = 0;
+        const iovsBase = iovs_ptr >>> 0;
+        let pos = offset;
+        for (let i = 0; i < iovs_len; i++) {
+          const base = iovsBase + i * 8;
+          const ptr = dv.getUint32(base, true) >>> 0;
+          const len = dv.getUint32(base + 4, true) >>> 0;
+          if (len === 0) continue;
+          const src = Buffer.from(buf, ptr, len);
+          const n = fs.writeSync(entry.nodeFd, src, 0, len, pos);
+          pos += n;
+          total += n;
+        }
+        dv.setUint32(nwritten_ptr, total, true);
+        return 0;
+      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_pwrite FAILED: ${e && e.message}`); return 8; }
+    },
+    fd_sync: (fd) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) return 8;
+      try { fs.fsyncSync(entry.nodeFd); return 0; } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_sync FAILED: ${e && e.message}`); return 8; }
+    },
+    fd_datasync: (fd) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) return 8;
+      try { fs.fdatasyncSync(entry.nodeFd); return 0; } catch (e) { return 8; }
+    },
+    fd_filestat_set_size: (fd, size64) => {
+      const entry = wasiOpenFiles.get(fd);
+      if (!entry) return 8;
+      try {
+        const size = Number(BigInt.asUintN(64, BigInt(size64)));
+        fs.ftruncateSync(entry.nodeFd, size);
+        return 0;
+      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_set_size FAILED: ${e && e.message}`); return 8; }
+    },
+    path_create_directory: (_dirfd, path_ptr, path_len) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        fs.mkdirSync(absPath, { recursive: true });
+        return 0;
+      } catch (e) {
+        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_create_directory FAILED: ${e && e.message}`);
+        return e && e.code === 'EEXIST' ? 0 : 8;
+      }
+    },
+    path_unlink_file: (_dirfd, path_ptr, path_len) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        fs.unlinkSync(absPath);
+        return 0;
+      } catch (e) {
+        return e && e.code === 'ENOENT' ? 44 : 8;
+      }
+    },
+    path_open: (_dirfd, _dirflags, path_ptr, path_len, oflags, _rights_base, _rights_inherit, fdflags, opened_fd_ptr) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        fs.mkdirSync(path.dirname(absPath), { recursive: true });
+        const OFLAGS_CREAT = 1, OFLAGS_EXCL = 2, OFLAGS_TRUNC = 8;
+        let nodeFlags = 'r+';
+        const creat = (oflags & OFLAGS_CREAT) !== 0;
+        const excl = (oflags & OFLAGS_EXCL) !== 0;
+        const trunc = (oflags & OFLAGS_TRUNC) !== 0;
+        if (excl && creat) nodeFlags = 'wx+';
+        else if (trunc) nodeFlags = 'w+';
+        else if (creat) nodeFlags = fs.existsSync(absPath) ? 'r+' : 'w+';
+        else nodeFlags = 'r+';
+        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_open: rel=${relPath} abs=${absPath} oflags=${oflags} nodeFlags=${nodeFlags}`);
+        const nodeFd = fs.openSync(absPath, nodeFlags);
+        const wasiFd = wasiNextFd++;
+        wasiOpenFiles.set(wasiFd, { nodeFd, pos: 0, path: absPath });
+        new DataView(buf).setUint32(opened_fd_ptr, wasiFd, true);
+        return 0;
+      } catch (e) {
+        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_open FAILED: ${e && e.message}`);
+        return e && /ENOENT/.test(e.code || '') ? 44 : 8;
+      }
+    },
+    path_filestat_get: (_dirfd, _flags, path_ptr, path_len, buf_ptr) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        const st = fs.statSync(absPath);
+        const dv = new DataView(buf);
+        dv.setBigUint64(buf_ptr, 0n, true);
+        dv.setBigUint64(buf_ptr + 8, 0n, true);
+        dv.setUint8(buf_ptr + 16, st.isDirectory() ? 3 : 4);
+        dv.setBigUint64(buf_ptr + 24, 1n, true);
+        dv.setBigUint64(buf_ptr + 32, BigInt(st.size), true);
+        dv.setBigUint64(buf_ptr + 40, BigInt(Math.floor(st.atimeMs * 1e6)), true);
+        dv.setBigUint64(buf_ptr + 48, BigInt(Math.floor(st.mtimeMs * 1e6)), true);
+        dv.setBigUint64(buf_ptr + 56, BigInt(Math.floor(st.ctimeMs * 1e6)), true);
+        return 0;
+      } catch (e) {
+        return e && /ENOENT/.test(e.code || '') ? 44 : 8;
+      }
+    },
     poll_oneoff: () => 0,
     sched_yield: () => 0,
   };
+  if (process.env.PLUGKIT_DEBUG_WASI) {
+    for (const k of Object.keys(shim)) {
+      const orig = shim[k];
+      shim[k] = (...args) => {
+        const r = orig(...args);
+        try { console.error(`[plugkit-wasm] wasi.${k}(${args.map(a => typeof a === 'bigint' ? a.toString() : a).join(',')}) -> ${r}`); } catch (_) {}
+        return r;
+      };
+    }
+  }
   return new Proxy(shim, {
     get(target, prop) {
       if (prop in target) return target[prop];

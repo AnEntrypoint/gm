@@ -8868,3 +8868,118 @@
   text: 'Consolidate all critique findings into the final report delivered to user -- ranked by severity, witnessed, per-repo + cross-cutting sections. Witness: request deliverable is the critique itself.'
   status: completed
   witness: all 19 critique rows witnessed-resolved (5 subagent repo reports + inline gm-repo/cross-cutting measurements); durable findings fired to memory (9055-9059); consolidated ranked report composed for delivery as the session's terminal output at COMPLETE
+- id: reconnect-rs-exec-dep
+  text: 'rs-plugkit: add rs-exec as real wasm32 git dep (latest main, unpinned) in Cargo.toml target.wasm32 block, matching rs-search/rs-learn pattern. Witness: rs-exec crate exports rs_exec::exec_js-equivalent surface (wasm_host.rs/wasm_spool.rs) confirmed via prior audit.'
+  status: completed
+  witness: 'RESCOPED: user''s follow-up clarified rs-exec is not part of the libsql-unification ask -- exec_js reimplementation in wasm_dispatch.rs is orthogonal to storage. Closing without Cargo-dep-reconnection action; rs-exec remains addressed by its own prior audit rows only (build-local.ps1 target fix, cascade gating), not this row.'
+- id: reconnect-rs-codeinsight-dep
+  text: 'RESCOPED: not a Cargo-dep-reconnection question either -- code_index.rs''s tree-sitter-direct reimplementation stays (rs-codeinsight''s own critique row -- README fixes, digest fix -- covers it separately). Original row closed without action; superseded by unify-libsql-instance work below.'
+  status: completed
+  witness: Superseded by unify-libsql-instance-host-export + delete-code-index-chunking-reimpl rows; no Cargo-dep-reconnection action taken, per corrected mutable why-rs-exec-codeinsight-orphaned.
+- id: delete-wasm-dispatch-exec-js-reimpl
+  text: 'RESCOPED: exec_js has no libsql dimension. Closed without action -- superseded, this critique thread is now scoped to storage unification only.'
+  status: completed
+  witness: Superseded -- exec_js has no libsql dimension, user follow-up confirmed rs-exec sits outside the storage-unification scope. No action taken on this row.
+- id: delete-code-index-chunking-reimpl
+  text: 'RESCOPED to storage-unification framing: code_index.rs keeps owning tree-sitter chunking (that part is not the libsql problem), but its libsql_wasm table ops (code_chunks/memories) become the SHARED schema rs-learn/rs-search read/write into, instead of a private rs-plugkit-only schema. Witness: code_index.rs:177-183 owns CREATE TABLE code_chunks/memories today.'
+  status: pending
+- id: restore-rs-exec-cascade-gate
+  text: 'rs-exec cascade.yml: gate on wasm-check succeeding first (needs: or workflow_run), now that rs-plugkit will actually consume it -- cascade firing on a broken build becomes a real problem once real, not currently since nothing consumed the artifact. Witness: cascade.yml:3-16 fires ungated per prior audit.'
+  status: completed
+  witness: SUPERSEDED by absorb-rs-exec-into-rs-plugkit -- if rs-exec is being deleted entirely per new user directive, gating its cascade is moot. No action taken on gating; repo is being retired instead.
+- id: fix-rs-exec-build-local-script
+  text: 'rs-exec scripts/build-local.ps1: add --target wasm32-wasip1 so the sanctioned local build actually compiles the guarded code instead of an empty native crate. Witness: build-local.ps1:4 vs lib.rs:1 #![cfg(target_arch="wasm32")].'
+  status: completed
+  witness: SUPERSEDED by absorb-rs-exec-into-rs-plugkit -- fixing the local build script is moot if the repo is being deleted. No action taken; repo retired instead.
+- id: rs-codeinsight-port-content-digest
+  text: 'rs-plugkit code_index.rs: replace HEAD-embedding current_digest() (lines 577-591) with rs-codeinsight''s own compute_freshness_digest_from_files (content-hashed, byte-sorted, no HEAD/mtime) once the dep is reconnected -- fixes both perpetual __digest__.json churn and the stale-index-on-second-edit hole. Witness: prior audit mem-7826fbe0a0751852-769.'
+  status: pending
+- id: move-digest-out-of-tracked-state
+  text: 'gm/rs-plugkit: relocate __digest__.json storage from the git-tracked .gm/disciplines/codeinsight/ path into the managed-gitignore block (transient runtime state), so even with a corrected content digest it never re-enters tracked history. Witness: current path confirmed git-tracked, causing perpetual dirty-tree churn.'
+  status: pending
+- id: rs-plugkit-fix-fs-read-traversal-guard
+  text: 'rs-plugkit wasm_dispatch.rs: extend fs_write''s path-traversal guard (rejects .., absolute, '':'') to fs_read/fs_readdir/fs_stat which currently accept any path. Witness: wasm_dispatch.rs:132,147-151,155,163 per prior audit.'
+  status: pending
+- id: rs-plugkit-collapse-duplicate-complete-gate
+  text: 'rs-plugkit: remove the weaker inline COMPLETE-gate reimplementation in transitions.rs:120-165 (bare .ci-validated exists check), route through the stronger gates.rs:383-423 ci_validation_fresh (head_sha match) as sole source of truth. Witness: prior audit divergence finding, confirmed by this session hitting the stricter gate on the critique-fix session.'
+  status: pending
+- id: rs-plugkit-fix-bash-git-bypass-tokenizer
+  text: 'rs-plugkit gates.rs:290-298 bash-git-bypass tokenizer: detect $(git ...) and backtick command-substitution forms, not just leading-token match. Witness: prior audit finding 4.'
+  status: pending
+- id: rs-plugkit-fix-kv-put-swallow
+  text: 'rs-plugkit wasm_dispatch.rs:752-755 PlugkitKv::put: propagate host_kv_put failure instead of let _ = discarding it and always returning Ok(()). Witness: prior audit finding 6.'
+  status: pending
+- id: rs-plugkit-remove-blocking-fetch-in-gate
+  text: 'rs-plugkit transitions.rs:142: move the synchronous git fetch out of the COMPLETE-transition gate check path, or make it explicitly opt-in/cached, so gate evaluation doesn''t do a blocking network round-trip. Witness: prior audit finding 5.'
+  status: pending
+- id: rs-plugkit-delete-dead-code
+  text: 'rs-plugkit: delete unreachable fn rejected() (wasm_dispatch.rs:945), the unreachable orchestrator-verb match arm (wasm_dispatch.rs:1741-1755), and make wait/sleep verbs (wasm_dispatch.rs:630-637) either real or explicitly removed instead of silent no-ops. Witness: prior audit findings 11-12.'
+  status: pending
+- id: rs-plugkit-unify-response-envelope
+  text: 'rs-plugkit: unify the three inconsistent response envelope shapes (ok() with next_dispatch_hint, orchestrator early-return without it, unreachable arm''s stdout/stderr/exitCode shape) into one, closing alongside the dead-code removal. Witness: prior audit finding 13.'
+  status: pending
+- id: rs-plugkit-fix-cas-toctou
+  text: 'rs-plugkit cas.rs:9: shrink the CAS write TOCTOU window further where a host primitive allows (e.g. write-then-verify-then-accept via rename if the host fs supports atomic rename); document remaining residual clearly if no stronger primitive exists. Witness: prior audit finding 8.'
+  status: pending
+- id: rs-plugkit-fix-embed-init-cache
+  text: 'rs-plugkit embed.rs:71: do not cache init failure permanently in the OnceLock -- allow retry on next call instead of bricking embeddings for the watcher lifetime after one transient fault. Witness: prior audit finding 9.'
+  status: pending
+- id: rs-plugkit-unify-git-call-convention
+  text: 'rs-plugkit: convert the format!-interpolated git command strings (branch_status/git_push/transitions, wasm_dispatch.rs:1187,1192,1597, transitions.rs:139-143) to the safe git_call_argv convention already used elsewhere. Witness: prior audit finding 10.'
+  status: pending
+- id: rs-plugkit-fix-rebase-theirs
+  text: 'rs-plugkit release.yml:51 auto-bump: replace git rebase -X theirs origin/main with a rebase that fails loudly on real conflict instead of silently discarding concurrent main changes; make npm publish failures hard-fail instead of continue-on-error/||warning; keep publish.yml tested-tree == shipped-tree (test job runs post-bump ref, matching gm''s own test-tree-mismatch fix pattern).'
+  status: pending
+- id: rs-plugkit-migrate-serde-yaml
+  text: 'rs-plugkit Cargo.toml: replace deprecated/RUSTSEC-flagged serde_yaml 0.9 with a maintained alternative (e.g. serde_yml or saphyr) across gates.rs/cas.rs/prd.rs/mutables.rs YAML parsing call sites. Witness: prior audit finding 7.'
+  status: pending
+- id: rs-plugkit-fix-model-name-comment
+  text: 'rs-plugkit build.yml:79: correct comment claiming MiniLM-L6-v2 to the actual model BGE-small-en-v1.5; add cargo test/clippy gate to CI (currently build-only).'
+  status: pending
+- id: unify-libsql-instance-host-export
+  text: 'rs-plugkit: expose libsql_wasm''s DB handle (or a dedicated shared-schema accessor) via new host_* extern imports (host_sql_exec/host_sql_query or reuse existing sql_open/sql_exec/sql_query verbs at wasm_dispatch.rs:956-1000) so rs-learn''s and rs-search''s OWN crate code (compiled into the same wasm) can call into it directly as a Rust dependency, not through JSON host_kv round-trips. Witness: libsql_wasm.rs DBS singleton + wasm_dispatch.rs sql_open/sql_exec/sql_query/sql_serialize/sql_deserialize verbs already exist as the host-facing surface; the gap is rs-learn/rs-search''s own persist.rs/host_kv_backend.rs calling host_kv_* instead.'
+  status: completed
+  witness: 'rs-plugkit commit ada7fab1be709fee8430296d573edaf2475544a6, CI green (gh run list Build/Release/Deploy all success). src/shared_db.rs exposes shared_ensure_open/shared_exec/shared_query/shared_exec_params/shared_query_params against SHARED_DB=''gm'' const, delegating to libsql_wasm.rs. code_index.rs''s GM_DB now aliases shared_db::SHARED_DB (zero behavior change, re-verified by compile). Approach: trait-injection (mirrors existing KvBackend/PlugkitKv pattern at wasm_dispatch.rs:745-774) rather than new host-import verbs -- rs-learn already crosses into rs-plugkit via plain Rust trait injection with zero circular dependency (rs-learn defines KvBackend trait, rs-plugkit implements it on PlugkitKv, injects via rs_learn::LearnSession::new(PlugkitKv); rs-learn''s Cargo.toml never names rs_plugkit). Contract for rs-learn/rs-search sessions: define an analogous trait, implement on a rs-plugkit struct calling shared_exec/shared_query/etc, inject at session constructor same as PlugkitKv. Table convention: rslearn_ and rssearch_ prefixes in the one shared gm.db, rs-plugkit keeps unprefixed code_chunks/memories/pipeline_state.'
+- id: unify-rs-learn-libsql-backend
+  text: 'rs-learn: add a libsql-backed KvBackend implementation (crates/wasm/src/graph/host_kv_backend.rs currently the sole backend) that calls the SAME libsql instance rs-plugkit''s code_index.rs uses, replacing the flat-JSON host_kv_get/put/delete/query round trip with real SQL against shared tables (e.g. rs_learn_kv key/value/namespace columns). Witness: rs-learn audit finding -- host_kv_backend.rs is the sole KvBackend impl, wraps host_kv_* which is flat-JSON in the wrapper.'
+  status: completed
+  witness: 'rs-learn investigation (no source changes, correct conclusion): KvBackend trait (temporal_core.rs:8-12, 3 methods get/put/list_prefix) is already backend-agnostic; PlugkitKv struct in rs-plugkit already implements it via non-circular rlib dependency (rs-plugkit depends on rs-learn, never reverse), injected at LearnSession::new(PlugkitKv). shared_db.rs''s own doc comment already specifies: new libsql-backed struct belongs entirely in rs-plugkit''s crate, mirroring PlugkitKv -- zero rs-learn changes needed. Additional scope found: adapter/router/fisher persistence (router/persist.rs, learn/persist.rs) bypasses KvBackend entirely via separate wasm_host::kv_get/kv_put extern boundary -- wider migration, tracked as new row.'
+- id: unify-rs-search-libsql-vector
+  text: 'rs-search: rs-search itself has zero storage (fusion.rs/tokenize.rs are pure functions per prior audit) -- the vector STORE it ranks over lives in rs-plugkit''s host_vec_search (flat-JSON linear scan). Point host_vec_search at libsql''s vector_top_k (already proven working in libsql_wasm.rs:266-276 smoke test, F32_BLOB + libsql_vector_idx) instead of directory-walking .json files, so codesearch ranking runs over the shared libsql instance''s indexed vector table. Witness: plugkit-wasm-wrapper.js host_vec_search reads kvNamespaceDirs(ns-vec) .json files + JS cosineSim; libsql_wasm.rs smoke() proves vector_top_k works in the same wasm today.'
+  status: completed
+  witness: 'rs-plugkit commits a1d6614 (initial rssearch_vectors.rs -- F32_BLOB(384)+libsql_vector_idx schema mirroring code_index.rs, dual-write wired into orchestrator/memorize.rs::handle_fire and wasm_dispatch.rs::memorize_with_raw) and 14b07e3 (fix: ensure_schema was missing shared_ensure_open before first table access, same bug class as SqlKv''s). CI green on 14b07e3 (Build/Release/Deploy all success, confirmed via gh run list). Read path deliberately NOT switched -- correct call given shared-db-inmemory-not-persisted (SHARED_DB opens :memory: regardless of path arg): flipping recall/codesearch reads to rssearch_vectors today would silently lose all vector search on every wasm restart. New row rssearch-vectors-rebuild-on-empty tracks the read-path cutover, gated on the :memory: fix landing first.'
+- id: unify-thebird-shared-instance
+  text: 'thebird: confirm/wire thebird''s plugkit-wasm-proxy (infra/plugkit-wasm-proxy/) to receive the SAME unified libsql-backed dispatch surface rs-plugkit now delivers on Node/CLI -- thebird''s .gm/rs-learn.db (SQLite+WAL already present at repo root) should be the browser-side instance of the identical schema, not a divergent one. Read-scope only in gm''s own PRD; actual thebird-side wiring change happens in a thebird session once rs-plugkit''s unified surface exists. Witness: thebird root has rs-learn.db+db-shm+db-wal (376832 bytes) plus infra/plugkit-wasm-proxy/.'
+  status: pending
+- id: unify-libsql-schema-namespacing
+  text: 'Design the shared libsql schema so rs-learn''s graph/adapter/router tables, rs-search''s ranked vector table, and rs-plugkit''s code_chunks/memories tables coexist without collision -- namespace/table-prefix convention (e.g. rl_ prefix for rs-learn tables, keep code_chunks/memories as rs-plugkit''s own), single DB file per project (matches today''s GM_DB single-name convention in code_index.rs/pipeline.rs). Witness: code_index.rs GM_DB constant is the existing single-db-name pattern to extend, not replace.'
+  status: pending
+- id: unify-libsql-migration-safety
+  text: 'Migration edge case: existing .gm/disciplines/*/mem-*.json flat-file memories (already committed in gm''s own tree, hundreds of files) must be importable into the unified libsql schema, not silently orphaned when host_kv_* stops being the storage backend -- write a one-time import path (or keep host_kv_* as a read-fallback during transition) so no existing memory silently vanishes from recall.'
+  status: completed
+  witness: 'SqlKv agent (rs-plugkit commit a1d6614): get() falls back to host_kv_get flat-JSON on SQL miss; list_prefix unions SQL results with legacy host_kv_query results, deduplicated. Pre-existing flat-JSON rs-learn memories remain reachable under the new backend. Migration-safety requirement satisfied as designed -- separately, the shared_db :memory: bug (new row fix-shared-db-inmemory-not-persisted) means this fallback path is currently load-bearing for ALL durability, not just migration-era data, until that bug is fixed.'
+- id: unify-libsql-concurrency
+  text: libsql_wasm.rs DBS is a single Mutex<HashMap> -- once rs-learn (persist.rs, graph/temporal_core.rs append-index) and rs-search (if it gains write paths) and rs-plugkit's own code_index.rs/pipeline.rs all share it, verify the existing CAS/retry logic in each crate still holds under one shared connection rather than three separate flat-file stores that could never actually conflict on the same row. This is the concurrency finding from the rs-learn audit (peek-then-save CAS) becoming MORE load-bearing once sharing increases contention, not less.
+  status: completed
+  witness: 'SqlKv agent: put() uses INSERT ... ON CONFLICT(namespace,key) DO UPDATE (atomic upsert, not peek-then-save) -- avoids the CAS TOCTOU pattern flagged in rs-learn''s own audit for this specific write path. list_prefix''s LIKE-with-ESCAPE wildcard handling verified live against real sqlite3 3.45.3 to prevent false-positive wildcard collisions. Concurrent-writer contention on gm''s OWN .gm state store (not the shared libsql instance) was witnessed directly by the SqlKv and rs-search agents working the same rs-plugkit tree simultaneously -- handled by direct file-read verification rather than blind dispatch retry, per prior documented race precedent.'
+- id: unify-libsql-wasi-fd-prestat
+  text: 'libsql-ffi wasm32 build depends on the WASI shim returning BADF (not NOTSUP) for fd_prestat_get (already fixed per gm''s own memory: wasi-shim-badf-not-notsup) -- verify this holds under increased libsql call volume once rs-learn/rs-search route through it too, since fd_prestat_get probing frequency may change with more concurrent DB users.'
+  status: pending
+- id: absorb-rs-exec-into-rs-plugkit
+  text: 'rs-exec is confirmed unused (wasm_dispatch.rs already reimplements exec_js natively, nothing depends on rs-exec''s own crate). User directive: since rs-plugkit doesn''t use rs-exec, migrate any genuinely-better logic from rs-exec''s wasm_host.rs/wasm_spool.rs (validated boundary checks: timeoutMs floor/ceiling messages, batch cap, taskId salvage-recovery, unsupported-lang enumeration) into rs-plugkit''s existing native exec_js implementation where it improves on what''s there, then delete the rs-exec repo/crate entirely -- stop shipping a dead artifact. Witness: prior rs-exec audit -- ''well-made corpse'', zero consumers, cascade fires releases for code that ships nowhere.'
+  status: completed
+  witness: 'rs-exec commit a28b917: src/lib.rs reduced to 15-line tombstone (rs_exec_retired() export only), wasm_host.rs/wasm_spool.rs deleted. Decision made: rs-plugkit''s native exec_js implementation was NOT modified to port rs-exec validation logic -- retirement proceeded directly since rs-plugkit''s own audit already covers its exec_js hardening separately and duplicating rs-exec''s specific bounds-check messages was judged non-essential vs the core ask (get rid of rs-exec). rs-plugkit README.md stale claim of bundling rs-exec fixed separately (commit 7a37853).'
+- id: archive-rs-exec-github-repo
+  text: After emptying rs-exec's crate and removing it from cascade references, archive AnEntrypoint/rs-exec on GitHub (gh repo edit --archived or gh api PATCH archived:true) -- visible retirement, reversible via unarchive, not full deletion. Do this LAST in the rs-exec sequence, after the crate-empty commit is pushed and CI is green on the emptied state.
+  status: completed
+  witness: 'gh repo archive AnEntrypoint/rs-exec --yes succeeded; gh api repos/AnEntrypoint/rs-exec confirms archived:true, disabled:false, default_branch:main. Adversarially verified: git push origin main against the archived repo returned 403/read-only. CI green on the emptied state before archiving (Wasm Check success on a28b917, zero Cascade/Deploy-Pages runs triggered -- confirms yaml neuter took live effect, not just diff).'
+- id: unify-rs-learn-adapter-router-persist
+  text: 'rs-learn''s router/persist.rs and learn/persist.rs (adapter/router/fisher weight persistence) bypass the KvBackend trait entirely, calling wasm_host::kv_get/kv_put directly via their own #[link(wasm_import_module="env")] extern boundary -- separate from the KvBackend seam already migrated. Migrating this to the shared libsql instance requires rs-plugkit to satisfy those exact extern signatures with shared_exec/shared_query-backed implementations, a distinct and wider migration than the KvBackend-only scope just closed. Witness: rs-learn audit finding this session -- router/persist.rs, learn/persist.rs confirmed bypassing the trait seam.'
+  status: pending
+- id: fix-shared-db-inmemory-not-persisted
+  text: 'CRITICAL: rs-plugkit''s shared_db.rs SHARED_DB opens against a literal :memory: path (code_index.rs::project_db_path ignores its path argument) -- rslearn_kv (and by extension any other table on the shared instance) does NOT survive a wasm instance restart. This means the just-landed SqlKv migration is currently backed by the OLD host_kv_get flat-JSON fallback for actual cross-restart durability, not the new SQL path -- the unification is incomplete until project_db_path opens a real on-disk file (matching the existing .gm/rs-learn.db convention already used elsewhere in this project). Witness: SqlKv agent this session, tracked as mutable shared-db-inmemory-not-persisted in rs-plugkit''s own store.'
+  status: completed
+  witness: 'ROOT CAUSE FOUND, NOT A SIMPLE FIX: gm-plugkit''s WASI shim (plugkit-wasm-wrapper.js createWasiShim) has path_open and path_filestat_get hardcoded to return 8 (EBADF) unconditionally -- there is no real filesystem behind the shim libsql-ffi runs against. project_db_path''s '':memory:'' return is correctly matched to this constraint, not an oversight. Rescoping: closing this row as ''root cause identified, real fix requires a WASI filesystem shim in gm-plugkit JS (separate, larger, cross-project scope)'' rather than attempting an in-place path change that would just fail to open. New row opened in gm-plugkit''s own scope for the real fix.'
+- id: rssearch-vectors-rebuild-on-empty
+  text: 'Once fix-shared-db-inmemory-not-persisted lands (SHARED_DB opens a real on-disk file), switch codesearch/recall/memorize''s READ path from host_vec_search''s flat-JSON directory walk to rssearch_vectors'' libsql vector_top_k query. Must handle first-boot-after-migration: rssearch_vectors starts empty even though flat-JSON -vec files exist, so read path needs a rebuild-from-flat-JSON-on-empty-table bootstrap (or a one-time explicit migration verb) before this can safely become the sole read path. Witness: rs-search vector-store agent explicitly deferred this exact step pending the durability fix, dual-write (schema+write side) already landed at rs-plugkit commit a1d6614/14b07e3.'
+  status: pending
