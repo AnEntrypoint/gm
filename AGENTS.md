@@ -88,6 +88,8 @@ Plugkit = stateful library the agent drives by verb dispatch -- never autonomous
 
 Every skill's `allowed-tools:` reduced to `Skill, Read, Write` (plus SKILL.md boot `Bash(bun *)`/`Bash(npx *)`); `Write` exclusively for spool dispatch. Every other side effect -- exec, git, browser, recall, memorize, codesearch -- routes spool -> plugkit. Never reach around plugkit; missing capability = new plugkit verb, not skill-side tool.
 
+**Subagent/Workflow-agent prompts delegate, never restate.** Any `Agent()` tool call or `Workflow` script `agent()`/`pipeline()`/`parallel()` call dispatching gm-driven work says only "use the gm skill for this" (or equivalent minimal pointer) plus the task-specific content -- target repo/path, what to investigate, what to report. Never inline verb names, spool paths, JSON body shapes, or phase-chain mechanics into the prompt string: `Skill(skill="gm")` already supplies all of that on invocation, so restating it is instructional content living outside plugkit+skill, the exact drift this file's own tool-surface rule exists to prevent. Applies identically to both surfaces -- a Workflow script author writing full gm-protocol prose into an `agent()` prompt is the same violation as an `Agent()` call doing it.
+
 ## Core Rules
 
 **Shared memory & search index are tracked, never ignored**: `.gm/rs-learn.db`, `.gm/code-search/` committed -- state shares cross-machine/session/CI. Never gitignore `.gm/`, `.gm/rs-learn.db`, `.gm/code-search/`, legacy `.code-search/`; transient `.gm/*` entries listed one-by-one between managed markers (parent-re-include caveat). Entry list + `ensureGitignored` mechanics: rs-learn (`recall: gm managed-gitignore mechanics`). Project-local persistent state -> `.gm/<name>/`, never top-level dotfile/dotdir.
@@ -150,13 +152,13 @@ Every skill's `allowed-tools:` reduced to `Skill, Read, Write` (plus SKILL.md bo
 
 Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: rs-learn (`recall: cascade pipeline`).
 
-**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, rs-learn, gm}` -- rs-plugkit Cargo.toml = version source-of-truth, gm.json holds plugkitVersion. Three npm packages ship: `gm-skill`, `gm-plugkit`, `plugkit-wasm`. Per-repo roles + legacy-retirement: rs-learn (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
+**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, rs-learn, gm}`. Roles, npm package names, legacy-retirement detail: rs-learn (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local `cargo update`/`cargo build` -- push, let CI build.
 
 ## Spool-dispatch architecture replaces hooks
 
-Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `checkDispatchGates()` gates Write/Edit/git pre-execution. Marker set (`prd.yml, mutables.yml, needs-gm, gm-fired-<sessionId>, residual-check-fired`) + SpoolDispatcher mechanism: rs-learn (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
+Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `checkDispatchGates()` gates Write/Edit/git pre-execution. Marker set + SpoolDispatcher mechanism: rs-learn (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
 
 **gm tool-use sequencing**: `Skill(skill="gm")` clears needs-gm gate. One shipped skill, no subagent variant. Marker mechanics: rs-learn (`recall: gm-skill tool-use sequencing mechanics`).
 
