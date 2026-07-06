@@ -166,7 +166,7 @@ Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `che
 
 **Dead-watcher recovery uses `bun x gm-plugkit@latest spool`, never direct-node boot** (mechanism: rs-learn `recall: dead-watcher recovery bun x not direct-node`).
 
-**Starting the spool is one atomic blocking call -- `bun x gm-plugkit@latest spool` daemonizes the watcher AND blocks until `.status.json` heartbeats fresh, returning exit 0 only when serving (loud non-zero on timeout).** No `& + sleep + re-cat` dance; agent writes to `instruction/` the moment the call returns. Wait lives in `gm-plugkit/cli.js` (`waitForWatcherHeartbeat`, `Atomics.wait` sync-sleep), cli-side since `startSpoolDaemon` is sync + shared by non-blocking callers. rs-plugkit carries no server-boot logic -- daemonize lifecycle is entirely gm-plugkit JS, no Rust/cascade rebuild needed.
+**Starting the spool is one atomic blocking call**: `bun x gm-plugkit@latest spool` daemonizes AND blocks until `.status.json` heartbeats fresh (exit 0 only when serving). Cli-side wait mechanics: rs-learn (`recall: atomic spool boot cli-side wait`).
 
 **Apparent tooling failure is mechanical self-recovery, NEVER a question for the user and never an a/b-test/blind-restart.** Missing spool response / stale watcher = agent's own job: honor future `busy_until` else boot+re-dispatch -- spooler is sound by construction, asking the user to do what a verb can do is a paper-spirit violation. Recovery mechanics (atomic `.status.json`, `FailedToOpenSocket` retry, debug-via-`window.*`-globals): rs-learn (`recall: spooler self-recovery mechanics`).
 
@@ -174,7 +174,7 @@ Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `che
 
 **The first verb after a genuine multi-minute IDLE is `instruction`, to reset the long-gap clock**: only spool verbs reset it, so long platform-tool investigation trips false stall -- interleave `instruction`/`prd-add` to stay warm, dispatch `instruction` BEFORE any predictable blocking wait. Threshold + exception: rs-learn (`recall: first verb after multi-minute wait instruction long-gap`).
 
-**A stop-hook firing on a terminal chain does not authorize re-polling**: stop-hook at `phase=COMPLETE AND prd_pending_count=0` -> re-dispatching `instruction`/`phase-status` to "re-confirm" = deviation (`deviation.complete-chain-poll`, `instructions/mod.rs`). Two admissible responses: (a) prose-only turn (COMPLETE in hand), (b) genuinely new work via FRESH `{"prompt":...}` body (resets to PLAN, skill-driven). Repeated same-hook answering = loop; state terminal facts once and stop, or open new work.
+**A stop-hook firing on a terminal chain does not authorize re-polling** (`deviation.complete-chain-poll`): prose-only turn or fresh `{"prompt":...}` only. Detail: rs-learn (`recall: complete-chain-poll stop-hook responses`).
 
 Session lifecycle (task/browser persistence across turn-stops, residual-scan trigger conditions): rs-learn (`recall: session lifecycle killSessionTasks residual-scan`).
 

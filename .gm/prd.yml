@@ -8788,3 +8788,83 @@
   text: 'Noticed: skills/gm/SKILL.md now has the persona/orthogonality payload content in TWO places -- inline within the ''You are the state machine'' paragraph (line 17, ''State machine represents: Supreme Constructive Systems Semanticist...'') AND as the separate ''Your are: Persona...'' block further down (lines 104-110). This landed via an external edit during this session (system-noted as intentional, not reverted). Flagging as a structural duplication worth a future dedup pass -- not acted on this turn per the instruction not to revert/comment on the external change, but the redundancy itself is a real observation for a later cleanup.'
   status: completed
   witness: 'Decision: leave both persona-block instances as-is. The system explicitly flagged the external edit landing this duplication as intentional and instructed not to revert/mention it -- deduping would be acting against that instruction under a different name (it''s still undoing the external change''s net effect, not adding new value). Recorded the observation per gm''s noticing-to-PRD rule as required, but the correct disposition here is leave-alone, not silent-drop -- closing with that as the explicit resolution rather than either reverting or letting the finding evaporate unaddressed.'
+- id: critique-rs-plugkit
+  text: 'Critique ../rs-plugkit (orchestrator/state-machine/gates/wasm-dispatch): architecture, complexity, panic surface, error handling, dead code -- file:line witnesses. Witness: request names repo.'
+  status: completed
+  witness: 'subagent report (read-only, worktree clean): HIGH -- transitions.rs:120-165 duplicates gates.rs:383-423 COMPLETE gate and diverges on ci_validation_fresh (bare exists vs head_sha match); Cargo.toml:41-42 unpinned rs-learn/rs-search git deps + release.yml:88-94 lockfile wipe = non-reproducible builds; fs_read/readdir/stat lack the fs_write path-traversal guard (wasm_dispatch.rs:132,155,163 vs 147-151). MED -- gates.rs:290 bash-git tokenizer misses $(git ...); blocking git fetch in transition gate; kv_put swallows write failure; serde_yaml 0.9 RUSTSEC; CAS TOCTOU window. Strengths: 2 unwrap/0 expect/1 deliberate panic over 8523 LOC, catch_unwind ABI shield, memorize 2PC rollback'
+- id: critique-rs-exec
+  text: 'Critique ../rs-exec (wasm marshaling shim for exec_js): boundary safety, error propagation, surface size. Witness: request names repo.'
+  status: completed
+  witness: 'subagent report (COMPLETE, clean): CRITICAL -- crate is dead code in shipped system: rs-plugkit Cargo.toml has no rs-exec dep, wasm_dispatch.rs:18/:302 reimplements host_exec_js natively, zero rs_exec refs in live wrapper, CHANGELOG.md:5 admits orphan; yet cascade.yml:3-16 still fires full downstream release per push ungated on wasm-check. HIGH -- build-local.ps1 compiles empty crate (native target vs #![cfg(wasm32)]). MED -- stdout misrouting of non-JSON host reply, outbox-write failure vaporizes task result, poison-inbox livelock, free-contract allocator-UB on len drift. Strengths: zero panic surface, copy-then-free FFI, 2-dep lockfile'
+- id: critique-rs-search
+  text: 'Critique ../rs-search (vector search/fusion backend): fusion algorithm quality, index consistency, perf characteristics. Witness: request names repo; prior mutable mut-1783015095715 flagged fusion.rs concern.'
+  status: completed
+  witness: 'subagent report (compiled-probe witnessed): HIGH -- README/CONTRIBUTING describe deleted cdylib crate (README.md:3 vs Cargo.toml:9 rlib, nonexistent modules/features); test.js guards assert text presence not behavior (IDENTIFIER_BOOST dead_code while 7/7 PASS). MED -- fusion.rs:37 fuse_n discards weights on non-identifier branch (witnessed b>a vs tie), BM25 boost evaporates for natural queries; tokenize.rs:31-36 lowercase path glues foo::bar -> foobar making identifier queries unmatchable on BM25 path; capitalized word misclassified as identifier; per-list duplicate double-count. Strengths: zero deps (guard-enforced), zero panic surface, deterministic ordering. Cascade: path-unfiltered cascade.yml fires full downstream release on .gm chore pushes; single PUBLISHER_TOKEN'
+- id: critique-rs-codeinsight
+  text: 'Critique ../rs-codeinsight (code indexer, sync-before-emit): staleness windows, index digest correctness, perf. Witness: request names repo; sibling __digest__.json dirty-state recall hit.'
+  status: completed
+  witness: 'subagent report (COMPLETE, clean, reverted): CRITICAL -- __digest__.json churn structural: rs-plugkit code_index.rs:577-591 digest embeds HEAD sha into a git-tracked file, non-convergent by construction, witnessed via git_diff + watcher digest-mismatch rebuild per commit; sync-before-emit hole: crc32(porcelain) blind to second edit of already-dirty file, witnessed in scratch repo. HIGH -- crate has zero live consumers (rs-plugkit reimplements chunking; README.md:24 claim stale) yet cascade-triggers releases; lockfile wiped per release. Strengths: near-zero panic surface, surfaced skips, correct content-based digest exists as dead code at lib.rs:254-269'
+- id: critique-rs-learn
+  text: 'Critique ../rs-learn (recall/memorize/KV/embeddings): embedding quality, prune semantics, db growth, namespace isolation. Witness: request names repo.'
+  status: completed
+  witness: 'subagent report (rows drained, read-only held): HIGH -- entire persistence/CAS/host-ABI layer cfg(wasm32) with zero test execution anywhere (wasm-check.yml:31 cargo check only); tests run on PR only while policy is direct-push (publish.yml has no test step); learning loop not closed -- handle_route uses no-op adapter, router weights never mutate, trained:true on frozen seed-random projections (dispatch.rs:334-362, core.rs:201-211); CAS is peek-then-save with unconditional clobber at retry exhaustion (dispatch.rs:191-206). MED -- no delete/compaction path (host_kv_delete never imported), O(n^2) comma-blob index growth, namespace isolation asymmetric (graph verbs global), version off-by-one in shipped artifact, lockfile wiped at release, .gm chore commits trigger full cascade (0.1.78->0.1.81 all chore-produced). Strengths: correct bi-temporal core w/ scenario test, near-zero panic surface, 15-package lockfile'
+- id: critique-gm-repo
+  text: 'Critique gm repo itself: skill prose, installer, lib/skill-bootstrap.js, gm-plugkit JS layer, test.js, site. Witness: cwd is the 6th named project surface.'
+  status: completed
+  witness: 'exec_js-9030/9031 + publish.yml read: bin/bootstrap.js is 71% line-identical to gm-plugkit/bootstrap.js (337/475 shared) = drift-prone duplicate; publish.yml test job runs pre-bump sha while publish jobs checkout ref:main post-bump (tested-tree != shipped-tree); auto-bump bot commit per push inflates history; wrapper monolith + catch density carried in sibling rows'
+- id: critique-wrapper-monolith
+  text: 'plugkit-wasm-wrapper.js single-file ~4400+ lines: cohesion, maintainability, self-heal/atomic-write path review. Witness: codesearch hit ci-1266e199 shows CLI entry at line 4397.'
+  status: completed
+  witness: 'exec_js-9030: gm-plugkit/plugkit-wasm-wrapper.js = 4479 lines single file, 397 catch sites of which 282 empty-swallow; largest file in repo, CLI entry at :4397 -- monolith confirmed, finding recorded for report'
+- id: critique-error-swallowing
+  text: 'Systemic empty-catch / catch(_){} pattern: enumerate density across gm JS + rs-* Rust ignored Results, classify benign vs failure-masking. Witness: bootstrap.js/skill-bootstrap.js codesearch hits show catch(_){} clusters.'
+  status: completed
+  witness: 'exec_js-9030: 463 of 737 catch blocks repo-wide are empty swallows (63%) across 20 JS files/10173 lines; wrapper 282/397, gm-plugkit/bootstrap.js 63/100, supervisor.js 26/32, plus 52 catch-return-null -- systemic failure-masking pattern quantified for report'
+- id: critique-cross-repo-abi
+  text: 'Wrapper JS <-> wasm export ABI coupling: version-skew self-heal adequacy, LinkError recovery, drift risk between gm-plugkit JS and rs-plugkit exports. Witness: wrapper selfHeal path in ci-1266e199 hit.'
+  status: completed
+  witness: 'combined: exec_js implemented twice (rs-exec crate orphaned, rs-plugkit wasm_dispatch.rs:302 native) with already-divergent language tables; rs-exec free-contract trusts host-packed len w/ no shared spec (UB on drift, verified-by-inspection only vs wrapper:1705); rs-learn README host_kv_query contract wrong vs wrapper:2101 substring-match O(namespace) IO; kv_get conflates missing/error/empty (wrapper returns 0n on exception); rs-plugkit kv_put swallows failure; wrapper selfHeal handles LinkError/CompileError skew but response envelopes drift in 3 shapes (wasm_dispatch.rs:127/:1664/:1748)'
+- id: critique-cascade-pipeline
+  text: 'Cascade cascade.yml -> release.yml -> auto-bump -> publish.yml: fragility, cross-repo race, PUBLISHER_TOKEN single point, bump-loop guards. Witness: AGENTS.md cascade section.'
+  status: completed
+  witness: 'combined: gm publish.yml (read inline) test job runs pre-bump sha while publish jobs checkout post-bump ref:main + bot commit per push; rs-search cascade.yml:3-6 path-unfiltered no concurrency; rs-exec cascade fires full downstream release for dead code, ungated on wasm-check; rs-learn publish.yml paths-ignore misses .gm/** -- versions 0.1.78->0.1.81 all produced by chore commits; lockfile wiped at release (rs-plugkit release.yml:88-94, rs-learn publish.yml:38-40); npm publish continue-on-error swallows failed ships; rebase -X theirs can clobber concurrent main; single PUBLISHER_TOKEN is the whole ship path'
+- id: critique-security-surface
+  text: 'Security: exec_js arbitrary host code, fetch verb SSRF scope, spool input trust boundary (any local writer drives verbs), sha256 pin coverage, wasm-sandbox claim accuracy. Witness: spool ABI accepts any .gm/exec-spool/in write.'
+  status: completed
+  witness: 'by-construction: any local process writing .gm/exec-spool/in/exec_js/N.txt obtains arbitrary host-Node code execution (witnessed all session); wasm sha256-pinned but host imports (exec/fs/git) run unsandboxed on host, so WASM-only claim scopes to plugkit internals not side effects; trust boundary = local user, undocumented as such'
+- id: critique-test-surface
+  text: 'Single root test.js <=200 lines guarding a 6-repo distributed system: coverage adequacy vs no-synthetic-test policy cost; rs-* repos'' own verification story. Witness: test.js main() enumerated via codesearch.'
+  status: completed
+  witness: 'combined: gm test.js (witnessed via codesearch) is a real integration witness but 200-line-capped for the whole harness; rs-search test.js asserts text-presence not behavior (IDENTIFIER_BOOST dead_code while 7/7 PASS); rs-learn: entire cfg(wasm32) persistence/ABI layer has zero test execution, publish.yml ships untested pushes (tests PR-only under direct-push policy); rs-plugkit CI is build-only, no cargo test/clippy gate; rs-exec build-local.ps1 validates an empty crate -- the no-synthetic-test policy leaves the Rust system layer witnessed only at gm-integration level'
+- id: critique-docs-discipline
+  text: 'AGENTS.md byte-ceiling + rs-learn externalization: docs reachable only via recall = retrieval-dependency risk for fresh agents/humans; stale-memory drift (e.g. bundle-overwrite-path memo contradicts gm-plugkit/ now in-tree). Witness: recall hit mem-1782988684437-6 vs codesearch gm-plugkit/bootstrap.js in cwd index.'
+  status: completed
+  witness: 'stale-memory drift witnessed live: recall memo mem-1782988684437-6 asserts gm-plugkit not locally checked out while gm-plugkit/ is in-tree and cwd-indexed (codesearch ci-db199e40); AGENTS.md carries 6MB of churn history under a 36KB ceiling; load-bearing knowledge split across AGENTS.md + rs-learn.db + served prose + SKILL.md with no consistency check'
+- id: critique-idempotency
+  text: 'At-least-once spool dispatch vs non-idempotent verbs: git_finalize double-fire window (ENOENT-after-consume trap documented in SKILL.md), per-verb convergence claims audit. Witness: SKILL.md dispatch-shape paragraph.'
+  status: completed
+  witness: 'SKILL.md dispatch paragraph documents ENOENT-after-consume ''has STILL dispatched... git_finalize would double-fire'': at-least-once delivery paired with non-idempotent verbs, mitigated by agent discipline rather than mechanism (no request-id dedup on spool input) -- contract gap recorded'
+- id: critique-observability
+  text: 'Observability: watcher.log/deviations/health -- foreign-session deviation noise pollutes per-session signal (13 foreign, 0 own witnessed in prior audit memo). Witness: recall hit mem-948f0ff000d88566.'
+  status: completed
+  witness: 'recall mem-948f0ff000d88566: 13 foreign-session deviations vs 0 own surfaced in one session''s gmsniff -- shared deviation/watcher.log observability lacks per-session scoping, polluting the drift signal it exists to provide'
+- id: critique-windows-portability
+  text: 'Windows-specific fragility inventory: taskkill /F /T, creationFlags hex, .cmd shim windowsHide trap, BOM traps, UTF-16 default encoding, path handling. Witness: skill-bootstrap.js killExistingPlugkit codesearch hit.'
+  status: completed
+  witness: 'exec_js-9034: spawnSync with creationFlags:0x08000008 exits 0 -- Node silently ignores unknown spawn options, so lib/skill-bootstrap.js creationFlags lines are inert config implying semantics that never apply; plus known .cmd-shim windowsHide trap and PS5.1 BOM default requiring standing discipline'
+- id: critique-dependency-hygiene
+  text: 'Dependency hygiene across 6 repos: Cargo dep weight (libsql-ffi in wasm, embedded model), npm deps, duplication, supply-chain pinning. Witness: WASI shim BADF memory + wasm size mechanics pointer in AGENTS.md.'
+  status: completed
+  witness: 'combined: rs-plugkit serde_yaml 0.9 deprecated w/ RUSTSEC + unpinned rs-learn/rs-search git deps at main; rs-search zero deps guard-enforced; rs-exec 2 deps but serde derive chain for one struct; rs-learn 15-package lockfile (no libsql/model here -- those live in plugkit host, AGENTS.md role description stale); gm/rs-exec/rs-learn gh-pages all build with unpinned npx flatspace@latest; actions pinned by tag not SHA; lockfile-wipe releases make committed lockfiles decorative'
+- id: critique-state-store-growth
+  text: 'Committed binary state: .gm/rs-learn.db + .gm/code-search/ tracked in git -- repo bloat trajectory, binary merge-conflict story across machines/CI, 2033 PRD rows accreted. Witness: prd_total_count=2033 in instruction response.'
+  status: completed
+  witness: 'exec_js-9032/9033: .git 2.4GB packed holding 20.84GB blob content, top blobs 92MB unreachable binaries; .gm/prd.yml history alone 384MB, .gm/disciplines 94.8MB, AGENTS.md 6MB; 2418 of 2520 tracked files (96%) under .gm/; 7401 commits; prd_total_count 2033 -- committed-state policy dominates the repo'
+- id: critique-method-overhead
+  text: 'Meta-critique of gm method itself: spool round-trip cost per turn, prose volume served per instruction, agent cognitive-load vs value, persona-prose coherence (SKILL.md typos: orthagnolatity/languate). Witness: SKILL.md text as loaded this session.'
+  status: completed
+  witness: prd.yml full-file rewrite per dispatch = 384MB git history for one YAML; instruction serves ~6KB prose per dispatch; SKILL.md persona prose carries typos (orthagnolatity twice, languate, 'Your are:') and self-contradicts (forbids figurative language in figurative prose) -- overhead and polish findings recorded
+- id: critique-report
+  text: 'Consolidate all critique findings into the final report delivered to user -- ranked by severity, witnessed, per-repo + cross-cutting sections. Witness: request deliverable is the critique itself.'
+  status: completed
+  witness: all 19 critique rows witnessed-resolved (5 subagent repo reports + inline gm-repo/cross-cutting measurements); durable findings fired to memory (9055-9059); consolidated ranked report composed for delivery as the session's terminal output at COMPLETE
