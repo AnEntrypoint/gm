@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 'use strict';
-
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
 const os = require('os');
-
 const ROOT = process.cwd();
 const SPOOL = path.join(ROOT, '.gm', 'exec-spool');
 const IN = path.join(SPOOL, 'in'), OUT = path.join(SPOOL, 'out'), STATUS = path.join(SPOOL, '.status.json');
-
 let SEQ = 0;
 function nextId(verb) { return `test-${process.pid}-${++SEQ}-${verb}`; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -36,7 +33,6 @@ async function dispatch(verb, body, timeoutMs = 30000) {
   }
   throw new Error(`timeout: ${verb} after ${timeoutMs}ms`);
 }
-
 function assert(cond, msg) { if (!cond) { console.error('FAIL:', msg); process.exit(1); } }
 function parseData(r) { return r && r.data ? (typeof r.data === 'string' ? JSON.parse(r.data) : r.data) : null; }
 
@@ -87,20 +83,17 @@ function checkVersionConsistency() {
   }
   console.log('version-consistency guard ok (plugkitVersion ' + canonical + ')');
 }
-
 function checkPackageFilesHygiene() {
   const files = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files || [];
   assert(!files.some(f => /^bin\/?\*{0,2}$/.test(f)) && !files.includes('bin/plugkit.wasm') && !files.some(f => /^gm-plugkit\/?\*{0,2}$/.test(f)) && !files.some(f => /\.test\.js$/.test(f)),
     'package.json files[] must not re-include bin/ wholesale, list bin/plugkit.wasm (149MB, bootstrap re-fetches sha256-pinned), ship whole gm-plugkit/ dir, or any *.test.js dev fixture');
   console.log('package-files-hygiene guard ok');
 }
-
 function checkUpdateWarningWired() {
   const src = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf8');
   assert(/function injectUpdateWarning\s*\(/.test(src) && /\.update-available\.json/.test(src) && /update_warning/.test(src) && (src.match(/injectUpdateWarning\s*\(/g) || []).length >= 3, 'injectUpdateWarning() must exist, read .update-available.json, set update_warning, called >=3x');
   console.log('update-warning-wired guard ok');
 }
-
 function checkRenameAndInstaller() {
   assert(!fs.existsSync(path.join(ROOT, 'skills', 'gm-skill')), 'skills/gm-skill must not exist after rename');
   const skillMd = path.join(ROOT, 'skills', 'gm', 'SKILL.md');
@@ -116,14 +109,12 @@ function checkRenameAndInstaller() {
   fs.rmSync(tmpHome, { recursive: true, force: true });
   console.log('rename+installer guard ok');
 }
-
 function checkAgentsMdBudget() {
   const CEILING = 36000, abs = path.join(ROOT, 'AGENTS.md'), bytes = fs.statSync(abs).size;
   assert(bytes <= CEILING, 'AGENTS.md is ' + bytes + '/' + CEILING + ' bytes -- detail has accreted instead of draining to an rs-learn recall: pointer; memorize-fire the substance and compress to one line until under ceiling');
   assert(/recall:/.test(fs.readFileSync(abs, 'utf8')), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn');
   console.log('agents-md-budget guard ok (' + bytes + '/' + CEILING + ' bytes)');
 }
-
 function checkConstraintsMdSeedAndIdempotency() {
   const target = path.join(ROOT, '.gm', 'constraints.md');
   if (!fs.existsSync(target)) { console.log('constraints-md guard skipped (not yet seeded, expected transient)'); return; }
@@ -138,7 +129,6 @@ function checkConstraintsMdSeedAndIdempotency() {
   fs.writeFileSync(target, orig);
   console.log('constraints-md seed+idempotency guard ok');
 }
-
 function checkWrapperRegressions() {
   const wrapper = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf-8');
   assert(!/\bspawnSync\s*\(\s*process\.execPath\s*,\s*\[\s*['"]-e['"]\s*,\s*`[^`]*\b_(?:net|http|https|crypto|childProcess)Module\b[^`]*`/.test(wrapper), 'no spawnSync child-script template may reference a parent-scope _*Module alias (spawned child has no such binding)');
@@ -148,7 +138,6 @@ function checkWrapperRegressions() {
   assert(threw, 'a stale (pre-grow) buffer view must throw after a memory grow (guardWasmRange must re-derive buffer per-call, never cache it)');
   console.log('wrapper-regressions guard ok');
 }
-
 function checkSpoolDispatchGates() {
   const { checkDispatchGates, isSpoolPollCommand, isNativeSearchCommand } = require('./lib/spool-dispatch.js');
   const gb = checkDispatchGates('s', 'verb', { verb: 'bash', body: { command: 'git commit -am "wip"' } });
@@ -158,7 +147,17 @@ function checkSpoolDispatchGates() {
   assert(!!isNativeSearchCommand('grep -rn "TODO" src/') && isNativeSearchCommand('grep TODO src/index.js') === null, 'grep -r flagged, single-file not');
   console.log('spool-dispatch-gates guard ok');
 }
-
+async function checkDisciplineNote() {
+  const name = 'test-witness-' + process.pid, dir = path.join(ROOT, '.gm', 'disciplines', name), line = 'discipline-note probe ' + process.pid;
+  try {
+    const r1 = parseData(await dispatch('discipline-note', { discipline: name, text: line }));
+    const r2 = parseData(await dispatch('discipline-note', { discipline: name, text: line }));
+    const long = await dispatch('discipline-note', { discipline: name, text: 'x'.repeat(250) });
+    const bad = await dispatch('discipline-note', { discipline: '../etc', text: 'traversal probe' });
+    assert(r1 && r1.ok && !r1.deduped && r2 && r2.ok && r2.deduped && !long.ok && !bad.ok && fs.readFileSync(path.join(dir, 'policy.md'), 'utf8').includes(line), 'create+dedup(f.f=f)+terseness-gate+name-gate');
+    console.log('discipline-note guard ok');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+}
 async function main() {
   checkNoBom();
   checkWrapperRegressions();
@@ -181,6 +180,7 @@ async function main() {
   const health = await dispatch('health', {});
   assert(health.ok, 'health ok');
   console.log('health ok version=' + (health.data.version || '?'));
+  await checkDisciplineNote();
   const memText = 'idempotency witness probe ' + process.pid + ' f-compose-f-equals-f';
   const [m1, m2] = [await dispatch('memorize-fire', { text: memText }), await dispatch('memorize-fire', { text: memText })];
   assert(m1.ok && m2.ok && m2.data && m2.data.deduped === true && m1.data.key === m2.data.key, 'memorize is idempotent (f.f=f): second identical fire must return deduped:true with the same content-hash key');
