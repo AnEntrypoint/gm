@@ -1,0 +1,8 @@
+---
+key: mem-bf21032e3df5cfce-327
+ns: default
+created: 1779526089334
+updated: 1779526126146
+---
+
+Iter-7: gmsniff was blind for entire loop — path mismatch. Writers (plugkit-wasm-wrapper.js + 12 lib/bin files) wrote to ~/.gm-log/, gmsniff reader defaults to ~/.claude/gm-log/. Fixed gm 39e4d612: repointed all 13 writers + migrated historical data. gmsniff now returns 101 events for past 30m (was 0). Audit infra restored.

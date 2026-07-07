@@ -1,0 +1,8 @@
+---
+key: mem-a2a8fb9da69edeb3-345
+ns: default
+created: 1779551358125
+updated: 1779551402193
+---
+
+Iter-22 (gm a6c7ce03): --kill-stale-watchers now checks wasm-drift in addition to wrapper-mtime. Reads ~/.gm-tools/plugkit.version, parses each watcher's project dir, compares .status.json instance_version to disk wasm version. stale_detail names reasons array per pid. Validated by killing own stale watcher and re-bootstrapping fresh v0.1.517.

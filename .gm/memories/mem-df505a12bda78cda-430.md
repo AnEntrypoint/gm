@@ -1,0 +1,8 @@
+---
+key: mem-df505a12bda78cda-430
+ns: default
+created: 1779963931832
+updated: 1779964085586
+---
+
+filter verb (rs-plugkit spool, full spec): pure stdout->compact-stdout transformation. Body {kind, input, ...opts} where kind is one of grep, ls, tree, json, diff, git-status, log. Returns {output, stats:{bytes_in, bytes_out, saved_pct, ...}}. Pipe raw command output through filter before letting it enter context - in-wasm, no subprocess. The bootstrap fetches only plugkit.wasm; there is no separate filter/rtk binary download.

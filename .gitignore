@@ -51,6 +51,7 @@ tmp/
 .gm/hooks/
 .gm/no-memorize-this-turn
 .gm/prd.paused.yml
+.gm/rs-learn.db
 .gm/rs-learn.db-shm
 .gm/rs-learn.db-wal
 .gm/learning-state.md

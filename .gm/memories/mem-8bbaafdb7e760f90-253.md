@@ -1,0 +1,10 @@
+---
+key: mem-8bbaafdb7e760f90-253
+ns: default
+created: 1782385640122
+updated: 1782385981025
+---
+
+## Resolved mutable: url-prefix-navigates-live
+
+browser-3 (body 'url=https://example.com/\nreturn {navigated_url:page.url(),h1:...}') returned {navigated_url:'https://example.com/',h1:'Example Domain'}, exit_code 0. url= prefix navigates then evaluates.

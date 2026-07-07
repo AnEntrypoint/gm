@@ -1,0 +1,8 @@
+---
+key: mem-0a7ddd6be9aa27e2-670
+ns: default
+created: 1779358096927
+updated: 1779358096929
+---
+
+host_vec_embed is the host-side embedding entry point: rs-plugkit/src/embed.rs::embed_text calls extern host_vec_embed first, falling back to in-wasm BertModel only when the host returns -1. The host implementation in ~/.claude/gm-tools/plugkit-wasm-wrapper.js delegates to a worker thread running onnxruntime-node with the all-MiniLM-L6-v2 quantized ONNX model (in ~/.claude/gm-tools/models/all-MiniLM-L6-v2/), connected to the synchronous wasm dispatch path via SharedArrayBuffer + Atomics.wait. Per-call latency is ~7ms native vs multi-second pure-wasm. GM_EMBED_BACKEND=stub|onnx|xenova pins the backend. Boot line emits [plugkit-wasm] host_vec_embed backend=<name>.
