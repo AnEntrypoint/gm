@@ -1,0 +1,8 @@
+---
+key: mem-945f81df8cdeae6d-735
+ns: default
+created: 1783153346195
+updated: 1783155132072
+---
+
+gm site design SDK pro-rata consumption detail: site/theme.mjs loads anentrypoint-design SDK at runtime from unpkg @latest; local <style> carries ONLY render-mode plumbing (flatspace html-class toggles article-flow/landing-cap, crumb media query) plus non-SDK article-layout rhythm, never a themed visual component. Every graphic-design change (token, component look, TOC/cli/panel/card/callout styling) is made in the SDK repo (../anentrypoint-design, GitHub AnEntrypoint/design, npm anentrypoint-design) as token-only sheet, published, picked up via @latest. New local CSS styling a visual component = deviation. SDK component sheets lint-gated literal-free (every color var(--token)); SDK build prefixes selectors .ds-247420-scoped.

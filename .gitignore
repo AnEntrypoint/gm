@@ -71,7 +71,7 @@ tmp/
 .gm/exec-spool/.gm-plugkit-stale.json
 .gm/disciplines/codeinsight/
 .gm/disciplines/codeinsight-vec/
-.gm/disciplines/codeinsight-manifest/._*
+.gm/disciplines/codeinsight-manifest/
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 .claude/worktrees/

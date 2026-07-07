@@ -1,2 +1,4 @@
 gm-plugkit/instructions/*.md text eol=lf
 skills/gm-skill/SKILL.md text eol=lf
+.gm/memories/*.md text eol=lf
+.gm/disciplines/*/memories/*.md text eol=lf

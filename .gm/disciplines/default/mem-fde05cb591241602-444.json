@@ -1,0 +1,3 @@
+## Resolved mutable: discipline-store-current-shape
+
+exec_js-9042: .gm/disciplines/ doubles as the raw KV-namespace store -- agent disciplines AND internal caches (default-vec, codeinsight, codeinsight-manifest, rs-learn_graph_edges*, rs-learn_router) share the directory; enabled.txt ABSENT in gm repo. md parity slot exists but layout must disentangle agent-facing corpora from derived caches (new PRD row md-store-disentangle-kv-namespaces).
