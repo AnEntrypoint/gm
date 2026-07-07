@@ -1819,6 +1819,40 @@ function createWasiShim(instanceRef) {
         return e && e.code === 'ENOENT' ? 44 : 8;
       }
     },
+    path_remove_directory: (_dirfd, path_ptr, path_len) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        fs.rmdirSync(absPath);
+        return 0;
+      } catch (e) {
+        if (e && e.code === 'ENOENT') return 44;
+        if (e && e.code === 'ENOTEMPTY') return 55;
+        return 8;
+      }
+    },
+    path_filestat_set_times: (_dirfd, _flags, path_ptr, path_len, atim64, mtim64, fst_flags) => {
+      try {
+        const buf = getMemory();
+        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
+        const absPath = wasiResolvePath(relPath);
+        const FILESTAT_SET_ATIM = 0x1, FILESTAT_SET_ATIM_NOW = 0x2, FILESTAT_SET_MTIM = 0x4, FILESTAT_SET_MTIM_NOW = 0x8;
+        const st = fs.statSync(absPath);
+        const nowMs = Date.now();
+        let atimeMs = st.atimeMs;
+        let mtimeMs = st.mtimeMs;
+        if (fst_flags & FILESTAT_SET_ATIM_NOW) atimeMs = nowMs;
+        else if (fst_flags & FILESTAT_SET_ATIM) atimeMs = Number(BigInt.asUintN(64, BigInt(atim64))) / 1e6;
+        if (fst_flags & FILESTAT_SET_MTIM_NOW) mtimeMs = nowMs;
+        else if (fst_flags & FILESTAT_SET_MTIM) mtimeMs = Number(BigInt.asUintN(64, BigInt(mtim64))) / 1e6;
+        fs.utimesSync(absPath, atimeMs / 1000, mtimeMs / 1000);
+        return 0;
+      } catch (e) {
+        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_filestat_set_times FAILED: ${e && e.message}`);
+        return e && e.code === 'ENOENT' ? 44 : 8;
+      }
+    },
     path_open: (_dirfd, _dirflags, path_ptr, path_len, oflags, _rights_base, _rights_inherit, fdflags, opened_fd_ptr) => {
       try {
         const buf = getMemory();
