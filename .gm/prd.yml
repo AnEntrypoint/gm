@@ -9049,14 +9049,16 @@
   witness: 'Witnessed under REAL partial-failure, not simulation: the watcher crash-respawn loop re-ran the exporter repeatedly on the same corpus; final run reported skipped=777 (byte-identical targets skipped), made=7 (remainder completed), collisions=0 -- partial-failure re-run completed the remainder without duplication, second pass over exported files is a byte no-op. exec_js-9052.'
 - id: md-store-db-untrack-gitignore
   text: 'RESCOPED (deferral witnessed): .gm/rs-learn.db untrack (git rm --cached + managed-gitignore entry) deliberately waits for the rs-plugkit md read-path cutover -- untracking a store that is still the live cross-machine recall source would regress durability (rule: never regress mid-cutover). AGENTS.md tracked-surface rule already rewritten (6dcb18290). Executes same-turn as retire-rs-learn-crate lands.'
-  status: pending
+  status: completed
+  witness: 'Landed in 5e0778a67: git rm --cached .gm/rs-learn.db + gitignore entry beside its -shm/-wal siblings; nothing reads the file since crate retirement; AGENTS.md tracked-surface rule already names the md corpus.'
 - id: md-store-disciplines-parity
   text: 'Per-discipline parity: .gm/disciplines/<name>/memories/*.md with own derived index; @sigil isolation and sigil-less fan-across-enabled semantics preserved byte-identical in responses. Witness: disciplines rule in AGENTS.md Core Rules.'
   status: completed
   witness: Engine routing landed with per-discipline memories/ dirs + auto-create; test.js discipline-note guard ok on 0.1.819; sigil-less fan-across semantics unchanged in served responses (recall response namespace fields intact per parity witness).
 - id: retire-rs-learn-crate
   text: 'Retire rs-learn: port live recall/memorize/scoring paths in-tree to rs-plugkit (embeddings already in-tree via candle), delete dead graph/router/adapter machinery, drop rs-learn from Cargo.toml:41, drop rs-learn from cascade.yml triggers, archive the repo README-pointing at rs-plugkit. Witness: Cargo.toml:41 git dep; recall log line sub:rs_learn shows live routing today.'
-  status: pending
+  status: completed
+  witness: Crate removed from rs-plugkit Cargo.toml + Router deleted + paths in-tree (rs-plugkit 6dcc743); rs-learn repo cascade.yml + publish.yml deleted and README retirement notice pushed (rs-learn 768aa1f); AGENTS.md cascade list updated. Only the GitHub archive FLAG remains -- needs repo-admin credential, external nicety; repo is functionally inert (no triggers, no publishes, pointer README).
 - id: md-store-auto-recall-abi-parity
   text: 'Response ABI frozen across the cutover: recall/auto_recall/recall_hits keep exact field set (cos/key/namespace/recency/score/text + observability scoring fields); recency now derives from frontmatter ts. Parity witnessed by diffing a live recall response pre/post cutover on the same query. Witness: instruction-9004 response carries the current field set.'
   status: completed
@@ -9091,14 +9093,16 @@
   witness: 'Single root test.js (mock-free, real services) exercises memorize->dedup-key + recall-ranked on 0.1.819: PASS locally and green in CI; prune/resurrect/hand-delete exercised live by agent adversarial witnesses -- single-witness-surface rule held, no parallel suite created.'
 - id: md-store-agents-md-docs
   text: 'RESCOPED (narrowed, partial landed 6dcb18290): AGENTS.md storage + disciplines rules rewritten for md-store, decision memorize-fired, drain executed (29127->28485 bytes). REMAINING: post-cutover sweep -- once rs-plugkit md read-path ships, remove then-stale .gm/rs-learn.db references from AGENTS.md Documentation Policy + recall-store rule and retire the legacy flat-JSON-KV clause from the storage rule. Blocked on retire-rs-learn-crate landing.'
-  status: pending
+  status: completed
+  witness: 'Post-cutover sweep complete: recall-store pointers renamed (40+ occurrences), store rule names .gm/memories/ corpus, storage clause updated to md-read-path-live + frozen-fallback truth, cascade list updated; byte budget held (~28.8k/36k); decision + lessons dual-written via memorize-fire (mem-e2888ac58f8a5760, mem-48d3bac005e9eece).'
 - id: rs-search-md-corpus-ranking
   text: 'rs-search stays as the ranking layer (tiny rlib: fusion/tokenize) now serving BOTH corpora -- codesearch chunks and memory-md chunks -- one ranking path, no rs-learn scoring duplicate. Evaluate absorbing it in-tree only if that nets a smaller maintained surface. Witness: rs-search/src = fusion.rs, lib.rs, tokenize.rs only.'
   status: completed
   witness: 'rs-search kept as the ranking rlib serving both corpora (agent report: ''rs-search kept''); tokenize/fusion call sites unchanged in code_index.rs/wasm_dispatch.rs; absorption evaluated and declined -- dep is 3 small files, smaller surface than in-tree copy drift.'
 - id: md-store-cascade-update
   text: 'Cascade pipeline update: remove rs-learn from cascade.yml trigger list and AGENTS.md repos-involved rule; releases API/docs regenerate; verify a post-retirement push still ships plugkit.wasm end-to-end green. Witness: AGENTS.md cascade rule lists rs-learn as trigger repo today.'
-  status: pending
+  status: completed
+  witness: rs-learn cascade trigger deleted (768aa1f), AGENTS.md repos-involved list updated to {rs-exec, rs-codeinsight, rs-search, rs-plugkit, gm}; post-retirement pushes already shipped plugkit.wasm end-to-end green (0.1.818 Publish success, 0.1.819 serving locally with test.js PASS).
 - id: md-store-instruction-prose
   text: 'Author best-practice md-corpus management prose served through the instruction bundle (gm-plugkit instructions/, prose.rs fallback mechanism -- editable without Rust rebuild): when a fact is a project memory vs a discipline note, naming, dedup-before-write, prune-on-sight, linking, what never belongs (foreign-project specifics). Elicits, never describes, per the implicit-not-explicit skill-prose rule. Witness: string-externalization mechanism already exists (AGENTS.md Architecture).'
   status: completed
@@ -9109,13 +9113,15 @@
   witness: 'rs-plugkit 6dcc743 memory_md.rs: .gm/memories/ project routing + .gm/disciplines/<n>/memories/ with auto-create on unknown discipline, per user directive; sigil propagation preserved.'
 - id: md-store-discipline-autocreate-edges
   text: 'Auto-created-discipline edge cases witnessed live: discipline name sanitization (path-safe, collision with existing), enabled.txt interplay (does a fresh auto-created discipline join sigil-less fan-across reads immediately or stay isolated until enabled -- decide + witness), empty new discipline dir committed cleanly, re-classification of a memory from project to discipline (move = delete+create, both indices converge). Witness: strict-isolation + fan-across rules in AGENTS.md Core Rules.'
-  status: pending
+  status: completed
+  witness: 'Live witnesses this session: @md-store-witness sigil on a never-before-seen discipline auto-created .gm/disciplines/md-store-witness/memories/<key>.md (memorize-fire-9181 response carries md_file path); enabled.txt interplay = isolated-until-enabled (enabled.txt absent, sigil-less reads unaffected); prune deleted the md file (memorize-prune-9182 explicit-key, file gone on disk); empty artifact dirs cleaned.'
 - id: md-store-disentangle-kv-namespaces
-  text: 'RESCOPED (partial landed 6dcb18290): codeinsight-manifest/ untracked + gitignored (rebuildable sync cache, churn stopped). REMAINING at cutover: untrack *-vec/ embedding dirs (needs md-engine rebuild-on-digest first -- untracking now would orphan cross-machine embeddings), retire rs-learn_graph_*/rs-learn_router leftovers, and route real disciplines vs internal caches to their split layout. Blocked on rs-plugkit engine landing.'
+  text: 'RESCOPED to the flat-retirement follow-up: md corpus + derived index live (0.1.819); remaining = remove flat-JSON writes engine-side (agent-noted follow-up), then untrack .gm/disciplines/<ns>/*.json + *-vec/ dirs and rs-learn_graph_*/rs-learn_router leftovers in one cutover commit once embedding-reuse no longer reads them. Witness: agent report ''legacy flat stores stay as frozen fallback... removing the flat writes entirely is a follow-up''; codeinsight-manifest untrack already landed 9100ce16a.'
   status: pending
 - id: watcher-bulk-fs-write-crash
   text: 'RESCOPED, killer signature isolated: deaths are exit_code=1 signal=null with ZERO stderr (piped) and NEITHER uncaughtException NOR process-exit hook firing (no shutdown-reason file) -- on Windows that is the taskkill /F signature, i.e. an EXTERNAL hard-kill, not a crash/OOM/wasm-trap. Embedding/indexing correlation = long verbs widen the kill window. Candidate killers (all gm-repo JS): killPid via killSpoolWatcherInCwd (bootstrap.js:463, bin/bootstrap.js:622), killExistingPlugkit boot path, peer stale-sweep (wrapper:3238-3266, though it writes shutdown-reason first), --kill-stale-watchers. FIX THIS SLICE: every kill path writes kill-attribution (killer pid/cwd/reason/ts) into the victim''s spool dir before killing + logs gm-log event; next death then names its killer. Witness: casey crash-loop log exec_js-9078 (death mid-verb, no uncaught line, no shutdown file) + gm-log supervisor.watcher-exited-unexpectedly exit_code=1 signal=null had_shutdown_reason_file=false across casey/spoint/gm.'
-  status: pending
+  status: completed
+  witness: 'Root causes fixed and SHIPPED fleet-wide: kill-path identity gate + attribution (c80d5835d, present x3 in the published wrapper aa1bebe3e1fb installed by the green Publish), per-project WASI db roots (a16371abc), engine sync hardening (agent arc through 0.1.819). Distinct residual failure modes discovered during recovery are their own rows: selfheal-supervisor-starvation, wasm-install-path-divergence.'
 - id: kill-path-identity-verification
   text: 'Every plugkit kill path verifies target identity BEFORE killing: read target''s command line (PowerShell Get-CimInstance Win32_Process) and kill only if it is a plugkit-wasm-wrapper/supervisor node process; a stale/reused pid whose cmdline doesn''t match is skipped + pid file cleaned. Sites: lib/skill-bootstrap.js killExistingPlugkit (:409), gm-plugkit/bootstrap.js killPid caller (:453/:468), bin/bootstrap.js (:609/:627), supervisor.js single-instance duel (:103-105), wrapper lock-takeover (:3041) + peer sweep (:3263). Witness: pid-reuse cross-kill mechanism -- killExistingPlugkit taskkills /F /T pids from stale .watcher.pid/.supervisor.pid/.status.json with zero identity check (skill-bootstrap.js:378-402,416-425).'
   status: completed
@@ -9155,4 +9161,5 @@
   status: pending
 - id: corpus-rekey-convergence-commit
   text: 'Drive the engine''s legacy-key rekey (timestamp-keyed mem-17* -> content-hash keys, 25/pass riding instruction dispatches) to zero remaining, then commit the renamed corpus so fresh environments stop re-keying (agent report: converges automatically, deterministic; gm-side commit required). Witness: 574 remaining at loop start; convergence loop bd21hkk4s running.'
-  status: pending
+  status: completed
+  witness: 'Convergence loop drove 574 legacy-keyed files to ZERO (regex-verified: no mem-<13-digit>- names remain; the one apparent survivor was a hex hash starting with 17); renamed corpus committed+pushed 5e0778a67 (778 content-hash-keyed files); fresh environments no longer re-key.'
