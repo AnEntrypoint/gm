@@ -74,6 +74,28 @@ function emitShutdownReason(reason, err) {
   } catch (_) {}
 }
 
+function pidCommandLineForKillGuard(pid) {
+  try {
+    if (process.platform === 'win32') {
+      const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}").CommandLine`], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+      return String((r && r.stdout) || '');
+    }
+    const r = spawnSync('ps', ['-p', String(pid), '-o', 'args='], { encoding: 'utf8', timeout: 5000 });
+    return String((r && r.stdout) || '');
+  } catch (_) { return ''; }
+}
+
+function pidIsPlugkitProcess(pid) {
+  return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
+}
+
+function writeKillAttribution(targetSpoolDir, info) {
+  try {
+    fs.mkdirSync(targetSpoolDir, { recursive: true });
+    fs.writeFileSync(path.join(targetSpoolDir, '.kill-attribution.json'), JSON.stringify({ killer_pid: process.pid, killer_cwd: process.cwd(), killer_script: 'plugkit-wasm-wrapper', ts: Date.now(), ...info }, null, 2));
+  } catch (_) {}
+}
+
 function writeVerbActive(verb, task) {
   __currentVerbContext = { verb, task, started_at_ms: Date.now(), pid: process.pid };
   try {
@@ -3038,7 +3060,12 @@ async function runSpoolWatcher(instance, spoolDir) {
                 holder_sha: holderSha,
               }));
             } catch (_) {}
-            try { process.kill(parseInt(pidStr, 10), 'SIGTERM'); } catch (_) {}
+            if (pidIsPlugkitProcess(holderPidNum)) {
+              writeKillAttribution(spoolDir, { reason: 'peer-stale-takeover', target_pid: holderPidNum, via: 'lock-takeover', holder_sha: holderSha });
+              try { process.kill(holderPidNum, 'SIGTERM'); } catch (_) {}
+            } else {
+              try { logEvent('plugkit', 'takeover-kill-skipped-pid-reused', { holder_pid: pidStr }); } catch (_) {}
+            }
             return 'takeover';
           } else {
             const msg = JSON.stringify({ ok: false, reason: 'another-watcher-active', pid: pidStr, age_ms: age });
@@ -3249,6 +3276,11 @@ async function runSpoolWatcher(instance, spoolDir) {
       try {
         process.kill(peerPid, 0);
       } catch (_) { continue; }
+      if (!pidIsPlugkitProcess(peerPid)) {
+        logEvent('plugkit', 'peer.kill-skipped-pid-reused', { peer_cwd: peerCwd, peer_pid: peerPid });
+        continue;
+      }
+      writeKillAttribution(path.join(peerCwd, '.gm', 'exec-spool'), { reason: 'peer-stale-takeover', target_pid: peerPid, via: 'peer-sweep', peer_sha: peerSha, own_sha: _ownWrapperSha12 });
       logEvent('plugkit', 'peer.stale-wrapper-killed', { peer_cwd: peerCwd, peer_pid: peerPid, peer_sha: peerSha, own_sha: _ownWrapperSha12, lock_age_ms: age });
       console.error(`[plugkit-wasm] peer-sweep killing stale-wrapper watcher pid=${peerPid} cwd=${peerCwd} sha=${peerSha} (own=${_ownWrapperSha12})`);
       try {

@@ -450,6 +450,28 @@ function writeDaemonVersion(v) {
   try { fs.writeFileSync(daemonVersionSentinel(), String(v)); } catch (_) {}
 }
 
+function pidCommandLineForKillGuard(pid) {
+  try {
+    if (process.platform === 'win32') {
+      const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}").CommandLine`], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+      return String((r && r.stdout) || '');
+    }
+    const r = spawnSync('ps', ['-p', String(pid), '-o', 'args='], { encoding: 'utf8', timeout: 5000 });
+    return String((r && r.stdout) || '');
+  } catch (_) { return ''; }
+}
+
+function pidIsPlugkitProcess(pid) {
+  return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
+}
+
+function writeKillAttribution(targetSpoolDir, info) {
+  try {
+    fs.mkdirSync(targetSpoolDir, { recursive: true });
+    fs.writeFileSync(path.join(targetSpoolDir, '.kill-attribution.json'), JSON.stringify({ killer_pid: process.pid, killer_cwd: process.cwd(), killer_script: __filename, ts: Date.now(), ...info }, null, 2));
+  } catch (_) {}
+}
+
 function killPid(pid) {
   if (!Number.isFinite(pid) || pid === process.pid || !pidAlive(pid)) return false;
   try { process.kill(pid, 'SIGTERM'); }
@@ -465,6 +487,12 @@ function killSpoolWatcherInCwd(reason) {
     const pidPath = path.join(process.cwd(), '.gm', 'exec-spool', '.watcher.pid');
     if (!fs.existsSync(pidPath)) return null;
     const pid = parseInt(fs.readFileSync(pidPath, 'utf8').trim(), 10);
+    if (pidAlive(pid) && !pidIsPlugkitProcess(pid)) {
+      obsEvent('bootstrap', 'watcher.kill-skipped-pid-reused', { pid, reason });
+      try { fs.unlinkSync(pidPath); } catch (_) {}
+      return null;
+    }
+    writeKillAttribution(path.join(process.cwd(), '.gm', 'exec-spool'), { reason, target_pid: pid, via: 'killSpoolWatcherInCwd' });
     if (killPid(pid)) {
       obsEvent('bootstrap', 'watcher.killed', { pid, reason });
       try { fs.unlinkSync(pidPath); } catch (_) {}

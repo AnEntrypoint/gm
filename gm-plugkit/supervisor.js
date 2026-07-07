@@ -64,6 +64,28 @@ function writeSupervisorStatus(state, extra) {
   } catch (_) {}
 }
 
+function pidCommandLineForKillGuard(pid) {
+  try {
+    if (process.platform === 'win32') {
+      const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}").CommandLine`], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+      return String((r && r.stdout) || '');
+    }
+    const r = spawnSync('ps', ['-p', String(pid), '-o', 'args='], { encoding: 'utf8', timeout: 5000 });
+    return String((r && r.stdout) || '');
+  } catch (_) { return ''; }
+}
+
+function pidIsPlugkitProcess(pid) {
+  return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
+}
+
+function writeKillAttribution(targetSpoolDir, info) {
+  try {
+    fs.mkdirSync(targetSpoolDir, { recursive: true });
+    fs.writeFileSync(path.join(targetSpoolDir, '.kill-attribution.json'), JSON.stringify({ killer_pid: process.pid, killer_cwd: process.cwd(), killer_script: __filename, ts: Date.now(), ...info }, null, 2));
+  } catch (_) {}
+}
+
 function pidAlive(pid) {
   if (!Number.isFinite(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch (_) { return false; }
@@ -100,9 +122,14 @@ function acquireSingleInstance() {
             spool_status_age_ms: now - spoolTs,
             severity: 'critical',
           });
-          try { process.kill(other, 'SIGTERM'); } catch (_) {}
-          if (process.platform === 'win32') {
-            try { spawnSync('taskkill', ['/F', '/T', '/PID', String(other)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+          if (pidIsPlugkitProcess(other)) {
+            writeKillAttribution(spoolDir, { reason: 'supervisor-takeover-wedged', target_pid: other, via: 'supervisor-duel' });
+            try { process.kill(other, 'SIGTERM'); } catch (_) {}
+            if (process.platform === 'win32') {
+              try { spawnSync('taskkill', ['/F', '/T', '/PID', String(other)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+            }
+          } else {
+            logEvent('supervisor.takeover-kill-skipped-pid-reused', { existing_pid: other, severity: 'warn' });
           }
         }
         try { fs.unlinkSync(SUPERVISOR_PID_PATH); } catch (_) {}
