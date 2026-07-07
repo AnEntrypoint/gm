@@ -2278,6 +2278,19 @@ function makeHostFunctions(instanceRef) {
       }
     },
 
+    host_fs_remove: (pathPtr, pathLen) => {
+      try {
+        const filePath = readWasmStr(instanceRef.value, pathPtr, pathLen);
+        if (!filePath) return 0;
+        const st = fs.statSync(filePath);
+        if (st.isDirectory()) return 0;
+        fs.unlinkSync(filePath);
+        return 1;
+      } catch (e) {
+        return 0;
+      }
+    },
+
     host_fs_readdir: (pathPtr, pathLen) => {
       try {
         const dirPath = readWasmStr(instanceRef.value, pathPtr, pathLen);
