@@ -1,3 +1,0 @@
-## Resolved mutable: iter18-cascade-live
-
-health verb: version 0.1.674 live, imports list shows host_browser_exec/host_task_proc (real wrapper) NOT the deleted stub's host_browser_spawn/eval/close. gm git_log: b0e9c87a1 (delete stub-host), bfaa8ed6e (docs), 36e635177 (close PRD) on origin; cascade auto-bumped plugkitVersion to 0.1.675 (f446fb783) -- iter-18 shipped through CI cleanly. 5 deleted files absent on disk. Siblings: rs-search 6021f53, rs-exec a0ed6b0, rs-codeinsight c0868e7 -- all on main.

@@ -1,3 +1,0 @@
-## Resolved mutable: mut-1783060767796
-
-TreeWalker over document.body text nodes (browser dispatch out/browser-9.json) found zero occurrences of em-dash/>=/ <=/middot in actual authored text content -- the earlier outerHTML.match hit came from mermaid.js-generated SVG internals or injected design-SDK CSS, not authored prose. Confirmed clean via node grep + file read: no matches in docs/paper.html source bytes for any of the 4 chars. No fix needed.

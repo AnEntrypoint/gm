@@ -1,3 +1,0 @@
-## Resolved mutable: edge-case-dispatch-input-encoding-bom
-
-AGENTS.md already documents this exact trap (No UTF-8 BOM section) with the prescribed mitigation (PowerShell -Encoding utf8 or Write tool). SKILL.md's dispatch instructions explicitly warn 'From PowerShell, write spool input UTF-8 no-BOM' and name 'spool.body-encoding-recoded' as the failure signature. This is documented agent-discipline (write correctly), not a code-side gap requiring a JS BOM-strip patch -- adding silent BOM-stripping in the wrapper would mask the discipline violation instead of surfacing it, contrary to AGENTS.md's fail-fast-and-loud principle. Accepted as already-adequately-mitigated via documented discipline + explicit error naming, not a code defect.

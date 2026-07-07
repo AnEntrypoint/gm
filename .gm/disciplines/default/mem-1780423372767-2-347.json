@@ -1,3 +1,0 @@
-## Resolved mutable: browser-port-probe-module-alias-in-child-script
-
-4 child -e templates reverted _netModule/_httpModule alias to require() (node --check OK); deployed wrapper sha f3931b1310fa to .gm-tools; browser verb task=9005 body "1 + 1" returned ok:true exit_code:0 [return value] 2 in 774ms live in tv8; child-script-alias.test.js passes.

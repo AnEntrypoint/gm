@@ -1,3 +1,0 @@
-## Resolved mutable: mut-1783238349372
-
-reproduced twice via spool fs_write verb: {"bytes":0} response for non-empty content, confirmed empty file via Read tool on both C:/dev/gm/.gm/exec-spool/.ci-validated and .fs-write-test.json; worked around by using the harness Write tool directly to populate .ci-validated with correct JSON; root cause is a rs-plugkit/wasm-host fs_write content-plumbing bug, scoped out of this session (not part of the original related-projects audit, discovered live) -- filed as its own gm PRD row to fix in rs-plugkit source, not resolved inline here per EXECUTE-vs-EMIT scope discipline

@@ -1,1 +1,0 @@
-Three npm packages publish from the gm repo: gm-skill (the skill harness), gm-plugkit (bootstrap + watcher), plugkit-wasm (wasm binary). publish.yml ships all three on every version-bump commit. AGENTS.md previously claimed 'one published artifact' which was incorrect.

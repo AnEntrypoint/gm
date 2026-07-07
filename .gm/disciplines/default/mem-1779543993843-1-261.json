@@ -1,1 +1,0 @@
-Iter-18: 2 bugs from clean audit. gm 521b15e4: normalizeUpdateErrorCategory now treats negative status as 'network' not 'http--2'. rs-plugkit 77cdeb3: extract_sigil only checks first leading token (was false-positiving on '@latest' inside memorize text bodies).

@@ -1,3 +1,0 @@
-## Resolved mutable: cascade-outage-handle-fire-dup
-
-native cargo check --no-default-features --features wasm --lib: BEFORE fix emitted error[E0428] the name handle_fire is defined multiple times at src/orchestrator/memorize.rs:219 (dup of :56); AFTER adding #[cfg(target_arch=wasm32)] to memorize.rs:56 the E0428 is gone. Remaining E0433 cannot-find-wasm_dispatch are native-only artifacts (wasm_dispatch/code_index/embed are #[cfg(target_arch=wasm32)] modules per lib.rs:1-11, absent off-wasm, present on the wasm CI target).

@@ -1,3 +1,0 @@
-## Resolved mutable: cdp-tracing-domain-available
-
-browser out/browser-1.json: page.context().newCDPSession(page) + Tracing.start(includedCategories gpu/viz/cc/blink/devtools.timeline, transferMode ReportEvents) + Tracing.end -> Tracing.tracingComplete fired (completed:true), Tracing.dataCollected delivered 30339 events. CDP Tracing domain IS available through playwriter.

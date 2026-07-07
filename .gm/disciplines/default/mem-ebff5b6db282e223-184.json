@@ -1,3 +1,0 @@
-## Resolved mutable: task-spawn-race-orphan-process
-
-gm-plugkit/plugkit-wasm-wrapper.js task spawning + orchestrator/task.rs verb plumbing; no explicit process-exit-handler for cleanup

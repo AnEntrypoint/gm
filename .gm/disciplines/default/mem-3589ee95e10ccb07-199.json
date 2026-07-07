@@ -1,3 +1,0 @@
-## Resolved mutable: atomics-wait-sharedarray-single-instance
-
-gm-plugkit/cli.js:146-148, plugkit-wasm-wrapper.js:1020-1022, both create new SharedArrayBuffer and use Atomics.wait(i32array, 0, 0, ms)

@@ -1,3 +1,0 @@
-## Resolved mutable: codeinsight-no-cosine-floor-no-dedup
-
-CONFIRMED (cosine-floor), CORRECTED (dedup). host_vec_search (plugkit-wasm-wrapper.js:1737) pushes every scored hit with NO cosine floor - line 1737 scored.push unconditional; only top-k + jaccard-dedup filter. A no-good-match query returns k weak hits (repro: 10 hits, best cos 0.567, all irrelevant daemon funcs for a ranking query). Dedup DOES exist (jaccard 0.7, line 1746), correcting the original 'no dedup' claim. Fix tracked in PRD fix-codeinsight-cosine-floor.

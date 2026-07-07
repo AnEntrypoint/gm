@@ -1,3 +1,0 @@
-## Resolved mutable: supervisor-respawn-window
-
-CONTRIBUTING TRIGGER, not the defect: supervisor.js spawnWatcher uses setTimeout(()=>spawnWatcher(reason),1500) after exit, so a ~1.5s+boot transient window exists where a probing session reads stale status. Correct agent response is self-service boot (the agent has authority to boot); the window is harmless UNLESS the agent escalates to the user instead of booting.

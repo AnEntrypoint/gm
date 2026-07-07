@@ -1,3 +1,0 @@
-## Resolved mutable: browser-console-network-surface
-
-SURFACED in-script, no runner change needed: page.on('console'/'pageerror'/'requestfinished') all fire and are returnable from the browser script (out/browser-178/179.json). Network timing works with the corrected recipe Math.round(timing.responseEnd) (dur_ms:2 re-witnessed; the responseEnd-startTime form gave garbage). console/error/network/perf capture lives in the agent's script via page.on + page.evaluate; playwriter exposes the real Playwright page.

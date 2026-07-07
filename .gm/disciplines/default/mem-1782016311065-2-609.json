@@ -1,3 +1,0 @@
-## Resolved mutable: backlog-truly-supervised
-
-Tested the hypothesis on rs-search/src/fusion.rs (Read): fuse/rrf_merge/looks_like_identifier/IDENTIFIER_BOOST/normalize_scores are NOT dead junk -- they are intended-to-be-wired capability the iter-18 README now documents as 'available but unwired pending a search-quality eval'. Deleting them destroys the deferred work, so the defer classification is correct. Backlog (context-rot orchestration core, chatgpt-memory arch, rs-plugkit correctness needing wasm rebuild, search-quality items) is genuinely supervised-only; no hidden autonomous-safe win this fire.

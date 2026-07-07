@@ -1,3 +1,0 @@
-## Resolved mutable: status-json-write-point
-
-plugkit-wasm-wrapper.js:3367 STATUS_PATH=.status.json; writeStatus() at 3368 writes {pid,ts,version,...}; called initially at 3394 and every 5s at 3392. The watcher process owns the heartbeat. cli.js must poll this file for ts within ~15s freshness after spawning to confirm serving.

@@ -1,3 +1,0 @@
-## Resolved mutable: headless-hardening-witness
-
-exec_js read of plugkit-wasm-wrapper.js confirms startManagedBrowser now logs raw_env_value and unexpected_env_value fields plus a browser.headless-env-unexpected-value event when GM_BROWSER_HEADLESS is set to something other than '1' or unset

@@ -1,3 +1,0 @@
-## Resolved mutable: prose-surfaces-in-scope
-
-Glob gm-plugkit/instructions/*.md -> entry,plan,execute,emit,verify,update_docs,browser .md; Glob **/prompt-submit.txt -> prompts/prompt-submit.txt; SKILL.md + AGENTS.md in context. Audit surface = these 10 files.

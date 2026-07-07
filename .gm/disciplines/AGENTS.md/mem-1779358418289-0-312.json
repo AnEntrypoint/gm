@@ -1,1 +1,0 @@
-The browser the agent spawns via the browser verb launches headed (visible) by default. startManagedBrowser in plugkit-wasm-wrapper.js appends --headless only when GM_BROWSER_HEADLESS=1 is set explicitly. The user must always be able to see the window the agent opened — that is part of the witness discipline.

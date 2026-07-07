@@ -1,3 +1,0 @@
-## Resolved mutable: edge-case-wasm-memory-uncaught-throw
-
-gm-plugkit/plugkit-wasm-wrapper.js:1534 guardWasmRange throws Error on out-of-bounds. Called from 1554 (writeWasmInput) and 1578 (writeWasmBytes). Some calling contexts don't wrap in try-catch, so throw propagates and crashes watcher.

@@ -1,3 +1,0 @@
-## Resolved mutable: git-finalize-atomicity-race
-
-rs-plugkit orchestrator/git.rs git_finalize verb; AGENTS.md push-on-clean rule requires porcelain check before push

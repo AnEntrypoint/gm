@@ -1,1 +1,0 @@
-Iter-15: gm-plugkit --kill-stale-watchers (gm 99d72353). Sweeps watchers by start-time vs wrapper mtime. Validated: 5 watchers, killed 4 stale, kept 1 fresh. Solves iter-4 drift-suppress's stale-in-memory cost.

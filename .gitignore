@@ -73,6 +73,14 @@ tmp/
 .gm/disciplines/codeinsight/
 .gm/disciplines/codeinsight-vec/
 .gm/disciplines/codeinsight-manifest/
+.gm/disciplines/AGENTS.md/
+.gm/disciplines/AGENTS.md-vec/
+.gm/disciplines/default/
+.gm/disciplines/default-vec/
+.gm/disciplines/rs-learn_graph_edges/
+.gm/disciplines/rs-learn_graph_edges_by_dst/
+.gm/disciplines/rs-learn_graph_edges_by_src/
+.gm/disciplines/rs-learn_router/
 .plugkit-browser-profile/
 .plugkit-browser-profile-*/
 .claude/worktrees/

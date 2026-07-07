@@ -1,3 +1,0 @@
-## Resolved mutable: bundle-path-resolution
-
-pkfs.rs:2-3 read_to_string->host_read; wasm_dispatch.rs:84 host_read(path) host import, used with RELATIVE project paths e.g. host_read(".gm/exec-spool/.session-current") at lines 853 & 1064 -> host resolves project-relative paths in BOTH hosts (Node disk + thebird in-page IDB FS, which already serves .gm markers today). RESOLUTION: bundle reads at relative path .gm/instructions/<key>.md via pkfs::read_to_string; None/empty -> compiled const fallback. Wrapper provisions the shipped bundle into .gm/instructions/ at boot (Node fs copy + thebird IDB write), always overwritten from the shipped copy = 'shipped bundle only'.

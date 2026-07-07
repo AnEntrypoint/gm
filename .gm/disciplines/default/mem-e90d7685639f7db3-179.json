@@ -1,3 +1,0 @@
-## Resolved mutable: tree-sitter-parser-version-lock
-
-gm-plugkit bootstrap fetches tree-sitter wasm; no explicit version pin found in codesearch results for parser vs wasm binding

@@ -1,3 +1,0 @@
-## Resolved mutable: session-new-second-tab-mechanism
-
-Defensive fix applied regardless of exact upstream mechanism: closeExtraBlankTabs(port,keepWsEndpoint) added to gm-plugkit/plugkit-wasm-wrapper.js (before startManagedBrowser), enumerates CDP http://127.0.0.1:<port>/json/list, closes every page target with url about:blank/empty except the wsEndpoint just attached via session-new. Wired into getOrCreateBrowserSession's fresh-launch branch only. Live witness: copied patched wrapper to ~/.gm-tools/, restarted watcher, cleared browser-profile/ports state, dispatched real browser verb with url=https://example.com, then exec_js queried http://127.0.0.1:<port>/json/list directly -- exactly 1 page target returned (url=https://example.com/), zero about:blank tabs.

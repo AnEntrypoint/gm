@@ -1,1 +1,0 @@
-Iteration-5 shipped npm/npx-cache staleness detection: gm 921ba3a5 (bootstrap.js probeSelfStaleness writes .gm-plugkit-stale.json marker) + rs-plugkit f836b8a (instruction response surfaces gm_plugkit_stale field). Root pattern: `bun x foo@latest` is not freshness — must probe registry.npmjs.org/foo/latest explicitly.

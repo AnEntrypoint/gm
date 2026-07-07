@@ -1,1 +1,0 @@
-Iter-13: shipped 3 fixes from audit (gm 995ce280, rs-plugkit f86c2b8). Cross-process update-error dedupe via shared disk marker. PLAYWRITER_PORT env discovery in gm-shell-validate. wrapper-stale-in-memory.json marker surfacing iter-4 drift-suppress trade-off in instruction response. 4 PRDs from iter-11 noticing now: 3 closed, 1 pending (clean-stale-cross-project-watchers).

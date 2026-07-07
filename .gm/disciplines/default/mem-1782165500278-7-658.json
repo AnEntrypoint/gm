@@ -1,3 +1,0 @@
-## Resolved mutable: manual-witness-coverage
-
-MOSTLY COVERED, no contradiction found: gm-plugkit/instructions/verify.md:23 'Integration witness' = 'Write test.js at root, 200-line ceiling, real services only (mock-free) -- this single witness IS the test surface ... not one gate beside a conventional unit suite: a growing mock-heavy multi-file test/ directory is the pattern gm replaces, never a coexisting exemption'; SKILL.md:57 mirrors it. execute.md:5 'real input -> real code -> real output, witnessed' + Witness section. The manual-real-services principle is upheld; add only a brief explicit cross-surface generalization, no contradiction to remove.

@@ -1,3 +1,0 @@
-## Resolved mutable: other-project-memo-pollution-extent
-
-memorize-prune {query} review (out/memorize-prune-259): the OTHER-project-specific memos are mem-1782179190497-2-835 (terrain-false-completion: c:/dev/terrain/.gm/prd.yml, tv8/terrain.glsl, revert-tv8-*) and mem-24c0c7b188f54d50-2226 (PLUGKIT FIXES: diagen + terrain/tv8 specifics, though it also carries the critical gm guardWasmRange lesson). The rest in review are gm/rs-* method (workflow findings, eval-harness, BOM incident, profile-debug, GLSL code_index fix) = KEEP. Prune the two; re-memorize the gm-only guardWasmRange + screenshot lesson + a project-agnostic false-completion insight.

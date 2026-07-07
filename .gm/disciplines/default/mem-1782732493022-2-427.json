@@ -1,3 +1,0 @@
-## Resolved mutable: gitignore-managed-block-idempotent
-
-rs-plugkit/src/gitignore.rs:88-140 ensure_managed_gitignore strips legacy + current managed block (strip_block, collapses \n\n), rebuilds canonical block from MANAGED_ENTRIES, gates write on changed = cleaned != original. Second run: original already canonical -> strip+rebuild reproduces identical -> changed=false -> no write. Fixed point in one step. f∘f≡f holds.

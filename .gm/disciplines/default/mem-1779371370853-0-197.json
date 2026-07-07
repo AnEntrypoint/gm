@@ -1,1 +1,0 @@
-Recall scoring now multiplies cosine similarity by a recency factor: recency = 0.4 + 0.6 * exp(-age_ms / 30_days). Results above Jaccard=0.7 token overlap are dedup-suppressed before slicing top-k.

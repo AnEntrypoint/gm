@@ -1,3 +1,0 @@
-## Resolved mutable: rs-plugkit-involvement-none
-
-exec_js grep of ../rs-plugkit/src for bind|listen|TcpListener|spawn|daemon|fn main: 14 hits, all SQL bind-param errors (libsql_wasm.rs:161,192), served prose (instructions/browser.rs), task-spawn verb plumbing (orchestrator/task.rs) -- zero server-boot or socket-bind logic; daemonize lifecycle is entirely gm-plugkit JS

@@ -1,3 +1,0 @@
-## Resolved mutable: live-embeddings-implementation
-
-rs-learn/crates/wasm/src/embeddings.rs is ONE line: pub const EMBED_DIM: usize = 384 -- rs-learn embeds nothing. Embedding lives entirely in rs-plugkit (embed.rs in src listing, candle/tokenizers deps Cargo.toml:36-39). Retirement loses zero embedding capability.

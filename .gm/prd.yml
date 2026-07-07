@@ -8894,13 +8894,16 @@
   witness: SUPERSEDED by absorb-rs-exec-into-rs-plugkit -- fixing the local build script is moot if the repo is being deleted. No action taken; repo retired instead.
 - id: rs-codeinsight-port-content-digest
   text: 'rs-plugkit code_index.rs: replace HEAD-embedding current_digest() (lines 577-591) with rs-codeinsight''s own compute_freshness_digest_from_files (content-hashed, byte-sorted, no HEAD/mtime) once the dep is reconnected -- fixes both perpetual __digest__.json churn and the stale-index-on-second-edit hole. Witness: prior audit mem-7826fbe0a0751852-769.'
-  status: pending
+  status: completed
+  witness: 'rs-plugkit 4528dbf: content-hash digest (v2:0440c9fc9919519f:files=47) witnessed on shipped 0.1.824 -- second codesearch byte-identical zero rebuilds, probe edit changes digest, SECOND edit to already-dirty file changes it again (old crc blind spot closed), revert returns to exact baseline, HEAD move with unchanged content leaves digest unchanged (commit-invariance). Bonus: non-convergent bootstrap loop found+fixed (c50424f).'
 - id: move-digest-out-of-tracked-state
   text: 'gm/rs-plugkit: relocate __digest__.json storage from the git-tracked .gm/disciplines/codeinsight/ path into the managed-gitignore block (transient runtime state), so even with a corrected content digest it never re-enters tracked history. Witness: current path confirmed git-tracked, causing perpetual dirty-tree churn.'
-  status: pending
+  status: completed
+  witness: Digest relocated to .gm/exec-spool/.codeinsight-digest (gitignored everywhere via the exec-spool block); legacy tracked .gm/disciplines/codeinsight/__digest__.json auto-deleted on first index (witnessed present->gone); driven-repo dirty-tree churn ends without manual migration. rs-plugkit 4528dbf, shipped 0.1.824.
 - id: rs-plugkit-fix-fs-read-traversal-guard
   text: 'rs-plugkit wasm_dispatch.rs: extend fs_write''s path-traversal guard (rejects .., absolute, '':'') to fs_read/fs_readdir/fs_stat which currently accept any path. Witness: wasm_dispatch.rs:132,147-151,155,163 per prior audit.'
-  status: pending
+  status: completed
+  witness: Guards extended to fs_read/fs_stat/fs_readdir (all four fs verbs confirmed by dispatch-table sweep); live dispatches ../secret.txt, ..\secret.txt, C:/Windows, /etc, a/../../x all refused; legitimate relative paths still served. rs-plugkit 4528dbf on 0.1.824.
 - id: rs-plugkit-collapse-duplicate-complete-gate
   text: 'rs-plugkit: remove the weaker inline COMPLETE-gate reimplementation in transitions.rs:120-165 (bare .ci-validated exists check), route through the stronger gates.rs:383-423 ci_validation_fresh (head_sha match) as sole source of truth. Witness: prior audit divergence finding, confirmed by this session hitting the stricter gate on the critique-fix session.'
   status: completed
@@ -8947,7 +8950,8 @@
   witness: rs-plugkit assessed serde_yml/saphyr as replacements for deprecated serde_yaml 0.9. Usage spans 7 files including gates.rs (off-limits due to concurrent edit) with non-trivial Value/Mapping variant matching -- judged too risky given concurrent multi-session activity in this repo this turn. Deferred, not attempted; RUSTSEC advisory remains open as a tracked future item.
 - id: rs-plugkit-fix-model-name-comment
   text: 'rs-plugkit build.yml:79: correct comment claiming MiniLM-L6-v2 to the actual model BGE-small-en-v1.5; add cargo test/clippy gate to CI (currently build-only).'
-  status: pending
+  status: completed
+  witness: 'Real defect exceeded the row: scripts/fetch-weights.ps1 downloaded the WRONG MODEL (all-MiniLM-L6-v2 vs embed.rs BGE include_bytes) -- ported to BGE, live run sha-matched the local model + fetched the real BAAI tokenizer; check+clippy CI gate now runs on every push (was PR-only = never ran), witnessed red then green. rs-plugkit 4528dbf + CI commits.'
 - id: unify-libsql-instance-host-export
   text: 'rs-plugkit: expose libsql_wasm''s DB handle (or a dedicated shared-schema accessor) via new host_* extern imports (host_sql_exec/host_sql_query or reuse existing sql_open/sql_exec/sql_query verbs at wasm_dispatch.rs:956-1000) so rs-learn''s and rs-search''s OWN crate code (compiled into the same wasm) can call into it directly as a Rust dependency, not through JSON host_kv round-trips. Witness: libsql_wasm.rs DBS singleton + wasm_dispatch.rs sql_open/sql_exec/sql_query/sql_serialize/sql_deserialize verbs already exist as the host-facing surface; the gap is rs-learn/rs-search''s own persist.rs/host_kv_backend.rs calling host_kv_* instead.'
   status: completed
@@ -9002,7 +9006,8 @@
   witness: Durability blocker now resolved (shared-db-inmemory-root-cause fixed, rs-plugkit commit 104ba3f). This row's read-path cutover (switching codesearch/recall reads from host_vec_search flat-JSON to rssearch_vectors' libsql vector_top_k) is now UNBLOCKED but not yet done -- the write-side dual-write already landed (rs-plugkit a1d6614/14b07e3); the read-path switch plus first-boot-rebuild-from-flat-JSON-on-empty-table logic remains open work for a follow-up session, tracked here as still-pending with its blocker cleared.
 - id: wasi-shim-lock-directory-hygiene
   text: 'WASI shim path_create_directory is called by sqlite for lockfile-as-directory locking (witnessed: a wasi-test-*.db.lock/ directory created alongside the .db file during live testing). Confirm this lock-directory scheme doesn''t leak indefinitely under GM_TOOLS_ROOT/wasi-fs across many db opens/closes -- check whether sqlite cleans it up on close or whether it accumulates, and whether the managed-gitignore block needs to cover this new wasi-fs/ directory tree (it''s under GM_TOOLS_ROOT which is typically outside the git-tracked project tree already, but confirm).'
-  status: pending
+  status: completed
+  witness: '10 live sql_open/INSERT/sql_close cycles against the per-project wasi-fs subdir: zero lock dirs before/during/after -- wrapper path_remove_directory reclaims them; no cleanup needed, no new wasm host import introduced. Witnessed on 0.1.824.'
 - id: rs-learn-wasm-check-never-runs-on-push
   text: 'RESCOPED (md-store decision): moot on rs-learn retirement -- closes when rs-learn leaves rs-plugkit Cargo.toml and the repo archives; if retirement stalls the original push-trigger fix re-applies. Witness: superseded by retire-rs-learn-crate.'
   status: completed
@@ -9136,7 +9141,8 @@
   witness: 'exec_js-9093: no current code writes .watcher.pid from watcher/supervisor -- machine-wide stale .watcher.pid files are legacy leftovers, exactly the pid-reuse ammunition; supervisor already self-unlinks .supervisor.pid on duel (:135) and release (:147-149). The landed identity gate (2e283eb69) unlinks stale/mismatched pid files on every kill attempt (both bootstraps), which IS the sweep -- stale files self-heal at first touch instead of firing a kill. Browser-reap sibling extracted to its own row browser-reap-kill-identity-guard.'
 - id: browser-reap-kill-identity-guard
   text: 'Apply the pidIsPlugkitProcess-style cmdline identity gate to the browser/task kill paths: wrapper killPidQuiet (:1321-1325 taskkill /F /T), reapOrphanBrowserSessions/reapOrphanChromiums (:982), browser-session takeover (:1431), exec task-group teardown (:2145-2155) -- same stale-pid-file/pid-reuse kill class as the watcher paths just fixed, but targets should match chrome/chromium/node-task cmdlines instead. Witness: exec_js-9080 kill-site inventory; watcher-path fix pattern landed 2e283eb69.'
-  status: pending
+  status: completed
+  witness: 'Landed 0ad3b3f14: the two file-sourced browser kill sites (gracefulCloseBrowser pid fallback, collision path) gate on pidIsManagedChromium (cmdline contains browser-profile + --remote-debugging-port) with kill-skipped-pid-reused logging; orphan reaper needed no change (already enumerates by cmdline scan with profile marker, wrapper:976-981); task-group teardown pids are same-process-lifetime children (registry in memory, not stale files) -- pid-reuse risk not applicable. node --check + test.js PASS on deployed wrapper.'
 - id: md-sync-cold-start-blocks-recall
   text: 'rs-plugkit md-store engine: memory_md_sync runs synchronously inside recall and embeds the full corpus (~0.5s/file x 784) on cold start -- CI test.js recall (30s budget, fresh checkout) times out, gating every gm-plugkit publish. Fix: recall serves available index immediately, sync incremental/bounded per dispatch; cold clone answers within 30s. Delegated to the rs-plugkit build agent with the hard budget. Witness: CI run 28870082093 test failure + local repro ''ERROR: timeout: recall after 30000ms''.'
   status: completed
@@ -9155,10 +9161,12 @@
   witness: Landed a16371abc (per-project WASI root via project-dir hash) + 4ac80bb06 (host_fs_remove export); running watcher wrapper_sha 1b4e0cdc7f1c serves on the fixed wrapper, per-project subdir created under ~/.gm-tools/wasi-fs/, no further malformed-db events post-restart (remaining row_failed are the shadow-row engine defect, tracked separately in md-sync-shadow-row-poisoning).
 - id: selfheal-supervisor-starvation
   text: 'Wrapper selfHeal''s 150MB GH download outlives the supervisor''s 30s stale-status kill: healer dies mid unlink-then-rename leaving ~/.gm-tools/plugkit.wasm ABSENT, cascading every watcher machine-wide into a self-heal thrash loop (witnessed live: file snatched within 14s of manual placement, 20 processes killed to break it). Fix: heal writes heartbeat/heal-active marker the supervisor respects; NEVER unlink target before replacement bytes fully staged (single rename, no unlink-first fallback window). Witness: watcher.log ''self-heal: wasm not installed'' respawn loop 17:03-17:05Z; selfHealFromGithubReleases unlink at rename-fallback.'
-  status: pending
+  status: completed
+  witness: 'Landed 0ad3b3f14: selfHeal writes .status.json with future busy_until every 5s (supervisor checkWatcherHealth:313 already honors busy_until, so mid-heal kills stop); heal-from-local-cache avoids the 150MB window entirely for the common case. Witnessed live from shipped bytes (exec_js-9197): heal_busy_future=true healing=true; cache-restore returned 0.1.819 with atomic placement.'
 - id: wasm-install-path-divergence
   text: 'gm-plugkit CLI installs wasm to AppData/Local/plugkit/bin/v<ver>/ while the wrapper reads ~/.gm-tools/plugkit.wasm; after a failed self-heal deletion the CLI''s ''forcing reboot'' loop reinstalls to the AppData path and never restores the gm-tools path -- witnessed twice this session requiring manual copies. Unify on one canonical wasm location (or make bootstrap always mirror to gm-tools atomically post-install). Witness: ''Daemon start failed... heartbeat not fresh'' loops with AppData v0.1.810/v0.1.817 present but gm-tools file absent.'
-  status: pending
+  status: completed
+  witness: 'Root-caused as thrash casualty, not missing mirror: bootstrap already mirrors AppData->gm-tools on every decision path (bootstrap.js:581,595,603,678 copyWasmToGmTools); the absent gm-tools file was concurrent healers dying mid unlink-rename (fixed 0ad3b3f14) snatching each mirror. Additionally the healer itself now restores from the AppData cache (newest sha-ok version) closing the divergence loop from the wrapper side. Witness: exec_js-9197 restore=0.1.819.'
 - id: corpus-rekey-convergence-commit
   text: 'Drive the engine''s legacy-key rekey (timestamp-keyed mem-17* -> content-hash keys, 25/pass riding instruction dispatches) to zero remaining, then commit the renamed corpus so fresh environments stop re-keying (agent report: converges automatically, deterministic; gm-side commit required). Witness: 574 remaining at loop start; convergence loop bd21hkk4s running.'
   status: completed

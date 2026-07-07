@@ -1,1 +1,0 @@
-Iter-23 (rs-plugkit 4e76a2d): catch consecutive same-verb retry after long-gap denial. tv8 retried prd-resolve 5x ignoring gate's next_dispatch:instruction. Fix: gates.rs tracks retry-state, 2nd attempt escalates to deviation.long-gap-retry-without-instruction. execute.rs prose names the discipline.

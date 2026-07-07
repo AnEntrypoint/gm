@@ -1,3 +1,0 @@
-## Resolved mutable: rs-plugkit-boot-wait-involvement
-
-Grep ../rs-plugkit/src for spawn/daemon/watcher/status.json/fn main: zero server-boot logic. Only refs are code_index.rs/poll_detect.rs treating .status.json as a skip/detect file, and entry.rs served prose. The daemonize/spawn/heartbeat lifecycle is entirely JS (gm-plugkit cli.js/bootstrap.js/supervisor.js/wrapper). rs-plugkit affected ONLY via served boot prose (entry.rs/entry.md and SKILL.md) which instructs agents to '& + sleep 8 + recat' -- must update to single synchronous call once cli is atomic.

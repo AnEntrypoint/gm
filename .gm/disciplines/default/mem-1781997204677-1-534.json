@@ -1,3 +1,0 @@
-## Resolved mutable: workflow-findings
-
-wf_ccb66342-a22 completed: 67 agents, 59 raw findings, 54 confirmed (9 implement-now, 44 defer-prd). Implement-now: rs-plugkit em-dash glyph sweep (7 files); rs-learn router/persist.rs:65 unqualified LlmError, dispatch.rs:262 handle_route no len-check wasm trap, deep_core.rs:49 record_loss non-finite EWC poison, persist.rs:90 per_target len; rs-search test.js asserts phantom architecture (100% red); rs-exec wasm_spool.rs error-on-stdout, started/ended_at mislabel, silent batch parse error.

@@ -1,3 +1,0 @@
-## Resolved mutable: prd-resolve-instruction-stale-read-race
-
-subagent codesearch of rs-plugkit src/orchestrator/mod.rs:17-30 confirmed git_common_dir_project_root() re-shells git rev-parse on every dispatch with no cache, silently falls back to $HOME/.gm or CLAUDE_PROJECT_DIR on transient subprocess failure (mod.rs:37-48 gm_dir()); this exactly reproduces the witnessed same-pid same-version PRD-state disagreement. Fix dispatched to a dedicated subagent (memoize root once per watcher lifetime, fail loud instead of silent misrooting).

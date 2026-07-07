@@ -1,3 +1,0 @@
-## Resolved mutable: browser-screenshot-issue
-
-WITNESSED: page.screenshot() returns a real PNG Buffer (out/browser-232: is_buffer true, 19628 bytes, magic 137,80,78,71). The 'checking' issue is the inline return -- a Buffer stringifies to useless bytes in the [return value] envelope. FIX (recipe, capability already works): page.screenshot({path:'<abs>.png'}) then Read that path -- the Read tool RENDERS the PNG (witnessed live: out/browser-233 saved the file, Read showed the Example Domain page). Document in browser.md; no code change needed.

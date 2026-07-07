@@ -1,3 +1,0 @@
-## Resolved mutable: spool-cli-returns-after-heartbeat
-
-gm-plugkit/cli.js:186-253 spool path: startSpoolDaemon (detached spawn, bootstrap.js:1021) -> waitForWatcherHeartbeat(spoolDir,30000,12000) at cli.js:150 -> process.exit(0); live boot this session returned exit 0 with 'plugkit ready, spool watcher serving', watcher_pid=9520 serving after return -- no foreground bind

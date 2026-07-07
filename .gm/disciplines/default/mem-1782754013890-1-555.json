@@ -1,3 +1,0 @@
-## Resolved mutable: gpu-wallclock-source
-
-browser out/browser-1.json: on a WebGL clear+gl.finish rAF loop (75 frames over ~1s wall), per-category summed event dur from the trace gave gpu=462851us, viz=175123us, viz,benchmark,graphics.pipeline=118458us, cc=49229us -- genuine non-zero GPU wall-clock activity the V8 CPU sampler is blind to. CHOSEN SIGNAL: per-category summed event.dur (us) over the trace window, bucketed gpu/viz/cc/raster, returned alongside wall-clock ms. trace_span_us raw monotonic is not directly useful; summed per-category dur is.

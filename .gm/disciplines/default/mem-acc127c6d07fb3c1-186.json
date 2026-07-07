@@ -1,3 +1,0 @@
-## Resolved mutable: wasm-linear-memory-fragmentation
-
-gm-plugkit/plugkit-wasm-wrapper.js writeWasmInput calls plugkit_alloc; rs-plugkit orchestrator manages alloc but no free/gc visible

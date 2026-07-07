@@ -1,3 +1,0 @@
-## Resolved mutable: wasm-alloc-pointer-sign-cast
-
-gm-plugkit/plugkit-wasm-wrapper.js:1551 ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0; also line 1575

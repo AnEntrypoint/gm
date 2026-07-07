@@ -1,1 +1,0 @@
-gm AGENTS.md drain: session lifecycle detail. Background tasks + browser sessions persist across turn-stops; cleanup fires only on real-exit reasons; residual-scan fires when PRD empty AND no open browser sessions AND no running tasks. Implementation in killSessionTasks + residual-scan wiring. Full mechanics: recall key 'session lifecycle killSessionTasks residual-scan'.

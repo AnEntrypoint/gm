@@ -1,1 +1,0 @@
-Iter-19 (gm da2db23b): watcher.unplanned-restart was the event name regardless of planned field. 43 events in 24h, all carrying planned:true. Fix: emit watcher.planned-restart when planned, unplanned-restart only when truly unplanned. Audit signal-to-noise rises further.
