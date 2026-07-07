@@ -1580,7 +1580,8 @@ function cosineSim(a, b) {
 }
 
 let __wasmAbortFlag = { aborted: false, code: 0 };
-const WASI_FILESYSTEM_ROOT = path.join(GM_TOOLS_ROOT, 'wasi-fs');
+const WASI_PROJECT_SLUG = crypto.createHash('sha256').update(String(process.env.CLAUDE_PROJECT_DIR || process.cwd()).toLowerCase().replace(/\\/g, '/')).digest('hex').slice(0, 16);
+const WASI_FILESYSTEM_ROOT = path.join(GM_TOOLS_ROOT, 'wasi-fs', WASI_PROJECT_SLUG);
 const wasiOpenFiles = new Map();
 let wasiNextFd = 100;
 

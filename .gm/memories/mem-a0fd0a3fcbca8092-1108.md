@@ -1,0 +1,8 @@
+---
+key: mem-a0fd0a3fcbca8092-1108
+ns: default
+created: 1783426352588
+updated: 1783426352588
+---
+
+Implicit-not-explicit skill-prose criteria (full, drained from AGENTS.md Coding Style): skill files and prompt-submit.txt elicit, never describe -- terse imperatives triggering already-learned dispositions, not numbered procedures. Describes = agent could re-derive from the goal (recipe, do-X-then-Y, trigger-instance list, over-explained rationale, restated mechanism) -> convert. Elicits = constructs a predicament where the wrong move is structurally incoherent -> keep. Exception: boot-edge ABI (exact spool paths, JSON fields, verb names, globs, deviation ids, gate names) is non-derivable, stays explicit regardless. Forbidden: step-by-step recipes, 'see paper section X', site/paper citations, multi-step manuals -- manual-shaped skill gets imitated as script, breaks at first edge case. Papers/site are discipline OUTPUTS, never link from a skill into docs. Cross-cutting rules needing citation belong in AGENTS.md, not skills. Companion SKILL.md style rule: strip explanatory prose, keep ONLY invocation syntax, transition markers (->), gate conditions, constraint lists, exact-usage code examples.
