@@ -89,6 +89,11 @@ function pidIsPlugkitProcess(pid) {
   return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
 }
 
+function pidIsManagedChromium(pid) {
+  const cmd = pidCommandLineForKillGuard(pid).toLowerCase().replace(/\\/g, '/');
+  return cmd.includes('browser-profile') && cmd.includes('--remote-debugging-port');
+}
+
 function writeKillAttribution(targetSpoolDir, info) {
   try {
     fs.mkdirSync(targetSpoolDir, { recursive: true });
@@ -1380,10 +1385,14 @@ function gracefulCloseBrowser(entry, reason) {
     } catch (_) {}
   }
   if (Number.isFinite(pid) && pid > 0) {
-    const deadline = Date.now() + 1500;
-    try { process.kill(pid, 'SIGTERM'); } catch (_) {}
-    while (Date.now() < deadline && isProcessAliveSync(pid)) sleepSyncMs(Math.min(150, deadline - Date.now()));
-    if (isProcessAliveSync(pid)) killPidQuiet(pid);
+    if (isProcessAliveSync(pid) && !pidIsManagedChromium(pid)) {
+      try { logEvent('plugkit', 'browser.kill-skipped-pid-reused', { pid, reason: reason || 'close' }); } catch (_) {}
+    } else {
+      const deadline = Date.now() + 1500;
+      try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+      while (Date.now() < deadline && isProcessAliveSync(pid)) sleepSyncMs(Math.min(150, deadline - Date.now()));
+      if (isProcessAliveSync(pid)) killPidQuiet(pid);
+    }
   }
   purgeProfileLockFiles(profileDir);
   try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
@@ -1450,7 +1459,11 @@ function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessio
   if (typeof gracefulCloseBrowser === 'function') {
     try { gracefulCloseBrowser(existing, `collision:${reason}`); } catch (_) {}
   } else if (pidOk && Number.isFinite(existing.pid)) {
-    try { killPidQuiet(existing.pid); } catch (_) {}
+    if (pidIsManagedChromium(existing.pid)) {
+      try { killPidQuiet(existing.pid); } catch (_) {}
+    } else {
+      try { logEvent('plugkit', 'browser.kill-skipped-pid-reused', { pid: existing.pid, reason: 'collision' }); } catch (_) {}
+    }
   }
   purgeProfileLockFiles(existing.profileDir);
   delete ports[claudeSessionId];
@@ -4650,14 +4663,56 @@ async function selfHealFromGithubReleases() {
   });
 }
 
+function writeHealBusyStatus() {
+  try {
+    const spoolDir = spoolDirForSentinel();
+    fs.mkdirSync(spoolDir, { recursive: true });
+    fs.writeFileSync(path.join(spoolDir, '.status.json'), JSON.stringify({ pid: process.pid, ts: Date.now(), healing: true, busy_until: Date.now() + 60_000 }));
+  } catch (_) {}
+}
+
+function restoreWasmFromLocalCache() {
+  try {
+    const root = path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), '.cache'), 'plugkit', 'bin');
+    const dirs = fs.readdirSync(root).filter(d => /^v\d+\.\d+\.\d+$/.test(d));
+    dirs.sort((a, b) => {
+      const pa = a.slice(1).split('.').map(Number), pb = b.slice(1).split('.').map(Number);
+      return (pb[0] - pa[0]) || (pb[1] - pa[1]) || (pb[2] - pa[2]);
+    });
+    for (const d of dirs) {
+      const wasm = path.join(root, d, 'plugkit.wasm');
+      if (!fs.existsSync(wasm) || !fs.existsSync(path.join(root, d, '.ok'))) continue;
+      const target = path.join(GM_TOOLS_ROOT, 'plugkit.wasm');
+      const tmp = `${target}.partial-${process.pid}`;
+      fs.copyFileSync(wasm, tmp);
+      try { fs.renameSync(tmp, target); }
+      catch (_) { try { fs.unlinkSync(target); } catch (_) {} fs.renameSync(tmp, target); }
+      fs.writeFileSync(path.join(GM_TOOLS_ROOT, 'plugkit.version'), d.slice(1));
+      return d.slice(1);
+    }
+  } catch (_) {}
+  return null;
+}
+
 async function selfHeal(reason) {
   console.error(`[plugkit-wasm] self-heal: ${reason}`);
+  writeHealBusyStatus();
+  const healBusy = setInterval(writeHealBusyStatus, 5000);
   try {
+    if (/not installed/.test(reason)) {
+      const restored = restoreWasmFromLocalCache();
+      if (restored) {
+        console.error(`[plugkit-wasm] self-heal: restored v${restored} from local install cache`);
+        return true;
+      }
+    }
     const r = await selfHealFromGithubReleases();
     console.error(`[plugkit-wasm] self-heal: installed v${r.version} from GH Releases`);
     return true;
   } catch (e) {
     console.error(`[plugkit-wasm] self-heal GH fetch failed: ${e.message}`);
+  } finally {
+    clearInterval(healBusy);
   }
   console.error('[plugkit-wasm] self-heal: run `bun x gm-plugkit@latest spool` to recover manually');
   return false;
