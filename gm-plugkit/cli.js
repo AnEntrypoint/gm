@@ -7,6 +7,14 @@ const path = require('path');
 const cp = require('child_process');
 const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh } = require('./bootstrap');
 
+function readUpdateAvailableMarker(dir) {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(dir, '.update-available.json'), 'utf-8'));
+    if (raw && raw.installed && raw.latest && raw.installed !== raw.latest) return raw;
+  } catch (_) {}
+  return null;
+}
+
 const usage = `gm-plugkit -- Bootstrap and daemon-spawn for gm plugkit binary.
 
 Usage:
@@ -201,7 +209,10 @@ function writeCliError(phase, err) {
   const already = readStatus(spoolDir());
   let onDiskVersion = null;
   try { onDiskVersion = readVersionFile(); } catch (_) { onDiskVersion = null; }
-  const versionDrifted = !!(already && onDiskVersion && already.version && already.version !== onDiskVersion);
+  const localVersionDrifted = !!(already && onDiskVersion && already.version && already.version !== onDiskVersion);
+  const remoteUpdate = already ? readUpdateAvailableMarker(spoolDir()) : null;
+  const remoteVersionDrifted = !!(remoteUpdate && already && already.version && already.version === remoteUpdate.installed);
+  const versionDrifted = localVersionDrifted || remoteVersionDrifted;
   if (statusServing(already, 12000) && !versionDrifted) {
     try { ensureGmPlugkitVersionFresh(); } catch (_) {}
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
@@ -215,8 +226,10 @@ function writeCliError(phase, err) {
     process.exit(0);
   }
   if (versionDrifted) {
-    writeCliStatus({ phase: 'version-drift-detected', running_version: already.version, disk_version: onDiskVersion });
-    console.error(`[gm-plugkit] running watcher (pid=${already.pid}) serves stale version ${already.version}, disk has ${onDiskVersion} -- forcing reboot`);
+    const targetVersion = remoteVersionDrifted ? remoteUpdate.latest : onDiskVersion;
+    const reason = remoteVersionDrifted ? 'npm-registry-drift' : 'local-cache-drift';
+    writeCliStatus({ phase: 'version-drift-detected', reason, running_version: already.version, target_version: targetVersion });
+    console.error(`[gm-plugkit] running watcher (pid=${already.pid}) serves stale version ${already.version}, ${reason === 'npm-registry-drift' ? 'npm' : 'disk'} has ${targetVersion} -- forcing reboot`);
     try {
       if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
       else process.kill(already.pid, 'SIGTERM');
