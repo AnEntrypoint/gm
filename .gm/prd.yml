@@ -9428,3 +9428,23 @@
   text: 'user directive: no task is bounded, out-of-scope naming a reachable piece of work must never occur; the bound must be fitted to the task (more rows/turns/sessions), never the task fitted to an assumed bound'
   status: completed
   witness: 'skills/gm/SKILL.md:17 added new rule directly after Standing-approval: ''No task is bounded; out of scope naming a real reachable piece of work must never occur... the fix is fitting the bound to the task, never fitting the task to an assumed bound''; also directly names the nevil README-Future-Optimizations pattern as this same deviation wearing a scoping costume, tying it to the prd-resolve-duplicate-witness gate added earlier this session'
+- id: derive-bundled-skills-from-fs-bin-install
+  text: bin/install.js BUNDLED_SKILLS array (currently ['gm','gm-continue','wfgy-method']) replaced with fs.readdirSync(skills/) filter for dirs containing SKILL.md
+  status: completed
+  witness: 'bin/install.js: removed BUNDLED_SKILLS array, added discoverBundledSkills() scanning skills/ for dirs containing SKILL.md; live-witnessed via real installer run against fresh temp home -- all 3 skills (gm, gm-continue, wfgy-method) landed correctly at .claude/skills/ and .agents/skills/'
+- id: derive-bundled-skills-lib-skill-bootstrap
+  text: lib/skill-bootstrap.js BUNDLED_SKILLS array replaced with same fs-scan convention, resolved relative to the file's own bundled skills/ candidates
+  status: completed
+  witness: 'lib/skill-bootstrap.js: removed BUNDLED_SKILLS array, added discoverBundledSkills() scanning same skills/ candidates; node --check passes clean'
+- id: derive-bundled-skills-bin-bootstrap
+  text: bin/bootstrap.js BOOTSTRAP_BUNDLED_SKILLS array replaced with same fs-scan convention
+  status: completed
+  witness: 'bin/bootstrap.js: removed BOOTSTRAP_BUNDLED_SKILLS array, added discoverBundledSkills(wrapperDir) parameterized scan; node --check passes clean'
+- id: derive-bundled-skills-gm-plugkit-bootstrap
+  text: 'gm-plugkit/bootstrap.js BOOTSTRAP_JS_BUNDLED_SKILLS array -- this one is trickier: the published npm package embeds SKILL.md/SKILL-<name>.md as flat files at its own root (no skills/ subdir with real directories inside the npm tarball), so fs-scan-by-directory doesn''t directly apply; needs its own convention (scan for SKILL*.md files in __dirname matching the naming pattern) or derive the list from a single manifest file shared across all four copies'
+  status: completed
+  witness: 'gm-plugkit/bootstrap.js: removed BOOTSTRAP_JS_BUNDLED_SKILLS array, added discoverBundledSkillsAndSources() scanning __dirname for SKILL-*.md pattern plus dev-mode skills/ dirs; live-witnessed by staging real embedded files (SKILL.md, SKILL-gm-continue.md, SKILL-wfgy-method.md) and calling the real exported ensureSkillMdFresh() -- correctly discovered and mapped all 3 skill names to their real file paths with zero hardcoded names'
+- id: sweep-other-hardcoded-list-patterns
+  text: sweep bin/install.js, lib/skill-bootstrap.js, bin/bootstrap.js, gm-plugkit/bootstrap.js, package.json, gm-plugkit/package.json, CI workflows for other hardcoded-per-item-list patterns that should derive from directory/file-existence convention instead (e.g. the skills/gm-continue + skills/wfgy-method SKILL.md embed-copy lines in .github/workflows/publish.yml, the gm-plugkit/package.json files[] SKILL-*.md entries)
+  status: completed
+  witness: .github/workflows/publish.yml:119-127 replaced 3 explicit `cp skills/<name>/SKILL.md` lines with a `for d in skills/*/` loop deriving from the real directory listing; gm-plugkit/package.json files[] replaced 2 explicit SKILL-*.md entries with a single glob pattern; grep -rn BUNDLED_SKILLS across the whole repo returns zero hits, confirming all 4 hardcoded arrays fully removed and no dangling references remain

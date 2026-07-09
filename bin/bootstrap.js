@@ -17,12 +17,26 @@ function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
 }
 
-const BOOTSTRAP_BUNDLED_SKILLS = ['gm', 'gm-continue', 'wfgy-method'];
+function discoverBundledSkills(wrapperDir) {
+  const roots = [
+    path.join(wrapperDir, '..', 'skills'),
+    path.join(wrapperDir, '..', '..', 'skills'),
+  ];
+  const root = roots.find(r => { try { return fs.existsSync(r) && fs.statSync(r).isDirectory(); } catch (_) { return false; } });
+  if (!root) return [];
+  try {
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .filter(name => { try { return fs.existsSync(path.join(root, name, 'SKILL.md')); } catch (_) { return false; } })
+      .sort();
+  } catch (_) { return []; }
+}
 
 function ensureSkillMdCurrent(wrapperDir) {
   const home = os.homedir();
   const allRefreshed = [];
-  for (const skillName of BOOTSTRAP_BUNDLED_SKILLS) {
+  for (const skillName of discoverBundledSkills(wrapperDir)) {
     try {
       const candidates = [
         path.join(wrapperDir, '..', 'skills', skillName, 'SKILL.md'),

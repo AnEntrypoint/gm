@@ -774,7 +774,32 @@ function ensureGmPlugkitVersionFresh() {
   } catch (_) { return false; }
 }
 
-const BOOTSTRAP_JS_BUNDLED_SKILLS = ['gm', 'gm-continue', 'wfgy-method'];
+function discoverBundledSkillsAndSources() {
+  const found = new Map();
+  found.set('gm', path.join(__dirname, 'SKILL.md'));
+  try {
+    for (const f of fs.readdirSync(__dirname)) {
+      const m = f.match(/^SKILL-(.+)\.md$/);
+      if (m) found.set(m[1], path.join(__dirname, f));
+    }
+  } catch (_) {}
+  const devSkillsRoots = [
+    path.join(__dirname, '..', 'gm-skill', 'skills'),
+    path.join(__dirname, '..', '..', 'gm-skill', 'skills'),
+    path.join(__dirname, '..', 'skills'),
+  ];
+  for (const root of devSkillsRoots) {
+    try {
+      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) continue;
+      for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+        if (!e.isDirectory()) continue;
+        const p = path.join(root, e.name, 'SKILL.md');
+        if (fs.existsSync(p) && !found.has(e.name)) found.set(e.name, p);
+      }
+    } catch (_) {}
+  }
+  return found;
+}
 
 function ensureSkillMdFresh() {
   const home = process.env.HOME || process.env.USERPROFILE || require('os').homedir();
@@ -782,19 +807,11 @@ function ensureSkillMdFresh() {
   const _norm = s => s.replace(/\r\n/g, '\n');
   const allRefreshed = [];
   const sources = {};
-  for (const skillName of BOOTSTRAP_JS_BUNDLED_SKILLS) {
+  const discovered = discoverBundledSkillsAndSources();
+  for (const [skillName, bundledPath] of discovered) {
     try {
-      const candidates = [
-        path.join(__dirname, skillName === 'gm' ? 'SKILL.md' : `SKILL-${skillName}.md`),
-        path.join(__dirname, '..', 'gm-skill', 'skills', skillName, 'SKILL.md'),
-        path.join(__dirname, '..', '..', 'gm-skill', 'skills', skillName, 'SKILL.md'),
-        path.join(__dirname, '..', 'skills', skillName, 'SKILL.md'),
-      ];
-      const bundledPath = candidates.find(p => {
-        try { return fs.existsSync(p); } catch (_) { return false; }
-      });
-      if (!bundledPath) {
-        try { obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { skillName, searched: candidates }); } catch (_) {}
+      if (!fs.existsSync(bundledPath)) {
+        try { obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { skillName, searched: [bundledPath] }); } catch (_) {}
         continue;
       }
       const bundled = fs.readFileSync(bundledPath, 'utf-8');

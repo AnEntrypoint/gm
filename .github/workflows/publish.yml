@@ -116,12 +116,17 @@ jobs:
             echo "::error::gm.json missing plugkitVersion"
             exit 1
           fi
-          # Embed all bundled skills' SKILL.md into gm-plugkit so ensureSkillMdFresh
-          # finds every one of them without depending on gm-skill being a sibling.
+          # Embed every bundled skill's SKILL.md into gm-plugkit so ensureSkillMdFresh
+          # finds each one without depending on gm-skill being a sibling. Derived by
+          # convention from skills/ -- adding a new skill directory needs no edit here.
           cp skills/gm/SKILL.md gm-plugkit/SKILL.md
-          cp skills/gm-continue/SKILL.md gm-plugkit/SKILL-gm-continue.md
-          cp skills/wfgy-method/SKILL.md gm-plugkit/SKILL-wfgy-method.md
-          echo "[done] Embedded skills/{gm,gm-continue,wfgy-method}/SKILL.md into gm-plugkit"
+          for d in skills/*/; do
+            name=$(basename "$d")
+            if [ "$name" != "gm" ] && [ -f "${d}SKILL.md" ]; then
+              cp "${d}SKILL.md" "gm-plugkit/SKILL-${name}.md"
+              echo "[done] Embedded skills/${name}/SKILL.md into gm-plugkit/SKILL-${name}.md"
+            fi
+          done
           cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}

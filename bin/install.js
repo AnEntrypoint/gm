@@ -6,10 +6,24 @@ const path = require('path');
 const os = require('os');
 const readline = require('readline');
 
-const BUNDLED_SKILLS = ['gm', 'gm-continue', 'wfgy-method'];
-
 function out(msg) { process.stdout.write(msg + '\n'); }
 function err(msg) { process.stderr.write(msg + '\n'); }
+
+function discoverBundledSkills() {
+  const roots = [
+    path.join(__dirname, '..', 'skills'),
+    path.join(__dirname, '..', '..', 'skills'),
+  ];
+  const root = roots.find(r => { try { return fs.existsSync(r) && fs.statSync(r).isDirectory(); } catch (_) { return false; } });
+  if (!root) return [];
+  try {
+    return fs.readdirSync(root, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .filter(name => { try { return fs.existsSync(path.join(root, name, 'SKILL.md')); } catch (_) { return false; } })
+      .sort();
+  } catch (_) { return []; }
+}
 
 function parseArgs(argv) {
   const flags = { yes: false, project: false, help: false };
@@ -179,7 +193,7 @@ async function main() {
   const nonInteractive = flags.yes || !process.stdin.isTTY;
 
   let anyInstalled = false;
-  for (const skillName of BUNDLED_SKILLS) {
+  for (const skillName of discoverBundledSkills()) {
     const skillSrc = bundledSkillDir(skillName);
     if (!skillSrc) { err(`bundled skill directory skills/${skillName} not found in package`); continue; }
     const installed = installSkillDir(skillSrc, skillName, home, flags.project);
