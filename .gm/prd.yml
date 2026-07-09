@@ -9412,3 +9412,7 @@
   text: 'SKILL.md: only allowed way to end using gm is loading another skill (fresh gm re-entry to confirm no remaining work, or wfgy-method if gm already ran without resolving), never a bare prose ending even at genuine COMPLETE'
   status: completed
   witness: 'skills/gm/SKILL.md:11 added: terminal-state exit now requires one final Skill dispatch (gm re-entry to confirm nothing missed, or wfgy-method if a prior gm walk already ran without resolving), with the confirming re-entry''s own PLAN-phase ''nothing new'' turn as the actual non-recursive stopping point'
+- id: self-respawn-on-wasm-registry-drift
+  text: plugkit.wasm registry-version-drift check (checkForUpdate/checkUpdateViaNpm) only wrote a flag file for the agent to notice; wired real self-respawn (bun x gm-plugkit@latest spool) matching the existing gm-plugkit-package self-stale pattern, so running sessions auto-update without waiting for agent-driven detection
+  status: completed
+  witness: 'gm-plugkit/plugkit-wasm-wrapper.js: added selfRespawnOnUpdate() called from applyUpdateCheckResult on drift detection, matching existing gm-plugkit-package self-stale respawn pattern (bun x gm-plugkit@latest spool, 3-attempt backoff guard); node --check gm-plugkit/plugkit-wasm-wrapper.js passes clean; live-witnessed the parallel self-stale mechanism firing this session (bun x gm-plugkit@latest auto-detected+rebuilt 0.1.833->0.1.834 without manual intervention)'

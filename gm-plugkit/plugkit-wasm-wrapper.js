@@ -4397,6 +4397,35 @@ async function runSpoolWatcher(instance, spoolDir) {
       } catch (_) {}
       logEvent('plugkit', 'update.available', { installed, latest });
       _lastKnownDrift = latest;
+      selfRespawnOnUpdate(installed, latest);
+    }
+  }
+  function selfRespawnOnUpdate(installed, latest) {
+    const guardPath = path.join(GM_TOOLS_ROOT, '.wasm-update-respawn-guard.json');
+    let guard = {};
+    try { guard = JSON.parse(fs.readFileSync(guardPath, 'utf8')); } catch (_) {}
+    const sameTarget = guard.last_latest === latest;
+    const attempts = sameTarget ? (guard.attempts || 0) : 0;
+    if (attempts >= 3) {
+      logEvent('plugkit', 'update.auto-respawn-abandoned', { installed, latest, attempts, note: 'wasm-registry version keeps drifting after 3 self-respawn attempts; agent must run bun x gm-plugkit@latest spool manually' });
+      return;
+    }
+    try {
+      fs.writeFileSync(guardPath, JSON.stringify({ attempts: attempts + 1, last_latest: latest, ts: Date.now() }));
+    } catch (_) {}
+    logEvent('plugkit', 'update.auto-applying', { installed, latest, attempt: attempts + 1, note: 'plugkit-wasm registry drift; self-respawning via bun x gm-plugkit@latest spool' });
+    try {
+      const bunPath = process.env.GM_BUN_PATH || 'bun';
+      const child = _childProcess.spawn(bunPath, ['x', 'gm-plugkit@latest', 'spool'], {
+        cwd: process.cwd(),
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env: { ...process.env, PLUGKIT_BOOT_REASON: 'self-respawn-from-wasm-registry-drift' },
+      });
+      child.unref();
+    } catch (e) {
+      logEvent('plugkit', 'update.auto-respawn-spawn-failed', { installed, latest, error: String(e && e.message || e) });
     }
   }
   function checkUpdateViaNpm(installed) {
