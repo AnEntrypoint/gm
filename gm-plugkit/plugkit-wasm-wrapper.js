@@ -2833,7 +2833,7 @@ function makeHostFunctions(instanceRef) {
           domSelector = domMatch[1];
           evalBody = domMatch[2] && domMatch[2].trim() ? domMatch[2] : 'return null;';
         }
-        const navTimeout = Math.min(timeoutMs, 60000);
+        const navTimeout = Math.min(timeoutMs, 120000);
         const gotoPrefix = startUrl
           ? `await page.goto(${JSON.stringify(startUrl)},{waitUntil:'load',timeout:${navTimeout}});\n`
           : '';

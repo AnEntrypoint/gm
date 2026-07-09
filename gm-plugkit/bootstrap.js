@@ -751,12 +751,31 @@ function ensureWrapperFresh() {
         if (a === b) same = true;
       } catch (_) {}
     }
-    if (!same) {
-      fs.mkdirSync(gmToolsDir(), { recursive: true });
-      fs.copyFileSync(wrapperSrc, wrapperDst);
+    if (same) return false;
+    // Many independent per-project watchers share this one gmToolsDir() install --
+    // concurrent CLI invocations from different projects can race this copy, so
+    // it's lock-guarded (atomic O_EXCL) + tmp-write-then-rename, never a direct
+    // in-place copyFileSync another reader could observe half-written.
+    fs.mkdirSync(gmToolsDir(), { recursive: true });
+    const lockPath = wrapperDst + '.lock';
+    acquireLock(lockPath);
+    try {
+      let stillSame = false;
+      if (fs.existsSync(wrapperDst)) {
+        try {
+          const a = sha256OfFileSync(wrapperSrc);
+          const b = sha256OfFileSync(wrapperDst);
+          if (a === b) stillSame = true;
+        } catch (_) {}
+      }
+      if (stillSame) return false;
+      const tmpDst = wrapperDst + '.tmp.' + process.pid;
+      fs.copyFileSync(wrapperSrc, tmpDst);
+      fs.renameSync(tmpDst, wrapperDst);
       return true;
+    } finally {
+      releaseLock(lockPath);
     }
-    return false;
   } catch (_) { return false; }
 }
 

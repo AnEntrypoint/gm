@@ -219,19 +219,26 @@ function writeCliError(phase, err) {
     try { skillRefresh = ensureSkillMdFresh(); } catch (_) {}
     let wrapperRefreshed = false;
     try { wrapperRefreshed = ensureWrapperFresh(); } catch (_) {}
-    writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
-    console.log(JSON.stringify({
-      ok: true,
-      already_serving: true,
-      watcher_pid: already.pid,
-      version: already.version,
-      skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
-      wrapper_refreshed: wrapperRefreshed,
-      message: wrapperRefreshed
-        ? 'plugkit already serving; wrapper file on disk was stale and has been refreshed -- restart the watcher to load it'
-        : 'plugkit already serving, no bootstrap/spawn needed',
-    }));
-    process.exit(0);
+    if (wrapperRefreshed) {
+      writeCliStatus({ phase: 'wrapper-drift-detected', reason: 'on-disk-wrapper-refreshed', running_pid: already.pid });
+      console.error(`[gm-plugkit] running watcher (pid=${already.pid}) serves a stale wrapper; on-disk copy just refreshed -- forcing reboot`);
+      try {
+        if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
+        else process.kill(already.pid, 'SIGTERM');
+      } catch (_) {}
+    } else {
+      writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
+      console.log(JSON.stringify({
+        ok: true,
+        already_serving: true,
+        watcher_pid: already.pid,
+        version: already.version,
+        skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
+        wrapper_refreshed: false,
+        message: 'plugkit already serving, no bootstrap/spawn needed',
+      }));
+      process.exit(0);
+    }
   }
   if (versionDrifted) {
     const targetVersion = remoteVersionDrifted ? remoteUpdate.latest : onDiskVersion;
