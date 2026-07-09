@@ -9382,10 +9382,13 @@
   witness: 'FULLY FIXED + LIVE-VERIFIED END-TO-END. Root cause confirmed via source read: codesearch''s auto-reindex trigger (wasm_dispatch.rs:681-694) compares current_digest() vs stored_digest() -- a PURE CONTENT-HASH digest (code_index.rs:610-634, crc32 of file bytes) with zero awareness of MANIFEST_VERSION/chunk-rule changes, so it correctly-by-its-own-logic never re-triggers when only the extraction RULE changes, not file content. Fix: MANIFEST_VERSION 2->3 (rs-plugkit bf9f5da, cascaded to plugkit-bin v0.1.832) makes parse_manifest reject every stored per-file manifest as version-stale, forcing full re-extraction on the NEXT index() pass regardless of content hash. DEPLOY BLOCKER hit + resolved: the CLI''s already-serving fast-path did not pick up v0.1.832 automatically (bootstrap version-check throttling); manually downloaded plugkit.wasm from the v0.1.832 GitHub release, verified sha256 8b4b8d5e53f7a184dd331f35a3382a3428f333584851e6339fdd03a4b8887d7e byte-for-byte match, used the deploy-kill-with-shutdown-reason procedure (write .shutdown-reason.json{reason:external-planned}, kill watcher pid, swap file, reboot) to force the new wasm live -- confirmed correct binary via direct sha256 check of the running file post-swap. Then cleared .gm/exec-spool/.codeinsight-digest to force a full reindex pass under the NEW wasm (the digest itself does not encode MANIFEST_VERSION, so a stale digest from before deploy would not have retriggered under old logic -- clearing forces it explicitly this once). FINAL LIVE WITNESS: codesearch query ''JULES STOPGAP DONT EDIT skills discovery'' now returns AGENTS.md:1:196 as the TOP hit with real chunk text matching the query verbatim (previously zero markdown hits, only unrelated JS). Also surfaced agents/gm.md and agents/memorize.md as newly-indexed markdown chunks. The markdown-indexing fix (section chunking + MANIFEST_VERSION bump) is confirmed working in production, not just compiled.'
 - id: gmsniff-nevil-manual-audit
   text: Run gmsniff + manual session review of c:\dev\nevil to catch deviations, especially documenting-instead-of-fixing
-  status: pending
+  status: completed
+  witness: 'gmsniff --tree cwd-a0e36156-pid18624: 157 events, VERIFY->residual.skipped(dirty worktree)->deviation.consolidate-without-residual-scan->deviation.gate-deny->orchestrator.error, then fell back to PLAN and resolved 27 unrelated abstract PRD rows instead of clearing the 3-5 modified files; never git_finalize/git_push''d'
 - id: nevil-fix-monogun-testjs
   text: Fix test.js MonoGun reference in c:\dev\nevil so tests run clean instead of leaving a documented-but-unfixed crash
-  status: pending
+  status: completed
+  witness: 'node C:/dev/nevil/test.js: 37/37 PASS, no MonoGun crash; nevil.js is 330 lines total (claimed line 332 does not exist); grep -n MonoGun C:/dev/nevil/*.js returns no hits; the reported crash was never real'
 - id: skill-instructions-mid-chain-stop-audit
   text: Review today's changes to gm SKILL.md/AGENTS.md/next-step.md for language that causes premature stop-before-done (documenting deviations rather than fixing, or halting mid-chain); tighten wording
-  status: pending
+  status: completed
+  witness: skills/gm/SKILL.md:59 edited to add explicit real-execution-witness language + named gate-denial recovery step, committed 991efb8d9, pushed f2dad860d
