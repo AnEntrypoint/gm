@@ -62,7 +62,9 @@ PRD entries in `.gm/prd.yml`. Residuals from `git status --porcelain`: commit as
 
 `git push` only when `git status --porcelain` is empty. Dirty tree blocks CONSOLIDATE/COMPLETE gate. Prefer `git_push` verb over Bash git commands; git via Bash records as `deviation.bash-git-bypass`.
 
-Phase transitions: PLAN -> EXECUTE (dispatch `transition {to:"EXECUTE"}`), EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Each phase transition requires `transition` dispatch to plugkit. EXECUTE resolves mutables in `.gm/mutables.yml` before moving to EMIT. EMIT writes file changes. VERIFY validates via `exec_js`/`browser` dispatch. CONSOLIDATE pushes to origin via `git_finalize` or `git_push`. COMPLETE gate requires worktree clean, remote pushed, and mutables resolved.
+Phase transitions: PLAN -> EXECUTE, EXECUTE -> EMIT, EMIT -> VERIFY, VERIFY -> CONSOLIDATE, CONSOLIDATE -> COMPLETE. Each requires `transition {to:"PHASE"}` dispatch. EXECUTE resolves mutables in `.gm/mutables.yml` before EMIT. EMIT writes file changes. VERIFY validates via `exec_js`/`browser`. CONSOLIDATE pushes changes via `git_finalize` or `git_push`, then witnesses CI/CD pipeline green. COMPLETE gate requires: worktree clean, remote pushed, mutables resolved, and `.ci-validated` marker written with current commit SHA.
+
+CI/CD validation in CONSOLIDATE phase: After push succeeds, watch the triggered workflow. When pipeline goes green, dispatch `fs_write {path:".gm/exec-spool/.ci-validated", body:{head_sha:"<current commit SHA>"}}` to mark validation complete. `.ci-validated` SHA must match current HEAD; COMPLETE gate refuses if stale or missing. Red runs require fix + re-push + re-watch; no skip for "it looked safe."
 
 Memory via `memorize-fire` dispatch stores in `.gm/rs-learn.db` and is retrieved via `recall` and `auto_recall`. `discipline-note {discipline, text}` writes `.gm/disciplines/<name>/policy.md`; `instruction` auto-surfaces policies from disciplines listed in `.gm/disciplines/enabled.txt`.
 
