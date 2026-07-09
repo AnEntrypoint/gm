@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh } = require('./bootstrap');
 
 function readUpdateAvailableMarker(dir) {
   try {
@@ -217,6 +217,8 @@ function writeCliError(phase, err) {
     try { ensureGmPlugkitVersionFresh(); } catch (_) {}
     let skillRefresh = null;
     try { skillRefresh = ensureSkillMdFresh(); } catch (_) {}
+    let wrapperRefreshed = false;
+    try { wrapperRefreshed = ensureWrapperFresh(); } catch (_) {}
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
     console.log(JSON.stringify({
       ok: true,
@@ -224,7 +226,10 @@ function writeCliError(phase, err) {
       watcher_pid: already.pid,
       version: already.version,
       skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
-      message: 'plugkit already serving, no bootstrap/spawn needed',
+      wrapper_refreshed: wrapperRefreshed,
+      message: wrapperRefreshed
+        ? 'plugkit already serving; wrapper file on disk was stale and has been refreshed -- restart the watcher to load it'
+        : 'plugkit already serving, no bootstrap/spawn needed',
     }));
     process.exit(0);
   }

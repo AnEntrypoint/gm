@@ -1122,6 +1122,7 @@ module.exports = {
   readVersionFile,
   ensureGmPlugkitVersionFresh,
   ensureSkillMdFresh,
+  ensureWrapperFresh,
 };
 
 if (require.main === module) {
