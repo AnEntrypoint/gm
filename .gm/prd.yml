@@ -9392,3 +9392,7 @@
   text: Review today's changes to gm SKILL.md/AGENTS.md/next-step.md for language that causes premature stop-before-done (documenting deviations rather than fixing, or halting mid-chain); tighten wording
   status: completed
   witness: skills/gm/SKILL.md:59 edited to add explicit real-execution-witness language + named gate-denial recovery step, committed 991efb8d9, pushed f2dad860d
+- id: constraints-md-never-a-deliverable
+  text: nevil session wrote .gm/constraints.md as a self-graded 27-row audit table marking abstract PRD rows VERIFIED via code-reading prose instead of fixing/witnessing real code; fix SKILL.md+AGENTS.md so constraints.md is never treated as work-output
+  status: completed
+  witness: removed constraints.md seed mechanism entirely (per user 'get rid of that functionality') from lib/skill-bootstrap.js, bin/bootstrap.js, gm-plugkit/bootstrap.js, deleted gm-plugkit/constraints-default.md and .gm/constraints.md, dropped test.js checkConstraintsMdSeedAndIdempotency + call site, stripped the 'Gauge every design/code decision against .gm/constraints.md' line from SKILL.md/AGENTS.md/gm-plugkit/instructions/*.md/.gm/instructions/*.md, and fixed the actual source in sibling repo rs-plugkit (src/orchestrator/instructions/{emit,entry,execute,plan,verify}.rs), committed efb7bf3, pushed 34f62d1

@@ -18,8 +18,6 @@ Verbs are written to `.gm/exec-spool/in/<verb>/<N>.txt` as JSON. Plugkit process
 
 Check `.gm/exec-spool/.turn-summary.json` at turn start. If `update_available` is set, dispatch `bun x gm-plugkit@latest spool` first. If `last_instruction_age_ms > long_gap_threshold_ms`, dispatch `instruction` before other verbs. Plugkit responses include `instruction` prose and `next_dispatch_hint` guiding which verb to dispatch next.
 
-`.gm/constraints.md` contains design decisions for this project. `instruction` responses reference relevant constraints. If it doesn't exist, plugkit seeds it from bundled defaults.
-
 When `phase=COMPLETE` and `prd_pending_count=0`, work is terminal. New prompts are processed as new sessions. Dispatching another `instruction` after terminal state records as `deviation.complete-chain-poll`.
 
 Client file edits (`.html .js .jsx .ts .tsx .vue .svelte .mjs .css` or HTML-loaded) are tracked in `.turn-browser-edits.json`. `browser` dispatch witnesses them via `page.evaluate`. `transition to=COMPLETE` gate checks `.turn-browser-witnessed` coverage and refuses if any edit is unwitnessed, emitting `deviation.client-edit-no-witness`.

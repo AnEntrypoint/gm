@@ -89,7 +89,6 @@ Write the recall index only via `memorize-fire`; surfaces outside it produce mem
 
 ## Constraints
 
-Gauge every design/code decision against `.gm/constraints.md` (create from bundled default if absent) -- the standing decision-arbiter, checked at every phase.
 
 ## Return to plugkit
 

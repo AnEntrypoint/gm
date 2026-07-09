@@ -115,20 +115,6 @@ function checkAgentsMdBudget() {
   assert(/recall:/.test(fs.readFileSync(abs, 'utf8')), 'AGENTS.md has no `recall:` pointer -- detail must externalize to rs-learn');
   console.log('agents-md-budget guard ok (' + bytes + '/' + CEILING + ' bytes)');
 }
-function checkConstraintsMdSeedAndIdempotency() {
-  const target = path.join(ROOT, '.gm', 'constraints.md');
-  if (!fs.existsSync(target)) { console.log('constraints-md guard skipped (not yet seeded, expected transient)'); return; }
-  const marker = 'test-marker-' + process.pid + '-do-not-overwrite';
-  const orig = fs.readFileSync(target, 'utf8');
-  fs.writeFileSync(target, orig + '\n' + marker + '\n');
-  try {
-    cp.execFileSync(process.execPath, ['-e', "require(path.join(process.env.GM_ROOT,'gm-plugkit','bootstrap.js')).ensureInstructionsBundle(process.env.GM_ROOT)"], { env: Object.assign({}, process.env, { GM_ROOT: ROOT }), stdio: 'ignore', timeout: 15000 });
-  } catch (_) {}
-  const after = fs.readFileSync(target, 'utf8');
-  assert(after.includes(marker), 'constraints.md seed-if-absent must NOT overwrite a user-modified file on re-run (f.f=f idempotency) -- marker lost after re-seed');
-  fs.writeFileSync(target, orig);
-  console.log('constraints-md seed+idempotency guard ok');
-}
 function checkWrapperRegressions() {
   const wrapper = fs.readFileSync(path.join(ROOT, 'gm-plugkit', 'plugkit-wasm-wrapper.js'), 'utf-8');
   assert(!/\bspawnSync\s*\(\s*process\.execPath\s*,\s*\[\s*['"]-e['"]\s*,\s*`[^`]*\b_(?:net|http|https|crypto|childProcess)Module\b[^`]*`/.test(wrapper), 'no spawnSync child-script template may reference a parent-scope _*Module alias (spawned child has no such binding)');
@@ -168,7 +154,6 @@ async function main() {
   checkUpdateWarningWired();
   checkRenameAndInstaller();
   checkAgentsMdBudget();
-  checkConstraintsMdSeedAndIdempotency();
   await ensureWatcher();
   console.log('watcher alive');
   const inst = await dispatch('instruction', { prompt: 'test integration probe' });

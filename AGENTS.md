@@ -64,7 +64,7 @@ Record only non-obvious multi-run-cost caveats; prune stale; never document the 
 
 **No UTF-8 BOM in any tracked source file** -- always `-Encoding utf8` (no BOM) or the `Write` tool; PowerShell defaults betray this. `test.js checkNoBom()` is the structural guard; one sighting spawns the full-tree sweep. Cause + breakage mechanics in the recall store (`recall: BOM regression incident`).
 
-**No graphical symbols; convert to industry-standard text on sight.** Any non-ASCII decorative glyph (arrows, box/geometric glyphs, stars, dots, bullets, checks/crosses, emojis) is forbidden in all output and source -- convert it to its plain-ASCII equivalent the same turn (the word, `->`, `-`/`*`, `[x]`/`[ ]`, done/todo/pass/fail). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs, and canonical CS/formal-logic notation in `.gm/constraints.md` / `gm-plugkit/constraints-default.md` (`.`, `->` as function-space, `|-`, set/quantifier symbols) -- these are semantic operators in a formal constraints spec, not decorative flourish. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
+**No graphical symbols; convert to industry-standard text on sight.** Any non-ASCII decorative glyph (arrows, box/geometric glyphs, stars, dots, bullets, checks/crosses, emojis) is forbidden in all output and source -- convert it to its plain-ASCII equivalent the same turn (the word, `->`, `-`/`*`, `[x]`/`[ ]`, done/todo/pass/fail). Tell-tale-AI class: one sighting spawns the full-codebase sweep, never a one-off edit. Exempt: functional code operators (`=>`, `??`, `?.`, comparison/math), frozen changelog/git-log entries, binary stores, intentional icon-font/CSS-content product glyphs. `ccsniff --glyph-discipline` flags decorative glyphs post-hoc (run each audit, like `--git-discipline`/`--search-discipline`).
 
 **Implicit, not explicit, in skill prose**: skill files elicit, never describe -- terse imperatives, no recipes/citations/manuals; boot-edge ABI (spool paths, JSON fields, verb names, deviation ids, gate names) stays explicit; SKILL.md keeps only invocation syntax, transition markers, gate conditions, constraints, exact-usage examples. Full criteria: the recall store (`recall: implicit-not-explicit skill prose criteria`).
 
@@ -179,8 +179,6 @@ Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `che
 Session lifecycle (task/browser persistence across turn-stops, residual-scan trigger conditions): the recall store (`recall: session lifecycle killSessionTasks residual-scan`).
 
 Browser session state roots at the git common dir, never `process.cwd()` (worktree fan-out shares one chromium, not N): the recall store (`recall: browser session state worktree common-dir rooting`).
-
-**Per-project `.gm/constraints.md` is the standing decision arbiter**: seed-if-absent (bootstrap copies the bundled CS-constraints default only when missing), never overwrite on re-seed -- it is user-editable mutable config, same contract as `.gm/next-step.md`. Every design/code decision the agent makes gauges against it; the pointer rule lives in SKILL.md, this is only the existence/mechanism note. `test.js` witnesses both the seed and the no-clobber idempotency.
 
 ## Spool observability surface
 

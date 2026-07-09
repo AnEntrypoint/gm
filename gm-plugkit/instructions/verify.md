@@ -75,7 +75,6 @@ rs-learn never calls a model; it emits the need, you supply the answer. Skipping
 
 ## Constraints
 
-Gauge every design/code decision against `.gm/constraints.md` (create from bundled default if absent) -- the standing decision-arbiter, checked at every phase.
 
 ## Dispatch
 

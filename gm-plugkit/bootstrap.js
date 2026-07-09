@@ -112,16 +112,6 @@ function ensureNextStepWiring(cwd) {
     }
   } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: nextStepPath, error: e.message }); }
 
-  const constraintsPath = path.join(gmDir, 'constraints.md');
-  try {
-    if (!fs.existsSync(constraintsPath)) {
-      const defaultSrc = path.join(__dirname, 'constraints-default.md');
-      if (fs.existsSync(defaultSrc)) {
-        fs.writeFileSync(constraintsPath, fs.readFileSync(defaultSrc));
-        changes.push('seeded .gm/constraints.md');
-      }
-    }
-  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: constraintsPath, error: e.message }); }
 
   const claudeMdPath = path.join(cwd, 'CLAUDE.md');
   try {
