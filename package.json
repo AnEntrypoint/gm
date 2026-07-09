@@ -1,6 +1,6 @@
 {
   "name": "gm-skill",
-  "version": "2.0.1834",
+  "version": "2.0.1835",
   "description": "Canonical universal harness — AI-native software engineering via skill-driven orchestration; bootstraps plugkit for task execution and session isolation. Install in any AI coding agent host.",
   "author": "AnEntrypoint",
   "license": "MIT",
