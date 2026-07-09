@@ -8,6 +8,8 @@ allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *)
 
 This is the only allowed next step when a `gm` walk reaches `phase=COMPLETE AND prd_pending_count=0`. Never end that turn with prose alone -- dispatch this skill instead, every time, no exceptions for "it looks finished."
 
+**This skill itself has exactly two allowed ways to end, and no others.** (1) Dispatch `Skill(skill="gm")` with the remaining PRD rows (found reachable work, or reopened an `external`/`out-of-reach` row, or this is the first confirming pass this session) -- `gm` then runs and, when it reaches COMPLETE again, calls back into this same skill. (2) Confirm there are no remaining PRD rows and none can be added -- a real, witnessed check (steps 2-4 below actually run, not assumed), not a feeling of "probably done." There is no third path: no prose-only stop that isn't outcome (2), no deferring to the user to decide whether to continue, no partial confirmation. Every dispatch of this skill lands in exactly one of these two states before the turn ends.
+
 ## What this skill does
 
 1. Read `.gm/exec-spool/.turn-summary.json` for the current `phase`, `prd_pending`, and how many times this repo has already round-tripped through `gm-continue` this session (track via a counter file, see below).

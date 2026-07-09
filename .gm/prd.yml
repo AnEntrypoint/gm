@@ -9468,3 +9468,11 @@
   text: 'root cause of gm-continue crossover not firing automatically in c:\dev\nevil (user had to manually retype list-remaining-limitations + new session): rs-plugkit''s served instruction prose (entry.rs continuation invariant, update_docs.rs COMPLETE section) still said ''authorizes stopping''/''session ends''/''stop dispatching'' with zero mention of gm-continue -- agents trust live plugkit response over skill memory per this project''s own rules, so the SKILL.md-only mandate never actually reached the agent''s real decision point'
   status: completed
   witness: rs-plugkit/src/orchestrator/instructions/entry.rs line 7 and update_docs.rs lines 33+37 both edited to explicitly name Skill(skill='gm-continue') as the required dispatch before a COMPLETE turn ends; cargo check --lib passes clean; pushed as rs-plugkit commit d5b84da; gm-plugkit/instructions/entry.md + update_docs.md mirrors synced identically and copied into the local gitignored .gm/instructions/ runtime dir so this machine's own watcher serves the fix without waiting for cascade republish
+- id: gm-only-ends-via-gm-continue-absolute
+  text: skills/gm/SKILL.md line 11 sharpened to 'gm is only allowed to end by calling gm-continue; there is no other exit' per user directive making the two-skill closure absolute
+  status: completed
+  witness: 'skills/gm/SKILL.md line 11 rewritten with ''This is absolute: no branch of gm''s own logic, no phase, no gate response ever authorizes ending a gm-driven turn any other way'''
+- id: gm-continue-two-exits-only
+  text: 'skills/gm-continue/SKILL.md added explicit statement: this skill has exactly two allowed ways to end (dispatch gm with remaining PRDs, or confirm none remain/can be added) and no third path (no deferring to user, no partial confirmation, no prose-only stop that isn''t outcome 2)'
+  status: completed
+  witness: skills/gm-continue/SKILL.md added new paragraph after line 9 enumerating the exactly-two allowed endings with explicit 'There is no third path' statement
