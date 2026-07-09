@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const readline = require('readline');
 
-const SKILL_NAME = 'gm';
+const BUNDLED_SKILLS = ['gm', 'wfgy-method'];
 
 function out(msg) { process.stdout.write(msg + '\n'); }
 function err(msg) { process.stderr.write(msg + '\n'); }
@@ -25,10 +25,10 @@ function homeDir() {
   return process.env.USERPROFILE || process.env.HOME || os.homedir();
 }
 
-function bundledSkillDir() {
+function bundledSkillDir(skillName) {
   const candidates = [
-    path.join(__dirname, '..', 'skills', SKILL_NAME),
-    path.join(__dirname, '..', '..', 'skills', SKILL_NAME),
+    path.join(__dirname, '..', 'skills', skillName),
+    path.join(__dirname, '..', '..', 'skills', skillName),
   ];
   return candidates.find(p => { try { return fs.existsSync(path.join(p, 'SKILL.md')); } catch (_) { return false; } }) || null;
 }
@@ -51,11 +51,11 @@ function copyTree(src, dst) {
   }
 }
 
-function installSkillDir(skillSrc, home, projectScope) {
+function installSkillDir(skillSrc, skillName, home, projectScope) {
   const installed = [];
   const roots = projectScope
-    ? [path.join(process.cwd(), '.claude', 'skills', SKILL_NAME)]
-    : [path.join(home, '.claude', 'skills', SKILL_NAME), path.join(home, '.agents', 'skills', SKILL_NAME)];
+    ? [path.join(process.cwd(), '.claude', 'skills', skillName)]
+    : [path.join(home, '.claude', 'skills', skillName), path.join(home, '.agents', 'skills', skillName)];
   for (const root of roots) {
     const legacy = path.join(path.dirname(root), 'gm-skill');
     try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
@@ -162,10 +162,10 @@ function printHelp() {
   out('Usage:');
   out('  npx gm-skill install            interactive install (offers Claude Code settings)');
   out('  npx gm-skill install --yes      non-interactive install (sets Claude Code settings)');
-  out('  npx gm-skill install --project  install into ./.claude/skills/gm instead of the home dir');
+  out('  npx gm-skill install --project  install into ./.claude/skills/ instead of the home dir');
   out('');
-  out('Installs the gm skill (/gm) by copying its directory into ~/.claude/skills/gm and');
-  out('~/.agents/skills/gm -- no npx "skills" library required.');
+  out('Installs bundled skills (gm and wfgy-method) by copying their directories into');
+  out('~/.claude/skills/ and ~/.agents/skills/ -- no npx "skills" library required.');
 }
 
 async function main() {
@@ -176,15 +176,19 @@ async function main() {
   const home = homeDir();
   if (!home) { err('cannot resolve home directory (HOME/USERPROFILE unset)'); return 1; }
 
-  const skillSrc = bundledSkillDir();
-  if (!skillSrc) { err('bundled skill directory skills/gm not found in package'); return 1; }
-
   const nonInteractive = flags.yes || !process.stdin.isTTY;
 
-  const installed = installSkillDir(skillSrc, home, flags.project);
-  if (installed.length === 0) { err('skill installation failed'); return 1; }
-  out('Installed gm skill to:');
-  for (const p of installed) out('  ' + p);
+  let anyInstalled = false;
+  for (const skillName of BUNDLED_SKILLS) {
+    const skillSrc = bundledSkillDir(skillName);
+    if (!skillSrc) { err(`bundled skill directory skills/${skillName} not found in package`); continue; }
+    const installed = installSkillDir(skillSrc, skillName, home, flags.project);
+    if (installed.length === 0) { err(`${skillName} skill installation failed`); continue; }
+    anyInstalled = true;
+    out(`Installed ${skillName} skill to:`);
+    for (const p of installed) out('  ' + p);
+  }
+  if (!anyInstalled) { err('skill installation failed'); return 1; }
 
   if (!flags.project) {
     if (seedGlobalMemory(home)) out('Seeded global memory line in ~/.claude/CLAUDE.md.');
