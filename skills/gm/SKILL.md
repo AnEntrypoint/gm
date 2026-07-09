@@ -56,13 +56,13 @@ Spool input from PowerShell must be UTF-8 no-BOM (`-Encoding utf8` or `[System.I
 
 Tracked files touched = commit+push to origin before COMPLETE. Dirty tree blocks COMPLETE gate; fix via stage-commit or revert. `git_finalize` bundles add->commit->porcelain-gate->push in one dispatch.
 
-VERIFY phase: dispatch `exec_js` or `browser` to validate EMIT changes against test cases.
+VERIFY phase: dispatch `exec_js` or `browser` to validate EMIT changes.
 
 PRD entries in `.gm/prd.yml`. Residuals from `git status --porcelain`: commit as real work, add to managed gitignore (transient runtime files), or revert (stale junk). `.gm/disciplines/` and new memorize-fire JSON are tracked. `.gm/witness/` and staleness markers go in managed gitignore.
 
 `git push` only when `git status --porcelain` is empty. Dirty tree blocks CONSOLIDATE/COMPLETE gate. Prefer `git_push` verb over Bash git commands; git via Bash records as `deviation.bash-git-bypass`.
 
-Phase transitions: PLAN -> EXECUTE (dispatch `transition {to:"EXECUTE"}`), EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Each phase transition requires `transition` dispatch to plugkit. EXECUTE resolves mutables in `.gm/mutables.yml` before moving to EMIT. EMIT writes file changes. VERIFY tests via `exec_js`/`browser` dispatch. CONSOLIDATE pushes to origin via `git_finalize` or `git_push`. COMPLETE gate requires worktree clean, remote pushed, and mutables resolved.
+Phase transitions: PLAN -> EXECUTE (dispatch `transition {to:"EXECUTE"}`), EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Each phase transition requires `transition` dispatch to plugkit. EXECUTE resolves mutables in `.gm/mutables.yml` before moving to EMIT. EMIT writes file changes. VERIFY validates via `exec_js`/`browser` dispatch. CONSOLIDATE pushes to origin via `git_finalize` or `git_push`. COMPLETE gate requires worktree clean, remote pushed, and mutables resolved.
 
 Memory via `memorize-fire` dispatch stores in `.gm/rs-learn.db` and is retrieved via `recall` and `auto_recall`. `discipline-note {discipline, text}` writes `.gm/disciplines/<name>/policy.md`; `instruction` auto-surfaces policies from disciplines listed in `.gm/disciplines/enabled.txt`.
 
