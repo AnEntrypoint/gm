@@ -56,7 +56,7 @@ Spool input from PowerShell must be UTF-8 no-BOM (`-Encoding utf8` or `[System.I
 
 Tracked files touched = commit+push to origin before COMPLETE. Dirty tree blocks COMPLETE gate; fix via stage-commit or revert. `git_finalize` bundles add->commit->porcelain-gate->push in one dispatch.
 
-VERIFY phase: dispatch `exec_js` or `browser` to validate EMIT changes.
+VERIFY phase: run the real code path and read its actual output via `exec_js` or `browser` -- a finding is only real once witnessed by execution this turn. Never assert a crash, pass, or defect from memory, prior session state, or written prose alone. A gate denial (e.g. `residual.skipped` on dirty worktree) is resolved immediately by the named recovery action (commit or revert the listed files, then re-dispatch the same verb) in the same turn -- it is never grounds to re-enter PLAN, add unrelated PRD rows, or narrate the blocker instead of clearing it.
 
 PRD entries in `.gm/prd.yml`. Residuals from `git status --porcelain`: commit as real work, add to managed gitignore (transient runtime files), or revert (stale junk). `.gm/disciplines/` and new memorize-fire JSON are tracked. `.gm/witness/` and staleness markers go in managed gitignore.
 
