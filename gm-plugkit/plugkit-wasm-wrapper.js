@@ -2772,6 +2772,17 @@ function makeHostFunctions(instanceRef) {
         __idleClosedSessions.delete(sessionId);
         stampBrowserLastUse(cwd, sessionId);
         markInflight(sessionId, curPid);
+        {
+          const bodyForShapeCheck = trimmed.replace(/^(?:timeout=\d+\s*\n|url=\S+[ \t]*\n)*/, '').trim();
+          if (/^\{/.test(bodyForShapeCheck)) {
+            return writeWasmJson(instanceRef.value, {
+              ok: false,
+              stdout: '',
+              stderr: 'browser verb body is a JSON object, not a supported body shape. The browser verb takes plain-text prefixed bodies only: "session new", "session close", "timeout=<ms>\\n<expr>", "url=<target>\\n<expr>", a bare URL, "screenshot[=name]\\n<expr>", "dom=<selector>\\n<expr>", or "capture|profile|trace ...\\n<expr>" -- never a {"command":...} JSON payload. Use "session new" to open a session, then "url=<target>\\n<js-expression>" to navigate and evaluate in one dispatch.',
+              exit_code: 1,
+            });
+          }
+        }
         let evalBody = body;
         let timeoutMs = 120000;
         const timeoutMatch = body.match(/^timeout=(\d+)\s*\n([\s\S]*)$/);
