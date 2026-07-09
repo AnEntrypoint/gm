@@ -18,6 +18,8 @@ PRD = `|F|=1` plan-item store: enumerate every node in the destructive transform
 
 **Inherited rows resume first.** `ready_wave`/`prd_pending>0` at entry = undone transform, not someone else's -- THIS cover's first slice. Resume to `prd-resolve` (witnessed) or explicit re-scope/close before any fresh row; disjoint fresh cover orphaning inherited rows = stopped mid-transform, not finished.
 
+**`prd-resolve` at PLAN is bound by the same false-completion rule as VERIFY, not exempt because the row was inherited.** A `prd-resolve` whose `witness_evidence` says "deferred"/"pending next session"/"pending browser fix"/"awaits [X] recovery"/"user must refresh" is marking undone work done -- forbidden regardless of phase. Real external blockers (browser environment down, credential missing, another team's repo) keep the row `status: pending` with `blockedBy: [external, "<specific reason>"]`; they are never grounds to resolve as `completed`. A session that repeatedly hits the same external blocker (e.g. browser verb crashing every attempt) `prd-add`s a row naming the blocker itself as the thing to fix -- diagnose and repair the tool (see BROWSER discipline), not paper over it with a completed status on the original row.
+
 "Every possible" load-bears: apply to every noun/surface/transform/output the request reaches, each application a row. Single-digit count on non-trivial request = stopped early -- re-orient, re-enumerate. Density, not minimality, is the COMPLETE-time invariant. Inline TODO in response body violates `|F|=1`.
 
 ## Expansion

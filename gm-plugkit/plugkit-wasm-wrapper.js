@@ -1314,6 +1314,7 @@ function startManagedBrowser(pw, profileDir, cwd) {
     logEvent('plugkit', 'browser.launch-failed', { reason: 'chromium-missing' });
     throw err;
   }
+  try { reapOrphanChromiums(cwd, 'pre-spawn'); } catch (_) {}
   const port = findFreePortSync();
   let noSandbox = process.env.GM_BROWSER_NO_SANDBOX === '1';
   let { pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox, cwd);
@@ -1366,36 +1367,47 @@ function sleepSyncMs(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms | 0);
 }
 
+const __browserClosingPids = new Set();
+
 function gracefulCloseBrowser(entry, reason) {
   if (!entry) return;
   const { pid, port, profileDir } = entry;
-  if (Number.isFinite(port) && port > 0) {
-    try {
-      const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 600);
-      if (info && info.webSocketDebuggerUrl) {
-        spawnSync(process.execPath, ['-e', `
-          const http = require('http');
-          const req = http.request({host:'127.0.0.1',port:${port},path:'/json/close/browser',method:'GET',timeout:1500},
-            res => { res.resume(); res.on('end', () => process.exit(0)); });
-          req.on('error', () => process.exit(1));
-          req.on('timeout', () => { req.destroy(); process.exit(1); });
-          req.end();
-        `], { timeout: 3000, windowsHide: true });
-      }
-    } catch (_) {}
+  if (Number.isFinite(pid) && pid > 0 && __browserClosingPids.has(pid)) {
+    try { logEvent('plugkit', 'browser.close-skipped-already-closing', { pid, reason: reason || 'close' }); } catch (_) {}
+    return;
   }
-  if (Number.isFinite(pid) && pid > 0) {
-    if (isProcessAliveSync(pid) && !pidIsManagedChromium(pid)) {
-      try { logEvent('plugkit', 'browser.kill-skipped-pid-reused', { pid, reason: reason || 'close' }); } catch (_) {}
-    } else {
-      const deadline = Date.now() + 1500;
-      try { process.kill(pid, 'SIGTERM'); } catch (_) {}
-      while (Date.now() < deadline && isProcessAliveSync(pid)) sleepSyncMs(Math.min(150, deadline - Date.now()));
-      if (isProcessAliveSync(pid)) killPidQuiet(pid);
+  if (Number.isFinite(pid) && pid > 0) __browserClosingPids.add(pid);
+  try {
+    if (Number.isFinite(port) && port > 0) {
+      try {
+        const info = fetchJsonSync(`http://127.0.0.1:${port}/json/version`, 600);
+        if (info && info.webSocketDebuggerUrl) {
+          spawnSync(process.execPath, ['-e', `
+            const http = require('http');
+            const req = http.request({host:'127.0.0.1',port:${port},path:'/json/close/browser',method:'GET',timeout:1500},
+              res => { res.resume(); res.on('end', () => process.exit(0)); });
+            req.on('error', () => process.exit(1));
+            req.on('timeout', () => { req.destroy(); process.exit(1); });
+            req.end();
+          `], { timeout: 3000, windowsHide: true });
+        }
+      } catch (_) {}
     }
+    if (Number.isFinite(pid) && pid > 0) {
+      if (isProcessAliveSync(pid) && !pidIsManagedChromium(pid)) {
+        try { logEvent('plugkit', 'browser.kill-skipped-pid-reused', { pid, reason: reason || 'close' }); } catch (_) {}
+      } else {
+        const deadline = Date.now() + 1500;
+        try { process.kill(pid, 'SIGTERM'); } catch (_) {}
+        while (Date.now() < deadline && isProcessAliveSync(pid)) sleepSyncMs(Math.min(150, deadline - Date.now()));
+        if (isProcessAliveSync(pid)) killPidQuiet(pid);
+      }
+    }
+    purgeProfileLockFiles(profileDir);
+    try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
+  } finally {
+    if (Number.isFinite(pid) && pid > 0) __browserClosingPids.delete(pid);
   }
-  purgeProfileLockFiles(profileDir);
-  try { logEvent('plugkit', 'browser.closed', { reason: reason || 'closed', pid, port, profileDir }); } catch (_) {}
 }
 
 function checkSessionNavigatedAway(port, claudeSessionId) {
