@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const readline = require('readline');
 
-const BUNDLED_SKILLS = ['gm', 'wfgy-method'];
+const BUNDLED_SKILLS = ['gm', 'gm-continue', 'wfgy-method'];
 
 function out(msg) { process.stdout.write(msg + '\n'); }
 function err(msg) { process.stderr.write(msg + '\n'); }

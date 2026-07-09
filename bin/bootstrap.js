@@ -17,58 +17,62 @@ function log(msg) {
   try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
 }
 
+const BOOTSTRAP_BUNDLED_SKILLS = ['gm', 'gm-continue', 'wfgy-method'];
+
 function ensureSkillMdCurrent(wrapperDir) {
-  try {
-    const candidates = [
-      path.join(wrapperDir, '..', 'skills', 'gm', 'SKILL.md'),
-      path.join(wrapperDir, '..', '..', 'skills', 'gm', 'SKILL.md'),
-      path.join(wrapperDir, '..', 'SKILL.md'),
-    ];
-    const bundledPath = candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
-    if (!bundledPath) return { skipped: 'bundled-not-found' };
-    const bundled = fs.readFileSync(bundledPath, 'utf8');
-    const _norm = s => s.replace(/\r\n/g, '\n');
-    const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
-    const home = os.homedir();
-    const targets = [
-      path.join(home, '.agents', 'skills', 'gm', 'SKILL.md'),
-      path.join(home, '.claude', 'skills', 'gm', 'SKILL.md'),
-    ];
-    for (const legacy of [
-      path.join(home, '.agents', 'skills', 'gm-skill'),
-      path.join(home, '.claude', 'skills', 'gm-skill'),
-    ]) {
-      try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
-    }
-    const refreshed = [];
-    for (const target of targets) {
-      try {
-        let needsWrite = true;
-        if (fs.existsSync(target)) {
-          const existing = fs.readFileSync(target, 'utf8');
-          const existingHash = crypto.createHash('sha256').update(_norm(existing)).digest('hex');
-          if (existingHash === bundledHash) needsWrite = false;
+  const home = os.homedir();
+  const allRefreshed = [];
+  for (const skillName of BOOTSTRAP_BUNDLED_SKILLS) {
+    try {
+      const candidates = [
+        path.join(wrapperDir, '..', 'skills', skillName, 'SKILL.md'),
+        path.join(wrapperDir, '..', '..', 'skills', skillName, 'SKILL.md'),
+      ];
+      const bundledPath = candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
+      if (!bundledPath) { obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { skillName }); continue; }
+      const bundled = fs.readFileSync(bundledPath, 'utf8');
+      const _norm = s => s.replace(/\r\n/g, '\n');
+      const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
+      const targets = [
+        path.join(home, '.agents', 'skills', skillName, 'SKILL.md'),
+        path.join(home, '.claude', 'skills', skillName, 'SKILL.md'),
+      ];
+      if (skillName === 'gm') {
+        for (const legacy of [
+          path.join(home, '.agents', 'skills', 'gm-skill'),
+          path.join(home, '.claude', 'skills', 'gm-skill'),
+        ]) {
+          try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
         }
-        if (needsWrite) {
-          fs.mkdirSync(path.dirname(target), { recursive: true });
-          const tmp = target + '.tmp';
-          fs.writeFileSync(tmp, bundled);
-          fs.renameSync(tmp, target);
-          refreshed.push(target);
-        }
-      } catch (e) {
-        obsEvent('bootstrap', 'skill-md.refresh.target-failed', { target, error: e.message });
       }
+      for (const target of targets) {
+        try {
+          let needsWrite = true;
+          if (fs.existsSync(target)) {
+            const existing = fs.readFileSync(target, 'utf8');
+            const existingHash = crypto.createHash('sha256').update(_norm(existing)).digest('hex');
+            if (existingHash === bundledHash) needsWrite = false;
+          }
+          if (needsWrite) {
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            const tmp = target + '.tmp';
+            fs.writeFileSync(tmp, bundled);
+            fs.renameSync(tmp, target);
+            allRefreshed.push(target);
+          }
+        } catch (e) {
+          obsEvent('bootstrap', 'skill-md.refresh.target-failed', { target, error: e.message });
+        }
+      }
+    } catch (e) {
+      obsEvent('bootstrap', 'skill-md.refresh.failed', { skillName, error: e.message });
     }
-    if (refreshed.length > 0) {
-      log(`SKILL.md refreshed (sha=${bundledHash.slice(0, 12)}): ${refreshed.join(', ')}`);
-      obsEvent('bootstrap', 'skill-md.refreshed', { hash: bundledHash.slice(0, 12), targets: refreshed });
-    }
-    return { refreshed, bundledHash };
-  } catch (e) {
-    obsEvent('bootstrap', 'skill-md.refresh.failed', { error: e.message });
-    return { error: e.message };
   }
+  if (allRefreshed.length > 0) {
+    log(`SKILL.md refreshed: ${allRefreshed.join(', ')}`);
+    obsEvent('bootstrap', 'skill-md.refreshed', { targets: allRefreshed });
+  }
+  return { refreshed: allRefreshed };
 }
 
 function ensureNextStepWiring(cwd) {

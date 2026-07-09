@@ -16,6 +16,8 @@ disclaimer: this is extremely opinionated. it will block bash, redirect your too
 
 A Claude Code Agent Skill is just a directory at `~/.claude/skills/<name>/SKILL.md` (personal, all projects) or `.claude/skills/<name>/SKILL.md` (one project). The directory name becomes the slash command. No marketplace, no `npx skills` library -- the installer copies the directory into place.
 
+**The npm package is `gm-skill`, not `gm`.** `npx gm@latest` resolves to an unrelated, unmaintained GraphicsMagick wrapper (`gm` on npm, last published years ago) with no `install` command -- it fails with `could not determine executable to run`. Always spell out the full package name below.
+
 Interactive (offers Claude Code settings):
 
 ```

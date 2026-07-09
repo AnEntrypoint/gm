@@ -119,6 +119,8 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <pre><code>npx gm-skill install          # interactive, offers the claude code settings
 npx gm-skill install --yes    # non-interactive, sets them outright</code></pre>
 
+<p><strong>The package is <code>gm-skill</code>, not <code>gm</code>.</strong> <code>npx gm@latest</code> resolves to an unrelated, unmaintained GraphicsMagick wrapper on npm and fails with <code>could not determine executable to run</code>. Spell out the full package name.</p>
+
 <p>The installer seeds this line into <code>~/.claude/CLAUDE.md</code> for you:</p>
 
 <pre><code>always use the gm skill for everything, always fan out subagents</code></pre>
