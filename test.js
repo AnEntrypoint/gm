@@ -159,7 +159,7 @@ async function main() {
   const inst = await dispatch('instruction', { prompt: 'test integration probe' });
   assert(inst.ok && inst.data && typeof inst.data === 'object', 'instruction ok + data object');
   console.log('instruction ok phase=' + (inst.data.phase || '?'));
-  const rec = await dispatch('recall', { query: 'spool dispatch architecture' });
+  const rec = await dispatch('recall', { query: 'spool dispatch architecture' }, 60000);
   assert(rec.ok && Array.isArray(rec.data.hits) && rec.data.hits.length > 0, 'recall ok + non-empty hits');
   console.log('recall ok hits=' + rec.data.hits.length);
   const health = await dispatch('health', {});
