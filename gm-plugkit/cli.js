@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh } = require('./bootstrap');
 
 function readUpdateAvailableMarker(dir) {
   try {
@@ -215,12 +215,15 @@ function writeCliError(phase, err) {
   const versionDrifted = localVersionDrifted || remoteVersionDrifted;
   if (statusServing(already, 12000) && !versionDrifted) {
     try { ensureGmPlugkitVersionFresh(); } catch (_) {}
+    let skillRefresh = null;
+    try { skillRefresh = ensureSkillMdFresh(); } catch (_) {}
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
     console.log(JSON.stringify({
       ok: true,
       already_serving: true,
       watcher_pid: already.pid,
       version: already.version,
+      skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
       message: 'plugkit already serving, no bootstrap/spawn needed',
     }));
     process.exit(0);

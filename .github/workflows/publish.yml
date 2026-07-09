@@ -116,10 +116,12 @@ jobs:
             echo "::error::gm.json missing plugkitVersion"
             exit 1
           fi
-          # Embed SKILL.md into gm-plugkit so ensureSkillMdFresh finds it
-          # without depending on gm-skill being installed as a sibling.
+          # Embed all bundled skills' SKILL.md into gm-plugkit so ensureSkillMdFresh
+          # finds every one of them without depending on gm-skill being a sibling.
           cp skills/gm/SKILL.md gm-plugkit/SKILL.md
-          echo "[done] Embedded skills/gm/SKILL.md into gm-plugkit ($(wc -c < gm-plugkit/SKILL.md) bytes)"
+          cp skills/gm-continue/SKILL.md gm-plugkit/SKILL-gm-continue.md
+          cp skills/wfgy-method/SKILL.md gm-plugkit/SKILL-wfgy-method.md
+          echo "[done] Embedded skills/{gm,gm-continue,wfgy-method}/SKILL.md into gm-plugkit"
           cd gm-plugkit
           echo "$PLUGKIT_VER" > plugkit.version
           npm publish . --access public 2>&1 | tee /tmp/npm-out.log; EXIT=${PIPESTATUS[0]}

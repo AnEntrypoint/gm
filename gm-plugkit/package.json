@@ -17,6 +17,8 @@
     "plugkit.version",
     "plugkit.sha256",
     "SKILL.md",
+    "SKILL-gm-continue.md",
+    "SKILL-wfgy-method.md",
     "instructions/"
   ],
   "keywords": [
