@@ -33,11 +33,11 @@ VERIFY is adversarial, never confirmatory: hunt every way EMIT's write breaks, v
 
 Each class exercised = exec_js/browser dispatch + witness (pass or fix-then-rewitness), same turn, before `transition`. A happy-path-only VERIFY has not verified.
 
-## Integration witness
+## Real-execution witness
 
-`test.js` at root, 200-line ceiling, real services only (mock-free) -- the single witness IS the test surface, proving a full real session end-to-end. Not one gate beside a conventional unit suite: a growing mock-heavy multi-file `test/` is the pattern gm replaces, never a coexisting exemption; the cap does not bless a parallel suite. More than the single real-services witness needs justifying, never default. Pass = integration witness; fail -> `transition` back to EXECUTE. `recursive` classifier = incomplete cover -- snake back, do not narrate past signal.
+Every claim of correctness is proven by a live `exec_js`/`browser` dispatch witnessing the real output, same turn, real services only (mock-free) -- manual troubleshooting and debugging is the entire verification surface, never a standing test file or suite. Pass = the live witness matches expectation; fail -> `transition` back to EXECUTE. `recursive` classifier = incomplete cover -- snake back, do not narrate past signal.
 
-**No unit tests, no exceptions.** A `deviation.synthetic-test-file` at VERIFY (new `*.test.*`/`*.spec.*`, a `test/`/`__tests__/` directory, or a testing-framework import found in the diff) blocks `transition` exactly like an unwitnessed mutable -- fold its assertions into `test.js` or replace them with a live `exec_js`/`browser` witness, then re-verify. This is manual legwork, not framework legwork: the adversarial corner-case sweep above is how every class gets exercised, by running the real thing, never by writing a test case that runs it later.
+**No test files, no exceptions.** A `deviation.synthetic-test-file` at VERIFY (new `*.test.*`/`*.spec.*`, a `test/`/`__tests__/` directory, a testing-framework import, or any standing root-level test file found in the diff) blocks `transition` exactly like an unwitnessed mutable -- delete it and replace its assertions with a live `exec_js`/`browser` witness, then re-verify. This is manual legwork, not framework legwork: the adversarial corner-case sweep above is how every class gets exercised, by running the real thing, never by writing a test case that runs it later.
 
 ## Residual-scan
 

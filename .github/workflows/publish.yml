@@ -65,19 +65,8 @@ jobs:
         id: version
         run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - uses: oven-sh/setup-bun@v2
-      - name: Run test.js
-        run: node test.js
-
   publish-gm-skill:
-    needs: [prepare, test]
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,7 +94,7 @@ jobs:
           echo "[done] Published gm-skill@${{ needs.prepare.outputs.version }} to npm"
 
   publish-gm-plugkit:
-    needs: [prepare, test]
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

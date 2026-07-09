@@ -100,7 +100,7 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 
 ### ground truth
 
-No mocks, no fakes, no unit tests on disk. Real services, real responses only. The single `test.js` at project root is the integration harness; `gm-complete` runs it before allowing session end.
+No mocks, no fakes, no test files or test suites on disk. Real services, real responses only -- verification is manual troubleshooting and debugging via live `exec_js`/`browser` execution, witnessed the same turn as the code it checks.
 
 ### memory
 
