@@ -1087,7 +1087,7 @@ function runBrowserRunner(pw, args, timeoutMs, cwd, claudeSessionId) {
   const sockDir = playwriterHomeFor(cwd, claudeSessionId);
   try { fs.mkdirSync(sockDir, { recursive: true }); } catch (_) {}
   env.PLAYWRITER_HOME = sockDir;
-  _writeStatusBusy((timeoutMs || 30000) + 5000);
+  _writeStatusBusy((timeoutMs || 120000) + 5000);
   return spawnSync(spawnCmd, spawnArgs, {
     encoding: 'utf-8',
     timeout: timeoutMs,
