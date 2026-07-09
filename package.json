@@ -23,6 +23,8 @@
   },
   "main": "bin/bootstrap.js",
   "bin": {
+    "gm": "./bin/install.js",
+    "gm-skill": "./bin/install.js",
     "gm-skill-bootstrap": "./bin/bootstrap.js",
     "gm-install": "./bin/install.js"
   },
