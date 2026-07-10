@@ -38,6 +38,8 @@ Code/file/symbol lookup uses `codesearch` (`{"query":"..."}`) or `recall` (prior
 
 Spool verbs are the primary interface: `codesearch`, `recall`, `fetch`, `exec_js`, `browser`, `memorize-fire`, git verbs (`git_status`, `git_log`, `git_diff`, `git_show`, `git_branch`, `git_add`, `git_commit`, `git_finalize`, `git_push`, `git_checkout`, `git_fetch`, `git_rm`, `git_revert`, `git_reset`). Git operations via Bash/PowerShell are recorded as `deviation.bash-git-bypass`. `git_finalize {message}` bundles add->commit->porcelain-gate->push in one dispatch.
 
+`prd-resolve` accepts an optional `commit_comment` (a one-line resolution note) alongside `id`/`witness_evidence`. When present, the row's note rides until the repo's next `git_commit`/`git_finalize`, which bundles every pending note for that repo into the commit message under a "Resolved PRD rows" section and clears those rows from `.gm/prd.yml`. Unrelated issues discovered mid-task are `prd-add`, never a same-turn detour and never dropped -- a later cover picks them up deliberately.
+
 Missing `.gm/exec-spool` on first use is normal. Boot the watcher before dispatching work.
 
 Boot probe at session start, one Bash call:

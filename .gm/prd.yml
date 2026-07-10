@@ -9586,3 +9586,31 @@
   witness_evidence: gm-plugkit/instructions/execute.md:47 mentions page.evaluate on a live window.* global but omits monkeypatching a candidate function/handler as the concrete in-page isolation technique, unlike the just-added browser.md paragraph
   status: completed
   witness: gm-plugkit/instructions/execute.md:47 grep shows monkeypatching phrase added; rs-plugkit/src/orchestrator/instructions/execute.rs grep -c monkeypatch=1 confirms sync
+- id: instr-unrelated-issue-to-prd
+  subject: instructions/skill explicitly tell agent unrelated issues found mid-task get logged as a PRD row to resolve later, not fixed inline or dropped
+  witness_evidence: gm-plugkit/instructions/plan.md:35 Noticing-to-PRD only names adjacent/structural/preference-drift noticing generically -- no explicit unrelated-issue clause naming the mid-task-discovered-but-out-of-current-transform case
+  status: pending
+- id: prd-resolve-require-commit-comment
+  subject: prd-resolve verb (rs-plugkit orchestrator/prd.rs handle_resolve) should accept/require a commit_comment field alongside witness_evidence, so resolution note is attached to the row at resolve time
+  witness_evidence: rs-plugkit/src/orchestrator/prd.rs:315-411 handle_resolve only reads id+witness_evidence, no commit_comment/commit_message field exists anywhere in the resolve body shape
+  status: pending
+- id: git-commit-bundle-resolved-prd-notes
+  subject: git_commit/git_finalize (rs-plugkit wasm_dispatch.rs) should auto-append pending resolved-PRD commit_comment notes into the commit message body when pushing, so resolution notes land in git history without the agent hand-composing them
+  witness_evidence: rs-plugkit/src/wasm_dispatch.rs:1466-1553 git_commit/git_finalize only use the literal message param passed in; no read of .gm/prd.yml resolved-but-not-yet-committed rows exists anywhere in this file
+  status: pending
+- id: prd-clear-resolved-rows-on-commit
+  subject: system should clear/archive completed PRD rows once their commit_comment has been bundled into a pushed commit, instead of accumulating them forever in prd.yml
+  witness_evidence: live .gm/prd.yml on this repo currently holds prd_total_count=2229 with status:completed rows dating back many sessions, never pruned -- confirms rows accumulate indefinitely with no clear/archive mechanism
+  status: pending
+- id: prd-resolve-body-shape-doc-update
+  subject: instructions/plan.md + execute.md + skills/gm/SKILL.md prd-resolve dispatch-shape documentation must be updated once commit_comment field is added, so the agent knows to pass it
+  witness_evidence: gm-plugkit/instructions/plan.md:53 current documented prd-add/prd-resolve shape has no commit_comment field; skill prose must be kept byte-aligned with the new rs-plugkit body shape per sync-instruction-consts.mjs mechanism
+  status: pending
+- id: prd-resolve-commit-comment-migration-safety
+  subject: prd-resolve commit_comment field must be additive/optional, never break existing resolve dispatches that only pass id+witness_evidence
+  witness_evidence: rs-plugkit/src/orchestrator/prd.rs:320 parse_resolve_target already supports multiple aliases (prd_id, mutable_id, item_id, slug, key) -- new field must follow the same permissive-alias, optional-not-required pattern to avoid a breaking API change
+  status: pending
+- id: prd-bundle-multi-repo-rs-plugkit-gm
+  subject: resolution-note bundling must work across BOTH gm repo commits and rs-plugkit sibling-repo commits since prd.yml is per-project but the resolve verb + commit verb are the same code serving both
+  witness_evidence: git_finalize body already accepts a repo/cwd param for sibling-repo dispatch (wasm_dispatch.rs:1495-1498) -- the PRD-note-bundling read must respect that same cwd/repo targeting, reading THAT repo's own .gm/prd.yml, not always the gm repo's
+  status: pending

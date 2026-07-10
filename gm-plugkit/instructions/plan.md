@@ -34,6 +34,10 @@ Cut the cover hardest-node-first: the row exercising the most failure modes at o
 
 Any observation not yet a row -- outstanding work, unfinished surface, improvable shape, preference misalignment, adjacent concern -- is `prd-add` this turn; response-body-only observations evaporate at turn end. Structural noticing (coverage gap, missing doc, rule-violating prior commit) and preference-aware noticing (drift from density-at-PLAN/residual-triage/push-on-clean/every-possible-expansion/browser-witness) are the same event: each its own row, witnessed by what surfaced it.
 
+**A genuinely unrelated issue discovered mid-task is `prd-add`, never a same-turn detour and never dropped.** "Unrelated" means outside this cover's own closure -- a bug/gap/hygiene issue the current transform did not touch and does not depend on. It still gets a row (never silently ignored, never fixed inline burning the current cover's focus, never mentioned in prose and left unrecorded) so a later cover picks it up deliberately.
+
+`prd-resolve` accepts an optional `commit_comment` (aliases `commit_message`, `resolution_note`) alongside `id`/`witness_evidence` -- a one-line resolution note. When present, the next `git_commit`/`git_finalize` in that repo bundles it into the commit message body under a "Resolved PRD rows" section and clears the row from `.gm/prd.yml` (deleted, not archived -- the commit message is the durable record). Pass it whenever the resolved row's story is worth a line in git history; omit it for rows too granular to warrant one.
+
 ## Mutables
 
 Unknowns -> `.gm/mutables.yml` via `mutable-add`, `status: unknown`, witness = `file:line`/codesearch hit/exec output. Narrative resolution rejected; unwitnessed rows block every `transition`. Uncertain mid-plan (orient-to-PRD gap, unweighted recall hit) -> re-dispatch `instruction`, never invent the next step from memory.
