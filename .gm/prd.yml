@@ -9581,3 +9581,8 @@
   witness_evidence: appended discipline paragraph to gm-plugkit/instructions/browser.md after profiler-recipe section
   status: completed
   witness: 'gm-plugkit/instructions/browser.md discipline section: added process-of-elimination monkeypatch paragraph; sync-instruction-consts.mjs ran and rewrote browser.rs (18132 chars) to match'
+- id: execute-md-poe-monkeypatch-parity
+  subject: execute.md universal PoE paragraph names browser page.evaluate as elimination tool but not monkeypatching as the technique
+  witness_evidence: gm-plugkit/instructions/execute.md:47 mentions page.evaluate on a live window.* global but omits monkeypatching a candidate function/handler as the concrete in-page isolation technique, unlike the just-added browser.md paragraph
+  status: completed
+  witness: gm-plugkit/instructions/execute.md:47 grep shows monkeypatching phrase added; rs-plugkit/src/orchestrator/instructions/execute.rs grep -c monkeypatch=1 confirms sync
