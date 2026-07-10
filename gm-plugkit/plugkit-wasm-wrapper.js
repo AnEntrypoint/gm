@@ -746,6 +746,18 @@ function aggregateCpuProfile(profile, topN) {
 
 const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
 
+function findCachedBunRunnerBin() {
+  try {
+    const cacheDir = path.join(os.homedir(), '.bun', 'install', 'cache');
+    const entries = fs.readdirSync(cacheDir).filter(n => n.startsWith(`${BROWSER_RUNNER_BIN}@`));
+    for (const name of entries) {
+      const binJs = path.join(cacheDir, name, 'bin.js');
+      if (fs.existsSync(binJs)) return binJs;
+    }
+  } catch (_) {}
+  return null;
+}
+
 function findBrowserRunner() {
   const bunGlobalRoots = [
     path.join(os.homedir(), '.bun', 'install', 'global', 'node_modules', BROWSER_RUNNER_BIN, 'bin.js'),
@@ -753,6 +765,8 @@ function findBrowserRunner() {
   for (const binJs of bunGlobalRoots) {
     if (fs.existsSync(binJs)) return { cmd: process.execPath, baseArgs: [binJs], shell: false };
   }
+  const cachedBin = findCachedBunRunnerBin();
+  if (cachedBin) return { cmd: process.execPath, baseArgs: [cachedBin], shell: false };
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
   const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
   if (bunR.status === 0 && bunR.stdout.trim()) {
@@ -829,8 +843,7 @@ function isProfileLocked(profileDir) {
 }
 
 function sessionProfileSlug(claudeSessionId) {
-  const s = String(claudeSessionId || 'default').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
-  return s || 'default';
+  return 'default';
 }
 
 function sessionProfileDir(cwd, claudeSessionId) {
@@ -866,6 +879,7 @@ function cleanDeadProfileFragments(cwd) {
         }
         continue;
       }
+      if (name === 'browser-profile-default') continue;
       try {
         if (fs.existsSync(dir) && !isProfileLocked(dir)) {
           fs.rmSync(dir, { recursive: true, force: true });
@@ -3807,7 +3821,7 @@ async function runSpoolWatcher(instance, spoolDir) {
     }
   }, 60_000);
 
-  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 15 * 60 * 1000;
+  const BROWSER_IDLE_LIMIT_MS = parseInt(process.env.PLUGKIT_BROWSER_IDLE_LIMIT_MS, 10) || 5 * 60 * 1000;
   setInterval(() => {
     try {
       const portsFile = browserPortsFile(process.cwd());
