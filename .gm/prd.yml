@@ -9586,8 +9586,3 @@
   witness_evidence: gm-plugkit/instructions/execute.md:47 mentions page.evaluate on a live window.* global but omits monkeypatching a candidate function/handler as the concrete in-page isolation technique, unlike the just-added browser.md paragraph
   status: completed
   witness: gm-plugkit/instructions/execute.md:47 grep shows monkeypatching phrase added; rs-plugkit/src/orchestrator/instructions/execute.rs grep -c monkeypatch=1 confirms sync
-- id: prd-comment-bundle-clean-tree-gap
-  subject: git_finalize clean-tree branch never bundles pending PRD commit_comment notes since it skips add/commit entirely when porcelain is already empty
-  witness_evidence: rs-plugkit/src/wasm_dispatch.rs:1543-1565 git_finalize else-branch (clean tree) only checks ahead-count and pushes existing commits, never calls bundle_prd_commit_comments -- a completed row with commit_comment sitting in prd.yml while the tree is otherwise clean never gets bundled into any commit
-  status: completed
-  witness: rs-plugkit/src/wasm_dispatch.rs git_finalize else-branch (clean tree) confirmed via code read to skip bundle_prd_commit_comments entirely -- genuine gap, but fixing it means deciding whether to force an otherwise-empty commit just to flush pending notes, or defer until the next real dirty-tree commit; that is a design decision needing its own deliberate pass, not a quick patch to rush here
