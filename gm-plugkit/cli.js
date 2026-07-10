@@ -151,20 +151,6 @@ function statusServing(st, freshMs) {
   return Number.isFinite(st.ts) && (now - st.ts) < freshMs;
 }
 
-function sleepSync(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-
-function waitForWatcherHeartbeat(dir, deadlineMs, freshMs) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < deadlineMs) {
-    const st = readStatus(dir);
-    if (statusServing(st, freshMs)) return st;
-    sleepSync(300);
-  }
-  return null;
-}
-
 function ensureSpoolDir() {
   try { fs.mkdirSync(spoolDir(), { recursive: true }); } catch (_) {}
 }
@@ -285,22 +271,21 @@ function writeCliError(phase, err) {
     process.exit(1);
   }
 
-  const serving = waitForWatcherHeartbeat(spoolDir(), 30000, 12000);
-  if (!serving) {
-    const errMsg = `watcher spawned (pid=${daemon.pid}) but .status.json heartbeat not fresh within 30s`;
-    writeCliError('watcher-heartbeat-timeout', new Error(errMsg));
-    console.error('Daemon start failed:', errMsg);
-    process.exit(1);
-  }
-
-  writeCliStatus({ phase: 'ready', version: bootstrapResult.version, daemon_pid: daemon.pid, watcher_pid: serving.pid, log: daemon.logPath });
+  // Fire-and-forget: the daemon child is already detached+unref'd by
+  // startSpoolDaemon(), so the CLI process itself has nothing left to do.
+  // Waiting here for a heartbeat confirmation (removed) used to block the
+  // calling shell for the full bootstrap+first-heartbeat duration -- up to
+  // 30s on a healthy boot, worse on a slow/degraded one -- holding up every
+  // caller even though the daemon spawn itself is near-instant. A caller
+  // that needs serving-confirmation reads .gm/exec-spool/.status.json
+  // directly (ts freshness) rather than blocking this call on it.
+  writeCliStatus({ phase: 'daemon-spawned', version: bootstrapResult.version, daemon_pid: daemon.pid, log: daemon.logPath });
 
   console.log(JSON.stringify({
     ok: true,
     binary: bootstrapResult.binaryPath,
     daemon,
-    watcher_pid: serving.pid,
-    message: 'plugkit ready, spool watcher serving'
+    message: 'plugkit daemon spawned, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness'
   }));
   process.exit(0);
 })().catch((err) => {

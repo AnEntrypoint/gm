@@ -52,7 +52,7 @@ cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-
 bun x gm-plugkit@latest spool
 ```
 
-(`npx -y gm-plugkit@latest spool` if no `bun`.) Atomic: daemonizes watcher, blocks until `.status.json` heartbeats fresh, returns only on serving (exit 0) or loud timeout. No `&`, no `sleep`, no re-`cat` -- returns, you write to `instruction/` directly. (Already-alive watcher returns at once.)
+(`npx -y gm-plugkit@latest spool` if no `bun`.) Fire-and-forget: spawns the detached daemon and returns immediately (already-alive watcher also returns at once, unchanged) -- it does NOT wait for the watcher to confirm serving. No `&`, no `sleep`, no re-`cat`; write your first verb to `in/` right after it returns. A first-read "file does not exist" on that verb is normal (the just-spawned watcher hasn't noticed the file yet) -- re-Read next message, same as any dead-watcher-adjacent recheck. If you need to actively confirm serving before dispatching (rare), read `.gm/exec-spool/.status.json` yourself and check `ts` freshness.
 
 **Dispatch shape: Write request + Read response, SAME tool-call block.** Never proceed/narrate/begin work before reading the response and following its `instruction` field. First-read "file does not exist" mid-verb = normal, re-Read next message. Never poll with `sleep && ls` -- plugkit is synchronous; missing response = dead watcher (recheck `ts`) or slow verb, never "still processing."
 
