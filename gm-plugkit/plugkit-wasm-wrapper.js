@@ -1278,6 +1278,29 @@ function spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox, cw
   return { pid: child.pid, chromeLogPath };
 }
 
+const BROWSER_AUTODETECT_PORTS = [3000, 5173, 8080, 4200, 5000, 8000];
+
+function probeLocalHttpPort(port, timeoutMs) {
+  const r = spawnSync(process.execPath, ['-e', `
+    const http = require('http');
+    const req = http.request({ host: '127.0.0.1', port: ${port}, path: '/', method: 'HEAD', timeout: ${timeoutMs || 400} }, (res) => {
+      res.resume();
+      process.exit(0);
+    });
+    req.on('error', () => process.exit(1));
+    req.on('timeout', () => { req.destroy(); process.exit(1); });
+    req.end();
+  `], { timeout: (timeoutMs || 400) + 300, windowsHide: true });
+  return r.status === 0;
+}
+
+function autodetectLocalDevServerUrl() {
+  for (const port of BROWSER_AUTODETECT_PORTS) {
+    if (probeLocalHttpPort(port, 400)) return `http://127.0.0.1:${port}/`;
+  }
+  return null;
+}
+
 function resolveBrowserStartUrl(cwd) {
   if (process.env.GM_BROWSER_START_URL) return process.env.GM_BROWSER_START_URL;
   try {
@@ -1286,6 +1309,12 @@ function resolveBrowserStartUrl(cwd) {
     const url = fs.readFileSync(cfgPath, 'utf-8').trim();
     if (url) return url;
   } catch (_) {}
+  const detected = autodetectLocalDevServerUrl();
+  if (detected) {
+    try { logEvent('plugkit', 'browser.start-url-autodetected', { url: detected }); } catch (_) {}
+    return detected;
+  }
+  try { logEvent('plugkit', 'browser.start-url-fallback-blank', { reason: 'no GM_BROWSER_START_URL, no .gm/browser-target-url, no local dev server detected on common ports' }); } catch (_) {}
   return 'about:blank';
 }
 
@@ -1461,7 +1490,7 @@ function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessio
         sessions[claudeSessionId] = [sid];
         writeJsonFile(portsFile, ports);
         writeJsonFile(sessionsFile, sessions);
-        logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true });
+        logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, pid: existing.pid, same_chromium: true });
         return sid;
       }
     }
@@ -1526,7 +1555,7 @@ function getOrCreateBrowserSession(cwd, claudeSessionId, pw) {
         const sid = a && a.status === 0 ? parseSessionId(a.stdout || '') : null;
         if (sid) {
           checkSessionNavigatedAway(winner.port, claudeSessionId);
-          logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-wait' });
+          logEvent('plugkit', 'browser.attached', { pwSessionId: sid, reused: true, via: 'spawn-lock-wait', pid: winner.pid, same_chromium: true });
           return sid;
         }
       }
