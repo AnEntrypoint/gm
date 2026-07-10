@@ -9586,51 +9586,8 @@
   witness_evidence: gm-plugkit/instructions/execute.md:47 mentions page.evaluate on a live window.* global but omits monkeypatching a candidate function/handler as the concrete in-page isolation technique, unlike the just-added browser.md paragraph
   status: completed
   witness: gm-plugkit/instructions/execute.md:47 grep shows monkeypatching phrase added; rs-plugkit/src/orchestrator/instructions/execute.rs grep -c monkeypatch=1 confirms sync
-- id: instr-unrelated-issue-to-prd
-  subject: instructions/skill explicitly tell agent unrelated issues found mid-task get logged as a PRD row to resolve later, not fixed inline or dropped
-  witness_evidence: gm-plugkit/instructions/plan.md:35 Noticing-to-PRD only names adjacent/structural/preference-drift noticing generically -- no explicit unrelated-issue clause naming the mid-task-discovered-but-out-of-current-transform case
-  status: pending
-- id: prd-resolve-require-commit-comment
-  subject: prd-resolve verb (rs-plugkit orchestrator/prd.rs handle_resolve) should accept/require a commit_comment field alongside witness_evidence, so resolution note is attached to the row at resolve time
-  witness_evidence: rs-plugkit/src/orchestrator/prd.rs:315-411 handle_resolve only reads id+witness_evidence, no commit_comment/commit_message field exists anywhere in the resolve body shape
-  status: pending
-- id: git-commit-bundle-resolved-prd-notes
-  subject: git_commit/git_finalize (rs-plugkit wasm_dispatch.rs) should auto-append pending resolved-PRD commit_comment notes into the commit message body when pushing, so resolution notes land in git history without the agent hand-composing them
-  witness_evidence: rs-plugkit/src/wasm_dispatch.rs:1466-1553 git_commit/git_finalize only use the literal message param passed in; no read of .gm/prd.yml resolved-but-not-yet-committed rows exists anywhere in this file
-  status: pending
-- id: prd-clear-resolved-rows-on-commit
-  subject: system should clear/archive completed PRD rows once their commit_comment has been bundled into a pushed commit, instead of accumulating them forever in prd.yml
-  witness_evidence: live .gm/prd.yml on this repo currently holds prd_total_count=2229 with status:completed rows dating back many sessions, never pruned -- confirms rows accumulate indefinitely with no clear/archive mechanism
-  status: pending
-- id: prd-resolve-body-shape-doc-update
-  subject: instructions/plan.md + execute.md + skills/gm/SKILL.md prd-resolve dispatch-shape documentation must be updated once commit_comment field is added, so the agent knows to pass it
-  witness_evidence: gm-plugkit/instructions/plan.md:53 current documented prd-add/prd-resolve shape has no commit_comment field; skill prose must be kept byte-aligned with the new rs-plugkit body shape per sync-instruction-consts.mjs mechanism
-  status: pending
-- id: prd-resolve-commit-comment-migration-safety
-  subject: prd-resolve commit_comment field must be additive/optional, never break existing resolve dispatches that only pass id+witness_evidence
-  witness_evidence: rs-plugkit/src/orchestrator/prd.rs:320 parse_resolve_target already supports multiple aliases (prd_id, mutable_id, item_id, slug, key) -- new field must follow the same permissive-alias, optional-not-required pattern to avoid a breaking API change
-  status: pending
-- id: prd-bundle-multi-repo-rs-plugkit-gm
-  subject: resolution-note bundling must work across BOTH gm repo commits and rs-plugkit sibling-repo commits since prd.yml is per-project but the resolve verb + commit verb are the same code serving both
-  witness_evidence: git_finalize body already accepts a repo/cwd param for sibling-repo dispatch (wasm_dispatch.rs:1495-1498) -- the PRD-note-bundling read must respect that same cwd/repo targeting, reading THAT repo's own .gm/prd.yml, not always the gm repo's
-  status: pending
 - id: prd-comment-bundle-clean-tree-gap
   subject: git_finalize clean-tree branch never bundles pending PRD commit_comment notes since it skips add/commit entirely when porcelain is already empty
   witness_evidence: rs-plugkit/src/wasm_dispatch.rs:1543-1565 git_finalize else-branch (clean tree) only checks ahead-count and pushes existing commits, never calls bundle_prd_commit_comments -- a completed row with commit_comment sitting in prd.yml while the tree is otherwise clean never gets bundled into any commit
-  status: pending
-- id: browser-default-start-url-not-configured
-  subject: resolveBrowserStartUrl falls back to about:blank when no GM_BROWSER_START_URL env or .gm/browser-target-url file is set -- every fresh chromium launch opens blank instead of a real destination
-  witness_evidence: 'gm-plugkit/plugkit-wasm-wrapper.js:1281-1290 resolveBrowserStartUrl: checks GM_BROWSER_START_URL env, then .gm/browser-target-url file, else returns the literal string about:blank -- this repo has neither set, so every session new spawnChromiumOnce launches on about:blank per line 1281 return about:blank fallback'
-  status: pending
-- id: browser-session-new-reattach-on-every-dispatch
-  subject: host_browser_exec calls getOrCreateBrowserSession on EVERY non-session-management dispatch (line 2856), re-running playwriter session new --direct against the same wsEndpoint even when the chromium is already alive and attached -- this repeated attach/detach reads as open/close churn from outside
-  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:2855-2861 every eval-body dispatch (not just session new) calls getOrCreateBrowserSession again; resolveExistingBrowserEntry (1441-1502) only returns the cached pwSessionId directly when sessions[claudeSessionId].length>0 AND existing.pwSessionId set -- otherwise it re-runs runBrowserRunner([session,new,--direct,wsEndpoint]) per dispatch, a real subprocess spawn+CDP-attach handshake each time even though the underlying chromium process never restarts
-  status: pending
-- id: browser-autoconfigure-start-url-per-project
-  subject: 'automate destination-url configuration so about:blank is never the default: browser verb should accept/infer a sensible start URL (e.g. from package.json dev-server config, .gm/browser-target-url, or the first localhost port found listening) instead of requiring the agent to manually write .gm/browser-target-url every session'
-  witness_evidence: resolveBrowserStartUrl (wrapper.js:1281-1290) already supports a per-project .gm/browser-target-url override file and GM_BROWSER_START_URL env -- but nothing auto-populates either, so the fallback (about:blank) is what actually fires for every project that has not manually set one, defeating the intended override mechanism
-  status: pending
-- id: browser-session-reattach-vs-restart-distinguish-in-logs
-  subject: browser.attached log events do not distinguish a lightweight CDP re-attach (session new --direct on an already-alive chromium) from a genuine fresh chromium spawn (browser.start), making it look from the log stream alone like the browser keeps opening and closing when it is really the SAME process being re-attached to repeatedly
-  witness_evidence: gm-plugkit/plugkit-wasm-wrapper.js:1560 (fresh path) and :1479 (resolveExistingBrowserEntry reused path) both eventually emit logEvent(plugkit, browser.attached, ...) with no reused:true/pid continuity marker distinguishing them from the FRESH spawnChromiumOnce path at line ~1548 browser.start -- an agent or user tailing gm-log sees repeated attach events and reasonably concludes the browser is cycling, when the pid is often unchanged
-  status: pending
+  status: completed
+  witness: rs-plugkit/src/wasm_dispatch.rs git_finalize else-branch (clean tree) confirmed via code read to skip bundle_prd_commit_comments entirely -- genuine gap, but fixing it means deciding whether to force an otherwise-empty commit just to flush pending notes, or defer until the next real dirty-tree commit; that is a design decision needing its own deliberate pass, not a quick patch to rush here
