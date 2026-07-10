@@ -194,14 +194,13 @@ function spawnWatcher(bootReason) {
   }
 
   const isNodeExe = (p) => /(^|[\\/])node(\.exe)?$/i.test(String(p || ''));
-  const resolveNode = () => {
+  const resolveRuntime = () => {
     const candidates = [];
-    if (isNodeExe(process.env.PLUGKIT_RUNTIME)) candidates.push(process.env.PLUGKIT_RUNTIME);
-    if (isNodeExe(process.execPath)) candidates.push(process.execPath);
-    if (process.env.GM_NODE_PATH) candidates.push(process.env.GM_NODE_PATH);
+    if (process.env.PLUGKIT_RUNTIME) candidates.push(process.env.PLUGKIT_RUNTIME);
+    candidates.push('bun');
     try {
       const which = process.platform === 'win32' ? 'where' : 'which';
-      const out = spawnSync(which, ['node'], { encoding: 'utf8', windowsHide: true });
+      const out = spawnSync(which, ['bun'], { encoding: 'utf8', windowsHide: true });
       if (out && out.stdout) {
         const first = out.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
         if (first) candidates.push(first);
@@ -210,9 +209,23 @@ function spawnWatcher(bootReason) {
     for (const c of candidates) {
       try { const r = spawnSync(c, ['--version'], { stdio: 'ignore', windowsHide: true }); if (r && r.status === 0) return c; } catch (_) {}
     }
+    const nodeCandidates = [];
+    if (isNodeExe(process.execPath)) nodeCandidates.push(process.execPath);
+    if (process.env.GM_NODE_PATH) nodeCandidates.push(process.env.GM_NODE_PATH);
+    try {
+      const which = process.platform === 'win32' ? 'where' : 'which';
+      const out = spawnSync(which, ['node'], { encoding: 'utf8', windowsHide: true });
+      if (out && out.stdout) {
+        const first = out.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
+        if (first) nodeCandidates.push(first);
+      }
+    } catch (_) {}
+    for (const c of nodeCandidates) {
+      try { const r = spawnSync(c, ['--version'], { stdio: 'ignore', windowsHide: true }); if (r && r.status === 0) return c; } catch (_) {}
+    }
     return process.execPath;
   };
-  let cmd = resolveNode();
+  let cmd = resolveRuntime();
   let args = [wrapper, 'spool'];
 
   let logFd = null;

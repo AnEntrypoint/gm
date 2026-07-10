@@ -117,12 +117,14 @@ function clearVerbActive() {
 
 process.on('uncaughtException', (err) => {
   try { console.error('[plugkit-wasm] uncaught:', err && err.stack || err); } catch (_) {}
+  try { killAllTasks('crash:uncaughtException'); } catch (_) {}
   emitShutdownReason('uncaughtException', err);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
   try { console.error('[plugkit-wasm] unhandled rejection:', reason && reason.stack || reason); } catch (_) {}
+  try { killAllTasks('crash:unhandledRejection'); } catch (_) {}
   emitShutdownReason('unhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
   process.exit(1);
 });
@@ -745,22 +747,22 @@ function aggregateCpuProfile(profile, topN) {
 const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
 
 function findBrowserRunner() {
-  const npmR = spawnSync('npm', ['root', '-g'], { encoding: 'utf-8', shell: true });
-  if (npmR.status === 0 && npmR.stdout.trim()) {
-    const root = npmR.stdout.trim().split(/\r?\n/).pop();
-    const binJs = path.join(root, BROWSER_RUNNER_BIN, 'bin.js');
+  const bunGlobalRoots = [
+    path.join(os.homedir(), '.bun', 'install', 'global', 'node_modules', BROWSER_RUNNER_BIN, 'bin.js'),
+  ];
+  for (const binJs of bunGlobalRoots) {
     if (fs.existsSync(binJs)) return { cmd: process.execPath, baseArgs: [binJs], shell: false };
   }
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+  const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
+  if (bunR.status === 0 && bunR.stdout.trim()) {
+    return { cmd: 'bun', baseArgs: ['x', `${BROWSER_RUNNER_BIN}@latest`], shell: true };
+  }
   const r = spawnSync(whichCmd, [BROWSER_RUNNER_BIN], { encoding: 'utf-8', shell: true });
   if (r.status === 0 && r.stdout.trim()) {
     const candidates = r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const cmd = candidates.find(c => c.toLowerCase().endsWith('.cmd')) || candidates.find(c => !c.toLowerCase().endsWith('.ps1')) || candidates[0];
     if (cmd) return { cmd, baseArgs: [], shell: process.platform === 'win32' };
-  }
-  const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
-  if (bunR.status === 0 && bunR.stdout.trim()) {
-    return { cmd: 'bun', baseArgs: ['x', `${BROWSER_RUNNER_BIN}@latest`], shell: true };
   }
   const npxR = spawnSync(whichCmd, ['npx'], { encoding: 'utf-8', shell: true });
   if (npxR.status === 0 && npxR.stdout.trim()) {
@@ -2116,8 +2118,25 @@ function nextTaskId(cwd) {
   return `t${n}`;
 }
 
+let _jsRuntimeCmd = null;
+function resolveJsRuntimeCmd() {
+  if (_jsRuntimeCmd) return _jsRuntimeCmd;
+  if (!/(^|[\\/])node(\.exe)?$/i.test(String(process.execPath || ''))) {
+    _jsRuntimeCmd = process.execPath;
+    return _jsRuntimeCmd;
+  }
+  try {
+    const which = process.platform === 'win32' ? 'where' : 'which';
+    const out = spawnSync(which, ['bun'], { encoding: 'utf-8', windowsHide: true });
+    const first = (out && out.stdout || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
+    if (first) { _jsRuntimeCmd = first; return _jsRuntimeCmd; }
+  } catch (_) {}
+  _jsRuntimeCmd = process.execPath;
+  return _jsRuntimeCmd;
+}
+
 function langToCmd(lang, code) {
-  if (lang === 'nodejs' || lang === 'js' || lang === 'javascript' || lang === 'node') return { cmd: process.execPath, args: ['-e', code], stdinCode: null };
+  if (lang === 'nodejs' || lang === 'js' || lang === 'javascript' || lang === 'node') return { cmd: resolveJsRuntimeCmd(), args: ['-e', code], stdinCode: null };
   if (lang === 'python' || lang === 'py') return { cmd: 'python', args: ['-c', code], stdinCode: null };
   if (lang === 'bash' || lang === 'sh' || lang === 'shell' || lang === 'zsh') return { cmd: 'bash', args: ['-c', code], stdinCode: null };
   if (lang === 'powershell' || lang === 'ps1') return { cmd: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', code], stdinCode: null };
@@ -2125,10 +2144,15 @@ function langToCmd(lang, code) {
   return null;
 }
 
+const TASK_MAX_TIMEOUT_MS = 10 * 60 * 1000;
+
 function spawnTask({ cwd, lang, code, timeoutMs }) {
   const id = nextTaskId(cwd);
   const built = langToCmd(lang, code);
   if (!built) return { ok: false, error: `unsupported lang: ${lang}` };
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > TASK_MAX_TIMEOUT_MS) {
+    timeoutMs = TASK_MAX_TIMEOUT_MS;
+  }
   const outLog = taskOutPath(cwd, id, 'stdout');
   const errLog = taskOutPath(cwd, id, 'stderr');
   let outFd = null, errFd = null;
@@ -2259,6 +2283,43 @@ function killAllTasks(reason) {
   }
   if (killed > 0) logEvent('plugkit', 'task.killAll', { reason, count: killed });
   return killed;
+}
+
+function pidAliveLocal(pid) {
+  if (!Number.isFinite(pid) || pid <= 0) return false;
+  try { process.kill(pid, 0); return true; } catch (_) { return false; }
+}
+
+function sweepOrphanedTaskMetaOnBoot(cwd) {
+  let swept = 0;
+  try {
+    const dir = tasksDir(cwd);
+    const now = Date.now();
+    for (const name of fs.readdirSync(dir)) {
+      if (!/^t\d+\.json$/.test(name)) continue;
+      const metaPath = path.join(dir, name);
+      let meta = null;
+      try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')); } catch (_) { continue; }
+      if (!meta || meta.status !== 'running') continue;
+      const stale = !pidAliveLocal(meta.pid) || (meta.deadline_ms && now > meta.deadline_ms);
+      if (!stale) continue;
+      if (pidAliveLocal(meta.pid)) {
+        try {
+          if (process.platform === 'win32') {
+            spawnSync('taskkill', ['/F', '/T', '/PID', String(meta.pid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 });
+          } else {
+            try { process.kill(-meta.pid, 'SIGKILL'); } catch (_) { try { process.kill(meta.pid, 'SIGKILL'); } catch (_) {} }
+          }
+        } catch (_) {}
+      }
+      meta.status = 'reaped-on-boot';
+      meta.ended_ms = now;
+      try { fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2)); } catch (_) {}
+      swept += 1;
+    }
+  } catch (_) {}
+  if (swept > 0) logEvent('plugkit', 'task.bootSweepReaped', { cwd: cwd || process.cwd(), count: swept });
+  return swept;
 }
 
 function hostTaskProc(action, params) {
@@ -3393,6 +3454,8 @@ async function runSpoolWatcher(instance, spoolDir) {
     try { releaseLock(); } catch (_) {}
     process.exit(0);
   }
+
+  try { sweepOrphanedTaskMetaOnBoot(process.cwd()); } catch (_) {}
 
   setInterval(() => {
     try { reapTimedOutTasks(); } catch (_) {}
