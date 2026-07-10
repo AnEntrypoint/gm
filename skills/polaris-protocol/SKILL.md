@@ -63,7 +63,7 @@ CLOSED --next atom------------------------------------> COMPILED
 ## Canonical syntax (pro-rata — use exactly this)
 
 - **Compile first. Execute one active atom. Verify before unlock. Claim only what is supported.** (Goal Compiler)
-- **shoot + [your problem]** — the Fifth-Dimension Engine interface. Examples: `shoot + Seven Millennium Problems`, `shoot + Death + AI`, `shoot + should I quit my job`.
+- **shoot + [your problem]** — the Fifth-Dimension Engine interface.
 - **ΔS = 1 − cos(I, G)** — drift between current state (I) and goal (G). Without a real embedding call, ΔS is a qualitative label ("ΔS looks high here"), never a computed decimal — unless a real `similarity` verb is available (see WFGY-Method).
 
 "Compile first. Then shoot." is the spine of the whole protocol.

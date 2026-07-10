@@ -43,7 +43,7 @@ Use **especially** for:
 - Research questions (turning ideas into research kernels)
 - Engineering failures (root cause analysis, repair paths)
 - Product/positioning work (audience, launch strategy)
-- High-strangeness problems (mixing themes into research)
+- Mixed-theme problems (combining unrelated ideas into research)
 
 ## How to Use
 
@@ -51,16 +51,6 @@ Use **especially** for:
 
 ```
 shoot + [your problem]
-```
-
-Examples:
-
-```
-shoot + Seven Millennium Problems
-shoot + should I quit my job
-shoot + Death + AI
-shoot + P vs NP
-shoot + How to fix my broken deployment pipeline
 ```
 
 ### The Engine Returns
@@ -113,51 +103,25 @@ You get:
 
 Use the engine for *depth*, WFGY-Method for *direction*.
 
-## Modes and Use Cases
+## Modes
 
-### Seven Millennium Problems
+### Theorem and Formal Work
 
-Shoot the flagship: all seven famous unsolved mathematics problems simultaneously using the same underlying engine logic.
+Shoot a theorem or formal problem; the engine returns a proof-route structure that can be checked against a formal verification standard.
 
-```
-shoot + Seven Millennium Problems
-```
+### Mixing Themes
 
-See `references/seven-millennium-problems.md` for the flagship claim and what it does and does not assert.
-
-### Baseline-50 + Frontier-50
-
-- **Baseline-50**: Known-truth math problems (check engine accuracy)
-- **Frontier-50**: Unknown century-level problems (explore frontier)
-
-### High-Strangeness Math Lab
-
-Mix two unrelated themes and let the engine find the mathematical skeleton:
+Give the engine two unrelated themes and let it find the mathematical skeleton underneath them:
 
 ```
 shoot + [theme 1] + [theme 2]
 ```
 
-Examples:
-- Death + AI -> digital exit operators, hell-state boundaries
-- Dream + Physics -> dream-observer collapse, reality drift
-- Love + Source Poisoning -> attachment trust graph, false-closure lemmas
+See `references/research-kernel-extraction.md` for how mixed themes become research kernels.
 
-See `references/research-kernel-extraction.md` for how strange themes become research kernels.
+### Everyday Problems
 
-### Everyday Shoot Modes
-
-The same engine works on everyday problems:
-
-| Mode | Use For |
-|---|---|
-| Life Decision Shoot | Quitting, moving, major choices |
-| Relationship Shoot | Conversations, behavior, hidden tension |
-| Work / Career Shoot | Bottlenecks, career drift, stuck loops |
-| Product / Startup Shoot | Positioning, audience, launch route |
-| Research / Learning Shoot | Turning ideas into research kernels |
-| Engineering / Debugging Shoot | Root cause, system debt, repair paths |
-| Meme / Absurd Shoot | Small, weird, funny targets made structured |
+The same engine works on ordinary decisions, work problems, product questions, and engineering failures — any well-specified target benefits from being shot into a route rather than answered directly.
 
 ## Verification
 
@@ -178,7 +142,6 @@ This skill does not:
 
 See `references/` directory for:
 - `route-structure.md` — what a route is and how it is structured
-- `seven-millennium-problems.md` — the flagship demonstration
 - `research-kernel-extraction.md` — turning ideas into research kernels
 - `route-inspection-guide.md` — how to verify and attack a route
 - `skills/polaris-protocol/SKILL.md` — the Polaris Protocol tree root and state machine
