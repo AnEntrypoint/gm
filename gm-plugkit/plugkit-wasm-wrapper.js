@@ -1212,6 +1212,16 @@ function fetchJsonSync(url, timeoutMs) {
   try { return JSON.parse(r.stdout); } catch (_) { return null; }
 }
 
+function fetchJsonSyncRetry(url, timeoutMs, attempts) {
+  const n = attempts || 3;
+  for (let i = 0; i < n; i++) {
+    const r = fetchJsonSync(url, timeoutMs);
+    if (r) return r;
+    if (i < n - 1) sleepSyncMs(150);
+  }
+  return null;
+}
+
 function closeExtraBlankTabs(port, keepWsEndpoint) {
   try {
     const targets = fetchJsonSync(`http://127.0.0.1:${port}/json/list`, 1500);
@@ -1473,7 +1483,7 @@ function resolveExistingBrowserEntry(cwd, claudeSessionId, pw, portsFile, sessio
   const wantProfile = sessionProfileDir(cwd, claudeSessionId);
   const pidOk = isProcessAliveSync(existing.pid);
   const profileOk = !existing.profileDir || existing.profileDir === wantProfile || existing.profileDir.startsWith(wantProfile);
-  const cdpOk = pidOk && !!fetchJsonSync(`http://127.0.0.1:${existing.port}/json/version`, 1000);
+  const cdpOk = pidOk && !!fetchJsonSyncRetry(`http://127.0.0.1:${existing.port}/json/version`, 1000, 3);
   if (pidOk && profileOk && cdpOk) {
     const pwIds = sessions[claudeSessionId] || [];
     if (pwIds.length > 0 && existing.pwSessionId) {
@@ -3882,7 +3892,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           logEvent('plugkit', 'browser.stale-reclaimed', { sid, pid: entry.pid || null, reason: 'pid-dead' });
           continue;
         }
-        const cdpOk = !!fetchJsonSync(`http://127.0.0.1:${entry.port}/json/version`, 1000);
+        const cdpOk = !!fetchJsonSyncRetry(`http://127.0.0.1:${entry.port}/json/version`, 1000, 3);
         if (!cdpOk) {
           try { gracefulCloseBrowser(entry, 'orphan-cdp-dead'); } catch (_) {}
           delete ports[sid];

@@ -9586,3 +9586,7 @@
   witness_evidence: gm-plugkit/instructions/execute.md:47 mentions page.evaluate on a live window.* global but omits monkeypatching a candidate function/handler as the concrete in-page isolation technique, unlike the just-added browser.md paragraph
   status: completed
   witness: gm-plugkit/instructions/execute.md:47 grep shows monkeypatching phrase added; rs-plugkit/src/orchestrator/instructions/execute.rs grep -c monkeypatch=1 confirms sync
+- id: chromium-double-launch-sandbox-fallback-every-start
+  subject: every fresh browser session start launches chromium TWICE on Windows -- once without --no-sandbox (denied), then again with --no-sandbox after detecting the denial in the launch log -- doubling launch latency on every genuine cold start
+  witness_evidence: gmsniff log shows browser.chromium-launched firing twice per browser.start (once noSandbox:false, immediately followed by browser.sandbox-fallback-engaged and a second browser.chromium-launched noSandbox:true) across every session start in the spoint log sample -- consistent 100andbox-denial rate suggests noSandbox should default true on this platform/environment rather than probing-then-falling-back every time
+  status: pending
