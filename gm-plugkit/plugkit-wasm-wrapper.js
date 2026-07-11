@@ -1371,7 +1371,8 @@ function startManagedBrowser(pw, profileDir, cwd) {
   }
   try { reapOrphanChromiums(cwd, 'pre-spawn'); } catch (_) {}
   const port = findFreePortSync();
-  let noSandbox = process.env.GM_BROWSER_NO_SANDBOX === '1';
+  const noSandboxEnv = process.env.GM_BROWSER_NO_SANDBOX;
+  let noSandbox = noSandboxEnv === '0' ? false : (noSandboxEnv === '1' || process.platform === 'win32');
   let { pid, chromeLogPath } = spawnChromiumOnce(browserBin, profileDir, port, headless, noSandbox, cwd);
   logEvent('plugkit', 'browser.chromium-launched', { pid, port, profileDir, headless, noSandbox, binary: browserBin, chromeLogPath });
   let ready = waitForCdpReady(port, 30000);
