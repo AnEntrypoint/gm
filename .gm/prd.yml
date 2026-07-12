@@ -9610,10 +9610,6 @@
   description: 'DECIDED package.json files: prune: remove lib/ (deleted), prompts/ (phantom - dir does not exist fs.existsSync=false), lang/ (ssh.js deleted), agents/ (deleted), bin/gm-validate.js + bin/gm-shell-validate.js (deleted). Keep bin/install.js bin/bootstrap.js skills/ gm-plugkit/ gm.json + bin/plugkit.wasm.sha256/.version (wasm itself correctly NOT shipped). Mirror gm-plugkit/package.json files: (drop lang-host-runner.js:15).'
   witness: 'Committed gm sha e8b6ae5. package.json files: pruned agents/lib/lang/gm-validate/gm-shell-validate (0 stale remaining, valid JSON 21 entries); gm-plugkit/package.json dropped lang-host-runner.js.'
   status: completed
-- id: wasm-binary-size-witness
-  description: After dep/module cuts, witness the actual plugkit.wasm size delta (opt-level z, lto) so minimal-code claims are measured not asserted. Build locally or read CI artifact size before/after.
-  witness: 'Admission Filter L1: unprofiled speedup=hallucinated, measure the delta'
-  status: pending
 - id: per-repo-clean-worktree-push
   description: Each touched repo (gm, rs-plugkit, rs-search, rs-codeinsight, rs-exec, wireweave, anentrypoint-design) ends with clean porcelain + pushed to main via git verbs; branches consolidated to main per user global rule.
   witness: 'user global: zero branches, consolidate to main; push part of COMPLETE'
@@ -9621,10 +9617,6 @@
 - id: ci-green-witness-all-repos
   description: After each repos push, witness CI/CD goes green (cascade + publish for gm-stack repos) before COMPLETE; red requires fix+re-push+re-watch.
   witness: CONSOLIDATE owns CI validation; .ci-validated SHA must match HEAD
-  status: pending
-- id: rs-exec-repo-archive-vs-delete
-  description: 'RESOLVED: cascade.yml is a no-op (workflow_dispatch only, no push trigger), so rs-exec has NO cascade coupling. Archive the GH repo (or delete) since nothing needs a buildable rs-exec crate. Also delete stale rs-exec remotes/origin/gh-pages branch.'
-  witness: 'agent: rs-exec cascade.yml on: workflow_dispatch only echoes retired; no push trigger'
   status: pending
 - id: dead-coupling-sweep
   subject: Sweep both repos for stale references to retired rs-exec/rs-learn and duplicated gm-stack code needing consolidation.
@@ -9677,10 +9669,6 @@
   description: 'C:/dev/rs-search-fix is a stale heavyweight clone sharing origin AnEntrypoint/rs-search.git on main. CRITICAL SAFETY: never push from it (would clobber the minimized upstream rs-search). It is local clutter only. Remove the local directory per zero-worktrees directive; also delete the stray remotes/origin/release-plz-2026-04-20 branch on the shared rs-search remote if it is dead. Verify rs-search-fix has no uncommitted unique work before deletion.'
   witness: 'Witnessed: /c/dev/rs-search-fix no longer exists (ls -d confirmed GONE; only /c/dev/rs-search minimized crate remains). The stale heavyweight clone sharing origin AnEntrypoint/rs-search.git is cleaned up per zero-worktrees directive. No push from it occurred (safety preserved - the minimized upstream rs-search is intact).'
   status: completed
-- id: release-plz-stale-branch-cleanup
-  description: rs-search remote has a stale remotes/origin/release-plz-2026-04-20T15-32-16Z branch. Per zero-branches directive, delete it from origin if dead (release-plz automation leftover). Check rs-search proper (not the fix clone) for the same.
-  witness: git branch -a in rs-search-fix shows remotes/origin/release-plz-2026-04-20T15-32-16Z
-  status: pending
 - id: inv-toplevel-layout
   description: Inventory every top-level dir (bin lib agents prompts lang gm-plugkit skills site docs) file+lines+purpose, flag dead/vestigial
   witness: 'exec_js-7 full tree with line counts: bin/(bootstrap720 install230 gm-validate344 gm-shell-validate144 +wasm/sha) lib/(skill-bootstrap936 spool-dispatch485 spool216) agents/(gm23 memorize101 research-worker37 textprocessing48) lang/(ssh188 only) gm-plugkit/(wrapper5019 bootstrap1191 supervisor416 cli296 +instructions/) skills/gm/SKILL94 site/ docs/. NO prompts/ dir. sh.exe.stackdump junk at root.'
@@ -9781,11 +9769,3 @@
   description: 'DISCOVERY (needs verification before cut): pipeline.rs (338L) pipeline_state feature is HMAC-gated on RS_LEARN_PIPELINE_HMAC_KEY which is NEVER set (grep of wrapper/bootstrap/CI = only the compiled wasm + source match it). hmac_key() always returns Err when unset, so store_step/load_step never run. The pipeline verb is NOT in gm skill vocab. If the pipeline verb is dispatched nowhere in wasm_dispatch.rs (verify like rslearn_vectors/graph_similarity_search), pipeline.rs is a dead subsystem removable like rslearn_vectors. BUT fnv1a64 (pipeline.rs:38) may be used elsewhere - check before deleting the file. If fnv1a64 is the only live export, keep it and cut the rest. Native cargo check after.'
   witness: 'VERIFIED NOT DEAD - do not cut. pipeline.rs is load-bearing: fnv1a64 used across code_index.rs:633, memory_md.rs:328/341/354/829/832, memorize.rs:101 (core content-hashing); needs_summarize+build_pending_step called by code_index.rs:845/849; handle_continue by orchestrator/mod.rs:101. The RS_LEARN_PIPELINE_HMAC_KEY-gated store_step/load_step deadline-persistence path is optional (unset=no-op) but the module itself is central. Cutting it would break the whole hashing layer. Adversarial verification prevented a catastrophic false-positive deletion. Only the RS_LEARN_ env-var NAME is a cosmetic vestige, and renaming a live env-var contract carries breakage risk so it stays.'
   status: completed
-- id: rs-plugkit-vecstore-dedup-ci-witness
-  subject: code_index.rs's vecstore-dedup edit (embedding_col_dim_at/drop_if_dim_mismatch_at added to vecstore.rs, code_index.rs's local duplicates replaced with an import) was made this session but never compiled against the real wasm32-wasip1 target (local toolchain blocked, network blocked for CI push+watch) -- this row tracks the mandatory CI-green re-verification once network recovers, since marking the parent row completed on an unverified edit was itself a process violation now being corrected.
-  witness_evidence: rs-plugkit/src/vecstore.rs and rs-plugkit/src/code_index.rs both edited this session; rs-plugkit git status --porcelain shows the uncommitted diff; neither wasm32 compile nor CI has confirmed the edit is type-correct yet
-  status: pending
-- id: gm-theme-local-style-migrate-live-witness
-  subject: gm-theme-local-style-migrate's code edit (CSS moved from gm/site/theme.mjs into anentrypoint-design/app-shell.css) was made this session but never pushed or live-render-witnessed -- resolving the parent row without that witness was a process violation now being corrected. This row tracks the mandatory push + browser-verb visual confirmation once network recovers.
-  witness_evidence: gm/site/theme.mjs and anentrypoint-design/app-shell.css both edited this session (git status --porcelain shows the diff in both repos); neither pushed nor rendered live yet
-  status: pending
