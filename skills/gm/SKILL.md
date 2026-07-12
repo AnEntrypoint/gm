@@ -48,7 +48,7 @@ Boot probe at session start, one Bash call:
 cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N
 ```
 
-`.turn-summary.json` fields: `phase`, `prd_pending`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `update_available`, `deviations_30m`. If `update_available` is set, dispatch `bun x gm-plugkit@latest spool`. If `last_instruction_age_ms` exceeds `long_gap_threshold_ms`, dispatch `instruction` before other verbs. `.status.json` `ts` within 5min = watcher alive; gap > 5min = dead. Exception: if `busy_until` is in the future, watcher is handling a long verb (browser, chromium spawn).
+`.turn-summary.json` fields: `phase`, `prd_pending`, `last_instruction_age_ms`, `long_gap_threshold_ms`, `update_available`, `deviations_30m`. (The pending-row count is `prd_pending` on `.turn-summary.json`; the same count arrives as `prd_pending_count` on the `instruction`/`transition` RESPONSE body -- the terminal condition elsewhere in this doc names the response field, so grep `.turn-summary.json` for `prd_pending`, not `prd_pending_count`.) If `update_available` is set, dispatch `bun x gm-plugkit@latest spool`. If `last_instruction_age_ms` exceeds `long_gap_threshold_ms`, dispatch `instruction` before other verbs. `.status.json` `ts` within 5min = watcher alive; gap > 5min = dead. Exception: if `busy_until` is in the future, watcher is handling a long verb (browser, chromium spawn).
 
 ```bash
 bun x gm-plugkit@latest spool
