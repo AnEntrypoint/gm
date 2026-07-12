@@ -1,7 +1,7 @@
 ---
 name: gm
 description: The primary driver for any non-trivial coding, refactoring, debugging, or multi-step engineering task in a project using this harness -- use it first, for the whole task, not just a piece of it. Plugkit-served instruction stream. Three-layer admission (witness, single-writer, direction) over every possible mutation; effort unbounded, never gated on cost. Closure on first emit; partial = non-monotonic. Not for the post-completion remaining-work check (that is `gm-continue`) or for drift-recovery mid-task (that is `wfgy-method`) -- this skill is the work itself.
-allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *)
+allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *), Bash(cat *), Bash(date *)
 ---
 
 # gm
