@@ -61,7 +61,6 @@ gm/
 |-- bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
 |-- lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
 |-- agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
-|-- prompts/           <- bash-deny, session-start, prompt-submit, pre-compact
 |-- lang/              <- language packs (browser, ssh)
 |-- gm-plugkit/        <- separate npm package that ships the wasm-wrapper
 |-- gm.json            <- version + plugkit pin

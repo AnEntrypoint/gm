@@ -158,7 +158,7 @@ Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single 
 
 ## Spool-dispatch architecture replaces hooks
 
-Orchestration state tracked via `.gm/` marker files, not hook events; CLI's `checkDispatchGates()` gates Write/Edit/git pre-execution. Marker set + SpoolDispatcher mechanism: the recall store (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
+Orchestration state tracked via `.gm/` marker files, not hook events; the gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + the `hook_pre_tool_use`/`hook_stop` exports), driven off the same `.gm/` markers. (The former JS `lib/spool-dispatch.js`/`checkDispatchGates()` reimplementation was removed once the gate moved into the wasm binary.) Marker set + gate mechanism: the recall store (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
 
 **gm tool-use sequencing**: `Skill(skill="gm")` clears needs-gm gate. One shipped skill, no subagent variant. Marker mechanics: the recall store (`recall: gm-skill tool-use sequencing mechanics`).
 

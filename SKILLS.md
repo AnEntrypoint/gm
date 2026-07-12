@@ -1,66 +1,51 @@
-# SKILLS.md -- Skill Discovery Tool
+# SKILLS.md -- Skill Discovery
 
 ## Purpose
 
-This file enables the agent to dynamically discover available skills in the project.
-If the agent doesn't know which skills exist before starting a task,
-it must run the command below to get the current skill list.
+The skills shipped with this project live in `skills/<name>/SKILL.md`. Before
+starting a task, check this list and read the relevant skill's SKILL.md -- its
+numbered steps (or prose) ARE the procedure to follow.
 
 ---
 
-## Getting the Skill List
+## Available skills
 
-Run the following command to list all skills in the project:
+| name | when to use |
+|------|-------------|
+| `gm` | The primary driver for any non-trivial coding, refactoring, debugging, or multi-step engineering task. Use it first, for the whole task. |
+| `gm-continue` | The mandatory final handoff after a `gm` walk reaches `phase=COMPLETE` with `prd_pending_count=0`. Searches for remaining work; reloads `gm` or `wfgy-method` if any exists. |
+| `wfgy-method` | Drift-recovery discipline for multi-step work: compare each step to the goal, weigh alternatives before ambiguous decisions, checkpoint before risky steps, bounded-retry-then-surface. |
+| `polaris-protocol` | WFGY 5.0 Polaris Protocol root: compile goals before execution, shoot problems into inspectable routes, control drift. Load first for complex/high-stakes/long-horizon work, then dispatch its children. |
+| `polaris-goal-compiler` | Compiles a goal into task atoms, active/blocked work, verification gates, and claim ceilings before execution. |
+| `fifth-dimension-engine` | WFGY 5.0's core problem-solving tool: lifts a target into higher problem-coordinates and returns structured routes. Use after the goal compiler. |
 
-```bash
-uvx --from skills-cli skills to-prompt ./skills/* --format yaml
-```
-
-### Example Output
-
-```yaml
-available_skills:
-  - name: data-analysis
-    description: Used for reading, analyzing, and summarizing CSV, JSON, and tabular data.
-    location: ./skills/data-analysis/SKILL.md
-  - name: pdf-reader
-    description: Used when text or tables need to be extracted from PDF files.
-    location: ./skills/pdf-reader/SKILL.md
-  - name: code-reviewer
-    description: Used to evaluate code quality, security, and best practice compliance.
-    location: ./skills/code-reviewer/SKILL.md
-```
-
-### Output Fields
-
-| Field         | Description                                                        |
-|---------------|--------------------------------------------------------------------|
-| `name`        | Short identifier for the skill                                     |
-| `description` | What the skill does and when it should be used                     |
-| `location`    | Full path to the skill's SKILL.md -- read this file before using it |
+The authoritative list is the set of directories under `skills/`; each
+`skills/<name>/SKILL.md` carries its own `description` frontmatter naming
+exactly when to reach for it.
 
 ---
 
-## Skill Usage Flow
+## Usage flow
 
 ```
-1. Agent doesn't know which skills are needed for the task
+1. Check the table above (or list skills/*/) for a skill matching the task
          ->
-2. Run the command above to get the available_skills list
+2. Read the matching SKILL.md's description frontmatter to confirm the fit
          ->
-3. Read the description fields to identify the right skill
+3. Read the full SKILL.md -- its steps ARE the procedure
          ->
-4. Read the SKILL.md file at the skill's location path
-         ->
-5. Complete the task following the instructions in SKILL.md
+4. Follow it to completion
 ```
 
 ---
 
 ## Rules
 
-- **Always discover first:** If you don't know the available skills, run the command -- don't assume.
-- **Read description carefully:** The `description` field determines which skill to use.
-- **Read from location:** Always read the SKILL.md at the `location` path before using a skill.
-- **Multiple skills:** If the task requires more than one skill, read all relevant SKILL.md files.
-- **No skill found:** If no suitable skill exists, proceed with your general knowledge and note it.
+- **Discover first:** If you don't know which skill fits, read this list and
+  the candidate SKILL.md before assuming -- don't improvise a procedure a
+  skill already defines.
+- **The SKILL.md is the source of truth:** Its steps override your prior
+  assumptions about how to do the task.
+- **Multiple skills:** If a task spans more than one, read each relevant
+  SKILL.md.
+- **No skill fits:** Proceed with general knowledge and say so.

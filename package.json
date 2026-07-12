@@ -31,7 +31,6 @@
   "files": [
     "skills/",
     "agents/",
-    "prompts/",
     "lib/",
     "lang/",
     "scripts/",
