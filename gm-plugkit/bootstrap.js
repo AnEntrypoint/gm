@@ -931,11 +931,12 @@ async function probeSelfStaleness(timeoutMs) {
 async function ensureReady(opts) {
   opts = opts || {};
   const offline = opts.offline === true;
+  const skipSelfStaleCheck = offline || process.env.GM_PLUGKIT_SKIP_SELF_STALE_CHECK === '1';
 
   try { ensureNextStepWiring(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
   try { ensureInstructionsBundle(process.env.CLAUDE_PROJECT_DIR || process.cwd()); } catch (_) {}
 
-  if (!offline) {
+  if (!skipSelfStaleCheck) {
     try {
       const selfStale = await probeSelfStaleness(2500);
       if (selfStale && selfStale.stale) {
