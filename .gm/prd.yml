@@ -9594,11 +9594,6 @@
   description: 'DECIDED RETIRE: rs-codeinsight has zero inbound edges from live gm/rs-plugkit graph (not in Cargo.toml, no use rs_codeinsight in rs-plugkit/src, no gm dep). rs-plugkit owns code-index natively (code_index.rs 938 LOC). rs-codeinsight is a tree-sitter AST-digest analyzer (14 files 4238 LOC) with no live consumer. Tombstone it like rs-exec: reduce src to inert stub OR archive repo + tombstone README pointing to rs-plugkit/src/code_index.rs, stop auto-version-bump CI. Also fix its stale AGENTS.md (documents nonexistent src/main.rs; crate is lib-only).'
   witness: 'agent: grep use rs_codeinsight rs-plugkit/src EMPTY; rs-codeinsight AGENTS.md:3 standalone-published-independently'
   status: pending
-- id: rs-plugkit-dead-deps
-  description: Audit every rs-plugkit Cargo.toml dependency for live use; cut unused tree-sitter grammars and any candle/tokenizer/libsql surface with zero live call path. Each removed dep shrinks the wasm binary (opt-level z). Witness each removal by grepping for zero use sites.
-  witness: 'agent: every Cargo.toml dep LIVE. serde/serde_json/serde_yaml (yaml prd/mutables/gates), libsql-ffi (all sql_* + vector stores), candle-core/nn/transformers + tokenizers (embed.rs:5-8 BertModel bge-small), getrandom custom (embed.rs:62 register_custom_getrandom RNG shim - load-bearing), rs-search 6 use sites, all 15 tree-sitter grammars wired to real extensions code_index.rs:114-128. NO dep removable without capability loss. Minimal-code win is in dead MODULES not deps.'
-  status: completed
-  commit_comment: Confirm all rs-plugkit Cargo deps are live and load-bearing; no dep removable without capability loss
 - id: rs-plugkit-dead-modules
   description: 'DECIDED HEADLINE CUT: delete rslearn_vectors.rs (147L) + graph_similarity_search verb - write-only dead subsystem. Written by memorize.rs:199 insert_memory_edge, read only by wasm_dispatch.rs:828 graph_similarity_search which is dispatched NOWHERE (absent from skill/docs/README/AGENTS). Real recall path uses recall.rs memory_recall_backend never touches rslearn_vectors. Remove: module, lib.rs:38 mod decl, insert_memory_edge (memorize.rs:193-209), graph_similarity_search handler+match arm, mark_deleted call wasm_dispatch.rs:629. ~200L, near-zero risk. Witness rs-plugkit still builds wasm32 + codesearch/recall/memorize still work after.'
   witness: 'agent: graph_similarity_search dispatched nowhere; rslearn_vectors write-only from gm perspective'
@@ -9619,16 +9614,6 @@
   description: Scrub every stale reference to retired components (rs-exec, rs-learn) across all repos code + docs so nothing points at a dead surface.
   witness: AGENTS.md/CLAUDE.md still mention rs-learn/rs-exec in multiple places
   status: pending
-- id: anentrypoint-design-coupling
-  description: Establish the real coupling surface between gm/site and anentrypoint-design SDK; apply minimal high-impact update only if it lets gm site drop local CSS or fixes stale coupling. If no coupling, exclude from scope explicitly.
-  witness: 'agent: gm/site/theme.mjs:53-54 loads unpkg anentrypoint-design@latest css+js; :290 ds-247420 class; SDK ships gm-prose.css wired into scripts/build.mjs:76, present in dist/247420.css (39 ds-article-host/gm-callout/ds-prose matches). Consumption live+healthy. No minimization-blocking work; SDK already owns gm prose surface pro-rata.'
-  status: completed
-  commit_comment: Confirm anentrypoint-design SDK coupling to gm site is live and healthy (pro-rata prose surface); no change required
-- id: wireweave-coupling
-  description: Establish whether wireweave has live coupling to the gm/rs-* stack; apply minimal high-impact update only if coupled. If unrelated, exclude from scope explicitly with evidence.
-  witness: 'agent: wireweave has NO harness/code coupling (nostr+webrtc SDK, not in cascade list, no gm/rs-* imports in src/). Only .gm/ scaffold artifacts from gm being run on it. Excludable from harness scope. In-spirit CSS-dedup + AGENTS.md-scrub reachable work split into wireweave-css-dedup + wireweave-agentsmd-audit-log-scrub rows.'
-  status: completed
-  commit_comment: Confirm wireweave has no code coupling to gm/rs-* stack; split its in-spirit CSS-dedup cleanup into dedicated rows
 - id: gm-docs-dedup
   description: Reduce AGENTS.md/SKILL.md redundancy vs plugkit-served instruction prose; drain detail-heavy caveats to recall store per Documentation Policy (bidirectional migration, deflation back-pressure). Byte-count must drop while recall gains facts.
   witness: AGENTS.md ~28KB; Documentation Policy mandates deflation each memorize run
@@ -9832,11 +9817,6 @@
   subject: 'Cargo dep audit: all deps live-used; 28 optional tree-sitter grammars gated behind features (default=[] means NONE compiled by default)'
   witness: 'WITNESSED: Cargo.toml non-optional deps tree-sitter/ignore/rayon/md-5 all live in lib.rs (Parser 21/78, WalkBuilder 19/177, par_iter 64/270, Md5 269). 28 tree-sitter-* optional behind per-lang features; default=[] compiles zero grammars unless opted in. No dead non-optional deps.'
   status: completed
-- id: finding-verdict-retirable
-  subject: 'VERDICT: RETIRABLE/tombstone-candidate. Zero inbound edges from the live gm/plugkit graph; functionality absorbed into rs-plugkit like rs-exec'
-  witness: 'WITNESSED VERDICT RETIRABLE: zero inbound edges from live graph (no Cargo dep rs-plugkit+gm, no use rs_codeinsight, no npm/bootstrap spawn). rs-codeinsight AGENTS.md line 3 self-declares standalone published independently of gm/rs-* family. Functionality absorbed into rs-plugkit code_index.rs = same pattern as rs-exec retirement. Last commit 2026-07-07 vs plugkit 2026-07-10.'
-  status: completed
-  commit_comment: 'Investigation: rs-codeinsight verdict = RETIRABLE (absorbed into rs-plugkit native code_index)'
 - id: gm-theme-local-style-migrate
   description: gm/site/theme.mjs:313-320 still has visual rules (heading margins, .ds-lede spacing) in local <style>; migrate into anentrypoint-design SDK so gm local <style> is 100% render-mode plumbing per pro-rata rule. Rest of block (:304-312,:327-328 article-flow/landing-capped/crumb media query) is legit render-mode plumbing that stays local.
   witness: 'agent: theme.mjs:313-320 visual rules migratable; :304-312 plumbing stays'
@@ -9872,4 +9852,8 @@
 - id: gm-docs-site-retired-crate-refs
   description: 'Scrub retired rs-exec/rs-learn crate refs from docs/site (agent exec_js-9): docs/crates.html:161,255, docs/distribution.html:186,194, docs/paper.html, docs/skills.html, site/content/pages/crates.yaml, site/content/pages/home.yaml:29,47 (home.yaml:29 still teaches retired exec:<lang>/exec:recall ABI). KEEP rs-learn.db FILENAME (live memory-store name - SKILL.md:89, README:89,109, entry.md:62, .gitignore correct); only crate/repo refs are stale.'
   witness: 'agent: docs+site reference rs-exec/rs-learn crates as live; rs-learn.db filename is correct/live'
+  status: pending
+- id: plugkit-warmup-loop-fix
+  description: 'FIX LANDED (repo + installed wrapper): boot-warmup in plugkit-wasm-wrapper.js was single-shot - one codesearch pass advanced the code index by one wall-budget slice then cleared busy_until, leaving deferred_files>0 so the digest never stored; every respawn re-embedded from scratch and the supervisor heartbeat-stale check (STATUS_STALE_MS=30s, supervisor.js:346) killed the watcher mid-rebuild because the synchronous wasm dispatch blocked the 5s heartbeat. Root cause: rebuild time > heartbeat window and digest only persists at deferred_files==0. Fix: loop the warmup dispatching codeinsight_index (returns deferred_files) refreshing _writeStatusBusy(1200000) each pass until deferred_files==0 or bounded (MAX_WARMUP_PASSES=80, stagnation break). Witnessed live: watcher pid stable across 3.6min (no heartbeat kill), code_index: done fired, phase-status+instruction verbs land in ms=5. Applied to BOTH gm-plugkit/plugkit-wasm-wrapper.js (repo source) AND ~/.gm-tools installed copy to unblock this session. Must commit repo source + let cascade republish.'
+  witness: 'live: pid 6464 survived 218s busy-protected; code_index done reused=447; verbs serve ms=5 after months of heartbeat-stale restart loop'
   status: pending

@@ -12,7 +12,6 @@
     "index.js",
     "bootstrap.js",
     "supervisor.js",
-    "lang-host-runner.js",
     "plugkit-wasm-wrapper.js",
     "plugkit.version",
     "plugkit.sha256",

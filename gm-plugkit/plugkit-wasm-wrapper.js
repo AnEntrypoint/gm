@@ -4390,16 +4390,42 @@ async function runSpoolWatcher(instance, spoolDir) {
       // The window must therefore comfortably exceed the worst-case cold embed;
       // it is a one-time cost (the digest persists after a single completion,
       // so subsequent boots' warmup is near-instant).
-      _writeStatusBusy(1200000);
-      const vb = new TextEncoder().encode('codesearch');
-      const bb = new TextEncoder().encode(JSON.stringify({ query: 'index warmup', k: 1 }));
-      const vp = writeWasmInput(instance, vb, 'boot-warmup:codesearch.verb');
-      const bp = writeWasmInput(instance, bb, 'boot-warmup:codesearch.body');
+      // A single warmup dispatch only advances the index by one wall-budget
+      // slice, so a large repo needs many passes before the digest converges
+      // (deferred_files == 0). A single-shot warmup left the digest permanently
+      // withheld: every later verb and every respawn re-triggered a fresh
+      // partial pass, and the stale-digest boot path re-embedded from scratch
+      // forever. Loop the warmup, refreshing busy_until each pass so the
+      // supervisor's stale-heartbeat check never kills a converging rebuild,
+      // until deferred_files reaches 0 or a bounded pass count is hit.
       const t0 = Date.now();
-      const r = dispatch(vp, vb.length, bp, bb.length);
-      decodeWasmResult(instance, r, 'boot-warmup:codesearch');
+      let passes = 0;
+      let lastDeferred = -1;
+      let stagnant = 0;
+      const MAX_WARMUP_PASSES = 80;
+      while (passes < MAX_WARMUP_PASSES) {
+        _writeStatusBusy(1200000);
+        const vb = new TextEncoder().encode('codeinsight_index');
+        const bb = new TextEncoder().encode(JSON.stringify({ root: '.', max_files: 500 }));
+        const vp = writeWasmInput(instance, vb, 'boot-warmup:codeinsight_index.verb');
+        const bp = writeWasmInput(instance, bb, 'boot-warmup:codeinsight_index.body');
+        const r = dispatch(vp, vb.length, bp, bb.length);
+        const decoded = decodeWasmResult(instance, r, 'boot-warmup:codeinsight_index');
+        passes++;
+        let deferred = null;
+        try {
+          const parsed = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
+          const d = parsed && (parsed.data || parsed);
+          if (d && typeof d.deferred_files === 'number') deferred = d.deferred_files;
+          else if (parsed && typeof parsed.deferred_files === 'number') deferred = parsed.deferred_files;
+        } catch (_) {}
+        if (deferred === null) break;
+        if (deferred === 0) break;
+        if (deferred === lastDeferred) { stagnant++; if (stagnant >= 4) break; } else { stagnant = 0; }
+        lastDeferred = deferred;
+      }
       writeStatus();
-      logEvent('plugkit', 'boot.index-warmup', { ms: Date.now() - t0 });
+      logEvent('plugkit', 'boot.index-warmup', { ms: Date.now() - t0, passes, converged: lastDeferred === -1 || lastDeferred === 0 });
     } catch (e) {
       try { logEvent('plugkit', 'boot.index-warmup-failed', { error: String(e && e.message || e) }); } catch (_) {}
     }
