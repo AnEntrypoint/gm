@@ -9610,14 +9610,6 @@
   description: 'DECIDED package.json files: prune: remove lib/ (deleted), prompts/ (phantom - dir does not exist fs.existsSync=false), lang/ (ssh.js deleted), agents/ (deleted), bin/gm-validate.js + bin/gm-shell-validate.js (deleted). Keep bin/install.js bin/bootstrap.js skills/ gm-plugkit/ gm.json + bin/plugkit.wasm.sha256/.version (wasm itself correctly NOT shipped). Mirror gm-plugkit/package.json files: (drop lang-host-runner.js:15).'
   witness: 'Committed gm sha e8b6ae5. package.json files: pruned agents/lib/lang/gm-validate/gm-shell-validate (0 stale remaining, valid JSON 21 entries); gm-plugkit/package.json dropped lang-host-runner.js.'
   status: completed
-- id: per-repo-clean-worktree-push
-  description: Each touched repo (gm, rs-plugkit, rs-search, rs-codeinsight, rs-exec, wireweave, anentrypoint-design) ends with clean porcelain + pushed to main via git verbs; branches consolidated to main per user global rule.
-  witness: 'user global: zero branches, consolidate to main; push part of COMPLETE'
-  status: pending
-- id: ci-green-witness-all-repos
-  description: After each repos push, witness CI/CD goes green (cascade + publish for gm-stack repos) before COMPLETE; red requires fix+re-push+re-watch.
-  witness: CONSOLIDATE owns CI validation; .ci-validated SHA must match HEAD
-  status: pending
 - id: dead-coupling-sweep
   subject: Sweep both repos for stale references to retired rs-exec/rs-learn and duplicated gm-stack code needing consolidation.
   status: completed
