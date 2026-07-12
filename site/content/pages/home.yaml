@@ -26,7 +26,7 @@ features:
     - name: "plugkit-only tool surface"
       desc: "the gm skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. an agent inventing a tool that does not exist is pure noise; one surface, audited, removes it. missing capability becomes a new verb, not a skill-side escape hatch."
     - name: "every unknown is resolved by running code"
-      desc: "exec:<lang> for proofs, exec:codesearch for whereabouts, exec:recall for what we already learned. \"I think this should work\" is physically blocked at the hook layer. an unverified assertion is noise dressed as signal; the agent runs the check, reads the output, and writes it as evidence."
+      desc: "exec_js for proofs, codesearch for whereabouts, recall for what we already learned. \"I think this should work\" is physically blocked at the gate layer. an unverified assertion is noise dressed as signal; the agent runs the check, reads the output, and writes it as evidence."
     - name: "process of elimination, not guessing"
       desc: "gm resolves an unknown the way a clinician runs a differential diagnosis: name the hypothesis (a mutable, a single row in .gm/mutables.yml), run exactly one test against real code, read the real result, and either cross the hypothesis off or confirm it. repeat until nothing is left unknown. the agent never answers from memory or from what the docs say should happen; it answers from what just happened when the code ran."
     - name: "instructions are file writes, not prose the agent has to interpret"

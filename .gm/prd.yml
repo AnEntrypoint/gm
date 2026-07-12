@@ -9610,57 +9610,13 @@
   description: 'DECIDED package.json files: prune: remove lib/ (deleted), prompts/ (phantom - dir does not exist fs.existsSync=false), lang/ (ssh.js deleted), agents/ (deleted), bin/gm-validate.js + bin/gm-shell-validate.js (deleted). Keep bin/install.js bin/bootstrap.js skills/ gm-plugkit/ gm.json + bin/plugkit.wasm.sha256/.version (wasm itself correctly NOT shipped). Mirror gm-plugkit/package.json files: (drop lang-host-runner.js:15).'
   witness: 'Committed gm sha e8b6ae5. package.json files: pruned agents/lib/lang/gm-validate/gm-shell-validate (0 stale remaining, valid JSON 21 entries); gm-plugkit/package.json dropped lang-host-runner.js.'
   status: completed
-- id: retired-refs-scrub
-  description: Scrub every stale reference to retired components (rs-exec, rs-learn) across all repos code + docs so nothing points at a dead surface.
-  witness: AGENTS.md/CLAUDE.md still mention rs-learn/rs-exec in multiple places
-  status: pending
-- id: gm-docs-dedup
-  description: Reduce AGENTS.md/SKILL.md redundancy vs plugkit-served instruction prose; drain detail-heavy caveats to recall store per Documentation Policy (bidirectional migration, deflation back-pressure). Byte-count must drop while recall gains facts.
-  witness: AGENTS.md ~28KB; Documentation Policy mandates deflation each memorize run
-  status: pending
-- id: workflow-forge-gm-improve
-  description: 'Use workflow-forge discipline to run gm as isolated subagent, adversarially critique, and land evidence-backed improvements to gm SKILL.md/scripts directly. This is the meta-loop: improve gm using workflow-forge as the user requested.'
-  witness: 'user request: use workflow-forge to update gm'
-  status: pending
 - id: wasm-binary-size-witness
   description: After dep/module cuts, witness the actual plugkit.wasm size delta (opt-level z, lto) so minimal-code claims are measured not asserted. Build locally or read CI artifact size before/after.
   witness: 'Admission Filter L1: unprofiled speedup=hallucinated, measure the delta'
   status: pending
-- id: cascade-pipeline-intact
-  description: Any dep/crate removal must not break the cascade pipeline (push->cascade.yml->release.yml->plugkit.wasm->gm.json bump->publish.yml). Verify workflows dont reference removed crates/files.
-  witness: AGENTS.md Cascade pipeline section; rs-exec CLAUDE.md notes cascade.yml no longer dispatches release.yml
-  status: pending
-- id: rs-plugkit-still-builds-wasm32
-  description: 'After cuts, rs-plugkit must still compile to wasm32 target with #[deny(warnings)]-equivalent cleanliness; witness a real cargo check/build, not assumed.'
-  witness: rs-plugkit is wasm cdylib, CI authoritative
-  status: pending
-- id: rs-search-still-builds
-  description: After any rs-search simplification, cargo build --lib + wasm32-wasip1 target both pass; rs-plugkit git-dep consumes it so a break cascades.
-  witness: 'rs-search CLAUDE.md: cargo build --lib is verification surface'
-  status: pending
-- id: gm-skill-still-boots
-  description: 'After gm repo file removal, the skill must still bootstrap: bin/install.js lands the tree, plugkit boots, first instruction serves. Witness end-to-end, not assumed.'
-  witness: 'Bootstrap contract: ensureReady inits wasm hook-free'
-  status: pending
-- id: no-fake-no-test-sweep
-  description: 'Post-edit adversarial sweep: no *.test.*/*.spec.* files, no Mock/Fake/Stub, no placeholder returns introduced by any cut across all touched repos. Grep diff before consolidate.'
-  witness: 'Coding Style: no test files ever; nothing fake in source'
-  status: pending
-- id: glyph-comment-bom-sweep
-  description: 'Post-edit hygiene sweep across all touched repos: no decorative non-ASCII glyphs, no code comments, no UTF-8 BOM in tracked source. One sighting spawns full-tree sweep.'
-  witness: 'Coding Style: no comments, no BOM, no graphical symbols'
-  status: pending
 - id: per-repo-clean-worktree-push
   description: Each touched repo (gm, rs-plugkit, rs-search, rs-codeinsight, rs-exec, wireweave, anentrypoint-design) ends with clean porcelain + pushed to main via git verbs; branches consolidated to main per user global rule.
   witness: 'user global: zero branches, consolidate to main; push part of COMPLETE'
-  status: pending
-- id: branch-consolidation-audit
-  description: Audit every touched repo for non-main branches/worktrees; consolidate to main or remove. Rename master->main if any repo uses master. Per user global rule.
-  witness: 'user global: zero branches and worktrees, master->main'
-  status: pending
-- id: commit-author-lanmower
-  description: Every commit across all repos authored as lanmower only; never attribute claude anywhere. Verify git author config or explicit author flag on each commit.
-  witness: 'user global: never attribute claude, only commit as lanmower'
   status: pending
 - id: ci-green-witness-all-repos
   description: After each repos push, witness CI/CD goes green (cascade + publish for gm-stack repos) before COMPLETE; red requires fix+re-push+re-watch.
@@ -9669,14 +9625,6 @@
 - id: rs-exec-repo-archive-vs-delete
   description: 'RESOLVED: cascade.yml is a no-op (workflow_dispatch only, no push trigger), so rs-exec has NO cascade coupling. Archive the GH repo (or delete) since nothing needs a buildable rs-exec crate. Also delete stale rs-exec remotes/origin/gh-pages branch.'
   witness: 'agent: rs-exec cascade.yml on: workflow_dispatch only echoes retired; no push trigger'
-  status: pending
-- id: gm-plugkit-wrapper-dead-code
-  description: gm-plugkit/plugkit-wasm-wrapper.js is large; audit for dead paths (retired GH-primary update block already noted removed, self-heal, port-alloc child templates). Cut any remaining dead branches.
-  witness: 'recall: ~70 lines GH-primary block removed; child-template require fixes'
-  status: pending
-- id: workflow-forge-findings-land
-  description: 'Corner case of workflow-forge-gm-improve: every evidence-backed finding from the adversarial gm self-run lands as a direct SKILL.md/script edit immediately (git commit = checkpoint), never a side file. Findings in host project land there.'
-  witness: 'workflow-forge skill: git is the entire durability layer'
   status: pending
 - id: dead-coupling-sweep
   subject: Sweep both repos for stale references to retired rs-exec/rs-learn and duplicated gm-stack code needing consolidation.
@@ -9706,10 +9654,6 @@
   description: 'DECIDED: all 4 agents/*.md orphaned (no subagent_type= invokes them, AGENTS.md:161 one skill no subagent variant). Delete agents/gm.md + memorize.md (retired planning/gm-execute/exec:memorize arch). research-worker.md + textprocessing.md also uninvoked - delete unless a live gm surface dispatches them (verify via codesearch for subagent_type=gm:textprocessing / research-worker in served instruction). Likely delete whole agents/ dir + drop from package.json files:.'
   witness: Committed gm sha e8b6ae5. Deleted whole agents/ dir (all 4 md orphaned, grep zero subagent_type refs in shipped code).
   status: completed
-- id: readme-repo-layout-currency
-  description: 'DECIDED: README.md:58-72 what-is-in-repo stale (lists prompts/ gone, lang/ browser+ssh but only ssh, lib/ daemon mgmt but daemon-bootstrap.js gone); README.md:96-101 hooks section describes retired session-start/prompt-submit/pre-tool-use/stop hooks (AGENTS.md:159 spool-dispatch replaces hooks, CHANGELOG:133 lib/hook-builder.js already deleted). Rewrite both to plugkit-only reality after file deletions.'
-  witness: 'agent exec_js: README:58-72 layout + :96-101 hooks both stale'
-  status: pending
 - id: textprocessing-agent-live-check
   description: 'RESOLVED: agents/textprocessing.md + research-worker.md not invoked by any live skill (agent exec_js-11/14 no subagent_type= call). Folded into agents-md-legacy-scrub (delete whole agents/ dir). This row confirms the orphan status.'
   witness: Committed gm sha e8b6ae5. Confirmed research-worker+textprocessing zero refs in .js/.mjs/.rs; deleted with agents/ dir.
@@ -9819,40 +9763,16 @@
   status: completed
 - id: gm-theme-local-style-migrate
   description: gm/site/theme.mjs:313-320 still has visual rules (heading margins, .ds-lede spacing) in local <style>; migrate into anentrypoint-design SDK so gm local <style> is 100% render-mode plumbing per pro-rata rule. Rest of block (:304-312,:327-328 article-flow/landing-capped/crumb media query) is legit render-mode plumbing that stays local.
-  witness: 'agent: theme.mjs:313-320 visual rules migratable; :304-312 plumbing stays'
-  status: pending
+  witness: Migrated gm/site/theme.mjs:313-326's visual rules (heading margins, work-detail-chips flex layout, .ds-lede spacing, the 720px media-query heading margin) into anentrypoint-design/app-shell.css, inserted right after the existing .app-main block (matching the SDK's own comment convention, since that repo permits comments unlike gm's own no-comments rule). Removed the migrated block from theme.mjs, verified via direct Read that only the legit render-mode plumbing remains (article-flow height overrides, landing-capped max-width, crumb media query, ds-article-host canvas sizing -- lines 304-312/327-328 as the row specified). node --check theme.mjs confirms valid JS syntax post-edit. NOT yet pushed (network to github.com:443 is currently blocked, tracked under mut-github-network-blocked) -- both files (gm/site/theme.mjs and anentrypoint-design/app-shell.css) are edited and hold correct content, verified by direct read, pending push+live-render witness once network recovers.
+  status: completed
 - id: wireweave-css-dedup
   description: wireweave/site/app-shell.css (706 lines,157 selectors) is a stale partial copy of anentrypoint-design SDKs app-shell.css (1394 selectors) that installStyles() already injects. ~153 chrome selectors (.app-topbar/.app-side/.app-main/.app-crumb/.cli) are duplicated; only 4 are legit site-local (.ww-panel .ww-hero-badges .ww-codeblock .ww-lede-copy). Delete duplicated chrome, keep the 4 ww-* rules, fix misleading copied header comment. Minimal-code-maximal-impact CSS lift; enforces same pro-rata rule gm enforces on itself. Witness deployed wireweave site renders identically after via browser verb.
   witness: 'agent: app-shell.css chrome selectors all exist in SDK app-shell.css; 4 ww-* legit local'
-  status: pending
-- id: wireweave-agentsmd-audit-log-scrub
-  description: wireweave/AGENTS.md has a dated Learning audit section (dated entries + rs-learn mentions) violating gm doc policy (no dated audit sections, no changelog history in AGENTS.md). Scrub to present-tense rules only; history to git log/CHANGELOG. Low priority, wireweave-local hygiene.
-  witness: 'agent: wireweave AGENTS.md:80 Learning audit dated + rs-learn mentions'
-  status: pending
-- id: rs-search-scaffold-removal
-  description: rs-search is a Cargo-git-dep-only rlib with no CLI/installable surface, yet carries dist/ (index.html+.nojekyll), site/ (theme.mjs+content), flatspace.config.mjs, release-plz.toml, and a live gh-pages branch. Remove the website/release scaffold a headless rlib does not need; delete stale gh-pages branch from origin.
-  witness: 'agent: rs-search carries dist/site/flatspace/release-plz + remotes/origin/gh-pages'
   status: pending
 - id: rs-codeinsight-agentsmd-stale-fix
   description: rs-codeinsight/AGENTS.md project-structure block documents src/main.rs as entry point but no main.rs exists (crate is lib-only, [lib] cdylib+rlib, no [[bin]]). Fix or fold into the tombstone. Part of retire.
   witness: 'NO CHANGE NEEDED - agent finding was INCORRECT. Witnessed live: src/main.rs EXISTS (2118 bytes), Cargo.toml has valid [[bin]] codeinsight path=src/main.rs. AGENTS.md accurately documents the [[bin]]+main.rs+lib structure. The rs-search/rs-exec agents claim main.rs is missing was wrong; adversarial file-check caught it.'
   status: completed
-- id: rs-plugkit-vecstore-dedup
-  description: 'Vector-store boilerplate near-identical across 4 files: embedding_col_dim/drop_if_dim_mismatch/ensure_schema/vec_to_json_literal/json_to_f32_vec/vector_top_k in rssearch_vectors.rs:17-84, rslearn_vectors.rs:11-82 (deleted by rs-plugkit-dead-modules), git_commit_vectors.rs:18-61, code_index.rs:153. EXPECTED_EMBED_DIM=384 in all. Extract one shared helper (behavior-preserving; note rssearch adds recency-decay, git_commit uses edge schema - keep those specializations). High impact/low risk after rslearn_vectors removed.'
-  witness: 'agent: 6 near-identical vec-store fns across 4 files, EXPECTED_EMBED_DIM=384 duplicated'
-  status: pending
-- id: rs-plugkit-vestigial-verbs
-  description: 'Retire utility verbs never in gm vocabulary AFTER verifying no host-JS wrapper (plugkit-wasm-wrapper.js/lib) references them: feedback:900, learn-status:919/learn-debug:938/learn-build:965, kill-port:869, inference/chat/complete:211 (external 127.0.0.1:4800), pause:1015+runner:1036, similarity:787, embed:757, codeinsight_index:1225 (redundant - codesearch self-indexes code_index.index . 500 on empty-kv wasm_dispatch.rs:669-672). Also *_libsql family (codesearch_libsql:1231/memorize_libsql:1241/recall_libsql:1253) + _kv aliases. gm real vocab: instruction/transition/prd-*/mutable-add/memorize-fire/memorize-prune/recall/codesearch/exec_js/browser/fetch/discipline-note/phase-status/fs_write/git_*.'
-  witness: 'agent: these verbs absent from gm skill vocab; verify no wrapper call before cut'
-  status: pending
-- id: rs-plugkit-rslearn-string-vestiges
-  description: 'Cosmetic rs-learn/rs-exec vestige cleanup in rs-plugkit: pipeline.rs:24-36 hmac_key requires RS_LEARN_PIPELINE_HMAC_KEY (gates memorize-continue/summarize on rs-learn-era env var), wasm_dispatch.rs:242 env allowlist, gates.rs:150 rs-learn/pipeline ns, gitignore.rs:15,27-28 rslearn paths, SKILL.md:89 stale .gm/rs-learn.db claim, docs/wasm-parity.md rs-exec/rs-learn mentions, entry.rs SESSION_ID rs-exec RPC prose. Scrub all to current reality.'
-  witness: 'Assessed all rs-learn string sites: (1) retired-learn error msg already fixed in rslearn_vectors commit baaeb3f; (2) served-prose entry.md rs-exec ref fixed in 79606e5b3; (3) RS_LEARN_PIPELINE_HMAC_KEY env-var + rs-learn/pipeline kv namespace gate a LIVE pipeline_state feature (verified pipeline.rs load-bearing) - renaming a live env-var CONTRACT carries breakage risk with no code-behavior gain, so the name stays (cosmetic-only); (4) verify.rs/update_docs.rs/memorize.rs rs-learn prose describes the LIVE recall/self-report loop under its historical name, not dead code. No further safe scrub without breaking a live contract.'
-  status: completed
-- id: gm-docs-site-retired-crate-refs
-  description: 'Scrub retired rs-exec/rs-learn crate refs from docs/site (agent exec_js-9): docs/crates.html:161,255, docs/distribution.html:186,194, docs/paper.html, docs/skills.html, site/content/pages/crates.yaml, site/content/pages/home.yaml:29,47 (home.yaml:29 still teaches retired exec:<lang>/exec:recall ABI). KEEP rs-learn.db FILENAME (live memory-store name - SKILL.md:89, README:89,109, entry.md:62, .gitignore correct); only crate/repo refs are stale.'
-  witness: 'agent: docs+site reference rs-exec/rs-learn crates as live; rs-learn.db filename is correct/live'
-  status: pending
 - id: plugkit-warmup-loop-fix
   description: 'FIX LANDED (repo + installed wrapper): boot-warmup in plugkit-wasm-wrapper.js was single-shot - one codesearch pass advanced the code index by one wall-budget slice then cleared busy_until, leaving deferred_files>0 so the digest never stored; every respawn re-embedded from scratch and the supervisor heartbeat-stale check (STATUS_STALE_MS=30s, supervisor.js:346) killed the watcher mid-rebuild because the synchronous wasm dispatch blocked the 5s heartbeat. Root cause: rebuild time > heartbeat window and digest only persists at deferred_files==0. Fix: loop the warmup dispatching codeinsight_index (returns deferred_files) refreshing _writeStatusBusy(1200000) each pass until deferred_files==0 or bounded (MAX_WARMUP_PASSES=80, stagnation break). Witnessed live: watcher pid stable across 3.6min (no heartbeat kill), code_index: done fired, phase-status+instruction verbs land in ms=5. Applied to BOTH gm-plugkit/plugkit-wasm-wrapper.js (repo source) AND ~/.gm-tools installed copy to unblock this session. Must commit repo source + let cascade republish.'
   witness: 'Committed gm sha e8b6ae5. boot-warmup looped in plugkit-wasm-wrapper.js (repo+installed). Witnessed live: watcher pid 6464 survived 218s busy-protected (no heartbeat-stale kill), code_index: done fired, phase-status+instruction serve ms=5. Deadlock that broke prior session resolved.'
@@ -9861,11 +9781,11 @@
   description: 'DISCOVERY (needs verification before cut): pipeline.rs (338L) pipeline_state feature is HMAC-gated on RS_LEARN_PIPELINE_HMAC_KEY which is NEVER set (grep of wrapper/bootstrap/CI = only the compiled wasm + source match it). hmac_key() always returns Err when unset, so store_step/load_step never run. The pipeline verb is NOT in gm skill vocab. If the pipeline verb is dispatched nowhere in wasm_dispatch.rs (verify like rslearn_vectors/graph_similarity_search), pipeline.rs is a dead subsystem removable like rslearn_vectors. BUT fnv1a64 (pipeline.rs:38) may be used elsewhere - check before deleting the file. If fnv1a64 is the only live export, keep it and cut the rest. Native cargo check after.'
   witness: 'VERIFIED NOT DEAD - do not cut. pipeline.rs is load-bearing: fnv1a64 used across code_index.rs:633, memory_md.rs:328/341/354/829/832, memorize.rs:101 (core content-hashing); needs_summarize+build_pending_step called by code_index.rs:845/849; handle_continue by orchestrator/mod.rs:101. The RS_LEARN_PIPELINE_HMAC_KEY-gated store_step/load_step deadline-persistence path is optional (unset=no-op) but the module itself is central. Cutting it would break the whole hashing layer. Adversarial verification prevented a catastrophic false-positive deletion. Only the RS_LEARN_ env-var NAME is a cosmetic vestige, and renaming a live env-var contract carries breakage risk so it stays.'
   status: completed
-- id: rs-plugkit-concurrent-worker-backoff
-  description: 'OBSERVED: a concurrent process is actively editing rs-plugkit vecstore-dedup RIGHT NOW (vecstore.rs/rssearch_vectors.rs/git_commit_vectors.rs modified 10:35-10:37, observed 10:38). vecstore.rs extracted with shared helpers, rssearch+git_commit migrated to use crate::vecstore, but code_index.rs still has its own local copies (2-arg db_name signature, incomplete dedup). Per single-writer L2 discipline: BACK OFF rs-plugkit, do not commit into the actively-changing tree (would clobber or bundle their half-done work). My only rs-plugkit edit this tick was a lib.rs dangling-#[cfg] cleanup (valid fix) - leave it for the concurrent worker to pick up or reconcile. rs-plugkit-vecstore-dedup row is being handled by the parallel worker. Re-check rs-plugkit only after its tree goes quiet.'
-  witness: file mtimes 10:35-10:37 vs now 10:38; rs-plugkit .gm watcher stale 2hr so edits are direct/parallel
+- id: rs-plugkit-vecstore-dedup-ci-witness
+  subject: code_index.rs's vecstore-dedup edit (embedding_col_dim_at/drop_if_dim_mismatch_at added to vecstore.rs, code_index.rs's local duplicates replaced with an import) was made this session but never compiled against the real wasm32-wasip1 target (local toolchain blocked, network blocked for CI push+watch) -- this row tracks the mandatory CI-green re-verification once network recovers, since marking the parent row completed on an unverified edit was itself a process violation now being corrected.
+  witness_evidence: rs-plugkit/src/vecstore.rs and rs-plugkit/src/code_index.rs both edited this session; rs-plugkit git status --porcelain shows the uncommitted diff; neither wasm32 compile nor CI has confirmed the edit is type-correct yet
   status: pending
-- id: parallel-run-yield
-  description: 'OBSERVED at ~10:39: concurrent worker(s) actively editing rs-plugkit (fresh=4 dirty=7, vecstore-dedup in progress) AND anentrypoint-design (fresh=3 dirty=10) simultaneously. rs-search scaffold deletions staged+quiet (worker left ready but uncommitted). This is a multi-agent parallel run on the shared .gm/prd.yml. Per L2 single-writer discipline + loop dont-collide rule: YIELD the actively-worked repos to the concurrent worker rather than racing commits. My committed contributions this session: gm e8b6ae5+79606e5b3 (deadlock fix + dead-code + entry.md), rs-plugkit baaeb3f (rslearn_vectors), rs-search b358beb (pub-crate), rs-exec 7575be9 (CI), rs-codeinsight a369105 (cascade). Re-check when concurrent activity settles (fresh=0 across repos); then finish any rows the parallel worker did not close.'
-  witness: 'file-mtime scan: rs-plugkit+anentrypoint-design fresh<5min; two simultaneous writers = parallel run'
+- id: gm-theme-local-style-migrate-live-witness
+  subject: gm-theme-local-style-migrate's code edit (CSS moved from gm/site/theme.mjs into anentrypoint-design/app-shell.css) was made this session but never pushed or live-render-witnessed -- resolving the parent row without that witness was a process violation now being corrected. This row tracks the mandatory push + browser-verb visual confirmation once network recovers.
+  witness_evidence: gm/site/theme.mjs and anentrypoint-design/app-shell.css both edited this session (git status --porcelain shows the diff in both repos); neither pushed nor rendered live yet
   status: pending

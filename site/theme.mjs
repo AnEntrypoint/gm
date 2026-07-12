@@ -310,20 +310,6 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
       .app-crumb .ds-chip, .app-crumb [class*="chip"] { display: none; }
       .app-crumb .ds-theme-toggle, .app-crumb [class*="theme-toggle"] { display: inline-flex; }
     }
-    .app-main > h1,
-    .app-main > h2,
-    .app-main > h3 { margin-top: 36px; margin-bottom: 12px; }
-    .app-main > h1:first-child { margin-top: 8px; }
-    .app-main > .panel,
-    .app-main > .work-detail-chips,
-    .app-main > .cli { margin-top: 18px; margin-bottom: 18px; }
-    .app-main .ds-lede { margin-top: 4px; margin-bottom: 18px; max-width: 64ch; line-height: 1.6; }
-    .work-detail-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; row-gap: 10px; }
-    @media (max-width: 720px) {
-      .app-main > h1,
-      .app-main > h2,
-      .app-main > h3 { margin-top: 28px; }
-    }
     #ds-article-host section { position: relative; }
     #ds-article-host canvas { display: block; width: 100% !important; max-width: 100%; height: 300px !important; max-height: 300px; }
   </style>
