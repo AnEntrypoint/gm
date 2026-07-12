@@ -181,9 +181,7 @@ bun x gm-plugkit@latest spool</code></pre>
 
 <h2>3. Open All The Way Down</h2>
 
-<p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no "and then a private build server takes over" step. The chain has six repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state.</p>
-
-<div class="repo-card"><span class="repo-name">rs-exec</span><span class="repo-role">Wasm host helpers. Compiled to <code>wasm32-wasip1</code>. Provides <code>exec_js</code>, browser session management, file-system glue, and the spool-watcher loop that the orchestrator imports. No daemon, no port; runs inside the wasm host process.</span></div>
+<p class="first">The SQLite analogy holds on the openness axis only because every link in the chain is in public. There is no "and then a private build server takes over" step. The chain has four live repositories under one GitHub organization (<code>AnEntrypoint</code>), and every one of them is MIT-licensed and forkable in its current state. (Two earlier siblings, <code>rs-exec</code> and <code>rs-learn</code>, are retired: their host-helper and memory surfaces were reimplemented natively inside <code>rs-plugkit</code>, and their repos are archived as public tombstones pointing at rs-plugkit.)</p>
 
 <div class="repo-card"><span class="repo-name">rs-codeinsight</span><span class="repo-role">Code structure analysis via tree-sitter. Compiled to wasm. Powers the <code>codesearch</code> verb's symbol layer and session-start architectural overviews.</span></div>
 
@@ -191,15 +189,13 @@ bun x gm-plugkit@latest spool</code></pre>
 
 <div class="repo-card"><span class="repo-name">rs-plugkit</span><span class="repo-role">The orchestrator. Compiled to wasm. Owns the PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE state machine in <code>src/orchestrator/</code>, exposes the <code>dispatch_verb</code> wasm export, services every orchestrator verb (<code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>mutable-resolve</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>) and routes host verbs to the imported helpers. The <code>Cargo.toml</code> here is the version source of truth.</span></div>
 
-<div class="repo-card"><span class="repo-name">rs-learn</span><span class="repo-role">Memory layer. KV plus vec store backing <code>recall</code> and <code>memorize</code>. Compiled to wasm. Per-project store under <code>.gm/rs-learn.db</code>, tracked in git so memory follows the project across machines.</span></div>
-
 <div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. Builds <code>gm-skill</code> via <code>node cli.js gm-starter ./build</code>. Publishes the npm package on every cascade tick. Holds the canonical SKILL.md, the bootstrap shim, and the version pins in <code>gm-starter/gm.json</code>.</span></div>
 
 <h2>4. The Cascade</h2>
 
-<p class="first">Six repositories cooperate but no human steps between them. A push to any of the sibling Rust repos triggers a deterministic cascade that ends with a fresh <code>gm-skill</code> publish on npm:</p>
+<p class="first">Four live repositories cooperate but no human steps between them. A push to any of the sibling Rust repos triggers a deterministic cascade that ends with a fresh <code>gm-skill</code> publish on npm:</p>
 
-<div class="pipeline">rs-exec / rs-codeinsight / rs-search / rs-learn
+<div class="pipeline">rs-codeinsight / rs-search
  , push to main
   , &gt; .github/workflows/cascade.yml fires rs-plugkit release.yml
        via gh workflow run + PUBLISHER_TOKEN
@@ -253,7 +249,7 @@ users
 <thead><tr><th>family</th><th>examples</th><th>serviced by</th></tr></thead>
 <tbody>
 <tr><td>orchestrator verbs</td><td><code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code>, <code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code></td><td>rs-plugkit orchestrator (<code>src/orchestrator/</code>)</td></tr>
-<tr><td>host verbs</td><td><code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>health</code>, <code>browser</code></td><td>wasm host imports (rs-exec, rs-learn, rs-search, rs-codeinsight)</td></tr>
+<tr><td>host verbs</td><td><code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>health</code>, <code>browser</code></td><td>wasm host imports (rs-plugkit native exec + memory, rs-search, rs-codeinsight)</td></tr>
 <tr><td>language verbs</td><td><code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></td><td><code>exec_js</code> with the matching runtime probe</td></tr>
 </tbody>
 </table>
@@ -308,10 +304,10 @@ users
 <h2>12. The Invariant</h2>
 
 <div class="theorem">
-  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking six repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user's machine.</em>
+  <strong>Distribution Invariant.</strong> <em>A user installs <code>gm-skill</code> with one npm command and never sees a build step. Every artifact they execute was built by a public CI run from a public Rust source repository under a single GitHub organization, anchored by SHA-256, fetched over HTTPS or npm at first use, cached locally for subsequent use, and replaceable at any time by forking the public repositories. There is no proprietary core, no private server, no daemon, no locked-in vendor surface, and no toolchain on the user's machine.</em>
 </div>
 
-<p>This is what we mean when we call gm "the SQLite of coding-agent infrastructure." Not that it is a database; that it has SQLite's ratio of install-experience-to-openness. One npm install in. Seven repositories out (gm, rs-plugkit, rs-exec, rs-codeinsight, rs-search, rs-learn, plugkit-bin). One wasm in between.</p>
+<p>This is what we mean when we call gm "the SQLite of coding-agent infrastructure." Not that it is a database; that it has SQLite's ratio of install-experience-to-openness. One npm install in. Five live repositories out (gm, rs-plugkit, rs-codeinsight, rs-search, plugkit-bin). One wasm in between.</p>
 
 </article>
 

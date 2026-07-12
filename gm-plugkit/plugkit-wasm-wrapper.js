@@ -1049,18 +1049,6 @@ function resolveWindowsExeLocal(cmd) {
   }
 }
 
-function isPortReachableSync(host, port, timeoutMs) {
-  const r = spawnSync(process.execPath, ['-e', `
-    const net = require('net');
-    const s = net.connect({ port: ${port}, host: ${JSON.stringify(host)} });
-    let done = false;
-    s.on('connect', () => { done = true; s.destroy(); process.exit(0); });
-    s.on('error', () => { if (!done) process.exit(1); });
-    setTimeout(() => { if (!done) { s.destroy(); process.exit(1); } }, ${timeoutMs || 800});
-  `], { timeout: (timeoutMs || 800) + 2000, windowsHide: true });
-  return r.status === 0;
-}
-
 function findFreePortSync() {
   const r = spawnSync(process.execPath, ['-e', `
     const net = require('net');
@@ -1070,17 +1058,6 @@ function findFreePortSync() {
   `], { encoding: 'utf-8', timeout: 5000 });
   if (r.status !== 0) throw new Error('could not allocate free port');
   return parseInt(r.stdout.trim(), 10);
-}
-
-function isPortAliveSync(port) {
-  const r = spawnSync(process.execPath, ['-e', `
-    const net = require('net');
-    const s = net.connect({ port: ${port}, host: '127.0.0.1' });
-    s.on('connect', () => { s.destroy(); process.exit(0); });
-    s.on('error', () => process.exit(1));
-    setTimeout(() => process.exit(1), 800);
-  `], { timeout: 2000 });
-  return r.status === 0;
 }
 
 function sleepSync(ms) {

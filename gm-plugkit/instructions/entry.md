@@ -71,7 +71,7 @@ Write `in/<lang>/<N>.<ext>` for language stems, `in/<verb>/<N>.txt` for orchestr
 
 ## SESSION_ID
 
-Thread SESSION_ID through every spool body + rs-exec RPC; plugkit rejects empty.
+Thread SESSION_ID through every spool body; plugkit rejects empty.
 
 ## Daemonize
 

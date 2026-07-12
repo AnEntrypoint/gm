@@ -58,15 +58,14 @@ This repo IS the published `gm-skill` npm package. No build step, no factory. Th
 ```
 gm/
 |-- skills/gm/        <- the skill (SKILL.md), installed as /gm
-|-- bin/               <- bootstrap + plugkit launcher (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
-|-- lib/               <- runtime: spool dispatch, skill bootstrap, daemon mgmt
-|-- agents/            <- subagent prompts (gm, memorize, research-worker, textprocessing)
-|-- lang/              <- language packs (browser, ssh)
-|-- gm-plugkit/        <- separate npm package that ships the wasm-wrapper
+|-- bin/               <- bootstrap + installer + plugkit wasm pins (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
+|-- scripts/           <- publish-time helper scripts
+|-- gm-plugkit/        <- separate npm package that ships the wasm-wrapper + supervisor
 |-- gm.json            <- version + plugkit pin
 |-- package.json       <- npm publish manifest
 |-- AGENTS.md          <- architectural rules (present-tense, no history)
 |-- CHANGELOG.md       <- release history
+|-- docs/              <- long-form paper + crate/skill/distribution pages
 `-- site/              <- flatspace site source (built to dist/ by CI)
 ```
 
@@ -92,12 +91,14 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 - **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
 - **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
 
-### hooks
+### gates
 
-- **session-start**: bootstraps plugkit, seeds `.gm/next-step.md`, sets `needs-gm` marker
-- **prompt-submit**: reminds the agent to dispatch instruction first; injects per-prompt auto-recall
-- **pre-tool-use**: blocks tool use before the gm skill fires for the turn
-- **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty
+Orchestration state is tracked via `.gm/` marker files, not hook events. The gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + its `hook_pre_tool_use` / `hook_stop` exports), driven off the same markers:
+
+- **session-start**: bootstraps plugkit, seeds `.gm/next-step.md`, sets the `needs-gm` marker
+- **turn entry**: the `instruction` verb reminds the agent to dispatch first and attaches the per-prompt auto-recall pack
+- **pre-tool-use**: blocks Write/Edit/git before the gm skill fires for the turn
+- **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty or unpushed
 
 ### ground truth
 

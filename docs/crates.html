@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rust crates - gm - 247420</title>
-<meta name="description" content="The five wasm-only Rust crates behind gm-skill: rs-plugkit (orchestrator), rs-exec (host helpers), rs-learn (memory), rs-search (file search), rs-codeinsight (code structure).">
+<meta name="description" content="The wasm-only Rust crates behind gm-skill: rs-plugkit (orchestrator, folds in exec + memory), rs-search (file search), rs-codeinsight (code structure).">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -83,14 +83,14 @@ window.addEventListener('DOMContentLoaded', () => {
 <body>
 <div class="title-block">
   <h1>Every rust crate behind gm (glootius maximus)</h1>
-  <div class="author">five wasm cdylibs, one orchestrator, zero native binaries</div>
+  <div class="author">three wasm cdylibs, one orchestrator, zero native binaries</div>
   <div class="date">cushion-certified - 2026</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm (glootius maximus) ships <strong>one wasm artifact</strong>, <code>plugkit.wasm</code>, assembled from five Rust crates that each target <code>wasm32-wasip1</code> as a <code>cdylib</code>. Each crate carries one share of the same job, raising the agent's signal-to-noise ratio: rs-exec witnesses execution so nothing fake passes, rs-learn retains signal across sessions, rs-codeinsight and rs-search find the answer the project already holds instead of re-deriving it, rs-plugkit gates the whole chain. Push to any of them and a new <code>gm-skill</code> publishes to npm within minutes. You do not run <code>cargo build</code>. You do not bump versions. You push, the cascade does the rest.
+    gm (glootius maximus) ships <strong>one wasm artifact</strong>, <code>plugkit.wasm</code>, assembled from three Rust crates that each target <code>wasm32-wasip1</code> as a <code>cdylib</code>. Each crate carries one share of the same job, raising the agent's signal-to-noise ratio: rs-plugkit gates the whole chain and folds in execution witnessing plus cross-session memory (the retired rs-exec and rs-learn surfaces reimplemented natively), rs-codeinsight and rs-search find the answer the project already holds instead of re-deriving it. Push to any of them and a new <code>gm-skill</code> publishes to npm within minutes. You do not run <code>cargo build</code>. You do not bump versions. You push, the cascade does the rest.
   </div>
 </div>
 
@@ -102,7 +102,7 @@ window.addEventListener('DOMContentLoaded', () => {
 sequenceDiagram
   autonumber
   participant Dev as Developer push
-  participant Sib as rs-exec / rs-codeinsight / rs-search / rs-learn
+  participant Sib as rs-codeinsight / rs-search
   participant Plugkit as rs-plugkit
   participant Bin as plugkit-bin Releases + npm plugkit-wasm
   participant GM as gm
@@ -119,7 +119,7 @@ sequenceDiagram
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"You did not type cargo once. You did not bump a version. You pushed and the cushion did the rest. This is the correct order of operations."</div>
 
-<p>Five crates contribute. One wasm deploys. One npm package updates.</p>
+<p>Three crates contribute. One wasm deploys. One npm package updates.</p>
 
 <div class="crate">
   <div class="crate-header">
@@ -153,39 +153,6 @@ sequenceDiagram
     <div class="cell"><span class="label">artifact</span><span class="value">plugkit.wasm (~&lt;200 KB)</span></div>
     <div class="cell"><span class="label">cascade target</span><span class="value">plugkit-bin Releases + npm</span></div>
     <div class="cell"><span class="label">version source</span><span class="value">Cargo.toml (single)</span></div>
-  </div>
-</div>
-
-<div class="crate">
-  <div class="crate-header">
-    <h2>rs-exec</h2>
-    <span class="role">wasm host helpers</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-exec">AnEntrypoint/rs-exec (open)</a></span>
-  </div>
-
-  <p><strong>Job:</strong> provide the host-side machinery that plugkit's wasm imports use to actually touch the world. Code execution, browser sessions, file-system glue, idle cleanup. Formerly a native exec daemon with its own port and rpc; now a wasm-only utility crate published as <code>@anentrypoint/rs-exec-wasm</code>.</p>
-
-  <h3>what it actually does</h3>
-  <ul>
-    <li>implements <code>exec_js</code> as a synchronous <code>child_process.spawnSync</code> call from the wasm host, the watcher blocks for the duration; long subprocesses are not supported under wasm</li>
-    <li>spawns the user's code in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code></li>
-    <li>enforces an explicit <code>timeoutMs</code> per call; missing or zero is a hard error</li>
-    <li>preserves partial streamed output on timeout; emits <code>timedOut: true</code> on the response</li>
-    <li>manages project-scoped browser sessions for the <code>browser</code> verb; idle-cleans dead sessions on a 60-second tick</li>
-  </ul>
-
-  <h3>commandments it enforces</h3>
-  <ul>
-    <li><span class="tag danger">mandatory</span> <code>timeoutMs</code> on every <code>exec_js</code> dispatch, the host treats missing or zero as a hard error</li>
-    <li><span class="tag">explicit</span> <code>timedOut</code> field on the response; clients do not string-match the error</li>
-    <li><span class="tag">streamed</span> output preserved through timeout-kill; the <code>output</code> array drains either way</li>
-  </ul>
-
-  <div class="statgrid">
-    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
-    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-exec-wasm</span></div>
-    <div class="cell"><span class="label">runtimes</span><span class="value">10 language verbs + browser</span></div>
-    <div class="cell"><span class="label">daemon</span><span class="value">none, wasm-only</span></div>
   </div>
 </div>
 
@@ -250,60 +217,26 @@ sequenceDiagram
   </div>
 </div>
 
-<div class="crate">
-  <div class="crate-header">
-    <h2>rs-learn</h2>
-    <span class="role">the memory store</span>
-    <span class="repo"><a href="https://github.com/AnEntrypoint/rs-learn">AnEntrypoint/rs-learn (open)</a></span>
-  </div>
+<h2>The memory store, folded in</h2>
 
-  <p><strong>Job:</strong> hold every fact the agent ever resolved, across every session, on every machine. The <code>recall</code> verb reads from it. The <code>memorize-fire</code> orchestrator verb writes to it. The store is committed to the repo as <code>.gm/rs-learn.db</code>, so memory shares across machines, sessions, CI, and contributors. Published as <code>@anentrypoint/rs-learn-wasm</code>.</p>
-
-  <h3>what it actually does</h3>
-  <ul>
-    <li>KV plus vec store backing <code>recall</code>, <code>memorize</code>, and the <code>kv_*</code> host verbs that the orchestrator uses for its own state</li>
-    <li>each episode has a source tag, content, embedding, classification</li>
-    <li>community detection (label propagation) groups related episodes; LLM summarization synthesizes per-community context</li>
-    <li>graph search via <code>Searcher</code> with configurable result count plus relevance threshold</li>
-    <li>fast-path ingest avoids re-embedding when content is identical</li>
-    <li>called directly from the orchestrator's wasm imports, no rpc, no daemon, no <code>bun x rs-learn</code> shim</li>
-    <li>stores only vector embeddings, never a searchable copy of the raw text, so <code>recall</code> works purely on semantic similarity; there is no keyword or full-text index sitting alongside it to fall back on</li>
-    <li>identical content hashes to the same key, so re-learning a fact is a no-op instead of a duplicate row</li>
-    <li>ranks results by a blend of similarity and recency, so an older, unreinforced memory fades in ranking over time without being deleted</li>
-    <li>a relevant memory pack auto-attaches to the start of a turn (see <code>auto-recall</code>) so the agent never has to remember to ask</li>
-  </ul>
-
-  <h3>commandments it enforces</h3>
-  <ul>
-    <li><span class="tag danger">tracked</span> <code>.gm/rs-learn.db</code> is committed, never gitignored, memory must travel</li>
-    <li><span class="tag">classified</span> facts route to AGENTS.md (top-level rules) or rs-learn (everything else); the classifier rejects changelog-shaped facts from AGENTS.md ingestion</li>
-    <li><span class="tag">isolated</span> per-discipline stores at <code>.gm/disciplines/&lt;name&gt;/rs-learn.db</code>; the <code>@&lt;name&gt;</code> sigil in a request scopes reads and writes</li>
-  </ul>
-
-  <div class="statgrid">
-    <div class="cell"><span class="label">target</span><span class="value">wasm32-wasip1 cdylib</span></div>
-    <div class="cell"><span class="label">artifact</span><span class="value">@anentrypoint/rs-learn-wasm</span></div>
-    <div class="cell"><span class="label">store</span><span class="value">KV + vec</span></div>
-    <div class="cell"><span class="label">graph</span><span class="value">community detection + LLM summarize</span></div>
-  </div>
-</div>
+<p>The <code>recall</code> / <code>memorize</code> memory surface and the <code>kv_*</code> host verbs are no longer a separate crate. The former <code>rs-learn</code> repo is retired: its spool-dispatch and memory surfaces were reimplemented natively inside <code>rs-plugkit</code>'s <code>wasm_dispatch</code>, and the repo is archived as a tombstone pointing at rs-plugkit. The store still lives at <code>.gm/rs-learn.db</code>, committed to the repo so memory travels across machines, sessions, CI, and contributors; per-discipline stores sit at <code>.gm/disciplines/&lt;name&gt;/rs-learn.db</code>, scoped by the <code>@&lt;name&gt;</code> sigil in a request. It is a KV-plus-vec store: content, embedding, and classification per episode; identical content hashes to the same key (re-learning is a no-op); results rank by a blend of similarity and recency so unreinforced memory fades without being deleted; and a relevant pack auto-attaches at turn start via <code>auto-recall</code>.</p>
 
 <h2>How to update any of them</h2>
 
-<p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, <code>rs-learn</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>'s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
+<p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-codeinsight</code>, <code>rs-search</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>'s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
 
-<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-exec</code>, <code>rs-codeinsight</code>, <code>rs-search</code>, and <code>rs-learn</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-codeinsight</code> and <code>rs-search</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
 
 <h2>notes on the architecture</h2>
 
 <blockquote>
-  "Five crates is two more than necessary and three fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one, they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them.", from the gm field guide
+  "Three crates is one more than necessary and two fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one, they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them.", from the gm field guide
 </blockquote>
 
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit - rs-exec - rs-learn - rs-search - rs-codeinsight</span></a>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit - rs-search - rs-codeinsight</span></a>
   <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>one skill, one wasm</span></a>
 </div>

@@ -374,7 +374,7 @@ stateDiagram-v2
 <p>All execution routes through <code>exec_js</code>: agent writes <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, the wasm watcher reads it, host runs <code>child_process.spawnSync</code>, agent reads back one JSON response at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> or <code>out/&lt;N&gt;.json</code> carrying <code>{ok, stdout, stderr, exit_code, timed_out, duration_ms}</code>. Language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>, plus <code>browser</code>.</p>
 
 <h3>6.4 Single-Package Deployment</h3>
-<p>Ships as one npm package, <code>gm-skill</code>, loadable by any Claude-style skill host; <code>gm-plugkit</code> wraps the wasm artifact and bootstrap shim as its dependency. A cascade pipeline over five wasm-only Rust repos (<code>rs-plugkit</code>, <code>rs-exec</code>, <code>rs-learn</code>, <code>rs-search</code>, <code>rs-codeinsight</code>) plus <code>plugkit-bin</code> Releases auto-publishes on any push, zero manual steps. Supersedes a fifteen-repo per-platform fan-out (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), archived. One install replaces fifteen.</p>
+<p>Ships as one npm package, <code>gm-skill</code>, loadable by any Claude-style skill host; <code>gm-plugkit</code> wraps the wasm artifact and bootstrap shim as its dependency. A cascade pipeline over three wasm-only Rust repos (<code>rs-plugkit</code>, which folds in the retired <code>rs-exec</code> host-helper and <code>rs-learn</code> memory surfaces natively, plus <code>rs-search</code> and <code>rs-codeinsight</code>) plus <code>plugkit-bin</code> Releases auto-publishes on any push, zero manual steps. Supersedes a fifteen-repo per-platform fan-out (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), archived. One install replaces fifteen.</p>
 
 <hr>
 
@@ -1076,7 +1076,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 </div>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit</span></a>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit, rs-search, rs-codeinsight</span></a>
   <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>the SQLite model</span></a>
 </div>
