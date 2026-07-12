@@ -2823,8 +2823,8 @@ function makeHostFunctions(instanceRef) {
             const __nl = __tail.indexOf('\n');
             const __jsonStr = __nl >= 0 ? __tail.slice(0, __nl) : __tail;
             try { __defResult = JSON.parse(__jsonStr); __defHasResult = true; } catch (_) {}
-            // Strip the sentinel (and the leading newline we prepended) so the
-            // caller's own stdout is returned clean.
+            // Strip the __GM_RESULT__ sentinel line (console.log emits it on its
+            // own line after the user's output) so the caller's stdout is clean.
             let __clean = __defStdout.slice(0, __ri) + (__nl >= 0 ? __tail.slice(__nl + 1) : '');
             if (__clean.endsWith('\n')) __clean = __clean.slice(0, -1);
             __defStdout = __clean;
@@ -4379,7 +4379,18 @@ async function runSpoolWatcher(instance, spoolDir) {
 
   setTimeout(() => {
     try {
-      _writeStatusBusy(360000);
+      // The boot warmup's codesearch triggers a codeinsight reindex + full
+      // in-wasm embed of the project when the stored digest is absent/stale.
+      // That embed is a SYNCHRONOUS wasm call that blocks the event loop, so
+      // the 5s heartbeat interval cannot fire while it runs. On a large repo a
+      // cold embed can take several minutes; if it exceeds the busy_until
+      // window the supervisor's stale-heartbeat check kills the watcher
+      // mid-embed, the digest never persists, and every respawn re-embeds from
+      // scratch -- an unbounded restart loop that spawns duplicate watchers.
+      // The window must therefore comfortably exceed the worst-case cold embed;
+      // it is a one-time cost (the digest persists after a single completion,
+      // so subsequent boots' warmup is near-instant).
+      _writeStatusBusy(1200000);
       const vb = new TextEncoder().encode('codesearch');
       const bb = new TextEncoder().encode(JSON.stringify({ query: 'index warmup', k: 1 }));
       const vp = writeWasmInput(instance, vb, 'boot-warmup:codesearch.verb');
