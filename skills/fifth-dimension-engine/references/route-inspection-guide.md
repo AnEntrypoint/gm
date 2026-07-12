@@ -1,4 +1,4 @@
-# Route Inspection Guide — Fifth-Dimension Engine
+# Route Inspection Guide -- Fifth-Dimension Engine
 
 A route from the Fifth-Dimension Engine is not a final answer. It is a structure you can inspect, attack, expand, and test. Inspection is your job; the engine only produces the route.
 

@@ -43,17 +43,17 @@ For an atom:
 
 ## Bad Gates
 
-- "Complete" — unmeasurable
-- "Good enough" — too vague
-- "No obvious bugs" — not verifiable
+- "Complete" -- unmeasurable
+- "Good enough" -- too vague
+- "No obvious bugs" -- not verifiable
 - Checking something trivial (wasting time)
 
 ## Gate Failure
 
 If an atom fails its gate:
-- **Do not move forward** — you have incomplete work that looks complete
-- **Return to the atom** — what's actually missing?
-- **Fix or redefine** — either finish the work or redefine the atom scope
+- **Do not move forward** -- you have incomplete work that looks complete
+- **Return to the atom** -- what's actually missing?
+- **Fix or redefine** -- either finish the work or redefine the atom scope
 
 This is where fake completion gets caught.
 

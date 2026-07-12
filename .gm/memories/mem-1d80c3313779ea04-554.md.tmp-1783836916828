@@ -1,0 +1,10 @@
+---
+key: mem-1d80c3313779ea04-554
+ns: default
+created: 1783836916826
+updated: 1783836916826
+---
+
+## Resolved mutable: rs-codeinsight-dependency-status
+
+rs-codeinsight audit agent: rs-plugkit Cargo.toml only git dep is rs-search (line 41), NO rs-codeinsight. grep -rn use rs_codeinsight rs-plugkit/src = EMPTY. gm has no package.json/bootstrap dep. rs-codeinsight AGENTS.md:3 self-declares standalone, published independently of gm/rs-* family. rs-plugkit owns code-index natively (src/code_index.rs 938 LOC, libsql/vector chunk indexer). rs-codeinsight is a tree-sitter AST-digest analyzer with ZERO live consumers. RETIRABLE, same pattern as rs-exec.

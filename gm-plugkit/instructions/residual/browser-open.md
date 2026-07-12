@@ -1,1 +1,1 @@
-browser sessions still open — dispatch `browser` with `session list` body to enumerate open ids, then `session close <id>` for each before retrying residual-scan
+browser sessions still open -- dispatch `browser` with `session list` body to enumerate open ids, then `session close <id>` for each before retrying residual-scan

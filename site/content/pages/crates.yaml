@@ -1,5 +1,5 @@
 id: crates
 title: rust crates
-description: Every rust crate behind gm (glootius maximus), rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit. The noise-reduction machinery of an SNR-oriented harness, what each does, why it exists, what it kills if it misbehaves.
+description: Every rust crate behind gm (glootius maximus), rs-plugkit, rs-search, rs-codeinsight. The noise-reduction machinery of an SNR-oriented harness, what each does, why it exists, what it kills if it misbehaves. (rs-exec and rs-learn are retired -- folded into rs-plugkit.)
 layout: article
 source: ../docs/crates.html

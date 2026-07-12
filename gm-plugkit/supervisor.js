@@ -159,6 +159,22 @@ function readShutdownReason() {
   try { return JSON.parse(fs.readFileSync(SHUTDOWN_REASON_PATH, 'utf-8')); } catch (_) { return null; }
 }
 
+// A supervisor-initiated kill is PLANNED (version/wrapper drift, heartbeat-stale),
+// but on Windows process.kill(pid,'SIGTERM') terminates the child immediately with
+// no catchable signal, so the child never writes its own .shutdown-reason.json and
+// the taskkill /F that follows leaves none either -- the NEXT boot then mislabels a
+// deliberate upgrade recycle as a SILENT ABORT / unplanned-restart critical. Write
+// the planned reason on the child's behalf BEFORE killing, so the next boot reads a
+// fresh planned shutdown reason and classifies the restart correctly.
+function killChild(reason) {
+  if (!currentChildPid) return;
+  try { fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({ reason, ts: Date.now(), pid: currentChildPid, killed_by_supervisor: true })); } catch (_) {}
+  try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
+  if (process.platform === 'win32') {
+    try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+  }
+}
+
 let lastSpawnedAt = 0;
 let lastVersionDriftActionAt = 0;
 let restartTimestamps = [];
@@ -258,7 +274,7 @@ function spawnWatcher(bootReason) {
     const idleClean = reason === 'idle';
     const lockRejected = code === 75;
     const cleanExit = code === 0;
-    const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'peer-stale-takeover', 'external-planned', 'process-exit']);
+    const plannedReasons = new Set(['idle', 'sigterm', 'version-change', 'wrapper-change', 'heartbeat-stale', 'peer-stale-takeover', 'external-planned', 'process-exit']);
     const isPlanned = plannedReasons.has(reason) || lockRejected || cleanExit;
     const eventName = idleClean
       ? 'supervisor.watcher-exited-idle'
@@ -335,10 +351,7 @@ function checkWatcherHealth() {
       stale_limit_ms: STATUS_STALE_MS,
       severity: 'critical',
     });
-    try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
-    if (process.platform === 'win32') {
-      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
-    }
+    killChild('heartbeat-stale');
     return;
   }
   const reported = status.wrapper_sha || null;
@@ -350,10 +363,7 @@ function checkWatcherHealth() {
       on_disk_sha: onDisk,
       severity: 'info',
     });
-    try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
-    if (process.platform === 'win32') {
-      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
-    }
+    killChild('wrapper-change');
     return;
   }
   if (status.version_drifted === true) {
@@ -377,10 +387,7 @@ function checkWatcherHealth() {
         try { fs.unlinkSync(path.join(gmTools, f)); } catch (_) {}
       }
     } catch (_) {}
-    try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
-    if (process.platform === 'win32') {
-      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
-    }
+    killChild('version-change');
   }
 }
 

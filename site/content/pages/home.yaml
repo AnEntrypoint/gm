@@ -44,7 +44,7 @@ features:
     - name: "wasm polymorphism"
       desc: "gm-skill ships a single plugkit.wasm that runs natively on every operating system through node or bun, no platform-specific builds, no per-architecture matrix. the orchestration logic compiles to hundreds of kilobytes; the shipped artifact is ~149MB because it embeds the bge-small embedding model in-wasm, so recall and memorize compute vectors in-process, offline, leaking no text to a remote embedder. a one-time sha-pinned download buys a self-contained, reproducible, network-independent memory system. the wasm host delegates to node for filesystem, subprocess, and fetch."
     - name: "rust-backed runtime"
-      desc: "rs-exec is the runner. rs-codeinsight is the AST x-ray. rs-search is the fast file finder. rs-learn is the memory store. rs-plugkit is the wasm module that ties them together. every push to any of them auto-cascades to a fresh gm-skill on npm within minutes."
+      desc: "rs-plugkit is the wasm module that runs everything: the verb runner, the AST-aware code index, and the memory store all live inside it. rs-search is the fast fusion/tokenize crate it links; rs-codeinsight is the standalone tree-sitter analyzer. (rs-exec and rs-learn are retired -- their surfaces were folded into rs-plugkit.) every push auto-cascades to a fresh gm-skill on npm within minutes."
     - name: "one spool folder, every dispatch"
       desc: "every verb writes a file to .gm/exec-spool/in/<verb>/<N>.<ext>. the wasm watcher reads the request, services it, and writes the response to out/<verb>-<N>.json. tool args are ephemeral; a file on disk is auditable, replayable, and survives compaction."
     - name: "the mutables file refuses to forget"
@@ -81,6 +81,6 @@ examples:
   heading: read further
   items:
     - { name: "the complete discipline", desc: "lifecycle control, governance, and operational hard rules, every section read as one more way to lift signal over noise. one paper, every rule the agent runs under.", cta: "open paper", href: "./paper/" }
-    - { name: "every rust crate", desc: "rs-exec, rs-codeinsight, rs-search, rs-learn, rs-plugkit. what each does, why it exists, what it kills if it misbehaves.", cta: "open crates", href: "./crates/" }
+    - { name: "every rust crate", desc: "rs-plugkit, rs-search, rs-codeinsight. what each does, why it exists, what it kills if it misbehaves. (rs-exec and rs-learn retired -- folded into rs-plugkit.)", cta: "open crates", href: "./crates/" }
     - { name: "the one skill", desc: "gm is the single shipped skill, a 12-line entry point that names the agent as the state machine. each turn you dispatch the instruction verb to read the active phase, the pending mutables, and the guardrails. plugkit is the durable memory and gate you drive, not an autonomous worker.", cta: "open skills", href: "./skills/" }
     - { name: "distribution", desc: "the cascade pipeline that puts a fresh gm-skill on npm every time anyone touches a rust crate.", cta: "open distribution", href: "./distribution/" }

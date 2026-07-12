@@ -4,10 +4,10 @@
 
 A task atom is the smallest executable unit of work. It must satisfy all of:
 
-1. **Atomic** — Cannot be divided further without losing meaning
-2. **Completable** — Can be finished in one session/sprint
-3. **Verifiable** — Has clear entrance and exit criteria
-4. **Interdependent** — Has clear dependencies (blocks/is blocked by other atoms)
+1. **Atomic** -- Cannot be divided further without losing meaning
+2. **Completable** -- Can be finished in one session/sprint
+3. **Verifiable** -- Has clear entrance and exit criteria
+4. **Interdependent** -- Has clear dependencies (blocks/is blocked by other atoms)
 
 ## Examples
 
@@ -27,7 +27,7 @@ A task atom is the smallest executable unit of work. It must satisfy all of:
 
 Start with: "Goal: Build a payment microservice."
 
-1. **Identify phases**: Research → Design → Implement → Test → Deploy
+1. **Identify phases**: Research -> Design -> Implement -> Test -> Deploy
 2. **For each phase, ask: What's the smallest piece?**
    - Research: API options, compliance, existing solutions
    - Design: Data model, interfaces, error handling
@@ -40,19 +40,19 @@ Start with: "Goal: Build a payment microservice."
 ## Dependency Edges
 
 Each atom has:
-- **Blockers** — Things that must finish before this starts
-- **Unblocks** — Things that can't start until this finishes
+- **Blockers** -- Things that must finish before this starts
+- **Unblocks** -- Things that can't start until this finishes
 
 Example:
 ```
 Research APIs (A1) 
-  ↓ unblocks
+  -> unblocks
 Design interface (A2)
-  ↓ unblocks
+  -> unblocks
 Implement core (A3)
-  ↓ unblocks
+  -> unblocks
 Test integration (A4)
-  ↓ unblocks
+  -> unblocks
 Deploy (A5)
 ```
 

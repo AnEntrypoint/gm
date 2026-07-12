@@ -1049,3 +1049,23 @@
   status: witnessed
   id: mut-prd-clear-semantics-delete-vs-archive
   witness_evidence: 'rs-plugkit/src/gates.rs:186 prd_has_open_items already filters by status!=completed (prd.rs:12), and durable memory already lives in memorize-fire/.gm/memories -- so completed rows carry zero correctness value once bundled into a commit message; decision: DELETE the row from prd.yml at bundle time (git_commit/git_finalize time), not archive-to-separate-file. The commit message itself becomes the durable historical record via git log, matching the existing pattern where git_finalize summary already reads git log -1 for its own summary field.'
+- id: rs-plugkit-treesitter-live-set
+  description: Which of the 14 tree-sitter grammars are actually exercised by code_index in practice vs dead weight
+  status: witnessed
+  witness: pending rs-plugkit audit agent
+  witness_evidence: 'rs-plugkit audit agent: all 15 tree-sitter grammars wired to real file extensions at code_index.rs:114-128; dropping any is silent capability loss not dead-code. None dead. getrandom custom feature load-bearing (embed.rs:62 register_custom_getrandom). Every Cargo dep confirmed live.'
+- id: rs-codeinsight-dependency-status
+  description: Whether any repo depends on rs-codeinsight crate
+  status: witnessed
+  witness: pending rs-codeinsight audit agent
+  witness_evidence: 'rs-codeinsight audit agent: rs-plugkit Cargo.toml only git dep is rs-search (line 41), NO rs-codeinsight. grep -rn use rs_codeinsight rs-plugkit/src = EMPTY. gm has no package.json/bootstrap dep. rs-codeinsight AGENTS.md:3 self-declares standalone, published independently of gm/rs-* family. rs-plugkit owns code-index natively (src/code_index.rs 938 LOC, libsql/vector chunk indexer). rs-codeinsight is a tree-sitter AST-digest analyzer with ZERO live consumers. RETIRABLE, same pattern as rs-exec.'
+- id: gm-orphaned-agent-prompts
+  description: Which agents/ prompt files are still invoked vs orphaned
+  status: witnessed
+  witness: pending gm repo audit agent
+  witness_evidence: 'gm-repo audit agent: agents/gm.md + memorize.md reference retired pre-plugkit arch (planning/gm-execute skills, exec:memorize ABI); NO subagent_type= call invokes them (exec_js-11/14). AGENTS.md:161 one shipped skill no subagent variant. All 4 agents/ prompts orphaned. lib/ entirely dead, lang/ssh.js orphaned, prompts/ phantom, gm-validate/gm-shell-validate no caller.'
+- id: wireweave-gm-coupling
+  description: Whether wireweave couples to gm/rs-* stack
+  status: witnessed
+  witness: pending wireweave audit agent
+  witness_evidence: 'wireweave audit agent: wireweave is a nostr+webrtc SDK (package.json dep nostr-tools only), NOT in gm cascade repo list, nothing in src/ imports gm/rs-*. All rs-* strings are harness scaffold (.gm/ dir, rs-learn.db, .gitignore managed block, dated AGENTS.md audit log). .gm/prd.yml fully terminal 0 pending. NO code coupling to gm-minimization; excludable from harness scope.'

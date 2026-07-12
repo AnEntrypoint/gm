@@ -117,7 +117,7 @@ Over-claiming (saying something is done when it's only drafted) is the most comm
 
 ### Closure Records
 
-For each atom, record what is done, what is missing, what is only partially true, and what is still unsafe to claim. A closure record preserves continuity across rounds so that unfinished work stays visible instead of being buried in prose — this is what stops a local step from being promoted into fake global completion.
+For each atom, record what is done, what is missing, what is only partially true, and what is still unsafe to claim. A closure record preserves continuity across rounds so that unfinished work stays visible instead of being buried in prose -- this is what stops a local step from being promoted into fake global completion.
 
 ## Interaction with Other Skills
 
@@ -143,10 +143,10 @@ Use Goal Compiler to compile the problem statement, then dispatch to Fifth-Dimen
 ## References
 
 See `references/` directory for:
-- `task-atomization.md` — how to break work into atoms
-- `verification-gates.md` — designing verification for each stage
-- `claim-ceiling-examples.md` — what "complete" actually means in different contexts
-- `skills/polaris-protocol/SKILL.md` — the Polaris Protocol tree root and state machine that wires this skill to Fifth-Dimension Engine and WFGY-Method
+- `task-atomization.md` -- how to break work into atoms
+- `verification-gates.md` -- designing verification for each stage
+- `claim-ceiling-examples.md` -- what "complete" actually means in different contexts
+- `skills/polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine that wires this skill to Fifth-Dimension Engine and WFGY-Method
 
 ## What This Is Not
 

@@ -152,7 +152,7 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: the recall store (`recall: cascade pipeline`).
 
-**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-exec, rs-codeinsight, rs-search, rs-plugkit, gm}`. rs-learn is retired (crate removed from rs-plugkit, repo cascade/publish workflows deleted, README points at rs-plugkit). Roles, npm package names, legacy-retirement detail: the recall store (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
+**Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-codeinsight, rs-search, rs-plugkit, gm}`. rs-learn and rs-exec are retired (crates removed from / never depended on by rs-plugkit; their spool-dispatch and memory surfaces reimplemented natively in rs-plugkit wasm_dispatch; repos archived as tombstones, README points at rs-plugkit). Roles, npm package names, legacy-retirement detail: the recall store (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local `cargo update`/`cargo build` -- push, let CI build.
 

@@ -121,7 +121,7 @@ See `references/research-kernel-extraction.md` for how mixed themes become resea
 
 ### Everyday Problems
 
-The same engine works on ordinary decisions, work problems, product questions, and engineering failures — any well-specified target benefits from being shot into a route rather than answered directly.
+The same engine works on ordinary decisions, work problems, product questions, and engineering failures -- any well-specified target benefits from being shot into a route rather than answered directly.
 
 ## Verification
 
@@ -141,7 +141,7 @@ This skill does not:
 ## References
 
 See `references/` directory for:
-- `route-structure.md` — what a route is and how it is structured
-- `research-kernel-extraction.md` — turning ideas into research kernels
-- `route-inspection-guide.md` — how to verify and attack a route
-- `skills/polaris-protocol/SKILL.md` — the Polaris Protocol tree root and state machine
+- `route-structure.md` -- what a route is and how it is structured
+- `research-kernel-extraction.md` -- turning ideas into research kernels
+- `route-inspection-guide.md` -- how to verify and attack a route
+- `skills/polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine

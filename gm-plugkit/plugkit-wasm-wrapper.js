@@ -2728,7 +2728,24 @@ function makeHostFunctions(instanceRef) {
               + `})();\n`;
             cmd = process.execPath; args = ['-e', memRunner];
           } else {
-            cmd = process.execPath; args = ['-e', code];
+            // Wrap in an async IIFE so top-level `return` (and top-level
+            // `await`) work -- `node/bun -e "return 2+2;"` is a SyntaxError
+            // at top level, but the gm exec_js contract lets code `return` a
+            // result. This mirrors the mem/profile paths and the browser verb.
+            // The returned value is emitted via a __GM_RESULT__ sentinel so the
+            // user's own stdout stays clean; a throw still prints its stack to
+            // stderr and exits 1, preserving the documented error channel.
+            const defRunner = `(async () => {\n`
+              + `  try {\n`
+              + `    const __r = await (async () => {\n${code}\n})();\n`
+              + `    try { console.log('__GM_RESULT__' + JSON.stringify(__r === undefined ? null : __r)); }\n`
+              + `    catch (__se) { console.log('__GM_RESULT__' + JSON.stringify({ __unserializable: String(__se && __se.message || __se) })); }\n`
+              + `  } catch (__e) {\n`
+              + `    console.error(String(__e && __e.stack || __e));\n`
+              + `    process.exitCode = 1;\n`
+              + `  }\n`
+              + `})();\n`;
+            cmd = process.execPath; args = ['-e', defRunner];
           }
         }
         else if (lang === 'python') { cmd = 'python'; args = ['-c', code]; }
@@ -2742,6 +2759,20 @@ function makeHostFunctions(instanceRef) {
         } finally {
           if (profileUserFile) { try { fs.unlinkSync(profileUserFile); } catch (_) {} }
         }
+        // Shared across all result branches: a genuine timeout kills the child
+        // near the deadline. A SIGTERM far under timeoutMs is a spurious /
+        // host-injected kill (e.g. the stale-watcher SIGTERM-at-28ms), not a
+        // timeout -- do not mislabel it as timed_out.
+        const __execDurMs = Date.now() - __execT0;
+        const __execTimedOut = result.signal === 'SIGTERM' && __execDurMs >= Math.floor(timeoutMs * 0.9);
+        // spawnSync sets result.error (and leaves status/signal null) when the
+        // child could NOT be started or was reaped abnormally (spawn race
+        // during watcher boot, ETIMEDOUT, EBADF, ENOENT for a missing runtime).
+        // Surface it so a status:-1 is diagnosable instead of a silent empty
+        // failure -- the caller sees WHY, not just exit_code:-1.
+        const __spawnError = result.error
+          ? { code: result.error.code || null, errno: result.error.errno || null, syscall: result.error.syscall || null, message: String(result.error.message || result.error) }
+          : null;
         if (wantProfile) {
           const raw = result.stdout || '';
           const idx = raw.indexOf('__GM_PROFILE__');
@@ -2752,14 +2783,15 @@ function makeHostFunctions(instanceRef) {
             stdout: idx >= 0 ? raw.slice(0, idx) : raw,
             stderr: result.stderr || '',
             exit_code: result.status === null ? -1 : result.status,
-            timed_out: result.signal === 'SIGTERM',
-            duration_ms: Date.now() - __execT0,
+            timed_out: __execTimedOut,
+            duration_ms: __execDurMs,
             result: parsed ? parsed.result : null,
             profile: parsed ? parsed.profile : { timeframe: null, culprits: [] },
             profile_error: parsed ? parsed.profile_error : 'profile sentinel not found in stdout',
             user_error: parsed ? parsed.user_error : null,
             mem: parsed ? parsed.mem : null,
             wall_vs_cpu: parsed ? parsed.wall_vs_cpu : null,
+            ...(__spawnError ? { spawn_error: __spawnError } : {}),
           });
         }
         if (opts.mem === true && isJsLang) {
@@ -2772,21 +2804,41 @@ function makeHostFunctions(instanceRef) {
             stdout: idx >= 0 ? raw.slice(0, idx) : raw,
             stderr: result.stderr || '',
             exit_code: result.status === null ? -1 : result.status,
-            timed_out: result.signal === 'SIGTERM',
-            duration_ms: Date.now() - __execT0,
+            timed_out: __execTimedOut,
+            duration_ms: __execDurMs,
             result: meta ? meta.result : null,
             mem: meta ? meta.mem : null,
             wall_ms: meta ? meta.wall_ms : null,
             ...(meta && meta.error ? { error: meta.error } : {}),
+            ...(__spawnError ? { spawn_error: __spawnError } : {}),
           });
+        }
+        let __defStdout = result.stdout || '';
+        let __defResult = null;
+        let __defHasResult = false;
+        if (isJsLang) {
+          const __ri = __defStdout.lastIndexOf('__GM_RESULT__');
+          if (__ri >= 0) {
+            const __tail = __defStdout.slice(__ri + '__GM_RESULT__'.length);
+            const __nl = __tail.indexOf('\n');
+            const __jsonStr = __nl >= 0 ? __tail.slice(0, __nl) : __tail;
+            try { __defResult = JSON.parse(__jsonStr); __defHasResult = true; } catch (_) {}
+            // Strip the sentinel (and the leading newline we prepended) so the
+            // caller's own stdout is returned clean.
+            let __clean = __defStdout.slice(0, __ri) + (__nl >= 0 ? __tail.slice(__nl + 1) : '');
+            if (__clean.endsWith('\n')) __clean = __clean.slice(0, -1);
+            __defStdout = __clean;
+          }
         }
         return writeWasmJson(instanceRef.value, {
           ok: result.status === 0,
-          stdout: result.stdout || '',
+          stdout: __defStdout,
           stderr: result.stderr || '',
           exit_code: result.status === null ? -1 : result.status,
-          timed_out: result.signal === 'SIGTERM',
-          duration_ms: Date.now() - __execT0,
+          timed_out: __execTimedOut,
+          duration_ms: __execDurMs,
+          ...(__defHasResult ? { result: __defResult } : {}),
+          ...(__spawnError ? { spawn_error: __spawnError } : {}),
           ...(profileSkipped ? { profile_skipped: profileSkipped } : {}),
         });
       } catch (e) {

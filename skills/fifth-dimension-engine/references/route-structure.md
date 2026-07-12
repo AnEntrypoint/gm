@@ -2,7 +2,7 @@
 
 ## What a Route Is
 
-A route is the **output of the Fifth-Dimension Engine** — a structured, inspectable answer to a complex problem.
+A route is the **output of the Fifth-Dimension Engine** -- a structured, inspectable answer to a complex problem.
 
 Instead of a flat statement like "Yes, do this" or "The answer is X," the engine produces:
 

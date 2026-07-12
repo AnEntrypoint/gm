@@ -1,1 +1,1 @@
-background tasks still running — wait for completion or kill them via the host_exec_js interface before retrying residual-scan
+background tasks still running -- wait for completion or kill them via the host_exec_js interface before retrying residual-scan

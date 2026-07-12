@@ -20,12 +20,12 @@ The point is not optimism or pessimism. It is that a local success should not be
 
 - Atom A03 "Repair structure" is finished and the file compiles.
 - Claim ceiling: you may say "the structure is repaired and compiles." You may **not** yet say "the bug is fixed" until A04 (verify repair) passes.
-- If A04 is still blocked, saying "fixed" is a ceiling violation — it promotes a local step to global completion.
+- If A04 is still blocked, saying "fixed" is a ceiling violation -- it promotes a local step to global completion.
 
 ### Documentation packaging
 
 - You wrote the release note (A06) but A04 (verify repair) never ran.
-- Claim ceiling: you may say "a draft release note exists." You may **not** say "release ready" — readiness requires the verification gate first.
+- Claim ceiling: you may say "a draft release note exists." You may **not** say "release ready" -- readiness requires the verification gate first.
 - This is exactly the upstream failure mode: writing the announcement before the repair is verified.
 
 ### Research synthesis
