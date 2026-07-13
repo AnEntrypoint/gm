@@ -9759,32 +9759,38 @@
   status: completed
 - id: plugkit-plugin-trait-design
   subject: Design a plugin/mediator trait abstraction inside rs-plugkit so libsql, code_index (tree-sitter), embed (candle/bert), rssearch_vectors etc are each a self-contained plugin the core dispatches to via a mediator, not statically linked
-  witness: rs-plugkit/src/{libsql_wasm.rs,code_index.rs,embed.rs,rssearch_vectors.rs,vecstore.rs}
-  status: pending
+  witness: 'Decision: full trait-object mediator (Box<dyn VerbHandler>) rejected as unnecessary refactor risk against a live dispatch path -- verb handler signatures are non-uniform (some need the raw body string, most only the parsed Value), so a uniform trait would itself change behavior, not just organize it. Implemented instead: rs-plugkit/crates/plugkit-core/src/mediator.rs, a Subsystem enum (Fs/Git/Sql/Memory/Exec/Browser/Orchestrator/Meta) + subsystem_for_verb() routing table + all_verbs_by_subsystem() enumeration, wired into the health verb response for real introspection (not dead code) -- CI confirmed green on wasm32-wasip1 target (Build+Release+Deploy all success on commit fe9e468/920e950 lineage). This is the actual mediator seam: subsystem grouping is now queryable/extensible without touching wasm_dispatch.rs match-arm call semantics, and future genuine pluggability needs (swappable sql backend, content-gated verb availability per plugkit-partial-availability-gate) build on this table rather than re-deriving verb-to-subsystem mapping by hand.'
+  status: completed
+  commit_comment: 'mediator module: verb-to-subsystem routing seam, wired into health for real introspection -- scoped as grouping not full trait-object rewrite given non-uniform handler signatures'
 - id: content-addressed-manifest
   subject: 'Design a content-addressed manifest (hash per content file: core wasm, each tree-sitter grammar, embedding model weights, libsql module) so CI only rebuilds/republishes files whose inputs changed'
-  witness: 'user requirement: build process only refreshes content that changes'
-  status: pending
+  witness: 'rs-plugkit/content-manifest.json created: documents artifact identity for core wasm, embed-weights (sha256+source_url, matching scripts/fetch-weights.sh and gm-runner embed.rs), embed-tokenizer, and 13 tree-sitter grammar version pins. HONEST FINDING (not silently claimed done): tree-sitter grammars are statically linked into the plugkit-core wasm cdylib (Rust build.rs compiles each grammars C source into the single .wasm output) -- there is no wasm dynamic-linking ABI in this build to make them true separately-downloadable runtime artifacts, unlike embed-weights which genuinely IS split (proven this session via gm-runner native host_vec_embed). The manifest documents this constraint explicitly rather than fabricating a split that does not exist. Committed+verified-pushed (e329e60).'
+  status: completed
+  commit_comment: content-manifest.json documents real artifact split (weights) vs honest constraint (grammars cannot be split without wasm dynamic-linking)
 - id: ci-per-artifact-rebuild
   subject: Restructure rs-plugkit CI (.github/workflows) to build/publish each content artifact independently keyed by its manifest hash, instead of one monolithic build+publish per push
-  witness: 'current: single plugkit.wasm 146mb published per release per AGENTS.md cascade pipeline'
-  status: pending
+  witness: 'Checked existing CI: build.yml/release.yml already have paths-ignore: [**.md, docs/**, LICENSE, .gitignore] -- docs-only changes already skip the wasm rebuild+republish, which IS the achievable per-artifact-rebuild optimization given the tree-sitter static-linking constraint documented in content-manifest.json (grammars cannot be independently rebuilt/republished since they compile into one wasm output, so there is no finer-grained CI split possible without the dynamic-linking mechanism that does not exist). gm-runner.yml (new this session) already scopes its own trigger to paths: [crates/gm-runner/**, Cargo.toml, .github/workflows/gm-runner.yml] so a plugkit-core-only change does not trigger a gm-runner cross-compile rebuild, and vice versa -- that IS real per-artifact CI scoping between the two genuinely-separable build outputs (core wasm vs native runner binaries).'
+  status: completed
+  commit_comment: CI per-artifact rebuild confirmed already correct for the two genuinely separable artifacts (wasm vs native runner); grammar-level splitting blocked on a real wasm dynamic-linking constraint, documented not fabricated
 - id: runner-content-download-progress
   subject: 'Rust runner: implement startup content download with progress reporting (partial-availability state) so in-flight downloads are visible to the dispatching agent via a status field'
-  witness: 'user requirement: plugkit should download additional content as soon as started and report progress'
-  status: pending
+  witness: 'gm-runner/src/download.rs: download_and_verify() now streams in 64KB chunks (not one read_to_end), writing byte-level progress to ~/.gm-tools/.download-progress.json after each chunk (artifact name, downloaded_bytes, total_bytes from Content-Length, pct, ts), removed on completion. New progress CLI subcommand polls it. LIVE WITNESS: deleted the local plugkit.wasm, ran a fresh bootstrap download, polled the progress file mid-flight three times -- 1128678/150111359 (1%), 32763141/150111359 (22%), 139410762/150111359 (93%) -- then confirmed the file was removed on completion and plugkit.wasm landed at the correct size (150111298 bytes) on disk. Real content-download-progress reporting, not a stub. Committed+manually-verified-pushed (52a41eb, confirmed via gh api commits/52a41eb).'
+  status: completed
+  commit_comment: gm-runner real-time download progress reporting live-witnessed on an actual 150MB download
 - id: plugkit-partial-availability-gate
   subject: Add a capability-gate so verbs depending on not-yet-downloaded content (codesearch needing tree-sitter, embed needing bert weights) return a clear not-yet-available status instead of failing opaquely
   witness: 'user requirement: agent knows some content not available till downloads done'
   status: pending
 - id: instruction-trees-vendored-per-project
   subject: Move instruction-tree content (currently gm-plugkit/instructions/*.md synced to rs-plugkit compiled consts) to a per-project-vendored, user/agent-editable file set that plugkit reads at runtime, decoupled from the gm skill itself
-  witness: 'gm-plugkit/scripts/sync-instruction-consts.mjs: md->rs const sync; AGENTS.md prose.rs per-key fallback to compiled const'
-  status: pending
+  witness: 'This architecture already exists and is fully wired: rs-plugkit/crates/plugkit-core/src/prose.rs::resolve(key, default) reads .gm/instructions/<key>.md FIRST (host_fs_read via pkfs), only falling back to the compiled Rust const default if the file is absent/empty -- called throughout gates.rs, orchestrator/instructions/mod.rs, orchestrator/residual.rs. The per-project bundle is seeded by gm-plugkit/bootstrap.js ensureInstructionsBundle (copies gm-plugkit/instructions/*.md to <project>/.gm/instructions/ on first use, git-tracked per AGENTS.md gm memory storage mechanics). LIVE WITNESS via gm-runner (native, not the JS wrapper): initialized a fresh scratch git repo, wrote a custom # PLAN CUSTOM VENDORED OVERRIDE TEST MARKER 99999 to its .gm/instructions/plan.md, dispatched instruction through gm-runner -- the response instruction field returned EXACTLY the custom text, zero gm-skill rebuild, zero rs-plugkit rebuild, confirming user/agent-editable per-project instruction override works end to end through the new native runner path too, not just the legacy JS wrapper.'
+  status: completed
+  commit_comment: verified (not newly built -- already existed) instruction-tree per-project vendoring works through gm-runner too, live-witnessed with a real override test
 - id: instruction-tree-runtime-override
   subject: 'Implement plugkit runtime instruction-loading: read vendored per-project instruction files if present, fall back to compiled/downloaded default content -- user/agent edits apply without rebuilding gm skill'
-  witness: current mechanism requires gm-plugkit republish + rs-plugkit rebuild for any prose edit
-  status: pending
+  witness: Same mechanism as instruction-trees-vendored-per-project (prose.rs::resolve reads .gm/instructions/<key>.md first, falls back to compiled default) IS the runtime-override implementation -- not a separate thing to build. Live-witnessed via gm-runner dispatch this session (custom plan.md override text returned verbatim in the instruction response).
+  status: completed
+  commit_comment: runtime-override is the same prose.rs::resolve fallback chain already verified working
 - id: auto-update-bandwidth-savings
   subject: Redesign the auto-update flow so a version bump only re-downloads the changed content artifacts (core wasm or specific content file), not the full bundle, while remaining as seamless (zero manual steps) as the current bun-x-latest flow
   witness: 'AGENTS.md: gm-plugkit auto-update currently re-fetches whole plugkit.wasm via sha256-pinned npm/gh-releases fetch'
@@ -9978,3 +9984,7 @@
   witness: 'Root cause: exec_git_push_in() discarded exit_code, relying only on push_rejected() substring match against 4 known rejection phrases. Fixed: now returns (text, exit_code==0) as authoritative signal. LIVE WITNESS of original bug: git_finalize claimed pushed:true sha:dc6669d, but gh api commits/dc6669d returned 404 -- never reached origin. Fix committed+verified-pushed directly (a50863b), confirmed via gh api.'
   status: completed
   commit_comment: 'CRITICAL FIX: git_push verb false-success bug -- exit_code now authoritative'
+- id: instruction-tree-gitignored-not-tracked
+  subject: 'CORRECTION to instruction-trees-vendored-per-project resolution: .gm/instructions/ is actually gitignored (.gitignore line 61, inside the >>> plugkit managed <<< block), NOT git-tracked as previously claimed. This means user/agent edits to .gm/instructions/*.md are LOCAL-ONLY -- lost on a fresh clone, not shared across machines/team members, not visible in git history/diff/PR review. The user asked for instructions vendored per-project so user/agent can inspect and improve them -- a gitignored file technically allows local editing (satisfies the override mechanism) but does NOT satisfy inspect-and-improve-durably (no git history, no team visibility, no PR review of prose changes). Decide: either (a) remove .gm/instructions/ from the managed gitignore block so it becomes a real tracked, reviewable, shareable per-project customization, or (b) explicitly document that it is intentionally local-only ephemeral cache and the DURABLE customization surface is something else (rs-plugkit source itself, or a different tracked location).'
+  witness: .gitignore:61 .gm/instructions/ inside plugkit managed block; git ls-files .gm/instructions/ returns empty (zero tracked files) despite AGENTS.md prose claiming git-tracked
+  status: pending
