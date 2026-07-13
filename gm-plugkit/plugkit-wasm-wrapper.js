@@ -4207,6 +4207,17 @@ async function runSpoolWatcher(instance, spoolDir) {
         try { _writeStatusBusy(360000); } catch (_) {}
       } else if (verb === 'git_finalize' || verb === 'git_push' || verb === 'git_fetch') {
         try { _writeStatusBusy(180000); } catch (_) {}
+      } else if (verb === 'instruction') {
+        // instruction's auto_recall path can trigger a cold bert-embed-model
+        // reload (~10-15s, paid fresh every process restart -- no cross-
+        // process cache) plus memory_md_sync_partial processing a backlog of
+        // .gm/memories/*.md files a few at a time. Without busy protection
+        // here, the 30s heartbeat-stale supervisor check kills the watcher
+        // mid-sync on any project with a nontrivial memory corpus, and the
+        // respawned process pays the same cold-reload cost again before
+        // making further progress -- a restart loop that never converges.
+        // Same class of blocking work as the codesearch case above.
+        try { _writeStatusBusy(300000); } catch (_) {}
       }
 
       let autoRecallPayload = null;
