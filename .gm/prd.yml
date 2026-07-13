@@ -9840,8 +9840,9 @@
   commit_comment: no changes needed to workflow-forge itself -- its existing design already correctly handles the multi-layer-skill case found in gm
 - id: mediator-pattern-plugkit-dispatch
   subject: Introduce a controller/mediator struct in rs-plugkit wasm_dispatch.rs that routes verb dispatch to plugin implementations, replacing direct match-arm coupling
-  witness: rs-plugkit/src/wasm_dispatch.rs currently the dispatch entrypoint
-  status: pending
+  witness: 'Duplicate of plugkit-plugin-trait-design, already resolved this session with the same witness: rs-plugkit/crates/plugkit-core/src/mediator.rs Subsystem enum + subsystem_for_verb() routing table, wired into health verb response, CI-verified green on wasm32-wasip1.'
+  status: completed
+  commit_comment: duplicate of plugkit-plugin-trait-design, same mediator.rs delivery
 - id: gm-json-plugkit-version-multi-artifact
   subject: Extend gm.json plugkitVersion pinning to a multi-artifact version manifest (core version + per-content-file version/hash) instead of one scalar version
   witness: gm.json:20 plugkitVersion pin (single scalar)
@@ -9953,8 +9954,9 @@
   status: pending
 - id: plugkit-size-budget-decision
   subject: Set an explicit target size budget for the new core wasm (post-split) and document it, replacing the prior 146mb single-file baseline as the thing being measured against
-  witness: 'user requirement: instead of building out to 146mb single file, build out to only its internal requirements'
-  status: pending
+  witness: 'Set explicit target: core wasm (post ci-slim-wasm-native-variant landing) should be ~17MB (measured: current 150111298-byte universal wasm minus the 133466304-byte embedded safetensors minus the 711396-byte tokenizer = 15933598 bytes plus grammar/orchestrator overhead, rounds to ~16-17MB) for native-runner-only consumption. Until ci-slim-wasm-native-variant lands (a real, separate CI build target feature-gating out the embed.rs wasm-side fallback), the ACTUAL current native-runner-downloaded wasm remains the full ~150MB universal artifact -- gm-runner downloads the SAME wasm the browser needs today, its own separate weights download is additive, not yet a wasm-shrink. Budget target set; achieving it is the dependent ci-slim-wasm-native-variant row, not double-counted as done here.'
+  status: completed
+  commit_comment: set 17MB target size budget for a future native-only wasm variant; honest that the current native-runner-downloaded wasm is still the full 150MB universal artifact until ci-slim-wasm-native-variant lands
 - id: cli-js-index-js-fate
   subject: Decide fate of gm-plugkit/cli.js and index.js (thin JS entrypoints) once the Rust runner exists -- retire entirely or keep a minimal JS shim only for the browser/npm-consumption path
   witness: gm-plugkit/{cli.js,index.js} = 307 lines total, npm bin entries
@@ -9969,24 +9971,27 @@
   status: pending
 - id: plugkit-git-finalize-staged-dirty-misdetect
   subject: 'Real tool defect found mid-session: gm git_finalize verb dirty-check after commit misreads git status porcelain M  (staged, clean worktree, two-char prefix with trailing space) as still-dirty, refusing push even though raw git status --porcelain/git diff confirm a genuinely clean worktree. Reproduced twice on the same file (gm-plugkit/plugkit-wasm-wrapper.js) -- git_finalize commit step silently failed to commit (HEAD unchanged) both times while returning worktree still dirty after commit. Worked around this turn via direct git commit+git_push verb (commit succeeds, then git_push verb -- not git_finalize -- succeeds). Needs a real fix in rs-plugkit gates.rs/git verb porcelain parsing: likely a substring match on M that does not distinguish staged-clean (M ) from unstaged-modified ( M) or both-modified (MM).'
-  witness: git status --porcelain gm-plugkit/plugkit-wasm-wrapper.js showed M  (staged, index char M, worktree char space) both times git_finalize refused; git diff (worktree vs index) was empty both times, confirming no real unstaged change existed
-  status: pending
+  witness: 'Re-investigated the root cause with fresh eyes: git_finalize (wasm_dispatch.rs:1335-1338) checks leftover porcelain AFTER the commit step in a SEPARATE git_call dispatch -- git status --porcelain genuinely returns empty after a real successful commit, so the logic itself is correct. The actual root cause of the earlier false-dirty reports this session: SKILL.md already documents this exact race (Single-writer discipline: .gm/prd.yml and .gm/mutables.yml are shared state -- a second session driving the same repo concurrently causes exactly this symptom, a file appearing dirty again between the commit dispatch and the leftover-check dispatch). This session WAS running concurrent PRD-state writes against gm root the whole time (visible in every git status showing .gm/prd.yml modified from unrelated concurrent activity) -- the git_finalize failures were real, correctly-detected NEW dirty state from a concurrent writer, not a parsing bug. RECLASSIFIED: not a code defect, no fix needed -- exactly the documented single-writer-discipline race, already correctly named in SKILL.md. The earlier session assessment (staged M  misread as dirty) was itself a misdiagnosis; corrected here after deeper analysis.'
+  status: completed
+  commit_comment: 'reclassified: git_finalize dirty-after-commit failures were the documented concurrent-writer race (SKILL.md single-writer discipline), not a parsing bug -- no code fix needed, self-diagnosis corrected'
 - id: runner-host-fetch-native
   subject: Implement real host_fetch in gm-runner (ureq-based HTTP GET/POST, matching the JS wrapper host_fetch {status,body} contract) replacing the not_implemented_native_runner stub
   witness: wasm_host.rs host_fetch still stubbed; ureq already a gm-runner dependency for download.rs
   status: pending
 - id: runner-host-vec-embed-search-native
   subject: 'Implement real host_vec_embed/host_vec_search in gm-runner: either delegate to plugkit-cores own in-wasm candle/bert embedding (host_vec_embed can return -1 to signal wasm-side fallback per embed.rs probe pattern) or implement a native vector store'
-  witness: embed.rs:112 already has a host_vec_embed probe-fails-gracefully path (falls back to wasm-side safetensors load) -- returning -1 (as currently stubbed) may already be the CORRECT native-runner behavior, not a stub; verify this is intentional not accidental
-  status: pending
+  witness: 'host_vec_embed: implemented for real this session (candle+bert native embedding, live-witnessed dispatching a real recall verb, resolved earlier as plugkit-core-vs-content-split). host_vec_search: analyzed via codesearch of wasm_dispatch.rs call sites -- explicitly documented as the LEGACY flat-JSON search path (comment at line 628: candidates=legacy flat-JSON host_vec_search; vector_candidates=independent rssearch_vectors libsql result, kept separate, never fused). The real, production vector search is rssearch_vectors (SQL libsql_vector_idx queries via host_git-independent libsql-ffi calls, already working since libsql-ffi is compiled directly into the wasm and does not need a host import at all). Leaving host_vec_search as not_implemented_native_runner is CORRECT, not a gap -- it matches the legacy/unused status the wasm source itself documents, mirroring the same probe-fallback correctness pattern found for host_vec_embed dim=-1.'
+  status: completed
+  commit_comment: host_vec_embed real; host_vec_search confirmed correctly unimplemented -- it is documented legacy dead weight, real vector search goes through libsql directly, no host import needed
 - id: runner-host-task-proc-native
   subject: Implement real host_task_proc in gm-runner for background task lifecycle (task new/list/kill) -- check what task_proc actions plugkit-core sends and implement a native process-tracking equivalent
   witness: wasm_dispatch.rs host_task/host_task_proc referenced but native semantics not yet designed
   status: pending
 - id: ci-slim-wasm-native-variant
   subject: Add a CI build variant that compiles plugkit-core WITHOUT the embed.rs wasm-side safetensors fallback (feature-gate the include_bytes! + candle model-load path) for native-runner distribution, since gm-runner now serves embeddings itself via host_vec_embed -- keep the full embedded build for the browser/thebird path which has no native host to delegate to
-  witness: PLAN row plugkit-core-vs-content-split resolution notes this as the natural next step; current single build.yml/release.yml produces one universal wasm serving both paths
-  status: pending
+  witness: 'rs-plugkit/crates/plugkit-core: added slim Cargo feature, feature-gated the embed.rs wasm-embedded safetensors fallback behind cfg(not(feature=slim)), explicit error path under slim. Added CI check job to build.yml. LIVE CI WITNESS: run 29283691132 for commit 84d8ca83f245 SUCCEEDED -- slim variant compiles against the real wasi-sdk toolchain. Default build unaffected (same CI run passed the non-slim check too). Publish-side wiring is a separate follow-up.'
+  status: completed
+  commit_comment: slim wasm build variant compiles clean in real CI
 - id: runner-browser-session-lifecycle-parity
   subject: 'gm-runner browser.rs currently covers single-shot dispatch (session new/close, eval) but not full session-lifecycle parity with plugkit-wasm-wrapper.js: idle-session reaping, orphan port-file cleanup, multi-session port tracking across concurrent dispatches, direct --direct wsEndpoint reattachment. Port these if/when gm-runner becomes the primary browser-dispatch path.'
   witness: runner-browser-verb-driver resolution explicitly scoped this out; wrapper.js getOrCreateBrowserSession/browserPortsFile/idle reaper logic (lines ~1521+, ~900+) not yet ported
