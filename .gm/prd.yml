@@ -9857,8 +9857,9 @@
   commit_comment: confirmed .gitmodules branch=main already correctly set
 - id: submodule-clone-recursive-docs
   subject: Document/automate `git clone --recurse-submodules` and `git submodule update --init --recursive` in gm README/installer so a fresh clone of gm actually gets rs-plugkit content, not an empty dir
-  witness: submodules are opt-in on clone by default; empty dir is the common failure mode
-  status: pending
+  witness: Added a developing gm itself README section documenting git clone --recurse-submodules and git submodule update --init --recursive, plus corrected the stale does not ship in this repo claim (source now IS submoduled, only the compiled wasm still fetched separately). Committed+verified-pushed (b777e8b7d).
+  status: completed
+  commit_comment: README documents rs-plugkit submodule clone-recursive requirement for contributors
 - id: submodule-ci-checkout-fix
   subject: Update gm CI workflows (publish.yml etc) to checkout with submodules:recursive so CI builds see rs-plugkit source
   witness: 'Checked all gm CI workflows (.github/workflows/*.yml): none currently need rs-plugkit submodule content -- publish.yml (npm gm-skill package) files list (gm.json/package.json) never references rs-plugkit/, confirmed via grep. rs-plugkit has its OWN independent CI/CD cascade per AGENTS.md cascade pipeline architecture; gm CI checking out the submodule would be dead weight until gm-runner becomes the actually-shipped default (which would need to build gm-runner binaries FROM rs-plugkit source in gm CI, or more likely continue relying on rs-plugkit own CI + gm-runner-bin release channel, avoiding the need for gm CI submodule checkout at all). No fix needed for the current, correct isolation; re-evaluate only if/when gm CI genuinely needs to build FROM the submodule.'
@@ -9878,12 +9879,14 @@
   status: pending
 - id: runner-offline-degraded-mode
   subject: 'Define runner behavior when download fails/network unavailable at startup: fail loud with explicit error vs run with cached/previous content -- no silent catastrophic mode per engineering invariants'
-  witness: 'AGENTS.md EXECUTE prose: every failure path explicit (full -> degraded -> safe-fail -> explicit-error), no silent catastrophic mode'
-  status: pending
+  witness: gm-runner/src/main.rs ensure_wasm_installed() propagates download::bootstrap_plugkit_wasm errors via anyhow::Result -- a fresh install with network unavailable/download failure fails LOUD with an explicit error (the download_and_verify sha-mismatch/network-error paths already return descriptive anyhow errors), never silently limping on a missing/corrupt wasm. This IS the explicit-error tier of the full->degraded->safe-fail->explicit-error invariant -- there is no safe degraded mode possible for a completely absent wasm (nothing to dispatch against), so explicit-error is the correct terminal state, not a gap. A REPEAT boot with an already-installed wasm (existing.exists()) skips the network entirely and continues working offline -- that IS the degraded-but-functional tier, already implemented.
+  status: completed
+  commit_comment: confirmed gm-runner offline/failure handling already matches the explicit-error + already-cached-degraded-mode invariant -- no code gap found
 - id: runner-version-skew-self-heal
   subject: Reimplement wrapper/wasm version-skew self-heal (selfHeal on LinkError/CompileError) in the Rust runner so a stale local binary auto-recovers without user intervention
-  witness: plugkit-wasm-wrapper.js selfHeal(wasm not installed / LinkError / CompileError)
-  status: pending
+  witness: 'gm-runner/src/spool.rs: version-check every 30s against ~/.gm-tools/plugkit.version, detects skew from the booted-at-load-time version. FULL LIVE WITNESS (not code-review-only): first implementation attempt had a real bug (return Ok(()) on skew was treated as terminal clean-exit by supervisor.rs catch_unwind, killing the whole process rather than reloading) -- caught by actually running the test, not by inspection. Fixed with a StopReason::Reload enum. Re-tested live: started gm-runner spool with debug instrumentation and a temporarily-shortened 3s check interval, confirmed the loop ticking (40+ tick log lines), wrote a genuine skew value (0.1.999-livetest) to the shared version file mid-run, watcher printed version skew detected + reloading wasm module for version-skew self-heal, and the SAME process continued serving afterward (re-entered PlugkitRuntime::load, resumed ticking) rather than exiting -- confirmed the fix, not just the feature. Reverted debug instrumentation and interval to production values (30s) before committing. Committed+manually-verified-pushed (0ec4d81).'
+  status: completed
+  commit_comment: gm-runner version-skew self-heal live-witnessed end to end, including catching and fixing a real bug in the first implementation attempt
 - id: runner-stale-watcher-takeover
   subject: Reimplement peer-stale-takeover and heartbeat-stale shutdown reasons in the Rust runner supervisor equivalent
   witness: gm-plugkit/supervisor.js plannedReasons Set includes heartbeat-stale, peer-stale-takeover
