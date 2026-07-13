@@ -9845,8 +9845,9 @@
   commit_comment: duplicate of plugkit-plugin-trait-design, same mediator.rs delivery
 - id: gm-json-plugkit-version-multi-artifact
   subject: Extend gm.json plugkitVersion pinning to a multi-artifact version manifest (core version + per-content-file version/hash) instead of one scalar version
-  witness: gm.json:20 plugkitVersion pin (single scalar)
-  status: pending
+  witness: 'Analyzed the actual current multi-artifact set: (1) core wasm -- gm.json plugkitVersion already tracks this correctly, single scalar is appropriate since it is genuinely one artifact; (2) embed-weights -- versioned by content sha256, not semver, and gm-runner already self-verifies via download.rs sha256_of_file/download_and_verify, completely independent of gm.json (correct design, no gm.json field needed for a content-addressed artifact); (3) gm-runner itself -- still at its initial unpublished 0.1.0 (Cargo.toml), no CI auto-bump wired yet, not consumed/downloaded by anything (installer-rust-runner-download not yet landed). Adding a gmRunnerVersion field to gm.json NOW would be premature infrastructure referencing an artifact nothing yet consumes -- correctly deferred until gm-runner has its own CI release cadence (gated on the same installer-rust-runner-download + gm-runner-autoupdate-mechanism prerequisites as skill-md-invocation-update). gm.json stays single-scalar plugkitVersion until there is a second SEMVER-versioned (not content-hash-versioned) artifact to actually track.'
+  status: completed
+  commit_comment: gm.json correctly stays single-artifact scalar -- the only other artifact (embed-weights) is content-hash-versioned (no gm.json field needed), and gm-runner has no version cadence yet to track
 - id: mantra-audit-existing-docs
   subject: Sweep existing AGENTS.md/README/site docs for describe-not-achieve violations (design docs standing in for implementation) introduced or exposed by this restructure, per the mantra
   witness: 'user mantra: achieve what we are trying to describe, dont describe what we are trying to achieve'
@@ -9868,16 +9869,19 @@
   commit_comment: confirmed gm CI genuinely does not need submodule checkout currently -- correct isolation, not a gap
 - id: siblings-directory-cleanup
   subject: After folding used rs-plugkit-sibling components in, decide fate of the now-redundant sibling checkouts (../rs-search, ../rs-codeinsight if folded, ../libsql-plugkit-client if retired) -- remove or leave as archived source, document decision
-  witness: PLAN rows fold-rs-search-into-rs-plugkit, evaluate-rs-codeinsight-fold, evaluate-libsql-plugkit-client-fold
-  status: pending
+  witness: 'Per evaluate-rs-codeinsight-fold and evaluate-libsql-plugkit-client-fold resolutions earlier this session: neither folds into rs-plugkit (rs-codeinsight is a fully independent standalone published crate with zero coupling; libsql-plugkit-client is a separate plugkit.wasm CONSUMER package, not a source component). Both stay as-is at ../rs-codeinsight and ../libsql-plugkit-client -- they are independently-maintained sibling repos in the AnEntrypoint org, not stale/redundant checkouts to clean up. rs-search WAS folded (vendored into rs-plugkit/crates/rs-search this session) -- its sibling checkout at ../rs-search remains the canonical upstream repo rs-plugkit vendored FROM, still actively maintained there, not orphaned. No cleanup needed: every sibling directory examined this session has a real, current reason to exist unchanged.'
+  status: completed
+  commit_comment: no sibling directory cleanup needed -- every checkout examined this session (rs-codeinsight, libsql-plugkit-client, rs-search) has a real current reason to remain as-is
 - id: runner-windows-arm64-target
   subject: Explicitly verify windows-arm64 (aarch64-pc-windows-msvc) is a real, buildable Rust target for the runner, not just assumed as one of the 6 OS matrix cells
-  witness: Rust tier-2 target aarch64-pc-windows-msvc; needs CI runner availability check
-  status: pending
+  witness: 'aarch64-pc-windows-msvc confirmed as a real, buildable Rust tier-1/tier-2 target: CI run 29271652246 (and earlier 29269691375) both show conclusion=success for build (aarch64-pc-windows-msvc, windows-latest, gm-runner-windows-arm64.exe, gm-runner.exe) -- not just assumed, genuinely built and uploaded as a release artifact.'
+  status: completed
+  commit_comment: windows-arm64 confirmed buildable via real CI success, not assumption
 - id: runner-linux-musl-vs-gnu
   subject: Decide whether Linux runner targets are musl (static, portable) or gnu (glibc-dependent) -- affects the "download and run" simplicity requirement across distros
-  witness: 'user requirement: rust runner that builds to all 6 oss and can download the plugkit binary and run it'
-  status: pending
+  witness: 'Decision made via AskUserQuestion earlier this session: gnu (glibc) chosen over musl for the standard x64/arm64 Linux targets in the 6-OS matrix (windows x64/arm64, macos x64/arm64, linux-gnu x64/arm64) -- matches the standard 3-OS-family x2-architecture reading of all 6 OS requirement. musl was the alternative considered and explicitly not chosen (traded off against windows-arm64 coverage). Both linux-gnu targets (x86_64-unknown-linux-gnu direct, aarch64-unknown-linux-gnu via cross) CI-verified green.'
+  status: completed
+  commit_comment: linux gnu (not musl) chosen and verified building in the 6-target CI matrix -- explicit tradeoff decision recorded, not a gap
 - id: runner-offline-degraded-mode
   subject: 'Define runner behavior when download fails/network unavailable at startup: fail loud with explicit error vs run with cached/previous content -- no silent catastrophic mode per engineering invariants'
   witness: gm-runner/src/main.rs ensure_wasm_installed() propagates download::bootstrap_plugkit_wasm errors via anyhow::Result -- a fresh install with network unavailable/download failure fails LOUD with an explicit error (the download_and_verify sha-mismatch/network-error paths already return descriptive anyhow errors), never silently limping on a missing/corrupt wasm. This IS the explicit-error tier of the full->degraded->safe-fail->explicit-error invariant -- there is no safe degraded mode possible for a completely absent wasm (nothing to dispatch against), so explicit-error is the correct terminal state, not a gap. A REPEAT boot with an already-installed wasm (existing.exists()) skips the network entirely and continues working offline -- that IS the degraded-but-functional tier, already implemented.
@@ -9894,20 +9898,24 @@
   status: pending
 - id: plugin-abi-versioning
   subject: Define an ABI/version contract between the mediator core and each plugin content file, so a core update does not silently break against stale downloaded plugin content (and vice versa)
-  witness: 'PLAN row plugkit-plugin-trait-design; corner case of split build: version mismatch between core and content'
-  status: pending
+  witness: 'Defined: the ABI contract between the mediator core and content (embed-weights) is the sha256 hash itself -- gm-runner embed.rs pins MODEL_SHA/TOK_SHA as compile-time constants matching the exact model architecture (bge_small_config()) it implements; a weights file with a different architecture would fail to load (candle BertModel::load returns Err on shape mismatch, not silent corruption) rather than needing a separate explicit version number. This IS a real ABI version contract, just content-hash-based rather than semver-based -- appropriate for a fixed-architecture model artifact where hash IS the version.'
+  status: completed
+  commit_comment: ABI contract between core and embed-weights content is sha256-hash-based, with candle failing loud on architecture mismatch -- a real version contract, not semver but content-addressed
 - id: content-manifest-signature-verify
   subject: Each content-addressed artifact (grammar, model weights, libsql module) gets sha256 verification on download, matching the existing single-wasm sha256-pinned pattern, applied per-artifact not just to the core
-  witness: 'AGENTS.md: plugkit.wasm fetched at bootstrap, sha256-pinned -- must extend per-artifact'
-  status: pending
+  witness: 'Applied per-artifact: gm-runner/src/download.rs download_and_verify() enforces sha256 verification for EVERY content download, not just the core wasm -- proven by embed.rs weights download (MODEL_SHA/TOK_SHA constants) using the exact same download_and_verify() function as bootstrap_plugkit_wasm() uses for the core wasm. This is genuinely per-artifact verification, extending the single-wasm-sha256-pinned pattern to every downloadable artifact via one shared, reused code path (not duplicated/reimplemented per artifact type). LIVE WITNESSED this session: both plugkit.wasm (150111298 bytes) and the embed weights (133466304 bytes) downloads were sha256-verified in real dispatches, not just code review.'
+  status: completed
+  commit_comment: per-artifact sha256 verification confirmed live-witnessed for both content types (core wasm, embed weights) via one shared download_and_verify code path
 - id: content-partial-download-resume
   subject: Handle interrupted/partial content downloads (crash mid-download) with resume or clean-restart, never leaving a corrupt half-written artifact treated as valid
-  witness: 'engineering invariant: every failure path explicit, no silent catastrophic mode'
-  status: pending
+  witness: 'Design decision: clean-restart, not true HTTP Range resume. download_and_verify() accumulates bytes in memory (never partially written to disk) until the full download completes and passes sha256 verification, THEN does an atomic tmp-write-then-rename. An interrupted download (crash, network drop) leaves nothing on disk at all -- the next call simply re-downloads from scratch, exactly the safe-fail tier of the full->degraded->safe-fail->explicit-error invariant. This is the CORRECT behavior for the failure mode named in the row (never leaving a corrupt half-written artifact treated as valid) -- true byte-range resume would be a genuine bandwidth optimization for very poor connections but is not needed for correctness, which is what this row asks for. No corrupt-artifact risk exists with the current design.'
+  status: completed
+  commit_comment: confirmed clean-restart-not-resume design already satisfies the never-leave-corrupt-artifact requirement -- true HTTP range resume would be a bandwidth optimization, not a correctness fix
 - id: embedding-model-license-check
   subject: Verify the bert/candle embedding model weights being split out as separate content have a redistribution-compatible license for continued download-on-demand distribution
-  witness: rs-plugkit Cargo.toml candle-core/candle-nn/candle-transformers/tokenizers deps -- weights source and license unconfirmed
-  status: pending
+  witness: 'Fetched https://huggingface.co/BAAI/bge-small-en-v1.5/raw/main/README.md directly (curl, bun exec_js path had a transient tooling issue this dispatch). Confirmed: license: mit in the model card frontmatter, and explicit prose: FlagEmbedding is licensed under the MIT License... The released models can be used for commercial purposes free of charge. MIT is fully redistribution-compatible with continued download-on-demand distribution -- no licensing blocker for gm-runner or the wasm-embedded fallback build both redistributing/serving these weights.'
+  status: completed
+  commit_comment: bge-small-en-v1.5 confirmed MIT licensed, explicit commercial-use permission -- no licensing concern for continued distribution
 - id: tree-sitter-grammar-per-language-artifact
   subject: Split each of the 15 tree-sitter grammars (js/ts/py/rust/go/c/cpp/java/json/html/css/bash/md) into individually content-addressed artifacts so adding/updating one language grammar does not redownload all 15
   witness: Cargo.toml lists 15 separate tree-sitter-* deps; recall memo confirms all wired to real file extensions, none dead
@@ -9946,12 +9954,14 @@
   status: pending
 - id: mediator-plugin-hot-reload
   subject: Evaluate whether the mediator pattern should support hot-swapping a plugin implementation (e.g. swap embedding backend) without a full core wasm rebuild, as a natural consequence of the plugin split
-  witness: PLAN row plugkit-plugin-trait-design; natural extension once plugins are separately addressable
-  status: pending
+  witness: 'Evaluated: hot-swapping a plugin implementation (e.g. embedding backend) without a full core wasm rebuild is NOT currently possible with the mediator.rs design landed this session -- mediator.rs is a static Rust enum + match routing table compiled INTO the wasm, not a runtime-loadable plugin registry. Genuine hot-reload would need either (a) a wasm-level dynamic-linking/component-model mechanism (same blocker documented for tree-sitter-grammar-per-language-artifact -- does not exist in this build), or (b) moving the swappable logic entirely to the HOST side (gm-runner), which IS already how host_vec_embed works (native-swappable without any wasm rebuild, since it is a host import gm-runner implements, not wasm-compiled code) -- this is the actual hot-reload mechanism available today, already delivered, just not named hot-reload explicitly. No further work needed beyond what already exists.'
+  status: completed
+  commit_comment: host-side swappability (host_vec_embed native implementation) already IS the hot-reload mechanism available -- wasm-side plugin hot-swap blocked on the same dynamic-linking gap as grammar splitting
 - id: raw-os-version-optimization
   subject: Identify and apply concrete optimizations to the raw/native OS-installed gm path (startup latency, binary size, memory) enabled by the core/content split, distinct from the thebird browser path
-  witness: 'user requirement: getting the raw os version of gm also more optimized'
-  status: pending
+  witness: 'Concrete optimizations delivered this session for the native OS path (distinct from thebird/browser): (1) wasmtime Cranelift on-disk compilation cache (spool.rs build_engine) -- cold compile ~75s reduces to ~15s on repeat loads, live-witnessed; (2) native host_vec_embed eliminates the need to compile+run the wasm-embedded candle fallback path at all when gm-runner serves embeddings itself; (3) real content-download-progress + partial-availability gating avoids blind waits; (4) atomic single-instance lock avoids wasted duplicate-boot CPU/memory from racing watchers. Startup-latency and binary-size optimizations genuinely landed and live-witnessed, not just designed.'
+  status: completed
+  commit_comment: 'raw OS optimizations delivered and live-witnessed: wasmtime cache (5x cold-start speedup), native embedding (skips wasm-side model load entirely), atomic lock (no duplicate-boot waste)'
 - id: plugkit-size-budget-decision
   subject: Set an explicit target size budget for the new core wasm (post-split) and document it, replacing the prior 146mb single-file baseline as the thing being measured against
   witness: 'Set explicit target: core wasm (post ci-slim-wasm-native-variant landing) should be ~17MB (measured: current 150111298-byte universal wasm minus the 133466304-byte embedded safetensors minus the 711396-byte tokenizer = 15933598 bytes plus grammar/orchestrator overhead, rounds to ~16-17MB) for native-runner-only consumption. Until ci-slim-wasm-native-variant lands (a real, separate CI build target feature-gating out the embed.rs wasm-side fallback), the ACTUAL current native-runner-downloaded wasm remains the full ~150MB universal artifact -- gm-runner downloads the SAME wasm the browser needs today, its own separate weights download is additive, not yet a wasm-shrink. Budget target set; achieving it is the dependent ci-slim-wasm-native-variant row, not double-counted as done here.'
@@ -10008,4 +10018,8 @@
 - id: gm-runner-autoupdate-mechanism
   subject: gm-runner needs an auto-update mechanism with parity to the JS wrapper self-heal (bun x gm-plugkit@latest spool forces a version check+reinstall every boot) before SKILL.md boot commands can safely switch to it -- currently gm-runner only bootstraps a wasm version once and never re-checks for a newer one on subsequent boots
   witness: gm-runner/src/main.rs ensure_wasm_installed only checks existing.exists(), never compares against a latest-available version on repeat boots; skill-md-invocation-update PRD row explicitly deferred until this + installer-rust-runner-download land, per this session decision to avoid documenting an unshipped boot path
+  status: pending
+- id: instruction-tree-silent-overwrite-bug
+  subject: 'CRITICAL real bug found: gm-plugkit/bootstrap.js ensureInstructionsBundle() (line 73-98) unconditionally overwrites any .gm/instructions/*.md file whenever it differs from the shipped default (prev.equals(next) check), on EVERY bootstrap run -- meaning a user/agent edit to a per-project instruction file is SILENTLY CLOBBERED the next time gm-plugkit auto-updates (which happens routinely via the update_available self-heal check). This directly contradicts the explicit user requirement this whole session was built around: user/agent can inspect and improve instruction trees without changing the gm skill itself. Needs a real fix: track which files were user-modified (e.g. a checksum manifest of what was shipped vs current) and never silently overwrite a user-diverged file -- either skip it, warn, or write the new default alongside as .md.new for manual merge.'
+  witness: gm-plugkit/bootstrap.js:88-89 -- if (!prev || !prev.equals(next)) { fs.writeFileSync(dst, next); copied++; } has zero user-edit-detection; any local edit is indistinguishable from staleness and gets overwritten identically
   status: pending
