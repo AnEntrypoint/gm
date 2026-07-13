@@ -9757,14 +9757,6 @@
   description: 'DISCOVERY (needs verification before cut): pipeline.rs (338L) pipeline_state feature is HMAC-gated on RS_LEARN_PIPELINE_HMAC_KEY which is NEVER set (grep of wrapper/bootstrap/CI = only the compiled wasm + source match it). hmac_key() always returns Err when unset, so store_step/load_step never run. The pipeline verb is NOT in gm skill vocab. If the pipeline verb is dispatched nowhere in wasm_dispatch.rs (verify like rslearn_vectors/graph_similarity_search), pipeline.rs is a dead subsystem removable like rslearn_vectors. BUT fnv1a64 (pipeline.rs:38) may be used elsewhere - check before deleting the file. If fnv1a64 is the only live export, keep it and cut the rest. Native cargo check after.'
   witness: 'VERIFIED NOT DEAD - do not cut. pipeline.rs is load-bearing: fnv1a64 used across code_index.rs:633, memory_md.rs:328/341/354/829/832, memorize.rs:101 (core content-hashing); needs_summarize+build_pending_step called by code_index.rs:845/849; handle_continue by orchestrator/mod.rs:101. The RS_LEARN_PIPELINE_HMAC_KEY-gated store_step/load_step deadline-persistence path is optional (unset=no-op) but the module itself is central. Cutting it would break the whole hashing layer. Adversarial verification prevented a catastrophic false-positive deletion. Only the RS_LEARN_ env-var NAME is a cosmetic vestige, and renaming a live env-var contract carries breakage risk so it stays.'
   status: completed
-- id: runner-cross-compile-6-os
-  subject: 'Set up cross-compilation targets for the Rust runner: windows x64/arm64, macOS x64/arm64, linux x64/arm64 (6 OS/arch combos) with CI build matrix'
-  witness: 'user requirement: builds to all 6 OS'
-  status: pending
-- id: runner-browser-verb-driver
-  subject: Reimplement browser verb (findBrowserRunner/chromium driving) in Rust, replacing the bun-x-puppeteer-mcp-style JS launcher
-  witness: plugkit-wasm-wrapper.js:761-786 findBrowserRunner bunGlobalRoots/bun x puppeteer-runner
-  status: pending
 - id: plugkit-plugin-trait-design
   subject: Design a plugin/mediator trait abstraction inside rs-plugkit so libsql, code_index (tree-sitter), embed (candle/bert), rssearch_vectors etc are each a self-contained plugin the core dispatches to via a mediator, not statically linked
   witness: rs-plugkit/src/{libsql_wasm.rs,code_index.rs,embed.rs,rssearch_vectors.rs,vecstore.rs}
@@ -9976,4 +9968,8 @@
 - id: ci-slim-wasm-native-variant
   subject: Add a CI build variant that compiles plugkit-core WITHOUT the embed.rs wasm-side safetensors fallback (feature-gate the include_bytes! + candle model-load path) for native-runner distribution, since gm-runner now serves embeddings itself via host_vec_embed -- keep the full embedded build for the browser/thebird path which has no native host to delegate to
   witness: PLAN row plugkit-core-vs-content-split resolution notes this as the natural next step; current single build.yml/release.yml produces one universal wasm serving both paths
+  status: pending
+- id: runner-browser-session-lifecycle-parity
+  subject: 'gm-runner browser.rs currently covers single-shot dispatch (session new/close, eval) but not full session-lifecycle parity with plugkit-wasm-wrapper.js: idle-session reaping, orphan port-file cleanup, multi-session port tracking across concurrent dispatches, direct --direct wsEndpoint reattachment. Port these if/when gm-runner becomes the primary browser-dispatch path.'
+  witness: runner-browser-verb-driver resolution explicitly scoped this out; wrapper.js getOrCreateBrowserSession/browserPortsFile/idle reaper logic (lines ~1521+, ~900+) not yet ported
   status: pending
