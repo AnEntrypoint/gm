@@ -58,7 +58,6 @@ tmp/
 .gm/git-block-counter.json
 .gm/next-step.md
 .gm/constraints.md
-.gm/instructions/
 .gm/last-instruction-ts
 .gm/last-dispatch-ts
 .gm/boot*.err
