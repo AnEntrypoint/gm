@@ -70,11 +70,40 @@ function clearBootstrapError() {
   } catch (_) {}
 }
 
+function sha256Hex(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex');
+}
+
+// User/agent edits to .gm/instructions/*.md are the whole point of vendoring
+// them per-project -- a bare content-diff overwrite treats "user diverged
+// from the shipped default" identically to "file is just stale", silently
+// clobbering local edits on every routine bootstrap/auto-update. The
+// manifest records the sha256 of what THIS install last shipped for each
+// key; a local file matching that hash is safe to refresh (it's untouched),
+// but a local file that differs from BOTH the manifest AND the new default
+// is a real user edit -- write the new default beside it as .md.new instead
+// of overwriting, so the edit survives and the update is still visible.
+function instructionsManifestPath(cwd) {
+  return path.join(cwd, '.gm', '.instructions-shipped-manifest.json');
+}
+
+function readInstructionsManifest(cwd) {
+  try { return JSON.parse(fs.readFileSync(instructionsManifestPath(cwd), 'utf-8')); }
+  catch (_) { return {}; }
+}
+
+function writeInstructionsManifest(cwd, manifest) {
+  try { fs.writeFileSync(instructionsManifestPath(cwd), JSON.stringify(manifest, null, 2)); }
+  catch (e) { obsEvent('bootstrap', 'instructions-bundle.manifest-write-failed', { error: e.message }); }
+}
+
 function ensureInstructionsBundle(cwd) {
   const srcDir = path.join(__dirname, 'instructions');
   if (!fs.existsSync(srcDir)) return;
   const dstDir = path.join(cwd, '.gm', 'instructions');
+  const manifest = readInstructionsManifest(cwd);
   let copied = 0;
+  let preserved = 0;
   const walk = (rel) => {
     const from = path.join(srcDir, rel);
     for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
@@ -84,16 +113,47 @@ function ensureInstructionsBundle(cwd) {
       try {
         fs.mkdirSync(path.dirname(dst), { recursive: true });
         const next = fs.readFileSync(path.join(srcDir, childRel));
+        const nextHash = sha256Hex(next);
         let prev = null;
         try { prev = fs.readFileSync(dst); } catch (_) {}
-        if (!prev || !prev.equals(next)) { fs.writeFileSync(dst, next); copied++; }
+        if (!prev) {
+          fs.writeFileSync(dst, next);
+          manifest[childRel] = nextHash;
+          copied++;
+          continue;
+        }
+        if (prev.equals(next)) {
+          manifest[childRel] = nextHash;
+          continue; // already current, nothing to do
+        }
+        const lastShippedHash = manifest[childRel];
+        const localMatchesLastShipped = lastShippedHash && sha256Hex(prev) === lastShippedHash;
+        if (localMatchesLastShipped || !lastShippedHash) {
+          // Untouched since we last wrote it (or first time we've ever
+          // recorded a hash for this key -- pre-manifest install, treat as
+          // ours) -- safe to refresh with the new default.
+          fs.writeFileSync(dst, next);
+          manifest[childRel] = nextHash;
+          copied++;
+        } else {
+          // Local content diverges from what we shipped: a real user/agent
+          // edit. Never overwrite it -- stage the new default beside it so
+          // the update is visible without destroying the edit.
+          try { fs.writeFileSync(dst + '.new', next); } catch (_) {}
+          preserved++;
+          obsEvent('bootstrap', 'instructions-bundle.user-edit-preserved', { target: dst });
+        }
       } catch (e) { obsEvent('bootstrap', 'instructions-bundle.target-failed', { target: dst, error: e.message }); }
     }
   };
   try { walk(''); } catch (e) { obsEvent('bootstrap', 'instructions-bundle.walk-failed', { error: e.message }); }
+  if (copied > 0 || preserved > 0) writeInstructionsManifest(cwd, manifest);
   if (copied > 0) {
     log(`instructions bundle provisioned: ${copied} file(s)`);
     obsEvent('bootstrap', 'instructions-bundle.provisioned', { copied });
+  }
+  if (preserved > 0) {
+    log(`instructions bundle: ${preserved} user-edited file(s) preserved (new default staged as .md.new)`);
   }
 }
 
