@@ -9765,14 +9765,6 @@
   subject: 'Rust runner: reimplement supervisor.js watcher lifecycle (spawn, restart-burst-backoff, heartbeat, idle-exit, lock-rejected) natively in Rust'
   witness: gm-plugkit/supervisor.js:184-326 spawnWatcher, restart burst backoff, heartbeat
   status: pending
-- id: runner-host-imports-native
-  subject: Reimplement wasm host imports (fs/kv/exec/fetch/env, git verbs, browser verb chromium driving) natively in Rust instead of via node/bun child_process/fetch
-  witness: 'AGENTS.md: wasm-direct plugkit verbs full list; #[link(wasm_import_module=env)] host-import rule'
-  status: pending
-- id: runner-exec-js-lang-dispatch
-  subject: Reimplement langToCmd (node/python/bash/powershell/deno exec dispatch) in the Rust runner for the exec_js verb, without depending on node/bun being installed for the JS case
-  witness: plugkit-wasm-wrapper.js:2169-2176 langToCmd
-  status: pending
 - id: runner-browser-verb-driver
   subject: Reimplement browser verb (findBrowserRunner/chromium driving) in Rust, replacing the bun-x-puppeteer-mcp-style JS launcher
   witness: plugkit-wasm-wrapper.js:761-786 findBrowserRunner bunGlobalRoots/bun x puppeteer-runner
@@ -9972,4 +9964,20 @@
 - id: mantra-sweep-this-sessions-own-docs
   subject: Apply the describe-not-achieve mantra to any documentation this session itself writes -- no design-doc-only rows get marked resolved without the real implementation landing in the same session
   witness: 'AGENTS.md nothing-fake rule: a row marked completed by documenting instead of implementing is the same violation as a mock'
+  status: pending
+- id: plugkit-git-finalize-staged-dirty-misdetect
+  subject: 'Real tool defect found mid-session: gm git_finalize verb dirty-check after commit misreads git status porcelain M  (staged, clean worktree, two-char prefix with trailing space) as still-dirty, refusing push even though raw git status --porcelain/git diff confirm a genuinely clean worktree. Reproduced twice on the same file (gm-plugkit/plugkit-wasm-wrapper.js) -- git_finalize commit step silently failed to commit (HEAD unchanged) both times while returning worktree still dirty after commit. Worked around this turn via direct git commit+git_push verb (commit succeeds, then git_push verb -- not git_finalize -- succeeds). Needs a real fix in rs-plugkit gates.rs/git verb porcelain parsing: likely a substring match on M that does not distinguish staged-clean (M ) from unstaged-modified ( M) or both-modified (MM).'
+  witness: git status --porcelain gm-plugkit/plugkit-wasm-wrapper.js showed M  (staged, index char M, worktree char space) both times git_finalize refused; git diff (worktree vs index) was empty both times, confirming no real unstaged change existed
+  status: pending
+- id: runner-host-fetch-native
+  subject: Implement real host_fetch in gm-runner (ureq-based HTTP GET/POST, matching the JS wrapper host_fetch {status,body} contract) replacing the not_implemented_native_runner stub
+  witness: wasm_host.rs host_fetch still stubbed; ureq already a gm-runner dependency for download.rs
+  status: pending
+- id: runner-host-vec-embed-search-native
+  subject: 'Implement real host_vec_embed/host_vec_search in gm-runner: either delegate to plugkit-cores own in-wasm candle/bert embedding (host_vec_embed can return -1 to signal wasm-side fallback per embed.rs probe pattern) or implement a native vector store'
+  witness: embed.rs:112 already has a host_vec_embed probe-fails-gracefully path (falls back to wasm-side safetensors load) -- returning -1 (as currently stubbed) may already be the CORRECT native-runner behavior, not a stub; verify this is intentional not accidental
+  status: pending
+- id: runner-host-task-proc-native
+  subject: Implement real host_task_proc in gm-runner for background task lifecycle (task new/list/kill) -- check what task_proc actions plugkit-core sends and implement a native process-tracking equivalent
+  witness: wasm_dispatch.rs host_task/host_task_proc referenced but native semantics not yet designed
   status: pending
