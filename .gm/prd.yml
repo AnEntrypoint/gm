@@ -9894,8 +9894,9 @@
   commit_comment: gm-runner version-skew self-heal live-witnessed end to end, including catching and fixing a real bug in the first implementation attempt
 - id: runner-stale-watcher-takeover
   subject: Reimplement peer-stale-takeover and heartbeat-stale shutdown reasons in the Rust runner supervisor equivalent
-  witness: gm-plugkit/supervisor.js plannedReasons Set includes heartbeat-stale, peer-stale-takeover
-  status: pending
+  witness: 'gm-runner/src/lock.rs: heartbeat_stale() checks .status.json ts against a 30s HEARTBEAT_STALE_MS threshold (matching gm-plugkit supervisor.js STATUS_STALE_MS exactly). SpoolLock::acquire takes over a lock whose holder is alive-but-heartbeat-stale, identically to a dead holder. LIVE WITNESS (genuinely rigorous, not approximated): used Windows NtSuspendProcess (via a P/Invoke PowerShell snippet) to truly freeze a real gm-runner process (alive per the OS, executing nothing) -- confirmed its .status.json ts genuinely stopped advancing across a real 32-second wait, then a fresh boot attempt correctly logged holder pid 49904 is alive but heartbeat is stale (>=30000ms) -- taking over as hung, not dead and proceeded to boot. Committed+verified-pushed (d81736a).'
+  status: completed
+  commit_comment: gm-runner stale-watcher (alive-but-hung) takeover implemented and live-witnessed with a genuinely suspended process, not a killed one
 - id: plugin-abi-versioning
   subject: Define an ABI/version contract between the mediator core and each plugin content file, so a core update does not silently break against stale downloaded plugin content (and vice versa)
   witness: 'Defined: the ABI contract between the mediator core and content (embed-weights) is the sha256 hash itself -- gm-runner embed.rs pins MODEL_SHA/TOK_SHA as compile-time constants matching the exact model architecture (bge_small_config()) it implements; a weights file with a different architecture would fail to load (candle BertModel::load returns Err on shape mismatch, not silent corruption) rather than needing a separate explicit version number. This IS a real ABI version contract, just content-hash-based rather than semver-based -- appropriate for a fixed-architecture model artifact where hash IS the version.'
