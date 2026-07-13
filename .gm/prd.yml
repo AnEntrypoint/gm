@@ -9765,10 +9765,6 @@
   subject: Reimplement browser verb (findBrowserRunner/chromium driving) in Rust, replacing the bun-x-puppeteer-mcp-style JS launcher
   witness: plugkit-wasm-wrapper.js:761-786 findBrowserRunner bunGlobalRoots/bun x puppeteer-runner
   status: pending
-- id: plugkit-core-vs-content-split
-  subject: Restructure rs-plugkit build so the core wasm contains only orchestrator/gates/state-machine/spool logic, and libsql/tree-sitter grammars/candle+bert embedding model become separate downloadable content files loaded at runtime
-  witness: current single cdylib bundles libsql-ffi + 15 tree-sitter grammars + candle-core/nn/transformers + tokenizers = 146mb
-  status: pending
 - id: plugkit-plugin-trait-design
   subject: Design a plugin/mediator trait abstraction inside rs-plugkit so libsql, code_index (tree-sitter), embed (candle/bert), rssearch_vectors etc are each a self-contained plugin the core dispatches to via a mediator, not statically linked
   witness: rs-plugkit/src/{libsql_wasm.rs,code_index.rs,embed.rs,rssearch_vectors.rs,vecstore.rs}
@@ -9976,4 +9972,8 @@
 - id: runner-host-task-proc-native
   subject: Implement real host_task_proc in gm-runner for background task lifecycle (task new/list/kill) -- check what task_proc actions plugkit-core sends and implement a native process-tracking equivalent
   witness: wasm_dispatch.rs host_task/host_task_proc referenced but native semantics not yet designed
+  status: pending
+- id: ci-slim-wasm-native-variant
+  subject: Add a CI build variant that compiles plugkit-core WITHOUT the embed.rs wasm-side safetensors fallback (feature-gate the include_bytes! + candle model-load path) for native-runner distribution, since gm-runner now serves embeddings itself via host_vec_embed -- keep the full embedded build for the browser/thebird path which has no native host to delegate to
+  witness: PLAN row plugkit-core-vs-content-split resolution notes this as the natural next step; current single build.yml/release.yml produces one universal wasm serving both paths
   status: pending
