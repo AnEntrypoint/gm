@@ -9757,3 +9757,247 @@
   description: 'DISCOVERY (needs verification before cut): pipeline.rs (338L) pipeline_state feature is HMAC-gated on RS_LEARN_PIPELINE_HMAC_KEY which is NEVER set (grep of wrapper/bootstrap/CI = only the compiled wasm + source match it). hmac_key() always returns Err when unset, so store_step/load_step never run. The pipeline verb is NOT in gm skill vocab. If the pipeline verb is dispatched nowhere in wasm_dispatch.rs (verify like rslearn_vectors/graph_similarity_search), pipeline.rs is a dead subsystem removable like rslearn_vectors. BUT fnv1a64 (pipeline.rs:38) may be used elsewhere - check before deleting the file. If fnv1a64 is the only live export, keep it and cut the rest. Native cargo check after.'
   witness: 'VERIFIED NOT DEAD - do not cut. pipeline.rs is load-bearing: fnv1a64 used across code_index.rs:633, memory_md.rs:328/341/354/829/832, memorize.rs:101 (core content-hashing); needs_summarize+build_pending_step called by code_index.rs:845/849; handle_continue by orchestrator/mod.rs:101. The RS_LEARN_PIPELINE_HMAC_KEY-gated store_step/load_step deadline-persistence path is optional (unset=no-op) but the module itself is central. Cutting it would break the whole hashing layer. Adversarial verification prevented a catastrophic false-positive deletion. Only the RS_LEARN_ env-var NAME is a cosmetic vestige, and renaming a live env-var contract carries breakage risk so it stays.'
   status: completed
+- id: add-rs-plugkit-git-submodule
+  subject: git submodule add the (restructured) rs-plugkit repo into gm at a canonical path (e.g. vendor/rs-plugkit or rs-plugkit/), replacing the sibling-checkout-only relationship
+  witness: gm currently has no .gitmodules; rs-plugkit lives only as sibling ../rs-plugkit
+  status: pending
+- id: design-rust-runner-crate
+  subject: 'Design and scaffold a new Rust binary crate (e.g. gm-runner or plugkit-runner) that replaces gm-plugkit JS: resolves platform, downloads plugkit binary+content, verifies sha256, spawns/loads wasm, runs spool watcher loop'
+  witness: gm-plugkit/{bootstrap.js,supervisor.js,cli.js,plugkit-wasm-wrapper.js} = 5826 lines of JS this replaces
+  status: pending
+- id: runner-cross-compile-6-os
+  subject: 'Set up cross-compilation targets for the Rust runner: windows x64/arm64, macOS x64/arm64, linux x64/arm64 (6 OS/arch combos) with CI build matrix'
+  witness: 'user requirement: builds to all 6 OS'
+  status: pending
+- id: runner-download-verify-binary
+  subject: 'Rust runner: implement platform-specific plugkit binary download + sha256 verification + atomic install (replacing bootstrap.js ensureReady/selfHeal logic)'
+  witness: gm-plugkit/bootstrap.js ensureWrapperFresh, sha256OfFileSync, atomic lock-guarded install
+  status: pending
+- id: runner-wasm-load-execute
+  subject: 'Rust runner: load plugkit.wasm via a wasm runtime (wasmtime/wasmer) and implement the dispatch_verb/plugkit_free host-import ABI currently implemented in plugkit-wasm-wrapper.js'
+  witness: plugkit-wasm-wrapper.js:5003-5084 CLI entry, dispatch_verb export, decodeWasmResult
+  status: pending
+- id: runner-spool-watcher-loop
+  subject: 'Rust runner: reimplement the spool watcher (poll in/, dispatch to wasm, write out/) natively, replacing runSpoolWatcher in plugkit-wasm-wrapper.js'
+  witness: plugkit-wasm-wrapper.js args[0]===spool -> runSpoolWatcher(instance, spoolDir)
+  status: pending
+- id: runner-supervisor-lifecycle
+  subject: 'Rust runner: reimplement supervisor.js watcher lifecycle (spawn, restart-burst-backoff, heartbeat, idle-exit, lock-rejected) natively in Rust'
+  witness: gm-plugkit/supervisor.js:184-326 spawnWatcher, restart burst backoff, heartbeat
+  status: pending
+- id: runner-host-imports-native
+  subject: Reimplement wasm host imports (fs/kv/exec/fetch/env, git verbs, browser verb chromium driving) natively in Rust instead of via node/bun child_process/fetch
+  witness: 'AGENTS.md: wasm-direct plugkit verbs full list; #[link(wasm_import_module=env)] host-import rule'
+  status: pending
+- id: runner-exec-js-lang-dispatch
+  subject: Reimplement langToCmd (node/python/bash/powershell/deno exec dispatch) in the Rust runner for the exec_js verb, without depending on node/bun being installed for the JS case
+  witness: plugkit-wasm-wrapper.js:2169-2176 langToCmd
+  status: pending
+- id: runner-browser-verb-driver
+  subject: Reimplement browser verb (findBrowserRunner/chromium driving) in Rust, replacing the bun-x-puppeteer-mcp-style JS launcher
+  witness: plugkit-wasm-wrapper.js:761-786 findBrowserRunner bunGlobalRoots/bun x puppeteer-runner
+  status: pending
+- id: plugkit-core-vs-content-split
+  subject: Restructure rs-plugkit build so the core wasm contains only orchestrator/gates/state-machine/spool logic, and libsql/tree-sitter grammars/candle+bert embedding model become separate downloadable content files loaded at runtime
+  witness: current single cdylib bundles libsql-ffi + 15 tree-sitter grammars + candle-core/nn/transformers + tokenizers = 146mb
+  status: pending
+- id: plugkit-plugin-trait-design
+  subject: Design a plugin/mediator trait abstraction inside rs-plugkit so libsql, code_index (tree-sitter), embed (candle/bert), rssearch_vectors etc are each a self-contained plugin the core dispatches to via a mediator, not statically linked
+  witness: rs-plugkit/src/{libsql_wasm.rs,code_index.rs,embed.rs,rssearch_vectors.rs,vecstore.rs}
+  status: pending
+- id: content-addressed-manifest
+  subject: 'Design a content-addressed manifest (hash per content file: core wasm, each tree-sitter grammar, embedding model weights, libsql module) so CI only rebuilds/republishes files whose inputs changed'
+  witness: 'user requirement: build process only refreshes content that changes'
+  status: pending
+- id: ci-per-artifact-rebuild
+  subject: Restructure rs-plugkit CI (.github/workflows) to build/publish each content artifact independently keyed by its manifest hash, instead of one monolithic build+publish per push
+  witness: 'current: single plugkit.wasm 146mb published per release per AGENTS.md cascade pipeline'
+  status: pending
+- id: runner-content-download-progress
+  subject: 'Rust runner: implement startup content download with progress reporting (partial-availability state) so in-flight downloads are visible to the dispatching agent via a status field'
+  witness: 'user requirement: plugkit should download additional content as soon as started and report progress'
+  status: pending
+- id: plugkit-partial-availability-gate
+  subject: Add a capability-gate so verbs depending on not-yet-downloaded content (codesearch needing tree-sitter, embed needing bert weights) return a clear not-yet-available status instead of failing opaquely
+  witness: 'user requirement: agent knows some content not available till downloads done'
+  status: pending
+- id: instruction-trees-vendored-per-project
+  subject: Move instruction-tree content (currently gm-plugkit/instructions/*.md synced to rs-plugkit compiled consts) to a per-project-vendored, user/agent-editable file set that plugkit reads at runtime, decoupled from the gm skill itself
+  witness: 'gm-plugkit/scripts/sync-instruction-consts.mjs: md->rs const sync; AGENTS.md prose.rs per-key fallback to compiled const'
+  status: pending
+- id: instruction-tree-runtime-override
+  subject: 'Implement plugkit runtime instruction-loading: read vendored per-project instruction files if present, fall back to compiled/downloaded default content -- user/agent edits apply without rebuilding gm skill'
+  witness: current mechanism requires gm-plugkit republish + rs-plugkit rebuild for any prose edit
+  status: pending
+- id: auto-update-bandwidth-savings
+  subject: Redesign the auto-update flow so a version bump only re-downloads the changed content artifacts (core wasm or specific content file), not the full bundle, while remaining as seamless (zero manual steps) as the current bun-x-latest flow
+  witness: 'AGENTS.md: gm-plugkit auto-update currently re-fetches whole plugkit.wasm via sha256-pinned npm/gh-releases fetch'
+  status: pending
+- id: thebird-loading-path-update
+  subject: Update thebird docs/vendor/gm loading path (refresh-gm.mjs) to consume the new split core+content artifact set instead of a single plugkit.wasm, preserving in-browser load
+  witness: ../thebird/scripts/refresh-gm.mjs copies bin/plugkit.wasm + wrapper; must become multi-artifact aware
+  status: pending
+- id: thebird-caching-content-addressed
+  subject: Make thebird browser-side caching content-addressed per artifact (service worker or IndexedDB cache keyed by content hash) so thebird only redownloads changed plugkit content, not the whole bundle, on each gm refresh
+  witness: 'user requirement: make loading process and caching for thebird more update-friendly'
+  status: pending
+- id: thebird-browser-wasm-runtime
+  subject: Ensure the browser-side plugkit loading path (thebird) has an equivalent in-browser dispatch mechanism that does not depend on the new Rust native runner (browser cannot spawn native binaries) -- clarify/preserve the JS wrapper specifically for the browser target
+  witness: 'plugkit-wasm-wrapper.js is dual-purpose: node/bun CLI AND (per thebird) browser-loadable; Rust runner replaces only the native/CLI half'
+  status: pending
+- id: remove-node-bun-from-native-path
+  subject: Remove node_modules/, package.json bin entries, and all bun/npx invocations from the native (non-browser) gm dispatch path once the Rust runner replaces gm-plugkit JS
+  witness: gm/package.json, gm/node_modules/, SKILL.md Bash(bun *)/Bash(npx *) allowed-tools
+  status: pending
+- id: skill-md-invocation-update
+  subject: Update skills/gm/SKILL.md boot-probe and daemon-boot instructions to invoke the new Rust runner binary instead of bun x gm-plugkit@latest spool / npx -y gm-plugkit@latest spool
+  witness: 'SKILL.md + AGENTS.md: dead-watcher recovery uses bun x gm-plugkit@latest spool'
+  status: pending
+- id: installer-rust-runner-download
+  subject: Update bin/install.js (canonical installer) to download/install the Rust runner binary for the host OS instead of relying on npm/bun/npx being present
+  witness: 'AGENTS.md: bin/install.js = canonical installer, no npx skills lib, no marketplace'
+  status: pending
+- id: agents-md-update-for-rust-runner
+  subject: Update AGENTS.md WASM-only / spool dispatch ABI / cascade pipeline sections to describe the Rust runner replacing node/bun, per the AGENTS.md self-maintenance rule (prose edits = doc updates, not code-only)
+  witness: 'AGENTS.md: WASM-only section currently describes plugkit-wasm-wrapper.js under Node/bun'
+  status: pending
+- id: cascade-pipeline-update-for-split-build
+  subject: Update the cascade.yml/release.yml pipeline description and actual workflow files across rs-codeinsight/rs-search/rs-plugkit/gm for per-artifact incremental build+publish instead of monolithic plugkit.wasm
+  witness: 'AGENTS.md cascade pipeline: push -> cascade.yml -> release.yml -> single plugkit.wasm'
+  status: pending
+- id: workflow-forge-review-gm
+  subject: 'Review gm from the /workflow-forge perspective: identify what workflow-forge would need from gm (Workflow tool orchestration hooks, agent-dispatch surfaces) and add/adjust'
+  witness: 'user requirement: take extra critical look at gm from workflow-forge perspective'
+  status: pending
+- id: workflow-forge-improvements
+  subject: Apply improvements to workflow-forge itself per its own policy, discovered while reviewing gm compatibility
+  witness: 'user requirement: per its policy also update workflow-forge if it can be improved'
+  status: pending
+- id: mediator-pattern-plugkit-dispatch
+  subject: Introduce a controller/mediator struct in rs-plugkit wasm_dispatch.rs that routes verb dispatch to plugin implementations, replacing direct match-arm coupling
+  witness: rs-plugkit/src/wasm_dispatch.rs currently the dispatch entrypoint
+  status: pending
+- id: gm-json-plugkit-version-multi-artifact
+  subject: Extend gm.json plugkitVersion pinning to a multi-artifact version manifest (core version + per-content-file version/hash) instead of one scalar version
+  witness: gm.json:20 plugkitVersion pin (single scalar)
+  status: pending
+- id: mantra-audit-existing-docs
+  subject: Sweep existing AGENTS.md/README/site docs for describe-not-achieve violations (design docs standing in for implementation) introduced or exposed by this restructure, per the mantra
+  witness: 'user mantra: achieve what we are trying to describe, dont describe what we are trying to achieve'
+  status: pending
+- id: submodule-detached-head-pin
+  subject: Pin the rs-plugkit submodule to a branch (main) not a detached SHA, so gm-side updates track rs-plugkit main per the direct-push-to-main-only rule, with CI auto-bumping the submodule pointer on rs-plugkit release
+  witness: 'AGENTS.md: direct-push-to-main, never a branch; cascade pipeline auto-bumps gm.json::plugkitVersion today'
+  status: pending
+- id: submodule-clone-recursive-docs
+  subject: Document/automate `git clone --recurse-submodules` and `git submodule update --init --recursive` in gm README/installer so a fresh clone of gm actually gets rs-plugkit content, not an empty dir
+  witness: submodules are opt-in on clone by default; empty dir is the common failure mode
+  status: pending
+- id: submodule-ci-checkout-fix
+  subject: Update gm CI workflows (publish.yml etc) to checkout with submodules:recursive so CI builds see rs-plugkit source
+  witness: actions/checkout defaults to non-recursive; cascade CI currently expects rs-plugkit as a separate repo push trigger, not a submodule checkout
+  status: pending
+- id: siblings-directory-cleanup
+  subject: After folding used rs-plugkit-sibling components in, decide fate of the now-redundant sibling checkouts (../rs-search, ../rs-codeinsight if folded, ../libsql-plugkit-client if retired) -- remove or leave as archived source, document decision
+  witness: PLAN rows fold-rs-search-into-rs-plugkit, evaluate-rs-codeinsight-fold, evaluate-libsql-plugkit-client-fold
+  status: pending
+- id: runner-windows-arm64-target
+  subject: Explicitly verify windows-arm64 (aarch64-pc-windows-msvc) is a real, buildable Rust target for the runner, not just assumed as one of the 6 OS matrix cells
+  witness: Rust tier-2 target aarch64-pc-windows-msvc; needs CI runner availability check
+  status: pending
+- id: runner-linux-musl-vs-gnu
+  subject: Decide whether Linux runner targets are musl (static, portable) or gnu (glibc-dependent) -- affects the "download and run" simplicity requirement across distros
+  witness: 'user requirement: rust runner that builds to all 6 oss and can download the plugkit binary and run it'
+  status: pending
+- id: runner-offline-degraded-mode
+  subject: 'Define runner behavior when download fails/network unavailable at startup: fail loud with explicit error vs run with cached/previous content -- no silent catastrophic mode per engineering invariants'
+  witness: 'AGENTS.md EXECUTE prose: every failure path explicit (full -> degraded -> safe-fail -> explicit-error), no silent catastrophic mode'
+  status: pending
+- id: runner-concurrent-instance-lock
+  subject: Ensure the new Rust runner preserves the atomic single-instance/lock guard (O_EXCL/atomic-rename) invariant when multiple gm sessions boot concurrently in the same project
+  witness: 'AGENTS.md: every single-instance/lock guard is atomic, never check-then-act (recall: supervisor churn TOCTOU atomic guard)'
+  status: pending
+- id: runner-version-skew-self-heal
+  subject: Reimplement wrapper/wasm version-skew self-heal (selfHeal on LinkError/CompileError) in the Rust runner so a stale local binary auto-recovers without user intervention
+  witness: plugkit-wasm-wrapper.js selfHeal(wasm not installed / LinkError / CompileError)
+  status: pending
+- id: runner-stale-watcher-takeover
+  subject: Reimplement peer-stale-takeover and heartbeat-stale shutdown reasons in the Rust runner supervisor equivalent
+  witness: gm-plugkit/supervisor.js plannedReasons Set includes heartbeat-stale, peer-stale-takeover
+  status: pending
+- id: plugin-abi-versioning
+  subject: Define an ABI/version contract between the mediator core and each plugin content file, so a core update does not silently break against stale downloaded plugin content (and vice versa)
+  witness: 'PLAN row plugkit-plugin-trait-design; corner case of split build: version mismatch between core and content'
+  status: pending
+- id: content-manifest-signature-verify
+  subject: Each content-addressed artifact (grammar, model weights, libsql module) gets sha256 verification on download, matching the existing single-wasm sha256-pinned pattern, applied per-artifact not just to the core
+  witness: 'AGENTS.md: plugkit.wasm fetched at bootstrap, sha256-pinned -- must extend per-artifact'
+  status: pending
+- id: content-partial-download-resume
+  subject: Handle interrupted/partial content downloads (crash mid-download) with resume or clean-restart, never leaving a corrupt half-written artifact treated as valid
+  witness: 'engineering invariant: every failure path explicit, no silent catastrophic mode'
+  status: pending
+- id: embedding-model-license-check
+  subject: Verify the bert/candle embedding model weights being split out as separate content have a redistribution-compatible license for continued download-on-demand distribution
+  witness: rs-plugkit Cargo.toml candle-core/candle-nn/candle-transformers/tokenizers deps -- weights source and license unconfirmed
+  status: pending
+- id: tree-sitter-grammar-per-language-artifact
+  subject: Split each of the 15 tree-sitter grammars (js/ts/py/rust/go/c/cpp/java/json/html/css/bash/md) into individually content-addressed artifacts so adding/updating one language grammar does not redownload all 15
+  witness: Cargo.toml lists 15 separate tree-sitter-* deps; recall memo confirms all wired to real file extensions, none dead
+  status: pending
+- id: instruction-tree-conflict-resolution
+  subject: Define behavior when a user/agent-edited vendored instruction file conflicts with a newer default shipped by gm -- never silently overwrite local edits on update
+  witness: 'user requirement: user/agent can inspect and improve instruction trees without changing the gm skill itself'
+  status: pending
+- id: instruction-tree-per-project-migration
+  subject: Migrate existing single-project instruction bundle mechanism (ensureInstructionsBundle in bootstrap.js, copies gm-plugkit/instructions/* to .gm/instructions/) to the new vendored-per-project model, preserving current .gm/instructions/ behavior for existing projects
+  witness: gm-plugkit/bootstrap.js:71-95 ensureInstructionsBundle walks srcDir, copies changed files to cwd/.gm/instructions
+  status: pending
+- id: auto-update-version-manifest-diff
+  subject: Implement version-manifest diffing in the Rust runner update check (compare local vs remote per-artifact hashes) so update_available correctly reflects partial vs full staleness
+  witness: plugkit-wasm-wrapper.js injectUpdateWarning reads .update-available.json, single installed vs latest scalar today
+  status: pending
+- id: auto-update-atomicity-multi-artifact
+  subject: Ensure multi-artifact auto-update remains atomic from the dispatching agents perspective -- no verb dispatch sees a half-updated mixed-version state mid-download
+  witness: 'engineering invariant: misuse structurally impossible; corner case of splitting one atomic file into many'
+  status: pending
+- id: thebird-service-worker-cache-invalidation
+  subject: Define thebird service-worker cache invalidation strategy per content-addressed artifact (new hash = new cache key, old entries evicted on a schedule/LRU) to avoid unbounded browser storage growth
+  witness: 'PLAN row thebird-caching-content-addressed; corner case: unbounded cache growth without eviction'
+  status: pending
+- id: thebird-download-progress-ui
+  subject: Surface plugkit content download progress in thebird UI (not just agent-facing status field) since thebird is an interactive browser OS with a real user watching
+  witness: 'thebird package.json: Browser-native web OS -- multi-instance, agentic, serverless; user-facing surface distinct from agent-facing'
+  status: pending
+- id: workflow-forge-locate-repo
+  subject: Locate the actual workflow-forge repo/skill (path, current state) before reviewing/improving it -- confirm it exists as a sibling or is a Claude-side skill not a local repo
+  witness: user requirement references /workflow-forge; location not yet confirmed in this session
+  status: pending
+- id: gm-workflow-tool-agent-prompt-compliance
+  subject: Audit gm subagent/Workflow-script agent() prompts for AGENTS.md delegate-never-restate compliance while doing the workflow-forge review pass
+  witness: 'AGENTS.md: Subagent/Workflow-agent prompts delegate, never restate -- says only use the gm skill for this plus task-specific content'
+  status: pending
+- id: mediator-plugin-hot-reload
+  subject: Evaluate whether the mediator pattern should support hot-swapping a plugin implementation (e.g. swap embedding backend) without a full core wasm rebuild, as a natural consequence of the plugin split
+  witness: PLAN row plugkit-plugin-trait-design; natural extension once plugins are separately addressable
+  status: pending
+- id: raw-os-version-optimization
+  subject: Identify and apply concrete optimizations to the raw/native OS-installed gm path (startup latency, binary size, memory) enabled by the core/content split, distinct from the thebird browser path
+  witness: 'user requirement: getting the raw os version of gm also more optimized'
+  status: pending
+- id: plugkit-size-budget-decision
+  subject: Set an explicit target size budget for the new core wasm (post-split) and document it, replacing the prior 146mb single-file baseline as the thing being measured against
+  witness: 'user requirement: instead of building out to 146mb single file, build out to only its internal requirements'
+  status: pending
+- id: cli-js-index-js-fate
+  subject: Decide fate of gm-plugkit/cli.js and index.js (thin JS entrypoints) once the Rust runner exists -- retire entirely or keep a minimal JS shim only for the browser/npm-consumption path
+  witness: gm-plugkit/{cli.js,index.js} = 307 lines total, npm bin entries
+  status: pending
+- id: npm-package-gm-plugkit-fate
+  subject: Decide fate of the gm-plugkit npm package itself (currently the sole distribution channel) once a Rust runner + submodule model exists -- keep npm as the browser-wrapper-only channel, add a new distribution channel (GH releases) for the native runner
+  witness: 'gm-plugkit/package.json: bin gm-plugkit/plugkit-wasm-wrapper, files list, npm-consumed only per recall memo'
+  status: pending
+- id: mantra-sweep-this-sessions-own-docs
+  subject: Apply the describe-not-achieve mantra to any documentation this session itself writes -- no design-doc-only rows get marked resolved without the real implementation landing in the same session
+  witness: 'AGENTS.md nothing-fake rule: a row marked completed by documenting instead of implementing is the same violation as a mock'
+  status: pending
