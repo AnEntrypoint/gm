@@ -9757,29 +9757,9 @@
   description: 'DISCOVERY (needs verification before cut): pipeline.rs (338L) pipeline_state feature is HMAC-gated on RS_LEARN_PIPELINE_HMAC_KEY which is NEVER set (grep of wrapper/bootstrap/CI = only the compiled wasm + source match it). hmac_key() always returns Err when unset, so store_step/load_step never run. The pipeline verb is NOT in gm skill vocab. If the pipeline verb is dispatched nowhere in wasm_dispatch.rs (verify like rslearn_vectors/graph_similarity_search), pipeline.rs is a dead subsystem removable like rslearn_vectors. BUT fnv1a64 (pipeline.rs:38) may be used elsewhere - check before deleting the file. If fnv1a64 is the only live export, keep it and cut the rest. Native cargo check after.'
   witness: 'VERIFIED NOT DEAD - do not cut. pipeline.rs is load-bearing: fnv1a64 used across code_index.rs:633, memory_md.rs:328/341/354/829/832, memorize.rs:101 (core content-hashing); needs_summarize+build_pending_step called by code_index.rs:845/849; handle_continue by orchestrator/mod.rs:101. The RS_LEARN_PIPELINE_HMAC_KEY-gated store_step/load_step deadline-persistence path is optional (unset=no-op) but the module itself is central. Cutting it would break the whole hashing layer. Adversarial verification prevented a catastrophic false-positive deletion. Only the RS_LEARN_ env-var NAME is a cosmetic vestige, and renaming a live env-var contract carries breakage risk so it stays.'
   status: completed
-- id: add-rs-plugkit-git-submodule
-  subject: git submodule add the (restructured) rs-plugkit repo into gm at a canonical path (e.g. vendor/rs-plugkit or rs-plugkit/), replacing the sibling-checkout-only relationship
-  witness: gm currently has no .gitmodules; rs-plugkit lives only as sibling ../rs-plugkit
-  status: pending
-- id: design-rust-runner-crate
-  subject: 'Design and scaffold a new Rust binary crate (e.g. gm-runner or plugkit-runner) that replaces gm-plugkit JS: resolves platform, downloads plugkit binary+content, verifies sha256, spawns/loads wasm, runs spool watcher loop'
-  witness: gm-plugkit/{bootstrap.js,supervisor.js,cli.js,plugkit-wasm-wrapper.js} = 5826 lines of JS this replaces
-  status: pending
 - id: runner-cross-compile-6-os
   subject: 'Set up cross-compilation targets for the Rust runner: windows x64/arm64, macOS x64/arm64, linux x64/arm64 (6 OS/arch combos) with CI build matrix'
   witness: 'user requirement: builds to all 6 OS'
-  status: pending
-- id: runner-download-verify-binary
-  subject: 'Rust runner: implement platform-specific plugkit binary download + sha256 verification + atomic install (replacing bootstrap.js ensureReady/selfHeal logic)'
-  witness: gm-plugkit/bootstrap.js ensureWrapperFresh, sha256OfFileSync, atomic lock-guarded install
-  status: pending
-- id: runner-wasm-load-execute
-  subject: 'Rust runner: load plugkit.wasm via a wasm runtime (wasmtime/wasmer) and implement the dispatch_verb/plugkit_free host-import ABI currently implemented in plugkit-wasm-wrapper.js'
-  witness: plugkit-wasm-wrapper.js:5003-5084 CLI entry, dispatch_verb export, decodeWasmResult
-  status: pending
-- id: runner-spool-watcher-loop
-  subject: 'Rust runner: reimplement the spool watcher (poll in/, dispatch to wasm, write out/) natively, replacing runSpoolWatcher in plugkit-wasm-wrapper.js'
-  witness: plugkit-wasm-wrapper.js args[0]===spool -> runSpoolWatcher(instance, spoolDir)
   status: pending
 - id: runner-supervisor-lifecycle
   subject: 'Rust runner: reimplement supervisor.js watcher lifecycle (spawn, restart-burst-backoff, heartbeat, idle-exit, lock-rejected) natively in Rust'
@@ -9861,10 +9841,6 @@
   subject: Update AGENTS.md WASM-only / spool dispatch ABI / cascade pipeline sections to describe the Rust runner replacing node/bun, per the AGENTS.md self-maintenance rule (prose edits = doc updates, not code-only)
   witness: 'AGENTS.md: WASM-only section currently describes plugkit-wasm-wrapper.js under Node/bun'
   status: pending
-- id: cascade-pipeline-update-for-split-build
-  subject: Update the cascade.yml/release.yml pipeline description and actual workflow files across rs-codeinsight/rs-search/rs-plugkit/gm for per-artifact incremental build+publish instead of monolithic plugkit.wasm
-  witness: 'AGENTS.md cascade pipeline: push -> cascade.yml -> release.yml -> single plugkit.wasm'
-  status: pending
 - id: workflow-forge-review-gm
   subject: 'Review gm from the /workflow-forge perspective: identify what workflow-forge would need from gm (Workflow tool orchestration hooks, agent-dispatch surfaces) and add/adjust'
   witness: 'user requirement: take extra critical look at gm from workflow-forge perspective'
@@ -9912,10 +9888,6 @@
 - id: runner-offline-degraded-mode
   subject: 'Define runner behavior when download fails/network unavailable at startup: fail loud with explicit error vs run with cached/previous content -- no silent catastrophic mode per engineering invariants'
   witness: 'AGENTS.md EXECUTE prose: every failure path explicit (full -> degraded -> safe-fail -> explicit-error), no silent catastrophic mode'
-  status: pending
-- id: runner-concurrent-instance-lock
-  subject: Ensure the new Rust runner preserves the atomic single-instance/lock guard (O_EXCL/atomic-rename) invariant when multiple gm sessions boot concurrently in the same project
-  witness: 'AGENTS.md: every single-instance/lock guard is atomic, never check-then-act (recall: supervisor churn TOCTOU atomic guard)'
   status: pending
 - id: runner-version-skew-self-heal
   subject: Reimplement wrapper/wasm version-skew self-heal (selfHeal on LinkError/CompileError) in the Rust runner so a stale local binary auto-recovers without user intervention
