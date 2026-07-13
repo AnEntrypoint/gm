@@ -1081,3 +1081,7 @@
   status: witnessed
   id: mut-wireweave-css-not-simple-dedup
   witness_evidence: 'Confirmed via grep -c var(--panel-|var(--paper|var(--ink) in wireweave/site/app-shell.css: 138 of 157 chrome selectors use wireweave''s own theme tokens, not the SDK''s. This is not simple duplication -- resolved by re-scoping the parent PRD row (wireweave-css-dedup) to reflect this, rather than deleting anything unsafely.'
+- mutable_id: gm-runner-ci-6-os-outcome
+  description: gm-runner.yml CI run 29268937405 result across all 6 OS/arch build matrix legs -- must witness green before resolving runner-cross-compile-6-os PRD row
+  status: unknown
+  id: mut-1783962246428

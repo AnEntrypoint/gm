@@ -9761,10 +9761,6 @@
   subject: 'Set up cross-compilation targets for the Rust runner: windows x64/arm64, macOS x64/arm64, linux x64/arm64 (6 OS/arch combos) with CI build matrix'
   witness: 'user requirement: builds to all 6 OS'
   status: pending
-- id: runner-supervisor-lifecycle
-  subject: 'Rust runner: reimplement supervisor.js watcher lifecycle (spawn, restart-burst-backoff, heartbeat, idle-exit, lock-rejected) natively in Rust'
-  witness: gm-plugkit/supervisor.js:184-326 spawnWatcher, restart burst backoff, heartbeat
-  status: pending
 - id: runner-browser-verb-driver
   subject: Reimplement browser verb (findBrowserRunner/chromium driving) in Rust, replacing the bun-x-puppeteer-mcp-style JS launcher
   witness: plugkit-wasm-wrapper.js:761-786 findBrowserRunner bunGlobalRoots/bun x puppeteer-runner
