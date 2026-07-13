@@ -1090,3 +1090,8 @@
   description: Confirm the macos-13 (x86_64 Intel) leg of gm-runner CI run 29271652246 eventually clears its GH Actions runner queue and reports success -- check on next session entry if not already resolved
   status: unknown
   id: mut-1783966202342
+- mutable_id: browser-tool-broken-this-session
+  description: 'browser verb genuinely broken in this session: window is not defined even after navigation+reset cycles (sessions 7 and 8 both affected), culminating in could not allocate free port on session 8 reset. This is a real playwriter/CDP-relay environment issue, not a retry-able transient -- 4+ distinct failure modes across 2 sessions with resets between each attempt. Blocks live-witnessing the freddie-host.js Cache API changes via the browser verb this turn.'
+  status: witnessed
+  id: mut-1783972544222
+  witness_evidence: 'Confirmed genuine, persistent environment bug, not stale-session: fresh session 9 (clean session list, zero prior state) STILL hit window is not defined at C:/Users/user/.bun/install/cache/playwriter@0.4.0@@@1/dist/executor.js:1270 after successful navigation_requested:true to a real page. 3 distinct sessions (7, 8, 9) all hit this identically. This is a real defect in playwriters CDP-relay eval-context binding, external to both gm and the freddie-host.js code under test. blockedBy: external confirmed, not a retry-able transient.'

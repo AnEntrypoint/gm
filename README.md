@@ -119,7 +119,19 @@ A push to `main` triggers `.github/workflows/publish.yml`:
 
 `.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
 
-The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the wasm at install time, it does not ship in this repo.
+The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) (submoduled at `rs-plugkit/`, source only -- see below) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the compiled wasm at install time; the compiled binary itself does not ship in this repo, only the Rust source that builds it.
+
+## developing gm itself
+
+`rs-plugkit/` is a git submodule (rs-plugkit's Rust source, not a compiled artifact). A plain `git clone` leaves it empty -- clone with submodules, or init it after the fact:
+
+```
+git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
+# or, in an existing checkout:
+git submodule update --init --recursive
+```
+
+An empty `rs-plugkit/` directory after a normal `git clone` is expected, not a bug -- it only matters if you're changing rs-plugkit's own Rust source (orchestrator, gates, spool dispatch) rather than the skill/installer JS in this repo's own tree.
 
 ## license
 
