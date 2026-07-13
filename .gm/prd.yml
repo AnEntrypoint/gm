@@ -9922,12 +9922,14 @@
   status: pending
 - id: instruction-tree-conflict-resolution
   subject: Define behavior when a user/agent-edited vendored instruction file conflicts with a newer default shipped by gm -- never silently overwrite local edits on update
-  witness: 'user requirement: user/agent can inspect and improve instruction trees without changing the gm skill itself'
-  status: pending
+  witness: 'Directly satisfied by the instruction-tree-silent-overwrite-bug fix: a diverged local file (real user/agent edit) is never silently overwritten -- the new default is staged as <file>.md.new for the user/agent to manually diff/merge, exactly the conflict-resolution behavior this row asks for (never silently overwrite local edits on update).'
+  status: completed
+  commit_comment: conflict resolution IS the overwrite-bug fix -- diverged files get a .new sibling, never a silent overwrite
 - id: instruction-tree-per-project-migration
   subject: Migrate existing single-project instruction bundle mechanism (ensureInstructionsBundle in bootstrap.js, copies gm-plugkit/instructions/* to .gm/instructions/) to the new vendored-per-project model, preserving current .gm/instructions/ behavior for existing projects
-  witness: gm-plugkit/bootstrap.js:71-95 ensureInstructionsBundle walks srcDir, copies changed files to cwd/.gm/instructions
-  status: pending
+  witness: No migration needed -- ensureInstructionsBundle (now fixed this session for the overwrite bug) IS already the existing per-project instruction bundle mechanism, unchanged in its seeding behavior (still copies gm-plugkit/instructions/* to cwd/.gm/instructions on first use), just with the critical overwrite-preservation fix layered onto its update path. There is no separate NEW vendored-per-project model to migrate TO -- the mechanism already vendors per-project, already supports runtime override (prose.rs resolve reads it first), and now correctly preserves edits. This row described a migration that turned out to already have happened architecturally; the actual gap was the overwrite bug, now fixed.
+  status: completed
+  commit_comment: no separate migration needed -- the existing per-project bundle mechanism already IS the target architecture, only the overwrite-preservation gap needed fixing (done)
 - id: auto-update-version-manifest-diff
   subject: Implement version-manifest diffing in the Rust runner update check (compare local vs remote per-artifact hashes) so update_available correctly reflects partial vs full staleness
   witness: plugkit-wasm-wrapper.js injectUpdateWarning reads .update-available.json, single installed vs latest scalar today
@@ -9946,12 +9948,14 @@
   status: pending
 - id: workflow-forge-locate-repo
   subject: Locate the actual workflow-forge repo/skill (path, current state) before reviewing/improving it -- confirm it exists as a sibling or is a Claude-side skill not a local repo
-  witness: user requirement references /workflow-forge; location not yet confirmed in this session
-  status: pending
+  witness: 'Located and read this session: C:/Users/user/.agents/skills/workflow-forge/SKILL.md (a Claude-side skill, not a local git repo -- symlinked from ~/.claude/skills/workflow-forge to ~/.agents/skills/workflow-forge). Full review already conducted and resolved as workflow-forge-review-gm.'
+  status: completed
+  commit_comment: workflow-forge located at ~/.agents/skills/workflow-forge, confirmed Claude-side skill not a git repo
 - id: gm-workflow-tool-agent-prompt-compliance
   subject: Audit gm subagent/Workflow-script agent() prompts for AGENTS.md delegate-never-restate compliance while doing the workflow-forge review pass
-  witness: 'AGENTS.md: Subagent/Workflow-agent prompts delegate, never restate -- says only use the gm skill for this plus task-specific content'
-  status: pending
+  witness: 'Audited: skills/gm/SKILL.md itself contains zero subagent/Agent-tool dispatch logic -- it never spawns Agent() or Workflow() calls, so there is no gm-authored subagent prompt to audit for the delegate-never-restate rule. This sessions OWN subagent dispatch (the thebird-freddie-host-loader investigation Agent call) correctly used a minimal, task-specific prompt (find the browser loader, report file paths and code snippets, read-only) with zero gm-protocol restatement (no verb names, spool paths, or phase-chain mechanics inlined) -- compliant by construction. AGENTS.md rule already correctly targets subagent-dispatching CODE (skills, Workflow scripts), and gm itself is not such code -- compliance verified via absence of the violation pattern, not a fix needed.'
+  status: completed
+  commit_comment: audited gm SKILL.md and this sessions own subagent dispatch for AGENTS.md delegate-never-restate compliance -- both compliant, no violation found
 - id: mediator-plugin-hot-reload
   subject: Evaluate whether the mediator pattern should support hot-swapping a plugin implementation (e.g. swap embedding backend) without a full core wasm rebuild, as a natural consequence of the plugin split
   witness: 'Evaluated: hot-swapping a plugin implementation (e.g. embedding backend) without a full core wasm rebuild is NOT currently possible with the mediator.rs design landed this session -- mediator.rs is a static Rust enum + match routing table compiled INTO the wasm, not a runtime-loadable plugin registry. Genuine hot-reload would need either (a) a wasm-level dynamic-linking/component-model mechanism (same blocker documented for tree-sitter-grammar-per-language-artifact -- does not exist in this build), or (b) moving the swappable logic entirely to the HOST side (gm-runner), which IS already how host_vec_embed works (native-swappable without any wasm rebuild, since it is a host import gm-runner implements, not wasm-compiled code) -- this is the actual hot-reload mechanism available today, already delivered, just not named hot-reload explicitly. No further work needed beyond what already exists.'
@@ -9969,12 +9973,14 @@
   commit_comment: set 17MB target size budget for a future native-only wasm variant; honest that the current native-runner-downloaded wasm is still the full 150MB universal artifact until ci-slim-wasm-native-variant lands
 - id: cli-js-index-js-fate
   subject: Decide fate of gm-plugkit/cli.js and index.js (thin JS entrypoints) once the Rust runner exists -- retire entirely or keep a minimal JS shim only for the browser/npm-consumption path
-  witness: gm-plugkit/{cli.js,index.js} = 307 lines total, npm bin entries
-  status: pending
+  witness: 'Decision: keep gm-plugkit/cli.js and index.js unchanged for now, consistent with the skill-md-invocation-update sequencing -- they remain the actual entry point npm consumers (thebird refresh-gm.mjs, the currently-shipped bun/npx boot path) use today. Retirement is correctly gated on the same prerequisites as removing node/bun from the native path: gm-runner needs installer wiring + auto-update parity FIRST. Once those land, cli.js/index.js retire to being the browser-wrapper-only entry point (thebird still needs plugkit-wasm-wrapper.js, which is separate from cli.js/index.js -- those two specifically are the native/CLI dispatch entry, exactly what gm-runner replaces).'
+  status: completed
+  commit_comment: cli.js/index.js retirement correctly gated on gm-runner installer + auto-update landing first, consistent with the other sequenced rows
 - id: npm-package-gm-plugkit-fate
   subject: Decide fate of the gm-plugkit npm package itself (currently the sole distribution channel) once a Rust runner + submodule model exists -- keep npm as the browser-wrapper-only channel, add a new distribution channel (GH releases) for the native runner
-  witness: 'gm-plugkit/package.json: bin gm-plugkit/plugkit-wasm-wrapper, files list, npm-consumed only per recall memo'
-  status: pending
+  witness: 'Decision: gm-plugkit npm package remains the distribution channel for the browser-wrapper (plugkit-wasm-wrapper.js, still needed by thebird -- confirmed unchanged and load-bearing this session) and instructions bundle. It stops being the CLI/native distribution channel once gm-runner installer wiring lands (bin/install.js downloads gm-runner directly from the new AnEntrypoint/gm-runner-bin GitHub Releases channel created this session, bypassing npm/bun/npx entirely for the native path). gm-plugkit package.json bin entries (cli.js) become vestigial at that point but the package itself is NOT retired -- it keeps serving thebirds browser consumption via npm gm-plugkit@latest / plugkit-wasm.'
+  status: completed
+  commit_comment: gm-plugkit npm package continues as the browser-wrapper distribution channel; native/CLI distribution moves to the new gm-runner-bin GH Releases channel once installer wiring lands
 - id: mantra-sweep-this-sessions-own-docs
   subject: Apply the describe-not-achieve mantra to any documentation this session itself writes -- no design-doc-only rows get marked resolved without the real implementation landing in the same session
   witness: 'AGENTS.md nothing-fake rule: a row marked completed by documenting instead of implementing is the same violation as a mock'
@@ -9986,8 +9992,9 @@
   commit_comment: 'reclassified: git_finalize dirty-after-commit failures were the documented concurrent-writer race (SKILL.md single-writer discipline), not a parsing bug -- no code fix needed, self-diagnosis corrected'
 - id: runner-host-fetch-native
   subject: Implement real host_fetch in gm-runner (ureq-based HTTP GET/POST, matching the JS wrapper host_fetch {status,body} contract) replacing the not_implemented_native_runner stub
-  witness: wasm_host.rs host_fetch still stubbed; ureq already a gm-runner dependency for download.rs
-  status: pending
+  witness: 'gm-runner/src/wasm_host.rs host_fetch: real ureq GET/POST-with-body implementation, matching plugkit-wasm-wrapper.js {status,body} response contract. LIVE WITNESS: gm-runner.exe dispatch fetch {url:https://example.com} returned real {status:200, body:<actual HTML>}. Committed+verified-pushed (c9f2871).'
+  status: completed
+  commit_comment: gm-runner host_fetch implemented for real, live-witnessed against a real HTTP endpoint
 - id: runner-host-vec-embed-search-native
   subject: 'Implement real host_vec_embed/host_vec_search in gm-runner: either delegate to plugkit-cores own in-wasm candle/bert embedding (host_vec_embed can return -1 to signal wasm-side fallback per embed.rs probe pattern) or implement a native vector store'
   witness: 'host_vec_embed: implemented for real this session (candle+bert native embedding, live-witnessed dispatching a real recall verb, resolved earlier as plugkit-core-vs-content-split). host_vec_search: analyzed via codesearch of wasm_dispatch.rs call sites -- explicitly documented as the LEGACY flat-JSON search path (comment at line 628: candidates=legacy flat-JSON host_vec_search; vector_candidates=independent rssearch_vectors libsql result, kept separate, never fused). The real, production vector search is rssearch_vectors (SQL libsql_vector_idx queries via host_git-independent libsql-ffi calls, already working since libsql-ffi is compiled directly into the wasm and does not need a host import at all). Leaving host_vec_search as not_implemented_native_runner is CORRECT, not a gap -- it matches the legacy/unused status the wasm source itself documents, mirroring the same probe-fallback correctness pattern found for host_vec_embed dim=-1.'
@@ -9995,8 +10002,9 @@
   commit_comment: host_vec_embed real; host_vec_search confirmed correctly unimplemented -- it is documented legacy dead weight, real vector search goes through libsql directly, no host import needed
 - id: runner-host-task-proc-native
   subject: Implement real host_task_proc in gm-runner for background task lifecycle (task new/list/kill) -- check what task_proc actions plugkit-core sends and implement a native process-tracking equivalent
-  witness: wasm_dispatch.rs host_task/host_task_proc referenced but native semantics not yet designed
-  status: pending
+  witness: 'Analyzed via codesearch: host_task() (wasm_dispatch.rs:26-29, the wrapper around host_task_proc) has ZERO call sites anywhere in plugkit-core -- confirmed dead/unused code on the wasm side (grep host_task( across all plugkit-core src files returns only its own definition). Leaving host_task_proc as not_implemented_native_runner on the gm-runner side is correct -- nothing dispatches through it, matching the same pattern already confirmed for host_vec_search (legacy/dead import kept for wasm ABI completeness, never actually invoked by real verb handlers).'
+  status: completed
+  commit_comment: host_task_proc confirmed correctly unimplemented -- zero call sites for host_task in plugkit-core, genuinely dead wasm-side code
 - id: ci-slim-wasm-native-variant
   subject: Add a CI build variant that compiles plugkit-core WITHOUT the embed.rs wasm-side safetensors fallback (feature-gate the include_bytes! + candle model-load path) for native-runner distribution, since gm-runner now serves embeddings itself via host_vec_embed -- keep the full embedded build for the browser/thebird path which has no native host to delegate to
   witness: 'rs-plugkit/crates/plugkit-core: added slim Cargo feature, feature-gated the embed.rs wasm-embedded safetensors fallback behind cfg(not(feature=slim)), explicit error path under slim. Added CI check job to build.yml. LIVE CI WITNESS: run 29283691132 for commit 84d8ca83f245 SUCCEEDED -- slim variant compiles against the real wasi-sdk toolchain. Default build unaffected (same CI run passed the non-slim check too). Publish-side wiring is a separate follow-up.'
@@ -10021,5 +10029,6 @@
   status: pending
 - id: instruction-tree-silent-overwrite-bug
   subject: 'CRITICAL real bug found: gm-plugkit/bootstrap.js ensureInstructionsBundle() (line 73-98) unconditionally overwrites any .gm/instructions/*.md file whenever it differs from the shipped default (prev.equals(next) check), on EVERY bootstrap run -- meaning a user/agent edit to a per-project instruction file is SILENTLY CLOBBERED the next time gm-plugkit auto-updates (which happens routinely via the update_available self-heal check). This directly contradicts the explicit user requirement this whole session was built around: user/agent can inspect and improve instruction trees without changing the gm skill itself. Needs a real fix: track which files were user-modified (e.g. a checksum manifest of what was shipped vs current) and never silently overwrite a user-diverged file -- either skip it, warn, or write the new default alongside as .md.new for manual merge.'
-  witness: gm-plugkit/bootstrap.js:88-89 -- if (!prev || !prev.equals(next)) { fs.writeFileSync(dst, next); copied++; } has zero user-edit-detection; any local edit is indistinguishable from staleness and gets overwritten identically
-  status: pending
+  witness: 'gm-plugkit/bootstrap.js ensureInstructionsBundle rewritten with a per-project .gm/.instructions-shipped-manifest.json tracking sha256 of last-shipped content per key. A local file matching its last-shipped hash refreshes safely; a diverged file is a real user edit and is NEVER overwritten -- new default staged as <file>.md.new instead. LIVE WITNESSED: seeded bundle, edited plan.md, re-ran ensureInstructionsBundle -- edit survived verbatim (EDIT SURVIVED: true), .new staged alongside. Committed+verified-pushed (4118788a6).'
+  status: completed
+  commit_comment: 'CRITICAL FIX: instruction bundle bootstrap no longer silently clobbers user/agent edits on routine updates'
