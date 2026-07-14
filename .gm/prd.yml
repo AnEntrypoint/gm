@@ -9765,6 +9765,9 @@
   - external
   witness: gh api repos/AnEntrypoint/gm-runner-bin/releases returned [] (zero releases) both before and after the CI fix push; gh run list shows the triggered run 29349237558 still has the macos-13 leg queued with no assigned runner (same GH Actions capacity issue named in the resolved CI-confirm mutable) -- an outside-session GH infra condition, not a code gap in this repo.
 - id: runner-browser-session-lifecycle-parity
-  subject: 'gm-runner browser.rs currently covers single-shot dispatch (session new/close, eval) but not full session-lifecycle parity with plugkit-wasm-wrapper.js: idle-session reaping, orphan port-file cleanup, multi-session port tracking across concurrent dispatches, direct --direct wsEndpoint reattachment. Port these if/when gm-runner becomes the primary browser-dispatch path.'
-  witness: runner-browser-verb-driver resolution explicitly scoped this out; wrapper.js getOrCreateBrowserSession/browserPortsFile/idle reaper logic (lines ~1521+, ~900+) not yet ported
+  rescoped: runner-browser-session-lifecycle-parity
+  subject: 'gm-runner browser.rs currently covers single-shot dispatch (session new/close, eval) but not full session-lifecycle parity with plugkit-wasm-wrapper.js: idle-session reaping, orphan port-file cleanup, multi-session port tracking across concurrent dispatches, direct --direct wsEndpoint reattachment. Explicitly deferred until gm-runner becomes the primary browser-dispatch path -- not yet true (gm-runner-bin has zero releases, JS wrapper remains the default/primary loader per this session''s skill-md-invocation-update row, which kept gm-runner strictly optional/fallback-preserving). Porting full lifecycle parity for a not-yet-primary loader would be speculative unshipped-boot-path work, the exact anti-pattern this session''s gm-runner-autoupdate-mechanism row explicitly avoided.'
   status: pending
+  blockedBy:
+  - external
+  witness: runner-browser-verb-driver resolution explicitly scoped this out; wrapper.js getOrCreateBrowserSession/browserPortsFile/idle reaper logic (lines ~1521+, ~900+) not yet ported; gm-runner-bin releases confirmed empty via gh api this session, so gm-runner has not become the primary browser-dispatch path yet -- the row's own stated precondition.
