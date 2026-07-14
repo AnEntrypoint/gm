@@ -758,20 +758,78 @@ function findCachedBunRunnerBin() {
   return null;
 }
 
+// playwriter's CLI `--timeout` option is parsed as a raw string (its own arg parser does not
+// coerce it despite the zod schema declaring z.number()), and that string is forwarded verbatim
+// into `vm.runInContext(..., { timeout })`, which throws
+// `TypeError: The "options.timeout" property must be of type number` -- every managed browser
+// session then fails, and each spawn's relay/Chromium never gets torn down (an "orphan-chrome
+// pileup"). Idempotently patch it in whatever playwriter dist copy we're about to invoke.
+const _patchedPlaywriterDistDirs = new Set();
+function patchPlaywriterTimeoutBug(binJs) {
+  try {
+    const distDir = path.dirname(binJs);
+    if (_patchedPlaywriterDistDirs.has(distDir)) return;
+    _patchedPlaywriterDistDirs.add(distDir);
+    const executorPath = path.join(distDir, 'executor.js');
+    if (fs.existsSync(executorPath)) {
+      const src = fs.readFileSync(executorPath, 'utf-8');
+      if (/async execute\(code, timeout = 10000\) \{(?!\s*timeout = Number)/.test(src)) {
+        const patched = src.replace(
+          /(async execute\(code, timeout = 10000\) \{)/,
+          '$1\n        timeout = Number(timeout) || 10000;'
+        );
+        fs.writeFileSync(executorPath, patched);
+      }
+    }
+    const cliPath = path.join(distDir, 'cli.js');
+    if (fs.existsSync(cliPath)) {
+      const src = fs.readFileSync(cliPath, 'utf-8');
+      if (src.includes('timeout: options.timeout || 10000') && !src.includes('timeout: Number(options.timeout)')) {
+        const patched = src.replace(
+          'timeout: options.timeout || 10000',
+          'timeout: Number(options.timeout) || 10000'
+        );
+        fs.writeFileSync(cliPath, patched);
+      }
+    }
+  } catch (_) {}
+}
+
+function patchAllCachedPlaywriterCopies() {
+  try {
+    const cacheDir = path.join(os.homedir(), '.bun', 'install', 'cache');
+    const entries = fs.readdirSync(cacheDir).filter(n => n.startsWith(`${BROWSER_RUNNER_BIN}@`));
+    for (const name of entries) {
+      const binJs = path.join(cacheDir, name, 'bin.js');
+      if (fs.existsSync(binJs)) patchPlaywriterTimeoutBug(binJs);
+    }
+  } catch (_) {}
+}
+
 function findBrowserRunner() {
+  // bun's global-install node_modules root has real dependency resolution (npm-style
+  // node_modules tree), so a bin.js found there is safe to invoke directly.
   const bunGlobalRoots = [
     path.join(os.homedir(), '.bun', 'install', 'global', 'node_modules', BROWSER_RUNNER_BIN, 'bin.js'),
   ];
   for (const binJs of bunGlobalRoots) {
-    if (fs.existsSync(binJs)) return { cmd: process.execPath, baseArgs: [binJs], shell: false };
+    if (fs.existsSync(binJs)) { patchPlaywriterTimeoutBug(binJs); return { cmd: process.execPath, baseArgs: [binJs], shell: false }; }
   }
-  const cachedBin = findCachedBunRunnerBin();
-  if (cachedBin) return { cmd: process.execPath, baseArgs: [cachedBin], shell: false };
+  // `~/.bun/install/cache/<pkg>@version` is bun's *content-addressed package cache*, not an
+  // installed tree -- it has no node_modules of its own, so invoking its bin.js directly with
+  // plain node/bun fails to resolve the package's own dependencies (e.g. "Cannot find package
+  // 'hono'"). Only `bun x` (or an npm-global install) sets up real dependency resolution, so
+  // prefer that over the cached bin.js. `bun x` still ultimately runs the same content-addressed
+  // cache copy (symlinked node_modules alongside it), so patch every cached copy proactively --
+  // there is no separate resolved-tree location to target for the `bun x` path specifically.
+  patchAllCachedPlaywriterCopies();
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
   const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
   if (bunR.status === 0 && bunR.stdout.trim()) {
     return { cmd: 'bun', baseArgs: ['x', `${BROWSER_RUNNER_BIN}@latest`], shell: true };
   }
+  const cachedBin = findCachedBunRunnerBin();
+  if (cachedBin) return { cmd: process.execPath, baseArgs: [cachedBin], shell: false };
   const r = spawnSync(whichCmd, [BROWSER_RUNNER_BIN], { encoding: 'utf-8', shell: true });
   if (r.status === 0 && r.stdout.trim()) {
     const candidates = r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
