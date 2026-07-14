@@ -84,6 +84,7 @@ tmp/
 .plugkit-browser-profile-*/
 .claude/worktrees/
 .gm/memories/*.tmp-*
+.gm/.instructions-shipped-manifest.json
 # <<< plugkit managed
 .gm/pw-sock-*/
 
