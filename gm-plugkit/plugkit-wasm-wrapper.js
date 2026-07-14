@@ -758,6 +758,29 @@ function findCachedBunRunnerBin() {
   return null;
 }
 
+// Cache dir entries are named `<pkg>@<version>[@@@N]` (the `@@@N` suffix is bun's own
+// disambiguator for multiple cache slots of the same resolved version, not part of the semver).
+// Picks the highest semver-looking version present so a stale older cache entry left over from
+// a prior gm-plugkit run doesn't win over a newer one that's also cached.
+function findCachedBunRunnerVersion() {
+  try {
+    const cacheDir = path.join(os.homedir(), '.bun', 'install', 'cache');
+    const entries = fs.readdirSync(cacheDir).filter(n => n.startsWith(`${BROWSER_RUNNER_BIN}@`));
+    const versions = entries
+      .map(n => n.slice(BROWSER_RUNNER_BIN.length + 1).split('@@@')[0])
+      .filter(v => /^\d+\.\d+\.\d+/.test(v));
+    if (!versions.length) return null;
+    versions.sort((a, b) => {
+      const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+      for (let i = 0; i < 3; i++) { if (pa[i] !== pb[i]) return pb[i] - pa[i]; }
+      return 0;
+    });
+    return versions[0];
+  } catch (_) {
+    return null;
+  }
+}
+
 // playwriter's CLI `--timeout` option is parsed as a raw string (its own arg parser does not
 // coerce it despite the zod schema declaring z.number()), and that string is forwarded verbatim
 // into `vm.runInContext(..., { timeout })`, which throws
@@ -826,7 +849,19 @@ function findBrowserRunner() {
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
   const bunR = spawnSync(whichCmd, ['bun'], { encoding: 'utf-8', shell: true });
   if (bunR.status === 0 && bunR.stdout.trim()) {
-    return { cmd: 'bun', baseArgs: ['x', `${BROWSER_RUNNER_BIN}@latest`], shell: true };
+    // `bun x <pkg>@latest` re-resolves the `@latest` tag against the npm registry on every
+    // single invocation, even when a resolved copy already sits in bun's own content-addressed
+    // cache (~/.bun/install/cache/<pkg>@<version>) from a prior run -- a redundant network
+    // round-trip per browser-verb dispatch. Observed on Windows to occasionally never return
+    // (hangs past "Resolved, downloaded and extracted" with no further output or error), which
+    // wedges every subsequent browser dispatch behind a 30s+ spawnSync timeout for no benefit,
+    // since the pinned exact version was already available locally. Prefer `bun x <pkg>@<exact
+    // cached version>` when a cached copy exists -- this still goes through `bun x`'s real
+    // dependency-tree resolution (the reason `bun x` is preferred over the raw cached bin.js
+    // above), it just skips the registry round-trip for the tag lookup itself.
+    const cachedVersion = findCachedBunRunnerVersion();
+    const pkgSpec = cachedVersion ? `${BROWSER_RUNNER_BIN}@${cachedVersion}` : `${BROWSER_RUNNER_BIN}@latest`;
+    return { cmd: 'bun', baseArgs: ['x', pkgSpec], shell: true };
   }
   const cachedBin = findCachedBunRunnerBin();
   if (cachedBin) return { cmd: process.execPath, baseArgs: [cachedBin], shell: false };
