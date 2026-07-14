@@ -24,9 +24,11 @@ Skills encode environment-specific constraints that override general knowledge.
 
 Repo root = package root = published `gm-skill` npm package; no factory, no separate build-output dir. Entry: `skills/gm/SKILL.md`. Orchestration lives in rs-plugkit, served on-demand via `instruction`. Agent-facing prose (phase instruction, gate/residual text) externalizes to editable `gm-plugkit/instructions/`: prose edits = gm-plugkit republish, zero Rust rebuild. Mechanism (prose.rs per-key fallback to compiled const; sync-instruction-consts.mjs byte-aligns .md<->rs-plugkit consts) in the recall store (`recall: string-externalization project`).
 
-## WASM-only
+## WASM-only, now with an optional native runner
 
-Plugkit = wasm cdylib, loaded by `plugkit-wasm-wrapper.js` under Node/bun; zero native binaries built/downloaded/published. `plugkit.wasm` fetched at bootstrap from `plugkit-wasm` npm / `plugkit-bin` gh-releases, sha256-pinned. Size + embedded-model (offline in-wasm embeddings) mechanics: the recall store (`recall: WASM-only plugkit size mechanics`).
+Plugkit = wasm cdylib. Two host loaders exist and coexist: `plugkit-wasm-wrapper.js` under Node/bun (original, still the default) and `gm-runner` (rs-plugkit `crates/gm-runner/`, a real native cross-platform binary built by CI and published to `AnEntrypoint/gm-runner-bin` releases) -- gm-runner links `wasmtime` and hosts the same wasm module directly, no Node/bun dependency for the boot step. Both loaders serve the byte-identical spool ABI (`in/`/`out/` layout, verb names), so a gm-driven session works the same regardless of which loader booted it. `bin/install.js` best-effort-downloads gm-runner (sha256-verified against its release's `.sha256` sidecar) but never hard-requires it -- a platform with no published gm-runner binary, or a failed download, silently falls back to bun/npx exactly as before. `plugkit.wasm` itself is fetched at bootstrap from `plugkit-wasm` npm / `plugkit-bin` gh-releases, sha256-pinned, by whichever loader is running (gm-runner's own `download.rs::bootstrap_plugkit_wasm` mirrors the JS wrapper's fetch+verify). Size + embedded-model (offline in-wasm embeddings) mechanics: the recall store (`recall: WASM-only plugkit size mechanics`).
+
+**gm-runner auto-updates the wasm it serves, not itself.** `spool.rs::run_spool_watcher` polls `plugkit-bin`'s GitHub Releases API every 600s for a newer tag (`download.rs::fetch_latest_plugkit_version`); on a mismatch it downloads+verifies the new wasm and the existing 30s local-version-skew check picks up the on-disk change and triggers a clean in-process reload (`StopReason::Reload`). The gm-runner *executable* itself has no such remote self-update loop yet -- a stale installed gm-runner binary keeps running until the next `bin/install.js` re-run re-checks `gm-runner-bin`'s latest release tag.
 
 Wasm host-import link-module rule (`#[link(wasm_import_module="env")]` on every host-import extern block, every dep crate): the recall store (`recall: wasm host-import link-module trap`).
 
@@ -151,6 +153,8 @@ A task that reduces to read/investigate/report, or a change confined to files th
 ## Cascade pipeline
 
 Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: the recall store (`recall: cascade pipeline`).
+
+A push touching `rs-plugkit/crates/gm-runner/**` additionally triggers its own `gm-runner.yml` workflow (separate from `release.yml`, matrix-builds all 6 platform targets, publishes to `AnEntrypoint/gm-runner-bin` Releases) -- a stuck/unschedulable single matrix leg (observed: `macos-13` queued 18h+ with zero GH-assigned runner) must never block the `release` job from shipping the other 5 platforms; that job runs `if: always()` and tolerates partial artifacts rather than a blanket `needs: build` hard-gate.
 
 **Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-codeinsight, rs-search, rs-plugkit, gm}`. rs-learn and rs-exec are retired (crates removed from / never depended on by rs-plugkit; their spool-dispatch and memory surfaces reimplemented natively in rs-plugkit wasm_dispatch; repos archived as tombstones, README points at rs-plugkit). Roles, npm package names, legacy-retirement detail: the recall store (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 

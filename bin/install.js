@@ -4,6 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
+const https = require('https');
 const readline = require('readline');
 
 function out(msg) { process.stdout.write(msg + '\n'); }
@@ -170,6 +172,119 @@ function runPlugkitBootstrap() {
   return Promise.resolve(false);
 }
 
+// Maps process.platform/process.arch to the exact release-asset basename
+// gm-runner's CI (rs-plugkit/.github/workflows/gm-runner.yml) publishes to
+// AnEntrypoint/gm-runner-bin -- must stay byte-identical to that workflow's
+// `artifact:` matrix values, this is the only other place that name is
+// spelled. Returns null for a host combination CI does not build (no crash,
+// caller falls back to the existing bun/npx path).
+function gmRunnerAssetName() {
+  const plat = process.platform;
+  const arch = process.arch;
+  if (plat === 'win32') {
+    if (arch === 'x64') return 'gm-runner-windows-x64.exe';
+    if (arch === 'arm64') return 'gm-runner-windows-arm64.exe';
+    return null;
+  }
+  if (plat === 'darwin') {
+    if (arch === 'x64') return 'gm-runner-macos-x64';
+    if (arch === 'arm64') return 'gm-runner-macos-arm64';
+    return null;
+  }
+  if (plat === 'linux') {
+    if (arch === 'x64') return 'gm-runner-linux-x64';
+    if (arch === 'arm64') return 'gm-runner-linux-arm64';
+    return null;
+  }
+  return null;
+}
+
+function httpsGetBuffer(url, redirectsLeft) {
+  if (redirectsLeft === undefined) redirectsLeft = 5;
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'gm-skill-installer' } }, res => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        if (redirectsLeft <= 0) { reject(new Error('too many redirects fetching ' + url)); return; }
+        httpsGetBuffer(res.headers.location, redirectsLeft - 1).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error(`GET ${url} -> HTTP ${res.statusCode}`));
+        return;
+      }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
+function sha256Hex(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex');
+}
+
+function gmToolsDir() {
+  const home = homeDir();
+  return path.join(home, '.gm-tools');
+}
+
+// Downloads the platform-matched gm-runner binary from gm-runner-bin's
+// GitHub Releases (native runner replacing the bun/node spool-boot path),
+// verified against the release's own .sha256 sidecar before the atomic
+// rename lands -- same trust model as gm-runner's own
+// download::download_and_verify for plugkit.wasm, so a corrupt/partial
+// download is never silently accepted. Best-effort: any failure (offline,
+// asset missing for this host, network error) resolves false rather than
+// throwing, so install never hard-fails over a runner-binary fetch -- the
+// bun/npx spool path remains the fallback until remove-node-bun-from-native-path
+// lands.
+async function downloadGmRunner({ silent } = {}) {
+  const assetName = gmRunnerAssetName();
+  if (!assetName) {
+    if (!silent) err(`gm-runner: no published binary for platform=${process.platform} arch=${process.arch}, skipping native runner install`);
+    return false;
+  }
+  const destDir = gmToolsDir();
+  const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'gm-runner.exe' : 'gm-runner');
+  try {
+    const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/gm-runner-bin/releases/latest')).toString('utf8'));
+    const tag = releaseInfo && releaseInfo.tag_name;
+    if (!tag) { if (!silent) err('gm-runner: no releases published yet at AnEntrypoint/gm-runner-bin, skipping'); return false; }
+    const base = `https://github.com/AnEntrypoint/gm-runner-bin/releases/download/${tag}`;
+    const binUrl = `${base}/${assetName}`;
+    const shaUrl = `${binUrl}.sha256`;
+
+    const versionFile = path.join(destDir, 'gm-runner.version');
+    if (fs.existsSync(destPath) && fs.existsSync(versionFile)) {
+      const installed = fs.readFileSync(versionFile, 'utf8').trim();
+      if (installed === tag) { if (!silent) out(`gm-runner ${tag} already installed at ${destPath}`); return true; }
+    }
+
+    const [binBuf, shaBuf] = await Promise.all([httpsGetBuffer(binUrl), httpsGetBuffer(shaUrl)]);
+    const expectedSha = shaBuf.toString('utf8').trim().split(/\s+/)[0];
+    const actualSha = sha256Hex(binBuf);
+    if (!expectedSha || actualSha.toLowerCase() !== expectedSha.toLowerCase()) {
+      if (!silent) err(`gm-runner: sha256 mismatch downloading ${binUrl} (expected ${expectedSha}, got ${actualSha}), not installing`);
+      return false;
+    }
+
+    fs.mkdirSync(destDir, { recursive: true });
+    const tmp = destPath + '.tmp' + process.pid;
+    fs.writeFileSync(tmp, binBuf);
+    if (process.platform !== 'win32') { try { fs.chmodSync(tmp, 0o755); } catch (_) {} }
+    fs.renameSync(tmp, destPath);
+    fs.writeFileSync(versionFile, tag);
+    if (!silent) out(`Installed gm-runner ${tag} to ${destPath}`);
+    return true;
+  } catch (e) {
+    if (!silent) err(`gm-runner download skipped: ${e && e.message || e}`);
+    return false;
+  }
+}
+
 function printHelp() {
   out('gm installer');
   out('');
@@ -220,6 +335,7 @@ async function main() {
   }
 
   await runPlugkitBootstrap();
+  await downloadGmRunner({ silent: false });
 
   out('');
   out('Done. Open Claude Code and run /gm. New top-level skill dirs may need one restart to register.');
