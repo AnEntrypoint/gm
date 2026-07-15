@@ -790,29 +790,40 @@ function findCachedBunRunnerVersion() {
 const _patchedPlaywriterDistDirs = new Set();
 function patchPlaywriterTimeoutBug(binJs) {
   try {
-    const distDir = path.dirname(binJs);
-    if (_patchedPlaywriterDistDirs.has(distDir)) return;
-    _patchedPlaywriterDistDirs.add(distDir);
-    const executorPath = path.join(distDir, 'executor.js');
-    if (fs.existsSync(executorPath)) {
-      const src = fs.readFileSync(executorPath, 'utf-8');
-      if (/async execute\(code, timeout = 10000\) \{(?!\s*timeout = Number)/.test(src)) {
-        const patched = src.replace(
-          /(async execute\(code, timeout = 10000\) \{)/,
-          '$1\n        timeout = Number(timeout) || 10000;'
-        );
-        fs.writeFileSync(executorPath, patched);
+    const pkgDir = path.dirname(binJs);
+    if (_patchedPlaywriterDistDirs.has(pkgDir)) return;
+    _patchedPlaywriterDistDirs.add(pkgDir);
+    // executor.js/cli.js live under <pkg-dir>/dist/ in the real published package layout, not
+    // directly alongside bin.js -- the prior version of this function joined path.dirname(binJs)
+    // straight onto 'executor.js'/'cli.js', which never matched any real file (fs.existsSync was
+    // always false), so the timeout-coercion patch silently never applied and every managed
+    // browser session with an explicit timeout= prefix threw
+    // `TypeError [ERR_INVALID_ARG_TYPE]: The "options.timeout" property must be of type number`.
+    // Check both the dist/ subfolder (the real layout) and the flat pkg-dir (defensive fallback
+    // for a differently-laid-out future version) so this keeps working either way.
+    const candidateDirs = [path.join(pkgDir, 'dist'), pkgDir];
+    for (const distDir of candidateDirs) {
+      const executorPath = path.join(distDir, 'executor.js');
+      if (fs.existsSync(executorPath)) {
+        const src = fs.readFileSync(executorPath, 'utf-8');
+        if (/async execute\(code, timeout = 10000\) \{(?!\s*timeout = Number)/.test(src)) {
+          const patched = src.replace(
+            /(async execute\(code, timeout = 10000\) \{)/,
+            '$1\n        timeout = Number(timeout) || 10000;'
+          );
+          fs.writeFileSync(executorPath, patched);
+        }
       }
-    }
-    const cliPath = path.join(distDir, 'cli.js');
-    if (fs.existsSync(cliPath)) {
-      const src = fs.readFileSync(cliPath, 'utf-8');
-      if (src.includes('timeout: options.timeout || 10000') && !src.includes('timeout: Number(options.timeout)')) {
-        const patched = src.replace(
-          'timeout: options.timeout || 10000',
-          'timeout: Number(options.timeout) || 10000'
-        );
-        fs.writeFileSync(cliPath, patched);
+      const cliPath = path.join(distDir, 'cli.js');
+      if (fs.existsSync(cliPath)) {
+        const src = fs.readFileSync(cliPath, 'utf-8');
+        if (src.includes('timeout: options.timeout || 10000') && !src.includes('timeout: Number(options.timeout)')) {
+          const patched = src.replace(
+            'timeout: options.timeout || 10000',
+            'timeout: Number(options.timeout) || 10000'
+          );
+          fs.writeFileSync(cliPath, patched);
+        }
       }
     }
   } catch (_) {}
@@ -3116,15 +3127,25 @@ function makeHostFunctions(instanceRef) {
         const __topNM = modeOpts.match(/topN=(\d+)/);
         const sampleIntervalUs = __intervalM && parseInt(__intervalM[1], 10) > 0 ? parseInt(__intervalM[1], 10) : 100;
         const profileTopNBrowser = __topNM && parseInt(__topNM[1], 10) > 0 ? parseInt(__topNM[1], 10) : 20;
+        // Real, pre-existing bug fixed here: this block previously called `page.evaluateOnNewDocument`,
+        // which is a PUPPETEER method name -- playwriter's `page` object is a real Playwright Page,
+        // whose equivalent is `page.addInitScript`. evaluateOnNewDocument does not exist on a
+        // Playwright page, so both calls threw `TypeError: page.evaluateOnNewDocument is not a
+        // function` on every single dispatch, silently swallowed by the enclosing try/catch -- meaning
+        // window.__gmErrors (window.onerror/onunhandledrejection capture) was NEVER actually installed,
+        // for as long as this code has existed, independent of the new GL-instrumentation block added
+        // alongside it (which inherited the same wrong method name by copying the existing pattern).
+        // Verified live: window.HTMLCanvasElement.prototype.getContext.toString() did not contain the
+        // patch marker before this fix, confirming the pre-navigation init script never ran.
         const debugSetup = `const __logs=[],__errs=[],__net=[];\n`
           + `try{page.on('console',m=>{try{__logs.push({type:m.type(),text:m.text()});}catch(_){}});`
           + `page.on('pageerror',e=>{try{__errs.push({type:'pageerror',msg:String(e&&e.message||e)});}catch(_){}});`
           + `page.on('error',e=>{try{__errs.push({type:'uncaught',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});}catch(_){}});`
           + `page.on('requestfinished',r=>{try{const t=r.timing();let __st=0,__sz=0;try{__st=(r.response()&&r.response().status())||0;}catch(_){}__net.push({url:String(r.url()).slice(0,120),method:r.method(),status:__st,dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});`
           + `page.on('requestfailed',r=>{try{const err=r.failure();__errs.push({type:'fetch',msg:String(err&&err.errorText||'request failed'),url:String(r.url()).slice(0,120)});}catch(_){}});`
-          + `page.evaluateOnNewDocument(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
+          + `await page.addInitScript(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
           // Auto-instrument every canvas's WebGL/WebGL2 context: patch getContext once (idempotent,
-          // pre-navigation via evaluateOnNewDocument so it is in place before the page's own first
+          // pre-navigation via page.addInitScript so it is in place before the page's own first
           // getContext call) to wrap every draw call (drawArrays/drawElements and their -Instanced
           // variants) with a post-call gl.getError() drain. This is exactly the manual
           // gl.*=function(){...gl.getError()...} monkeypatch pattern used ad hoc to root-cause GPU
@@ -3134,7 +3155,7 @@ function makeHostFunctions(instanceRef) {
           // window.__gmGlErrors accumulates {fn,mode,count,offset,type,error,errorName,ctxLabel} for
           // up to 40 distinct GL errors per page load (capped to bound memory on a runaway-error page);
           // window.__gmGlDrawCalls is a running total per draw-fn name for volume context.
-          + `page.evaluateOnNewDocument(()=>{`
+          + `await page.addInitScript(()=>{`
           +   `window.__gmGlErrors=[];window.__gmGlDrawCalls={};`
           +   `const __glErrName=(gl,code)=>{for(const k of ['NO_ERROR','INVALID_ENUM','INVALID_VALUE','INVALID_OPERATION','INVALID_FRAMEBUFFER_OPERATION','OUT_OF_MEMORY','CONTEXT_LOST_WEBGL']){try{if(gl[k]===code)return k;}catch(_){}}return 'UNKNOWN_'+code;};`
           +   `const __wrapDraw=(gl,ctxLabel)=>{`
