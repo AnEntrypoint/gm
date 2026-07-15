@@ -3123,12 +3123,58 @@ function makeHostFunctions(instanceRef) {
           + `page.on('requestfinished',r=>{try{const t=r.timing();let __st=0,__sz=0;try{__st=(r.response()&&r.response().status())||0;}catch(_){}__net.push({url:String(r.url()).slice(0,120),method:r.method(),status:__st,dur_ms:Math.round(t.responseEnd),ttfb_ms:Math.round(t.responseStart)});}catch(_){}});`
           + `page.on('requestfailed',r=>{try{const err=r.failure();__errs.push({type:'fetch',msg:String(err&&err.errorText||'request failed'),url:String(r.url()).slice(0,120)});}catch(_){}});`
           + `page.evaluateOnNewDocument(()=>{window.__gmErrors=[];window.onerror=(msg,src,line,col,err)=>{try{window.__gmErrors.push({type:'error',msg:String(msg),src:String(src).slice(0,80),line,col,stack:String(err&&err.stack||'')});}catch(_){};return false;};window.onunhandledrejection=(e)=>{try{window.__gmErrors.push({type:'unhandledRejection',msg:String(e.reason&&e.reason.message||e.reason),stack:String(e.reason&&e.reason.stack||'')});}catch(_){}};});`
+          // Auto-instrument every canvas's WebGL/WebGL2 context: patch getContext once (idempotent,
+          // pre-navigation via evaluateOnNewDocument so it is in place before the page's own first
+          // getContext call) to wrap every draw call (drawArrays/drawElements and their -Instanced
+          // variants) with a post-call gl.getError() drain. This is exactly the manual
+          // gl.*=function(){...gl.getError()...} monkeypatch pattern used ad hoc to root-cause GPU
+          // rendering bugs (stale VAO/buffer bindings, sampler-unit collisions, etc) -- making it a
+          // standing, zero-setup capability means every browser-verb dispatch against a WebGL page
+          // gets GL error visibility for free, without hand-rolling the instrumentation each time.
+          // window.__gmGlErrors accumulates {fn,mode,count,offset,type,error,errorName,ctxLabel} for
+          // up to 40 distinct GL errors per page load (capped to bound memory on a runaway-error page);
+          // window.__gmGlDrawCalls is a running total per draw-fn name for volume context.
+          + `page.evaluateOnNewDocument(()=>{`
+          +   `window.__gmGlErrors=[];window.__gmGlDrawCalls={};`
+          +   `const __glErrName=(gl,code)=>{for(const k of ['NO_ERROR','INVALID_ENUM','INVALID_VALUE','INVALID_OPERATION','INVALID_FRAMEBUFFER_OPERATION','OUT_OF_MEMORY','CONTEXT_LOST_WEBGL']){try{if(gl[k]===code)return k;}catch(_){}}return 'UNKNOWN_'+code;};`
+          +   `const __wrapDraw=(gl,ctxLabel)=>{`
+          +     `['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced'].forEach(fn=>{`
+          +       `if(typeof gl[fn]!=='function'||gl[fn].__gmWrapped)return;`
+          +       `const __orig=gl[fn].bind(gl);`
+          +       `const __wrapped=function(...args){`
+          +         `const __res=__orig(...args);`
+          +         `window.__gmGlDrawCalls[fn]=(window.__gmGlDrawCalls[fn]||0)+1;`
+          +         `const __err=gl.getError();`
+          +         `if(__err!==gl.NO_ERROR&&window.__gmGlErrors.length<40){`
+          +           `let __bufSize=-1;try{__bufSize=gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER,gl.BUFFER_SIZE);}catch(_){}`
+          +           `window.__gmGlErrors.push({fn,ctxLabel,mode:args[0],count:args[1],offset:fn.indexOf('Elements')>=0?args[3]:undefined,type:fn.indexOf('Elements')>=0?args[2]:undefined,instanceCount:fn.indexOf('Instanced')>=0?args[args.length-1]:undefined,error:__err,errorName:__glErrName(gl,__err),elementArrayBufferSize:__bufSize,drawCallIndex:window.__gmGlDrawCalls[fn]});`
+          +         `}`
+          +         `return __res;`
+          +       `};`
+          +       `__wrapped.__gmWrapped=true;gl[fn]=__wrapped;`
+          +     `});`
+          +   `};`
+          +   `const __origGetContext=HTMLCanvasElement.prototype.getContext;`
+          +   `HTMLCanvasElement.prototype.getContext=function(type,...rest){`
+          +     `const ctx=__origGetContext.call(this,type,...rest);`
+          +     `if(ctx&&(type==='webgl'||type==='webgl2'||type==='experimental-webgl')&&typeof ctx.getError==='function'){try{__wrapDraw(ctx,type);}catch(_){}}`
+          +     `return ctx;`
+          +   `};`
+          + `});`
           + `}catch(_){}\n`;
         const perfRead = `let __perf=null;try{__perf=await page.evaluate(async()=>{const n=performance.getEntriesByType('navigation')[0];const paints={};for(const p of performance.getEntriesByType('paint')){paints[p.name]=Math.round(p.startTime);}let lcp=0;try{const le=performance.getEntriesByType('largest-contentful-paint');if(le.length)lcp=Math.round(le[le.length-1].startTime);}catch(_){}let cls=0;try{for(const ls of performance.getEntriesByType('layout-shift')){if(!ls.hadRecentInput)cls+=ls.value;}}catch(_){}let longtasks=0;try{longtasks=performance.getEntriesByType('longtask').length;}catch(_){}let heapU=0,heapT=0;try{if(performance.memory){heapU=Math.round(performance.memory.usedJSHeapSize/10485.76)/100;heapT=Math.round(performance.memory.totalJSHeapSize/10485.76)/100;}}catch(_){}const fps=await new Promise(res=>{let f=0;const s=performance.now();function tick(){f++;if(performance.now()-s>=500)return res(Math.round(f/((performance.now()-s)/1000)));requestAnimationFrame(tick);}requestAnimationFrame(tick);});return{load_ms:n?Math.round(n.loadEventEnd||0):0,dcl_ms:n?Math.round(n.domContentLoadedEventEnd||0):0,resources:performance.getEntriesByType('resource').length,now:Math.round(performance.now()),first_paint_ms:paints['first-paint']||0,first_contentful_paint_ms:paints['first-contentful-paint']||0,largest_contentful_paint_ms:lcp,cumulative_layout_shift:Math.round(cls*1000)/1000,longtasks,fps,heap_used_mb:heapU,heap_total_mb:heapT};});}catch(_){}\n`;
         const blankProbe = startUrl ? '' : `try{const __u=page.url();if(__u==='about:blank'||__u===''){console.error('__GM_BLANK__');}}catch(_){}\n`;
         const netFmt = `__net.slice().sort((a,b)=>(b.dur_ms||0)-(a.dur_ms||0)).slice(0,30)`;
         const consoleFmt = `(__logs.length>50?[...__logs.slice(0,50),{type:'meta',text:'... '+(__logs.length-50)+' more console entries dropped'}]:__logs)`;
-        const emitResult = `try{console.log('__GM_RESULT__'+JSON.stringify(__RET===undefined?null:__RET));}catch(__se){console.log('__GM_RESULT__'+JSON.stringify({__unserializable:String(__se&&__se.message||__se)}));}\n`;
+        // playwriter's own executor.js truncates the DISPLAYED stdout text at a fixed 10000 chars
+        // ("[Truncated to 10000 characters...]"), which silently ate the __GM_RESULT__ sentinel line
+        // (always appended LAST, after any real console.log volume from the page/debug capture) on
+        // any dispatch whose combined console output exceeded that cap -- the exact common case once
+        // debug capture became always-on. Writing the result to a dedicated file from inside the
+        // executed script, then reading that file directly (bypassing playwriter's own stdout
+        // formatting entirely), makes result delivery immune to output volume.
+        const resultFile = path.join(os.tmpdir(), `gm-browser-result-${process.pid}-${execProfileSeq++}.json`);
+        const emitResult = `try{require('fs').writeFileSync(${JSON.stringify(resultFile)},JSON.stringify(__RET===undefined?null:__RET));}catch(__se){try{require('fs').writeFileSync(${JSON.stringify(resultFile)},JSON.stringify({__unserializable:String(__se&&__se.message||__se)}));}catch(__se2){}}\n`;
         if (modeMatch && modeMatch[1] === 'profile') {
           const userScript = modeMatch[3];
           const intervalUs = sampleIntervalUs;
@@ -3141,13 +3187,15 @@ function makeHostFunctions(instanceRef) {
             + `const __wallUs=(Date.now()-__wallT0)*1000;\n`
             + `if(__cdp){try{const __r=await __cdp.send('Profiler.stop');__profile=__r&&__r.profile||null;}catch(e){__profileError=String(e&&e.message||e);}}\n`
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
             + perfRead
             + AGGREGATE_CPU_PROFILE_SRC + `\n`
             + `const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopNBrowser}) : {timeframe:null,culprits:[]};\n`
             + `const __cpuUs=__agg.timeframe?__agg.timeframe.total_us:0;\n`
             + `const __wallVsCpu={wall_us:__wallUs,cpu_self_us:__cpuUs,offcpu_us:Math.max(0,__wallUs-__cpuUs),note:'offcpu_us = wall minus on-CPU JS self time = GPU/compositor/raster/IO/idle the CPU sampler is blind to; use trace mode to attribute GPU activity'};\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + `const __RET={result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
             + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'trace') {
           const userScript = modeMatch[3];
@@ -3160,6 +3208,8 @@ function makeHostFunctions(instanceRef) {
             + `const __wallUs=(Date.now()-__wallT0)*1000;\n`
             + `if(__cdp){const __done=new Promise(res=>{__cdp.once('Tracing.tracingComplete',()=>res(true));setTimeout(()=>res(false),Math.min(${Math.min(navTimeout, 10000)},10000));});try{await __cdp.send('Tracing.end');}catch(e){__traceError=(__traceError||'')+' end:'+String(e&&e.message||e);}__traceComplete=await __done;}\n`
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
             + perfRead
             + `const __byCat={};let __minTs=Infinity,__maxTs=-Infinity;for(const ev of __traceEvents){if(typeof ev.ts==='number'){__minTs=Math.min(__minTs,ev.ts);if(typeof ev.dur==='number')__maxTs=Math.max(__maxTs,ev.ts+ev.dur);}if(typeof ev.dur==='number'&&ev.dur>0){const c=ev.cat||'?';__byCat[c]=(__byCat[c]||0)+ev.dur;}}\n`
             + `const __sum=(re)=>Object.entries(__byCat).filter(([k])=>re.test(k)).reduce((a,[,v])=>a+v,0);\n`
@@ -3167,37 +3217,77 @@ function makeHostFunctions(instanceRef) {
             + `const __topCats=Object.entries(__byCat).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([cat,us])=>({cat,wall_us:us}));\n`
             + `const __spanUs=(isFinite(__minTs)&&__maxTs>0)?(__maxTs-__minTs):0;\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + `const __RET={result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
             + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'capture') {
           const userScript = modeMatch[3];
           evalBody = debugSetup
             + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${userScript}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf}};\n`
+            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
             + emitResult + `return __RET;`;
         } else if (screenshotPath) {
-          evalBody = `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${evalBody}}catch(e){throw e;}\n})();\n`
+          // Every path below (screenshot, DOM query, plain URL/eval, bare eval) now attaches the SAME
+          // debugSetup + debug:{console,pageErrors,network,performance} envelope that `capture` already
+          // had -- console.log/pageerror/uncaught-exception/failed-request/perf data was previously
+          // silently dropped on every dispatch that didn't explicitly type the `capture` prefix, which
+          // meant the single most common case (navigate + do something + screenshot/return a value) had
+          // zero visibility into what the page actually logged or errored on. Debugging a live page
+          // should never require remembering to opt in to seeing its own console/errors.
+          evalBody = debugSetup
+            + `const __result = await (async () => {\n${blankProbe}${gotoPrefix}try{${evalBody}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}\n})();\n`
             + `let __shotErr=null;try{await page.screenshot({path:${JSON.stringify(screenshotPath)},fullPage:false});}catch(e){__shotErr=String(e&&e.message||e);}\n`
-            + `const __RET={result:__result,screenshot_path:${JSON.stringify(screenshotPath)},screenshot_error:__shotErr};\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + perfRead
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `const __RET={result:__result,screenshot_path:${JSON.stringify(screenshotPath)},screenshot_error:__shotErr,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
             + emitResult + `return __RET;`;
         } else if (domSelector) {
-          evalBody = `${blankProbe}${gotoPrefix}let __RET;try{__RET=await page.evaluate((sel)=>{const out=[];const els=document.querySelectorAll(sel);for(let i=0;i<Math.min(els.length,20);i++){const e=els[i];const r=e.getBoundingClientRect();const attrs={};for(const a of e.attributes)attrs[a.name]=String(a.value).slice(0,120);out.push({tag:e.tagName.toLowerCase(),text:(e.textContent||'').trim().slice(0,200),attrs,visible:!!(r.width&&r.height),rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});}return{selector:sel,match_count:els.length,elements:out};},${JSON.stringify(domSelector)});}catch(e){__RET={selector:${JSON.stringify(domSelector)},error:String(e&&e.message||e),match_count:0,elements:[]};}\n`
+          evalBody = debugSetup
+            + `${blankProbe}${gotoPrefix}let __RET;try{__RET=await page.evaluate((sel)=>{const out=[];const els=document.querySelectorAll(sel);for(let i=0;i<Math.min(els.length,20);i++){const e=els[i];const r=e.getBoundingClientRect();const attrs={};for(const a of e.attributes)attrs[a.name]=String(a.value).slice(0,120);out.push({tag:e.tagName.toLowerCase(),text:(e.textContent||'').trim().slice(0,200),attrs,visible:!!(r.width&&r.height),rect:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});}return{selector:sel,match_count:els.length,elements:out};},${JSON.stringify(domSelector)});}catch(e){__RET={selector:${JSON.stringify(domSelector)},error:String(e&&e.message||e),match_count:0,elements:[]};}\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + perfRead
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `__RET={...__RET,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
             + emitResult + `return __RET;`;
-        } else if (startUrl) {
-          evalBody = `${gotoPrefix}const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
-        } else if (blankProbe) {
-          evalBody = `${blankProbe}const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
         } else {
-          evalBody = `const __RET=await (async()=>{${evalBody}})();\n` + emitResult + `return __RET;`;
+          // startUrl and/or blankProbe and/or bare-eval all collapse into this single branch now --
+          // same debug-envelope treatment as every other path above.
+          evalBody = debugSetup
+            + `${blankProbe}${gotoPrefix}const __result = await (async () => {try{${evalBody}}catch(e){__errs.push({type:'exec',msg:String(e&&e.message||e),stack:String(e&&e.stack||'')});throw e;}})();\n`
+            + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
+            + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
+            + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + perfRead
+            + `const __allErrors=[...__errs,...__wmErrors];\n`
+            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + emitResult + `return __RET;`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
         let r;
+        // Route the script through a temp file (-f) instead of inlining it on the command line (-e).
+        // Bun on Windows has known fixed-size-buffer index-out-of-bounds panics ("index out of bounds:
+        // index N, len 2048/4095/4096...", a real oven-sh/bun bug class, not user-code-triggerable
+        // from a JS bug) that fire on sufficiently long argv/command-line content -- the debug/GL
+        // instrumentation prelude alone is >2KB, so ANY non-trivial user script pushed the combined
+        // argv over that threshold and crashed the whole `bun x` invocation outright (visible as
+        // `panic(main thread): index out of bounds` with a Bun crash-report link, not a script error).
+        // A temp .js file has no such length limit -- this sidesteps the Bun bug class entirely rather
+        // than working around it script-by-script.
+        const scriptFile = path.join(os.tmpdir(), `gm-browser-eval-${process.pid}-${execProfileSeq++}.js`);
         try {
-          r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-e', evalBody], outerTimeoutMs, cwd, sessionId);
+          fs.writeFileSync(scriptFile, evalBody, 'utf-8');
+          r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-f', scriptFile], outerTimeoutMs, cwd, sessionId);
         } finally {
+          try { fs.unlinkSync(scriptFile); } catch (_) {}
           clearInflight(sessionId);
           stampBrowserLastUse(cwd, sessionId);
         }
@@ -3207,17 +3297,25 @@ function makeHostFunctions(instanceRef) {
         }
         const rawStderr = r.stderr || '';
         const landedOnBlank = !startUrl && rawStderr.includes('__GM_BLANK__');
-        let rawStdout = r.stdout || '';
+        // Read the real result from resultFile (written by emitResult inside the executed script) --
+        // NOT parsed out of playwriter's own stdout, which truncates its displayed text at a fixed
+        // 10000 chars regardless of how much real data the script actually produced. This is the
+        // authoritative result channel; stdout below is kept only for genuine console.log visibility,
+        // no longer load-bearing for the actual return value.
         let parsedResult;
         let resultParsed = false;
-        const resIdx = rawStdout.lastIndexOf('__GM_RESULT__');
-        if (resIdx >= 0) {
-          const tail = rawStdout.slice(resIdx + '__GM_RESULT__'.length);
-          const nl = tail.indexOf('\n');
-          const jsonStr = nl >= 0 ? tail.slice(0, nl) : tail;
-          try { parsedResult = JSON.parse(jsonStr); resultParsed = true; } catch (_) {}
-          rawStdout = (rawStdout.slice(0, resIdx) + (nl >= 0 ? tail.slice(nl + 1) : '')).replace(/\n+$/, '\n');
+        try {
+          const resultFileContent = fs.readFileSync(resultFile, 'utf-8');
+          parsedResult = JSON.parse(resultFileContent);
+          resultParsed = true;
+        } catch (_) {
+          // Script threw before reaching emitResult, or the runner itself failed/timed out before the
+          // page-side code ever ran -- resultParsed stays false, envelope.result is simply absent,
+          // exactly matching the pre-fix behavior for a script that never printed __GM_RESULT__.
+        } finally {
+          try { fs.unlinkSync(resultFile); } catch (_) {}
         }
+        const rawStdout = r.stdout || '';
         const envelope = {
           ok,
           stdout: scrubBrowserRunnerText(rawStdout),
