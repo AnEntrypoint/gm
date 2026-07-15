@@ -861,7 +861,19 @@ function findBrowserRunner() {
     // above), it just skips the registry round-trip for the tag lookup itself.
     const cachedVersion = findCachedBunRunnerVersion();
     const pkgSpec = cachedVersion ? `${BROWSER_RUNNER_BIN}@${cachedVersion}` : `${BROWSER_RUNNER_BIN}@latest`;
-    return { cmd: 'bun', baseArgs: ['x', pkgSpec], shell: true };
+    // bun is a real native binary (resolved to its actual path via `where`/`which` just above), so
+    // it can be spawned directly without an intermediate shell. shell:true here was forcing every
+    // browser-verb -e script argument through cmd.exe's argv parsing on Windows, which treats an
+    // unescaped `&` (extremely common in real target URLs, e.g. `?singleplayer&world=...` query
+    // strings) as a command separator EVEN INSIDE A QUOTED ARGUMENT -- silently truncating the
+    // script/URL mid-string, corrupting the executed code (observed live: "await page.goto(\"http:
+    // //host/path?a" with everything from the `&` onward missing, then a bogus second "command"
+    // from the leftover text failing with "'world' is not recognized..."). Passing the resolved
+    // absolute exe path with shell:false hands the args array to the OS process-create call
+    // directly, with zero shell metacharacter interpretation -- verified safe for arbitrary argv
+    // content (long strings containing `&`, quotes, newlines) via direct spawnSync reproduction.
+    const bunPath = bunR.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean)[0];
+    return { cmd: bunPath || 'bun', baseArgs: ['x', pkgSpec], shell: false };
   }
   const cachedBin = findCachedBunRunnerBin();
   if (cachedBin) return { cmd: process.execPath, baseArgs: [cachedBin], shell: false };
@@ -869,11 +881,16 @@ function findBrowserRunner() {
   if (r.status === 0 && r.stdout.trim()) {
     const candidates = r.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const cmd = candidates.find(c => c.toLowerCase().endsWith('.cmd')) || candidates.find(c => !c.toLowerCase().endsWith('.ps1')) || candidates[0];
-    if (cmd) return { cmd, baseArgs: [], shell: process.platform === 'win32' };
+    // A resolved .exe candidate is a real binary and can run shell:false (same reasoning as the bun
+    // case above). Only a genuine .cmd/.bat wrapper needs shell:true on Windows -- cmd.exe is the
+    // only thing that can directly execute a .cmd file -- so scope the shell path to that case.
+    if (cmd) return { cmd, baseArgs: [], shell: process.platform === 'win32' && cmd.toLowerCase().endsWith('.cmd') };
   }
   const npxR = spawnSync(whichCmd, ['npx'], { encoding: 'utf-8', shell: true });
   if (npxR.status === 0 && npxR.stdout.trim()) {
-    return { cmd: 'npx', baseArgs: ['-y', BROWSER_RUNNER_BIN], shell: true };
+    // npx resolves to npx.cmd on Windows, which genuinely requires shell:true to execute (see
+    // above). Non-Windows npx is a real executable/shebang script and needs no shell.
+    return { cmd: 'npx', baseArgs: ['-y', BROWSER_RUNNER_BIN], shell: process.platform === 'win32' };
   }
   return null;
 }
@@ -1164,11 +1181,30 @@ function playwriterHomeFor(cwd, claudeSessionId) {
   return path.join(cwd, '.gm', `pw-sock-${sessionProfileSlug(claudeSessionId)}`);
 }
 
+// cmd.exe (the shell Node's spawnSync{shell:true} uses on Windows for a .cmd/.bat target) treats
+// &|<>^ as command-line metacharacters EVEN INSIDE a double-quoted argument -- double-quoting alone
+// (the prior logic here) stops whitespace-splitting but does not stop cmd.exe from splitting
+// `foo&bar` into two separate commands. Real script/URL arguments passed through the browser verb
+// routinely contain `&` (e.g. `?a=1&b=2` query strings), which was being silently truncated
+// mid-argument on any shell:true path. Escaping each metacharacter with a caret (^) inside the
+// quoted string is the standard cmd.exe-safe encoding; this is the remaining defense for the
+// npx.cmd/.cmd-wrapper fallback paths that genuinely require shell:true (the bun path above no
+// longer needs this at all, since it now spawns the resolved .exe directly with shell:false).
+function cmdExeQuote(s) {
+  const str = String(s);
+  const escaped = str.replace(/"/g, '\\"').replace(/[&|<>^]/g, '^$&');
+  return `"${escaped}"`;
+}
+
 function runBrowserRunner(pw, args, timeoutMs, cwd, claudeSessionId) {
   const allArgs = [...pw.baseArgs, ...args];
   const useShell = !!pw.shell;
   const spawnCmd = useShell && /\s/.test(pw.cmd) ? `"${pw.cmd}"` : pw.cmd;
-  const spawnArgs = useShell ? allArgs.map(a => /[\s"]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : a) : allArgs;
+  const spawnArgs = useShell
+    ? (process.platform === 'win32'
+        ? allArgs.map(a => cmdExeQuote(a))
+        : allArgs.map(a => /[\s"]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : a))
+    : allArgs;
   const env = { ...process.env };
   const sockDir = playwriterHomeFor(cwd, claudeSessionId);
   try { fs.mkdirSync(sockDir, { recursive: true }); } catch (_) {}
