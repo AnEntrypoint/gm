@@ -798,11 +798,24 @@ function isReady() {
   return fs.existsSync(wasm);
 }
 
+function runningFromGmSourceRepo() {
+  try {
+    const pkgPath = path.join(__dirname, '..', 'package.json');
+    if (!fs.existsSync(pkgPath)) return false;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    return pkg && pkg.name === 'gm-skill';
+  } catch (_) { return false; }
+}
+
 function ensureWrapperFresh() {
   try {
     const wrapperSrc = path.join(__dirname, 'plugkit-wasm-wrapper.js');
     const wrapperDst = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
     if (!fs.existsSync(wrapperSrc)) return false;
+    if (runningFromGmSourceRepo() && process.env.GM_PLUGKIT_ALLOW_DEV_WRAPPER_OVERWRITE !== '1') {
+      log(`refusing to overwrite the shared ~/.gm-tools wrapper from the gm source repo (${wrapperSrc}) -- this machine-wide install is shared by every project's watcher; set GM_PLUGKIT_ALLOW_DEV_WRAPPER_OVERWRITE=1 to opt in, or use 'bun x gm-plugkit@latest' which fetches an isolated npm copy instead`);
+      return false;
+    }
     let same = false;
     if (fs.existsSync(wrapperDst)) {
       try {
