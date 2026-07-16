@@ -34,6 +34,8 @@ Wasm host-import link-module rule (`#[link(wasm_import_module="env")]` on every 
 
 **`plugkit-wasm-wrapper.js` is ESM; import node builtins at module scope, never inline `require()`** (recall store: `recall: wrapper require not defined under bun`).
 
+**`~/.gm-tools/` is one shared install across every project's watcher on the machine -- never run gm-plugkit's own `cli.js`/`bootstrap.js` directly against the gm source checkout on a live machine.** `bun x gm-plugkit@latest` fetches an isolated npm-temp copy and is always safe; a direct `node`/`bun` invocation of the repo's own `gm-plugkit/cli.js` copies the local dev-tree wrapper over the shared install and cascades a wrapper-sha-drift kill across every other project's watcher. `ensureWrapperFresh()` refuses this unless `GM_PLUGKIT_ALLOW_DEV_WRAPPER_OVERWRITE=1` is set (recall store: `recall: shared install machine-wide wrapper-drift storm`).
+
 **Every single-instance/lock guard is atomic** (O_EXCL / atomic-rename), never check-then-act (recall store: `recall: supervisor churn TOCTOU atomic guard`).
 
 ## Spool dispatch ABI
