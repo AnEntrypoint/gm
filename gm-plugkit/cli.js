@@ -5,7 +5,43 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath } = require('./bootstrap');
+
+function getWasmPathSafe() {
+  try { return getWasmPath(); } catch (_) { return null; }
+}
+
+function spawnBackgroundFreshnessCheck(reason) {
+  try {
+    const child = cp.spawn(process.execPath, [__filename.replace(/cli\.js$/, 'bootstrap.js')], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      env: { ...process.env, GM_PLUGKIT_BACKGROUND_REFRESH: reason },
+    });
+    child.unref();
+  } catch (_) {}
+}
+
+function spawnDaemonOrExit(version, binaryPath, message) {
+  let daemon;
+  try {
+    daemon = startSpoolDaemon();
+  } catch (err) {
+    writeCliError('start-daemon', err);
+    console.error('Daemon start failed:', err.message);
+    process.exit(1);
+  }
+  if (!daemon || !daemon.ok) {
+    const errMsg = (daemon && daemon.error) || 'startSpoolDaemon returned non-ok';
+    writeCliError('start-daemon', new Error(errMsg));
+    console.error('Daemon start failed:', errMsg);
+    process.exit(1);
+  }
+  writeCliStatus({ phase: 'daemon-spawned', version, daemon_pid: daemon.pid, log: daemon.logPath });
+  console.log(JSON.stringify({ ok: true, binary: binaryPath, daemon, message }));
+  process.exit(0);
+}
 
 function readUpdateAvailableMarker(dir) {
   try {
@@ -237,6 +273,19 @@ function writeCliError(phase, err) {
     } catch (_) {}
   }
 
+  const wrapperPath = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
+  if (isReady() && fs.existsSync(wrapperPath)) {
+    let installedVersion = null;
+    try { installedVersion = readVersionFile(); } catch (_) { installedVersion = null; }
+    writeCliStatus({ phase: 'bootstrapped', version: installedVersion, binary: getWasmPathSafe() });
+    spawnBackgroundFreshnessCheck(versionDrifted ? 'version-drift-respawn' : 'fast-path-spawn');
+    spawnDaemonOrExit(
+      installedVersion,
+      getWasmPathSafe(),
+      'plugkit daemon spawned from existing local install, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness; remote freshness check running in background'
+    );
+  }
+
   let bootstrapResult;
   try {
     bootstrapResult = await ensureReady();
@@ -254,40 +303,11 @@ function writeCliError(phase, err) {
   }
 
   writeCliStatus({ phase: 'bootstrapped', version: bootstrapResult.version, binary: bootstrapResult.binaryPath });
-
-  let daemon;
-  try {
-    daemon = startSpoolDaemon();
-  } catch (err) {
-    writeCliError('start-daemon', err);
-    console.error('Daemon start failed:', err.message);
-    process.exit(1);
-  }
-
-  if (!daemon || !daemon.ok) {
-    const errMsg = (daemon && daemon.error) || 'startSpoolDaemon returned non-ok';
-    writeCliError('start-daemon', new Error(errMsg));
-    console.error('Daemon start failed:', errMsg);
-    process.exit(1);
-  }
-
-  // Fire-and-forget: the daemon child is already detached+unref'd by
-  // startSpoolDaemon(), so the CLI process itself has nothing left to do.
-  // Waiting here for a heartbeat confirmation (removed) used to block the
-  // calling shell for the full bootstrap+first-heartbeat duration -- up to
-  // 30s on a healthy boot, worse on a slow/degraded one -- holding up every
-  // caller even though the daemon spawn itself is near-instant. A caller
-  // that needs serving-confirmation reads .gm/exec-spool/.status.json
-  // directly (ts freshness) rather than blocking this call on it.
-  writeCliStatus({ phase: 'daemon-spawned', version: bootstrapResult.version, daemon_pid: daemon.pid, log: daemon.logPath });
-
-  console.log(JSON.stringify({
-    ok: true,
-    binary: bootstrapResult.binaryPath,
-    daemon,
-    message: 'plugkit daemon spawned, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness'
-  }));
-  process.exit(0);
+  spawnDaemonOrExit(
+    bootstrapResult.version,
+    bootstrapResult.binaryPath,
+    'plugkit daemon spawned, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness'
+  );
 })().catch((err) => {
   writeCliError('uncaught', err);
   console.error('gm-plugkit failed:', err && err.message ? err.message : err);

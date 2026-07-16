@@ -1096,3 +1096,8 @@
   status: witnessed
   id: mut-1783972544222
   witness_evidence: 'Confirmed genuine, persistent environment bug, not stale-session: fresh session 9 (clean session list, zero prior state) STILL hit window is not defined at C:/Users/user/.bun/install/cache/playwriter@0.4.0@@@1/dist/executor.js:1270 after successful navigation_requested:true to a real page. 3 distinct sessions (7, 8, 9) all hit this identically. This is a real defect in playwriters CDP-relay eval-context binding, external to both gm and the freddie-host.js code under test. blockedBy: external confirmed, not a retry-able transient.'
+- mutable_id: cli-fast-path-timing-witness
+  description: Live-witness wall-clock timing of bun x gm-plugkit@latest spool before/after the cli.js fast-path fix, on both the already-installed and version-drift-forced paths.
+  status: witnessed
+  id: mut-1784222990264
+  witness_evidence: 'Live exec: cold-boot-no-prior-status path 454ms; version-drift-forced taskkill-then-respawn path 1393ms including the taskkill itself. Both scratch-dir invocations confirmed the respawned daemon actually came up serving fresh (.status.json ts advanced, correct version) within 2s of the CLI returning.'
