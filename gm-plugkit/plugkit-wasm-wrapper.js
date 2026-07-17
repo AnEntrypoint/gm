@@ -5274,14 +5274,16 @@ async function selfHeal(reason) {
 
 async function tryInstantiate(wasmPath) {
   const wasmBuffer = fs.readFileSync(wasmPath);
-  const wasmModule = new WebAssembly.Module(wasmBuffer);
+  try { _writeStatusBusy(60000); } catch (_) {}
+  const wasmModule = await WebAssembly.compile(wasmBuffer);
+  try { _writeStatusBusy(60000); } catch (_) {}
   const instanceRef = { value: null };
   const hostFunctions = makeHostFunctions(instanceRef);
   const importObject = {
     env: hostFunctions,
     wasi_snapshot_preview1: createWasiShim(instanceRef),
   };
-  const instance = new WebAssembly.Instance(wasmModule, importObject);
+  const instance = await WebAssembly.instantiate(wasmModule, importObject);
   instanceRef.value = instance;
   return { instance, instanceRef };
 }
