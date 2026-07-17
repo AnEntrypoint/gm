@@ -6,12 +6,11 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
+const { gmToolsDir } = require('./bootstrap');
 
 function wrapperSha12OnDisk() {
   try {
-    const primary = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
-    const fallback = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
-    const wp = fs.existsSync(primary) ? primary : fallback;
+    const wp = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
     return crypto.createHash('sha256').update(fs.readFileSync(wp)).digest('hex').slice(0, 12);
   } catch (_) { return null; }
 }
@@ -200,9 +199,7 @@ function spawnWatcher(bootReason) {
     return;
   }
 
-  const primaryWrapper = path.join(os.homedir(), '.gm-tools', 'plugkit-wasm-wrapper.js');
-  const fallbackWrapper = path.join(os.homedir(), '.claude', 'gm-tools', 'plugkit-wasm-wrapper.js');
-  const wrapper = fs.existsSync(primaryWrapper) ? primaryWrapper : fallbackWrapper;
+  const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
   if (!fs.existsSync(wrapper)) {
     logEvent('supervisor.wrapper-missing', { wrapper, severity: 'critical' });
     writeSupervisorStatus('error', { error: 'wrapper-missing' });
@@ -379,10 +376,7 @@ function checkWatcherHealth() {
       severity: 'critical',
     });
     try {
-      const home = process.env.USERPROFILE || process.env.HOME || require('os').homedir();
-      const gmTools = fs.existsSync(path.join(home, '.gm-tools'))
-        ? path.join(home, '.gm-tools')
-        : path.join(home, '.claude', 'gm-tools');
+      const gmTools = gmToolsDir();
       for (const f of ['plugkit.wasm', 'plugkit.version', 'plugkit.wasm.sha256']) {
         try { fs.unlinkSync(path.join(gmTools, f)); } catch (_) {}
       }
