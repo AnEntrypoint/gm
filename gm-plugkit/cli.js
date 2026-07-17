@@ -11,6 +11,19 @@ function getWasmPathSafe() {
   try { return getWasmPath(); } catch (_) { return null; }
 }
 
+function pidAliveSync(pid) {
+  try { process.kill(pid, 0); return true; } catch (_) { return false; }
+}
+
+function waitForPidDeath(pid, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!pidAliveSync(pid)) return true;
+    try { cp.execFileSync(process.platform === 'win32' ? 'ping' : 'sleep', process.platform === 'win32' ? ['-n', '2', '127.0.0.1'] : ['0.3'], { stdio: 'ignore', windowsHide: true }); } catch (_) {}
+  }
+  return !pidAliveSync(pid);
+}
+
 function spawnBackgroundFreshnessCheck(reason) {
   try {
     const child = cp.spawn(process.execPath, [__filename.replace(/cli\.js$/, 'bootstrap.js')], {
@@ -248,6 +261,7 @@ function writeCliError(phase, err) {
         if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
         else process.kill(already.pid, 'SIGTERM');
       } catch (_) {}
+      waitForPidDeath(already.pid, 5000);
     } else {
       writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
       console.log(JSON.stringify({
