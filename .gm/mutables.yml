@@ -1101,3 +1101,11 @@
   status: witnessed
   id: mut-1784222990264
   witness_evidence: 'Live exec: cold-boot-no-prior-status path 454ms; version-drift-forced taskkill-then-respawn path 1393ms including the taskkill itself. Both scratch-dir invocations confirmed the respawned daemon actually came up serving fresh (.status.json ts advanced, correct version) within 2s of the CLI returning.'
+- id: mut-wasm32-thread-availability
+  status: witnessed
+  witness: need to check rust-toolchain.toml / wasmtime host config / Cargo.toml for wasm32-wasip1-threads or std::thread availability before claiming parallel embedding is reachable in this wasm32 target
+  witness_evidence: 'rs-plugkit Cargo.toml targets wasm32 with candle-core/candle-transformers (Device::Cpu only, no cuda/wasm-simd feature flags enabled), libsql-ffi wasm32-wasi-vfs feature, tokenizers unstable_wasm feature -- no wasm32-wasip1-threads target, no std::thread usage anywhere in plugkit-core/src grep. Real OS-thread parallelism is not reachable on this wasm32 target without a threads-proposal toolchain rs-plugkit does not use. Conclusion: batching via candle''s native tensor batch dimension (single-threaded SIMD-vectorized matmul across a batch) is the correct lever, not thread-based parallelism -- feeds directly into batch-embed-model-forward row.'
+- id: mut-host-vec-embed-batch-capability
+  status: witnessed
+  witness: need to inspect gm-plugkit JS wrapper (plugkit-wasm-wrapper.js) and gm-runner (rs-plugkit crates/gm-runner) host_vec_embed implementation to determine whether the HOST side model call already batches internally per wasm call, or is truly one-embedding-per-host-call
+  witness_evidence: 'gm-plugkit/plugkit-wasm-wrapper.js:2674-2681 host_vec_embed delegates to globalThis.__hostEmbedSync if defined, else returns -1. Grepped entire gm-plugkit directory: __hostEmbedSync is referenced ONLY at this call site, never assigned/defined anywhere. Host-delegated embed path is dead in this environment -- probe_host_embed() in embed.rs always returns false, so 100% of embeddings go through the slow in-wasm candle BertModel::forward path, one text at a time. This is the confirmed real bottleneck (not hypothetical): host-side batching is unreachable because there is no active host embed path at all. Fix must be wasm-side model.forward batching (batch-embed-model-forward row), not host-side.'

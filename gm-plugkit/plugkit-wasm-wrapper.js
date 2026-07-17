@@ -2981,6 +2981,7 @@ function makeHostFunctions(instanceRef) {
 
     host_log: (level, msgPtr, msgLen) => {
       try {
+        try { _writeStatusBusy(120000); } catch (_) {}
         const msg = readWasmStr(instanceRef.value, msgPtr, msgLen);
         const prefix = level >= 3 ? '[plugkit-wasm:err]' : level >= 2 ? '[plugkit-wasm:warn]' : '[plugkit-wasm]';
         if (level >= 2) console.error(`${prefix} ${msg}`);
