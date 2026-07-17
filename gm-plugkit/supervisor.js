@@ -165,13 +165,28 @@ function readShutdownReason() {
 // deliberate upgrade recycle as a SILENT ABORT / unplanned-restart critical. Write
 // the planned reason on the child's behalf BEFORE killing, so the next boot reads a
 // fresh planned shutdown reason and classifies the restart correctly.
+function pidAliveSync(pid) {
+  try { process.kill(pid, 0); return true; } catch (_) { return false; }
+}
+
+function waitForPidDeath(pid, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!pidAliveSync(pid)) return true;
+    try { spawnSync(process.platform === 'win32' ? 'ping' : 'sleep', process.platform === 'win32' ? ['-n', '2', '127.0.0.1'] : ['0.3'], { stdio: 'ignore', windowsHide: true }); } catch (_) {}
+  }
+  return !pidAliveSync(pid);
+}
+
 function killChild(reason) {
   if (!currentChildPid) return;
-  try { fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({ reason, ts: Date.now(), pid: currentChildPid, killed_by_supervisor: true })); } catch (_) {}
-  try { process.kill(currentChildPid, 'SIGTERM'); } catch (_) {}
+  const pid = currentChildPid;
+  try { fs.writeFileSync(SHUTDOWN_REASON_PATH, JSON.stringify({ reason, ts: Date.now(), pid, killed_by_supervisor: true })); } catch (_) {}
+  try { process.kill(pid, 'SIGTERM'); } catch (_) {}
   if (process.platform === 'win32') {
-    try { spawnSync('taskkill', ['/F', '/T', '/PID', String(currentChildPid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
+    try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); } catch (_) {}
   }
+  waitForPidDeath(pid, 5000);
 }
 
 let lastSpawnedAt = 0;
