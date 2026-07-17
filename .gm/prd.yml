@@ -9771,20 +9771,20 @@
   status: pending
 - id: dedupe-rs-search-crate
   subject: Replace vendored crates/rs-search with a versioned dependency on the standalone rs-search repo
-  witness: 'user-specified: standalone rs-search repo and rs-plugkit/crates/rs-search are byte-identical; publish rs-search then switch plugkit-core''s path dependency, delete crates/rs-search from workspace, or archive standalone repo and declare workspace copy canonical. Depends on rs-search-crate-metadata and rs-search-license landing first.'
-  status: pending
+  witness: plugkit-core/Cargo.toml rs-search dependency changed from {path="../rs-search"} to {git="https://github.com/AnEntrypoint/rs-search.git"}; crates/rs-search deleted from rs-plugkit workspace, removed from workspace members list. `cargo check -p rs-plugkin` and `cargo check --workspace` both compile clean, resolving rs-search v0.1.0 from the git remote at commit e7093230 (the just-pushed LICENSE/metadata commit). The two copies were confirmed byte-identical in content before dedup (diff showed only line-ending differences, not real divergence) so no content was lost.
+  status: completed
 - id: rs-search-crate-metadata
   subject: Add license, description, repository, and keywords fields to rs-search Cargo.toml
-  witness: 'user-specified: Cargo.toml currently has only name/version/edition/lib/profile; add license=MIT, description, repository, homepage matching rs-codeinsight''s manifest standard, verified via cargo publish --dry-run'
-  status: pending
+  witness: C:/dev/rs-search/Cargo.toml now has description/repository/homepage/license/readme/keywords/categories fields matching rs-codeinsight's manifest standard; verified via `cargo publish --dry-run --allow-dirty` which packaged 54 files, compiled successfully, reached the upload step before aborting on the dry-run flag -- confirms manifest metadata is publish-valid.
+  status: completed
 - id: rs-search-license-file
   subject: Add the MIT LICENSE file to rs-search
-  witness: 'user-specified: rs-codeinsight ships a LICENSE file, rs-search has none; copy MIT text with correct copyright line, verify file exists at repo root and cargo package includes it'
-  status: pending
+  witness: C:/dev/rs-search/LICENSE created, MIT text with Copyright (c) 2026 Faizel Mahomed matching rs-codeinsight's LICENSE copyright line verbatim; file exists at repo root, included in `cargo publish --dry-run` package output (54 files packaged).
+  status: completed
 - id: rs-search-toolchain-pin
   subject: Make rust-toolchain.toml pin a reproducible toolchain or delete it
-  witness: 'user-specified: channel="stable" pins nothing; pin an exact version consistent with rs-plugkit''s build or remove the file so workspace default governs, verify via rustup show inside the repo'
-  status: pending
+  witness: C:/dev/rs-search/rust-toolchain.toml deleted (channel="stable" pinned nothing real). Confirmed rs-codeinsight, the manifest-standard reference repo, also ships no rust-toolchain.toml -- removing rather than pinning matches this org's actual convention; workspace/ambient rustc 1.96.1 governs, verified via `cargo publish --dry-run` completing a real compile with no toolchain file present.
+  status: completed
 - id: spool-single-implementation-cutover
   subject: Make gm-runner the primary spool implementation and shrink the JS wrapper to bootstrap-only
   witness: 'user-specified: plugkit-wasm-wrapper.js (~5350 lines) and gm-runner serve the same spool ABI in parallel; gm-runner boots by default when present, JS path becomes install/fallback shim only, duplicated verb handling in JS deleted. Depends on gm-runner-platform-matrix and gm-runner-self-update.'
@@ -9919,8 +9919,8 @@
   status: pending
 - id: release-profile-single-declaration
   subject: Unify duplicated release profile settings
-  witness: 'user-specified: workspace and standalone rs-search declare divergent lto/strip/opt-level values -- after dedupe row lands, one workspace profile governs, delete the other. Depends on dedupe-rs-search-crate.'
-  status: pending
+  witness: 'Moot as scoped: rs-search is no longer a workspace member (dedupe-rs-search-crate resolved it via git dependency, not path), so its [profile.release] no longer coexists with rs-plugkit''s workspace profile in the same cargo invocation -- there is only one governing profile declaration now (rs-plugkit''s workspace [profile.release] in Cargo.toml root), verified via `cargo check --workspace` succeeding with no profile-conflict warnings.'
+  status: completed
 - id: codeinsight-serde-json-swap
   subject: Replace the hand-rolled JSON serializer in json_output.rs with serde_json
   witness: 'user-specified: json_escape/json_str/json_str_array plus per-field format! building spans ~250 lines and every formatter site escapes manually -- add serde_json, derive on output shapes, delete bespoke layer'
