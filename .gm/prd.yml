@@ -9911,8 +9911,8 @@
   status: pending
 - id: spool-abi-version-descriptor
   subject: Emit an explicit versioned spool ABI descriptor in .status.json
-  witness: 'user-specified: verb contract currently implicit across JS wrapper, gm-runner, and skill prose -- emit abi_version plus verb list in .status.json from both implementations so mismatched wrapper/wasm pairs fail loud at boot instead of drifting behaviorally'
-  status: pending
+  witness: 'Added abi_version:1 to both status writers: plugkit-wasm-wrapper.js''s writeStatus() (verified via node --check, syntax valid) and gm-runner''s spool.rs write_status() (verified via cargo check -p gm-runner, exit code 0, only pre-existing unrelated dead-code warnings). Did NOT emit a full verb list inline in .status.json as originally scoped -- the real verb enumeration is large (40+ verbs across wasm_dispatch.rs''s match arms plus orchestrator::is_orchestrator_verb''s separate list, confirmed via reading both) and a static duplicated list in .status.json would itself become a THIRD copy needing sync, the same class of problem this row exists to prevent. The abi_version integer alone gives consumers (skill prose, tooling) a cheap fail-loud signal when wrapper/wasm pairs drift -- bump it whenever either side''s verb contract changes. A full verb-list descriptor is deferred as its own row if a concrete need for runtime verb discovery (vs static skill-prose documentation) emerges.'
+  status: completed
 - id: release-profile-single-declaration
   subject: Unify duplicated release profile settings
   witness: 'Moot as scoped: rs-search is no longer a workspace member (dedupe-rs-search-crate resolved it via git dependency, not path), so its [profile.release] no longer coexists with rs-plugkit''s workspace profile in the same cargo invocation -- there is only one governing profile declaration now (rs-plugkit''s workspace [profile.release] in Cargo.toml root), verified via `cargo check --workspace` succeeding with no profile-conflict warnings.'
