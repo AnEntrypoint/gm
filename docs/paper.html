@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="en" class="ds-247420" data-theme="auto"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Complete Discipline - gm - 247420</title>
+<meta name="description" content="The Complete Discipline: the unified gm research paper. Phase-gated lifecycle, mutable discipline, search protocol, governance layer, maximal cover, bounded autonomy, learning loop, and all operational hard rules in one document.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<script type="module">
+  import { installStyles } from 'https://unpkg.com/anentrypoint-design/dist/247420.js';
+  installStyles();
+  document.documentElement.classList.add('ds-247420');
+</script>
+<style>
+body { display: flex; flex-direction: column; min-height: 100vh; }
+body > header:not(.app-topbar), body > nav:not(.app-topbar), body > main > header:not(.app-topbar), body > main > nav:not(.app-topbar), body > .ds-topbar, body > [data-flatspace-topbar], body > .anentrypoint-topbar, body > .ds-247420-topbar, body > .ae-topbar, body > [data-ds-topbar] { display: none !important; }
+body > header.app-topbar ~ header, body > header.gm-topbar ~ header, body > header.app-topbar ~ nav, body > .app-topbar ~ .app-topbar, body > .gm-topbar ~ .gm-topbar { display: none !important; }
+body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap { max-width: min(92ch, 94vw); margin: 0 auto; padding: 0 32px; font-family: 'Inter','Segoe UI',sans-serif; color: var(--panel-text); }
+.toc { max-width: min(92ch, 94vw) !important; }
+@media (min-width: 1400px) {
+  body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap, .toc { max-width: min(110ch, 90vw); }
+}
+@media (min-width: 1800px) {
+  body > .title-block, body > .abstract-block, body > article, body > main, article, .prose-wrap, .toc { max-width: 128ch; }
+}
+body > .title-block { padding-top: 48px; padding-bottom: 8px; }
+body > .title-block h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; color: var(--panel-text); margin: 0 0 8px 0; }
+body > .title-block .author, body > .title-block .date { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-2); margin-top: 4px; text-transform: lowercase; }
+body > .abstract-block { margin: 24px auto; background: var(--panel-1); border-radius: 8px; box-shadow: var(--panel-shadow); padding: 16px 20px; }
+body > .abstract-block .abstract-title { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+body > .abstract-block .abstract-text { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article h1, article h2 { font-size: 22px; font-weight: 600; color: var(--panel-text); margin: 32px 0 8px 0; letter-spacing: -0.005em; }
+article h3 { font-family: var(--ff-mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin: 24px 0 8px 0; }
+article p, article li { font-size: 14px; line-height: 1.6; color: var(--panel-text); }
+article p { margin: 0 0 12px 0; }
+article pre { background: var(--panel-2); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
+article code { font-family: var(--ff-mono); font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--panel-text); overflow-wrap: anywhere; word-break: break-word; }
+article pre code { padding: 0; background: transparent; }
+article a { color: var(--panel-accent); text-decoration: underline; text-underline-offset: 3px; }
+article a:hover { color: var(--panel-accent-2); }
+article blockquote { margin: 12px 0; padding: 8px 16px; background: var(--panel-1); border-radius: 6px; box-shadow: var(--panel-shadow); color: var(--panel-text-2); font-style: italic; }
+article ul, article ol { padding-left: 24px; }
+article hr { border: 0; height: 1px; background: var(--panel-3); margin: 24px 0; }
+</style>
+<style>
+.gm-topbar{display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--panel-1);box-shadow:var(--panel-shadow);border-bottom:1px solid var(--panel-3);position:sticky;top:0;z-index:50}
+.gm-topbar .gm-brand{font-family:var(--ff-mono);font-size:13px;font-weight:600;color:var(--panel-text);letter-spacing:.04em}
+.gm-topbar .gm-brand .slash{color:var(--panel-text-3);margin:0 4px}
+.gm-topbar .gm-brand .leaf{color:var(--panel-text-2);font-weight:400}
+.gm-topbar nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+.gm-topbar nav a, .gm-topbar nav .gm-dd > summary{font-family:var(--ff-mono);font-size:12px;text-transform:lowercase;letter-spacing:.04em;color:var(--panel-text);text-decoration:none;padding:6px 10px;border-radius:6px;cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px}
+.gm-topbar nav a:hover, .gm-topbar nav .gm-dd > summary:hover{background:var(--panel-2);color:var(--panel-accent)}
+.gm-topbar nav .gm-dd{position:relative}
+.gm-topbar nav .gm-dd > summary::-webkit-details-marker{display:none}
+.gm-topbar nav .gm-dd > summary::after{content:'';font-size:9px;margin-left:2px;color:var(--panel-text-3);transition:transform .15s}
+.gm-topbar nav .gm-dd[open] > summary::after{transform:rotate(180deg)}
+.gm-topbar nav .gm-dd[open] > summary{background:var(--panel-2);color:var(--panel-accent)}
+.gm-topbar nav .gm-dd-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:200px;background:var(--panel-1);border:1px solid var(--panel-3);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
+.gm-topbar nav .gm-dd-menu a{padding:8px 12px;border-radius:5px;display:block}
+.gm-topbar nav .gm-dd-menu a:hover{background:var(--panel-2)}
+@media (max-width:1024px){html.ds-247420 .gm-topbar nav{flex-wrap:nowrap !important;overflow-x:auto !important;scrollbar-width:none;-webkit-overflow-scrolling:touch}html.ds-247420 .gm-topbar nav::-webkit-scrollbar{display:none}}
+@media (max-width:640px){.gm-topbar{flex-wrap:wrap}.gm-topbar nav{margin-left:0;width:100%;justify-content:flex-start;overflow-x:visible;flex-wrap:wrap}.gm-topbar nav .gm-dd-menu{position:static;box-shadow:none;border:0;padding-left:14px;background:transparent}}
+</style>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose', themeVariables: { fontFamily: 'Inter, Segoe UI, sans-serif', fontSize: '13px' } });
+window.addEventListener('DOMContentLoaded', () => {
+  const lb = document.createElement('div');
+  lb.className = 'gm-mermaid-lightbox';
+  lb.innerHTML = '<div class="lb-close">close [x]</div><div class="lb-inner"></div>';
+  document.body.appendChild(lb);
+  const lbInner = lb.querySelector('.lb-inner');
+  const closeLb = () => { lb.classList.remove('open'); lbInner.innerHTML = ''; };
+  lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lb-close')) closeLb(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
+  document.addEventListener('click', (e) => {
+    const host = e.target.closest('.mermaid');
+    if (!host) return;
+    const svg = host.querySelector('svg');
+    if (!svg) return;
+    lbInner.innerHTML = '';
+    lbInner.appendChild(svg.cloneNode(true));
+    lb.classList.add('open');
+  });
+});
+</script>
+<style>
+.mermaid{margin:18px 0;padding:14px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);text-align:center;overflow-x:auto;cursor:zoom-in}
+.mermaid svg{max-width:100%;min-width:min(720px,100%);height:auto}
+.gm-mermaid-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:zoom-out;align-items:center;justify-content:center;padding:24px}
+.gm-mermaid-lightbox.open{display:flex}
+.gm-mermaid-lightbox .lb-inner{background:var(--panel-1);border-radius:8px;padding:24px;max-width:96vw;max-height:96vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.gm-mermaid-lightbox .lb-inner svg{width:auto;height:auto;max-width:none;min-width:900px}
+.gm-mermaid-lightbox .lb-close{position:fixed;top:20px;right:28px;color:#fff;font-family:var(--ff-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:6px}
+@media (max-width:640px){.gm-mermaid-lightbox .lb-inner svg{min-width:0;width:100%}}
+.gm-callout{margin:18px 0;padding:14px 18px;background:var(--panel-1);border-left:3px solid var(--panel-accent);color:var(--panel-text)}
+.gm-callout .who{display:block;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-text-2);font-style:normal;margin-bottom:4px}
+.cross-footer{margin:32px 0 12px 0;padding:18px;background:var(--panel-1);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;font-family:var(--ff-mono);font-size:12px}
+.cross-footer a{display:block;padding:10px 12px;background:var(--panel-2);border-radius:6px;text-decoration:none;color:var(--panel-text);transition:background .15s}
+.cross-footer a:hover{background:var(--panel-3);color:var(--panel-accent)}
+.cross-footer a strong{display:block;color:var(--panel-text);margin-bottom:2px}
+.cross-footer a span{font-size:11px;color:var(--panel-text-2);text-transform:lowercase}
+.hard-rule{margin:18px 0;padding:14px 18px;background:var(--panel-1);border-left:4px solid var(--panel-accent);border-radius:8px;box-shadow:var(--panel-shadow)}
+.hard-rule .rule-title{font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-accent);margin-bottom:8px;font-weight:600}
+.hard-rule p{margin:0 0 8px 0;font-size:14px;color:var(--panel-text)}
+.hard-rule p:last-child{margin:0}
+.toc{margin:24px auto;padding:16px 20px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);max-width:72ch}
+.toc-title{font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-text-2);margin-bottom:12px}
+.toc ol{margin:0;padding-left:20px}
+.toc li{font-size:13px;line-height:1.7;color:var(--panel-text)}
+.toc a{color:var(--panel-text-2);text-decoration:none}
+.toc a:hover{color:var(--panel-accent);text-decoration:underline}
+</style>
+<style>
+.paper-body{--sidebar-width:260px;max-width:min(110ch,94vw);margin:24px auto;padding:0 32px;display:grid;grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr);gap:32px;align-items:start}
+@media (min-width:1400px){.paper-body{max-width:min(132ch,92vw)}}
+@media (min-width:1800px){.paper-body{max-width:152ch}}
+.paper-body > .toc{margin:0;max-width:none !important;position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;align-self:start}
+.paper-body > article{margin:0;max-width:none;padding:0}
+@media (max-width:900px){.paper-body{grid-template-columns:minmax(0,1fr);gap:16px;padding:0 20px}.paper-body > .toc{position:static;max-height:none;overflow:visible}}
+</style>
+</head>
+<body data-screen-label="gm / paper">
+<header class="app-topbar gm-topbar">
+  <div class="gm-brand"><span>247420</span><span class="slash"> / </span><span class="leaf">gm</span></div>
+  <nav>
+    <a href="./index.html">home</a>
+    <a href="./paper.html">paper</a>
+    <details class="gm-dd"><summary>docs</summary><div class="gm-dd-menu">
+      <a href="./crates.html">crates</a>
+      <a href="./skills.html">skills</a>
+      <a href="./distribution.html">distribution</a>
+    </div></details>
+    <details class="gm-dd"><summary>more</summary><div class="gm-dd-menu">
+      <a href="./made-with.html">showcase</a>
+      <a href="./stats.html">stats</a>
+      <a href="https://247420.xyz">247420</a>
+      <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">GitHub</a>
+    </div></details>
+  </nav>
+</header>
+
+<div class="title-block">
+  <h1>The Complete Discipline: Lifecycle Control,<br>Governance, and Operational Hard Rules<br>for LLM Coding Agents</h1>
+  <div class="author">AnEntrypoint - gm (glootius maximus)</div>
+  <div class="date">June 2026 - the complete discipline, in one document, oriented end to end at agentic signal-to-noise</div>
+</div>
+
+<div class="abstract-block">
+  <div class="abstract-title">Abstract</div>
+  <div class="abstract-text">
+    LLM coding agents exhibit failure modes invariant under self-regulation: assumption propagation, state drift, memory decay, premature closure, fabricated output indistinguishable in form from witnessed output. Model as channel noise between request and delivered artifact; the discipline's objective functional is signal-to-noise ratio (SNR), the fraction of emitted tokens/actions constituting monotone progress toward the specification versus stochastic drift. gm (glootius maximus) is 14000+ supervised-modification hours gradient-ascending that objective; token austerity is the same objective under a cost prior, since unwitnessed narration is pure noise term. Every section below is a denoising operator over one noise class. Covered: the phase-gated FSM (PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE) with conjunctive forward guards and unconditional backward transitions on novel-unknown detection; the named-mutable/witnessed-execution type-state discipline; in-phase search and code-structure invariants; a governance layer of route families, orthogonal state planes, and quality metrics; second-generation rules (Maximal Cover, bounded autonomy, the recall/memorize learning loop, the execution budget model); operational hard rules (Fix-on-Sight, Browser Witness, Nothing Fake, web-search-before-pause, ORIENT, single-integration-test); and a third generation fixing the dispatch boundary itself: the spool as sole execution ABI (eliminating encapsulation friction from prose/API-call surfaces), the mutables file as an externally-enforced UNKNOWN|WITNESSED lattice, discipline isolation via <code>@</code>-sigil namespacing, synchronous-under-wasm exec semantics, throw-not-mutate gate denials, CI-as-ground-truth-build, the residual-scan stop gate, and semantic dispatch fan-out (agent-as-LLM) replacing subagent indirection. Together: a closed behavioral envelope shipped as one wasm-backed skill on npm.
+  </div>
+</div>
+
+<div class="paper-body">
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#s1">Introduction</a></li>
+    <li><a href="#s2">The State Machine Model</a></li>
+    <li><a href="#s3">The Mutable Discipline</a></li>
+    <li><a href="#s4">Work Item Management: The PRD</a></li>
+    <li><a href="#s5">Cross-Session Memory Architecture</a></li>
+    <li><a href="#s6">Implementation: The gm Orchestrator</a></li>
+    <li><a href="#s7">Constraint Tiers</a></li>
+    <li><a href="#s8">Pre-Emit Verification Protocol</a></li>
+    <li><a href="#s9">In-Phase Quality: The Search and Code Discipline</a></li>
+    <li><a href="#s10">Structural Parallelism and Wave Execution</a></li>
+    <li><a href="#s11">Permanent Observability</a></li>
+    <li><a href="#s12">The Memorize Sub-Agent</a></li>
+    <li><a href="#s13">Governance Layer</a></li>
+    <li><a href="#s14">Quality Metrics</a></li>
+    <li><a href="#s15">Failure Taxonomy</a></li>
+    <li><a href="#s16">Remote Execution Boundary</a></li>
+    <li><a href="#s17">Maximal Cover</a></li>
+    <li><a href="#s18">Bounded Autonomy</a></li>
+    <li><a href="#s19">The Learning Loop</a></li>
+    <li><a href="#s20">Execution Budget Model</a></li>
+    <li><a href="#s21">ORIENT: Pre-Planning Recall Pack</a></li>
+    <li><a href="#s22">Fix on Sight</a></li>
+    <li><a href="#s23">Browser Witness</a></li>
+    <li><a href="#s24">Nothing Fake</a></li>
+    <li><a href="#s25">Web-Search Before Pause</a></li>
+    <li><a href="#s26">Single Integration Test Policy</a></li>
+    <li><a href="#s27">Sync-Before-Emit</a></li>
+    <li><a href="#s28">Auto-Recall on Prompt-Submit</a></li>
+    <li><a href="#s29">Implicit Skill Prose</a></li>
+    <li><a href="#s30">The Spool Dispatch Surface</a></li>
+    <li><a href="#s31">The Mutables File as Co-Equal Hook Gate</a></li>
+    <li><a href="#s32">Discipline Isolation via @sigil</a></li>
+    <li><a href="#s33">Synchronous-Under-Wasm Execution Contract</a></li>
+    <li><a href="#s34">Hook Denials Throw, Never Mutate</a></li>
+    <li><a href="#s35">CI Is the Build</a></li>
+    <li><a href="#s36">The Residual-Scan Stop Gate</a></li>
+    <li><a href="#s37">Meaning Through the Agent, Mechanics Through Code</a></li>
+    <li><a href="#s38">The Continuation Invariant: A Toolless Turn Is A Stop</a></li>
+    <li><a href="#s39">Spool Dispatch Replaces Platform Hooks</a></li>
+    <li><a href="#s40">The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer</a></li>
+    <li><a href="#s41">The WASM Migration</a></li>
+    <li><a href="#s42">The Rust Service Crates: exec, codeinsight, search</a></li>
+    <li><a href="#s43">Deviation Gates: Predictability Across LLMs</a></li>
+    <li><a href="#three-layer-filter">Three-Layer Admission Filter</a></li>
+    <li><a href="#code-invariants">Code Invariants</a></li>
+    <li><a href="#s44">Discussion</a></li>
+    <li><a href="#s45">Conclusion</a></li>
+    <li><a href="#refs">References</a></li>
+  </ol>
+</div>
+
+<article>
+
+<h2 id="s1">1. Introduction</h2>
+
+<p>LLM coding agents are capable but unevenly reliable. Operating a single-skill harness (<code>gm-skill</code>, npm-published, wasm-backed) across every Claude-style skill host surfaces three failure categories, each a distinct noise injection on the intent-to-artifact channel:</p>
+
+<ol>
+  <li><strong>Assumption propagation:</strong> unverified hypotheses treated as ground truth, cascading downstream on falsification. Type confusion between UNKNOWN and WITNESSED: identical surface form, no static discriminator.</li>
+  <li><strong>State amnesia:</strong> context-window compaction drops resolved subproblems from the live set; re-derivation is wasted channel capacity. A lossy compression with no error-correction code.</li>
+  <li><strong>Premature closure:</strong> non-monotonic termination, declaring a fixed point reached before the invariant holds. The highest-cost noise class: it self-reports as signal.</li>
+</ol>
+
+<p>Self-regulation cannot fix any of these: the same inference process that would detect the shortcut is the process producing it, so introspective correction is not a fixed point of the failure. Only external enforcement below the decision layer, spool-dispatch gates, marker-file barriers on disk, orchestrator-enforced FSM transitions, hard rules served fresh per call by the wasm <code>instruction</code> verb, is sound.<sup><a href="#r8">8</a>,<a href="#r9">9</a></sup> Empirical work converges on the same diagnosis: premature termination, assumption propagation, and over-helpful substitution dominate under unconstrained self-regulation; constrained pipelines Pareto-dominate free-form agents on real software-engineering benchmarks.<sup><a href="#r7">7</a>,<a href="#r3">3</a></sup></p>
+
+<p>Production reference for the gm discipline. Every section is a denoising operator targeting one of the three classes above, or a signal-preservation mechanism. Lifecycle: SS2-8. In-phase quality: 9-12. Governance: 13-16. Autonomy/scope: 17-20. Operational hard rules: 21-29. Dispatch-boundary invariants: 30-37.</p>
+
+<hr>
+
+<h2 id="s2">2. The State Machine Model</h2>
+
+<p>Suppresses the two loudest noise sources: action under UNKNOWN, and termination before the fixed point. Forward guards are conjunctive predicates over resolved facts only; backward transitions fire unconditionally on any novel-unknown detection, so no workaround is load-bearing across a phase boundary. Phase membership is a function of last-transition, never of narrated intent, an FSM has no side channel.</p>
+
+<pre class="mermaid">
+stateDiagram-v2
+  direction TB
+  [*] --> PLAN
+  PLAN --> EXECUTE: zero new unknowns last pass
+  EXECUTE --> EMIT: every mutable KNOWN
+  EMIT --> VERIFY: post-emit matches pre-emit
+  VERIFY --> COMPLETE: .prd empty AND git clean AND pushed
+  COMPLETE --> [*]: docs refreshed
+  EXECUTE --> PLAN: new unknown
+  EMIT --> PLAN: new unknown
+  VERIFY --> PLAN: new unknown
+  EMIT --> EXECUTE: logic wrong
+  VERIFY --> EMIT: broken output
+  VERIFY --> EXECUTE: logic wrong
+</pre>
+
+<div class="gm-callout"><span class="who">from the gm field guide</span>"Forward transitions are conjunctive ladders. Backward transitions are snakes. The board is rigged in favour of finishing, but only if you climb every rung."</div>
+
+<h3>2.1 Phases</h3>
+<p>Five phases, forward-only absent a guard failure. <strong>PLAN</strong>: fixed-point iteration over the unknown-set, exits at a pass yielding the empty delta. <strong>EXECUTE</strong>: resolves the mutable set via witnessed execution, exits at total lattice convergence (all mutables WITNESSED). <strong>EMIT</strong>: writes artifacts, exits on post-emit/pre-emit exact equivalence. <strong>VERIFY</strong>: exits on the conjunction [.prd empty, worktree clean, pushed to origin]; the triggered cascade build runs async post-session. <strong>COMPLETE</strong>: docs refresh, session closes.</p>
+
+<p>The agent dispatches <code>instruction</code> every turn; the wasm orchestrator (<code>rs-plugkit/src/orchestrator/</code>) returns each phase's body generated per-call from live FSM state, PRD, mutables, and recall pack, an idempotent pure function of current state, so prose cannot drift from ground truth because ground truth is its only input. No per-phase SKILL.md files remain; the shipped skill is one terse body naming the agent as the state machine itself, instructing dispatch of <code>instruction</code> every turn and execution of the verb the response names. Plugkit never self-advances; <code>transition</code> is agent-dispatched only.</p>
+
+<h3>2.2 Forward Transitions (Ladders)</h3>
+<p>Exit conditions are conjunctive predicates, every conjunct must hold simultaneously, ruling out the partial-advancement state where code exists ahead of its resolving witness.</p>
+
+<h3>2.3 Backward Transitions (Snakes)</h3>
+<p>Any novel unknown at any phase forces an unconditional backward transition (no accumulator, no override):</p>
+<ul>
+  <li>EXECUTE -&gt; PLAN: new unknown, or mutable non-convergent after 2 passes</li>
+  <li>EMIT -&gt; EXECUTE: logic defect in a WITNESSED mutable; EMIT -&gt; PLAN: genuinely new unknown</li>
+  <li>VERIFY -&gt; EMIT: output mismatch; VERIFY -&gt; EXECUTE: logic defect; VERIFY -&gt; PLAN: requirement defect</li>
+</ul>
+
+<p>Root-cause regression is mandatory over local patching: unexpected EMIT-time behavior forces a fix at the source of the invariant violation, never an accreted workaround.</p>
+
+<blockquote><strong>Observation (Termination).</strong> Finite discoverable-unknown set + monotone decrease per planning pass implies termination. Observed convergence: 2-4 passes.</blockquote>
+
+<hr>
+
+<h2 id="s3">3. The Mutable Discipline</h2>
+
+<p>An unverified assumption is a type-confusion attack on the discipline: UNKNOWN and WITNESSED are structurally indistinguishable at the point of use until a downstream fault discriminates them. The mutable discipline is type-state enforcement over a two-element lattice, {UNKNOWN, WITNESSED}, with UNKNOWN bottom and WITNESSED reachable only through one transition rule: assignment by a real side-effect's output. No coercion, implicit or explicit, promotes UNKNOWN to WITNESSED absent that witness.</p>
+
+<h3>3.1 Named Unknowns</h3>
+<p>A <em>named mutable</em> reifies every free variable the decision procedure or the code depends on, named before use: identifier, expected value, current value (init UNKNOWN), resolution method. Progress past an open (UNKNOWN-state) mutable is statically disallowed, not merely discouraged.</p>
+
+<p>Reification makes latent uncertainty an addressable term. Plausible-but-unwitnessed code is the dominant generator of assumption-propagation failure.</p>
+
+<h3>3.2 Resolution by Witnessed Execution</h3>
+<p>The sole WITNESSED-transition rule: value assignment from the observed output of real execution against real services and real data. Inadmissible as witness, each a form of unsound inference:</p>
+<ul>
+  <li>Documentation (non-authoritative, may be stale relative to HEAD)</li>
+  <li>A priori reasoning about behavior (unsound: model of the system, not the system)</li>
+  <li>Static source inspection (decidable properties only; misses runtime-only failure modes)</li>
+</ul>
+
+<p>Witnessed output is the only admissible ground truth; absent it, state stays bottom regardless of prior plausibility. Converges with the code-hallucination literature: reasoning-only verification systematically misses runtime-only failure modes; iterative grounding against live APIs is the empirically validated fabrication-reduction mechanism.<sup><a href="#r10">10</a>,<a href="#r11">11</a></sup></p>
+
+<h3>3.3 The Two-Pass Rule</h3>
+<p>Non-convergence after two resolution passes reclassifies the mutable as a fresh unknown and forces the PLAN snake, a termination guard against a fixed-cost infinite loop over one failing strategy.</p>
+
+<h3>3.4 Surprise Absorption Prohibition</h3>
+<p>No silent absorption of expected-vs-actual divergence. Every discrepancy instantiates a new named mutable and forces PLAN regression, precluding workaround-debt accumulation.</p>
+
+<hr>
+
+<h2 id="s4">4. Work Item Management: The PRD</h2>
+
+<p>Scope drift, shipping a convenient slice and framing the remainder as follow-up, is unrecoverable signal loss. The PRD is durable on-disk state making the full request set a checkable invariant; a pending item is message-in-flight, not a dropped one.</p>
+
+<h3>4.1 Structure</h3>
+<p><code>.gm/prd.yml</code>: id, imperative subject, status (pending -&gt; in_progress -&gt; completed), acceptance criteria, edge cases, bidirectional dependency edges, effort estimate, route-family tag, load score lambda in [0,1]. Mandatory beyond single-line single-file edits.</p>
+
+<p><code>verification_budget = lambda x (1 - tier_confidence)</code>; lambda &gt; 0.75 requires pre-EMIT witness.</p>
+
+<p>Under independent study: a SANER 2026 registered report on spec-preceding-code error reduction, and Agentless's constrained localize/repair/validate decomposition beating free-form agentic loops on SWE-bench at lower cost.<sup><a href="#r16">16</a>,<a href="#r7">7</a></sup></p>
+
+<h3>4.2 Wave-Based Parallel Execution</h3>
+<p>Dependency DAG drives topological wave scheduling: each wave batches every dependency-satisfied pending item as concurrent spool dispatches in one message, fan-out width bounded by spool concurrency cap not agent count. Platform Task/Explore subagents forbidden, isolated-subagent prose return strands the chain (section 38); parallelism is exclusively N concurrent orchestrator-serviced spool dispatches.</p>
+
+<h3>4.3 Stop-Checkpoint Enforcement</h3>
+<p>Marker-file gate at the stop checkpoint: non-empty <code>.gm/prd.yml</code>, dirty worktree, or unpushed HEAD each independently deny stop. Gate reads disk state, no hook-event dependency.</p>
+
+<h3>4.4 Cross-Session Continuity</h3>
+<p>PRD persists across sessions as the durable contract; discovered prior-session items are current-session obligations regardless of current-turn mention. Sessions are scheduling quanta; the PRD is invariant across them.</p>
+
+<hr>
+
+<h2 id="s5">5. Cross-Session Memory Architecture</h2>
+
+<p>A context window is a lossy, unbuffered channel: FIFO eviction under fill pressure drops earlier signal, and re-derivation of an evicted subproblem retransmits an answer already sent. Persistent memory is the error-correcting code across the session boundary; the exclusion and verification rules below are the parity check preventing stale entries from re-entering as false signal.</p>
+
+<h3>5.1 Memory Types</h3>
+<p>Four semantic types partition the vector store:</p>
+<dl>
+  <dt>user:</dt><dd>profile, role, expertise, preference</dd>
+  <dt>feedback:</dt><dd>behavioral correction/confirmation, the persistent learning channel</dd>
+  <dt>project:</dt><dd>work context, deadlines, decisions</dd>
+  <dt>reference:</dt><dd>external-system pointers</dd>
+</dl>
+
+<p>Memory is project-resident, never platform-resident scratch state, committed to the repository so it survives across the machine/session/CI boundary. No raw-text search index exists: <code>memorize-fire</code> embeds each entry through an in-wasm bge-small model and persists content plus its 384-dim embedding as two co-located files, <code>.gm/disciplines/&lt;ns&gt;/&lt;key&gt;.json</code> and <code>.gm/disciplines/&lt;ns&gt;-vec/&lt;key&gt;.json</code>; retrieval is embeddings-only, cosine similarity against every candidate composed with a recency decay (30-day half-life, floored), then Jaccard dedup, no inverted text index anywhere in the path. <code>recall</code>/<code>auto_recall</code> re-score on every dispatch rather than loading a session-start snapshot. Parallels recent agentic-memory architectures: A-MEM's Zettelkasten-style embedding-linked notes, Mem0's consolidation-plus-salience production store, and MemoryAgentBench's finding that even strong RAG-augmented agents trail humans on retrieval accuracy, test-time learning, and selective forgetting, the empirical case for per-turn auto-recall over session-scoped retrieval.<sup><a href="#r13">13</a>,<a href="#r14">14</a>,<a href="#r15">15</a></sup></p>
+
+<h3>5.2 Exclusion Principle</h3>
+<p>Anything derivable from live project state (code patterns, architecture, paths, git history, prior debugging) is excluded from the store; storing it creates a second, driftable source of truth. Acting on a stale cached fact is among the highest-cost failure classes.</p>
+
+<h3>5.3 Verification Before Recall</h3>
+<p>A memory naming a specific file/function/flag is re-verified for continued existence before being acted on: a memory is a claim indexed by write-time, not a claim about present state.</p>
+
+<h3>5.4 Feedback Loop</h3>
+<p>The feedback type is a persistent behavioral-correction channel: corrections and confirmed non-obvious approaches are recorded as {rule, reason, context}, closing the repeated-cross-session-mistake ("Groundhog Day") failure mode.</p>
+
+<hr>
+
+<h2 id="s6">6. Implementation: The gm Orchestrator</h2>
+
+<p>Enforcement resident in the agent's own context is a filter the same process can edit, the noise source gains write access to its own denoising operator. The orchestrator relocates every gate below the decision layer, onto disk and into the wasm verb surface: enforcement as external ABI, not internal discipline the model must choose to honor.</p>
+
+<h3>6.1 Single-Skill Architecture</h3>
+<p>One published skill, <code>gm-skill</code>: a single terse hard-rule-elicitation body, zero per-phase content, instructing dispatch of <code>instruction</code> every turn; the orchestrator generates phase-imperative content per call. Superseded: the earlier fifteen-skill chain (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing), now folded entirely into the <code>instruction</code> response and the verb-dispatch surface. This is the encapsulation-friction fix at the skill layer: one thin invariant elicitor plus a data-driven response body, not fifteen coupled prose surfaces to keep synchronized.</p>
+
+<h3>6.2 Spool Dispatch and Marker Gates</h3>
+<p>State-machine enforcement is marker-file driven, not event-driven: the earlier host-process hook callback pump (session-start, prompt-submit, pre-tool-use, stop) is retired in favor of the gate running natively inside <code>plugkit.wasm</code> (<code>rs-plugkit</code>'s <code>gates.rs</code> plus its <code>hook_pre_tool_use</code>/<code>hook_stop</code> exports), reading disk state before any tool executes. The wasm host calls the gate; denial surfaces its reason text to the model. Marker files under <code>.gm/</code> constitute the discipline's persistent automaton state:</p>
+<dl>
+  <dt><code>.gm/prd.yml</code></dt><dd>Existence triggers the <code>needs-gm</code> gate: until the gm skill has been invoked this turn, write/edit/git operations are blocked.</dd>
+  <dt><code>.gm/mutables.yml</code></dt><dd>Any row with <code>status: unknown</code> blocks Write, Edit, NotebookEdit, <code>git commit</code>, <code>git push</code>, and the stop checkpoint.</dd>
+  <dt><code>.gm/needs-gm</code></dt><dd>Written by bootstrap; signals the dispatcher that the agent must invoke the gm skill this turn before tool use is permitted.</dd>
+  <dt><code>.gm/gm-fired-&lt;sessionId&gt;</code></dt><dd>Written when the agent invokes <code>Skill(skill="gm")</code>, clears the needs-gm gate. Cleared again at turn start.</dd>
+  <dt><code>.gm/residual-check-fired</code></dt><dd>One-shot marker that ensures the residual-scan challenge fires exactly once per stop window; clears at the next prompt-submit.</dd>
+</dl>
+
+<p>Session-start bootstrap (<code>lib/skill-bootstrap.js</code>) provisions the wasm artifact, instantiates it, writes <code>.gm/exec-spool/.bootstrap-status.json</code>, lays the markers. <code>auto-recall</code> fires at every turn entry: derives a 2-6 word query from the prompt, injects "## Recall for this prompt" into the next <code>instruction</code> response.</p>
+
+<p>Inference cannot route around enforcement: markers are on-disk facts, the dispatcher reads them independent of context state, the gate sits below the tool surface, structurally unreachable from the decision layer. Strictly more robust than the retired hook-event pump: no event to miss, no callback to forget, no host-specific lifecycle, only files and one read.</p>
+
+<h3>6.3 Unified Code Execution</h3>
+<p>All execution routes through <code>exec_js</code>: agent writes <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, the wasm watcher reads it, host runs <code>child_process.spawnSync</code>, agent reads back one JSON response at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> or <code>out/&lt;N&gt;.json</code> carrying <code>{ok, stdout, stderr, exit_code, timed_out, duration_ms}</code>. Language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>, plus <code>browser</code>.</p>
+
+<h3>6.4 Single-Package Deployment</h3>
+<p>Ships as one npm package, <code>gm-skill</code>, loadable by any Claude-style skill host; <code>gm-plugkit</code> wraps the wasm artifact and bootstrap shim as its dependency. A cascade pipeline over three wasm-only Rust repos (<code>rs-plugkit</code>, which folds in the retired <code>rs-exec</code> host-helper and <code>rs-learn</code> memory surfaces natively, plus <code>rs-search</code> and <code>rs-codeinsight</code>) plus <code>plugkit-bin</code> Releases auto-publishes on any push, zero manual steps. Supersedes a fifteen-repo per-platform fan-out (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), archived. One install replaces fifteen.</p>
+
+<hr>
+
+<h2 id="s7">7. Constraint Tiers</h2>
+
+<p>Tiers rank constraint violation by admitted-noise magnitude: Tier 0 breach is channel corruption, Tier 3 breach is a density loss. Four tiers, decreasing severity:</p>
+<dl>
+  <dt>Tier 0 (Absolute):</dt><dd><code>no_crash</code>, <code>no_exit</code>, <code>ground_truth_only</code>, <code>real_execution</code>, enforced by the spool-dispatch gate, cannot be overridden</dd>
+  <dt>Tier 1 (Quality):</dt><dd><code>max_file_lines=200</code>, <code>hot_reloadable</code>, <code>checkpoint_state</code></dd>
+  <dt>Tier 2 (Modularity):</dt><dd><code>no_duplication</code>, <code>no_hardcoded_values</code></dd>
+  <dt>Tier 3 (Style):</dt><dd><code>no_comments</code>, <code>convention_over_code</code></dd>
+</dl>
+
+<hr>
+
+<h2 id="s8">8. Pre-Emit Verification Protocol</h2>
+
+<p>An in-memory pass that fails from disk is fabrication with a green check attached, the highest-cost noise class. Two-stage verification closes the gap between in-memory state and the persisted artifact. <strong>Pre-emit:</strong> import target module, run proposed logic in-memory against real and error inputs, record expected outputs, verify all gate conjuncts hold, then write.</p>
+
+<p><strong>Post-emit:</strong> re-import from disk, re-run identical inputs, compare exactly. Known variance -&gt; fix-and-reverify; unknown variance -&gt; PLAN snake. Catches what test-after-write misses: serialization bugs, import-resolution skew, filesystem race conditions.</p>
+
+<hr>
+
+<h2 id="s9">9. In-Phase Quality: The Search and Code Discipline</h2>
+
+<p>Two paths to the same correct answer can carry wildly different signal density: blind grep re-derives what the project's index already encodes, a single grounded hit retrieves it. This discipline keeps search grounded and code structural, minimizing wasted-motion cost on the path, not just at the answer.</p>
+
+<h3>9.1 Codebase Search Protocol</h3>
+<p>Absence is a claim requiring a minimum search campaign before assertion:</p>
+<ul>
+  <li>2-word initial query, one-word delta per pass (hill-climb over query space)</li>
+  <li>4-attempt floor before absence is admissible</li>
+  <li>Exclusively <code>codesearch</code>; the spool-dispatch gate denies direct Glob/Grep/Find during agent phases, all reconnaissance routes through one indexed surface</li>
+</ul>
+<p><code>codesearch</code> is embeddings-only retrieval with no raw-text index backing it -- the corpus is a vector space, not a grep target, so recall is semantic-similarity-ranked rather than substring-matched. It fuses BM25 lexical scoring with vector cosine similarity via Reciprocal Rank Fusion (rs-search, section 42), and boosts by git-commit relevance: files touched in commits topically near the query rank higher, temporal-proximity-weighted retrieval on top of semantic similarity. Both <code>codesearch</code> and <code>recall</code> return dual full-result sets, complete matches, not truncated snippets, so a hit is immediately actionable without a second fetch round-trip; every output is token-optimized for the calling context, no unbounded dump. A found concern is consolidated into, never duplicated beside, its existing implementation, a second abstraction over one already indexed is competing-implementation debt at construction time.</p>
+
+<h3>9.2 Minimal-Code Resolution Order</h3>
+<p>When a problem can be solved multiple ways, the agent follows a four-step resolution order and stops at the first that applies:</p>
+<ol>
+  <li><strong>Native first:</strong> does the language or runtime already provide this?</li>
+  <li><strong>Library second:</strong> does an existing dependency solve this pattern?</li>
+  <li><strong>Structure third:</strong> can the problem be encoded as data (map, dispatch table, pipeline) so the structure enforces correctness?</li>
+  <li><strong>Write last:</strong> only author new logic when the above three are exhausted.</li>
+</ol>
+<p>Dispatch tables over switch chains, pipelines over loop-with-accumulator, maps over if/else forests: correctness properties, not style, structure eliminates the invalid-state class that manual consistency-maintenance otherwise admits.</p>
+
+<hr>
+
+<h2 id="s10">10. Structural Parallelism and Wave Execution</h2>
+
+<p>Serializing independent work is dead-air channel time. Wave discipline fills it: batch every dependency-satisfied pending item as one message of concurrent spool dispatches, collect, evaluate next wave. Runs to PRD-covering-family completion, never stops mid-wave to poll for direction.</p>
+
+<p>Sole serialization constraint: <code>browser</code> (shared Chromium, no concurrent sessions). Everything else is wave-eligible.</p>
+
+<hr>
+
+<h2 id="s11">11. Permanent Observability</h2>
+
+<p>Unmeasured noise is unreducible noise. Observability is the instrument making the channel legible: every subsystem queryable without restart, drift read off structured state, never inferred from rendered output.</p>
+
+<h3>11.1 Mandatory Enumeration</h3>
+<p>Every planning pass enumerates subsystems lacking a queryable inspection endpoint, one PRD item per gap. PLAN exits at zero-gap pass.</p>
+
+<h3>11.2 Server-Side</h3>
+<p>Every subsystem exposes <code>/debug/&lt;subsystem&gt;</code> emitting structured <code>{subsystem, severity, ts}</code> JSONL. <code>console.log</code> is not observability. Instrumentation wraps the dispatch boundary once, never per-handler.</p>
+
+<h3>11.3 Client-Side</h3>
+<p><code>window.__debug</code>: live structured registry, mount-time register / unmount-time deregister of state, active requests, sockets. Addressable by key, no restart to query, no parallel observability surface, asserted via <code>test.js</code>.</p>
+
+<h3>11.4 Stack Observability</h3>
+<p>Structured JSONL to <code>~/.claude/gm-log/&lt;YYYY-MM-DD&gt;/&lt;subsystem&gt;.jsonl</code>; watcher stdout/stderr (plus wasm cdylib <code>println!</code>/<code>eprintln!</code>) to <code>.gm/exec-spool/.watcher.log</code>, 10MB rotation. Spool-root diagnostics: <code>.status.json</code> (stale mtime = dead watcher), <code>.last-session-start.json</code>, <code>.bootstrap-error.json</code> (absent = healthy). <code>health</code> verb: one-shot full-component probe. Diagnosing without reading the log or dispatching <code>health</code> first is closure-by-guess.</p>
+
+<hr>
+
+<h2 id="s12">12. The Memorize Sub-Agent</h2>
+
+<p>Signal amortized once should never be re-paid. Memorize is the write half of the loop, converting a resolved WITNESSED fact into a durable store entry rather than letting it decay back to UNKNOWN at session boundary. Every UNKNOWN-&gt;WITNESSED transition fires a background dispatch same-turn:</p>
+<pre><code>write .gm/exec-spool/in/memorize-fire/&lt;N&gt;.txt
+  body: "&lt;fact&gt;"
+read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
+
+<p>N resolved facts in one turn spawn N parallel dispatches in one message, never batched (co-batched facts collapse to one classification, losing per-fact semantic separation). End-of-turn self-check scans for un-memorized resolutions. Content-hash keying makes the write idempotent (f(f(x))=f(x)): a re-fired identical fact dedups against its existing key rather than accreting a duplicate, convergent under at-least-once dispatch semantics. <code>memorize-fire</code> is the sole writer of <code>AGENTS.md</code>/<code>CLAUDE.md</code>; agent inline edits to those files are prohibited, they are the staging ground, the store is the retrieval surface, and every load-bearing rule is dual-written: land inline in AGENTS.md for the compaction-surviving copy, fire the same text to the default-namespace store so future-turn <code>recall</code>/<code>auto_recall</code> surfaces it. The flow is bidirectional and back-pressured: each memorize session also drains a few existing detail-heavy AGENTS.md entries to the store, firing the substance and compressing the file to a one-line pointer, so the staging ground deflates as fast as the store accretes rather than growing unbounded. The classifier rejects changelog-shaped (dated, past-tense) facts from AGENTS.md ingestion; rs-learn's default namespace still accepts them directly.</p>
+
+<p>Recall and memorize are the two dispatches of one closed learning loop; either alone is an open loop with unbounded rediscovery cost.</p>
+
+<hr>
+
+<h2 id="s13">13. Governance Layer</h2>
+
+<p>Governance operationalizes the objective: route families, state planes, refused collapses turn SNR from an aspiration into decidable predicates a transition passes or fails. What the lifecycle suppresses by construction, governance verifies by instrument.</p>
+
+<h3>13.1 Seven Route Families</h3>
+<p>Every PRD item tags one of seven route families gating which quality constraints apply:</p>
+<dl>
+  <dt>grounding:</dt><dd>Constrains the agent's belief formation, what counts as evidence, what counts as knowledge, when to regress to planning. Governs all information-gathering operations.</dd>
+  <dt>reasoning:</dt><dd>Constrains inference chains. Requires each reasoning step to be witnessable, prohibits conclusions that outrun their premises, enforces the two-pass rule and surprise absorption prohibition.</dd>
+  <dt>state:</dt><dd>Governs mutable state transitions. Every mutation must be visible in the PRD; state-bearing operations require pre- and post-conditions. The PRD is the authoritative state record.</dd>
+  <dt>execution:</dt><dd>Constrains code execution: real services only, witnessed output, exec_js dispatch, timeout budgets. No stubs, no mocks, no hardcoded responses.</dd>
+  <dt>observability:</dt><dd>Every subsystem must be inspectable without restart. Covers /debug endpoints, window.__debug, structured logging, the gm-log JSONL stack.</dd>
+  <dt>boundary:</dt><dd>Governs the agent's interaction surface with external systems: git, CI, remote APIs, the user. The remote-execution boundary (section 16) is the primary concern of this family.</dd>
+  <dt>representation:</dt><dd>Governs how information is encoded and communicated: skill prose must be implicit not explicit, memory must use the four semantic types, PRD items must use the mandated schema.</dd>
+</dl>
+
+<h3>13.2 Four State Planes</h3>
+<p>Agent state is tracked across four orthogonal planes that must be consistent at every phase transition. Each plane has a concrete detection test:</p>
+<dl>
+  <dt>epistemic:</dt><dd>What the agent knows, what it is uncertain about, what mutables remain unresolved. <em>Detection test:</em> count unresolved mutables (epsilon); PLAN exits only at epsilon = 0. Any named UNKNOWN that has not been witnessed is an open mutable.</dd>
+  <dt>operational:</dt><dd>What the agent has done, what artifacts exist on disk, what code has been executed. <em>Detection test:</em> <code>git status</code> (uncommitted changes = inconsistent), acceptance criteria assertions (failing = inconsistent), <code>exec_js</code> return value witnessed (not just theorized).</dd>
+  <dt>relational:</dt><dd>What the agent has communicated to the user, what commitments are outstanding. <em>Detection test:</em> any open "I will" or "next I'll" statement in the agent's prior response that has no corresponding completed action in the operational plane is a relational inconsistency.</dd>
+  <dt>temporal:</dt><dd>What happened in earlier sessions, what the PRD preserves across context resets. <em>Detection test:</em> <code>.gm/prd.yml</code> exists and has pending items = temporal inconsistency with COMPLETE; <code>recall</code> hit on a prior design decision that differs from the current plan = weak temporal inconsistency requiring re-witness.</dd>
+</dl>
+
+<p>A phase transition is legitimate only when all four planes are consistent with the transition's exit condition. An agent that advances EXECUTE-&gt;EMIT while the epistemic plane still contains unresolved mutables is in an inconsistent state regardless of what the operational plane shows.</p>
+
+<h3>13.3 Five Refused Collapses</h3>
+<p>Five patterns are categorically refused because they collapse the discipline without appearing to:</p>
+<ol>
+  <li><strong>Narrating as executing:</strong> describing what code would do rather than running it</li>
+  <li><strong>Assumption as resolution:</strong> treating a plausible value as witnessed</li>
+  <li><strong>Partial closure:</strong> declaring a PRD item done while its acceptance criteria are unmet</li>
+  <li><strong>Deferred observability:</strong> shipping code without an inspection endpoint and noting it as a future task</li>
+  <li><strong>Asking-as-progress:</strong> routing through the user a question the agent could answer itself via tools</li>
+</ol>
+
+<hr>
+
+<h2 id="s14">14. Quality Metrics</h2>
+
+<p>Four metrics govern quality gate decisions at phase transitions:</p>
+<dl>
+  <dt>DeltaS (state delta):</dt><dd>The number of state-plane inconsistencies introduced by a proposed change. A change with DeltaS &gt; 0 must be rejected or the inconsistency must be resolved before advancing.</dd>
+  <dt>lambda (load score):</dt><dd>Consequence weight of a PRD item (0.0-1.0). Items with lambda &gt; 0.75 require witnessed verification before EMIT. Verification budget = lambda x (1 - tier_confidence), where <em>tier_confidence</em> is the fraction of acceptance criteria for this item that have already been witnessed (0.0 = none witnessed, 1.0 = all witnessed). Higher prior witnessing shrinks the remaining verification budget proportionally.</dd>
+  <dt>epsilon (epistemic gap):</dt><dd>Count of unresolved mutables in the epistemic plane. PLAN exits only at epsilon = 0 on the final pass.</dd>
+  <dt>Coverage (&gt;=0.70):</dt><dd>The proportion of load-bearing behaviors witnessed by <code>test.js</code>. The test file enforces a 200-line budget; coverage &gt;=0.70 at that budget is the acceptance criterion. Behaviors not witnessable within the budget are not load-bearing by definition.</dd>
+</dl>
+
+<hr>
+
+<h2 id="s15">15. Failure Taxonomy</h2>
+
+<p>The noise catalogue: sixteen failure modes across four categories, each a specific error-injection or signal-drop mechanism, each mapped to a suppressing rule elsewhere in the paper. Every PLAN pass cross-references this taxonomy against each PRD item:</p>
+
+<h3>Grounding Failures</h3>
+<ol>
+  <li><strong>Assumption propagation:</strong> unverified hypothesis treated as ground truth</li>
+  <li><strong>Documentation trust:</strong> stale docs used as resolution evidence</li>
+  <li><strong>Static analysis substitution:</strong> code reading used instead of execution</li>
+  <li><strong>Memory staleness:</strong> outdated memory acted on without verification</li>
+</ol>
+
+<h3>Execution Failures</h3>
+<ol start="5">
+  <li><strong>Stub shipping:</strong> placeholder code presented as real implementation</li>
+  <li><strong>Mock leakage:</strong> test fixtures surviving into production paths</li>
+  <li><strong>Timeout blindness:</strong> execution result truncated without detection</li>
+  <li><strong>Orphan accumulation:</strong> background processes not cleaned up on restart</li>
+</ol>
+
+<h3>State Failures</h3>
+<ol start="9">
+  <li><strong>Partial closure:</strong> PRD item marked complete with unmet acceptance criteria</li>
+  <li><strong>Epistemic advance:</strong> phase transition attempted with unresolved mutables</li>
+  <li><strong>Cross-session amnesia:</strong> PRD items from prior sessions not discovered and executed</li>
+  <li><strong>Dirty exit:</strong> session closed with uncommitted or unpushed changes</li>
+</ol>
+
+<h3>Boundary Failures</h3>
+<ol start="13">
+  <li><strong>CI blindness:</strong> COMPLETE declared before CI result is known</li>
+  <li><strong>Remote-execution misread:</strong> git push treated as local execution, CI result not watched</li>
+  <li><strong>Forced pause:</strong> pause issued for a question the web could have answered</li>
+  <li><strong>Asking-as-progress:</strong> user asked a question answerable via tools</li>
+</ol>
+
+<hr>
+
+<h2 id="s16">16. Remote Execution Boundary</h2>
+
+<h3>16.1 git push as Remote Execution</h3>
+<p>A git push is not local; it is a remote-execution event dispatching a build/test/deploy pipeline on external infrastructure. The CI result is the canonical verdict on correctness, and declaring COMPLETE before it is premature closure.</p>
+
+<h3>16.2 CI Watch Protocol</h3>
+<p>After every push, the agent dispatches <code>gh run watch</code> through the spool, polls to completion, and inspects the result. Green CI is a precondition for VERIFY-&gt;COMPLETE; the stop-checkpoint gate refuses session close while the most recent push has no recorded green run. The agent cannot advance past VERIFY while CI is pending or red.</p>
+
+<h3>16.3 Parse-Time CI Failure Shapes</h3>
+<p>Five CI failure shapes are catalogued for rapid triage:</p>
+<ol>
+  <li><strong>Import error:</strong> module not found, check package.json or Cargo.toml, not the source file</li>
+  <li><strong>Type error:</strong> schema mismatch, regression to PLAN to re-witness the interface</li>
+  <li><strong>Test failure:</strong> assertion mismatch, root cause first, never silence the assertion</li>
+  <li><strong>Lint failure:</strong> style constraint violation, fix in-band, never <code>// eslint-disable</code></li>
+  <li><strong>Build timeout:</strong> infrastructure issue, re-trigger once; if repeated, open a PRD item with <code>blockedBy: external</code></li>
+</ol>
+
+<hr>
+
+<h2 id="s17">17. Maximal Cover</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Maximal Cover <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN]</span></div>
+  <p>When scope exceeds reach, construct a maximal cover, not a refusal, not a single slice with the rest deferred. Distributed refusal is the same failure dressed as triage. The default shape is the widest, deepest, most destructive reading the request admits from this session; the narrower shape is the exception and carries the burden of proof.</p>
+  <p>Required move: construct a covering family of every bounded subset of the request witnessable from this session. Write the family into the PRD with the dependency graph explicit. Execute every member. Build cost, CI duration, cross-repo reach, and breaking-change weight are inputs to executing the cover, not arguments for shrinking it.</p>
+  <p>Residuals the agent judges within the spirit of the original ask AND completable from this session are self-authorized. Expand the PRD with them and execute, do not stop to ask. Only residuals genuinely outside the original ask, or genuinely unreachable from this session, are name-and-stop.</p>
+  <p>When expanding under self-authorization, the agent declares its judgment in-response ("treating X as in-scope because Y") so the user can correct mid-chain. Silent expansion without the declaration is the failure mode this rule guards against.</p>
+  <p>Enforcement: committed work + named out-of-spirit residuals must equal the witnessable closure of the request. Gap = cover not maximal -&gt; re-enter planning.</p>
+</div>
+
+<p>A dropped requirement is the quietest noise class: no error, no red test, a silent divergence between delivered and specified. Maximal Cover hunts it. Scope-exceeds-reach is a planning-input, not a stop condition: the covering family (over witnessable subsets of the request, from this session) is itself the plan, executed to completion. Single-slice-and-stop is refusal wearing triage's clothes, both leave witnessable work unexecuted, both are non-monotonic termination. Controlled experiments quantify the structural bias the rule corrects: systematic section omission, length undershoot, minimum-viable substitution for full spec, laziness as a measured regularity, not an anecdote.<sup><a href="#r17">17</a></sup></p>
+
+<hr>
+
+<h2 id="s18">18. Bounded Autonomy</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: User Request = Authorization <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE]</span></div>
+  <p>The user's first message asking for X is the approval to do X. The PRD records the authorization; it is not a second permission gate. Re-asking "want me to do X?", "should I proceed?", "which shape of X?" after the user said "do X" is forced closure dressed as deference, the user already authorized the work and waits while the agent stalls.</p>
+  <p>Surfacing tradeoffs is allowed inside the same chain (one sentence: "going with shape A because Y") so the user can interrupt, never as a stop-and-wait. Multi-repo scope, build cost, CI duration, and binary-size impact are never grounds to re-confirm.</p>
+  <p>A written PRD is the user's authorization. Once it exists, EXECUTE owns the work to COMPLETE. Every doubt arising during execution is resolved by witnessed probe, by recall, or by re-reading the PRD, never by asking the user.</p>
+  <p>Asking is last-resort: destructive-irreversible AND not covered by the PRD, OR user intent irrecoverable from PRD/memory/code/web. Channel: <code>pause</code> (renames <code>prd.yml</code> -&gt; <code>prd.paused.yml</code>; question in header). In-conversation asking is last-resort beneath last-resort. The disposition: a question forming in-response is a signal to expand scope and dispatch a <code>WebSearch</code>/<code>WebFetch</code> pack first; the question survives only if both close empty. Most agent-side questions are scope-narrowing dressed as deference, and the answer the user would give matches what one web call would produce.</p>
+  <p><code>pause</code> interaction with the stop checkpoint: when the agent issues <code>pause</code>, the PRD is renamed to <code>prd.paused.yml</code>. The stop gate's PRD-completeness check reads <code>.gm/prd.yml</code> and finds no live PRD, so the session may close normally. On the next session-start bootstrap, <code>skill-bootstrap.js</code> detects <code>prd.paused.yml</code> without a live <code>prd.yml</code> and renames it back, resuming where the agent paused. There is no hook-timeout race because the rename is a synchronous file operation completed before stop is attempted.</p>
+</div>
+
+<p>A self-answerable question routed to the user is noise transferred onto the higher-latency channel participant, and the round trip it costs is signal the session never spends on the work. Every ask costs >=1 round trip; a tool-answerable question is agent work externalized as user labor. The accumulated asking tax (compounding per-question context-reconstruction cost) is a quality defect on par with a broken test.</p>
+
+<hr>
+
+<h2 id="s19">19. The Learning Loop</h2>
+
+<p>The learning loop is the sole mechanism raising SNR monotonically over calendar time rather than holding it constant per-session: every recalled-not-rederived fact is a discovery cost paid exactly once, amortized across all future sessions. Requires both operations firing every cycle:</p>
+
+<h3>19.1 Recall (Read)</h3>
+<p>Precedes any fresh-execution resolution attempt:</p>
+<pre><code>recall
+&lt;2-6 word query&gt;</code></pre>
+<p>Triggers: familiar-feeling unknown | subtask on a known project | about-to-ask something likely already discussed | about-to-design where a prior decision likely exists. Hits are <code>weak_prior</code>, non-authoritative until re-witnessed. Cost: ~200 tokens, ~5ms.</p>
+
+<h3>19.2 Memorize (Write)</h3>
+<p>Every UNKNOWN-&gt;WITNESSED transition fires a background <code>memorize-fire</code> same-turn; N facts -&gt; N parallel writes in one message. Skipped memorize reopens the loop: every future session re-pays full discovery cost for a fact this session already resolved.</p>
+
+<h3>19.3 rs-learn Backend</h3>
+<p>Both operations target the rs-learn KV+vec store at <code>.gm/rs-learn.db</code>, git-committed so memory and index state are shared, not per-machine. <code>auto-recall</code> calls rs-learn in-wasm and injects "## Recall for this prompt" into the next <code>instruction</code> body ahead of the agent seeing the user turn.</p>
+
+<hr>
+
+<h2 id="s20">20. Execution Budget Model</h2>
+
+<p>Token austerity made literal at the execution layer: a mandatory per-call ceiling bounds worst-case unproductive spend, and a timeout returns partial signal rather than hanging the channel. Two-layer budget on every <code>exec_js</code> dispatch:</p>
+<ol>
+  <li><strong>Dispatch layer:</strong> <code>timeoutMs</code> mandatory in the request body; missing/zero is a hard reject</li>
+  <li><strong>Host layer:</strong> <code>child_process.spawnSync</code> with timeout; on expiry, partial streamed output preserved, <code>timedOut: true</code> sidecar</li>
+</ol>
+
+<p>The <code>[exec timed out after Nms; partial output above]</code> marker is authoritative truncation, not error; re-issue at a higher budget. Retry-at-same-budget is a fixed-cost infinite loop.</p>
+
+<p>Synchronous-under-wasm means a long subprocess blocks the watcher for its duration, no detached background execution exists. Long-lived workloads pass a real timeout and accept watcher unavailability to other dispatchers for the call's span.</p>
+
+<hr>
+
+<h2 id="s21">21. ORIENT: Pre-Planning Recall Pack</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: ORIENT <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN]</span></div>
+  <p>Open every planning session with a parallel pack of 3-5 <code>recall</code> calls and 3-5 <code>codesearch</code> calls against the request's nouns, all in one message. Hits land as <code>weak_prior</code>; misses confirm the unknown is fresh.</p>
+  <p>The pack runs in one message, never serially. The agent that skips ORIENT pays the same cost in fresh probes a turn later, plus the price of disagreeing with its own prior witness if the earlier session established a relevant fact.</p>
+  <p>ORIENT is free relative to the duplicated discovery and disagree-with-prior-witness risk it prevents. Its cost equals the cost of skipping it, because the skipping agent will eventually run the same searches; it just does so later, after having already named unknowns that may be stale.</p>
+</div>
+
+<p>ORIENT front-loads signal: pulls existing project knowledge to planning's start so named unknowns are genuinely novel, not lookup failures. No absence claim without a prior search; no new abstraction without a prior existence check. The parallel pack runs this at maximum concurrency, zero serialization cost against planning.</p>
+
+<hr>
+
+<h2 id="s22">22. Fix on Sight</h2>
+
+<p>Jank accumulates as a noise floor: each unaddressed rough edge is a small persistent corruption, and their sum reads as machine-shaped regardless of per-line correctness. Fix on Sight refuses to let detected noise outlive the turn that detected it.</p>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
+  <p>Every issue surfaced during work is fixed in-band, this turn, at root cause. Defer-markers, swallowed errors, suppressed output, skipped tests, and "address it next session" are variants of the same failure: a known-bad signal carried past the moment of detection.</p>
+  <p>Surface -&gt; diagnose -&gt; fix at root cause -&gt; re-witness -&gt; continue. New unknown surfaced by the fix -&gt; regress to planning. Out-of-scope-irreversible fix -&gt; residual into PRD before moving on. Narration is not a substitute for a PRD item.</p>
+</div>
+
+<h3>22.1 Auto-PRD on Incidental Error</h3>
+<p>Any reasonably fixable mid-task error, pre-existing build break, lockfile drift, broken dep, neighboring lint failure, adjacent type error, stale generated file, dead import, is added to <code>.gm/prd.yml</code> same-turn and executed before COMPLETE, unsolicited. Closing on a still-emitting known-bad signal is non-monotonic termination regardless of provenance.</p>
+
+<p>Genuinely out-of-reach errors (require user credentials, depend on external services that are down, demand product decisions) are named and stopped with the residual recorded in the PRD with <code>blockedBy: external</code>, never silently dropped, never narrated past.</p>
+
+<h3>22.2 Auto-PRD on Re-Architecting Opportunities</h3>
+<p>The same rule applies to obvious refactor wins surfaced while doing the user's task: a hand-rolled implementation that a well-known library does cleaner; a multi-file ad-hoc system one import would replace; duplicated logic crying out for one helper; a boilerplate pattern repeated in N places where one upstream tool covers it. These are not separate sessions, they are PRD items, added the same turn they surface, executed before COMPLETE.</p>
+
+<p>The bar is <em>obvious + reachable from this session</em>, not any conceivable refactor. Speculative or aesthetic changes stay out. Library-replacement is a specific case: before keeping a local reimplementation of something a published package already provides, add a PRD item to swap to the import. Local code competes with upstream maintenance and loses.</p>
+
+<p>The architecture is treated as <em>pliable</em>: not a fixed substrate the work routes around, but a shape the work is licensed to reshape. Every architectural change that clearly improves the design or clearly reduces the code-maintenance burden is a spooled PRD plan, not a deferred wish. Replacing bespoke code with native functionality or a very-popular, well-maintained library is encouraged, but only when it <em>reduces the codebase</em> to a net-smaller shipped-and-maintained surface. Adding a heavy dependency to delete a few lines net-grows maintenance and is the failure mode the rule guards against; the swap is admissible precisely when the line count and the maintenance surface both fall.</p>
+
+<h3>22.3 The Jank Sweep</h3>
+<p>At PLAN, for every surface the user's prompt concerns, the agent enumerates to the PRD a complete list of every possible aspect that can be checked for <em>jank</em>, every immaturity, every unfinished edge, every half-wired path, across gui, ux, ui, client state, server state, the client/server state boundary, and any other surface the request reaches. <em>Jank</em> is the operative word: the sweep hunts the rough, the unpolished, the almost-done, not only outright bugs. Each aspect that must be improved or validated is its own PRD row, including a profiling row and a security row for every surface that can carry them. The sweep is scoped to what the prompt concerns and its reachable closure, not an unbounded repo-wide audit, but within that closure it is exhaustive. Every issue found along the way opens its own debug-and-repair plan spooled as PRD rows the same turn, and every outstanding quick improvement is spooled too.</p>
+
+<h3>22.4 The Tell-Tale Sweep</h3>
+<p>One tell-tale AI design element found along the way, a boilerplate flourish, an over-hedged comment, a generic scaffold name, an unmistakable machine-authored shape, spawns a full-codebase sweep. A single sighting is never a one-off local fix: it is the witness that the same shape is likely elsewhere, so it triggers a complete codebase-wide resolution run spooled to the PRD as its own rows, one for the scan, one per cluster of findings, one for the fix-and-verify, exhaustive over every possible file. A tell-tale left standing anywhere is the tell that the whole was machine-shaped, so the sweep does not stop at the instance that surfaced it.</p>
+
+<hr>
+
+<h2 id="s23">23. Browser Witness</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Browser Witness <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
+  <p>Editing code that runs in a browser requires a live <code>browser</code> witness in the same turn as the edit. The witness does not defer to a later phase; later phases re-witness on top, they do not replace this one.</p>
+  <p>Protocol: (1) boot the real surface, server up, page reachable, HTTP 200 witnessed; (2) <code>browser</code> -&gt; navigate -&gt; poll for the global the change affects; (3) <code>page.evaluate</code> asserting the specific invariant the change establishes, capturing the witnessed values; (4) variance -&gt; fix at root cause, re-witness (Fix on Sight). Never advance on unwitnessed client behavior.</p>
+  <p>Pure-prose edits to static documents with no JS/canvas/DOM behavior change are exempt; the exemption is tagged explicitly with the reason so the skip is auditable. Silent skip on actual behavior change is forced closure.</p>
+  <p>This rule fires in EXECUTE (witness on edit), EMIT (post-emit verify), and VERIFY (final gate).</p>
+</div>
+
+<p>A mock-DOM pass is a maximum-confidence certificate over an unverified proposition, the highest-noise outcome available: it terminates green and asserts nothing about the live runtime. Browser Witness substitutes the live page's own evaluation for the mock, closing the gap between "assertion passed" and "feature works." Only a live-DOM evaluation is admissible evidence that a client-side change renders correctly; a mock is a model of the page, not the page.</p>
+
+<h3>23.1 The Live Page Is the Debugger</h3>
+<p>Client debugging exposes state as <code>window.*</code> globals and interrogates them <em>in situ</em> via a <code>page.evaluate</code> loop against the real runtime, never blind-restart-and-eyeball. Auto-captured console, error, network, and performance streams accompany every session, so the evaluate loop reads a superset of what the page itself would print. Restart-and-observe is near-zero-information per cycle at one-turn cost; global-expose plus <code>page.evaluate</code> is a single dispatch reading exact live state, no restart, no reconstruction. Client behavior ambiguity resolves by surfacing the relevant state as a global, evaluating it live, asserting the invariant against the returned value, never by re-guessing across a restart. The live page is the debugger: the same evaluate surface that witnesses an edit (section 23) diagnoses one, and the edit-to-COMPLETE transition is hard-gated on this witness having fired (<code>client-edit-no-witness</code>, section 43) -- no unwitnessed client behavior reaches a terminal phase.</p>
+
+<hr>
+
+<h2 id="s24">24. Nothing Fake</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Nothing Fake <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
+  <p>What ships runs against real services, real data, real binaries. Stubs, mocks, placeholder returns, fixture-only paths, "TODO: implement", hardcoded sample responses, and demo-mode fallbacks are forbidden in source the user will run. They produce green checks that survive into production and lie about what works.</p>
+  <p>Scaffolding and shims are permitted when they call through to real behavior: an empty file laid down before its body, a thin adapter wrapping an upstream API, a build target that compiles but is wired to nothing yet and is the only callsite of itself. The test is whether the artifact, executed, would do the thing it claims. If it would not, it is a stub.</p>
+  <p>Before writing a shim or adapter, the agent asks whether an existing library or tool already provides the same surface. Maintaining a local reimplementation of something an upstream package solves is its own failure mode, the shim drifts, ages, and accumulates the bugs the upstream already fixed.</p>
+  <p>Stub detection is behavioral, not by keyword: code paths that always succeed, always return the same value regardless of input, or short-circuit a real call to satisfy a type signature are stubs. Comments asserting realness do not make code real.</p>
+</div>
+
+<p>A shipped stub is pure noise at maximum confidence: clean return, passing check, zero relation to the specified behavior. Nothing Fake makes this class inadmissible in source. It is Section 3's execution-layer dual: witnessed execution requires real code to produce the witness; Nothing Fake forbids code engineered to pass witnessing through deception. Jointly: no fabricated witness, and no fabricated code past a real one. Coding-policy corollaries follow the same real-execution-only logic: no comment layer (a second, driftable description of behavior the structure already encodes), no synthetic test files (<code>*.test.*</code>/fixtures/mocking libraries are themselves a stub-shaped verification surface), no ASCII-non-conformant glyphs (decorative unicode is unverifiable-by-execution decoration), and verification is exclusively real-service execution witnessed live, never a fixture standing in for the system.</p>
+
+<hr>
+
+<h2 id="s25">25. Web-Search Before Pause</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Web-Search Before Pause <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
+  <p>Before <code>pause</code> or any in-conversation question whose answer plausibly exists on the public web, missing artifact, prebuilt binary, library status, build recipe, version compatibility, upstream issue, "does X exist for Y", fire <code>WebSearch</code> and at least one targeted <code>WebFetch</code> first. Pause or ask only after the web pass returns empty, or returns candidates the agent has witnessed and rejected.</p>
+  <p>Pausing on a question the web could have answered is forced closure dressed as humility. Fix on sight: re-enter planning, web-search, and resume.</p>
+  <p>Genuine user-only questions: private credentials, preference among already-surfaced viable options, destructive-irreversible authorization.</p>
+</div>
+
+<p>Targets the agent stalling on a publicly-documented unknown, taxing the user with a resolvable round trip. Instance of the general autonomy principle: any self-obtainable answer is the agent's own obligation, never the user's.</p>
+
+<hr>
+
+<h2 id="s26">26. Single Integration Test Policy</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Single Integration Test <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY, COMPLETE]</span></div>
+  <p>One <code>test.js</code> at project root. 200-line hard cap. No fixtures, mocks, or scattered test files under any naming convention. Plain assertions, real data, real system. <code>gm-complete</code> runs it. Failure = regression to EXECUTE.</p>
+  <p>Any second test runner, under any name, in any directory, is a smuggled parallel surface that fights the observability discipline. If a behavior needs exercising in-page, register it in <code>window.__debug</code> and assert via <code>test.js</code>.</p>
+</div>
+
+<h3>26.1 Budget, Not Target</h3>
+<p><code>test.js</code> is a 200-line budget, not a target. Every line witnesses a load-bearing behavior; redundant assertions are dead weight. Subsystems get one group each, combined groups (<code>profiles+observability+auth+context</code>) are the norm, not the exception. The win from combining comes from collapsing per-subsystem groups into multi-subsystem ones: the test surface grows linearly with subsystem count, not multiplicatively.</p>
+
+<h3>26.2 Use Overlap to Exclude</h3>
+<p>When subsystem A's test exercises B as a side effect, B does not need its own group. Examples from production: the agent-machine tool-loop test exercises bash dispatch; the dashboard test asserts the API surface and tool registration; the gateway test exercising one platform with a stub-shape loop covers all 18 adapters. Overlap is a signal to drop the redundant group, not to add another assertion.</p>
+
+<h3>26.3 Hygiene at Edit Time</h3>
+<p>Every change to <code>test.js</code> prefers compaction over expansion. If the file exceeds 200 lines, the discipline is to merge groups and drop redundancy until it fits, not to split the file or lift the cap. If the budget is genuinely insufficient, the question is whether the assertion is load-bearing, not whether the cap should move.</p>
+
+<h3>26.4 Group Naming Convention</h3>
+<p>Name combined groups by joining their subsystems with <code>+</code>: <code>home+config+skin</code>, <code>mcp+swe+distributions+account+credpool</code>, <code>env+pi+cli+tui+setup+website</code>. A group with 4-6 components is healthy; a group with 1 component should be questioned.</p>
+
+<hr>
+
+<h2 id="s27">27. Sync-Before-Emit</h2>
+
+<p>rs-codeinsight and rs-search outputs require a freshly-completed index; cache serves only on digest match (mtime sum + git HEAD + dirty-tree marker) against live filesystem state. Default path runs fresh; <code>--read-cache</code> requires exact <code>.codeinsight.digest</code> match, auto-refreshing on mismatch.</p>
+
+<p>rs-search runs scan+embed+sweep before first result, emitting <code>[index fully synced: ...]</code> for freshness visibility. Emitting from an unverified/partial index is closure-on-stale-ground-truth: acting on state that no longer exists.</p>
+
+<hr>
+
+<h2 id="s28">28. Auto-Recall on Prompt-Submit</h2>
+
+<p>The <code>auto-recall</code> verb fires at every turn entry: it derives a 2-6 word query from the prompt, calls the rs-learn <code>Searcher</code> via the shared tokio Runtime, and injects "## Recall for this prompt" into the next <code>instruction</code> response before the agent acts. Auto-search (codeinsight) runs at session-start; auto-recall at every prompt. The mechanism is the spool, not a host-side prompt-submit callback, so any harness loading gm-skill gets it identically.</p>
+
+<p>Every turn thus begins with prior memory loaded. An agent that skips ORIENT still receives the auto-recall injection; ORIENT adds 3-5 targeted queries on top.</p>
+
+<hr>
+
+<h2 id="s29">29. Implicit Skill Prose</h2>
+
+<p>Skill files and system prompts elicit behavior, they do not describe it. Write terse imperative principles whose phrasing triggers the model's already-learned dispositions, not numbered procedures that spell out what to do.</p>
+
+<p>Forbidden in skill prose: numbered step lists like "1. agent runs N parallel calls 2. then writes 3. then..."; citations to site pages or paper numbers; references to the documentation as an input ("as described in docs/skills.html"); multi-step recipes. The skill is a prompt, not a manual. If it reads like a manual, the behavior gets imitated as a script and breaks at the first edge case.</p>
+
+<p>The papers and site are outputs of the discipline, not inputs to it. Cross-cutting rules that need a citation belong in <code>AGENTS.md</code>, not in skills. <code>CLAUDE.md</code> in the project root is a pure <code>@AGENTS.md</code> pointer, nothing else is written there directly.</p>
+
+<hr>
+
+<h2 id="s30">30. The Spool Dispatch Surface</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
+  <p>Code execution and every utility verb both write a file to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>. Language verbs: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, <code>java</code>. Host verbs: <code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>browser</code>, <code>health</code>. Git verbs: <code>git_status</code>, <code>branch_status</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, <code>git_branch</code> (inspect), <code>git_add</code>, <code>git_commit</code>, <code>git_finalize</code>, <code>git_push</code> (stage/commit/push), <code>git_checkout</code>, <code>git_fetch</code>, <code>git_rm</code>, <code>git_revert</code>, <code>git_reset</code> (mutate). Orchestrator verbs: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>/<code>prd-resolve</code>/<code>prd-list</code>, <code>mutable-add</code>/<code>mutable-resolve</code>/<code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>. Output lands at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> for nested verbs and <code>out/&lt;N&gt;.json</code> for root verbs.</p>
+  <p>Git is a first-class spool surface, not a shell command. A <code>bash</code>/<code>sh</code>/<code>powershell</code> body whose command is git-dominant is denied at the dispatch gate (<code>deviation.bash-git-bypass</code>), the denial naming the equivalent git verb. Inline tool args, JSON-form dispatch, and any attempt to bypass the spool (e.g. <code>Bash(node script.js)</code>, <code>Bash(python -c ...)</code>) are denied at the Bash gate. Only <code>gh</code> runs directly via Bash.</p>
+</div>
+
+<p>Encapsulation friction is the cost of expressing a complex instruction through a prose/API-call surface: every capability negotiation happens inline, in natural language, re-parsed and re-validated per call, with no persistent record and no gate between intent and execution. The spool eliminates it by moving the instruction off the prose channel entirely: a complex operation is a code-like file write to a fixed path, not a described intent an interpreter must recover. Git is the clearest instance. Session close previously cost four-plus separate Bash events (porcelain probe, add, commit, push), each a distinct round-trip the agent had to sequence correctly by convention, with the porcelain-witness discipline riding on the agent remembering to make the probe its own event, exactly the kind of convention-dependent correctness the spool ABI removes. <code>git_finalize {message}</code> collapses this to one dispatch: stage-all, commit, re-check porcelain (refusing push over a dirty tree), push with rebase-retry, emitting <code>git.commit</code>/<code>git.push</code> witnesses. Four-plus turns to one; the porcelain gate becomes internal and structurally unforgettable rather than convention-dependent; the flow is dispatch-ledger-visible rather than scattered across shell history. Inspect verbs (<code>git_status</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, <code>git_branch</code>) and granular mutators (<code>git_add</code>, <code>git_commit</code>, <code>git_checkout</code>, <code>git_fetch</code>, <code>git_rm</code>, <code>git_revert</code>, <code>git_reset</code>) cover the remainder; raw <code>git</code> is never needed. All route through one <code>host_git</code> import resolving to the <code>.exe</code> directly (a Windows <code>.cmd</code> shim would defeat <code>windowsHide</code> and flash a terminal) and accepting a JSON argv array (a multi-word commit message must survive intact, not be shattered by whitespace-splitting). The general principle: a capability reached through a verb is auditable, gated, portable; the same capability reached through the shell is none of those, an unaudited free-text surface with no persistent trace.</p>
+
+<p>File-based dispatch is what makes the channel legible: a request surviving context compaction, a response auditable after the fact, a ledger discriminating executed work from merely-narrated work, the system's sharpest signal/noise cut. Tool-call args are ephemeral, scoped to one call, non-persistent, non-replayable, uninspectable without re-running the agent, exactly the encapsulation-friction failure mode. A file-based surface inverts every property: the request is durable on disk before the watcher reads it, the watcher is a process detached from the agent, and the response is one JSON file auditable by any directory-reading tool, no re-execution required.</p>
+
+<p>Agent-facing surface: one file per dispatch. The watcher writes <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (or <code>out/&lt;N&gt;.json</code> at root) on verb completion, carrying result payload plus metadata (<code>exitCode</code>, <code>durationMs</code>, <code>timedOut</code>, stdout, thrown-error stack); one read discriminates clean-completion, budget-kill, and data-return. Streaming execs keep incremental stdout/stderr in host-owned internal stream files the agent never parses directly, reading only the resolved JSON.</p>
+
+<p>Boundary enforced at the Bash gate: any attempt at non-spool execution (<code>node script.js</code>, inline <code>python -c</code>) receives a denial that throws, naming the correct spool path, rather than mutating the call into a self-failing form. This is the discipline's only recognized execution surface; anything else is unverifiable whether the call happened at all. Independent support for the constrained-surface bet: SWE-agent's Agent-Computer Interface as the primary reliability lever, and contemporary fault-tolerant-sandbox work converging on policy-based interception plus transactional filesystem snapshots as the safe-execution baseline.<sup><a href="#r3">3</a>,<a href="#r12">12</a></sup></p>
+
+<div class="gm-callout">
+  <span class="who">from the gm field guide</span>
+  One folder. One contract. Watcher reads, agent writes, output lands in three files. The agent who tries to skip the folder discovers very quickly that the folder is not optional.
+</div>
+
+<hr>
+
+<h2 id="s31">31. The Mutables File as Co-Equal Hook Gate</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Mutables File Co-Equal With PRD <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT]</span></div>
+  <p><code>.gm/mutables.yml</code> lives alongside <code>.gm/prd.yml</code>. Every unknown surfaced during PLAN lands as a row with <code>status: unknown</code>. Write, Edit, NotebookEdit, <code>git commit</code>, <code>git push</code>, and the stop checkpoint are all hard-blocked by the dispatcher while any row has <code>status: unknown</code>. Rows flip to <code>witnessed</code> only when <code>witness_evidence</code> is filled with concrete proof (file:line, codesearch hit, exec output snippet).</p>
+</div>
+
+<p>Section 3's named-mutable type-state lived only inside the context window: a fact "tracked" purely in-reasoning evaporates on compaction, restart, or subagent spawn, an in-memory lattice with no durability guarantee. The mutables file externalizes it: an on-disk row the spool-dispatch gate reads independent of agent memory, the durable representation of the UNKNOWN|WITNESSED lattice.</p>
+
+<p>The <code>mutables.yml</code>/<code>prd.yml</code> split is what-to-do versus what-must-be-true: PRD items can complete while a referenced mutable stays UNKNOWN, since item-completion and invariant-verification are orthogonal predicates the dispatcher checks separately.</p>
+
+<p>The witness-evidence requirement (file:line, codesearch hit, exec output) blocks narrative-only state transition: an evidence-free status change is rejected on read, row stays UNKNOWN, EMIT gate stays closed. A discipline the agent could previously talk past becomes one a file structurally refuses to.</p>
+
+<hr>
+
+<h2 id="s32">32. Discipline Isolation via @sigil</h2>
+
+<p>A <em>discipline</em> is a per-project namespace at <code>&lt;project&gt;/.gm/disciplines/&lt;name&gt;/</code>, own rs-learn DB and code-search index each. Exists against a specific failure mode: cross-namespace memory bleed surfacing a prior-project fact as a <code>weak_prior</code> that contradicts current code or references a nonexistent symbol. A hallucinated prior is strictly worse than no prior, it earns witnessing it never should have qualified for.</p>
+
+<p>The <code>@&lt;name&gt;</code> sigil authorizes strict single-discipline isolation for recall/codesearch/memorize. Sigil-less default is asymmetric: reads fan-merge across <code>default</code> plus every line in <code>enabled.txt</code>, rank-tagged <code>[discipline:&lt;name&gt;]</code>; writes target <code>default</code> only.</p>
+
+<p>The asymmetry is a least-privilege adaptation: broad reads are recoverable (a bad prior fails at the witness step), broad writes are not (a misplaced fact pollutes every future read in an unrelated namespace). Read-broad, write-narrow.</p>
+
+<hr>
+
+<h2 id="s33">33. Synchronous-Under-Wasm Execution Contract</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Every Exec Carries A Real Timeout <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE - EMIT]</span></div>
+  <p><code>exec_js</code> is synchronous under the wasm host: the orchestrator runs the user subprocess via <code>child_process.spawnSync</code> and blocks the watcher for the duration. Every dispatch carries a positive <code>timeoutMs</code>; missing or zero is a hard error. On timeout, partial streamed output is preserved and <code>timedOut: true</code> lands on the response sidecar.</p>
+</div>
+
+<p>Consequence of wasm's execution model: no thread to detach a subprocess into, no cross-dispatch process handle, no port for external attachment. Host runs, blocks up to <code>timeoutMs</code>, returns. No orphaned background work is representable.</p>
+
+<p><code>exec_js</code> is the JIT-execution substitute for internal deliberation: rather than reasoning silently about what code would do, the agent writes a hypothesis as executable code and dispatches it, and the response is ground truth about the hypothesis rather than a projection of it. Because witnessed execution categorically replaces reasoning-as-verification (section 3), the model's own extended-thinking/reasoning-effort budget is largely redundant work duplicating what exec_js will verify anyway; running gm with the driving model's reasoning-effort or thinking setting LOW or OFF is the recommended configuration, since gm substitutes cheap, real, externally-verifiable execution for expensive, unverifiable internal token spend on the same question.</p>
+
+<p>This is a deliberate trade. The earlier generation of this project ran <code>rs-exec</code> as a native daemon with a port file, a task store, and a grammar of resumption verbs (<code>tail</code>, <code>watch</code>, <code>wait</code>, <code>sleep</code>, <code>close</code>). It was more flexible and also a fountain of operational pain: dead PIDs, port-leak races on Windows, idle-cleanup tuning, kill-tree edge cases on bash pipelines that escaped the parent group. The wasm-only surface gives up the long-task affordance and gets back operational simplicity: no daemon to supervise, no port to leak, no orphan-process accounting. The wasm-for-agents pattern has converged in recent industry and academic work as well: NVIDIA Developer Blog argues for WebAssembly sandboxing of LLM-generated code, and MCP-SandboxScan formalizes a WASI sandbox for untrusted MCP tool execution.<sup><a href="#r20">20</a>,<a href="#r19">19</a></sup></p>
+
+<p>Browser sessions are the one exception. <code>browser</code> opens a managed Chrome session that the wasm host holds open between dispatches (the host-side state lives outside the wasm instance, in the Node process that hosts it). Browser sessions persist across turn-stops and are reaped only on real-exit reasons (clear, logout, prompt_input_exit). The <code>running_task_ids</code> field on every dispatch response surfaces outstanding browser sessions so the agent sees them on every turn.</p>
+
+<hr>
+
+<h2 id="s34">34. Hook Denials Throw, Never Mutate</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Throw on Denial <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN, EXECUTE, EMIT, VERIFY]</span></div>
+  <p>A hook that blocks a tool call <em>throws</em> an error with an imperative instruction string. It does not rewrite the call's arguments into a self-failing form, not a shell command that exits 1, not a Node one-liner that writes to stderr and process.exit. The thrown error is the entire denial surface.</p>
+</div>
+
+<p>The distinction is in how the failure is classified downstream. A thrown error reads as policy-refusal: the model updates its model of the surface and switches tools next attempt. An args-mutation producing the same exit code reads as "the tool is broken," reinforcing an incorrect model and converting a one-shot denial into a retry loop with no convergence.</p>
+
+<p>Generalizes: any denial-issuing hook must throw, never mutate. Throw signals "use a different tool"; mutate signals "run this corrected call," a rare need, almost never what a guardrail wants.</p>
+
+<hr>
+
+<h2 id="s35">35. CI Is the Build</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[EXECUTE, EMIT, VERIFY]</span></div>
+  <p>For the Rust crates in this org (<code>rs-plugkit</code>, <code>rs-search</code>, <code>rs-codeinsight</code>) and the gm publish chain, <code>git push</code> triggers the build pipeline. <code>cargo build</code> and <code>cargo test</code> are not run locally. Toolchain mismatches, rustc version skew, and missing system dependencies never block a push, push, watch CI via <code>gh run watch</code> dispatched through the spool, fix on red.</p>
+</div>
+
+<p>The witness for a Rust crate is green CI on pushed HEAD, not a green local build. Every crate compiles to <code>wasm32-wasip1</code> as a <code>cdylib</code>, the loaded artifact; local cargo proves nothing about the wasm import surface or the published tarball's contents.</p>
+
+<p>Cascade is the witnessing infrastructure: sibling push fires <code>cascade.yml</code> (<code>gh workflow run</code> + <code>PUBLISHER_TOKEN</code>) into <code>rs-plugkit/release.yml</code>, which rebuilds wasm, publishes to <code>plugkit-bin</code> Releases and npm (<code>plugkit-wasm</code>), bumps <code>gm.json::plugkitVersion</code> and the sha256 pin. That bump triggers <code>publish.yml</code> (<code>npm publish .</code> from repo root, itself the published artifact), a fresh <code>gm-skill</code> tag. Witness lands at the tree's leaf, not its root.</p>
+
+<p>Pairs with Browser Witness (section 23): same witnessing principle, different execution boundary, and in both cases the witness lives outside the agent's local environment because local environment cannot answer the question.</p>
+
+<hr>
+
+<h2 id="s36">36. The Residual-Scan Stop Gate</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Stop-Checkpoint Residual Challenge <span style="font-weight:400;font-size:11px;opacity:0.6;">[COMPLETE]</span></div>
+  <p>When <code>.gm/prd.yml</code> is empty or missing AND no open browser sessions AND no running tasks, the stop-checkpoint gate fires one residual-scan challenge before allowing stop. The agent either re-enters planning, appends to the PRD, and executes, or explicitly states "residual scan: none reachable in-spirit." The marker file <code>.gm/residual-check-fired</code> makes the challenge one-shot per stopping window; the marker clears at the next prompt-submit so the next stopping window starts fresh.</p>
+</div>
+
+<p>Empty-PRD is necessary but not sufficient for done: the PRD records decided work, the gate probes the complement set, what should have been decided but wasn't. The gap is where non-monotonic termination hides, enumerated-items-done-and-stopped, leaving in-spirit residuals undiscovered.</p>
+
+<p>One-shot per stopping window prevents the gate itself becoming noise: a refused second stop in the same window would loop without termination; the marker clears at next prompt-submit, defining a fresh window.</p>
+
+<p>Pairs with Maximal Cover (17, in-spirit boundary at PLAN) and Fix on Sight (22, EXECUTE-time PRD folding): this gate is the COMPLETE-phase backstop for what both miss.</p>
+
+<hr>
+
+<h2 id="s37">37. Meaning Through the Agent, Mechanics Through Code</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: Semantic Work Is the Agent's Own Judgment <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN - EXECUTE - EMIT]</span></div>
+  <p>Any task whose correctness depends on understanding, summarize, classify, extract intent, rewrite, translate, semantic dedup, score, label, decide-if-two-texts-mean-the-same, is the agent's own inline judgment, not a separate model call. plugkit is the harness and the agent IS the model it dispatched, so each semantic decision is the agent deciding on the spot from the current situation. When the work is many independent items, fan them out as N parallel spool dispatches in one message, one item per dispatch.</p>
+</div>
+
+<p>A regex deciding a meaning question is deterministic-faced noise: it terminates, returns a value, and the value bears no relation to the question. Meaning routes to the agent's own judgment, mechanics to deterministic code, each engine kept on the work it carries signal for. Mechanics: parse, sort, hash, count, decidable by procedure. Meaning: language understanding, is this a fix or a feature, does this docstring contradict its function, are these error messages semantically identical.</p>
+
+<p>A keyword-list or regex-over-meaning-phrases loop is Nothing Fake's failure mode (section 24) applied to judgment: it looks right because it terminates, and is unrelated to what was asked.</p>
+
+<p>Fan-out is the parallelism half: N items to N parallel dispatches in one message, never batched, a batched judgment dilutes per-item signal via averaging over the batch. Negligible cost delta, large quality delta; mirrors memorize-fire's fan-out (section 12), one unit per call.</p>
+
+<hr>
+
+<h2 id="s38">38. The Continuation Invariant: A Toolless Turn Is A Stop</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: While The Chain Is In-Flight, Every Turn Ends In A Tool Call <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN - EXECUTE - EMIT - VERIFY]</span></div>
+  <p>Every programming agent reads only tool calls and their outputs; an assistant message that ends in prose with no tool call <em>is</em> the turn ending, and the harness halts there. So while the chain is in-flight (phase != COMPLETE or prd_pending &gt; 0) the agent never ends a turn in prose and never writes a summary or recap, summary is a stop. The only event that authorizes a prose-only turn is plugkit returning phase=COMPLETE and prd_pending=0. Before any apparent stop, the agent dispatches <code>phase-status</code> and rechecks; a non-terminal phase means the urge to stop was drift, and the recovery is to dispatch <code>instruction</code> and continue.</p>
+</div>
+
+<p>Mechanical root of the dominant long-horizon failure: a completed sub-piece plus a "here is what I did" paragraph plus zero tool calls reads to the harness as terminal, independent of the agent's intent. No amount of in-context "remember to continue" survives, closing sentence and stop are the same event by construction.</p>
+
+<p>Two faces of the same failure: summary (backward-facing) and deferred intent (forward-facing, a final sentence naming the next move instead of taking it), the latter slipping past a summary-only prohibition because it self-reports as continuation. The corrective is uniform: take the described move, same turn, no exception for surfacing a decision, which lands through a tool call, never prose alone.</p>
+
+<p>Inverts the default: not "continue unless done" but "dispatch until the gate says done." Doneness is plugkit's COMPLETE-gate pronouncement, never an agent self-report; self-reported doneness substitutes the agent's judgment for the gate's, the dominant premature-halt source on long-horizon tasks.</p>
+
+<p>Depends only on the verb spool, no hook/stop-interceptor/platform-continuation-feature (each host-specific, each a single point of host-coupling failure). The invariant is prose served through <code>instruction</code>, eliciting identical behavior on any model that reads and calls tools, the only mechanism achieving cross-host predictability.</p>
+
+<h3>38.1 Terse Output</h3>
+<p>Prose around tool calls is minimized to substantive content only: real findings, one-line decision-plus-reason, blockers. Mundane output (boot-probe narration, dispatch echoes, restated prose, status recaps) is suppressed. Composes with, never overrides, the continuation invariant: terse means shorter, never zero tool calls, never silent work. Output shrinks toward zero exactly where the tool calls already carry the meaning.</p>
+
+<h2 id="s39">39. Spool Dispatch Replaces Platform Hooks</h2>
+
+<div class="hard-rule">
+  <div class="rule-title">Hard Rule: The Gate Is The Spool, Not A Host Hook <span style="font-weight:400;font-size:11px;opacity:0.6;">[PLAN - EXECUTE]</span></div>
+  <p>Orchestration state is tracked via marker files in <code>.gm/</code> and gated at the dispatch layer, not through any agent-host hook event. No skill prose, gate denial, or instruction names a host-specific invocation form (a plugin-namespaced skill, a host-specific subagent type). The gate-satisfying action is always a portable spool dispatch: write <code>.gm/exec-spool/in/instruction/&lt;N&gt;.txt</code> and read the response.</p>
+</div>
+
+<p>Superseded design: host PreToolUse hooks emitting host-specific permission JSON and naming host-specific skill/subagent forms. Invisible coupling: under a different harness the hook never fires or names an absent form, silently disabling the gate. Subagent orchestration compounds it: an isolated subagent's prose-summary return reads as a stop to its parent (section 38).</p>
+
+<p>Replacement: marker files plus spool dispatch. <code>checkDispatchGates</code> reads <code>.gm/prd.yml</code>, <code>.gm/mutables.yml</code>, needs-gm/gm-fired markers, returns allow/deny naming the next portable verb, never a host-specific tool. Every prior hook-enforced behavior survives as a host-invariant spool gate. Legacy <code>wasm_hooks</code> exports are dead ABI, no caller.</p>
+
+<hr>
+
+<h2 id="s40">40. The Memory Architecture: File-Vec Recall and the rs-learn Algorithm Layer</h2>
+
+<p>Memory splits into a live layer and an algorithm layer. Live: the file-vec store. <code>memorize-fire</code> embeds via in-wasm bge-small, writes two files per memory (text under <code>.gm/disciplines/&lt;ns&gt;/&lt;key&gt;.json</code>, its 384-dim embedding under <code>.gm/disciplines/&lt;ns&gt;-vec/&lt;key&gt;.json</code>). <code>recall</code>/<code>auto_recall</code> read fresh, score <code>cosine x recency</code> (30-day half-life, 0.4 floor), dedup by Jaccard overlap. Git-resident, project-scoped.</p>
+
+<p>Pruning is first-class: a false-positive recall hit is worse than a miss (it poisons every future matching query, not just this one). <code>memorize-prune</code> deletes text+embedding atomically, by explicit key or review-only candidate query, never blind similarity-delete (an automatic similarity prune is itself a bad-memory generator). Precision over retention.</p>
+
+<p>The algorithm layer, rs-learn, is a separate wasm cdylib, five continual-learning cores: instant rank-2 Hebbian MicroLoRA with norm-bound and EWC correction (sona-derived); EWC++ deep core with online Fisher EMA and z-score boundary detection; bi-temporal knowledge graph invalidating (never deleting) contradicted edges, point-in-time queryable (graphiti-derived); 8-head graph-attention with relation/recency edge features; FastGRNN sparse-plus-low-rank router, epsilon-greedy over model/context-bucket/temperature/top_p/confidence. Owns no IO: imports <code>host_kv_*</code>, <code>host_vec_search</code>, <code>host_log</code>, <code>host_now_ms</code>, exposes one JSON dispatch surface.</p>
+
+<p>Design: host owns IO/scheduling/embedding/transport, rs-learn owns math only, isolation-testable and reusable by any six-import-satisfying host. Reachable from the agent-facing spool via plugkit's <code>learn</code> verb, routing through <code>dispatch_json</code> over a <code>PlugkitKv</code> backend (three-method <code>KvBackend</code> trait over <code>kv_get</code>/<code>kv_put</code>/<code>kv_query</code>). Math-no-IO / host-no-algorithm is the reproducibility split: cores carry no platform assumption, host carries no learning-rate constant.</p>
+
+<p>Stateless-host dispatch constructs a fresh <code>LearnSession</code> per <code>learn</code> verb; session-RAM-only state evaporates between dispatches. The bi-temporal graph is unaffected (every edge written straight through <code>host_kv_*</code>, durable by construction). The three weight-bearing cores (MicroLoRA/EWC adapter, FastGRNN router, GAT attention) persist explicitly: serialize learned tensors to a fixed KV namespace after every mutation, lazy-reload on empty in-RAM slot. Only genuinely learned state persists (low-rank weights, quality counters, feedback count, edge-feature weights); seed-deterministic matrices reconstruct from seed. Length-guarded on load: dimension mismatch reconstructs clean from config rather than corrupting, no cross-run poisoning. Namespace resolves under the project's own <code>.gm</code> tree, no cross-project weight bleed. This makes the cores genuinely continual across the spool rather than dispatchable-but-amnesic.</p>
+
+<p>The router closes into the turn lifecycle: every <code>instruction</code> dispatch embeds the active prompt, routes through FastGRNN, attaches a <code>route_hint</code> (model, temperature, top_p, context bucket, confidence) to the response. Fresh projects fall back to a rule policy (<code>algo: rule</code>); accumulated <code>record_outcome</code> dispatches cross a trajectory threshold and the router switches to its learned low-rank weights, epsilon-greedy exploring off-policy. Advisory only, never forced. Concrete shape of agent-as-LLM: model-selection becomes a learned, per-turn, persisted policy compounding over project life rather than a fixed constant reset each turn. The hint's prompt embedding reuses the recall path's per-query cache, no second embedding pass.</p>
+
+<p>The MicroLoRA core is a learned scoring head over embeddings, not an embedding transform: rank-2 adapter over a 384-dim bge-small vector emitting a per-target score (<code>apply_adapter</code>: <code>logit[k] += B - (A - embedding)</code>); <code>feedback</code> nudges factors A/B from a single 0-1 trajectory-quality score, a norm-bounded, EWC-corrected Hebbian update so new adaptation never erases old. Learns which targets this project's embeddings should favor. The quality signal is the one thing only the model-in-the-loop holds, so the agent self-reports it at turn close and the head's weights move toward proven-good targets. Second face of agent-as-LLM: router learns which model to dispatch, MicroLoRA learns to score this project's targets, both from the same self-report. Open integration: wiring the head's score into recall re-ranking.</p>
+
+<p>The self-report closes the loop end to end. The bi-temporal graph auto-populates: every <code>memorize-fire</code> inserts a graph edge over the same embedding already computed for file-vec storage (zero marginal embedding cost); pruning invalidates the edge in the same step, no dangling reference. Because plugkit is the harness and the agent is the model it dispatched, the model knows its own identity and outcome and reports them directly, rs-learn never calls out for that judgment, it emits the need and the agent supplies it.</p>
+
+<hr>
+
+<h2 id="s41">41. The WASM Migration</h2>
+
+<p>The orchestrator runs as a single WebAssembly cdylib loaded by a thin JS wrapper under Node/Bun; zero native binaries per platform. One artifact runs identically across every JS-host OS, sha256-pinned, no per-architecture build matrix, no platform install path. The wasm imports a minimal host contract (filesystem, KV, vector search, fetch, subprocess, clock, log); JS satisfies it by delegating to Node, wasm carries logic, host carries IO. Same module loads in-browser given an import-satisfying host.</p>
+
+<p>Two size stories, one artifact. Orchestration logic (state machine, gates, dispatch, verb routing) compiles to hundreds of KB. The shipped artifact is large (~143 MB) because it embeds the embedding model in-wasm (BAAI/bge-small-en-v1.5, 12 hidden layers, 384-dim output, safetensors blob plus tokenizer): embedding runs wasm-side, no host delegation, no external service, offline and text-leak-free by construction. Deliberate trade: one large download buys a self-contained, reproducible, network-independent memory system over a small binary phoning home per embedding.</p>
+
+<p>Single-artifact discipline underwrites stability: atomic write (temp file, rename); version drift between running instance and on-disk version file triggers clean self-respawn, never partial reload; embedding init witnessed by <code>embed_init_ok</code> before first recall. Shared resources (KV, vector index, embedding model) are host-owned and session-shared across every verb dispatch, amortizing model load once per session.</p>
+
+<h2 id="s42">42. The Rust Service Crates: codeinsight, search</h2>
+
+<p>Two zero-dependency static Rust crates, plus execution folded natively into <code>rs-plugkit</code>. Language execution (nodejs, python, bash, typescript, deno, go, rust, c, cpp, java through the spool), browser sessions, and per-call timeout/task isolation (mandatory positive timeout, wasm host runs subprocesses synchronously, unbounded child blocks the watcher) were previously a standalone <strong>rs-exec</strong> crate; that crate is retired, its surfaces reimplemented directly inside <code>rs-plugkit</code>'s <code>wasm_dispatch</code>. <strong>rs-codeinsight</strong>: AST x-ray, tree-sitter across thirteen languages, 500-file project analyzed under 200 ms in one pass, giving an unfamiliar repo's files/symbols/shape without exploratory grep. <strong>rs-search</strong>: hybrid finder, BM25 lexical scoring with identifier-aware tokenization (snake/kebab/camel splits) fused with vector similarity via Reciprocal Rank Fusion, <code>.gitignore</code>-disciplined, PDF-ingesting, content-addressable embedding cache so re-index only re-embeds changed content.</p>
+
+<p>Model selection splits meaning from mechanics stack-wide. Semantic work (summarize, classify, judge-equivalence) routes to a small fast model via fetch, one item per call, parallel by default. Mechanics (parse, sort, hash, count) stay in deterministic Rust. bge-small embeddings for 384-dim output at small weight footprint relative to recall quality. Same motivation as the wasm migration and the rs-learn boundary: one concern per layer (model = meaning, Rust = mechanics, host = IO, algorithm crate = math), each independently testable, reproducible, swappable.</p>
+
+<p>The static meaning/mechanics split fixes which engine handles a job, not which model handles a meaning-job. FastGRNN decides the latter: the per-turn <code>route_hint</code> (section 40) recommends model/temperature/top_p learned from this project's prior turns rather than a hard-coded constant. Compositional: layer-concern split decides model-versus-Rust deterministically; within the model tier, the router turns which-model into a learned, persisted, per-turn policy compounding over project life. Agent-as-LLM is the same one-concern-per-layer discipline one level up: harness owns orchestration, router owns model-selection policy, neither hard-coded into the other.</p>
+
+<hr>
+
+<h2 id="s43">43. Deviation Gates: Predictability Across LLMs</h2>
+
+<p>Cross-model predictability is a worst-case target: a weaker driver should hit the same SNR floor as a strong one, because gates hold the line, not model capability. Kept not by trusting the model but by pure on-disk-state checks firing identically under any LLM/harness: <code>long-gap-no-instruction</code> refuses a non-orienting verb >5 min post-last-<code>instruction</code>; <code>complete-chain-poll</code> flags re-dispatch of <code>instruction</code> on an already-terminal chain; <code>push-dirty</code> refuses push from unclean worktree; <code>client-edit-no-witness</code> refuses COMPLETE-transition absent a browser witness on a client edit. Gates never mutate the command, only return a refusal whose text is the next instruction, steering a weak model the way a strong one self-steers.</p>
+
+<p>A gate's signal quality is its attribution accuracy: fire on agent mistakes, stay silent on the mechanism's own bookkeeping. Two refinements: the long-gap clock resets on fresh-watcher-boot (a version-upgrade-induced gap is not agent-caused, so boot stamps last-instruction to now); <code>complete-chain-poll</code> fires only for session-attributed dispatches (cron/stop-checkpoint empty-body probes against a terminal chain are not agent re-polling, counting them inflates the rate without reflecting agent behavior). Generalizes: a deviation is an agent action gone off-discipline, so the gate must discriminate agent dispatches (session-carrying) from harness-internal bookkeeping (not), or the signal measures the wrong quantity.</p>
+
+<hr>
+
+<h2 id="three-layer-filter">Three-Layer Admission Filter</h2>
+
+<p>Sections 2-37 specialize a single structural invariant: every candidate operation passes three orthogonal admission tests in sequence before commit.</p>
+
+<pre><code>candidate to [L1 cost] to [L2 bounds] to [L3 direction] to execute
+</code></pre>
+
+<p><strong>L1 Cost.</strong> Amortized cost &lt;= prior-best envelope. Unmeasured marginal = inadmissible. ORIENT (section 21) is the baseline probe.</p>
+
+<p><strong>L2 Bounds.</strong> Single-writer per surface (<code>|F|=1</code>). Hard cap per managed resource; backpressure to defer queue at watermark. State outside a sanctioned surface = unreconcilable.</p>
+
+<p><strong>L3 Direction.</strong> Lyapunov: <code>Deltad &gt;= 0</code> rejects. Audit tuple <code>(id, hash, ts)</code> per accepted write. Trajectory classifier over rolling window: convergent | flat | divergent | chaotic; non-convergent holds. VERIFY's four-observation window <code>[worktree-clean, remote-pushed, prd-empty, mutables-witnessed]</code> is the convergence criterion.</p>
+
+<p><strong>Closure anti-shape (universal L3 violation).</strong> The agent's response body is not a mutation surface. Any artifact composed in the response that displaces a sanctioned dispatch fails L3 because no <code>(id, hash, ts)</code> exists, the recall index does not see it, the trajectory classifier does not register it, the gate does not advance. Recognition is structural, not by enumeration.</p>
+
+<p><strong>Maturity-first emit.</strong> First emit = closure of the destructive transform. Partial emit externalizes residual completion cost as implicit unaudited state; the next session pays the reconstruction cost. Closure-exceeds-reach decomposes along dependency edges (Maximal Cover DAG, section 17), never along schedule.</p>
+
+<p><strong>Invariants.</strong> Measurement gates optimization. Bounds prevent cascades. Direction eliminates waste. Composability: layers are independently tunable.</p>
+
+<blockquote>The five phases are the filter at escalating commitment. PLAN runs L1+L2 cheaply via ORIENT and PRD-DAG. EXECUTE runs L3 over witnessed mutations into the central store. EMIT runs L3 audit on disk. VERIFY runs the trajectory classifier over the four-observation window. The filter is the engine; the phases are scheduling.</blockquote>
+
+<hr>
+
+<h2 id="code-invariants">Code Invariants</h2>
+
+<p>Instruction prose extends to code emission. Every artifact carries the same structural disciplines.</p>
+
+<ul>
+<li><strong>State space minimized.</strong> Sequential downward flow; state flags evaluated in one phase. External inputs through a unified queue before mutation. State changes = explicit assignment, never buried side effect.</li>
+<li><strong>Hardware reality.</strong> Benchmark before abstracting. Scope passed explicitly; closures hide scope-resolution cost on hot loops. Pools over allocation. Native data flow on performance paths; reject Promise chains / class hierarchies / operator overloading there.</li>
+<li><strong>Flat structure.</strong> Denormalized graphs over nested documents. Partial-field updates. Bytes over JSON for transport; varint variable-width fields; pre-compute exact size and allocate once. Lexical ordering for deterministic tie-breaking.</li>
+<li><strong>200-line vertical slices.</strong> One responsibility per file. Complete input-&gt;process-&gt;output. Zero-config defaults correct for 90%. Universal runtime: browser, Node, mobile, Bare.</li>
+<li><strong>Async boundary explicit.</strong> Sequential awaitable primitives. No implicit callback ordering. Unified error channel. Tests await real ops; mock-free.</li>
+<li><strong>Naming by scale.</strong> &lt;50 lines: single-letter algebraic. 50-200: short descriptors. &gt;200: full names. Iterators short; public APIs explicit.</li>
+<li><strong>Fail fast, loud, deterministic.</strong> Halt on precondition violation with exact state. Assert on emitted semantics, not return values. Sentinel words + checksum headers verified on every access.</li>
+<li><strong>Binary transport, append-only persistence.</strong> Lexical cursors for sparse reads. Append-only sequence for replay. Chunked by lexical range; modify only the touched chunk.</li>
+<li><strong>Single focused task per session.</strong> No drive-by refactors. Pre-compute and inline; code growth &lt; cognitive overhead.</li>
+</ul>
+
+<p><strong>Token discipline.</strong> English describing intent = liability when code can encode it. Comments = liability when names + structure encode the same. Duplication that must sync = liability. Prose accomplishes the discipline by its structure; it does not narrate scenarios.</p>
+
+<hr>
+
+<h2 id="s44">44. Discussion</h2>
+
+<h3>44.1 Relationship to Formal Methods</h3>
+<p>Surface similarity to model checking (named state variables, explicit transitions) and design-by-contract (pre/post-conditions gating advancement), at a coarser abstraction: states are task phases not program states, contracts concern epistemic state not program correctness. Route families (13) function as typing domains, partitioning valid-operation space rather than verifying program properties.</p>
+
+<h3>44.2 Relationship to Test-Driven Development</h3>
+<p>Loose TDD analogy: both front-load verification. Divergence: verification here is witnessed execution, not a persisted test suite during EXECUTE; the single integration test (26) is COMPLETE-phase witnessing residue. The 200-line budget trades regression depth for context-window economy.</p>
+
+<h3>44.3 External vs. Self-Regulation</h3>
+<p>External enforcement over self-regulation is the recurring design choice: the same inference process that reasons through a problem reasons through shortcut-justification, so introspective correction is not a fixed point of the failure. Marker-file gates read <code>.gm/prd.yml</code>/<code>.gm/mutables.yml</code> independent of agent judgment; hard rules 21-37 live in orchestrator output and marker gates, not in-context reasoning. The retired hook-event architecture made enforcement contingent on a working callback pump; the current architecture reduces it to a file read.</p>
+
+<h3>44.4 Overhead vs. Benefit</h3>
+<p>Every backward transition costs re-planning/re-executing discarded partial work, offset in production by avoided late-stage rework: the snake-back surfaces problems while scope is still bounded, versus COMPLETE-time discovery after compounding across all subsequent work.</p>
+
+<h3>44.5 Limitations</h3>
+<ol>
+  <li><strong>Finite unknown assumption:</strong> termination requires a finite discoverable-unknown set, may not hold adversarially/chaotically. Two-pass reclassification (9.2) doesn't prevent structural (non-transient) persistence across both passes; persistence past pass 2 is prescribed <code>pause</code> with blocker in the PRD header, not indefinite reclassification, else unbounded reclassification cycles.</li>
+  <li><strong>Witnessed execution cost:</strong> real execution against expensive external APIs may be prohibitive for some paths.</li>
+  <li><strong>Memory staleness window:</strong> the creation-to-verification interval admits stale-memory-induced error.</li>
+  <li><strong>Browser witness scope:</strong> single-instance managed Chromium serializes, no wave parallelism.</li>
+  <li><strong>Test budget ceiling:</strong> 200-line cap forces compact coverage; genuinely large subsystems may be under-witnessed within it.</li>
+</ol>
+
+<hr>
+
+<h2 id="s45">45. Conclusion</h2>
+
+<p>The complete gm discipline: a phase-gated FSM, a mutable-naming/witnessed-execution type-state framework, an in-phase quality discipline, a governance layer of seven route families and four state planes, second-generation autonomy/scope rules, operational hard rules, and a third generation of dispatch-boundary invariants moving the discipline onto disk into marker-file gates.</p>
+
+<p>Not aspirational: every rule is enforced by the spool-dispatch gate below the decision layer, by disk-state the gate reads independent of the agent, or by hard-rule encoding in the <code>instruction</code> response the agent cannot reason around. The agent executes within the envelope; the envelope prevents local-optimality collapse of the discipline.</p>
+
+<p>One npm package, one wasm artifact, every Claude-style host: reliability depends substantially on lifecycle control, not model capability alone, and on relocating discipline-state out of agent memory and host event pumps into externally-readable artifacts, a spool file, a mutables row, a stop-checkpoint marker, a CI run. The agent participates in the discipline, does not keep it; the host delivers it, does not enforce it. A practical engineering artifact, not a theoretical claim.</p>
+
+<p>Every rule above measures one quantity: gm is 14000+ supervised-modification hours raising the signal-to-noise ratio, the fraction of every token/action constituting genuine progress rather than drift, fabrication, amnesia, or premature stop. Token austerity is that objective under a cost prior, the cheapest signal is the one never emitted. Phase gates, witnessed mutables, Maximal Cover, the continuation invariant, the spool ledger, and deviation gates are the catalogue those hours converged on, each a denoising operator over one noise class between intent and shipped software.</p>
+
+<div class="references">
+  <h2 id="refs">References</h2>
+  <ol>
+    <li id="r1">S. Yao et al., "ReAct: Synergizing Reasoning and Acting in Language Models," <em>ICLR</em>, 2023.</li>
+    <li id="r2">N. Shinn et al., "Reflexion: Language Agents with Verbal Reinforcement Learning," <em>NeurIPS</em>, 2023. <a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener">arXiv:2303.11366</a></li>
+    <li id="r3">J. Yang et al., "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering," <em>NeurIPS</em>, 2024. <a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener">arXiv:2405.15793</a></li>
+    <li id="r4">J. Wei et al., "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models," <em>NeurIPS</em>, 2022.</li>
+    <li id="r5">J.S. Park et al., "Generative Agents: Interactive Simulacra of Human Behavior," <em>UIST</em>, 2023.</li>
+    <li id="r6">G. Wang et al., "Voyager: An Open-Ended Embodied Agent with Large Language Models," <em>NeurIPS</em>, 2023.</li>
+    <li id="r7">C.S. Xia et al., "Agentless: Demystifying LLM-based Software Engineering Agents," 2024. <a href="https://arxiv.org/abs/2407.01489" target="_blank" rel="noopener">arXiv:2407.01489</a>, demonstrates that a constrained three-phase localize/repair/validate pipeline beats free-form agents on SWE-bench at lower cost; empirical vindication of mandatory plan-before-execute.</li>
+    <li id="r8">M. Cemri et al., "Why Do Multi-Agent LLM Systems Fail?," 2025. <a href="https://arxiv.org/abs/2503.13657" target="_blank" rel="noopener">arXiv:2503.13657</a>, grounded-theory taxonomy across 1600+ traces; premature termination and assumption propagation are dominant failures under self-regulation.</li>
+    <li id="r9">J.V. Roig, "How Do LLMs Fail In Agentic Scenarios? A Qualitative Analysis," 2025. <a href="https://arxiv.org/abs/2512.07497" target="_blank" rel="noopener">arXiv:2512.07497</a>, identifies "premature action without grounding" and "over-helpfulness substituting missing entities" as recurring archetypes; direct empirical motivation for external phase enforcement.</li>
+    <li id="r10">A. Eghbali and M. Pradel, "De-Hallucinator: Mitigating LLM Hallucinations in Code Generation Tasks via Iterative Grounding," 2024. <a href="https://arxiv.org/abs/2401.01701" target="_blank" rel="noopener">arXiv:2401.01701</a>, iterative grounding against real project APIs reduces hallucination; supports the "witness, don't reason" principle behind named mutables.</li>
+    <li id="r11">X. Lin et al., "LLM-based Agents Suffer from Hallucinations: A Survey of Taxonomy, Methods, and Directions," 2025. <a href="https://arxiv.org/abs/2509.18970" target="_blank" rel="noopener">arXiv:2509.18970</a>, surveys why reasoning-only verification fails and why execution evidence is required.</li>
+    <li id="r12">B. Yan et al., "Fault-Tolerant Sandboxing for AI Coding Agents: A Transactional Approach to Safe Autonomous Execution," 2025. <a href="https://arxiv.org/abs/2512.12806" target="_blank" rel="noopener">arXiv:2512.12806</a>, policy-based interception of agent tool calls plus transactional filesystem snapshots; mirrors the spool-dispatch gate.</li>
+    <li id="r13">W. Xu et al., "A-MEM: Agentic Memory for LLM Agents," <em>NeurIPS</em>, 2025. <a href="https://arxiv.org/abs/2502.12110" target="_blank" rel="noopener">arXiv:2502.12110</a>, Zettelkasten-style dynamic memory with embedding-indexed notes; direct parallel to rs-learn's memorize/recall.</li>
+    <li id="r14">P. Chhikara et al., "Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory," 2025. <a href="https://arxiv.org/abs/2504.19413" target="_blank" rel="noopener">arXiv:2504.19413</a>, production-grade long-term memory architecture; benchmarks the embedding-store memory pattern.</li>
+    <li id="r15">Y. Hu et al., "Evaluating Memory in LLM Agents via Incremental Multi-Turn Interactions (MemoryAgentBench)," 2025. <a href="https://arxiv.org/abs/2507.05257" target="_blank" rel="noopener">arXiv:2507.05257</a>, shows RAG-augmented memory still lags humans across retrieval, test-time learning, long-range understanding, and selective forgetting; motivates auto-recall on every turn.</li>
+    <li id="r16">G. Rosa et al., "Understanding Specification-Driven Code Generation with LLMs: An Empirical Study Design," <em>SANER 2026 Stage-1 Registered Report</em>, 2026. <a href="https://arxiv.org/abs/2601.03878" target="_blank" rel="noopener">arXiv:2601.03878</a>, peer-reviewed protocol for measuring whether written specs preceding code reduce errors; the PRD-mandatory hypothesis under formal study.</li>
+    <li id="r17">Y. Ma and J.-H. Liu, "Quantifying Laziness, Decoding Suboptimality, and Context Degradation in Large Language Models," 2025. <a href="https://arxiv.org/abs/2512.20662" target="_blank" rel="noopener">arXiv:2512.20662</a>, controlled experiments quantifying instruction-omission and length-undershoot; structural motivation for the covering-family obligation.</li>
+    <li id="r18">T. Joshi et al., "SWE-Bench-CL: Continual Learning for Coding Agents," 2025. <a href="https://arxiv.org/abs/2507.00014" target="_blank" rel="noopener">arXiv:2507.00014</a>, extends SWE-bench with cross-session continual-learning evaluation; relevant to the cross-session memory claim.</li>
+    <li id="r19">Z. Tan et al., "MCP-SandboxScan: WASM-based Secure Execution and Runtime Analysis for MCP Tools," 2026. <a href="https://arxiv.org/abs/2601.01241" target="_blank" rel="noopener">arXiv:2601.01241</a>, WebAssembly/WASI sandbox for untrusted tool execution in agent contexts; same architectural bet as plugkit.wasm.</li>
+    <li id="r20">J. Lucas, "Sandboxing Agentic AI Workflows with WebAssembly," <em>NVIDIA Developer Blog</em>, 2024. <a href="https://developer.nvidia.com/blog/sandboxing-agentic-ai-workflows-with-webassembly/" target="_blank" rel="noopener">developer.nvidia.com</a>, influential industry technical report on the wasm-for-agents pattern.</li>
+  </ol>
+</div>
+
+</article>
+</div>
+
+<div class="cross-footer">
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit, rs-search, rs-codeinsight</span></a>
+  <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
+  <a href="./distribution.html"><strong>distribution</strong><span>the SQLite model</span></a>
+</div>
+
+<footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> and <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>probably emerging</span>
+</footer>
+
+</body></html>
