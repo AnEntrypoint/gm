@@ -682,7 +682,7 @@ function writeJsonFile(fp, value) {
   try { atomicWriteJson(fp, value); } catch (_) {}
 }
 
-const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN) {
+const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN, isBrowserCtx) {
   const N = topN || 20;
   if (!profile || !Array.isArray(profile.nodes) || !Array.isArray(profile.samples)) {
     return { timeframe: null, culprits: [] };
@@ -712,6 +712,21 @@ const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN) {
     .sort((a, b) => b.self_us - a.self_us)
     .slice(0, N)
     .map(c => ({ location: c.location, function: c.function, self_us: c.self_us, self_pct: total ? Math.round((c.self_us / total) * 1000) / 10 : 0, hits: c.hits }));
+  // gpu_hint: when the TOP culprit is the unattributed '(program)'/'(native)' bucket at a dominant
+  // share of total self-time, the CPU sampler is telling you it is BLIND here -- that time is real
+  // wall-clock cost the JS/V8 sampler cannot see into (GPU driver submission, shader execution,
+  // compositor/raster work), not "nothing is happening". Proactively naming the follow-up (the
+  // browser verb's own 'trace\\n<script>' CDP-tracing prefix, which returns real gpu_us/viz_us/cc_us
+  // wall-clock GPU-process activity) saves a full extra dispatch+re-read round trip every time a
+  // caller has to rediscover this on their own -- a real, repeated cost hit debugging a live FPS
+  // regression where the top culprit was '(program)' at 84% self-time with nothing further to go on
+  // until a SEPARATE trace-mode dispatch was manually reasoned into existence.
+  const topC = culprits[0];
+  const gpu_hint = (topC && (topC.location === '(native):0' || topC.location === '(program):0') && topC.self_pct >= 40)
+    ? (isBrowserCtx
+        ? \`Top culprit is the unattributed \${topC.function === '(program)' ? '(program)' : '(native)'} bucket at \${topC.self_pct}% self-time -- the CPU sampler cannot see GPU-side work (driver submission, shader execution, compositor/raster). Re-run this dispatch with the 'trace\\n<script>' prefix instead of 'profile' to get real gpu_us/viz_us/cc_us wall-clock GPU-process activity via CDP Tracing.\`
+        : \`Top culprit is the unattributed \${topC.function === '(program)' ? '(program)' : '(native)'} bucket at \${topC.self_pct}% self-time -- the CPU sampler cannot see into native/C++ addon calls, syscalls, or (on the node exec_js surface) any work happening off the main JS thread. No GPU-tracing follow-up applies here (that is browser-only); consider opts.mem:true or narrowing the profiled span if this bucket needs further attribution.\`)
+    : null;
   return {
     timeframe: {
       start_us: typeof profile.startTime === 'number' ? profile.startTime : 0,
@@ -720,6 +735,7 @@ const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN) {
       sample_count: sampleCount,
     },
     culprits,
+    gpu_hint,
   };
 }`;
 
@@ -737,11 +753,11 @@ function sweepStaleProfileTmp() {
 }
 try { sweepStaleProfileTmp(); } catch (_) {}
 let _aggregateCpuProfileFn = null;
-function aggregateCpuProfile(profile, topN) {
+function aggregateCpuProfile(profile, topN, isBrowserCtx) {
   if (!_aggregateCpuProfileFn) {
     _aggregateCpuProfileFn = new Function(AGGREGATE_CPU_PROFILE_SRC + '\nreturn aggregateCpuProfile;')();
   }
-  return _aggregateCpuProfileFn(profile, topN);
+  return _aggregateCpuProfileFn(profile, topN, isBrowserCtx);
 }
 
 const BROWSER_RUNNER_BIN = process.env.GM_BROWSER_RUNNER_BIN || 'playwriter';
@@ -2821,7 +2837,7 @@ function makeHostFunctions(instanceRef) {
               + `    __profile = __r && __r.profile || null;\n`
               + `  } catch (pe) { __profileError = String(pe && pe.message || pe); }\n`
               + `  const __memAfter = process.memoryUsage();\n`
-              + `  const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopN}) : { timeframe: null, culprits: [] };\n`
+              + `  const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopN}, false) : { timeframe: null, culprits: [] };\n`
               + `  const __userFile = ${JSON.stringify('file:///' + profileUserFile.replace(/\\/g, '/'))};\n`
               + `  const __cpuTotalUs = __agg.timeframe ? __agg.timeframe.total_us : 0;\n`
               + `  const __cpuUserUs = (__agg.culprits || []).filter(c => c.location && c.location.indexOf(__userFile) === 0).reduce((a, c) => a + c.self_us, 0);\n`
@@ -3155,8 +3171,25 @@ function makeHostFunctions(instanceRef) {
           // window.__gmGlErrors accumulates {fn,mode,count,offset,type,error,errorName,ctxLabel} for
           // up to 40 distinct GL errors per page load (capped to bound memory on a runaway-error page);
           // window.__gmGlDrawCalls is a running total per draw-fn name for volume context.
+          // DESIGN NOTES (2026-07-17, fixing two real gaps hit live debugging a session-reported FPS
+          // regression): (1) the original cap was "first 40 occurrences, ever, per page load, then
+          // silently stop recording" -- on a bug that fires every frame, the array fills in <1s and
+          // every subsequent browser dispatch for the rest of a long debugging session reads the exact
+          // same stale 9-or-so entries, making it look like the error stopped recurring or is capped/
+          // dead when it is actually still firing every frame. Fixed to a per-SIGNATURE (fn+error+mode+
+          // count+instanceCount) dedup table with an occurrence COUNTER and lastSeenDrawCallIndex, so a
+          // recurring error updates its own entry's count/lastSeen instead of being dropped once 40 raw
+          // occurrences have ever been logged -- growth is now bounded by DISTINCT error shapes (a
+          // realistic page has a handful, not thousands), not raw occurrence volume, and a caller can
+          // tell "still happening, N times so far, most recently at draw #X" instead of a dead list.
+          // (2) no error entry carried a JS stack trace, forcing the exact same
+          // gl.drawX=function(){...new Error().stack...} monkeypatch to be hand-rolled from scratch in
+          // every debugging session that needed to know WHICH call site triggered a given GL error --
+          // captured here once, for free, on first occurrence of each distinct signature (capturing on
+          // EVERY occurrence would be wasteful once a hot per-frame error has fired thousands of times;
+          // the call site for a given signature does not change across occurrences in practice).
           + `await page.addInitScript(()=>{`
-          +   `window.__gmGlErrors=[];window.__gmGlDrawCalls={};`
+          +   `window.__gmGlErrors=[];window.__gmGlDrawCalls={};window.__gmGlErrorTotalCount=0;`
           +   `const __glErrName=(gl,code)=>{for(const k of ['NO_ERROR','INVALID_ENUM','INVALID_VALUE','INVALID_OPERATION','INVALID_FRAMEBUFFER_OPERATION','OUT_OF_MEMORY','CONTEXT_LOST_WEBGL']){try{if(gl[k]===code)return k;}catch(_){}}return 'UNKNOWN_'+code;};`
           +   `const __wrapDraw=(gl,ctxLabel)=>{`
           +     `['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced'].forEach(fn=>{`
@@ -3166,9 +3199,17 @@ function makeHostFunctions(instanceRef) {
           +         `const __res=__orig(...args);`
           +         `window.__gmGlDrawCalls[fn]=(window.__gmGlDrawCalls[fn]||0)+1;`
           +         `const __err=gl.getError();`
-          +         `if(__err!==gl.NO_ERROR&&window.__gmGlErrors.length<40){`
+          +         `window.__gmGlLastDrainedError={fn,error:__err,errorName:__glErrName(gl,__err),drawCallIndex:window.__gmGlDrawCalls[fn]};` // last-drained-code accessor: a user script's OWN post-draw gl.getError() call always reads NO_ERROR (this wrapper already drained the single-slot GL error queue first) -- read this instead of calling gl.getError() again in user code.
+          +         `if(__err!==gl.NO_ERROR){`
+          +           `window.__gmGlErrorTotalCount++;`
           +           `let __bufSize=-1;try{__bufSize=gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER,gl.BUFFER_SIZE);}catch(_){}`
-          +           `window.__gmGlErrors.push({fn,ctxLabel,mode:args[0],count:args[1],offset:fn.indexOf('Elements')>=0?args[3]:undefined,type:fn.indexOf('Elements')>=0?args[2]:undefined,instanceCount:fn.indexOf('Instanced')>=0?args[args.length-1]:undefined,error:__err,errorName:__glErrName(gl,__err),elementArrayBufferSize:__bufSize,drawCallIndex:window.__gmGlDrawCalls[fn]});`
+          +           `const __sig=fn+'|'+__err+'|'+args[0]+'|'+args[1]+'|'+(fn.indexOf('Instanced')>=0?args[args.length-1]:'');`
+          +           `let __rec=window.__gmGlErrors.find(e=>e.__sig===__sig);`
+          +           `if(__rec){__rec.occurrenceCount++;__rec.lastDrawCallIndex=window.__gmGlDrawCalls[fn];}`
+          +           `else if(window.__gmGlErrors.length<40){`
+          +             `let __stack='';try{__stack=new Error().stack.split('\\n').slice(1,9).join(' | ');}catch(_){}`
+          +             `window.__gmGlErrors.push({__sig,fn,ctxLabel,mode:args[0],count:args[1],offset:fn.indexOf('Elements')>=0?args[3]:undefined,type:fn.indexOf('Elements')>=0?args[2]:undefined,instanceCount:fn.indexOf('Instanced')>=0?args[args.length-1]:undefined,error:__err,errorName:__glErrName(gl,__err),elementArrayBufferSize:__bufSize,firstDrawCallIndex:window.__gmGlDrawCalls[fn],lastDrawCallIndex:window.__gmGlDrawCalls[fn],occurrenceCount:1,stack:__stack});`
+          +           `}`
           +         `}`
           +         `return __res;`
           +       `};`
@@ -3210,13 +3251,14 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + AGGREGATE_CPU_PROFILE_SRC + `\n`
-            + `const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopNBrowser}) : {timeframe:null,culprits:[]};\n`
+            + `const __agg = __profile ? aggregateCpuProfile(__profile, ${profileTopNBrowser}, true) : {timeframe:null,culprits:[]};\n`
             + `const __cpuUs=__agg.timeframe?__agg.timeframe.total_us:0;\n`
             + `const __wallVsCpu={wall_us:__wallUs,cpu_self_us:__cpuUs,offcpu_us:Math.max(0,__wallUs-__cpuUs),note:'offcpu_us = wall minus on-CPU JS self time = GPU/compositor/raster/IO/idle the CPU sampler is blind to; use trace mode to attribute GPU activity'};\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `const __RET={result:__result,profile:__agg,profile_error:__profileError,wall_vs_cpu:__wallVsCpu,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'trace') {
           const userScript = modeMatch[3];
@@ -3231,6 +3273,7 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + `const __byCat={};let __minTs=Infinity,__maxTs=-Infinity;for(const ev of __traceEvents){if(typeof ev.ts==='number'){__minTs=Math.min(__minTs,ev.ts);if(typeof ev.dur==='number')__maxTs=Math.max(__maxTs,ev.ts+ev.dur);}if(typeof ev.dur==='number'&&ev.dur>0){const c=ev.cat||'?';__byCat[c]=(__byCat[c]||0)+ev.dur;}}\n`
             + `const __sum=(re)=>Object.entries(__byCat).filter(([k])=>re.test(k)).reduce((a,[,v])=>a+v,0);\n`
@@ -3238,7 +3281,7 @@ function makeHostFunctions(instanceRef) {
             + `const __topCats=Object.entries(__byCat).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([cat,us])=>({cat,wall_us:us}));\n`
             + `const __spanUs=(isFinite(__minTs)&&__maxTs>0)?(__maxTs-__minTs):0;\n`
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `const __RET={result:__result,trace:{wall_us:__wallUs,trace_span_us:__spanUs,event_count:__traceEvents.length,complete:__traceComplete,gpu_us:__gpuUs,viz_us:__vizUs,cc_us:__ccUs,raster_us:__rasterUs,offcpu_note:'gpu_us/viz_us/cc_us are wall-clock GPU-process activity (compositor/raster/draw) captured via CDP Tracing -- the CPU sampler cannot see these',by_category:__topCats},trace_error:__traceError,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         } else if (modeMatch && modeMatch[1] === 'capture') {
           const userScript = modeMatch[3];
@@ -3247,9 +3290,10 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         } else if (screenshotPath) {
           // Every path below (screenshot, DOM query, plain URL/eval, bare eval) now attaches the SAME
@@ -3265,9 +3309,10 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,screenshot_path:${JSON.stringify(screenshotPath)},screenshot_error:__shotErr,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `const __RET={result:__result,screenshot_path:${JSON.stringify(screenshotPath)},screenshot_error:__shotErr,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         } else if (domSelector) {
           evalBody = debugSetup
@@ -3275,9 +3320,10 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `__RET={...__RET,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `__RET={...__RET,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         } else {
           // startUrl and/or blankProbe and/or bare-eval all collapse into this single branch now --
@@ -3287,9 +3333,10 @@ function makeHostFunctions(instanceRef) {
             + `const __wmErrors=await page.evaluate(()=>window.__gmErrors||[]);\n`
             + `const __glErrors=await page.evaluate(()=>window.__gmGlErrors||[]).catch(()=>[]);\n`
             + `const __glDrawCalls=await page.evaluate(()=>window.__gmGlDrawCalls||{}).catch(()=>({}));\n`
+            + `const __glErrorTotalCount=await page.evaluate(()=>window.__gmGlErrorTotalCount||0).catch(()=>0);\n`
             + perfRead
             + `const __allErrors=[...__errs,...__wmErrors];\n`
-            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls}}};\n`
+            + `const __RET={result:__result,debug:{console:${consoleFmt},pageErrors:__allErrors,network:${netFmt},performance:__perf,gl:{errors:__glErrors,drawCalls:__glDrawCalls,errorTotalCount:__glErrorTotalCount}}};\n`
             + emitResult + `return __RET;`;
         }
         const outerTimeoutMs = Math.min(timeoutMs + 6000, 126000);
