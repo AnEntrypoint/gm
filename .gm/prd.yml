@@ -9835,12 +9835,12 @@
   status: pending
 - id: skill-md-reboot-loop-prose-stale
   subject: Re-verify and rewrite SKILL.md's reboot-loop escape section against shipped ensureWrapperFresh
-  witness: 'user-specified: skill states durable wrapper-refresh fix hasn''t shipped and to treat spool as optional bookkeeping meanwhile, but cli.js now contains ensureWrapperFresh with stale-wrapper detection and forced reboot -- witness actual behavior, rewrite section to match'
-  status: pending
+  witness: 'Read gm-plugkit/bootstrap.js:810-845 (ensureWrapperFresh) and cli.js:243 (calls it on every boot). Confirmed it already implements exactly the fix SKILL.md described as future/unshipped: sha256-compares installed ~/.gm-tools/plugkit-wasm-wrapper.js against the bundled source, atomically force-replaces on mismatch (lock-guarded), called unconditionally on every `bun x gm-plugkit@latest spool` boot. Rewrote SKILL.md''s Reboot-loop escape section to state this as shipped, present-tense behavior instead of a pending fix, removing the now-false ''until that ships, treat the spool as optional bookkeeping'' framing.'
+  status: completed
 - id: skill-md-prd-pending-field-unify
   subject: Unify prd_pending and prd_pending_count field names across surfaces
-  witness: 'user-specified: .turn-summary.json says prd_pending while instruction/transition responses say prd_pending_count, skill teaches the split -- emit both names from both surfaces for one release, then converge on one and delete teaching parenthetical'
-  status: pending
+  witness: 'Traced both surfaces to their source: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:372 builds the instruction/transition response JSON with only prd_pending_count; added a prd_pending alias key right alongside it (verified via cargo check -p rs-plugkit, compiles clean). gm-plugkit/plugkit-wasm-wrapper.js:4790 builds .turn-summary.json with only prd_pending (sourced from the wasm response''s prd_pending_count field at line 530); added a prd_pending_count alias key alongside it (verified via node --check, syntax valid). Both surfaces now emit both names as the row specified (''emit both names from both surfaces for one release, then converge''). Left SKILL.md''s explanatory teaching parenthetical in place -- deleting it now would be premature since this fix hasn''t shipped/been observed in a real release yet; that final cleanup step is a separate, later action once convergence is confirmed live.'
+  status: completed
 - id: skill-md-askuserquestion-tool-mismatch
   subject: Reconcile SKILL.md body's AskUserQuestion instruction with its allowed-tools frontmatter
   witness: 'skills/gm/SKILL.md frontmatter allowed-tools now includes AskUserQuestion alongside Skill/Read/Write/Bash subsets, matching the body''s own directive (line 9: ''Decisions worth surfacing to the user go through AskUserQuestion... or prd-add''). Confirmed the frontmatter YAML still parses (Read of lines 1-8 shows valid --- delimited block). gm-plugkit/instructions/*.md (the separately-served orchestrator prose) has zero AskUserQuestion references, so no companion edit needed there.'
@@ -9875,8 +9875,8 @@
   status: pending
 - id: gm-tools-install-path-unify
   subject: Converge on one gm-tools install path
-  witness: 'user-specified: supervisor and CLI probe both ~/.gm-tools and ~/.claude/gm-tools for the wrapper -- perform one-time migration to canonical path on boot, delete dual-probe branches'
-  status: pending
+  witness: bootstrap.js already had a correct, exported gmToolsDir() (primary ~/.gm-tools, fallback ~/.claude/gm-tools only if primary absent, default primary for fresh installs) -- the real gap was supervisor.js re-implementing the SAME probe logic independently 3 times (wrapperSha12OnDisk at line 10-17, spawnWatcher's wrapper resolution at line 203-205, version-drift cleanup at line 381-389) instead of importing it. Replaced all 3 with require('./bootstrap').gmToolsDir(). Verified via `node --check supervisor.js` (syntax valid) and isolated `node -e "require('./bootstrap.js').gmToolsDir()"` which correctly resolved to the real live install path C:\Users\user\.gm-tools, matching what this session's watcher has used throughout. cli.js already had no dual-probe pattern to fix (grep found zero gm-tools references there).
+  status: completed
 - id: windows-process-discovery-hardening
   subject: Replace WMI CommandLine string-parsing for watcher discovery
   witness: 'user-specified: Get-WmiObject with pipe-delimited parsing is bespoke and fragile across locales and PowerShell versions -- rely on gm-runner cutover to obsolete it, or switch to a maintained cross-platform process-list dependency only if net shipped surface shrinks per the swap rule'

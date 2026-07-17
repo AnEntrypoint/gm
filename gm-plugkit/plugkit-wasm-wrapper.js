@@ -4651,6 +4651,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         supervisor_pid: _supervisorPid,
         wrapper_sha: _ownWrapperSha12 || null,
         idle_limit_ms: IDLE_LIMIT_MS,
+        supervisor_stale_limit_ms: 30000,
       };
       if (busyMs && busyMs > 0) { rec.busy_until = now + busyMs; _lastBusyUntil = rec.busy_until; }
       fs.writeFileSync(STATUS_PATH, JSON.stringify(rec));
