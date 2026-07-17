@@ -4439,11 +4439,14 @@ async function runSpoolWatcher(instance, spoolDir) {
         const dir = path.dirname(relPath);
         const verb = dir === '.' ? taskBase : dir;
         const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
-        fs.writeFileSync(path.join(outDir, outName), JSON.stringify({
+        const abortOutPath = path.join(outDir, outName);
+        const abortTmpPath = abortOutPath + '.tmp.' + process.pid;
+        fs.writeFileSync(abortTmpPath, JSON.stringify({
           ok: false,
           error: `wasm aborted earlier (exit_code=${__wasmAbortFlag.code}); watcher will respawn`,
           wasm_aborted: true,
         }));
+        fs.renameSync(abortTmpPath, abortOutPath);
         try { fs.unlinkSync(filePath); } catch (_) {}
       } catch (_) {}
       unmarkProcessed(key);
@@ -4561,7 +4564,10 @@ async function runSpoolWatcher(instance, spoolDir) {
       }
 
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
-      fs.writeFileSync(path.join(outDir, outName), resultStr);
+      const outPath = path.join(outDir, outName);
+      const outTmpPath = outPath + '.tmp.' + process.pid;
+      fs.writeFileSync(outTmpPath, resultStr);
+      fs.renameSync(outTmpPath, outPath);
       const dur_ms = Date.now() - t0;
       console.log(`[dispatch] <- verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
       logEvent('plugkit', 'dispatch.end', { verb, task: taskBase, dur_ms, out_bytes: resultStr.length });
@@ -4603,7 +4609,10 @@ async function runSpoolWatcher(instance, spoolDir) {
       const verb = dir === '.' ? taskBase : dir;
       const outName = dir === '.' ? `${taskBase}.json` : `${verb}-${taskBase}.json`;
       try {
-        fs.writeFileSync(path.join(outDir, outName), JSON.stringify({ ok: false, error: e.message }));
+        const errOutPath = path.join(outDir, outName);
+        const errTmpPath = errOutPath + '.tmp.' + process.pid;
+        fs.writeFileSync(errTmpPath, JSON.stringify({ ok: false, error: e.message }));
+        fs.renameSync(errTmpPath, errOutPath);
       } catch (_) {}
       try { fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);
