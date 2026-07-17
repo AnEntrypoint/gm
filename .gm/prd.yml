@@ -9827,8 +9827,8 @@
   status: pending
 - id: docs-archive-stale-workflow-file
   subject: Delete docs/_archive/rs-plugkit-release-yml-new.yml
-  witness: 'user-specified: parked copy of another repo''s CI workflow inside gm''s docs archive is stale junk under residual-triage rule; land authoritative content in rs-plugkit''s real workflow first if still needed, then delete archive copy'
-  status: pending
+  witness: diff against C:/dev/gm/rs-plugkit/.github/workflows/release.yml confirmed the archived copy's job structure (6-platform matrix build inline) is completely superseded by the real workflow's current shape (much shorter, different structure, paths-ignore added) -- archived content already landed/evolved past in the authoritative file. Deleted C:/dev/gm/docs/_archive/rs-plugkit-release-yml-new.yml.
+  status: completed
 - id: docs-html-stop-committing-build-output
   subject: Stop committing built docs HTML that duplicates site/content sources
   witness: 'user-specified: docs/*.html mirrors site/content/pages/*.yaml page-for-page; if build output, build in Pages workflow and remove from tree; if hand-authored, migrate content into yaml source first'
