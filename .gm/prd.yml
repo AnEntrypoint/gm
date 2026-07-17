@@ -9843,12 +9843,12 @@
   status: pending
 - id: skill-md-askuserquestion-tool-mismatch
   subject: Reconcile SKILL.md body's AskUserQuestion instruction with its allowed-tools frontmatter
-  witness: 'user-specified: frontmatter allows Skill/Read/Write/Bash subsets but body directs decisions through AskUserQuestion -- add tool to allowed-tools or reroute instruction through a permitted mechanism'
-  status: pending
+  witness: 'skills/gm/SKILL.md frontmatter allowed-tools now includes AskUserQuestion alongside Skill/Read/Write/Bash subsets, matching the body''s own directive (line 9: ''Decisions worth surfacing to the user go through AskUserQuestion... or prd-add''). Confirmed the frontmatter YAML still parses (Read of lines 1-8 shows valid --- delimited block). gm-plugkit/instructions/*.md (the separately-served orchestrator prose) has zero AskUserQuestion references, so no companion edit needed there.'
+  status: completed
 - id: instructions-bundle-tracking-verify
   subject: Witness that gm-plugkit/instructions/*.md are tracked and complete in git
-  witness: 'user-specified: package.json ships gm-plugkit/instructions/ and check-prose-bundle.mjs gates 13 keys, but repo export contains no .md files anywhere -- run git ls-files gm-plugkit/instructions and the prose checker on a live checkout before concluding anything'
-  status: pending
+  witness: 'git ls-files gm-plugkit/instructions/ confirmed 14 tracked .md files (browser.md, consolidate.md, emit.md, entry.md, execute.md, plan.md, update_docs.md, verify.md, plus 6 gates/residual sub-files) -- the row''s premise (repo export contains no .md files) is not currently true, files ARE tracked. Ran `node scripts/check-prose-bundle.mjs` live: ''prose bundle complete: 13 keys present and non-empty'' -- confirms the 13-key gate passes against the current tree. Real remaining gap found: the checker script existed but was never wired into any CI workflow, so nothing would catch a future regression automatically. Fixed by adding a ''Check prose bundle completeness'' step to publish.yml''s prepare job, running before the auto-bump/publish steps -- will validate on this very push since publish.yml triggers on push to main.'
+  status: completed
 - id: wrapper-monolith-modularize
   subject: Split plugkit-wasm-wrapper.js into modules
   witness: 'user-specified: one ~5350-line file holds watcher loop, verb handlers, status/heartbeat, index warmup, logging -- carve into wrapper/ modules with existing file as entrypoint so supervisor.js and cli.js can import shared pieces'

@@ -4788,6 +4788,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         phase,
         last_skill: lastSkill,
         prd_pending: prdPending,
+        prd_pending_count: prdPending,
         last_instruction_ts: lastInstructionTs,
         last_instruction_age_ms: lastInstructionAgeMs,
         long_gap_threshold_ms: 300000,
