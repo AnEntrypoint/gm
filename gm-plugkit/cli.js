@@ -285,6 +285,7 @@ function writeCliError(phase, err) {
       if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
       else process.kill(already.pid, 'SIGTERM');
     } catch (_) {}
+    waitForPidDeath(already.pid, 5000);
   }
 
   const wrapperPath = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
