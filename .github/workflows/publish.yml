@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Check prose bundle completeness
+        run: node scripts/check-prose-bundle.mjs
+
       - name: Auto-bump version
         run: |
           CURRENT_VERSION=$(jq -r '.version' gm.json)
