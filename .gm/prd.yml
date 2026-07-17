@@ -9935,8 +9935,8 @@
   status: pending
 - id: ascii-policy-sweep
   subject: Sweep site and docs prose for conformance to the declared ASCII-only rule
-  witness: 'user-specified: code appears clean, run non-ASCII scan across shipped site/docs surfaces and either fix findings or scope published rule to code only'
-  status: pending
+  witness: Ran a real non-ASCII character scan (grep -P '[^\x00-\x7F]') across site/content/pages/*.yaml, docs/*.md, and broadly across site/ and docs/ for *.md/*.yaml/*.yml/*.html file types -- zero matches found anywhere. The declared ASCII-only rule is already fully conformed to across all shipped site/docs prose surfaces; no fix needed, confirmed clean.
+  status: completed
 - id: site-derive-quantitative-claims
   subject: Derive hard-coded quantitative site claims from data
   witness: 'user-specified: stat callouts like adapter counts and supervised-hours figures are hand-written in yaml and drift like docs/api snapshots -- generate at build from same data pipeline, or mark explicitly as historical fixed claims'
