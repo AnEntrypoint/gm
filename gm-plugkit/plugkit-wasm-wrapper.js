@@ -2548,6 +2548,55 @@ function hostEmbedViaGmRunner(text) {
   }
 }
 
+let _agentplugRunnerBinPath;
+function resolveAgentplugRunnerBin() {
+  if (_agentplugRunnerBinPath !== undefined) return _agentplugRunnerBinPath;
+  const exe = path.join(GM_TOOLS_ROOT, process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner');
+  _agentplugRunnerBinPath = fs.existsSync(exe) ? exe : null;
+  return _agentplugRunnerBinPath;
+}
+
+// plugkit-core's wasm now imports env:host_plugin_call unconditionally (the
+// agentplug migration routes libsql/bert/treesitter through it instead of
+// linking them in-process) -- WITHOUT this import registered, WebAssembly.
+// instantiate throws a hard LinkError and the wasm never boots at all, not
+// just a degraded-capability fallback like host_vec_embed's absence. This
+// delegates to agentplug-runner's `dispatch <plugin> <verb> <body>` one-shot
+// subcommand (same synchronous spawnSync shape as hostEmbedViaGmRunner
+// above) when a real ~/.gm-tools/agentplug-runner(.exe) is present; when
+// absent, returns a real, typed {"ok":false,"error":"not_implemented_js_wrapper"}
+// envelope instead of a JS-side exception -- lets wasm instantiation and
+// every non-plugin-dependent verb keep working, with only the specific
+// libsql/bert/treesitter-backed verbs (sql_*, recall, memorize, codesearch)
+// failing loud and typed rather than the whole session going dark.
+function hostPluginCallViaAgentplugRunner(plugin, verb, body) {
+  const bin = resolveAgentplugRunnerBin();
+  if (!bin) return null;
+  try {
+    const r = spawnSync(bin, ['dispatch', plugin, verb, body], {
+      encoding: 'utf-8',
+      windowsHide: true,
+      timeout: 30000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (r.error || r.status !== 0) return null;
+    return r.stdout;
+  } catch (_) {
+    return null;
+  }
+}
+
+globalThis.__hostPluginCallSync = function __hostPluginCallSync(pluginPtr, pluginLen, verbPtr, verbLen, bodyPtr, bodyLen, instance) {
+  const plugin = readWasmStr(instance, pluginPtr, pluginLen);
+  const verb = readWasmStr(instance, verbPtr, verbLen);
+  const body = readWasmStr(instance, bodyPtr, bodyLen);
+  const result = hostPluginCallViaAgentplugRunner(plugin, verb, body);
+  const out = result != null
+    ? result
+    : JSON.stringify({ ok: false, error: 'not_implemented_js_wrapper', plugin });
+  return writeWasmJson(instance, JSON.parse(out));
+};
+
 globalThis.__hostEmbedSync = function __hostEmbedSync(textPtr, textLen, outPtr, outLen, instance) {
   try {
     const text = readWasmStr(instance, textPtr, textLen);
@@ -2735,6 +2784,14 @@ function makeHostFunctions(instanceRef) {
         }
       } catch (_) {}
       return -1;
+    },
+
+    host_plugin_call: (pluginPtr, pluginLen, verbPtr, verbLen, bodyPtr, bodyLen) => {
+      try {
+        return globalThis.__hostPluginCallSync(pluginPtr, pluginLen, verbPtr, verbLen, bodyPtr, bodyLen, instanceRef.value);
+      } catch (_) {
+        return 0n;
+      }
     },
 
     host_vec_search: (qPtr, qLen, k) => {
