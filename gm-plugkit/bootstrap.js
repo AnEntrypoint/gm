@@ -223,6 +223,26 @@ function gmToolsDir() {
   return primary;
 }
 
+// Slim-artifact eligibility: plugkit-core's embed.rs probes host_vec_embed
+// before ever loading its wasm-embedded safetensors fallback (see
+// rs-plugkit/crates/plugkit-core/src/embed.rs::init_ctx) -- a slim build
+// (feature=slim, no embedded weights at all) is only safe to fetch on a host
+// that actually answers host_vec_embed for real. plugkit-wasm-wrapper.js
+// wires that answer through gm-runner's native candle path
+// (hostEmbedViaGmRunner) or agentplug-runner's shared daemon, both gated on
+// one of these two binaries existing under ~/.gm-tools -- mirrors that same
+// on-disk presence check here so bootstrap-time artifact selection and
+// runtime embed-delegation eligibility never disagree. Absence of both means
+// no host_vec_embed answer will ever come, so fetching fat (which carries its
+// own wasm-side embedding fallback) is the only safe choice.
+function hasNativeEmbedRunner() {
+  const dir = gmToolsDir();
+  const names = process.platform === 'win32'
+    ? ['gm-runner.exe', 'agentplug-runner.exe']
+    : ['gm-runner', 'agentplug-runner'];
+  return names.some(n => { try { return fs.existsSync(path.join(dir, n)); } catch (_) { return false; } });
+}
+
 // Root a project-dir resolution at the git COMMON dir, not the raw cwd/
 // CLAUDE_PROJECT_DIR -- a worktree (e.g. Workflow's isolation:'worktree'
 // agents, each `git worktree add`-ing a fresh physical directory) shares the
@@ -441,14 +461,39 @@ function httpGetBuffer(url, timeoutMs) {
   });
 }
 
-async function downloadFromGithubReleases(destPath, version) {
+// artifactName selects the REMOTE release asset ('plugkit.wasm' fat or
+// 'plugkit-slim.wasm' slim) -- the local destPath filename is unaffected,
+// same convention gm-runner's own download.rs::bootstrap_plugkit_wasm uses
+// (fixed local name, artifact-selected remote source). A slim fetch that 404s
+// (older release predating the slim publish step, or the asset genuinely
+// missing) falls back to fetching fat rather than failing the whole
+// bootstrap -- a host capable of running the slim build is also always a
+// valid fat-build host (fat is a strict superset of slim's capability), so
+// this fallback never produces incorrect behavior, only a larger download.
+async function downloadFromGithubReleases(destPath, version, artifactName) {
+  const name = artifactName || 'plugkit.wasm';
   const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
-  log(`gh-releases download: ${base}/plugkit.wasm`);
-  const buf = await httpGetBuffer(`${base}/plugkit.wasm`, 60000);
-  if (!buf || buf.length < 1024) throw new Error(`gh-releases download too small: ${buf ? buf.length : 0} bytes`);
+  log(`gh-releases download: ${base}/${name}`);
+  let buf;
+  try {
+    buf = await httpGetBuffer(`${base}/${name}`, 60000);
+  } catch (e) {
+    if (name !== 'plugkit.wasm') {
+      log(`gh-releases slim fetch failed (${e.message}); falling back to fat plugkit.wasm`);
+      return downloadFromGithubReleases(destPath, version, 'plugkit.wasm');
+    }
+    throw e;
+  }
+  if (!buf || buf.length < 1024) {
+    if (name !== 'plugkit.wasm') {
+      log(`gh-releases slim download too small (${buf ? buf.length : 0} bytes); falling back to fat plugkit.wasm`);
+      return downloadFromGithubReleases(destPath, version, 'plugkit.wasm');
+    }
+    throw new Error(`gh-releases download too small: ${buf ? buf.length : 0} bytes`);
+  }
   let remoteSha = '';
   try {
-    const shaBuf = await httpGetBuffer(`${base}/plugkit.wasm.sha256`, 10000);
+    const shaBuf = await httpGetBuffer(`${base}/${name}.sha256`, 10000);
     remoteSha = shaBuf.toString('utf-8').trim().split(/\s+/)[0];
   } catch (e) { log(`gh-releases sha fetch failed: ${e.message}`); }
   if (remoteSha) {
@@ -457,7 +502,7 @@ async function downloadFromGithubReleases(destPath, version) {
     log(`gh-releases sha verified ${got.slice(0, 16)}...`);
   }
   fs.writeFileSync(destPath, buf);
-  log(`gh-releases wrote ${buf.length} bytes to ${destPath}`);
+  log(`gh-releases wrote ${buf.length} bytes to ${destPath} (artifact=${name})`);
 }
 
 async function extractNpmPackageWithRetry(destPath, version) {
@@ -625,14 +670,27 @@ async function bootstrap(opts) {
   opts = opts || {};
   const version = readVersionFile();
   const shaManifest = readShaManifest();
+  // Artifact selection: slim (no wasm-embedded safetensors, ~130MB smaller)
+  // only when this host has a native host_vec_embed answerer on disk
+  // (gm-runner or agentplug-runner under ~/.gm-tools -- see
+  // hasNativeEmbedRunner) -- everyone else fetches fat, unchanged from
+  // before this selection logic existed. remoteArtifact is the release-asset
+  // name; the LOCAL cache filename stays 'plugkit.wasm' either way (matching
+  // gm-runner's own download.rs convention) so nothing downstream that reads
+  // the local wasm path needs to know which variant landed. The cache
+  // sub-directory is kept distinct per-kind (v<version> vs v<version>-slim)
+  // so a fat and slim download of the same version never collide under the
+  // same sha/sentinel check.
+  const useSlim = hasNativeEmbedRunner();
+  const remoteArtifact = useSlim ? 'plugkit-slim.wasm' : 'plugkit.wasm';
   const wasmName = 'plugkit.wasm';
-  const expectedSha = shaManifest ? shaManifest[wasmName] : null;
+  const expectedSha = shaManifest ? (shaManifest[remoteArtifact] || (useSlim ? null : shaManifest[wasmName])) : null;
 
   let root = cacheRoot();
   try { ensureDir(root); }
   catch (_) { root = fallbackCacheRoot(); ensureDir(root); }
 
-  const verDir = path.join(root, `v${version}`);
+  const verDir = path.join(root, useSlim ? `v${version}-slim` : `v${version}`);
   ensureDir(verDir);
 
   const finalPath = path.join(verDir, wasmName);
@@ -696,19 +754,37 @@ async function bootstrap(opts) {
         }
       } catch (_) {}
     }
-    try {
-      await extractNpmPackageWithRetry(partialPath, version);
-    } catch (extractErr) {
-      log(`npm-extract failed (${extractErr.message || extractErr}); falling back to GitHub Releases`);
+    if (useSlim) {
+      // The plugkit-wasm npm package only ever ships the fat artifact (see
+      // release.yml's npm-publish step, which cp's release-assets/plugkit.wasm
+      // -- never plugkit-slim.wasm -- into the package). Skip the npm-extract
+      // attempt entirely for a slim fetch and go straight to GitHub Releases,
+      // which is where slim is actually published.
       try {
-        await downloadFromGithubReleases(partialPath, version);
+        await downloadFromGithubReleases(partialPath, version, remoteArtifact);
       } catch (ghErr) {
         writeBootstrapError({
           expected_version: version, cached_version: null,
-          error_phase: 'npm-extract+gh-fallback',
-          error_message: `npm: ${extractErr.message}; gh: ${ghErr.message}`,
+          error_phase: 'gh-releases-slim',
+          error_message: `gh: ${ghErr.message}`,
         });
         throw ghErr;
+      }
+    } else {
+      try {
+        await extractNpmPackageWithRetry(partialPath, version);
+      } catch (extractErr) {
+        log(`npm-extract failed (${extractErr.message || extractErr}); falling back to GitHub Releases`);
+        try {
+          await downloadFromGithubReleases(partialPath, version, remoteArtifact);
+        } catch (ghErr) {
+          writeBootstrapError({
+            expected_version: version, cached_version: null,
+            error_phase: 'npm-extract+gh-fallback',
+            error_message: `npm: ${extractErr.message}; gh: ${ghErr.message}`,
+          });
+          throw ghErr;
+        }
       }
     }
 
@@ -740,7 +816,15 @@ async function bootstrap(opts) {
     log(`decision: fetch reason: install-complete (${finalPath})`);
     obsEvent('bootstrap', 'install.done', { path: finalPath, version, kind: 'plugkit-wasm' });
     proactiveKillForNewInstall(version);
-    pruneOldVersions(root, version);
+    // pruneOldVersions keeps only the dir literally named v<keepVersion> --
+    // verDir uses a '-slim' suffix for the slim cache slot (see useSlim
+    // above), so the keep-token passed here must match that same suffix or
+    // pruneOldVersions deletes the directory just populated by THIS run
+    // before copyWasmToGmTools below can read from it (live-witnessed this
+    // session: a real end-to-end bootstrap() run on a native-runner host hit
+    // exactly this -- 'pruned .../v0.1.906-slim' followed by an ENOENT on the
+    // immediately-following copy, because 'v0.1.906' != 'v0.1.906-slim').
+    pruneOldVersions(root, useSlim ? `${version}-slim` : version);
     copyWasmToGmTools(finalPath, version);
     clearBootstrapError();
     return finalPath;

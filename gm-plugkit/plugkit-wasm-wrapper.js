@@ -1936,6 +1936,10 @@ globalThis.__hostEmbedSync = function __hostEmbedSync(textPtr, textLen, outPtr, 
 
 function makeHostFunctions(instanceRef) {
   return {
+    host_cwd: () => {
+      const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+      return writeWasmStr(instanceRef.value, cwd);
+    },
     host_fs_read: (pathPtr, pathLen) => {
       try {
         const filePath = readWasmStr(instanceRef.value, pathPtr, pathLen);
@@ -4601,6 +4605,17 @@ async function runSpoolWatcher(instance, spoolDir) {
   await new Promise(() => {});
 }
 
+// Slim eligibility mirrors bootstrap.js's own hasNativeEmbedRunner (same
+// on-disk check, duplicated rather than shared because this file is ESM and
+// bootstrap.js is CJS with no shared module between them today) -- a slim
+// fetch here is only correct when a real host_vec_embed answerer
+// (resolveGmRunnerEmbedBin / resolveAgentplugRunnerBin, both already defined
+// above for the runtime embed-delegation path) is present on disk, since a
+// slim wasm has no fallback embedding path of its own.
+function hasNativeEmbedRunnerForSelfHeal() {
+  return !!(resolveGmRunnerEmbedBin() || resolveAgentplugRunnerBin());
+}
+
 async function selfHealFromGithubReleases() {
   return new Promise((resolve, reject) => {
     const fetchJson = (url) => new Promise((res, rej) => {
@@ -4635,10 +4650,30 @@ async function selfHealFromGithubReleases() {
         const version = meta && meta.version;
         if (!version) throw new Error('no version from npm plugkit-wasm');
         const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
-        const [wasm, sha] = await Promise.all([
-          fetchBuf(`${base}/plugkit.wasm`),
-          fetchBuf(`${base}/plugkit.wasm.sha256`).then(b => b.toString('utf-8').trim().split(/\s+/)[0]).catch(() => ''),
-        ]);
+        // Slim only when a real host_vec_embed answerer is present -- see
+        // hasNativeEmbedRunnerForSelfHeal. A slim asset that 404s (older
+        // release predating slim publish) falls back to fat rather than
+        // failing self-heal entirely, since fat is a strict capability
+        // superset and always a safe (if larger) substitute.
+        const wantSlim = hasNativeEmbedRunnerForSelfHeal();
+        let artifactName = wantSlim ? 'plugkit-slim.wasm' : 'plugkit.wasm';
+        let wasm, sha;
+        try {
+          [wasm, sha] = await Promise.all([
+            fetchBuf(`${base}/${artifactName}`),
+            fetchBuf(`${base}/${artifactName}.sha256`).then(b => b.toString('utf-8').trim().split(/\s+/)[0]).catch(() => ''),
+          ]);
+        } catch (e) {
+          if (artifactName !== 'plugkit.wasm') {
+            artifactName = 'plugkit.wasm';
+            [wasm, sha] = await Promise.all([
+              fetchBuf(`${base}/${artifactName}`),
+              fetchBuf(`${base}/${artifactName}.sha256`).then(b => b.toString('utf-8').trim().split(/\s+/)[0]).catch(() => ''),
+            ]);
+          } else {
+            throw e;
+          }
+        }
         if (sha) {
           const got = crypto.createHash('sha256').update(wasm).digest('hex');
           if (got !== sha) throw new Error(`sha mismatch: got ${got}, expected ${sha}`);
@@ -4664,7 +4699,7 @@ async function selfHealFromGithubReleases() {
         if (path.resolve(wrapperSrc) !== path.resolve(wrapperDst) && fs.existsSync(wrapperSrc)) {
           try { fs.copyFileSync(wrapperSrc, wrapperDst); } catch (_) {}
         }
-        resolve({ ok: true, version, sha });
+        resolve({ ok: true, version, sha, artifact: artifactName });
       } catch (e) { reject(e); }
     })();
   });
