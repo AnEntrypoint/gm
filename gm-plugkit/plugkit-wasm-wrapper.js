@@ -12,6 +12,9 @@ const _netModule = net;
 const _httpModule = http;
 const _httpsModule = https;
 import { fileURLToPath } from 'url';
+import _gmLog from './gm-log.js';
+const _sharedLogEvent = _gmLog.logEvent;
+const _sharedGmLogRoot = _gmLog.GM_LOG_ROOT;
 
 let _writeStatusBusy = () => {};
 let _lastBusyUntil = 0;
@@ -38,7 +41,7 @@ const GM_TOOLS_ROOT = resolveGmToolsRoot();
 const KV_DIR = path.join(GM_TOOLS_ROOT, 'kv');
 fs.mkdirSync(KV_DIR, { recursive: true });
 
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const GM_LOG_ROOT = _sharedGmLogRoot;
 const ORCHESTRATOR_VERBS = new Set(['instruction', 'transition', 'phase-status', 'prd-add', 'prd-resolve', 'prd-list', 'mutable-add', 'mutable-resolve', 'mutable-list', 'memorize-fire', 'residual-scan', 'auto-recall']);
 
 const TURN_IDLE_MS = 30_000;
@@ -472,27 +475,7 @@ const __lockRejectedEmitAt = new Map();
 
 
 function logEvent(sub, event, fields) {
-  if (process.env.GM_LOG_DISABLE) return;
-  try {
-    const day = new Date().toISOString().slice(0, 10);
-    const dir = path.join(GM_LOG_ROOT, day);
-    fs.mkdirSync(dir, { recursive: true });
-    const safeFields = { ...(fields || {}) };
-    if (Object.prototype.hasOwnProperty.call(safeFields, 'pid')) {
-      safeFields.child_pid = safeFields.pid;
-      delete safeFields.pid;
-    }
-    const line = JSON.stringify({
-      ts: new Date().toISOString(),
-      sub,
-      event,
-      pid: process.pid,
-      cwd: process.cwd(),
-      sess: readCurrentSess(),
-      ...safeFields,
-    });
-    fs.appendFileSync(path.join(dir, `${sub}.jsonl`), line + '\n');
-  } catch (_) {}
+  _sharedLogEvent(sub, event, fields, { sess: readCurrentSess() });
 }
 
 function emitOrchestratorEvents(verb, taskBase, resultStr) {

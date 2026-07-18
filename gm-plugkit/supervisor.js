@@ -7,6 +7,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { gmToolsDir } = require('./bootstrap');
+const { logEvent: _sharedLogEvent, GM_LOG_ROOT: _sharedGmLogRoot } = require('./gm-log');
 
 function wrapperSha12OnDisk() {
   try {
@@ -24,7 +25,7 @@ const SHUTDOWN_REASON_PATH = path.join(spoolDir, '.shutdown-reason.json');
 const SUPERVISOR_PATH = path.join(spoolDir, '.supervisor.json');
 const SUPERVISOR_PID_PATH = path.join(spoolDir, '.supervisor.pid');
 const LOG_PATH = path.join(spoolDir, '.watcher.log');
-const GM_LOG_ROOT = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
+const GM_LOG_ROOT = _sharedGmLogRoot;
 
 const POLL_INTERVAL_MS = 10_000;
 const STATUS_STALE_MS = 30_000;
@@ -34,22 +35,7 @@ const BURST_BACKOFF_MS = 60_000;
 const VERSION_DRIFT_COOLDOWN_MS = 60_000;
 
 function logEvent(event, fields) {
-  try {
-    const day = new Date().toISOString().slice(0, 10);
-    const dir = path.join(GM_LOG_ROOT, day);
-    fs.mkdirSync(dir, { recursive: true });
-    const line = JSON.stringify({
-      ts: new Date().toISOString(),
-      sub: 'plugkit',
-      event,
-      pid: process.pid,
-      sess: process.env.CLAUDE_SESSION_ID || '',
-      cwd: process.cwd(),
-      role: 'supervisor',
-      ...fields,
-    }) + '\n';
-    fs.appendFileSync(path.join(dir, 'plugkit.jsonl'), line);
-  } catch (e) { try { console.error('[supervisor] logEvent write failed:', e); } catch (_) {} }
+  _sharedLogEvent('plugkit', event, fields, { sess: process.env.CLAUDE_SESSION_ID || '', role: 'supervisor' });
 }
 
 function writeSupervisorStatus(state, extra) {

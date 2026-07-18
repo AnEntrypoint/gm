@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
+const { logEvent: _sharedLogEvent } = require('./gm-log');
 
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
@@ -39,19 +40,7 @@ function log(msg) {
 }
 
 function obsEvent(subsystem, event, fields) {
-  if (process.env.GM_LOG_DISABLE) return;
-  try {
-    const root = process.env.GM_LOG_DIR || path.join(os.homedir(), '.claude', 'gm-log');
-    const day = new Date().toISOString().slice(0, 10);
-    const dir = path.join(root, day);
-    fs.mkdirSync(dir, { recursive: true });
-    const line = JSON.stringify({
-      ts: new Date().toISOString(), sub: subsystem, event,
-      pid: process.pid, sess: process.env.CLAUDE_SESSION_ID || process.env.GM_SESSION_ID || '',
-      ...fields,
-    });
-    fs.appendFileSync(path.join(dir, `${subsystem}.jsonl`), line + '\n');
-  } catch (_) {}
+  _sharedLogEvent(subsystem, event, fields, { cwd: false });
 }
 
 function writeBootstrapError(spec) {

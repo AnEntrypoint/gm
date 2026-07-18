@@ -13,6 +13,7 @@
     "bootstrap.js",
     "supervisor.js",
     "plugkit-wasm-wrapper.js",
+    "gm-log.js",
     "plugkit.version",
     "plugkit.sha256",
     "instructions/"
