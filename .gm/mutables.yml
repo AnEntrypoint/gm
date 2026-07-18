@@ -1128,3 +1128,8 @@
   witness: 'anentrypoint-design repo: dispatched git_commit, response data.sha was corrupted bytes instead of a real short SHA. Confirmed the commit itself landed correctly via a follow-up git_log dispatch which showed the real sha 0e34d62 with matching subject. The commit/push mechanism works; only the git_commit response''s own sha field is corrupted -- needs a fix in the rs-plugkit git_commit verb handler''s sha extraction/encoding.'
   id: mut-1784372274491
   status: unknown
+- prd_id: treesitter-surface-consolidation
+  name: rs-plugkit-push-deferred-concurrent-writer
+  description: 'content-manifest.json grammar-manifest work committed locally to rs-plugkit as 0dad22f (docs: pin cross-repo tree-sitter grammar versions). git_push denied with deviation.push-dirty: a second, actively-running concurrent session is continuously modifying rs-plugkit (git_commit_vectors.rs, rssearch_vectors.rs, vecns.rs, site/theme.mjs, plus new site/node_modules untracked) unrelated to this row -- single-writer contention, not a real conflict with the committed change. Per single-writer discipline, none of those files were touched or triaged since they are not mine to stage/commit/revert. Will retry git_push once git status --porcelain on rs-plugkit goes empty (concurrent session settles) rather than force through active edits.'
+  id: mut-1784372737382
+  status: unknown
