@@ -10223,3 +10223,9 @@
   subject: race test B
   status: completed
   witness: Second test-only row (distinct from race-test-a), created to verify the cas_retry_write race fix via two near-simultaneous prd-add dispatches, resolving to clean up test artifacts.
+- id: cas-race-live-witness-scratch-row
+  subject: scratch row for live two-concurrent-prd-resolve witness of cas_retry_write fix -- safe to delete
+  category: scratch
+  effort: small
+  status: completed
+  witness: live two-concurrent-prd-resolve witness dispatch B -- confirming cas_retry_write post-write read-back fix holds through the real spool ABI, gm-plugkit 0.1.915, second concurrent caller
