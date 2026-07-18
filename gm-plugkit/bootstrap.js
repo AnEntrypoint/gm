@@ -285,8 +285,26 @@ function readVersionFile() {
 function readShaManifest() {
   const p = path.join(wrapperDir, 'plugkit.sha256');
   if (!fs.existsSync(p)) return null;
+  const raw = fs.readFileSync(p, 'utf8');
+  // Two real formats seen in the wild for this file: the checked-in local
+  // gm-plugkit/plugkit.sha256 is a JSON manifest ({"plugkit.wasm":"<sha>"}),
+  // written by the version-bump automation; a GitHub-release .sha256 sidecar
+  // (fetched directly from plugkit-bin releases) is a standard sha256sum-format
+  // line ("<hash>  <filename>"). Try JSON first since that's this file's own
+  // real on-disk shape -- the sha256sum-line regex never matched it, silently
+  // returning {} and skipping verification on every bootstrap call.
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      const out = {};
+      for (const [name, sha] of Object.entries(parsed)) {
+        if (typeof sha === 'string') out[name] = sha.toLowerCase();
+      }
+      return out;
+    }
+  } catch (_) { /* not JSON, fall through to sha256sum-line parsing */ }
   const out = {};
-  for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+  for (const line of raw.split(/\r?\n/)) {
     const m = line.match(/^([0-9a-f]{64})\s+(\S+)\s*$/i);
     if (m) out[m[2]] = m[1].toLowerCase();
   }
