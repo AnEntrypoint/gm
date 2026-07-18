@@ -17,6 +17,20 @@ const _sharedLogEvent = _gmLog.logEvent;
 const _sharedGmLogRoot = _gmLog.GM_LOG_ROOT;
 import _gmProcess from './gm-process.js';
 const _sharedPidCommandLine = _gmProcess.pidCommandLineForKillGuard;
+import { wasiFilesystemRootFor, createWasiShim } from './wrapper/wasi-shim.js';
+import {
+  guardWasmRange,
+  decodeWasmResult,
+  writeWasmInput,
+  readWasmBytes,
+  readWasmStr,
+  writeWasmBytes,
+  writeWasmStr,
+  writeWasmJson,
+} from './wrapper/wasm-bridge.js';
+import { atomicWriteRaw, atomicWriteJson, readJsonFile, writeJsonFile } from './wrapper/fs-atomic.js';
+import { safeName, projectKvDir, enabledDisciplineNamespaces, jaccardOverlap, makeKvHelpers } from './wrapper/kv-store.js';
+import { makeTaskManager } from './wrapper/task-manager.js';
 
 let _writeStatusBusy = () => {};
 let _lastBusyUntil = 0;
@@ -612,21 +626,6 @@ function stampBrowserLastUse(cwd, claudeSessionId) {
   } catch (_) {}
 }
 
-function atomicWriteRaw(filePath, data) {
-  const tmp = filePath + '.tmp.' + process.pid + '.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8);
-  fs.writeFileSync(tmp, data);
-  try {
-    fs.renameSync(tmp, filePath);
-  } catch (err) {
-    try { fs.unlinkSync(tmp); } catch (_) {}
-    throw err;
-  }
-}
-
-function atomicWriteJson(filePath, obj) {
-  atomicWriteRaw(filePath, JSON.stringify(obj, null, 2));
-}
-
 function migrateLegacyBrowserState(cwd) {
   const dst1 = browserPortsFile(cwd);
   const dst2 = browserSessionsFile(cwd);
@@ -651,13 +650,6 @@ function migrateLegacyBrowserState(cwd) {
       if (legacy && typeof legacy === 'object') atomicWriteJson(dst2, legacy);
     }
   } catch (_) {}
-}
-
-function readJsonFile(fp, fallback) {
-  try { return JSON.parse(fs.readFileSync(fp, 'utf-8')); } catch (_) { return fallback; }
-}
-function writeJsonFile(fp, value) {
-  try { atomicWriteJson(fp, value); } catch (_) {}
 }
 
 const AGGREGATE_CPU_PROFILE_SRC = `function aggregateCpuProfile(profile, topN, isBrowserCtx) {
@@ -1772,737 +1764,45 @@ function cosineSim(a, b) {
 }
 
 let __wasmAbortFlag = { aborted: false, code: 0 };
-const WASI_PROJECT_SLUG = crypto.createHash('sha256').update(String(process.env.CLAUDE_PROJECT_DIR || process.cwd()).toLowerCase().replace(/\\/g, '/')).digest('hex').slice(0, 16);
-const WASI_FILESYSTEM_ROOT = path.join(GM_TOOLS_ROOT, 'wasi-fs', WASI_PROJECT_SLUG);
+const WASI_FILESYSTEM_ROOT = wasiFilesystemRootFor(GM_TOOLS_ROOT);
 const wasiOpenFiles = new Map();
 let wasiNextFd = 100;
-
-function wasiResolvePath(relPath) {
-  const rel = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
-  const resolved = path.resolve(WASI_FILESYSTEM_ROOT, rel);
-  const rootResolved = path.resolve(WASI_FILESYSTEM_ROOT) + path.sep;
-  if (resolved !== path.resolve(WASI_FILESYSTEM_ROOT) && !resolved.startsWith(rootResolved)) {
-    throw new Error(`wasi-path-traversal-refused: ${relPath} escapes ${WASI_FILESYSTEM_ROOT}`);
-  }
-  return resolved;
-}
-
-function createWasiShim(instanceRef) {
-  const getMemory = () => instanceRef.value.exports.memory.buffer;
-  const shim = {
-    proc_exit: (code) => {
-      __wasmAbortFlag.aborted = true;
-      __wasmAbortFlag.code = code;
-      try {
-        const spoolDir = spoolDirForSentinel();
-        fs.mkdirSync(spoolDir, { recursive: true });
-        fs.writeFileSync(path.join(spoolDir, '.wasm-abort.json'), JSON.stringify({
-          ts: Date.now(),
-          exit_code: code,
-          verb_in_flight: __currentVerbContext,
-        }));
-      } catch (_) {}
-      try { console.error(`[plugkit-wasm] wasm proc_exit(${code}) intercepted; throwing to abort current verb without killing watcher`); } catch (_) {}
-      throw new Error(`wasm proc_exit(${code}) during verb ${__currentVerbContext && __currentVerbContext.verb}`);
-    },
-    fd_write: (fd, iovs_ptr, iovs_len, nwritten_ptr) => {
-      try {
-        const buf = getMemory();
-        const dv = new DataView(buf);
-        const chunks = [];
-        let total = 0;
-        const iovsBase = iovs_ptr >>> 0;   // >>>0: high-bit iovs pointer is negative in JS -> getUint32 would throw
-        for (let i = 0; i < iovs_len; i++) {
-          const base = iovsBase + i * 8;
-          const ptr = dv.getUint32(base, true);
-          const len = dv.getUint32(base + 4, true);
-          if (len > 0 && ptr + len <= buf.byteLength) {
-            chunks.push(new Uint8Array(buf, ptr, len).slice());
-            total += len;
-          }
-        }
-        const merged = new Uint8Array(total);
-        let off = 0;
-        for (const c of chunks) { merged.set(c, off); off += c.length; }
-        const text = new TextDecoder('utf-8').decode(merged);
-        if (fd === 2) process.stderr.write(text);
-        else process.stdout.write(text);
-        new DataView(getMemory()).setUint32(nwritten_ptr, total, true);
-        return 0;
-      } catch (e) {
-        return 28;
-      }
-    },
-    random_get: (buf_ptr, buf_len) => {
-      try {
-        crypto.randomFillSync(new Uint8Array(getMemory(), buf_ptr >>> 0, buf_len >>> 0));   // >>>0: high-bit ptr is negative in JS
-        return 0;
-      } catch (e) {
-        return 28;
-      }
-    },
-    clock_time_get: (clock_id, precision, time_ptr) => {
-      try {
-        const ns = BigInt(Date.now()) * 1000000n;
-        new DataView(getMemory()).setBigUint64(time_ptr >>> 0, ns, true);   // >>>0: high-bit ptr is negative in JS
-        return 0;
-      } catch (e) {
-        return 28;
-      }
-    },
-    environ_get: () => 0,
-    environ_sizes_get: () => 0,
-    fd_prestat_get: (fd, buf_ptr) => {
-      if (fd !== 3) return 8;
-      try {
-        const dv = new DataView(getMemory());
-        dv.setUint8(buf_ptr, 0);
-        dv.setUint32(buf_ptr + 4, 1, true);
-        return 0;
-      } catch (e) { return 8; }
-    },
-    fd_prestat_dir_name: (fd, path_ptr, path_len) => {
-      if (fd !== 3) return 8;
-      try {
-        const buf = getMemory();
-        new Uint8Array(buf, path_ptr >>> 0, Math.min(path_len, 1)).set([0x2e]);
-        return 0;
-      } catch (e) { return 8; }
-    },
-    fd_close: (fd) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) return 0;
-      try { fs.closeSync(entry.nodeFd); } catch (_) {}
-      wasiOpenFiles.delete(fd);
-      return 0;
-    },
-    fd_fdstat_get: (fd, stat_ptr) => {
-      try {
-        const dv = new DataView(getMemory());
-        const entry = wasiOpenFiles.get(fd);
-        dv.setUint8(stat_ptr, entry ? 4 : 0);
-        dv.setUint8(stat_ptr + 1, 0);
-        dv.setBigUint64(stat_ptr + 8, 0xffffffffffffffffn, true);
-        dv.setBigUint64(stat_ptr + 16, 0xffffffffffffffffn, true);
-        return 0;
-      } catch (e) { return 8; }
-    },
-    fd_fdstat_set_flags: () => 0,
-    fd_filestat_get: (fd, buf_ptr) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_get FAILED: no entry for fd=${fd}`); return 8; }
-      try {
-        const st = fs.fstatSync(entry.nodeFd);
-        const dv = new DataView(getMemory());
-        dv.setBigUint64(buf_ptr, 0n, true);
-        dv.setBigUint64(buf_ptr + 8, 0n, true);
-        dv.setUint8(buf_ptr + 16, 4);
-        dv.setBigUint64(buf_ptr + 24, 1n, true);
-        dv.setBigUint64(buf_ptr + 32, BigInt(st.size), true);
-        dv.setBigUint64(buf_ptr + 40, BigInt(Math.floor(st.atimeMs * 1e6)), true);
-        dv.setBigUint64(buf_ptr + 48, BigInt(Math.floor(st.mtimeMs * 1e6)), true);
-        dv.setBigUint64(buf_ptr + 56, BigInt(Math.floor(st.ctimeMs * 1e6)), true);
-        return 0;
-      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_get FAILED: ${e && e.message}`); return 8; }
-    },
-    fd_seek: (fd, offset64, whence, newoffset_ptr) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) { try { new DataView(getMemory()).setBigUint64(newoffset_ptr, 0n, true); } catch (_) {} return 8; }
-      try {
-        const offset = BigInt.asIntN(64, BigInt(offset64));
-        let base;
-        if (whence === 0) base = 0n;
-        else if (whence === 1) base = BigInt(entry.pos);
-        else base = BigInt(fs.fstatSync(entry.nodeFd).size);
-        const next = base + offset;
-        entry.pos = Number(next < 0n ? 0n : next);
-        new DataView(getMemory()).setBigUint64(newoffset_ptr, BigInt(entry.pos), true);
-        return 0;
-      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_seek FAILED: ${e && e.message}`); return 8; }
-    },
-    fd_read: (fd, iovs_ptr, iovs_len, nread_ptr) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) { try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {} return 8; }
-      try {
-        const buf = getMemory();
-        const dv = new DataView(buf);
-        let total = 0;
-        const iovsBase = iovs_ptr >>> 0;
-        for (let i = 0; i < iovs_len; i++) {
-          const base = iovsBase + i * 8;
-          const ptr = dv.getUint32(base, true) >>> 0;
-          const len = dv.getUint32(base + 4, true) >>> 0;
-          if (len === 0) continue;
-          const dest = Buffer.from(buf, ptr, len);
-          const n = fs.readSync(entry.nodeFd, dest, 0, len, entry.pos);
-          entry.pos += n;
-          total += n;
-          if (n < len) break;
-        }
-        dv.setUint32(nread_ptr, total, true);
-        return 0;
-      } catch (e) { return 8; }
-    },
-    fd_pread: (fd, iovs_ptr, iovs_len, offset64, nread_ptr) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) { try { new DataView(getMemory()).setUint32(nread_ptr, 0, true); } catch (_) {} return 8; }
-      try {
-        const offset = Number(BigInt.asUintN(64, BigInt(offset64)));
-        const buf = getMemory();
-        const dv = new DataView(buf);
-        let total = 0;
-        const iovsBase = iovs_ptr >>> 0;
-        let pos = offset;
-        for (let i = 0; i < iovs_len; i++) {
-          const base = iovsBase + i * 8;
-          const ptr = dv.getUint32(base, true) >>> 0;
-          const len = dv.getUint32(base + 4, true) >>> 0;
-          if (len === 0) continue;
-          const dest = Buffer.from(buf, ptr, len);
-          const n = fs.readSync(entry.nodeFd, dest, 0, len, pos);
-          pos += n;
-          total += n;
-          if (n < len) break;
-        }
-        dv.setUint32(nread_ptr, total, true);
-        return 0;
-      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_pread FAILED: ${e && e.message}`); return 8; }
-    },
-    fd_pwrite: (fd, iovs_ptr, iovs_len, offset64, nwritten_ptr) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) { try { new DataView(getMemory()).setUint32(nwritten_ptr, 0, true); } catch (_) {} return 8; }
-      try {
-        const offset = Number(BigInt.asUintN(64, BigInt(offset64)));
-        const buf = getMemory();
-        const dv = new DataView(buf);
-        let total = 0;
-        const iovsBase = iovs_ptr >>> 0;
-        let pos = offset;
-        for (let i = 0; i < iovs_len; i++) {
-          const base = iovsBase + i * 8;
-          const ptr = dv.getUint32(base, true) >>> 0;
-          const len = dv.getUint32(base + 4, true) >>> 0;
-          if (len === 0) continue;
-          const src = Buffer.from(buf, ptr, len);
-          const n = fs.writeSync(entry.nodeFd, src, 0, len, pos);
-          pos += n;
-          total += n;
-        }
-        dv.setUint32(nwritten_ptr, total, true);
-        return 0;
-      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_pwrite FAILED: ${e && e.message}`); return 8; }
-    },
-    fd_sync: (fd) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) return 8;
-      try { fs.fsyncSync(entry.nodeFd); return 0; } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_sync FAILED: ${e && e.message}`); return 8; }
-    },
-    fd_datasync: (fd) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) return 8;
-      try { fs.fdatasyncSync(entry.nodeFd); return 0; } catch (e) { return 8; }
-    },
-    fd_filestat_set_size: (fd, size64) => {
-      const entry = wasiOpenFiles.get(fd);
-      if (!entry) return 8;
-      try {
-        const size = Number(BigInt.asUintN(64, BigInt(size64)));
-        fs.ftruncateSync(entry.nodeFd, size);
-        return 0;
-      } catch (e) { if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] fd_filestat_set_size FAILED: ${e && e.message}`); return 8; }
-    },
-    path_create_directory: (_dirfd, path_ptr, path_len) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        fs.mkdirSync(absPath, { recursive: true });
-        return 0;
-      } catch (e) {
-        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_create_directory FAILED: ${e && e.message}`);
-        return e && e.code === 'EEXIST' ? 0 : 8;
-      }
-    },
-    path_unlink_file: (_dirfd, path_ptr, path_len) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        fs.unlinkSync(absPath);
-        return 0;
-      } catch (e) {
-        return e && e.code === 'ENOENT' ? 44 : 8;
-      }
-    },
-    path_remove_directory: (_dirfd, path_ptr, path_len) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        fs.rmdirSync(absPath);
-        return 0;
-      } catch (e) {
-        if (e && e.code === 'ENOENT') return 44;
-        if (e && e.code === 'ENOTEMPTY') return 55;
-        return 8;
-      }
-    },
-    path_filestat_set_times: (_dirfd, _flags, path_ptr, path_len, atim64, mtim64, fst_flags) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        const FILESTAT_SET_ATIM = 0x1, FILESTAT_SET_ATIM_NOW = 0x2, FILESTAT_SET_MTIM = 0x4, FILESTAT_SET_MTIM_NOW = 0x8;
-        const st = fs.statSync(absPath);
-        const nowMs = Date.now();
-        let atimeMs = st.atimeMs;
-        let mtimeMs = st.mtimeMs;
-        if (fst_flags & FILESTAT_SET_ATIM_NOW) atimeMs = nowMs;
-        else if (fst_flags & FILESTAT_SET_ATIM) atimeMs = Number(BigInt.asUintN(64, BigInt(atim64))) / 1e6;
-        if (fst_flags & FILESTAT_SET_MTIM_NOW) mtimeMs = nowMs;
-        else if (fst_flags & FILESTAT_SET_MTIM) mtimeMs = Number(BigInt.asUintN(64, BigInt(mtim64))) / 1e6;
-        fs.utimesSync(absPath, atimeMs / 1000, mtimeMs / 1000);
-        return 0;
-      } catch (e) {
-        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_filestat_set_times FAILED: ${e && e.message}`);
-        return e && e.code === 'ENOENT' ? 44 : 8;
-      }
-    },
-    path_open: (_dirfd, _dirflags, path_ptr, path_len, oflags, _rights_base, _rights_inherit, fdflags, opened_fd_ptr) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        fs.mkdirSync(path.dirname(absPath), { recursive: true });
-        const OFLAGS_CREAT = 1, OFLAGS_EXCL = 2, OFLAGS_TRUNC = 8;
-        let nodeFlags = 'r+';
-        const creat = (oflags & OFLAGS_CREAT) !== 0;
-        const excl = (oflags & OFLAGS_EXCL) !== 0;
-        const trunc = (oflags & OFLAGS_TRUNC) !== 0;
-        if (excl && creat) nodeFlags = 'wx+';
-        else if (trunc) nodeFlags = 'w+';
-        else if (creat) nodeFlags = fs.existsSync(absPath) ? 'r+' : 'w+';
-        else nodeFlags = 'r+';
-        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_open: rel=${relPath} abs=${absPath} oflags=${oflags} nodeFlags=${nodeFlags}`);
-        const nodeFd = fs.openSync(absPath, nodeFlags);
-        const wasiFd = wasiNextFd++;
-        wasiOpenFiles.set(wasiFd, { nodeFd, pos: 0, path: absPath });
-        new DataView(buf).setUint32(opened_fd_ptr, wasiFd, true);
-        return 0;
-      } catch (e) {
-        if (process.env.PLUGKIT_DEBUG) console.error(`[plugkit-wasm] path_open FAILED: ${e && e.message}`);
-        return e && /ENOENT/.test(e.code || '') ? 44 : 8;
-      }
-    },
-    path_filestat_get: (_dirfd, _flags, path_ptr, path_len, buf_ptr) => {
-      try {
-        const buf = getMemory();
-        const relPath = new TextDecoder('utf-8').decode(new Uint8Array(buf, path_ptr >>> 0, path_len >>> 0));
-        const absPath = wasiResolvePath(relPath);
-        const st = fs.statSync(absPath);
-        const dv = new DataView(buf);
-        dv.setBigUint64(buf_ptr, 0n, true);
-        dv.setBigUint64(buf_ptr + 8, 0n, true);
-        dv.setUint8(buf_ptr + 16, st.isDirectory() ? 3 : 4);
-        dv.setBigUint64(buf_ptr + 24, 1n, true);
-        dv.setBigUint64(buf_ptr + 32, BigInt(st.size), true);
-        dv.setBigUint64(buf_ptr + 40, BigInt(Math.floor(st.atimeMs * 1e6)), true);
-        dv.setBigUint64(buf_ptr + 48, BigInt(Math.floor(st.mtimeMs * 1e6)), true);
-        dv.setBigUint64(buf_ptr + 56, BigInt(Math.floor(st.ctimeMs * 1e6)), true);
-        return 0;
-      } catch (e) {
-        return e && /ENOENT/.test(e.code || '') ? 44 : 8;
-      }
-    },
-    poll_oneoff: () => 0,
-    sched_yield: () => 0,
-  };
-  if (process.env.PLUGKIT_DEBUG_WASI) {
-    for (const k of Object.keys(shim)) {
-      const orig = shim[k];
-      shim[k] = (...args) => {
-        const r = orig(...args);
-        try { console.error(`[plugkit-wasm] wasi.${k}(${args.map(a => typeof a === 'bigint' ? a.toString() : a).join(',')}) -> ${r}`); } catch (_) {}
-        return r;
-      };
-    }
-  }
-  return new Proxy(shim, {
-    get(target, prop) {
-      if (prop in target) return target[prop];
-      return (...args) => {
-        console.error(`[plugkit-wasm] unimplemented WASI call: ${String(prop)} args=${args.length}`);
-        return 8;
-      };
-    }
+const __wasiNextFdRef = { get value() { return wasiNextFd; }, set value(v) { wasiNextFd = v; } };
+const __currentVerbContextRef = { get value() { return __currentVerbContext; } };
+function __createWasiShimBound(instanceRef) {
+  return createWasiShim(instanceRef, {
+    wasiFilesystemRoot: WASI_FILESYSTEM_ROOT,
+    wasiOpenFiles,
+    wasiNextFdRef: __wasiNextFdRef,
+    wasmAbortFlag: __wasmAbortFlag,
+    spoolDirForSentinel,
+    currentVerbContextRef: __currentVerbContextRef,
   });
 }
 
-function guardWasmRange(buffer, ptr, len, where) {
-  const total = buffer.byteLength;
-  if (!Number.isInteger(ptr) || !Number.isInteger(len) || ptr < 0 || len < 0 || ptr + len > total) {
-    throw new Error(`wasm-memory-read-out-of-bounds at ${where}: ptr=${ptr} len=${len} buffer=${total} -- corrupt (ptr,len) from wasm, refusing the read instead of crashing the dispatch loop`);
-  }
-}
+const { kvFilePath, kvReadResolve, kvNamespaceDirs } = makeKvHelpers(KV_DIR);
 
-function decodeWasmResult(instance, result, where) {
-  const u = BigInt.asUintN(64, BigInt(result));
-  const ptr = Number(u & 0xffffffffn);
-  const len = Number(u >> 32n);
-  if (ptr === 0 || len === 0) return '';
-  const buffer = instance.exports.memory.buffer;
-  guardWasmRange(buffer, ptr, len, where);
-  const out = new TextDecoder().decode(new Uint8Array(buffer, ptr, len));
-  try { instance.exports.plugkit_free(ptr, len); } catch (_) {}
-  return out;
-}
-
-function writeWasmInput(instance, bytes, where) {
-  if (bytes.length === 0) return 0;
-  const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
-  if (ptr === 0) throw new Error(`wasm-alloc-failed at ${where}: plugkit_alloc returned 0 (wasm OOM)`);
-  guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, `${where}:writeWasmInput`);
-  new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);
-  return ptr;
-}
-
-function readWasmBytes(instance, ptr, len) {
-  if (ptr === 0 || len === 0) return new Uint8Array(0);
-  const buffer = instance.exports.memory.buffer;
-  guardWasmRange(buffer, ptr, len, 'readWasmBytes');
-  return new Uint8Array(buffer, ptr, len).slice();
-}
-
-function readWasmStr(instance, ptr, len) {
-  if (ptr === 0 || len === 0) return '';
-  const buffer = instance.exports.memory.buffer;
-  guardWasmRange(buffer, ptr, len, 'readWasmStr');
-  const bytes = new Uint8Array(buffer, ptr, len);
-  return new TextDecoder('utf-8').decode(bytes);
-}
-
-function writeWasmBytes(instance, bytes) {
-  if (bytes.length === 0) return 0n;
-  const ptr = instance.exports.plugkit_alloc(bytes.length) >>> 0;
-  if (ptr === 0) return 0n;
-  guardWasmRange(instance.exports.memory.buffer, ptr, bytes.length, 'writeWasmBytes');
-  new Uint8Array(instance.exports.memory.buffer, ptr, bytes.length).set(bytes);
-  return (BigInt(ptr) & 0xffffffffn) | (BigInt(bytes.length) << 32n);
-}
-
-function writeWasmStr(instance, str) {
-  if (!str) return 0n;
-  return writeWasmBytes(instance, new TextEncoder().encode(str));
-}
-
-function writeWasmJson(instance, value) {
-  return writeWasmStr(instance, JSON.stringify(value));
-}
-
-function safeName(s) { return String(s).replace(/[^A-Za-z0-9._-]/g, '_'); }
-
-function projectKvDir(ns) {
-  const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  return path.join(projectRoot, '.gm', 'disciplines', safeName(ns));
-}
-
-function legacyKvDir(ns) {
-  return path.join(KV_DIR, safeName(ns));
-}
-
-function kvFilePath(ns, key, ensureDir) {
-  const dir = projectKvDir(ns);
-  if (ensureDir) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, safeName(key) + '.json');
-}
-
-function kvReadResolve(ns, key) {
-  const fp = kvFilePath(ns, key);
-  if (fs.existsSync(fp)) return fp;
-  const legacy = path.join(legacyKvDir(ns), safeName(key) + '.json');
-  if (fs.existsSync(legacy)) return legacy;
-  return null;
-}
-
-function kvNamespaceDirs(ns) {
-  const out = [];
-  const proj = projectKvDir(ns);
-  if (fs.existsSync(proj)) out.push(proj);
-  const legacy = legacyKvDir(ns);
-  if (fs.existsSync(legacy)) out.push(legacy);
-  return out;
-}
-
-function enabledDisciplineNamespaces(baseNs) {
-  const projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const set = new Set([baseNs]);
-  try {
-    const enabledPath = path.join(projectRoot, '.gm', 'disciplines', 'enabled.txt');
-    if (fs.existsSync(enabledPath)) {
-      const lines = fs.readFileSync(enabledPath, 'utf-8').split(/\r?\n/);
-      for (const ln of lines) {
-        const name = ln.trim();
-        if (name && !name.startsWith('#')) set.add(name);
-      }
-    }
-  } catch (_) {}
-  return Array.from(set);
-}
-
-function jaccardOverlap(a, b) {
-  if (!a || !b) return 0;
-  const tokenize = (s) => new Set(String(s).toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3));
-  const A = tokenize(a), B = tokenize(b);
-  if (A.size === 0 || B.size === 0) return 0;
-  let inter = 0;
-  for (const t of A) if (B.has(t)) inter++;
-  return inter / (A.size + B.size - inter);
-}
-
-const __tasks = new Map();
-
-function tasksDir(cwd) {
-  const d = path.join(cwd || process.cwd(), '.gm', 'exec-spool', 'tasks');
-  try { fs.mkdirSync(d, { recursive: true }); } catch (_) {}
-  return d;
-}
-
-function taskMetaPath(cwd, id) { return path.join(tasksDir(cwd), `${id}.json`); }
-function taskOutPath(cwd, id, which) { return path.join(tasksDir(cwd), `${id}.${which}.log`); }
-
-function writeTaskMeta(cwd, id, meta) {
-  try { fs.writeFileSync(taskMetaPath(cwd, id), JSON.stringify(meta, null, 2)); } catch (_) {}
-}
-
-function nextTaskId(cwd) {
-  const counterPath = path.join(tasksDir(cwd), '.counter');
-  let n = 0;
-  try { n = parseInt(fs.readFileSync(counterPath, 'utf-8'), 10) || 0; } catch (_) {}
-  n += 1;
-  try { fs.writeFileSync(counterPath, String(n)); } catch (_) {}
-  return `t${n}`;
-}
-
-let _jsRuntimeCmd = null;
-function resolveJsRuntimeCmd() {
-  if (_jsRuntimeCmd) return _jsRuntimeCmd;
-  if (!/(^|[\\/])node(\.exe)?$/i.test(String(process.execPath || ''))) {
-    _jsRuntimeCmd = process.execPath;
-    return _jsRuntimeCmd;
-  }
-  try {
-    const which = process.platform === 'win32' ? 'where' : 'which';
-    const out = spawnSync(which, ['bun'], { encoding: 'utf-8', windowsHide: true });
-    const first = (out && out.stdout || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
-    if (first) { _jsRuntimeCmd = first; return _jsRuntimeCmd; }
-  } catch (_) {}
-  _jsRuntimeCmd = process.execPath;
-  return _jsRuntimeCmd;
-}
-
-function langToCmd(lang, code) {
-  if (lang === 'nodejs' || lang === 'js' || lang === 'javascript' || lang === 'node') return { cmd: resolveJsRuntimeCmd(), args: ['-e', code], stdinCode: null };
-  if (lang === 'python' || lang === 'py') return { cmd: 'python', args: ['-c', code], stdinCode: null };
-  if (lang === 'bash' || lang === 'sh' || lang === 'shell' || lang === 'zsh') return { cmd: 'bash', args: ['-c', code], stdinCode: null };
-  if (lang === 'powershell' || lang === 'ps1') return { cmd: 'powershell', args: ['-NoProfile', '-NonInteractive', '-Command', code], stdinCode: null };
-  if (lang === 'deno') return { cmd: 'deno', args: ['eval', code], stdinCode: null };
-  return null;
-}
-
-const TASK_MAX_TIMEOUT_MS = 10 * 60 * 1000;
-
-function spawnTask({ cwd, lang, code, timeoutMs }) {
-  const id = nextTaskId(cwd);
-  const built = langToCmd(lang, code);
-  if (!built) return { ok: false, error: `unsupported lang: ${lang}` };
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > TASK_MAX_TIMEOUT_MS) {
-    timeoutMs = TASK_MAX_TIMEOUT_MS;
-  }
-  const outLog = taskOutPath(cwd, id, 'stdout');
-  const errLog = taskOutPath(cwd, id, 'stderr');
-  let outFd = null, errFd = null;
-  try { outFd = fs.openSync(outLog, 'a'); } catch (_) {}
-  try { errFd = fs.openSync(errLog, 'a'); } catch (_) {}
-  const startedMs = Date.now();
-  const isPosix = process.platform !== 'win32';
-  const child = spawn(built.cmd, built.args, {
-    cwd: cwd || process.cwd(),
-    detached: isPosix,
-    stdio: ['ignore', outFd || 'ignore', errFd || 'ignore'],
-    windowsHide: true,
-    env: process.env,
-  });
-  try { if (outFd !== null) fs.closeSync(outFd); } catch (_) {}
-  try { if (errFd !== null) fs.closeSync(errFd); } catch (_) {}
-  const meta = {
-    id,
-    pid: child.pid,
-    pgid: isPosix ? child.pid : null,
-    lang,
-    cmd: built.cmd,
-    cwd: cwd || process.cwd(),
-    started_ms: startedMs,
-    timeout_ms: timeoutMs,
-    deadline_ms: startedMs + timeoutMs,
-    status: 'running',
-    exit_code: null,
-    stdout_log: outLog,
-    stderr_log: errLog,
-  };
-  __tasks.set(id, { child, meta });
-  writeTaskMeta(cwd, id, meta);
-  child.on('exit', (code, signal) => {
-    meta.status = signal ? 'killed' : (code === 0 ? 'completed' : 'failed');
-    meta.exit_code = code;
-    meta.signal = signal;
-    meta.ended_ms = Date.now();
-    writeTaskMeta(meta.cwd, id, meta);
-  });
-  child.on('error', (err) => {
-    meta.status = 'error';
-    meta.error = err.message;
-    meta.ended_ms = Date.now();
-    writeTaskMeta(meta.cwd, id, meta);
-  });
-  logEvent('plugkit', 'task.spawn', { task_id: id, pid: child.pid, lang, timeout_ms: timeoutMs });
-  return { ok: true, task_id: id, pid: child.pid, started_ms: startedMs };
-}
-
-function stopTaskById(id) {
-  const entry = __tasks.get(id);
-  if (!entry) {
-    return { ok: false, error: 'unknown task_id', task_id: id };
-  }
-  const { child, meta } = entry;
-  if (meta.status !== 'running') return { ok: true, already: meta.status, task_id: id };
-  const pid = meta.pid;
-  const isPosix = process.platform !== 'win32';
-  try {
-    if (isPosix && meta.pgid) {
-      try { process.kill(-meta.pgid, 'SIGTERM'); } catch (_) {}
-    } else {
-      try { child.kill('SIGTERM'); } catch (_) {}
-    }
-  } catch (_) {}
-  const graceTimer = setTimeout(() => {
-    if (meta.status !== 'running') return;
-    if (isPosix && meta.pgid) {
-      try { process.kill(-meta.pgid, 'SIGKILL'); } catch (_) {}
-    } else if (process.platform === 'win32') {
-      try { spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { stdio: 'ignore', timeout: 3000 }); } catch (_) {}
-    } else {
-      try { child.kill('SIGKILL'); } catch (_) {}
-    }
-  }, 2000);
-  graceTimer.unref && graceTimer.unref();
-  logEvent('plugkit', 'task.stop', { task_id: id, pid });
-  return { ok: true, task_id: id, pid };
-}
-
-function tailFile(filePath, maxBytes) {
-  try {
-    const stat = fs.statSync(filePath);
-    if (stat.size <= maxBytes) return fs.readFileSync(filePath, 'utf-8');
-    const fd = fs.openSync(filePath, 'r');
-    try {
-      const buf = Buffer.alloc(maxBytes);
-      fs.readSync(fd, buf, 0, maxBytes, stat.size - maxBytes);
-      return buf.toString('utf-8');
-    } finally { try { fs.closeSync(fd); } catch (_) {} }
-  } catch (_) { return ''; }
-}
-
-function listTasks(cwd) {
-  const d = tasksDir(cwd);
-  const out = [];
-  try {
-    for (const entry of fs.readdirSync(d)) {
-      if (!entry.endsWith('.json') || entry.startsWith('.')) continue;
-      try {
-        const meta = JSON.parse(fs.readFileSync(path.join(d, entry), 'utf-8'));
-        out.push(meta);
-      } catch (_) {}
-    }
-  } catch (_) {}
-  return out;
-}
-
-function reapTimedOutTasks() {
-  const now = Date.now();
-  for (const [id, entry] of __tasks) {
-    const m = entry.meta;
-    if (m.status === 'running' && m.deadline_ms && now > m.deadline_ms) {
-      logEvent('plugkit', 'task.timeout', { task_id: id, pid: m.pid, deadline_ms: m.deadline_ms, now_ms: now });
-      stopTaskById(id);
-    }
-  }
-}
-
-function killAllTasks(reason) {
-  let killed = 0;
-  for (const [id, entry] of __tasks) {
-    if (entry.meta.status === 'running') {
-      stopTaskById(id);
-      killed += 1;
-    }
-  }
-  if (killed > 0) logEvent('plugkit', 'task.killAll', { reason, count: killed });
-  return killed;
-}
-
-function pidAliveLocal(pid) {
-  if (!Number.isFinite(pid) || pid <= 0) return false;
-  try { process.kill(pid, 0); return true; } catch (_) { return false; }
-}
-
-function sweepOrphanedTaskMetaOnBoot(cwd) {
-  let swept = 0;
-  try {
-    const dir = tasksDir(cwd);
-    const now = Date.now();
-    for (const name of fs.readdirSync(dir)) {
-      if (!/^t\d+\.json$/.test(name)) continue;
-      const metaPath = path.join(dir, name);
-      let meta = null;
-      try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')); } catch (_) { continue; }
-      if (!meta || meta.status !== 'running') continue;
-      const stale = !pidAliveLocal(meta.pid) || (meta.deadline_ms && now > meta.deadline_ms);
-      if (!stale) continue;
-      if (pidAliveLocal(meta.pid)) {
-        try {
-          if (process.platform === 'win32') {
-            spawnSync('taskkill', ['/F', '/T', '/PID', String(meta.pid)], { stdio: 'ignore', windowsHide: true, timeout: 3000 });
-          } else {
-            try { process.kill(-meta.pid, 'SIGKILL'); } catch (_) { try { process.kill(meta.pid, 'SIGKILL'); } catch (_) {} }
-          }
-        } catch (_) {}
-      }
-      meta.status = 'reaped-on-boot';
-      meta.ended_ms = now;
-      try { fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2)); } catch (_) {}
-      swept += 1;
-    }
-  } catch (_) {}
-  if (swept > 0) logEvent('plugkit', 'task.bootSweepReaped', { cwd: cwd || process.cwd(), count: swept });
-  return swept;
-}
-
-function hostTaskProc(action, params) {
-  switch (action) {
-    case 'spawn': return spawnTask(params);
-    case 'stop': return stopTaskById(params.id || params.task_id);
-    case 'list': return { ok: true, tasks: listTasks(params.cwd) };
-    case 'output': return {
-      ok: true,
-      task_id: params.id || params.task_id,
-      stdout: tailFile(taskOutPath(params.cwd, params.id || params.task_id, 'stdout'), params.max_bytes || 65536),
-      stderr: tailFile(taskOutPath(params.cwd, params.id || params.task_id, 'stderr'), params.max_bytes || 65536),
-    };
-    case 'reap': { reapTimedOutTasks(); return { ok: true }; }
-    case 'killAll': { const n = killAllTasks(params.reason || 'host_task_proc'); return { ok: true, killed: n }; }
-    default: return { ok: false, error: `unknown action: ${action}` };
-  }
-}
+const __taskManager = makeTaskManager({ spawn, spawnSync, logEvent: (sub, event, fields) => logEvent(sub, event, fields) });
+const {
+  __tasks,
+  tasksDir,
+  taskMetaPath,
+  taskOutPath,
+  writeTaskMeta,
+  nextTaskId,
+  resolveJsRuntimeCmd,
+  langToCmd,
+  TASK_MAX_TIMEOUT_MS,
+  spawnTask,
+  stopTaskById,
+  tailFile,
+  listTasks,
+  reapTimedOutTasks,
+  killAllTasks,
+  pidAliveLocal,
+  sweepOrphanedTaskMetaOnBoot,
+  hostTaskProc,
+} = __taskManager;
 
 let _gmRunnerEmbedBinPath;
 function resolveGmRunnerEmbedBin() {
@@ -5436,7 +4736,7 @@ async function tryInstantiate(wasmPath) {
     const hostFunctions = makeHostFunctions(instanceRef);
     const importObject = {
       env: hostFunctions,
-      wasi_snapshot_preview1: createWasiShim(instanceRef),
+      wasi_snapshot_preview1: __createWasiShimBound(instanceRef),
     };
     const instance = await WebAssembly.instantiate(wasmModule, importObject);
     instanceRef.value = instance;
