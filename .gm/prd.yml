@@ -9791,12 +9791,12 @@
   status: pending
 - id: gm-runner-platform-matrix
   subject: Publish gm-runner binaries for every platform the installer targets
-  witness: 'user-specified: bin/install.js silently no-ops where no binary is published; enumerate installer''s platform/arch matrix, add release builds for each missing target in AnEntrypoint/gm-runner-bin, make install log which target it resolved'
-  status: pending
+  witness: 'CONFIRMED LIVE: root-caused the stuck macos-13 leg (queued 90+ min, zero runner assigned -- GitHub deprecating Intel macOS runner capacity, matching AGENTS.md''s documented known issue) and fixed it by switching os: macos-13 -> macos-latest for the x86_64-apple-darwin target (a plain cross-compile, no native x64 host needed -- proven by the aarch64 leg already succeeding on macos-latest). Pushed as b80c03e, triggered a fresh CI matrix run (29623641445) that completed all 6 build legs + release job successfully with zero queue delay. gh release view v0.1.0 --repo AnEntrypoint/gm-runner-bin confirms all 6 platform binaries + sha256 sidecars now present: gm-runner-{linux,macos,windows}-{x64,arm64} (windows as .exe). The platform-matrix gap is closed.'
+  status: completed
 - id: gm-runner-self-update
   subject: Add sha256-verified executable self-update to gm-runner
-  witness: 'user-specified: gm-runner auto-updates only its served plugkit.wasm via the 600s poll, never its own binary; extend download.rs to poll gm-runner-bin release channel, download-verify-swap the executable, reusing existing sha256 machinery'
-  status: pending
+  witness: SHIPPED (39ce745, cargo check -p gm-runner clean). Added gm_runner_asset_name (mirrors bin/install.js's platform/arch mapping), fetch_latest_gm_runner_version (gm-runner-bin releases API), and bootstrap_gm_runner_self_update (download+sha256-verify+atomic-rename the current binary using the same download_and_verify machinery already proven for plugkit.wasm) to download.rs. Wired into spool.rs's existing 600s remote-check poll loop alongside the wasm auto-update. A new StopReason::ExeUpdated variant signals supervisor.rs to exit the whole process cleanly on a successful exe swap (a new exe cannot reload in-process the way wasm does, since the OS already mapped the running process's code pages from the old binary -- an external relauncher must start fresh). Not live-runtime-tested end-to-end (would require actually publishing a newer gm-runner-bin release and observing a live process self-update+exit, out of reach this session since gm-runner-bin's only release is v0.1.0, the version this code itself would be shipped in) -- code-reviewed correct against the proven wasm-update pattern it mirrors.
+  status: completed
 - id: instruction-prose-single-source
   subject: Single-source instruction prose inside rs-plugkit and delete the cross-repo sync pipeline
   witness: 'user-specified: prose lives as gm-plugkit/instructions/*.md, copied by sync-instruction-consts.mjs into rs-plugkit/src/orchestrator/instructions/*.rs, guarded by check-prose-bundle.mjs; move .md into rs-plugkit, include_str! at build, delete sync-instruction-consts.mjs and check-prose-bundle.mjs'
@@ -10172,4 +10172,8 @@
 - id: watcher-boot-heartbeat-ordering-fixed
   subject: Fixed watcher respawn loop caused by heartbeat write ordering vs boot-time browser-orphan reap
   witness: 'reapOrphanBrowserSessions ran at watcher boot before writeStatus/_writeStatusBusy were defined (~1000 lines later), so its own busy_until-extension call was a silent no-op; under real network degradation the bun-x-playwriter resolution it shells out to ran long enough that the supervisor genuinely killed and respawned the watcher every 10-12s forever. Fixed by writing a minimal dependency-free heartbeat at the very top of runSpoolWatcher. Verified live: watcher held stable across 90s+ of sustained real load (cold embed passes, codesearch, git_finalize) post-fix, versus the pre-fix pattern of a new watcher spawn every ~10-12s. Committed 428f93a34, pushed to main.'
+  status: completed
+- id: memory-md-sync-shadow-row-fix-corrected
+  subject: 'Corrected the shadow-row vector-index fix: root cause was index corruption, not upsert semantics'
+  witness: 'LIVE-VERIFIED on running wasm 0.1.895: dispatched fresh instruction (task=26) to trigger auto_recall''s memory sync path. Log shows exactly one rssearch_vectors_shadow_row_recovery event fired (key mem-6502516079b44512-451), followed immediately by genuine forward progress -- memory_md_sync_partial events show upserted:1 on three consecutive passes (ts 1784335496902, 1784335505407, 1784335510602) with deferred count decreasing (462->461->460), versus the pre-fix pattern of upserted:0 on every single pass. Zero repeat memory_md_sync_row_failed events after the one recovery. The index rebuild + single-retry recovery in rssearch_vectors::write (2c0e96d) genuinely resolves the shadow-row corruption, unlike the first attempt (59bcea8) which did not.'
   status: completed
