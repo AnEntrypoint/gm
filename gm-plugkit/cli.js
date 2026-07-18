@@ -248,21 +248,34 @@ function writeCliError(phase, err) {
 // This is the actual code-level enforcement of what was previously only a
 // documented convention (SKILL.md telling an LLM agent to manually prefer
 // gm-runner) -- with this in place bun/node are only ever exercised on a
-// platform gm-runner-bin has no published binary for, or during the
-// one-time install before gm-runner itself lands on disk.
-function tryDelegateToGmRunner(args) {
+// platform neither runner has a published binary for, or during the
+// one-time install before either runner lands on disk.
+//
+// agentplug-runner is tried FIRST, gm-runner second -- agentplug-runner
+// serves the identical spool ABI (same in/out layout, same verb names;
+// gm.wasm is just one of its loadable plugins now) so it's a strict
+// superset, not an alternative; gm-runner stays as the fallback for any
+// install that has it but hasn't picked up agentplug-runner yet (installer
+// re-run pending, or a platform agentplug-bin hasn't published for yet
+// while gm-runner-bin already has).
+function tryDelegateToRunner(args) {
   if (process.env.GM_PLUGKIT_NO_RUNNER_DELEGATE === '1') return false;
-  const exeName = process.platform === 'win32' ? 'gm-runner.exe' : 'gm-runner';
-  const runnerPath = path.join(gmToolsDir(), exeName);
-  if (!fs.existsSync(runnerPath)) return false;
-  try {
-    const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
-    if (result.error) return false; // exec genuinely failed to start -- fall through to bun/node path
-    process.exit(typeof result.status === 'number' ? result.status : 0);
-  } catch (_) {
-    return false;
+  const candidates = process.platform === 'win32'
+    ? ['agentplug-runner.exe', 'gm-runner.exe']
+    : ['agentplug-runner', 'gm-runner'];
+  for (const exeName of candidates) {
+    const runnerPath = path.join(gmToolsDir(), exeName);
+    if (!fs.existsSync(runnerPath)) continue;
+    try {
+      const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
+      if (result.error) continue; // this candidate genuinely failed to start -- try the next one
+      process.exit(typeof result.status === 'number' ? result.status : 0);
+    } catch (_) {
+      continue;
+    }
+    return true;
   }
-  return true;
+  return false;
 }
 
 (async () => {
@@ -273,7 +286,7 @@ function tryDelegateToGmRunner(args) {
     process.exit(0);
   }
 
-  tryDelegateToGmRunner(args);
+  tryDelegateToRunner(args);
 
   if (args.includes('--kill-stale-watchers')) {
     process.exit(killStaleWatchers());

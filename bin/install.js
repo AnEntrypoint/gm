@@ -199,6 +199,31 @@ function gmRunnerAssetName() {
   return null;
 }
 
+// Same mapping as gmRunnerAssetName, for agentplug-runner's own CI
+// (AnEntrypoint/agentplug's .github/workflows/release.yml) publishing to
+// AnEntrypoint/agentplug-bin -- must stay byte-identical to that workflow's
+// `artifact:` matrix values.
+function agentplugRunnerAssetName() {
+  const plat = process.platform;
+  const arch = process.arch;
+  if (plat === 'win32') {
+    if (arch === 'x64') return 'agentplug-runner-windows-x64.exe';
+    if (arch === 'arm64') return 'agentplug-runner-windows-arm64.exe';
+    return null;
+  }
+  if (plat === 'darwin') {
+    if (arch === 'x64') return 'agentplug-runner-macos-x64';
+    if (arch === 'arm64') return 'agentplug-runner-macos-arm64';
+    return null;
+  }
+  if (plat === 'linux') {
+    if (arch === 'x64') return 'agentplug-runner-linux-x64';
+    if (arch === 'arm64') return 'agentplug-runner-linux-arm64';
+    return null;
+  }
+  return null;
+}
+
 function httpsGetBuffer(url, redirectsLeft) {
   if (redirectsLeft === undefined) redirectsLeft = 5;
   return new Promise((resolve, reject) => {
@@ -285,6 +310,60 @@ async function downloadGmRunner({ silent } = {}) {
   }
 }
 
+// Downloads agentplug-runner (the generic wasm plugin-host runner gm-runner
+// is migrating to -- hosts gm.wasm plus optional libsql/bert/treesitter
+// plugin wasm modules via a host-mediated plugin_call ABI) from
+// agentplug-bin's GitHub Releases, same sha256-sidecar/atomic-rename trust
+// model as downloadGmRunner. Installed ALONGSIDE gm-runner, not instead of
+// it yet -- cli.js's tryDelegateToRunner prefers agentplug-runner when
+// present (it's the same spool ABI, agentplug-runner is a strict superset),
+// falling back to gm-runner, falling back to bun/npx, so an agentplug-bin
+// download failure (new/unpublished platform, network issue) never
+// regresses an install that already had a working gm-runner.
+async function downloadAgentplugRunner({ silent } = {}) {
+  const assetName = agentplugRunnerAssetName();
+  if (!assetName) {
+    if (!silent) err(`agentplug-runner: no published binary for platform=${process.platform} arch=${process.arch}, skipping`);
+    return false;
+  }
+  const destDir = gmToolsDir();
+  const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'agentplug-runner.exe' : 'agentplug-runner');
+  try {
+    const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/agentplug-bin/releases/latest')).toString('utf8'));
+    const tag = releaseInfo && releaseInfo.tag_name;
+    if (!tag) { if (!silent) err('agentplug-runner: no releases published yet at AnEntrypoint/agentplug-bin, skipping'); return false; }
+    const base = `https://github.com/AnEntrypoint/agentplug-bin/releases/download/${tag}`;
+    const binUrl = `${base}/${assetName}`;
+    const shaUrl = `${binUrl}.sha256`;
+
+    const versionFile = path.join(destDir, 'agentplug-runner.version');
+    if (fs.existsSync(destPath) && fs.existsSync(versionFile)) {
+      const installed = fs.readFileSync(versionFile, 'utf8').trim();
+      if (installed === tag) { if (!silent) out(`agentplug-runner ${tag} already installed at ${destPath}`); return true; }
+    }
+
+    const [binBuf, shaBuf] = await Promise.all([httpsGetBuffer(binUrl), httpsGetBuffer(shaUrl)]);
+    const expectedSha = shaBuf.toString('utf8').trim().split(/\s+/)[0];
+    const actualSha = sha256Hex(binBuf);
+    if (!expectedSha || actualSha.toLowerCase() !== expectedSha.toLowerCase()) {
+      if (!silent) err(`agentplug-runner: sha256 mismatch downloading ${binUrl} (expected ${expectedSha}, got ${actualSha}), not installing`);
+      return false;
+    }
+
+    fs.mkdirSync(destDir, { recursive: true });
+    const tmp = destPath + '.tmp' + process.pid;
+    fs.writeFileSync(tmp, binBuf);
+    if (process.platform !== 'win32') { try { fs.chmodSync(tmp, 0o755); } catch (_) {} }
+    fs.renameSync(tmp, destPath);
+    fs.writeFileSync(versionFile, tag);
+    if (!silent) out(`Installed agentplug-runner ${tag} to ${destPath}`);
+    return true;
+  } catch (e) {
+    if (!silent) err(`agentplug-runner download skipped: ${e && e.message || e}`);
+    return false;
+  }
+}
+
 function printHelp() {
   out('gm installer');
   out('');
@@ -336,6 +415,7 @@ async function main() {
 
   await runPlugkitBootstrap();
   await downloadGmRunner({ silent: false });
+  await downloadAgentplugRunner({ silent: false });
 
   out('');
   out('Done. Open Claude Code and run /gm. New top-level skill dirs may need one restart to register.');
