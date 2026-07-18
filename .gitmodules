@@ -2,3 +2,4 @@
 	path = rs-plugkit
 	url = https://github.com/AnEntrypoint/rs-plugkit.git
 	branch = main
+	ignore = dirty
