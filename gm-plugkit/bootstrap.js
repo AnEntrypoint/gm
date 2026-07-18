@@ -46,7 +46,7 @@ function obsEvent(subsystem, event, fields) {
 
 function writeBootstrapError(spec) {
   try {
-    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
     fs.writeFileSync(path.join(spoolDir, '.bootstrap-error.json'), JSON.stringify({ ts: new Date().toISOString(), ...spec }, null, 2));
@@ -55,7 +55,7 @@ function writeBootstrapError(spec) {
 
 function clearBootstrapError() {
   try {
-    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
     fs.unlinkSync(path.join(projectDir, '.gm', 'exec-spool', '.bootstrap-error.json'));
   } catch (_) {}
 }
@@ -221,6 +221,39 @@ function gmToolsDir() {
   if (fs.existsSync(primary)) return primary;
   if (fs.existsSync(fallback)) return fallback;
   return primary;
+}
+
+// Root a project-dir resolution at the git COMMON dir, not the raw cwd/
+// CLAUDE_PROJECT_DIR -- a worktree (e.g. Workflow's isolation:'worktree'
+// agents, each `git worktree add`-ing a fresh physical directory) shares the
+// SAME underlying repo as its main checkout but has its own separate
+// directory tree. Every cwd-derived project-dir computation in this file and
+// in supervisor.js/cli.js must funnel through this so a worktree-spawned
+// process resolves to the SAME .gm/exec-spool/ as its main-repo sibling --
+// otherwise the single-instance supervisor lock can never see a sibling
+// worktree's already-running watcher, and every worktree cold-boots its own
+// independent watcher (each loading the full embed model + running its own
+// cold reindex of what is, conceptually, the same project). Live-measured
+// this session under real concurrent multi-agent load: this was the actual
+// root cause of a user-flagged "memory grows to ~2GB then clears" churn
+// pattern -- N worktrees of one repo each independently paying full
+// cold-embed cost instead of sharing one already-warm watcher, and the
+// resulting CPU contention pushed genuinely-busy processes past their
+// heartbeat deadline into a restart cycle that produces the sawtooth memory
+// pattern. Mirrors the existing browserRootDir() resolution already used for
+// browser-session state in plugkit-wasm-wrapper.js (same fix, same reason,
+// applied one layer up at the process-boot-dedup level).
+function resolveProjectRoot(start) {
+  const resolved = path.resolve(start);
+  try {
+    const r = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: resolved, encoding: 'utf-8', windowsHide: true, timeout: 1500 });
+    if (r.status === 0 && r.stdout && r.stdout.trim()) {
+      let commonDir = r.stdout.trim();
+      if (!path.isAbsolute(commonDir)) commonDir = path.resolve(resolved, commonDir);
+      if (/(^|[\\/])\.git$/.test(commonDir)) return path.dirname(commonDir);
+    }
+  } catch (_) {}
+  return resolved;
 }
 
 function readVersionFile() {
@@ -1254,6 +1287,7 @@ module.exports = {
   ensureNextStepWiring,
   ensureInstructionsBundle,
   gmToolsDir,
+  resolveProjectRoot,
   getWasmPath,
   getBinaryPath,
   startSpoolDaemon,

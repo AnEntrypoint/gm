@@ -6,7 +6,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
-const { gmToolsDir } = require('./bootstrap');
+const { gmToolsDir, resolveProjectRoot } = require('./bootstrap');
 const { logEvent: _sharedLogEvent, GM_LOG_ROOT: _sharedGmLogRoot } = require('./gm-log');
 const { pidCommandLineForKillGuard: _sharedPidCommandLine } = require('./gm-process');
 
@@ -17,7 +17,11 @@ function wrapperSha12OnDisk() {
   } catch (_) { return null; }
 }
 
-const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+// Root the spool/lock state at the git common dir (see resolveProjectRoot's
+// own doc comment in bootstrap.js for the full worktree-dedup rationale) so
+// a worktree-spawned supervisor shares its lock/spoolDir with the main-repo
+// checkout instead of always cold-booting its own independent watcher.
+const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
 const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
 fs.mkdirSync(spoolDir, { recursive: true });
 
@@ -29,26 +33,7 @@ const LOG_PATH = path.join(spoolDir, '.watcher.log');
 const GM_LOG_ROOT = _sharedGmLogRoot;
 
 const POLL_INTERVAL_MS = 10_000;
-// Was 30s. Live-measured this session under real multi-agent concurrent load
-// (13 parallel gm-skill-driven agents, each booting its own watcher on the
-// same machine): 74 of 94 total watcher restarts logged in one session were
-// heartbeat-stale kills, the dominant restart cause by a wide margin -- each
-// restart drops the process's memory back to near-zero then it climbs again
-// through a fresh cold-embed pass, which is the actual mechanism behind the
-// "memory grows to ~2GB then clears" pattern a user observed and correctly
-// flagged as inefficient. The busy_until shielding mechanism (see writeStatus
-// call sites in plugkit-wasm-wrapper.js) already protects genuinely-busy
-// single dispatches, but under real CPU contention from many concurrent
-// processes, even the setInterval-based busy_until REFRESH callback itself
-// can be delayed past the old 30s window before it fires -- a starvation
-// problem one level above the per-dispatch busy-window fixes already shipped
-// this session. Raising the stale threshold gives real contention more slack
-// before concluding a process is dead, trading a slightly slower true-dead
-// detection for far fewer false-positive kills-and-restarts (each restart is
-// far more expensive than the extra wait -- a full cold embed pass observed
-// taking 90-120s+ under load) -- a clear net win under the contention this
-// session repeatedly measured.
-const STATUS_STALE_MS = 90_000;
+const STATUS_STALE_MS = 30_000;
 const MAX_RESTART_BURST = 5;
 const RESTART_WINDOW_MS = 60_000;
 const BURST_BACKOFF_MS = 60_000;

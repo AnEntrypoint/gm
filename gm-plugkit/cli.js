@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
 
 function getWasmPathSafe() {
   try { return getWasmPath(); } catch (_) { return null; }
@@ -201,7 +201,7 @@ function killStaleWatchers() {
 }
 
 function spoolDir() {
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
   return path.join(projectDir, '.gm', 'exec-spool');
 }
 
@@ -242,6 +242,29 @@ function writeCliError(phase, err) {
   } catch (_) {}
 }
 
+// gm-runner is a genuine, sha256-verified drop-in replacement for this
+// entire bun/node boot path -- when it's installed, delegate to it
+// immediately and exit, before any bun/node-specific bootstrap logic runs.
+// This is the actual code-level enforcement of what was previously only a
+// documented convention (SKILL.md telling an LLM agent to manually prefer
+// gm-runner) -- with this in place bun/node are only ever exercised on a
+// platform gm-runner-bin has no published binary for, or during the
+// one-time install before gm-runner itself lands on disk.
+function tryDelegateToGmRunner(args) {
+  if (process.env.GM_PLUGKIT_NO_RUNNER_DELEGATE === '1') return false;
+  const exeName = process.platform === 'win32' ? 'gm-runner.exe' : 'gm-runner';
+  const runnerPath = path.join(gmToolsDir(), exeName);
+  if (!fs.existsSync(runnerPath)) return false;
+  try {
+    const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
+    if (result.error) return false; // exec genuinely failed to start -- fall through to bun/node path
+    process.exit(typeof result.status === 'number' ? result.status : 0);
+  } catch (_) {
+    return false;
+  }
+  return true;
+}
+
 (async () => {
   const args = process.argv.slice(2);
 
@@ -249,6 +272,8 @@ function writeCliError(phase, err) {
     console.log(usage);
     process.exit(0);
   }
+
+  tryDelegateToGmRunner(args);
 
   if (args.includes('--kill-stale-watchers')) {
     process.exit(killStaleWatchers());

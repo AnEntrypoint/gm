@@ -4732,9 +4732,22 @@ async function runSpoolWatcher(instance, spoolDir) {
     } catch (_) {}
   }
   _writeStatusBusy = (ms) => { try { writeStatus(ms); } catch (_) {} };
-  setInterval(() => writeStatus(), 5000);
+  // Every regular heartbeat tick also carries a modest rolling busy_until
+  // (45s, comfortably above the supervisor's 30s STATUS_STALE_MS) -- not
+  // because this tick itself is doing long work, but because under heavy
+  // real multi-process contention (many concurrent gm-driven watchers on
+  // one machine, live-observed: 13 concurrent agent watchers each competing
+  // for CPU, all doing real embed/codesearch work) the OS scheduler can
+  // starve THIS process of any time slice for well over 30s between ticks
+  // even though the process is genuinely alive and will resume once
+  // scheduled -- no in-process yield/setImmediate can fix a starvation that
+  // happens entirely outside this process's own event loop. A missed tick
+  // or two under real contention should not itself be a kill signal; a
+  // GENUINELY dead process still gets caught because nothing here ever
+  // refreshes busy_until once the process actually exits.
+  setInterval(() => writeStatus(45000), 5000);
   setInterval(() => { try { scanStalledTurns(); } catch (_) {} }, 30000);
-  writeStatus();
+  writeStatus(45000);
 
   setTimeout(async () => {
     try {
