@@ -4672,7 +4672,7 @@ async function runSpoolWatcher(instance, spoolDir) {
   setInterval(() => { try { scanStalledTurns(); } catch (_) {} }, 30000);
   writeStatus();
 
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       // The boot warmup's codesearch triggers a codeinsight reindex + full
       // in-wasm embed of the project when the stored digest is absent/stale.
@@ -4718,6 +4718,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         if (deferred === 0) break;
         if (deferred === lastDeferred) { stagnant++; if (stagnant >= 4) break; } else { stagnant = 0; }
         lastDeferred = deferred;
+        await new Promise((r) => setImmediate(r));
       }
       writeStatus();
       logEvent('plugkit', 'boot.index-warmup', { ms: Date.now() - t0, passes, converged: lastDeferred === -1 || lastDeferred === 0 });
