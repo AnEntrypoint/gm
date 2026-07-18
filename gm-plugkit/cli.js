@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot } = require('./bootstrap');
 
 function getWasmPathSafe() {
   try { return getWasmPath(); } catch (_) { return null; }
@@ -77,6 +77,22 @@ Usage:
                                              wrapper sha differs from on-disk
                                              (lets new wrapper code load on next bootstrap)
   bun x gm-plugkit@latest --help             Show this help
+
+Opt-in pinned fast-path (skips bunx's own @latest npm-registry resolution):
+  GM_PLUGKIT_PREFER_PINNED=1 bun x gm-plugkit@latest spool
+  bun x gm-plugkit@latest spool --pinned
+                                             Reads ~/.gm-tools/gm-plugkit.version
+                                             (written by every successful boot) and
+                                             re-execs 'bun x gm-plugkit@<pinned-exact-version>'
+                                             with the remaining args -- bunx skips registry
+                                             resolution for an exact version once cached, so
+                                             this is genuinely faster than @latest on repeat
+                                             boots. Falls back to normal @latest-driven
+                                             behavior automatically when no pin file exists
+                                             yet (first-ever boot) or the pinned invocation
+                                             fails (stale/unpublished pinned version).
+                                             Opt-in only -- the default boot line above is
+                                             unaffected.
 `;
 
 function readDiskWasmVersion() {
@@ -236,6 +252,25 @@ function writeCliError(phase, err) {
 
   if (args.includes('--kill-stale-watchers')) {
     process.exit(killStaleWatchers());
+  }
+
+  const wantsPinned = process.env.GM_PLUGKIT_PREFER_PINNED === '1' || args.includes('--pinned');
+  const alreadyReexecedPinned = process.env.GM_PLUGKIT_PINNED_REEXEC === '1';
+  if (wantsPinned && !alreadyReexecedPinned) {
+    const passArgs = args.filter(a => a !== '--pinned');
+    const pinned = readPinnedGmPlugkitVersion();
+    if (pinned) {
+      writeCliStatus({ phase: 'pinned-fast-path', pinned_version: pinned });
+      const result = spawnPinnedBoot(passArgs);
+      if (result.ok) {
+        process.exit(typeof result.status === 'number' ? result.status : 0);
+      }
+      writeCliStatus({ phase: 'pinned-fast-path-fallback', reason: result.reason, pinned_version: result.pinned_version || null });
+      console.error(`[gm-plugkit] pinned fast-path failed (${result.reason}), falling back to @latest resolution`);
+    } else {
+      writeCliStatus({ phase: 'pinned-fast-path-no-pin-file' });
+      console.error('[gm-plugkit] GM_PLUGKIT_PREFER_PINNED set but no ~/.gm-tools/gm-plugkit.version pin file yet -- falling back to @latest resolution (this boot will write the pin for next time)');
+    }
   }
 
   ensureSpoolDir();

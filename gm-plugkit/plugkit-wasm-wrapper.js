@@ -2504,6 +2504,69 @@ function hostTaskProc(action, params) {
   }
 }
 
+let _gmRunnerEmbedBinPath;
+function resolveGmRunnerEmbedBin() {
+  if (_gmRunnerEmbedBinPath !== undefined) return _gmRunnerEmbedBinPath;
+  const exe = path.join(GM_TOOLS_ROOT, process.platform === 'win32' ? 'gm-runner.exe' : 'gm-runner');
+  _gmRunnerEmbedBinPath = fs.existsSync(exe) ? exe : null;
+  return _gmRunnerEmbedBinPath;
+}
+
+// Slim-build support: plugkit-core's embed.rs probes host_vec_embed BEFORE
+// ever loading the 133MB wasm-embedded safetensors fallback (see
+// rs-plugkit/crates/plugkit-core/src/embed.rs::init_ctx) -- if this function
+// returns a real embedding, the wasm-side model never loads at all. Wired
+// here to gm-runner's OWN native candle path (crates/gm-runner/src/embed.rs)
+// via its `embed-text` one-shot subcommand (stdin=text,
+// stdout={"embedding":[...]}), a synchronous spawnSync call so the wasm-side
+// caller (a synchronous extern "C" import) can block on it correctly. Used
+// ONLY when a real ~/.gm-tools/gm-runner(.exe) binary is present on this
+// host; if absent, returns null immediately and the caller (host_vec_embed
+// below) falls through to -1, which makes plugkit-core's own probe fail and
+// fall back to loading the wasm-embedded fat-build safetensors model exactly
+// as before -- embedding capability is never silently lost on a host with no
+// gm-runner installed, by design (this is the real fallback the
+// slim-wasm-default-flip PRD row required be live before any default-feature
+// flip).
+function hostEmbedViaGmRunner(text) {
+  const bin = resolveGmRunnerEmbedBin();
+  if (!bin) return null;
+  try {
+    const r = spawnSync(bin, ['embed-text'], {
+      input: text,
+      encoding: 'utf-8',
+      windowsHide: true,
+      timeout: 30000,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    if (r.error || r.status !== 0) return null;
+    const parsed = JSON.parse(r.stdout || '{}');
+    if (!Array.isArray(parsed.embedding)) return null;
+    return parsed.embedding;
+  } catch (_) {
+    return null;
+  }
+}
+
+globalThis.__hostEmbedSync = function __hostEmbedSync(textPtr, textLen, outPtr, outLen, instance) {
+  try {
+    const text = readWasmStr(instance, textPtr, textLen);
+    if (!text) return -1;
+    const values = hostEmbedViaGmRunner(text);
+    if (!values || values.length === 0) return -1;
+    const dim = Math.min(values.length, outLen >>> 0);
+    const bytes = new Uint8Array(dim * 4);
+    const view = new DataView(bytes.buffer);
+    for (let i = 0; i < dim; i++) view.setFloat32(i * 4, values[i], true);
+    const buffer = instance.exports.memory.buffer;
+    guardWasmRange(buffer, outPtr, dim * 4, '__hostEmbedSync:write');
+    new Uint8Array(buffer, outPtr, dim * 4).set(bytes);
+    return dim;
+  } catch (_) {
+    return -1;
+  }
+};
+
 function makeHostFunctions(instanceRef) {
   return {
     host_fs_read: (pathPtr, pathLen) => {
@@ -4445,6 +4508,7 @@ async function runSpoolWatcher(instance, spoolDir) {
           wasm_aborted: true,
         }));
         fs.renameSync(abortTmpPath, abortOutPath);
+        try { fs.writeFileSync(abortOutPath + '.ready', ''); } catch (_) {}
         try { fs.unlinkSync(filePath); } catch (_) {}
       } catch (_) {}
       unmarkProcessed(key);
@@ -4566,6 +4630,7 @@ async function runSpoolWatcher(instance, spoolDir) {
       const outTmpPath = outPath + '.tmp.' + process.pid;
       fs.writeFileSync(outTmpPath, resultStr);
       fs.renameSync(outTmpPath, outPath);
+      try { fs.writeFileSync(outPath + '.ready', ''); } catch (_) {}
       const dur_ms = Date.now() - t0;
       console.log(`[dispatch] <- verb=${verb} task=${taskBase} ms=${dur_ms} out=${resultStr.length}b`);
       logEvent('plugkit', 'dispatch.end', { verb, task: taskBase, dur_ms, out_bytes: resultStr.length });
@@ -4611,6 +4676,7 @@ async function runSpoolWatcher(instance, spoolDir) {
         const errTmpPath = errOutPath + '.tmp.' + process.pid;
         fs.writeFileSync(errTmpPath, JSON.stringify({ ok: false, error: e.message }));
         fs.renameSync(errTmpPath, errOutPath);
+        try { fs.writeFileSync(errOutPath + '.ready', ''); } catch (_) {}
       } catch (_) {}
       try { fs.unlinkSync(filePath); } catch (_) {}
       unmarkProcessed(key);

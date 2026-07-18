@@ -849,6 +849,63 @@ function ensureGmPlugkitVersionFresh() {
   } catch (_) { return false; }
 }
 
+const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+
+function readPinnedGmPlugkitVersion() {
+  try {
+    const p = path.join(gmToolsDir(), 'gm-plugkit.version');
+    if (!fs.existsSync(p)) return null;
+    const v = fs.readFileSync(p, 'utf-8').trim();
+    if (!v || !SEMVER_RE.test(v)) return null;
+    return v;
+  } catch (_) { return null; }
+}
+
+function resolveBunRuntime() {
+  const candidates = process.platform === 'win32' ? ['bun.exe', 'bun'] : ['bun'];
+  for (const c of candidates) {
+    try {
+      const r = spawnSync('where', [c], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true, timeout: 800 });
+      if (r.status === 0) {
+        const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const exe = lines.find(l => /\.exe$/i.test(l)) || lines[0];
+        if (exe) return exe;
+      }
+    } catch (_) {}
+  }
+  return process.platform === 'win32' ? 'bun.exe' : 'bun';
+}
+
+function spawnPinnedBoot(extraArgs) {
+  const args = Array.isArray(extraArgs) ? extraArgs : [];
+  const pinned = readPinnedGmPlugkitVersion();
+  if (!pinned) {
+    return { ok: false, reason: 'no-pin-file', fallback: '@latest' };
+  }
+  const runtime = resolveBunRuntime();
+  const bunxArgs = ['x', `gm-plugkit@${pinned}`, ...args];
+  const startedMs = Date.now();
+  let result;
+  try {
+    result = spawnSync(runtime, bunxArgs, {
+      stdio: 'inherit',
+      windowsHide: true,
+      shell: false,
+      env: { ...process.env, GM_PLUGKIT_PINNED_REEXEC: '1' },
+    });
+  } catch (e) {
+    return { ok: false, reason: 'spawn-failed', error: e.message, pinned_version: pinned, fallback: '@latest' };
+  }
+  const durationMs = Date.now() - startedMs;
+  if (result.error) {
+    return { ok: false, reason: 'spawn-error', error: result.error.message, pinned_version: pinned, fallback: '@latest' };
+  }
+  if (typeof result.status === 'number' && result.status !== 0) {
+    return { ok: false, reason: 'pinned-invocation-nonzero-exit', status: result.status, pinned_version: pinned, duration_ms: durationMs, fallback: '@latest' };
+  }
+  return { ok: true, pinned_version: pinned, duration_ms: durationMs, status: result.status };
+}
+
 function discoverBundledSkillsAndSources() {
   const found = new Map();
   found.set('gm', path.join(__dirname, 'SKILL.md'));
@@ -1213,6 +1270,9 @@ module.exports = {
   ensureGmPlugkitVersionFresh,
   ensureSkillMdFresh,
   ensureWrapperFresh,
+  readPinnedGmPlugkitVersion,
+  resolveBunRuntime,
+  spawnPinnedBoot,
 };
 
 if (require.main === module) {
