@@ -88,6 +88,12 @@ tmp/
 # <<< plugkit managed
 .gm/pw-sock-*/
 
+# agentplug-runner project-local runtime state (kv store, per-project
+# plugin-dispatch spool) -- transient, regenerated every session, same
+# category as .gm/pw-sock-*/ above
+.agentplug/
+.agentplug-kv/
+
 # in-process plugkit probe artifact (transient)
 gm-plugkit/.gm/
 

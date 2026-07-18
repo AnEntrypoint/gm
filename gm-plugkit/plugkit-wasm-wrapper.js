@@ -2573,11 +2573,29 @@ function hostPluginCallViaAgentplugRunner(plugin, verb, body) {
   const bin = resolveAgentplugRunnerBin();
   if (!bin) return null;
   try {
+    // agentplug-runner's `dispatch` one-shot resolves relative paths (e.g.
+    // libsql's "path":"gm.db") against its OWN process cwd -- without an
+    // explicit cwd here it inherits whatever directory spawned the watcher
+    // process itself (which need not be the project root, e.g. a bunx temp
+    // resolution dir), silently opening/creating the wrong gm.db instead of
+    // the real one. Same CLAUDE_PROJECT_DIR-first resolution the rest of
+    // this file already uses for the spool dir.
+    const projectCwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    // 90s, not 30s: `dispatch` now routes through agentplug-runner's shared
+    // daemon when reachable (see agentplug's own daemon.rs) -- a COLD daemon
+    // spawn (no daemon alive yet) plus a plugin that hasn't been downloaded
+    // to this machine yet (first libsql/bert/treesitter call ever) can
+    // genuinely exceed 30s combined, live-witnessed this session as a
+    // real not_implemented_js_wrapper fallback on an otherwise-correct
+    // call. A warm daemon with an already-cached plugin answers in
+    // milliseconds regardless of this ceiling; the higher bound only
+    // matters for the one-time cold path.
     const r = spawnSync(bin, ['dispatch', plugin, verb, body], {
       encoding: 'utf-8',
       windowsHide: true,
-      timeout: 30000,
+      timeout: 90000,
       maxBuffer: 64 * 1024 * 1024,
+      cwd: projectCwd,
     });
     if (r.error || r.status !== 0) return null;
     return r.stdout;
