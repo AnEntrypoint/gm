@@ -94,6 +94,17 @@ tmp/
 .agentplug/
 .agentplug-kv/
 
+# rs-learn/memorize derived binary store -- every live gm session dispatching
+# mutable-resolve/prd-add/memorize perpetually grows this file; it is a
+# rebuildable derived cache, not source, and had grown past GitHub's 50MB
+# recommended limit while tracked (57.18MB, live-witnessed via a real
+# git_push warning) -- untracked here, same rule as any other derived store
+# per this project's own "derived stores are transient, never tracked" policy.
+gm.db
+gm.db-wal
+gm.db-shm
+gm.db-journal
+
 # in-process plugkit probe artifact (transient)
 gm-plugkit/.gm/
 
