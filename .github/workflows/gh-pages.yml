@@ -18,9 +18,90 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Generate releases.json at build time
+        # Must run BEFORE "Build site bundle" -- theme.mjs's readJson reads
+        # docs/api/npm-downloads.json (and would read releases.json the same
+        # way if it consumed it) from the checked-out working tree at BUILD
+        # time, not from dist/. Writing straight into the working tree here
+        # (never git add/commit'd) lets the existing site build + "Copy
+        # static assets" step below pick it up exactly as it did when the
+        # file was a committed snapshot, with zero downstream changes needed.
+        run: |
+          set -e
+          mkdir -p docs/api
+          python3 << 'PYTHON_EOF'
+          import json
+          import subprocess
+          from datetime import datetime
+
+          result = subprocess.run(['git', 'tag', '--list', '--sort=-version:refname', '--format=%(refname:short)|%(creatordate:short)'],
+                                 capture_output=True, text=True)
+
+          releases = []
+          for line in result.stdout.strip().split('\n'):
+              if not line:
+                  continue
+              parts = line.split('|')
+              tag = parts[0]
+              date = parts[1] if len(parts) > 1 else ''
+              try:
+                  msg = subprocess.run(['git', 'log', '-1', '--format=%s', tag],
+                                      capture_output=True, text=True).stdout.strip()
+              except Exception:
+                  msg = tag
+              repo = 'AnEntrypoint/gm'
+              url = f'https://github.com/{repo}/releases/tag/{tag}'
+              releases.append({'tag': tag, 'name': msg or tag, 'date': date, 'url': url})
+
+          output = {'timestamp': datetime.utcnow().isoformat() + 'Z', 'releases': releases}
+          with open('docs/api/releases.json', 'w') as f:
+              json.dump(output, f, indent=2)
+          print(f'Generated docs/api/releases.json with {len(releases)} releases')
+          PYTHON_EOF
+      - name: Generate npm-downloads.json at build time
+        run: |
+          set -e
+          mkdir -p docs/api
+          OUT=docs/api/npm-downloads.json
+          PKGS=(gm-skill)
+          END=$(date -u +%Y-%m-%d)
+          START=$(date -u -d '29 days ago' +%Y-%m-%d)
+          declare -A SERIES
+          declare -A TOTAL
+          for p in "${PKGS[@]}"; do
+            R=$(curl -s "https://api.npmjs.org/downloads/range/${START}:${END}/${p}")
+            ERR=$(echo "$R" | jq -r '.error // empty')
+            if [ -n "$ERR" ]; then
+              echo "skip $p: $ERR"
+              SERIES[$p]='[]'
+              continue
+            fi
+            DAILY=$(echo "$R" | jq -c '[.downloads[] | {date: .day, count: .downloads}]')
+            SERIES[$p]="$DAILY"
+            while IFS=$'\t' read -r d c; do
+              TOTAL[$d]=$(( ${TOTAL[$d]:-0} + c ))
+            done < <(echo "$R" | jq -r '.downloads[] | [.day,.downloads] | @tsv')
+          done
+          PACKAGES_JSON=$(jq -n '{}')
+          for p in "${PKGS[@]}"; do
+            PACKAGES_JSON=$(echo "$PACKAGES_JSON" | jq --arg k "$p" --argjson v "${SERIES[$p]:-[]}" '.[$k]=$v')
+          done
+          TOTALS_JSON='[]'
+          for d in $(echo "${!TOTAL[@]}" | tr ' ' '\n' | sort); do
+            TOTALS_JSON=$(echo "$TOTALS_JSON" | jq --arg d "$d" --argjson c "${TOTAL[$d]}" '. + [{date:$d,count:$c}]')
+          done
+          GRAND=$(echo "$TOTALS_JSON" | jq '[.[].count] | add // 0')
+          jq -n --arg gen "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                --argjson packages "$PACKAGES_JSON" \
+                --argjson totals "$TOTALS_JSON" \
+                --argjson grand "$GRAND" \
+                '{generated:$gen, range_days:30, total_30d:$grand, packages:$packages, totals:$totals}' > "$OUT"
+          echo "wrote $OUT (total_30d=$GRAND)"
       - name: Build site bundle
         working-directory: site
         run: |
