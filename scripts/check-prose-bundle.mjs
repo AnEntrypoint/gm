@@ -6,7 +6,6 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const bundleDir = path.join(root, 'gm-plugkit', 'instructions');
 
 const KEYS = [
-  'entry', 'plan', 'execute', 'emit', 'verify', 'update_docs', 'browser',
   'gates/long-gap-no-instruction',
   'residual/prd-open', 'residual/browser-open', 'residual/tasks-running',
   'residual/dirty-tree', 'residual/imperative',

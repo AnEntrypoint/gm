@@ -22,7 +22,7 @@ Skills encode environment-specific constraints that override general knowledge.
 
 # Architecture & Philosophy
 
-Repo root = package root = published `gm-skill` npm package; no factory, no separate build-output dir. Entry: `skills/gm/SKILL.md`. Orchestration lives in rs-plugkit, served on-demand via `instruction`. Agent-facing prose (phase instruction, gate/residual text) externalizes to editable `gm-plugkit/instructions/`: prose edits = gm-plugkit republish, zero Rust rebuild. Mechanism (prose.rs per-key fallback to compiled const; sync-instruction-consts.mjs byte-aligns .md<->rs-plugkit consts) in the recall store (`recall: string-externalization project`).
+Repo root = package root = published `gm-skill` npm package; no factory, no separate build-output dir. Entry: `skills/gm/SKILL.md`. Orchestration lives in rs-plugkit, served on-demand via `instruction`. The 8 phase-prose files (entry/plan/execute/emit/verify/consolidate/update_docs/browser) live single-sourced inside rs-plugkit itself (`crates/plugkit-core/src/orchestrator/instructions/prose/*.md`, `include_str!`'d at build) -- a prose edit there requires a Rust rebuild via the normal cascade, no cross-repo sync step. Gate/residual text stays genuinely zero-rebuild: editable `gm-plugkit/instructions/gates/` and `gm-plugkit/instructions/residual/` in this repo, read at runtime with `prose.rs`'s per-key fallback to a compiled default (`.gm/instructions/<key>.md` per-project-overridable). Detail in the recall store (`recall: string-externalization project`).
 
 ## WASM-only, now with an optional native runner
 
