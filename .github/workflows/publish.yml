@@ -68,6 +68,39 @@ jobs:
         id: version
         run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
 
+      - name: Verify version-cascade files agree
+        run: |
+          set -e
+          # Two independent version families across 6 files: the gm-skill/
+          # gm-plugkit package version (gm.json, package.json, gm-plugkit/
+          # package.json -- kept in lockstep by the auto-bump step above) and
+          # the separately-cascaded plugkit WASM version (gm.json's
+          # plugkitVersion, gm-plugkit/plugkit.version, bin/plugkit.version --
+          # written by rs-plugkit's cross-repo push, not this workflow). Each
+          # family must agree internally; the two families are NOT expected
+          # to match each other. A partial-failure scenario (a cross-repo
+          # push racing this workflow's own auto-bump, or a push retry
+          # exhausting its 5 attempts and continuing anyway) previously had
+          # no check that would ever catch drift -- it just shipped silently
+          # until someone noticed mismatched version numbers in the wild.
+          PKG_VERSION=$(jq -r '.version' gm.json)
+          PKG_VERSION_2=$(jq -r '.version' package.json)
+          PKG_VERSION_3=$(jq -r '.version' gm-plugkit/package.json)
+          if [ "$PKG_VERSION" != "$PKG_VERSION_2" ] || [ "$PKG_VERSION" != "$PKG_VERSION_3" ]; then
+            echo "::error::package version drift: gm.json=$PKG_VERSION package.json=$PKG_VERSION_2 gm-plugkit/package.json=$PKG_VERSION_3"
+            exit 1
+          fi
+
+          WASM_VERSION=$(jq -r '.plugkitVersion' gm.json)
+          WASM_VERSION_2=$(tr -d '[:space:]' < gm-plugkit/plugkit.version 2>/dev/null || echo "MISSING")
+          WASM_VERSION_3=$(tr -d '[:space:]' < bin/plugkit.version 2>/dev/null || echo "MISSING")
+          if [ "$WASM_VERSION" != "$WASM_VERSION_2" ] || [ "$WASM_VERSION" != "$WASM_VERSION_3" ]; then
+            echo "::error::plugkit WASM version drift: gm.json.plugkitVersion=$WASM_VERSION gm-plugkit/plugkit.version=$WASM_VERSION_2 bin/plugkit.version=$WASM_VERSION_3"
+            exit 1
+          fi
+
+          echo "[ok] package version $PKG_VERSION agrees across 3 files; plugkit WASM version $WASM_VERSION agrees across 3 files"
+
   publish-gm-skill:
     needs: prepare
     runs-on: ubuntu-latest
