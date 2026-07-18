@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { gmToolsDir } = require('./bootstrap');
 const { logEvent: _sharedLogEvent, GM_LOG_ROOT: _sharedGmLogRoot } = require('./gm-log');
+const { pidCommandLineForKillGuard: _sharedPidCommandLine } = require('./gm-process');
 
 function wrapperSha12OnDisk() {
   try {
@@ -50,14 +51,7 @@ function writeSupervisorStatus(state, extra) {
 }
 
 function pidCommandLineForKillGuard(pid) {
-  try {
-    if (process.platform === 'win32') {
-      const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}").CommandLine`], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
-      return String((r && r.stdout) || '');
-    }
-    const r = spawnSync('ps', ['-p', String(pid), '-o', 'args='], { encoding: 'utf8', timeout: 5000 });
-    return String((r && r.stdout) || '');
-  } catch (_) { return ''; }
+  return _sharedPidCommandLine(pid);
 }
 
 function pidIsPlugkitProcess(pid) {

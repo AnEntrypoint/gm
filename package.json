@@ -44,6 +44,7 @@
     "gm-plugkit/plugkit-wasm-wrapper.js",
     "gm-plugkit/supervisor.js",
     "gm-plugkit/gm-log.js",
+    "gm-plugkit/gm-process.js",
     "gm-plugkit/plugkit.version",
     "gm-plugkit/plugkit.sha256",
     "gm-plugkit/instructions/",
