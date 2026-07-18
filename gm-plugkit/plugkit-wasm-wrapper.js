@@ -3507,6 +3507,26 @@ async function runSpoolWatcher(instance, spoolDir) {
   fs.mkdirSync(inDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
+  // A heartbeat must exist BEFORE any boot step that can block for a while (the
+  // browser-runner orphan reaps below shell out to `bun x playwriter@latest`, a
+  // network-bound resolution that can run long under real network degradation).
+  // The full writeStatus/_writeStatusBusy pair is defined ~1000 lines later in
+  // this function (it needs _bootReason/_supervisorPid/_instanceVersionAtBoot/
+  // IDLE_LIMIT_MS, all assigned further down) -- calling _writeStatusBusy from
+  // runBrowserRunner during these early reaps was a no-op (undefined) until that
+  // point, so the supervisor's heartbeat-stale check (30s, no busy_until to
+  // shield it) killed the watcher every ~10s before it ever wrote a real status,
+  // an unrecoverable respawn loop. Write a minimal, dependency-free heartbeat with
+  // a busy window up front (real writeStatus() overwrites it correctly once its
+  // dependencies exist) so the supervisor sees genuine liveness immediately.
+  try {
+    fs.writeFileSync(path.join(spoolDir, '.status.json'), JSON.stringify({
+      pid: process.pid,
+      ts: Date.now(),
+      busy_until: Date.now() + 60000,
+    }));
+  } catch (_) {}
+
   try {
     const gmDir = path.dirname(spoolDir);
     fs.writeFileSync(path.join(gmDir, 'last-instruction-ts'), String(Date.now()));
