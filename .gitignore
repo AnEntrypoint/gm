@@ -30,6 +30,7 @@ tmp/
 
 # >>> plugkit managed
 .gm/exec-spool/
+.gm/.sql-smoke.db
 .gm/gm-fired-*
 .gm/needs-gm
 .gm/lastskill
