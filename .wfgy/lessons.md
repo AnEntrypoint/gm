@@ -125,3 +125,30 @@ grep both native runtimes to confirm it's a real gap vs a routed-elsewhere
 path. (b) before concluding a gate/rule fix works, grep for every site that
 enforces the same predicate -- a rule duplicated across enforcement points must
 be changed at all of them or the missed one silently wins.
+
+## 2026-07-20 -- "External/unfixable" is a drift signal, not a verdict; build past the blocker
+Goal (G): zero stubs, zero external blockers -- browser crash actually fixed,
+host_vec_search implemented, unfixable docs purged, instructionality rewritten
+so blockedBy:external is not a solution path.
+What drifted / what went wrong: multiple prior sessions had marked the browser
+UV_HANDLE_CLOSING crash "blockedBy:external, not fixable from a gm session,"
+and had even ADDED gate exemptions so such rows could pass CONSOLIDATE. That
+was the drift: treating a dependency's crash as a terminal verdict instead of a
+prompt to replace the dependency. The crash was in playwriter's relay process,
+so the fix was never "patch playwriter" (genuinely out of reach) -- it was
+"stop using the relay," which was fully in reach: the wrapper already launched
+Chrome with --remote-debugging-port and had a live CDP endpoint; only the final
+eval hop went through the crashing relay. Driving that endpoint directly over
+the DevTools websocket (Runtime.evaluate) eliminated the crash entirely.
+Fix / resolution: investigate WHERE the blocker actually lives (subagent found
+the crash is downstream of every arg-fix, in the relay), then replace the
+crashing component with one you control. Proven end to end: real navigation +
+DOM extraction, zero playwriter, on the same Windows host that "couldn't" run a
+browser. Also found the bug in my own port: agentplug's run() treated the whole
+{body,timeoutMs} dispatch JSON as the script -- extract the envelope first.
+Generalizes to: when a tool crashes, the reachable fix is almost always "own
+the layer below it" (drive the protocol directly, spawn your own instance,
+reimplement the hop), not "declare it external." A gate/rule that lets a
+blockedBy:external row count as done is itself the anti-pattern -- remove the
+escape hatch so the workflow is forced to build the real fix. Grep BOTH native
+runtimes when eliminating stubs; a fix in one leaves the other stubbed.
