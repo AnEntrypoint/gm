@@ -10,3 +10,28 @@ Goal (G): Reduce agentplug-runner.exe steady-state memory from ~1.5-2.9GB to som
 What drifted / what went wrong: Every measurement across the session used `WorkingSet64` (what `tasklist` and `Get-Process | WorkingSet64` report) and called it "RSS". Windows trims a committed-but-cold working set aggressively and independently of the program -- a forced `EmptyWorkingSet` took WorkingSet from 1545.8MB to 1.0MB while `PrivateMemorySize64` held flat at 1546.6MB. That trim/refault cycle is exactly the "accumulates then clears by GC" sawtooth the user reported, and it made a monotonically-growing committed footprint look like it was being reclaimed. Two consequences: (a) I told the user the RAM was a permanently-retained ratchet while also observing drops, an unresolved self-contradiction I narrated instead of investigating; (b) a bucket-rounding "fix" in agentplug-bert was benchmarked entirely on WorkingSet64, so its net-negative verdict (2861MB vs 2288-2346MB) rests on an unsound metric -- the revert may have been right or wrong, it was not actually measured. Separately, two "measurements" during verification were taken on dispatches that had been gate-denied or had errored (`query required`), i.e. did no work at all -- one nearly got accepted as a great result.
 Fix / resolution: Judge Windows process memory by `PrivateMemorySize64` (committed, backed) and confirm attribution with `VirtualQueryEx` region walking, never `WorkingSet64`. Region walk found the truth immediately: 1541.9MB committed private, of which one contiguous ~1285MB PAGE_READWRITE region = bert's grown wasm linear memory, plus 132MB PAGE_READONLY = the baked-in safetensors. 19.5GB "reserved" was pure MEM_RESERVE and cost nothing (that suspect was eliminated in one reading). Staged measurement: 350MB fresh boot -> 538MB with 4 plugins instantiated -> 1544MB after ONE cold codeinsight pass, and it never came back down. Real fix: `release_shared_plugin("bert")` drops the shared Store after a quiet interval, returning the committed pages; `load_plugin` re-instantiates transparently on next use since the compiled Module stays cached. Verified on a forced-cold pass (digest deleted): peak 1543.6MB during embedding, settling to 256-386MB ~12s after going quiet, versus staying pinned at 1544MB before. Shipped as agentplug 345a650.
 Generalizes to: On Windows, `WorkingSet64` is an OS scheduling artifact, not a measure of what a program allocated -- any before/after memory comparison built on it is unsound, and a sawtooth in it is the OS trimming, not the program freeing. Use `PrivateMemorySize64` for the magnitude and `VirtualQueryEx` region-walking for attribution before forming any theory. And before recording ANY measurement, verify the dispatch under test actually did the work: check the response body for `ok:true` and real output, since a gate-denied or errored call yields a clean-looking but meaningless number.
+
+## 2026-07-19 -- "ok:true" is not "it worked"; read the mode/shape fields
+Goal (G): debug every possible part of the gm setup and fix what is broken.
+What drifted / what went wrong: codesearch had been returning `ok:true` with
+`hits:0` all session and I read that as "no matches for this query" rather than
+"the search is broken." The real signal was in fields I was not printing:
+`mode:fallback_kv` (instead of `fusion`) plus `bm25_top10:0` proved the corpus
+itself was empty, not the result set. Three distinct bugs were hiding behind
+that one benign-looking response: an index livelock (files over the per-pass
+chunk cap were deferred forever, so the digest was never written and every
+search re-indexed from scratch), a host/guest ABI mismatch (host_kv_query
+returned bare content strings while every guest reader indexed rows by
+key/value, loading 114 valid manifests as 0 chunks), and a daemon that never
+refreshed an already-installed wasm.
+Fix / resolution: follow the failing value down the stack instead of theorizing
+-- print the diagnostic fields, verify each layer's data really is intact
+(manifests parse, host_read works for both relative forms) to eliminate
+theories, then read the consuming code's exact expectations against the
+producing code's exact output.
+Generalizes to: for any verb that reports success, check the fields that
+describe HOW it succeeded before trusting the payload. A degraded fallback path
+returning an empty-but-valid result is indistinguishable from a legitimate
+empty result unless the mode field is read. Also: measurements taken from
+gate-denied or errored dispatches are void -- always confirm ok:true AND real
+output before recording a number.
