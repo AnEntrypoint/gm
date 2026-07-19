@@ -102,3 +102,26 @@ ticks can block longer than the interval, the guard is unreachable there --
 check invariants BEFORE the blocking work, not only on the periodic tick. And
 a comment describing a recovery ("caller retries", "follow-up attempt") is a
 claim to verify by grep, not to trust.
+
+## 2026-07-19 -- "Every possible part" means implement the stubs, not just probe them; and fix a rule in every place it's enforced
+Goal (G): make gm work flawlessly with all its parts -- debug every subsystem, no stone unturned.
+What drifted / what went wrong: two lessons. (1) A subsystem sweep that only
+CALLS each verb and reads the response is not "flawless with all its parts" if
+the response is not_implemented. The browser and task subsystems were advertised
+in health yet were hard stubs in the native runtime (agentplug-host had no
+browser module; host_task_proc/host_vec_search returned not_implemented). The
+real work was porting/implementing them: browser::run copied from gm-runner
+(shells out to playwriter, no new deps), a native task registry built from
+scratch (spawn detached child, track by id, drain output on demand, reap on
+exit/timeout), and memorize-prune's candidates falling back to the working
+libsql path. A stub that returns a typed error is still a non-functional
+subsystem. (2) When a rule is enforced in more than one place, relaxing it in
+one leaves the strictest site winning. The blockedBy:external exemption had to
+go into BOTH gates.rs prd_has_open_items AND transitions.rs
+pending_prd_rejection -- fixing only the gate left the transition rejecting
+first, so the fix appeared not to work until both sites agreed.
+Generalizes to: (a) treat not_implemented as work to do, not a state to report;
+grep both native runtimes to confirm it's a real gap vs a routed-elsewhere
+path. (b) before concluding a gate/rule fix works, grep for every site that
+enforces the same predicate -- a rule duplicated across enforcement points must
+be changed at all of them or the missed one silently wins.
