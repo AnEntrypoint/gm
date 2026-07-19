@@ -6,22 +6,10 @@ const os = require('os');
 const path = require('path');
 const cp = require('child_process');
 const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
+const { pidAliveSync, waitForPidDeath } = require('./gm-process');
 
 function getWasmPathSafe() {
   try { return getWasmPath(); } catch (_) { return null; }
-}
-
-function pidAliveSync(pid) {
-  try { process.kill(pid, 0); return true; } catch (_) { return false; }
-}
-
-function waitForPidDeath(pid, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (!pidAliveSync(pid)) return true;
-    try { cp.execFileSync(process.platform === 'win32' ? 'ping' : 'sleep', process.platform === 'win32' ? ['-n', '2', '127.0.0.1'] : ['0.3'], { stdio: 'ignore', windowsHide: true }); } catch (_) {}
-  }
-  return !pidAliveSync(pid);
 }
 
 function spawnBackgroundFreshnessCheck(reason) {

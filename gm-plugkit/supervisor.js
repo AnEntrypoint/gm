@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { gmToolsDir, resolveProjectRoot } = require('./bootstrap');
 const { logEvent: _sharedLogEvent, GM_LOG_ROOT: _sharedGmLogRoot } = require('./gm-log');
-const { pidCommandLineForKillGuard: _sharedPidCommandLine } = require('./gm-process');
+const { pidCommandLineForKillGuard: _sharedPidCommandLine, pidAliveSync, waitForPidDeath } = require('./gm-process');
 
 function wrapperSha12OnDisk() {
   try {
@@ -149,19 +149,6 @@ function readShutdownReason() {
 // deliberate upgrade recycle as a SILENT ABORT / unplanned-restart critical. Write
 // the planned reason on the child's behalf BEFORE killing, so the next boot reads a
 // fresh planned shutdown reason and classifies the restart correctly.
-function pidAliveSync(pid) {
-  try { process.kill(pid, 0); return true; } catch (_) { return false; }
-}
-
-function waitForPidDeath(pid, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (!pidAliveSync(pid)) return true;
-    try { spawnSync(process.platform === 'win32' ? 'ping' : 'sleep', process.platform === 'win32' ? ['-n', '2', '127.0.0.1'] : ['0.3'], { stdio: 'ignore', windowsHide: true }); } catch (_) {}
-  }
-  return !pidAliveSync(pid);
-}
-
 function killChild(reason) {
   if (!currentChildPid) return;
   const pid = currentChildPid;
