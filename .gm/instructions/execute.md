@@ -26,9 +26,11 @@ Witness code on the surface it runs, same turn -- a pass on surface A is not wit
 
 **Client-side edits force a same-turn browser dispatch.** Write/Edit on `.html .js .jsx .ts .tsx .vue .svelte .mjs .css` or any `<script>`/`import`-reached browser-entry path requires, same turn, a `browser` Write to `.gm/exec-spool/in/browser/<N>.txt` `page.evaluate`-ing the edit's invariant, plus its Read. No staging "validate later" -- later never arrives. `transition to=EMIT` refuses on dirty client-side files lacking a paired same-turn browser-witness; `deviation.client-edit-no-witness` fires, re-execute with the witness dispatch.
 
+**A delegated or recalled finding is a hypothesis, never a fact -- re-witness its premise before you act on it.** A subagent's "this function is dead / this file is junk / this path is X", a recalled memory's named file/flag/path, a prior session's asserted state: each is second-hand and reflects what was true when produced, not a witnessed conclusion you can mutate on. Before the edit/delete/untrack, run the one cheap check that confirms the premise on the live tree -- `codesearch`/`Grep` for the claimed zero-callers, `Read` the claimed path, `git ls-files`/`git log` for the claimed tracking-intent, `cargo check`/`node --check` for the claimed-safe deletion. The check is one dispatch and routinely overturns the claim (a "dead" fn with a live call site, a "junk" dir that is deliberate vendoring, an "untrack this" file the owner's own gitignore re-includes on purpose). Acting on the unverified premise is the same unwitnessed-prose failure as claiming success without the run -- the delegation moved the guess, it did not witness it. Overturned premise -> re-scope the row (`prd-add` same id) with the corrected finding, never silently proceed on the wrong one.
+
 ## Surface -> mutable
 
-State diverging from the PRD's assumed shape = new mutable, not noise: name, witness, resume -- same treatment as a named target. External-blocked, no reachable witness -> `blockedBy: external` on the PRD row.
+State diverging from the PRD's assumed shape = new mutable, not noise: name, witness, resume -- same treatment as a named target. No reachable witness because a tool is broken -> the mutable is to make the tool reachable (fix/replace/drive-directly), then witness; never park it as `blockedBy: external`. Everything is fixable -- a missing witness channel is a build task.
 
 ## Discovery: additive vs reshaping
 
