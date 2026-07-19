@@ -274,6 +274,24 @@ async function downloadGmRunner({ silent } = {}) {
   }
   const destDir = gmToolsDir();
   const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'gm-runner.exe' : 'gm-runner');
+
+  // gm-runner stages a verified self-update as <asset>.new and then renames it
+  // over its own exe -- which Windows refuses while that exe is running, so the
+  // staged file was abandoned and gm-runner never updated itself (witnessed: a
+  // 29h-old .new beside a byte-different in-use binary; the identical rename
+  // succeeded immediately once no gm-runner process was running). The installer
+  // is the right place to complete it: it runs as node, outside the target
+  // binary, so it does not hold the lock that blocks gm-runner's own attempt.
+  try {
+    const staged = path.join(destDir, assetName + '.new');
+    if (fs.existsSync(staged)) {
+      fs.renameSync(staged, destPath);
+      if (!silent) out(`Adopted staged gm-runner self-update from ${staged}`);
+    }
+  } catch (e) {
+    if (!silent) err(`gm-runner: staged self-update could not be adopted (${e && e.message || e}); leaving it in place`);
+  }
+
   try {
     const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/gm-runner-bin/releases/latest')).toString('utf8'));
     const tag = releaseInfo && releaseInfo.tag_name;
