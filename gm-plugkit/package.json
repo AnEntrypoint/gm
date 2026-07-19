@@ -1,6 +1,6 @@
 {
   "name": "gm-plugkit",
-  "version": "2.0.2000",
+  "version": "2.0.2001",
   "description": "Bootstrap and daemon-spawn tool for gm plugkit binary. Downloads the correct platform binary, verifies SHA256, and starts the spool watcher daemon. Includes plugkit-wasm-wrapper for WASM-based spool watching.",
   "main": "index.js",
   "bin": {
