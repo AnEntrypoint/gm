@@ -1,6 +1,43 @@
 'use strict';
 
+const fs = require('fs');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+
+// Pure-leaf helpers shared byte-for-byte between bin/bootstrap.js and
+// gm-plugkit/bootstrap.js (they were identical inline copies in both). Only
+// node builtins, no bootstrap-local state -- safe to centralize here.
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function pidAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+}
+
+function sha256OfFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const h = crypto.createHash('sha256');
+    const s = fs.createReadStream(filePath);
+    s.on('data', c => h.update(c));
+    s.on('end', () => resolve(h.digest('hex')));
+    s.on('error', reject);
+  });
+}
+
+function sha256OfFileSync(filePath) {
+  const h = crypto.createHash('sha256');
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(1024 * 1024);
+    for (;;) {
+      const n = fs.readSync(fd, buf, 0, buf.length, null);
+      if (n <= 0) break;
+      h.update(buf.subarray(0, n));
+    }
+  } finally { try { fs.closeSync(fd); } catch (_) {} }
+  return h.digest('hex');
+}
 
 function pidCommandLineForKillGuard(pid) {
   try {
@@ -31,4 +68,4 @@ function waitForPidDeath(pid, timeoutMs) {
   return !pidAliveSync(pid);
 }
 
-module.exports = { pidCommandLineForKillGuard, pidAliveSync, waitForPidDeath };
+module.exports = { ensureDir, pidAlive, sha256OfFile, sha256OfFileSync, pidCommandLineForKillGuard, pidAliveSync, waitForPidDeath };

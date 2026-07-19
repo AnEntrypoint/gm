@@ -7,7 +7,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { logEvent: _sharedLogEvent } = require('./gm-log');
-const { pidCommandLineForKillGuard: _sharedPidCommandLine } = require('./gm-process');
+const { pidCommandLineForKillGuard: _sharedPidCommandLine, ensureDir, pidAlive, sha256OfFile, sha256OfFileSync } = require('./gm-process');
 
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
@@ -311,28 +311,6 @@ function readShaManifest() {
   return out;
 }
 
-function sha256OfFileSync(filePath) {
-  const h = crypto.createHash('sha256');
-  const fd = fs.openSync(filePath, 'r');
-  try {
-    const buf = Buffer.alloc(1024 * 1024);
-    for (;;) {
-      const n = fs.readSync(fd, buf, 0, buf.length, null);
-      if (n <= 0) break;
-      h.update(buf.subarray(0, n));
-    }
-  } finally { try { fs.closeSync(fd); } catch (_) {} }
-  return h.digest('hex');
-}
-
-function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
-}
-
 function acquireLock(lockPath) {
   const start = Date.now();
   for (;;) {
@@ -362,16 +340,6 @@ function acquireLock(lockPath) {
 
 function releaseLock(lockPath) {
   try { fs.unlinkSync(lockPath); } catch (_) {}
-}
-
-function sha256OfFile(filePath) {
-  return new Promise((resolve, reject) => {
-    const h = crypto.createHash('sha256');
-    const s = fs.createReadStream(filePath);
-    s.on('data', c => h.update(c));
-    s.on('end', () => resolve(h.digest('hex')));
-    s.on('error', reject);
-  });
 }
 
 function resolveNpxJsCli() {

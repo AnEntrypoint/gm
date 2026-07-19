@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+const { ensureDir, pidAlive, sha256OfFile, sha256OfFileSync } = require('../gm-plugkit/gm-process');
 
 const NPM_PACKAGE = 'plugkit-wasm';
 const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -254,30 +255,12 @@ function copyWasmToGmTools(wasmPath, wrapperDir, version) {
   } catch (_) {}
 }
 
-function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
 function readVersionFile(wrapperDir) {
   const p = path.join(wrapperDir, 'plugkit.version');
   if (!fs.existsSync(p)) throw new Error(`plugkit.version not found at ${p}`);
   return fs.readFileSync(p, 'utf8').trim();
 }
 
-
-function sha256OfFileSync(filePath) {
-  const h = crypto.createHash('sha256');
-  const fd = fs.openSync(filePath, 'r');
-  try {
-    const buf = Buffer.alloc(1024 * 1024);
-    for (;;) {
-      const n = fs.readSync(fd, buf, 0, buf.length, null);
-      if (n <= 0) break;
-      h.update(buf.subarray(0, n));
-    }
-  } finally { try { fs.closeSync(fd); } catch (_) {} }
-  return h.digest('hex');
-}
 
 function healIfShaMatches(binPath, expectedSha, sentinelPath, partialPath, kind) {
   if (!fs.existsSync(binPath)) return false;
@@ -304,10 +287,6 @@ function readShaManifest(wrapperDir, manifestName) {
     if (m) out[m[2]] = m[1].toLowerCase();
   }
   return out;
-}
-
-function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
 }
 
 function acquireLock(lockPath) {
@@ -339,16 +318,6 @@ function acquireLock(lockPath) {
 
 function releaseLock(lockPath) {
   try { fs.unlinkSync(lockPath); } catch (_) {}
-}
-
-function sha256OfFile(filePath) {
-  return new Promise((resolve, reject) => {
-    const h = crypto.createHash('sha256');
-    const s = fs.createReadStream(filePath);
-    s.on('data', c => h.update(c));
-    s.on('end', () => resolve(h.digest('hex')));
-    s.on('error', reject);
-  });
 }
 
 async function extractNpmPackageWasm(destPath, version) {
