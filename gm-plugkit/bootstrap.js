@@ -191,6 +191,37 @@ function ensureNextStepWiring(cwd) {
     }
   } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: agentsMdPath, error: e.message }); }
 
+  // gm writes its own runtime data into .gm/ in every project it drives; if that
+  // project is an npm package, that data must never be published. Maintain a
+  // managed .npmignore block excluding .gm/, mirroring the managed-gitignore
+  // mechanism: append a marker-delimited block to any existing .npmignore
+  // without clobbering the user's own entries, and skip entirely when a
+  // package.json `files:` allowlist is present (an allowlist already excludes
+  // everything not listed, so .gm/ is safe without an .npmignore).
+  try {
+    const pkgPath = path.join(cwd, 'package.json');
+    let hasFilesAllowlist = false;
+    try {
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        hasFilesAllowlist = Array.isArray(pkg.files) && pkg.files.length > 0;
+      }
+    } catch (_) {}
+    if (!hasFilesAllowlist) {
+      const npmIgnorePath = path.join(cwd, '.npmignore');
+      const begin = '# >>> gm managed';
+      const end = '# <<< gm managed';
+      const block = `${begin}\n.gm/\n${end}\n`;
+      let content = '';
+      if (fs.existsSync(npmIgnorePath)) content = fs.readFileSync(npmIgnorePath, 'utf8');
+      if (!content.includes(begin)) {
+        const sep = content && !content.endsWith('\n') ? '\n' : '';
+        fs.writeFileSync(npmIgnorePath, content + sep + (content ? '\n' : '') + block);
+        changes.push(fs.existsSync(npmIgnorePath) && content ? 'added gm managed block to .npmignore' : 'created .npmignore excluding .gm/');
+      }
+    }
+  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: '.npmignore', error: e.message }); }
+
   if (changes.length > 0) {
     log(`next-step wiring: ${changes.join(', ')}`);
     obsEvent('bootstrap', 'next-step.wiring.applied', { changes });
