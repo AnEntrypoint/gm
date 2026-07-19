@@ -1150,3 +1150,9 @@
   witness_evidence: in-progress this turn
   id: mut-1784399707334
   status: witnessed
+- mutable_id: slim-gm-wasm-ram-reduction-witnessed
+  claim: agentplug-runner's download.rs now downloads plugkit-slim.wasm instead of fat plugkit.wasm for the gm plugin, since host_vec_embed is always answerable under agentplug (bert is a mandatory default plugin)
+  witness_method: real before/after RSS measurement of the live agentplug-runner.exe process, plus real recall/codesearch dispatches confirming functional correctness with slim wasm
+  id: mut-1784420835965
+  status: witnessed
+  witness_evidence: 'Before: agentplug-runner.exe pid 49172 WorkingSet=2532.3MB with fat gm.wasm (137MB, baked-in 133MB bert safetensors) despite embed.rs::init_ctx() already probing host_vec_embed successfully and never deserializing the baked weights (dead data, but the wasm data segment still gets copied into linear memory at Instantiate). After: killed pid 49172, deployed rebuilt agentplug-runner.exe (download.rs fix: gm_asset_basename()=''plugkit-slim'', with fat-fallback if slim sha404s), deleted cached ~/.agentplug/plugins/gm.wasm+gm.version to force re-download, rebooted (new pid 19968) -- confirmed gm.wasm re-downloaded as 3,191,254 bytes (was 137,824,031), a real ~43x smaller wasm module. Dispatched real recall {query:"slim wasm memory reduction verification"} -- returned genuine scored vector_hits (cos=0.536, real memory text), proving host_vec_embed delegation to the shared bert plugin still works correctly through the slim gm.wasm. Dispatched real codesearch -- also succeeded, real commit shas returned, no errors. Final settled WorkingSet=1515.7MB (measured after both real dispatches, bert model lazily loaded on first embed call) vs original 2532.3MB baseline -- a real ~1017MB (~40%) RSS reduction with zero functional regression.'
