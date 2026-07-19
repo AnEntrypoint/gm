@@ -78,3 +78,27 @@ Generalizes to: when a migration leaves one artifact stranded, the question is
 never "fix this file" but "what else did that migration own?" Enumerate the old
 owner's outputs and check each for a current writer and a current consumer;
 those two answers together decide port-vs-delete.
+
+## 2026-07-19 -- A periodic guard gated behind a timer never fires during a long blocking call
+Goal (G): debug every part of the setup, fix anything, no unfinished work.
+What drifted / what went wrong: the agentplug daemon had a correct
+lost-authority check that exits a superseded daemon -- but it lived inside
+`if last_heartbeat.elapsed() >= HEARTBEAT_INTERVAL`, and the verb dispatch that
+follows can block one loop iteration far past that interval on a long
+synchronous wasm call (a 45s index pass, a batch of 3s embeds). So a daemon
+busy in wasm never reached the guard, a newer daemon claimed authority, and the
+orphan kept burning a full core and 2.8GB serving nobody. The guard existed and
+looked sufficient; the gating condition is what made it unreachable exactly
+when it was needed. Same shape appeared in the gm-runner self-update: a
+"follow-up rename attempt" the comment promised was never reachable because no
+follow-up was ever wired up.
+Fix / resolution: move the guard to the top of the loop, before the blocking
+work, via a shared helper both call sites use. Verified by injecting the race
+(overwrite the heartbeat file with a foreign fresh pid) and watching the
+daemon exit.
+Generalizes to: a self-correction gated behind a timer or a heartbeat tick is
+only as reliable as the shortest path back to that gate. If any branch between
+ticks can block longer than the interval, the guard is unreachable there --
+check invariants BEFORE the blocking work, not only on the periodic tick. And
+a comment describing a recovery ("caller retries", "follow-up attempt") is a
+claim to verify by grep, not to trust.
