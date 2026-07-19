@@ -35,3 +35,25 @@ returning an empty-but-valid result is indistinguishable from a legitimate
 empty result unless the mode field is read. Also: measurements taken from
 gate-denied or errored dispatches are void -- always confirm ok:true AND real
 output before recording a number.
+
+## 2026-07-19 -- Verify the artifact you deployed is the one you built
+Goal (G): debug every part of the setup and fix what is broken, no unfinished work.
+What drifted / what went wrong: three separate times I measured a "fix didn't
+work" result that was really a deployment or environment artifact, not a code
+failure. (1) A rebuilt runner reported "Finished" without relinking, because
+the running daemon held the exe's file lock -- the deployed binary kept an old
+timestamp and I concluded the change had no effect. (2) A foreground daemon
+repeatedly lost the spawn race to a background one still serving the OLD wasm,
+so verification ran against the previous build. (3) An idle-release test never
+fired because the daemon was still doing real work (commit-vector embedding),
+so `any_work` stayed true and the idle branch was never reached -- and in an
+earlier attempt the daemon had simply exited when its timeout window closed.
+Separately, a `similarity` verb I tested against turned out not to exist in the
+build at all, making that whole measurement meaningless.
+Fix / resolution: before concluding a fix failed, confirm the artifact under
+test is the one just built (compare file timestamps/sizes, kill lock-holders
+before rebuilding), confirm the process serving the request is the one you
+started, and confirm the precondition the code path needs actually held.
+Generalizes to: a negative result is only evidence about the code if the
+build-deploy-serve chain is verified first. Check the chain, then trust the
+measurement -- and check that a verb exists before drawing conclusions from it.
