@@ -57,3 +57,24 @@ started, and confirm the precondition the code path needs actually held.
 Generalizes to: a negative result is only evidence about the code if the
 build-deploy-serve chain is verified first. Check the chain, then trust the
 measurement -- and check that a verb exists before drawing conclusions from it.
+
+## 2026-07-19 -- When one file is orphaned by a migration, sweep the whole class
+Goal (G): debug every part of the setup, fix anything, no unfinished work.
+What drifted / what went wrong: I fixed .gm-plugkit-stale.json (a marker the
+retired JS watcher owned that the native runtime never took over) as a one-off
+last session. This session the identical defect appeared in .turn-summary.json
+-- frozen a full day at phase=VERIFY prd_pending=14 from watcher 0.1.905, and
+worse than the first because SKILL.md's own boot probe reads it, so every
+session was starting from fabricated state. Two instances of one pattern found
+one-per-session is the signal I was treating a class as a series of incidents.
+Fix / resolution: after the second, I enumerated every file the JS wrapper
+writes into exec-spool and cross-checked each for a native writer AND a native
+reader, which found six more orphans in a single pass. The reader check is what
+made the triage correct: files nothing reads are inert residue (delete), while
+files something reads are active misinformation (port the writer). Also
+confirmed a version-reporting ambiguity the same way -- health's CARGO_PKG_
+VERSION vs the CI-bumped release tag -- which had already cost a diversion.
+Generalizes to: when a migration leaves one artifact stranded, the question is
+never "fix this file" but "what else did that migration own?" Enumerate the old
+owner's outputs and check each for a current writer and a current consumer;
+those two answers together decide port-vs-delete.
