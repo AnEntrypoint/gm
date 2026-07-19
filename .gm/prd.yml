@@ -10271,3 +10271,12 @@
   subject: Playwriter runBrowserRunner path stays intact as fallback when no live CDP port; verify node --check passes and grep confirms both CDP branch and playwriter fallback exist post-edit
   witness: 'if(!usedCdp){ fs.writeFileSync(scriptFile,evalBody); r=runBrowserRunner(pw,[''-s'',pwSessionId,...,''-f'',scriptFile],...) } at ~2814 -- playwriter path intact, runs on no-live-port and on screenshot/dom. Both branches confirmed via grep: CDP at :2788, fallback at :2814. node --check gm-plugkit/plugkit-wasm-wrapper.js => NODE_CHECK_OK. resultFile reader below unchanged, works for both (cdp-eval writes same resultFile).'
   status: completed
+- id: skillmd-external-framing-sweep
+  subject: Rewrite the two remaining blockedBy:external-as-admissible passages in skills/gm/SKILL.md (standing-approval and PLAN sections) to the everything-is-fixable/build-past doctrine, matching the already-rewritten served prose.
+  status: pending
+- id: gm-runner-vec-search-dead-marker
+  subject: Reframe gm-runner host_vec_search (wasm_host.rs) from the shared not_implemented helper to a dedicated dead-and-unused error envelope with an explanatory comment, matching agentplug's treatment -- honest 'no stubs' parity.
+  status: pending
+- id: exhaustive-sweep-reverify
+  subject: Re-grep both native runtimes and all prose for any remaining live not_implemented-behind-a-subsystem or blockedBy:external-as-resolution, confirm zero remain that aren't resolved-history or the new fixable-framing.
+  status: pending
