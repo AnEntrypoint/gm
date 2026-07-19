@@ -566,7 +566,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <li><strong>Type error:</strong> schema mismatch, regression to PLAN to re-witness the interface</li>
   <li><strong>Test failure:</strong> assertion mismatch, root cause first, never silence the assertion</li>
   <li><strong>Lint failure:</strong> style constraint violation, fix in-band, never <code>// eslint-disable</code></li>
-  <li><strong>Build timeout:</strong> infrastructure issue, re-trigger once; if repeated, open a PRD item with <code>blockedBy: external</code></li>
+  <li><strong>Build timeout:</strong> re-trigger once; if repeated, diagnose and fix the cause (split the job, cache deps, raise the CI timeout, find the hang) &mdash; a repeated timeout has real fixes, never park it as external</li>
 </ol>
 
 <hr>
@@ -659,7 +659,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h3>22.1 Auto-PRD on Incidental Error</h3>
 <p>Any reasonably fixable mid-task error, pre-existing build break, lockfile drift, broken dep, neighboring lint failure, adjacent type error, stale generated file, dead import, is added to <code>.gm/prd.yml</code> same-turn and executed before COMPLETE, unsolicited. Closing on a still-emitting known-bad signal is non-monotonic termination regardless of provenance.</p>
 
-<p>Genuinely out-of-reach errors (require user credentials, depend on external services that are down, demand product decisions) are named and stopped with the residual recorded in the PRD with <code>blockedBy: external</code>, never silently dropped, never narrated past.</p>
+<p>Errors that appear to depend on something outside the tree are routed to the concrete reach action, not stopped: a needed credential becomes a row to script or request the credential path; a down service becomes retry/escalate/alternative; a product decision is surfaced to the user as the next step; a broken tool becomes a row to fix or replace it (drive its protocol directly, spawn your own instance, reimplement the hop). Everything is fixable. <code>blockedBy</code> is only a transient annotation carrying the reach path forward while it is built &mdash; never a resolution, never a resting state, never a way to close a turn with the work undone.</p>
 
 <h3>22.2 Auto-PRD on Re-Architecting Opportunities</h3>
 <p>The same rule applies to obvious refactor wins surfaced while doing the user's task: a hand-rolled implementation that a well-known library does cleaner; a multi-file ad-hoc system one import would replace; duplicated logic crying out for one helper; a boilerplate pattern repeated in N places where one upstream tool covers it. These are not separate sessions, they are PRD items, added the same turn they surface, executed before COMPLETE.</p>

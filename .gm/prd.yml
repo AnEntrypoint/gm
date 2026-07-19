@@ -10275,3 +10275,15 @@
   subject: gm must auto-create/maintain an .npmignore (or package.json files-exclusion) for its own .gm/ runtime data in every project it works in
   notes: 'User request this turn: gm should automatically create an .npmignore for its own data wherever it works. gm writes .gm/ (exec-spool, prd.yml, mutables.yml, memories, disciplines, rs-learn.db, browser-state, etc) into every project it drives. If that project is an npm package, this runtime data would be published unless excluded. gm should, as part of its bootstrap/ensureReady, ensure the driven project excludes .gm/ from npm packaging -- either by adding a managed .npmignore block (marker-delimited, like the managed .gitignore block already does) or by respecting an existing files: allowlist. Must be idempotent and non-destructive: append a managed block to an existing .npmignore, never clobber the user''s own entries, mirror the managed-gitignore mechanism. Applies wherever gm works, not just this repo. Reachable this project -- implement in the bootstrap path (gm-plugkit/bootstrap.js ensureReady, alongside the managed .gitignore write).'
   status: pending
+- id: cdp-path-gated-away-from-page-dependent-modes
+  subject: CDP path must NOT be taken for screenshot= or dom= bodies (they build page.screenshot/page.evaluate calls needing the Playwright page object cdp-eval.js lacks); gate CDP on live-port AND not-screenshot AND not-dom, else playwriter fallback
+  witness: 'rawUserScript=(screenshotPath||domSelector)?null:(modeMatch?modeMatch[3]:evalBody) at plugkit-wasm-wrapper.js:~2568. CDP branch gated on rawUserScript!=null so screenshot=/dom= bodies (which build page.screenshot/page.evaluate) always take playwriter. Live witness: gating decision exercised -- plain->script, profile->modeMatch[3], screenshot->null, dom->null, all correct.'
+  status: completed
+- id: cdp-rawuserscript-captured-per-branch
+  subject: 'Capture rawUserScript per body-shape BEFORE evalBody is reassigned to the debugSetup-wrapped form: modeMatch[3] for capture/profile/trace, the stripped evalBody for plain/url/timeout'
+  witness: 'rawUserScript snapshotted at line ~2568 right after modeMatch computed, BEFORE the big if/else at ~2661 reassigns evalBody to the debugSetup-wrapped form. modeMatch?modeMatch[3]:evalBody captures the stripped user script for mode and plain/url/timeout bodies. Witnessed: mode body yields inner script ''return doWork();'', plain yields ''return 1+1;''.'
+  status: completed
+- id: cdp-fallback-preserved-node-check
+  subject: Playwriter runBrowserRunner path stays intact as fallback when no live CDP port; verify node --check passes and grep confirms both CDP branch and playwriter fallback exist post-edit
+  witness: 'if(!usedCdp){ fs.writeFileSync(scriptFile,evalBody); r=runBrowserRunner(pw,[''-s'',pwSessionId,...,''-f'',scriptFile],...) } at ~2814 -- playwriter path intact, runs on no-live-port and on screenshot/dom. Both branches confirmed via grep: CDP at :2788, fallback at :2814. node --check gm-plugkit/plugkit-wasm-wrapper.js => NODE_CHECK_OK. resultFile reader below unchanged, works for both (cdp-eval writes same resultFile).'
+  status: completed

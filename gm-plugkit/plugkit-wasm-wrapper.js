@@ -2564,6 +2564,9 @@ function makeHostFunctions(instanceRef) {
         const __topNM = modeOpts.match(/topN=(\d+)/);
         const sampleIntervalUs = __intervalM && parseInt(__intervalM[1], 10) > 0 ? parseInt(__intervalM[1], 10) : 100;
         const profileTopNBrowser = __topNM && parseInt(__topNM[1], 10) > 0 ? parseInt(__topNM[1], 10) : 20;
+        const rawUserScript = (screenshotPath || domSelector)
+          ? null
+          : (modeMatch ? modeMatch[3] : evalBody);
         // Real, pre-existing bug fixed here: this block previously called `page.evaluateOnNewDocument`,
         // which is a PUPPETEER method name -- playwriter's `page` object is a real Playwright Page,
         // whose equivalent is `page.addInitScript`. evaluateOnNewDocument does not exist on a
@@ -2772,13 +2775,51 @@ function makeHostFunctions(instanceRef) {
         // A temp .js file has no such length limit -- this sidesteps the Bun bug class entirely rather
         // than working around it script-by-script.
         const scriptFile = path.join(os.tmpdir(), `gm-browser-eval-${process.pid}-${execProfileSeq++}.js`);
-        try {
-          fs.writeFileSync(scriptFile, evalBody, 'utf-8');
-          r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-f', scriptFile], outerTimeoutMs, cwd, sessionId);
-        } finally {
-          try { fs.unlinkSync(scriptFile); } catch (_) {}
-          clearInflight(sessionId);
-          stampBrowserLastUse(cwd, sessionId);
+        // The playwriter relay's attach+eval hop crashes with a UV_HANDLE_CLOSING native
+        // assertion on Windows. When the session already has a live Chrome CDP endpoint
+        // (chromium launched with --remote-debugging-port, recorded in browser-ports.json),
+        // drive that endpoint directly via the proven wrapper/cdp-eval.js helper instead --
+        // it connects over the DevTools websocket and runs the raw user script through
+        // Runtime.evaluate, never spawning the crashing relay. This is gated strictly on a
+        // live CDP port AND a self-contained raw user script (screenshot=/dom= bodies build
+        // page.screenshot/page.evaluate calls that need the Playwright page object cdp-eval.js
+        // does not provide, so rawUserScript is null for those and the playwriter path runs).
+        let usedCdp = false;
+        if (rawUserScript != null) {
+          let cdpPort = null;
+          let cdpWs = null;
+          try {
+            const ent = readJsonFile(browserPortsFile(cwd), {})[sessionId];
+            if (ent && Number.isFinite(ent.port)) { cdpPort = ent.port; cdpWs = ent.wsEndpoint || null; }
+          } catch (_) {}
+          const cdpLive = cdpPort != null && !!fetchJsonSync(`http://127.0.0.1:${cdpPort}/json/version`, 1000);
+          if (cdpLive) {
+            const cdpEvalScript = path.join(os.tmpdir(), `gm-cdp-eval-${process.pid}-${execProfileSeq++}.js`);
+            try {
+              fs.writeFileSync(cdpEvalScript, rawUserScript, 'utf-8');
+              const cfg = JSON.stringify({ port: cdpPort, wsEndpoint: cdpWs, startUrl, scriptFile: cdpEvalScript, resultFile, timeoutMs });
+              r = spawnSync(process.execPath, [path.join(__dirname, 'wrapper', 'cdp-eval.js'), cfg], {
+                encoding: 'utf-8',
+                timeout: outerTimeoutMs,
+                windowsHide: true,
+              });
+              usedCdp = true;
+            } finally {
+              try { fs.unlinkSync(cdpEvalScript); } catch (_) {}
+              clearInflight(sessionId);
+              stampBrowserLastUse(cwd, sessionId);
+            }
+          }
+        }
+        if (!usedCdp) {
+          try {
+            fs.writeFileSync(scriptFile, evalBody, 'utf-8');
+            r = runBrowserRunner(pw, ['-s', pwSessionId, '--timeout', String(timeoutMs), '-f', scriptFile], outerTimeoutMs, cwd, sessionId);
+          } finally {
+            try { fs.unlinkSync(scriptFile); } catch (_) {}
+            clearInflight(sessionId);
+            stampBrowserLastUse(cwd, sessionId);
+          }
         }
         const ok = r.status === 0;
         if (!ok && r.status === null) {
