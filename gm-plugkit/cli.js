@@ -230,27 +230,25 @@ function writeCliError(phase, err) {
   } catch (_) {}
 }
 
-// gm-runner is a genuine, sha256-verified drop-in replacement for this
-// entire bun/node boot path -- when it's installed, delegate to it
-// immediately and exit, before any bun/node-specific bootstrap logic runs.
-// This is the actual code-level enforcement of what was previously only a
-// documented convention (SKILL.md telling an LLM agent to manually prefer
-// gm-runner) -- with this in place bun/node are only ever exercised on a
-// platform neither runner has a published binary for, or during the
-// one-time install before either runner lands on disk.
-//
-// agentplug-runner is tried FIRST, gm-runner second -- agentplug-runner
-// serves the identical spool ABI (same in/out layout, same verb names;
-// gm.wasm is just one of its loadable plugins now) so it's a strict
-// superset, not an alternative; gm-runner stays as the fallback for any
-// install that has it but hasn't picked up agentplug-runner yet (installer
-// re-run pending, or a platform agentplug-bin hasn't published for yet
-// while gm-runner-bin already has).
+// agentplug-runner is the sole native host and a sha256-verified drop-in
+// replacement for this entire bun/node boot path -- when it's installed,
+// delegate to it immediately and exit, before any bun/node bootstrap runs.
+// It serves the identical spool ABI (same in/out layout, same verb names;
+// gm.wasm is one of its loadable plugins alongside libsql/bert/treesitter),
+// so bun/node are only ever exercised as the pure-JS fallback on a platform
+// agentplug-bin has no published binary for, or during the one-time install
+// before the runner lands on disk. (gm-runner, a strictly-inferior
+// single-module duplicate, was retired once agentplug-runner reached full
+// 6-platform parity.)
 function tryDelegateToRunner(args) {
   if (process.env.GM_PLUGKIT_NO_RUNNER_DELEGATE === '1') return false;
+  // agentplug-runner is the sole native host now -- gm-runner (a strictly
+  // inferior single-module duplicate) was retired once agentplug-runner had
+  // full 6-platform parity published to agentplug-bin. The JS wasm-host below
+  // is the only fallback, for a platform with no published native binary.
   const candidates = process.platform === 'win32'
-    ? ['agentplug-runner.exe', 'gm-runner.exe']
-    : ['agentplug-runner', 'gm-runner'];
+    ? ['agentplug-runner.exe']
+    : ['agentplug-runner'];
   for (const exeName of candidates) {
     const runnerPath = path.join(gmToolsDir(), exeName);
     if (!fs.existsSync(runnerPath)) continue;

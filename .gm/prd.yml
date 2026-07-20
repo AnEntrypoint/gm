@@ -10271,3 +10271,41 @@
   subject: Playwriter runBrowserRunner path stays intact as fallback when no live CDP port; verify node --check passes and grep confirms both CDP branch and playwriter fallback exist post-edit
   witness: 'if(!usedCdp){ fs.writeFileSync(scriptFile,evalBody); r=runBrowserRunner(pw,[''-s'',pwSessionId,...,''-f'',scriptFile],...) } at ~2814 -- playwriter path intact, runs on no-live-port and on screenshot/dom. Both branches confirmed via grep: CDP at :2788, fallback at :2814. node --check gm-plugkit/plugkit-wasm-wrapper.js => NODE_CHECK_OK. resultFile reader below unchanged, works for both (cdp-eval writes same resultFile).'
   status: completed
+- id: gm-runner-redundant-host-consolidation
+  subject: 'RETIRE gm-runner fully (user-authorized): agentplug-runner is a strict superset with identical 6-platform coverage all published to agentplug-bin. Remove the crate from rs-plugkit workspace, delete crates/gm-runner/, delete gm-runner.yml CI, remove the gm-runner branch from cli.js tryDelegateToRunner and its download from bin/install.js. Keep plugins separate (agentplug already does). Order carefully so the live agentplug-runner boot path is never broken.'
+  status: pending
+- id: js-wrapper-wasm-host-redundant
+  subject: 'RETIRE the JS wasm-host fully (user-authorized): delete plugkit-wasm-wrapper.js''s wasm-loading host + wrapper/wasm-bridge/wasi-shim + supervisor.js, keeping ONLY the gm-plugkit launcher (cli.js delegation) + bootstrap.js (seed/refresh). agentplug-runner becomes the sole host. Verify the launcher still delegates correctly with the wasm-host gone.'
+  status: pending
+- id: rsplugkit-cargo-drop-gm-runner-member
+  subject: 'Remove crates/gm-runner from rs-plugkit Cargo.toml workspace members, keeping only crates/plugkit-core. Line 3 members=["crates/plugkit-core","crates/gm-runner"] -> ["crates/plugkit-core"]. default-members already only plugkit-core. Witness: cargo metadata --no-deps resolves cleanly with gm-runner gone.'
+  notes: Cargo.toml line 3 confirmed via Read
+  status: pending
+- id: rsplugkit-delete-gm-runner-crate-dir
+  subject: Delete the entire C:/dev/rs-plugkit/crates/gm-runner/ directory (main.rs, wasm_host.rs, download.rs, daemon.rs, spool.rs, supervisor.rs, lock.rs, embed.rs, Cargo.toml). agentplug-runner is the superset host; this native runner crate is redundant.
+  notes: 7 .rs files + Cargo.toml confirmed via grep hits
+  status: pending
+- id: rsplugkit-delete-gm-runner-workflow
+  subject: Delete C:/dev/rs-plugkit/.github/workflows/gm-runner.yml -- the CI that matrix-builds and publishes gm-runner-bin releases. It self-triggers on crates/gm-runner/** and Cargo.toml; no other workflow calls it. Deleting removes the publish path.
+  notes: 'gm-runner.yml triggers confirmed self-contained via Read of its on: block'
+  status: pending
+- id: rsplugkit-verify-release-cascade-untouched
+  subject: 'Confirm release.yml (the load-bearing plugkit-core wasm cascade to plugkit-bin) and build.yml have zero gm-runner triggers/refs that break -- grep already shows release.yml has NO gm-runner refs, build.yml only a generic ''native-runner-only'' slim-variant comment that stays accurate for agentplug-runner. Do NOT touch plugkit-core wasm build/publish steps. Witness: grep release.yml/build.yml for gm-runner = 0 breaking refs.'
+  notes: release.yml grep = no matches; build.yml only generic comment
+  status: pending
+- id: rsplugkit-clean-dangling-source-refs
+  subject: 'Update dangling gm-runner references now that the crate is gone: plugkit-core/Cargo.toml lines 15-16 comment (see crates/gm-runner/src/embed.rs), embed.rs lines 130/150 error-string+comment naming gm-runner as example native host, content-manifest.json lines 15-16/23 listing gm-runner as weights consumer. Rewrite each to reference agentplug-runner (the actual host now) or remove the stale crate-path pointer. Leave frozen CHANGELOG history untouched. Witness: grep repo for gm[-_]runner outside CHANGELOG/Cargo.lock = 0.'
+  notes: 5 source/manifest refs enumerated via grep -C
+  status: pending
+- id: rsplugkit-regen-cargo-lock
+  subject: Regenerate Cargo.lock so the [[package]] name="gm-runner" block (line 1346, with candle/wasmtime/tokenizers deps) is removed after the crate is dropped from the workspace. Run cargo metadata / cargo update -p or let cargo check regenerate the lockfile; confirm gm-runner package entry gone. Do not manually hand-edit the lockfile.
+  notes: Cargo.lock:1346 name=gm-runner block confirmed
+  status: pending
+- id: rsplugkit-workspace-resolve-witness
+  subject: 'After all removals, run cargo metadata --no-deps (or cargo check -p plugkit-core manifest resolve) in C:/dev/rs-plugkit and witness the workspace resolves cleanly with gm-runner gone and plugkit-core intact. plugkit-core is a wasm target so a full wasm build needs WASI SDK -- manifest/workspace resolve is sufficient, not full build. Witness: cargo metadata exit 0, members=[plugkit-core] only.'
+  notes: verification gate for the whole cover
+  status: pending
+- id: rsplugkit-commit-push-main
+  subject: Commit all rs-plugkit removals to main as lanmower with message 'Retire the redundant gm-runner native host -- agentplug-runner is a strict superset with full platform parity', push to origin. Clean-worktree-witnessed push. Report commit sha.
+  notes: final CONSOLIDATE step for rs-plugkit repo
+  status: pending

@@ -172,37 +172,11 @@ function runPlugkitBootstrap() {
   return Promise.resolve(false);
 }
 
-// Maps process.platform/process.arch to the exact release-asset basename
-// gm-runner's CI (rs-plugkit/.github/workflows/gm-runner.yml) publishes to
-// AnEntrypoint/gm-runner-bin -- must stay byte-identical to that workflow's
-// `artifact:` matrix values, this is the only other place that name is
-// spelled. Returns null for a host combination CI does not build (no crash,
-// caller falls back to the existing bun/npx path).
-function gmRunnerAssetName() {
-  const plat = process.platform;
-  const arch = process.arch;
-  if (plat === 'win32') {
-    if (arch === 'x64') return 'gm-runner-windows-x64.exe';
-    if (arch === 'arm64') return 'gm-runner-windows-arm64.exe';
-    return null;
-  }
-  if (plat === 'darwin') {
-    if (arch === 'x64') return 'gm-runner-macos-x64';
-    if (arch === 'arm64') return 'gm-runner-macos-arm64';
-    return null;
-  }
-  if (plat === 'linux') {
-    if (arch === 'x64') return 'gm-runner-linux-x64';
-    if (arch === 'arm64') return 'gm-runner-linux-arm64';
-    return null;
-  }
-  return null;
-}
-
-// Same mapping as gmRunnerAssetName, for agentplug-runner's own CI
-// (AnEntrypoint/agentplug's .github/workflows/release.yml) publishing to
-// AnEntrypoint/agentplug-bin -- must stay byte-identical to that workflow's
-// `artifact:` matrix values.
+// Maps process.platform/process.arch to the exact release-asset basename for
+// agentplug-runner's CI (AnEntrypoint/agentplug's .github/workflows/release.yml)
+// publishing to AnEntrypoint/agentplug-bin -- must stay byte-identical to that
+// workflow's `artifact:` matrix values. Returns null for a host combination CI
+// does not build, so the caller falls back to the JS host without crashing.
 function agentplugRunnerAssetName() {
   const plat = process.platform;
   const arch = process.arch;
@@ -256,88 +230,16 @@ function gmToolsDir() {
   return path.join(home, '.gm-tools');
 }
 
-// Downloads the platform-matched gm-runner binary from gm-runner-bin's
-// GitHub Releases (native runner replacing the bun/node spool-boot path),
-// verified against the release's own .sha256 sidecar before the atomic
-// rename lands -- same trust model as gm-runner's own
-// download::download_and_verify for plugkit.wasm, so a corrupt/partial
-// download is never silently accepted. Best-effort: any failure (offline,
-// asset missing for this host, network error) resolves false rather than
-// throwing, so install never hard-fails over a runner-binary fetch -- the
-// bun/npx spool path remains the fallback until remove-node-bun-from-native-path
-// lands.
-async function downloadGmRunner({ silent } = {}) {
-  const assetName = gmRunnerAssetName();
-  if (!assetName) {
-    if (!silent) err(`gm-runner: no published binary for platform=${process.platform} arch=${process.arch}, skipping native runner install`);
-    return false;
-  }
-  const destDir = gmToolsDir();
-  const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'gm-runner.exe' : 'gm-runner');
 
-  // gm-runner stages a verified self-update as <asset>.new and then renames it
-  // over its own exe -- which Windows refuses while that exe is running, so the
-  // staged file was abandoned and gm-runner never updated itself (witnessed: a
-  // 29h-old .new beside a byte-different in-use binary; the identical rename
-  // succeeded immediately once no gm-runner process was running). The installer
-  // is the right place to complete it: it runs as node, outside the target
-  // binary, so it does not hold the lock that blocks gm-runner's own attempt.
-  try {
-    const staged = path.join(destDir, assetName + '.new');
-    if (fs.existsSync(staged)) {
-      fs.renameSync(staged, destPath);
-      if (!silent) out(`Adopted staged gm-runner self-update from ${staged}`);
-    }
-  } catch (e) {
-    if (!silent) err(`gm-runner: staged self-update could not be adopted (${e && e.message || e}); leaving it in place`);
-  }
-
-  try {
-    const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/gm-runner-bin/releases/latest')).toString('utf8'));
-    const tag = releaseInfo && releaseInfo.tag_name;
-    if (!tag) { if (!silent) err('gm-runner: no releases published yet at AnEntrypoint/gm-runner-bin, skipping'); return false; }
-    const base = `https://github.com/AnEntrypoint/gm-runner-bin/releases/download/${tag}`;
-    const binUrl = `${base}/${assetName}`;
-    const shaUrl = `${binUrl}.sha256`;
-
-    const versionFile = path.join(destDir, 'gm-runner.version');
-    if (fs.existsSync(destPath) && fs.existsSync(versionFile)) {
-      const installed = fs.readFileSync(versionFile, 'utf8').trim();
-      if (installed === tag) { if (!silent) out(`gm-runner ${tag} already installed at ${destPath}`); return true; }
-    }
-
-    const [binBuf, shaBuf] = await Promise.all([httpsGetBuffer(binUrl), httpsGetBuffer(shaUrl)]);
-    const expectedSha = shaBuf.toString('utf8').trim().split(/\s+/)[0];
-    const actualSha = sha256Hex(binBuf);
-    if (!expectedSha || actualSha.toLowerCase() !== expectedSha.toLowerCase()) {
-      if (!silent) err(`gm-runner: sha256 mismatch downloading ${binUrl} (expected ${expectedSha}, got ${actualSha}), not installing`);
-      return false;
-    }
-
-    fs.mkdirSync(destDir, { recursive: true });
-    const tmp = destPath + '.tmp' + process.pid;
-    fs.writeFileSync(tmp, binBuf);
-    if (process.platform !== 'win32') { try { fs.chmodSync(tmp, 0o755); } catch (_) {} }
-    fs.renameSync(tmp, destPath);
-    fs.writeFileSync(versionFile, tag);
-    if (!silent) out(`Installed gm-runner ${tag} to ${destPath}`);
-    return true;
-  } catch (e) {
-    if (!silent) err(`gm-runner download skipped: ${e && e.message || e}`);
-    return false;
-  }
-}
-
-// Downloads agentplug-runner (the generic wasm plugin-host runner gm-runner
-// is migrating to -- hosts gm.wasm plus optional libsql/bert/treesitter
-// plugin wasm modules via a host-mediated plugin_call ABI) from
-// agentplug-bin's GitHub Releases, same sha256-sidecar/atomic-rename trust
-// model as downloadGmRunner. Installed ALONGSIDE gm-runner, not instead of
-// it yet -- cli.js's tryDelegateToRunner prefers agentplug-runner when
-// present (it's the same spool ABI, agentplug-runner is a strict superset),
-// falling back to gm-runner, falling back to bun/npx, so an agentplug-bin
-// download failure (new/unpublished platform, network issue) never
-// regresses an install that already had a working gm-runner.
+// Downloads agentplug-runner (the sole native wasm plugin-host now -- hosts
+// gm.wasm plus the separate libsql/bert/treesitter plugin wasm modules via a
+// host-mediated plugin_call ABI) from agentplug-bin's GitHub Releases,
+// sha256-sidecar-verified with an atomic rename, so a corrupt/partial download
+// is never accepted. Best-effort: any failure (offline, unpublished platform,
+// network) resolves false rather than throwing, so install never hard-fails
+// over a runner fetch -- cli.js's tryDelegateToRunner then falls back to the
+// pure-JS wasm host. gm-runner was retired once agentplug-runner reached full
+// 6-platform parity (it was a strictly-inferior single-module duplicate).
 async function downloadAgentplugRunner({ silent } = {}) {
   const assetName = agentplugRunnerAssetName();
   if (!assetName) {
@@ -346,6 +248,22 @@ async function downloadAgentplugRunner({ silent } = {}) {
   }
   const destDir = gmToolsDir();
   const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'agentplug-runner.exe' : 'agentplug-runner');
+
+  // agentplug-runner stages a verified self-update as <asset>.new and renames
+  // it over its own exe, which Windows refuses while that exe is running -- so
+  // the staged file is abandoned unless something outside the binary completes
+  // it. The installer runs as node, outside the target binary, so it adopts any
+  // staged .new here before downloading.
+  try {
+    const staged = path.join(destDir, assetName + '.new');
+    if (fs.existsSync(staged)) {
+      fs.renameSync(staged, destPath);
+      if (!silent) out(`Adopted staged agentplug-runner self-update from ${staged}`);
+    }
+  } catch (e) {
+    if (!silent) err(`agentplug-runner: staged self-update could not be adopted (${e && e.message || e}); leaving it in place`);
+  }
+
   try {
     const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/agentplug-bin/releases/latest')).toString('utf8'));
     const tag = releaseInfo && releaseInfo.tag_name;
@@ -432,7 +350,6 @@ async function main() {
   }
 
   await runPlugkitBootstrap();
-  await downloadGmRunner({ silent: false });
   await downloadAgentplugRunner({ silent: false });
 
   out('');
