@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, ensureWrapperFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
 const { pidAliveSync, waitForPidDeath } = require('./gm-process');
 
 function getWasmPathSafe() {
@@ -60,10 +60,6 @@ Usage:
   bun x gm-plugkit@latest --daemon           Same as default
   bun x gm-plugkit@latest --binary           Print binary path only
   bun x gm-plugkit@latest --status           JSON status check
-  bun x gm-plugkit@latest --kill-stale-watchers
-                                             Kill plugkit watchers whose in-memory
-                                             wrapper sha differs from on-disk
-                                             (lets new wrapper code load on next bootstrap)
   bun x gm-plugkit@latest --help             Show this help
 
 Opt-in pinned fast-path (skips bunx's own @latest npm-registry resolution):
@@ -82,111 +78,6 @@ Opt-in pinned fast-path (skips bunx's own @latest npm-registry resolution):
                                              Opt-in only -- the default boot line above is
                                              unaffected.
 `;
-
-function readDiskWasmVersion() {
-  try {
-    const versionFile = path.join(gmToolsDir(), 'plugkit.version');
-    return fs.readFileSync(versionFile, 'utf-8').trim() || null;
-  } catch (_) { return null; }
-}
-
-function readWatcherInstanceVersion(pid) {
-  try {
-    const ps = process.platform === 'win32'
-      ? `(Get-WmiObject Win32_Process -Filter "ProcessId=${pid}").CommandLine`
-      : null;
-    if (!ps) return null;
-    const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
-    const m = out.match(/([A-Z]:\\[^"\s]+\.gm[\\/]exec-spool)/i);
-    if (!m) return null;
-    const statusPath = path.join(m[1].replace(/[\\/]exec-spool.*$/, ''), 'exec-spool', '.status.json');
-    if (!fs.existsSync(statusPath)) return null;
-    const status = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
-    return status && status.instance_version ? status.instance_version : null;
-  } catch (_) { return null; }
-}
-
-function killStaleWatchers() {
-  try {
-    const wrapperPath = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
-    if (!fs.existsSync(wrapperPath)) {
-      console.log(JSON.stringify({ ok: false, error: `wrapper not installed at ${wrapperPath}` }));
-      return 1;
-    }
-    const diskMtime = fs.statSync(wrapperPath).mtimeMs;
-    const diskWasmVersion = readDiskWasmVersion();
-    let localStatus = null;
-    try {
-      const localStatusPath = path.join(process.cwd(), '.gm', 'exec-spool', '.status.json');
-      if (fs.existsSync(localStatusPath)) localStatus = JSON.parse(fs.readFileSync(localStatusPath, 'utf-8'));
-    } catch (_) { localStatus = null; }
-    const stale = [];
-    const fresh = [];
-    function consider(pid, startedMs) {
-      const reasons = [];
-      if (startedMs < diskMtime) reasons.push('wrapper-mtime');
-      let instV = readWatcherInstanceVersion(pid);
-      if (!instV && localStatus && localStatus.pid === pid) {
-        instV = localStatus.instance_version || localStatus.version || null;
-      }
-      if (diskWasmVersion && instV && instV !== diskWasmVersion) reasons.push(`wasm-drift:${instV}->${diskWasmVersion}`);
-      if (reasons.length > 0) stale.push({ pid, started_ms: startedMs, instance_version: instV, reasons });
-      else fresh.push({ pid, started_ms: startedMs, instance_version: instV });
-    }
-    if (process.platform === 'win32') {
-      const ps = `Get-WmiObject Win32_Process -Filter "name='node.exe' OR name='bun.exe'" | Where-Object { $_.CommandLine -match 'plugkit-wasm-wrapper' } | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.CreationDate }`;
-      const out = cp.execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf-8', windowsHide: true });
-      for (const line of out.split(/\r?\n/).filter(Boolean)) {
-        const [pidStr, creation] = line.split('|');
-        const pid = parseInt(pidStr, 10);
-        if (!Number.isFinite(pid)) continue;
-        const m = creation && creation.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\.(\d+))?(?:([+-])(\d+))?/);
-        if (!m) continue;
-        const localMs = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], m[7] ? Math.round(+('0.' + m[7]) * 1000) : 0).getTime();
-        consider(pid, localMs);
-      }
-    } else {
-      const out = cp.execFileSync('ps', ['-eo', 'pid,lstart,command'], { encoding: 'utf-8' });
-      for (const line of out.split('\n').slice(1)) {
-        if (!line.includes('plugkit-wasm-wrapper')) continue;
-        const m = line.match(/^\s*(\d+)\s+(.+?\d{4})\s+/);
-        if (!m) continue;
-        const pid = parseInt(m[1], 10);
-        const start = Date.parse(m[2]);
-        if (!Number.isFinite(pid) || !Number.isFinite(start)) continue;
-        consider(pid, start);
-      }
-    }
-    const killed = [];
-    const failed = [];
-    for (const s of stale) {
-      try {
-        if (process.platform === 'win32') {
-          cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(s.pid)], { stdio: 'ignore', windowsHide: true });
-        } else {
-          process.kill(s.pid, 'SIGTERM');
-        }
-        killed.push(s.pid);
-      } catch (e) {
-        failed.push({ pid: s.pid, error: e.message });
-      }
-    }
-    console.log(JSON.stringify({
-      ok: true,
-      disk_wrapper_mtime_ms: diskMtime,
-      disk_wasm_version: diskWasmVersion,
-      stale_found: stale.length,
-      fresh_found: fresh.length,
-      stale_detail: stale,
-      killed,
-      failed,
-    }, null, 2));
-    return 0;
-  } catch (e) {
-    console.log(JSON.stringify({ ok: false, error: e.message }));
-    return 1;
-  }
-}
 
 function spoolDir() {
   const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
@@ -230,38 +121,28 @@ function writeCliError(phase, err) {
   } catch (_) {}
 }
 
-// agentplug-runner is the sole native host and a sha256-verified drop-in
-// replacement for this entire bun/node boot path -- when it's installed,
-// delegate to it immediately and exit, before any bun/node bootstrap runs.
-// It serves the identical spool ABI (same in/out layout, same verb names;
-// gm.wasm is one of its loadable plugins alongside libsql/bert/treesitter),
-// so bun/node are only ever exercised as the pure-JS fallback on a platform
-// agentplug-bin has no published binary for, or during the one-time install
-// before the runner lands on disk. (gm-runner, a strictly-inferior
-// single-module duplicate, was retired once agentplug-runner reached full
-// 6-platform parity.)
+// agentplug-runner is the SOLE spool loader -- a native wasmtime binary that
+// loads gm.wasm as one plugin alongside its shared libsql/bert/treesitter
+// plugins and serves the full spool ABI (in/out layout, verb names, browser
+// via direct CDP, task via a native registry). When it is installed, delegate
+// to it immediately and exit before any bun/node bootstrap runs. The JS
+// wasm-host was retired; there is no pure-JS fallback anymore. If no runner is
+// installed, the bootstrap path below downloads the wasm and startSpoolDaemon()
+// either launches the runner or fails loudly with an actionable message
+// (there is no silent no-loader state).
 function tryDelegateToRunner(args) {
   if (process.env.GM_PLUGKIT_NO_RUNNER_DELEGATE === '1') return false;
-  // agentplug-runner is the sole native host now -- gm-runner (a strictly
-  // inferior single-module duplicate) was retired once agentplug-runner had
-  // full 6-platform parity published to agentplug-bin. The JS wasm-host below
-  // is the only fallback, for a platform with no published native binary.
-  const candidates = process.platform === 'win32'
-    ? ['agentplug-runner.exe']
-    : ['agentplug-runner'];
-  for (const exeName of candidates) {
-    const runnerPath = path.join(gmToolsDir(), exeName);
-    if (!fs.existsSync(runnerPath)) continue;
-    try {
-      const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
-      if (result.error) continue; // this candidate genuinely failed to start -- try the next one
-      process.exit(typeof result.status === 'number' ? result.status : 0);
-    } catch (_) {
-      continue;
-    }
-    return true;
+  const exeName = process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner';
+  const runnerPath = path.join(gmToolsDir(), exeName);
+  if (!fs.existsSync(runnerPath)) return false;
+  try {
+    const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
+    if (result.error) return false; // genuinely failed to start -- fall through to bootstrap+relaunch
+    process.exit(typeof result.status === 'number' ? result.status : 0);
+  } catch (_) {
+    return false;
   }
-  return false;
+  return true;
 }
 
 (async () => {
@@ -273,10 +154,6 @@ function tryDelegateToRunner(args) {
   }
 
   tryDelegateToRunner(args);
-
-  if (args.includes('--kill-stale-watchers')) {
-    process.exit(killStaleWatchers());
-  }
 
   const wantsPinned = process.env.GM_PLUGKIT_PREFER_PINNED === '1' || args.includes('--pinned');
   const alreadyReexecedPinned = process.env.GM_PLUGKIT_PINNED_REEXEC === '1';
@@ -311,29 +188,16 @@ function tryDelegateToRunner(args) {
     try { ensureGmPlugkitVersionFresh(); } catch (_) {}
     let skillRefresh = null;
     try { skillRefresh = ensureSkillMdFresh(); } catch (_) {}
-    let wrapperRefreshed = false;
-    try { wrapperRefreshed = ensureWrapperFresh(); } catch (_) {}
-    if (wrapperRefreshed) {
-      writeCliStatus({ phase: 'wrapper-drift-detected', reason: 'on-disk-wrapper-refreshed', running_pid: already.pid });
-      console.error(`[gm-plugkit] running watcher (pid=${already.pid}) serves a stale wrapper; on-disk copy just refreshed -- forcing reboot`);
-      try {
-        if (process.platform === 'win32') cp.execFileSync('taskkill', ['/F', '/T', '/PID', String(already.pid)], { stdio: 'ignore', windowsHide: true });
-        else process.kill(already.pid, 'SIGTERM');
-      } catch (_) {}
-      waitForPidDeath(already.pid, 5000);
-    } else {
-      writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
-      console.log(JSON.stringify({
-        ok: true,
-        already_serving: true,
-        watcher_pid: already.pid,
-        version: already.version,
-        skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
-        wrapper_refreshed: false,
-        message: 'plugkit already serving, no bootstrap/spawn needed',
-      }));
-      process.exit(0);
-    }
+    writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
+    console.log(JSON.stringify({
+      ok: true,
+      already_serving: true,
+      watcher_pid: already.pid,
+      version: already.version,
+      skills_refreshed: skillRefresh && skillRefresh.refreshed || [],
+      message: 'plugkit already serving, no bootstrap/spawn needed',
+    }));
+    process.exit(0);
   }
   if (versionDrifted) {
     const targetVersion = remoteVersionDrifted ? remoteUpdate.latest : onDiskVersion;
@@ -347,8 +211,7 @@ function tryDelegateToRunner(args) {
     waitForPidDeath(already.pid, 5000);
   }
 
-  const wrapperPath = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
-  if (isReady() && fs.existsSync(wrapperPath)) {
+  if (isReady()) {
     let installedVersion = null;
     try { installedVersion = readVersionFile(); } catch (_) { installedVersion = null; }
     writeCliStatus({ phase: 'bootstrapped', version: installedVersion, binary: getWasmPathSafe() });

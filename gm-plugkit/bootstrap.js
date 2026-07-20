@@ -258,19 +258,17 @@ function gmToolsDir() {
 // before ever loading its wasm-embedded safetensors fallback (see
 // rs-plugkit/crates/plugkit-core/src/embed.rs::init_ctx) -- a slim build
 // (feature=slim, no embedded weights at all) is only safe to fetch on a host
-// that actually answers host_vec_embed for real. plugkit-wasm-wrapper.js
-// wires that answer through gm-runner's native candle path
-// (hostEmbedViaGmRunner) or agentplug-runner's shared daemon, both gated on
-// one of these two binaries existing under ~/.gm-tools -- mirrors that same
-// on-disk presence check here so bootstrap-time artifact selection and
-// runtime embed-delegation eligibility never disagree. Absence of both means
-// no host_vec_embed answer will ever come, so fetching fat (which carries its
-// own wasm-side embedding fallback) is the only safe choice.
+// that actually answers host_vec_embed for real. agentplug-runner answers it
+// via its shared bert plugin daemon; the check is gated on the runner binary
+// existing under ~/.gm-tools so bootstrap-time artifact selection and runtime
+// embed-delegation eligibility never disagree. Absence means no host_vec_embed
+// answer will ever come, so fetching fat (which carries its own wasm-side
+// embedding fallback) is the only safe choice.
 function hasNativeEmbedRunner() {
   const dir = gmToolsDir();
   const names = process.platform === 'win32'
-    ? ['gm-runner.exe', 'agentplug-runner.exe']
-    : ['gm-runner', 'agentplug-runner'];
+    ? ['agentplug-runner.exe']
+    : ['agentplug-runner'];
   return names.some(n => { try { return fs.existsSync(path.join(dir, n)); } catch (_) { return false; } });
 }
 
@@ -279,21 +277,21 @@ function hasNativeEmbedRunner() {
 // agents, each `git worktree add`-ing a fresh physical directory) shares the
 // SAME underlying repo as its main checkout but has its own separate
 // directory tree. Every cwd-derived project-dir computation in this file and
-// in supervisor.js/cli.js must funnel through this so a worktree-spawned
-// process resolves to the SAME .gm/exec-spool/ as its main-repo sibling --
-// otherwise the single-instance supervisor lock can never see a sibling
-// worktree's already-running watcher, and every worktree cold-boots its own
-// independent watcher (each loading the full embed model + running its own
-// cold reindex of what is, conceptually, the same project). Live-measured
+// in cli.js must funnel through this so a worktree-spawned process resolves to
+// the SAME .gm/exec-spool/ as its main-repo sibling -- otherwise the
+// single-instance watcher guard can never see a sibling worktree's
+// already-running watcher, and every worktree cold-boots its own independent
+// watcher (each loading the full embed model + running its own cold reindex of
+// what is, conceptually, the same project). Live-measured
 // this session under real concurrent multi-agent load: this was the actual
 // root cause of a user-flagged "memory grows to ~2GB then clears" churn
 // pattern -- N worktrees of one repo each independently paying full
 // cold-embed cost instead of sharing one already-warm watcher, and the
 // resulting CPU contention pushed genuinely-busy processes past their
 // heartbeat deadline into a restart cycle that produces the sawtooth memory
-// pattern. Mirrors the existing browserRootDir() resolution already used for
-// browser-session state in plugkit-wasm-wrapper.js (same fix, same reason,
-// applied one layer up at the process-boot-dedup level).
+// pattern. agentplug-runner roots its own browser-session state at the git
+// common dir for the same reason (same fix, same reason, applied one layer up
+// at the process-boot-dedup level).
 function resolveProjectRoot(start) {
   const resolved = path.resolve(start);
   try {
@@ -371,23 +369,6 @@ function acquireLock(lockPath) {
 
 function releaseLock(lockPath) {
   try { fs.unlinkSync(lockPath); } catch (_) {}
-}
-
-function resolveNpxJsCli() {
-  if (process.platform !== 'win32') return null;
-  const candidates = [];
-  if (process.env.npm_config_prefix) {
-    candidates.push(path.join(process.env.npm_config_prefix, 'node_modules', 'npm', 'bin', 'npx-cli.js'));
-  }
-  const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
-  candidates.push(path.join(programFiles, 'nodejs', 'node_modules', 'npm', 'bin', 'npx-cli.js'));
-  candidates.push(path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js'));
-  const appdata = process.env.APPDATA;
-  if (appdata) candidates.push(path.join(appdata, 'npm', 'node_modules', 'npm', 'bin', 'npx-cli.js'));
-  for (const c of candidates) {
-    try { if (fs.existsSync(c)) return c; } catch (_) {}
-  }
-  return null;
 }
 
 async function extractNpmPackageWasm(destPath, version) {
@@ -590,7 +571,7 @@ function pidCommandLineForKillGuard(pid) {
 }
 
 function pidIsPlugkitProcess(pid) {
-  return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
+  return /agentplug-runner(\.exe)?/i.test(pidCommandLineForKillGuard(pid));
 }
 
 function writeKillAttribution(targetSpoolDir, info) {
@@ -854,8 +835,6 @@ function copyWasmToGmTools(wasmPath, version) {
   const dst = gmToolsDir();
   fs.mkdirSync(dst, { recursive: true });
   const target = path.join(dst, 'plugkit.wasm');
-  const wrapperSrc = path.join(__dirname, 'plugkit-wasm-wrapper.js');
-  const wrapperDst = path.join(dst, 'plugkit-wasm-wrapper.js');
 
   let wasmFresh = false;
   if (fs.existsSync(target)) {
@@ -888,17 +867,6 @@ function copyWasmToGmTools(wasmPath, version) {
     }
   } catch (_) {}
 
-  if (fs.existsSync(wrapperSrc)) {
-    let wrapperFresh = false;
-    if (fs.existsSync(wrapperDst)) {
-      try {
-        const cur = sha256OfFileSync(wrapperDst);
-        const src = sha256OfFileSync(wrapperSrc);
-        if (cur === src) wrapperFresh = true;
-      } catch (_) {}
-    }
-    if (!wrapperFresh) fs.copyFileSync(wrapperSrc, wrapperDst);
-  }
 }
 
 function getWasmPath() {
@@ -913,60 +881,6 @@ function getWasmPath() {
 function isReady() {
   const wasm = getWasmPath();
   return fs.existsSync(wasm);
-}
-
-function runningFromGmSourceRepo() {
-  try {
-    const pkgPath = path.join(__dirname, '..', 'package.json');
-    if (!fs.existsSync(pkgPath)) return false;
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-    return pkg && pkg.name === 'gm-skill';
-  } catch (_) { return false; }
-}
-
-function ensureWrapperFresh() {
-  try {
-    const wrapperSrc = path.join(__dirname, 'plugkit-wasm-wrapper.js');
-    const wrapperDst = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
-    if (!fs.existsSync(wrapperSrc)) return false;
-    if (runningFromGmSourceRepo() && process.env.GM_PLUGKIT_ALLOW_DEV_WRAPPER_OVERWRITE !== '1') {
-      log(`refusing to overwrite the shared ~/.gm-tools wrapper from the gm source repo (${wrapperSrc}) -- this machine-wide install is shared by every project's watcher; set GM_PLUGKIT_ALLOW_DEV_WRAPPER_OVERWRITE=1 to opt in, or use 'bun x gm-plugkit@latest' which fetches an isolated npm copy instead`);
-      return false;
-    }
-    let same = false;
-    if (fs.existsSync(wrapperDst)) {
-      try {
-        const a = sha256OfFileSync(wrapperSrc);
-        const b = sha256OfFileSync(wrapperDst);
-        if (a === b) same = true;
-      } catch (_) {}
-    }
-    if (same) return false;
-    // Many independent per-project watchers share this one gmToolsDir() install --
-    // concurrent CLI invocations from different projects can race this copy, so
-    // it's lock-guarded (atomic O_EXCL) + tmp-write-then-rename, never a direct
-    // in-place copyFileSync another reader could observe half-written.
-    fs.mkdirSync(gmToolsDir(), { recursive: true });
-    const lockPath = wrapperDst + '.lock';
-    acquireLock(lockPath);
-    try {
-      let stillSame = false;
-      if (fs.existsSync(wrapperDst)) {
-        try {
-          const a = sha256OfFileSync(wrapperSrc);
-          const b = sha256OfFileSync(wrapperDst);
-          if (a === b) stillSame = true;
-        } catch (_) {}
-      }
-      if (stillSame) return false;
-      const tmpDst = wrapperDst + '.tmp.' + process.pid;
-      fs.copyFileSync(wrapperSrc, tmpDst);
-      fs.renameSync(tmpDst, wrapperDst);
-      return true;
-    } finally {
-      releaseLock(lockPath);
-    }
-  } catch (_) { return false; }
 }
 
 function ensureGmPlugkitVersionFresh() {
@@ -1223,10 +1137,9 @@ async function ensureReady(opts) {
 
   if (isReady() && !versionDrift) {
     const wasmPath = getWasmPath();
-    const wrapperUpdated = ensureWrapperFresh();
     const versionMarkerUpdated = ensureGmPlugkitVersionFresh();
     ensureSkillMdFresh();
-    return { ok: true, wasmPath, binaryPath: wasmPath, status: (wrapperUpdated || versionMarkerUpdated) ? 'wrapper-refreshed' : 'already-ready', version: installed };
+    return { ok: true, wasmPath, binaryPath: wasmPath, status: versionMarkerUpdated ? 'version-refreshed' : 'already-ready', version: installed };
   }
   if (targetVersion && targetVersion !== pinnedVersion) {
     try {
@@ -1243,7 +1156,6 @@ async function ensureReady(opts) {
     if (versionDrift && isReady()) {
       log(`bootstrap for ${targetVersion} failed (${bootErr.message || bootErr}); keeping running watcher on installed ${installed} (no kill, serve cached wasm)`);
       const cachedPath = getWasmPath();
-      ensureWrapperFresh();
       ensureSkillMdFresh();
       return { ok: true, wasmPath: cachedPath, binaryPath: cachedPath, status: 'bootstrap-failed-served-cached', version: installed };
     }
@@ -1254,7 +1166,6 @@ async function ensureReady(opts) {
     try { killSpoolWatcherInCwd(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
   }
 
-  ensureWrapperFresh();
   ensureSkillMdFresh();
   return { ok: true, wasmPath, binaryPath: wasmPath, status: 'bootstrapped', version: targetVersion || installed };
 }
@@ -1263,46 +1174,21 @@ function getBinaryPath() {
   return getWasmPath();
 }
 
-function resolveNodeRuntime() {
-  const candidates = [];
-  if (process.env.PLUGKIT_RUNTIME) candidates.push(process.env.PLUGKIT_RUNTIME);
-  candidates.push('bun');
-  try {
-    const which = process.platform === 'win32' ? 'where' : 'which';
-    const out = require('child_process').spawnSync(which, ['bun'], { encoding: 'utf8', windowsHide: true });
-    if (out && out.stdout) {
-      const first = out.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
-      if (first) candidates.push(first);
-    }
-  } catch (_) {}
-  for (const c of candidates) {
-    try { const r = require('child_process').spawnSync(c, ['--version'], { stdio: 'ignore', windowsHide: true }); if (r && r.status === 0) return c; } catch (_) {}
-  }
-  const isNodeExe = (p) => /(^|[\\/])node(\.exe)?$/i.test(String(p || ''));
-  const nodeCandidates = [];
-  if (isNodeExe(process.env.GM_NODE_PATH)) nodeCandidates.push(process.env.GM_NODE_PATH);
-  if (isNodeExe(process.execPath)) nodeCandidates.push(process.execPath);
-  try {
-    const which = process.platform === 'win32' ? 'where' : 'which';
-    const out = require('child_process').spawnSync(which, ['node'], { encoding: 'utf8', windowsHide: true });
-    if (out && out.stdout) {
-      const first = out.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
-      if (first) nodeCandidates.push(first);
-    }
-  } catch (_) {}
-  for (const c of nodeCandidates) {
-    try { const r = require('child_process').spawnSync(c, ['--version'], { stdio: 'ignore', windowsHide: true }); if (r && r.status === 0) return c; } catch (_) {}
-  }
-  return process.execPath;
-}
-
 function startSpoolDaemon() {
   try {
-    const wrapper = path.join(gmToolsDir(), 'plugkit-wasm-wrapper.js');
-    if (!fs.existsSync(wrapper)) {
-      return { ok: false, error: `wrapper not at ${wrapper} -- ensureReady() must run first` };
+    const runnerName = process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner';
+    const runner = path.join(gmToolsDir(), runnerName);
+    if (!fs.existsSync(runner)) {
+      return {
+        ok: false,
+        error:
+          `agentplug-runner is not installed at ${runner} and is the sole supported spool loader. ` +
+          `The JS wasm-host has been retired. Install it with 'bun x gm-skill install' (or 'npx gm-skill install'), ` +
+          `which downloads the sha256-verified native runner from AnEntrypoint/agentplug-bin for this platform ` +
+          `(${process.platform}/${process.arch}). If no binary is published for this platform yet, there is no ` +
+          `loader available -- file an issue at https://github.com/AnEntrypoint/agentplug-bin so a binary is built for it.`,
+      };
     }
-    const runtime = resolveNodeRuntime();
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
@@ -1315,20 +1201,18 @@ function startSpoolDaemon() {
       }
     } catch (_) {}
 
-    const cmd = runtime;
-    const args = [wrapper, 'spool'];
     const logFd = fs.openSync(logPath, 'a');
-    try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (js-host fallback, native runner absent) ---\n`); } catch (_) {}
-    const child = require('child_process').spawn(cmd, args, {
+    try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (agentplug-runner) ---\n`); } catch (_) {}
+    const child = require('child_process').spawn(runner, ['spool'], {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
-      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_BOOT_REASON: 'js-host-fallback' },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_BOOT_REASON: 'agentplug-runner' },
     });
     try { fs.closeSync(logFd); } catch (_) {}
     const pid = child.pid;
     child.unref();
-    return { ok: true, pid, wrapper, runtime: cmd, logPath, supervised: false };
+    return { ok: true, pid, runner, logPath, supervised: false };
   } catch (e) {
     return { ok: false, error: e.message };
   }
@@ -1356,7 +1240,6 @@ module.exports = {
   readVersionFile,
   ensureGmPlugkitVersionFresh,
   ensureSkillMdFresh,
-  ensureWrapperFresh,
   readPinnedGmPlugkitVersion,
   resolveBunRuntime,
   spawnPinnedBoot,

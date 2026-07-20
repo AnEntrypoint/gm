@@ -595,7 +595,7 @@ function pidCommandLineForKillGuard(pid) {
 }
 
 function pidIsPlugkitProcess(pid) {
-  return /plugkit-wasm-wrapper\.js|plugkit-supervisor\.js|gm-plugkit[\\\/]supervisor\.js/i.test(pidCommandLineForKillGuard(pid));
+  return /agentplug-runner(\.exe)?/i.test(pidCommandLineForKillGuard(pid));
 }
 
 function writeKillAttribution(targetSpoolDir, info) {

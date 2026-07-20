@@ -176,7 +176,9 @@ function runPlugkitBootstrap() {
 // agentplug-runner's CI (AnEntrypoint/agentplug's .github/workflows/release.yml)
 // publishing to AnEntrypoint/agentplug-bin -- must stay byte-identical to that
 // workflow's `artifact:` matrix values. Returns null for a host combination CI
-// does not build, so the caller falls back to the JS host without crashing.
+// does not build; agentplug-runner is the sole spool loader now (the JS host
+// was retired), so a null here means there is no loader for this platform and
+// the installer fails loudly rather than leaving a silent no-loader state.
 function agentplugRunnerAssetName() {
   const plat = process.platform;
   const arch = process.arch;
@@ -231,15 +233,14 @@ function gmToolsDir() {
 }
 
 
-// Downloads agentplug-runner (the sole native wasm plugin-host now -- hosts
-// gm.wasm plus the separate libsql/bert/treesitter plugin wasm modules via a
+// Downloads agentplug-runner (the SOLE native wasm plugin-host -- hosts gm.wasm
+// plus the separate libsql/bert/treesitter plugin wasm modules via a
 // host-mediated plugin_call ABI) from agentplug-bin's GitHub Releases,
 // sha256-sidecar-verified with an atomic rename, so a corrupt/partial download
-// is never accepted. Best-effort: any failure (offline, unpublished platform,
-// network) resolves false rather than throwing, so install never hard-fails
-// over a runner fetch -- cli.js's tryDelegateToRunner then falls back to the
-// pure-JS wasm host. gm-runner was retired once agentplug-runner reached full
-// 6-platform parity (it was a strictly-inferior single-module duplicate).
+// is never accepted. Returns true on success, false on any failure (offline,
+// unpublished platform, network, sha mismatch). The JS wasm-host was retired,
+// so agentplug-runner is required: main() hard-fails the install when this
+// returns false, rather than leaving the user with no spool loader at all.
 async function downloadAgentplugRunner({ silent } = {}) {
   const assetName = agentplugRunnerAssetName();
   if (!assetName) {
@@ -350,7 +351,28 @@ async function main() {
   }
 
   await runPlugkitBootstrap();
-  await downloadAgentplugRunner({ silent: false });
+
+  // agentplug-runner is the sole spool loader (the JS wasm-host was retired).
+  // Its download is a HARD requirement -- if the platform has no published
+  // binary, or the download/verification fails, there is no loader at all, so
+  // fail loudly with an actionable message rather than silently leaving the
+  // user with an installed skill that cannot boot a spool watcher.
+  const runnerReady = await downloadAgentplugRunner({ silent: false });
+  if (!runnerReady) {
+    const asset = agentplugRunnerAssetName();
+    err('');
+    err('FATAL: agentplug-runner could not be installed, and it is the sole spool loader.');
+    if (!asset) {
+      err(`No agentplug-runner binary is published for this platform (${process.platform}/${process.arch}).`);
+      err('The JS wasm-host fallback has been retired, so there is no loader available for this platform.');
+      err('Request a build at https://github.com/AnEntrypoint/agentplug-bin/issues, or install on a supported');
+      err('platform: linux-x64, linux-arm64, macos-x64, macos-arm64, windows-x64, windows-arm64.');
+    } else {
+      err(`The download or sha256 verification of ${asset} from AnEntrypoint/agentplug-bin failed`);
+      err('(see the messages above). Check your network/proxy and re-run: npx gm-skill install');
+    }
+    return 1;
+  }
 
   out('');
   out('Done. Open Claude Code and run /gm. New top-level skill dirs may need one restart to register.');
