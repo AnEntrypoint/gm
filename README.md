@@ -60,7 +60,7 @@ gm/
 |-- skills/gm/        <- the skill (SKILL.md), installed as /gm
 |-- bin/               <- bootstrap + installer + plugkit wasm pins (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
 |-- scripts/           <- publish-time helper scripts
-|-- gm-plugkit/        <- separate npm package that ships the wasm-wrapper + supervisor
+|-- gm-plugkit/        <- separate npm package: thin launcher + bootstrap that delegates to the native agentplug-runner, with the JS wasm-wrapper kept only as a fallback host
 |-- gm.json            <- version + plugkit pin
 |-- package.json       <- npm publish manifest
 |-- AGENTS.md          <- architectural rules (present-tense, no history)

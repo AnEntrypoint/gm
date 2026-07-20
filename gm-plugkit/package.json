@@ -11,7 +11,6 @@
     "cli.js",
     "index.js",
     "bootstrap.js",
-    "supervisor.js",
     "plugkit-wasm-wrapper.js",
     "gm-log.js",
     "gm-process.js",

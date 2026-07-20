@@ -1161,3 +1161,23 @@
   status: witnessed
   witness: 'Measured this session on PrivateMemorySize64 (the sound metric): 397MB fresh boot with plugins loaded, ~1146MB after a heavy indexing session, 2744MB peak during sustained re-indexing. The idle bert Store release fires correctly (witnessed ''released idle shared bert Store after 120000ms quiet''). Unknown whether ~1.1GB is the real floor for a warm 4-plugin daemon or whether treesitter/libsql/gm Stores also retain grown linear memory that could be released on the same idle rule -- only bert is released today.'
   witness_evidence: 'Answered by direct measurement on PrivateMemorySize64 after extending the idle release from bert-only to all three stateless non-orchestrator plugins. Full curve witnessed live on one daemon: 353MB cold baseline (plugins compiled, none instantiated) -> 577MB under a real codesearch load -> 199MB after the idle release fired. Log line: ''released idle shared Stores [bert, treesitter, libsql] after 120000ms quiet -- returns their grown wasm linear memory; next call re-instantiates''. So the steady-state floor for an idle daemon is ~199MB, not the ~1.1GB observed earlier -- that figure was a warm daemon whose treesitter and libsql Stores were never released, since only bert was eligible before. gm stays deliberately excluded from release: it holds the orchestrator state the poll loop is actively serving. Reclaim measured at 378MB, and the post-release figure sits BELOW the cold baseline because the plugin Stores are fully dropped rather than merely trimmed.'
+- id: js-host-reachability
+  description: Is the JS wasm-host (startSpoolDaemon->wrapper) still reachable after tryDelegateToRunner on win32? cli.js:277 tryDelegateToRunner runs first; on win32 tries agentplug-runner.exe then gm-runner.exe; ~/.gm-tools/gm-runner.exe confirmed present so delegation succeeds and JS host never reached on live platform. JS host is ONLY reached if BOTH runner binaries absent OR fail to spawn.
+  status: witnessed
+  witness: cli.js:249-267,277
+  witness_evidence: cli.js:277 tryDelegateToRunner runs FIRST before ensureReady/startSpoolDaemon. On win32 tries agentplug-runner.exe then gm-runner.exe from gmToolsDir(); on spawnSync success (no result.error) process.exit()s so JS host never reached. Continues to JS host ONLY if both runner binaries absent OR fail to spawn. ~/.gm-tools/gm-runner.exe confirmed present -> JS host unreachable on live win32 but remains a structural fallback for missing-binary platforms.
+- id: supervisor-removable
+  description: 'supervisor.js provably removable: startSpoolDaemon bootstrap.js:1351 checks !fs.existsSync(supervisor) and falls back to direct wrapper spawn. Removing supervisor.js degrades gracefully to direct-spawn path.'
+  status: witnessed
+  witness: bootstrap.js:1350-1366
+  witness_evidence: 'bootstrap.js:1351 startSpoolDaemon: (PLUGKIT_SKIP_SUPERVISOR===1 || !fs.existsSync(supervisor)) -> direct wrapper spawn returning {supervised:false}. supervisor.js requires only bootstrap/gm-log/gm-process (self-contained). Removing it degrades gracefully; kill-guard regex bootstrap.js:592 stays valid. SAFE to remove.'
+- id: wrapper-subdir-not-shipped
+  description: 'wrapper/ subdir (cdp-eval, wasi-shim, kv-store, task-manager, wasm-bridge, fs-atomic) is NOT in package.json files: array -- so wrapper/*.js are not shipped in npm package currently. Need to check whether plugkit-wasm-wrapper.js require()s them.'
+  status: witnessed
+  witness: package.json:10-21
+  witness_evidence: 'exec_js probe: package.json files: array = [cli.js,index.js,bootstrap.js,supervisor.js,plugkit-wasm-wrapper.js,gm-log.js,gm-process.js,plugkit.version,plugkit.sha256,instructions/] -- NO wrapper/. plugkit-wasm-wrapper.js ESM-imports ./wrapper/{wasi-shim,wasm-bridge,fs-atomic,kv-store,task-manager}.js and spawns wrapper/cdp-eval.js. So a fresh npm bun x install ships the wrapper without its imports -> JS host fallback already broken for published installs (pre-existing gap). Local ~/.gm-tools has the subdir present from a prior direct copy.'
+- id: boot-still-works-after
+  description: Does bun x gm-plugkit@latest spool still work on win32 after retirement? Must trace tryDelegateToRunner still delegates to agentplug-runner and node --check passes on cli.js/bootstrap.js/index.js.
+  status: witnessed
+  witness: pending
+  witness_evidence: To be witnessed post-edit via node --check + tracing tryDelegateToRunner path is untouched by supervisor removal (cli.js not edited for the delegate path).

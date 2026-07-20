@@ -1263,37 +1263,6 @@ function getBinaryPath() {
   return getWasmPath();
 }
 
-function probeUnsupervisedWatcher(spoolDir) {
-  try {
-    const statusPath = path.join(spoolDir, '.status.json');
-    const supervisorPath = path.join(spoolDir, '.supervisor.json');
-    const markerPath = path.join(spoolDir, '.pre-supervised-watcher.json');
-    if (!fs.existsSync(statusPath)) {
-      try { fs.unlinkSync(markerPath); } catch (_) {}
-      return;
-    }
-    const status = JSON.parse(fs.readFileSync(statusPath, 'utf-8'));
-    const age = Date.now() - (status && status.ts || 0);
-    if (age > 30_000) {
-      try { fs.unlinkSync(markerPath); } catch (_) {}
-      return;
-    }
-    if (fs.existsSync(supervisorPath)) {
-      try { fs.unlinkSync(markerPath); } catch (_) {}
-      return;
-    }
-    const marker = {
-      ts: Date.now(),
-      reason: 'running-watcher-has-no-supervisor',
-      watcher_pid: status.pid,
-      watcher_version: status.version,
-      severity: 'warn',
-      instruction: 'A running watcher was started under an older bootstrap that did not spawn a supervisor. Unplanned-restart recovery and idle-teardown coordination are dormant. To migrate, stop the current watcher (taskkill /F /T /PID <watcher_pid> on Windows or kill <watcher_pid> on POSIX) and let the next bootstrap re-spawn it under supervisor.js.',
-    };
-    fs.writeFileSync(markerPath, JSON.stringify(marker, null, 2));
-  } catch (_) {}
-}
-
 function resolveNodeRuntime() {
   const candidates = [];
   if (process.env.PLUGKIT_RUNTIME) candidates.push(process.env.PLUGKIT_RUNTIME);
@@ -1337,7 +1306,6 @@ function startSpoolDaemon() {
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
     fs.mkdirSync(spoolDir, { recursive: true });
-    probeUnsupervisedWatcher(spoolDir);
     const logPath = path.join(spoolDir, '.watcher.log');
     try {
       const stat = fs.statSync(logPath);
@@ -1347,36 +1315,20 @@ function startSpoolDaemon() {
       }
     } catch (_) {}
 
-    const supervisor = path.join(__dirname, 'supervisor.js');
-    if (process.env.PLUGKIT_SKIP_SUPERVISOR === '1' || !fs.existsSync(supervisor)) {
-      const cmd = runtime;
-      const args = [wrapper, 'spool'];
-      const logFd = fs.openSync(logPath, 'a');
-      try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (no supervisor) ---\n`); } catch (_) {}
-      const child = require('child_process').spawn(cmd, args, {
-        detached: true,
-        stdio: ['ignore', logFd, logFd],
-        windowsHide: true,
-        env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_BOOT_REASON: 'direct-no-supervisor' },
-      });
-      try { fs.closeSync(logFd); } catch (_) {}
-      const pid = child.pid;
-      child.unref();
-      return { ok: true, pid, wrapper, runtime: cmd, logPath, supervised: false };
-    }
-
+    const cmd = runtime;
+    const args = [wrapper, 'spool'];
     const logFd = fs.openSync(logPath, 'a');
-    try { fs.writeSync(logFd, `\n--- supervisor spawn ${new Date().toISOString()} parent=${process.pid} ---\n`); } catch (_) {}
-    const child = require('child_process').spawn(runtime, [supervisor], {
+    try { fs.writeSync(logFd, `\n--- daemon spawn ${new Date().toISOString()} parent=${process.pid} (js-host fallback, native runner absent) ---\n`); } catch (_) {}
+    const child = require('child_process').spawn(cmd, args, {
       detached: true,
       stdio: ['ignore', logFd, logFd],
       windowsHide: true,
-      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_RUNTIME: runtime },
+      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir, PLUGKIT_BOOT_REASON: 'js-host-fallback' },
     });
     try { fs.closeSync(logFd); } catch (_) {}
     const pid = child.pid;
     child.unref();
-    return { ok: true, pid, wrapper, supervisor, runtime, logPath, supervised: true };
+    return { ok: true, pid, wrapper, runtime: cmd, logPath, supervised: false };
   } catch (e) {
     return { ok: false, error: e.message };
   }

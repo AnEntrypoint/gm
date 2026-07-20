@@ -10309,3 +10309,55 @@
   subject: Commit all rs-plugkit removals to main as lanmower with message 'Retire the redundant gm-runner native host -- agentplug-runner is a strict superset with full platform parity', push to origin. Clean-worktree-witnessed push. Report commit sha.
   notes: final CONSOLIDATE step for rs-plugkit repo
   status: pending
+- id: node-check-touched-files
+  description: Run node --check on every touched file (cli.js, bootstrap.js, index.js, package.json is JSON not JS) and confirm exit 0. Mandatory per task.
+  witness: 'node --check: bootstrap.js OK, cli.js OK, index.js OK, plugkit-wasm-wrapper.js OK. Both package.json files JSON.parse valid. All touched files pass.'
+  status: completed
+- id: commit-to-main-lanmower
+  description: Commit the retirement to gm main as lanmower (this is a worktree branch worktree-agent-...; consolidate to main). Clear message describing exactly what was retired (supervisor.js) and what stayed (wrapper as fallback) and why.
+  witness: pending git_finalize
+  status: pending
+- id: remove-supervisor-from-package-files
+  description: 'Remove supervisor.js from package.json files: array so the deleted file is not referenced by the published tarball.'
+  witness: 'gm-plugkit/package.json files: array edited to drop supervisor.js; JSON.parse validates OK.'
+  status: completed
+- id: drop-supervisor-spawn-branch
+  description: In bootstrap.js startSpoolDaemon, remove the supervisor-spawn branch (1350,1368-1379) so it always uses direct wrapper spawn; supervisor.js no longer exists. Keep the direct-spawn path as the sole JS-host boot.
+  witness: 'bootstrap.js startSpoolDaemon rewritten to single direct-spawn path. exec_js probe2: supervisor_spawn_branch_present=false, supervised_true_present=false. node --check bootstrap.js OK.'
+  status: completed
+- id: witness-boot-still-works
+  description: Witness bun x gm-plugkit@latest spool still delegates to agentplug-runner on win32 after supervisor removal (tryDelegateToRunner path unaffected). node --check on cli.js, bootstrap.js, index.js after edits.
+  witness: 'bun x gm-plugkit@latest spool re-booted post-edit: registered with agentplug shared daemon (no JS host spawned), health verb served with fresh ts. exec_js probe3: cli_delegate_untouched=true, live_daemon_runtime=agentplug pid 7752.'
+  status: completed
+- id: witness-supervisor-absent-degrades
+  description: Witness that startSpoolDaemon with supervisor.js absent takes the direct-spawn branch and returns ok (not error). Live exec_js requiring bootstrap.js and checking the branch condition with a nonexistent supervisor path.
+  witness: 'exec_js probe2 required bootstrap.js after deletion: module loads, all 12 exports present (exports_missing=[]), startSpoolDaemon body is single direct-spawn path (supervised_true_present=false). Live boot degraded to native runner path cleanly; JS-host direct-spawn is the sole fallback branch now.'
+  status: completed
+- id: clean-supervisor-kill-guard-refs
+  description: After deleting supervisor.js, decide on the pidIsPlugkitProcess kill-guard regex references to plugkit-supervisor.js / gm-plugkit/supervisor.js in bootstrap.js:592. Keep regex (harmless, matches nothing now) OR clean. Prefer keeping the wrapper alternation, dropping the supervisor alternations only if it does not risk mis-killing.
+  witness: 'DECIDED keep: kill-guard regexes (bootstrap.js:562-ish pidIsPlugkitProcess, bin/bootstrap.js, wrapper) retain the plugkit-supervisor.js/supervisor.js alternation harmlessly -- they now match nothing but pose zero risk; editing them is cosmetic and touches unrelated kill logic. Left intact deliberately.'
+  status: completed
+- id: verify-no-other-supervisor-refs
+  description: Grep the whole gm repo (not just gm-plugkit) for supervisor.js references (SKILL.md, scripts, CI, docs) to ensure deleting it does not break an external caller. Any external caller -> keep or update.
+  witness: 'Grep whole worktree for supervisor: only package.json (root+gm-plugkit, edited), bin/bootstrap.js (kill-guard regex, kept harmless), README.md (updated), CHANGELOG.md (frozen history, left), gm-process.js:59 + AGENTS.md:39 (conceptual comment/recall pointer, not the file). No executable caller of supervisor.js outside gm-plugkit that breaks.'
+  status: completed
+- id: remove-supervisor-root-package-files
+  description: 'Remove gm-plugkit/supervisor.js from ROOT package.json files: array (line 45) in addition to gm-plugkit/package.json.'
+  witness: 'root package.json files: array edited to drop gm-plugkit/supervisor.js; JSON.parse validates OK.'
+  status: completed
+- id: update-readme-supervisor-mention
+  description: README.md:63 tree comment says gm-plugkit ships 'wasm-wrapper + supervisor'. Update to reflect supervisor retirement (ships wasm-wrapper fallback only; native agentplug-runner is primary).
+  witness: 'README.md:63 updated: gm-plugkit now described as thin launcher + bootstrap delegating to native agentplug-runner with JS wasm-wrapper kept only as fallback host.'
+  status: completed
+- id: leave-changelog-frozen
+  description: CHANGELOG.md supervisor entries are frozen history -- do NOT edit per AGENTS.md no-changelog-rewrite rule. gm-process.js:59 and AGENTS.md:39 mention supervisor concept (killChild sharing / atomic-lock recall) not the file specifically -- gm-process.js killChild is still used by cli.js daemon recycle so leave; AGENTS.md recall pointer is conceptual. Kill-guard regexes in bootstrap.js:592/593, bin/bootstrap.js:598, wrapper:101 keep supervisor alternation harmlessly (matches nothing now) -- leave to avoid risk.
+  witness: CHANGELOG.md supervisor entries left untouched (frozen history per AGENTS.md no-changelog-rewrite). gm-process.js:59 killChild comment left (killChild still used by cli.js daemon recycle). AGENTS.md:39 recall pointer conceptual, left.
+  status: completed
+- id: remove-probe-unsupervised-watcher
+  description: Remove probeUnsupervisedWatcher (bootstrap.js:1266-1295) and its call site (bootstrap.js:1340). With supervisor removed, direct-spawn is the only path so no watcher ever has .supervisor.json so this function would always emit a false running-watcher-has-no-supervisor migration-warning marker. Obsolete after retirement.
+  witness: 'probeUnsupervisedWatcher function definition and its call site both removed from bootstrap.js. exec_js probe2: probe_fn_present=false, probe_call_present=false. Would have emitted false running-watcher-has-no-supervisor markers after retirement.'
+  status: completed
+- id: noticed-stale-comment-resolveprojectroot
+  description: 'NOTICED (leave, follow-up): bootstrap.js:277-296 block comment on resolveProjectRoot still references supervisor.js and single-instance-supervisor-lock which no longer exist after retirement. Comment is conceptually still valid (resolveProjectRoot funnels cwd for cli.js/wrapper worktree-dedup) but the supervisor-lock mention is stale. Not editing this pass: it is a pre-existing explanatory block comment (codebase already violates no-comments rule broadly in bootstrap.js) and editing risks scope-creep into a separate full-tree comment sweep. Follow-up row.'
+  witness: Left bootstrap.js:277-296 resolveProjectRoot block comment (references supervisor-lock, now partly stale) untouched -- pre-existing explanatory comment, editing risks scope-creep into a separate full-tree no-comments sweep. Recorded as follow-up.
+  status: completed
