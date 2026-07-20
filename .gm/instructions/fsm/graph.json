@@ -1,0 +1,96 @@
+{
+  "states": [
+    {
+      "key": "PLAN",
+      "prose_key": "plan",
+      "skill": "gm-execute"
+    },
+    {
+      "key": "EXECUTE",
+      "prose_key": "execute",
+      "skill": "gm-emit"
+    },
+    {
+      "key": "EMIT",
+      "prose_key": "emit",
+      "skill": "gm-verify"
+    },
+    {
+      "key": "VERIFY",
+      "prose_key": "verify",
+      "skill": "gm-consolidate"
+    },
+    {
+      "key": "CONSOLIDATE",
+      "prose_key": "consolidate",
+      "skill": "gm-complete"
+    },
+    {
+      "key": "COMPLETE",
+      "prose_key": "update_docs",
+      "skill": "update-docs"
+    }
+  ],
+  "edges": [
+    {
+      "from": "PLAN",
+      "to": "EXECUTE",
+      "gates": []
+    },
+    {
+      "from": "EXECUTE",
+      "to": "EMIT",
+      "gates": []
+    },
+    {
+      "from": "EMIT",
+      "to": "VERIFY",
+      "gates": []
+    },
+    {
+      "from": "VERIFY",
+      "to": "CONSOLIDATE",
+      "gates": [
+        "residual-scan-fired",
+        "prd-all-closed",
+        "mutables-all-resolved"
+      ]
+    },
+    {
+      "from": "CONSOLIDATE",
+      "to": "COMPLETE",
+      "gates": [
+        "prd-all-closed",
+        "mutables-all-resolved"
+      ]
+    },
+    {
+      "from": "COMPLETE",
+      "to": "COMPLETE",
+      "gates": []
+    }
+  ],
+  "gates": [
+    {
+      "name": "residual-scan-fired",
+      "predicate": "residual-scan-fired",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition to CONSOLIDATE rejected: residual-scan not fired in this stop window -- dispatch `residual-scan` before CONSOLIDATE."
+    },
+    {
+      "name": "prd-all-closed",
+      "predicate": "prd-all-closed",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: PRD items still pending -- execute or remove them before transitioning."
+    },
+    {
+      "name": "mutables-all-resolved",
+      "predicate": "mutables-all-resolved",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: mutables still pending -- resolve them with witness_evidence before transitioning."
+    }
+  ]
+}
