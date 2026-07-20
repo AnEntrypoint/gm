@@ -3,3 +3,27 @@
 	url = https://github.com/AnEntrypoint/rs-plugkit.git
 	branch = main
 	ignore = dirty
+[submodule "rs-codeinsight"]
+	path = rs-codeinsight
+	url = https://github.com/AnEntrypoint/rs-codeinsight.git
+	branch = main
+[submodule "agentplug"]
+	path = agentplug
+	url = https://github.com/AnEntrypoint/agentplug.git
+	branch = main
+[submodule "agentplug-bert"]
+	path = agentplug-bert
+	url = https://github.com/AnEntrypoint/agentplug-bert.git
+	branch = main
+[submodule "agentplug-libsql"]
+	path = agentplug-libsql
+	url = https://github.com/AnEntrypoint/agentplug-libsql.git
+	branch = main
+[submodule "agentplug-treesitter"]
+	path = agentplug-treesitter
+	url = https://github.com/AnEntrypoint/agentplug-treesitter.git
+	branch = main
+[submodule "rs-search"]
+	path = rs-search
+	url = https://github.com/AnEntrypoint/rs-search.git
+	branch = main
