@@ -52,3 +52,55 @@ behaves byte-identically to before this file existed.
 Changing `heartbeat_interval_secs`, `max_concurrent_projects`, or `gm_concurrency`
 requires a daemon restart to take effect (read once at startup, not re-read per
 tick, since these govern the daemon's own loop timing and pool sizing).
+
+## Per-project fairness cap (not machine-wide)
+
+`gm_concurrency` above is the actual TOTAL pool size and stays strictly
+machine-wide -- one shared daemon process, so no per-project override of the
+real pool size is admissible (a project raising its own share would be raising
+it for every other registered project too, since they all draw from the same
+pool).
+
+A registered project can still set its OWN fairness ceiling: how many of that
+shared pool's slots ITS OWN dispatches may occupy concurrently, as a
+self-limiting cap that can only ever lower a project's effective share, never
+raise the machine total. Configured per-project, read fresh on every dispatch
+(same precedent as `.gm/browser-config.json`'s `BrowserConfig::load(cwd)`),
+at:
+
+```
+<project>/.gm/daemon-project-config.json
+```
+
+```json
+{
+  "gm_concurrency_limit": 1
+}
+```
+
+- `gm_concurrency_limit` (default: unset -- unbounded from this project's own
+  side, i.e. bounded only by the machine-wide `gm_concurrency` pool size) --
+  the maximum number of this project's own `gm` dispatches allowed in flight
+  at once. A dispatch beyond this project's own limit waits (polls a
+  process-wide in-flight counter keyed by project root) for one of this same
+  project's earlier dispatches to finish, BEFORE it takes a slot from the
+  shared pool -- it never grants extra pool slots, it only restricts how many
+  of the ones the pool already has this one project may hold simultaneously.
+  Released automatically (RAII guard) when the dispatch completes or panics,
+  so a crash mid-dispatch cannot wedge the project at a permanently-held
+  fairness slot.
+
+Missing file, or the field absent, is byte-identical to behavior before this
+file existed -- no wait loop is entered, no shared map is touched, zero
+overhead beyond one file read that fails.
+
+Note: today's daemon architecture already drains one project's own pending
+spool work fully sequentially (one request file at a time, single worker
+thread per project per tick -- see `dispatch_project`'s own doc comment), so
+a single project's `gm` dispatches never actually run concurrently against
+EACH OTHER under the current loop. This cap is consequently a forward-looking
+safety net against a future change to that assumption (e.g. per-project
+multi-threaded draining) rather than something observable in today's
+single-project timing -- it costs nothing when unconfigured and does no harm
+when configured, but there is currently no code path where a single
+project's own in-flight `gm` count can exceed 1 regardless of this setting.
