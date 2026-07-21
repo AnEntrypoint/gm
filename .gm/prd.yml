@@ -10503,3 +10503,13 @@
   description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
   status: completed
   witness: 'probe row #9 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-9'
+- title: Stale agentplug/rs-plugkit submodule pins in gm tree lagged pushed fixes
+  description: gm-continue's fresh codesearch orient surfaced a stale hit against agentplug/crates/agentplug-host/src/browser.rs showing pre-headful/pre-BrowserConfig code, tracing to gm's own checked-in submodule pins for agentplug (2e20e97) and rs-plugkit (a3d659f) lagging behind the commits actually pushed to those repos' origin/main (8783151, 83aa55b) earlier this session.
+  status: resolved
+  witness_evidence: exec_js git rev-parse comparisons confirmed the mismatch, then git checkout <sha> --detach in both submodules to the correct commits, git_finalize committed+pushed as a7cb92f26, gm local head verified == origin/main (98357b44e) after a trailing CI auto-bump was pulled in via git_reset --hard to origin/main.
+  id: stale-agentplug-rs-plugkit-submodule-pins-in-gm-tree-lagged-push
+- title: Two orphaned find.exe processes accumulating from prior raw-shell find / usage
+  description: 'User reported find.exe and git.exe processes accumulating. Live investigation via exec_js + Get-CimInstance found exactly two orphaned find.exe processes (pids 19592, 14680) running find / -iname ... (full-filesystem scans) whose parent bash processes (pids 10220, 3292) had already exited -- classic Windows Git-Bash orphan pattern where a killed/finished parent doesn''t cascade-kill its detached find child. Root cause: some prior raw Bash tool call used find / instead of the dedicated Glob/codesearch verb.'
+  status: resolved
+  witness_evidence: exec_js Get-CimInstance Win32_Process enumeration identified both pids and their command lines; confirmed parent pids no longer existed; process.kill(pid, 'SIGTERM') on both; re-ran the same Win32_Process query afterward and got zero find.exe/git.exe processes system-wide.
+  id: two-orphaned-find-exe-processes-accumulating-from-prior-raw-shel
