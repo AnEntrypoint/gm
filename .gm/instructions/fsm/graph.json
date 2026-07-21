@@ -57,11 +57,30 @@
       ]
     },
     {
+      "from": "EXECUTE",
+      "to": "PLAN",
+      "gates": []
+    },
+    {
+      "from": "EMIT",
+      "to": "PLAN",
+      "gates": []
+    },
+    {
+      "from": "VERIFY",
+      "to": "PLAN",
+      "gates": []
+    },
+    {
       "from": "CONSOLIDATE",
       "to": "COMPLETE",
       "gates": [
         "prd-all-closed",
-        "mutables-all-resolved"
+        "mutables-all-resolved",
+        "worktree-clean",
+        "residual-scan-fired",
+        "ci-validated-fresh",
+        "browser-witness-coverage"
       ]
     },
     {
@@ -91,6 +110,52 @@
       "hook": null,
       "hook_mode": "predicate-only",
       "message": "transition rejected: mutables still pending -- resolve them with witness_evidence before transitioning."
+    },
+    {
+      "name": "worktree-clean",
+      "predicate": "worktree-clean",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: worktree dirty -- commit or revert before declaring done; an unpushed delta is an unwitnessed slice."
+    },
+    {
+      "name": "ci-validated-fresh",
+      "predicate": "ci-validated-fresh",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: CI/CD validation not witnessed fresh -- .gm/exec-spool/.ci-validated missing, stale, or not matching current HEAD sha. Witness the pipeline green for the pushed HEAD, then fs_write .gm/exec-spool/.ci-validated with {\"head_sha\":\"<git rev-parse HEAD>\"} and re-attempt."
+    },
+    {
+      "name": "browser-witness-coverage",
+      "predicate": "browser-witness-coverage",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: client-edit-no-witness -- one or more client-side files edited this session lack a matching browser-witness. Dispatch `browser` to page.evaluate the invariant each edit establishes, then re-attempt."
     }
-  ]
+  ],
+  "policy": {
+    "toplevel_doc_allowlist": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "README.md",
+      "SKILLS.md",
+      "CHANGELOG.md",
+      "LICENSE",
+      "LICENSE.md"
+    ],
+    "await_allowed_verbs": [
+      "memorize-continue",
+      "instruction",
+      "phase-status",
+      "health"
+    ],
+    "longgap_exempt_verbs": [
+      "health",
+      "auto-recall",
+      "wait",
+      "sleep"
+    ],
+    "gate_repeat_escalate_threshold": 3,
+    "longgap_threshold_ms": 300000
+  }
 }

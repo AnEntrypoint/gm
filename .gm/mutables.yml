@@ -1181,3 +1181,11 @@
   status: witnessed
   witness: pending
   witness_evidence: To be witnessed post-edit via node --check + tracing tryDelegateToRunner path is untouched by supervisor removal (cli.js not edited for the delegate path).
+- id: fsm-test-gate-witness-mutable
+  claim: temporary probe mutable to live-witness the mutables-all-resolved gate on VERIFY->CONSOLIDATE and CONSOLIDATE->COMPLETE edges
+  status: witnessed
+  witness_evidence: temporary probe mutable used to live-witness mutables-all-resolved gate correctly denying VERIFY->CONSOLIDATE (transition-1784613255001.json); gate behavior confirmed correct, resolving the probe now that its purpose is served
+- id: fsm-test-gate-witness-mutable
+  claim: temporary probe mutable to live-witness the mutables-all-resolved gate on VERIFY->CONSOLIDATE and CONSOLIDATE->COMPLETE edges
+  status: witnessed
+  witness_evidence: temporary probe mutable used to live-witness mutables-all-resolved gate correctly denying VERIFY->CONSOLIDATE (transition-1784613255001.json); gate behavior confirmed correct, resolving the probe now that its purpose is served
