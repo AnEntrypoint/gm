@@ -46,6 +46,7 @@ tmp/
 .gm/subagent-*.json
 .gm/browser-profile/
 .gm/browser-profile-*/
+.gm/browser-profiles/
 .gm/browser-state/
 .gm/build-tool-ignores.md
 .gm/last-prompt.txt
