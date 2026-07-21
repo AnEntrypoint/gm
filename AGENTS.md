@@ -158,7 +158,7 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: the recall store (`recall: cascade pipeline`).
 
-A push touching `rs-plugkit/crates/gm-runner/**` additionally triggers its own `gm-runner.yml` workflow (separate from `release.yml`, matrix-builds all 6 platform targets, publishes to `AnEntrypoint/gm-runner-bin` Releases) -- a stuck/unschedulable single matrix leg (observed: `macos-13` queued 18h+ with zero GH-assigned runner) must never block the `release` job from shipping the other 5 platforms; that job runs `if: always()` and tolerates partial artifacts rather than a blanket `needs: build` hard-gate.
+The `gm-runner` crate and its separate `gm-runner.yml` CI workflow are retired along with the binary itself (see the WASM-guest section above) -- confirmed absent from rs-plugkit's `crates/` and `.github/workflows/`, no longer a stage in the cascade.
 
 **Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-codeinsight, rs-search, rs-plugkit, gm}`. rs-learn and rs-exec are retired (crates removed from / never depended on by rs-plugkit; their spool-dispatch and memory surfaces reimplemented natively in rs-plugkit wasm_dispatch; repos archived as tombstones, README points at rs-plugkit). Roles, npm package names, legacy-retirement detail: the recall store (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 
