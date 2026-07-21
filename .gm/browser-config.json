@@ -1,0 +1,6 @@
+{
+  "cdp_poll_timeout_ms": 1000,
+  "cdp_poll_interval_ms": 250,
+  "chrome_ready_deadline_ms": 30000,
+  "eval_timeout_grace_ms": 6000
+}

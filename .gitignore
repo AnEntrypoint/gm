@@ -47,6 +47,7 @@ tmp/
 .gm/browser-profile/
 .gm/browser-profile-*/
 .gm/browser-profiles/
+.gm/browser-chrome-profile-*/
 .gm/browser-state/
 .gm/build-tool-ignores.md
 .gm/last-prompt.txt
