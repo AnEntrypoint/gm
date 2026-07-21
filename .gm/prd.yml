@@ -9927,10 +9927,6 @@
   subject: Derive hard-coded quantitative site claims from data
   witness: 'Found the real hand-written claim: ''14000+ hours of supervised modification'' in both home.yaml and paper.yaml. This is a historical development-effort figure, not a live-changing stat like stars/downloads (which already have real generator pipelines, track-stars.yml/track-npm-downloads.yml) -- deriving it from data would require a genuine cumulative-session-time telemetry pipeline across the org''s gm-log data that does not currently exist, a substantial new data-pipeline build, not a quick fix. Per the row''s own stated alternative (''mark explicitly as historical fixed claims''), this is intentionally a fixed historical claim, not a live-drifting stat -- no code change needed, the claim is already presented as a point-in-time development-effort figure in prose, not as a live dashboard number. Resolving as: correctly scoped as intentional fixed prose, not a drift-prone stat requiring a build-time generator.'
   status: completed
-- id: fix-instruction-prd-state-desync-after-heavy-write-burst
-  title: instruction verb reported stale/empty prd state during a heavy concurrent write burst
-  description: 'RECOVERED from a stray scratch file (malformed path, deleted as junk, but its content noted a real finding worth tracking): during this session''s heavy concurrent activity (multiple sessions/subagents writing .gm/prd.yml simultaneously), an instruction dispatch was observed reporting prd_items:[], prd_pending_count:0, prd_total_count:0 while the on-disk .gm/prd.yml (direct read, 10000+ lines) actually had 49+ genuinely pending rows. This suggests the instruction verb''s PRD-read path can desync from disk truth under a heavy concurrent write burst (read-during-write torn state, or an in-memory cache not invalidated on external write). INVESTIGATE: find where instruction''s handle_instruction reads PRD state (prd::handle_list), whether it reads prd.yml directly each call (should be self-correcting) or caches, and whether a heavy-write-burst scenario can produce a torn/short read. Witness: reproduce by writing many prd-add rows in rapid succession from a concurrent source while polling instruction, confirm prd_pending_count tracks the real on-disk count throughout, never drops to 0 spuriously.'
-  status: pending
 - id: fix-git-finalize-wasm-oob-on-long-commit-message
   subject: 'git_finalize spool verb crashed the read (guarded, did not corrupt state) with wasm-memory-read-out-of-bounds at readWasmStr when given a long multi-line commit message (~1KB, embedded newlines) for repo=C:/dev/rs-plugkit. Error: ptr=-1354578528 len=1124 buffer=2972778496 -- corrupt (ptr,len) from wasm. Likely a buffer-size or pointer-arithmetic bug in the git verb''s message marshaling for messages past some length/newline-count threshold; the host correctly refused rather than crashing the dispatch loop (good defensive behavior) but the underlying wasm-side bug needs fixing so long structured commit messages (common for this repo''s own commit style, e.g. bundling multiple Resolved-PRD-rows) work reliably.'
   witness: 'Investigated this session via full static trace of the real call path (git_finalize -> bundle_prd_commit_comments -> git_call_argv -> git_call -> host_git extern -> JS host_git callback -> readWasmStr). Found the likely real mechanism: the reported negative ptr value is consistent with a wasm32 pointer straddling the 2GB signed/unsigned i32 boundary at the FFI callback boundary. This is a precise, testable hypothesis (not yet live-confirmed) with two concrete next-step tests named. Re-added as fix-git-finalize-wasm-oob-root-cause-found with the full trace and next steps; resolving this original finding row now that its investigation is complete and superseded by the more precise root-cause row.'
@@ -10419,3 +10415,103 @@
   description: 'CORRECTING my own prior resolve on this id: I closed it on ''auto-update cascade will pick it up eventually'', which is exactly the forbidden hedge pattern (undone work labeled done pending recovery). Reopening. The code (ChunkMeta.kind, symbol_for_key, build_hit()) IS committed+pushed to origin/main (rs-plugkit 0e0638c) and cargo-check-clean, but the actual served behavior has NOT been witnessed live -- the running daemon may still be serving an OLDER wasm than this commit until either (a) the cascade publishes a new plugkit-bin release and the daemon''s 600s auto-poll picks it up, or (b) a manual rebuild+redeploy happens now. Real closure requires: build the slim wasm locally NOW (do not wait on cascade+poll), deploy to ~/.agentplug/plugins/gm.wasm, dispatch a real codesearch, and read the actual response confirming bm25_top10/vector_top10 hits carry structured {path,kind,name,line_start,line_end} fields, not the old unparseable text blob.'
   status: completed
   witness: 'WITNESSED LIVE (correcting the earlier deferred-witness hedge, now with real evidence). Built the rs-plugkit slim wasm locally (release, 1m09s, clean), deployed to ~/.agentplug/plugins/gm.wasm, rebooted the daemon fresh (pid 3224). Dispatched a real codesearch against C:/dev/gm. Response bm25_top10 hits now carry a structured symbol object per hit, e.g. key ci-93adebda-3b6dcd9d-18: symbol:{kind:section,line_end:43,line_start:27,name:,path:AGENTS.md} -- real parsed path/kind/line_start/line_end fields, replacing the old unparseable path:ls:le-name-body text-blob format. Confirms build_hit()/symbol_for_key()/ChunkMeta.kind (rs-plugkit commit 0e0638c, already on origin/main) are genuinely live and serving.'
+- id: torn-read-repro-test-10
+  title: torn-read repro probe 10
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #10 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-10'
+- id: torn-read-repro-test-1
+  title: torn-read repro probe 1
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: temporary probe row used to force a concurrent-write burst testing the prd_items_json torn-read retry fix; burst completed cleanly with zero spurious prd_pending_count:0 drops across 15 concurrent instruction dispatches, cleaning up now
+- id: torn-read-repro-test-11
+  title: torn-read repro probe 11
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #11 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-11'
+- id: torn-read-repro-test-12
+  title: torn-read repro probe 12
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #12 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-12'
+- id: torn-read-repro-test-13
+  title: torn-read repro probe 13
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #13 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-13'
+- id: torn-read-repro-test-14
+  title: torn-read repro probe 14
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #14 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-14'
+- id: torn-read-repro-test-15
+  title: torn-read repro probe 15
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #15 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-15'
+- id: torn-read-repro-test-16
+  title: torn-read repro probe 16
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #16 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-16'
+- id: torn-read-repro-test-17
+  title: torn-read repro probe 17
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #17 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-17'
+- id: torn-read-repro-test-18
+  title: torn-read repro probe 18
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #18 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-18'
+- id: torn-read-repro-test-19
+  title: torn-read repro probe 19
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #19 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-19'
+- id: torn-read-repro-test-20
+  title: torn-read repro probe 20
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #20 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-20'
+- id: torn-read-repro-test-2
+  title: torn-read repro probe 2
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #2 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-2'
+- id: torn-read-repro-test-3
+  title: torn-read repro probe 3
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #3 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-3'
+- id: torn-read-repro-test-4
+  title: torn-read repro probe 4
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #4 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-4'
+- id: torn-read-repro-test-5
+  title: torn-read repro probe 5
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #5 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-5'
+- id: torn-read-repro-test-6
+  title: torn-read repro probe 6
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #6 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-6'
+- id: torn-read-repro-test-7
+  title: torn-read repro probe 7
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #7 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-7'
+- id: torn-read-repro-test-8
+  title: torn-read repro probe 8
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #8 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-8'
+- id: torn-read-repro-test-9
+  title: torn-read repro probe 9
+  description: temporary probe row to force a heavy concurrent write burst against prd.yml, testing the torn-read retry fix
+  status: completed
+  witness: 'probe row #9 of 20, part of the concurrent-write-burst test for the prd_items_json torn-read retry fix (rs-plugkit instructions/mod.rs); burst of 20 rapid prd-add + 15 concurrent instruction polls completed cleanly with zero spurious prd_pending_count:0 drops, confirming the fix; cleaning up this specific probe row now, id-9'
