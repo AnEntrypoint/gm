@@ -1,6 +1,6 @@
 {
   "name": "gm",
-  "version": "2.0.2038",
+  "version": "2.0.2039",
   "description": "Spool-dispatch orchestration engine with unified state machine, skills, and automated git enforcement",
   "author": "AnEntrypoint",
   "license": "MIT",
