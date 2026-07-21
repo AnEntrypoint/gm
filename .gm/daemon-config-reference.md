@@ -94,13 +94,70 @@ Missing file, or the field absent, is byte-identical to behavior before this
 file existed -- no wait loop is entered, no shared map is touched, zero
 overhead beyond one file read that fails.
 
-Note: today's daemon architecture already drains one project's own pending
-spool work fully sequentially (one request file at a time, single worker
-thread per project per tick -- see `dispatch_project`'s own doc comment), so
-a single project's `gm` dispatches never actually run concurrently against
-EACH OTHER under the current loop. This cap is consequently a forward-looking
-safety net against a future change to that assumption (e.g. per-project
-multi-threaded draining) rather than something observable in today's
-single-project timing -- it costs nothing when unconfigured and does no harm
-when configured, but there is currently no code path where a single
-project's own in-flight `gm` count can exceed 1 regardless of this setting.
+Note: a single project's own `gm` dispatches CAN now run genuinely concurrent
+against each other -- see `background-convert` below. This fairness cap is the
+real, observable ceiling on that concurrency, not a forward-looking no-op:
+once a dispatch has been background-converted, the project's remaining queued
+dispatches proceed against the shared pool while the converted one is still
+running, and `gm_concurrency_limit` (if configured) bounds how many of that
+project's own dispatches -- background-converted or not -- may hold a pool
+slot at the same time.
+
+## `background-convert` -- agent-initiated dispatch backgrounding
+
+Each of a project's spool requests is spawned onto its own OS thread the
+moment it is claimed; the daemon's own worker normally waits for that thread
+to finish (bounded-poll `is_finished()` check, ~50ms cadence) before writing
+the response and moving on -- functionally identical timing to a plain
+synchronous call. `background-convert` lets an agent that already dispatched
+a slow verb (`exec_js`, `browser`, or any other -- the mechanism is
+verb-agnostic, the daemon does not need to know what a verb does to detach
+the thread running it) tell the daemon mid-flight: stop waiting on this one,
+keep it running, and free the worker/tick immediately. This is agent-
+initiated only -- there is no timer/threshold that backgrounds a dispatch
+automatically. It is unrelated to `exec_js`'s own internal `timeoutMs`-based
+subprocess backgrounding (`host_task_proc`/`task.rs`'s `spawn`/`list`/
+`output`/`stop`) -- that mechanism backgrounds a subprocess the JS script
+itself spawned; `background-convert` backgrounds the WASM DISPATCH CALL
+itself, one layer up, regardless of verb.
+
+Request: `in/background-convert/<N>.txt`
+
+```json
+{"verb": "exec_js", "task": "<the original request's numeric filename stem>"}
+```
+
+`task` is the same id the agent already knows from having written the
+original request to `in/<verb>/<task>.txt` itself.
+
+Response: `out/background-convert-<N>.json`
+
+```json
+{"ok": true, "converted": true, "verb": "exec_js", "task": "..."}
+```
+
+or, if no matching in-flight dispatch exists for this project (wrong verb/
+task, or it already finished before this request was processed -- both read
+identically, since from the caller's side "never existed" and "already done"
+require the same next action: read the real response, it's either already
+there or on its way):
+
+```json
+{"ok": false, "error": "already_completed", "verb": "exec_js", "task": "..."}
+```
+
+Once converted, the original dispatch keeps running to completion on its own
+thread and writes its real result to the EXACT SAME path the synchronous path
+would have (`out/<verb>-<task>.json` + the `.ready` sentinel) -- the calling
+agent's later `Read` on that same path is unchanged ABI, it just may need to
+be retried later rather than being immediately available.
+
+Ownership model: after a background-convert, the project's OTHER queued
+dispatches are not blocked behind the converted one -- they proceed through
+the same `SharedPluginPool`/`GmFairnessGuard` machinery a second, genuinely
+concurrent checkout for that project, bounded by the exact same
+`gm_concurrency` (machine-wide pool size) and `gm_concurrency_limit`
+(per-project fairness cap, see above) this file already documents. A
+background-converted dispatch still counts as one held pool slot and one held
+fairness-guard slot for its entire real runtime -- it is not exempt from
+either cap, it only stops holding the WORKER and the daemon TICK hostage.

@@ -46,6 +46,7 @@ Dispatch = Write `.gm/exec-spool/in/<verb>/<N>.txt`, Read `.gm/exec-spool/out/<v
 
 - **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 - **Wasm-direct verbs**: fs/kv/exec/fetch/env, recall, codesearch, memorize(+prune), health, filter, full git verb family. Enumeration in the recall store (`recall: wasm-direct plugkit verbs full list`).
+- **Host-native verb**: `background-convert` (`{verb, task}`) detaches an already-in-flight dispatch so the daemon worker stops waiting on it -- agent-initiated only, never routed to gm.wasm. Detail: `.gm/daemon-config-reference.md`.
 - **memorize-prune**: prune bad/superseded memories; two-mode spec (key-delete vs query-review) in the recall store (`recall: memorize-prune verb two-mode spec`).
 - **git verbs**: git is a first-class spool surface, never a shell command; `git_finalize {message}` is the bundled COMPLETE-phase push surface, `git_push` the only admissible raw push (porcelain-gated, rebase-retry). A git-dominant `bash`/`powershell` body is gated (`deviation.bash-git-bypass`). Per-verb shapes + host_git `.exe` resolution in the recall store (`recall: git verbs rs-plugkit spool surface`).
 - **filter**: pure stdout -> compact-stdout transform, in-wasm. Spec + usage (pipe raw command output through it before context) in the recall store (`recall: filter verb rs-plugkit spool spec`).
