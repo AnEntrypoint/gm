@@ -10611,3 +10611,7 @@
   witness_evidence: 'Investigation report headless-chrome-elimination: run() eval timeout (browser.rs ~615-623) kills only the node cdp-eval helper child via unconditional kill(), no graceful term-then-escalate; the actual Chrome process stays in SESSIONS and is reused next dispatch even if page/renderer is wedged. Fix: on eval timeout, verify Chrome CDP responsiveness (e.g. re-poll /json/version) and if unresponsive, kill+remove the session from SESSIONS so the next dispatch relaunches a fresh Chrome instead of reusing a wedged one.'
   id: agentplug-browser-rs-eval-timeout-escalate-kill-wedged-chrome-no
   status: pending
+- title: 'gm root submodule pointer bump for agentplug 09e2f37 deferred: concurrent session actively writing .gm/prd.yml, .gm/mutables.yml, and rs-plugkit/agentplug inner trees -- resume once quiet'
+  witness_evidence: git status --porcelain on gm root showed .gm/mutables.yml and .gm/prd.yml re-dirtied between two close reads despite no local edits this turn, and both agentplug and rs-plugkit submodules carry unrelated substantial in-flight work (browser.rs orphan-reaping, fsm.rs/mutables.rs/prd.rs edits) not authored this turn -- single-writer contention, back off per gm's own discipline
+  id: gm-root-submodule-pointer-bump-for-agentplug-09e2f37-deferred-co
+  status: pending
