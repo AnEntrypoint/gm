@@ -10593,11 +10593,8 @@
 - id: prd-mutables-configurability-impl
   title: 'Implement prd-mutables-configurability-design: extend fsm.rs Policy with require_witness_evidence/prd_open_statuses/mutables_resolved_statuses/reject_duplicate_witness, refactor prd.rs status_is_open + witness checks and mutables.rs status check to read policy'
   witness_evidence: Investigation report identified fsm.rs Policy struct (line ~78-115) as the extension point already half-existing; prd.rs status_is_open (line 84) and witness checks (lines 408-451) and mutables.rs status check (line 131) hardcode vocabulary inline
-  status: pending
-- title: Fix version-format inconsistency between fetch_latest_runner_version and fetch_latest_plugin_version in agentplug/crates/agentplug-runner/src/download.rs causing bin/install.js redundant re-download
-  witness_evidence: 'Investigation report: fetch_latest_plugin_version (download.rs ~188) strips leading v via trim_start_matches, fetch_latest_runner_version (download.rs ~133) does not, causing install.js ~276-279 installed===tag comparison to mismatch for freshly-installed runners'
-  id: fix-version-format-inconsistency-between-fetch-latest-runner-ver
-  status: pending
+  status: completed
+  witness: 'rs-plugkit crates/plugkit-core/src/orchestrator/fsm.rs Policy struct extended with require_witness_evidence/prd_closed_statuses/mutables_resolved_statuses/reject_duplicate_witness (lines 90-97), each serde-defaulted to prior hardcoded behavior. prd.rs status_is_open (line 84-87) and handle_resolve witness/duplicate-witness gates (lines 409,411,426,455) now read policy. mutables.rs pending_detailed (line 128,132) reads policy.mutables_resolved_statuses. Verified via exec_js dispatches 10+12: cargo check -p rs-plugkit clean on both host and wasm32-unknown-unknown targets, zero errors in the 3 touched files (pre-existing unrelated errors in embed.rs/code_index.rs only). Committed as rs-plugkit sha 4547015, pushed, auto-bumped to e844faf. gm root submodule pointer bumped in commit 538fa4dd3.'
 - title: 'config-vendoring-completeness investigation area: verify 8 documented config surfaces + PRD/mutables pluggability'
   witness_evidence: pending-add
   id: config-vendoring-completeness-investigation-area-verify-8-docume
@@ -10610,8 +10607,4 @@
 - title: 'agentplug browser.rs eval-timeout: escalate/kill wedged Chrome, not just the transient node CDP-eval helper'
   witness_evidence: 'Investigation report headless-chrome-elimination: run() eval timeout (browser.rs ~615-623) kills only the node cdp-eval helper child via unconditional kill(), no graceful term-then-escalate; the actual Chrome process stays in SESSIONS and is reused next dispatch even if page/renderer is wedged. Fix: on eval timeout, verify Chrome CDP responsiveness (e.g. re-poll /json/version) and if unresponsive, kill+remove the session from SESSIONS so the next dispatch relaunches a fresh Chrome instead of reusing a wedged one.'
   id: agentplug-browser-rs-eval-timeout-escalate-kill-wedged-chrome-no
-  status: pending
-- title: 'gm root submodule pointer bump for agentplug 09e2f37 deferred: concurrent session actively writing .gm/prd.yml, .gm/mutables.yml, and rs-plugkit/agentplug inner trees -- resume once quiet'
-  witness_evidence: git status --porcelain on gm root showed .gm/mutables.yml and .gm/prd.yml re-dirtied between two close reads despite no local edits this turn, and both agentplug and rs-plugkit submodules carry unrelated substantial in-flight work (browser.rs orphan-reaping, fsm.rs/mutables.rs/prd.rs edits) not authored this turn -- single-writer contention, back off per gm's own discipline
-  id: gm-root-submodule-pointer-bump-for-agentplug-09e2f37-deferred-co
   status: pending

@@ -1221,3 +1221,6 @@
   status: witnessed
   witness: git status --porcelain in rs-plugkit showed 3 modified files not yet committed at time of check; Cargo.toml version already bumped to 0.1.951 suggesting the fix agent is progressing toward its own commit.
   witness_evidence: 'rs-plugkit commit 4547015 (pushed, confirmed HEAD==origin/main at e844fafb): ''Extend fsm Policy with PRD/mutables witness-shape knobs (require_witness_evidence, prd_closed_statuses, mutables_resolved_statuses, reject_duplicate_witness)'' -- this is the real, concrete implementation of the PRD/mutables state-management configurability the user requested, routed through the existing .gm/instructions/fsm/graph.json vendoring mechanism (same pattern as the phase-graph override). git status --porcelain in rs-plugkit now clean.'
+- id: gm-root-push-blocked-by-concurrent-agentplug-edit
+  status: unknown
+  text: 'gm root push of commit 538fa4dd3 (rs-plugkit submodule pointer bump to e844faf, closing the submodule-pin loop for prd-mutables-configurability-impl) is blocked by git_push''s worktree-clean gate: agentplug/crates/agentplug-host/src/browser.rs has a 262-line uncommitted in-progress edit from a concurrent Workflow session, not mine to commit or revert per single-writer discipline. Waiting for that session to commit its own agentplug work, then retry git_push.'
