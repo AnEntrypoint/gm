@@ -137,6 +137,8 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 **Push requires clean worktree witnessed in its own tool-use event**: `git push` only on empty `git status --porcelain`, probed its OWN Bash event before push (never `&&`-chained). Prefer `git_push`/`git_finalize` (internal gate). Enforcement locations: the recall store (`recall: push clean worktree enforcement locations`).
 
+**Any history rewrite or force-push sourced from an external clone/mirror verifies that source's ancestry against live HEAD first**: `git merge-base --is-ancestor <source-tip> <live-HEAD>` must exit 0 before `filter-repo`/force-push runs against that clone -- a freshly-named clone directory is not proof of freshness, staleness is a content property, not a naming one. Skipping this check risks silently discarding real commits on the remote if the clone turns out stale or wrong-branch.
+
 **AGENTS.md / CLAUDE.md are inline-edited AND dual-written to the store**: inline-edit for structural rules (only doc surviving context summarization), AND `memorize-fire` the same rule for `recall`/`auto_recall` surfacing -- complementary, not either/or. Never `namespace:"AGENTS.md"`; load-bearing rules -> default namespace. Mechanics: the recall store (`recall: memorize-fire ingestion classifier`).
 
 **A memorized workaround is a tool defect; transform it, never accumulate it**: using gm != working on gm, so a workaround/known-limitation-framed `recall` memo is tribal knowledge that surprises a fresh user/LLM -- surprises forbidden, everything must be predictable at face value. Resolve: (a) already in standing prose -> prune; (b) prose-worthy, absent -> add then prune; (c) genuinely surprising -> fix code predictable then prune.
