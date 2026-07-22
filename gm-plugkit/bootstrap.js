@@ -829,7 +829,7 @@ function discoverBundledSkillsAndSources() {
       const m = f.match(/^SKILL-(.+)\.md$/);
       if (m) found.set(m[1], path.join(__dirname, f));
     }
-  } catch (_) {}
+  } catch (e) { obsEvent('bootstrap', 'discover-bundled-skills.readdir-failed', { dir: __dirname, error: e.message }); }
   const devSkillsRoots = [
     path.join(__dirname, '..', 'gm-skill', 'skills'),
     path.join(__dirname, '..', '..', 'gm-skill', 'skills'),
