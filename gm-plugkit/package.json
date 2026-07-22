@@ -1,6 +1,6 @@
 {
   "name": "gm-plugkit",
-  "version": "2.0.2069",
+  "version": "2.0.2070",
   "description": "Bootstrap and daemon-spawn tool for gm plugkit binary. Downloads the correct platform wasm, verifies SHA256, and launches agentplug-runner (the native wasm host) as the spool watcher daemon.",
   "main": "index.js",
   "bin": {
