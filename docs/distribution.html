@@ -125,13 +125,13 @@ npx gm-skill install --yes    # non-interactive, sets them outright</code></pre>
 
 <pre><code>always use the gm skill for everything, always fan out subagents</code></pre>
 
-<p>That's the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) ensures the wasm artifact and the <code>plugkit-wasm-wrapper.js</code> loader are on disk under <code>node_modules/plugkit-wasm/</code>. After that, every dispatch is a local <code>wasm.instantiate</code> plus a <code>dispatch_verb</code> call. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
+<p>That's the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a ~12-line <code>SKILL.md</code> that tells the agent to dispatch verbs through the file-spool. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) delegates to <code>agentplug-runner</code> -- a sha256-verified native binary the installer downloads per platform, the sole wasm loader (no JS wasm-host fallback). After that, every dispatch is a spool write served by the shared daemon's real <code>wasmtime</code> instance running <code>dispatch_verb</code>. The wasm artifact is under 200 KB; the agent never sees a download progress bar after the first run.</p>
 
 <h3>2.1 What "Turnkey" Excludes</h3>
 
 <ul>
   <li>No host toolchain. The user does not need <code>cargo</code>, <code>rustup</code>, <code>cmake</code>, <code>gcc</code>, or platform SDKs.</li>
-  <li>No native build step at install. The single wasm artifact runs everywhere a Node 20+ WASI host runs, one binary for every OS and every CPU.</li>
+  <li>No native build step at install. The single wasm artifact runs inside <code>agentplug-runner</code>'s <code>wasmtime</code> host, published for 6 platform/arch combinations so the agent never compiles anything.</li>
   <li>No daemon to install or supervise. The watcher and host run inside the same wasm instance as the orchestrator. There is no port, no rpc daemon, no <code>kill -9</code> story.</li>
   <li>No mandatory secrets at install. Embeddings run in-wasm via baked Q4 weights; LLM-tier work is offloaded to the host agent via callback. Offline use is the default.</li>
 </ul>

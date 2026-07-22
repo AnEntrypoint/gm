@@ -60,7 +60,7 @@ gm/
 |-- skills/gm/        <- the skill (SKILL.md), installed as /gm
 |-- bin/               <- bootstrap + installer + plugkit wasm pins (gmsniff / ccsniff are separate npm packages, `bun x gmsniff`, `bun x ccsniff`)
 |-- scripts/           <- publish-time helper scripts
-|-- gm-plugkit/        <- separate npm package: thin launcher + bootstrap that delegates to the native agentplug-runner, with the JS wasm-wrapper kept only as a fallback host
+|-- gm-plugkit/        <- separate npm package: thin launcher + bootstrap that downloads and delegates to the native agentplug-runner (sole loader, no JS-wrapper fallback)
 |-- gm.json            <- version + plugkit pin
 |-- package.json       <- npm publish manifest
 |-- AGENTS.md          <- architectural rules (present-tense, no history)
@@ -87,7 +87,7 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 - **`recall`**: vector + KV recall against `rs-learn`, scored by cosine x recency, namespace-aware
 - **`codesearch`**: semantic vector search across the project
 - **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
-- **`browser`**: managed Chrome session with project-scoped profile at `.gm/browser-profile/`
+- **`browser`**: headful-by-default Chrome session driven natively by `agentplug` (CDP direct, no JS wrapper) -- a process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches instead of relaunching per-call, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly
 - **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
 - **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
 
@@ -123,7 +123,14 @@ The plugkit wasm itself is built and released by [rs-plugkit](https://github.com
 
 ## developing gm itself
 
-`rs-plugkit/` is a git submodule (rs-plugkit's Rust source, not a compiled artifact). A plain `git clone` leaves it empty -- clone with submodules, or init it after the fact:
+Seven git submodules, source only, none compiled artifacts:
+
+- **`rs-plugkit/`** -- the wasm guest: orchestrator, gates, spool dispatch (the gm "brain")
+- **`agentplug/`** -- the native host that loads that wasm and drives `browser`/`task` natively via CDP, plus the shared-plugin loader
+- **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- the shared native plugins agentplug loads alongside the gm wasm (embeddings, vector storage, syntax parsing)
+- **`rs-codeinsight`**, **`rs-search`** -- codebase-indexing and search backends the `codesearch` verb consumes
+
+A plain `git clone` leaves all seven empty -- clone with submodules, or init them after the fact:
 
 ```
 git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
@@ -131,7 +138,7 @@ git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
 git submodule update --init --recursive
 ```
 
-An empty `rs-plugkit/` directory after a normal `git clone` is expected, not a bug -- it only matters if you're changing rs-plugkit's own Rust source (orchestrator, gates, spool dispatch) rather than the skill/installer JS in this repo's own tree.
+Empty submodule directories after a normal `git clone` are expected, not a bug -- they only matter if you're changing one of these repos' own source rather than the skill/installer JS in this repo's own tree.
 
 ## license
 

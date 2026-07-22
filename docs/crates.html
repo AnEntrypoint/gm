@@ -128,7 +128,7 @@ sequenceDiagram
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> own the PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm module that loads into the Node host; the other four crates are its imports.</p>
+  <p><strong>Job:</strong> own the PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm guest; <code>agentplug-runner</code> (a native wasmtime host, see below) is the sole loader that runs it -- the other two crates on this page are its imports, alongside agentplug's own shared native plugins.</p>
 
   <h3>what it actually does</h3>
   <ul>
@@ -153,6 +153,32 @@ sequenceDiagram
     <div class="cell"><span class="label">artifact</span><span class="value">plugkit.wasm (~&lt;200 KB)</span></div>
     <div class="cell"><span class="label">cascade target</span><span class="value">plugkit-bin Releases + npm</span></div>
     <div class="cell"><span class="label">version source</span><span class="value">Cargo.toml (single)</span></div>
+  </div>
+</div>
+
+<div class="crate">
+  <div class="crate-header">
+    <h2>agentplug</h2>
+    <span class="role">the native host</span>
+    <span class="repo"><a href="https://github.com/AnEntrypoint/agentplug">AnEntrypoint/agentplug (open)</a></span>
+  </div>
+
+  <p><strong>Job:</strong> the sole loader of <code>plugkit.wasm</code> -- a real native <code>wasmtime</code> binary, not a JS wasm-host. <code>agentplug-runner</code> loads gm's wasm as one plugin among siblings (<code>agentplug-bert</code>, <code>agentplug-libsql</code>, <code>agentplug-treesitter</code>), routing the wasm guest's <code>host_plugin_call</code>/<code>host_vec_embed</code> imports to those shared plugins so gm's own wasm ships without baked-in embedding weights. Not a Rust crate on <code>crates.io</code> in the same publishing sense as the other three -- a standalone binary, published to <code>AnEntrypoint/agentplug-bin</code> Releases per platform, sha256-verified at install time.</p>
+
+  <h3>what it actually does</h3>
+  <ul>
+    <li>one shared daemon process serves every registered project on the machine -- up to four projects genuinely concurrent, a single project's own dispatches still serialize</li>
+    <li>drives the <code>browser</code> verb natively via direct CDP (no JS wrapper, no playwriter relay in the primary path)</li>
+    <li>polls <code>plugkit-bin</code>'s Releases API every 600s for a newer wasm tag; on mismatch, downloads+verifies+hot-reloads in place</li>
+    <li>self-updates its own executable too, not just the wasm it serves: stages a verified <code>&lt;exe&gt;.new</code>, spawns it as a <code>takeover</code> process that pre-warms plugins before signaling ready, then the old daemon releases ownership -- a real handoff, no service gap</li>
+    <li>writes structured lifecycle events (<code>dispatch.end</code>, <code>phase.transitioned</code>, etc, sent by rs-plugkit as <code>evt: {json}</code> lines via <code>host_log</code>) to each project's own <code>.gm/exec-spool/.watcher.log</code>, the surface <code>gmsniff</code> reads</li>
+  </ul>
+
+  <div class="statgrid">
+    <div class="cell"><span class="label">target</span><span class="value">native (wasmtime host)</span></div>
+    <div class="cell"><span class="label">artifact</span><span class="value">agentplug-runner (6 platforms)</span></div>
+    <div class="cell"><span class="label">cascade target</span><span class="value">agentplug-bin Releases</span></div>
+    <div class="cell"><span class="label">concurrency</span><span class="value">4 projects/daemon, 1 dispatch/project</span></div>
   </div>
 </div>
 
@@ -226,6 +252,8 @@ sequenceDiagram
 <p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-codeinsight</code>, <code>rs-search</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>'s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm, publishes it, and bumps <code>gm-starter/gm.json::plugkitVersion</code> plus <code>bin/plugkit.wasm.sha256</code> in this repo. The bump commit triggers <code>publish.yml</code>, which runs <code>node cli.js gm-starter ./build</code> and <code>npm publish build/gm-skill</code>. The next <code>bun add -g gm-skill</code> picks up the change.</p>
 
 <p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-codeinsight</code> and <code>rs-search</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+
+<p><strong><code>agentplug</code> is a separate, decoupled pipeline that consumes the cascade's output rather than joining it.</strong> Its own CI builds only the native host binary (published to <code>agentplug-bin</code>) and the shared plugins' own <code>*-bin</code> releases; none of them build or publish gm's wasm. Every host (agentplug-runner included) fetches the same <code>plugkit-slim.wasm</code> from <code>plugkit-bin</code> at runtime via its own 600s poll -- a plugkit-core change flows through the cascade above with zero agentplug rebuild needed. An agentplug-side change (a new native subsystem, a browser/task fix) rebuilds only <code>agentplug-runner</code>, independent of everything above.</p>
 
 <h2>notes on the architecture</h2>
 
