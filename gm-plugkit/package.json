@@ -10,6 +10,7 @@
     "cli.js",
     "index.js",
     "bootstrap.js",
+    "bootstrap-shared.js",
     "gm-log.js",
     "gm-process.js",
     "plugkit.version",
