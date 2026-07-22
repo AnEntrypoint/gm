@@ -16,7 +16,8 @@ behaves byte-identically to before this file existed.
   "plugin_update_poll_interval_secs": 600,
   "runner_update_poll_interval_secs": 600,
   "max_concurrent_projects": 4,
-  "gm_concurrency": 4
+  "gm_concurrency": 4,
+  "side_plugin_concurrency": 1
 }
 ```
 
@@ -45,13 +46,54 @@ behaves byte-identically to before this file existed.
   entire duration (live-witnessed 18-21s stall, fixed by pooling instead of
   reverting to per-project instances, which would reintroduce per-project
   state duplication for a plugin whose state is supposed to live in flat
-  files). bert/treesitter/libsql are NOT pooled -- exactly one shared instance
-  each, unchanged -- since bert alone costs ~133MB of resident tensors per
-  instance and no live contention was ever found for the three of them.
+  files). bert/treesitter/libsql default to exactly one shared instance
+  each -- see `side_plugin_concurrency` below for how to raise it.
+- `side_plugin_concurrency` (default 1) -- how many concurrent live Stores
+  EACH of bert/treesitter/libsql (the non-`gm` stateless-shared plugins)
+  holds. Defaults to 1, byte-identical to the pre-existing hardcoded
+  behavior, because bert alone costs ~133MB of resident tensors per extra
+  instance and no live contention was ever found for the three of them on
+  this host's own workloads. A deployment that DOES see real cross-project
+  `codesearch`/`recall`/`embed` contention -- `host_plugin_call`/
+  `host_vec_embed` calls into a size-1 pool serialize behind
+  `SharedPluginPool::acquire`'s bounded 20s `ACQUIRE_TIMEOUT_MS` before
+  surfacing `plugin_pool_busy_timeout` rather than hanging forever -- can
+  raise this to trade the added memory for less queuing under concurrent
+  multi-project load.
 
-Changing `heartbeat_interval_secs`, `max_concurrent_projects`, or `gm_concurrency`
-requires a daemon restart to take effect (read once at startup, not re-read per
-tick, since these govern the daemon's own loop timing and pool sizing).
+Changing `heartbeat_interval_secs`, `max_concurrent_projects`, `gm_concurrency`,
+or `side_plugin_concurrency` requires a daemon restart to take effect (read
+once at startup, not re-read per tick, since these govern the daemon's own
+loop timing and pool sizing).
+
+## Heartbeat independence
+
+The heartbeat write and single-instance-ownership re-check run on their own
+dedicated ticker thread (`spawn_heartbeat_ticker`), independent of the
+per-tick worker-pool `thread::scope` that dispatches project work. Before
+this, both lived only at the top of the main loop, gated behind that
+iteration's `thread::scope` fully joining every worker -- one worker occupying
+a slot for up to `DISPATCH_CALL_DEADLINE_SECS` (40s, a slow exec_js/browser
+call or a stuck pool-acquire wait) delayed the heartbeat write for that same
+duration, risking a live daemon's heartbeat going stale long enough for a
+competing process to claim ownership out from under it. The ticker thread
+never touches `projects`/`plugin_modules`/worker state directly (only the
+filesystem, via the same primitives the old inline check already used); on
+losing authority it raises a shared flag the main loop polls cheaply (both at
+the top of every loop iteration and immediately after each dispatch batch)
+and performs the actual session-owning shutdown itself.
+
+## Mid-batch verb starvation
+
+Within one `dispatch_project` call, newly-arrived requests in ANY verb
+directory (not just `background-convert`, which had this fix first) are
+re-scanned and spawned into the same in-flight batch on every ~50ms poll
+tick, rather than waiting for the batch's original members to finish and the
+next `dispatch_project` call for that root to pick them up. Without this, an
+ordinary request (e.g. `phase-status`) landing on a busy project's spool
+while an unrelated slow dispatch (e.g. `codesearch`, `exec_js`) from the same
+claim-snapshot was still in flight sat unclaimed for the full duration of
+that slow sibling.
 
 ## Per-project fairness cap (not machine-wide)
 
