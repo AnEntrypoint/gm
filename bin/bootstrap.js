@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 const { ensureDir, pidAlive, sha256OfFile, sha256OfFileSync } = require('../gm-plugkit/gm-process');
 
 const NPM_PACKAGE = 'plugkit-wasm';
@@ -160,8 +160,9 @@ function resolveWindowsExe(cmd) {
 
 function probeBinaryVersion(binPath) {
   try {
-    const { spawnSync } = require('child_process');
-    const r = spawnSync(binPath, ['--version'], { timeout: 3000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    if (!binPath || !path.isAbsolute(binPath)) return null;
+    const resolvedBin = fs.realpathSync(binPath);
+    const r = spawnSync(resolvedBin, ['--version'], { timeout: 3000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     if (r.error) return null;
     const text = `${r.stdout || ''} ${r.stderr || ''}`.trim();
     const m = text.match(/(\d+\.\d+\.\d+)/);
@@ -584,7 +585,6 @@ function writeDaemonVersion(v) {
 
 function pidCommandLineForKillGuard(pid) {
   try {
-    const { spawnSync } = require('child_process');
     if (process.platform === 'win32') {
       const r = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${Number(pid)}").CommandLine`], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
       return String((r && r.stdout) || '');
@@ -611,7 +611,6 @@ function killPid(pid) {
   catch (_) { try { process.kill(pid); } catch (_) {} }
   if (os.platform() === 'win32' && pidAlive(pid)) {
     try {
-      const { spawnSync } = require('child_process');
       spawnSync('taskkill', ['/F', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true, timeout: 3000, killSignal: 'SIGKILL' });
     } catch (_) {}
   }
