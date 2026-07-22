@@ -88,6 +88,16 @@ tmp/
 .claude/worktrees/
 .gm/memories/*.tmp-*
 .gm/.instructions-shipped-manifest.json
+
+# .gm/prd.yml + .gm/mutables.yml: per-dispatch runtime state, rewritten on
+# nearly every PLAN/EXECUTE/VERIFY dispatch -- same class as .gm/witness/
+# and gm.db above (transient, regenerated, never durable source). Tracking
+# it committed a near-full-file version on every single dispatch (970
+# revisions, 743MB logical history for a currently-2.1MB file), roughly
+# half of .git on-disk blob weight -- untracked here per this project own
+# derived-stores-are-transient-never-tracked policy.
+.gm/prd.yml
+.gm/mutables.yml
 # <<< plugkit managed
 .gm/pw-sock-*/
 

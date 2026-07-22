@@ -6,8 +6,35 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
-const { logEvent: _sharedLogEvent } = require('./gm-log');
-const { pidCommandLineForKillGuard: _sharedPidCommandLine, ensureDir, pidAlive, sha256OfFile, sha256OfFileSync } = require('./gm-process');
+const { pidAlive, sha256OfFile, sha256OfFileSync } = require('./gm-process');
+const shared = require('./bootstrap-shared');
+const {
+  obsEvent,
+  cacheRoot,
+  fallbackCacheRoot,
+  gmToolsDir,
+  ensureDir,
+  acquireLock,
+  releaseLock,
+  isLockStale,
+  pruneOldVersions,
+  healIfShaMatches,
+  daemonVersionSentinel,
+  readDaemonVersion,
+  writeDaemonVersion,
+  pidCommandLineForKillGuard,
+  pidIsPlugkitProcess,
+  writeKillAttribution,
+  killPid,
+  killSpoolWatcherInCwd,
+  proactiveKillForNewInstall,
+} = shared;
+
+// ensureNextStepWiring here is intentionally NOT imported from
+// bootstrap-shared -- this file's version does strictly more (CLAUDE.md
+// prepend, AGENTS.md append, managed .npmignore block) than bin/bootstrap.js's
+// leaner one, so it is genuinely-different logic, not accidental drift, and
+// stays local to this file.
 
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
@@ -40,10 +67,6 @@ function log(msg) {
   try { process.stderr.write(`[gm-plugkit] ${msg}\n`); } catch (_) {}
 }
 
-function obsEvent(subsystem, event, fields) {
-  _sharedLogEvent(subsystem, event, fields, { cwd: false });
-}
-
 function writeBootstrapError(spec) {
   try {
     const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
@@ -54,6 +77,7 @@ function writeBootstrapError(spec) {
 }
 
 function clearBootstrapError() {
+  // best-effort, missing file is fine
   try {
     const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
     fs.unlinkSync(path.join(projectDir, '.gm', 'exec-spool', '.bootstrap-error.json'));
@@ -79,7 +103,12 @@ function instructionsManifestPath(cwd) {
 
 function readInstructionsManifest(cwd) {
   try { return JSON.parse(fs.readFileSync(instructionsManifestPath(cwd), 'utf-8')); }
-  catch (_) { return {}; }
+  catch (e) {
+    if (e && e.code !== 'ENOENT') {
+      obsEvent('bootstrap', 'instructions-bundle.manifest-read-failed', { error: e.message });
+    }
+    return {};
+  }
 }
 
 function writeInstructionsManifest(cwd, manifest) {
@@ -229,31 +258,6 @@ function ensureNextStepWiring(cwd) {
 }
 
 
-function cacheRoot() {
-  const home = os.homedir();
-  if (process.env.PLUGKIT_CACHE_DIR) return process.env.PLUGKIT_CACHE_DIR;
-  if (os.platform() === 'win32') {
-    const base = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
-    return path.join(base, 'plugkit', 'bin');
-  }
-  if (os.platform() === 'darwin') return path.join(home, 'Library', 'Caches', 'plugkit', 'bin');
-  const xdg = process.env.XDG_CACHE_HOME || path.join(home, '.cache');
-  return path.join(xdg, 'plugkit', 'bin');
-}
-
-function fallbackCacheRoot() {
-  return path.join(os.tmpdir(), 'plugkit-cache', 'bin');
-}
-
-function gmToolsDir() {
-  const home = process.env.USERPROFILE || process.env.HOME || os.homedir();
-  const primary = path.join(home, '.gm-tools');
-  const fallback = path.join(home, '.claude', 'gm-tools');
-  if (fs.existsSync(primary)) return primary;
-  if (fs.existsSync(fallback)) return fallback;
-  return primary;
-}
-
 // Slim-artifact eligibility: plugkit-core's embed.rs probes host_vec_embed
 // before ever loading its wasm-embedded safetensors fallback (see
 // rs-plugkit/crates/plugkit-core/src/embed.rs::init_ctx) -- a slim build
@@ -311,6 +315,13 @@ function readVersionFile() {
   return fs.readFileSync(p, 'utf8').trim();
 }
 
+// readVersionFile() throws loudly on its own (missing/unreadable file is a
+// real, surfaced error) -- callers below that swallow it are choosing to
+// no-op rather than propagate, so they log what they swallowed instead of
+// going silent. This is the actual behavior at every call site already
+// (killStaleDaemonIfVersionChanged just returns, ensureReady leaves
+// pinnedVersion null) -- only the missing observability was the gap.
+
 function readShaManifest() {
   const p = path.join(wrapperDir, 'plugkit.sha256');
   if (!fs.existsSync(p)) return null;
@@ -340,37 +351,6 @@ function readShaManifest() {
   return out;
 }
 
-function acquireLock(lockPath) {
-  const start = Date.now();
-  for (;;) {
-    try {
-      const fd = fs.openSync(lockPath, 'wx');
-      fs.writeSync(fd, String(process.pid));
-      fs.closeSync(fd);
-      return true;
-    } catch (err) {
-      if (err.code !== 'EEXIST') throw err;
-      let stale = false;
-      try {
-        const st = fs.statSync(lockPath);
-        if (Date.now() - st.mtimeMs > LOCK_STALE_MS) stale = true;
-        const owner = parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
-        if (Number.isFinite(owner) && owner !== process.pid && !pidAlive(owner)) stale = true;
-      } catch (_) { stale = true; }
-      if (stale) {
-        try { fs.unlinkSync(lockPath); } catch (_) {}
-        continue;
-      }
-      if (Date.now() - start > ATTEMPT_TIMEOUT_MS) throw new Error(`lock wait timeout: ${lockPath}`);
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
-    }
-  }
-}
-
-function releaseLock(lockPath) {
-  try { fs.unlinkSync(lockPath); } catch (_) {}
-}
-
 async function extractNpmPackageWasm(destPath, version) {
   const tempDir = path.join(path.dirname(destPath), '.npm-extract-' + Date.now());
   try {
@@ -395,7 +375,6 @@ async function extractNpmPackageWasm(destPath, version) {
       encoding: 'utf8',
       windowsHide: true,
       ...(isCmdShim ? { shell: true } : {}),
-      ...(process.platform === 'win32' ? { creationFlags: 0x08000000 } : {}),
     });
 
     if (result.error) throw result.error;
@@ -533,125 +512,13 @@ async function extractNpmPackageWithRetry(destPath, version) {
 }
 
 
-function healIfShaMatches(binPath, expectedSha, sentinelPath, partialPath, kind) {
-  if (!fs.existsSync(binPath)) return false;
-  if (partialPath) { try { if (fs.existsSync(partialPath)) fs.unlinkSync(partialPath); } catch (_) {} }
-  if (!expectedSha) return false;
-  let got;
-  try { got = sha256OfFileSync(binPath); }
-  catch (_) { return false; }
-  if (got !== expectedSha) {
-    try { fs.unlinkSync(binPath); } catch (_) {}
-    return false;
-  }
-  try { fs.writeFileSync(sentinelPath, new Date().toISOString()); } catch (_) { return false; }
-  obsEvent('bootstrap', 'cache.heal', { path: binPath, kind });
-  return true;
-}
-
-function daemonVersionSentinel() {
-  const root = (() => {
-    try { const r = cacheRoot(); ensureDir(r); return r; }
-    catch (_) { const r = fallbackCacheRoot(); ensureDir(r); return r; }
-  })();
-  return path.join(root, '.daemon-version');
-}
-
-function readDaemonVersion() {
-  try { return fs.readFileSync(daemonVersionSentinel(), 'utf8').trim(); }
-  catch (_) { return null; }
-}
-
-function writeDaemonVersion(v) {
-  try { fs.writeFileSync(daemonVersionSentinel(), String(v)); } catch (_) {}
-}
-
-function pidCommandLineForKillGuard(pid) {
-  return _sharedPidCommandLine(pid);
-}
-
-function pidIsPlugkitProcess(pid) {
-  return /agentplug-runner(\.exe)?/i.test(pidCommandLineForKillGuard(pid));
-}
-
-function writeKillAttribution(targetSpoolDir, info) {
-  try {
-    fs.mkdirSync(targetSpoolDir, { recursive: true });
-    fs.writeFileSync(path.join(targetSpoolDir, '.kill-attribution.json'), JSON.stringify({ killer_pid: process.pid, killer_cwd: process.cwd(), killer_script: __filename, ts: Date.now(), ...info }, null, 2));
-  } catch (_) {}
-}
-
-function killPid(pid) {
-  if (!Number.isFinite(pid) || pid === process.pid || !pidAlive(pid)) return false;
-  try { process.kill(pid, 'SIGTERM'); }
-  catch (_) { try { process.kill(pid); } catch (_) {} }
-  if (os.platform() === 'win32' && pidAlive(pid)) {
-    try { spawnSync('taskkill', ['/F', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true, timeout: 3000, killSignal: 'SIGKILL' }); } catch (_) {}
-  }
-  return true;
-}
-
-function killSpoolWatcherInCwd(reason) {
-  try {
-    const pidPath = path.join(process.cwd(), '.gm', 'exec-spool', '.watcher.pid');
-    if (!fs.existsSync(pidPath)) return null;
-    const pid = parseInt(fs.readFileSync(pidPath, 'utf8').trim(), 10);
-    if (pidAlive(pid) && !pidIsPlugkitProcess(pid)) {
-      obsEvent('bootstrap', 'watcher.kill-skipped-pid-reused', { pid, reason });
-      try { fs.unlinkSync(pidPath); } catch (_) {}
-      return null;
-    }
-    writeKillAttribution(path.join(process.cwd(), '.gm', 'exec-spool'), { reason, target_pid: pid, via: 'killSpoolWatcherInCwd' });
-    if (killPid(pid)) {
-      obsEvent('bootstrap', 'watcher.killed', { pid, reason });
-      try { fs.unlinkSync(pidPath); } catch (_) {}
-      return pid;
-    }
-    try { fs.unlinkSync(pidPath); } catch (_) {}
-  } catch (_) {}
-  return null;
-}
-
-
-function isLockStale(lockPath) {
-  try {
-    const st = fs.statSync(lockPath);
-    if (Date.now() - st.mtimeMs > LOCK_STALE_MS) return true;
-    const owner = parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
-    if (Number.isFinite(owner) && !pidAlive(owner)) return true;
-  } catch (_) { return true; }
-  return false;
-}
-
-function pruneOldVersions(root, keepVersion) {
-  try {
-    const entries = fs.readdirSync(root);
-    for (const e of entries) {
-      if (!e.startsWith('v')) continue;
-      if (e === `v${keepVersion}`) continue;
-      const dir = path.join(root, e);
-      const lock = path.join(dir, '.lock');
-      if (fs.existsSync(lock) && !isLockStale(lock)) continue;
-      if (fs.existsSync(lock)) { try { fs.unlinkSync(lock); } catch (_) {} }
-      try {
-        fs.rmSync(dir, { recursive: true, force: true, maxRetries: 1, retryDelay: 50 });
-        log(`pruned ${dir}`);
-      } catch (err) { log(`prune skip ${dir}: ${err.message}`); }
-    }
-  } catch (_) {}
-}
-
-function proactiveKillForNewInstall(installedVersion) {
-  try {
-    const reason = `install:v${installedVersion}`;
-    killSpoolWatcherInCwd(reason);
-    writeDaemonVersion(installedVersion);
-  } catch (_) {}
-}
-
 function killStaleDaemonIfVersionChanged() {
   let currentVersion;
-  try { currentVersion = readVersionFile(); } catch (_) { return; }
+  try { currentVersion = readVersionFile(); }
+  catch (e) {
+    obsEvent('bootstrap', 'kill-stale-daemon.version-read-failed', { error: e.message });
+    return;
+  }
   const cached = resolveCachedBinary({ version: currentVersion });
   if (cached) {
     proactiveKillForNewInstall(currentVersion, cached);
@@ -976,7 +843,9 @@ function discoverBundledSkillsAndSources() {
         const p = path.join(root, e.name, 'SKILL.md');
         if (fs.existsSync(p) && !found.has(e.name)) found.set(e.name, p);
       }
-    } catch (_) {}
+    } catch (e) {
+      obsEvent('bootstrap', 'discover-bundled-skills.dir-read-failed', { root, error: e.message });
+    }
   }
   return found;
 }
@@ -1060,7 +929,9 @@ async function resolveLatestRemoteVersion(timeoutMs) {
       const hasPlugkitWasm = Array.isArray(rel.assets) && rel.assets.some(a => a && a.name === 'plugkit.wasm');
       if (hasPlugkitWasm) return m[1];
     }
-  } catch (_) {}
+  } catch (e) {
+    obsEvent('bootstrap', 'resolve-latest-remote-version.failed', { error: e.message });
+  }
   return null;
 }
 
@@ -1069,7 +940,9 @@ async function resolveLatestGmPlugkitNpmVersion(timeoutMs) {
     const buf = await httpGetBuffer('https://registry.npmjs.org/gm-plugkit/latest', timeoutMs || 3000);
     const meta = JSON.parse(buf.toString('utf-8'));
     if (meta && typeof meta.version === 'string') return meta.version;
-  } catch (_) {}
+  } catch (e) {
+    obsEvent('bootstrap', 'resolve-latest-npm-version.failed', { error: e.message });
+  }
   return null;
 }
 
@@ -1120,7 +993,9 @@ async function ensureReady(opts) {
           if (fs.existsSync(stalePath)) fs.unlinkSync(stalePath);
         } catch (_) {}
       }
-    } catch (_) {}
+    } catch (e) {
+      obsEvent('bootstrap', 'self-stale-check.failed', { error: e.message });
+    }
   }
 
   let pinnedVersion = null;
