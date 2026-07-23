@@ -147,3 +147,7 @@ Empty submodule directories after a normal `git clone` are expected, not a bug -
 ## license
 
 MIT
+
+## donations
+
+BTC: `15FLMay4of9rk4jK2davzzL4HDdGQtscGX`
