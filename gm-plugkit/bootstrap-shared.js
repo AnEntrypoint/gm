@@ -211,6 +211,38 @@ function proactiveKillForNewInstall(installedVersion) {
   } catch (_) {}
 }
 
+function resolveWindowsExe(cmd) {
+  if (process.platform !== 'win32') return cmd;
+  try {
+    const r = spawnSync('where', [cmd], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+      timeout: 800,
+    });
+    if (r.status !== 0) return cmd;
+    const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const exe = lines.find(l => /\.exe$/i.test(l));
+    const shim = lines.find(l => /\.(cmd|bat)$/i.test(l));
+    return exe || shim || cmd;
+  } catch {
+    return cmd;
+  }
+}
+
+function resolveNpmCliJs(shimPath) {
+  const candidates = [];
+  try {
+    const shimDir = path.dirname(shimPath);
+    candidates.push(path.join(shimDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+  } catch (_) {}
+  candidates.push(
+    path.join('C:', 'Program Files', 'nodejs', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join(process.env.APPDATA || '', 'npm', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  );
+  return candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } }) || null;
+}
+
 function ensureNextStepWiring(cwd) {
   const changes = [];
   const gmDir = path.join(cwd, '.gm');
@@ -278,4 +310,6 @@ module.exports = {
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
   ensureNextStepWiring,
+  resolveWindowsExe,
+  resolveNpmCliJs,
 };

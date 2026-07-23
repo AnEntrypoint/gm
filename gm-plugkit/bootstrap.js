@@ -29,26 +29,9 @@ const {
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
   ensureNextStepWiring: ensureNextStepWiringShared,
+  resolveWindowsExe,
+  resolveNpmCliJs,
 } = shared;
-
-function resolveWindowsExe(cmd) {
-  if (process.platform !== 'win32') return cmd;
-  try {
-    const r = spawnSync('where', [cmd], {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      windowsHide: true,
-      timeout: 800,
-    });
-    if (r.status !== 0) return cmd;
-    const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const exe = lines.find(l => /\.exe$/i.test(l));
-    const shim = lines.find(l => /\.(cmd|bat)$/i.test(l));
-    return exe || shim || cmd;
-  } catch {
-    return cmd;
-  }
-}
 
 const NPM_PACKAGE = 'plugkit-wasm';
 const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -248,11 +231,13 @@ async function extractNpmPackageWasm(destPath, version) {
     fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'plugkit-extract', version: '0.0.0', private: true }));
 
     const cmd = resolveWindowsExe('npm');
-    const args = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
+    const installArgs = ['install', '--no-audit', '--no-fund', '--no-save', NPM_PACKAGE + '@' + version];
     const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(cmd);
+    const npmCliJs = isCmdShim ? resolveNpmCliJs(cmd) : null;
 
-    const spawnCmd = isCmdShim ? `"${cmd}"` : cmd;
-    const spawnArgs = isCmdShim ? args.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : args;
+    const spawnCmd = npmCliJs ? process.execPath : (isCmdShim ? `"${cmd}"` : cmd);
+    const rawArgs = npmCliJs ? [npmCliJs, ...installArgs] : installArgs;
+    const spawnArgs = (isCmdShim && !npmCliJs) ? rawArgs.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : rawArgs;
 
     const result = spawnSync(spawnCmd, spawnArgs, {
       cwd: tempDir,
@@ -260,7 +245,7 @@ async function extractNpmPackageWasm(destPath, version) {
       timeout: ATTEMPT_TIMEOUT_MS,
       encoding: 'utf8',
       windowsHide: true,
-      ...(isCmdShim ? { shell: true } : {}),
+      ...((isCmdShim && !npmCliJs) ? { shell: true } : {}),
     });
 
     if (result.error) throw result.error;

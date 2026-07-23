@@ -29,6 +29,8 @@ const {
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
   ensureNextStepWiring,
+  resolveWindowsExe,
+  resolveNpmCliJs,
 } = shared;
 
 const NPM_PACKAGE = 'plugkit-wasm';
@@ -113,25 +115,6 @@ function ensureSkillMdCurrent(wrapperDir) {
   return { refreshed: allRefreshed };
 }
 
-function resolveWindowsExe(cmd) {
-  if (process.platform !== 'win32') return cmd;
-  try {
-    const r = spawnSync('where', [cmd], {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      windowsHide: true,
-      timeout: 800,
-    });
-    if (r.status !== 0) return cmd;
-    const lines = (r.stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const exe = lines.find(l => /\.exe$/i.test(l));
-    const shim = lines.find(l => /\.(cmd|bat)$/i.test(l));
-    return exe || shim || cmd;
-  } catch {
-    return cmd;
-  }
-}
-
 function probeBinaryVersion(binPath) {
   try {
     const { spawnSync } = require('child_process');
@@ -209,11 +192,14 @@ async function extractNpmPackageWasm(destPath, version) {
     log(`extracting npm package ${NPM_PACKAGE}@${version} to ${tempDir}`);
     obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
 
-    const npxResolved = resolveWindowsExe('npx');
-    const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(npxResolved);
-    const rawArgs = [NPM_PACKAGE + '@' + version, '--prefix', tempDir];
-    const spawnCmd = isCmdShim && /\s/.test(npxResolved) ? `"${npxResolved}"` : npxResolved;
-    const spawnArgs = isCmdShim ? rawArgs.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : rawArgs;
+    const npmResolved = resolveWindowsExe('npm');
+    const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(npmResolved);
+    const npmCliJs = isCmdShim ? resolveNpmCliJs(npmResolved) : null;
+    const installArgs = ['install', '--no-audit', '--no-fund', '--no-save', '--prefix', tempDir, NPM_PACKAGE + '@' + version];
+
+    const spawnCmd = npmCliJs ? process.execPath : (isCmdShim && /\s/.test(npmResolved) ? `"${npmResolved}"` : npmResolved);
+    const rawArgs = npmCliJs ? [npmCliJs, ...installArgs] : installArgs;
+    const spawnArgs = (isCmdShim && !npmCliJs) ? rawArgs.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : rawArgs;
     const result = spawnSync(
       spawnCmd,
       spawnArgs,
@@ -222,13 +208,13 @@ async function extractNpmPackageWasm(destPath, version) {
         timeout: ATTEMPT_TIMEOUT_MS,
         encoding: 'utf8',
         windowsHide: true,
-        ...(isCmdShim ? { shell: true } : {}),
+        ...((isCmdShim && !npmCliJs) ? { shell: true } : {}),
       }
     );
 
     if (result.error) throw result.error;
     if (result.status !== 0) {
-      throw new Error(`npx extraction failed: ${result.stderr || result.stdout || 'unknown error'}`);
+      throw new Error(`npm install extraction failed: ${result.stderr || result.stdout || 'unknown error'}`);
     }
 
     const nodeModulesPath = path.join(tempDir, 'node_modules', NPM_PACKAGE, 'plugkit.wasm');
