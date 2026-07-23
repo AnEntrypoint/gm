@@ -28,13 +28,15 @@ const {
   killPid,
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
+  ensureNextStepWiring: ensureNextStepWiringShared,
 } = shared;
 
-// ensureNextStepWiring here is intentionally NOT imported from
-// bootstrap-shared -- this file's version does strictly more (CLAUDE.md
-// prepend, AGENTS.md append, managed .npmignore block) than bin/bootstrap.js's
-// leaner one, so it is genuinely-different logic, not accidental drift, and
-// stays local to this file.
+// This file's own ensureNextStepWiring below delegates the shared prefix
+// (seed next-step.md, prepend CLAUDE.md, append AGENTS.md) to
+// bootstrap-shared's ensureNextStepWiringShared, then adds strictly more
+// (a managed .npmignore block) that bootstrap-shared's leaner version does
+// not need -- genuinely-different logic on top of a shared base, not two
+// independent copies of the same first 40 lines.
 
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
@@ -177,48 +179,7 @@ function ensureInstructionsBundle(cwd) {
 }
 
 function ensureNextStepWiring(cwd) {
-  const changes = [];
-  const gmDir = path.join(cwd, '.gm');
-  try { fs.mkdirSync(gmDir, { recursive: true }); }
-  catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: gmDir, error: e.message }); }
-
-  const nextStepPath = path.join(gmDir, 'next-step.md');
-  const nextStepBody = '# Next step\n\nDispatch the `instruction` verb to plugkit by writing `.gm/exec-spool/in/instruction/<N>.txt` (any unique N) with body `{}` (or `{"prompt":"<user request>"}` on the first dispatch of the turn). Read the response from `.gm/exec-spool/out/<N>.json` and follow the imperative in the `instruction` field.\n\nThis file is auto-rewritten by plugkit on every instruction dispatch.\n';
-  try {
-    if (!fs.existsSync(nextStepPath)) {
-      fs.writeFileSync(nextStepPath, nextStepBody);
-      changes.push('seeded .gm/next-step.md');
-    }
-  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: nextStepPath, error: e.message }); }
-
-
-  const claudeMdPath = path.join(cwd, 'CLAUDE.md');
-  try {
-    if (!fs.existsSync(claudeMdPath)) {
-      fs.writeFileSync(claudeMdPath, '@AGENTS.md\n');
-      changes.push('created CLAUDE.md');
-    } else {
-      const cur = fs.readFileSync(claudeMdPath, 'utf8');
-      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@AGENTS.md');
-      if (!hasLine) {
-        fs.writeFileSync(claudeMdPath, '@AGENTS.md\n' + cur);
-        changes.push('prepended @AGENTS.md to CLAUDE.md');
-      }
-    }
-  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: claudeMdPath, error: e.message }); }
-
-  const agentsMdPath = path.join(cwd, 'AGENTS.md');
-  try {
-    if (fs.existsSync(agentsMdPath)) {
-      const cur = fs.readFileSync(agentsMdPath, 'utf8');
-      const hasLine = cur.split(/\r?\n/).some(l => l.trim() === '@.gm/next-step.md');
-      if (!hasLine) {
-        const sep = cur.endsWith('\n') ? '' : '\n';
-        fs.writeFileSync(agentsMdPath, cur + sep + '\n@.gm/next-step.md\n');
-        changes.push('appended @.gm/next-step.md to AGENTS.md');
-      }
-    }
-  } catch (e) { obsEvent('bootstrap', 'next-step.wiring.target-failed', { target: agentsMdPath, error: e.message }); }
+  const changes = ensureNextStepWiringShared(cwd);
 
   // gm writes its own runtime data into .gm/ in every project it drives; if that
   // project is an npm package, that data must never be published. Maintain a

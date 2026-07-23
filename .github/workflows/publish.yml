@@ -22,12 +22,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PUBLISHER_TOKEN }}
+          submodules: true
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Check prose bundle completeness
+      - name: Check prose bundle completeness + prose-conformance
         run: node scripts/check-prose-bundle.mjs
 
       - name: Auto-bump version
