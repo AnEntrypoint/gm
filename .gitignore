@@ -99,6 +99,7 @@ tmp/
 # derived-stores-are-transient-never-tracked policy.
 .gm/prd.yml
 .gm/mutables.yml
+.gm/.gm-continue-count
 # <<< plugkit managed
 .gm/pw-sock-*/
 
