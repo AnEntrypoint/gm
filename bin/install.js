@@ -172,13 +172,6 @@ function runPlugkitBootstrap() {
   return Promise.resolve(false);
 }
 
-// Maps process.platform/process.arch to the exact release-asset basename for
-// agentplug-runner's CI (AnEntrypoint/agentplug's .github/workflows/release.yml)
-// publishing to AnEntrypoint/agentplug-bin -- must stay byte-identical to that
-// workflow's `artifact:` matrix values. Returns null for a host combination CI
-// does not build; agentplug-runner is the sole spool loader now (the JS host
-// was retired), so a null here means there is no loader for this platform and
-// the installer fails loudly rather than leaving a silent no-loader state.
 function agentplugRunnerAssetName() {
   const plat = process.platform;
   const arch = process.arch;
@@ -232,15 +225,6 @@ function gmToolsDir() {
   return path.join(home, '.gm-tools');
 }
 
-
-// Downloads agentplug-runner (the SOLE native wasm plugin-host -- hosts gm.wasm
-// plus the separate libsql/bert/treesitter plugin wasm modules via a
-// host-mediated plugin_call ABI) from agentplug-bin's GitHub Releases,
-// sha256-sidecar-verified with an atomic rename, so a corrupt/partial download
-// is never accepted. Returns true on success, false on any failure (offline,
-// unpublished platform, network, sha mismatch). The JS wasm-host was retired,
-// so agentplug-runner is required: main() hard-fails the install when this
-// returns false, rather than leaving the user with no spool loader at all.
 async function downloadAgentplugRunner({ silent } = {}) {
   const assetName = agentplugRunnerAssetName();
   if (!assetName) {
@@ -250,11 +234,6 @@ async function downloadAgentplugRunner({ silent } = {}) {
   const destDir = gmToolsDir();
   const destPath = path.join(destDir, assetName.endsWith('.exe') ? 'agentplug-runner.exe' : 'agentplug-runner');
 
-  // agentplug-runner stages a verified self-update as <asset>.new and renames
-  // it over its own exe, which Windows refuses while that exe is running -- so
-  // the staged file is abandoned unless something outside the binary completes
-  // it. The installer runs as node, outside the target binary, so it adopts any
-  // staged .new here before downloading.
   try {
     const staged = path.join(destDir, assetName + '.new');
     if (fs.existsSync(staged)) {
@@ -352,11 +331,6 @@ async function main() {
 
   await runPlugkitBootstrap();
 
-  // agentplug-runner is the sole spool loader (the JS wasm-host was retired).
-  // Its download is a HARD requirement -- if the platform has no published
-  // binary, or the download/verification fails, there is no loader at all, so
-  // fail loudly with an actionable message rather than silently leaving the
-  // user with an installed skill that cannot boot a spool watcher.
   const runnerReady = await downloadAgentplugRunner({ silent: false });
   if (!runnerReady) {
     const asset = agentplugRunnerAssetName();

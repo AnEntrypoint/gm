@@ -121,15 +121,6 @@ function writeCliError(phase, err) {
   } catch (_) {}
 }
 
-// agentplug-runner is the SOLE spool loader -- a native wasmtime binary that
-// loads gm.wasm as one plugin alongside its shared libsql/bert/treesitter
-// plugins and serves the full spool ABI (in/out layout, verb names, browser
-// via direct CDP, task via a native registry). When it is installed, delegate
-// to it immediately and exit before any bun/node bootstrap runs. The JS
-// wasm-host was retired; there is no pure-JS fallback anymore. If no runner is
-// installed, the bootstrap path below downloads the wasm and startSpoolDaemon()
-// either launches the runner or fails loudly with an actionable message
-// (there is no silent no-loader state).
 function tryDelegateToRunner(args) {
   if (process.env.GM_PLUGKIT_NO_RUNNER_DELEGATE === '1') return false;
   const exeName = process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner';
@@ -137,7 +128,7 @@ function tryDelegateToRunner(args) {
   if (!fs.existsSync(runnerPath)) return false;
   try {
     const result = cp.spawnSync(runnerPath, args, { stdio: 'inherit', windowsHide: true });
-    if (result.error) return false; // genuinely failed to start -- fall through to bootstrap+relaunch
+    if (result.error) return false;
     process.exit(typeof result.status === 'number' ? result.status : 0);
   } catch (_) {
     return false;

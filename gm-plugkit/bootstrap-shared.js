@@ -6,12 +6,6 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const { pidAlive, sha256OfFileSync } = require('./gm-process');
 
-// Functions shared byte-for-byte between gm-plugkit/bootstrap.js and
-// bin/bootstrap.js -- the two installer entry points diverge in install
-// STRATEGY (npm-install vs npx-extract, slim/fat artifact selection,
-// pinned-reexec) but the cache/lock/prune/kill/wiring mechanics underneath
-// were identical copy-paste, drifting apart in small accidental ways release
-// over release. Centralized here so a fix lands once for both callers.
 
 const LOCK_STALE_MS = 30 * 60 * 1000;
 const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -93,7 +87,6 @@ function acquireLock(lockPath) {
 }
 
 function releaseLock(lockPath) {
-  // best-effort, missing file is fine
   try { fs.unlinkSync(lockPath); } catch (_) {}
 }
 
@@ -119,7 +112,7 @@ function pruneOldVersions(root, keepVersion) {
       if (fs.existsSync(lock)) { try { fs.unlinkSync(lock); } catch (_) {} }
       try {
         fs.rmSync(dir, { recursive: true, force: true, maxRetries: 1, retryDelay: 50 });
-      } catch (_) { /* prune skip, non-fatal */ }
+      } catch (_) {}
     }
   } catch (_) {}
 }

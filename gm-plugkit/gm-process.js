@@ -4,9 +4,6 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 
-// Pure-leaf helpers shared byte-for-byte between bin/bootstrap.js and
-// gm-plugkit/bootstrap.js (they were identical inline copies in both). Only
-// node builtins, no bootstrap-local state -- safe to centralize here.
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
@@ -50,15 +47,10 @@ function pidCommandLineForKillGuard(pid) {
   } catch (_) { return ''; }
 }
 
-// Is `pid` still alive? signal-0 probe (throws ESRCH once the process is gone).
 function pidAliveSync(pid) {
   try { process.kill(pid, 0); return true; } catch (_) { return false; }
 }
 
-// Block (via a short spawnSync sleep, no async) until `pid` dies or timeoutMs
-// elapses. Shared by cli.js (daemon recycle) and supervisor.js (killChild) —
-// both previously carried a byte-divergent inline copy (execFileSync vs
-// spawnSync) of this exact loop.
 function waitForPidDeath(pid, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

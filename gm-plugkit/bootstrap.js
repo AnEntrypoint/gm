@@ -31,13 +31,6 @@ const {
   ensureNextStepWiring: ensureNextStepWiringShared,
 } = shared;
 
-// This file's own ensureNextStepWiring below delegates the shared prefix
-// (seed next-step.md, prepend CLAUDE.md, append AGENTS.md) to
-// bootstrap-shared's ensureNextStepWiringShared, then adds strictly more
-// (a managed .npmignore block) that bootstrap-shared's leaner version does
-// not need -- genuinely-different logic on top of a shared base, not two
-// independent copies of the same first 40 lines.
-
 function resolveWindowsExe(cmd) {
   if (process.platform !== 'win32') return cmd;
   try {
@@ -79,7 +72,6 @@ function writeBootstrapError(spec) {
 }
 
 function clearBootstrapError() {
-  // best-effort, missing file is fine
   try {
     const projectDir = resolveProjectRoot(process.env.CLAUDE_PROJECT_DIR || process.cwd());
     fs.unlinkSync(path.join(projectDir, '.gm', 'exec-spool', '.bootstrap-error.json'));
@@ -90,15 +82,6 @@ function sha256Hex(buf) {
   return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
-// User/agent edits to .gm/instructions/*.md are the whole point of vendoring
-// them per-project -- a bare content-diff overwrite treats "user diverged
-// from the shipped default" identically to "file is just stale", silently
-// clobbering local edits on every routine bootstrap/auto-update. The
-// manifest records the sha256 of what THIS install last shipped for each
-// key; a local file matching that hash is safe to refresh (it's untouched),
-// but a local file that differs from BOTH the manifest AND the new default
-// is a real user edit -- write the new default beside it as .md.new instead
-// of overwriting, so the edit survives and the update is still visible.
 function instructionsManifestPath(cwd) {
   return path.join(cwd, '.gm', '.instructions-shipped-manifest.json');
 }
@@ -145,21 +128,15 @@ function ensureInstructionsBundle(cwd) {
         }
         if (prev.equals(next)) {
           manifest[childRel] = nextHash;
-          continue; // already current, nothing to do
+          continue;
         }
         const lastShippedHash = manifest[childRel];
         const localMatchesLastShipped = lastShippedHash && sha256Hex(prev) === lastShippedHash;
         if (localMatchesLastShipped || !lastShippedHash) {
-          // Untouched since we last wrote it (or first time we've ever
-          // recorded a hash for this key -- pre-manifest install, treat as
-          // ours) -- safe to refresh with the new default.
           fs.writeFileSync(dst, next);
           manifest[childRel] = nextHash;
           copied++;
         } else {
-          // Local content diverges from what we shipped: a real user/agent
-          // edit. Never overwrite it -- stage the new default beside it so
-          // the update is visible without destroying the edit.
           try { fs.writeFileSync(dst + '.new', next); } catch (_) {}
           preserved++;
           obsEvent('bootstrap', 'instructions-bundle.user-edit-preserved', { target: dst });
@@ -181,13 +158,6 @@ function ensureInstructionsBundle(cwd) {
 function ensureNextStepWiring(cwd) {
   const changes = ensureNextStepWiringShared(cwd);
 
-  // gm writes its own runtime data into .gm/ in every project it drives; if that
-  // project is an npm package, that data must never be published. Maintain a
-  // managed .npmignore block excluding .gm/, mirroring the managed-gitignore
-  // mechanism: append a marker-delimited block to any existing .npmignore
-  // without clobbering the user's own entries, and skip entirely when a
-  // package.json `files:` allowlist is present (an allowlist already excludes
-  // everything not listed, so .gm/ is safe without an .npmignore).
   try {
     const pkgPath = path.join(cwd, 'package.json');
     let hasFilesAllowlist = false;
@@ -218,17 +188,6 @@ function ensureNextStepWiring(cwd) {
   }
 }
 
-
-// Slim-artifact eligibility: plugkit-core's embed.rs probes host_vec_embed
-// before ever loading its wasm-embedded safetensors fallback (see
-// rs-plugkit/crates/plugkit-core/src/embed.rs::init_ctx) -- a slim build
-// (feature=slim, no embedded weights at all) is only safe to fetch on a host
-// that actually answers host_vec_embed for real. agentplug-runner answers it
-// via its shared bert plugin daemon; the check is gated on the runner binary
-// existing under ~/.gm-tools so bootstrap-time artifact selection and runtime
-// embed-delegation eligibility never disagree. Absence means no host_vec_embed
-// answer will ever come, so fetching fat (which carries its own wasm-side
-// embedding fallback) is the only safe choice.
 function hasNativeEmbedRunner() {
   const dir = gmToolsDir();
   const names = process.platform === 'win32'
@@ -237,26 +196,6 @@ function hasNativeEmbedRunner() {
   return names.some(n => { try { return fs.existsSync(path.join(dir, n)); } catch (_) { return false; } });
 }
 
-// Root a project-dir resolution at the git COMMON dir, not the raw cwd/
-// CLAUDE_PROJECT_DIR -- a worktree (e.g. Workflow's isolation:'worktree'
-// agents, each `git worktree add`-ing a fresh physical directory) shares the
-// SAME underlying repo as its main checkout but has its own separate
-// directory tree. Every cwd-derived project-dir computation in this file and
-// in cli.js must funnel through this so a worktree-spawned process resolves to
-// the SAME .gm/exec-spool/ as its main-repo sibling -- otherwise the
-// single-instance watcher guard can never see a sibling worktree's
-// already-running watcher, and every worktree cold-boots its own independent
-// watcher (each loading the full embed model + running its own cold reindex of
-// what is, conceptually, the same project). Live-measured
-// this session under real concurrent multi-agent load: this was the actual
-// root cause of a user-flagged "memory grows to ~2GB then clears" churn
-// pattern -- N worktrees of one repo each independently paying full
-// cold-embed cost instead of sharing one already-warm watcher, and the
-// resulting CPU contention pushed genuinely-busy processes past their
-// heartbeat deadline into a restart cycle that produces the sawtooth memory
-// pattern. agentplug-runner roots its own browser-session state at the git
-// common dir for the same reason (same fix, same reason, applied one layer up
-// at the process-boot-dedup level).
 function resolveProjectRoot(start) {
   const resolved = path.resolve(start);
   try {
@@ -276,24 +215,10 @@ function readVersionFile() {
   return fs.readFileSync(p, 'utf8').trim();
 }
 
-// readVersionFile() throws loudly on its own (missing/unreadable file is a
-// real, surfaced error) -- callers below that swallow it are choosing to
-// no-op rather than propagate, so they log what they swallowed instead of
-// going silent. This is the actual behavior at every call site already
-// (killStaleDaemonIfVersionChanged just returns, ensureReady leaves
-// pinnedVersion null) -- only the missing observability was the gap.
-
 function readShaManifest() {
   const p = path.join(wrapperDir, 'plugkit.sha256');
   if (!fs.existsSync(p)) return null;
   const raw = fs.readFileSync(p, 'utf8');
-  // Two real formats seen in the wild for this file: the checked-in local
-  // gm-plugkit/plugkit.sha256 is a JSON manifest ({"plugkit.wasm":"<sha>"}),
-  // written by the version-bump automation; a GitHub-release .sha256 sidecar
-  // (fetched directly from plugkit-bin releases) is a standard sha256sum-format
-  // line ("<hash>  <filename>"). Try JSON first since that's this file's own
-  // real on-disk shape -- the sha256sum-line regex never matched it, silently
-  // returning {} and skipping verification on every bootstrap call.
   try {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object') {
@@ -303,7 +228,7 @@ function readShaManifest() {
       }
       return out;
     }
-  } catch (_) { /* not JSON, fall through to sha256sum-line parsing */ }
+  } catch (_) {}
   const out = {};
   for (const line of raw.split(/\r?\n/)) {
     const m = line.match(/^([0-9a-f]{64})\s+(\S+)\s*$/i);
@@ -399,15 +324,6 @@ function httpGetBuffer(url, timeoutMs) {
   });
 }
 
-// artifactName selects the REMOTE release asset ('plugkit.wasm' fat or
-// 'plugkit-slim.wasm' slim) -- the local destPath filename is unaffected,
-// same convention gm-runner's own download.rs::bootstrap_plugkit_wasm uses
-// (fixed local name, artifact-selected remote source). A slim fetch that 404s
-// (older release predating the slim publish step, or the asset genuinely
-// missing) falls back to fetching fat rather than failing the whole
-// bootstrap -- a host capable of running the slim build is also always a
-// valid fat-build host (fat is a strict superset of slim's capability), so
-// this fallback never produces incorrect behavior, only a larger download.
 async function downloadFromGithubReleases(destPath, version, artifactName) {
   const name = artifactName || 'plugkit.wasm';
   const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
@@ -472,7 +388,6 @@ async function extractNpmPackageWithRetry(destPath, version) {
   throw lastErr;
 }
 
-
 function killStaleDaemonIfVersionChanged() {
   let currentVersion;
   try { currentVersion = readVersionFile(); }
@@ -491,22 +406,10 @@ function killStaleDaemonIfVersionChanged() {
   writeDaemonVersion(currentVersion);
 }
 
-
 async function bootstrap(opts) {
   opts = opts || {};
   const version = readVersionFile();
   const shaManifest = readShaManifest();
-  // Artifact selection: slim (no wasm-embedded safetensors, ~130MB smaller)
-  // only when this host has a native host_vec_embed answerer on disk
-  // (gm-runner or agentplug-runner under ~/.gm-tools -- see
-  // hasNativeEmbedRunner) -- everyone else fetches fat, unchanged from
-  // before this selection logic existed. remoteArtifact is the release-asset
-  // name; the LOCAL cache filename stays 'plugkit.wasm' either way (matching
-  // gm-runner's own download.rs convention) so nothing downstream that reads
-  // the local wasm path needs to know which variant landed. The cache
-  // sub-directory is kept distinct per-kind (v<version> vs v<version>-slim)
-  // so a fat and slim download of the same version never collide under the
-  // same sha/sentinel check.
   const useSlim = hasNativeEmbedRunner();
   const remoteArtifact = useSlim ? 'plugkit-slim.wasm' : 'plugkit.wasm';
   const wasmName = 'plugkit.wasm';
@@ -581,11 +484,6 @@ async function bootstrap(opts) {
       } catch (_) {}
     }
     if (useSlim) {
-      // The plugkit-wasm npm package only ever ships the fat artifact (see
-      // release.yml's npm-publish step, which cp's release-assets/plugkit.wasm
-      // -- never plugkit-slim.wasm -- into the package). Skip the npm-extract
-      // attempt entirely for a slim fetch and go straight to GitHub Releases,
-      // which is where slim is actually published.
       try {
         await downloadFromGithubReleases(partialPath, version, remoteArtifact);
       } catch (ghErr) {
@@ -642,14 +540,6 @@ async function bootstrap(opts) {
     log(`decision: fetch reason: install-complete (${finalPath})`);
     obsEvent('bootstrap', 'install.done', { path: finalPath, version, kind: 'plugkit-wasm' });
     proactiveKillForNewInstall(version);
-    // pruneOldVersions keeps only the dir literally named v<keepVersion> --
-    // verDir uses a '-slim' suffix for the slim cache slot (see useSlim
-    // above), so the keep-token passed here must match that same suffix or
-    // pruneOldVersions deletes the directory just populated by THIS run
-    // before copyWasmToGmTools below can read from it (live-witnessed this
-    // session: a real end-to-end bootstrap() run on a native-runner host hit
-    // exactly this -- 'pruned .../v0.1.906-slim' followed by an ENOENT on the
-    // immediately-following copy, because 'v0.1.906' != 'v0.1.906-slim').
     pruneOldVersions(root, useSlim ? `${version}-slim` : version);
     copyWasmToGmTools(finalPath, version);
     clearBootstrapError();

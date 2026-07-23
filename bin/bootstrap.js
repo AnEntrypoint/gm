@@ -154,7 +154,6 @@ function writeBootstrapError(spec) {
 }
 
 function clearBootstrapError() {
-  // best-effort, missing file is fine
   try {
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
     const out = path.join(projectDir, '.gm', 'exec-spool', '.bootstrap-error.json');
