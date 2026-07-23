@@ -34,7 +34,7 @@ The `gm-plugkit` npm identity stays load-bearing as the thin launcher edge only:
 
 **`bin/install.js` hard-requires agentplug-runner.** It downloads the sha256-verified native runner from `AnEntrypoint/agentplug-bin` for the host platform, and if none is published (or the download/verify fails) it fails the install loudly with a clear message rather than leaving the user with no loader. There is no JS-host fallback to silently fall through to anymore.
 
-**agentplug-runner auto-updates the wasm it serves, not itself.** It polls `plugkit-bin`'s Releases API every 600s for a newer tag; on a mismatch it downloads+verifies the new wasm and a local-version-skew check triggers a clean in-process reload. The runner *executable* self-updates only via `bin/install.js` re-run (it additionally adopts a staged `.new` on the next start).
+**agentplug-runner auto-updates the wasm it serves, not itself.** Polls `plugkit-bin` every 600s; executable self-update is `bin/install.js` re-run or the daemon's own takeover-handoff protocol. Full mechanics: the recall store (`recall: agentplug daemon.rs self-update handoff protocol`).
 
 Wasm host-import link-module rule (`#[link(wasm_import_module="env")]` on every host-import extern block, every dep crate): the recall store (`recall: wasm host-import link-module trap`).
 
