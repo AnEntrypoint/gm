@@ -83,7 +83,7 @@ Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. `@<name>` prefix sets namespac
 
 ## Inspection routing
 
-Every capability has exactly one sanctioned surface and the platform's native tools are never it: code/file/symbol search is the `codesearch` verb (cwd-indexed -- a sibling repo is `Read` by path, never expected from `codesearch`), runtime-state files (spool response JSON, `.status.json`) are `Read`, and Bash survives only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Reaching for Glob/Grep/Explore or any host-native search is reaching around the surface -- it is blocked; the verb IS the surface. Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
+Every capability has exactly one sanctioned surface and the platform's native tools are never it: code/file/symbol search is the `codesearch` verb (cwd-indexed -- a sibling repo is `Read` by path, never expected from `codesearch`), runtime-state files (spool response JSON, `.status.json`) are `Read`, browser automation of any kind is the `browser` verb (no raw Chrome launch, no puppeteer/playwright import or CLI, ever -- same inadmissible-reach class as bypassing `codesearch`), and Bash survives only for the boot probe and shell-only non-git tooling (`npm`, `bun x`, `curl`). Reaching for Glob/Grep/Explore or any host-native search is reaching around the surface -- it is blocked; the verb IS the surface. Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
 
 ## Memorize
 

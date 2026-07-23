@@ -53,7 +53,9 @@
       "gates": [
         "residual-scan-fired",
         "prd-all-closed",
-        "mutables-all-resolved"
+        "mutables-all-resolved",
+        "claim-audit-clean",
+        "submodules-clean"
       ]
     },
     {
@@ -80,7 +82,8 @@
         "worktree-clean",
         "residual-scan-fired",
         "ci-validated-fresh",
-        "browser-witness-coverage"
+        "browser-witness-coverage",
+        "submodules-clean"
       ]
     },
     {
@@ -131,6 +134,20 @@
       "hook": null,
       "hook_mode": "predicate-only",
       "message": "transition rejected: client-edit-no-witness -- one or more client-side files edited this session lack a matching browser-witness. Dispatch `browser` to page.evaluate the invariant each edit establishes, then re-attempt."
+    },
+    {
+      "name": "claim-audit-clean",
+      "predicate": "claim-audit-clean",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition to CONSOLIDATE rejected: claim-audit not fired in this stop window, or a prior fire found a stale claim -- dispatch `claim-audit` to scan AGENTS.md for shipped/validated/fixed claims referencing a commit hash and verify each hash actually exists in this repo's git log; resolve any stale finding before re-attempting."
+    },
+    {
+      "name": "submodules-clean",
+      "predicate": "submodules-clean",
+      "hook": null,
+      "hook_mode": "predicate-only",
+      "message": "transition rejected: submodule pointer drift -- one or more of gm's tracked submodule gitlinks (agentplug, rs-plugkit, rs-codeinsight, rs-search, agentplug-bert, agentplug-libsql, agentplug-treesitter) no longer match that submodule's own real HEAD. `git add <drifted-path>` for each, then git_commit/git_finalize to update gm's own pointer before re-attempting."
     }
   ],
   "policy": {
@@ -156,6 +173,19 @@
       "sleep"
     ],
     "gate_repeat_escalate_threshold": 3,
-    "longgap_threshold_ms": 300000
+    "longgap_threshold_ms": 300000,
+    "require_witness_evidence": true,
+    "prd_closed_statuses": [
+      "done",
+      "complete",
+      "completed"
+    ],
+    "mutables_resolved_statuses": [
+      "witnessed",
+      "resolved"
+    ],
+    "reject_duplicate_witness": true,
+    "initial_phase": "PLAN",
+    "terminal_phase": "COMPLETE"
   }
 }

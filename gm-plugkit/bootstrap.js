@@ -659,7 +659,6 @@ function spawnPinnedBoot(extraArgs) {
 
 function discoverBundledSkillsAndSources() {
   const found = new Map();
-  found.set('gm', path.join(__dirname, 'SKILL.md'));
   try {
     for (const f of fs.readdirSync(__dirname)) {
       const m = f.match(/^SKILL-(.+)\.md$/);

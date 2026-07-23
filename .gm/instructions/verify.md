@@ -41,6 +41,8 @@ Every claim of correctness is proven by a live `exec_js`/`browser` dispatch witn
 
 **No fake shipped code, checked at VERIFY too, not only at EMIT.** A `Mock*`/`Fake*`/`Stub*` class or a hardcoded always-succeeds/input-invariant short-circuit anywhere in the diff is the same class of deviation as a test file -- grep the diff for these names before transitioning; a mock network/service/client shipped as if it were the real integration is exactly what "nothing fake in source" forbids, whether or not it lives in a `test/` directory. Real input through real code into real output is the only acceptance shape.
 
+**No comments, checked at VERIFY too, not only at EXECUTE.** A leading `//`, `///`, `/* */`, `#`, or JSDoc block anywhere in the diff -- inline, doc, or the paragraph-long rationale kind -- blocks `transition` exactly like an unwitnessed mutable: grep the diff for comment-opener tokens across every touched language before transitioning, delete what's found, and re-verify the code still reads clearly by name and structure alone. A comment surviving into VERIFY means EXECUTE's own no-comments rule was skipped, not that this diff is the exception to it.
+
 **Documenting a hard row instead of implementing it is a false completion, not a resolution.** `prd-resolve` refuses two identical/near-identical `witness_evidence` strings across different PRD ids (`deviation.prd-resolve-duplicate-witness`) -- generic copy-pasted witness text ("code written and tested") across structurally distinct rows is the rubber-stamp tell: a row that got a README section titled "Future Optimizations"/"Not Yet Implemented" and a `status: completed` in the same turn was NOT solved, it was deferred with different words. A row that looks out of reach this turn is a row to build a way IN -- name the real fix and its path (drive the crashing tool's protocol directly, spawn your own instance, open the cross-repo change, script the credential path) and execute it; a design doc describing the fix is not the fix. Each row's witness must name the specific file:line/exec-output/browser-read proving THAT row's own distinct deliverable, not a shared paragraph. "Everything is fixable" is the standing rule: `blockedBy` may only transiently carry the reach path forward while it is being built, never mark a row done or abandoned.
 
 ## Residual-scan
@@ -66,14 +68,6 @@ Before accepting the slice convergent, trace every shipped change to a human out
 ## Completion
 
 Chain enters COMPLETE only when your `transition` returns COMPLETE phase; on-disk state moves only on `transition`. **Done is plugkit's pronouncement, not yours** -- gate-allowance is not done, only a dispatched `transition` returning COMPLETE is; a narrated PLAN->COMPLETE walk with the gate open or the verb un-dispatched is fabrication. "I'm finished" before the gate flips is narrating; cure = `phase-status`. Not-COMPLETE means a next transition exists; idle/"waiting for the user" mid-chain are deviations (closure authorized at request time). Between the four observations, between residual-scan and COMPLETE, between push and transition, re-dispatch `instruction` -- VERIFY is where premature COMPLETE happens.
-
-**You close rs-learn's learning loop here -- you are the model in the loop, holding the one signal every core needs: how well this turn went.** Before COMPLETE, self-report turn quality 0.0-1.0 (1.0 = clean convergent walk, no deviations, pushed, gate-allowed; lower as deviations/rework accumulate). That number drives every core, none observable to it without you:
-
-- **Instant MicroLoRA adapter:** only >=2 enabled disciplines (default-only = correct no-op, skip). Init once/session `learn {verb:init_instant, body:{targets:[<enabled namespaces>]}}`, then `learn {verb:feedback, body:{embedding:<bge embedding of this turn's task>, payload:{quality:<0-1>}}}` -- high quality shifts the helpful namespace's logit up so recall promotes it.
-- **FastGRNN router:** `learn {verb:record_outcome, body:{target:"<your model id>", quality:<0-1>}}` so the next `route_hint` reflects learned outcomes.
-- **Deep EWC core** and **GAT attention relation weights:** same quality as `record_loss` / `nudge_relation`.
-
-rs-learn never calls a model; it emits the need, you supply the answer. Skipping the self-report leaves the cores untrained.
 
 **No summary, no prose-only turn here.** A summary, recap, announced-but-undispatched next move, or any tool-less message IS a stop -- VERIFY is where the temptation peaks. Until this surface returns phase=COMPLETE after `transition`, every turn ends in a verb (`phase-status`, `residual-scan`, the push verbs, `instruction`, `transition`). Catching yourself composing a summary IS the drift signal -> dispatch `phase-status` instead.
 

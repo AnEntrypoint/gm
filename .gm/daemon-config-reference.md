@@ -52,14 +52,48 @@ behaves byte-identically to before this file existed.
   EACH of bert/treesitter/libsql (the non-`gm` stateless-shared plugins)
   holds. Defaults to 1, byte-identical to the pre-existing hardcoded
   behavior, because bert alone costs ~133MB of resident tensors per extra
-  instance and no live contention was ever found for the three of them on
-  this host's own workloads. A deployment that DOES see real cross-project
+  instance. A deployment that DOES see real cross-project
   `codesearch`/`recall`/`embed` contention -- `host_plugin_call`/
   `host_vec_embed` calls into a size-1 pool serialize behind
   `SharedPluginPool::acquire`'s bounded 20s `ACQUIRE_TIMEOUT_MS` before
   surfacing `plugin_pool_busy_timeout` rather than hanging forever -- can
   raise this to trade the added memory for less queuing under concurrent
   multi-project load.
+
+  Real load witnessed 2026-07-23 (12 registered projects sharing one
+  daemon, `max_concurrent_projects`/`gm_concurrency` both at their default
+  of 4, `side_plugin_concurrency` unset/1) produced sustained
+  `plugin gm not loaded` errors -- root-caused to a DIFFERENT bug (a Trap
+  in a shared plugin, bert in particular, left its pool slot poisoned
+  instead of being evicted and reinstantiated; fixed in
+  `d3c159316e35320fb61e688651af1468a6ca41dc`,
+  "Evict poisoned shared-plugin Store after a dispatch error instead of
+  reusing it"), not by `side_plugin_concurrency` itself being undersized.
+  With the eviction fix in place, a poisoned slot self-heals on the very
+  next dispatch instead of staying wedged for 1-2 minutes, which removes
+  the actual mechanism that produced the sustained symptom -- raising
+  `side_plugin_concurrency` would not have prevented that specific failure
+  mode (a poisoned slot behaves the same whether the pool has 1 slot or 4;
+  eviction, not pool width, was the missing piece). The default of 1
+  remains the right tradeoff absent a DIFFERENT, still-live symptom
+  (`plugin_pool_busy_timeout` or queuing visible in `.watcher.log` under
+  concurrent load with the eviction fix already applied) -- raise it only
+  once that distinct symptom is actually observed post-fix, not
+  preemptively from the presence of many registered projects alone: with
+  `max_concurrent_projects` at its own default of 4, at most 4 projects are
+  ever genuinely mid-dispatch at once regardless of how many are
+  registered, so registering 12 projects does not by itself imply more
+  than 4-way real concurrency against the side-plugin pools.
+
+  The same investigation also found and fixed a genuine fairness bug in
+  `SharedPluginPool::acquire`'s fallback path (agentplug commit following
+  d3c1593): when the initial single sweep across all slots found every slot
+  momentarily busy, the fallback poll loop retried ONLY `slots[0]` for the
+  full 20s `ACQUIRE_TIMEOUT_MS`, ignoring slots 1..N even if they freed up
+  first -- for `gm_concurrency`'s default pool size of 4 this artificially
+  serialized contention onto a single slot instead of using the other three,
+  worsening exactly this kind of multi-project contention. Fixed to re-sweep
+  every slot on each poll iteration.
 
 Changing `heartbeat_interval_secs`, `max_concurrent_projects`, `gm_concurrency`,
 or `side_plugin_concurrency` requires a daemon restart to take effect (read
