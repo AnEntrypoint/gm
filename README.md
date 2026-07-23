@@ -87,7 +87,7 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 - **`recall`**: vector + KV recall against `rs-learn`, scored by cosine x recency, namespace-aware
 - **`codesearch`**: semantic vector search across the project
 - **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
-- **`browser`**: headful-by-default Chrome session driven natively by `agentplug` (CDP direct, no JS wrapper) -- a process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches instead of relaunching per-call, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly
+- **`browser`**: headful-by-default Chrome session driven natively by `agentplug` (CDP direct, no JS wrapper) -- a process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches instead of relaunching per-call, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly; `screenshot[=name]`/`dom=<selector>`/`timeout=<ms>` body prefixes stack with a plain eval body for capture and DOM-scoped queries
 - **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
 - **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
 
@@ -99,6 +99,10 @@ Orchestration state is tracked via `.gm/` marker files, not hook events. The gat
 - **turn entry**: the `instruction` verb reminds the agent to dispatch first and attaches the per-prompt auto-recall pack
 - **pre-tool-use**: blocks Write/Edit/git before the gm skill fires for the turn
 - **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty or unpushed
+- **VERIFY -> CONSOLIDATE**: `residual-scan-fired`, `prd-all-closed`, `mutables-all-resolved`, `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log), `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD)
+- **CONSOLIDATE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha), `browser-witness-coverage`, `submodules-clean`
+
+The gate graph itself is data, not hardcoded Rust: a project's `.gm/instructions/fsm/graph.json` (written by the `fsm-vendor` verb) can add states, rewire edges, or swap which gates guard which transition, including a `policy` block that externalizes previously-hardcoded behavior (status vocabularies, witness-requirement toggles, CAS retry attempts) as project-overridable JSON.
 
 ### ground truth
 
