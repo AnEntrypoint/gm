@@ -233,12 +233,17 @@ function resolveWindowsExe(cmd) {
 function resolveNpmCliJs(shimPath) {
   const candidates = [];
   try {
+    const execDir = path.dirname(process.execPath);
+    candidates.push(path.join(execDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+  } catch (_) {}
+  try {
     const shimDir = path.dirname(shimPath);
     candidates.push(path.join(shimDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
   } catch (_) {}
   candidates.push(
     path.join('C:', 'Program Files', 'nodejs', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
     path.join(process.env.APPDATA || '', 'npm', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join(process.env.APPDATA || '', 'nvm', process.version.replace(/^v/, ''), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
   );
   return candidates.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } }) || null;
 }
