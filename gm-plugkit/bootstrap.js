@@ -220,6 +220,17 @@ function readShaManifest() {
   return out;
 }
 
+async function fetchRemoteSha(version, artifactName) {
+  const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
+  try {
+    const shaBuf = await httpGetBuffer(`${base}/${artifactName}.sha256`, 10000);
+    return shaBuf.toString('utf-8').trim().split(/\s+/)[0].toLowerCase();
+  } catch (e) {
+    log(`remote sha fetch failed for ${artifactName}@${version}: ${e.message}`);
+    return null;
+  }
+}
+
 async function extractNpmPackageWasm(destPath, version) {
   const tempDir = path.join(path.dirname(destPath), '.npm-extract-' + Date.now());
   try {
@@ -394,11 +405,19 @@ function killStaleDaemonIfVersionChanged() {
 async function bootstrap(opts) {
   opts = opts || {};
   const version = readVersionFile();
-  const shaManifest = readShaManifest();
   const useSlim = hasNativeEmbedRunner();
   const remoteArtifact = useSlim ? 'plugkit-slim.wasm' : 'plugkit.wasm';
   const wasmName = 'plugkit.wasm';
-  const expectedSha = shaManifest ? (shaManifest[remoteArtifact] || (useSlim ? null : shaManifest[wasmName])) : null;
+
+  let expectedSha = await fetchRemoteSha(version, remoteArtifact);
+  if (!expectedSha) {
+    const shaManifest = readShaManifest();
+    const localManifestVersion = (() => { try { return readVersionFile(); } catch (_) { return null; } })();
+    if (shaManifest && localManifestVersion === version) {
+      expectedSha = shaManifest[remoteArtifact] || (useSlim ? null : shaManifest[wasmName]) || null;
+      if (expectedSha) log(`remote sha unreachable, falling back to committed manifest for matching version ${version}`);
+    }
+  }
 
   let root = cacheRoot();
   try { ensureDir(root); }

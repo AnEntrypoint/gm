@@ -80,15 +80,14 @@ jobs:
             exit 1
           fi
 
-          WASM_VERSION=$(jq -r '.plugkitVersion' gm.json)
           WASM_VERSION_2=$(tr -d '[:space:]' < gm-plugkit/plugkit.version 2>/dev/null || echo "MISSING")
           WASM_VERSION_3=$(tr -d '[:space:]' < bin/plugkit.version 2>/dev/null || echo "MISSING")
-          if [ "$WASM_VERSION" != "$WASM_VERSION_2" ] || [ "$WASM_VERSION" != "$WASM_VERSION_3" ]; then
-            echo "::error::plugkit WASM version drift: gm.json.plugkitVersion=$WASM_VERSION gm-plugkit/plugkit.version=$WASM_VERSION_2 bin/plugkit.version=$WASM_VERSION_3"
+          if [ "$WASM_VERSION_2" != "$WASM_VERSION_3" ]; then
+            echo "::error::plugkit WASM version drift: gm-plugkit/plugkit.version=$WASM_VERSION_2 bin/plugkit.version=$WASM_VERSION_3"
             exit 1
           fi
 
-          echo "[ok] package version $PKG_VERSION agrees across 3 files; plugkit WASM version $WASM_VERSION agrees across 3 files"
+          echo "[ok] package version $GM_JSON_PACKAGE_VERSION agrees across 3 files; plugkit WASM version $WASM_VERSION_2 agrees across gm-plugkit/bin (gm.json.plugkitVersion is informational-only, not functionally read by any code path, and is no longer gated here -- see AGENTS.md)"
 
   publish-gm-skill:
     needs: prepare

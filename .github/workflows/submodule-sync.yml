@@ -1,0 +1,55 @@
+name: Sync submodule pointers to latest
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [submodule-updated]
+
+concurrency:
+  group: submodule-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PUBLISHER_TOKEN }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Update every submodule to its remote-tracked branch tip
+        run: |
+          git config user.name "gm-bot"
+          git config user.email "noreply@github.com"
+          git submodule update --remote --merge
+
+      - name: Commit and push if any submodule pointer moved
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          if git diff --quiet; then
+            echo "no submodule pointer drift"
+            exit 0
+          fi
+          moved=$(git diff --name-only)
+          git add -A
+          git commit -m "chore: auto-sync submodule pointers to latest ($(echo "$moved" | tr '\n' ' '))"
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              echo "pushed on attempt $i"
+              exit 0
+            fi
+            echo "push attempt $i failed; rebasing"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+          done
+          echo "all push attempts exhausted" >&2
+          exit 1
