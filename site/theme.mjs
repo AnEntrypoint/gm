@@ -137,6 +137,19 @@ const buildLandingMain = () => {
     }));
   }
 
+  const whatsNew = page.whatsNew;
+  if (whatsNew && whatsNew.items && whatsNew.items.length && C.Panel) {
+    main.push(C.Panel({
+      title: whatsNew.heading || "what's new",
+      count: whatsNew.items.length,
+      children: whatsNew.items.map((it, i) => h('div', { key: i, class: 'row' },
+        h('span', { class: 'code' }, it.date || ''),
+        h('span', { class: 'title' }, it.summary || ''),
+        h('span', { class: 'meta' }, '')
+      )),
+    }));
+  }
+
   const qs = page.quickstart;
   if (qs && qs.lines && qs.lines.length) {
     main.push(h('h3', {}, qs.heading || 'quick start'));

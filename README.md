@@ -1,14 +1,18 @@
 # glootius maximus (gm)
 
-> **more coushin' for the puhin'**
+**the coding agent skill that refuses to stop early or ship a stub.**
 
-**glootius maximus** (gm) exists to raise one number: the signal-to-noise ratio (SNR) of a coding agent. every failure an agent commits, narrating an unverified guess, forgetting a decision, shipping a placeholder, stopping early, is noise injected into the channel between what you asked and what gets built. gm is a skill that convinces your coding agent it already is a deterministic state machine, PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE, and then enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up." every rule in it is one more noise source removed.
+14000+ hours of supervised modification, 8600+ commits, one person, built to raise one number: the signal-to-noise ratio of a coding agent. gm convinces your agent it already is a deterministic state machine (`PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE`) and enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
 
-that orientation is also why gm is built for token austerity: every token an agent spends should be signal toward the work, never narration, hedging, or busy-output. austerity is SNR enforced at the budget.
+[![npm](https://img.shields.io/npm/v/gm-skill.svg)](https://www.npmjs.com/package/gm-skill) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Discord](https://img.shields.io/badge/discord-join-5865F2.svg)](https://discord.com/invite/c9VV59MKNr) [![site](https://img.shields.io/badge/site-anentrypoint.github.io%2Fgm-informational.svg)](https://anentrypoint.github.io/gm/)
+
+**[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
 
 it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
 
-built over 14000+ hours of supervised modification, across ~200 commits of daily use, every one of those hours spent tuning the same target: more agentic signal, less noise. free, open source, maintained by one person.
+that orientation is also why gm is built for token austerity: every token an agent spends should be signal toward the work, never narration, hedging, or busy-output. austerity is SNR enforced at the budget.
+
+free, open source, maintained by one person.
 
 disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, force you to push git before ending a session, and reject any execute call without an explicit timeout. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep sitting down.
 

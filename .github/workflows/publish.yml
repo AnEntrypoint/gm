@@ -19,14 +19,14 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.PUBLISHER_TOKEN }}
           submodules: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Check prose bundle completeness + prose-conformance
         run: node scripts/check-prose-bundle.mjs
@@ -69,26 +69,14 @@ jobs:
         id: version
         run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
 
-      - name: Verify version-cascade files agree
+      - name: Verify the gm-skill/gm-plugkit package-version family agrees internally (independent of the separately-cascaded plugkit WASM version family)
         run: |
           set -e
-          # Two independent version families across 6 files: the gm-skill/
-          # gm-plugkit package version (gm.json, package.json, gm-plugkit/
-          # package.json -- kept in lockstep by the auto-bump step above) and
-          # the separately-cascaded plugkit WASM version (gm.json's
-          # plugkitVersion, gm-plugkit/plugkit.version, bin/plugkit.version --
-          # written by rs-plugkit's cross-repo push, not this workflow). Each
-          # family must agree internally; the two families are NOT expected
-          # to match each other. A partial-failure scenario (a cross-repo
-          # push racing this workflow's own auto-bump, or a push retry
-          # exhausting its 5 attempts and continuing anyway) previously had
-          # no check that would ever catch drift -- it just shipped silently
-          # until someone noticed mismatched version numbers in the wild.
-          PKG_VERSION=$(jq -r '.version' gm.json)
-          PKG_VERSION_2=$(jq -r '.version' package.json)
-          PKG_VERSION_3=$(jq -r '.version' gm-plugkit/package.json)
-          if [ "$PKG_VERSION" != "$PKG_VERSION_2" ] || [ "$PKG_VERSION" != "$PKG_VERSION_3" ]; then
-            echo "::error::package version drift: gm.json=$PKG_VERSION package.json=$PKG_VERSION_2 gm-plugkit/package.json=$PKG_VERSION_3"
+          GM_JSON_PACKAGE_VERSION=$(jq -r '.version' gm.json)
+          ROOT_PACKAGE_JSON_VERSION=$(jq -r '.version' package.json)
+          GM_PLUGKIT_PACKAGE_JSON_VERSION=$(jq -r '.version' gm-plugkit/package.json)
+          if [ "$GM_JSON_PACKAGE_VERSION" != "$ROOT_PACKAGE_JSON_VERSION" ] || [ "$GM_JSON_PACKAGE_VERSION" != "$GM_PLUGKIT_PACKAGE_JSON_VERSION" ]; then
+            echo "::error::package version drift: gm.json=$GM_JSON_PACKAGE_VERSION package.json=$ROOT_PACKAGE_JSON_VERSION gm-plugkit/package.json=$GM_PLUGKIT_PACKAGE_JSON_VERSION"
             exit 1
           fi
 
@@ -106,13 +94,13 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish gm-skill to npm
@@ -134,16 +122,16 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Publish gm-plugkit to npm
+      - name: Publish gm-plugkit to npm (bundling every skills/*/SKILL.md so ensureSkillMdFresh never depends on gm-skill being a sibling)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
@@ -153,9 +141,6 @@ jobs:
             echo "::error::gm.json missing plugkitVersion"
             exit 1
           fi
-          # Embed every bundled skill's SKILL.md into gm-plugkit so ensureSkillMdFresh
-          # finds each one without depending on gm-skill being a sibling. Derived by
-          # convention from skills/ -- adding a new skill directory needs no edit here.
           cp skills/gm/SKILL.md gm-plugkit/SKILL.md
           for d in skills/*/; do
             name=$(basename "$d")

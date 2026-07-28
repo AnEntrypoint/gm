@@ -2,8 +2,8 @@ id: home
 title: gm
 hero:
   heading: "gm"
-  subheading: "glootius maximus: raise your coding agent's signal-to-noise ratio"
-  body: "PLAN, EXECUTE, EMIT, VERIFY, COMPLETE. gm puts a deterministic loop around your agent so every token it spends is signal toward the work, drift, looping, invented tools, and shipped placeholders are noise, and gm removes them one rule at a time. built for token austerity over 14000+ hours of supervised modification. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
+  subheading: "the coding agent that refuses to stop early or ship a stub"
+  body: "14000+ hours of supervised modification, 8600+ commits, one person. gm puts a deterministic loop (PLAN, EXECUTE, EMIT, VERIFY, COMPLETE) around your coding agent so every token it spends is signal toward the work: drift, looping, invented tools, and shipped placeholders are noise, and gm removes them one rule at a time. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
   badges:
     - { label: "glootius maximus" }
     - { label: "signal over noise / token austerity" }
@@ -13,6 +13,7 @@ hero:
   ctas:
     - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
     - { label: "Install", href: "https://github.com/AnEntrypoint/gm#install" }
+    - { label: "Discord", href: "https://discord.com/invite/c9VV59MKNr" }
     - { label: "live stats", href: "./stats/" }
     - { label: "rust crates", href: "./crates/" }
     - { label: "skills", href: "./skills/" }
@@ -42,7 +43,7 @@ features:
     - name: "one npm package, no fanout"
       desc: "an earlier generation fanned fifteen downstream plugin repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), each with its own bootstrap shim. those repos are archived. the repo root is the published gm-skill package. add a hook once, it shows up everywhere."
     - name: "wasm polymorphism"
-      desc: "gm-skill ships a single plugkit.wasm that runs natively on every operating system through node or bun, no platform-specific builds, no per-architecture matrix. the orchestration logic compiles to hundreds of kilobytes; the shipped artifact is ~149MB because it embeds the bge-small embedding model in-wasm, so recall and memorize compute vectors in-process, offline, leaking no text to a remote embedder. a one-time sha-pinned download buys a self-contained, reproducible, network-independent memory system. the wasm host delegates to node for filesystem, subprocess, and fetch."
+      desc: "gm-skill ships a single plugkit.wasm that runs natively on every operating system through node or bun, no platform-specific builds, no per-architecture matrix. the orchestration logic compiles to hundreds of kilobytes; the shipped artifact is ~138MB because it embeds the bge-small embedding model in-wasm, so recall and memorize compute vectors in-process, offline, leaking no text to a remote embedder. a one-time sha-pinned download buys a self-contained, reproducible, network-independent memory system. the wasm host delegates to node for filesystem, subprocess, and fetch."
     - name: "rust-backed runtime"
       desc: "rs-plugkit is the wasm module that runs everything: the verb runner, the AST-aware code index, and the memory store all live inside it. rs-search is the fast fusion/tokenize crate it links; rs-codeinsight is the standalone tree-sitter analyzer. (rs-exec and rs-learn are retired -- their surfaces were folded into rs-plugkit.) every push auto-cascades to a fresh gm-skill on npm within minutes."
     - name: "one spool folder, every dispatch"
@@ -57,6 +58,17 @@ features:
       desc: "learning a fact twice does not create two memories: identical content hashes to the same key, so re-learning something is a no-op. stale or wrong memories get pruned the moment they are noticed. search results are ranked by a mix of semantic similarity and recency, so an older memory fades unless something reinforces it again. and a relevant pack of memories auto-attaches at the start of each turn, the agent never has to remember to ask for its own memory."
     - name: "search by meaning, not by keyword, and answers come back whole"
       desc: "memory recall does not keep a searchable index of raw text anywhere; it stores only vector embeddings, so a query matches by meaning, not by matching words. code search adds one more signal on top of the usual text match: it can rank results by which git commits touched them most relevantly or most recently, not just static grep. both search verbs hand back the full matched content, never a truncated snippet, so the agent is not forced to go fetch the rest. and every verb response is deliberately short and token-optimized, so none of that context gets spent for nothing."
+whatsNew:
+  heading: "what's new (last two weeks)"
+  items:
+    - { date: "2026-07-28", summary: "gmsniff stale-registry bug fixed (daemon-registry/daemon-status now read from the live ~/.agentplug path); browser-verb health verified fleet-wide; comment-policy sweep" }
+    - { date: "2026-07-25", summary: "browser session-launch TOCTOU race fixed (concurrent dispatches no longer spawn duplicate Chrome instances); codeinsight wall-budget and daemon-concurrency fixes" }
+    - { date: "2026-07-24", summary: "system-wide verification sweep across gm/ccsniff/gmsniff; vocabulary sync; comment-sweep completion" }
+    - { date: "2026-07-23", summary: "no-comments policy closed the loop with a full-repo sweep; threading/pool fairness fixes; mutables lifecycle made project-configurable" }
+    - { date: "2026-07-22", summary: "dead gm-log observability restored (a 2-week-silent gap was invisible until now); ccsniff/gmsniff detector gaps closed" }
+    - { date: "2026-07-21", summary: "dynamic FSM framework: the phase graph is now project-overridable data, not hardcoded Rust; runner self-update; a real COMPLETE-gate bypass bug fixed" }
+    - { date: "2026-07-17", summary: "GL error capture: fixed a fill-once-then-frozen cap, added stack traces and a proactive GPU-tracing hint" }
+    - { date: "2026-07-16", summary: "stopped the CLI spool command from blocking on network round-trips during watcher reboot" }
 quickstart:
   heading: install
   lines:

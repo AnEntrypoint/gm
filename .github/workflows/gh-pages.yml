@@ -17,20 +17,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
-      - name: Generate releases.json at build time
-        # Must run BEFORE "Build site bundle" -- theme.mjs's readJson reads
-        # docs/api/npm-downloads.json (and would read releases.json the same
-        # way if it consumed it) from the checked-out working tree at BUILD
-        # time, not from dist/. Writing straight into the working tree here
-        # (never git add/commit'd) lets the existing site build + "Copy
-        # static assets" step below pick it up exactly as it did when the
-        # file was a committed snapshot, with zero downstream changes needed.
+          node-version: '24'
+      - name: Generate releases.json into the working tree before the site build reads it
         run: |
           set -e
           mkdir -p docs/api
@@ -116,8 +109,8 @@ jobs:
             [ -e "$f" ] && cp -f "$f" dist/ || true
           done
           if [ -d docs/api ]; then mkdir -p dist/docs/api && cp -f docs/api/*.json dist/docs/api/ || true; fi
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist
 
@@ -129,4 +122,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
