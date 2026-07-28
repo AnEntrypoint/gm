@@ -11,6 +11,7 @@
     "index.js",
     "bootstrap.js",
     "bootstrap-shared.js",
+    "bootstrap-wasm-core.js",
     "gm-log.js",
     "gm-process.js",
     "plugkit.version",
