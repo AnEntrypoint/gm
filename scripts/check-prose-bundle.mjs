@@ -5,16 +5,78 @@ import process from 'node:process';
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const bundleDir = path.join(root, 'gm-plugkit', 'instructions');
 
-const GATE_AND_RESIDUAL_KEYS = [
+const FALLBACK_GATE_AND_RESIDUAL_KEYS = [
   'gates/long-gap-no-instruction',
   'residual/prd-open', 'residual/browser-open', 'residual/tasks-running',
   'residual/dirty-tree', 'residual/imperative',
 ];
 
-function validateBundleCompleteness() {
+const coreSrcDir = path.join(root, 'rs-plugkit', 'crates', 'plugkit-core', 'src');
+const fsmVendorPath = path.join(coreSrcDir, 'orchestrator', 'fsm_vendor.rs');
+const gatesRsPath = path.join(coreSrcDir, 'gates.rs');
+const residualRsPath = path.join(coreSrcDir, 'orchestrator', 'residual.rs');
+
+function readIfPresent(p) {
+  return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null;
+}
+
+function extractDefaultsTable(fsmVendorRs, tableName) {
+  const re = new RegExp(`const ${tableName}:\\s*&\\[\\(&str,\\s*&str\\)\\]\\s*=\\s*&\\[([\\s\\S]*?)\\];`);
+  const m = fsmVendorRs.match(re);
+  if (!m) return null;
+  const entries = [];
+  const rowRe = /\(\s*"([^"]+)"\s*,\s*([A-Za-z_][A-Za-z0-9_:]*)\s*\)/g;
+  let row;
+  while ((row = rowRe.exec(m[1])) !== null) {
+    entries.push({ key: row[1], constPath: row[2] });
+  }
+  return entries;
+}
+
+function extractConstText(sourceText, constName) {
+  const re = new RegExp(`const ${constName}:\\s*&str\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"\\s*;`);
+  const m = sourceText.match(re);
+  return m ? m[1] : null;
+}
+
+function placeholdersIn(text) {
+  const found = new Set();
+  const re = /\{([a-z_]+)\}/g;
+  let m;
+  while ((m = re.exec(text)) !== null) found.add(`{${m[1]}}`);
+  return found;
+}
+
+function deriveKeySpecs() {
+  const fsmVendorRs = readIfPresent(fsmVendorPath);
+  const gatesRs = readIfPresent(gatesRsPath);
+  const residualRs = readIfPresent(residualRsPath);
+  if (!fsmVendorRs || !gatesRs || !residualRs) return null;
+
+  const gateRows = extractDefaultsTable(fsmVendorRs, 'GATE_DEFAULTS');
+  const residualRows = extractDefaultsTable(fsmVendorRs, 'RESIDUAL_DEFAULTS');
+  if (!gateRows || !residualRows || gateRows.length === 0 || residualRows.length === 0) return null;
+
+  const specs = [];
+  for (const { key, constPath } of gateRows) {
+    const constName = constPath.split('::').pop();
+    const text = extractConstText(gatesRs, constName) ?? extractConstText(residualRs, constName);
+    if (text === null) return null;
+    specs.push({ key: `gates/${key}`, constName, placeholders: placeholdersIn(text) });
+  }
+  for (const { key, constPath } of residualRows) {
+    const constName = constPath.split('::').pop();
+    const text = extractConstText(residualRs, constName) ?? extractConstText(gatesRs, constName);
+    if (text === null) return null;
+    specs.push({ key: `residual/${key}`, constName, placeholders: placeholdersIn(text) });
+  }
+  return specs;
+}
+
+function validateBundleCompleteness(keys) {
   const missing = [];
   const empty = [];
-  for (const key of GATE_AND_RESIDUAL_KEYS) {
+  for (const key of keys) {
     const fp = path.join(bundleDir, `${key}.md`);
     if (!fs.existsSync(fp)) { missing.push(key); continue; }
     if (fs.readFileSync(fp, 'utf8').trim() === '') empty.push(key);
@@ -24,8 +86,35 @@ function validateBundleCompleteness() {
     if (empty.length) console.error(`prose bundle empty entries: ${empty.join(', ')}`);
     return false;
   }
-  console.log(`prose bundle complete: ${GATE_AND_RESIDUAL_KEYS.length} keys present and non-empty`);
+  console.log(`prose bundle complete: ${keys.length} keys present and non-empty`);
   return true;
+}
+
+function validatePlaceholderParity(specs) {
+  const findings = [];
+  for (const { key, constName, placeholders } of specs) {
+    const fp = path.join(bundleDir, `${key}.md`);
+    if (!fs.existsSync(fp)) continue;
+    const mdPlaceholders = placeholdersIn(fs.readFileSync(fp, 'utf8'));
+    for (const tok of placeholders) {
+      if (!mdPlaceholders.has(tok)) {
+        findings.push(`${key}.md is missing placeholder ${tok} carried by the canonical Rust const ${constName}; the substituted value would be silently dropped at render time`);
+      }
+    }
+    for (const tok of mdPlaceholders) {
+      if (!placeholders.has(tok)) {
+        findings.push(`${key}.md carries placeholder ${tok} that the canonical Rust const ${constName} never substitutes; it would render literally`);
+      }
+    }
+  }
+  if (findings.length) {
+    console.error('prose-placeholder-parity FAILED -- .md overrides drifted from the substituting Rust consts:');
+    for (const f of findings) console.error(`  - ${f}`);
+    return true;
+  }
+  const withTokens = specs.filter((s) => s.placeholders.size > 0).length;
+  console.log(`prose-placeholder-parity: ${specs.length} keys checked, ${withTokens} carrying placeholders, all matching their Rust consts`);
+  return false;
 }
 
 function resolveConformancePaths() {
@@ -135,9 +224,23 @@ function runConformanceCheck() {
   return false;
 }
 
-const bundleFailed = !validateBundleCompleteness();
+const derivedSpecs = deriveKeySpecs();
+const keys = derivedSpecs ? derivedSpecs.map((s) => s.key) : FALLBACK_GATE_AND_RESIDUAL_KEYS;
+
+if (derivedSpecs) {
+  const missingFromDerived = FALLBACK_GATE_AND_RESIDUAL_KEYS.filter((k) => !keys.includes(k));
+  console.log(`prose bundle keys derived from fsm_vendor GATE_DEFAULTS + RESIDUAL_DEFAULTS: ${keys.length}`);
+  if (missingFromDerived.length) {
+    console.log(`note: previously-hardcoded keys no longer in the Rust tables: ${missingFromDerived.join(', ')}`);
+  }
+} else {
+  console.log('prose bundle keys: falling back to the hardcoded list -- rs-plugkit sources unavailable (submodule not populated, or a partial/shallow checkout)');
+}
+
+const bundleFailed = !validateBundleCompleteness(keys);
+const placeholderFailed = derivedSpecs ? validatePlaceholderParity(derivedSpecs) : false;
 const conformanceFailed = runConformanceCheck();
 
-if (bundleFailed || conformanceFailed) {
+if (bundleFailed || placeholderFailed || conformanceFailed) {
   process.exit(1);
 }
