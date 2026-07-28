@@ -152,3 +152,29 @@ reimplement the hop), not "declare it external." A gate/rule that lets a
 blockedBy:external row count as done is itself the anti-pattern -- remove the
 escape hatch so the workflow is forced to build the real fix. Grep BOTH native
 runtimes when eliminating stubs; a fix in one leaves the other stubbed.
+
+## 2026-07-28 -- a gate precondition can be unsatisfiable-and-wrong, not just unmet
+Goal (G): restructure the AnEntrypoint ecosystem across 13 repos and hand back a
+consolidation list -- not drive gm's own phase machine to COMPLETE.
+What drifted / what went wrong: CONSOLIDATE denied on submodule pointer drift and
+I retried it instead of testing the denial's premise. gm's seven submodules are
+uninitialized here (every git submodule status line prefixed '-', zero entries, no
+.git) and gm's porcelain is empty with no gitlink diff, so nothing had drifted
+inside gm at all. The gate was comparing gm's pins against the sibling standalone
+clones under /home/user, which this session had advanced onto a feature branch.
+Doing what the denial literally asked -- git add each path, commit -- would have
+pinned gm's tree to unmerged branch commits, which is strictly worse than the
+drift it was flagging, and is the exact cross-repo breakage gm's own AGENTS.md
+documents submodule-sync.yml exists to prevent.
+Fix / resolution: stop at the retry bound, record the concrete stuck state as a
+PRD row naming why the prescribed recovery is wrong, and surface it. The real
+blocker is the same human action already on the consolidation list (merge the
+branches once CI can be validated), so there was no local fix to build.
+Generalizes to: "return to plugkit on drift, dispatch the verb the denial names"
+is right by default but not unconditional. Before executing a gate's prescribed
+recovery, check that its premise holds in THIS environment -- a gate reasoning
+about submodules cannot tell an uninitialized checkout plus a sibling clone apart
+from a real drifted pointer. When the prescribed fix would damage state the gate
+is meant to protect, the correct move is bounded-retry-then-surface, not
+compliance. Distinguish "precondition unmet" (do the work) from "precondition
+unsatisfiable and its recovery harmful" (surface it).
