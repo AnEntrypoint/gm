@@ -178,7 +178,7 @@ function tryDelegateToRunner(args) {
   if (statusServing(already, 12000) && !versionDrifted) {
     try { ensureGmPlugkitVersionFresh(); } catch (_) {}
     let skillRefresh = null;
-    try { skillRefresh = ensureSkillMdFresh(); } catch (_) {}
+    try { skillRefresh = await ensureSkillMdFresh(); } catch (_) {}
     writeCliStatus({ phase: 'ready', already_serving: true, watcher_pid: already.pid });
     console.log(JSON.stringify({
       ok: true,

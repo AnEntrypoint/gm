@@ -676,7 +676,10 @@ function spawnPinnedBoot(extraArgs) {
   return { ok: true, pinned_version: pinned, duration_ms: durationMs, status: result.status };
 }
 
-function discoverBundledSkillsAndSources() {
+const SKILL_MD_REMOTE_REPO = 'AnEntrypoint/gm';
+const SKILL_MD_REMOTE_BRANCH = 'main';
+
+function discoverBundledSkillsAndSourcesLocal() {
   const found = new Map();
   try {
     for (const f of fs.readdirSync(__dirname)) {
@@ -704,20 +707,66 @@ function discoverBundledSkillsAndSources() {
   return found;
 }
 
-function ensureSkillMdFresh() {
+async function discoverRemoteSkillNames(timeoutMs) {
+  const url = `https://api.github.com/repos/${SKILL_MD_REMOTE_REPO}/contents/skills?ref=${SKILL_MD_REMOTE_BRANCH}`;
+  const buf = await httpGetBuffer(url, timeoutMs || 5000);
+  const entries = JSON.parse(buf.toString('utf-8'));
+  if (!Array.isArray(entries)) throw new Error('unexpected github contents API response shape');
+  return entries.filter(e => e && e.type === 'dir' && e.name).map(e => e.name);
+}
+
+async function fetchRemoteSkillMd(skillName, timeoutMs) {
+  const url = `https://raw.githubusercontent.com/${SKILL_MD_REMOTE_REPO}/${SKILL_MD_REMOTE_BRANCH}/skills/${skillName}/SKILL.md`;
+  const buf = await httpGetBuffer(url, timeoutMs || 8000);
+  return buf.toString('utf-8');
+}
+
+async function resolveSkillMdSource(skillName, localPath) {
+  if (localPath && fs.existsSync(localPath)) {
+    return { content: fs.readFileSync(localPath, 'utf-8'), origin: localPath };
+  }
+  const content = await fetchRemoteSkillMd(skillName, 8000);
+  return { content, origin: `https://raw.githubusercontent.com/${SKILL_MD_REMOTE_REPO}/${SKILL_MD_REMOTE_BRANCH}/skills/${skillName}/SKILL.md` };
+}
+
+async function ensureSkillMdFresh() {
   const home = process.env.HOME || process.env.USERPROFILE || require('os').homedir();
   const crypto = require('crypto');
   const _norm = s => s.replace(/\r\n/g, '\n');
   const allRefreshed = [];
   const sources = {};
-  const discovered = discoverBundledSkillsAndSources();
-  for (const [skillName, bundledPath] of discovered) {
+  const failures = [];
+
+  const localFound = discoverBundledSkillsAndSourcesLocal();
+  let skillNames = Array.from(localFound.keys());
+  let remoteNamesFetched = false;
+  try {
+    const remoteNames = await discoverRemoteSkillNames(5000);
+    remoteNamesFetched = true;
+    for (const n of remoteNames) if (!skillNames.includes(n)) skillNames.push(n);
+  } catch (e) {
+    obsEvent('bootstrap', 'skill-md.refresh.remote-name-discovery-failed', { error: e.message });
+  }
+
+  if (skillNames.length === 0) {
+    const msg = `SKILL.md refresh found zero bundled skills: local dev-tree lookup empty AND remote discovery ${remoteNamesFetched ? 'returned zero dirs' : 'failed'} against ${SKILL_MD_REMOTE_REPO}@${SKILL_MD_REMOTE_BRANCH}`;
+    log(`ERROR: ${msg}`);
+    try { obsEvent('bootstrap', 'skill-md.refresh.zero-skills-discovered', { dir: __dirname, remote_repo: SKILL_MD_REMOTE_REPO, remote_branch: SKILL_MD_REMOTE_BRANCH, remote_names_fetched: remoteNamesFetched }); } catch (_) {}
+    return { refreshed: [], sources: {}, failures: [{ skillName: null, error: msg }] };
+  }
+
+  for (const skillName of skillNames) {
     try {
-      if (!fs.existsSync(bundledPath)) {
-        try { obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { skillName, searched: [bundledPath] }); } catch (_) {}
+      const localPath = localFound.get(skillName) || null;
+      let resolved;
+      try {
+        resolved = await resolveSkillMdSource(skillName, localPath);
+      } catch (e) {
+        try { obsEvent('bootstrap', 'skill-md.refresh.bundled-not-found', { skillName, searched: [localPath, `https://raw.githubusercontent.com/${SKILL_MD_REMOTE_REPO}/${SKILL_MD_REMOTE_BRANCH}/skills/${skillName}/SKILL.md`], error: e.message }); } catch (_) {}
+        failures.push({ skillName, error: e.message });
         continue;
       }
-      const bundled = fs.readFileSync(bundledPath, 'utf-8');
+      const bundled = resolved.content;
       const bundledHash = crypto.createHash('sha256').update(_norm(bundled)).digest('hex');
       const targets = [
         path.join(home, '.agents', 'skills', skillName, 'SKILL.md'),
@@ -731,7 +780,7 @@ function ensureSkillMdFresh() {
           try { if (fs.existsSync(legacy)) fs.rmSync(legacy, { recursive: true, force: true }); } catch (_) {}
         }
       }
-      sources[skillName] = bundledPath;
+      sources[skillName] = resolved.origin;
       for (const target of targets) {
         try {
           let needsWrite = true;
@@ -753,13 +802,14 @@ function ensureSkillMdFresh() {
       }
     } catch (e) {
       try { obsEvent('bootstrap', 'skill-md.refresh.failed', { skillName, error: e.message }); } catch (_) {}
+      failures.push({ skillName, error: e.message });
     }
   }
   if (allRefreshed.length > 0) {
     log(`SKILL.md refreshed: ${allRefreshed.length} target(s)`);
     try { obsEvent('bootstrap', 'skill-md.refreshed', { targets: allRefreshed, sources }); } catch (_) {}
   }
-  return { refreshed: allRefreshed, sources };
+  return { refreshed: allRefreshed, sources, failures };
 }
 
 function installedVersionAtTools() {
@@ -867,7 +917,7 @@ async function ensureReady(opts) {
   if (isReady() && !versionDrift) {
     const wasmPath = getWasmPath();
     const versionMarkerUpdated = ensureGmPlugkitVersionFresh();
-    ensureSkillMdFresh();
+    await ensureSkillMdFresh();
     return { ok: true, wasmPath, binaryPath: wasmPath, status: versionMarkerUpdated ? 'version-refreshed' : 'already-ready', version: installed };
   }
   if (targetVersion && targetVersion !== pinnedVersion) {
@@ -885,7 +935,7 @@ async function ensureReady(opts) {
     if (versionDrift && isReady()) {
       log(`bootstrap for ${targetVersion} failed (${bootErr.message || bootErr}); keeping running watcher on installed ${installed} (no kill, serve cached wasm)`);
       const cachedPath = getWasmPath();
-      ensureSkillMdFresh();
+      await ensureSkillMdFresh();
       return { ok: true, wasmPath: cachedPath, binaryPath: cachedPath, status: 'bootstrap-failed-served-cached', version: installed };
     }
     throw bootErr;
@@ -895,7 +945,7 @@ async function ensureReady(opts) {
     try { killSpoolWatcherInCwd(`version_drift:${installed}->${targetVersion}`); } catch (_) {}
   }
 
-  ensureSkillMdFresh();
+  await ensureSkillMdFresh();
   return { ok: true, wasmPath, binaryPath: wasmPath, status: 'bootstrapped', version: targetVersion || installed };
 }
 
