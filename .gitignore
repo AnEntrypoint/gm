@@ -29,6 +29,7 @@ tmp/
 **/.tessl-plugin/
 
 # >>> plugkit managed
+.scratch/
 .gm/exec-spool/
 .gm/.sql-smoke.db
 .gm/gm-fired-*
