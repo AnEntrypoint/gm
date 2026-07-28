@@ -1,0 +1,24 @@
+---
+key: mem-session-crossing-defect-cluster-20260728
+ns: default
+created: 1785232600000
+updated: 1785232600000
+---
+
+gm spool session-crossing defect cluster, witnessed live 2026-07-28 (gm session gm-62880911; every watcher-log event from it misattributed to sess=claude-loop-iter).
+
+FOUR ESCALATING SYMPTOMS, one suspected root cause: in-flight dispatches keyed by a session identity that is NOT the sessionId supplied in the request body.
+
+1. FOREIGN RESPONSE ECHO -- a verb returns another invocation's payload while its own side effect lands correctly. exec_js running `git rev-parse` returned a gh-workflow-run array (headSha 9e236b001b20 / 8215791f3bba / a3e174ddf1b3); a statSync body returned slot-scheduling booleans; a chrome-process-scan body returned npm version data. prd-add with id orphaned-headless-chrome-from-dead-sessions returned added=subagent-gm-usage-quality while prd.yml correctly gained the intended row.
+
+2. SILENTLY DROPPED WRITE (strictly worse) -- four prd-add dispatches returned ok:true and wrote nothing; id count stayed flat at 51. Reliable signature in .watcher.log: dispatch.end for verb=prd-add is BIMODAL. Real writes take 98-106ms and emit a matching prd.added event; dropped ones complete in exactly 2ms and emit NO prd.added event, i.e. they are answered from a response cache without the handler ever running. Measured: ms:2 at ts 1785232304380, 1785232304383, 1785232361218 (dropped) vs ms:103 at 1785232304487, ms:98 at 1785232355912, ms:106 at 1785232395783 (real).
+
+3. CROSSED ORCHESTRATION STATE (most severe) -- instruction returned phase=PLAN with a 25-row working set, then later in the SAME session, with no transition ever dispatched, returned phase=EMIT with a completely different 9-row working set. Both phase-status calls reported session_id=claude-loop-iter17. Because the skill instructs agents to treat the instruction response as authoritative for phase, an agent can be handed a foreign chain's phase and drive transitions against work it does not own. prd_total_count stayed correct (51) throughout, so the shared prd.yml on disk is healthy; only per-session working set, phase, and response routing are crossed.
+
+4. MEMORIZE SILENTLY DISCARDS -- a memorize dispatch returned ok:true with key mem-15624e3e40a891b4-73, md_file .gm/memories/mem-15624e3e40a891b4-73.md, embedded:true, bytes:73. That file is a PRE-EXISTING memo created 1784405478921 (9 days earlier) containing unrelated content (memory-fix-verification-marker-gm-project). The new memo was never written. So the durable-memory channel is affected too, and reports success while discarding the record.
+
+DEBUGGING LESSON: when a spool response looks implausible, verify the on-disk side effect directly (grep prd.yml, statSync the path, read the md_file) before trusting or retrying. The response envelope is the unreliable component, not the store.
+
+DURABILITY NOTE: .gm/prd.yml is gitignored (.gitignore line 100), so PRD rows are session-local and NOT durable across clones. .gm/memories/ IS tracked (884 files), so findings worth keeping belong there -- and, given symptom 4, must be verified on disk after writing rather than trusted from the verb response.
+
+RELATED ROOT CAUSE, separate defect: the bert embedder plugin traps (wasm backtrace at 0x435ef fn397 / 0x43523 fn396 / 0x53d7f fn611 / 0x1ab807 fn4407, logged as git_commit_embed_failed kind=plugin-error with a consecutive counter climbing 1..5, plus kind=plugin-not-found "no response from plugin 'bert' (verb 'embed')"). Every embedding-dependent verb then fails, and the error surfaced to the caller is the misleading string "plugin gm not loaded" -- which names the wrong plugin entirely and sends debuggers down the wrong path. memorize succeeds in the same window because it needs no embedding; codesearch fails because it does.
