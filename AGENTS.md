@@ -167,9 +167,17 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 ## Cascade pipeline
 
-Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> auto-bump `gm.json::plugkitVersion` -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: the recall store (`recall: cascade pipeline`).
+Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single `plugkit.wasm` (npm `plugkit-wasm` + `plugkit-bin` Releases) -> best-effort gm-metadata-sync commit -> `publish.yml` ships gm-skill+gm-plugkit+SKILL.md mirror. Step sequence + PUBLISHER_TOKEN: the recall store (`recall: cascade pipeline`).
+
+**`gm.json.plugkitVersion` is informational-only, never a functional pin** -- nothing reads it; the real runtime pin is `gm-plugkit/plugkit.version`, always overridden by `resolveLatestRemoteVersion()` before use. `publish.yml`'s drift-check no longer gates on it. Mechanism detail: the recall store (`recall: gm cascade pin-toil design`).
+
+**Every downloaded wasm artifact is sha256-verified against the sha published alongside that exact resolved release, fetched fresh, never against a locally-committed value alone** -- `gm-plugkit/bootstrap.js::fetchRemoteSha()`. Floating past the committed pin never weakens verification. Detail: the recall store (`recall: gm cascade pin-toil design`).
+
+**Submodule pointers auto-sync via `.github/workflows/submodule-sync.yml`** (30min schedule, `git submodule update --remote --merge`, auto-commit) instead of hand-bumped chore commits -- reproducibility preserved since each commit still pins exact SHAs, only main's HEAD advances automatically.
 
 The `gm-runner` crate and its separate `gm-runner.yml` CI workflow are retired along with the binary itself (see the WASM-guest section above) -- confirmed absent from rs-plugkit's `crates/` and `.github/workflows/`, no longer a stage in the cascade.
+
+**The three agentplug-* wasm-plugin repos (agentplug-bert, agentplug-libsql, agentplug-treesitter) share one reusable release workflow** hosted in rs-plugkit (`wasm-plugin-release.yml`, `workflow_call`). Parameterization + the build_env/pre_build_steps quoting caveat: the recall store (`recall: gm cascade pin-toil design`).
 
 **Repos involved (push to any triggers cascade):** `AnEntrypoint/{rs-codeinsight, rs-search, rs-plugkit, gm}`. rs-learn and rs-exec are retired (crates removed from / never depended on by rs-plugkit; their spool-dispatch and memory surfaces reimplemented natively in rs-plugkit wasm_dispatch; repos archived as tombstones, README points at rs-plugkit). Roles, npm package names, legacy-retirement detail: the recall store (`recall: cascade repos involved roles`, `recall: legacy gm-skill variants retired`).
 
