@@ -5,42 +5,40 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
-const { pidAlive, sha256OfFile, sha256OfFileSync } = require('../gm-plugkit/gm-process');
 const shared = require('../gm-plugkit/bootstrap-shared');
+const core = require('../gm-plugkit/bootstrap-wasm-core');
 const {
   obsEvent,
   cacheRoot,
   fallbackCacheRoot,
-  gmToolsDir,
   ensureDir,
   acquireLock,
   releaseLock,
-  isLockStale,
-  pruneOldVersions,
   healIfShaMatches,
-  daemonVersionSentinel,
+  pruneOldVersions,
   readDaemonVersion,
   writeDaemonVersion,
-  pidCommandLineForKillGuard,
-  pidIsPlugkitProcess,
-  writeKillAttribution,
-  killPid,
   killSpoolWatcherInCwd,
   proactiveKillForNewInstall,
   ensureNextStepWiring,
-  resolveWindowsExe,
-  resolveNpmCliJs,
 } = shared;
+const {
+  readVersionFile,
+  readShaManifest,
+  resolveCacheWasmPath,
+  extractNpmPackageWithRetry: extractNpmPackageWithRetryCore,
+  writeBootstrapError,
+  clearBootstrapError,
+} = core;
 
-const NPM_PACKAGE = 'plugkit-wasm';
-const ATTEMPT_TIMEOUT_MS = 10 * 60 * 1000;
-const MAX_ATTEMPTS = 3;
-const BACKOFF_MS = [5000, 15000];
-const LOCK_STALE_MS = 30 * 60 * 1000;
+const log = core.makeLogger('plugkit-bootstrap');
 
-function log(msg) {
-  try { process.stderr.write(`[plugkit-bootstrap] ${msg}\n`); } catch (_) {}
+function copyWasmToGmTools(wasmPath, wrapperDir, version) {
+  return core.copyWasmToGmTools(wasmPath, version, { wrapperDir });
+}
+
+function extractNpmPackageWithRetry(destPath, version) {
+  return extractNpmPackageWithRetryCore(destPath, version, { log });
 }
 
 function discoverBundledSkills(wrapperDir) {
@@ -126,139 +124,6 @@ function probeBinaryVersion(binPath) {
   } catch (_) { return null; }
 }
 
-function writeBootstrapError(spec) {
-  try {
-    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-    const spoolDir = path.join(projectDir, '.gm', 'exec-spool');
-    fs.mkdirSync(spoolDir, { recursive: true });
-    const out = path.join(spoolDir, '.bootstrap-error.json');
-    fs.writeFileSync(out, JSON.stringify({ ts: new Date().toISOString(), ...spec }, null, 2));
-  } catch (_) {}
-}
-
-function clearBootstrapError() {
-  try {
-    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-    const out = path.join(projectDir, '.gm', 'exec-spool', '.bootstrap-error.json');
-    fs.unlinkSync(out);
-  } catch (_) {}
-}
-
-function copyWasmToGmTools(wasmPath, wrapperDir, version) {
-  const dst = gmToolsDir();
-  fs.mkdirSync(dst, { recursive: true });
-  const target = path.join(dst, 'plugkit.wasm');
-  if (fs.existsSync(target)) {
-    try {
-      const cur = sha256OfFileSync(target);
-      const src = sha256OfFileSync(wasmPath);
-      if (cur === src) {
-        try { fs.writeFileSync(path.join(dst, 'plugkit.version'), version); } catch (_) {}
-        return;
-      }
-    } catch (_) {}
-  }
-  fs.copyFileSync(wasmPath, target);
-  fs.writeFileSync(path.join(dst, 'plugkit.version'), version);
-  try {
-    const srcSha = path.join(wrapperDir, 'plugkit.sha256');
-    if (fs.existsSync(srcSha)) fs.copyFileSync(srcSha, path.join(dst, 'plugkit.sha256'));
-  } catch (_) {}
-}
-
-function readVersionFile(wrapperDir) {
-  const p = path.join(wrapperDir, 'plugkit.version');
-  if (!fs.existsSync(p)) throw new Error(`plugkit.version not found at ${p}`);
-  return fs.readFileSync(p, 'utf8').trim();
-}
-
-
-function readShaManifest(wrapperDir, manifestName) {
-  const p = path.join(wrapperDir, manifestName || 'plugkit.sha256');
-  if (!fs.existsSync(p)) return null;
-  const out = {};
-  for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
-    const m = line.match(/^([0-9a-f]{64})\s+(\S+)\s*$/i);
-    if (m) out[m[2]] = m[1].toLowerCase();
-  }
-  return out;
-}
-
-async function extractNpmPackageWasm(destPath, version) {
-  const tempDir = path.join(path.dirname(destPath), '.npm-extract-' + Date.now());
-  try {
-    ensureDir(tempDir);
-    const startMs = Date.now();
-    log(`extracting npm package ${NPM_PACKAGE}@${version} to ${tempDir}`);
-    obsEvent('bootstrap', 'npm.extract.start', { package: NPM_PACKAGE, version });
-
-    const npmResolved = resolveWindowsExe('npm');
-    const isCmdShim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(npmResolved);
-    const npmCliJs = isCmdShim ? resolveNpmCliJs(npmResolved) : null;
-    const installArgs = ['install', '--no-audit', '--no-fund', '--no-save', '--prefix', tempDir, NPM_PACKAGE + '@' + version];
-
-    const spawnCmd = npmCliJs ? process.execPath : (isCmdShim && /\s/.test(npmResolved) ? `"${npmResolved}"` : npmResolved);
-    const rawArgs = npmCliJs ? [npmCliJs, ...installArgs] : installArgs;
-    const spawnArgs = (isCmdShim && !npmCliJs) ? rawArgs.map(a => /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a) : rawArgs;
-    const result = spawnSync(
-      spawnCmd,
-      spawnArgs,
-      {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: ATTEMPT_TIMEOUT_MS,
-        encoding: 'utf8',
-        windowsHide: true,
-        ...((isCmdShim && !npmCliJs) ? { shell: true } : {}),
-      }
-    );
-
-    if (result.error) throw result.error;
-    if (result.status !== 0) {
-      throw new Error(`npm install extraction failed: ${result.stderr || result.stdout || 'unknown error'}`);
-    }
-
-    const nodeModulesPath = path.join(tempDir, 'node_modules', NPM_PACKAGE, 'plugkit.wasm');
-    if (!fs.existsSync(nodeModulesPath)) {
-      throw new Error(`plugkit.wasm not found in extracted npm package at ${nodeModulesPath}`);
-    }
-
-    fs.copyFileSync(nodeModulesPath, destPath);
-    log(`extracted ${nodeModulesPath} -> ${destPath}`);
-    obsEvent('bootstrap', 'npm.extract.end', { dur_ms: Date.now() - startMs, ok: true });
-  } finally {
-    try { fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 1, retryDelay: 50 }); } catch (_) {}
-  }
-}
-
-async function extractNpmPackageWithRetry(destPath, version) {
-  let lastErr;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      log(`npm extract attempt ${attempt}/${MAX_ATTEMPTS}: ${NPM_PACKAGE}@${version}`);
-      await extractNpmPackageWasm(destPath, version);
-      return;
-    } catch (err) {
-      lastErr = err;
-      log(`attempt ${attempt} failed: ${err.message}`);
-      obsEvent('bootstrap', 'npm.extract.attempt_failed', { package: NPM_PACKAGE, attempt, max: MAX_ATTEMPTS, err: String(err.message || err) });
-      if (err && (err.code === 'ENOENT' || /ENOENT/.test(String(err.message || '')))) {
-        log(`npx binary unresolvable (ENOENT); skipping retries, falling back`);
-        throw err;
-      }
-      if (err && (err.code === 'EINVAL' || /EINVAL/.test(String(err.message || '')))) {
-        log(`spawn EINVAL on npx shim; skipping retries, falling back`);
-        throw err;
-      }
-      if (attempt < MAX_ATTEMPTS) {
-        const wait = BACKOFF_MS[attempt - 1] || 120000;
-        log(`backing off ${wait}ms`);
-        await new Promise(r => setTimeout(r, wait));
-      }
-    }
-  }
-  throw lastErr;
-}
-
 async function bootstrap(opts) {
   opts = opts || {};
   const wrapperDir = opts.wrapperDir || __dirname;
@@ -282,7 +147,7 @@ async function bootstrap(opts) {
 
   if (fs.existsSync(wasmFinalPath) && fs.existsSync(wasmOkSentinel)) {
     if (wasmExpectedSha) {
-      const actualSha = sha256OfFileSync(wasmFinalPath);
+      const actualSha = require('../gm-plugkit/gm-process').sha256OfFileSync(wasmFinalPath);
       if (actualSha === wasmExpectedSha) {
         obsEvent('bootstrap', 'decision.hit', { reason: 'sha-match', version, path: wasmFinalPath });
         copyWasmToGmTools(wasmFinalPath, wrapperDir, version);
@@ -332,7 +197,7 @@ async function bootstrap(opts) {
     if (fs.existsSync(wasmPartialPath)) {
       try {
         const st = fs.statSync(wasmPartialPath);
-        if (Date.now() - st.mtimeMs > LOCK_STALE_MS) {
+        if (Date.now() - st.mtimeMs > 30 * 60 * 1000) {
           fs.unlinkSync(wasmPartialPath);
           log(`cleared stale partial: ${wasmPartialPath}`);
         }
@@ -351,7 +216,7 @@ async function bootstrap(opts) {
     }
 
     if (wasmExpectedSha) {
-      const got = await sha256OfFile(wasmPartialPath);
+      const got = await require('../gm-plugkit/gm-process').sha256OfFile(wasmPartialPath);
       if (got !== wasmExpectedSha) {
         try { fs.unlinkSync(wasmPartialPath); } catch (_) {}
         writeBootstrapError({
@@ -396,11 +261,7 @@ function getWasmPath(opts) {
     try { const r = cacheRoot(); ensureDir(r); return r; }
     catch (_) { const r = fallbackCacheRoot(); ensureDir(r); return r; }
   })();
-  const verDir = path.join(root, `v${version}`);
-  const wasmPath = path.join(verDir, 'plugkit.wasm');
-  const okSentinel = path.join(verDir, '.wasm-ok');
-  if (fs.existsSync(wasmPath) && fs.existsSync(okSentinel)) return wasmPath;
-  return null;
+  return resolveCacheWasmPath(root, version, 'plugkit.wasm');
 }
 
 function killStaleDaemonIfVersionChanged(wrapperDir) {

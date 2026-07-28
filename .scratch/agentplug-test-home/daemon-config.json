@@ -1,0 +1,9 @@
+{
+  "registry_poll_interval_secs": 5,
+  "heartbeat_interval_secs": 2,
+  "plugin_update_poll_interval_secs": 12,
+  "runner_update_poll_interval_secs": 15,
+  "max_concurrent_projects": 1,
+  "gm_concurrency": 1,
+  "side_plugin_concurrency": 1
+}
