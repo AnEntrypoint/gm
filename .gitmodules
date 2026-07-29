@@ -27,3 +27,7 @@
 	path = rs-search
 	url = https://github.com/AnEntrypoint/rs-search.git
 	branch = main
+[submodule "gm-config"]
+	path = gm-config
+	url = https://github.com/AnEntrypoint/gm-config.git
+	branch = main

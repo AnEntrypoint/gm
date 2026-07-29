@@ -91,6 +91,11 @@ tmp/
 .claude/worktrees/
 .gm/memories/*.tmp-*
 .gm/.instructions-shipped-manifest.json
+.gm/instructions-source-cache/
+.gm/config-source-cache/
+.gm/config-source-cache-default/
+.gm/config-source-cache-default.*.sync.json
+.gm/config-source-cache.*.sync.json
 
 # .gm/prd.yml + .gm/mutables.yml: per-dispatch runtime state, rewritten on
 # nearly every PLAN/EXECUTE/VERIFY dispatch -- same class as .gm/witness/
