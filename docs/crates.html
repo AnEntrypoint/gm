@@ -128,7 +128,7 @@ sequenceDiagram
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> own the PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm guest; <code>agentplug-runner</code> (a native wasmtime host, see below) is the sole loader that runs it -- the other two crates on this page are its imports, alongside agentplug's own shared native plugins.</p>
+  <p><strong>Job:</strong> own the SPECIFY-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;PROVE-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;EMIT-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;STATE-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;CONC-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;SEC-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;RES-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;DECIDE-PLAN-&gt;EXECUTE-&gt;EMIT-&gt;VERIFY-&gt;CONSOLIDATE-&gt;COMPLETEgt;COMPLETE state machine, dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm guest; <code>agentplug-runner</code> (a native wasmtime host, see below) is the sole loader that runs it -- the other two crates on this page are its imports, alongside agentplug's own shared native plugins.</p>
 
   <h3>what it actually does</h3>
   <ul>

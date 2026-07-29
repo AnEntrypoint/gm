@@ -87,7 +87,7 @@ window.addEventListener('DOMContentLoaded', () => {
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    There is exactly one shipped skill: <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> npm package). Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over -- invocation syntax, spool paths, verb names, gate conditions, transition markers -- and every phase instruction is served from elsewhere. The state machine, <strong>PLAN -&gt; EXECUTE -&gt; EMIT -&gt; VERIFY -&gt; CONSOLIDATE -&gt; COMPLETE</strong>, lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    There is exactly one shipped skill: <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> npm package). Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over -- invocation syntax, spool paths, verb names, gate conditions, transition markers -- and every phase instruction is served from elsewhere. The state machine, <strong>SPECIFY -&gt; PROVE -&gt; EMIT -&gt; STATE -&gt; CONC -&gt; SEC -&gt; RES -&gt; DECIDE -&gt; COMPLETE</strong> (a non-linear graph with feedback edges, not a chain), lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
@@ -98,19 +98,25 @@ window.addEventListener('DOMContentLoaded', () => {
 <pre class="mermaid">
 stateDiagram-v2
   direction TB
-  [*] --> PLAN: user message
-  PLAN --> EXECUTE: zero new unknowns last pass
-  EXECUTE --> EMIT: every mutable witnessed
-  EMIT --> VERIFY: post-emit matches pre-emit
-  VERIFY --> COMPLETE: prd empty AND git clean AND CI green
+  [*] --> SPECIFY: user message
+  SPECIFY --> PROVE: cover closed
+  PROVE --> EMIT: every mutable witnessed
+  EMIT --> STATE: source hygiene gates pass
+  STATE --> CONC: idempotency gate passes
+  CONC --> SEC: disjointness witnessed
+  SEC --> RES: no secrets in diff
+  RES --> DECIDE: no unchecked panics
+  DECIDE --> COMPLETE: prd empty AND git clean AND CI green
   COMPLETE --> [*]
 
-  EXECUTE --> PLAN: new unknown
-  EMIT --> PLAN: new unknown
-  VERIFY --> PLAN: new unknown
-  EMIT --> EXECUTE: logic wrong
-  VERIFY --> EMIT: broken output
-  VERIFY --> EXECUTE: logic wrong
+  PROVE --> SPECIFY: reshaping discovery
+  EMIT --> SPECIFY: reshaping discovery
+  STATE --> EMIT: code repair
+  CONC --> STATE: boundary enforcement
+  SEC --> STATE: boundary enforcement
+  RES --> EMIT: panic elimination
+  DECIDE --> SPECIFY: empirical fitness feedback
+  DECIDE --> PROVE: unproven obligation
 </pre>
 
 <p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target, and the orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
@@ -144,18 +150,18 @@ stateDiagram-v2
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">PLAN, EXECUTE, COMPLETE</span></div>
+  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">SPECIFY, PROVE, COMPLETE</span></div>
   <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd.yml</code>; the orchestrator owns the serializer so concurrent dispatch from parallel <code>exec_js</code> calls cannot corrupt it.</span></div>
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">PLAN, EXECUTE</span></div>
-  <div class="row"><span class="k">role</span><span>Every unknown surfaced during PLAN lands here with <code>status: unknown</code>; <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
+  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">SPECIFY, PROVE</span></div>
+  <div class="row"><span class="k">role</span><span>Every unknown surfaced during SPECIFY lands here with <code>status: unknown</code>; <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time: name the hypothesis as a mutable, run exactly one real test against it, read the real result, and either cross it off or confirm it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">EXECUTE, EMIT</span></div>
+  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">PROVE, EMIT</span></div>
   <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or rs-learn (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers, so the file keeps gaining facts without growing without bound.</span></div>
@@ -163,7 +169,7 @@ stateDiagram-v2
 
 <div class="skill">
   <div class="skill-header"><h2>residual-scan</h2><span class="role">stop-gate challenge</span><span class="phase">COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no open browser sessions AND no running tasks. Agent either expands the PRD with in-spirit residuals and re-enters EXECUTE, or explicitly states "residual scan: none reachable in-spirit." Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
+  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no open browser sessions AND no running tasks. Agent either expands the PRD with in-spirit residuals and re-enters PROVE, or explicitly states "residual scan: none reachable in-spirit." Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
 </div>
 
 <div class="skill">
