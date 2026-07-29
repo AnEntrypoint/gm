@@ -5,7 +5,7 @@
 ```
 $ transition to=COMPLETE
 
-  DENIED  CONSOLIDATE -> COMPLETE   2 residuals
+  DENIED  DECIDE -> COMPLETE   2 residuals
 
   x worktree-clean       3 uncommitted files
   x ci-validated-fresh   .ci-validated sha 7c90878 != HEAD e8ea29f
@@ -105,7 +105,7 @@ The two npm packages this repo publishes:
 
 ### the state machine
 
-PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the push reaches origin.
+SPECIFY -> PROVE -> EMIT -> STATE -> CONC -> SEC -> RES -> DECIDE -> COMPLETE, a non-linear graph with feedback edges from every later stage back to SPECIFY/EMIT/STATE/PROVE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. DECIDE owns adversarial verification + git-push + CI/CD validation, gated by the full closure set into COMPLETE. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the push reaches origin.
 
 ### tools
 
@@ -126,8 +126,12 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 - **turn entry**: the `instruction` verb reminds the agent to dispatch first and attaches the per-prompt auto-recall pack
 - **pre-tool-use**: blocks Write/Edit/git before the gm skill fires for the turn
 - **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty or unpushed
-- **VERIFY -> CONSOLIDATE**: `residual-scan-fired`, `prd-all-closed`, `mutables-all-resolved`, `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log), `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD)
-- **CONSOLIDATE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha), `browser-witness-coverage`, `submodules-clean`
+- **PROVE -> EMIT**: `mutables-all-resolved`
+- **EMIT -> STATE**: `no-synthetic-test-files`, `no-graphical-symbols-in-diff`, `no-admit-deferral-markers`
+- **STATE -> CONC**: `idempotent-dispatch-replay-safe`
+- **SEC -> RES**: `no-secrets-in-diff`
+- **RES -> DECIDE**: `no-unchecked-panics-in-diff`
+- **DECIDE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha), `browser-witness-coverage`, `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD), `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log), `no-hedge-language-in-diff`
 
 The gate graph itself is data, not hardcoded Rust: a project's `.gm/instructions/fsm/graph.json` (written by the `fsm-vendor` verb) can add states, rewire edges, or swap which gates guard which transition, including a `policy` block that externalizes previously-hardcoded behavior (status vocabularies, witness-requirement toggles, CAS retry attempts) as project-overridable JSON.
 

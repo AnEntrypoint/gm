@@ -1,6 +1,6 @@
 title: "gm"
 tagline: "a state machine your coding agent can sit inside"
-description: "gm puts a deterministic PLAN, EXECUTE, EMIT, VERIFY, COMPLETE loop around your coding agent. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
+description: "gm puts a deterministic SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE pipeline around your coding agent. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
 repo: "https://github.com/AnEntrypoint/gm"
 url: "https://anentrypoint.github.io/gm"
 year: 2026
