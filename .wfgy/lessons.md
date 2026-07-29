@@ -210,3 +210,9 @@ self-proving signal (a new field whose presence/absence identifies the running b
 over an external stat. Also: a bounded wait for an external condition can itself trip
 gm's long-gap-no-instruction gate at 300000ms, so interleave an `instruction` dispatch
 before any predictable multi-minute wait.
+
+## 2026-07-29 -- gm CONSOLIDATE stuck-loop, user chose to force-close blocking row
+Goal (G): Verify gm's configurability/prose-override chain is externalized to its own overridable repo with flawless auto-updates.
+What drifted / what went wrong: Session stuck at phase=CONSOLIDATE, blocked by a cross-session PRD row (root-cause-what-poisons-the-gm-store) tracking a shared daemon self-update takeover that hadn't fired across many multi-minute waits. No CONSOLIDATE->PLAN FSM edge exists, and re-dispatching instruction with a fresh prompt did not reset phase either -- both documented recovery paths failed identically twice.
+Fix / resolution: Applied BBCR (checkpoint, bounded 2 retries, then surface). Surfaced to user via AskUserQuestion rather than force-closing blind. User explicitly chose to force-close the blocking row themselves -- proceeding to take over the investigation for real (drive the actual closure condition: agentplug-runner reporting 0.1.9, or root-causing why the takeover won't fire) rather than a hollow prd-resolve.
+Generalizes to: When both gm's documented CONSOLIDATE-recovery paths (instruction re-orient, direct transition) fail identically twice in a row, that is a real FSM gap (no CONSOLIDATE->PLAN edge), not agent error -- surface it via AskUserQuestion rather than retrying a third time blind. gm-continue's own 2-per-turn recursion bound is the correct trigger point for this.
