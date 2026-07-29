@@ -17,7 +17,7 @@ Most agent harnesses ask the model to follow a process. gm makes the process a p
 
 [![npm](https://img.shields.io/npm/v/gm-skill.svg)](https://www.npmjs.com/package/gm-skill) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Discord](https://img.shields.io/badge/discord-join-5865F2.svg)](https://discord.com/invite/c9VV59MKNr) [![site](https://img.shields.io/badge/site-anentrypoint.github.io%2Fgm-informational.svg)](https://anentrypoint.github.io/gm/)
 
-**[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
+**[Why gm hits different](#why-gm-hits-different)** &middot; **[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
 
 ```
 npx gm-skill install
@@ -43,8 +43,6 @@ This is extremely opinionated. It narrows bash to a handful of prefixes, routes 
 
 A Claude Code Agent Skill is just a directory at `~/.claude/skills/<name>/SKILL.md` (personal, all projects) or `.claude/skills/<name>/SKILL.md` (one project). The directory name becomes the slash command. No marketplace, no `npx skills` library -- the installer copies the directory into place.
 
-**The npm package is `gm-skill`, not `gm`.** `npx gm@latest` resolves to an unrelated, unmaintained GraphicsMagick wrapper (`gm` on npm, last published years ago) with no `install` command -- it fails with `could not determine executable to run`. Always spell out the full package name below.
-
 Interactive (offers Claude Code settings):
 
 ```
@@ -62,6 +60,8 @@ Project-local instead of home (`./.claude/skills/gm`):
 ```
 npx gm-skill install --project
 ```
+
+Spell out the full package name: the npm package is `gm-skill`, not `gm`. `npx gm@latest` resolves to an unrelated, unmaintained GraphicsMagick wrapper with no `install` command and fails with `could not determine executable to run`.
 
 The skill installs as `/gm`. On Claude Code the installer also offers (interactive) or sets (`--yes`):
 
