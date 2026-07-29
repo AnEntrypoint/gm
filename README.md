@@ -1,20 +1,43 @@
 # glootius maximus (gm)
 
-**the coding agent skill that refuses to stop early or ship a stub.**
+**Your coding agent doesn't decide when it's done. A gate does.**
 
-14000+ hours of supervised modification, 8600+ commits, one person, built to raise one number: the signal-to-noise ratio of a coding agent. gm convinces your agent it already is a deterministic state machine (`PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE`) and enforces that conviction with a wasm-backed orchestrator, witnessed execution, and a covering family of bounded subsets that refuses to let "follow-up" become a synonym for "I gave up."
+```
+$ transition to=COMPLETE
+
+  DENIED  CONSOLIDATE -> COMPLETE   2 residuals
+
+  x worktree-clean       3 uncommitted files
+  x ci-validated-fresh   .ci-validated sha 7c90878 != HEAD e8ea29f
+
+  next: git_finalize
+```
+
+Most agent harnesses ask the model to follow a process. gm makes the process a program the model cannot talk its way past.
 
 [![npm](https://img.shields.io/npm/v/gm-skill.svg)](https://www.npmjs.com/package/gm-skill) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Discord](https://img.shields.io/badge/discord-join-5865F2.svg)](https://discord.com/invite/c9VV59MKNr) [![site](https://img.shields.io/badge/site-anentrypoint.github.io%2Fgm-informational.svg)](https://anentrypoint.github.io/gm/)
 
 **[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
 
-it is named after **glootius maximus**, the muscle that holds you in the chair while you finish the work. the name is the joke and the discipline at once: the agent that sits down through PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE actually ships. the agent that stands up early ships a stub with a green check on it.
+```
+npx gm-skill install
+```
 
-that orientation is also why gm is built for token austerity: every token an agent spends should be signal toward the work, never narration, hedging, or busy-output. austerity is SNR enforced at the budget.
+## Why gm hits different
 
-free, open source, maintained by one person.
+**The COMPLETE gate is code, not a prompt.** Seven conditions guard the last transition -- PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync. They are a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust. A failed gate refuses the transition. The agent cannot narrate its way to done.
 
-disclaimer: this is extremely opinionated. it will block bash, redirect your tools, refuse to write test files, force you to push git before ending a session, and reject any execute call without an explicit timeout. if that sounds terrible, this is not for you. if that sounds like what you wish your agent did automatically, keep sitting down.
+**A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `exec_js`. You get an instruction, not an error.
+
+**Repeat the same failure and it stops you.** After the same denial fires repeatedly, the response stops restating the refusal and instructs the agent to record the stuck state and switch to a bounded-retry discipline. Loops end.
+
+**Zero test files, and that is checkable.** Search this repo for `*.test.*`, `*.spec.*`, `__tests__`, or a jest config. There are none, and there never will be. Verification means running the real path and reading the real output in the same turn. VERIFY also greps the diff for `Mock*`/`Fake*`/`Stub*` -- a mock shipped as a real integration is the same violation as a test file.
+
+**You can loosen the rules, and it will tell on you.** The phase graph is JSON at `.gm/instructions/fsm/graph.json`. Rewire edges, add states, swap gates. gm compares your graph against the compiled default and reports every edge you made weaker.
+
+This is extremely opinionated. It narrows bash to a handful of prefixes, routes git through verbs, refuses to write test files, forces a push before a session ends, and rejects any execute call without an explicit timeout. If that sounds terrible, this is not for you. If that sounds like what you wish your agent did automatically, keep sitting down.
+
+14000+ hours of supervised modification, 8800+ commits, one person. Free, open source. Named after **glootius maximus**, the muscle that holds you in the chair while you finish the work.
 
 ## install
 
