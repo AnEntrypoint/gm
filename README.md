@@ -131,6 +131,16 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 
 The gate graph itself is data, not hardcoded Rust: a project's `.gm/instructions/fsm/graph.json` (written by the `fsm-vendor` verb) can add states, rewire edges, or swap which gates guard which transition, including a `policy` block that externalizes previously-hardcoded behavior (status vocabularies, witness-requirement toggles, CAS retry attempts) as project-overridable JSON.
 
+### configuring gm from your own repo
+
+Any project using gm can override its instruction prose, gate-denial text, residual-scan messages, and the FSM graph itself from a git repo it controls, without forking rs-plugkit. Run the `fsm-vendor` verb to scaffold every overridable file (phase prose, gate text, an example gate hook, and an inert `.gm/instructions/source.json.example`), then rename that example to `.gm/instructions/source.json`:
+
+```json
+{ "repo": "https://github.com/your-org/your-gm-config", "branch": "main", "path": "" }
+```
+
+The daemon clones and re-syncs that repo on a poll interval (default 600s, `.gm/daemon-config-reference.md`'s `plugin_update_poll_interval_secs`), so a push to your config repo reaches every project pointing at it within that window -- not instant, eventually consistent. Resolution order per key is always: your project's own `.gm/instructions/<key>.md` file wins outright, then your config repo's synced copy, then gm's compiled default. Gate hooks (arbitrary JS) only ever run from the local file tier, never from a synced config repo, so a remote you don't control can restyle prose but never gain code execution on your machine. A malformed `source.json` or unreachable repo degrades to the compiled default and logs why -- it never crashes a dispatch.
+
 ### ground truth
 
 No mocks, no fakes, no test files or test suites on disk. Real services, real responses only -- verification is manual troubleshooting and debugging via live `exec_js`/`browser` execution, witnessed the same turn as the code it checks.
