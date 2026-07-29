@@ -184,3 +184,29 @@ Goal (G): Get gm's phase chain in C:/dev/gm to genuinely reach COMPLETE for a "f
 What drifted / what went wrong: Three consecutive `transition` dispatches, written to `in/transition/1.txt`, `2.txt`, `3.txt` with different target phases and nonces in the JSON body, all came back with the byte-identical `request_fingerprint` and denial text of a `transition` dispatch made much earlier in the same long session -- triggering the plugkit-side stuck-loop escalation. Sibling verbs dispatched in the same window (residual-scan, git_status, instruction, prd-add) all returned genuinely fresh fingerprints, which ruled out a global daemon-wide staleness and pointed at something specific to how `transition` responses were being resolved.
 Fix / resolution: Applied BBCR -- stopped bare-retrying after 3 identical denials, `prd-add`ed a row naming the concrete stuck state, then retried with a request file using a brand-new non-numeric filename stem (`bbcr-retry-4.txt`) instead of reusing a previously-used numeric stem, plus an explicit distinct `sessionId` in the body. That dispatch returned a genuinely fresh fingerprint and the real gate result (phase advanced to EMIT). The likely root cause: some layer of the spool/response pipeline was keying a cached response off the input filename stem rather than (or in addition to) full body content, so reusing `1.txt`/`2.txt`/`3.txt` numeric names across a long session's many verb dispatches collided with earlier dispatches that happened to reuse the same stem for a different verb or an earlier attempt.
 Generalizes to: In a long-running gm session that writes many spool dispatches, prefer unique/non-reused filename stems for `in/<verb>/<N>.txt` (a timestamp, a monotonic session-wide counter, or a descriptive stem) rather than restarting numbering at 1 per verb per turn -- especially for `transition`, which this session found susceptible to stale-response collisions on reused stems. If a gate denial's `request_fingerprint` stays byte-identical across dispatches with genuinely different bodies while sibling verbs return fresh fingerprints in the same window, suspect a filename-keyed response cache before suspecting the gate logic itself, and test the fix by using a never-before-used stem plus a distinct session/nonce field.
+
+## 2026-07-29 -- an empty log grep can mean "not instrumented yet", not "defect gone"
+Goal (G): finish all remaining work in gm, which turned into shipping observability
+for a live poisoned-Store failure and then capturing its root cause.
+What drifted / what went wrong: I shipped logging for a recurring failure
+(agentplug 737b3900ea/9426f57), then grepped the watcher log for the new event and
+got zero. The tempting read is "fixed" or "not actually recurring." Both are wrong:
+the running agentplug-runner.exe was 22h old and predated the fix, so the
+instrumentation was built, CI-green, downloaded and staged as .exe.new -- but never
+executing. The staged binary never swapped across THREE daemon pids because the
+takeover handoff is gated behind `if !any_work` accumulated over all 43 served
+projects, so a busy shared daemon may never idle enough to hand off.
+Fix / resolution: verify the SERVING binary's mtime postdates the fix before drawing
+any conclusion from its logs. Cheapest proof I had: a field I added in the same push
+(staged_runner_awaiting_handoff) was absent from daemon-status.json, which proves the
+old binary is live without stat-ing anything. Shipped that field precisely so the
+starvation becomes observable. Did NOT force the swap by killing the shared daemon --
+43 projects have in-flight dispatches and a kill discards their work.
+Generalizes to: before concluding anything from the absence of a log event, prove the
+code that emits it is actually running. "Built + pushed + CI-green + pinned" is four
+different things from "serving." When a fix ships behind an autonomous update
+mechanism, check that mechanism's own completion, not just its trigger -- and prefer a
+self-proving signal (a new field whose presence/absence identifies the running build)
+over an external stat. Also: a bounded wait for an external condition can itself trip
+gm's long-gap-no-instruction gate at 300000ms, so interleave an `instruction` dispatch
+before any predictable multi-minute wait.
