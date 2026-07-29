@@ -105,7 +105,7 @@ The two npm packages this repo publishes:
 
 ### the state machine
 
-PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the commit is pushed to origin.
+PLAN -> EXECUTE -> EMIT -> VERIFY -> CONSOLIDATE -> COMPLETE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. CONSOLIDATE owns git-push + CI/CD validation, split off the COMPLETE gate. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the push reaches origin.
 
 ### tools
 
@@ -120,7 +120,7 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 
 ### gates
 
-Orchestration state is tracked via `.gm/` marker files, not hook events. The gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + its `hook_pre_tool_use` / `hook_stop` exports), driven off the same markers:
+`.gm/` marker files track orchestration state, not hook events. The gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + its `hook_pre_tool_use` / `hook_stop` exports), driven off the same markers:
 
 - **session-start**: bootstraps plugkit, seeds `.gm/next-step.md`, sets the `needs-gm` marker
 - **turn entry**: the `instruction` verb reminds the agent to dispatch first and attaches the per-prompt auto-recall pack
@@ -169,7 +169,7 @@ git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
 git submodule update --init --recursive
 ```
 
-Empty submodule directories after a normal `git clone` are expected, not a bug -- they only matter if you're changing one of these repos' own source rather than the skill/installer JS in this repo's own tree.
+A normal `git clone` leaves the submodule directories empty; this is not a bug. Empty submodules matter only if you change one of those repos' own source instead of the skill or installer JS in this repo's own tree.
 
 ## license
 
