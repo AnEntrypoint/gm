@@ -101,7 +101,7 @@ Every skill's `allowed-tools:` reduced to `Skill, Read, Write` (plus SKILL.md bo
 
 A task that reduces to read/investigate/report, or a change confined to files the subagent owns for the turn, dispatches straight through -- stating the read-only boundary explicitly ("report only, no writes") is task-scope, not gm-protocol restatement, so it's not a violation of the rule above. A task whose plain description asks for an irreversible or shared-state-affecting action (remove data, force-push, merge/close a PR, deploy, rename a shared branch) is not silently handed off -- name the risk in the prompt and require the subagent to surface it back rather than execute it, the same blast-radius judgment the top-level agent applies to its own actions; the action still routes through the gm-driven skill invocation, never a prompt-authored imperative sequence that bypasses it. Contrast: "find every caller of X and summarize" dispatches as-is; "drop the staging table and reseed it" gets confirmed before any subagent is scoped to carry it out.
 
-**A subagent dispatched to build/commit/push in a submodule (`agentplug`, `rs-plugkit`, `rs-codeinsight`, `agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`, `rs-search`, `gm-config`) closes the loop back to gm's own pin as its last step, every time, no exceptions.** These repos are checked out INSIDE this repo's own tree as git submodules -- a commit landed and pushed only to the submodule's standalone remote leaves gm's own tracked pointer silently pointing at the prior commit, invisible until the next explicit `git rev-parse HEAD` (submodule) vs `git rev-parse origin/main` comparison surfaces the drift. Incident history: the recall store (`recall: gm submodule-pin-drift incident history`). Every subagent prompt dispatching work into one of these submodules must include, as an explicit final step: after pushing the submodule's own commit, `cd` back to gm's root, `git add <submodule-path>`, and commit+push gm's own updated pointer in the SAME turn -- never leave that as an implicit "someone will notice." A top-level `gm` session that itself lands a submodule-touching commit (directly or via a subagent) checks `git status --porcelain` for the submodule path specifically before calling the turn done.
+**A subagent dispatched to build/commit/push in a submodule (`agentplug`, `rs-plugkit`, `rs-codeinsight`, `agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`, `rs-search`, `gm-config`) closes the loop back to gm's own pin as its last step, every time, no exceptions.** Full procedure + incident history: the recall store (`recall: gm submodule-pin-drift incident history`).
 
 ## Core Rules
 
@@ -197,7 +197,7 @@ The `gm-runner` crate and its separate `gm-runner.yml` CI workflow are retired a
 
 ## Spool-dispatch architecture replaces hooks
 
-Orchestration state tracked via `.gm/` marker files, not hook events; the gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + the `hook_pre_tool_use`/`hook_stop` exports), driven off the same `.gm/` markers. (The former JS `lib/spool-dispatch.js`/`checkDispatchGates()` reimplementation was removed once the gate moved into the wasm binary.) Marker set + gate mechanism: the recall store (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
+Orchestration state tracked via `.gm/` marker files, not hook events; the gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm`. Marker set + gate mechanism + retired-JS-reimplementation history: the recall store (`recall: gate enforcement layer`, `recall: spool dispatch gates marker files`).
 
 **gm tool-use sequencing**: `Skill(skill="gm")` clears needs-gm gate. One shipped skill, no subagent variant. Marker mechanics: the recall store (`recall: gm-skill tool-use sequencing mechanics`).
 
@@ -218,6 +218,8 @@ Orchestration state tracked via `.gm/` marker files, not hook events; the gate t
 Session lifecycle (task/browser persistence across turn-stops, residual-scan trigger conditions): the recall store (`recall: session lifecycle killSessionTasks residual-scan`).
 
 Browser session state roots at the git common dir, never `process.cwd()` (worktree fan-out shares one chromium, not N): the recall store (`recall: browser session state worktree common-dir rooting`).
+
+**Absence of file edits never authorizes skipping a browser witness.** `browser-witness-coverage` only checks files edited this turn and is vacuously satisfied by an empty edit list -- the separate `app-loads-witnessed` gate on DECIDE->COMPLETE closes that gap: any project with `.gm/browser-config.json` present must record a same-turn healthy `browser` dispatch regardless of edit count, or the transition refuses. A confirmation/audit turn asserting the app works is itself a claim requiring the same live witness a code-change turn needs.
 
 ## Spool observability surface
 
