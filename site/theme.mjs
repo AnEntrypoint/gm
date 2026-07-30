@@ -200,10 +200,6 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
 }
-const GRID_PAGES = ['made-with', 'stats'];
-if (page.layout !== 'article' && !GRID_PAGES.includes(page.id)) {
-  document.documentElement.classList.add('landing-capped');
-}
 if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
   if (host) {
@@ -288,7 +284,6 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     html.article-flow #app, html.article-flow .app, html.article-flow .app-body, html.article-flow .app-main {
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
-    html.landing-capped .app-main > * { max-width: var(--measure-wide, 940px); margin-left: auto; margin-right: auto; width: 100%; }
     @media (max-width: 640px) {
       .app-crumb .ds-chip, .app-crumb [class*="chip"] { display: none; }
       .app-crumb .ds-theme-toggle, .app-crumb [class*="theme-toggle"] { display: inline-flex; }
