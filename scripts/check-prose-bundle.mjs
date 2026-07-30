@@ -122,7 +122,7 @@ function resolveConformancePaths() {
   return {
     proseSourceDir,
     browserMdPath: path.join(proseSourceDir, 'browser.md'),
-    executeMdPath: path.join(proseSourceDir, 'execute.md'),
+    execJsOptsProseMdPath: path.join(proseSourceDir, 'prove.md'),
     browserRsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'browser.rs'),
     cdpEvalJsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'cdp_eval.js'),
     execJsRsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'exec_js.rs'),
@@ -172,23 +172,23 @@ function crossReferenceBrowserPrefixes(browserMd, browserRs, cdpEvalJs) {
   return { conformanceFindings, promisedPrefixCount: promisedPrefixes.length };
 }
 
-function extractExecJsOptsFieldsFromProse(executeMd) {
+function extractExecJsOptsFieldsFromProse(execJsOptsProseMd) {
   const optsFieldRe = /opts\.([a-zA-Z][a-zA-Z0-9]*)/g;
   const promisedOptsFields = new Set();
   let m;
-  while ((m = optsFieldRe.exec(executeMd)) !== null) {
+  while ((m = optsFieldRe.exec(execJsOptsProseMd)) !== null) {
     if (m[1] !== 'true' && m[1] !== 'false') promisedOptsFields.add(m[1]);
   }
   return promisedOptsFields;
 }
 
-function crossReferenceExecJsOptsFields(executeMd, execJsRs) {
-  const promisedOptsFields = extractExecJsOptsFieldsFromProse(executeMd);
+function crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs) {
+  const promisedOptsFields = extractExecJsOptsFieldsFromProse(execJsOptsProseMd);
   const conformanceFindings = [];
 
   for (const field of promisedOptsFields) {
     if (!execJsRs.includes(`opts.get("${field}")`)) {
-      conformanceFindings.push(`execute.md promises exec_js opts.${field} with no matching opts.get("${field}") in exec_js.rs`);
+      conformanceFindings.push(`prove.md promises exec_js opts.${field} with no matching opts.get("${field}") in exec_js.rs`);
     }
   }
   return { conformanceFindings, promisedOptsFieldCount: promisedOptsFields.size };
@@ -196,7 +196,7 @@ function crossReferenceExecJsOptsFields(executeMd, execJsRs) {
 
 function runConformanceCheck() {
   const paths = resolveConformancePaths();
-  const requiredFiles = [paths.browserMdPath, paths.executeMdPath, paths.browserRsPath, paths.cdpEvalJsPath, paths.execJsRsPath];
+  const requiredFiles = [paths.browserMdPath, paths.execJsOptsProseMdPath, paths.browserRsPath, paths.cdpEvalJsPath, paths.execJsRsPath];
   const missingFiles = checkEveryRequiredFileExists(requiredFiles);
 
   if (missingFiles.length > 0) {
@@ -207,11 +207,11 @@ function runConformanceCheck() {
   const browserMd = fs.readFileSync(paths.browserMdPath, 'utf8');
   const browserRs = fs.readFileSync(paths.browserRsPath, 'utf8');
   const cdpEvalJs = fs.readFileSync(paths.cdpEvalJsPath, 'utf8');
-  const executeMd = fs.readFileSync(paths.executeMdPath, 'utf8');
+  const execJsOptsProseMd = fs.readFileSync(paths.execJsOptsProseMdPath, 'utf8');
   const execJsRs = fs.readFileSync(paths.execJsRsPath, 'utf8');
 
   const browserResult = crossReferenceBrowserPrefixes(browserMd, browserRs, cdpEvalJs);
-  const execJsResult = crossReferenceExecJsOptsFields(executeMd, execJsRs);
+  const execJsResult = crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs);
   const allFindings = [...browserResult.conformanceFindings, ...execJsResult.conformanceFindings];
 
   if (allFindings.length) {
