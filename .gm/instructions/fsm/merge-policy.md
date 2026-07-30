@@ -46,12 +46,16 @@ Some overridable messages have their `{token}` substrings substituted by the cal
 | --- | --- | --- | --- | --- |
 | `.gm/instructions/browser.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
 | `.gm/instructions/consolidate.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/specify.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/prove.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
 | `.gm/instructions/emit.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/state.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/conc.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/sec.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/res.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
+| `.gm/instructions/decide.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
 | `.gm/instructions/entry.md` | phase prose (also prepended to every other phase) | `per-key-whole-file` | -- | crate::prose::resolve, served for ENTRY and concatenated AHEAD of every non-entry phase's prose |
-| `.gm/instructions/execute.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
-| `.gm/instructions/plan.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
 | `.gm/instructions/update_docs.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
-| `.gm/instructions/verify.md` | phase prose | `per-key-whole-file` | -- | crate::prose::resolve via instructions::get_instruction |
 | `.gm/instructions/fsm/graph.json` | FSM graph | `wholesale-replace` | -- | fsm::graph_detailed |
 | `.gm/instructions/fsm/predicates.md` | generated reference | `generated-not-read` | -- | nothing -- written for a human, never read back by this build |
 | `.gm/instructions/fsm/deviations.md` | generated reference | `generated-not-read` | -- | nothing -- written for a human, never read back by this build |
@@ -86,12 +90,16 @@ Where each row's policy came from. A row marked NOT derived is transcribed from 
 
 - `.gm/instructions/browser.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
 - `.gm/instructions/consolidate.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/specify.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/prove.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
 - `.gm/instructions/emit.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/state.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/conc.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/sec.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/res.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
+- `.gm/instructions/decide.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
 - `.gm/instructions/entry.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
-- `.gm/instructions/execute.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
-- `.gm/instructions/plan.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
 - `.gm/instructions/update_docs.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
-- `.gm/instructions/verify.md` -- iterated from fsm::graph().states[].prose_key plus the two non-state keys the vendor pass appends
 - `.gm/instructions/fsm/graph.json` -- the single GRAPH_OVERRIDE_PATH fsm.rs reads
 - `.gm/instructions/fsm/predicates.md` -- written unconditionally by the vendor pass
 - `.gm/instructions/fsm/deviations.md` -- written unconditionally by the vendor pass
