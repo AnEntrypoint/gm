@@ -280,7 +280,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${SDK_CSS}" />
   <style>
-    html.article-flow, html.article-flow body { height: auto !important; min-height: 100% !important; overflow-y: auto !important; }
+    html.article-flow, html.article-flow body { height: auto !important; min-height: 100% !important; }
     html.article-flow #app, html.article-flow .app, html.article-flow .app-body, html.article-flow .app-main {
       height: auto !important; max-height: none !important; min-height: 0 !important; overflow: visible !important;
     }
