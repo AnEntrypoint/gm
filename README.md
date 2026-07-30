@@ -143,7 +143,7 @@ Any project using gm can override its instruction prose, gate-denial text, resid
 { "repo": "https://github.com/your-org/your-gm-config", "branch": "main", "path": "" }
 ```
 
-The daemon clones and re-syncs that repo on a poll interval (default 600s, `.gm/daemon-config-reference.md`'s `plugin_update_poll_interval_secs`), so a push to your config repo reaches every project pointing at it within that window -- not instant, eventually consistent. Resolution order per key is always: your project's own `.gm/instructions/<key>.md` file wins outright, then your config repo's synced copy, then gm's compiled default. A malformed `source.json` or unreachable repo degrades to the compiled default and logs why -- it never crashes a dispatch. No project sets up `source.json` for itself before checking: gm ships pointed at `AnEntrypoint/gm-config` by default, so every fresh install already pulls from a shared config repo unless a project's own `source.json` says otherwise.
+The daemon clones and re-checks that repo on a debounce, default 15 minutes (`config_sync.rs`'s `DEFAULT_DEBOUNCE_MS`). A push to your config repo reaches every project pointing at it within that window -- not instant, eventually consistent. Resolution order per key is always the same three steps. Your project's own `.gm/instructions/<key>.md` file wins outright. Your config repo's synced copy is next. A compiled Rust default is last, served only as an emergency fallback. A malformed `source.json` or unreachable repo degrades to that fallback and logs why. It never crashes a dispatch. A prior good checkout keeps serving through a transient outage rather than being discarded. No project needs to set up `source.json` before this works: gm ships pointed at `AnEntrypoint/gm-config` by default. Every fresh install already pulls from a shared config repo unless a project's own `source.json` says otherwise.
 
 **WARNING: a config repo has the same authority as your own local git history, including code execution.** Gate hooks (arbitrary JS run at gate evaluation) execute from a synced config repo exactly as they would from a file in your own project. Anyone who can push to that repo, or compromise it, gets code execution on every machine syncing it -- there is no sandboxing, no local review step, no confirmation prompt. Only point `source.json` at a repo you trust with that level of access; the same trust model applies whether the repo is `AnEntrypoint/gm-config` or one your own org runs.
 
@@ -176,7 +176,7 @@ Eight git submodules, source only, none compiled artifacts:
 - **`agentplug/`** -- the native host that loads that wasm and drives `browser`/`task` natively via CDP, plus the shared-plugin loader
 - **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- the shared native plugins agentplug loads alongside the gm wasm (embeddings, vector storage, syntax parsing)
 - **`rs-codeinsight`**, **`rs-search`** -- codebase-indexing and search backends the `codesearch` verb consumes
-- **`gm-config/`** -- the default remote-config repo (prose, FSM graph, gate hooks, policy), a regenerated snapshot of the compiled defaults; gm points at it out of the box unless a project or user configures its own
+- **`gm-config/`** -- the default remote-config repo: prose, FSM graph, gate hooks, policy. Edited directly and pulled from at runtime. gm points at it out of the box unless a project or user configures its own.
 
 A plain `git clone` leaves all eight empty -- clone with submodules, or init them after the fact:
 
