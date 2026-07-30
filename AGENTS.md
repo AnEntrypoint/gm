@@ -141,7 +141,7 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 **Push requires clean worktree witnessed in its own tool-use event**: `git push` only on empty `git status --porcelain`, probed its OWN Bash event before push (never `&&`-chained). Prefer `git_push`/`git_finalize` (internal gate). Enforcement locations: the recall store (`recall: push clean worktree enforcement locations`).
 
-**Any history rewrite or force-push sourced from an external clone/mirror verifies that source's ancestry against live HEAD first**: `git merge-base --is-ancestor <source-tip> <live-HEAD>` must exit 0 before `filter-repo`/force-push runs against that clone -- a freshly-named clone directory is not proof of freshness, staleness is a content property, not a naming one. Skipping this check risks silently discarding real commits on the remote if the clone turns out stale or wrong-branch.
+**Any history rewrite or force-push sourced from an external clone/mirror verifies that source's ancestry against live HEAD first**, `git merge-base --is-ancestor` gated. Detail: the recall store (`recall: gm history-rewrite force-push ancestry safety rule`).
 
 **A `git checkout <branch>` that leaves commits behind names EVERY dangling commit, not one candidate to trust blind**: ancestry-safe (`git merge-base --is-ancestor`) is not automatically content-complete when multiple dangling commits chain together -- check the real recovery by grepping pushed content on origin for the expected change, never by trusting `git_push`'s own summary line alone. Full incident + recovery mechanics: the recall store (`recall: wrong dangling commit git recovery`).
 
@@ -175,7 +175,7 @@ Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single 
 
 **Every downloaded wasm artifact is sha256-verified against the sha published alongside that exact resolved release, fetched fresh, never against a locally-committed value alone** -- `gm-plugkit/bootstrap.js::fetchRemoteSha()`. Floating past the committed pin never weakens verification. Detail: the recall store (`recall: gm cascade pin-toil design`).
 
-**Submodule pointers auto-sync via `.github/workflows/submodule-sync.yml`** (30min schedule, `git submodule update --remote --merge`, auto-commit) instead of hand-bumped chore commits -- reproducibility preserved since each commit still pins exact SHAs, only main's HEAD advances automatically.
+**Submodule pointers auto-sync via `.github/workflows/submodule-sync.yml`**, 30min schedule. Mechanics + manual-recovery fallback: the recall store (`recall: gm submodule pointer auto-sync mechanics`).
 
 The `gm-runner` crate and its separate `gm-runner.yml` CI workflow are retired along with the binary itself (see the WASM-guest section above) -- confirmed absent from rs-plugkit's `crates/` and `.github/workflows/`, no longer a stage in the cascade.
 
