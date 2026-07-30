@@ -1,3 +1,13 @@
+## 2026-07-29 - non-linear 8-stage pipeline, ASD-STE100 prose discipline, gm-config submodule
+
+**The FSM moved from the linear PLAN->EXECUTE->EMIT->VERIFY->CONSOLIDATE->COMPLETE chain to a non-linear 8-stage graph.** The new stage list is SPECIFY->PROVE->EMIT->STATE->CONC->SEC->RES->DECIDE->COMPLETE, with feedback edges from every later stage back to SPECIFY/EMIT/STATE/PROVE. Stale vendored graph overrides from the old chain were dropped. AGENTS.md, README.md, and SKILL.md now state the new stage list.
+
+**ASD-STE100 (Simplified Technical English) now governs gm prose.** The rule sets short sentences, active voice, and an approved word list. It applies to AGENTS.md, README.md, CHANGELOG.md, SKILL.md files, and docs under `.gm/` and `gm-plugkit/instructions/`. Full rule text is at `.gm/disciplines/ste100/policy.md`.
+
+**`gm-config` is now a git submodule of this repo.** It holds the default remote-config repo content (prose, FSM graph, gate hooks, policy) as a regenerated snapshot of the compiled defaults. This adds the implicit default-repo tier: a fresh gm install already syncs from `AnEntrypoint/gm-config` unless a project sets its own `.gm/instructions/source.json`, so remote-hook configuration is opt-out, not opt-in.
+
+**README.md gained a section on configuring gm from an external repo.** It documents the `fsm-vendor` verb, the three-tier prose resolution order, and the trust model for a config repo with gate-hook code execution.
+
 ## 2026-07-28 - browser verb health verified fleet-wide, gmsniff stale-registry bug fixed, comment-policy sweep
 
 **gmsniff was silently reading dead daemon state, hiding any project (like `freddie`) that only registered after the daemon migrated to agentplug.** `readDaemonRegistry()`/`readDaemonStatus()` across `registry.js`/`index.js`/`cli.js`/`server.js` all pointed at `~/.gm-tools/daemon-registry.txt`/`daemon-status.json`, frozen since the daemon moved its live state to `~/.agentplug/` -- gmsniff only stayed usable at all via a separate readdir-over-`C:/dev` fallback that happened to still find most projects. Added an `AGENTPLUG_DIR` constant (same env-override pattern as `GM_TOOLS_DIR`) and routed every daemon-registry/daemon-status read through it, leaving `plugkit.version`/`gm-plugkit.version` on `GM_TOOLS_DIR` since those genuinely still live there. Live-verified: `freddie` now correctly appears under `--watchers --all` as idle.

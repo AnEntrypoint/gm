@@ -6,7 +6,7 @@ hero:
   body: "seven conditions guard the last transition: PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync. they are a list on an edge in rust, evaluated as code, and a failed gate refuses the transition and names the verb that fixes it. the agent cannot narrate its way to done."
   badges:
     - { label: "the COMPLETE gate is code, not a prompt" }
-    - { label: "PLAN / EXECUTE / EMIT / VERIFY / CONSOLIDATE" }
+    - { label: "SPECIFY / PROVE / EMIT / STATE / CONC / SEC / RES / DECIDE" }
     - { label: "zero test files, checkable" }
     - { label: "one skill, every harness" }
   ctas:

@@ -116,6 +116,11 @@ tmp/
 .agentplug/
 .agentplug-kv/
 
+# local dev-tool caches (codesearch index, opencode config+node_modules) --
+# regenerable local state, same category as .agentplug/ above
+.code-search/
+.opencode/
+
 # rs-learn/memorize derived binary store -- every live gm session dispatching
 # mutable-resolve/prd-add/memorize perpetually grows this file; it is a
 # rebuildable derived cache, not source, and had grown past GitHub's 50MB
