@@ -125,7 +125,7 @@ npx gm-skill install --yes    # non-interactive, sets them outright</code></pre>
 
 <pre><code>always use the gm skill for everything, always fan out subagents</code></pre>
 
-<p>That's the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a single <code>SKILL.md</code> carrying only the boot-edge ABI -- spool paths, verb names, gate conditions, transition markers -- and no phase prose, which the orchestrator serves on demand instead. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) delegates to <code>agentplug-runner</code> -- a sha256-verified native binary the installer downloads per platform, the sole wasm loader (no JS wasm-host fallback). After that, every dispatch is a spool write served by the shared daemon's real <code>wasmtime</code> instance running <code>dispatch_verb</code>. The orchestrator brain is small and the heavy weights are shared: <code>gm.wasm</code> is a few MB of state machine, gates, dispatch and verb routing, while the bge-small embedding model lives in a separate <code>bert.wasm</code> sibling plugin that <code>agentplug-runner</code> loads once and shares across every project on the machine. Recall stays offline and text-leak-free, but the model is downloaded once per machine rather than embedded in every artifact.</p>
+<p>That's the whole thing. No <code>cargo</code>, no Python, no PATH edits, no plugin marketplace, no per-platform installer. The skill body is a single <code>SKILL.md</code> carrying only the boot-edge ABI -- spool paths, verb names, gate conditions, transition markers -- and no phase prose, which the orchestrator serves on demand instead. The first time the agent dispatches anything, <code>gm-plugkit</code> (a companion npm package, auto-resolved as a dependency) execs into <code>agentplug-runner</code> -- a sha256-verified native binary the installer downloads for the host platform, the one loader for gm's wasm module. After that, every dispatch is a spool write served by the shared daemon's real <code>wasmtime</code> instance running <code>dispatch_verb</code>. The orchestrator brain is small and the heavy weights are shared: <code>gm.wasm</code> is a few MB of state machine, gates, dispatch and verb routing, while the bge-small embedding model lives in a separate <code>bert.wasm</code> sibling plugin that <code>agentplug-runner</code> loads once and shares across every project on the machine. Recall stays offline and text-leak-free, but the model is downloaded once per machine rather than embedded in every artifact.</p>
 
 <h3>2.1 What "Turnkey" Excludes</h3>
 
@@ -189,7 +189,7 @@ bun x gm-plugkit@latest spool</code></pre>
 
 <div class="repo-card"><span class="repo-name">rs-plugkit</span><span class="repo-role">The orchestrator. Compiled to wasm. Owns the SPECIFY-&gt;PROVE-&gt;EMIT-&gt;STATE-&gt;CONC-&gt;SEC-&gt;RES-&gt;DECIDE-&gt;COMPLETE state machine in <code>src/orchestrator/</code>, exposes the <code>dispatch_verb</code> wasm export, services every orchestrator verb (<code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>mutable-resolve</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code>) and routes host verbs to the imported helpers. The <code>Cargo.toml</code> here is the version source of truth.</span></div>
 
-<div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. Builds <code>gm-skill</code> via <code>node cli.js gm-starter ./build</code>. Publishes the npm package on every cascade tick. Holds the canonical SKILL.md, the bootstrap shim, and the version pins in <code>gm-starter/gm.json</code>.</span></div>
+<div class="repo-card"><span class="repo-name">gm</span><span class="repo-role">This repository. The repository root is the published <code>gm-skill</code> package; there is no separate build directory. Publishes the npm package on every cascade tick. Holds the canonical SKILL.md, the installer at <code>bin/install.js</code>, and the version pins in <code>gm.json</code>.</span></div>
 
 <h2>4. The Cascade</h2>
 
@@ -206,18 +206,23 @@ bun x gm-plugkit@latest spool</code></pre>
 rs-plugkit
  , release.yml: build plugkit.wasm (wasm32-wasip1, ~&lt;200 KB)
  , publish plugkit-bin Releases + npm plugkit-wasm
- , bump gm-starter/gm.json::plugkitVersion and
-       gm-starter/bin/plugkit.wasm.sha256 in AnEntrypoint/gm
+
+agentplug
+ , a separate pipeline that consumes the plugkit-bin release
+ , builds and publishes the native agentplug-runner binary
+       to AnEntrypoint/agentplug-bin, per platform, sha256-signed
 
 gm
- , that bump commit triggers publish.yml
- , node cli.js gm-starter ./build         (regenerates skill body)
- , npm publish build/gm-skill              (one package, one tag)
+ , a best-effort gm-metadata-sync commit records the new version
+ , that commit triggers publish.yml
+ , npm publish .                           (one package, one tag)
 
 users
  , bun add -g gm-skill   (or harness-local install)
- , on first dispatch, gm-plugkit ensures plugkit.wasm is present
- , every subsequent verb is a local wasm call</div>
+ , bin/install.js downloads the matching agentplug-runner binary
+ , on first dispatch, gm-plugkit execs into agentplug-runner
+ , agentplug-runner polls for its own and gm's wasm updates
+       every 600 seconds, and swaps in a newer build itself</div>
 
 <p>No human edits a version string. No human runs <code>cargo build</code>. The cascade is the publishing pipeline. The phrase "to update anything, push to the relevant repo" is literal: a one-line fix in <code>rs-search</code> propagates to a new <code>gm-skill</code> on npm within one CI cycle.</p>
 
@@ -229,17 +234,19 @@ users
 
 <h2>6. The Bootstrap, In One File</h2>
 
-<p class="first">On first dispatch, <code>gm-plugkit/lib/skill-bootstrap.js</code> runs once per session:</p>
+<p class="first"><code>bin/install.js</code> is the one installer for the whole distribution. It runs these steps in order:</p>
 
 <ol>
-  <li>Resolve <code>plugkit.wasm</code> via the bundled <code>plugkit-wasm</code> npm dependency. If absent (rare; npm install was offline), fetch from <code>github.com/AnEntrypoint/plugkit-bin/releases/download/v&lt;version&gt;/plugkit.wasm</code>, verify against the <code>bin/plugkit.wasm.sha256</code> pinned in the skill.</li>
-  <li>Atomically write the artifact under <code>.gm/plugkit.wasm</code>. Atomic-write is sufficient under wasm; there is no running daemon to kill.</li>
-  <li>Instantiate the wasm module with the Node WASI imports plus the host-fn imports for <code>exec_js</code>, <code>fetch</code>, <code>kv_*</code>, <code>fs_*</code>, <code>browser</code>, etc.</li>
-  <li>Record bootstrap status under <code>.gm/exec-spool/.bootstrap-status.json</code> for spool awareness; record any error under <code>.bootstrap-error.json</code>.</li>
-  <li>Return; the spool watcher inside the wasm instance services every subsequent dispatch.</li>
+  <li>Check the host OS and CPU type.</li>
+  <li>Get the matching native <code>agentplug-runner</code> binary from the <code>AnEntrypoint/agentplug-bin</code> releases.</li>
+  <li>Check the download against its published SHA-256 hash.</li>
+  <li>Write the binary to <code>~/.gm-tools/agentplug-runner</code>.</li>
+  <li>Stop with a clear error message if no matching binary exists, or if the download or the hash check fails. There is no other loader to fall back on.</li>
 </ol>
 
-<p>Bootstrap failure is non-fatal. A failed wasm fetch leaves a documented error in <code>.bootstrap-error.json</code>; the skill body degrades to surfacing the error string to the agent rather than to a stack trace.</p>
+<p><code>agentplug-runner</code> is the one host that loads <code>plugkit.wasm</code>. It is a real native <code>wasmtime</code> binary, built from the <code>AnEntrypoint/agentplug</code> repository, and it loads gm's wasm module next to sibling wasm plugins for embeddings, storage, and code parsing. The <code>gm-plugkit</code> npm package is a thin launcher: <code>bun x gm-plugkit@latest spool</code> execs straight into the staged <code>agentplug-runner</code> binary and exits. There is no separate JavaScript wasm host and no fallback loader.</p>
+
+<p><code>agentplug-runner</code> updates itself while it runs. Two independent 600-second polls check for a newer wasm module and a newer <code>agentplug-runner</code> build. When a poll finds an update, it stages the new file with a <code>.new</code> suffix in the background. On the next idle tick, the running process hands control to the staged build itself, through its own internal takeover step. The user never reinstalls or restarts the process for an update to take effect.</p>
 
 <h2>7. The Verb Surface</h2>
 
@@ -277,7 +284,7 @@ users
 
 <ul>
   <li><strong>Public build pipeline.</strong> Every wasm artifact is built by a GitHub Actions workflow whose YAML is in the same repository as the source. There is no offline build step. <code>plugkit-bin</code> Releases and <code>plugkit-wasm</code> on npm are produced by <code>rs-plugkit</code> CI; the run logs are public.</li>
-  <li><strong>SHA-256 manifest.</strong> The skill ships <code>bin/plugkit.wasm.sha256</code> pinned next to <code>gm-starter/gm.json::plugkitVersion</code>. The bootstrap verifies the wasm against this hash before instantiation; mismatch is fatal-soft (recorded to <code>.bootstrap-error.json</code> rather than thrown into the agent).</li>
+  <li><strong>SHA-256 manifest.</strong> <code>bin/install.js</code> gets a fresh SHA-256 hash for the exact resolved <code>agentplug-runner</code> release, every time, never a hash saved from a past install. The installer checks the download against this hash before it writes the binary to disk. A failed check stops the install with a clear error.</li>
   <li><strong>One target.</strong> <code>wasm32-wasip1</code> is reproducible from Cargo across Linux and macOS runners; mismatch between runs is a CI red, not silent drift.</li>
   <li><strong>Forkable.</strong> Any user who does not trust the published wasm can fork all seven repositories and point their skill at their own fork's npm package. Nothing in the distribution requires <code>AnEntrypoint</code> specifically.</li>
 </ul>
@@ -288,7 +295,7 @@ users
 
 <ol>
   <li><strong>The host is Node.</strong> Every harness that loads a skill loads it inside a Node-capable runtime. Publishing to crates.io or PyPI would force every host to bridge Rust or Python at install time, which is exactly the toolchain dependency the SQLite model exists to avoid. npm is the lowest-common-denominator registry for skill-loading hosts.</li>
-  <li><strong>The wasm is the binary.</strong> A cargo install would require <code>rustup</code>; a pip install would require Python. The npm tarball ships the precompiled wasm and the JS wrapper together, no transpilation, no native build, no postinstall script.</li>
+  <li><strong>The wasm is the binary.</strong> A cargo install would require <code>rustup</code>; a pip install would require Python. The npm tarball ships the boot-edge ABI, and <code>bin/install.js</code> gets the precompiled <code>agentplug-runner</code> binary that loads the wasm, no transpilation and no native build on the user's machine.</li>
 </ol>
 
 <h2>11. Operational Lessons</h2>
