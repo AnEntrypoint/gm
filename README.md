@@ -25,13 +25,13 @@ npx gm-skill install
 
 ## Why gm hits different
 
-**The COMPLETE gate is code, not a prompt.** Seven conditions guard the last transition -- PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync. They are a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust. A failed gate refuses the transition. The agent cannot narrate its way to done.
+**The COMPLETE gate is code, not a prompt.** Nine conditions guard the last transition -- PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync, every claimed commit hash resolves against real git log, no hedge language in the diff. They are a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust. A failed gate refuses the transition. The agent cannot narrate its way to done.
 
 **A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `exec_js`. You get an instruction, not an error.
 
 **Repeat the same failure and it stops you.** After the same denial fires repeatedly, the response stops restating the refusal and instructs the agent to record the stuck state and switch to a bounded-retry discipline. Loops end.
 
-**Zero test files, and that is checkable.** Search this repo for `*.test.*`, `*.spec.*`, `__tests__`, or a jest config. There are none, and there never will be. Verification means running the real path and reading the real output in the same turn. VERIFY also greps the diff for `Mock*`/`Fake*`/`Stub*` -- a mock shipped as a real integration is the same violation as a test file.
+**Zero test files, and that is checkable.** Search this repo for `*.test.*`, `*.spec.*`, `__tests__`, or a jest config. There are none, and there never will be. Verification means running the real path and reading the real output in the same turn. DECIDE also greps the diff for `Mock*`/`Fake*`/`Stub*` -- a mock shipped as a real integration is the same violation as a test file.
 
 **You can loosen the rules, and it will tell on you.** The phase graph is JSON at `.gm/instructions/fsm/graph.json`. Rewire edges, add states, swap gates. gm compares your graph against the compiled default and reports every edge you made weaker.
 
