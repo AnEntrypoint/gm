@@ -1,12 +1,12 @@
-## 2026-07-29 - non-linear 8-stage pipeline, ASD-STE100 prose discipline, gm-config submodule
+## 2026-07-29 - 8-stage FSM, ASD-STE100 prose rule, gm-config submodule
 
-**The FSM moved from the linear PLAN->EXECUTE->EMIT->VERIFY->CONSOLIDATE->COMPLETE chain to a non-linear 8-stage graph.** The new stage list is SPECIFY->PROVE->EMIT->STATE->CONC->SEC->RES->DECIDE->COMPLETE, with feedback edges from every later stage back to SPECIFY/EMIT/STATE/PROVE. Stale vendored graph overrides from the old chain were dropped. AGENTS.md, README.md, and SKILL.md now state the new stage list.
+**The FSM changed from a linear 6-stage chain to a non-linear 8-stage graph.** The old chain was PLAN->EXECUTE->EMIT->VERIFY->CONSOLIDATE->COMPLETE. The new graph is SPECIFY->PROVE->EMIT->STATE->CONC->SEC->RES->DECIDE->COMPLETE. Every later stage can feed back to SPECIFY, EMIT, STATE, or PROVE. The pipeline dropped old vendored graph overrides. AGENTS.md, README.md, and SKILL.md now state the new stage list.
 
-**ASD-STE100 (Simplified Technical English) now governs gm prose.** The rule sets short sentences, active voice, and an approved word list. It applies to AGENTS.md, README.md, CHANGELOG.md, SKILL.md files, and docs under `.gm/` and `gm-plugkit/instructions/`. Full rule text is at `.gm/disciplines/ste100/policy.md`.
+**ASD-STE100 (Simplified Technical English) now governs gm prose.** The rule sets short sentences, the active voice, and an approved word list. It applies to AGENTS.md, README.md, CHANGELOG.md, and SKILL.md files. It also applies to docs under `.gm/` and `gm-plugkit/instructions/`. Full rule text is at `.gm/disciplines/ste100/policy.md`.
 
-**`gm-config` is now a git submodule of this repo.** It holds the default remote-config repo content (prose, FSM graph, gate hooks, policy) as a regenerated snapshot of the compiled defaults. This adds the implicit default-repo tier: a fresh gm install already syncs from `AnEntrypoint/gm-config` unless a project sets its own `.gm/instructions/source.json`, so remote-hook configuration is opt-out, not opt-in.
+**`gm-config` is now a git submodule of this repo.** It holds the default remote-config content: prose, the FSM graph, gate hooks, and policy. This adds an implicit default tier. A fresh gm install syncs from `AnEntrypoint/gm-config` by default. A project can still point at its own repo via `.gm/instructions/source.json`.
 
-**README.md gained a section on configuring gm from an external repo.** It documents the `fsm-vendor` verb, the three-tier prose resolution order, and the trust model for a config repo with gate-hook code execution.
+**README.md gained a section on configuring gm from an external repo.** It documents the `fsm-vendor` verb. It documents the three-tier prose order. It documents the trust risk of a config repo that runs gate-hook code.
 
 ## 2026-07-28 - browser verb health verified fleet-wide, gmsniff stale-registry bug fixed, comment-policy sweep
 
