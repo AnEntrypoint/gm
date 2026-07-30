@@ -185,6 +185,14 @@ The `gm-runner` crate and its separate `gm-runner.yml` CI workflow are retired a
 
 **agentplug is a separate parallel pipeline that CONSUMES the cascade's output, not a stage in it**, decoupled at the `plugkit-bin` release artifact. Detail: the recall store (`recall: agentplug parallel pipeline decoupling`).
 
+**Repo inventory** (authoritative list; `.gitmodules` is ground truth for submodules):
+
+| repo | role |
+| --- | --- |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, gm-config, rs-codeinsight, rs-plugkit, rs-search | active-dependency (submodule) |
+| rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
+| rs-learn, rs-exec, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit) |
+
 **To update every possible thing**: push to the relevant repo. No manual version bumps, no local `cargo update`/`cargo build` -- push, let CI build.
 
 ## Spool-dispatch architecture replaces hooks
