@@ -7,6 +7,7 @@ const os = require('os');
 const crypto = require('crypto');
 const https = require('https');
 const readline = require('readline');
+const { execFileSync } = require('child_process');
 
 function out(msg) { process.stdout.write(msg + '\n'); }
 function err(msg) { process.stderr.write(msg + '\n'); }
@@ -220,6 +221,38 @@ function sha256Hex(buf) {
   return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
+// Some sandboxed/cloud environments scope-restrict the GitHub REST API
+// (api.github.com) while leaving plain git protocol access unrestricted --
+// `git ls-remote` talks git's own smart-HTTP protocol against github.com,
+// never api.github.com, so it works in exactly that restricted case.
+// The release ASSET download itself (github.com/.../releases/download/...)
+// is also plain unauthenticated HTTPS, not an API call, so once the tag is
+// known this way the rest of downloadAgentplugRunner needs no change.
+function latestReleaseTagViaGitLsRemote(repo) {
+  const out = execFileSync('git', ['ls-remote', '--tags', '--refs', `https://github.com/${repo}.git`], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  const tags = out.split('\n')
+    .map(line => line.match(/refs\/tags\/(.+)$/))
+    .filter(Boolean)
+    .map(m => m[1]);
+  if (tags.length === 0) return null;
+  // Release tags here are always `v<semver>`; sort numerically by the
+  // dotted version rather than lexically, so v0.1.9 does not sort after
+  // v0.1.10.
+  tags.sort((a, b) => {
+    const pa = a.replace(/^v/, '').split('.').map(Number);
+    const pb = b.replace(/^v/, '').split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const d = (pa[i] || 0) - (pb[i] || 0);
+      if (d !== 0) return d;
+    }
+    return 0;
+  });
+  return tags[tags.length - 1];
+}
+
 function gmToolsDir() {
   const home = homeDir();
   return path.join(home, '.gm-tools');
@@ -245,8 +278,20 @@ async function downloadAgentplugRunner({ silent } = {}) {
   }
 
   try {
-    const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/agentplug-bin/releases/latest')).toString('utf8'));
-    const tag = releaseInfo && releaseInfo.tag_name;
+    let tag;
+    try {
+      const releaseInfo = JSON.parse((await httpsGetBuffer('https://api.github.com/repos/AnEntrypoint/agentplug-bin/releases/latest')).toString('utf8'));
+      tag = releaseInfo && releaseInfo.tag_name;
+    } catch (apiErr) {
+      if (!silent) err(`agentplug-runner: GitHub API tag lookup failed (${apiErr && apiErr.message || apiErr}) -- falling back to git ls-remote (works even when the REST API is scope-restricted, since it only needs plain git protocol access)`);
+      try {
+        tag = latestReleaseTagViaGitLsRemote('AnEntrypoint/agentplug-bin');
+      } catch (gitErr) {
+        if (!silent) err(`agentplug-runner: git ls-remote fallback also failed (${gitErr && gitErr.message || gitErr})`);
+        throw apiErr;
+      }
+      if (tag && !silent) out(`agentplug-runner: resolved latest tag ${tag} via git ls-remote`);
+    }
     if (!tag) { if (!silent) err('agentplug-runner: no releases published yet at AnEntrypoint/agentplug-bin, skipping'); return false; }
     const base = `https://github.com/AnEntrypoint/agentplug-bin/releases/download/${tag}`;
     const binUrl = `${base}/${assetName}`;
