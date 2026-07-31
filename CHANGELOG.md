@@ -1,3 +1,13 @@
+## 2026-07-31 - gm-config is now pulled from, not pushed to
+
+**`gm-config` could never function as a real default source.** A nightly cron regenerated its `prose/`, `gates/`, `residual/`, and `fsm/` content from rs-plugkit's compiled defaults. It overwrote any hand edit on the next run. Deleted `sync-from-plugkit.yml` and its script. `gm-config` is now edited directly and pushed straight to main.
+
+**Reads never actually reached `gm-config` in the common case.** `prose.rs` and two functions in `fsm.rs` hardcoded the wrong tier's cache-directory path. This is the default, zero-configuration case: a project with no explicit `.gm/config.source.json`. It resolves `gm-config` through a different cache directory. The hardcoded path pointed at an empty one. Every project silently served the compiled fallback forever, even while `gm-config` fetched and cached correctly for its own `gm.config.json` values. Added a `cache_dir` field to `Resolution` so every consumer reads the directory the actually-winning tier used. Fixed `prose.rs::read_from_config_repo`, `fsm.rs::source_repo_graph_path`, and `fsm.rs::resolve_hook_path`.
+
+**A new signal distinguishes "gm-config is down" from "nobody overrode this key."** Both used to look identical: the compiled default served either way. `Outcome::ConfigRepoUnreachable` now names the reachability failure specifically, emits its own watcher-log event, and surfaces as `config_repo_unreachable` on every `instruction`/`transition` response.
+
+**Verified live.** Cleared the local cache, dispatched fresh, and confirmed the resulting checkout carried this session's own `gm-config` fix (a stale-key correction) with no manual step.
+
 ## 2026-07-30 - bert wasm trap fixed, FSM phase-stuck-at-PLAN root-caused, paper-page layout fixes, DECIDE prose additions
 
 **A forced-SIMD128 bug in the bert embedding plugin caused hundreds of embed failures per session.** The plugin called `gemm::set_wasm_simd128(true)` unconditionally. The release build never sets the `+simd128` target feature. The call forced a SIMD codepath the compiled wasm module never had. Every candle matmul call trapped. Removed the forced call. Live recall dispatches now succeed with zero embed failures.
