@@ -27,7 +27,7 @@ npx gm-skill install
 
 **The COMPLETE gate is code, not a prompt.** Nine conditions guard the last transition -- PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync, every claimed commit hash resolves against real git log, no hedge language in the diff. They are a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust. A failed gate refuses the transition. The agent cannot narrate its way to done.
 
-**A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `exec_js`. You get an instruction, not an error.
+**A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `ci-status`. You get an instruction, not an error.
 
 **Repeat the same failure and it stops you.** After the same denial fires repeatedly, the response stops restating the refusal and instructs the agent to record the stuck state and switch to a bounded-retry discipline. Loops end.
 
