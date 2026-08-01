@@ -153,7 +153,7 @@ No mocks, no fakes, no test files or test suites on disk. Real services, real re
 
 ### memory
 
-`.gm/rs-learn.db` is the per-project memory store, committed to git so it travels with the project. Vector embeddings via BGE-small-en-v1.5 (with proper query/passage asymmetry: queries prefixed with `"Represent this sentence for searching relevant passages: "`, passages raw). LRU query-embedding cache (64 entries, 10-min TTL) sits in front to avoid re-embedding repeat queries.
+`.gm/memories/*.md` (human-readable, one memo per file) is the durable per-project memory store, committed to git so it travels with the project. `gm.db`, the derived vector index built from that corpus, is deliberately untracked -- it grew past GitHub's 50MB recommended limit under normal use, so it is treated as a rebuildable derived cache, not source, the same as any other derived store. Vector embeddings via BGE-small-en-v1.5 (with proper query/passage asymmetry: queries prefixed with `"Represent this sentence for searching relevant passages: "`, passages raw). LRU query-embedding cache (64 entries, 10-min TTL) sits in front to avoid re-embedding repeat queries. `recall` triggers a one-time full-corpus sync the first time a project's memory namespace has never been synced at all (a fresh clone, before `gm.db` exists) -- every read after that first touch stays on the cheap read-only path.
 
 ## release pipeline
 
