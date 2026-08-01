@@ -157,7 +157,7 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 **Idempotency contract (f∘f≡f)**: spool dispatch is at-least-once; correctness rests on per-verb convergence (content-hash dedup, nothing-to-commit gates, digest gates); read-only verbs recompute, never cache. Per-verb enumeration: the recall store (`recall: idempotency contract per-verb convergence`).
 
-**host_exec_js is synchronous**: real per-call `timeoutMs` required (zero/missing = hard error). Detail: the recall store (`recall: host_exec_js synchronous`).
+**Every exec-family verb requires a real per-call `timeoutMs`** (`exec_js`/`host_exec_js` and every language stem it backs -- `bash`, `python`, `powershell`, `ssh`, `go`, `rust`, `c`, `cpp`, `java`, `deno` -- all route through the same synchronous host call): zero or missing `timeoutMs` is a hard error, not a default-substituted value. Detail: the recall store (`recall: host_exec_js synchronous`).
 
 **Sync-before-emit (codeinsight + search)**: output must come from this-invocation freshly-synced index (cache serves only on digest match). Mechanics: the recall store (`recall: sync-before-emit codeinsight search`).
 
