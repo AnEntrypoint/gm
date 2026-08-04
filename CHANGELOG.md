@@ -1,3 +1,13 @@
+## 2026-08-04 - paper page TOC hierarchy, mermaid lightbox, header-offset sync landed and live-witnessed
+
+**The paper page TOC had no visual hierarchy across 48 flat entries.** Grouped the "Operational Hard Rules" and "Third-Generation Dispatch-Boundary Fixes" runs into nested `<ol>` blocks under a `.toc-group` label in `docs/paper.html`, styled via new rules in the design SDK's `gm-prose.css`. Live-witnessed: 2 groups render on the deployed page.
+
+**The sticky TOC clipped under the sticky header on scroll.** `theme.mjs` now measures `.app-chrome`'s live height on load, resize, and font-load, and writes it to `--article-header-h`; `gm-prose.css`'s TOC `top`/`max-height` consume that var instead of a hardcoded `24px`. Live-witnessed in both themes: no overlap post-deploy.
+
+**Mermaid diagrams had no click-to-enlarge and could overflow their column.** Wired a click handler in `theme.mjs` that clones the rendered SVG into the design SDK's existing `Modal` primitive via `ds.applyDiff`, reusing shipped `.ds-modal` CSS instead of a bespoke lightbox. Added `.mermaid svg{max-width:100%;height:auto}` in `gm-prose.css`. Live-witnessed: a dispatched click opens the modal on the deployed page in dark theme.
+
+**Body copy measure and code/chip pill contrast were fixed in the design SDK, republished, and consumed.** `anentrypoint-design` bumped 0.0.468 -> 0.0.471; `site/package.json` repinned and rebuilt so the deployed page picks up the narrower `--measure` (68ch) and the `--bg-3` pill background step.
+
 ## 2026-07-31 - gm-config is now pulled from, not pushed to
 
 **`gm-config` could never function as a real default source.** A nightly cron regenerated its `prose/`, `gates/`, `residual/`, and `fsm/` content from rs-plugkit's compiled defaults. It overwrote any hand edit on the next run. Deleted `sync-from-plugkit.yml` and its script. `gm-config` is now edited directly and pushed straight to main.
