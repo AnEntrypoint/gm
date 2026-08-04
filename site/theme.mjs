@@ -151,21 +151,8 @@ const buildLandingMain = () => {
   }
 
   const qs = page.quickstart;
-  if (qs && qs.lines && qs.lines.length) {
-    main.push(h('h3', {}, qs.heading || 'quick start'));
-    main.push(h('div', { class: 'cli' },
-      ...qs.lines.map((ln, i) => {
-        if (!ln) return null;
-        if (ln.kind === 'cmt') return h('div', { key: i, class: 'cli-cmt' }, ln.text || ' ');
-        if (ln.text) {
-          return h('div', { key: i, class: 'cli-line' },
-            h('span', { class: 'prompt' }, '$'),
-            h('span', { class: 'cmd' }, ln.text)
-          );
-        }
-        return null;
-      }).filter(Boolean)
-    ));
+  if (qs && qs.lines && qs.lines.length && C.CliBlock) {
+    main.push(C.CliBlock({ lines: qs.lines, heading: qs.heading || 'quick start' }));
   }
 
   const ex = page.examples;
