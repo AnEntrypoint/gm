@@ -173,6 +173,42 @@ const buildLandingMain = () => {
 
 const main = page.layout === 'article' ? buildArticleMain() : buildLandingMain();
 
+function wireMermaidLightbox(blocks) {
+  let activeHost = null;
+  const openOverlay = (svg) => {
+    if (activeHost) return;
+    const host = document.createElement('div');
+    activeHost = host;
+    document.body.appendChild(host);
+    const clone = svg.cloneNode(true);
+    clone.style.maxWidth = '100%';
+    clone.style.height = 'auto';
+    clone.style.cursor = 'default';
+    const originalId = svg.id;
+    if (originalId) {
+      const cloneId = originalId + '-lightbox';
+      clone.id = cloneId;
+      clone.innerHTML = clone.innerHTML.split('#' + originalId).join('#' + cloneId);
+    }
+    const close = () => { host.remove(); activeHost = null; };
+    const mountClone = (el) => { if (el) el.appendChild(clone); };
+    const modal = C.Modal ? C.Modal({
+      kind: 'preview',
+      head: 'diagram',
+      body: h('div', { style: 'display:flex;justify-content:center;', ref: mountClone }),
+      onClose: close,
+    }) : null;
+    if (modal && ds.applyDiff) ds.applyDiff(host, modal);
+    else close();
+  };
+  for (const block of blocks) {
+    const svg = block.querySelector('svg');
+    if (!svg || svg._dsLightboxBound) continue;
+    svg._dsLightboxBound = true;
+    svg.addEventListener('click', () => openOverlay(svg));
+  }
+}
+
 const WIDE_ARTICLES = ['made-with', 'stats', 'paper'];
 const shell = C.AppShell ? C.AppShell({
   topbar, crumb, main, status,
@@ -186,6 +222,14 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
+  const syncHeaderOffset = () => {
+    const chrome = document.querySelector('.app-chrome, .app-topbar, .app-crumb');
+    const h = chrome ? chrome.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty('--article-header-h', h + 'px');
+  };
+  syncHeaderOffset();
+  window.addEventListener('resize', syncHeaderOffset);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncHeaderOffset).catch(() => {});
 }
 if (page.layout === 'article' && page.articleHtml) {
   const host = document.getElementById('ds-article-host');
@@ -216,7 +260,7 @@ if (page.layout === 'article' && page.articleHtml) {
       import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
         const dark = matchMedia('(prefers-color-scheme: dark)').matches;
         mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
-        mermaid.run({ nodes: blocks });
+        mermaid.run({ nodes: blocks }).then(() => wireMermaidLightbox(blocks));
       }).catch(() => {});
     }
     const loadExternal = (src) => new Promise((res) => {
