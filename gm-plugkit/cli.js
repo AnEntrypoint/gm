@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { ensureReady, startSpoolDaemon, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
+const { ensureReady, startSpoolDaemon, ensureAgentplugRunnerInstalled, gmToolsDir, readVersionFile, ensureGmPlugkitVersionFresh, ensureSkillMdFresh, isReady, getWasmPath, readPinnedGmPlugkitVersion, spawnPinnedBoot, resolveProjectRoot } = require('./bootstrap');
 const { pidAliveSync, waitForPidDeath } = require('./gm-process');
 
 function getWasmPathSafe() {
@@ -24,7 +24,7 @@ function spawnBackgroundFreshnessCheck(reason) {
   } catch (_) {}
 }
 
-function spawnDaemonOrExit(version, binaryPath, message) {
+async function spawnDaemonOrExit(version, binaryPath, message) {
   let daemon;
   try {
     daemon = startSpoolDaemon();
@@ -32,6 +32,21 @@ function spawnDaemonOrExit(version, binaryPath, message) {
     writeCliError('start-daemon', err);
     console.error('Daemon start failed:', err.message);
     process.exit(1);
+  }
+  if (daemon && !daemon.ok && daemon.needsRunnerInstall) {
+    const runnerName = process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner';
+    const runnerPath = path.join(gmToolsDir(), runnerName);
+    console.error('agentplug-runner not found -- attempting sha256-verified download from AnEntrypoint/agentplug-bin before failing...');
+    const installed = await ensureAgentplugRunnerInstalled(runnerPath);
+    if (installed) {
+      try {
+        daemon = startSpoolDaemon();
+      } catch (err) {
+        writeCliError('start-daemon', err);
+        console.error('Daemon start failed:', err.message);
+        process.exit(1);
+      }
+    }
   }
   if (!daemon || !daemon.ok) {
     const errMsg = (daemon && daemon.error) || 'startSpoolDaemon returned non-ok';
@@ -207,7 +222,7 @@ function tryDelegateToRunner(args) {
     try { installedVersion = readVersionFile(); } catch (_) { installedVersion = null; }
     writeCliStatus({ phase: 'bootstrapped', version: installedVersion, binary: getWasmPathSafe() });
     spawnBackgroundFreshnessCheck(versionDrifted ? 'version-drift-respawn' : 'fast-path-spawn');
-    spawnDaemonOrExit(
+    await spawnDaemonOrExit(
       installedVersion,
       getWasmPathSafe(),
       'plugkit daemon spawned from existing local install, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness; remote freshness check running in background'
@@ -231,7 +246,7 @@ function tryDelegateToRunner(args) {
   }
 
   writeCliStatus({ phase: 'bootstrapped', version: bootstrapResult.version, binary: bootstrapResult.binaryPath });
-  spawnDaemonOrExit(
+  await spawnDaemonOrExit(
     bootstrapResult.version,
     bootstrapResult.binaryPath,
     'plugkit daemon spawned, not yet confirmed serving -- check .gm/exec-spool/.status.json for heartbeat freshness'

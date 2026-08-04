@@ -792,6 +792,95 @@ function getBinaryPath() {
   return getWasmPath();
 }
 
+function agentplugRunnerAssetName() {
+  const plat = process.platform;
+  const arch = process.arch;
+  if (plat === 'win32') {
+    if (arch === 'x64') return 'agentplug-runner-windows-x64.exe';
+    if (arch === 'arm64') return 'agentplug-runner-windows-arm64.exe';
+    return null;
+  }
+  if (plat === 'darwin') {
+    if (arch === 'x64') return 'agentplug-runner-macos-x64';
+    if (arch === 'arm64') return 'agentplug-runner-macos-arm64';
+    return null;
+  }
+  if (plat === 'linux') {
+    if (arch === 'x64') return 'agentplug-runner-linux-x64';
+    if (arch === 'arm64') return 'agentplug-runner-linux-arm64';
+    return null;
+  }
+  return null;
+}
+
+function compareDottedSemverAscending(a, b) {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+function latestAgentplugRunnerTagViaGitLsRemote() {
+  const { execFileSync } = require('child_process');
+  const out = execFileSync('git', ['ls-remote', '--tags', '--refs', 'https://github.com/AnEntrypoint/agentplug-bin.git'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  const tags = out.split('\n')
+    .map(line => line.match(/refs\/tags\/(.+)$/))
+    .filter(Boolean)
+    .map(m => m[1]);
+  if (tags.length === 0) return null;
+  tags.sort(compareDottedSemverAscending);
+  return tags[tags.length - 1];
+}
+
+// The sole loader has to exist before startSpoolDaemon can do anything --
+// a project that never ran `gm-skill install` (or whose install predates
+// agentplug-runner) hit a hard "not installed" failure here even though
+// the sha256-verified download this needs is the same one bin/install.js
+// already performs. Attempting it inline means a bare `spool` boot recovers
+// on its own instead of requiring a separate manual install step first.
+async function ensureAgentplugRunnerInstalled(destPath) {
+  const assetName = agentplugRunnerAssetName();
+  if (!assetName) return false;
+  const destDir = gmToolsDir();
+  try {
+    let tag;
+    try {
+      const releaseInfo = JSON.parse((await httpGetBuffer('https://api.github.com/repos/AnEntrypoint/agentplug-bin/releases/latest', 15000)).toString('utf8'));
+      tag = releaseInfo && releaseInfo.tag_name;
+    } catch (apiErr) {
+      try {
+        tag = latestAgentplugRunnerTagViaGitLsRemote();
+      } catch (_) {
+        return false;
+      }
+    }
+    if (!tag) return false;
+    const base = `https://github.com/AnEntrypoint/agentplug-bin/releases/download/${tag}`;
+    const [binBuf, shaBuf] = await Promise.all([
+      httpGetBuffer(`${base}/${assetName}`, 60000),
+      httpGetBuffer(`${base}/${assetName}.sha256`, 15000),
+    ]);
+    const expectedSha = shaBuf.toString('utf8').trim().split(/\s+/)[0];
+    const actualSha = sha256Hex(binBuf);
+    if (!expectedSha || actualSha.toLowerCase() !== expectedSha.toLowerCase()) return false;
+    fs.mkdirSync(destDir, { recursive: true });
+    const tmp = destPath + '.tmp' + process.pid;
+    fs.writeFileSync(tmp, binBuf);
+    if (process.platform !== 'win32') { try { fs.chmodSync(tmp, 0o755); } catch (_) {} }
+    fs.renameSync(tmp, destPath);
+    fs.writeFileSync(path.join(destDir, 'agentplug-runner.version'), tag);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function startSpoolDaemon() {
   try {
     const runnerName = process.platform === 'win32' ? 'agentplug-runner.exe' : 'agentplug-runner';
@@ -805,6 +894,7 @@ function startSpoolDaemon() {
           `which downloads the sha256-verified native runner from AnEntrypoint/agentplug-bin for this platform ` +
           `(${process.platform}/${process.arch}). If no binary is published for this platform yet, there is no ` +
           `loader available -- file an issue at https://github.com/AnEntrypoint/agentplug-bin so a binary is built for it.`,
+        needsRunnerInstall: true,
       };
     }
     const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -846,6 +936,7 @@ module.exports = {
   getWasmPath,
   getBinaryPath,
   startSpoolDaemon,
+  ensureAgentplugRunnerInstalled,
   isReady,
   cacheRoot,
   obsEvent,
