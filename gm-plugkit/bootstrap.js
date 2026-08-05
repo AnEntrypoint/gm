@@ -564,12 +564,6 @@ function discoverBundledSkillsAndSourcesLocal() {
   return found;
 }
 
-// Walks a (decompressed) POSIX tar stream's fixed 512-byte headers, yielding
-// each entry's name. `git archive --remote` was tried first and does NOT
-// work against GitHub (its git server returns HTTP 422 for upload-archive,
-// a documented GitHub limitation) -- codeload.github.com's tarball endpoint
-// is the real plain-HTTPS, non-api.github.com path that actually serves
-// repo content.
 function* tarEntryNames(buf) {
   let offset = 0;
   while (offset + 512 <= buf.length) {
@@ -596,12 +590,6 @@ async function discoverRemoteSkillNamesViaCodeload(timeoutMs) {
   return Array.from(names);
 }
 
-// The GitHub Contents API this normally uses already fails soft (caller
-// falls back to bundled local skills), but a fully API-scope-restricted
-// environment (a corporate proxy or org policy blocking api.github.com
-// specifically) loses fresh remote skill discovery entirely even though
-// the same repo is reachable over codeload.github.com's plain-HTTPS
-// tarball endpoint -- a different host, no API token or REST surface.
 async function discoverRemoteSkillNames(timeoutMs) {
   const url = `https://api.github.com/repos/${SKILL_MD_REMOTE_REPO}/contents/skills?ref=${SKILL_MD_REMOTE_BRANCH}`;
   try {
@@ -734,11 +722,6 @@ function compareDottedSemverAscending(a, b) {
   return 0;
 }
 
-// Fallback when the Releases-list API is unreachable: git ls-remote can
-// see every tag over plain git protocol without touching api.github.com,
-// but cannot see release ASSETS -- so a tag it finds is verified against
-// a HEAD probe on the raw release-download URL for plugkit.wasm before
-// being trusted, matching the API path's own hasPlugkitWasm check.
 async function resolveLatestRemoteVersionViaGit(timeoutMs) {
   const { execFileSync } = require('child_process');
   const out = execFileSync('git', ['ls-remote', '--tags', '--refs', 'https://github.com/AnEntrypoint/plugkit-bin.git'], {
@@ -945,12 +928,6 @@ function latestAgentplugRunnerTagViaGitLsRemote() {
   return tags[tags.length - 1];
 }
 
-// The sole loader has to exist before startSpoolDaemon can do anything --
-// a project that never ran `gm-skill install` (or whose install predates
-// agentplug-runner) hit a hard "not installed" failure here even though
-// the sha256-verified download this needs is the same one bin/install.js
-// already performs. Attempting it inline means a bare `spool` boot recovers
-// on its own instead of requiring a separate manual install step first.
 async function ensureAgentplugRunnerInstalled(destPath) {
   const assetName = agentplugRunnerAssetName();
   if (!assetName) return false;
