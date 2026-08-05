@@ -231,6 +231,24 @@ function httpGetBuffer(url, timeoutMs) {
   });
 }
 
+function httpHeadOk(url, timeoutMs) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, { method: 'HEAD', timeout: timeoutMs || 3000, headers: { 'user-agent': 'gm-plugkit-bootstrap' } }, (res) => {
+      res.resume();
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        httpHeadOk(res.headers.location, timeoutMs).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode === 200) resolve();
+      else reject(new Error(`HTTP ${res.statusCode} ${url}`));
+    });
+    req.on('timeout', () => { try { req.destroy(new Error(`idle-timeout ${timeoutMs || 3000}ms ${url}`)); } catch (_) {} });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 async function downloadFromGithubReleases(destPath, version, artifactName) {
   const name = artifactName || 'plugkit.wasm';
   const base = `https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}`;
@@ -546,12 +564,59 @@ function discoverBundledSkillsAndSourcesLocal() {
   return found;
 }
 
+// Walks a (decompressed) POSIX tar stream's fixed 512-byte headers, yielding
+// each entry's name. `git archive --remote` was tried first and does NOT
+// work against GitHub (its git server returns HTTP 422 for upload-archive,
+// a documented GitHub limitation) -- codeload.github.com's tarball endpoint
+// is the real plain-HTTPS, non-api.github.com path that actually serves
+// repo content.
+function* tarEntryNames(buf) {
+  let offset = 0;
+  while (offset + 512 <= buf.length) {
+    const header = buf.subarray(offset, offset + 512);
+    if (header.every(b => b === 0)) break;
+    const name = header.subarray(0, 100).toString('utf-8').replace(/\0.*$/s, '');
+    const sizeOctal = header.subarray(124, 136).toString('utf-8').replace(/\0.*$/s, '').trim();
+    const size = parseInt(sizeOctal, 8) || 0;
+    if (name) yield name;
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+}
+
+async function discoverRemoteSkillNamesViaCodeload(timeoutMs) {
+  const url = `https://codeload.github.com/${SKILL_MD_REMOTE_REPO}/tar.gz/refs/heads/${SKILL_MD_REMOTE_BRANCH}`;
+  const gz = await httpGetBuffer(url, timeoutMs || 15000);
+  const tar = require('zlib').gunzipSync(gz);
+  const names = new Set();
+  for (const name of tarEntryNames(tar)) {
+    const m = /^[^/]+\/skills\/([^/]+)\/$/.exec(name);
+    if (m) names.add(m[1]);
+  }
+  if (names.size === 0) throw new Error('codeload tarball listing produced zero skill directories');
+  return Array.from(names);
+}
+
+// The GitHub Contents API this normally uses already fails soft (caller
+// falls back to bundled local skills), but a fully API-scope-restricted
+// environment (a corporate proxy or org policy blocking api.github.com
+// specifically) loses fresh remote skill discovery entirely even though
+// the same repo is reachable over codeload.github.com's plain-HTTPS
+// tarball endpoint -- a different host, no API token or REST surface.
 async function discoverRemoteSkillNames(timeoutMs) {
   const url = `https://api.github.com/repos/${SKILL_MD_REMOTE_REPO}/contents/skills?ref=${SKILL_MD_REMOTE_BRANCH}`;
-  const buf = await httpGetBuffer(url, timeoutMs || 5000);
-  const entries = JSON.parse(buf.toString('utf-8'));
-  if (!Array.isArray(entries)) throw new Error('unexpected github contents API response shape');
-  return entries.filter(e => e && e.type === 'dir' && e.name).map(e => e.name);
+  try {
+    const buf = await httpGetBuffer(url, timeoutMs || 5000);
+    const entries = JSON.parse(buf.toString('utf-8'));
+    if (!Array.isArray(entries)) throw new Error('unexpected github contents API response shape');
+    return entries.filter(e => e && e.type === 'dir' && e.name).map(e => e.name);
+  } catch (apiErr) {
+    try {
+      return await discoverRemoteSkillNamesViaCodeload(timeoutMs);
+    } catch (fallbackErr) {
+      obsEvent('bootstrap', 'discover-remote-skill-names.codeload-fallback-failed', { error: fallbackErr.message });
+      throw apiErr;
+    }
+  }
 }
 
 async function fetchRemoteSkillMd(skillName, timeoutMs) {
@@ -659,6 +724,42 @@ function installedVersionAtTools() {
   } catch (_) { return null; }
 }
 
+function compareDottedSemverAscending(a, b) {
+  const pa = a.replace(/^v/, '').split('.').map(Number);
+  const pb = b.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+// Fallback when the Releases-list API is unreachable: git ls-remote can
+// see every tag over plain git protocol without touching api.github.com,
+// but cannot see release ASSETS -- so a tag it finds is verified against
+// a HEAD probe on the raw release-download URL for plugkit.wasm before
+// being trusted, matching the API path's own hasPlugkitWasm check.
+async function resolveLatestRemoteVersionViaGit(timeoutMs) {
+  const { execFileSync } = require('child_process');
+  const out = execFileSync('git', ['ls-remote', '--tags', '--refs', 'https://github.com/AnEntrypoint/plugkit-bin.git'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  const tags = out.split('\n')
+    .map(line => line.match(/refs\/tags\/v(\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)$/))
+    .filter(Boolean)
+    .map(m => m[1]);
+  tags.sort(compareDottedSemverAscending);
+  for (let i = tags.length - 1; i >= 0; i--) {
+    const version = tags[i];
+    try {
+      await httpHeadOk(`https://github.com/AnEntrypoint/plugkit-bin/releases/download/v${version}/plugkit.wasm`, timeoutMs || 3000);
+      return version;
+    } catch (_) { /* asset missing for this tag, try the next-newest */ }
+  }
+  return null;
+}
+
 async function resolveLatestRemoteVersion(timeoutMs) {
   try {
     const buf = await httpGetBuffer('https://api.github.com/repos/AnEntrypoint/plugkit-bin/releases?per_page=50', timeoutMs || 3000);
@@ -674,6 +775,12 @@ async function resolveLatestRemoteVersion(timeoutMs) {
     }
   } catch (e) {
     obsEvent('bootstrap', 'resolve-latest-remote-version.failed', { error: e.message });
+    try {
+      const viaGit = await resolveLatestRemoteVersionViaGit(timeoutMs);
+      if (viaGit) return viaGit;
+    } catch (gitErr) {
+      obsEvent('bootstrap', 'resolve-latest-remote-version.git-fallback-failed', { error: gitErr.message });
+    }
   }
   return null;
 }
