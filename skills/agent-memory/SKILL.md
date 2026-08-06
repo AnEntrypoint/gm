@@ -62,6 +62,33 @@ Zero-config works for basic capability. Production tuning groups: `capture`, `ex
 
 Use the migration tool documented at `MemoryCore/scripts/migrate-v2-to-v3/README.md` in the repo. New installs skip this.
 
+### 4. Migrating gm's own memories into the `tencentdb_backend` store
+
+Distinct from #3 above (that's the standalone system's own internal format
+evolution). This is for a project that already has gm-native memories
+(`.gm/memories/*.md`, written by `memorize`/`memorize-fire` before
+`memory.tencentdb_backend` was enabled) and wants them carried over once a
+namespace opts into the Tencent-compatible backend, so recall doesn't go
+cold on the switch.
+
+Dispatch the `tencentdb-memory-import` verb: `{"source_namespace":
+"default", "dest_namespace": "<routed-namespace>", "kind": "l1"}`. It reads
+every `.md` doc in the source namespace, re-embeds through gm's own
+384-dim pipeline, and writes into the destination via
+`tencentdb_memory::write_cfg`. It refuses up front unless
+`dest_namespace`'s resolved `memory.tencentdb_backend.vectors_db_dims` is
+exactly `384` -- gm's embedder cannot produce vectors at any other width,
+and a namespace configured for externally-embedded 768-dim content (the
+default) cannot safely receive them (recall queries that namespace through
+the project-resolved dim, not a per-import override, so a dim mismatch
+there is a real defect, not a formality). A project wanting both kinds of
+content needs two separate `tencentdb_backend`-routed namespaces, each at
+its own dim.
+
+This is a one-way copy, not a move: the source `.md` files and their
+`rssearch_vectors` index rows are untouched, so the default backend keeps
+working for any namespace not also switched over.
+
 ## Verification (do this before declaring setup done)
 
 1. Confirm version prerequisites: `node -v` (`>=22.16`), and `openclaw --version` (`>=2026.3.13`) if using the OpenClaw plugin path.
