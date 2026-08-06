@@ -1,6 +1,6 @@
 ---
 name: agent-memory
-description: Sets up and drives TencentDB Agent Memory (MemoryCore + MemoryHub + MemoryProxy + MemoryPanel, from AnEntrypoint/agent-memory) -- a persistent, cross-session memory and knowledge system for AI agents distinct from this project's own recall/memorize-fire store. Chat Memory (L0 conversation -> L1 atom -> L2 scenario -> L3 persona), a versioned Skill library extracted from past work, a Wiki + CodeGraph knowledge map over docs and code, and a human-controlled review panel. Use when the user wants an agent team to share and accumulate memory/skills/knowledge across sessions and across multiple agent frameworks (not just this one Claude Code session), when they mention "memory hub", "team memory", "chat memory", "skill library", "wiki", "codegraph", or ask to install/configure/troubleshoot the memory-tencentdb plugin, or when onboarding a new agent into an existing team's accumulated experience. Not for this project's own internal recall/memorize-fire mechanism -- that is a separate, unrelated store.
+description: Sets up and drives TencentDB Agent Memory (MemoryCore + MemoryHub + MemoryProxy + MemoryPanel, from AnEntrypoint/agent-memory) -- a persistent, cross-session memory and knowledge system for AI agents. Chat Memory (L0 conversation -> L1 atom -> L2 scenario -> L3 persona), a versioned Skill library extracted from past work, a Wiki + CodeGraph knowledge map over docs and code, and a human-controlled review panel. Use when the user wants an agent team to share and accumulate memory/skills/knowledge across sessions and across multiple agent frameworks (not just this one Claude Code session), when they mention "memory hub", "team memory", "chat memory", "skill library", "wiki", "codegraph", or ask to install/configure/troubleshoot the memory-tencentdb plugin, or when onboarding a new agent into an existing team's accumulated experience. As of gm's tencentdb_backend addition, this system's format can ALSO be gm's own memorize/recall/memorize-fire/memorize-prune backend for an opted-in namespace (see gm.config.json's memory.tencentdb_backend) -- when that's enabled, the verb surface an agent already knows is unchanged; only the storage target moves. Use this skill for the standalone deployment (Docker Compose, panel UI, team review) or when gm's own backend is not what's being asked about.
 license: MIT
 compatibility: Requires Docker (or Node.js >= 22.16 for source install) to run MemoryCore/MemoryHub/MemoryProxy services locally or self-hosted; a running LLM endpoint (OpenAI-compatible) for extraction/embedding. Panel UI served over HTTP. Verified against AnEntrypoint/agent-memory (published fork of TencentCloud/TencentDB-Agent-Memory).
 metadata:
@@ -12,7 +12,7 @@ allowed-tools: Skill, Read, Write, Bash, WebFetch
 
 # agent-memory
 
-TencentDB Agent Memory gives an agent team a shared, growing memory instead of starting cold every session. It is a separate system from this project's own `memorize-fire`/`recall` store (see `wfgy-method`/`gm` skills for that) -- reach for `agent-memory` when the ask spans multiple agent frameworks, multiple team members, or needs a human-reviewable panel, not just this single Claude Code session's local recall.
+TencentDB Agent Memory gives an agent team a shared, growing memory instead of starting cold every session. Two ways it relates to gm's own `memorize-fire`/`recall` (see `wfgy-method`/`gm` skills for that): (1) as a fully standalone system (this skill's main content, below) when the ask spans multiple agent frameworks, multiple team members, or needs a human-reviewable panel; (2) as an opt-in storage backend for gm's own memory verbs (`memory.tencentdb_backend` in `gm.config.json`, disabled by default) -- when a namespace is routed to it, gm's `memorize`/`recall`/`memorize-fire`/`memorize-prune` write file-pointer-indexed content compatible with this system's format instead of gm's default 384-dim md-corpus store, with no change to the verb surface an agent calls. Reach for THIS skill's setup instructions (Docker Compose, panel UI) for the standalone deployment; reach for `gm`'s own docs when the ask is just "make gm's memory use the Tencent-compatible backend."
 
 ## What it provides
 
@@ -23,10 +23,10 @@ TencentDB Agent Memory gives an agent team a shared, growing memory instead of s
 
 Assets are portable across agent frameworks and shareable across a team -- a new agent or team member can load existing memory instead of relearning from scratch.
 
-## When to use this skill vs. this project's own memory
+## When to use this skill vs. gm's own memory verbs
 
-- Use `agent-memory` when: the user explicitly names TencentDB/memory-tencentdb/Memory Hub/team memory, wants memory that survives across *different* agent frameworks or team members (not just this session), wants a Skill library extracted from past conversations, or wants a Wiki/CodeGraph over a codebase.
-- Do NOT use this for the recall/memorize-fire mechanism already built into `gm`/`wfgy-method` -- that is this project's own local memory and is unrelated infrastructure.
+- Use `agent-memory`'s standalone setup instructions when: the user explicitly names TencentDB/memory-tencentdb/Memory Hub/team memory, wants memory that survives across *different* agent frameworks or team members (not just this session), wants a Skill library extracted from past conversations, or wants a Wiki/CodeGraph over a codebase.
+- Use gm's own `memorize`/`recall`/`memorize-fire`/`memorize-prune` verbs (default backend, no setup) for this session's own local recall -- and if the user specifically wants gm's memory to be Tencent-format-compatible without running the standalone services, point them at `gm.config.json`'s `memory.tencentdb_backend` block instead of a full standalone install.
 
 ## Setup
 
