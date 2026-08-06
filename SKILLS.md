@@ -18,6 +18,7 @@ numbered steps (or prose) ARE the procedure to follow.
 | `polaris-protocol` | WFGY 5.0 Polaris Protocol root: compile goals before execution, shoot problems into inspectable routes, control drift. Load first for complex/high-stakes/long-horizon work, then dispatch its children. |
 | `polaris-goal-compiler` | Compiles a goal into task atoms, active/blocked work, verification gates, and claim ceilings before execution. |
 | `fifth-dimension-engine` | WFGY 5.0's core problem-solving tool: lifts a target into higher problem-coordinates and returns structured routes. Use after the goal compiler. |
+| `agent-memory` | Sets up and drives TencentDB Agent Memory (Chat Memory, Skill library, Wiki/CodeGraph, team review panel) for cross-session, cross-framework, cross-team agent memory -- distinct from this project's own recall/memorize-fire store. |
 
 The authoritative list is the set of directories under `skills/`; each
 `skills/<name>/SKILL.md` carries its own `description` frontmatter naming
