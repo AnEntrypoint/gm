@@ -13,7 +13,7 @@
 // namespace|text content-hash key scheme gm's memorize verb uses.
 //
 // Usage:
-//   node scripts/migrate-memory-to-tencentdb.mjs --project <path> [--namespace default] [--dry-run]
+//   node scripts/migrate-memory-to-tencentdb.mjs --project <path> [--namespace default] [--dry-run] [--archive]
 //
 // Requires the target project to have a live gm-plugkit spool watcher
 // (boots one if .gm/exec-spool is missing, same as any other gm session)
@@ -21,13 +21,29 @@
 // listed in gm.config.json -- this script drives the memorize verb, never
 // writes .gm/tencentdb-memory files directly, so the write always goes
 // through the same dedup/embed/index path a live agent dispatch would.
+//
+// This is the batch/CLI-driven migration path -- useful for migrating a
+// whole namespace outside a live agent session, and it applies the
+// derivable-state discard filter below (the verb-based path does not).
+// The `tencentdb-memory-import` verb (rs-plugkit's
+// wasm_dispatch/verbs.rs::tencentdb_memory_import) is the single-dispatch
+// alternative for use from within an already-running agent session; both
+// write through the same tencentdb_memory::write_cfg path and share the
+// same --archive/archive_source opt-in archiving behavior (see below).
+//
+// --archive (default off, matches the verb's archive_source default) moves
+// each successfully-migrated source .md file to
+// .gm/memories-archive-tencentdb/<namespace>/<filename> instead of leaving
+// it in place -- opt-in because the default stays a pure one-way copy (the
+// old backend keeps working for any namespace not also switched over).
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, renameSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
+const ARCHIVE = args.includes("--archive");
 const projectIdx = args.indexOf("--project");
 const PROJECT = projectIdx >= 0 ? args[projectIdx + 1] : process.cwd();
 const nsIdx = args.indexOf("--namespace");
@@ -37,6 +53,7 @@ const SPOOL_IN = join(PROJECT, ".gm", "exec-spool", "in");
 const SPOOL_OUT = join(PROJECT, ".gm", "exec-spool", "out");
 const MEMORIES_DIR = join(PROJECT, ".gm", "memories");
 const RS_LEARN_DB = join(PROJECT, ".gm", "rs-learn.db");
+const ARCHIVE_DIR = join(PROJECT, ".gm", "memories-archive-tencentdb", NAMESPACE);
 
 // Mirrors rs-plugkit's orchestrator/memorize.rs::is_derivable_state exactly
 // (pattern list kept in sync by hand -- both are small and rarely change;
@@ -143,6 +160,7 @@ function main() {
   let kept = 0;
   let discarded = 0;
   let errored = 0;
+  let archived = 0;
   const discardedSamples = [];
 
   for (const path of files) {
@@ -169,6 +187,16 @@ function main() {
       const resp = dispatchVerb("memorize", { text: parsed.text, namespace: NAMESPACE, kind: "l0" });
       if (resp.ok) {
         kept++;
+        if (ARCHIVE) {
+          try {
+            const dest = join(ARCHIVE_DIR, path.slice(path.lastIndexOf("/") + 1));
+            mkdirSync(dirname(dest), { recursive: true });
+            renameSync(path, dest);
+            archived++;
+          } catch (e) {
+            console.log(`[migrate]   WARN: migrated ${parsed.key} but failed to archive source ${path}: ${e.message}`);
+          }
+        }
       } else {
         errored++;
         console.log(`[migrate]   ERROR migrating ${parsed.key}: ${resp.error || JSON.stringify(resp)}`);
@@ -179,7 +207,7 @@ function main() {
     }
   }
 
-  console.log(`[migrate] summary: kept=${kept} discarded=${discarded} errored=${errored} total=${files.length}`);
+  console.log(`[migrate] summary: kept=${kept} discarded=${discarded} errored=${errored} archived=${archived} total=${files.length}`);
   if (discardedSamples.length) {
     console.log(`[migrate] sample of discarded entries (up to 10):`);
     for (const s of discardedSamples) {
