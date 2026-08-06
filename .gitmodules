@@ -31,3 +31,7 @@
 	path = gm-config
 	url = https://github.com/AnEntrypoint/gm-config.git
 	branch = main
+[submodule "vendor/tencentdb-agent-memory"]
+	path = vendor/tencentdb-agent-memory
+	url = https://github.com/AnEntrypoint/agent-memory.git
+	branch = main
