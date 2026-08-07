@@ -44,7 +44,7 @@ Wasm host-import link-module rule (`#[link(wasm_import_module="env")]` on every 
 
 ## Spool dispatch ABI
 
-Dispatch = Write `.gm/exec-spool/in/<verb>/<N>.txt`, Read `.gm/exec-spool/out/<verb>-<N>.json` (nested) or `out/<N>.json` (root). Wasm orchestrator services every verb; harness never executes side effects directly.
+Dispatch = Write `.gm/exec-spool/in/<verb>/<N>.txt`, Read `.gm/exec-spool/out/<verb>-<N>.json` (nested) or `out/<N>.json` (root). `<N>` is session-id-prefixed (`<session_id>-<local-counter>`), never a bare small integer -- the shared daemon claims and answers in-files by the literal `(verb, N)` pair with no per-session partition, so unprefixed sequential ids collide across concurrent sessions on the same project (recall: `gm spool dispatch id collision cross-session crosstalk`). Wasm orchestrator services every verb; harness never executes side effects directly.
 
 - **Orchestrator verbs**: `instruction`, `transition`, `phase-status`, `mutable-resolve`, `memorize-fire`, `residual-scan`, `auto-recall`.
 - **Wasm-direct verbs**: fs/kv/exec/fetch/env, recall, codesearch, memorize(+prune), health, filter, full git verb family. Enumeration in the recall store (`recall: wasm-direct plugkit verbs full list`).
