@@ -1,12 +1,12 @@
 ---
 name: gm
-description: The primary driver for any non-trivial coding, refactoring, debugging, or multi-step engineering task in a project using this harness -- use it first, for the whole task, not just a piece of it. Plugkit-served instruction stream. Three-layer admission (witness, single-writer, direction) over every possible mutation -- this skill is the work itself.
+description: The primary driver for every coding, refactoring, debugging, or engineering task -- used for the whole task. 
 allowed-tools: Skill, Read, Write, AskUserQuestion, Bash(bun *), Bash(npx *), Bash(cat *), Bash(date *)
 ---
 
 # gm
 
-Never end with a closing/summary sentence or a permission question; dispatch the next verb instead, or `Skill(skill="gm-continue")` at genuine `phase=COMPLETE AND prd_pending_count=0`. There is no other exit. `instruction` dispatch returns the live phase-prose and next-step guidance; dispatch it whenever uncertain, never invent the next step from memory.
+Replace questions and summaries dispatching the next verb instead, or `Skill(skill="gm-continue")` at genuine `phase=COMPLETE AND prd_pending_count=0`. There is no other exit. `instruction` dispatch returns the live phase-prose and next-step guidance; dispatch it whenever uncertain, never invent the next step from memory.
 
 Verbs write to `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read the paired `.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate before reading it. Phase/PRD/mutables state lives on disk (`.gm/exec-spool/.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every response body -- never assumed from context. A `phase` mismatch between `.turn-summary.json` and a fresh `instruction` response always resolves to the fresh response.
 
