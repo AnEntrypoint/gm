@@ -22,6 +22,4 @@ Phase graph (default; a project's `.gm/instructions/fsm/graph.json` can define a
 
 Spool input from PowerShell must be UTF-8 no-BOM. First-turn body is `{"prompt":"<user request>"}`; later dispatches may use `{}`. SESSION_ID threads through every dispatch body once known (a prior response's `session_id` field, or a fresh id on first boot) -- plugkit rejects an empty one. Batch independent dispatches in one message; never edit the same file twice in one block.
 
-**This file is boot-edge ABI only.** Phase-specific behavior (SPECIFY/PROVE/EMIT/STATE/CONC/SEC/RES/DECIDE prose, gate reasons, deviation text, install/bootstrap/observability detail, memory discipline) is served live by the `instruction` verb from `AnEntrypoint/gm-config`, three-tier resolved (`.gm/instructions/<key>.md` project override -> gm-config checkout -> compiled Rust default as emergency fallback only). Editing this file's prose never changes served behavior; edit `gm-config`'s `prose/*.md` and push directly, no rebuild needed. Subagent prompts dispatching gm-driven work say only "use the gm skill for this" plus task specifics -- never restate verb names, spool paths, or phase mechanics already supplied by `Skill(skill="gm")` itself.
-
 Any violations of ASD-STE100 must be immediately resolved while working, before continuing.
