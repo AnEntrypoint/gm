@@ -27,12 +27,13 @@ A task atom is the smallest executable unit of work. It must satisfy all of:
 
 Start with: "Goal: Build a payment microservice."
 
-1. **Identify phases**: Research -> Design -> Implement -> Test -> Deploy
+1. **Identify phases**: Research -> Design -> Implement -> Verify -> Deploy
 2. **For each phase, ask: What's the smallest piece?**
    - Research: API options, compliance, existing solutions
    - Design: Data model, interfaces, error handling
    - Implement: Core logic, integrations, monitoring
-   - Test: Unit tests, integration tests, end-to-end
+   - Verify: exhaustive manual debugging with live code execution against the
+     running system -- no test files, no suites, ever (see gm SKILL.md)
    - Deploy: Staging validation, production rollout
 
 3. **For each piece, refine**: Can this be done in 1-2 days by one person? If not, break further.
@@ -51,7 +52,7 @@ Design interface (A2)
   -> unblocks
 Implement core (A3)
   -> unblocks
-Test integration (A4)
+Verify integration live (A4)
   -> unblocks
 Deploy (A5)
 ```

@@ -77,8 +77,16 @@ or bare JS. Prefixes stack. `cdp` additionally accepts `screenshot[=name]`,
 persist a real Chrome process across dispatches. Every response carries
 `result.debug`.
 
-Ground truth only: no mocks, fakes, or test files on disk. Verification is live
-witnessed execution, same turn as the work. Reasoning is execution, not monologue.
+No test files, ever, anywhere, no exceptions -- not written, not edited, not
+left on disk even if a project already has one (remove any found, same turn,
+no separate approval needed). A test suite is never evidence of anything and is
+never consulted, run, or cited, even alongside other evidence: a test authored
+in the same pass as its fix reliably shares the fix's own misreading of the
+request, so "tests pass" only proves the code agrees with itself. Verification
+is exhaustive manual debugging with live code execution against the real
+system, same turn as the work -- run the actual code path against real state
+and read the real output, re-derived from the request's own words each time,
+never from the diff just written. Reasoning is execution, not monologue.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Batch independent dispatches; never edit one file twice per block.
@@ -220,11 +228,13 @@ behaviour (Feathers), witnessed live; Boy Scout Rule (Martin); Opportunistic
 Refactoring and Rule of Three (Fowler); Broken Windows (Hunt & Thomas); DRY; Code
 Smells; Strangler Fig; SOLID; Deep Modules (Ousterhout); SLAP; Chesterton's Fence;
 Hyrum's Law.
-**Verify** — Boundary Value Analysis and Equivalence Partitioning (Myers);
-property-based and mutation reasoning (Claessen & Hughes; DeMillo); Residuality
-Theory (O'Reilly); Fallacies of Distributed Computing (Deutsch); Red/Green (Beck),
-executed live, never a suite; Fagan Inspection; Shewhart and Nelson Rules; Devil's
-Advocate.
+**Verify** — Boundary Value Analysis and Equivalence Partitioning (Myers) applied
+by hand to real inputs; property-based and mutation reasoning (Claessen & Hughes;
+DeMillo) as live exploratory execution; Residuality Theory (O'Reilly); Fallacies
+of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the
+running system; Fagan Inspection re-reading the request's literal words against
+the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules;
+Devil's Advocate. No test files, ever (Section 1).
 **Secure** — Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE;
 OWASP Top 10; LINDDUN. Credentials are asymmetric: no revert reaches a log or
 mirror.
