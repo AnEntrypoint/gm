@@ -164,15 +164,16 @@ The plugkit wasm itself is built and released by [rs-plugkit](https://github.com
 
 ## developing gm itself
 
-Eight git submodules, source only, none compiled artifacts:
+Nine git submodules, source only, none compiled artifacts:
 
 - **`rs-plugkit/`** -- the wasm guest: orchestrator, gates, spool dispatch (the gm "brain")
 - **`agentplug/`** -- the native host that loads that wasm and drives `browser`/`task` natively via CDP, plus the shared-plugin loader
 - **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- the shared native plugins agentplug loads alongside the gm wasm (embeddings, vector storage, syntax parsing)
 - **`rs-codeinsight`**, **`rs-search`** -- codebase-indexing and search backends the `codesearch` verb consumes
 - **`gm-config/`** -- the default remote-config repo: prose, FSM graph, gate hooks, policy. Edited directly and pulled from at runtime. gm points at it out of the box unless a project or user configures its own.
+- **`vendor/tencentdb-agent-memory`** -- vendored agent-memory backend source.
 
-A plain `git clone` leaves all eight empty -- clone with submodules, or init them after the fact:
+A plain `git clone` leaves all nine empty -- clone with submodules, or init them after the fact:
 
 ```
 git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
