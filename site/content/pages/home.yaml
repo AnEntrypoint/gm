@@ -1,0 +1,98 @@
+id: home
+title: gm
+hero:
+  heading: "gm"
+  subheading: "vibe coding felt great. now it works great too."
+  body: "describe the change, watch the agent write it, feel the momentum -- that part already works. gm adds the part that was missing: proof the result actually holds up. it puts a gate between \"the agent said done\" and \"done.\" seven conditions guard the last transition: PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync. those conditions are code, checked on an edge in rust, and a failed gate refuses the transition and names the verb that fixes it. the agent cannot narrate its way to done, so the speed of vibe coding now ships something real."
+  badges:
+    - { label: "the speed stays; the guesswork goes" }
+    - { label: "the COMPLETE gate is code, not a prompt" }
+    - { label: "SPECIFY / PROVE / EMIT / STATE / CONC / SEC / RES / DECIDE" }
+    - { label: "zero test files, checkable" }
+    - { label: "one skill, every harness" }
+  ctas:
+    - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
+    - { label: "Install", href: "https://github.com/AnEntrypoint/gm#install" }
+    - { label: "Discord", href: "https://discord.com/invite/c9VV59MKNr" }
+    - { label: "live stats", href: "./stats/" }
+    - { label: "rust crates", href: "./crates/" }
+    - { label: "skills", href: "./skills/" }
+features:
+  heading: "what you actually get when gm sits inside a vibe-coding session"
+  items:
+    - name: "done means done, checkably"
+      desc: "SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE lives in rs-plugkit as native rust -- a non-linear graph with feedback edges, not a chain. four verbs (transition, mutable-resolve, memorize-fire, phase-status) drive the agent. the harness asks plugkit what phase it is in and what is still unknown, and there is no skip button. the gate holds action to its order and closure to real completion, so a written PRD is your authorization for the agent to stop asking and start doing."
+    - name: "one skill, every harness"
+      desc: "skills/gm/SKILL.md is the single skill shipped as the gm-skill npm package, installed as /gm. install it into any harness that loads claude-style skill directories, including claude code, gemini cli, opencode, codex, kilo, copilot cli, vscode, cursor, zed, jetbrains, antigravity, and windsurf. same skill, same orchestration, zero per-platform drift. add behavior once in skills/gm/ and every harness inherits it on the next install."
+    - name: "plugkit-only tool surface"
+      desc: "the gm skill's allowed-tools is reduced to Skill, Read, Write. Write exists only for spool dispatch. code, git, browser, recall, memorize, codesearch all route through .gm/exec-spool/ and are serviced by plugkit verbs. the harness never reaches around plugkit. an agent inventing a tool that does not exist is pure noise; one surface, audited, removes it. missing capability becomes a new verb, not a skill-side escape hatch."
+    - name: "every unknown is resolved by running code"
+      desc: "exec_js proves a claim by running it, codesearch finds where something lives, and recall surfaces what was already learned. \"this should work\" gets replaced with a live check, every time, at the gate layer -- so what ships is backed by output you can point to, not a guess dressed up as confidence."
+    - name: "process of elimination, not guessing"
+      desc: "gm resolves an unknown the way a clinician runs a differential diagnosis: name the hypothesis (a mutable, a single row in .gm/mutables.yml), run exactly one test against real code, read the real result, and either cross the hypothesis off or confirm it. repeat until nothing is left unknown. the agent never answers from memory or from what the docs say should happen; it answers from what just happened when the code ran."
+    - name: "instructions are file writes, not prose the agent has to interpret"
+      desc: "instead of a long paragraph the agent has to read and might misread, gm expresses every instruction as a small file: a short JSON or text body written into a spool folder (.gm/exec-spool/in/<verb>/<N>.txt). writing an instruction becomes structurally the same as writing code, with no natural-language translation step to lose signal in. the wasm orchestrator picks up the file, acts on it, and writes a matching response file back."
+    - name: "real execution replaces silent thinking"
+      desc: "instead of the model reasoning silently inside hidden thinking tokens about whether an approach will work, gm has the agent write and run real code immediately to test the idea. the execution itself is the reasoning, made visible and falsifiable in the terminal instead of invisible inside the model. turn your coding agent's internal thinking or reasoning-effort setting low or off when running gm -- the witnessed-execution loop already does that job, and paying for both is redundant."
+    - name: "coding standard: nothing fake, nothing decorative"
+      desc: "no comments in shipped code, ever. no synthetic or mock unit test files; verification means running the real thing and reading the real output. plain ascii text only, no decorative unicode or emoji. every function that ships does the real thing it claims to do -- a scaffold is only acceptable when it genuinely delegates to real behavior."
+    - name: "the live page is the debugger"
+      desc: "for anything that runs in a browser, gm exposes application state as window.* globals and reads them directly in the running page instead of restarting the app and guessing. every browser interaction automatically captures console output, page errors, network timing, and performance data with no extra setup, so a client-side change is proven working in the same turn it was made."
+    - name: "the whole ask gets covered, not just the easy part"
+      desc: "when a request is large, the agent breaks it into every witnessable piece, executes each one, and names exactly what is left over rather than quietly dropping it. you get the full scope you asked for, or a clear, explicit account of what remains and why."
+    - name: "one npm package, no fanout"
+      desc: "an earlier generation fanned fifteen downstream plugin repos (gm-cc, gm-gc, gm-oc, gm-kilo, gm-codex, gm-qwen, gm-copilot-cli, gm-hermes, gm-thebird, gm-vscode, gm-cursor, gm-zed, gm-jetbrains, gm-antigravity, gm-windsurf), each with its own bootstrap shim. those repos are archived. the repo root is the published gm-skill package. add a hook once, it shows up everywhere."
+    - name: "a small brain beside shared weights"
+      desc: "the orchestrator is a few megabytes of wasm: state machine, gates, dispatch, verb routing, nothing else. the bge-small embedding model is not inside it; it is a separate sibling plugin that the native runner loads once and shares across every project on the machine. recall and memorize still compute vectors locally and offline, leaking no text to a remote embedder, and the heavy download is paid once per machine instead of once per artifact. the runner carries filesystem, subprocess, and fetch; the wasm carries only logic."
+    - name: "rust-backed runtime"
+      desc: "rs-plugkit is the wasm module that runs everything: the verb runner, the AST-aware code index, and the memory store all live inside it. rs-search is the fast fusion/tokenize crate it links; rs-codeinsight is the standalone tree-sitter analyzer. (rs-exec and rs-learn are retired -- their surfaces were folded into rs-plugkit.) every push auto-cascades to a fresh gm-skill on npm within minutes."
+    - name: "one spool folder, every dispatch"
+      desc: "every verb writes a file to .gm/exec-spool/in/<verb>/<N>.<ext>. the wasm watcher reads the request, services it, and writes the response to out/<verb>-<N>.json. tool args are ephemeral; a file on disk is auditable, replayable, and survives compaction."
+    - name: "an open question stays visible until it is answered"
+      desc: ".gm/mutables.yml lives alongside the PRD. every unknown is a row; status flips to witnessed only when the row carries concrete proof. writes, commits, pushes, and the stop hook wait until every row is resolved, so an assumption never quietly rides along unverified. the discipline lives on disk, not in the agent's context window, so it survives the turn that raised the question."
+    - name: "memory stays relevant to the project it came from"
+      desc: "a @discipline sigil scopes recall, codesearch, and memorize to one knowledge store. read broadly, write narrowly: without a sigil, reads fan across enabled disciplines but writes go to default only. each project's memory stays specific to that project, so recall answers with what is actually true here, not a fact borrowed from somewhere else."
+    - name: "AGENTS.md is the staging ground for what the agent learns"
+      desc: "a new rule first gets written into AGENTS.md: durable, human-readable, and it survives context compaction. the same rule is then also fired into the vector memory store (memorize-fire) so a future turn can recall it just by working on something related, without anyone having to remember to reread the file. the flow runs both ways: memory also periodically drains back into AGENTS.md as compressed one-line pointers, so the file gains facts without bloating."
+    - name: "memory that dedups, decays, and shows up uninvited"
+      desc: "learning a fact twice does not create two memories: identical content hashes to the same key, so re-learning something is a no-op. stale or wrong memories get pruned the moment they are noticed. search results are ranked by a mix of semantic similarity and recency, so an older memory fades unless something reinforces it again. and a relevant pack of memories auto-attaches at the start of each turn, the agent never has to remember to ask for its own memory."
+    - name: "search by meaning, not by keyword, and answers come back whole"
+      desc: "memory recall does not keep a searchable index of raw text anywhere; it stores only vector embeddings, so a query matches by meaning, not by matching words. code search adds one more signal on top of the usual text match: it can rank results by which git commits touched them most relevantly or most recently, not just static grep. both search verbs hand back the full matched content, never a truncated snippet, so the agent is not forced to go fetch the rest. every verb response is also deliberately short and token-optimized, so none of that context gets spent for nothing."
+whatsNew:
+  heading: "what's new (last two weeks)"
+  items:
+    - { date: "2026-07-28", summary: "gmsniff stale-registry bug fixed (daemon-registry/daemon-status now read from the live ~/.agentplug path); browser-verb health verified fleet-wide; comment-policy sweep" }
+    - { date: "2026-07-25", summary: "browser session-launch TOCTOU race fixed (concurrent dispatches no longer spawn duplicate Chrome instances); codeinsight wall-budget and daemon-concurrency fixes" }
+    - { date: "2026-07-24", summary: "system-wide verification sweep across gm/ccsniff/gmsniff; vocabulary sync; comment-sweep completion" }
+    - { date: "2026-07-23", summary: "no-comments policy closed the loop with a full-repo sweep; threading/pool fairness fixes; mutables lifecycle made project-configurable" }
+    - { date: "2026-07-22", summary: "dead gm-log observability restored (a 2-week-silent gap was invisible until now); ccsniff/gmsniff detector gaps closed" }
+    - { date: "2026-07-21", summary: "dynamic FSM framework: the phase graph is now project-overridable data, not hardcoded Rust; runner self-update; a real COMPLETE-gate bypass bug fixed" }
+    - { date: "2026-07-17", summary: "GL error capture: fixed a fill-once-then-frozen cap, added stack traces and a proactive GPU-tracing hint" }
+    - { date: "2026-07-16", summary: "stopped the CLI spool command from blocking on network round-trips during watcher reboot" }
+quickstart:
+  heading: install
+  lines:
+    - { kind: "cmt", text: "# install the one skill (/gm) -- downloads a GitHub Release, copies the dir into ~/.claude/skills/gm" }
+    - { kind: "cmd", text: "curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# windows (powershell):" }
+    - { kind: "cmd", text: "irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# the installer seeds this line into ~/.claude/CLAUDE.md for you:" }
+    - { kind: "cmt", text: "# always use the gm skill for everything, always fan out subagents" }
+    - { kind: "cmt", text: "" }
+    - { kind: "cmt", text: "# claude code settings it offers (interactive) or sets (--yes):" }
+    - { kind: "cmt", text: '#   autoCompactEnabled: true' }
+    - { kind: "cmt", text: '#   autoCompactWindow: 380000   (absolute token count, 38% of a 1M window, not a percent)' }
+    - { kind: "cmt", text: '#   effortLevel: "low"' }
+    - { kind: "cmt", text: '#   alwaysThinkingEnabled: false' }
+    - { kind: "cmt", text: "# the model still reasons -- gm replaces hidden thinking tokens with reasoning in code:" }
+    - { kind: "cmt", text: "# form a hypothesis, run it as code or a browser probe, read the real result." }
+    - { kind: "cmt", text: "# thinking becomes witnessed execution, not an unverified internal monologue." }
+examples:
+  heading: read further
+  items:
+    - { name: "the complete discipline", desc: "lifecycle control, governance, and operational hard rules, every section read as one more way to make what ships match what was asked for. one paper, every rule the agent runs under.", cta: "open paper", href: "./paper/" }
+    - { name: "every rust crate", desc: "rs-plugkit, rs-search, rs-codeinsight. what each does, why it exists, what it kills if it misbehaves. (rs-exec and rs-learn retired -- folded into rs-plugkit.)", cta: "open crates", href: "./crates/" }
+    - { name: "the one skill", desc: "gm is the single shipped skill, a boot-edge entry point that names the agent as the state machine and carries no phase prose of its own. each turn you dispatch the instruction verb to read the active phase, the pending mutables, and the guardrails. plugkit is the durable memory and gate you drive, not an autonomous worker.", cta: "open skills", href: "./skills/" }
+    - { name: "distribution", desc: "the cascade pipeline that puts a fresh gm-skill on npm every time anyone touches a rust crate.", cta: "open distribution", href: "./distribution/" }

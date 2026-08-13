@@ -1,0 +1,58 @@
+=== accpal ===
+(exit 1, 240974ms)
+[pattern] C:\dev\accpal\public\static\js\16.0acb03ea.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.1acc0d41.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.3370d296.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.4641c447.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.59c8a049.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.6876e815.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\18.24c4bd8d.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+
+scan-supply-chain-tells: 7 finding(s) across 7 file(s) (3675 files scanned total)
+
+=== accpal ===
+(exit 1, 114602ms)
+[pattern] C:\dev\accpal\public\static\js\16.0acb03ea.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.1acc0d41.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.3370d296.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.4641c447.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.59c8a049.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\16.6876e815.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+[pattern] C:\dev\accpal\public\static\js\18.24c4bd8d.chunk.js:2 — eval-of-network-response
+    eval() fed directly by network response content — remote code execution primitive
+
+scan-supply-chain-tells: 7 finding(s) across 7 file(s) (3675 files scanned total)
+
+=== debloat ===
+(exit 0, 250ms)
+scan-supply-chain-tells: 0 finding(s) across 0 file(s) (7 files scanned total)
+
+=== design ===
+(exit 0, 11604ms)
+scan-supply-chain-tells: 0 finding(s) across 0 file(s) (1744 files scanned total)
+
+=== dev ===
+(exit 0, 151ms)
+scan-supply-chain-tells: 0 finding(s) across 0 file(s) (24 files scanned total)
+
+=== dev3d - Copy ===
+(exit 0, 105ms)
+scan-supply-chain-tells: 0 finding(s) across 0 file(s) (13 files scanned total)
+
+=== devbox ===
+(exit 0, 1210ms)
+scan-supply-chain-tells: 0 finding(s) across 0 file(s) (72 files scanned total)
+

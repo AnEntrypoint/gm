@@ -1,0 +1,8 @@
+---
+key: mem-22dcf2f306aadbd8-1013
+ns: default
+created: 1784617854976
+updated: 1784617854976
+---
+
+{"content": "Windows host + msys2 bash.exe fork()-emulation is fragile under heavy concurrent process-spawn load. A 7-wide parallel Workflow fan-out of gm-skill subagents (each subagent issuing many of its own Bash tool calls for builds/spool-dispatches/git-ops) sustained ~45-100 bash.exe processes for minutes and produced a live sh.exe.stackdump crash (msys-2.0.dll fault in fork emulation) -- a known MSYS2-on-Windows fragility class, not a gm/rs-plugkit/agentplug code defect. On THIS Windows host, cap real parallel width for gm-skill-driving Workflow subagents below the naive per-workstream count: chunk parallel() into smaller groups (2-3 at a time) or prefer pipeline() over parallel() where workstreams do not genuinely need simultaneous execution, keeping bash.exe count under roughly 20 throughout a fan-out. This is host-process-model guidance for whoever authors a Workflow script targeting this machine, not a change to any repo's source.", "tags": ["windows", "workflow", "concurrency", "msys2"]}

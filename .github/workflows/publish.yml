@@ -1,0 +1,187 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', 'SKILLS.md', 'docs/**', 'site/**', 'LICENSE', '.gitignore', 'CHANGELOG.md', '.gm/**']
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PUBLISHER_TOKEN }}
+          submodules: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Check prose bundle completeness + prose-conformance
+        run: node scripts/check-prose-bundle.mjs
+
+      - name: Auto-bump version
+        run: |
+          CURRENT_VERSION=$(jq -r '.version' gm.json)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+          echo "Bumping version from $CURRENT_VERSION to $NEW_VERSION"
+          jq --arg v "$NEW_VERSION" '.version = $v' gm.json > /tmp/gm.json.tmp
+          mv /tmp/gm.json.tmp gm.json
+
+          jq --arg v "$NEW_VERSION" '.version = $v' package.json > /tmp/pkg.json.tmp
+          mv /tmp/pkg.json.tmp package.json
+
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "gm-bot"
+          git add gm.json package.json
+          git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              echo "Version bumped and pushed (attempt $i)"
+              break
+            fi
+            echo "Push attempt $i failed; rebasing"
+            git pull --rebase origin main || true
+            if [ "$i" -eq 5 ]; then
+              echo "All push attempts exhausted" >&2
+              exit 1
+            fi
+          done
+
+      - name: Get version
+        id: version
+        run: echo "version=$(jq -r '.version' gm.json)" >> $GITHUB_OUTPUT
+
+      - name: Verify the gm-skill package version agrees with gm.json (gm-plugkit no longer carries its own package.json/version -- it is data files only, see AGENTS.md)
+        run: |
+          set -e
+          GM_JSON_PACKAGE_VERSION=$(jq -r '.version' gm.json)
+          ROOT_PACKAGE_JSON_VERSION=$(jq -r '.version' package.json)
+          if [ "$GM_JSON_PACKAGE_VERSION" != "$ROOT_PACKAGE_JSON_VERSION" ]; then
+            echo "::error::package version drift: gm.json=$GM_JSON_PACKAGE_VERSION package.json=$ROOT_PACKAGE_JSON_VERSION"
+            exit 1
+          fi
+
+          WASM_VERSION_2=$(tr -d '[:space:]' < gm-plugkit/plugkit.version 2>/dev/null || echo "MISSING")
+          WASM_VERSION_3=$(tr -d '[:space:]' < bin/plugkit.version 2>/dev/null || echo "MISSING")
+          if [ "$WASM_VERSION_2" != "$WASM_VERSION_3" ]; then
+            echo "::error::plugkit WASM version drift: gm-plugkit/plugkit.version=$WASM_VERSION_2 bin/plugkit.version=$WASM_VERSION_3"
+            exit 1
+          fi
+
+          echo "[ok] package version $GM_JSON_PACKAGE_VERSION agrees between gm.json and package.json; plugkit WASM version $WASM_VERSION_2 agrees across gm-plugkit/bin (gm.json.plugkitVersion is informational-only, not functionally read by any code path, and is no longer gated here -- see AGENTS.md)"
+
+  publish-github-release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Stage release assets (files package.json's "files" array names)
+        id: stage
+        env:
+          VER: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -e
+          mkdir -p release-assets
+          tar -czf "release-assets/gm-skill-${VER}.tar.gz" \
+            skills/ scripts/ install.sh install.ps1 \
+            bin/plugkit.sha256 bin/plugkit.version bin/plugkit.wasm.sha256 bin/plugkit-slim.wasm.sha256 \
+            gm-plugkit/plugkit.version gm-plugkit/plugkit.sha256 gm-plugkit/plugkit-slim.wasm.sha256 gm-plugkit/instructions/ \
+            AGENTS.md README.md gm.json
+          cd release-assets
+          sha256sum "gm-skill-${VER}.tar.gz" | sed 's/ \*/  /' > "gm-skill-${VER}.tar.gz.sha256"
+          ls -la
+
+      - name: Upload to GitHub Release (gm repo, tag v<version>)
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          VER: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -e
+          if ! gh release view "v$VER" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+            gh release create "v$VER" \
+              --repo AnEntrypoint/gm \
+              --title "gm v$VER" \
+              --notes "Auto-published gm-skill release from publish.yml at $(git rev-parse HEAD)"
+          fi
+          gh release upload "v$VER" \
+            --repo AnEntrypoint/gm \
+            --clobber \
+            "release-assets/gm-skill-${VER}.tar.gz" \
+            "release-assets/gm-skill-${VER}.tar.gz.sha256"
+          echo "[done] Uploaded gm-skill-${VER}.tar.gz to GitHub Release v$VER"
+
+  mirror-gm-skill-repo:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Setup Git
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          git config --global user.email "noreply@github.com"
+          git config --global user.name "gm-bot"
+          git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+
+      - name: Mirror SKILL.md to gm-skill repo (back-compat)
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          REPO="AnEntrypoint/gm-skill"
+          WORK_DIR="/tmp/gm-skill-mirror"
+
+          gh repo create "${REPO}" --public 2>/dev/null || true
+
+          rm -rf "$WORK_DIR"
+          mkdir -p "$WORK_DIR"
+          cd "$WORK_DIR"
+
+          git init -q --initial-branch=main
+          git remote add origin "https://github.com/${REPO}.git"
+
+          mkdir -p skills/gm-skill
+          cp "${GITHUB_WORKSPACE}/skills/gm/SKILL.md" skills/gm-skill/SKILL.md
+          if [ -f "${GITHUB_WORKSPACE}/skills/gm/index.js" ]; then
+            cp "${GITHUB_WORKSPACE}/skills/gm/index.js" skills/gm-skill/index.js
+          fi
+
+          cat > README.md <<'EOF'
+          # gm-skill (back-compat mirror)
+
+          This repo mirrors only `skills/gm-skill/SKILL.md` for backward compatibility with
+          `bun x skills add AnEntrypoint/gm-skill`. The canonical, maintained source is at
+          [AnEntrypoint/gm](https://github.com/AnEntrypoint/gm).
+
+          New installs should prefer:
+
+          ```bash
+          bun x skills add AnEntrypoint/gm
+          ```
+          EOF
+
+          git add -A
+          git commit -q -m "Mirror SKILL.md from AnEntrypoint/gm (v${{ needs.prepare.outputs.version }})"
+          git push --force origin main
+          echo "[done] Mirrored skill to ${REPO}"

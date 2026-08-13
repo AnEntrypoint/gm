@@ -1,0 +1,23 @@
+- id: browser-module-created
+  claim: lib/browser.js implements complete session management API with async socket communication
+  witness_method: Read gm-starter/lib/browser.js and verify exports
+  witness_evidence: "gm-starter/lib/browser.js created with exports: createSession(sessionId), sendCommand(sessionId, commandType, args), getScreenshot(sessionId), closeSession(sessionId), closeAllSessions(), isBrowserAvailable(), loadSessionState(), saveSessionState(). All functions async, socket connection to 127.0.0.1:5000 (BROWSER_API_HOST:BROWSER_API_PORT). Session state persisted to ~/.gm/browser-sessions/<sessionId>.json. Lines 1-385."
+  status: witnessed
+
+- id: browser-spool-handler-created
+  claim: lib/browser-spool-handler.js handles exec:browser verb dispatch with action routing
+  witness_method: Read gm-starter/lib/browser-spool-handler.js
+  witness_evidence: "gm-starter/lib/browser-spool-handler.js created with handleBrowserVerb(body, sessionId) async function. Routes actions: start->createSession, stop->closeSession, screenshot->getScreenshot, click|type|navigate->sendCommand with JSON.parse fallback. Error handling surfaces 'Browser API unavailable at 127.0.0.1:5000'. Returns {ok:true/false, ...result}. JSONL event logging. Lines 1-100."
+  status: witnessed
+
+- id: daemon-bootstrap-browser-support
+  claim: daemon-bootstrap.js exports ensureBrowserReady() for browser API availability checks
+  witness_method: Read gm-starter/lib/daemon-bootstrap.js module.exports section
+  witness_evidence: "ensureBrowserReady(sessionId) function added at lines 399-431. Polls 127.0.0.1:5000 for up to 10s with 250ms intervals using checkPortReachable. Returns {ok:true, host, port, sessionId, durationMs} on success or {ok:false, error, durationMs} on timeout/failure. JSONL event logging via emitDaemonEvent. Exported in module.exports at line 441."
+  status: witnessed
+
+- id: browser-session-persistence-contract
+  claim: Browser sessions keyed by CLAUDE_SESSION_ID persist in ~/.gm/browser-sessions/ until closeSession or cleanup
+  witness_method: Read gm-starter/lib/browser.js session management code
+  witness_evidence: "loadSessionState(sessionId) at lines 64-78 reads from SESSION_STATE_DIR=~/.gm/browser-sessions/<sessionId>.json; returns default {sessionId, createdAt, commands:[] } on ENOENT. saveSessionState(sessionId, state) at lines 80-88 writes state JSON to file. createSession stores browserSessionId and status in state. Commands logged to state.commands array, trimmed to last 500 (line 246). closeSession deletes state file (line 309). Sessions persist across skill invocations within same CLAUDE_SESSION_ID."
+  status: witnessed
