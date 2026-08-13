@@ -13,11 +13,11 @@ $ transition to=COMPLETE
   next: git_finalize
 ```
 
-Most agent harnesses ask the model to follow a process. gm makes the process a program the model cannot talk its way past.
+Most agent harnesses ask the model to follow a process. gm turns the process into a state machine with real, git/filesystem-backed checks on most edges -- and is honest that a few of those checks (CI-freshness, browser-witness, claim-audit) verify a marker file the agent itself writes, not an independently-observed fact, so they still rely on the agent reporting honestly rather than being unfakeable.
 
 [![release](https://img.shields.io/github/v/release/AnEntrypoint/gm.svg)](https://github.com/AnEntrypoint/gm/releases) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Discord](https://img.shields.io/badge/discord-join-5865F2.svg)](https://discord.com/invite/c9VV59MKNr) [![site](https://img.shields.io/badge/site-anentrypoint.github.io%2Fgm-informational.svg)](https://anentrypoint.github.io/gm/)
 
-**[Why gm hits different](#why-gm-hits-different)** &middot; **[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
+**[Why gm hits different](#why-gm-hits-different)** &middot; **[A skill on a plugin host](#gm-is-a-skill-on-a-general-purpose-plugin-host-not-a-monolith)** &middot; **[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
 
 ```
 curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh
@@ -25,7 +25,7 @@ curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | s
 
 ## Why gm hits different
 
-**The COMPLETE gate is code, not a prompt.** Nine conditions guard the last transition -- PRD closed, mutables resolved, worktree clean, residual scan fired, CI green against the current HEAD sha, browser witness coverage, submodules in sync, every claimed commit hash resolves against real git log, no hedge language in the diff. They are a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust. A failed gate refuses the transition. The agent cannot narrate its way to done.
+**The COMPLETE gate is code, but not uniformly unfakeable.** Ten conditions guard the DECIDE -> COMPLETE transition, a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust -- a failed gate refuses the transition and the agent cannot narrate its way to done. Six of the ten check something the gate itself observes and cannot be talked past: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean` (real `git status --porcelain`), `residual-scan-fired`, `submodules-clean` (every tracked submodule gitlink against that submodule's own live HEAD), `no-hedge-language-in-diff`. The other four -- `ci-validated-fresh`, `browser-witness-coverage`, `app-loads-witnessed`, `claim-audit-clean` -- verify a marker file (`.gm/exec-spool/.ci-validated`, browser-witness records, etc.) that the agent's own dispatches write; `ci-validated-fresh` only checks that marker's `head_sha` matches `git rev-parse HEAD`, it never independently queries CI itself, so an agent that hand-writes the marker satisfies the gate without CI ever having run. `app-loads-witnessed` and `claim-audit-clean` additionally hardcode to `true` outside a wasm build. These four are still real code paths -- harder to satisfy by accident than a bare instruction -- but they trust the agent to report honestly, the same trust model as an unenforced prompt, just with more ceremony.
 
 **A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `ci-status`. You get an instruction, not an error.
 
@@ -38,6 +38,10 @@ curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | s
 This is extremely opinionated. It narrows bash to a handful of prefixes, routes git through verbs, refuses to write test files, forces a push before a session ends, and rejects any execute call without an explicit timeout. If that sounds terrible, this is not for you. If that sounds like what you wish your agent did automatically, keep sitting down.
 
 14000+ hours of supervised modification, 8800+ commits, one person. Free, open source. Named after **glootius maximus**, the muscle that holds you in the chair while you finish the work.
+
+## gm is a skill on a general-purpose plugin host, not a monolith
+
+`agentplug`/`agentplug-runner` is a generic shared-plugin wasm runtime -- it hosts any wasm plugin that satisfies its imports; `gm` (via `rs-plugkit`) is one plugin loaded into it, not the runtime itself. The FSM graph a project runs is data (`.gm/instructions/fsm/graph.json`), swappable per-project via the `fsm-vendor` verb (see "configuring gm from your own repo" below) without forking anything. The gm skill ships with three optional native plugins the host can load alongside it (embeddings, vector storage, syntax parsing) -- none are required for gm's own state machine to run; they back specific verbs (`recall`'s embeddings, `codesearch`'s syntax-aware indexing). Prose, gate-denial text, and the FSM graph itself are all similarly swappable per-project or from a shared org-wide config repo -- see "configuring gm from your own repo" below.
 
 ## install
 
@@ -106,10 +110,11 @@ SPECIFY -> PROVE -> EMIT -> STATE -> CONC -> SEC -> RES -> DECIDE -> COMPLETE, a
 
 Every tool the agent uses is a dispatch verb. No direct shell, no direct file writes outside the spool. The wasm host owns the side effects.
 
-- **`recall`**: vector + KV recall against `rs-learn`, scored by cosine x recency, namespace-aware
-- **`codesearch`**: semantic vector search across the project
+- **`recall`**: vector + KV recall against `.gm/memories/*.md` + the derived `gm.db` vector index, scored by cosine x recency, namespace-aware. In-tree in `rs-plugkit` -- the standalone `rs-learn` wasm crate this used to depend on is retired and no longer part of the pipeline.
+- **`codesearch`**: semantic vector search across the project (`rs-codeinsight`/`rs-search` backends)
 - **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
-- **`browser`**: headful-by-default Chrome session driven natively by `agentplug` (CDP direct, no JS wrapper) -- a process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches instead of relaunching per-call, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly; `screenshot[=name]`/`dom=<selector>`/`timeout=<ms>` body prefixes stack with a plain eval body for capture and DOM-scoped queries
+- **`browser`**: fast, no-Chrome-process headless engine (oxibrowser, pure Rust) -- navigate/evaluate/dom-query/extract-markdown only, one implicit session, `session new/close/reset` are accepted no-ops
+- **`cdp`**: the same plain-text-body grammar driving a real Chrome process over CDP (native, via `agentplug`, no JS wrapper) for anything `browser` can't do -- full CSS/layout fidelity, real screenshots, `capture`/`profile`/`trace`/`viewport=`. A process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly. `url=`/`dom=<selector>`/`screenshot[=name]`/`timeout=<ms>` compose in any order within one dispatch body; the script body itself is evaluated as a real async-function body -- a bare expression (`1+1`) gets auto-wrapped to return its value, matching REPL-style eval, not raw statement execution.
 - **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
 - **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
 
@@ -126,7 +131,7 @@ Every tool the agent uses is a dispatch verb. No direct shell, no direct file wr
 - **STATE -> CONC**: `idempotent-dispatch-replay-safe`
 - **SEC -> RES**: `no-secrets-in-diff`
 - **RES -> DECIDE**: `no-unchecked-panics-in-diff`
-- **DECIDE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha), `browser-witness-coverage`, `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD), `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log), `no-hedge-language-in-diff`
+- **DECIDE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha -- self-reported by the agent's own dispatch, not independently checked against CI), `browser-witness-coverage`, `app-loads-witnessed` (self-reported, hardcoded `true` outside a wasm build), `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD), `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log; also hardcoded `true` outside wasm), `no-hedge-language-in-diff` -- ten gates total, see "Why gm hits different" above for which are self-reported vs independently observed
 
 The gate graph itself is data, not hardcoded Rust: a project's `.gm/instructions/fsm/graph.json` (written by the `fsm-vendor` verb) can add states, rewire edges, or swap which gates guard which transition, including a `policy` block that externalizes previously-hardcoded behavior (status vocabularies, witness-requirement toggles, CAS retry attempts) as project-overridable JSON.
 
@@ -167,11 +172,11 @@ The plugkit wasm itself is built and released by [rs-plugkit](https://github.com
 Nine git submodules, source only, none compiled artifacts:
 
 - **`rs-plugkit/`** -- the wasm guest: orchestrator, gates, spool dispatch (the gm "brain")
-- **`agentplug/`** -- the native host that loads that wasm and drives `browser`/`task` natively via CDP, plus the shared-plugin loader
-- **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- the shared native plugins agentplug loads alongside the gm wasm (embeddings, vector storage, syntax parsing)
+- **`agentplug/`** -- the native, plugin-agnostic host that loads wasm plugins (gm's included) and drives `browser`/`cdp` natively via CDP
+- **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- optional shared native plugins agentplug can load alongside the gm wasm (embeddings, vector storage, syntax parsing)
 - **`rs-codeinsight`**, **`rs-search`** -- codebase-indexing and search backends the `codesearch` verb consumes
 - **`gm-config/`** -- the default remote-config repo: prose, FSM graph, gate hooks, policy. Edited directly and pulled from at runtime. gm points at it out of the box unless a project or user configures its own.
-- **`vendor/tencentdb-agent-memory`** -- vendored agent-memory backend source.
+- **`vendor/tencentdb-agent-memory/`** -- an optional alternate memory/skill-library backend `recall`/`memorize` can target instead of the default `.gm/memories/` + `gm.db` store (see `gm.config.json`'s `memory.tencentdb_backend`); vendored, not forked.
 
 A plain `git clone` leaves all nine empty -- clone with submodules, or init them after the fact:
 
