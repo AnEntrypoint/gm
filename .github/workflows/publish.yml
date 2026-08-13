@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.PUBLISHER_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           submodules: true
 
       - uses: actions/setup-node@v6
@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload to GitHub Release (gm repo, tag v<version>)
         env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VER: ${{ needs.prepare.outputs.version }}
         run: |
           set -e
@@ -127,61 +127,3 @@ jobs:
             "release-assets/gm-skill-${VER}.tar.gz" \
             "release-assets/gm-skill-${VER}.tar.gz.sha256"
           echo "[done] Uploaded gm-skill-${VER}.tar.gz to GitHub Release v$VER"
-
-  mirror-gm-skill-repo:
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-
-      - name: Setup Git
-        env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: |
-          git config --global user.email "noreply@github.com"
-          git config --global user.name "gm-bot"
-          git config --global url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-
-      - name: Mirror SKILL.md to gm-skill repo (back-compat)
-        env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-        run: |
-          set -e
-          REPO="AnEntrypoint/gm-skill"
-          WORK_DIR="/tmp/gm-skill-mirror"
-
-          gh repo create "${REPO}" --public 2>/dev/null || true
-
-          rm -rf "$WORK_DIR"
-          mkdir -p "$WORK_DIR"
-          cd "$WORK_DIR"
-
-          git init -q --initial-branch=main
-          git remote add origin "https://github.com/${REPO}.git"
-
-          mkdir -p skills/gm-skill
-          cp "${GITHUB_WORKSPACE}/skills/gm/SKILL.md" skills/gm-skill/SKILL.md
-          if [ -f "${GITHUB_WORKSPACE}/skills/gm/index.js" ]; then
-            cp "${GITHUB_WORKSPACE}/skills/gm/index.js" skills/gm-skill/index.js
-          fi
-
-          cat > README.md <<'EOF'
-          # gm-skill (back-compat mirror)
-
-          This repo mirrors only `skills/gm-skill/SKILL.md` for backward compatibility with
-          `bun x skills add AnEntrypoint/gm-skill`. The canonical, maintained source is at
-          [AnEntrypoint/gm](https://github.com/AnEntrypoint/gm).
-
-          New installs should prefer:
-
-          ```bash
-          bun x skills add AnEntrypoint/gm
-          ```
-          EOF
-
-          git add -A
-          git commit -q -m "Mirror SKILL.md from AnEntrypoint/gm (v${{ needs.prepare.outputs.version }})"
-          git push --force origin main
-          echo "[done] Mirrored skill to ${REPO}"

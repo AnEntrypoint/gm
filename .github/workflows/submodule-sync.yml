@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          token: ${{ secrets.PUBLISHER_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           submodules: true
           fetch-depth: 0
 
@@ -32,7 +32,7 @@ jobs:
 
       - name: Commit and push if any submodule pointer moved
         env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           if git diff --quiet; then
