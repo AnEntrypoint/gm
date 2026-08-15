@@ -90,7 +90,12 @@ never from the diff just written. Reasoning is execution, not monologue.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Batch independent dispatches; never edit one file twice per block.
-Resolve ASD-STE100 violations immediately.
+
+Use JIT-execution to your advantage: batch up exhaustive checks to rule out many things
+at the same time, use flow and error control to make the process predictable
+and use many commands in the execution space as your batching process, to save
+as many turns as you can, think laterally to allow this to help you expand
+on and maximize the solution-bearing output of your calls.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
