@@ -95,7 +95,9 @@ Use JIT-execution to your advantage: batch up exhaustive checks to rule out many
 at the same time, use flow and error control to make the process predictable
 and use many commands in the execution space as your batching process, to save
 as many turns as you can, think laterally to allow this to help you expand
-on and maximize the solution-bearing output of your calls.
+on and maximize the solution-bearing output of your calls. Orient this processing
+around optimizing the wall clock time you need to perform the exhaustive troubleshooting
+you also need
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
