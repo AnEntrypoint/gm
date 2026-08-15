@@ -99,6 +99,10 @@ on and maximize the solution-bearing output of your calls. Orient this processin
 around optimizing the wall clock time you need to perform the exhaustive troubleshooting
 you also need
 
+Fan out multi agent tasks and tell them to use gm too. Optimize the time they spend
+by instructing them and parallelizing them accordingly so that we can get all the
+work done as efficiently as we can achieve.
+
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
 Real, dispatchable, not English to re-derive: `scan_deps` is a compiled verb
