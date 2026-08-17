@@ -3,8 +3,14 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import {
   escapeHtml, escapeJson, extractArticle, rewriteLegacyLinks,
-  SDK_CSS_URL, SDK_JS_URL,
 } from 'anentrypoint-design/kits/flatspace-theme';
+
+// SDK_CSS_URL/SDK_JS_URL are NOT imported from the dependency: it's pinned to
+// anentrypoint-design@0.0.471 (npm hasn't been republished since), so its
+// exported URLs point at a stale unpkg build missing current CSS fixes.
+// Point straight at the design repo's GitHub source via jsDelivr instead.
+const SDK_CSS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.css';
+const SDK_JS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.js';
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
