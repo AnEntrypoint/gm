@@ -101,7 +101,7 @@ Every skill's `allowed-tools:` reduced to `Skill, Read, Write` (plus SKILL.md bo
 
 A task that reduces to read/investigate/report, or a change confined to files the subagent owns for the turn, dispatches straight through -- stating the read-only boundary explicitly ("report only, no writes") is task-scope, not gm-protocol restatement, so it's not a violation of the rule above. A task whose plain description asks for an irreversible or shared-state-affecting action (remove data, force-push, merge/close a PR, deploy, rename a shared branch) is not silently handed off -- name the risk in the prompt and require the subagent to surface it back rather than execute it, the same blast-radius judgment the top-level agent applies to its own actions; the action still routes through the gm-driven skill invocation, never a prompt-authored imperative sequence that bypasses it. Contrast: "find every caller of X and summarize" dispatches as-is; "drop the staging table and reseed it" gets confirmed before any subagent is scoped to carry it out.
 
-**A subagent dispatched to build/commit/push in a submodule (`agentplug`, `rs-plugkit`, `rs-codeinsight`, `agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`, `rs-search`, `gm-config`) closes the loop back to gm's own pin as its last step, every time, no exceptions.** Full procedure + incident history: the recall store (`recall: gm submodule-pin-drift incident history`).
+**A subagent dispatched to build/commit/push in a submodule (`agentplug`, `rs-plugkit`, `rs-codeinsight`, `agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`, `liqology`, `rs-search`, `gm-config`) closes the loop back to gm's own pin as its last step, every time, no exceptions.** Full procedure + incident history: the recall store (`recall: gm submodule-pin-drift incident history`).
 
 ## Core Rules
 
@@ -197,7 +197,7 @@ Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single 
 
 | repo | role |
 | --- | --- |
-| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, gm-config, rs-codeinsight, rs-plugkit, rs-search, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, liqology, gm-config, rs-codeinsight, rs-plugkit, rs-search, vendor/tencentdb-agent-memory | active-dependency (submodule) |
 | rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
 | rs-learn, rs-exec, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit) |
 
