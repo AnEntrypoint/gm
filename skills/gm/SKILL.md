@@ -103,6 +103,13 @@ Fan out multi agent tasks and tell them to use gm too. Optimize the time they sp
 by instructing them and parallelizing them accordingly so that we can get all the
 work done as efficiently as we can achieve.
 
+Every `Agent`/`Task` dispatch, with no exception, opens its prompt with an
+instruction to use the `/gm` skill for the work. A fresh subagent inherits none
+of this file's prose and defaults to its own native Grep/Glob/find/raw-git tools
+with no discouragement -- the "use gm" line is the only thing that binds it to
+`codesearch` instead. Omitting it is not a shorter prompt, it is a silent revert
+to ungoverned tool use for that whole subagent's execution.
+
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
 Real, dispatchable, not English to re-derive: `scan_deps` is a compiled verb
