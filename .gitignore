@@ -26,6 +26,7 @@ tmp/
 .plugkit-agent-worktree/
 *.stackdump
 **/.tessl-plugin/
+.scan-progress.log
 
 # >>> plugkit managed
 .gm/.embed-generation
@@ -40,6 +41,7 @@ tmp/
 .gm/residual-check-fired
 .gm/claim-audit-fired
 .gm/bootstrap-status.json
+.gm/scan-deps-stamp.json
 .gm/bootstrap-error.json
 .gm/rslearn-counter.json
 .gm/trajectory-drafts/

@@ -26,6 +26,12 @@ detect_asset() {
         *) echo "" ;;
       esac
       ;;
+    MINGW*|MSYS*|CYGWIN*)
+      case "$arch" in
+        x86_64) echo "agentplug-runner-windows-x64.exe" ;;
+        *) echo "" ;;
+      esac
+      ;;
     *)
       echo ""
       ;;
@@ -160,7 +166,10 @@ main() {
 
   mkdir -p "$GM_TOOLS_DIR"
   base="https://github.com/${REPO}/releases/download/${tag}"
-  dest="${GM_TOOLS_DIR}/agentplug-runner"
+  case "$asset" in
+    *.exe) dest="${GM_TOOLS_DIR}/agentplug-runner.exe" ;;
+    *) dest="${GM_TOOLS_DIR}/agentplug-runner" ;;
+  esac
   tmp="${dest}.tmp.$$"
   shafile="${tmp}.sha256"
 
