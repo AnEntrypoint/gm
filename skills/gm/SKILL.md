@@ -54,7 +54,7 @@ is a respawn, not a stuck loop.
 The verb set belongs to the running build, not this file. An unrecognized verb is
 silently queued with no response, so a missing out-file after a normal read cycle
 means unavailable: fall back, never retry blindly. Where served: `codesearch`
-(never Grep/Glob), `browser` (never raw Chrome/playwright), git verbs (never raw
+(never Grep/Glob), `serp`/`browser`/`cdp` (never raw Chrome/playwright), git verbs (never raw
 `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`, `exec_js`,
 `memorize-fire`, `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`,
 `transition`, `phase-status`, `filter`. `git_finalize {message}` bundles
@@ -67,24 +67,27 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-`browser` runs a headless engine (oxibrowser, pure Rust) by default -- fast,
+`serp` runs a headless engine (oxibrowser, pure Rust) in-process -- fast,
 no Chrome process, but a narrower surface: navigate/evaluate/dom-query/
 extract-markdown only, one implicit session per instance (`session
 new/close/reset` are accepted no-ops), and no screenshot/capture/profile/
-trace/viewport. `cdp` is the same plain-text-body contract driving real
-Chrome over CDP (playwright-style) for anything `browser` cannot do yet --
-full CSS/layout fidelity, real screenshots, devtools-dependent sites, or
-genuine multi-tab sessions. A `browser` dispatch that fails or names an
-unsupported mode returns a `note` pointing at `cdp`; try that next rather
-than reworking the `browser` call.
+trace/viewport. `browser` dials a real CDP-speaking engine (lightpanda by
+default, or a configured steel-browser endpoint) -- the full session/
+screenshot/capture/profile/trace/viewport surface `serp` lacks, without
+spawning local Chrome. `cdp` is the same plain-text-body contract driving
+real Chrome over CDP (playwright-style) for anything `serp`/`browser`
+cannot do yet -- full CSS/layout fidelity, real screenshots,
+devtools-dependent sites, or genuine multi-tab sessions. A `serp` dispatch
+that fails or names an unsupported mode returns a `note` pointing at
+`browser`/`cdp`; try one of those next rather than reworking the `serp` call.
 
-Both verbs share one plain-text body grammar, never CLI flags: `session
+All three verbs share one plain-text body grammar, never CLI flags: `session
 new|list|close <id>|reset <id>`, `timeout=<ms>`, `url=<target>`, `dom=<selector>`,
-or bare JS. Prefixes stack. `cdp` additionally accepts `screenshot[=name]`,
-`capture`, `profile`, `trace`, and `viewport=`, which `browser` rejects outright
-(see line 54-55). Unlike `browser`'s no-op session commands, `cdp` sessions
-persist a real Chrome process across dispatches. Every response carries
-`result.debug`.
+or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
+`screenshot[=name]`, `capture`, `profile`, `trace`, and `viewport=`, which
+`serp` rejects outright. Unlike `serp`'s no-op session commands, `browser`
+and `cdp` sessions persist a real engine process (or a dialed remote
+endpoint) across dispatches. Every response carries `result.debug`.
 
 No test files, ever, anywhere, no exceptions -- not written, not edited, not
 left on disk even if a project already has one (remove any found, same turn,
