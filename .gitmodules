@@ -39,3 +39,11 @@
 	path = liqology
 	url = https://github.com/AnEntrypoint/liqology.git
 	branch = main
+[submodule "obrowser"]
+	path = obrowser
+	url = https://github.com/AnEntrypoint/obrowser.git
+	branch = main
+[submodule "agentplug-crux"]
+	path = agentplug-crux
+	url = https://github.com/AnEntrypoint/agentplug-crux.git
+	branch = main
