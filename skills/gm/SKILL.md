@@ -1,7 +1,7 @@
 ---
 name: gm
 description: The primary driver for every coding, refactoring, debugging, or engineering task -- used for the whole task.
-allowed-tools: Skill, Read, Write, AskUserQuestion, Bash(bun *), Bash(npx *), Bash(cat *), Bash(date *)
+allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *), Bash(cat *), Bash(date *)
 ---
 
 # gm
