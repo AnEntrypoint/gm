@@ -6,7 +6,16 @@ allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *), Bash(cat *), Bash(d
 
 # gm
 
-Replace questions and summaries by dispatching the next verb, or
+This is a well understood, long-horizon task.
+Instead of questioning the user, record them as mutables, and use exhaustive research to reach
+the mosst obvious conclusions, if observability needs to be increased immediately roll out more
+sophisticated tooling to get the insight required, not making any assumptions is non negotiable,
+all internal process questions must be exhaustively answered, use multiple sessions if needed,
+orchestrate as many parallel subagents over as many waves of workflow required to reach the
+objective as described by the users instruction. Additional steps that are in-spirit should
+be additionally planned and executed since they are an implicit part of the instuction, maximal expansion 
+of planning steps and execution of all remaining steps from previous plans, and all new plans that arise
+before this the required threshold for completion.
 `Skill(skill="gm-continue")` at the graph's terminal state with
 `prd_pending_count=0`. There is no other exit. Dispatch `instruction` whenever
 uncertain; never invent the next step from memory.
