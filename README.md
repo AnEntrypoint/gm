@@ -1,6 +1,6 @@
 # glootius maximus (gm)
 
-**Your coding agent doesn't decide when it's done. A gate does.**
+A gate decides when work is done, not the coding agent.
 
 ```
 $ transition to=COMPLETE
@@ -13,74 +13,74 @@ $ transition to=COMPLETE
   next: git_finalize
 ```
 
-Most agent harnesses ask the model to follow a process. gm turns the process into a state machine with real, git/filesystem-backed checks on most edges -- and is honest that a few of those checks (CI-freshness, browser-witness, claim-audit) verify a marker file the agent itself writes, not an independently-observed fact, so they still rely on the agent reporting honestly rather than being unfakeable.
+Most agent harnesses ask the model to follow a process. gm turns the process into a state machine. The state machine has real checks on most edges, backed by git and the filesystem. Some checks (CI freshness, browser witness, claim audit) check a marker file the agent itself writes. These checks do not check an independent fact. gm states this limit openly: these four checks still depend on the agent reporting honestly.
 
-[![release](https://img.shields.io/github/v/release/AnEntrypoint/gm.svg)](https://github.com/AnEntrypoint/gm/releases) [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![Discord](https://img.shields.io/badge/discord-join-5865F2.svg)](https://discord.com/invite/c9VV59MKNr) [![site](https://img.shields.io/badge/site-anentrypoint.github.io%2Fgm-informational.svg)](https://anentrypoint.github.io/gm/)
+[Releases](https://github.com/AnEntrypoint/gm/releases) - [License](./LICENSE) (MIT) - [Discord](https://discord.com/invite/c9VV59MKNr) - [Site](https://anentrypoint.github.io/gm/)
 
-**[Why gm hits different](#why-gm-hits-different)** &middot; **[A skill on a plugin host](#gm-is-a-skill-on-a-general-purpose-plugin-host-not-a-monolith)** &middot; **[Install](#install)** &middot; **[How it works](#how-it-works)** &middot; **[Release pipeline](#release-pipeline)** &middot; **[Developing gm itself](#developing-gm-itself)** &middot; **[Full paper (site)](https://anentrypoint.github.io/gm/paper/)** &middot; **[Discord](https://discord.com/invite/c9VV59MKNr)** &middot; **[License](#license)**
+Contents: [Why gm uses a gate](#why-gm-uses-a-gate), [A skill on a plugin host](#gm-is-a-skill-on-a-general-purpose-plugin-host-not-a-monolith), [Install](#install), [How it works](#how-it-works), [Release pipeline](#release-pipeline), [Developing gm itself](#developing-gm-itself), [Full paper (site)](https://anentrypoint.github.io/gm/paper/), [License](#license).
 
 ```
 curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh
 ```
 
-## Why gm hits different
+## Why gm uses a gate
 
-**The COMPLETE gate is code, but not uniformly unfakeable.** Ten conditions guard the DECIDE -> COMPLETE transition, a `Vec<String>` on an edge in `fsm.rs`, evaluated in Rust -- a failed gate refuses the transition and the agent cannot narrate its way to done. Six of the ten check something the gate itself observes and cannot be talked past: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean` (real `git status --porcelain`), `residual-scan-fired`, `submodules-clean` (every tracked submodule gitlink against that submodule's own live HEAD), `no-hedge-language-in-diff`. The other four -- `ci-validated-fresh`, `browser-witness-coverage`, `app-loads-witnessed`, `claim-audit-clean` -- verify a marker file (`.gm/exec-spool/.ci-validated`, browser-witness records, etc.) that the agent's own dispatches write; `ci-validated-fresh` only checks that marker's `head_sha` matches `git rev-parse HEAD`, it never independently queries CI itself, so an agent that hand-writes the marker satisfies the gate without CI ever having run. `app-loads-witnessed` and `claim-audit-clean` additionally hardcode to `true` outside a wasm build. These four are still real code paths -- harder to satisfy by accident than a bare instruction -- but they trust the agent to report honestly, the same trust model as an unenforced prompt, just with more ceremony.
+The COMPLETE gate is code. It is not equally strict on every condition. Ten conditions guard the transition from DECIDE to COMPLETE. Rust code holds these ten conditions as a `Vec<String>` on one edge in `fsm.rs`. A failed condition refuses the transition. The agent cannot talk its way past a refusal. Six of the ten conditions check a fact the gate itself observes. The agent cannot talk past these six: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean` (a real `git status --porcelain` check), `residual-scan-fired`, `submodules-clean` (each tracked submodule link against that submodule's own live HEAD commit), `no-hedge-language-in-diff`. The other four conditions check a marker file the agent's own dispatch writes: `ci-validated-fresh`, `browser-witness-coverage`, `app-loads-witnessed`, `claim-audit-clean`. Examples of these marker files: `.gm/exec-spool/.ci-validated`, and a set of browser-witness records. The `ci-validated-fresh` condition only checks that the marker's `head_sha` field matches the output of `git rev-parse HEAD`. It never queries the CI (continuous integration) system on its own. An agent that writes the marker file by hand satisfies this condition, even when CI never ran. `app-loads-witnessed` and `claim-audit-clean` each hold a hardcoded value of `true` outside a WASM (WebAssembly, the binary format plugkit-core compiles to) build. These four conditions still run real code. Real code is harder to satisfy by accident than a bare instruction in a prompt. But these four conditions still trust the agent to report honestly. This is the same trust model as an unenforced prompt, with more steps around it.
 
-**A refused transition tells the agent what to do next.** Gate denials carry the recovery verb: `worktree-clean` returns `git_finalize`, `ci-validated-fresh` returns `ci-status`. You get an instruction, not an error.
+A refused transition tells the agent its next step. Each gate denial names a recovery verb. `worktree-clean` names `git_finalize` as the next verb. `ci-validated-fresh` names `ci-status` as the next verb. The agent gets an instruction, not a bare error.
 
-**Repeat the same failure and it stops you.** After the same denial fires repeatedly, the response stops restating the refusal and instructs the agent to record the stuck state and switch to a bounded-retry discipline. Loops end.
+When the same failure repeats, gm stops the agent. After the same denial fires many times in a row, the response stops restating the refusal. Instead, the response tells the agent to record the stuck state and switch to a bounded-retry method. This method ends loops.
 
-**Zero test files, and that is checkable.** Search this repo for `*.test.*`, `*.spec.*`, `__tests__`, or a jest config. There are none, and there never will be. Verification means running the real path and reading the real output in the same turn. DECIDE also greps the diff for `Mock*`/`Fake*`/`Stub*` -- a mock shipped as a real integration is the same violation as a test file.
+gm has zero test files, and a user can check this fact directly. Search this repository for `*.test.*`, `*.spec.*`, `__tests__`, or a jest config file. None exist, and gm's rules forbid adding any. In gm's method, verification means running the real code path and reading the real output, in the same session as the code change. The DECIDE phase also searches the diff for names starting with `Mock`, `Fake`, or `Stub`. A mock shipped as a real integration is the same rule violation as a test file.
 
-**You can loosen the rules, and it will tell on you.** The phase graph is JSON at `.gm/instructions/fsm/graph.json`. Rewire edges, add states, swap gates. gm compares your graph against the compiled default and reports every edge you made weaker.
+A user can loosen gm's rules, and gm reports this change. The phase graph is a JSON (JavaScript Object Notation, a data format) file at `.gm/instructions/fsm/graph.json`. A user can rewire edges, add states, or swap which condition guards which edge in this file. gm compares the user's graph against its own compiled default graph. gm then reports every edge where the user's change made a condition weaker.
 
-This is extremely opinionated. It narrows bash to a handful of prefixes, routes git through verbs, refuses to write test files, forces a push before a session ends, and rejects any execute call without an explicit timeout. If that sounds terrible, this is not for you. If that sounds like what you wish your agent did automatically, keep sitting down.
+gm holds strong, narrow opinions. gm narrows the Bash tool to a small set of allowed command prefixes. gm routes every git operation through its own verbs. gm refuses to write test files. gm forces a push to the remote repository before a session ends. gm rejects any execute call that has no explicit time limit set on it.
 
-14000+ hours of supervised modification, 8800+ commits, one person. Free, open source. Named after **glootius maximus**, the muscle that holds you in the chair while you finish the work.
+The project has over 14000 hours of supervised use and over 8800 commits, built by one person. gm is free and open source. The name comes from the gluteus maximus, the muscle that holds a person in a chair through to the end of a task.
 
 ## gm is a skill on a general-purpose plugin host, not a monolith
 
-`agentplug`/`agentplug-runner` is a generic shared-plugin wasm runtime -- it hosts any wasm plugin that satisfies its imports; `gm` (via `rs-plugkit`) is one plugin loaded into it, not the runtime itself. The FSM graph a project runs is data (`.gm/instructions/fsm/graph.json`), swappable per-project via the `fsm-vendor` verb (see "configuring gm from your own repo" below) without forking anything. The gm skill ships with three optional native plugins the host can load alongside it (embeddings, vector storage, syntax parsing) -- none are required for gm's own state machine to run; they back specific verbs (`recall`'s embeddings, `codesearch`'s syntax-aware indexing). Prose, gate-denial text, and the FSM graph itself are all similarly swappable per-project or from a shared org-wide config repo -- see "configuring gm from your own repo" below.
+`agentplug`/`agentplug-runner` is a general-purpose, shared-plugin WASM runtime. It hosts any WASM plugin that meets its import contract. `gm` (through `rs-plugkit`) is one plugin loaded into this runtime, not the runtime itself. The FSM (finite state machine, the phase graph gm advances through) graph a project runs is a data file at `.gm/instructions/fsm/graph.json`. A project can swap this file through the `fsm-vendor` verb (see "configuring gm from your own repo" below), with no fork of any repository needed. The gm skill ships with three optional native plugins. The host can load each plugin alongside gm: an embeddings plugin, a vector storage plugin, and a syntax parsing plugin. None of the three is a requirement for gm's own state machine to run. Each plugin backs a specific verb: the embeddings plugin backs the `recall` verb, and the syntax parsing plugin backs the `codesearch` verb. The instruction prose, the gate-denial text, and the FSM graph are each swappable per project, or from one shared configuration repository across an organization. See "configuring gm from your own repo" below.
 
-## install
+## Install
 
-A Claude Code Agent Skill is just a directory at `~/.claude/skills/<name>/SKILL.md` (personal, all projects) or `.claude/skills/<name>/SKILL.md` (one project). The directory name becomes the slash command. No marketplace, no npm registry -- one script installs the skill, the same script also boots the native spool host inside any project that has it.
+A Claude Code Agent Skill is a directory at `~/.claude/skills/<name>/SKILL.md` for personal use across every project, or at `.claude/skills/<name>/SKILL.md` for one project. The directory name becomes the slash command. gm needs no marketplace and no npm registry. One script installs the skill. The same script also starts the native spool host inside any project that has gm installed.
 
-Install the `/gm` skill (POSIX):
+Install the `/gm` skill on a POSIX system (Linux, macOS):
 
 ```
 curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install
 ```
 
-Install the `/gm` skill (Windows PowerShell):
+Install the `/gm` skill on Windows PowerShell:
 
 ```
 irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main install
 ```
 
-Both resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases), download the `gm-skill-<version>.tar.gz` asset, sha256-verify it against the sidecar published alongside it, and copy `skills/gm` into `~/.claude/skills/gm/`.
+Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). Each script downloads the `gm-skill-<version>.tar.gz` asset. Each script checks the download against a published sha256 sidecar file. Each script then copies `skills/gm` into `~/.claude/skills/gm/`.
 
-Inside a project using gm, the same scripts (without the `install` argument, e.g. `curl -fsSL .../install.sh | sh -s -- spool`) resolve, sha256-verify, and exec the `agentplug-runner` binary (the native spool host) from `AnEntrypoint/agentplug-bin` releases -- this is what `bun x gm-plugkit@latest spool` used to do; there is no separate JS launcher anymore.
+Inside a project that uses gm, the same two scripts run again without the `install` argument, for example `curl -fsSL .../install.sh | sh -s -- spool`. In this mode, each script resolves, checks, and runs the `agentplug-runner` binary (the native spool host) from `AnEntrypoint/agentplug-bin` releases. This step replaces the old `bun x gm-plugkit@latest spool` command. gm no longer uses a separate JS (JavaScript, a source-file language this repository tracks) launcher.
 
-The skill installs as `/gm`. On Claude Code, set these settings for the reasoning-in-code workflow gm expects (the installer scripts do not touch Claude Code settings; set them via `/config` or by editing `~/.claude/settings.json` directly):
+The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 
 - `autoCompactEnabled: true`
-- `autoCompactWindow: 380000` -- an absolute token count (38% of a 1M window), not a percentage
+- `autoCompactWindow: 380000` (an absolute token count, 38 percent of a 1M-token window, not a percentage setting)
 - `effortLevel: "low"`
 - `alwaysThinkingEnabled: false`
 
-The model still reasons -- gm replaces hidden thinking tokens with reasoning in code: form a hypothesis, run it as code or a browser probe, read the real result. Reasoning becomes a witnessed execution rather than an unverified internal monologue. Change any of these back in `~/.claude/settings.json` or via `/config` at any time.
+The model still reasons under gm. gm replaces hidden thinking tokens with reasoning carried out in code. The agent forms a hypothesis, runs the hypothesis as code or as a browser probe, then reads the real result. Reasoning becomes a witnessed run, not an unchecked internal thought. A user can change any of these four settings back at any time, in `~/.claude/settings.json` or through `/config`.
 
-then add this line to your agent's global memory / system prompt (the installer seeds it into `~/.claude/CLAUDE.md` for you):
+Add this line to your agent's global memory or system prompt. The installer already writes this line into `~/.claude/CLAUDE.md`.
 
 ```
 always use the gm skill for everything, always fan out subagents
 ```
 
-## what's in this repo
+## What's in this repo
 
-This repo IS the published GitHub Release artifact. No build step, no factory. The directory layout you see at root is exactly what ships:
+This repository IS the published GitHub Release artifact. gm has no build step and no separate factory step. The directory layout at the repository root is the exact layout that ships:
 
 ```
 gm/
@@ -98,86 +98,86 @@ gm/
 `-- site/              <- flatspace site source (built to dist/ by CI)
 ```
 
-Distribution: `publish.yml` tars the files `package.json`'s `files` array names into `gm-skill-<version>.tar.gz`, sha256-sidecars it, and uploads both to a tagged [GitHub Release](https://github.com/AnEntrypoint/gm/releases) on `AnEntrypoint/gm` -- no npm registry involved. `install.sh`/`install.ps1` download that release directly.
+Distribution: `publish.yml` bundles the files named in `package.json`'s `files` array into `gm-skill-<version>.tar.gz`. The workflow adds a sha256 sidecar file to the bundle. The workflow then uploads both files to a tagged [GitHub Release](https://github.com/AnEntrypoint/gm/releases) on `AnEntrypoint/gm`. This step uses no npm registry. `install.sh` and `install.ps1` download that release directly.
 
-## how it works
+## How it works
 
-### the state machine
+### The state machine
 
-SPECIFY -> PROVE -> EMIT -> STATE -> CONC -> SEC -> RES -> DECIDE -> COMPLETE, a non-linear graph with feedback edges from every later stage back to SPECIFY/EMIT/STATE/PROVE. Every transition is a verb the agent dispatches by writing to `.gm/exec-spool/in/<verb>/<N>.txt`. The wasm orchestrator (rs-plugkit) services it and writes the response to `.gm/exec-spool/out/`. The agent reads, follows the imperative prose, dispatches the next verb. DECIDE owns adversarial verification + git-push + CI/CD validation, gated by the full closure set into COMPLETE. The chain isn't complete until `transition to=COMPLETE` returns COMPLETE phase AND the push reaches origin.
+The phase order is SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, then COMPLETE. This order is a non-linear graph. The graph carries feedback edges from every later phase back to SPECIFY, EMIT, STATE, or PROVE. Each transition between phases is a verb the agent dispatches. The agent dispatches a verb by writing a file to `.gm/exec-spool/in/<verb>/<N>.txt`. The WASM orchestrator (rs-plugkit) reads this file and writes its response to `.gm/exec-spool/out/`. The agent reads the response, follows the instruction inside it, then dispatches the next verb. The DECIDE phase owns adversarial verification, the git push step, and CI/CD (continuous integration and continuous delivery) validation. The full set of conditions that lead into COMPLETE gates the DECIDE phase. The chain does not reach completion until a `transition to=COMPLETE` dispatch returns the COMPLETE phase, and the push reaches the origin remote.
 
-### tools
+### Tools
 
-Every tool the agent uses is a dispatch verb. No direct shell, no direct file writes outside the spool. The wasm host owns the side effects.
+Every tool the agent uses is a dispatch verb. The agent has no direct shell access and makes no direct file writes outside the spool. The WASM host owns every side effect.
 
-- **`recall`**: vector + KV recall against `.gm/memories/*.md` + the derived `gm.db` vector index, scored by cosine x recency, namespace-aware. In-tree in `rs-plugkit` -- the standalone `rs-learn` wasm crate this used to depend on is retired and no longer part of the pipeline.
-- **`codesearch`**: semantic vector search across the project (`rs-codeinsight`/`rs-search` backends)
-- **`memorize`**: write to the recall index (with the BGE query/passage prefix asymmetry)
-- **`browser`**: fast, no-Chrome-process headless engine (oxibrowser, pure Rust) -- navigate/evaluate/dom-query/extract-markdown only, one implicit session, `session new/close/reset` are accepted no-ops
-- **`cdp`**: the same plain-text-body grammar driving a real Chrome process over CDP (native, via `agentplug`, no JS wrapper) for anything `browser` can't do -- full CSS/layout fidelity, real screenshots, `capture`/`profile`/`trace`/`viewport=`. A process-wide session registry keeps the launched Chrome child + CDP port alive across dispatches, profile persisted at `.gm/browser-chrome-profile-<session_id>/`; `session new|list|close|reset <id>` manages sessions explicitly. `url=`/`dom=<selector>`/`screenshot[=name]`/`timeout=<ms>` compose in any order within one dispatch body; the script body itself is evaluated as a real async-function body -- a bare expression (`1+1`) gets auto-wrapped to return its value, matching REPL-style eval, not raw statement execution.
-- **`git_status` / `branch_status` / `git_push`**: git verbs that gate on porcelain
-- **`filter`**: in-wasm stdout-compaction (grep/ls/tree/json/diff)
+- **`recall`**: a vector-plus-KV (key-value, a storage namespace inside a discipline) search against `.gm/memories/*.md` and a derived `gm.db` vector index. The search scores each result by cosine similarity times recency, and is namespace-aware. This verb lives in-tree in `rs-plugkit`. This verb once depended on the `rs-learn` WASM crate. That crate no longer exists, and the pipeline no longer uses it.
+- **`codesearch`**: a semantic vector search across the project, backed by the `rs-codeinsight` and `rs-search` crates.
+- **`memorize`**: writes to the recall index, using the BGE model's query/passage prefix asymmetry.
+- **`browser`**: a fast headless engine (oxibrowser, written in pure Rust) that starts no Chrome process. This verb supports navigate, evaluate, DOM (Document Object Model) query, and markdown extraction only. It holds one implicit session. gm accepts the `session new`, `session close`, and `session reset` commands here, but each command performs no action.
+- **`cdp`** (Chrome DevTools Protocol, used to drive a live browser): the same plain-text-body grammar as `browser`. This verb drives a real Chrome process over CDP, natively through `agentplug`, with no JS wrapper. Use this verb for anything `browser` cannot do. Examples: full CSS (Cascading Style Sheets, a styling language) fidelity, full layout fidelity, real screenshots, and the `capture`, `profile`, `trace`, and `viewport=` commands. A process-wide session registry keeps the launched Chrome child process and its CDP port alive across dispatches. The registry stores each session's browser profile at `.gm/browser-chrome-profile-<session_id>/`. The `session new`, `session list`, `session close <id>`, and `session reset <id>` commands manage these sessions directly. The commands `url=`, `dom=<selector>`, `screenshot[=name]`, and `timeout=<ms>` combine in any order inside one dispatch body. The dispatch runs the script body itself as a real async function body. A bare expression such as `1+1` is auto-wrapped to return its own value, matching REPL (read-eval-print loop) behavior rather than plain statement execution.
+- **`git_status`, `branch_status`, `git_push`**: git verbs that check a clean porcelain status before they run.
+- **`filter`**: an in-WASM stdout compaction step, for grep, ls, tree, JSON, and diff output.
 
-### gates
+### Gates
 
-`.gm/` marker files track orchestration state, not hook events. The gate that admits Write/Edit/git pre-execution runs natively inside `plugkit.wasm` (rs-plugkit `gates.rs` + its `hook_pre_tool_use` / `hook_stop` exports), driven off the same markers:
+Files under `.gm/` track orchestration state as markers. gm does not use hook events for this purpose. The condition that admits a Write, an Edit, or a git operation before execution runs natively inside `plugkit.wasm`. This logic lives in `rs-plugkit`'s `gates.rs` file, through its `hook_pre_tool_use` and `hook_stop` exports. Both exports read the same marker files.
 
-- **session-start**: bootstraps plugkit, seeds `.gm/next-step.md`, sets the `needs-gm` marker
-- **turn entry**: the `instruction` verb reminds the agent to dispatch first and attaches the per-prompt auto-recall pack
-- **pre-tool-use**: blocks Write/Edit/git before the gm skill fires for the turn
-- **stop**: blocks session end while `.gm/prd.yml` has open items, mutables are unresolved, residual-scan hasn't fired, or the worktree is dirty or unpushed
-- **PROVE -> EMIT**: `mutables-all-resolved`
-- **EMIT -> STATE**: `no-synthetic-test-files`, `no-graphical-symbols-in-diff`, `no-admit-deferral-markers`
-- **STATE -> CONC**: `idempotent-dispatch-replay-safe`
-- **SEC -> RES**: `no-secrets-in-diff`
-- **RES -> DECIDE**: `no-unchecked-panics-in-diff`
-- **DECIDE -> COMPLETE**: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh` (`.gm/exec-spool/.ci-validated` matches current HEAD sha -- self-reported by the agent's own dispatch, not independently checked against CI), `browser-witness-coverage`, `app-loads-witnessed` (self-reported, hardcoded `true` outside a wasm build), `submodules-clean` (every tracked submodule gitlink matches that submodule's own live HEAD), `claim-audit-clean` (every AGENTS.md/recall claim naming a commit hash resolves against real git log; also hardcoded `true` outside wasm), `no-hedge-language-in-diff` -- ten gates total, see "Why gm hits different" above for which are self-reported vs independently observed
+- **session-start**: starts plugkit, seeds `.gm/next-step.md`, and sets the `needs-gm` marker.
+- **turn entry**: the `instruction` verb reminds the agent to dispatch a verb first, and attaches the per-prompt auto-recall data.
+- **pre-tool-use**: blocks a Write or an Edit or a git operation before the gm skill runs for that turn.
+- **stop**: blocks the end of a session in four cases. Case one: `.gm/prd.yml` (PRD, list of planned and resolved work rows tracked in .gm/prd.yml) still has an open row. Case two: a mutable value is unresolved. Case three: the residual scan has not run. Case four: the worktree is dirty or unpushed.
+- **PROVE to EMIT**: `mutables-all-resolved`.
+- **EMIT to STATE**: `no-synthetic-test-files`, `no-graphical-symbols-in-diff`, `no-admit-deferral-markers`.
+- **STATE to CONC**: `idempotent-dispatch-replay-safe`.
+- **SEC to RES**: `no-secrets-in-diff`.
+- **RES to DECIDE**: `no-unchecked-panics-in-diff`.
+- **DECIDE to COMPLETE**: ten conditions guard this transition in total. The list: `prd-all-closed`, `mutables-all-resolved`, `worktree-clean`, `residual-scan-fired`, `ci-validated-fresh`, `browser-witness-coverage`, `app-loads-witnessed`, `submodules-clean`, `claim-audit-clean`, `no-hedge-language-in-diff`. `ci-validated-fresh` checks that `.gm/exec-spool/.ci-validated` matches the current HEAD sha. The agent's own dispatch writes this marker file. `ci-validated-fresh` never checks the CI system directly. The agent self-reports `app-loads-witnessed`. gm's own code hardcodes `app-loads-witnessed` to `true` outside a WASM build. `submodules-clean` checks that each tracked submodule link matches that submodule's own live HEAD commit. `claim-audit-clean` checks that every commit hash named in AGENTS.md or a recall entry resolves against a real git log entry. gm's own code also hardcodes `claim-audit-clean` to `true` outside WASM. See "Why gm uses a gate" above for which conditions the agent self-reports and which conditions gm checks independently.
 
-The gate graph itself is data, not hardcoded Rust: a project's `.gm/instructions/fsm/graph.json` (written by the `fsm-vendor` verb) can add states, rewire edges, or swap which gates guard which transition, including a `policy` block that externalizes previously-hardcoded behavior (status vocabularies, witness-requirement toggles, CAS retry attempts) as project-overridable JSON.
+The gate graph itself is a data file, not hardcoded Rust code. A project's own `.gm/instructions/fsm/graph.json` file, written by the `fsm-vendor` verb, can add states, rewire edges, or swap which condition guards which transition. This file can also carry a `policy` block. This block turns previously hardcoded behavior into project-overridable JSON: status wording, witness-requirement toggles, and CAS (compare-and-swap) retry attempt counts.
 
-### configuring gm from your own repo
+### Configuring gm from your own repo
 
-Any project using gm can override its instruction prose, gate-denial text, residual-scan messages, and the FSM graph itself from a git repo it controls, without forking rs-plugkit. Run the `fsm-vendor` verb to scaffold every overridable file (phase prose, gate text, an example gate hook, and an inert `.gm/instructions/source.json.example`), then rename that example to `.gm/instructions/source.json`:
+Any project using gm can override its instruction prose, its gate-denial text, its residual-scan messages, and the FSM graph itself. A project sets this override from a git repository it controls, with no fork of `rs-plugkit` needed. Run the `fsm-vendor` verb to scaffold every file a project can override. The verb writes the phase prose, the gate text, an example gate hook, and an inert `.gm/instructions/source.json.example` file. Then rename this example file to `.gm/instructions/source.json`:
 
 ```json
 { "repo": "https://github.com/your-org/your-gm-config", "branch": "main", "path": "" }
 ```
 
-The daemon clones and re-checks that repo on a debounce, default 15 minutes (`config_sync.rs`'s `DEFAULT_DEBOUNCE_MS`). A push to your config repo reaches every project pointing at it within that window -- not instant, eventually consistent. Resolution order per key is always the same three steps. Your project's own `.gm/instructions/<key>.md` file wins outright. Your config repo's synced copy is next. A compiled Rust default is last, served only as an emergency fallback. A malformed `source.json` or unreachable repo degrades to that fallback and logs why. It never crashes a dispatch. A prior good checkout keeps serving through a transient outage rather than being discarded. No project needs to set up `source.json` before this works: gm ships pointed at `AnEntrypoint/gm-config` by default. Every fresh install already pulls from a shared config repo unless a project's own `source.json` says otherwise.
+The daemon clones this repository and checks it again after a debounce period, 15 minutes by default (set in `config_sync.rs`'s `DEFAULT_DEBOUNCE_MS` value). A push to a project's configuration repository reaches every project pointing at that repository within this debounce window. The update is not instant, but it does reach every project eventually. gm resolves each configuration key through the same three steps, in order every time. First, a project's own `.gm/instructions/<key>.md` file wins outright over every other source. Second, the project's synced copy from its configuration repository applies next. Third, a compiled Rust default applies last, served only as a fallback in an emergency. A malformed `source.json` file, or an unreachable repository, causes gm to fall back to this compiled default, and gm logs the reason why. This fallback never crashes a dispatch. A prior good checkout of the configuration repository keeps serving through a short outage. gm does not discard this checkout during the outage. A project needs no `source.json` file before this system works. gm ships pointed at `AnEntrypoint/gm-config` by default. Every fresh install already pulls configuration from this shared repository, unless a project's own `source.json` file names a different one.
 
-**WARNING: a config repo has the same authority as your own local git history, including code execution.** Gate hooks (arbitrary JS run at gate evaluation) execute from a synced config repo exactly as they would from a file in your own project. Anyone who can push to that repo, or compromise it, gets code execution on every machine syncing it -- there is no sandboxing, no local review step, no confirmation prompt. Only point `source.json` at a repo you trust with that level of access; the same trust model applies whether the repo is `AnEntrypoint/gm-config` or one your own org runs.
+**Warning: a configuration repository holds the same authority as a project's own local git history.** This authority includes code execution rights. A gate hook is arbitrary JS code that runs at the moment gm checks a gate condition. A gate hook synced from a configuration repository executes with full authority. This authority equals the authority of a gate hook stored as a file in a project's own repository. A person who can push to a configuration repository gets code execution rights on every machine that syncs it. A person who compromises that repository gets the same rights. gm applies no sandbox, no local review step, and no confirmation prompt to this trust. Point `source.json` only at a repository trusted with this level of access. This same trust model applies to `AnEntrypoint/gm-config`. This same trust model also applies to a repository an organization runs on its own.
 
-### ground truth
+### Ground truth
 
-No mocks, no fakes, no test files or test suites on disk. Real services, real responses only -- verification is manual troubleshooting and debugging via live `exec_js`/`browser` execution, witnessed the same turn as the code it checks.
+gm's design has no mocks, no fakes, and no test files or test suites on disk. gm's method uses real services and real responses only. Verification means manual troubleshooting through live `exec_js` or `browser` execution, witnessed in the same session as the code change it checks.
 
-### memory
+### Memory
 
-`.gm/memories/*.md` (human-readable, one memo per file) is the durable per-project memory store, committed to git so it travels with the project. `gm.db`, the derived vector index built from that corpus, is deliberately untracked -- it grew past GitHub's 50MB recommended limit under normal use, so it is treated as a rebuildable derived cache, not source, the same as any other derived store. Vector embeddings via BGE-small-en-v1.5 (with proper query/passage asymmetry: queries prefixed with `"Represent this sentence for searching relevant passages: "`, passages raw). LRU query-embedding cache (64 entries, 10-min TTL) sits in front to avoid re-embedding repeat queries. `recall` triggers a one-time full-corpus sync the first time a project's memory namespace has never been synced at all (a fresh clone, before `gm.db` exists) -- every read after that first touch stays on the cheap read-only path.
+`.gm/memories/*.md` is the durable, per-project memory store. Each file holds one human-readable memo. Git tracks this directory, so the memory store travels with the project. `gm.db` is the vector index derived from this memo corpus. Git does not track `gm.db`. Under normal use, this file grew past GitHub's 50MB recommended file-size limit. gm treats this file as a rebuildable derived cache, not as source, the same as any other derived store. gm builds vector embeddings using the BGE-small-en-v1.5 model. This model uses a real query/passage asymmetry. gm adds the prefix "Represent this sentence for searching relevant passages: " to each query. gm leaves each passage unprefixed. An LRU (least recently used) cache sits in front of this process. This cache holds 64 query embeddings for 10 minutes, to skip re-embedding a repeat query. The `recall` verb triggers one full-corpus sync the first time a project's memory namespace has never synced before. An example: right after a fresh clone, before `gm.db` exists. Every read after that first sync stays on a cheaper, read-only path.
 
-## release pipeline
+## Release pipeline
 
-A push to `main` triggers `.github/workflows/publish.yml`:
+A push to the `main` branch starts the `.github/workflows/publish.yml` workflow:
 
-1. auto-bump `gm.json::version` + `package.json::version`
-2. tar the release file set into `gm-skill-<version>.tar.gz`, sha256-sidecar it, upload both to a tagged GitHub Release on `AnEntrypoint/gm` (no build step, no npm registry)
+1. The workflow bumps the version value in `gm.json` and in `package.json`.
+2. The workflow bundles the release file set into `gm-skill-<version>.tar.gz`, adds a sha256 sidecar file, and uploads both files to a tagged GitHub Release on `AnEntrypoint/gm`. This step has no build step and uses no npm registry.
 
-`.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
+`.github/workflows/gh-pages.yml` builds the `site/` flatspace source into the `dist/` directory, then deploys this output to GitHub Pages.
 
-The plugkit wasm itself is built and released by [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) (submoduled at `rs-plugkit/`, source only -- see below) on every push, published to npm as `plugkit-wasm` and to GitHub Releases as `plugkit-bin`. Bootstrapping the agent downloads the compiled wasm at install time; the compiled binary itself does not ship in this repo, only the Rust source that builds it.
+The [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) repository builds and releases the plugkit WASM binary itself, on every push to that repository. This repository holds `rs-plugkit` as a submodule at `rs-plugkit/`, as source code only. `rs-plugkit` publishes its build to npm under the name `plugkit-wasm`, and to GitHub Releases under the name `plugkit-bin`. Starting the agent downloads this compiled WASM binary at install time. This repository never ships the compiled binary itself, only the Rust source code that builds it.
 
-## developing gm itself
+## Developing gm itself
 
-Nine git submodules, source only, none compiled artifacts:
+This repository holds nine git submodules. Each submodule holds source code only, with no compiled artifact checked in.
 
-- **`rs-plugkit/`** -- the wasm guest: orchestrator, gates, spool dispatch (the gm "brain")
-- **`agentplug/`** -- the native, plugin-agnostic host that loads wasm plugins (gm's included) and drives `browser`/`cdp` natively via CDP
-- **`agentplug-bert`**, **`agentplug-libsql`**, **`agentplug-treesitter`** -- optional shared native plugins agentplug can load alongside the gm wasm (embeddings, vector storage, syntax parsing)
-- **`rs-codeinsight`**, **`rs-search`** -- codebase-indexing and search backends the `codesearch` verb consumes
-- **`gm-config/`** -- the default remote-config repo: prose, FSM graph, gate hooks, policy. Edited directly and pulled from at runtime. gm points at it out of the box unless a project or user configures its own.
-- **`vendor/tencentdb-agent-memory/`** -- an optional alternate memory/skill-library backend `recall`/`memorize` can target instead of the default `.gm/memories/` + `gm.db` store (see `gm.config.json`'s `memory.tencentdb_backend`); vendored, not forked.
+- **`rs-plugkit/`**: the WASM guest. This submodule holds the orchestrator, the gates, and the spool dispatch logic (the gm "brain").
+- **`agentplug/`**: the native, plugin-agnostic host. This submodule loads WASM plugins, gm included, and drives the `browser` and `cdp` verbs natively through CDP.
+- **`agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`**: optional shared native plugins. `agentplug` can load each plugin alongside the gm WASM plugin, for embeddings, vector storage, and syntax parsing in turn.
+- **`rs-codeinsight`, `rs-search`**: codebase-indexing and search backends. The `codesearch` verb consumes both.
+- **`gm-config/`**: the default remote configuration repository. This submodule holds prose, the FSM graph, gate hooks, and policy data. A user edits this repository directly, and gm pulls from it at run time. gm points at this repository by default, unless a project or user sets its own configuration repository.
+- **`vendor/tencentdb-agent-memory/`**: an optional alternate memory and skill-library backend. The `recall` and `memorize` verbs can target this backend instead of the default `.gm/memories/` and `gm.db` store (see the `memory.tencentdb_backend` field in `gm.config.json`). This submodule holds vendored code, not a fork.
 
-A plain `git clone` leaves all nine empty -- clone with submodules, or init them after the fact:
+A plain `git clone` command leaves all nine submodules empty. Clone with the submodules included, or set up the submodules after cloning:
 
 ```
 git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
@@ -185,12 +185,12 @@ git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
 git submodule update --init --recursive
 ```
 
-A normal `git clone` leaves the submodule directories empty; this is not a bug. Empty submodules matter only if you change one of those repos' own source instead of the skill or installer JS in this repo's own tree.
+A plain `git clone` command leaves each submodule directory empty. This is normal, not a defect. Empty submodules matter only in one case: a developer changes one of these nine repositories' own source code. Empty submodules do not matter when a developer changes only the skill or the installer script in this repository's own tree.
 
-## license
+## License
 
 MIT
 
-## donations
+## Donations
 
 BTC: `15FLMay4of9rk4jK2davzzL4HDdGQtscGX`
