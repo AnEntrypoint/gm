@@ -161,7 +161,6 @@ A push to `main` triggers `.github/workflows/publish.yml`:
 
 1. auto-bump `gm.json::version` + `package.json::version`
 2. tar the release file set into `gm-skill-<version>.tar.gz`, sha256-sidecar it, upload both to a tagged GitHub Release on `AnEntrypoint/gm` (no build step, no npm registry)
-3. mirror `skills/gm/SKILL.md` to the `AnEntrypoint/gm-skill` repo (back-compat)
 
 `.github/workflows/gh-pages.yml` builds the `site/` flatspace source to `dist/` and deploys to GitHub Pages.
 
