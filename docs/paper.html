@@ -187,7 +187,7 @@ window.addEventListener('DOMContentLoaded', () => {
         <li><a href="#s23">Browser Witness</a></li>
         <li><a href="#s24">Nothing Fake</a></li>
         <li><a href="#s25">Web-Search Before Pause</a></li>
-        <li><a href="#s26">Single Integration Test Policy</a></li>
+        <li><a href="#s26">Zero Standing Test Files, Live Witness Only</a></li>
         <li><a href="#s27">Sync-Before-Emit</a></li>
         <li><a href="#s28">Auto-Recall on Prompt-Submit</a></li>
         <li><a href="#s29">Implicit Skill Prose</a></li>
@@ -460,7 +460,7 @@ stateDiagram-v2
 <p>Every subsystem exposes a <code>/debug/&lt;subsystem&gt;</code> endpoint. This endpoint emits structured JSONL (JSON Lines) in the shape <code>{subsystem, severity, ts}</code>. A plain <code>console.log</code> call does not count as observability. The agent wraps instrumentation around the dispatch boundary once. It never adds instrumentation to each handler separately.</p>
 
 <h3>11.3 Client-Side</h3>
-<p>The <code>window.__debug</code> object is a live structured registry. It registers state when a component mounts and deregisters it when the component unmounts, and it tracks active requests and sockets. The agent can query any entry by key with no restart, and no other observability surface exists in parallel. The agent checks this registry through <code>test.js</code>.</p>
+<p>The <code>window.__debug</code> object is a live structured registry. It registers state when a component mounts and deregisters it when the component unmounts, and it tracks active requests and sockets. The agent can query any entry by key with no restart, and no other observability surface exists in parallel. The agent checks this registry through a live <code>browser</code> dispatch, never a standing test file.</p>
 
 <h3>11.4 Stack Observability</h3>
 <p>The system writes structured JSONL to <code>~/.claude/gm-log/&lt;YYYY-MM-DD&gt;/&lt;subsystem&gt;.jsonl</code>. It writes the watcher's stdout and stderr output, plus the WASM cdylib's own <code>println!</code> and <code>eprintln!</code> output, to <code>.gm/exec-spool/.watcher.log</code>, which rotates at 10MB. The spool root also holds diagnostic files: <code>.status.json</code>, <code>.last-session-start.json</code>, and <code>.bootstrap-error.json</code>. A stale modification time on <code>.status.json</code> means the watcher has died; the absence of <code>.bootstrap-error.json</code> means the system is healthy. The <code>health</code> verb runs a one-shot probe across every component. The agent must read the log or dispatch <code>health</code> before it diagnoses a problem. Skipping this step turns a diagnosis into a guess.</p>
@@ -526,7 +526,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <dt>DeltaS (state delta):</dt><dd>the number of state-plane inconsistencies a proposed change would introduce. The agent must reject a change with DeltaS greater than 0, or resolve the inconsistency, before it advances the phase.</dd>
   <dt>lambda (load score):</dt><dd>the consequence weight of a PRD item, a number from 0.0 to 1.0. An item with lambda greater than 0.75 needs a witnessed check before EMIT. The formula <code>verification_budget = lambda x (1 - tier_confidence)</code> sets how much verification remains. Here <em>tier_confidence</em> is the fraction of this item's acceptance criteria already witnessed (0.0 means none witnessed, 1.0 means all witnessed). More prior witnessing shrinks the remaining budget in direct proportion.</dd>
   <dt>epsilon (epistemic gap):</dt><dd>the count of unresolved mutables in the epistemic plane. PROVE exits only when the final pass reaches epsilon equal to 0.</dd>
-  <dt>Coverage (0.70 or higher):</dt><dd>the share of load-bearing behaviors that <code>test.js</code> witnesses. The test file must stay within a 200-line budget, and coverage of 0.70 or higher within that budget is the acceptance criterion. Any behavior the budget cannot witness is not load-bearing, by definition.</dd>
+  <dt>Coverage (0.70 or higher):</dt><dd>the share of load-bearing behaviors witnessed by a live <code>exec_js</code>/<code>browser</code> dispatch against the real system, never a standing test file. Coverage of 0.70 or higher across the behaviors an EMIT pass touches is the acceptance criterion. Any behavior a session cannot witness live this way is not load-bearing, by definition.</dd>
 </dl>
 
 <hr>
@@ -738,25 +738,25 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <hr>
 
-<h2 id="s26">26. Single Integration Test Policy</h2>
+<h2 id="s26">26. Zero Standing Test Files, Live Witness Only</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Single Integration Test <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY, COMPLETE]</span></div>
-  <p>The project has one file, <code>test.js</code>, at its root, with a hard limit of 200 lines. The agent must not add fixtures, mocks, or extra test files under any name. This file uses plain assertions against real data and the real system. The <code>gm-complete</code> command runs this file. A failure sends the task back to PROVE.</p>
-  <p>A second test runner, under any name, in any directory, works around this rule and breaks the project's ability to observe its own state clearly. When a behavior needs a check inside the page, the agent registers it in <code>window.__debug</code> and asserts it from <code>test.js</code>.</p>
+  <div class="rule-title">Hard Rule: No Test Files, Ever <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY, COMPLETE]</span></div>
+  <p>The project has no standing test file of any kind, not one file and not many. The agent must not add a <code>*.test.*</code> file, a <code>*.spec.*</code> file, a <code>test/</code> or <code>__tests__/</code> directory, or a jest/mocha/vitest/pytest/unittest import, ever, for any reason. Verification runs a live <code>exec_js</code> or <code>browser</code> dispatch against real data and the real system. This dispatch runs in the same turn as the change it checks, and it reads the real output. A failed check sends the task back to PROVE.</p>
+  <p>A test file of any kind, single or many, standing in for that live check is the same rule violation. It reports a pass the real path never produced. When a behavior needs a check inside the page, the agent registers it in <code>window.__debug</code> and asserts it from a live <code>browser</code> dispatch, not from a file on disk.</p>
 </div>
 
-<h3>26.1 A Budget, Not a Target</h3>
-<p>The 200-line limit on <code>test.js</code> is a budget, not a goal to reach. Each line must check one behavior the system depends on. A repeated assertion is dead weight, and the agent must remove it. Each subsystem starts with its own group of assertions, but the normal outcome is to combine groups, for example <code>profiles+observability+auth+context</code>. Combining groups keeps the file's size growing at the same rate as the number of subsystems, not faster.</p>
+<h3>26.1 A Budget on the Witness Pass, Not a File</h3>
+<p>The verification effort for an EMIT pass is a budget, not a target to fill. Each witness must check one behavior the system depends on. A repeated assertion inside one dispatch is dead weight, and the agent must remove it. Each subsystem starts with its own witness pass, but the normal outcome is to combine passes into one dispatch. An example: checking <code>profiles+observability+auth+context</code> together against one running system. Combining passes keeps the total witness effort growing at the same rate as the number of subsystems, not faster.</p>
 
-<h3>26.2 Use Overlap to Remove Groups</h3>
-<p>When a test for subsystem A also exercises subsystem B as a side effect, subsystem B does not need its own group. Real examples: the agent-machine tool-loop test also exercises the bash dispatch code, and the dashboard test checks the API surface and the tool registration together. A gateway test that runs one platform through a stub-shaped loop covers all 18 adapters at once. Overlap is a signal to remove the now-redundant group, not to add another assertion.</p>
+<h3>26.2 Use Overlap to Remove Passes</h3>
+<p>When witnessing subsystem A also exercises subsystem B as a side effect, subsystem B does not need its own separate witness. Real examples: the agent-machine tool-loop witness also exercises the bash dispatch code, and the dashboard witness checks the API surface and the tool registration together. A gateway witness that runs one platform through a stub-shaped loop covers all 18 adapters at once. Overlap is a signal to remove the now-redundant pass, not to add another assertion.</p>
 
-<h3>26.3 Keep the File Clean at Edit Time</h3>
-<p>Every change to <code>test.js</code> should make the file smaller, not larger. When the file passes 200 lines, the agent must merge groups and remove redundant assertions until the file fits the limit again. The agent must not split the file into more files or raise the limit. When the budget still is not enough, the agent must ask whether each assertion checks a needed behavior. The agent must not ask whether to raise the limit.</p>
+<h3>26.3 Keep Each Witness Dispatch Focused</h3>
+<p>Every witness dispatch should stay small and targeted, never grow into a standing suite. When one dispatch grows unwieldy, the agent splits it by concern or combines it with an adjacent live check, never converts it into a file that persists on disk between sessions. When a single dispatch cannot cover every behavior, the agent runs more dispatches, never authors a test file to hold them.</p>
 
-<h3>26.4 How to Name a Combined Group</h3>
-<p>The agent names a combined group by joining its subsystem names with a <code>+</code> sign, for example <code>home+config+skin</code>, <code>mcp+swe+distributions+account+credpool</code>, or <code>env+pi+cli+tui+setup+website</code>. A group with 4 to 6 subsystems is a healthy size. A group with only 1 subsystem should raise a question about why it stands alone.</p>
+<h3>26.4 How to Name a Combined Witness Pass</h3>
+<p>The agent names a combined witness pass by joining its subsystem names with a <code>+</code> sign, for example <code>home+config+skin</code>, <code>mcp+swe+distributions+account+credpool</code>, or <code>env+pi+cli+tui+setup+website</code>. A pass covering 4 to 6 subsystems is a healthy size. A pass covering only 1 subsystem should raise a question about why it stands alone.</p>
 
 <hr>
 
