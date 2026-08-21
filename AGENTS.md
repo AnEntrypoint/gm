@@ -198,7 +198,7 @@ Push to any rs-* sibling -> `cascade.yml` -> rs-plugkit `release.yml` -> single 
 
 | repo | role |
 | --- | --- |
-| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, liqology, gm-config, rs-codeinsight, rs-plugkit, rs-search, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, liqology, gm-config, rs-codeinsight, rs-plugkit, rs-search, obrowser, vendor/tencentdb-agent-memory | active-dependency (submodule) |
 | rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
 | rs-learn, rs-exec, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit) |
 
