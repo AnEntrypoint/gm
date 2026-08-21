@@ -223,6 +223,33 @@ too" rule binds every one of them), combined with JIT-batched harness calls
 (Section 1) for whatever stays in this session. Batch and parallelize to
 minimize wall-clock, not tool-call count.
 
+**A shared recurring transform gets one reviewed mapping before fan-out, not N
+independent interpretations.** When the closure's rows apply the SAME KIND of
+mechanical transform across many files (a rename sweep, an API migration, a
+bulk lint-class fix, N>5 applications of one pattern), a single subagent
+first drafts a mapping/edge-case note for that pattern -- old shape to new
+shape, the corner cases it must preserve -- scoped to a mutable or PRD-row
+note, never a standing doc. A second subagent adversarially reviews that note
+before fan-out begins (find the cases it misses or the conflicting
+instructions it gives, the same refute-only posture M_VERIFY takes toward
+code -- see the plugkit orchestrator's own served DECIDE-phase prose for
+the adversarial-sweep discipline this mirrors).
+Only then do the parallel workers dispatch, each referencing the reviewed
+mapping instead of inventing its own reading of the pattern. Skipping this
+for a shared pattern is how N parallel agents land N subtly different
+handlings of the same edge case.
+
+**A large classifiable finding-set (compiler errors, lint violations, a
+dependency-bump breakage) is partitioned once, never re-classified mid-fan-out.**
+Run the classifying dispatch (a build, a lint pass, whatever produces the
+finding list) a single time, group the output by its natural boundary (file,
+crate, module), and turn each partition into one PRD row owned by one
+subagent -- disjoint slices need no coordination. Each subagent verifies its
+own slice by re-running the classifier scoped to its own files, never the
+full classification again; re-running the global classifier mid-fan-out
+either wastes the run or risks two agents racing to fix the same
+already-reported finding.
+
 **Every dispatch is goal-oriented.** A subagent's or sub-session's prompt
 states the terminal condition it serves -- `prd_pending_count=0` against the
 *full* discovered scope -- not just its own slice. A dispatch that surfaces a
@@ -252,6 +279,10 @@ flowchart TB
   M_REPLAN["prd-add -- rows for newly discovered scope"]
   M_PLAN["PLAN -- .gm/prd.yml rows fixed for this pass"]
   M_GOAL["goal-oriented dispatch -- prompt states prd_pending_count=0 as the terminal"]
+  M_MAPDOC{"rows share one recurring transform, N>5 applications"}
+  M_MAPREVIEW["draft mapping/edge-case note, adversarially reviewed by a second agent"]
+  M_ERRQUEUE{"cover derives from one large classifiable finding-set"}
+  M_PARTITION["classify once (build/lint/scan run), partition by file/crate/module, one PRD row per partition"]
   M_FANOUT{"batch is independent enough to parallelize"}
   M_MULTIAGENT["multi-agent batched parallel Agent dispatch + JIT harness calls (Section 1)"]
   M_MULTISESSION["multi-session continuation -- disk state is the substrate, not context"]
@@ -294,7 +325,12 @@ flowchart TB
   M_BOOT --> M_ORIENT --> L1E --> M_MUTABLE --> M_SCOPE
   M_SCOPE -->|"no"| M_PLAN
   M_SCOPE -->|"yes"| M_REPLAN --> M_MUTABLE
-  M_PLAN --> L2E --> M_GOAL --> M_FANOUT
+  M_PLAN --> M_ERRQUEUE
+  M_ERRQUEUE -->|"yes"| M_PARTITION --> L2E
+  M_ERRQUEUE -->|"no"| L2E
+  L2E --> M_GOAL --> M_MAPDOC
+  M_MAPDOC -->|"yes"| M_MAPREVIEW --> M_FANOUT
+  M_MAPDOC -->|"no"| M_FANOUT
   M_FANOUT -->|"yes"| M_MULTIAGENT --> M_MULTISESSION --> M_EXEC
   M_FANOUT -->|"no"| M_EXEC
   M_EXEC --> L3E --> M_VERIFY --> L4E --> M_SECURE --> M_RECORD --> L5E --> M_HOUSE --> L6E
@@ -315,7 +351,7 @@ flowchart TB
 
   classDef gate stroke-width:3px
   classDef terminal stroke-width:4px,stroke-dasharray:2 2
-  class M_BOOT,M_SCOPE,M_FANOUT,M_SWEEP,M_FIXPOINT gate
+  class M_BOOT,M_SCOPE,M_FANOUT,M_SWEEP,M_FIXPOINT,M_MAPDOC,M_ERRQUEUE gate
   class M_TERMINAL,M_SURFACE terminal
 ```
 
