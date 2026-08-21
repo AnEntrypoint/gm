@@ -8,14 +8,15 @@ allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *), Bash(cat *), Bash(d
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
-the mosst obvious conclusions, if observability needs to be increased immediately roll out more
-sophisticated tooling to get the insight required, not making any assumptions is non negotiable,
+the most obvious conclusions, if observability needs to be increased immediately roll out more
+sophisticated tooling to get the insight required, not making any assumptions is non-negotiable,
 all internal process questions must be exhaustively answered, use multiple sessions if needed,
 orchestrate as many parallel subagents over as many waves of workflow required to reach the
-objective as described by the users instruction. Additional steps that are in-spirit should
-be additionally planned and executed since they are an implicit part of the instuction, maximal expansion 
-of planning steps and execution of all remaining steps from previous plans, and all new plans that arise
-before this the required threshold for completion.
+objective as described by the user's instruction. Additional steps that are in-spirit should
+be additionally planned and executed since they are an implicit part of the instruction, maximal expansion
+of planning steps and execution of all remaining steps from previous plans, and all new plans that arise,
+before the required threshold for completion. Section 1b is this paragraph made mechanical: a
+graph, not a mood.
 `Skill(skill="gm-continue")` at the graph's terminal state with
 `prd_pending_count=0`. There is no other exit. Dispatch `instruction` whenever
 uncertain; never invent the next step from memory.
@@ -188,6 +189,136 @@ any push -- prefer `git revert` (keeps the compromised commit visible in
 history as evidence) over a history rewrite unless the user explicitly asks
 for the stronger squash/rewrite.
 
+## 1b. Meta-graph -- dynamic scope discovery, multi-session, multi-agent, goal-oriented dispatch
+
+This graph is the dispatch layer this file wraps around `lean`'s own P1-P9
+graph (see the `lean` skill for every node and its internal backreferences --
+they are unchanged and not reproduced here; `L1`..`L9` below stand for those
+subgraphs whole). Nothing here replaces a lean node; it is the harness/session/
+agent machinery that walks the request through them. Read this section as the
+literal mechanism behind the opening paragraph above, not a restatement of it.
+
+**Discovery does not stop at the first plan.** ORIENT treats every unresolved
+unknown as a `mutable-add`, never a silent assumption (Section 2, "Default
+across choices, never facts"). A mutable that implies work outside the current
+`.gm/prd.yml` is a scope expansion: `prd-add` the new rows in the same pass,
+derive their own mutables in turn, and loop. This is not "a new run" barred by
+Section 2's "Maximum effort per run" -- that invariant bars unrelated work,
+and scope discovered inside the same request's closure is not unrelated. The
+only thing that licenses leaving PLAN is a sweep that adds zero new mutables
+and zero new PRD rows -- a discovery fixed point, not a step count or a feeling
+of coverage.
+
+**Multi-session is a default shape for long-horizon work, not a fallback for
+running out of room.** State lives on disk (`.gm/prd.yml`, `.gm/mutables.yml`,
+`.turn-summary.json`) precisely so a fresh session's boot probe (Section 1)
+resumes the same walk with no replay and no re-derivation from memory. Once a
+batch of PRD rows is independent enough to run unattended, hand it to a new
+session deliberately rather than serializing everything through one context --
+that is the whole point of the on-disk substrate.
+
+**Multi-agent fan-out is the default shape within a session.** Every batch of
+independent PRD rows becomes parallel `Agent` dispatches (Section 1's "use gm
+too" rule binds every one of them), combined with JIT-batched harness calls
+(Section 1) for whatever stays in this session. Batch and parallelize to
+minimize wall-clock, not tool-call count.
+
+**Every dispatch is goal-oriented.** A subagent's or sub-session's prompt
+states the terminal condition it serves -- `prd_pending_count=0` against the
+*full* discovered scope -- not just its own slice. A dispatch that surfaces a
+new mutable mid-task feeds it back into `mutable-add`/`prd-add` instead of
+quietly narrowing scope to fit what it was told.
+
+**Housekeeping and memorization are scheduled runs, not incidental cleanup.**
+Every pass through `M_RECORD` (`git_finalize`) opens a housekeeping run before
+the next PLAN: dead code, superseded paths, and stale PRD/mutable rows from
+earlier passes are swept (lean P6: NODELETE -> DELETIONGATE -> REACHABLE)
+so a later session never trips over them. `memorize-fire` runs in the same
+pass -- any correction the user gave, any default this walk had to pick, any
+recurring gap surfaced -- is persisted immediately (Section 2, "Corrections
+stick"), not deferred to session end where a crash or compaction would drop
+it.
+
+```mermaid
+flowchart TB
+
+%% solid = forward dispatch   dotted = backreference, label is the condition that fires it
+%% diamond = gate   L1..L9 = lean's own P1-P9 subgraphs, entered and exited whole
+
+  M_BOOT{"harness probe answered (Section 1)"}
+  M_ORIENT["ORIENT -- codesearch + recall + fetch, full closure"]
+  M_MUTABLE["mutable-add -- unresolved unknown becomes a row, never an assumption"]
+  M_SCOPE{"closure exceeds current .gm/prd.yml"}
+  M_REPLAN["prd-add -- rows for newly discovered scope"]
+  M_PLAN["PLAN -- .gm/prd.yml rows fixed for this pass"]
+  M_GOAL["goal-oriented dispatch -- prompt states prd_pending_count=0 as the terminal"]
+  M_FANOUT{"batch is independent enough to parallelize"}
+  M_MULTIAGENT["multi-agent batched parallel Agent dispatch + JIT harness calls (Section 1)"]
+  M_MULTISESSION["multi-session continuation -- disk state is the substrate, not context"]
+  M_EXEC["EXECUTE"]
+  M_VERIFY["VERIFY -- witnessed live, no test files (Section 1)"]
+  M_SECURE["scan_deps (Section 1a)"]
+  M_RECORD["git_finalize"]
+  M_HOUSE["housekeeping run -- residual cleanup, deletion-completeness"]
+  M_MEMORIZE["memorize-fire -- corrections persisted"]
+  M_SWEEP{"full sweep, all PRD rows + all mutables"}
+  M_FIXPOINT{"sweep changed nothing AND zero new mutables AND zero new scope"}
+  M_TERMINAL{"Skill(gm-continue), prd_pending_count=0"}
+  M_SURFACE{"bounded retry exhausted -- wfgy-method / AskUserQuestion, one-way doors only"}
+
+  subgraph L1["lean P1 . SHAPE"]
+    L1E["JTBD..LIVEPLAN -- see lean SKILL.md"]
+  end
+  subgraph L2["lean P2 . CONTRACT"]
+    L2E["UBIQ..ACCEPTPORT"]
+  end
+  subgraph L3["lean P3 . BUILD"]
+    L3E["TOTALITY..KISS"]
+  end
+  subgraph L4["lean P4 . VERIFY"]
+    L4E["DIJKSTRATEST..SANITIZE (no CHARTEST -- no test files, Section 1)"]
+  end
+  subgraph L5["lean P5 . RECORD"]
+    L5E["CONVCOM..ADRN"]
+  end
+  subgraph L6["lean P6 . PRESSURE"]
+    L6E["NODELETE..KOLMOGOROV"]
+  end
+  subgraph L7["lean P7 . CONTEXT ECONOMY"]
+    L7E["SMALLESTSET..GREPFIRST -- active at every node above, not one phase"]
+  end
+  subgraph L9["lean P9 . CONVERGENCE"]
+    L9E["FIXPOINT..LOWERBOUND"]
+  end
+
+  M_BOOT --> M_ORIENT --> L1E --> M_MUTABLE --> M_SCOPE
+  M_SCOPE -->|"no"| M_PLAN
+  M_SCOPE -->|"yes"| M_REPLAN --> M_MUTABLE
+  M_PLAN --> L2E --> M_GOAL --> M_FANOUT
+  M_FANOUT -->|"yes"| M_MULTIAGENT --> M_MULTISESSION --> M_EXEC
+  M_FANOUT -->|"no"| M_EXEC
+  M_EXEC --> L3E --> M_VERIFY --> L4E --> M_SECURE --> M_RECORD --> L5E --> M_HOUSE --> L6E
+  M_HOUSE --> M_MEMORIZE -.-> L7E
+  L6E --> M_SWEEP --> M_FIXPOINT
+  M_FIXPOINT -->|"yes"| L9E --> M_TERMINAL
+  M_FIXPOINT -->|"no, new mutable or scope surfaced"| M_MUTABLE
+  M_FIXPOINT -->|"same gap recurred, no new information"| M_SURFACE
+
+  %% ===== BACKREFERENCES (gm's own layer; lean's internal ones are unchanged, see lean SKILL.md) =====
+  M_MULTIAGENT -.->|"a fanned-out subagent surfaces a new unknown"| M_MUTABLE
+  M_MULTISESSION -.->|"a session dies mid-walk (Section 1 dead-watcher rule)"| M_BOOT
+  M_VERIFY -.->|"witnessed behavior contradicts the request's literal words"| M_MUTABLE
+  M_SECURE -.->|"failCount>0 or blockedCount>0"| M_SURFACE
+  M_SWEEP -.->|"a gate reopened"| M_ORIENT
+  M_HOUSE -.->|"a superseded path is still reachable"| M_RECORD
+  M_MEMORIZE -.->|"a correction was given but not yet persisted"| M_HOUSE
+
+  classDef gate stroke-width:3px
+  classDef terminal stroke-width:4px,stroke-dasharray:2 2
+  class M_BOOT,M_SCOPE,M_FANOUT,M_SWEEP,M_FIXPOINT gate
+  class M_TERMINAL,M_SURFACE terminal
+```
+
 ## 2. Invariants -- true under any graph
 
 **Derive, never assume.** Current state, legal transitions, edge gates and
@@ -243,6 +374,15 @@ exit. Confused Deputy.
 **An interruption pauses the turn, never exits.**
 
 ## 3. Anchors
+
+This catalogue is `lean`'s own P1-P9 graph by another name -- Frame/Specify
+maps onto P1/P2, Change onto P3+P6, Verify onto P4, Correct and Decide-and-stop
+onto P9's fixed-point/variant/bounded-retry discipline, Disclose onto P5.
+Secure has no lean phase of its own; it is this file's addition, exercised
+inside whichever phase touches a trust boundary. Section 1b is the dispatch
+layer wrapped around this graph, not a second copy of it -- for full
+node-level detail and lean's own internal backreferences, see the `lean`
+skill; nothing below restates them.
 
 Take the state's purpose from its served prose. If that prose carries a
 named-technique catalogue, use it and add nothing. Otherwise draw below only where
