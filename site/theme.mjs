@@ -321,7 +321,7 @@ if (page.layout === 'article' && page.articleHtml) {
     if (blocks.length) {
       import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
         const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-        mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+        mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose', flowchart: { wrappingWidth: 120 } });
         mermaid.run({ nodes: blocks }).then(() => wireMermaidLightbox(blocks));
       }).catch(() => {});
     }

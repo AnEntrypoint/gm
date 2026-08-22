@@ -41,7 +41,7 @@ article pre code { padding: 0; background: transparent; }
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose', themeVariables: { fontFamily: 'Inter, Segoe UI, sans-serif', fontSize: '13px' } });
+mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose', themeVariables: { fontFamily: 'Inter, Segoe UI, sans-serif', fontSize: '13px' }, flowchart: { wrappingWidth: 120 } });
 window.addEventListener('DOMContentLoaded', () => {
   const lb = document.createElement('div');
   lb.className = 'gm-mermaid-lightbox';
