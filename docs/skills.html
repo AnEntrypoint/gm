@@ -42,19 +42,57 @@ mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securi
 window.addEventListener('DOMContentLoaded', () => {
   const lb = document.createElement('div');
   lb.className = 'gm-mermaid-lightbox';
-  lb.innerHTML = '<div class="lb-close">close [x]</div><div class="lb-inner"></div>';
+  lb.innerHTML = '<div class="lb-zoom"><button type="button" class="lb-zoom-out" aria-label="Zoom out">-</button><span class="lb-zoom-pct">100%</span><button type="button" class="lb-zoom-in" aria-label="Zoom in">+</button><button type="button" class="lb-zoom-reset">reset</button></div><div class="lb-close">close [x]</div><div class="lb-inner"></div>';
   document.body.appendChild(lb);
   const lbInner = lb.querySelector('.lb-inner');
-  const closeLb = () => { lb.classList.remove('open'); lbInner.innerHTML = ''; };
+  const zoomPct = lb.querySelector('.lb-zoom-pct');
+  let baseWidth = 0, baseHeight = 0, scale = 1;
+  const MIN_SCALE = 0.25, MAX_SCALE = 4, LEGIBLE_PX_PER_UNIT = 0.16;
+  const applyScale = () => {
+    const svg = lbInner.querySelector('svg');
+    if (!svg || !baseWidth) return;
+    svg.style.width = (baseWidth * scale) + 'px';
+    svg.style.height = (baseHeight * scale) + 'px';
+    zoomPct.textContent = Math.round(scale * 100) + '%';
+  };
+  const closeLb = () => { lb.classList.remove('open'); lbInner.innerHTML = ''; baseWidth = 0; baseHeight = 0; scale = 1; };
   lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lb-close')) closeLb(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
+  let dragging = false, dragStartX = 0, dragStartY = 0, dragScrollLeft = 0, dragScrollTop = 0;
+  lbInner.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'A') return;
+    dragging = true;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    dragScrollLeft = lbInner.scrollLeft; dragScrollTop = lbInner.scrollTop;
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    lbInner.scrollLeft = dragScrollLeft - (e.clientX - dragStartX);
+    lbInner.scrollTop = dragScrollTop - (e.clientY - dragStartY);
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  lb.querySelector('.lb-zoom-in').addEventListener('click', () => { scale = Math.min(MAX_SCALE, scale + 0.25); applyScale(); });
+  lb.querySelector('.lb-zoom-out').addEventListener('click', () => { scale = Math.max(MIN_SCALE, scale - 0.25); applyScale(); });
+  lb.querySelector('.lb-zoom-reset').addEventListener('click', () => { scale = 1; applyScale(); });
   document.addEventListener('click', (e) => {
     const host = e.target.closest('.mermaid');
     if (!host) return;
     const svg = host.querySelector('svg');
     if (!svg) return;
     lbInner.innerHTML = '';
-    lbInner.appendChild(svg.cloneNode(true));
+    const clone = svg.cloneNode(true);
+    const viewBox = clone.getAttribute('viewBox');
+    const parts = viewBox ? viewBox.trim().split(/\s+/).map(Number) : null;
+    const vbWidth = parts && parts.length === 4 ? parts[2] : clone.clientWidth || 900;
+    const vbHeight = parts && parts.length === 4 ? parts[3] : clone.clientHeight || 600;
+    baseWidth = Math.max(900, Math.round(vbWidth * LEGIBLE_PX_PER_UNIT));
+    baseHeight = Math.round(baseWidth * (vbHeight / vbWidth));
+    clone.removeAttribute('width');
+    clone.removeAttribute('height');
+    clone.style.maxWidth = 'none';
+    lbInner.appendChild(clone);
+    scale = 1;
+    applyScale();
     lb.classList.add('open');
   });
 });
@@ -62,12 +100,18 @@ window.addEventListener('DOMContentLoaded', () => {
 <style>
 .mermaid{margin:18px 0;padding:14px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);text-align:center;overflow-x:auto;cursor:zoom-in}
 .mermaid svg{max-width:100%;min-width:min(720px,100%);height:auto}
-.gm-mermaid-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:zoom-out;align-items:center;justify-content:center;padding:24px}
+.gm-mermaid-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:default;align-items:center;justify-content:center;padding:24px}
 .gm-mermaid-lightbox.open{display:flex}
-.gm-mermaid-lightbox .lb-inner{background:var(--panel-1);border-radius:8px;padding:24px;max-width:96vw;max-height:96vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-.gm-mermaid-lightbox .lb-inner svg{width:auto;height:auto;max-width:none;min-width:900px}
+.gm-mermaid-lightbox .lb-inner{background:var(--panel-1);border-radius:8px;padding:24px;max-width:96vw;max-height:96vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4);cursor:grab}
+.gm-mermaid-lightbox .lb-inner:active{cursor:grabbing}
+.gm-mermaid-lightbox .lb-inner svg{display:block;max-width:none}
 .gm-mermaid-lightbox .lb-close{position:fixed;top:20px;right:28px;color:#fff;font-family:var(--ff-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:6px}
-@media (max-width:640px){.gm-mermaid-lightbox .lb-inner svg{min-width:0;width:100%}}
+.gm-mermaid-lightbox .lb-zoom{position:fixed;top:20px;left:28px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border-radius:6px;padding:6px 8px;font-family:var(--ff-mono);font-size:13px;color:#fff}
+.gm-mermaid-lightbox .lb-zoom button{background:rgba(255,255,255,.14);border:0;color:#fff;font-family:var(--ff-mono);font-size:13px;cursor:pointer;padding:4px 10px;border-radius:4px;line-height:1}
+.gm-mermaid-lightbox .lb-zoom button:hover{background:rgba(255,255,255,.26)}
+.gm-mermaid-lightbox .lb-zoom-pct{min-width:44px;text-align:center;opacity:.85}
+.gm-mermaid-lightbox .lb-zoom-reset{text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+@media (max-width:640px){.gm-mermaid-lightbox .lb-zoom{top:auto;bottom:20px;left:50%;transform:translateX(-50%)}}
 .gm-callout{margin:18px 0;padding:14px 18px;background:var(--panel-1);border-left:3px solid var(--panel-accent);color:var(--panel-text)}
 .gm-callout .who{display:block;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-text-2);font-style:normal;margin-bottom:4px}
 .cross-footer{margin:32px 0 12px 0;padding:18px;background:var(--panel-1);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;font-family:var(--ff-mono);font-size:12px}
@@ -87,7 +131,7 @@ window.addEventListener('DOMContentLoaded', () => {
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    There is exactly one shipped skill: <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball). Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over -- invocation syntax, spool paths, verb names, gate conditions, transition markers -- and every phase instruction is served from elsewhere. The state machine, <strong>SPECIFY -&gt; PROVE -&gt; EMIT -&gt; STATE -&gt; CONC -&gt; SEC -&gt; RES -&gt; DECIDE -&gt; COMPLETE</strong> (a non-linear graph with feedback edges, not a chain), lives inside the wasm orchestrator (rs-plugkit) and is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>; the wasm watcher reads them, the orchestrator routes them, the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    There is exactly one shipped skill: <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball). Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The state machine is <strong>SPECIFY -&gt; PROVE -&gt; EMIT -&gt; STATE -&gt; CONC -&gt; SEC -&gt; RES -&gt; DECIDE -&gt; COMPLETE</strong>. It is a non-linear graph with feedback edges, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
@@ -119,15 +163,17 @@ stateDiagram-v2
   DECIDE --> PROVE: unproven obligation
 </pre>
 
-<p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target, and the orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
+<p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"There is no skip button. There is no 'just this once.' The arrows are arrows. The cushion is the cushion. Sit."</div>
 
 <h2>How the one skill works</h2>
 
-<p>The <code>gm</code> SKILL.md body says, in essence: <em>on every turn, dispatch the <code>instruction</code> verb through the spool; obey what it returns.</em> It contains no phase prose, no checklists, no transition diagrams, those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator with the current FSM state, the current PRD, the current mutables, and the current residual-scan state baked in.</p>
+<p>The <code>gm</code> SKILL.md body says, in essence: <em>on every turn, dispatch the <code>instruction</code> verb through the spool; obey what it returns.</em></p>
 
-<p>This collapses what used to be a chain of fourteen skill files (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing) into a single dispatch surface. The behaviors those files used to elicit are now properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
+<p>It contains no phase prose, no checklists, no transition diagrams. Those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator. The current FSM state, the current PRD, and the current mutables and residual-scan state are baked in.</p>
+
+<p>This collapses a chain of fourteen former skill files into a single dispatch surface. The first seven: gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance. The remaining seven: code-search, browser, ssh, pages, create-lang-plugin, memorize, textprocessing. The behaviors those files used to elicit are now properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
 
 <h2>The orchestrator verbs</h2>
 
@@ -156,25 +202,25 @@ stateDiagram-v2
 
 <div class="skill">
   <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">SPECIFY, PROVE</span></div>
-  <div class="row"><span class="k">role</span><span>Every unknown surfaced during SPECIFY lands here with <code>status: unknown</code>; <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time: name the hypothesis as a mutable, run exactly one real test against it, read the real result, and either cross it off or confirm it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
+  <div class="row"><span class="k">role</span><span>Every unknown surfaced during SPECIFY lands here with <code>status: unknown</code>. <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time. Name the hypothesis as a mutable, run exactly one real test against it, and read the real result. Then either cross it off or check it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">PROVE, EMIT</span></div>
   <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or rs-learn (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers, so the file keeps gaining facts without growing without bound.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store, so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers. The file keeps gaining facts without growing without bound.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>residual-scan</h2><span class="role">stop-gate challenge</span><span class="phase">COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no open browser sessions AND no running tasks. Agent either expands the PRD with in-spirit residuals and re-enters PROVE, or explicitly states "residual scan: none reachable in-spirit." Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
+  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no open browser sessions AND no running tasks. The agent either expands the PRD with in-spirit residuals and re-enters PROVE, or states "residual scan: none reachable in-spirit" directly. Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>auto-recall</h2><span class="role">prompt-submit recall injection</span><span class="phase">every prompt</span></div>
-  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2-6 word recall query from the user prompt, calls rs-learn, and emits a "## Recall for this prompt" block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this ensures every turn begins with prior memory loaded.</span></div>
+  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2-6 word recall query from the user prompt and calls rs-learn. It emits a "## Recall for this prompt" block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this makes sure every turn begins with prior memory loaded.</span></div>
 </div>
 
 <h2>The host verbs</h2>
@@ -189,21 +235,21 @@ stateDiagram-v2
 <div class="skill">
   <div class="skill-header"><h2>codesearch</h2><span class="role">project-local search</span></div>
   <div class="row"><span class="k">role</span><span>BM25 + embedding fusion over the project tree, plus tree-sitter symbol layer. Two-words-then-iterate query protocol; minimum four attempts before declaring absent. Emits <code>[index fully synced: ...]</code> so freshness is visible.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span>, the Bash gate denies these in favour of codesearch.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>Beyond plain text matching, results can be ranked by which git commits touched a file most relevantly or most recently, so a hot recent change outranks a stale untouched match. A hit returns the full matched content, not a truncated snippet, so the agent never has to go fetch the rest separately. The response body itself stays short and token-optimized either way.</span></div>
+  <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span>. The Bash gate denies these in favour of codesearch.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>Beyond plain text matching, results can be ranked by which git commits touched a file most relevantly or most recently. A hot recent change outranks a stale untouched match. A hit returns the full matched content, not a truncated snippet, so the agent never has to go fetch the rest separately. The response body itself stays short and token-optimized either way.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>recall / memorize</h2><span class="role">read/write memory</span></div>
   <div class="row"><span class="k">role</span><span>Backed by <code>.gm/rs-learn.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>Memory does not keep a searchable index of raw text; it stores only vector embeddings, so recall works purely on semantic similarity, there is no keyword or full-text index sitting around to search instead. A hit returns the full matched content, never a truncated snippet. Identical content hashes to the same key, so re-learning a fact never creates a duplicate. Stale or wrong memories are pruned the moment they are noticed. Ranking blends similarity with recency, so an older memory fades unless something reinforces it again. A relevant pack of memories auto-attaches at the start of each turn without the agent asking for it.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>Memory does not keep a searchable index of raw text; it stores only vector embeddings. Recall works purely on semantic similarity: there is no keyword or full-text index to search instead. A hit returns the full matched content, never a truncated snippet. Identical content hashes to the same key, so re-learning a fact never creates a duplicate. Stale or wrong memories are pruned the moment they are noticed. Ranking blends similarity with recency, so an older memory fades unless something reinforces it again. A relevant pack of memories auto-attaches at the start of each turn without the agent asking for it.</span></div>
 </div>
 
 <div class="skill">
   <div class="skill-header"><h2>browser</h2><span class="role">live-page witness</span></div>
   <div class="row"><span class="k">role</span><span>The wasm host's managed browser session. Boot the surface, navigate, <code>page.evaluate</code> the invariant, capture witnessed values. Required for any edit to code that runs in a browser. The only sanctioned way to drive a live page; parallel browser tooling fragments witness state.</span></div>
   <div class="row"><span class="k">forbids</span><span><span class="tag danger">screenshot without page.evaluate</span>. Treating "node test.js passes" as substitute for a live witness.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>The live page is the debugger. Application state gets exposed as window.* globals so the agent reads and evaluates them directly in the running page instead of restarting the app and guessing what happened. Every browser interaction automatically captures console output, page errors, network timing, and performance data with zero extra setup. Any client-side edit needs a same-turn browser check proving the change actually works before it counts as done.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>The live page is the debugger. Application state gets exposed as window.* globals. The agent reads and evaluates them directly in the running page instead of restarting the app and guessing what happened. Every browser interaction automatically captures console output, page errors, network timing, and performance data with zero extra setup. Any client-side edit needs a same-turn browser check proving the change actually works before it counts as done.</span></div>
 </div>
 
 <div class="skill">
@@ -229,7 +275,7 @@ stateDiagram-v2
 <h2>notes on the verb surface</h2>
 
 <blockquote>
-  "Every skill that was once a SKILL.md file is now an <code>instruction</code> response that knows the current state of the world. The behavior the file used to elicit is now woven into a string that the orchestrator generates in milliseconds, freshly, from the phase, the PRD, the mutables, and the recall pack. The chair is the same chair. The cushion is now part of the floor.", from the gm field guide
+  "Every skill that was once a SKILL.md file is now an <code>instruction</code> response that knows the current state of the world. The behavior the file used to elicit is now woven into a string. The orchestrator generates it in milliseconds, freshly, from the phase, the PRD, the mutables, and the recall pack. The chair is the same chair. The cushion is now part of the floor.", from the gm field guide
 </blockquote>
 
 </article>
