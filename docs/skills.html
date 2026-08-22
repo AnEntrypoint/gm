@@ -35,83 +35,12 @@ article code { font-family: var(--ff-mono); font-size: 12px; background: var(--p
 .tag.danger { background: color-mix(in oklab, var(--warn, #c0392b) 14%, transparent); color: var(--warn, #c0392b); }
 .tag.special { background: color-mix(in oklab, var(--sky, #2b6cb0) 14%, transparent); color: var(--sky, #2b6cb0); }
 </style>
-<script type="module">
-import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'loose', themeVariables: { fontFamily: 'Inter, Segoe UI, sans-serif', fontSize: '13px' }, flowchart: { wrappingWidth: 120 } });
-window.addEventListener('DOMContentLoaded', () => {
-  const lb = document.createElement('div');
-  lb.className = 'gm-mermaid-lightbox';
-  lb.innerHTML = '<div class="lb-zoom"><button type="button" class="lb-zoom-out" aria-label="Zoom out">-</button><span class="lb-zoom-pct">100%</span><button type="button" class="lb-zoom-in" aria-label="Zoom in">+</button><button type="button" class="lb-zoom-reset">reset</button></div><div class="lb-close">close [x]</div><div class="lb-inner"></div>';
-  document.body.appendChild(lb);
-  const lbInner = lb.querySelector('.lb-inner');
-  const zoomPct = lb.querySelector('.lb-zoom-pct');
-  let baseWidth = 0, baseHeight = 0, scale = 1;
-  const MIN_SCALE = 0.25, MAX_SCALE = 4, LEGIBLE_PX_PER_UNIT = 0.16;
-  const applyScale = () => {
-    const svg = lbInner.querySelector('svg');
-    if (!svg || !baseWidth) return;
-    svg.style.width = (baseWidth * scale) + 'px';
-    svg.style.height = (baseHeight * scale) + 'px';
-    zoomPct.textContent = Math.round(scale * 100) + '%';
-  };
-  const closeLb = () => { lb.classList.remove('open'); lbInner.innerHTML = ''; baseWidth = 0; baseHeight = 0; scale = 1; };
-  lb.addEventListener('click', (e) => { if (e.target === lb || e.target.classList.contains('lb-close')) closeLb(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
-  let dragging = false, dragStartX = 0, dragStartY = 0, dragScrollLeft = 0, dragScrollTop = 0;
-  lbInner.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'A') return;
-    dragging = true;
-    dragStartX = e.clientX; dragStartY = e.clientY;
-    dragScrollLeft = lbInner.scrollLeft; dragScrollTop = lbInner.scrollTop;
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    lbInner.scrollLeft = dragScrollLeft - (e.clientX - dragStartX);
-    lbInner.scrollTop = dragScrollTop - (e.clientY - dragStartY);
-  });
-  window.addEventListener('mouseup', () => { dragging = false; });
-  lb.querySelector('.lb-zoom-in').addEventListener('click', () => { scale = Math.min(MAX_SCALE, scale + 0.25); applyScale(); });
-  lb.querySelector('.lb-zoom-out').addEventListener('click', () => { scale = Math.max(MIN_SCALE, scale - 0.25); applyScale(); });
-  lb.querySelector('.lb-zoom-reset').addEventListener('click', () => { scale = 1; applyScale(); });
-  document.addEventListener('click', (e) => {
-    const host = e.target.closest('.mermaid');
-    if (!host) return;
-    const svg = host.querySelector('svg');
-    if (!svg) return;
-    lbInner.innerHTML = '';
-    const clone = svg.cloneNode(true);
-    const viewBox = clone.getAttribute('viewBox');
-    const parts = viewBox ? viewBox.trim().split(/\s+/).map(Number) : null;
-    const vbWidth = parts && parts.length === 4 ? parts[2] : clone.clientWidth || 900;
-    const vbHeight = parts && parts.length === 4 ? parts[3] : clone.clientHeight || 600;
-    baseWidth = Math.max(900, Math.round(vbWidth * LEGIBLE_PX_PER_UNIT));
-    baseHeight = Math.round(baseWidth * (vbHeight / vbWidth));
-    clone.removeAttribute('width');
-    clone.removeAttribute('height');
-    clone.style.maxWidth = 'none';
-    lbInner.appendChild(clone);
-    scale = 1;
-    applyScale();
-    lb.classList.add('open');
-  });
-});
-</script>
 <style>
-.mermaid{margin:18px 0;padding:14px;background:var(--panel-1);border-radius:8px;box-shadow:var(--panel-shadow);text-align:center;overflow-x:auto;cursor:zoom-in}
-.mermaid svg{max-width:100%;min-width:min(720px,100%);height:auto}
-.gm-mermaid-lightbox{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);cursor:default;align-items:center;justify-content:center;padding:24px}
-.gm-mermaid-lightbox.open{display:flex}
-.gm-mermaid-lightbox .lb-inner{background:var(--panel-1);border-radius:8px;padding:24px;max-width:96vw;max-height:96vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4);cursor:grab}
-.gm-mermaid-lightbox .lb-inner:active{cursor:grabbing}
-.gm-mermaid-lightbox .lb-inner svg{display:block;max-width:none}
-.gm-mermaid-lightbox .lb-close{position:fixed;top:20px;right:28px;color:#fff;font-family:var(--ff-mono);font-size:13px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,.1);border-radius:6px}
-.gm-mermaid-lightbox .lb-zoom{position:fixed;top:20px;left:28px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border-radius:6px;padding:6px 8px;font-family:var(--ff-mono);font-size:13px;color:#fff}
-.gm-mermaid-lightbox .lb-zoom button{background:rgba(255,255,255,.14);border:0;color:#fff;font-family:var(--ff-mono);font-size:13px;cursor:pointer;padding:4px 10px;border-radius:4px;line-height:1}
-.gm-mermaid-lightbox .lb-zoom button:hover{background:rgba(255,255,255,.26)}
-.gm-mermaid-lightbox .lb-zoom-pct{min-width:44px;text-align:center;opacity:.85}
-.gm-mermaid-lightbox .lb-zoom-reset{text-transform:uppercase;letter-spacing:.06em;font-size:11px}
-@media (max-width:640px){.gm-mermaid-lightbox .lb-zoom{top:auto;bottom:20px;left:50%;transform:translateX(-50%)}}
+article table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+article table caption { text-align: left; font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); margin-bottom: 8px; }
+article th, article td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--panel-3); vertical-align: top; }
+article th { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--panel-text-2); }
+article tbody tr:hover { background: var(--panel-1); }
 .gm-callout{margin:18px 0;padding:14px 18px;background:var(--panel-1);border-left:3px solid var(--panel-accent);color:var(--panel-text)}
 .gm-callout .who{display:block;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--panel-text-2);font-style:normal;margin-bottom:4px}
 .cross-footer{margin:32px 0 12px 0;padding:18px;background:var(--panel-1);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;font-family:var(--ff-mono);font-size:12px}
@@ -139,29 +68,36 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <h2>The state machine, in one diagram</h2>
 
-<pre class="mermaid">
-stateDiagram-v2
-  direction TB
-  [*] --> SPECIFY: user message
-  SPECIFY --> PROVE: cover closed
-  PROVE --> EMIT: every mutable witnessed
-  EMIT --> STATE: source hygiene gates pass
-  STATE --> CONC: idempotency gate passes
-  CONC --> SEC: disjointness witnessed
-  SEC --> RES: no secrets in diff
-  RES --> DECIDE: no unchecked panics
-  DECIDE --> COMPLETE: prd empty AND git clean AND CI green
-  COMPLETE --> [*]
-
-  PROVE --> SPECIFY: reshaping discovery
-  EMIT --> SPECIFY: reshaping discovery
-  STATE --> EMIT: code repair
-  CONC --> STATE: boundary enforcement
-  SEC --> STATE: boundary enforcement
-  RES --> EMIT: panic elimination
-  DECIDE --> SPECIFY: empirical fitness feedback
-  DECIDE --> PROVE: unproven obligation
-</pre>
+<table>
+<caption>Forward transitions (the phase order)</caption>
+<thead><tr><th>From</th><th>To</th><th>Condition</th></tr></thead>
+<tbody>
+<tr><td>start</td><td>SPECIFY</td><td>user message</td></tr>
+<tr><td>SPECIFY</td><td>PROVE</td><td>cover closed</td></tr>
+<tr><td>PROVE</td><td>EMIT</td><td>every mutable witnessed</td></tr>
+<tr><td>EMIT</td><td>STATE</td><td>source hygiene gates pass</td></tr>
+<tr><td>STATE</td><td>CONC</td><td>idempotency gate passes</td></tr>
+<tr><td>CONC</td><td>SEC</td><td>disjointness witnessed</td></tr>
+<tr><td>SEC</td><td>RES</td><td>no secrets in diff</td></tr>
+<tr><td>RES</td><td>DECIDE</td><td>no unchecked panics</td></tr>
+<tr><td>DECIDE</td><td>COMPLETE</td><td>PRD empty AND git clean AND CI green</td></tr>
+<tr><td>COMPLETE</td><td>end</td><td>-</td></tr>
+</tbody>
+</table>
+<table>
+<caption>Backward transitions (feedback edges)</caption>
+<thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
+<tbody>
+<tr><td>PROVE</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
+<tr><td>EMIT</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
+<tr><td>STATE</td><td>EMIT</td><td>code repair</td></tr>
+<tr><td>CONC</td><td>STATE</td><td>boundary enforcement</td></tr>
+<tr><td>SEC</td><td>STATE</td><td>boundary enforcement</td></tr>
+<tr><td>RES</td><td>EMIT</td><td>panic elimination</td></tr>
+<tr><td>DECIDE</td><td>SPECIFY</td><td>empirical fitness feedback</td></tr>
+<tr><td>DECIDE</td><td>PROVE</td><td>unproven obligation</td></tr>
+</tbody>
+</table>
 
 <p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
 

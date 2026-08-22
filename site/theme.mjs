@@ -179,95 +179,6 @@ const buildLandingMain = () => {
 
 const main = page.layout === 'article' ? buildArticleMain() : buildLandingMain();
 
-function wireMermaidLightbox(blocks) {
-  let activeHost = null;
-  const MIN_SCALE = 0.25, MAX_SCALE = 4, LEGIBLE_PX_PER_UNIT = 0.16;
-  const openOverlay = (svg) => {
-    if (activeHost) return;
-    const host = document.createElement('div');
-    activeHost = host;
-    document.body.appendChild(host);
-    const clone = svg.cloneNode(true);
-    clone.style.cursor = 'default';
-    const originalId = svg.id;
-    if (originalId) {
-      const cloneId = originalId + '-lightbox';
-      clone.id = cloneId;
-      clone.innerHTML = clone.innerHTML.split('#' + originalId).join('#' + cloneId);
-    }
-    const viewBox = clone.getAttribute('viewBox');
-    const parts = viewBox ? viewBox.trim().split(/\\s+/).map(Number) : null;
-    const vbWidth = parts && parts.length === 4 ? parts[2] : (clone.clientWidth || 900);
-    const vbHeight = parts && parts.length === 4 ? parts[3] : (clone.clientHeight || 600);
-    const baseWidth = Math.max(900, Math.round(vbWidth * LEGIBLE_PX_PER_UNIT));
-    const baseHeight = Math.round(baseWidth * (vbHeight / vbWidth));
-    clone.removeAttribute('width');
-    clone.removeAttribute('height');
-    clone.style.maxWidth = 'none';
-    let scale = 1;
-    let scrollWrap = null;
-    let pctLabel = null;
-    const applyScale = () => {
-      clone.style.width = (baseWidth * scale) + 'px';
-      clone.style.height = (baseHeight * scale) + 'px';
-      if (pctLabel) pctLabel.textContent = Math.round(scale * 100) + '%';
-    };
-    const close = () => { host.remove(); activeHost = null; };
-    const mountClone = (el) => { if (el) el.appendChild(clone); };
-    const mountScrollWrap = (el) => { scrollWrap = el; };
-    const mountPct = (el) => { pctLabel = el; if (el) el.textContent = '100%'; };
-    let dragging = false, dragStartX = 0, dragStartY = 0, dragScrollLeft = 0, dragScrollTop = 0;
-    const onScrollWrapMount = (el) => {
-      mountScrollWrap(el);
-      if (!el) return;
-      el.style.overflow = 'auto';
-      el.style.maxWidth = '100%';
-      el.style.maxHeight = '70vh';
-      el.style.cursor = 'grab';
-      el.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'A') return;
-        dragging = true;
-        dragStartX = e.clientX; dragStartY = e.clientY;
-        dragScrollLeft = el.scrollLeft; dragScrollTop = el.scrollTop;
-      });
-      window.addEventListener('mousemove', (e) => {
-        if (!dragging) return;
-        el.scrollLeft = dragScrollLeft - (e.clientX - dragStartX);
-        el.scrollTop = dragScrollTop - (e.clientY - dragStartY);
-      });
-      window.addEventListener('mouseup', () => { dragging = false; });
-    };
-    const zoomIn = () => { scale = Math.min(MAX_SCALE, scale + 0.25); applyScale(); };
-    const zoomOut = () => { scale = Math.max(MIN_SCALE, scale - 0.25); applyScale(); };
-    const zoomReset = () => { scale = 1; applyScale(); };
-    const body = h('div', {}, [
-      h('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:8px;font-family:monospace;font-size:12px;' }, [
-        h('button', { type: 'button', onClick: zoomOut, style: 'cursor:pointer;padding:2px 10px;' }, ['-']),
-        h('span', { ref: mountPct }, ['100%']),
-        h('button', { type: 'button', onClick: zoomIn, style: 'cursor:pointer;padding:2px 10px;' }, ['+']),
-        h('button', { type: 'button', onClick: zoomReset, style: 'cursor:pointer;padding:2px 10px;text-transform:uppercase;font-size:11px;' }, ['reset']),
-      ]),
-      h('div', { style: 'display:flex;justify-content:center;', ref: onScrollWrapMount }, [
-        h('div', { style: 'display:flex;justify-content:center;', ref: mountClone }),
-      ]),
-    ]);
-    const modal = C.Modal ? C.Modal({
-      kind: 'preview',
-      head: 'diagram',
-      body,
-      onClose: close,
-    }) : null;
-    if (modal && ds.applyDiff) { ds.applyDiff(host, modal); applyScale(); }
-    else close();
-  };
-  for (const block of blocks) {
-    const svg = block.querySelector('svg');
-    if (!svg || svg._dsLightboxBound) continue;
-    svg._dsLightboxBound = true;
-    svg.addEventListener('click', () => openOverlay(svg));
-  }
-}
-
 // Every article page now renders at the same full-bleed width as the landing
 // (home) page -- a prior partial allowlist (WIDE_ARTICLES) left crates/
 // distribution/skills clamped to --measure-narrow (760px) while made-with/
@@ -307,6 +218,7 @@ if (page.layout === 'article' && page.articleHtml) {
     if (toc) {
       if (toc.parentElement !== host) host.insertBefore(toc, host.firstChild);
       host.classList.add('has-toc');
+      if (page.wide) host.classList.add('wide');
       const col = document.createElement('div');
       col.className = 'article-col';
       let node = toc.nextSibling;
@@ -316,14 +228,6 @@ if (page.layout === 'article' && page.articleHtml) {
         node = next;
       }
       host.appendChild(col);
-    }
-    const blocks = host.querySelectorAll('.mermaid');
-    if (blocks.length) {
-      import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
-        const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-        mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose', flowchart: { wrappingWidth: 120 } });
-        mermaid.run({ nodes: blocks }).then(() => wireMermaidLightbox(blocks));
-      }).catch(() => {});
     }
     const loadExternal = (src) => new Promise((res) => {
       const s = document.createElement('script');

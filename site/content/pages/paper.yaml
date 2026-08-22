@@ -4,4 +4,5 @@ subtitle: The unified gm (glootius maximus) paper -- every phase and hard rule r
 date: June 2026
 description: The Complete Discipline, the unified gm (glootius maximus) paper. gm exists to raise a coding agent's signal-to-noise ratio and enforce token austerity. This document frames the phase-gated lifecycle, mutable discipline, search protocol, governance layer, maximal cover, bounded autonomy, and learning loop as the noise-reduction machinery that 14,000+ hours of supervised modification converged on.
 layout: article
+wide: true
 source: ../docs/paper.html
