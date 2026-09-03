@@ -1,0 +1,141 @@
+.glootie-stop-verified
+.prd
+build/
+dist/
+final-build/
+gm-build/
+gm-build-latest/
+gm-build-sync/
+gm-plugkit/SKILL.md
+bin/plugkit.wasm
+gm-plugkit/plugkit.wasm
+.codeinsight
+node_modules/
+
+loggedin/
+site/node_modules/
+site/platforms-out.json
+docs/bundle.js
+docs/styles.css
+docs/badges/
+*.tgz
+.plugkit-browser-profile/
+tmp/
+.claude/scheduled_tasks.lock
+.plugkit-browser-profile-*/
+.plugkit-agent-worktree/
+*.stackdump
+**/.tessl-plugin/
+.scan-progress.log
+
+# >>> plugkit managed
+.gm/.embed-generation
+.scratch/
+.gm/exec-spool/
+.gm/.sql-smoke.db
+.gm/gm-fired-*
+.gm/needs-gm
+.gm/lastskill
+.gm/turn-state.json
+.gm/turn-state.json.corrupted-*
+.gm/residual-check-fired
+.gm/claim-audit-fired
+.gm/bootstrap-status.json
+.gm/scan-deps-stamp.json
+.gm/bootstrap-error.json
+.gm/rslearn-counter.json
+.gm/trajectory-drafts/
+.gm/ingest-drafts/
+.gm/prd-state.json
+.gm/subagent-*.json
+.gm/browser-profile/
+.gm/browser-profile-*/
+.gm/browser-profiles/
+.gm/browser-chrome-profile-*/
+.gm/browser-state/
+.gm/build-tool-ignores.md
+.gm/last-prompt.txt
+.gm/hooks/
+.gm/no-memorize-this-turn
+.gm/prd.paused.yml
+.gm/rs-learn.db
+.gm/rs-learn.db-shm
+.gm/rs-learn.db-wal
+.gm/learning-state.md
+.gm/git-block-counter.json
+.gm/next-step.md
+.gm/constraints.md
+.gm/last-instruction-ts
+.gm/last-dispatch-ts
+.gm/boot*.err
+.gm/boot*.out
+.gm/diag-*.out
+.gm/audit-iter-*.md
+.gm/silent-abort-forensics.json
+.gm/*.png
+.gm/witness/
+.gm/long-gap-retry-state
+.gm/exec-spool/.gm-plugkit-stale.json
+.gm/disciplines/codeinsight/
+.gm/disciplines/codeinsight-vec/
+.gm/disciplines/codeinsight-manifest/
+.gm/disciplines/AGENTS.md/
+.gm/disciplines/AGENTS.md-vec/
+.gm/disciplines/default/
+.gm/disciplines/default-vec/
+.gm/disciplines/rs-learn_graph_edges/
+.gm/disciplines/rs-learn_graph_edges_by_dst/
+.gm/disciplines/rs-learn_graph_edges_by_src/
+.gm/disciplines/rs-learn_router/
+.plugkit-browser-profile/
+.plugkit-browser-profile-*/
+.claude/worktrees/
+.gm/memories/*.tmp-*
+.gm/.instructions-shipped-manifest.json
+.gm/instructions-source-cache/
+.gm/config-source-cache/
+.gm/config-source-cache-default/
+.gm/config-source-cache-default.*.sync.json
+.gm/config-source-cache.*.sync.json
+
+# .gm/prd.yml + .gm/mutables.yml: per-dispatch runtime state, rewritten on
+# nearly every PLAN/EXECUTE/VERIFY dispatch -- same class as .gm/witness/
+# and gm.db above (transient, regenerated, never durable source). Tracking
+# it committed a near-full-file version on every single dispatch (970
+# revisions, 743MB logical history for a currently-2.1MB file), roughly
+# half of .git on-disk blob weight -- untracked here per this project own
+# derived-stores-are-transient-never-tracked policy.
+.gm/prd.yml
+.gm/mutables.yml
+.gm/.gm-continue-count
+# <<< plugkit managed
+.gm/pw-sock-*/
+
+# agentplug-runner project-local runtime state (kv store, per-project
+# plugin-dispatch spool) -- transient, regenerated every session, same
+# category as .gm/pw-sock-*/ above
+.agentplug/
+.agentplug-kv/
+
+# local dev-tool caches (codesearch index, opencode config+node_modules) --
+# regenerable local state, same category as .agentplug/ above
+.code-search/
+.opencode/
+
+# rs-learn/memorize derived binary store -- every live gm session dispatching
+# mutable-resolve/prd-add/memorize perpetually grows this file; it is a
+# rebuildable derived cache, not source, and had grown past GitHub's 50MB
+# recommended limit while tracked (57.18MB, live-witnessed via a real
+# git_push warning) -- untracked here, same rule as any other derived store
+# per this project's own "derived stores are transient, never tracked" policy.
+gm.db
+gm.db-wal
+gm.db-shm
+gm.db-journal
+
+# in-process plugkit probe artifact (transient)
+gm-plugkit/.gm/
+
+# tessl tooling marker (foreign, not shipped)
+skills/gm-skill/.tessl-plugin/
+config.bat
