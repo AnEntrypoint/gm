@@ -1,0 +1,10 @@
+---
+key: mem-ca56d71fa930eebb-1151
+ns: default
+created: 1780400768433
+updated: 1780400845016
+---
+
+## Resolved mutable: supervisor-pid-file-missing-spawns-duplicates
+
+ROOT CAUSE confirmed by reading code: gm-plugkit/supervisor.js (the running variant) writes only .supervisor.json, NOT .supervisor.pid, and has NO single-instance guard. findSupervisorPid (lib/skill-bootstrap.js:577-585) reads .supervisor.pid -> file missing/empty -> returns null -> spawnPlugkitWatcher does not early-return -> every gm-skill bootstrap spawns a DUPLICATE supervisor (parent=claude.exe), each spawning watchers that lock-fight -> 4-8 procs churning, all 0-1min fresh, pids rotating every fire. bin/plugkit-supervisor.js already had SUPERVISOR_PID_PATH + acquireSingleInstance/releaseSingleInstance; gm-plugkit/supervisor.js did not. FIX: ported acquireSingleInstance (refuse-if-live-peer + write .supervisor.pid) + releaseSingleInstance (on SIGTERM + process.exit) + the SUPERVISOR_PID_PATH const into gm-plugkit/supervisor.js; acquire called at startup before spawnWatcher, exits 0 if a live peer holds the pid. node --check OK. Ships via gm-plugkit publish; once the bootstrap installs it, findSupervisorPid finds the live supervisor and stops spawning duplicates.

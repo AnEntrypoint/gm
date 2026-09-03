@@ -1,0 +1,16 @@
+links:
+  - label: home
+    href: ./
+  - label: paper
+    href: ./paper/
+  - label: docs
+    group:
+      - { label: crates,       href: "./crates/" }
+      - { label: skills,       href: "./skills/" }
+      - { label: distribution, href: "./distribution/" }
+  - label: more
+    group:
+      - { label: showcase, href: "./made-with/" }
+      - { label: stats,    href: "./stats/" }
+      - { label: 247420,   href: "https://247420.xyz" }
+      - { label: GitHub,   href: "https://github.com/AnEntrypoint/gm" }

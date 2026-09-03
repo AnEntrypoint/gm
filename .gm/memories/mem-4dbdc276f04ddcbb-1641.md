@@ -1,0 +1,8 @@
+---
+key: mem-4dbdc276f04ddcbb-1641
+ns: default
+created: 1784800588677
+updated: 1784800588677
+---
+
+code_index.rs history (rs-plugkit) index(): write_chunk writes the KV vector-search fallback row to namespace "codeinsight" (NOT "codeinsight-vec") because host_vec_search's fusion candidate lookup in codesearch() queries exactly that namespace name (wasm_dispatch.rs q_json.namespace) -- writing to "codeinsight-vec" left that fusion input structurally always empty, silently dropping the KV-vector-search signal from every fused codesearch result (fix-codeinsight-vec-namespace-mismatch-bug). Prune-deleted-files logic: originally compared against the SAME files list capped at max_files/limit, so on a repo with more files than the cap a legitimately-live file past the cutoff was wrongly treated as deleted and pruned -- fixed by enumerating a separate uncapped full_files set (PRUNE_ENUMERATION_CAP=20000, a structural sanity ceiling not a work budget, since directory walk is cheap with no file reads) used only for the prune comparison, while per-file indexing work stays limit-bounded. MAX_CHUNKS_PER_FILE_PER_PASS=64: a single pathological file's chunk set could itself blow the 45s INDEX_WALL_BUDGET_MS (the outer per-file elapsed check only fires BETWEEN files) -- live-witnessed a single dispatch taking 328s against the 45s budget. Deferring an oversized file ENTIRELY (never marking seen) livelocks: hits the identical cap every pass forever, digest never stored, full tree re-indexed from scratch every codesearch call -- live-witnessed as missing .codeinsight-digest with private memory climbing 397MB to 2438MB across repeated passes. Fix: cap and index the first 64 chunks, mark the file seen anyway, so the pass converges.

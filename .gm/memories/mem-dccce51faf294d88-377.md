@@ -1,0 +1,10 @@
+---
+key: mem-dccce51faf294d88-377
+ns: default
+created: 1782002217875
+updated: 1782002548927
+---
+
+## Resolved mutable: outbox-consumer-contract
+
+rs-plugkit wasm_dispatch.rs:585 status() returns the entire outbox JSON object verbatim (serde_json::from_str) to the agent; it does not read stdout as program output. Consumers see ok:false + exitCode:1 on failure regardless of channel. Therefore moving the error JSON stdout->stderr is SAFE and more honest (stdout stays clean).
