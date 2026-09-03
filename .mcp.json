@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gm": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "github:AnEntrypoint/gm-mcp"
+      ]
+    }
+  }
+}

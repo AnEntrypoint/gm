@@ -1,0 +1,3 @@
+bin/plugkit.wasm
+gm-plugkit/plugkit.wasm
+**/*.wasm
