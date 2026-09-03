@@ -1,0 +1,246 @@
+# Daemon lifecycle configuration
+
+agentplug-runner reads `~/.agentplug/daemon-config.json` at startup for the timing
+constants governing its own lifecycle. This is machine-scoped (not per-project) because
+the daemon is a single shared process across every registered project -- a per-project
+override would be ambiguous when multiple projects are registered.
+
+All fields optional; a field's absence (or the whole file's absence) falls back to the
+value already documented in the field descriptions below. An unconfigured machine
+behaves byte-identically to before this file existed.
+
+```json
+{
+  "registry_poll_interval_secs": 5,
+  "heartbeat_interval_secs": 10,
+  "plugin_update_poll_interval_secs": 600,
+  "runner_update_poll_interval_secs": 600
+}
+```
+
+`max_concurrent_projects`/`gm_concurrency`/`side_plugin_concurrency` are deliberately absent from this example: leaving them unset derives a default from this machine's own `std::thread::available_parallelism()` at every daemon boot, so the same config file behaves correctly on a 4-core box and a 64-core box. Set them explicitly only to override that host-derived default.
+
+- `registry_poll_interval_secs` (default 5) -- how often the daemon re-reads
+  `daemon-registry.txt` to notice newly-registered projects.
+- `heartbeat_interval_secs` (default 10) -- how often the daemon writes its
+  `.status.json` heartbeat and re-checks single-instance ownership authority.
+- `plugin_update_poll_interval_secs` (default 600) -- how often the daemon checks
+  each loaded plugin's remote release for a newer version, only when genuinely idle.
+- `runner_update_poll_interval_secs` (default 600) -- how often the daemon checks
+  its own executable's remote release for a newer version, only when genuinely idle.
+- `max_concurrent_projects` (default: this host's
+  `std::thread::available_parallelism()`, e.g. 4 on a 4-core box) -- how many
+  project-worker threads run concurrently in the daemon's own dispatch loop.
+  Each worker pulls the next registered root off a shared queue and may block
+  for the duration of a slow exec_js/browser dispatch, so this is the real
+  ceiling on how many projects can be mid-dispatch at once. Set explicitly to
+  override the host-derived default.
+- `gm_concurrency` (default: same as `max_concurrent_projects`, so also
+  host-core-derived unless set explicitly) -- how many concurrent live Stores
+  the shared `gm` plugin instance pool holds. `gm` is genuinely stateless (its
+  real state lives in each project's own `.gm/` flat files, never in wasm
+  memory), so more than one live Store is always safe -- this bounds how many
+  worker threads can be mid-gm-call simultaneously before the next one queues
+  on a pool slot. Before this field existed, gm ran as a single process-wide
+  instance whose Mutex was held for the full duration of each dispatch, so one
+  project's long exec_js/browser call could stall an unrelated project's
+  trivial phase-status/health call behind it for the entire duration
+  (live-witnessed 18-21s stall, fixed by pooling instead of reverting to
+  per-project instances, which would reintroduce per-project state
+  duplication for a plugin whose state is supposed to live in flat files).
+  bert/treesitter/libsql default to `side_plugin_concurrency` shared instances
+  each, not a fixed single instance -- see below.
+- `side_plugin_concurrency` (default: half this host's
+  `available_parallelism()`, rounded up, e.g. 2 on a 4-core box) -- how many
+  concurrent live Stores EACH of bert/treesitter/libsql (the non-`gm`
+  stateless-shared plugins) holds. Scaled lower than `gm_concurrency` by
+  default because bert alone costs ~133MB of resident tensors per extra
+  instance, so the default memory cost of this pool now scales with host
+  core count too -- a large host gets more side-plugin instances by default,
+  and pays proportionally more resident memory for them. Set explicitly to
+  pin a fixed value regardless of host size. A deployment that DOES see real
+  cross-project `codesearch`/`recall`/`embed` contention --
+  `host_plugin_call`/`host_vec_embed` calls into an undersized pool serialize
+  behind `SharedPluginPool::acquire`'s bounded 20s `ACQUIRE_TIMEOUT_MS` before
+  surfacing `plugin_pool_busy_timeout` rather than hanging forever -- can
+  raise this further to trade more memory for less queuing under concurrent
+  multi-project load.
+
+  Real load witnessed 2026-07-23, when `max_concurrent_projects`/
+  `gm_concurrency`/`side_plugin_concurrency` were still hardcoded to a
+  static `4`/`4`/`1` (before both were made host-core-derived): 12
+  registered projects sharing one daemon at that fixed 4/4/1 produced
+  sustained `plugin gm not loaded` errors -- root-caused to a DIFFERENT bug
+  (a Trap in a shared plugin, bert in particular, left its pool slot
+  poisoned instead of being evicted and reinstantiated; fixed in
+  `d3c159316e35320fb61e688651af1468a6ca41dc`,
+  "Evict poisoned shared-plugin Store after a dispatch error instead of
+  reusing it"), not by `side_plugin_concurrency` itself being undersized.
+  With the eviction fix in place, a poisoned slot self-heals on the very
+  next dispatch instead of staying wedged for 1-2 minutes, which removes
+  the actual mechanism that produced the sustained symptom -- raising
+  `side_plugin_concurrency` would not have prevented that specific failure
+  mode (a poisoned slot behaves the same regardless of pool width; eviction,
+  not pool width, was the missing piece). Today's host-derived default
+  remains a reasonable starting tradeoff absent a DIFFERENT, still-live
+  symptom (`plugin_pool_busy_timeout` or queuing visible in `.watcher.log`
+  under concurrent load with the eviction fix already applied) -- raise it
+  further only once that distinct symptom is actually observed post-fix,
+  not preemptively from the presence of many registered projects alone:
+  `max_concurrent_projects` still caps how many projects are ever genuinely
+  mid-dispatch at once regardless of how many are registered, so
+  registering many more projects than that cap does not by itself imply
+  more real concurrency against the side-plugin pools.
+
+  The same investigation also found and fixed a genuine fairness bug in
+  `SharedPluginPool::acquire`'s fallback path (agentplug commit following
+  d3c1593): when the initial single sweep across all slots found every slot
+  momentarily busy, the fallback poll loop retried ONLY `slots[0]` for the
+  full 20s `ACQUIRE_TIMEOUT_MS`, ignoring slots 1..N even if they freed up
+  first -- for `gm_concurrency`'s default pool size of 4 this artificially
+  serialized contention onto a single slot instead of using the other three,
+  worsening exactly this kind of multi-project contention. Fixed to re-sweep
+  every slot on each poll iteration.
+
+Changing `heartbeat_interval_secs`, `max_concurrent_projects`, `gm_concurrency`,
+or `side_plugin_concurrency` requires a daemon restart to take effect (read
+once at startup, not re-read per tick, since these govern the daemon's own
+loop timing and pool sizing).
+
+## Heartbeat independence
+
+The heartbeat write and single-instance-ownership re-check run on their own
+dedicated ticker thread (`spawn_heartbeat_ticker`), independent of the
+per-tick worker-pool `thread::scope` that dispatches project work. Before
+this, both lived only at the top of the main loop, gated behind that
+iteration's `thread::scope` fully joining every worker -- one worker occupying
+a slot for up to `DISPATCH_CALL_DEADLINE_SECS` (40s, a slow exec_js/browser
+call or a stuck pool-acquire wait) delayed the heartbeat write for that same
+duration, risking a live daemon's heartbeat going stale long enough for a
+competing process to claim ownership out from under it. The ticker thread
+never touches `projects`/`plugin_modules`/worker state directly (only the
+filesystem, via the same primitives the old inline check already used); on
+losing authority it raises a shared flag the main loop polls cheaply (both at
+the top of every loop iteration and immediately after each dispatch batch)
+and performs the actual session-owning shutdown itself.
+
+## Mid-batch verb starvation
+
+Within one `dispatch_project` call, newly-arrived requests in ANY verb
+directory (not just `background-convert`, which had this fix first) are
+re-scanned and spawned into the same in-flight batch on every ~50ms poll
+tick, rather than waiting for the batch's original members to finish and the
+next `dispatch_project` call for that root to pick them up. Without this, an
+ordinary request (e.g. `phase-status`) landing on a busy project's spool
+while an unrelated slow dispatch (e.g. `codesearch`, `exec_js`) from the same
+claim-snapshot was still in flight sat unclaimed for the full duration of
+that slow sibling.
+
+## Per-project fairness cap (not machine-wide)
+
+`gm_concurrency` above is the actual TOTAL pool size and stays strictly
+machine-wide -- one shared daemon process, so no per-project override of the
+real pool size is admissible (a project raising its own share would be raising
+it for every other registered project too, since they all draw from the same
+pool).
+
+A registered project can still set its OWN fairness ceiling: how many of that
+shared pool's slots ITS OWN dispatches may occupy concurrently, as a
+self-limiting cap that can only ever lower a project's effective share, never
+raise the machine total. Configured per-project, read fresh on every dispatch
+(same precedent as `.gm/browser-config.json`'s `BrowserConfig::load(cwd)`),
+at:
+
+```
+<project>/.gm/daemon-project-config.json
+```
+
+```json
+{
+  "gm_concurrency_limit": 1
+}
+```
+
+- `gm_concurrency_limit` (default: unset -- unbounded from this project's own
+  side, i.e. bounded only by the machine-wide `gm_concurrency` pool size) --
+  the maximum number of this project's own `gm` dispatches allowed in flight
+  at once. A dispatch beyond this project's own limit waits (polls a
+  process-wide in-flight counter keyed by project root) for one of this same
+  project's earlier dispatches to finish, BEFORE it takes a slot from the
+  shared pool -- it never grants extra pool slots, it only restricts how many
+  of the ones the pool already has this one project may hold simultaneously.
+  Released automatically (RAII guard) when the dispatch completes or panics,
+  so a crash mid-dispatch cannot wedge the project at a permanently-held
+  fairness slot.
+
+Missing file, or the field absent, is byte-identical to behavior before this
+file existed -- no wait loop is entered, no shared map is touched, zero
+overhead beyond one file read that fails.
+
+Note: a single project's own `gm` dispatches CAN now run genuinely concurrent
+against each other -- see `background-convert` below. This fairness cap is the
+real, observable ceiling on that concurrency, not a forward-looking no-op:
+once a dispatch has been background-converted, the project's remaining queued
+dispatches proceed against the shared pool while the converted one is still
+running, and `gm_concurrency_limit` (if configured) bounds how many of that
+project's own dispatches -- background-converted or not -- may hold a pool
+slot at the same time.
+
+## `background-convert` -- agent-initiated dispatch backgrounding
+
+Each of a project's spool requests is spawned onto its own OS thread the
+moment it is claimed; the daemon's own worker normally waits for that thread
+to finish (bounded-poll `is_finished()` check, ~50ms cadence) before writing
+the response and moving on -- functionally identical timing to a plain
+synchronous call. `background-convert` lets an agent that already dispatched
+a slow verb (`exec_js`, `browser`, or any other -- the mechanism is
+verb-agnostic, the daemon does not need to know what a verb does to detach
+the thread running it) tell the daemon mid-flight: stop waiting on this one,
+keep it running, and free the worker/tick immediately. This is agent-
+initiated only -- there is no timer/threshold that backgrounds a dispatch
+automatically. It is unrelated to `exec_js`'s own internal `timeoutMs`-based
+subprocess backgrounding (`host_task_proc`/`task.rs`'s `spawn`/`list`/
+`output`/`stop`) -- that mechanism backgrounds a subprocess the JS script
+itself spawned; `background-convert` backgrounds the WASM DISPATCH CALL
+itself, one layer up, regardless of verb.
+
+Request: `in/background-convert/<N>.txt`
+
+```json
+{"verb": "exec_js", "task": "<the original request's numeric filename stem>"}
+```
+
+`task` is the same id the agent already knows from having written the
+original request to `in/<verb>/<task>.txt` itself.
+
+Response: `out/background-convert-<N>.json`
+
+```json
+{"ok": true, "converted": true, "verb": "exec_js", "task": "..."}
+```
+
+or, if no matching in-flight dispatch exists for this project (wrong verb/
+task, or it already finished before this request was processed -- both read
+identically, since from the caller's side "never existed" and "already done"
+require the same next action: read the real response, it's either already
+there or on its way):
+
+```json
+{"ok": false, "error": "already_completed", "verb": "exec_js", "task": "..."}
+```
+
+Once converted, the original dispatch keeps running to completion on its own
+thread and writes its real result to the EXACT SAME path the synchronous path
+would have (`out/<verb>-<task>.json` + the `.ready` sentinel) -- the calling
+agent's later `Read` on that same path is unchanged ABI, it just may need to
+be retried later rather than being immediately available.
+
+Ownership model: after a background-convert, the project's OTHER queued
+dispatches are not blocked behind the converted one -- they proceed through
+the same `SharedPluginPool`/`GmFairnessGuard` machinery a second, genuinely
+concurrent checkout for that project, bounded by the exact same
+`gm_concurrency` (machine-wide pool size) and `gm_concurrency_limit`
+(per-project fairness cap, see above) this file already documents. A
+background-converted dispatch still counts as one held pool slot and one held
+fairness-guard slot for its entire real runtime -- it is not exempt from
+either cap, it only stops holding the WORKER and the daemon TICK hostage.
