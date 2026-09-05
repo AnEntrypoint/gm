@@ -178,7 +178,7 @@ A task that reduces to read/investigate/report, or a change confined to files th
 
 **The agent IS the LLM the recall pipeline calls**: no separate judge model; decisions inline via spool. Internals: the recall store (`recall: rs-plugkit self-report core internals`).
 
-**Idempotency contract (f∘f≡f)**: spool dispatch is at-least-once; correctness rests on per-verb convergence (content-hash dedup, nothing-to-commit gates, digest gates); read-only verbs recompute, never cache. Per-verb enumeration: the recall store (`recall: idempotency contract per-verb convergence`).
+**Idempotency contract (f(f(x)) = f(x))**: spool dispatch is at-least-once; correctness rests on per-verb convergence (content-hash dedup, nothing-to-commit gates, digest gates); read-only verbs recompute, never cache. Per-verb enumeration: the recall store (`recall: idempotency contract per-verb convergence`).
 
 **Every exec-family verb requires a real per-call `timeoutMs`**. This covers `exec_js`/`host_exec_js` and every language stem it backs: `bash`, `python`, `powershell`, `ssh`, `go`, `rust`, `c`, `cpp`, `java`, `deno`. All of these route through the same synchronous host call. Zero or missing `timeoutMs` is a hard error, not a default-substituted value. Detail: the recall store (`recall: host_exec_js synchronous`).
 
@@ -239,6 +239,10 @@ Session lifecycle (task/browser persistence across turn-stops, residual-scan tri
 Browser session state roots at the git common dir, never `process.cwd()` (worktree fan-out shares one chromium, not N): the recall store (`recall: browser session state worktree common-dir rooting`).
 
 **Absence of file edits never authorizes skipping a browser witness.** `browser-witness-coverage` only checks files edited this turn and is vacuously satisfied by an empty edit list. The separate `app-loads-witnessed` gate on DECIDE->COMPLETE closes that gap. Any project with `.gm/browser-config.json` present must record a same-turn healthy `browser` dispatch regardless of edit count, or the transition refuses. A confirmation/audit turn asserting the app works is itself a claim requiring the same live witness a code-change turn needs.
+
+## Daemon memory
+
+**Three controls bound the shared daemon's resident memory. A restart is never the control.** The runner maps each compiled module from a `.cwasm` file in `~/.agentplug/precompiled/`. Those pages are clean and the recycle metric excludes them. A project's first dispatch instantiates only `gm`. The runner instantiates each sibling plugin on its first use. A project that never uses a plugin never holds its Store. The runner evicts a Store that leaves a dispatch over its per-plugin linear-memory ceiling. The process-wide recycle gate releases the shared Stores when `private_bytes` crosses its limit. That release runs at most once per `shared_store_recycle_min_interval_secs`. Read the live numbers before you tune a key: run `gmsniff --daemon`, or read `memory`, `plugin_store_bytes` and `last_shared_store_release` in `~/.agentplug/daemon-status.json`. The keys, the defaults and the measured baselines are in `.gm/daemon-config-reference.md`, section Memory. Each subprocess bridge (`host_git`, `exec_js`, the CDP helper, background tasks) drains stdout and stderr on its own threads while it waits. A child that writes more than the pipe holds no longer stalls a dispatch until its timeout.
 
 ## Spool observability surface
 
