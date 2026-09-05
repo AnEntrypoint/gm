@@ -18,7 +18,7 @@ behaves byte-identically to before this file existed.
 }
 ```
 
-`max_concurrent_projects`/`gm_concurrency`/`side_plugin_concurrency` are deliberately absent from this example: leaving them unset derives a default from this machine's own `std::thread::available_parallelism()` at every daemon boot, so the same config file behaves correctly on a 4-core box and a 64-core box. Set them explicitly only to override that host-derived default.
+`max_concurrent_projects` and `gm_concurrency` are absent from this example on purpose. When they are unset, each daemon boot derives a default from this machine's own `std::thread::available_parallelism()`. The same config file then behaves correctly on a 4-core box and on a 64-core box. Set them only to override that host-derived default. `side_plugin_concurrency` defaults to 1 on every host (see its entry below).
 
 - `registry_poll_interval_secs` (default 5) -- how often the daemon re-reads
   `daemon-registry.txt` to notice newly-registered projects.
@@ -36,35 +36,24 @@ behaves byte-identically to before this file existed.
   ceiling on how many projects can be mid-dispatch at once. Set explicitly to
   override the host-derived default.
 - `gm_concurrency` (default: same as `max_concurrent_projects`, so also
-  host-core-derived unless set explicitly) -- how many concurrent live Stores
-  the shared `gm` plugin instance pool holds. `gm` is genuinely stateless (its
-  real state lives in each project's own `.gm/` flat files, never in wasm
-  memory), so more than one live Store is always safe -- this bounds how many
-  worker threads can be mid-gm-call simultaneously before the next one queues
-  on a pool slot. Before this field existed, gm ran as a single process-wide
-  instance whose Mutex was held for the full duration of each dispatch, so one
-  project's long exec_js/browser call could stall an unrelated project's
-  trivial phase-status/health call behind it for the entire duration
-  (live-witnessed 18-21s stall, fixed by pooling instead of reverting to
-  per-project instances, which would reintroduce per-project state
-  duplication for a plugin whose state is supposed to live in flat files).
-  bert/treesitter/libsql default to `side_plugin_concurrency` shared instances
-  each, not a fixed single instance -- see below.
-- `side_plugin_concurrency` (default: half this host's
-  `available_parallelism()`, rounded up, e.g. 2 on a 4-core box) -- how many
-  concurrent live Stores EACH of bert/treesitter/libsql (the non-`gm`
-  stateless-shared plugins) holds. Scaled lower than `gm_concurrency` by
-  default because bert alone costs ~133MB of resident tensors per extra
-  instance, so the default memory cost of this pool now scales with host
-  core count too -- a large host gets more side-plugin instances by default,
-  and pays proportionally more resident memory for them. Set explicitly to
-  pin a fixed value regardless of host size. A deployment that DOES see real
-  cross-project `codesearch`/`recall`/`embed` contention --
-  `host_plugin_call`/`host_vec_embed` calls into an undersized pool serialize
-  behind `SharedPluginPool::acquire`'s bounded 20s `ACQUIRE_TIMEOUT_MS` before
-  surfacing `plugin_pool_busy_timeout` rather than hanging forever -- can
-  raise this further to trade more memory for less queuing under concurrent
-  multi-project load.
+  host-core-derived unless set explicitly) -- the worker-thread budget for
+  cross-project gm dispatch and the multiplier behind
+  `shared_store_recycle_dispatches`. It no longer sizes the `gm` Store pool.
+  The runner keeps exactly one hot `gm` Store and serializes gm calls through
+  it. One Store stays loaded between calls, so per-call latency stays fast,
+  and no project ever pays for a second copy of gm's linear memory. `gm` is
+  stateless: its real state lives in each project's own `.gm/` files, never
+  in wasm memory, so the single Store serves every project.
+- `side_plugin_concurrency` (default 1) -- how many live Stores EACH of
+  bert/treesitter (the non-`gm` shared plugins) holds. Each extra slot is a
+  full copy of that plugin's Store; for bert that is its own copy of the
+  loaded model weights, live-measured at about 140 MB of linear memory per
+  slot before any batch embed. The default was once half the host's cores,
+  and on a 16-core host that derived 8 bert slots; two or three of them
+  filling under ordinary use pushed the process past 1.7 GB. Raise this
+  only after `plugin_pool_busy_timeout` or queuing shows in `.watcher.log`
+  under real concurrent load, never from the number of registered projects
+  alone. `libsql` is a per-project Store and this key does not apply to it.
 
   Real load witnessed 2026-07-23, when `max_concurrent_projects`/
   `gm_concurrency`/`side_plugin_concurrency` were still hardcoded to a
@@ -106,6 +95,88 @@ Changing `heartbeat_interval_secs`, `max_concurrent_projects`, `gm_concurrency`,
 or `side_plugin_concurrency` requires a daemon restart to take effect (read
 once at startup, not re-read per tick, since these govern the daemon's own
 loop timing and pool sizing).
+
+## Memory
+
+One daemon serves every registered project, so its resident memory is the
+sum of three parts. Each part has its own control.
+
+1. Compiled plugin modules. The runner compiles each `<plugin>.wasm` once
+   into `~/.agentplug/precompiled/<plugin>-<sha16>-<engine-key>.cwasm` and
+   maps that file on every later load. The mapping is file-backed and clean.
+   The kernel can drop those pages under pressure and re-read them, so they
+   never count toward `private_bytes`. The old `wasmtime-cache` directory is
+   removed on first use. A plugin whose bytes change gets a new artifact and
+   the superseded one is deleted. Measured on Linux with all four default
+   modules loaded and no instance live: 118 MB RSS, down from about 300 MB
+   when the artifact was copied into anonymous memory.
+2. Plugin Stores. A Store is one live wasm instance with its own linear
+   memory. `gm`, `bert` and `treesitter` are shared across projects (one hot
+   Store each). `libsql`, `oxibrowser`, `crux` and any extra plugin get one
+   Store per project. Only `gm` is instantiated when a project first
+   dispatches. Every other plugin is instantiated on its first
+   `host_plugin_call` or `host_vec_embed`, and the watcher log records
+   `plugin_lazy_loaded` with the plugin, scope and load time. A project that
+   never searches code never holds a `treesitter` Store, and a project that
+   never opens a page never holds an `oxibrowser` Store.
+3. Wasm linear memory growth. A wasm linear memory never shrinks in place.
+   A large `codesearch` or `memorize-fire` leaves its peak resident inside
+   the Store until that Store is dropped. Two controls bound this. The
+   per-plugin ceiling below drops one Store the moment a dispatch leaves it
+   over its ceiling. The process-wide recycle gate below drops every shared
+   Store when the whole process crosses its limit.
+
+Keys, all machine-scoped in `~/.agentplug/daemon-config.json`:
+
+- `plugin_store_linear_memory_ceiling_mb` (default 512) -- the ceiling for a
+  plugin with no entry in the per-name table. After each successful
+  dispatch the runner reads the Store's linear memory size. A Store above
+  its ceiling is evicted at once. The next dispatch re-instantiates it from
+  the mapped module, which costs milliseconds for `gm` and `treesitter` and
+  one model load (seconds) for `bert`. The watcher log records
+  `plugin_store_evicted_linear_memory_ceiling` with the verb, the size and
+  the ceiling.
+- `plugin_store_linear_memory_ceiling_mb_by_name` (default `{"gm": 384,
+  "treesitter": 256, "libsql": 256, "oxibrowser": 256, "crux": 128, "bert":
+  768}`) -- per-plugin overrides. `bert` is high because its weights alone
+  occupy about 140 MB of linear memory and every batch embed grows it
+  (measured 283 MB after one `codesearch` index pass on a small repo, on
+  the f32 weight build; the f16 build halves the file image but the F32
+  tensors in linear memory stay the same, measured 215 MB after one embed).
+  Set a value to 0 to disable the ceiling for that plugin. A ceiling below
+  a plugin's post-load floor evicts that plugin after every dispatch;
+  bert's floor is about 140 MB, witnessed with a 128 MB ceiling that
+  evicted bert three times in three embeds. An `oxibrowser`
+  Store holds that project's `serp` session, so its eviction ends the
+  session; keep its ceiling above the session's real working set.
+- `shared_store_recycle_private_mb` (default 768, floor 256) -- the
+  process-wide gate. `private_bytes` is `RssAnon + RssShmem + VmSwap` on
+  Linux and the process private commit charge (`PrivateUsage`) on Windows,
+  which can exceed the working set. File-backed module pages
+  are excluded on purpose. Crossing the limit releases every free shared
+  Store (`gm`, `bert`, `treesitter`).
+- `shared_store_recycle_dispatches` (default 500 x `gm_concurrency`, floor
+  100 when unset; a configured value has floor 1, so 0 means a release after
+  every dispatch) -- the
+  same release on a cumulative shared-dispatch count, independent of memory.
+- `shared_store_recycle_min_interval_secs` (default 120) -- the shortest gap
+  between two pressure-driven releases. Without it a resident baseline that
+  sits above `shared_store_recycle_private_mb` releases and reloads `bert`
+  on every tick. When the gap suppresses a release the daemon log says so
+  and names the key to raise.
+- `project_idle_evict_secs` (default 1800, floor 60) -- drops a project's
+  per-project Stores after that long without a dispatch.
+- `shared_plugin_release_idle_secs` (default 1800, floor 300) -- drops the
+  shared Stores after that long with no dispatch across every project.
+
+The heartbeat file `~/.agentplug/daemon-status.json` reports the live
+numbers: `memory` (`rss_bytes`, `anon_bytes`, `file_bytes`, `shmem_bytes`,
+`swap_bytes`, `private_bytes`), `plugin_store_bytes` (per plugin:
+`instances`, `total_bytes`, `max_bytes`, `ceiling_bytes`),
+`shared_dispatches_since_release` and `last_shared_store_release` (`ts`,
+`trigger`, `reason`, `released`, `private_bytes_before`,
+`private_bytes_after`). gmsniff reads these fields and prints them as
+measurements. Use them before changing a key.
 
 ## Heartbeat independence
 
