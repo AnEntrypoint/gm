@@ -107,6 +107,80 @@ or `side_plugin_concurrency` requires a daemon restart to take effect (read
 once at startup, not re-read per tick, since these govern the daemon's own
 loop timing and pool sizing).
 
+## Memory
+
+One daemon serves every registered project, so its resident memory is the
+sum of three parts. Each part has its own control.
+
+1. Compiled plugin modules. The runner compiles each `<plugin>.wasm` once
+   into `~/.agentplug/precompiled/<plugin>-<sha16>-<engine-key>.cwasm` and
+   maps that file on every later load. The mapping is file-backed and clean.
+   The kernel can drop those pages under pressure and re-read them, so they
+   never count toward `private_bytes`. The old `wasmtime-cache` directory is
+   removed on first use. A plugin whose bytes change gets a new artifact and
+   the superseded one is deleted. Measured on Linux with all four default
+   modules loaded and no instance live: 118 MB RSS, down from about 300 MB
+   when the artifact was copied into anonymous memory.
+2. Plugin Stores. A Store is one live wasm instance with its own linear
+   memory. `gm`, `bert` and `treesitter` are shared across projects (one hot
+   Store each). `libsql`, `oxibrowser`, `crux` and any extra plugin get one
+   Store per project. Only `gm` is instantiated when a project first
+   dispatches. Every other plugin is instantiated on its first
+   `host_plugin_call` or `host_vec_embed`, and the watcher log records
+   `plugin_lazy_loaded` with the plugin, scope and load time. A project that
+   never searches code never holds a `treesitter` Store, and a project that
+   never opens a page never holds an `oxibrowser` Store.
+3. Wasm linear memory growth. A wasm linear memory never shrinks in place.
+   A large `codesearch` or `memorize-fire` leaves its peak resident inside
+   the Store until that Store is dropped. Two controls bound this. The
+   per-plugin ceiling below drops one Store the moment a dispatch leaves it
+   over its ceiling. The process-wide recycle gate below drops every shared
+   Store when the whole process crosses its limit.
+
+Keys, all machine-scoped in `~/.agentplug/daemon-config.json`:
+
+- `plugin_store_linear_memory_ceiling_mb` (default 512) -- the ceiling for a
+  plugin with no entry in the per-name table. After each successful
+  dispatch the runner reads the Store's linear memory size. A Store above
+  its ceiling is evicted at once. The next dispatch re-instantiates it from
+  the mapped module, which costs milliseconds for `gm` and `treesitter` and
+  one model load (seconds) for `bert`. The watcher log records
+  `plugin_store_evicted_linear_memory_ceiling` with the verb, the size and
+  the ceiling.
+- `plugin_store_linear_memory_ceiling_mb_by_name` (default `{"gm": 384,
+  "treesitter": 256, "libsql": 256, "oxibrowser": 256, "crux": 128, "bert":
+  768}`) -- per-plugin overrides. `bert` is high because its weights alone
+  occupy about 140 MB of linear memory and every batch embed grows it
+  (measured 283 MB after one `codesearch` index pass on a small repo).
+  Set a value to 0 to disable the ceiling for that plugin. An `oxibrowser`
+  Store holds that project's `serp` session, so its eviction ends the
+  session; keep its ceiling above the session's real working set.
+- `shared_store_recycle_private_mb` (default 768, floor 256) -- the
+  process-wide gate. `private_bytes` is `RssAnon + RssShmem + VmSwap` on
+  Linux and the private working set on Windows. File-backed module pages
+  are excluded on purpose. Crossing the limit releases every free shared
+  Store (`gm`, `bert`, `treesitter`).
+- `shared_store_recycle_dispatches` (default 500 x `gm_concurrency`) -- the
+  same release on a cumulative shared-dispatch count, independent of memory.
+- `shared_store_recycle_min_interval_secs` (default 120) -- the shortest gap
+  between two pressure-driven releases. Without it a resident baseline that
+  sits above `shared_store_recycle_private_mb` releases and reloads `bert`
+  on every tick. When the gap suppresses a release the daemon log says so
+  and names the key to raise.
+- `project_idle_evict_secs` (default 1800, floor 60) -- drops a project's
+  per-project Stores after that long without a dispatch.
+- `shared_plugin_release_idle_secs` (default 1800, floor 300) -- drops the
+  shared Stores after that long with no dispatch across every project.
+
+The heartbeat file `~/.agentplug/daemon-status.json` reports the live
+numbers: `memory` (`rss_bytes`, `anon_bytes`, `file_bytes`, `shmem_bytes`,
+`swap_bytes`, `private_bytes`), `plugin_store_bytes` (per plugin:
+`instances`, `total_bytes`, `max_bytes`, `ceiling_bytes`),
+`shared_dispatches_since_release` and `last_shared_store_release` (`ts`,
+`trigger`, `reason`, `released`, `private_bytes_before`,
+`private_bytes_after`). gmsniff reads these fields and prints them as
+measurements. Use them before changing a key.
+
 ## Heartbeat independence
 
 The heartbeat write and single-instance-ownership re-check run on their own
