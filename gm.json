@@ -12,7 +12,7 @@
   ],
   "homepage": "https://github.com/AnEntrypoint/gm",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "plugkitVersion": "0.1.1281"
 }
