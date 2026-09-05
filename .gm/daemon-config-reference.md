@@ -18,7 +18,7 @@ behaves byte-identically to before this file existed.
 }
 ```
 
-`max_concurrent_projects` and `gm_concurrency` are deliberately absent from this example: leaving them unset derives a default from this machine's own `std::thread::available_parallelism()` at every daemon boot, so the same config file behaves correctly on a 4-core box and a 64-core box. Set them explicitly only to override that host-derived default. `side_plugin_concurrency` defaults to 1 on every host (see its entry below).
+`max_concurrent_projects` and `gm_concurrency` are absent from this example on purpose. When they are unset, each daemon boot derives a default from this machine's own `std::thread::available_parallelism()`. The same config file then behaves correctly on a 4-core box and on a 64-core box. Set them only to override that host-derived default. `side_plugin_concurrency` defaults to 1 on every host (see its entry below).
 
 - `registry_poll_interval_secs` (default 5) -- how often the daemon re-reads
   `daemon-registry.txt` to notice newly-registered projects.
@@ -140,7 +140,9 @@ Keys, all machine-scoped in `~/.agentplug/daemon-config.json`:
   "treesitter": 256, "libsql": 256, "oxibrowser": 256, "crux": 128, "bert":
   768}`) -- per-plugin overrides. `bert` is high because its weights alone
   occupy about 140 MB of linear memory and every batch embed grows it
-  (measured 283 MB after one `codesearch` index pass on a small repo).
+  (measured 283 MB after one `codesearch` index pass on a small repo, on
+  the f32 weight build; the f16 build halves the file image but the F32
+  tensors in linear memory stay the same, measured 215 MB after one embed).
   Set a value to 0 to disable the ceiling for that plugin. A ceiling below
   a plugin's post-load floor evicts that plugin after every dispatch;
   bert's floor is about 140 MB, witnessed with a 128 MB ceiling that
@@ -149,10 +151,13 @@ Keys, all machine-scoped in `~/.agentplug/daemon-config.json`:
   session; keep its ceiling above the session's real working set.
 - `shared_store_recycle_private_mb` (default 768, floor 256) -- the
   process-wide gate. `private_bytes` is `RssAnon + RssShmem + VmSwap` on
-  Linux and the private working set on Windows. File-backed module pages
+  Linux and the process private commit charge (`PrivateUsage`) on Windows,
+  which can exceed the working set. File-backed module pages
   are excluded on purpose. Crossing the limit releases every free shared
   Store (`gm`, `bert`, `treesitter`).
-- `shared_store_recycle_dispatches` (default 500 x `gm_concurrency`) -- the
+- `shared_store_recycle_dispatches` (default 500 x `gm_concurrency`, floor
+  100 when unset; a configured value has floor 1, so 0 means a release after
+  every dispatch) -- the
   same release on a cumulative shared-dispatch count, independent of memory.
 - `shared_store_recycle_min_interval_secs` (default 120) -- the shortest gap
   between two pressure-driven releases. Without it a resident baseline that
