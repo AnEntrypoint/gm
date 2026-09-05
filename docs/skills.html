@@ -144,7 +144,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">PROVE, EMIT</span></div>
-  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or rs-learn (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
+  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or the recall store (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store, so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers. The file keeps gaining facts without growing without bound.</span></div>
 </div>
@@ -156,7 +156,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>auto-recall</h2><span class="role">prompt-submit recall injection</span><span class="phase">every prompt</span></div>
-  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2-6 word recall query from the user prompt and calls rs-learn. It emits a "## Recall for this prompt" block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this makes sure every turn begins with prior memory loaded.</span></div>
+  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2-6 word recall query from the user prompt and searches the recall store. It emits a "## Recall for this prompt" block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this makes sure every turn begins with prior memory loaded.</span></div>
 </div>
 
 <h2>The host verbs</h2>
@@ -177,7 +177,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>recall / memorize</h2><span class="role">read/write memory</span></div>
-  <div class="row"><span class="k">role</span><span>Backed by <code>.gm/rs-learn.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
+  <div class="row"><span class="k">role</span><span>Backed by <code>.gm/gm.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>Memory does not keep a searchable index of raw text; it stores only vector embeddings. Recall works purely on semantic similarity: there is no keyword or full-text index to search instead. A hit returns the full matched content, never a truncated snippet. Identical content hashes to the same key, so re-learning a fact never creates a duplicate. Stale or wrong memories are pruned the moment they are noticed. Ranking blends similarity with recency, so an older memory fades unless something reinforces it again. A relevant pack of memories auto-attaches at the start of each turn without the agent asking for it.</span></div>
 </div>
 
@@ -195,7 +195,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>kv_get / kv_put / kv_query</h2><span class="role">project-scoped KV store</span></div>
-  <div class="row"><span class="k">role</span><span>Backed by rs-learn. Used by the orchestrator for residual-scan markers, gm-fired sentinels, mutables/PRD serialization, and any project-state the agent needs to survive context compaction.</span></div>
+  <div class="row"><span class="k">role</span><span>Backed by <code>gm.db</code>. Used by the orchestrator for residual-scan markers, gm-fired sentinels, mutables/PRD serialization, and any project-state the agent needs to survive context compaction.</span></div>
 </div>
 
 <div class="skill">
@@ -205,7 +205,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>health</h2><span class="role">one-shot system probe</span></div>
-  <div class="row"><span class="k">role</span><span>Returns plugkit version + pin-match, watcher liveness, runner state, rs-learn status, cache dirs, inbox/outbox counts, recent dispatch fires, recent errors. Use before assuming any component is broken.</span></div>
+  <div class="row"><span class="k">role</span><span>Returns plugkit version + pin-match, watcher liveness, runner state, recall-store status, cache dirs, inbox/outbox counts, recent dispatch fires, recent errors. Use before assuming any component is broken.</span></div>
 </div>
 
 <h2>notes on the verb surface</h2>
