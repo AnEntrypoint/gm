@@ -118,7 +118,7 @@ The phase order is SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, then COM
 
 Every tool the agent uses is a dispatch verb. The agent has no direct shell access and makes no direct file writes outside the spool. The WASM host owns every side effect.
 
-- **`recall`**: a vector-plus-KV (key-value, a storage namespace inside a discipline) search against `.gm/memories/*.md` and a derived `gm.db` vector index. The search scores each result by cosine similarity times recency, and is namespace-aware. This verb lives in-tree in `rs-plugkit`. This verb once depended on the `rs-learn` WASM crate. That crate no longer exists, and the pipeline no longer uses it.
+- **`recall`**: a vector-plus-KV (key-value, a storage namespace inside a discipline) search against `.gm/memories/*.md` and a derived `gm.db` vector index. The search scores each result by cosine similarity times recency, and is namespace-aware. This verb lives in-tree in `rs-plugkit`.
 - **`codesearch`**: a semantic vector search across the project, backed by the `rs-codeinsight` and `rs-search` crates.
 - **`memorize`**: writes to the recall index, using the BGE model's query/passage prefix asymmetry.
 - **`browser`**: a fast headless engine (oxibrowser, written in pure Rust) that starts no Chrome process. This verb supports navigate, evaluate, DOM (Document Object Model) query, and markdown extraction only. It holds one implicit session. gm accepts the `session new`, `session close`, and `session reset` commands here, but each command performs no action.
