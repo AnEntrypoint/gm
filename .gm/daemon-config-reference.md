@@ -141,7 +141,10 @@ Keys, all machine-scoped in `~/.agentplug/daemon-config.json`:
   768}`) -- per-plugin overrides. `bert` is high because its weights alone
   occupy about 140 MB of linear memory and every batch embed grows it
   (measured 283 MB after one `codesearch` index pass on a small repo).
-  Set a value to 0 to disable the ceiling for that plugin. An `oxibrowser`
+  Set a value to 0 to disable the ceiling for that plugin. A ceiling below
+  a plugin's post-load floor evicts that plugin after every dispatch;
+  bert's floor is about 140 MB, witnessed with a 128 MB ceiling that
+  evicted bert three times in three embeds. An `oxibrowser`
   Store holds that project's `serp` session, so its eviction ends the
   session; keep its ceiling above the session's real working set.
 - `shared_store_recycle_private_mb` (default 768, floor 256) -- the
