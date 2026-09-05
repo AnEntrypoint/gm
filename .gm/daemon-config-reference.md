@@ -18,7 +18,7 @@ behaves byte-identically to before this file existed.
 }
 ```
 
-`max_concurrent_projects`/`gm_concurrency`/`side_plugin_concurrency` are deliberately absent from this example: leaving them unset derives a default from this machine's own `std::thread::available_parallelism()` at every daemon boot, so the same config file behaves correctly on a 4-core box and a 64-core box. Set them explicitly only to override that host-derived default.
+`max_concurrent_projects` and `gm_concurrency` are deliberately absent from this example: leaving them unset derives a default from this machine's own `std::thread::available_parallelism()` at every daemon boot, so the same config file behaves correctly on a 4-core box and a 64-core box. Set them explicitly only to override that host-derived default. `side_plugin_concurrency` defaults to 1 on every host (see its entry below).
 
 - `registry_poll_interval_secs` (default 5) -- how often the daemon re-reads
   `daemon-registry.txt` to notice newly-registered projects.
@@ -36,35 +36,24 @@ behaves byte-identically to before this file existed.
   ceiling on how many projects can be mid-dispatch at once. Set explicitly to
   override the host-derived default.
 - `gm_concurrency` (default: same as `max_concurrent_projects`, so also
-  host-core-derived unless set explicitly) -- how many concurrent live Stores
-  the shared `gm` plugin instance pool holds. `gm` is genuinely stateless (its
-  real state lives in each project's own `.gm/` flat files, never in wasm
-  memory), so more than one live Store is always safe -- this bounds how many
-  worker threads can be mid-gm-call simultaneously before the next one queues
-  on a pool slot. Before this field existed, gm ran as a single process-wide
-  instance whose Mutex was held for the full duration of each dispatch, so one
-  project's long exec_js/browser call could stall an unrelated project's
-  trivial phase-status/health call behind it for the entire duration
-  (live-witnessed 18-21s stall, fixed by pooling instead of reverting to
-  per-project instances, which would reintroduce per-project state
-  duplication for a plugin whose state is supposed to live in flat files).
-  bert/treesitter/libsql default to `side_plugin_concurrency` shared instances
-  each, not a fixed single instance -- see below.
-- `side_plugin_concurrency` (default: half this host's
-  `available_parallelism()`, rounded up, e.g. 2 on a 4-core box) -- how many
-  concurrent live Stores EACH of bert/treesitter/libsql (the non-`gm`
-  stateless-shared plugins) holds. Scaled lower than `gm_concurrency` by
-  default because bert alone costs ~133MB of resident tensors per extra
-  instance, so the default memory cost of this pool now scales with host
-  core count too -- a large host gets more side-plugin instances by default,
-  and pays proportionally more resident memory for them. Set explicitly to
-  pin a fixed value regardless of host size. A deployment that DOES see real
-  cross-project `codesearch`/`recall`/`embed` contention --
-  `host_plugin_call`/`host_vec_embed` calls into an undersized pool serialize
-  behind `SharedPluginPool::acquire`'s bounded 20s `ACQUIRE_TIMEOUT_MS` before
-  surfacing `plugin_pool_busy_timeout` rather than hanging forever -- can
-  raise this further to trade more memory for less queuing under concurrent
-  multi-project load.
+  host-core-derived unless set explicitly) -- the worker-thread budget for
+  cross-project gm dispatch and the multiplier behind
+  `shared_store_recycle_dispatches`. It no longer sizes the `gm` Store pool.
+  The runner keeps exactly one hot `gm` Store and serializes gm calls through
+  it. One Store stays loaded between calls, so per-call latency stays fast,
+  and no project ever pays for a second copy of gm's linear memory. `gm` is
+  stateless: its real state lives in each project's own `.gm/` files, never
+  in wasm memory, so the single Store serves every project.
+- `side_plugin_concurrency` (default 1) -- how many live Stores EACH of
+  bert/treesitter (the non-`gm` shared plugins) holds. Each extra slot is a
+  full copy of that plugin's Store; for bert that is its own copy of the
+  loaded model weights, live-measured at about 140 MB of linear memory per
+  slot before any batch embed. The default was once half the host's cores,
+  and on a 16-core host that derived 8 bert slots; two or three of them
+  filling under ordinary use pushed the process past 1.7 GB. Raise this
+  only after `plugin_pool_busy_timeout` or queuing shows in `.watcher.log`
+  under real concurrent load, never from the number of registered projects
+  alone. `libsql` is a per-project Store and this key does not apply to it.
 
   Real load witnessed 2026-07-23, when `max_concurrent_projects`/
   `gm_concurrency`/`side_plugin_concurrency` were still hardcoded to a
