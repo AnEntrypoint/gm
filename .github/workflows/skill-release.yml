@@ -1,0 +1,85 @@
+name: skill-release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+
+concurrency:
+  group: gm-skill-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PUBLISHER_TOKEN }}
+          fetch-depth: 0
+
+      - name: Auto-bump patch version BEFORE packaging
+        id: bump
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+        run: |
+          set -e
+          git config user.name "gm-bot"
+          git config user.email "noreply@github.com"
+          git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          CURRENT=$(node -e "console.log(require('./package.json').version)")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          node -e "
+            const fs = require('fs');
+            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            p.version = '$NEW_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          "
+          git add package.json
+          git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+          git push origin HEAD:main
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package skill tarball with checksum
+        run: |
+          set -e
+          mkdir -p release-assets
+          VER="${{ steps.bump.outputs.version }}"
+          tar -czf "release-assets/gm-skill-$VER.tar.gz" skills
+          cd release-assets
+          sha256sum "gm-skill-$VER.tar.gz" | sed 's/ \*/  /' > "gm-skill-$VER.tar.gz.sha256"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          VER: ${{ steps.bump.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -e
+          gh release create "v$VER" \
+            --repo AnEntrypoint/gm \
+            --title "gm skill v$VER" \
+            --notes "Auto-published from gm CI at $SHA" \
+            release-assets/*
+
+      - name: Verify every uploaded asset is actually fetchable
+        env:
+          VER: ${{ steps.bump.outputs.version }}
+        run: |
+          set -e
+          base="https://github.com/AnEntrypoint/gm/releases/download/v$VER"
+          for f in release-assets/*; do
+            name=$(basename "$f")
+            code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
+            if [ "$code" != "200" ]; then
+              echo "::error::published release v$VER's $name is not fetchable (HTTP $code)"
+              exit 1
+            fi
+          done
+          echo "[ok] all $(ls release-assets | wc -l) release assets confirmed fetchable at $base"
