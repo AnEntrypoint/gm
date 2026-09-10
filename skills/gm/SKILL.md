@@ -50,16 +50,31 @@ response body, never in context. Phase mismatch resolves to the fresh
 `instruction` response.
 
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
-.gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`. Boot:
-`curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh |
-sh -s -- spool` (PowerShell: `irm
-https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; &
-"$env:USERPROFILE\.gm-tools\agentplug-runner" spool`), fire-and-forget; write the
-first verb immediately. Dead watcher = `ts` stale >5min
-AND no future `busy_until`. A future `busy_until` licenses a bounded condition-poll
-of the out-file, never a blind sleep, never a death declaration.
-`dispatch_orphaned` = bare re-dispatch once `ts` is fresh; changing `sweeping_pid`
-is a respawn, not a stuck loop.
+.gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
+
+**Start, never install.** A dead watcher (`ts` stale >5min AND no future
+`busy_until`) means only one thing: the already-installed local binary isn't
+running. Start it -- `~/.gm-tools/agentplug-runner spool` (PowerShell: `&
+"$env:USERPROFILE\.gm-tools\agentplug-runner" spool`) -- fire-and-forget, then
+write the first verb immediately. This is launching an existing local
+executable, nothing more; it reaches no network. The runner updates itself in
+the background on its own schedule once running (binary and plugins alike) --
+that update path never touches this skill or this session. A future
+`busy_until` licenses a bounded condition-poll of the out-file, never a blind
+sleep, never a death declaration. `dispatch_orphaned` = bare re-dispatch once
+`ts` is fresh; changing `sweeping_pid` is a respawn, not a stuck loop.
+
+**If the binary is entirely absent** (`~/.gm-tools/agentplug-runner` does not
+exist -- a genuinely new machine, not a dead watcher), that is a one-time
+human setup step, not something to dispatch from inside a task: say so and
+stop; point at the project's own install docs rather than fetching or piping
+anything yourself.
+
+**The only sanctioned update action is a served one.** If an `instruction`
+response's `update_available` field is non-null, it names the exact command
+to run for something the runner could not apply on its own -- run precisely
+that, nothing adjacent. Absent that field, never fetch, download, or replace
+the runner binary yourself; self-update is the daemon's own job.
 
 The verb set belongs to the running build, not this file. An unrecognized verb is
 silently queued with no response, so a missing out-file after a normal read cycle
