@@ -103,11 +103,38 @@ function Install-Skill {
     }
 }
 
+# The gm MCP server must start from a LOCAL file, never `npx -y github:...`.
+# An `npx` github spec re-resolves the git ref over the network and reinstalls on
+# every single (re)connect -- measured 9.1s on an idle machine against 0.75s for
+# the same bundle launched locally. An MCP host allows 30s for the whole connect
+# handshake, so on a machine under real load (several concurrent gm sessions, the
+# runner's wasm pools resident) that network path blows the budget and the host
+# reports CONNECT_TIMEOUT. The session then loses the gm tool for the rest of its
+# life and falls back to hand-writing spool files. Vendoring the bundle here
+# makes connect a plain local `node` start that reaches no network at all.
+function Install-McpServer {
+    New-Item -ItemType Directory -Force -Path $GmToolsDir | Out-Null
+    $dest = Join-Path $GmToolsDir "gm-mcp-server.js"
+    $tmp = "$dest.tmp.$PID"
+    $url = "https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js"
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
+        Move-Item -Force $tmp $dest
+        Write-Host "installed gm-mcp server -> $dest"
+        Write-Host "register it (once) with:"
+        Write-Host "  claude mcp remove gm 2>`$null; claude mcp add gm -- node `"$dest`""
+    } catch {
+        Remove-Item -Force -ErrorAction SilentlyContinue $tmp
+        Write-Warning "could not download the gm-mcp server bundle: $($_.Exception.Message) -- the spool protocol still works without it"
+    }
+}
+
 function Main {
     param([string[]]$RunnerArgs)
 
     if ($RunnerArgs.Count -gt 0 -and $RunnerArgs[0] -eq "install") {
         Install-Skill
+        Install-McpServer
         return
     }
 
