@@ -71,6 +71,13 @@ npx github:AnEntrypoint/gm -g
 
 Drop `-g` to install into the current project folder instead of every agent host globally. This route runs `npx skills add AnEntrypoint/gm` and `npx add-mcp github:AnEntrypoint/gm-mcp` under the hood; it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
 
+**Register the MCP server against a local file, not an `npx` github spec.** If `add-mcp` leaves you with a server whose command is `npx -y github:AnEntrypoint/gm-mcp`, replace it. An `npx` github spec re-resolves the git ref over the network and reinstalls on *every* connect and reconnect: measured 9.1s on an idle machine against 0.75s for the same bundle launched from disk. MCP hosts allow 30s for the whole connect handshake, so on a machine under real load that network path blows the budget and the host reports `CONNECT_TIMEOUT` -- the session then loses the `gm` tool for the rest of its life and falls back to hand-writing spool files. `install.sh install` / `install.ps1 install` now vendor the bundle to `~/.gm-tools/gm-mcp-server.js`; point the host at that:
+
+```
+claude mcp remove gm
+claude mcp add gm -- node "$HOME/.gm-tools/gm-mcp-server.js"
+```
+
 The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 
 - `autoCompactEnabled: true`
