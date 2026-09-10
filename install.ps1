@@ -112,6 +112,37 @@ function Install-Skill {
 # reports CONNECT_TIMEOUT. The session then loses the gm tool for the rest of its
 # life and falls back to hand-writing spool files. Vendoring the bundle here
 # makes connect a plain local `node` start that reaches no network at all.
+# Current gm.wasm imports env:host_plugin_call. The retired JS wasm host
+# never registered that import, so any boot that still spawned
+# plugkit-wasm-wrapper.js died with LinkError and self-healed into a
+# restart loop. agentplug-runner already provides the import. Quarantine
+# leftover wrapper files so that path cannot be re-entered.
+function Remove-RetiredJsHost {
+    $retiredDir = Join-Path $GmToolsDir "retired-js-host"
+    $names = @("plugkit-wasm-wrapper.js", "supervisor.js", "bootstrap.js")
+    $moved = $false
+    foreach ($name in $names) {
+        $src = Join-Path $GmToolsDir $name
+        if (-not (Test-Path $src)) { continue }
+        if (-not $moved) {
+            New-Item -ItemType Directory -Force -Path $retiredDir | Out-Null
+            $moved = $true
+        }
+        Move-Item -Force $src (Join-Path $retiredDir $name)
+        Write-Host "quarantined retired JS host file $name -> $retiredDir (cannot link env:host_plugin_call)"
+    }
+    $wrapperDir = Join-Path $GmToolsDir "wrapper"
+    if (Test-Path $wrapperDir) {
+        if (-not $moved) {
+            New-Item -ItemType Directory -Force -Path $retiredDir | Out-Null
+        }
+        $destDir = Join-Path $retiredDir "wrapper"
+        if (Test-Path $destDir) { Remove-Item -Recurse -Force $destDir }
+        Move-Item -Force $wrapperDir $destDir
+        Write-Host "quarantined retired JS host directory wrapper -> $retiredDir"
+    }
+}
+
 function Install-McpServer {
     New-Item -ItemType Directory -Force -Path $GmToolsDir | Out-Null
     $dest = Join-Path $GmToolsDir "gm-mcp-server.js"
@@ -135,6 +166,7 @@ function Main {
     if ($RunnerArgs.Count -gt 0 -and $RunnerArgs[0] -eq "install") {
         Install-Skill
         Install-McpServer
+        Remove-RetiredJsHost
         return
     }
 
@@ -184,6 +216,8 @@ function Main {
             exit 1
         }
     }
+
+    Remove-RetiredJsHost
 
     & $dest @RunnerArgs
     exit $LASTEXITCODE
