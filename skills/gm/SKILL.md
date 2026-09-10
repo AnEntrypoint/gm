@@ -10,6 +10,14 @@ allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *), Bash(cat *), Bash(d
 everywhere, no exceptions. `fetch`/`browser`/`cdp` replace WebFetch/WebSearch/
 raw Chrome. Every `Agent`/`Task` dispatch opens with "use the gm skill for this."**
 
+The ripgrep-shaped job that wall used to block with nothing equivalent behind it --
+every definition AND every call site of one symbol -- is `codesearch {query,
+mode: "literal"}` (or `"regex"`): every match with `path` and `line`, no ranking,
+no top-k, read from the tree rather than the index, so it costs ~1s where the
+default `dual` mode costs minutes on a large workspace. An unrecognized `mode` is
+now an error, not a silent downgrade to `dual`. Trust the result as complete only
+when the response says `exhaustive: true`; otherwise it names the bound that fired.
+
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
 the most obvious conclusions, if observability needs to be increased immediately roll out more
