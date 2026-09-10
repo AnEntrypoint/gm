@@ -178,6 +178,37 @@ install_skill() {
 # reports CONNECT_TIMEOUT. The session then loses the gm tool for the rest of its
 # life and falls back to hand-writing spool files. Vendoring the bundle here
 # makes connect a plain local `node` start that reaches no network at all.
+
+# Current gm.wasm imports env:host_plugin_call. The retired JS wasm host
+# never registered that import, so any boot that still spawned
+# plugkit-wasm-wrapper.js died with LinkError and self-healed into a
+# restart loop. agentplug-runner already provides the import. Quarantine
+# leftover wrapper files so that path cannot be re-entered.
+quarantine_retired_js_host() {
+  retired_dir="${GM_TOOLS_DIR}/retired-js-host"
+  moved=0
+  for name in plugkit-wasm-wrapper.js supervisor.js bootstrap.js; do
+    src="${GM_TOOLS_DIR}/${name}"
+    if [ -f "$src" ]; then
+      if [ "$moved" -eq 0 ]; then
+        mkdir -p "$retired_dir"
+        moved=1
+      fi
+      mv -f "$src" "${retired_dir}/${name}"
+      log "quarantined retired JS host file ${name} -> ${retired_dir} (cannot link env:host_plugin_call)"
+    fi
+  done
+  wrapper_dir="${GM_TOOLS_DIR}/wrapper"
+  if [ -d "$wrapper_dir" ]; then
+    if [ "$moved" -eq 0 ]; then
+      mkdir -p "$retired_dir"
+    fi
+    rm -rf "${retired_dir}/wrapper"
+    mv -f "$wrapper_dir" "${retired_dir}/wrapper"
+    log "quarantined retired JS host directory wrapper -> ${retired_dir}"
+  fi
+}
+
 install_mcp_server() {
   mkdir -p "$GM_TOOLS_DIR"
   dest="${GM_TOOLS_DIR}/gm-mcp-server.js"
@@ -198,6 +229,7 @@ main() {
   if [ "${1:-}" = "install" ]; then
     install_skill
     install_mcp_server
+    quarantine_retired_js_host
     exit 0
   fi
 
@@ -252,6 +284,8 @@ main() {
   fi
   printf '%s' "$tag" > "${GM_TOOLS_DIR}/agentplug-runner.version"
   log "installed agentplug-runner ${tag} -> ${dest}"
+
+  quarantine_retired_js_host
 
   exec "$dest" "$@"
 }
