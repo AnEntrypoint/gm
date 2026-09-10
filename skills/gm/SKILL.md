@@ -50,7 +50,13 @@ never spend a turn connecting one before dispatching real work.
 
 Verbs write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
 `.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate
-first. `<N>` MUST be `<session_id>-<N>`, never a bare integer: the daemon keys
+first. **Write that in-file atomically: body to a sibling temp name, then
+`mv`/`Move-Item` it onto `<N>.txt`.** A plain `>` redirect creates the file empty
+and fills it a moment later; a claim landing in that window dispatches a torn
+body and answers with a validation error naming a field you did supply (live:
+two dispatches answered `query required`, same `request_fingerprint`, for bodies
+that carried a `query`). A rename is atomic, so the file only ever appears
+complete. `<N>` MUST be `<session_id>-<N>`, never a bare integer: the daemon keys
 in-flight claims by literal `(verb, N)` with no per-session partition, so two
 sessions picking `1`, `2`, `3` silently read each other's responses. State lives
 on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
@@ -60,11 +66,19 @@ response body, never in context. Phase mismatch resolves to the fresh
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
-**Start, never install.** A dead watcher (`ts` stale >5min AND no future
-`busy_until`) means only one thing: the already-installed local binary isn't
-running. Start it -- `~/.gm-tools/agentplug-runner spool` (PowerShell: `&
-"$env:USERPROFILE\.gm-tools\agentplug-runner" spool`) -- fire-and-forget, then
-write the first verb immediately. This is launching an existing local
+**Start, never install -- and never a second one.** A dead watcher (`ts` stale
+>5min AND no future `busy_until`) means only one thing: the already-installed
+local binary isn't running. Start it -- `~/.gm-tools/agentplug-runner spool`
+(PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`) --
+fire-and-forget, then write the first verb immediately. A `ts` that is merely
+recent-but-not-this-second is a BUSY watcher, not a dead one: its heartbeat
+oscillates while one dispatch occupies it, and starting another process then
+gives the project two sweepers that cannot see each other's claims, so each
+one's orphan sweep answers `dispatch_orphaned` for the other's running work and
+deletes the claim under it. That is the `dispatch_orphaned` storm with a rotating
+`sweeping_pid`, and it is self-inflicted -- seven concurrent watchers were
+observed on one project this way. Stale by >5min is the only license to start
+one. This is launching an existing local
 executable, nothing more; it reaches no network. The runner updates itself in
 the background on its own schedule once running (binary and plugins alike) --
 that update path never touches this skill or this session. A future
@@ -84,14 +98,31 @@ to run for something the runner could not apply on its own -- run precisely
 that, nothing adjacent. Absent that field, never fetch, download, or replace
 the runner binary yourself; self-update is the daemon's own job.
 
-The verb set belongs to the running build, not this file. An unrecognized verb is
-silently queued with no response, so a missing out-file after a normal read cycle
-means unavailable: fall back, never retry blindly. Where served (per the brick
-wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never raw `git`
-via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`, `exec_js`,
-`memorize-fire`, `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`,
-`transition`, `phase-status`, `filter`. `git_finalize {message}` bundles
+The verb set belongs to the running build, not this file. **A missing out-file
+never means the verb is unavailable.** An unrecognized verb gets an explicit
+`error_code: unknown_verb` out-file, and a body the verb cannot parse gets an
+explicit validation error naming what it wanted -- both arrive through the
+ordinary read cycle. So a missing out-file means exactly one thing: *the
+dispatch has not finished yet*. Check `in/<verb>/<N>.txt.inflight` -- while that
+claim exists the work is still running, and a cold codesearch index/embed pass
+or a contended daemon legitimately takes minutes, not seconds. Condition-poll it
+(never a blind sleep, never a blind re-dispatch, which only adds a second
+competing dispatch to the same queue); `.status.json`'s `busy_until` and
+`queue_depth` say how contended the project is. Concluding "verb unavailable"
+from silence has cost real sessions whole turns falling back from verbs that
+were served and answering normally -- `git_log` among them. Where served (per
+the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
+raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
+`exec_js`, `memorize-fire`,
+`prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
+`phase-status`, `filter`. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it.
+
+**One row per dispatch.** `prd-add`/`mutable-add` take a single
+`{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
+rejected with a validation error, costing a round trip. Batch by writing several
+numbered in-files in the SAME tool-call block instead; that is what "batch
+independent dispatches" means here.
 
 **The one exception: runtime-state files.** Spool response JSON
 (`.gm/exec-spool/out/*.json`), `.status.json`, `.turn-summary.json`, and this
