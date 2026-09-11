@@ -33,6 +33,7 @@ Give each subagent its own session id and tell it to use the gm skill. Paralleli
 - Do not add synthetic tests, mocks, placeholders, or decorative glyphs. Verify behavior through the actual build and a live spool dispatch.
 - Keep tracked text UTF-8 without a BOM.
 - Use atomic create or rename for every single-writer and lock guard.
+- Treat configuration prose keys and source paths as untrusted relative paths. Accept only safe components. Accept config repositories only through approved remote transports. Keep fetch HTTP(S)-only with a nonempty authority.
 - Treat durable memory as source. Keep only current, reusable facts. Remove resolved incident narration and duplicate guidance instead of growing the corpus.
 - Keep documentation current, present-tense, and concise. Put detailed protocol, release, and incident material in its owning README, source, or changelog rather than duplicating it here.
 - Keep this file below 30 KB. When it exceeds that limit, revalidate it against current source, history, and retained memory before compacting it.
