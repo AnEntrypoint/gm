@@ -1,0 +1,26 @@
+*** Begin Patch
+*** Update File: /config/workspace/gm/agentplug/crates/agentplug-runner/src/daemon.rs
+@@
+         self.project_idle_evict_secs.unwrap_or(DEFAULT_SECS).max(60) * 1000
+     }
+-    // The prior 120s (2min) hardcoded default cold-dropped the hot bert/
+-    // treesitter/gm pool slots on every ordinary lull between bursts of
+-    // dispatch activity -- live-witnessed firing 10+ times across one
+-    // session with 103 registered projects, each drop costing a real
+-    // wasm-instantiate + first-forward-pass warmup (bert alone measured at
+-    // 5.5s for one embed call right after a reload) stacked on top of
+-    // whatever queue wait already existed, intermittently exceeding even a
+-    // widened client-side timeout. That 120s figure predates the pool_size=1
+-    // "always keep exactly one hot instance" design (an earlier fix, when
+-    // pools scaled with core count) and was never revisited when the design
+-    // changed to deliberately favor latency over idle memory reclaim -- this
+-    // is the SAME architectural conflict project_idle_evict_ms's own history
+-    // above already fixed once for per-project non-shared plugins, now fixed
+-    // for the shared bert/treesitter/gm pool too. The memory-pressure
+-    // recycle gate (shared_store_recycle_private_bytes/_dispatches) remains
+-    // the real safety valve against unbounded wasm linear-memory growth;
+-    // this time-based release only needs to matter for a GENUINELY long
+-    // idle stretch, not an ordinary multi-minute gap between turns.
+     fn shared_plugin_release_idle_ms(&self) -> u64 {
+         const DEFAULT_SECS: u64 = 30 * 60;
+*** End Patch
