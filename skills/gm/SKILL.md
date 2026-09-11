@@ -48,7 +48,7 @@ one is available this turn; it wraps the same write-then-poll cycle into one
 call with cleaned output. Fall back to the raw protocol below otherwise --
 never spend a turn connecting one before dispatching real work.
 
-Verbs write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
+Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
 `.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate
 first. **Write that in-file atomically: body to a sibling temp name, then
 `mv`/`Move-Item` it onto `<N>.txt`.** A plain `>` redirect creates the file empty
@@ -115,7 +115,7 @@ the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_finalize {message}` bundles
+`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
