@@ -1,7 +1,6 @@
 ---
 name: gm-continue
 description: The mandatory final handoff after a gm walk reaches phase=COMPLETE with prd_pending_count=0. Never end a gm session with prose alone -- dispatch this skill instead. It searches for genuinely remaining work and reloads gm if any exists; if gm already ran a full walk without resolving everything, it loads wfgy-method instead to apply bounded-retry-then-surface discipline before any further gm re-entry. Use immediately after any gm chain reaches its terminal state, never as a substitute for gm itself.
-allowed-tools: Skill, Read, Write, Bash(bun *), Bash(npx *)
 ---
 
 # gm-continue
