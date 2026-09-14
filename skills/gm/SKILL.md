@@ -183,7 +183,11 @@ or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
 `screenshot[=name]`, `capture`, `profile`, `trace`, and `viewport=`, which
 `serp` rejects outright. Unlike `serp`'s no-op session commands, `browser`
 and `cdp` sessions persist a real engine process (or a dialed remote
-endpoint) across dispatches. Every response carries `result.debug`.
+endpoint) across dispatches. Without a `sessionId=<id>` first line the page
+belongs to the dispatching gm session (keyed by the SESSION_ID in the task
+name), so two gm sessions never share a page unless one names the other's id;
+`session list` shows each page's `owner_gm_session`. Every response carries
+`result.debug`.
 
 No test files, ever, anywhere, no exceptions -- not written, not edited, not
 left on disk even if a project already has one (remove any found, same turn,
