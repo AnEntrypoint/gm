@@ -21,7 +21,11 @@ only when the response says `exhaustive: true`; otherwise it names the bound or
 skip rule that fired (`excluded_by_rule` lists pruned paths outside a git worktree).
 Scope it with `path` (a subdirectory or file, relative to the root; a subdirectory
 passed as `root` works the same) and `glob`/`path_glob`; any unrecognized body
-field is refused, never silently ignored into a whole-tree scan.
+field is refused, never silently ignored into a whole-tree scan. The glob is a
+real glob (`*`, `?`, `**`, `[abc]`, `{a,b}` -- `**/*.{js,mjs}` works), matched
+against the path relative to the root or to `path`, or the bare file name; a
+malformed glob is an error, and one that admits no listed file answers
+`glob_matched_no_files: true`, `exhaustive: false`.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -126,6 +130,11 @@ another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
 and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the
 sanctioned push of a commit you already made over someone else's dirt.
+`git_log {limit?, range|ref|rev?, path?, paths?}` keeps only commits touching the
+pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
+`git_show {rev?, path?, paths?, stat?}`: `path` prints that file at the revision
+(same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
+refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
