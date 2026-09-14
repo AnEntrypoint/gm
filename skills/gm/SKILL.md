@@ -14,8 +14,11 @@ every definition AND every call site of one symbol -- is `codesearch {query,
 mode: "literal"}` (or `"regex"`): every match with `path` and `line`, no ranking,
 no top-k, read from the tree rather than the index, so it costs ~1s where the
 default `dual` mode costs minutes on a large workspace. An unrecognized `mode` is
-now an error, not a silent downgrade to `dual`. Trust the result as complete only
-when the response says `exhaustive: true`; otherwise it names the bound that fired.
+now an error, not a silent downgrade to `dual`. The files read are git's view of
+the worktree -- every tracked file (submodules included) plus untracked files git
+does not ignore, with no directory-name noise list. Trust the result as complete
+only when the response says `exhaustive: true`; otherwise it names the bound or
+skip rule that fired (`excluded_by_rule` lists pruned paths outside a git worktree).
 Scope it with `path` (a subdirectory or file, relative to the root; a subdirectory
 passed as `root` works the same) and `glob`/`path_glob`; any unrecognized body
 field is refused, never silently ignored into a whole-tree scan.
