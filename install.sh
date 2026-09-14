@@ -169,16 +169,6 @@ install_skill() {
   log "installed gm skill ${tag} -> ${CLAUDE_SKILLS_DIR}/gm"
 }
 
-# The gm MCP server must start from a LOCAL file, never `npx -y github:...`.
-# An npx github spec re-resolves the git ref over the network and reinstalls on
-# every single (re)connect -- measured 9.1s on an idle machine against 0.75s for
-# the same bundle launched locally. An MCP host allows 30s for the whole connect
-# handshake, so on a machine under real load (several concurrent gm sessions, the
-# runner's wasm pools resident) that network path blows the budget and the host
-# reports CONNECT_TIMEOUT. The session then loses the gm tool for the rest of its
-# life and falls back to hand-writing spool files. Vendoring the bundle here
-# makes connect a plain local `node` start that reaches no network at all.
-
 # Current gm.wasm imports env:host_plugin_call. The retired JS wasm host
 # never registered that import, so any boot that still spawned
 # plugkit-wasm-wrapper.js died with LinkError and self-healed into a
@@ -211,7 +201,7 @@ quarantine_retired_js_host() {
 
 install_mcp_server() {
   mkdir -p "$GM_TOOLS_DIR"
-  dest="${GM_TOOLS_DIR}/gm-mcp-server.js"
+  dest="${GM_TOOLS_DIR}/gm-mcp-server.mjs"
   tmp="${dest}.tmp.$$"
   url="https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js"
   if fetch "$url" "$tmp"; then

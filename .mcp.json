@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "gm": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "github:AnEntrypoint/gm-mcp"
+        "-e",
+        "const p=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');if(!require('fs').existsSync(p)){console.error('gm-mcp bundle missing at '+p+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}import(require('url').pathToFileURL(p).href)"
       ]
     }
   }
