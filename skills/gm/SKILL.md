@@ -16,6 +16,9 @@ no top-k, read from the tree rather than the index, so it costs ~1s where the
 default `dual` mode costs minutes on a large workspace. An unrecognized `mode` is
 now an error, not a silent downgrade to `dual`. Trust the result as complete only
 when the response says `exhaustive: true`; otherwise it names the bound that fired.
+Scope it with `path` (a subdirectory or file, relative to the root; a subdirectory
+passed as `root` works the same) and `glob`/`path_glob`; any unrecognized body
+field is refused, never silently ignored into a whole-tree scan.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -114,8 +117,12 @@ the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
-add->commit->porcelain-gate->push->CI-watch; where absent, compose it.
+`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
+add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
+another agent shares the worktree, pass `paths:[...]` to `git_commit`/
+`git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
+and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the
+sanctioned push of a commit you already made over someone else's dirt.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
