@@ -44,3 +44,47 @@ Give each subagent its own session id and tell it to use the gm skill. Paralleli
 Verify the changed surface with its real entry point. For `rs-plugkit`, build the guest and witness the changed verb through `agentplug-runner`. For `gm-mcp`, rebuild the bundle when its source or input schema changes. For release-facing changes, inspect the relevant workflow and resulting artifact.
 
 Use the gm git verbs. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
+
+## Verified 2026-09-14 (upstream merge + daemon heartbeat)
+
+**FIXED UPSTREAM, verified here — the daemon "looks dead" bug.** `registry.rs`'s
+own comment records it: `slot_content_hashes()` takes each slot's mutex, so the
+10s heartbeat ticker blocked behind whatever dispatch held the slot and went
+**76 seconds stale**; every client then read the status as stale, concluded the
+daemon was dead, and spawned a competing one. That is the daemon start/exit churn
+that follows a slow dispatch, and it is exactly what repeatedly bit the docstudio
+sessions — a `git_commit` with a large message would appear swallowed, the status
+`ts` would look minutes old, the daemon would be killed and restarted, and the
+dispatch was lost in the churn.
+
+`slot_snapshot_without_blocking()` fixes it. Re-verified on runner 0.1.135 by
+driving a real 75-second `exec_js` (it genuinely held a slot — status read `busy`
+throughout, and the verb returned `exit_code:0`, "held a slot for 75075ms") while
+polling `.status.json` every 5s: **worst heartbeat age 2,964 ms** against a
+300,000 ms dead-threshold. It never came close to looking dead.
+
+Method note: the first attempt at this measurement was INVALID and said so only
+because the out-file was read. Hand-writing the dispatch into the spool bypassed
+the MCP path, so it was `gate_denied` (`long-gap-no-instruction`) and never ran —
+the heartbeat stayed fresh because the daemon was idle, not because the fix
+worked. Always confirm the long verb actually executed before believing a
+liveness measurement taken "during" it.
+
+**STILL BROKEN — `serp`/oxibrowser navigates but serves an empty document.**
+Reproduced on oxibrowser 0.18.3 (plugin gm 0.1.1296). `url=https://example.com`
+returns `ok:true` and JS sees the right `location.href` ("https://example.com/")
+and `readyState:"complete"` — so it is the same session and navigation reported
+success — but `document.documentElement` is **null**, `outerHTML` length 0, and
+all three read paths come back empty: `evaluate` (`NO BODY`), `dom=h1` (ok with
+no matches), and `extract-markdown` (`markdown: ""`).
+
+Narrowed, not fixed: `Session::navigate` (oxibrowser-core/src/session.rs:545)
+looks correct — it fetches, errors on >=400, builds `Page::from_html`, sets
+`active_page` and calls `inject_dom_snapshot()`. The `document.documentElement`
+getter (js/runtime.rs:5465) is also correct, returning null only when both the
+render doc and the DOM snapshot are empty. So the break is between
+`inject_dom_snapshot()` and the JS realm the plugin's `evaluate` runs in. Left
+for the obrowser repo rather than patched speculatively from here: it is a young
+engine (2 commits), the lifecycle involved is substantial, and `browser`
+(lightpanda) and `cdp` (real Chrome) both work and are the documented fallbacks,
+so nothing is blocked by this.
