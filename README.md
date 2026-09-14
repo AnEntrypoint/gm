@@ -69,14 +69,16 @@ An alternative one-line install adds the `/gm` skill and the `gm` MCP tool (the 
 npx github:AnEntrypoint/gm -g
 ```
 
-Drop `-g` to install into the current project folder instead of every agent host globally. This route runs `npx skills add AnEntrypoint/gm` and `npx add-mcp github:AnEntrypoint/gm-mcp` under the hood; it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
+Drop `-g` to install into the current project folder instead of every agent host globally. This route runs `npx skills add AnEntrypoint/gm`, vendors the pre-bundled `gm-mcp` server to `~/.gm-tools/gm-mcp-server.mjs`, and registers that local file with every agent host (`npx add-mcp "node ~/.gm-tools/gm-mcp-server.mjs"` for the hosts add-mcp knows, plus a direct write for Claude Code); it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
 
-**Register the MCP server against a local file, not an `npx` github spec.** If `add-mcp` leaves you with a server whose command is `npx -y github:AnEntrypoint/gm-mcp`, replace it. An `npx` github spec re-resolves the git ref over the network and reinstalls on *every* connect and reconnect: measured 9.1s on an idle machine against 0.75s for the same bundle launched from disk. MCP hosts allow 30s for the whole connect handshake, so on a machine under real load that network path blows the budget and the host reports `CONNECT_TIMEOUT` -- the session then loses the `gm` tool for the rest of its life and falls back to hand-writing spool files. `install.sh install` / `install.ps1 install` now vendor the bundle to `~/.gm-tools/gm-mcp-server.js`; point the host at that:
+**The MCP server always launches from that local file, never from an `npx` github spec.** `npx -y github:AnEntrypoint/gm-mcp` re-resolves the git ref over the network and reinstalls on every connect: measured 8.2s with a warm npm cache and 22.2s cold on an idle machine, against 0.19s for the same bundle launched from disk. Claude Code allows 30s for the whole connect handshake, so under real load (several concurrent sessions, the runner's wasm pools resident) the network path blows that budget and the host reports `CONNECT_TIMEOUT` -- the session then has no `gm` tool for the rest of its life. The installer also rewrites any existing `npx -y github:AnEntrypoint/gm-mcp` registration it finds in `~/.claude.json` (user and per-project scope) and in the current folder's `.mcp.json`. To repair registrations without reinstalling the skill or runner:
 
 ```
-claude mcp remove gm
-claude mcp add gm -- node "$HOME/.gm-tools/gm-mcp-server.js"
+npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets node <absolute path>
+npx github:AnEntrypoint/gm --mcp-only      # project scope: .mcp.json gets a node -e launcher that resolves ~/.gm-tools at start, so the committed file works on every machine
 ```
+
+Restart the agent host afterwards; a running session keeps the registration it connected with.
 
 The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 

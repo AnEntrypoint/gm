@@ -1,10 +1,23 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 
-const global = process.argv.includes('-g') || process.argv.includes('--global')
+const argv = process.argv.slice(2)
+const global = argv.includes('-g') || argv.includes('--global')
+const mcpOnly = argv.includes('--mcp-only')
+
+const GM_TOOLS_DIR = path.join(os.homedir(), '.gm-tools')
+const MCP_BUNDLE_PATH = path.join(GM_TOOLS_DIR, 'gm-mcp-server.mjs')
+const MCP_BUNDLE_URL = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js'
+const LEGACY_NPX_SPEC = 'github:AnEntrypoint/gm-mcp'
+
+const PROJECT_LAUNCH_SNIPPET =
+  "const p=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +
+  "if(!require('fs').existsSync(p)){console.error('gm-mcp bundle missing at '+p+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}" +
+  "import(require('url').pathToFileURL(p).href)"
 
 function run(cmd, args) {
   const res = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' })
@@ -13,25 +26,112 @@ function run(cmd, args) {
   }
 }
 
-const scopeFlag = global ? ['-g'] : []
+function globalServerEntry() {
+  return { command: 'node', args: [MCP_BUNDLE_PATH] }
+}
 
-run('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...scopeFlag, '-y'])
-run('npx', ['-y', 'add-mcp', 'github:AnEntrypoint/gm-mcp', '-n', 'gm', ...scopeFlag, '-y'])
+function projectServerEntry() {
+  return { command: 'node', args: ['-e', PROJECT_LAUNCH_SNIPPET] }
+}
 
-const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const installSh = path.join(pkgRoot, 'install.sh')
-const installPs1 = path.join(pkgRoot, 'install.ps1')
+async function vendorMcpBundle() {
+  fs.mkdirSync(GM_TOOLS_DIR, { recursive: true })
+  const res = await fetch(MCP_BUNDLE_URL)
+  if (!res.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${res.status}`)
+  const body = await res.text()
+  if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
+  const tmp = `${MCP_BUNDLE_PATH}.tmp.${process.pid}`
+  fs.writeFileSync(tmp, body)
+  fs.renameSync(tmp, MCP_BUNDLE_PATH)
+  console.log(`vendored gm-mcp server -> ${MCP_BUNDLE_PATH} (${body.length} bytes)`)
+}
 
-if (process.platform === 'win32') {
-  if (fs.existsSync(installPs1)) {
-    run('powershell', ['-ExecutionPolicy', 'Bypass', '-Command', `& '${installPs1}' spool`])
-  } else {
-    run('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
-  }
-} else {
-  if (fs.existsSync(installSh)) {
-    run('sh', [installSh, 'spool'])
-  } else {
-    run('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'])
+function isLegacyNpxEntry(entry) {
+  return entry && entry.command === 'npx' && Array.isArray(entry.args) && entry.args.includes(LEGACY_NPX_SPEC)
+}
+
+function isCurrentEntry(entry, wanted) {
+  return entry && entry.command === wanted.command && JSON.stringify(entry.args) === JSON.stringify(wanted.args)
+}
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return null
   }
 }
+
+function writeJsonAtomic(file, value) {
+  const tmp = `${file}.tmp.${process.pid}`
+  fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n')
+  fs.renameSync(tmp, file)
+}
+
+function upsertGmServer(servers, wanted, label, create) {
+  if (!servers || typeof servers !== 'object') return false
+  const existing = servers.gm
+  if (!existing && !create) return false
+  if (isCurrentEntry(existing, wanted)) return false
+  servers.gm = wanted
+  console.log(`registered gm MCP server in ${label}${isLegacyNpxEntry(existing) ? ' (replaced legacy npx github spec)' : ''}`)
+  return true
+}
+
+function registerClaudeCode() {
+  const userConfigPath = path.join(os.homedir(), '.claude.json')
+  const userConfig = readJson(userConfigPath)
+  if (userConfig && typeof userConfig === 'object') {
+    if (global) userConfig.mcpServers ||= {}
+    let changed = upsertGmServer(userConfig.mcpServers, globalServerEntry(), `${userConfigPath} mcpServers`, global)
+    for (const [projectPath, project] of Object.entries(userConfig.projects || {})) {
+      changed = upsertGmServer(project?.mcpServers, globalServerEntry(), `${userConfigPath} projects[${projectPath}].mcpServers`, false) || changed
+    }
+    if (changed) writeJsonAtomic(userConfigPath, userConfig)
+  }
+
+  const projectConfigPath = path.join(process.cwd(), '.mcp.json')
+  const projectConfig = readJson(projectConfigPath)
+  if (!global && !projectConfig) {
+    writeJsonAtomic(projectConfigPath, { mcpServers: { gm: projectServerEntry() } })
+    console.log(`registered gm MCP server in ${projectConfigPath} (create)`)
+  } else if (projectConfig && typeof projectConfig === 'object') {
+    if (!global) projectConfig.mcpServers ||= {}
+    if (upsertGmServer(projectConfig.mcpServers, projectServerEntry(), `${projectConfigPath} mcpServers`, !global)) writeJsonAtomic(projectConfigPath, projectConfig)
+  }
+}
+
+function registerOtherHosts() {
+  const scopeFlag = global ? ['-g'] : []
+  const launch = `node ${MCP_BUNDLE_PATH}`
+  run('npx', ['-y', 'add-mcp', process.platform === 'win32' ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'])
+}
+
+function installRunner() {
+  const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+  const installSh = path.join(pkgRoot, 'install.sh')
+  const installPs1 = path.join(pkgRoot, 'install.ps1')
+
+  if (process.platform === 'win32') {
+    if (fs.existsSync(installPs1)) {
+      run('powershell', ['-ExecutionPolicy', 'Bypass', '-Command', `& '${installPs1}' spool`])
+    } else {
+      run('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
+    }
+  } else {
+    if (fs.existsSync(installSh)) {
+      run('sh', [installSh, 'spool'])
+    } else {
+      run('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'])
+    }
+  }
+}
+
+if (!mcpOnly) {
+  run('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'])
+}
+await vendorMcpBundle()
+if (!mcpOnly) registerOtherHosts()
+registerClaudeCode()
+if (!mcpOnly) installRunner()
+console.log(`gm MCP server launches from ${pathToFileURL(MCP_BUNDLE_PATH).href} -- restart the agent host to reconnect`)
