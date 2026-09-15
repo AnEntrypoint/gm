@@ -201,7 +201,9 @@ and read the real output, re-derived from the request's own words each time,
 never from the diff just written. Reasoning is execution, not monologue.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
-every body. Batch independent dispatches; never edit one file twice per block.
+every body -- verbs that validate their body fields accept `SESSION_ID`,
+`session_id` and `sessionId` alike, so the spelling written here dispatches as
+written. Batch independent dispatches; never edit one file twice per block.
 
 Use JIT-execution to your advantage: batch up exhaustive checks to rule out many things
 at the same time, use flow and error control to make the process predictable
