@@ -26,6 +26,21 @@ function run(cmd, args) {
   }
 }
 
+// Node's shell:true on Windows joins the args array with plain spaces and
+// does NOT escape/quote them (see the DEP0190 deprecation notice) -- fine
+// for simple tokens like npx's own args, but any arg containing spaces or
+// shell metacharacters (a quoted path, an `&`) gets corrupted by cmd.exe's
+// own parsing before it ever reaches the target program. runDirect() skips
+// the shell entirely and lets spawnSync pass the args array straight to
+// CreateProcess, which is the only reliable way to hand powershell.exe a
+// real filesystem path as one of its arguments.
+function runDirect(cmd, args) {
+  const res = spawnSync(cmd, args, { stdio: 'inherit' })
+  if (res.status !== 0) {
+    process.exit(res.status ?? 1)
+  }
+}
+
 function globalServerEntry() {
   return { command: 'node', args: [MCP_BUNDLE_PATH] }
 }
@@ -114,9 +129,11 @@ function installRunner() {
 
   if (process.platform === 'win32') {
     if (fs.existsSync(installPs1)) {
-      run('powershell', ['-ExecutionPolicy', 'Bypass', '-Command', `& '${installPs1}' spool`])
+      // -File (not -Command "& '<path>' spool") sidesteps quoting entirely --
+      // no embedded single-quoted path string for cmd.exe to mangle.
+      runDirect('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
     } else {
-      run('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
+      runDirect('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
     }
   } else {
     if (fs.existsSync(installSh)) {
