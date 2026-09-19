@@ -1,6 +1,6 @@
-## 2026-09-19 - idle tick and plugin-dispatch poll 25ms
+## 2026-09-19 - idle tick 25ms, claim non-empty in-files immediately
 
-**Idle-to-claim floor cut from 200ms to 25ms.** `daemon.rs` slept 200ms whenever a sweep found `!any_work`; an in-file that arrived during that sleep waited the remainder. Idle sleep is now 25ms. Nested plugin-dispatch answer poll (`PLUGIN_DISPATCH_POLL_MS`) is 25ms, same quantum. Busy ticks still skip sleep. No notify crate: Windows watch plus a new dep lost to the shorter tick.
+**Idle-to-claim floor.** `daemon.rs` slept 200ms whenever a sweep found `!any_work`. Idle sleep is now 25ms. Claim also refused any in-file younger than `SPOOL_WRITE_SETTLE_MS=200`; that age gate is gone. Empty in-files (torn `>` redirects) are still refused; publishers rename a complete sibling into place. Nested plugin-dispatch answer poll (`PLUGIN_DISPATCH_POLL_MS`) is 25ms. Busy ticks still skip sleep.
 
 ## 2026-08-23 - Cordis paper fidelity: extended calculus, confinement, deadlock fix, doc corrections
 
