@@ -1,3 +1,7 @@
+## 2026-09-19 - idle tick and plugin-dispatch poll 25ms
+
+**Idle-to-claim floor cut from 200ms to 25ms.** `daemon.rs` slept 200ms whenever a sweep found `!any_work`; an in-file that arrived during that sleep waited the remainder. Idle sleep is now 25ms. Nested plugin-dispatch answer poll (`PLUGIN_DISPATCH_POLL_MS`) is 25ms, same quantum. Busy ticks still skip sleep. No notify crate: Windows watch plus a new dep lost to the shorter tick.
+
 ## 2026-08-23 - Cordis paper fidelity: extended calculus, confinement, deadlock fix, doc corrections
 
 **Audited gm/rs-plugkit's Cordis-calculus mapping against the actual paper text (not a summary of it) and fixed a real misattribution.** AGENTS.md cited `registry.rs`'s `get_active_provider` as mirroring "Definition 46 (`provider_k(gamma)`)" -- exhaustive extraction of the paper's PDF confirmed `provider_k(gamma)` is defined inline under Definition 45 (the Registry), and Definition 46 is instead the target view `target_n(gamma)` and quiescence predicate `quiet(gamma)`. Corrected in AGENTS.md.
