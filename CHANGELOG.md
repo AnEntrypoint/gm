@@ -1,3 +1,7 @@
+## 2026-09-20 - first-tick runner poll, clear sticky update flag, idle in-dir wake
+
+**Auto-update after CI.** Runner poll default is 60s. A freshly spawned daemon calls `stage_runner_self_update` on the first loop tick even if `last-runner-update-poll-ts` is recent. Project `.status.json` removes `runner_update_in_progress` / `runner_update_waiting_ms` when no `.new` binary is staged. Idle ticks re-scan `in/` before waiting; on Windows they also `FindFirstChangeNotificationW` the exec-spool `in/` tree with a 25ms cap.
+
 ## 2026-09-19 - idle tick 25ms, claim non-empty in-files immediately
 
 **Idle-to-claim floor.** `daemon.rs` slept 200ms whenever a sweep found `!any_work`. Idle sleep is now 25ms. Claim also refused any in-file younger than `SPOOL_WRITE_SETTLE_MS=200`; that age gate is gone. Empty in-files (torn `>` redirects) are still refused; publishers rename a complete sibling into place. Nested plugin-dispatch answer poll (`PLUGIN_DISPATCH_POLL_MS`) is 25ms. Busy ticks still skip sleep.
