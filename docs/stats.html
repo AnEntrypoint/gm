@@ -129,7 +129,7 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
       </div>
       <div class="card">
         <div class="label">Contributors</div>
-        <div class="value" id="contributors">--</div>
+        <div class="value" id="contributorsCount">--</div>
       </div>
       <div class="card">
         <div class="label">Avg Merge Time</div>
@@ -345,7 +345,7 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
     }
 
     function renderSummaryUnavailable() {
-      ['openIssues', 'commitsPerWeek', 'contributors', 'avgMergeTime'].forEach((id) => {
+      ['openIssues', 'commitsPerWeek', 'contributorsCount', 'avgMergeTime'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.textContent = 'n/a';
       });
@@ -484,13 +484,13 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
     function renderSummaryCards() {
       document.getElementById('openIssues').textContent = apiData.metrics?.open_issues ?? '--';
       document.getElementById('commitsPerWeek').textContent = apiData.metrics?.commits_per_week ?? '--';
-      document.getElementById('contributors').textContent = apiData.metrics?.contributors ?? '--';
+      document.getElementById('contributorsCount').textContent = apiData.metrics?.contributors ?? '--';
       document.getElementById('avgMergeTime').textContent = apiData.metrics?.avg_merge_time ?? '--';
     }
 
     function renderReleases() {
       const container = document.getElementById('releasesList');
-      const releases = apiData.releases?.releases || [];
+      const releases = apiData.releases || [];
       container.innerHTML = releases.slice(0, 10).map(r => `
         <div class="release-item">
           <div style="display:flex;gap:1rem;align-items:center;">
@@ -504,7 +504,7 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
     }
 
     function updateTimestamp() {
-      const lastGen = apiData.insights?.generated || apiData.metrics?.timestamp || apiData.releases?.timestamp || new Date().toISOString();
+      const lastGen = apiData.insights?.generated || apiData.metrics?.timestamp || new Date().toISOString();
       const lastFetch = window.__debug.dashboard.lastUpdate || new Date().toISOString();
       const date = new Date(lastFetch);
       const el = document.getElementById('updated');
