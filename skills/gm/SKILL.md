@@ -222,235 +222,26 @@ served `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
-Real, dispatchable, not English to re-derive: `scan_deps` is a compiled verb
-(rs-plugkit's `scan_deps.rs`, `Capability::ProjectPath`) that scans the
-project's git-tracked source in full plus any `node_modules` present
-(bounded, see below) for the "HiddenSpawn"-class obfuscated dropper
-(confirmed across 17+ separately-compromised repos, 2026-08: a source file
-gets a payload appended after its real end -- usually one extremely long
-line, whitespace-padded off the visible screen -- resolving a C2 address,
-fetching, decoding, and `eval`/`spawn`-ing attacker code). It checks two
-structural properties that survive the exact C2/IP/wallet/decode-cipher
-changing in the next variant, never the literal values of today's known
-samples: (1) a file whose byte size is wildly disproportionate to its line
-count, and (2) a dense run (4+) of `\uXXXX` escapes decoding to an
-identifier shape (letters/digits/underscore, starting with a letter) --
-real code never escapes an ASCII identifier this way; an attacker does it
-specifically to dodge a plain-text grep for `require`/`spawn`/
-`child_process`. Body: `{}` for the whole project, or `{"root":
-"<relative-dir>"}` to scope the git-tracked-source half to a subdirectory
-(`node_modules` is always resolved at the project root regardless of
-`root`). `node_modules` is walked per-package against a changed-since-
-last-scan stamp (`.gm/scan-deps-stamp.json`, package mtime+size, never
-mtime alone) plus a noise-dir/noise-suffix ignore list (test/docs/
-examples/fixtures dirs, `.map`/`.d.ts`/`.md` files -- never a payload
-carrier for this attack class) -- an unchanged package is skipped
-entirely on every dispatch after the first, so a stable dependency tree
-stays fast and never bogs the machine down on every session. Pass
-`{"full": true}` to force a full re-walk ignoring the stamp (a genuinely
-exhaustive one-off sweep, e.g. right after a suspicious install -- not the
-per-session default). Response `data` is structured JSON: `ok` (bool),
-`failCount`/`warnCount`/`blockedCount`, `failing`/`warnings`/`blocked`
-arrays (each with `path` and detail fields), `nodeModulesTruncated` (bool
--- true means the scan hit its file-count bound on a very large tree and
-did not cover it in full; disclosed, never silent).
-
-**On any project's first `npm install`/dependency-install this session, and
-before trusting any freshly-cloned/updated `node_modules` or vendored
-dependency content:** dispatch `scan_deps`. `blockedCount > 0` is itself
-evidence, not noise to route around (see this file's own Section 2, "an
-unfalsifiable claim is hedge language" -- "I couldn't check" is never "it's
-fine") -- a blocked read is the AV/OS itself already flagging the file. A
-`failCount > 0` result is a real hit (see below). `warnCount > 0` alone
-(size-ratio disproportion with no escape-density corroboration) is usually
-a legitimate minified/bundled dependency -- worth a glance, never a block.
-`nodeModulesTruncated: true` means this session's fast pass did not cover
-the whole tree; if the project has no standing unbounded scanner of its own
-for a less-frequent full sweep, `prd-add` a row to add one (see casey's
-`scripts/scan-deps.mjs` as a reference shape, wired into a doctor/preflight
-command and `postinstall`).
-
-**On a real hit (`failCount > 0` or `blockedCount > 0`):** this is a world-scope one-way-door concern (Section 4) --
-surface it to the user immediately via `AskUserQuestion`, do not silently
-work around it (no exclusions, no blind retries, no "it's probably a false
-positive"). Investigate via the dependency's own git history/GitHub API
-(bypasses local AV blocks cleanly) to find the exact introducing commit and
-confirm the last clean one before proposing a fix (pin/revert/exclude). If
-several unrelated repos under the same account/org show the same pattern,
-the shared root cause is more likely a compromised credential (an org-level
-token, a shared release-workflow secret) than each repo being attacked in
-isolation -- name that possibility to the user rather than only fixing files
-one at a time. Fixing a compromised GitHub-sourced dependency's own `main`
-(not just the local install) requires the user's explicit go-ahead before
-any push -- prefer `git revert` (keeps the compromised commit visible in
-history as evidence) over a history rewrite unless the user explicitly asks
-for the stronger squash/rewrite.
+The `scan_deps` mechanism -- body params, `node_modules` walk bounding, and
+hit-escalation rules for the "HiddenSpawn"-class obfuscated dropper -- is
+served prose at SPECIFY (`gm-config/prose/specify.md`, "Supply-chain scan"),
+arriving automatically with every SPECIFY-phase `instruction` response; no
+separate lookup needed. Dispatch it on any project's first dependency-install
+this session, and before trusting freshly-cloned/updated `node_modules`. A
+real hit (`failCount > 0`/`blockedCount > 0`) is world-scope, one-way-door
+(Section 4): surface it via `AskUserQuestion`, never route around it.
 
 ## 1b. Meta-graph -- dynamic scope discovery, multi-session, multi-agent, goal-oriented dispatch
 
-This graph is the dispatch layer this file wraps around `lean`'s own P1-P9
-graph (see the `lean` skill for every node and its internal backreferences --
-they are unchanged and not reproduced here; `L1`..`L9` below stand for those
-subgraphs whole). Nothing here replaces a lean node; it is the harness/session/
-agent machinery that walks the request through them. Read this section as the
-literal mechanism behind the opening paragraph above, not a restatement of it.
-
-**Discovery does not stop at the first plan.** ORIENT treats every unresolved
-unknown as a `mutable-add`, never a silent assumption (Section 2, "Default
-across choices, never facts"). A mutable that implies work outside the current
-`.gm/prd.yml` is a scope expansion: `prd-add` the new rows in the same pass,
-derive their own mutables in turn, and loop. This is not "a new run" barred by
-Section 2's "Maximum effort per run" -- that invariant bars unrelated work,
-and scope discovered inside the same request's closure is not unrelated. The
-only thing that licenses leaving PLAN is a sweep that adds zero new mutables
-and zero new PRD rows -- a discovery fixed point, not a step count or a feeling
-of coverage.
-
-**Multi-session is a default shape for long-horizon work, not a fallback for
-running out of room.** State lives on disk (`.gm/prd.yml`, `.gm/mutables.yml`,
-`.turn-summary.json`) precisely so a fresh session's boot probe (Section 1)
-resumes the same walk with no replay and no re-derivation from memory. Once a
-batch of PRD rows is independent enough to run unattended, hand it to a new
-session deliberately rather than serializing everything through one context --
-that is the whole point of the on-disk substrate.
-
-**Multi-agent fan-out is the default shape within a session.** Every batch of
-independent PRD rows becomes parallel `Agent` dispatches (Section 1's "use gm
-too" rule binds every one of them), combined with JIT-batched harness calls
-(Section 1) for whatever stays in this session. Batch and parallelize to
-minimize wall-clock, not tool-call count.
-
-**A shared recurring transform gets one reviewed mapping before fan-out, not N
-independent interpretations.** When the closure's rows apply the SAME KIND of
-mechanical transform across many files (a rename sweep, an API migration, a
-bulk lint-class fix, N>5 applications of one pattern), a single subagent
-first drafts a mapping/edge-case note for that pattern -- old shape to new
-shape, the corner cases it must preserve -- scoped to a mutable or PRD-row
-note, never a standing doc. A second subagent adversarially reviews that note
-before fan-out begins (find the cases it misses or the conflicting
-instructions it gives, the same refute-only posture M_VERIFY takes toward
-code -- see the plugkit orchestrator's own served DECIDE-phase prose for
-the adversarial-sweep discipline this mirrors).
-Only then do the parallel workers dispatch, each referencing the reviewed
-mapping instead of inventing its own reading of the pattern. Skipping this
-for a shared pattern is how N parallel agents land N subtly different
-handlings of the same edge case.
-
-**A large classifiable finding-set (compiler errors, lint violations, a
-dependency-bump breakage) is partitioned once, never re-classified mid-fan-out.**
-Run the classifying dispatch (a build, a lint pass, whatever produces the
-finding list) a single time, group the output by its natural boundary (file,
-crate, module), and turn each partition into one PRD row owned by one
-subagent -- disjoint slices need no coordination. Each subagent verifies its
-own slice by re-running the classifier scoped to its own files, never the
-full classification again; re-running the global classifier mid-fan-out
-either wastes the run or risks two agents racing to fix the same
-already-reported finding.
-
-**Every dispatch is goal-oriented.** A subagent's or sub-session's prompt
-states the terminal condition it serves -- `prd_pending_count=0` against the
-*full* discovered scope -- not just its own slice. A dispatch that surfaces a
-new mutable mid-task feeds it back into `mutable-add`/`prd-add` instead of
-quietly narrowing scope to fit what it was told.
-
-**Housekeeping and memorization are scheduled runs, not incidental cleanup.**
-Every pass through `M_RECORD` (`git_finalize`) opens a housekeeping run before
-the next PLAN: dead code, superseded paths, and stale PRD/mutable rows from
-earlier passes are swept (lean P6: NODELETE -> DELETIONGATE -> REACHABLE)
-so a later session never trips over them. `memorize-fire` runs in the same
-pass -- any correction the user gave, any default this walk had to pick, any
-recurring gap surfaced -- is persisted immediately (Section 2, "Corrections
-stick"), not deferred to session end where a crash or compaction would drop
-it.
-
-```mermaid
-flowchart TB
-
-%% solid = forward dispatch   dotted = backreference, label is the condition that fires it
-%% diamond = gate   L1..L9 = lean's own P1-P9 subgraphs, entered and exited whole
-
-  M_BOOT{"harness probe answered (Section 1)"}
-  M_ORIENT["ORIENT -- codesearch + recall + fetch, full closure"]
-  M_MUTABLE["mutable-add -- unresolved unknown becomes a row, never an assumption"]
-  M_SCOPE{"closure exceeds current .gm/prd.yml"}
-  M_REPLAN["prd-add -- rows for newly discovered scope"]
-  M_PLAN["PLAN -- .gm/prd.yml rows fixed for this pass"]
-  M_GOAL["goal-oriented dispatch -- prompt states prd_pending_count=0 as the terminal"]
-  M_MAPDOC{"rows share one recurring transform, N>5 applications"}
-  M_MAPREVIEW["draft mapping/edge-case note, adversarially reviewed by a second agent"]
-  M_ERRQUEUE{"cover derives from one large classifiable finding-set"}
-  M_PARTITION["classify once (build/lint/scan run), partition by file/crate/module, one PRD row per partition"]
-  M_FANOUT{"batch is independent enough to parallelize"}
-  M_MULTIAGENT["multi-agent batched parallel Agent dispatch + JIT harness calls (Section 1)"]
-  M_MULTISESSION["multi-session continuation -- disk state is the substrate, not context"]
-  M_EXEC["EXECUTE"]
-  M_VERIFY["VERIFY -- witnessed live, no test files (Section 1)"]
-  M_SECURE["scan_deps (Section 1a)"]
-  M_RECORD["git_finalize"]
-  M_HOUSE["housekeeping run -- residual cleanup, deletion-completeness"]
-  M_MEMORIZE["memorize-fire -- corrections persisted"]
-  M_SWEEP{"full sweep, all PRD rows + all mutables"}
-  M_FIXPOINT{"sweep changed nothing AND zero new mutables AND zero new scope"}
-  M_TERMINAL{"Skill(gm-continue), prd_pending_count=0"}
-  M_SURFACE{"bounded retry exhausted -- wfgy-method / AskUserQuestion, one-way doors only"}
-
-  subgraph L1["lean P1 . SHAPE"]
-    L1E["JTBD..LIVEPLAN -- see lean SKILL.md"]
-  end
-  subgraph L2["lean P2 . CONTRACT"]
-    L2E["UBIQ..ACCEPTPORT"]
-  end
-  subgraph L3["lean P3 . BUILD"]
-    L3E["TOTALITY..KISS"]
-  end
-  subgraph L4["lean P4 . VERIFY"]
-    L4E["DIJKSTRATEST..SANITIZE (no CHARTEST -- no test files, Section 1)"]
-  end
-  subgraph L5["lean P5 . RECORD"]
-    L5E["CONVCOM..ADRN"]
-  end
-  subgraph L6["lean P6 . PRESSURE"]
-    L6E["NODELETE..KOLMOGOROV"]
-  end
-  subgraph L7["lean P7 . CONTEXT ECONOMY"]
-    L7E["SMALLESTSET..GREPFIRST -- active at every node above, not one phase"]
-  end
-  subgraph L9["lean P9 . CONVERGENCE"]
-    L9E["FIXPOINT..LOWERBOUND"]
-  end
-
-  M_BOOT --> M_ORIENT --> L1E --> M_MUTABLE --> M_SCOPE
-  M_SCOPE -->|"no"| M_PLAN
-  M_SCOPE -->|"yes"| M_REPLAN --> M_MUTABLE
-  M_PLAN --> M_ERRQUEUE
-  M_ERRQUEUE -->|"yes"| M_PARTITION --> L2E
-  M_ERRQUEUE -->|"no"| L2E
-  L2E --> M_GOAL --> M_MAPDOC
-  M_MAPDOC -->|"yes"| M_MAPREVIEW --> M_FANOUT
-  M_MAPDOC -->|"no"| M_FANOUT
-  M_FANOUT -->|"yes"| M_MULTIAGENT --> M_MULTISESSION --> M_EXEC
-  M_FANOUT -->|"no"| M_EXEC
-  M_EXEC --> L3E --> M_VERIFY --> L4E --> M_SECURE --> M_RECORD --> L5E --> M_HOUSE --> L6E
-  M_HOUSE --> M_MEMORIZE -.-> L7E
-  L6E --> M_SWEEP --> M_FIXPOINT
-  M_FIXPOINT -->|"yes"| L9E --> M_TERMINAL
-  M_FIXPOINT -->|"no, new mutable or scope surfaced"| M_MUTABLE
-  M_FIXPOINT -->|"same gap recurred, no new information"| M_SURFACE
-
-  %% ===== BACKREFERENCES (gm's own layer; lean's internal ones are unchanged, see lean SKILL.md) =====
-  M_MULTIAGENT -.->|"a fanned-out subagent surfaces a new unknown"| M_MUTABLE
-  M_MULTISESSION -.->|"a session dies mid-walk (Section 1 dead-watcher rule)"| M_BOOT
-  M_VERIFY -.->|"witnessed behavior contradicts the request's literal words"| M_MUTABLE
-  M_SECURE -.->|"failCount>0 or blockedCount>0"| M_SURFACE
-  M_SWEEP -.->|"a gate reopened"| M_ORIENT
-  M_HOUSE -.->|"a superseded path is still reachable"| M_RECORD
-  M_MEMORIZE -.->|"a correction was given but not yet persisted"| M_HOUSE
-
-  classDef gate stroke-width:3px
-  classDef terminal stroke-width:4px,stroke-dasharray:2 2
-  class M_BOOT,M_SCOPE,M_FANOUT,M_SWEEP,M_FIXPOINT,M_MAPDOC,M_ERRQUEUE gate
-  class M_TERMINAL,M_SURFACE terminal
-```
+The dispatch layer wrapping `lean`'s own P1-P9 graph (see the `lean` skill for
+every node) is served prose, arriving automatically with the phase's own
+response: scope-discovery-as-fixed-point, multi-session/multi-agent fan-out,
+shared-transform mapping review, and large-finding-set partition-once at
+SPECIFY (`gm-config/prose/specify.md`, "Scope discovery and fan-out");
+scheduled housekeeping and `memorize-fire` at DECIDE
+(`gm-config/prose/decide.md`, "Housekeeping and memorization are scheduled
+runs"). Section 1b is the opening paragraph above made mechanical: a graph,
+not a mood.
 
 ## 2. Invariants -- true under any graph
 
