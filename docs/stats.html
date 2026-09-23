@@ -25,6 +25,7 @@ main canvas { background: var(--panel-1); max-width: 100%; }
 main table { width: 100%; border-collapse: collapse; font-family: var(--ff-mono); font-size: 13px; }
 main table th { text-align: left; padding: 8px 12px; color: var(--panel-text-2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; box-shadow: inset 0 -1px 0 var(--panel-3); }
 main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); box-shadow: inset 0 -1px 0 var(--panel-3); }
+main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text-3); padding: 8px 0; }
 </style>
 <style>
 .gm-topbar{display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--panel-1);box-shadow:var(--panel-shadow);border-bottom:1px solid var(--panel-3);position:sticky;top:0;z-index:50}
@@ -287,17 +288,67 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
     }
 
     function renderAll() {
-      if (apiData.stars) renderStarsChart();
-      if (apiData.metrics) renderMetricsChart();
+      if (apiData.stars) { clearUnavailable('stars', 'starsChart'); renderStarsChart(); }
+      else setUnavailable('stars', 'starsChart');
+
+      if (apiData.metrics) { clearUnavailable('commits', 'commitsChart'); renderMetricsChart(); renderSummaryCards(); }
+      else { setUnavailable('commits', 'commitsChart'); renderSummaryUnavailable(); }
+
       if (apiData.insights) {
+        clearUnavailable('contributors'); clearUnavailable('files'); clearUnavailable('velocity');
         renderContributorsTable();
         renderFilesTable();
         renderVelocityTable();
+      } else {
+        setUnavailable('contributors'); setUnavailable('files'); setUnavailable('velocity');
       }
-      if (apiData.metrics) renderSummaryCards();
-      if (apiData.releases) renderReleases();
-      if (apiData.npm) renderNpmChart();
+
+      if (apiData.releases) { clearUnavailable('releases'); renderReleases(); }
+      else setUnavailable('releases');
+
+      if (apiData.npm) { clearUnavailable('npm-downloads', 'npmChart'); renderNpmChart(); }
+      else setUnavailable('npm-downloads', 'npmChart');
+
       updateTimestamp();
+    }
+
+    // Distinguishes "no data source built for this section yet" from a transient
+    // fetch error: the top-of-page error banner (showError) already covers
+    // network failures on an endpoint that DOES exist. This covers metrics.json
+    // and insights.json, which have no generator yet (tracked in .gm/prd.yml),
+    // so their sections would otherwise stay frozen on their initial static
+    // markup (blank canvas, empty table, "--" cards) forever.
+    function setUnavailable(sectionId, canvasId) {
+      const section = document.getElementById(sectionId);
+      if (!section) return;
+      if (!section.querySelector('.data-unavailable-note')) {
+        const note = document.createElement('div');
+        note.className = 'data-unavailable-note';
+        note.textContent = 'Data unavailable -- no source configured for this metric yet.';
+        section.appendChild(note);
+      }
+      if (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas) canvas.style.display = 'none';
+      }
+    }
+
+    function clearUnavailable(sectionId, canvasId) {
+      const section = document.getElementById(sectionId);
+      if (!section) return;
+      const note = section.querySelector('.data-unavailable-note');
+      if (note) note.remove();
+      if (canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas) canvas.style.display = '';
+      }
+    }
+
+    function renderSummaryUnavailable() {
+      ['openIssues', 'commitsPerWeek', 'contributors', 'avgMergeTime'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = 'n/a';
+      });
     }
 
     function renderStarsChart() {
@@ -339,7 +390,7 @@ main table td { text-align: left; padding: 6px 12px; color: var(--panel-text); b
 
       if (chartInstances.metrics) chartInstances.metrics.destroy();
 
-      const count = apiData.metrics.commits_per_week || 0;
+      const count = apiData.metrics?.commits_per_week || 0;
       chartInstances.metrics = new Chart(ctx, {
         type: 'bar',
         data: {
