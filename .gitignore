@@ -18,6 +18,8 @@ site/platforms-out.json
 docs/bundle.js
 docs/styles.css
 docs/badges/
+docs/api/releases.json
+docs/api/npm-downloads.json
 *.tgz
 .plugkit-browser-profile/
 tmp/
