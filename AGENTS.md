@@ -18,6 +18,18 @@ Read `SKILLS.md` before starting work. Read every relevant `skills/<name>/SKILL.
 
 The root is the published package. `package.json` lists release contents. `skill-release.yml` publishes skill changes from `main`; do not assume a release succeeded without its workflow result.
 
+## Repo inventory
+
+Authoritative list; `.gitmodules` is ground truth for submodules.
+
+| repo | role |
+| --- | --- |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, liqology, gm-config, rs-codeinsight, rs-plugkit, rs-search, obrowser, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
+| rs-learn, rs-exec, gm-skill, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit or gm) |
+
+`gm-config/gm.config.json` fields carry no inline `_comment` keys -- rationale lives here. `version` gates the schema; the file IS the workflow definition `crate::config::resolve` pulls on the debounce in `sync.debounce_ms` (default 300000ms, `shallow` fetch), reproducing stock gm behavior unmodified until edited. `instructions.keys` name per-state prose files under `instructions.dir`, resolved project-vendored-first then this repo's cache then compiled default. `fsm.graph`/`fsm.predicates_reference` are the state machine as data; `gates.predicate` may only name a predicate generated into `predicates_reference` from the same registry the code dispatches on -- a condition outside that registry needs a jit hook under `fsm.hooks_dir` instead. `messages.gates_dir`/`residual_dir` are operator-editable denial/residual text; editing them never changes when a gate fires. `memory.embed_dim` (384) is compile-time coupled to baked-in model weights -- changing it invalidates every stored vector and routes through an explicit drop-if-mismatch path, never silent. `memory.tencentdb_backend.vectors_db_dims` (768 default) is independent of `embed_dim`: it matches whichever TencentDB-compatible provider produced the indexed content, never gm's own embedder. `memory_sync.*_budget_ms` bound one `memory_md.rs::sync_index` pass; a pass that cannot finish records a `:partial` digest and converges across repeated dispatches rather than blocking one. `rssearch.table`/`index` and the `git_commits`/`code_chunks` equivalents accept only `[A-Za-z_][A-Za-z0-9_]*` since they interpolate into SQL. `scoring.*` splits two fusions: `recency_floor`/`cos_floor`/`dedup_jaccard_threshold`/`half_life_ms` govern recall's cosine-x-recency score, `bm25_k1`/`bm25_b`/`fusion_rrf_k`/`fusion_identifier_boost`/`fusion_vector_list_weight` govern codesearch's BM25+vector RRF fusion. `browser_witness.extra_*`/`claim_audit.extra_*` append to built-in defaults, never replace them. `cache.*` budgets are per-namespace so one greedy consumer cannot evict another's entries.
+
 ## Working with gm
 
 Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use the documented spool fallback: write one complete request atomically, prefix every request number with a unique session id, and poll the matching response. Never start a second watcher while a fresh watcher is busy. A stale or failed runner is a defect in its owning source, not a reason to bypass gm.
