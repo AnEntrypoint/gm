@@ -122,6 +122,67 @@ function registerOtherHosts() {
   run('npx', ['-y', 'add-mcp', process.platform === 'win32' ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'])
 }
 
+// add-mcp (registerOtherHosts) does not know these three hosts' exact config
+// shapes and is not guaranteed to replace an existing legacy npx entry rather
+// than leaving it alone, so each is also rewritten directly here.
+const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
+const GEMINI_SETTINGS_PATH = path.join(os.homedir(), '.gemini', 'settings.json')
+const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml')
+
+function registerJsonMcpHost(configPath) {
+  const config = readJson(configPath)
+  if (!config || typeof config !== 'object') return
+  config.mcpServers ||= {}
+  if (upsertGmServer(config.mcpServers, globalServerEntry(), `${configPath} mcpServers`, true)) writeJsonAtomic(configPath, config)
+}
+
+function tomlQuotedString(value) {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
+// TOML table headers ([mcp_servers.gm], [mcp_servers.gm.env], ...) always
+// start at column 0 in a config codex itself writes, so the gm table (plus
+// any of its own subtables) is the span from its header to the next header
+// that is not itself a "[mcp_servers.gm" continuation.
+function registerCodex(configPath) {
+  if (!fs.existsSync(configPath)) return
+  const text = fs.readFileSync(configPath, 'utf8')
+  const lines = text.split(/\r?\n/)
+  const gmHeaderRe = /^\s*\[mcp_servers\.gm(?:\.[^\]]*)?\]\s*$/
+  const anyHeaderRe = /^\s*\[/
+  const wantedLines = [
+    '[mcp_servers.gm]',
+    'command = "node"',
+    `args = [ ${tomlQuotedString(MCP_BUNDLE_PATH)} ]`,
+  ]
+
+  let start = lines.findIndex(line => gmHeaderRe.test(line))
+  let end = lines.length
+  if (start !== -1) {
+    for (let i = start + 1; i < lines.length; i++) {
+      if (anyHeaderRe.test(lines[i]) && !gmHeaderRe.test(lines[i])) { end = i; break }
+    }
+  }
+
+  const newLines = start === -1
+    ? lines.concat(lines[lines.length - 1] === '' ? [] : [''], wantedLines)
+    : lines.slice(0, start).concat(wantedLines, lines.slice(end))
+
+  const newText = newLines.join('\n')
+  if (newText !== text) {
+    const tmp = `${configPath}.tmp.${process.pid}`
+    fs.writeFileSync(tmp, newText)
+    fs.renameSync(tmp, configPath)
+    console.log(`registered gm MCP server in ${configPath}${start !== -1 ? ' (replaced existing table)' : ''}`)
+  }
+}
+
+function registerKnownHostShapes() {
+  registerJsonMcpHost(CURSOR_MCP_PATH)
+  registerJsonMcpHost(GEMINI_SETTINGS_PATH)
+  registerCodex(CODEX_CONFIG_PATH)
+}
+
 function installRunner() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const installSh = path.join(pkgRoot, 'install.sh')
@@ -148,7 +209,8 @@ if (!mcpOnly) {
   run('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'])
 }
 await vendorMcpBundle()
-if (!mcpOnly) registerOtherHosts()
+registerOtherHosts()
+registerKnownHostShapes()
 registerClaudeCode()
 if (!mcpOnly) installRunner()
 console.log(`gm MCP server launches from ${pathToFileURL(MCP_BUNDLE_PATH).href} -- restart the agent host to reconnect`)
