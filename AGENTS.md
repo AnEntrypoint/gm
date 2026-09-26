@@ -36,6 +36,8 @@ Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use 
 
 Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it.
 
+Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior.
+
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
 Give each subagent its own session id and tell it to use the gm skill. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
