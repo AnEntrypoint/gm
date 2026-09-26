@@ -109,7 +109,7 @@ resolve_installable_tag() {
   echo "${tag:-}"
 }
 
-fetch() {
+fetch() (
   url="$1"
   dest="$2"
   if command -v curl >/dev/null 2>&1; then
@@ -117,7 +117,7 @@ fetch() {
   else
     wget -qO "$dest" "$url"
   fi
-}
+)
 
 resolve_latest_gm_tag() {
   token=$(github_token)
@@ -169,11 +169,6 @@ install_skill() {
   log "installed gm skill ${tag} -> ${CLAUDE_SKILLS_DIR}/gm"
 }
 
-# Current gm.wasm imports env:host_plugin_call. The retired JS wasm host
-# never registered that import, so any boot that still spawned
-# plugkit-wasm-wrapper.js died with LinkError and self-healed into a
-# restart loop. agentplug-runner already provides the import. Quarantine
-# leftover wrapper files so that path cannot be re-entered.
 quarantine_retired_js_host() {
   retired_dir="${GM_TOOLS_DIR}/retired-js-host"
   moved=0
@@ -261,7 +256,7 @@ main() {
   chmod 755 "$tmp"
   if ! mv -f "$tmp" "$dest" 2>/dev/null; then
     if rm -f "$dest" 2>/dev/null && mv -f "$tmp" "$dest" 2>/dev/null; then
-      : # unlinked running binary and placed new binary at dest
+      :
     else
       staged="${dest}.new"
       mv -f "$tmp" "$staged"
