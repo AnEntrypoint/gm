@@ -15,6 +15,7 @@ Read `SKILLS.md` before starting work. Read every relevant `skills/<name>/SKILL.
 - `gm-mcp/` wraps the spool write-and-poll cycle. Edit `src/` and rebuild its committed bundle together.
 - `install.sh` and `install.ps1` install the skill and runner. Keep their platform behavior equivalent.
 - `bin/gm-install.js` registers the MCP server as `node ~/.gm-tools/gm-mcp-server.mjs` (project `.mcp.json`: a `node -e` launcher resolving that path at start). Never register an `npx github:` spec: it re-resolves and reinstalls over the network on every connect (measured 8.2s warm, 22.2s cold, vs 0.19s local) and trips Claude Code's 30s `CONNECT_TIMEOUT` under load.
+- On Windows, invoke PowerShell through `runDirect` and `-File <install.ps1> spool`; `spawnSync` with `shell:true` loses argument boundaries. Rewrite the native Cursor, Gemini, and Codex MCP registrations because `add-mcp` does not migrate their legacy entries. Replace the full contiguous `[mcp_servers.gm]` TOML table span when updating Codex.
 
 The root is the published package. `package.json` lists release contents. `skill-release.yml` publishes skill changes from `main`; do not assume a release succeeded without its workflow result.
 
