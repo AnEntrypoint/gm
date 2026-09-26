@@ -140,6 +140,12 @@ pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
 (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
 refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
 
+`exec_js` evaluates its raw body in a separate Node process. It does not inject
+the caller's `tools` object. To run a command, use Node's argument-safe API:
+`const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
+Prefix the body with `timeoutMs=<ms>`. Use a language verb such as `bash` only
+when the request specifically needs shell syntax.
+
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
 rejected with a validation error, costing a round trip. Batch by writing several
@@ -187,7 +193,9 @@ or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
 `screenshot[=name]`, `capture`, `profile`, `trace`, and `viewport=`, which
 `serp` rejects outright. Unlike `serp`'s no-op session commands, `browser`
 and `cdp` sessions persist a real engine process (or a dialed remote
-endpoint) across dispatches. Without a `sessionId=<id>` first line the page
+endpoint) across dispatches. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250`
+or `.gm/browser-config.json`'s `chrome_cdp_endpoint` to use an existing Chrome
+endpoint. GM then does not launch or terminate that Chrome process. Without a `sessionId=<id>` first line the page
 belongs to the dispatching gm session (keyed by the SESSION_ID in the task
 name), so two gm sessions never share a page unless one names the other's id;
 `session list` shows each page's `owner_gm_session`. Every response carries
