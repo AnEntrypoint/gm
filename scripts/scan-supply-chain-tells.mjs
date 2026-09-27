@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// Scans files for supply-chain-backdoor and AI-injection "tells" -- signatures
-// found live in a real incident (an obfuscated C2 stager appended to
-// vite.browser.config.js, delivered via a compromised automated release
-// commit that also bumped a dependency and dropped .env from .gitignore).
-//
-// Run standalone: node scripts/scan-supply-chain-tells.mjs [path...]
-// Exit code 0 = clean, 1 = findings, 2 = scan error.
-//
-// Designed to be invoked from any project (not just this one) -- pass the
-// target repo root(s) as argv, or it scans cwd.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -17,25 +7,11 @@ import process from 'node:process'
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', 'vendor', '.cache',
   '.svelte-kit', '.nuxt', '.output', '.turbo', 'out', 'coverage', '.parcel-cache',
-  // Vendored/third-party binary trees this scanner isn't meant to police --
-  // a browser profile's installed extensions are third-party code the user
-  // didn't write and can't fix here; a real backdoor concern in a project's
-  // OWN code should never be diluted by noise from a bundled Chrome profile.
   '.plugkit-browser-profile', '.plugkit-agent-worktree', '.wwebjs_auth', '.wwebjs_cache',
 ])
-// Code files only. JSON/YAML/MD routinely carry legitimate non-Latin natural-
-// language text (Cyrillic, Greek, CJK, etc.) which is indistinguishable from a
-// homoglyph attack by codepoint alone -- the Unicode-confusable check below is
-// only meaningful applied to CODE, where an identifier/URL is expected to be
-// plain ASCII and non-ASCII inside one is a genuine anomaly, not content.
 const CODE_EXT = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.sh', '.ps1', '.py'])
-// Broader set for the exact-string / pattern checks, which key on code shapes
-// (require calls, eval, spawn) that can legitimately only appear in code or
-// config, not prose -- config/build files are still worth the exact-string and
-// structural-pattern passes, just not the Unicode-confusable pass.
 const TEXT_EXT = new Set([...CODE_EXT, '.json', '.yml', '.yaml', '.md'])
 
-// ---- Exact-match signatures from the confirmed incident ----------------
 const EXACT_STRINGS = [
   { sig: 'A9-2057', why: 'campaign/version tag literal seen in a live C2 stager' },
   { sig: '0xa322E5f3D311D3080e6f0121063e9aDC2490Ef1a', why: 'hardcoded Ethereum address used as a blockchain-based C2 config lookup key' },
@@ -43,7 +19,6 @@ const EXACT_STRINGS = [
   { sig: 'x-payload-b64', why: 'custom HTTP header used to smuggle a staged payload' },
 ]
 
-// ---- Structural / behavioral patterns (regex) ---------------------------
 const PATTERNS = [
   {
     name: 'blockchain-derived-c2-lookup',
@@ -93,8 +68,6 @@ const PATTERNS = [
   },
 ]
 
-// ---- Unicode confusables / invisible-character tells ---------------------
-// Each entry: a *visible-as-ASCII-but-isn't* or fully invisible codepoint.
 const SUSPICIOUS_UNICODE = [
   { cp: 0x200b, name: 'ZERO WIDTH SPACE' },
   { cp: 0x200c, name: 'ZERO WIDTH NON-JOINER' },
@@ -113,7 +86,6 @@ const SUSPICIOUS_UNICODE = [
   { cp: 0x2069, name: 'POP DIRECTIONAL ISOLATE' },
   { cp: 0xfeff, name: 'ZERO WIDTH NO-BREAK SPACE / BOM (mid-file)' },
   { cp: 0x00ad, name: 'SOFT HYPHEN' },
-  // Common homoglyphs used to disguise identifiers/URLs (Cyrillic look-alikes)
   { cp: 0x0410, name: 'CYRILLIC CAPITAL А (looks like Latin A)' },
   { cp: 0x0430, name: 'CYRILLIC SMALL а (looks like Latin a)' },
   { cp: 0x0415, name: 'CYRILLIC CAPITAL Е (looks like Latin E)' },
@@ -127,12 +99,6 @@ const SUSPICIOUS_UNICODE = [
 ]
 const SUSPICIOUS_UNICODE_MAP = new Map(SUSPICIOUS_UNICODE.map(u => [u.cp, u.name]))
 
-// ---- Statistical AI-prose-tell detection ---------------------------------
-// A separate signal class from the backdoor/injection checks above: this one
-// flags LLM-authored prose by its rhetorical fingerprint (uniform sentence
-// rhythm, stock rhetorical constructs, overused vocabulary), not by
-// malicious-code shape. Applies only to prose-bearing files (.md), never to
-// code, where the same words are routine and not evidence of anything.
 const SENTENCE_SPLIT_RE = /[.?!]+/
 const DESOURO_RE = /it['’]s not\s+(?:just\s+)?([^,]+),\s*it['’]s/i
 const TRIPLET_RE = /\b\w+\b,\s+\b\w+\b,\s+and\s+\b\w+\b/i
@@ -158,8 +124,6 @@ const FLUFF_WORDS = [
   'tapestry', 'testament', 'toolkit', 'trailblazing', 'transformative', 'transparent', 'turnkey',
   'underscore', 'unleash', 'unlock', 'unparalleled', 'unprecedented',
   'versatile', 'vibrant', 'visionary',
-  // Extended beyond the reference list: stock transition/hedge phrases and
-  // additional overused adjectives seen across LLM-authored marketing/doc copy.
   'moreover', 'furthermore', 'in conclusion', 'in summary', 'on the other hand',
   'it is worth noting', 'it is important to note', 'needless to say',
   'ecosystem', 'tailored', 'cohesive', 'robust framework', 'comprehensive',
@@ -201,17 +165,8 @@ function analyzeProseTells(text) {
 const PROSE_TELL_EXT = new Set(['.md'])
 const PROSE_TELL_MIN_SENTENCES = 8
 const PROSE_TELL_SCORE_THRESHOLD = 0.5
-// Single regex alternation, scanned natively by the engine in one pass --
-// the previous per-character for-loop with an inner .find() was O(n) work
-// PER CHARACTER (n = codepoint list length) and made a multi-MB minified
-// bundle file (a real case: a 3.3MB single-line webpack chunk) take minutes
-// instead of milliseconds.
 const SUSPICIOUS_UNICODE_RE = new RegExp('[' + SUSPICIOUS_UNICODE.map(u => '\\u' + u.cp.toString(16).padStart(4, '0')).join('') + ']', 'g')
 
-// A file whose non-ASCII payload is almost entirely \uXXXX-style JS escape
-// sequences decoding to plain ASCII is itself a tell (deliberate obfuscation
-// to defeat plain-string grep, seen in the confirmed incident's http/https/
-// url/child_process require() calls).
 const ESCAPED_ASCII_RUN = /(\\u00[2-7][0-9a-fA-F]){6,}/
 
 function walk(dir, out) {
@@ -223,8 +178,6 @@ function walk(dir, out) {
   }
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue
-    // Hash/timestamp-suffixed variants of the same vendored-profile dirs
-    // (e.g. .plugkit-browser-profile-<id>) -- prefix match on the same names.
     if (e.name.startsWith('.plugkit-browser-profile') || e.name.startsWith('.plugkit-browser-chrome-profile') || e.name.startsWith('.plugkit-agent-worktree')) continue
     const p = path.join(dir, e.name)
     if (e.isDirectory()) {
@@ -289,9 +242,6 @@ function scanFile(filePath) {
   if (CODE_EXT.has(path.extname(filePath))) {
     const matches = text.match(SUSPICIOUS_UNICODE_RE)
     if (matches && matches.length) {
-      // Line numbers computed via one pass over newline offsets (not a fresh
-      // split() per hit) -- still correct even on a huge single-line file,
-      // just no longer quadratic.
       let newlineOffsets = null
       const lineOf = (idx) => {
         if (!newlineOffsets) {
@@ -350,10 +300,6 @@ function main() {
     else files.push(root)
   }
 
-  // Stream findings as each file is scanned (never buffer until the end) so a
-  // kill/timeout mid-run still leaves a partial, readable, useful result on
-  // disk instead of losing everything. Progress heartbeat every 200 files so
-  // a long run's liveness is visible without waiting for a finding.
   let totalFindings = 0
   const filesWithFindings = new Set()
   for (let idx = 0; idx < files.length; idx++) {

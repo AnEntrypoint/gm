@@ -15,6 +15,7 @@ Read `SKILLS.md` before starting work. Read every relevant `skills/<name>/SKILL.
 - `gm-mcp/` wraps the spool write-and-poll cycle. Edit `src/` and rebuild its committed bundle together.
 - `install.sh` and `install.ps1` install the skill and runner. Keep their platform behavior equivalent.
 - `bin/gm-install.js` registers the MCP server as `node ~/.gm-tools/gm-mcp-server.mjs` (project `.mcp.json`: a `node -e` launcher resolving that path at start). Never register an `npx github:` spec: it re-resolves and reinstalls over the network on every connect (measured 8.2s warm, 22.2s cold, vs 0.19s local) and trips Claude Code's 30s `CONNECT_TIMEOUT` under load.
+- On Windows, invoke PowerShell through `runDirect` and `-File <install.ps1> spool`; `spawnSync` with `shell:true` loses argument boundaries. Rewrite the native Cursor, Gemini, and Codex MCP registrations because `add-mcp` does not migrate their legacy entries. Replace the full contiguous `[mcp_servers.gm]` TOML table span when updating Codex.
 
 The root is the published package. `package.json` lists release contents. `skill-release.yml` publishes skill changes from `main`; do not assume a release succeeded without its workflow result.
 
@@ -35,6 +36,8 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use the documented spool fallback: write one complete request atomically, prefix every request number with a unique session id, and poll the matching response. Never start a second watcher while a fresh watcher is busy. A stale or failed runner is a defect in its owning source, not a reason to bypass gm.
 
 Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it.
+
+Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior.
 
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
