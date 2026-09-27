@@ -5,12 +5,8 @@ import {
   escapeHtml, escapeJson, extractArticle, rewriteLegacyLinks,
 } from 'anentrypoint-design/kits/flatspace-theme';
 
-// SDK_CSS_URL/SDK_JS_URL are NOT imported from the dependency: it's pinned to
-// anentrypoint-design@0.0.471 (npm hasn't been republished since), so its
-// exported URLs point at a stale unpkg build missing current CSS fixes.
-// Point straight at the design repo's GitHub source via jsDelivr instead.
-const SDK_CSS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.css';
-const SDK_JS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.js';
+const DESIGN_REPOSITORY_CSS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.css';
+const DESIGN_REPOSITORY_JS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.js';
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -26,8 +22,8 @@ function flattenNav(nav) {
   return out;
 }
 
-const SDK_CSS = SDK_CSS_URL;
-const SDK_JS  = SDK_JS_URL;
+const SDK_CSS = DESIGN_REPOSITORY_CSS_URL;
+const SDK_JS  = DESIGN_REPOSITORY_JS_URL;
 
 const CLIENT_SCRIPT = `
 import * as ds from '${SDK_JS}';
@@ -179,11 +175,6 @@ const buildLandingMain = () => {
 
 const main = page.layout === 'article' ? buildArticleMain() : buildLandingMain();
 
-// Every article page now renders at the same full-bleed width as the landing
-// (home) page -- a prior partial allowlist (WIDE_ARTICLES) left crates/
-// distribution/skills clamped to --measure-narrow (760px) while made-with/
-// stats/paper and home rendered full-width, so page width varied by page
-// with no content-driven reason. All pages fill the screen consistently now.
 const shell = C.AppShell ? C.AppShell({
   topbar, crumb, main, status,
 }) : h('div', {}, ...main);
