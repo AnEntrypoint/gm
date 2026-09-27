@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Runs scan-supply-chain-tells.mjs once PER top-level project directory under
-// a root, appending each project's result to a progress log immediately.
-// Resumable: projects already present in the progress log are skipped on a
-// re-run, so a kill/timeout never loses completed work and a re-invocation
-// picks up where it left off.
-//
-// Usage: node scripts/scan-dev-tree-chunked.mjs <root> <progressLogPath>
 
 import fs from 'node:fs'
 import path from 'node:path'

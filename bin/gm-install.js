@@ -8,11 +8,19 @@ import os from 'node:os'
 const argv = process.argv.slice(2)
 const global = argv.includes('-g') || argv.includes('--global')
 const mcpOnly = argv.includes('--mcp-only')
+const help = argv.includes('-h') || argv.includes('--help')
 
 const GM_TOOLS_DIR = path.join(os.homedir(), '.gm-tools')
 const MCP_BUNDLE_PATH = path.join(GM_TOOLS_DIR, 'gm-mcp-server.mjs')
 const MCP_BUNDLE_URL = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js'
 const LEGACY_NPX_SPEC = 'github:AnEntrypoint/gm-mcp'
+
+if (help) {
+  console.log('Usage: gm [-g|--global] [--mcp-only]')
+  console.log('Installs or repairs the gm skill, local MCP registration, and runner.')
+  console.log('For live dispatch, use the gm MCP tool after restarting the agent host, or the project spool with agentplug-runner spool.')
+  process.exit(0)
+}
 
 const PROJECT_LAUNCH_SNIPPET =
   "const p=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +

@@ -103,11 +103,6 @@ function Install-Skill {
     }
 }
 
-# Current gm.wasm imports env:host_plugin_call. The retired JS wasm host
-# never registered that import, so any boot that still spawned
-# plugkit-wasm-wrapper.js died with LinkError and self-healed into a
-# restart loop. agentplug-runner already provides the import. Quarantine
-# leftover wrapper files so that path cannot be re-entered.
 function Remove-RetiredJsHost {
     $retiredDir = Join-Path $GmToolsDir "retired-js-host"
     $names = @("plugkit-wasm-wrapper.js", "supervisor.js", "bootstrap.js")
