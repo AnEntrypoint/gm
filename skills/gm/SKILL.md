@@ -75,9 +75,13 @@ response body, never in context. Phase mismatch resolves to the fresh
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
-**Start, never install -- and never a second one.** A dead watcher (`ts` stale
->5min AND no future `busy_until`) means only one thing: the already-installed
-local binary isn't running. Start it -- `~/.gm-tools/agentplug-runner spool`
+**Start, never install -- and never a second one.** A dead watcher is either a
+`ts` stale >5min with no future `busy_until`, or a status `pid` that the host
+proves is absent (`kill -0 <pid>` on Unix; `Get-Process -Id <pid>` on
+PowerShell). A recent timestamp only proves that a process wrote once; it does
+not prove that process still exists. In either verified-dead case, the
+already-installed local binary is not running. Start it --
+`~/.gm-tools/agentplug-runner spool`
 (PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`) --
 fire-and-forget, then write the first verb immediately. A `ts` that is merely
 recent-but-not-this-second is a BUSY watcher, not a dead one: its heartbeat
@@ -86,8 +90,8 @@ gives the project two sweepers that cannot see each other's claims, so each
 one's orphan sweep answers `dispatch_orphaned` for the other's running work and
 deletes the claim under it. That is the `dispatch_orphaned` storm with a rotating
 `sweeping_pid`, and it is self-inflicted -- seven concurrent watchers were
-observed on one project this way. Stale by >5min is the only license to start
-one. This is launching an existing local
+observed on one project this way. A stale timestamp or a proven-absent status
+PID is the only license to start one. This is launching an existing local
 executable, nothing more; it reaches no network. The runner updates itself in
 the background on its own schedule once running (binary and plugins alike) --
 that update path never touches this skill or this session. A future
@@ -124,7 +128,7 @@ the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
+`phase-status`, `filter`. `git_clone {url, destination}` accepts an HTTPS repository URL without credentials, a port, query, or fragment. `destination` is an absolute path that git must find absent or empty. Its receipt reports `revision`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
 another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
@@ -135,6 +139,12 @@ pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
 `git_show {rev?, path?, paths?, stat?}`: `path` prints that file at the revision
 (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
 refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
+
+`exec_js` evaluates its raw body in a separate Node process. It does not inject
+the caller's `tools` object. To run a command, use Node's argument-safe API:
+`const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
+Prefix the body with `timeoutMs=<ms>`. Use a language verb such as `bash` only
+when the request specifically needs shell syntax.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
@@ -183,7 +193,9 @@ or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
 `screenshot[=name]`, `capture`, `profile`, `trace`, and `viewport=`, which
 `serp` rejects outright. Unlike `serp`'s no-op session commands, `browser`
 and `cdp` sessions persist a real engine process (or a dialed remote
-endpoint) across dispatches. Without a `sessionId=<id>` first line the page
+endpoint) across dispatches. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250`
+or `.gm/browser-config.json`'s `chrome_cdp_endpoint` to use an existing Chrome
+endpoint. GM then does not launch or terminate that Chrome process. Without a `sessionId=<id>` first line the page
 belongs to the dispatching gm session (keyed by the SESSION_ID in the task
 name), so two gm sessions never share a page unless one names the other's id;
 `session list` shows each page's `owner_gm_session`. Every response carries
