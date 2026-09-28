@@ -25,7 +25,27 @@ field is refused, never silently ignored into a whole-tree scan. The glob is a
 real glob (`*`, `?`, `**`, `[abc]`, `{a,b}` -- `**/*.{js,mjs}` works), matched
 against the path relative to the root or to `path`, or the bare file name; a
 malformed glob is an error, and one that admits no listed file answers
-`glob_matched_no_files: true`, `exhaustive: false`.
+`glob_matched_no_files: true`, `exhaustive: false`. Exclude with `exclude_glob`
+(a string or an array) or a leading `!` in `glob`/`path_glob` (`"!{dist,build}/**"`);
+`glob` and `path_glob` also take an array. `case_insensitive: true` matches ignoring
+case and `whole_word: true` matches whole words, for literal and regex alike.
+Dotfiles match `*.json`; only when the target is walked rather than listed by git
+(a non-git or gitignored path) are hidden directories skipped, named in
+`excluded_by_rule` with rule `hidden_dir`. Shape the reply with `output`:
+`"matches"` (default, one object per match), `"compact"` (`path:line: <text
+trimmed to 160 chars>`), `"files"` (matching paths) or `"count"` (totals plus the
+busiest files). `limit` (also `head_limit`, `k`, `max_results`) caps matches for
+`matches`/`compact` and rows for `files`/`count`. A reply is capped at `max_chars`
+(default 24000): the remaining entries, still part of the exhaustive result, are
+written one per line to `spill_file`, which can be read directly, and the reply
+says `reply_truncated: true`. `excluded_by_rule` lists paths skipped by rule and
+never affects `exhaustive`; `files_unreadable` counts files the requested target
+could not read (with `files_unreadable_sample`) and is the only unreadable count
+that turns `exhaustive` false, while unreadable files under dependency stores
+(`node_modules`, `.pnpm`, `.venv`, `target`) are reported apart as
+`files_unreadable_in_dependency_dirs`. A `path` that does not exist answers with
+the absolute search root it was resolved against; pass `root` (or dispatch with
+that project's `cwd`) when the path lives elsewhere.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -139,18 +159,33 @@ pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
 `git_show {rev?, path?, paths?, stat?}`: `path` prints that file at the revision
 (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
 refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
+`git_status {paths?, summary?, limit?}` scopes to those pathspecs;
+`summary: true` returns counts by status plus the first `limit` (default 20)
+`first_paths`, and `limit` alone caps each status list (`truncated_totals` names
+the real totals).
 
-`exec_js` evaluates its raw body in a separate Node process. It does not inject
-the caller's `tools` object. To run a command, use Node's argument-safe API:
+`exec_js` evaluates its raw body in a separate Node process, delivered on the
+child's stdin, so the body is never part of its command line and a process-listing
+query that filters command lines for a marker string cannot match the runner
+itself. It does not inject the caller's `tools` object. A `.js` scratch file in a
+repo whose package.json says `"type": "module"` is ESM: give a scratch file that
+uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API:
 `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
-Prefix the body with `timeoutMs=<ms>`; the MCP wrapper polls for that budget plus
-5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds` always wins,
-and `resume_task` re-polls a `timed_out` dispatch). A body that outlives its
-`timeoutMs` keeps running as a background task named in the response. Output
-fields (`stdout`, `stderr`, `result`) show up to 16000 characters; a longer field
-ends in `OUTPUT TRUNCATED` naming the out-file that holds all of it. Use a
-language verb such as `bash` only when the request specifically needs shell
-syntax.
+Prefix the body with `timeoutMs=<ms>`: it is an enforced wall-clock limit
+(default 300000, hard ceiling 900000). At expiry the child's whole process tree is
+killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true,
+killed: true, error_code: exec_timeout` with `limit_ms` and the partial
+`stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that
+budget plus 5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds`
+always wins, and `resume_task` re-polls a `timed_out` dispatch). A server that must
+outlive the call is started detached: `spawn(process.execPath, [script], {detached:
+true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
+stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
+(`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000
+characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain
+text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be
+read directly. Use a language verb such as `bash` only when the request
+specifically needs shell syntax.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
@@ -208,8 +243,15 @@ gm-config `prose/browser.md`. Dispatches of one session queue on its page; use
 `sessionId=<other>` for an independent page. Without a `sessionId=<id>` first line the page
 belongs to the dispatching gm session (keyed by the SESSION_ID in the task
 name), so two gm sessions never share a page unless one names the other's id;
-`session list` shows each page's `owner_gm_session`. Every response carries
-`result.debug`.
+`session list` shows each page's `owner_gm_session`. A `browser`/`cdp` dispatch
+is quiet by default: `debug` holds only a console summary, page errors and a
+network summary. Put `capture` (or `debug=on`) as a prefix line for the full
+network, performance and gl block, and `quiet` (or `debug=off`) to force the short
+one. A single expression may use top-level `await`; a multi-statement script needs
+an explicit `return`. The page's Chrome is reaped after `chrome_idle_ttl_seconds`
+idle, evicted at the concurrent-Chrome cap, or lost to a crash, in which case the
+reply says `session_recycled: true`: put `url=<target>` on every call that depends
+on a loaded page.
 
 No test files, ever, anywhere, no exceptions -- not written, not edited, not
 left on disk even if a project already has one (remove any found, same turn,
