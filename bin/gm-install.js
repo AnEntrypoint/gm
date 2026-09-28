@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
@@ -63,10 +64,21 @@ async function vendorMcpBundle() {
   if (!res.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${res.status}`)
   const body = await res.text()
   if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
+  const freshHash = sha256Short(body)
+  const deployedHash = fs.existsSync(MCP_BUNDLE_PATH) ? sha256Short(fs.readFileSync(MCP_BUNDLE_PATH)) : null
+  if (deployedHash === freshHash) {
+    console.log(`gm-mcp server already current at ${MCP_BUNDLE_PATH} (sha256 ${freshHash})`)
+    return
+  }
   const tmp = `${MCP_BUNDLE_PATH}.tmp.${process.pid}`
   fs.writeFileSync(tmp, body)
   fs.renameSync(tmp, MCP_BUNDLE_PATH)
-  console.log(`vendored gm-mcp server -> ${MCP_BUNDLE_PATH} (${body.length} bytes)`)
+  const transition = deployedHash ? `stale ${deployedHash} -> ${freshHash}` : `new ${freshHash}`
+  console.log(`vendored gm-mcp server -> ${MCP_BUNDLE_PATH} (${body.length} bytes, ${transition}); the bundle then keeps itself current`)
+}
+
+function sha256Short(content) {
+  return createHash('sha256').update(content).digest('hex').slice(0, 12)
 }
 
 function isLegacyNpxEntry(entry) {
