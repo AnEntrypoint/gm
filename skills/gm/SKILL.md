@@ -128,7 +128,7 @@ the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_clone {url, destination}` accepts an HTTPS repository URL without credentials, a port, query, or fragment. `destination` is an absolute path that git must find absent or empty. Its receipt reports `revision`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
+`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
 another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
@@ -143,8 +143,14 @@ refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
 `exec_js` evaluates its raw body in a separate Node process. It does not inject
 the caller's `tools` object. To run a command, use Node's argument-safe API:
 `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
-Prefix the body with `timeoutMs=<ms>`. Use a language verb such as `bash` only
-when the request specifically needs shell syntax.
+Prefix the body with `timeoutMs=<ms>`; the MCP wrapper polls for that budget plus
+5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds` always wins,
+and `resume_task` re-polls a `timed_out` dispatch). A body that outlives its
+`timeoutMs` keeps running as a background task named in the response. Output
+fields (`stdout`, `stderr`, `result`) show up to 16000 characters; a longer field
+ends in `OUTPUT TRUNCATED` naming the out-file that holds all of it. Use a
+language verb such as `bash` only when the request specifically needs shell
+syntax.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
