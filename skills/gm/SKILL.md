@@ -201,7 +201,11 @@ or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
 and `cdp` sessions persist a real engine process (or a dialed remote
 endpoint) across dispatches. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250`
 or `.gm/browser-config.json`'s `chrome_cdp_endpoint` to use an existing Chrome
-endpoint. GM then does not launch or terminate that Chrome process. Without a `sessionId=<id>` first line the page
+endpoint. GM then does not launch or terminate that Chrome process.
+`.gm/browser-config.json` also accepts `enable_webgpu`, `chrome_extra_args`,
+`load_extension`, `chrome_idle_ttl_seconds` and `chrome_max_concurrent`; see
+gm-config `prose/browser.md`. Dispatches of one session queue on its page; use
+`sessionId=<other>` for an independent page. Without a `sessionId=<id>` first line the page
 belongs to the dispatching gm session (keyed by the SESSION_ID in the task
 name), so two gm sessions never share a page unless one names the other's id;
 `session list` shows each page's `owner_gm_session`. Every response carries
