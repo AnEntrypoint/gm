@@ -38,12 +38,17 @@ behaves byte-identically to before this file existed.
 - `gm_concurrency` (default: same as `max_concurrent_projects`, so also
   host-core-derived unless set explicitly) -- the worker-thread budget for
   cross-project gm dispatch and the multiplier behind
-  `shared_store_recycle_dispatches`. It no longer sizes the `gm` Store pool.
-  The runner keeps exactly one hot `gm` Store and serializes gm calls through
-  it. One Store stays loaded between calls, so per-call latency stays fast,
-  and no project ever pays for a second copy of gm's linear memory. `gm` is
-  stateless: its real state lives in each project's own `.gm/` files, never
-  in wasm memory, so the single Store serves every project.
+  `shared_store_recycle_dispatches`. It does not size the `gm` Store pool.
+- `gm_pool_size` (default 8, capped by the host's
+  `std::thread::available_parallelism()` and 16) -- how many `gm` Stores the
+  runner keeps, and so how many gm dispatches run inside wasm at once. A
+  dispatch holds one Store for its whole run, so a long `exec_js` occupies one
+  until it returns; a quick dispatch waits only when every Store is held. Heavy
+  verbs (`recall`, `health`, `code_index`, `memorize*`, a dual-mode
+  `codesearch`) may hold at most 3 Stores at once, so the rest stay reachable
+  by quick verbs. Lower it (4 was the earlier default) to trade concurrency
+  for resident memory. `gm` is stateless: its real state lives in each
+  project's own `.gm/` files, never in wasm memory.
 - `side_plugin_concurrency` (default 1) -- how many live Stores EACH of
   bert/treesitter (the non-`gm` shared plugins) holds. Each extra slot is a
   full copy of that plugin's Store; for bert that is its own copy of the
@@ -195,79 +200,47 @@ losing authority it raises a shared flag the main loop polls cheaply (both at
 the top of every loop iteration and immediately after each dispatch batch)
 and performs the actual session-owning shutdown itself.
 
-## Mid-batch verb starvation
+## Claiming
 
-Within one `dispatch_project` call, newly-arrived requests in ANY verb
-directory (not just `background-convert`, which had this fix first) are
-re-scanned and spawned into the same in-flight batch on every ~50ms poll
-tick, rather than waiting for the batch's original members to finish and the
-next `dispatch_project` call for that root to pick them up. Without this, an
-ordinary request (e.g. `phase-status`) landing on a busy project's spool
-while an unrelated slow dispatch (e.g. `codesearch`, `exec_js`) from the same
-claim-snapshot was still in flight sat unclaimed for the full duration of
-that slow sibling.
+`dispatch_project` claims every settled in-file of the project on each tick,
+oldest first, and hands each claim to its own thread without waiting for it.
+Nothing holds a later in-file back while an earlier dispatch is in flight; the
+only waits are the per-project lanes and the `gm` Store pool described below.
 
-## Per-project fairness cap (not machine-wide)
+## Per-project lanes (not machine-wide)
 
-`gm_concurrency` above is the actual TOTAL pool size and stays strictly
-machine-wide -- one shared daemon process, so no per-project override of the
-real pool size is admissible (a project raising its own share would be raising
-it for every other registered project too, since they all draw from the same
-pool).
+`gm_pool_size` above is the machine-wide total: one shared daemon process, so no
+project can raise its own share. Within one project, gm dispatches of different
+kinds run concurrently and are serialised only against the ones that can touch
+the same files. The runner reads no per-project config for this; the
+`gm_concurrency_limit` key of `.gm/daemon-project-config.json` was removed and is
+ignored.
 
-A registered project can still set its OWN fairness ceiling: how many of that
-shared pool's slots ITS OWN dispatches may occupy concurrently, as a
-self-limiting cap that can only ever lower a project's effective share, never
-raise the machine total. Configured per-project, read fresh on every dispatch
-(same precedent as `.gm/browser-config.json`'s `BrowserConfig::load(cwd)`),
-at:
+- Parallel-safe verbs take no lock: the exec family (`exec_js` and every
+  language stem), `codesearch`, `fetch`, `serp`/`browser`/`cdp`, the read-only
+  `fs_*`, `git_status`/`git_log`/`git_diff`/`git_show`, `prd-list`/`prd-status`/
+  `mutable-list`, `phase-status`, `status`, `wait`, `close`, `filter`.
+- Every other verb takes one of three per-project lanes and waits only for an
+  earlier dispatch in the same lane: `git` (add, commit, finalize, push, pull,
+  fetch, checkout, merge, reset, stash), `store` (memorize, recall, index, sql,
+  cache, kv writes) and `state` (instruction, transition, prd-add/resolve,
+  mutable-add/resolve, everything unlisted). A slow `recall` therefore never
+  holds a `prd-add`, and a `git_finalize` waiting on CI never holds a `recall`.
+- A state-changing verb also queues first-in first-out behind the same verb of
+  every other project, so two `memorize-fire` calls never overlap machine-wide.
 
-```
-<project>/.gm/daemon-project-config.json
-```
-
-```json
-{
-  "gm_concurrency_limit": 1
-}
-```
-
-- `gm_concurrency_limit` (default: unset -- unbounded from this project's own
-  side, i.e. bounded only by the machine-wide `gm_concurrency` pool size) --
-  the maximum number of this project's own `gm` dispatches allowed in flight
-  at once. A dispatch beyond this project's own limit waits (polls a
-  process-wide in-flight counter keyed by project root) for one of this same
-  project's earlier dispatches to finish, BEFORE it takes a slot from the
-  shared pool -- it never grants extra pool slots, it only restricts how many
-  of the ones the pool already has this one project may hold simultaneously.
-  Released automatically (RAII guard) when the dispatch completes or panics,
-  so a crash mid-dispatch cannot wedge the project at a permanently-held
-  fairness slot.
-
-Missing file, or the field absent, is byte-identical to behavior before this
-file existed -- no wait loop is entered, no shared map is touched, zero
-overhead beyond one file read that fails.
-
-Note: a single project's own `gm` dispatches CAN now run genuinely concurrent
-against each other -- see `background-convert` below. This fairness cap is the
-real, observable ceiling on that concurrency, not a forward-looking no-op:
-once a dispatch has been background-converted, the project's remaining queued
-dispatches proceed against the shared pool while the converted one is still
-running, and `gm_concurrency_limit` (if configured) bounds how many of that
-project's own dispatches -- background-converted or not -- may hold a pool
-slot at the same time.
+A project can have at most 32 claimed dispatches in flight; further in-files stay
+queued and are claimed, oldest first, as earlier ones finish.
 
 ## `background-convert` -- agent-initiated dispatch backgrounding
 
 Each of a project's spool requests is spawned onto its own OS thread the
-moment it is claimed; the daemon's own worker normally waits for that thread
-to finish (bounded-poll `is_finished()` check, ~50ms cadence) before writing
-the response and moving on -- functionally identical timing to a plain
-synchronous call. `background-convert` lets an agent that already dispatched
+moment it is claimed, and the daemon's worker returns to its loop without
+waiting for it. `background-convert` lets an agent that already dispatched
 a slow verb (`exec_js`, `browser`, or any other -- the mechanism is
-verb-agnostic, the daemon does not need to know what a verb does to detach
-the thread running it) tell the daemon mid-flight: stop waiting on this one,
-keep it running, and free the worker/tick immediately. This is agent-
+verb-agnostic) tell the daemon mid-flight to drop the dispatch from its
+in-flight accounting (the self-update and idle-recycle gates stop counting it)
+while the thread keeps running and writes its out-file as usual. This is agent-
 initiated only -- there is no timer/threshold that backgrounds a dispatch
 automatically. It is unrelated to `exec_js`'s own internal `timeoutMs`-based
 subprocess backgrounding (`host_task_proc`/`task.rs`'s `spawn`/`list`/
@@ -306,12 +279,7 @@ would have (`out/<verb>-<task>.json` + the `.ready` sentinel) -- the calling
 agent's later `Read` on that same path is unchanged ABI, it just may need to
 be retried later rather than being immediately available.
 
-Ownership model: after a background-convert, the project's OTHER queued
-dispatches are not blocked behind the converted one -- they proceed through
-the same `SharedPluginPool`/`GmFairnessGuard` machinery a second, genuinely
-concurrent checkout for that project, bounded by the exact same
-`gm_concurrency` (machine-wide pool size) and `gm_concurrency_limit`
-(per-project fairness cap, see above) this file already documents. A
-background-converted dispatch still counts as one held pool slot and one held
-fairness-guard slot for its entire real runtime -- it is not exempt from
-either cap, it only stops holding the WORKER and the daemon TICK hostage.
+Ownership model: a background-convert only stops the WORKER wait; since every
+claim already runs on its own thread, the project's other dispatches were never
+held behind the converted one. It still holds its `gm` Store, and its lane if
+its verb takes one (see "Per-project lanes"), for its entire real runtime.
