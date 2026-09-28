@@ -217,13 +217,13 @@ the same files. The runner reads no per-project config for this; the
 ignored.
 
 - Parallel-safe verbs take no lock: the exec family (`exec_js` and every
-  language stem), `codesearch`, `fetch`, `serp`/`browser`/`cdp`, the read-only
+  language stem), `codesearch` in any mode but `dual`, `fetch`, `serp`/`browser`/`cdp`, the read-only
   `fs_*`, `git_status`/`git_log`/`git_diff`/`git_show`, `prd-list`/`prd-status`/
   `mutable-list`, `phase-status`, `status`, `wait`, `close`, `filter`.
 - Every other verb takes one of three per-project lanes and waits only for an
   earlier dispatch in the same lane: `git` (add, commit, finalize, push, pull,
   fetch, checkout, merge, reset, stash), `store` (memorize, recall, index, sql,
-  cache, kv writes) and `state` (instruction, transition, prd-add/resolve,
+  cache, kv writes, dual-mode `codesearch`) and `state` (instruction, transition, prd-add/resolve,
   mutable-add/resolve, everything unlisted). A slow `recall` therefore never
   holds a `prd-add`, and a `git_finalize` waiting on CI never holds a `recall`.
 - A state-changing verb also queues first-in first-out behind the same verb of
