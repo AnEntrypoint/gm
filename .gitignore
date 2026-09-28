@@ -140,4 +140,3 @@ gm-plugkit/.gm/
 
 # tessl tooling marker (foreign, not shipped)
 skills/gm-skill/.tessl-plugin/
-config.bat
