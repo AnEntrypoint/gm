@@ -43,6 +43,8 @@ The on-disk PRD and mutable state is authoritative. A walk completes only when t
 
 Give each subagent its own session id and tell it to use the gm skill. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
 
+Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into every subagent prompt; agents run `session list` and reuse a live session before launching (`chrome_max_concurrent` defaults to 2), and end with `session close-all` then `session list` to confirm none remain. The parent closes the shared id after its subagents finish. Never run a scratch agentplug daemon against a real project root while other agents work: its orphan sweep sees every gm chrome on the machine.
+
 ## Implementation rules
 
 - Keep code and prose self-explanatory. Retain a comment only for a local fact that structure cannot express, such as a measured limit or an external workaround.
