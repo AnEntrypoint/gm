@@ -202,7 +202,12 @@ and `cdp` sessions persist a real engine process (or a dialed remote
 endpoint) across dispatches. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250`
 or `.gm/browser-config.json`'s `chrome_cdp_endpoint` to use an existing Chrome
 endpoint. GM then does not launch or terminate that Chrome process.
-`.gm/browser-config.json` also accepts `enable_webgpu`, `chrome_extra_args`,
+Every fresh `cdp` session returns a `gpu` report: check `gpu.accelerated` is
+`true` (and read `gpu.warn`) before trusting any perf or visual witness, and for
+rendering claims witness under both `session new gpu=nvidia` and `session new gpu=amd`
+(bare body `gpu` re-probes). Plain dispatches attach no instrumentation; `capture gl`
+adds sampled GL error tracking, so never measure perf with it.
+`.gm/browser-config.json` also accepts `gpu`, `enable_webgpu`, `chrome_extra_args`,
 `load_extension`, `chrome_idle_ttl_seconds` and `chrome_max_concurrent`; see
 gm-config `prose/browser.md`. Dispatches of one session queue on its page; use
 `sessionId=<other>` for an independent page. Without a `sessionId=<id>` first line the page
