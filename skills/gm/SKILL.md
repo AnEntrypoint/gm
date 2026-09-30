@@ -124,7 +124,10 @@ competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
 were served and answering normally -- `git_log` among them. Where served (per
-the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
+the brick wall above): `codesearch`, `codeinsight` (structure questions over a
+symbol index that covers the whole tree: `{}` for the overview, then `outline`,
+`find`, `callers`, `impact`, `tests`, `imports`, `cycles`, `coupling`, `complexity`,
+`duplicates`, `orphans` via `{"action": ...}`), `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
