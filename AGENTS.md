@@ -37,11 +37,11 @@ Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use 
 
 Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it.
 
-Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior.
+Structural code questions (who calls X, what breaks if X changes, is X dead, a diff's blast radius) go to `callers {symbol}` / `impact {symbol}` first; `codesearch` (alias `code_search`) is the search verb and the exhaustive confirmation when the call-graph reply is empty.
 
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
-Give each subagent its own session id and tell it to use the gm skill. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
+Give each subagent its own session id and tell it to use the gm skill, codeinsight (`callers`/`impact`) first. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
 
 Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into every subagent prompt; agents run `session list` and reuse a live session before launching (`chrome_max_concurrent` defaults to 2), and end with `session close-all` then `session list` to confirm none remain. The parent closes the shared id after its subagents finish. Never run a scratch agentplug daemon against a real project root while other agents work: its orphan sweep sees every gm chrome on the machine.
 

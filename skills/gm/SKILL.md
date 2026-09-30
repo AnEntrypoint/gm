@@ -7,45 +7,34 @@ description: The primary driver for every coding, refactoring, debugging, or eng
 
 **Brick wall: `codesearch` replaces Grep/Glob/Explore/Bash `find`/`grep`/`rg`
 everywhere, no exceptions. `fetch`/`browser`/`cdp` replace WebFetch/WebSearch/
-raw Chrome. Every `Agent`/`Task` dispatch opens with "use the gm skill for this."**
+raw Chrome. Every `Agent`/`Task` dispatch opens with "use the gm skill for this;
+code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`,
+and `Read` only a located path."**
 
-The ripgrep-shaped job that wall used to block with nothing equivalent behind it --
-every definition AND every call site of one symbol -- is `codesearch {query,
-mode: "literal"}` (or `"regex"`): every match with `path` and `line`, no ranking,
-no top-k, read from the tree rather than the index, so it costs ~1s where the
-default `dual` mode costs minutes on a large workspace. An unrecognized `mode` is
-now an error, not a silent downgrade to `dual`. The files read are git's view of
-the worktree -- every tracked file (submodules included) plus untracked files git
-does not ignore, with no directory-name noise list. Trust the result as complete
-only when the response says `exhaustive: true`; otherwise it names the bound or
-skip rule that fired (`excluded_by_rule` lists pruned paths outside a git worktree).
-Scope it with `path` (a subdirectory or file, relative to the root; a subdirectory
-passed as `root` works the same) and `glob`/`path_glob`; any unrecognized body
-field is refused, never silently ignored into a whole-tree scan. The glob is a
-real glob (`*`, `?`, `**`, `[abc]`, `{a,b}` -- `**/*.{js,mjs}` works), matched
-against the path relative to the root or to `path`, or the bare file name; a
-malformed glob is an error, and one that admits no listed file answers
-`glob_matched_no_files: true`, `exhaustive: false`. Exclude with `exclude_glob`
-(a string or an array) or a leading `!` in `glob`/`path_glob` (`"!{dist,build}/**"`);
-`glob` and `path_glob` also take an array. `case_insensitive: true` matches ignoring
-case and `whole_word: true` matches whole words, for literal and regex alike.
-Dotfiles match `*.json`; only when the target is walked rather than listed by git
-(a non-git or gitignored path) are hidden directories skipped, named in
-`excluded_by_rule` with rule `hidden_dir`. Shape the reply with `output`:
-`"matches"` (default, one object per match), `"compact"` (`path:line: <text
-trimmed to 160 chars>`), `"files"` (matching paths) or `"count"` (totals plus the
-busiest files). `limit` (also `head_limit`, `k`, `max_results`) caps matches for
-`matches`/`compact` and rows for `files`/`count`. A reply is capped at `max_chars`
-(default 24000): the remaining entries, still part of the exhaustive result, are
-written one per line to `spill_file`, which can be read directly, and the reply
-says `reply_truncated: true`. `excluded_by_rule` lists paths skipped by rule and
-never affects `exhaustive`; `files_unreadable` counts files the requested target
-could not read (with `files_unreadable_sample`) and is the only unreadable count
-that turns `exhaustive` false, while unreadable files under dependency stores
-(`node_modules`, `.pnpm`, `.venv`, `target`) are reported apart as
-`files_unreadable_in_dependency_dirs`. A `path` that does not exist answers with
-the absolute search root it was resolved against; pass `root` (or dispatch with
-that project's `cwd`) when the path lives elsewhere.
+Codeinsight first: `callers {symbol}` before reading, editing or deleting a
+function (who calls it, what must stay valid), `impact {symbol, max_depth}` for
+what it depends on, `callers` on every changed function for a diff's blast
+radius. An empty reply is proof only when `codeinsight_index` says `complete:
+true`; otherwise confirm with a `codesearch` identifier query. Served prose
+("Code intelligence first") has the full table.
+
+Every definition AND every call site of one symbol is `codesearch {query, mode:
+"literal"}` (or `"regex"`): every match with `path` and `line`, no ranking or
+top-k, read from git's view of the worktree (tracked files incl. submodules, plus
+unignored untracked files), ~1s where `dual` costs minutes. An unknown `mode` or
+body field is an error, never a silent whole-tree `dual`. Complete only when
+`exhaustive: true`; otherwise the reply names the bound or rule that fired.
+Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
+`glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
+or `exclude_glob` excludes; a glob admitting no file answers
+`glob_matched_no_files: true`), `case_insensitive`, `whole_word`. Reply shape:
+`output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
+`count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
+(24000) the rest spills to `spill_file` with `reply_truncated: true`.
+`excluded_by_rule` (incl. `hidden_dir` on walked, non-git targets) never affects
+`exhaustive`; `files_unreadable` does, except under dependency stores
+(`files_unreadable_in_dependency_dirs`). A missing `path` answers with the root it
+resolved against: pass `root` or that project's `cwd`.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -282,8 +271,8 @@ on and maximize the solution-bearing output of your calls. Orient this processin
 around optimizing the wall clock time you need to perform the exhaustive troubleshooting
 you also need
 
-Every `Agent`/`Task` dispatch, with no exception, opens its prompt with an
-instruction to use the `/gm` skill for the work (see the brick wall above) --
+Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
+brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Full
 fan-out discipline (SESSION_ID minting, when to fan out vs stay single-session):
