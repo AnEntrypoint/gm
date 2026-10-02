@@ -1,1 +1,1 @@
-browser sessions still open -- dispatch `browser` with `session list` body to enumerate open ids, then `session close <id>` for each before retrying residual-scan
+browser sessions still open -- dispatch `browser` with `session close-all` body (closes every Chrome your gm session owns; `session close <id>` for a shared id), then `session list` to confirm none remain, before retrying residual-scan
