@@ -62,7 +62,7 @@ Give each subagent its own session id and tell it to use the gm skill. Paralleli
 
 Verify the changed surface with its real entry point. For `rs-plugkit`, build the guest and witness the changed verb through `agentplug-runner`. For `gm-mcp`, rebuild the bundle when its source or input schema changes. For release-facing changes, inspect the relevant workflow and resulting artifact.
 
-Use the gm git verbs. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
+Use the gm git verbs. Use `git_remote` to inspect configured remote URLs and the current branch's upstream without fetching or mutating state. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
 
 ## Verified 2026-09-14 (upstream merge + daemon heartbeat)
 
