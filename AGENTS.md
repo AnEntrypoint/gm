@@ -62,6 +62,8 @@ Verify the changed surface with its real entry point. For `rs-plugkit`, build th
 
 Use the gm git verbs. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
 
+`gm-mcp` compacts every dispatch response before it crosses the wire; `gm-mcp/AGENTS.md` records which fields compact, which stay whole, and why.
+
 ## Verified 2026-09-14 (upstream merge + daemon heartbeat)
 
 **FIXED UPSTREAM, verified here — the daemon "looks dead" bug.** `registry.rs`'s
