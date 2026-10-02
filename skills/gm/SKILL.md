@@ -7,25 +7,34 @@ description: The primary driver for every coding, refactoring, debugging, or eng
 
 **Brick wall: `codesearch` replaces Grep/Glob/Explore/Bash `find`/`grep`/`rg`
 everywhere, no exceptions. `fetch`/`browser`/`cdp` replace WebFetch/WebSearch/
-raw Chrome. Every `Agent`/`Task` dispatch opens with "use the gm skill for this."**
+raw Chrome. Every `Agent`/`Task` dispatch opens with "use the gm skill for this;
+code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`,
+and `Read` only a located path."**
 
-The ripgrep-shaped job that wall used to block with nothing equivalent behind it --
-every definition AND every call site of one symbol -- is `codesearch {query,
-mode: "literal"}` (or `"regex"`): every match with `path` and `line`, no ranking,
-no top-k, read from the tree rather than the index, so it costs ~1s where the
-default `dual` mode costs minutes on a large workspace. An unrecognized `mode` is
-now an error, not a silent downgrade to `dual`. The files read are git's view of
-the worktree -- every tracked file (submodules included) plus untracked files git
-does not ignore, with no directory-name noise list. Trust the result as complete
-only when the response says `exhaustive: true`; otherwise it names the bound or
-skip rule that fired (`excluded_by_rule` lists pruned paths outside a git worktree).
-Scope it with `path` (a subdirectory or file, relative to the root; a subdirectory
-passed as `root` works the same) and `glob`/`path_glob`; any unrecognized body
-field is refused, never silently ignored into a whole-tree scan. The glob is a
-real glob (`*`, `?`, `**`, `[abc]`, `{a,b}` -- `**/*.{js,mjs}` works), matched
-against the path relative to the root or to `path`, or the bare file name; a
-malformed glob is an error, and one that admits no listed file answers
-`glob_matched_no_files: true`, `exhaustive: false`.
+Codeinsight first: `callers {symbol}` before reading, editing or deleting a
+function (who calls it, what must stay valid), `impact {symbol, max_depth}` for
+what it depends on, `callers` on every changed function for a diff's blast
+radius. An empty reply is proof only when `codeinsight_index` says `complete:
+true`; otherwise confirm with a `codesearch` identifier query. Served prose
+("Code intelligence first") has the full table.
+
+Every definition AND every call site of one symbol is `codesearch {query, mode:
+"literal"}` (or `"regex"`): every match with `path` and `line`, no ranking or
+top-k, read from git's view of the worktree (tracked files incl. submodules, plus
+unignored untracked files), ~1s where `dual` costs minutes. An unknown `mode` or
+body field is an error, never a silent whole-tree `dual`. Complete only when
+`exhaustive: true`; otherwise the reply names the bound or rule that fired.
+Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
+`glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
+or `exclude_glob` excludes; a glob admitting no file answers
+`glob_matched_no_files: true`), `case_insensitive`, `whole_word`. Reply shape:
+`output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
+`count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
+(24000) the rest spills to `spill_file` with `reply_truncated: true`.
+`excluded_by_rule` (incl. `hidden_dir` on walked, non-git targets) never affects
+`exhaustive`; `files_unreadable` does, except under dependency stores
+(`files_unreadable_in_dependency_dirs`). A missing `path` answers with the root it
+resolved against: pass `root` or that project's `cwd`.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -128,7 +137,7 @@ the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_clone {url, destination}` accepts an HTTPS repository URL without credentials, a port, query, or fragment. `destination` is an absolute path that git must find absent or empty. Its receipt reports `revision`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files. `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore. `git_finalize {message}` bundles
+`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_init {path?, user_name?, user_email?, initial_branch?}` turns a non-repository directory into a repository (`path` defaults to the dispatch directory; pair it with `git_root_override` for a project with no repository yet): it refuses unknown fields (naming `unknown_fields` and `accepted_fields`), a path already inside a repository, a missing directory, `..`, `:` and anything under `.gm/` or `.agentplug*`; it writes repo-local `user.name`/`user.email` only when given, appends `.gm/exec-spool/` to `.gitignore` when no entry covers it, and its receipt is `{root, branch, created, gitignore}`. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_init {path?, user_name?, user_email?, initial_branch?}` turns a non-repository directory into a repository (`path` defaults to `cwd`; pair it with `git_root_override` for a project with no repository yet). It refuses unknown fields (naming `unknown_fields` and `accepted_fields`), a path already inside a repository (naming its `root`), a missing directory, `..`, `:` and anything under `.gm/` or `.agentplug*`; it sets repo-local `user.name`/`user.email` only when given, appends `.gm/exec-spool/` to `.gitignore` when no entry covers it, and returns `{root, branch, created, gitignore}`. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
 another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
@@ -139,12 +148,33 @@ pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
 `git_show {rev?, path?, paths?, stat?}`: `path` prints that file at the revision
 (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
 refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
+`git_status {paths?, summary?, limit?}` scopes to those pathspecs;
+`summary: true` returns counts by status plus the first `limit` (default 20)
+`first_paths`, and `limit` alone caps each status list (`truncated_totals` names
+the real totals).
 
-`exec_js` evaluates its raw body in a separate Node process. It does not inject
-the caller's `tools` object. To run a command, use Node's argument-safe API:
+`exec_js` evaluates its raw body in a separate Node process, delivered on the
+child's stdin, so the body is never part of its command line and a process-listing
+query that filters command lines for a marker string cannot match the runner
+itself. It does not inject the caller's `tools` object. A `.js` scratch file in a
+repo whose package.json says `"type": "module"` is ESM: give a scratch file that
+uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API:
 `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
-Prefix the body with `timeoutMs=<ms>`. Use a language verb such as `bash` only
-when the request specifically needs shell syntax.
+Prefix the body with `timeoutMs=<ms>`: it is an enforced wall-clock limit
+(default 300000, hard ceiling 900000). At expiry the child's whole process tree is
+killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true,
+killed: true, error_code: exec_timeout` with `limit_ms` and the partial
+`stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that
+budget plus 5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds`
+always wins, and `resume_task` re-polls a `timed_out` dispatch). A server that must
+outlive the call is started detached: `spawn(process.execPath, [script], {detached:
+true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
+stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
+(`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000
+characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain
+text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be
+read directly. Use a language verb such as `bash` only when the request
+specifically needs shell syntax.
 
 **One row per dispatch.** `prd-add`/`mutable-add` take a single
 `{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
@@ -195,11 +225,27 @@ or bare JS. Prefixes stack. `browser` and `cdp` additionally accept
 and `cdp` sessions persist a real engine process (or a dialed remote
 endpoint) across dispatches. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250`
 or `.gm/browser-config.json`'s `chrome_cdp_endpoint` to use an existing Chrome
-endpoint. GM then does not launch or terminate that Chrome process. Without a `sessionId=<id>` first line the page
+endpoint. GM then does not launch or terminate that Chrome process.
+Every fresh `cdp` session returns a `gpu` report: check `gpu.accelerated` is
+`true` (and read `gpu.warn`) before trusting any perf or visual witness, and for
+rendering claims witness under both `session new gpu=nvidia` and `session new gpu=amd`
+(bare body `gpu` re-probes). Plain dispatches attach no instrumentation; `capture gl`
+adds sampled GL error tracking, so never measure perf with it.
+`.gm/browser-config.json` also accepts `gpu`, `enable_webgpu`, `chrome_extra_args`,
+`load_extension`, `chrome_idle_ttl_seconds` and `chrome_max_concurrent`; see
+gm-config `prose/browser.md`. Dispatches of one session queue on its page; use
+`sessionId=<other>` for an independent page. Without a `sessionId=<id>` first line the page
 belongs to the dispatching gm session (keyed by the SESSION_ID in the task
 name), so two gm sessions never share a page unless one names the other's id;
-`session list` shows each page's `owner_gm_session`. Every response carries
-`result.debug`.
+`session list` shows each page's `owner_gm_session`. A `browser`/`cdp` dispatch
+is quiet by default: `debug` holds only a console summary, page errors and a
+network summary. Put `capture` (or `debug=on`) as a prefix line for the full
+network, performance and gl block, and `quiet` (or `debug=off`) to force the short
+one. A single expression may use top-level `await`; a multi-statement script needs
+an explicit `return`. The page's Chrome is reaped after `chrome_idle_ttl_seconds`
+idle, evicted at the concurrent-Chrome cap, or lost to a crash, in which case the
+reply says `session_recycled: true`: put `url=<target>` on every call that depends
+on a loaded page.
 
 No test files, ever, anywhere, no exceptions -- not written, not edited, not
 left on disk even if a project already has one (remove any found, same turn,
@@ -225,8 +271,8 @@ on and maximize the solution-bearing output of your calls. Orient this processin
 around optimizing the wall clock time you need to perform the exhaustive troubleshooting
 you also need
 
-Every `Agent`/`Task` dispatch, with no exception, opens its prompt with an
-instruction to use the `/gm` skill for the work (see the brick wall above) --
+Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
+brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Full
 fan-out discipline (SESSION_ID minting, when to fan out vs stay single-session):
