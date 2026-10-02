@@ -45,7 +45,11 @@ Give each subagent its own session id and tell it to use the gm skill. Paralleli
 
 ## Implementation rules
 
-- Keep code and prose self-explanatory. Retain a comment only for a local fact that structure cannot express, such as a measured limit or an external workaround.
+- Keep code and prose self-explanatory. Put only current, non-expressible local constraints in this file.
+- Keep `agentplug-libsql`'s `serde_json` `preserve_order` feature. Its query rows and JavaScript `columns` result must retain SQL SELECT order.
+- Keep `oxibrowser-core` as both `rlib` and `cdylib`. The native clients use `rlib`; agentplug calls the WASM export through `cdylib`.
+- Keep Blitz rendering dependencies isolated in `oxibrowser-render`. Do not add them to the root workspace or core browser crate.
+- Keep the `RUSTSEC-2024-0436` exception only while Boa reaches `paste` through `boa_string`; remove it after the dependency path disappears.
 - Do not add synthetic tests, mocks, placeholders, or decorative glyphs. Verify behavior through the actual build and a live spool dispatch.
 - Keep tracked text UTF-8 without a BOM.
 - Use atomic create or rename for every single-writer and lock guard.
