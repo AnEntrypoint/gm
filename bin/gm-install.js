@@ -34,14 +34,6 @@ function run(cmd, args) {
   }
 }
 
-// Node's shell:true on Windows joins the args array with plain spaces and
-// does NOT escape/quote them (see the DEP0190 deprecation notice) -- fine
-// for simple tokens like npx's own args, but any arg containing spaces or
-// shell metacharacters (a quoted path, an `&`) gets corrupted by cmd.exe's
-// own parsing before it ever reaches the target program. runDirect() skips
-// the shell entirely and lets spawnSync pass the args array straight to
-// CreateProcess, which is the only reliable way to hand powershell.exe a
-// real filesystem path as one of its arguments.
 function runDirect(cmd, args) {
   const res = spawnSync(cmd, args, { stdio: 'inherit' })
   if (res.status !== 0) {
@@ -130,9 +122,6 @@ function registerOtherHosts() {
   run('npx', ['-y', 'add-mcp', process.platform === 'win32' ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'])
 }
 
-// add-mcp (registerOtherHosts) does not know these three hosts' exact config
-// shapes and is not guaranteed to replace an existing legacy npx entry rather
-// than leaving it alone, so each is also rewritten directly here.
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
 const GEMINI_SETTINGS_PATH = path.join(os.homedir(), '.gemini', 'settings.json')
 const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml')
@@ -148,10 +137,6 @@ function tomlQuotedString(value) {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
-// TOML table headers ([mcp_servers.gm], [mcp_servers.gm.env], ...) always
-// start at column 0 in a config codex itself writes, so the gm table (plus
-// any of its own subtables) is the span from its header to the next header
-// that is not itself a "[mcp_servers.gm" continuation.
 function registerCodex(configPath) {
   if (!fs.existsSync(configPath)) return
   const text = fs.readFileSync(configPath, 'utf8')
@@ -198,8 +183,6 @@ function installRunner() {
 
   if (process.platform === 'win32') {
     if (fs.existsSync(installPs1)) {
-      // -File (not -Command "& '<path>' spool") sidesteps quoting entirely --
-      // no embedded single-quoted path string for cmd.exe to mangle.
       runDirect('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
     } else {
       runDirect('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
