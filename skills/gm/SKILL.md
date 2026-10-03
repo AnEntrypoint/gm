@@ -25,7 +25,23 @@ field is refused, never silently ignored into a whole-tree scan. The glob is a
 real glob (`*`, `?`, `**`, `[abc]`, `{a,b}` -- `**/*.{js,mjs}` works), matched
 against the path relative to the root or to `path`, or the bare file name; a
 malformed glob is an error, and one that admits no listed file answers
-`glob_matched_no_files: true`, `exhaustive: false`.
+`glob_matched_no_files: true`, `exhaustive: false`. A multi-word query is matched
+as ONE phrase (the whole query verbatim, spaces included -- `fn sys_wait4` finds
+the definition, not every `fn` in the tree); `combine: "or"` splits it into terms
+and ranks any-term hits with all-term lines strictly on top, `combine: "and"`
+requires every term on one line. Whichever ran is named in `term_combination`.
+
+`grep` is that same exhaustive scan as its own verb, for when the ask is
+literally "find this string": `{"pattern":"captureMicros","path":"src"}`,
+optionally `glob`, `case_insensitive`, `context`, `max_results` (default cap 200)
+and `output_mode` (`content` by default, `files_with_matches`, `count`). It
+answers with `output`, one `path:line: text` per hit, and `mode` telling you
+which reading ran. `pattern` is read as a regex when it carries an alternation
+bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a
+doubled `||` stays literal); pass `regex:true` or `regex:false` to decide it
+explicitly, and expect a refusal carrying the regex error text rather than an
+empty result when the pattern will not compile. `rg` is an accepted alias.
+`search` is `codesearch` -- the ranked BM25-plus-vector verb -- never `grep`.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -124,7 +140,7 @@ competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
 were served and answering normally -- `git_log` among them. Where served (per
-the brick wall above): `codesearch`, `codeinsight` (structure questions over a
+the brick wall above): `codesearch`, `grep` (literal `path:line` scan), `codeinsight` (structure questions over a
 symbol index that covers the whole tree: `{}` for the overview, then `outline`,
 `find`, `callers`, `impact`, `tests`, `imports`, `cycles`, `coupling`, `complexity`,
 `duplicates`, `orphans` via `{"action": ...}`), `serp`/`browser`/`cdp`, git verbs (never
