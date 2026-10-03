@@ -35,9 +35,9 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 
 Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use the documented spool fallback: write one complete request atomically, prefix every request number with a unique session id, and poll the matching response. Never start a second watcher while a fresh watcher is busy. A stale or failed runner is a defect in its owning source, not a reason to bypass gm.
 
-Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it.
+Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it. `docs/verbs.md` is the verb inventory: every name, its body shape, and one example each.
 
-Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior.
+Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior. `grep` (alias `rg`) is that same exhaustive scan under a grep-shaped body -- `{"pattern":"...","path"?,"glob"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?,"regex"?}` -- for the question that is literally "where is this string"; the pattern is read as a regex when it carries an alternation bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal), and `regex:true`/`regex:false` forces the reading either way. `search` is `codesearch`, not `grep`.
 
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
@@ -54,6 +54,8 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 - Treat configuration prose keys and source paths as untrusted relative paths. Accept only safe components. Accept config repositories only through approved remote transports. Keep fetch HTTP(S)-only with a nonempty authority.
 - Treat durable memory as source. Keep only current, reusable facts. Remove resolved incident narration and duplicate guidance instead of growing the corpus.
 - Keep documentation current, present-tense, and concise. Put detailed protocol, release, and incident material in its owning README, source, or changelog rather than duplicating it here.
+- Every Windows child spawn in `agentplug` goes through `windowless::apply_windowless`, and `agentplug-runner` calls `ensure_hidden_console()` before anything else. `CREATE_NO_WINDOW` alone is not enough: it leaves a console-subsystem child (git.exe, node, powershell) console-less, and its own console-subsystem children (git.exe -> git.exe -> git-remote-https.exe) then allocate a fresh conhost each and flash a window. A console the runner owns and hides is inherited by the whole subtree instead, so git chains stay windowless; `apply_windowless` falls back to `CREATE_NO_WINDOW` only when no console exists.
+- `config_sync::ensure_current` debounces on the last probe time whether or not a local checkout exists, and records that time in memory as well as on disk: the `.sync.json` write can fail under load, and with no local checkout every dispatch re-ran `git ls-remote` with no backoff (measured at more than one spawn per second, 24/7).
 - Keep this file below 30 KB. When it exceeds that limit, revalidate it against current source, history, and retained memory before compacting it.
 
 ## Verification and delivery
@@ -89,7 +91,7 @@ the heartbeat stayed fresh because the daemon was idle, not because the fix
 worked. Always confirm the long verb actually executed before believing a
 liveness measurement taken "during" it.
 
-**STILL BROKEN — `serp`/oxibrowser navigates but serves an empty document.**
+**STILL BROKEN — oxibrowser serves an empty document.**
 Reproduced on oxibrowser 0.18.3 (plugin gm 0.1.1296). `url=https://example.com`
 returns `ok:true` and JS sees the right `location.href` ("https://example.com/")
 and `readyState:"complete"` — so it is the same session and navigation reported
