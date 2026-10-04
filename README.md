@@ -128,7 +128,8 @@ The phase order is SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, then COM
 Every tool the agent uses is a dispatch verb. The agent has no direct shell access and makes no direct file writes outside the spool. The WASM host owns every side effect.
 
 - **`recall`**: a vector-plus-KV (key-value, a storage namespace inside a discipline) search against `.gm/memories/*.md` and a derived `gm.db` vector index. The search scores each result by cosine similarity times recency, and is namespace-aware. This verb lives in-tree in `rs-plugkit`.
-- **`codesearch`**: a semantic vector search across the project, backed by the `rs-codeinsight` and `rs-search` crates.
+- **`codesearch`**: ranked (BM25 plus vector) and exhaustive (`literal`/`regex`/identifier) search across the project, backed by the `rs-search` backend.
+- **`callers`, `impact`, `codeinsight_index`**: the call graph. `callers {symbol}` lists every recorded call site, `impact {symbol}` walks what a symbol depends on, and `codeinsight_index` refreshes the tree-sitter symbol and call-edge index incrementally. Agents ask these first for who-calls, what-breaks, dead-code and blast-radius questions.
 - **`grep`**: an exhaustive literal scan of the tree that answers every hit as `path:line: text`. Takes `{"pattern":"...","path"?,"glob"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?}`; `rg` is an accepted alias. It honours the same `.gitignore`/hidden-directory/dependency-directory rules `codesearch` does, defaults to a 200-match cap, and `output_mode` selects `content` (every hit), `files_with_matches` (each path once) or `count` (per-path totals). `search`/`codesearch` stays the ranked BM25-plus-vector verb; `grep` is the one to use when the question is literally "where is this string".
 - **`memorize`**: writes to the recall index, using the BGE model's query/passage prefix asymmetry.
 - **`browser`**: a fast headless engine (oxibrowser, written in pure Rust) that starts no Chrome process. This verb supports navigate, evaluate, DOM (Document Object Model) query, and markdown extraction only. It holds one implicit session. gm accepts the `session new`, `session close`, and `session reset` commands here, but each command performs no action.
@@ -193,7 +194,8 @@ This repository holds nine git submodules. Each submodule holds source code only
 - **`rs-plugkit/`**: the WASM guest. This submodule holds the orchestrator, the gates, and the spool dispatch logic (the gm "brain").
 - **`agentplug/`**: the native, plugin-agnostic host. This submodule loads WASM plugins, gm included, and drives the `browser` and `cdp` verbs natively through CDP.
 - **`agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`**: optional shared native plugins. `agentplug` can load each plugin alongside the gm WASM plugin, for embeddings, vector storage, and syntax parsing in turn.
-- **`rs-codeinsight`, `rs-search`**: codebase-indexing and search backends. The `codesearch` verb consumes both.
+- **`rs-codeinsight`**: a standalone tree-sitter codebase analyzer (CLI and library). The call-graph verbs above are implemented natively in `rs-plugkit` (`code_index.rs`), not by linking this crate.
+- **`rs-search`**: a search backend. The `codesearch` verb consumes it.
 - **`gm-config/`**: the default remote configuration repository. This submodule holds prose, the FSM graph, gate hooks, and policy data. A user edits this repository directly, and gm pulls from it at run time. gm points at this repository by default, unless a project or user sets its own configuration repository.
 - **`vendor/tencentdb-agent-memory/`**: an optional alternate memory and skill-library backend. The `recall` and `memorize` verbs can target this backend instead of the default `.gm/memories/` and `gm.db` store (see the `memory.tencentdb_backend` field in `gm.config.json`). This submodule holds vendored code, not a fork.
 
