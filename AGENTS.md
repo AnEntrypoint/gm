@@ -39,11 +39,13 @@ Use the verbs exposed by the running plugin for search, browser, git, execution,
 
 Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior. `grep` (alias `rg`) is that same exhaustive scan under a grep-shaped body -- `{"pattern":"...","path"?,"glob"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?,"regex"?}` -- for the question that is literally "where is this string"; the pattern is read as a regex when it carries an alternation bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal), and `regex:true`/`regex:false` forces the reading either way. `search` is `codesearch`, not `grep`.
 
+Structural code questions (who calls X, what breaks if X changes, is X dead, a diff's blast radius) go to `callers {symbol}` / `impact {symbol}` first; `codesearch` (alias `code_search`) is the search verb and the exhaustive confirmation when the call-graph reply is empty.
+
 A project declares what codesearch must not walk in a `.codesearchignore` at its root: gitignore syntax, anchored at that file's directory, read *in addition to* `.gitignore` (a directory may also carry its own, applying to its immediate children). Use it for generated and vendored trees -- Chrome profile caches, genome dumps, build output -- so an unscoped query stays inside its 45 s wall budget instead of dying partway through at `exhaustive: false`. Every dropped path is reported per call in `excluded_by_rule_summary`/`excluded_by_rule_count` and rule exclusions never affect `exhaustive`, which stays governed only by the real bounds (budget, size ceiling, unreadable files, listing completeness); a project declaring nothing scans exactly what it scanned before.
 
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
-Give each subagent its own session id and tell it to use the gm skill. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
+Give each subagent its own session id and tell it to use the gm skill, codeinsight (`callers`/`impact`) first. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
 
 Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into every subagent prompt; agents run `session list` and reuse a live session before launching (`chrome_max_concurrent` defaults to 2), and end with `session close-all` then `session list` to confirm none remain. The parent closes the shared id after its subagents finish. Never run a scratch agentplug daemon against a real project root while other agents work: its orphan sweep sees every gm chrome on the machine.
 
