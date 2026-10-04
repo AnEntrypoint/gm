@@ -83,8 +83,8 @@ function dispatchVerb(verb, body, timeoutMs = 30_000) {
   const n = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
   const inDir = join(SPOOL_IN, verb);
   const outPath = join(SPOOL_OUT, `${verb}-${n}.json`);
-  execFileSync("mkdir", ["-p", inDir]);
-  execFileSync("node", ["-e", `require('fs').writeFileSync(${JSON.stringify(join(inDir, `${n}.txt`))}, ${JSON.stringify(JSON.stringify(body))})`]);
+  execFileSync("mkdir", ["-p", inDir], { windowsHide: true });
+  execFileSync("node", ["-e", `require('fs').writeFileSync(${JSON.stringify(join(inDir, `${n}.txt`))}, ${JSON.stringify(JSON.stringify(body))})`], { windowsHide: true });
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (existsSync(outPath)) {
@@ -94,7 +94,7 @@ function dispatchVerb(verb, body, timeoutMs = 30_000) {
         void parseErrorWhileStillBeingWritten;
       }
     }
-    execFileSync("sleep", ["0.2"]);
+    execFileSync("sleep", ["0.2"], { windowsHide: true });
   }
   throw new Error(`dispatch timeout waiting for ${outPath}`);
 }
