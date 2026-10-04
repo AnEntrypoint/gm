@@ -29,7 +29,7 @@ const PROJECT_LAUNCH_SNIPPET =
   "import(require('url').pathToFileURL(p).href)"
 
 function run(cmd, args) {
-  const res = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' })
+  const res = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', windowsHide: true })
   if (res.status !== 0) {
     process.exit(res.status ?? 1)
   }
@@ -44,7 +44,7 @@ function run(cmd, args) {
 // CreateProcess, which is the only reliable way to hand powershell.exe a
 // real filesystem path as one of its arguments.
 function runDirect(cmd, args) {
-  const res = spawnSync(cmd, args, { stdio: 'inherit' })
+  const res = spawnSync(cmd, args, { stdio: 'inherit', windowsHide: true })
   if (res.status !== 0) {
     process.exit(res.status ?? 1)
   }

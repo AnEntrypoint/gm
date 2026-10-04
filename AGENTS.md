@@ -39,6 +39,8 @@ Use the verbs exposed by the running plugin for search, browser, git, execution,
 
 Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior. `grep` (alias `rg`) is that same exhaustive scan under a grep-shaped body -- `{"pattern":"...","path"?,"glob"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?,"regex"?}` -- for the question that is literally "where is this string"; the pattern is read as a regex when it carries an alternation bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal), and `regex:true`/`regex:false` forces the reading either way. `search` is `codesearch`, not `grep`.
 
+A project declares what codesearch must not walk in a `.codesearchignore` at its root: gitignore syntax, anchored at that file's directory, read *in addition to* `.gitignore` (a directory may also carry its own, applying to its immediate children). Use it for generated and vendored trees -- Chrome profile caches, genome dumps, build output -- so an unscoped query stays inside its 45 s wall budget instead of dying partway through at `exhaustive: false`. Every dropped path is reported per call in `excluded_by_rule_summary`/`excluded_by_rule_count` and rule exclusions never affect `exhaustive`, which stays governed only by the real bounds (budget, size ceiling, unreadable files, listing completeness); a project declaring nothing scans exactly what it scanned before.
+
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
 Give each subagent its own session id and tell it to use the gm skill. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
@@ -108,4 +110,93 @@ render doc and the DOM snapshot are empty. So the break is between
 for the obrowser repo rather than patched speculatively from here: it is a young
 engine (2 commits), the lifecycle involved is substantial, and `browser`
 (lightpanda) and `cdp` (real Chrome) both work and are the documented fallbacks,
-so nothing is blocked by this.
+so nothing is blocked by this. No gm verb dispatches through oxibrowser any
+more: `serp` is an HTTP search over `host_fetch`, the same transport `fetch`
+uses.
+
+## Verified 2026-10-04 (windowless child spawns + runner self-update guard)
+
+**The recurrence is a VERSION-EQUAL downgrade, so version comparison can never
+catch it.** The windowless fix was committed locally as 0.1.159 and the release
+asset was also 0.1.159, built from `main` before the fix landed. The updater's
+`marker_is_trustworthy_and_current` compared only the version marker against the
+latest release tag (and the on-disk marker carried a `v` prefix, so it could
+never have matched anyway), so a release that merely had the same version number
+replaced a running binary that had strictly more commits. Any guard has to
+compare IDENTITY, not version.
+
+**How releases are cut:** `.github/workflows/release.yml`, on push to `main`.
+A `bump` job rewrites the patch version in `Cargo.toml`, then a matrix job builds
+6 targets and publishes assets plus `.sha256` (and `.sig` when
+`release-signatures/manifest.json` names one) to `AnEntrypoint/agentplug-bin`.
+The runner consumes `releases/latest` and stages `.exe.new` -> `takeover` ->
+`promote_staged_exe_to_canonical` -> re-exec. There is no way to trigger a
+release other than pushing to `main`, and CI pushes its own bump commits, so
+expect `git pull --rebase origin main` before a push.
+
+**Build identity is baked at compile time**, because nothing on disk can be
+trusted to describe the binary: `crates/agentplug-runner/build.rs` writes
+`OUT_DIR/build_info.rs` with `COMMIT`, `BUILD_TS` and `RELEASE_BUILD`, exposed
+through `src/build_info.rs` and printed by `--build-info`.
+`RELEASE_BUILD` is true only when `AGENTPLUG_RELEASE_BUILD=1` is set, which only
+the release workflow does. `build.rs` emits `rerun-if-changed` for `.git/HEAD`
+and the resolved ref, but **agentplug is a submodule**, so that path does not
+exist at the manifest dir and the script does not rerun when you commit — `touch
+crates/agentplug-runner/build.rs` before a release-candidate build or it will
+report the previous commit.
+
+**The guard** (`crates/agentplug-runner/src/download.rs`,
+`self_update_blocked_reason`, checked before anything is staged): refuse when
+`AGENTPLUG_NO_SELF_UPDATE` is set to anything but `0/false/no/off`; refuse when
+`~/.agentplug/agentplug-runner.no-self-update` exists; refuse when the installed
+runner is a local build (either its sha256 matches
+`~/.agentplug/agentplug-runner.local-build.json`, or probing it with
+`--build-info` reports `release_build:false`); and require the incoming release
+version to be STRICTLY greater than the running one. `promote_staged_exe_to_canonical`
+re-checks `installed_runner_blocks_promotion` at takeover, so a staged copy that
+slipped past staging still cannot overwrite a pinned local binary — the process
+then keeps running from the staged copy instead. `staged_binary_self_check` is
+untouched. `AGENTPLUG_ALLOW_UPDATE_OVER_LOCAL_BUILD=1` overrides the local-build
+refusal only; `pin-local-build` / `unpin-local-build` maintain the sha256 pin by
+hand.
+
+**The pin is synced on every daemon boot, not inside `record_runner_version`.**
+Recording only happens when the version marker differs, so a rebuild that keeps
+the same version left the pin pointing at the previous binary and the guard
+compared against a sha that was no longer installed.
+
+**Live witness (2026-10-04, this box):** with the pre-fix release 0.1.159
+(14003200 bytes) running as the daemon, a 45 s sample saw **189 distinct visible
+console windows titled `C:\Program Files\Git\cmd\git.exe`** (~4/s). With the
+fixed local build (2c16fa2, 14041088 bytes) as the daemon, a 60 s sample saw
+**0**. The exe size was unchanged after the sample, so the old build never
+self-updated mid-measurement.
+
+**Method notes, both of which cost a wasted measurement:**
+- conhost is NOT parented to the process that caused the console here, so
+  attributing console flashes by `ParentProcessId` finds nothing. Detect them by
+  enumerating VISIBLE windows and matching the title — a new console's title is
+  the console app's path.
+- **conhost count is not a usable before/after metric on this machine**: the
+  default terminal is Windows Terminal, so consoles are hosted by
+  `OpenConsole.exe`, and peak conhost was 24 before vs 25 after while the real
+  signal went 189 -> 0.
+- The flash only reproduces with the daemon running (its repeated `project_root`
+  -> `git rev-parse` calls). Launching the binary as a one-shot `spool` client
+  shows nothing, so an A/B built on one-shot launches will falsely report both
+  builds clean.
+
+**Swapping the live runner binary:** Windows refuses to overwrite a running
+image but allows renaming it. `taskkill` every `agentplug-runner.exe`, rename the
+canonical exe aside, copy the new one in, and restart the daemon. Deleting the
+file first does not work — the gm session respawns `spool` every few seconds and
+re-locks it. A `finally` block is not optional here: a failed restore leaves the
+pre-fix binary live and self-updating.
+
+**Still open, same class, JS side:** `~/.gm-tools/gm-mcp-server.mjs` self-updates
+from a release channel via `gm-mcp/src/self-update.js` (backing up to `.prev`)
+and the 08:57 copy lost two `windowsHide` sites the `.prev` copy has —
+`execFileSync("git", [...])` and `spawnSync(process.execPath, ["--check", ...])`.
+The release channel is shipping a bundle without them, so the same
+"update silently reverts a fix" shape applies there. Not touched pending a
+decision; the runner guard does not cover it.
