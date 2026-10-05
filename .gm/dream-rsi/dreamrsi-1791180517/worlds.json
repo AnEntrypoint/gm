@@ -1,0 +1,1 @@
+[{"discovery_ids":["disc1","disc2"],"id":"world1","nodes":[{"children":["disc2"],"cost":1,"id":"disc1","round":0,"score":1.0},{"children":[],"cost":1,"id":"disc2","round":1,"score":1.0}],"owner_session_id":"dreamrsi-1791180517"}]
