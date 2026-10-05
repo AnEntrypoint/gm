@@ -99,6 +99,24 @@ on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
 response body, never in context. Phase mismatch resolves to the fresh
 `instruction` response.
 
+A bare state check -- phase, `prd_pending_count`, mutables-pending, nothing more
+-- dispatches `phase-status`, never `instruction`: `phase-status` returns only
+the compact phase-history struct, while `instruction` additionally composes and
+returns the full entry+phase prose block plus recall/orient data on every call,
+often 1000+ words an agent already holds from its last dispatch. Reserve
+`instruction` for an actual orient (fresh prompt, phase transition, drift,
+uncertainty about the served prose) where that prose is new information.
+
+When `instruction` is the right dispatch but the served prose likely hasn't
+changed since the last one this session read, pass that prior response's
+`instruction_hash`/`policy_hash` back as `known_instruction_hash`/
+`known_policy_hash` in the new body. An unchanged match suppresses the prose
+and discipline-policy blocks from the reply (`instruction_unchanged`/
+`discipline_policies_unchanged: true`, fields omitted) instead of resending
+them; a mismatch or first dispatch returns them in full as normal. This is a
+response-size optimization only -- phase/PRD/mutables/recall data still
+return every time.
+
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
