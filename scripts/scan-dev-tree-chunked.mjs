@@ -33,7 +33,7 @@ for (const name of entries) {
   const start = Date.now()
   let out, code
   try {
-    out = execFileSync('node', [scannerPath, target], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000 })
+    out = execFileSync('node', [scannerPath, target], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000, windowsHide: true })
     code = 0
   } catch (err) {
     out = err.stdout || ''
