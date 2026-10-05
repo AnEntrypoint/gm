@@ -29,6 +29,7 @@ tmp/
 *.stackdump
 **/.tessl-plugin/
 .scan-progress.log
+.gm/dream-rsi/
 
 # >>> plugkit managed
 .gm/.embed-generation
