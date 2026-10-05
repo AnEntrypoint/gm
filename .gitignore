@@ -30,6 +30,8 @@ tmp/
 **/.tessl-plugin/
 .scan-progress.log
 .gm/dream-rsi/.last-cycle-observation-count
+.gm/.last-scan-deps-ts
+.gm/.last-scan-deps-result.json
 
 # >>> plugkit managed
 .gm/.embed-generation
