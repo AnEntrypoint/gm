@@ -1,1 +1,1 @@
-{"blocked":[],"blockedCount":0,"failCount":0,"failing":[],"filesScanned":14,"nodeModulesPresent":false,"nodeModulesTruncated":false,"ok":true,"root":".","tool":"scan_deps","version":1,"warnCount":0,"warnings":[]}
+{"blocked":[],"blockedCount":0,"failCount":0,"failing":[],"filesScanned":14,"nodeModulesPresent":false,"nodeModulesTruncated":false,"ok":true,"root":".","symlinkEscapeCount":0,"symlinkEscapes":[],"tool":"scan_deps","version":1,"warnCount":0,"warnings":[]}
