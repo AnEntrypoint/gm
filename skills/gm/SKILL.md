@@ -20,14 +20,20 @@ true`; otherwise confirm with a `codesearch` identifier query. Served prose
 
 Every definition AND every call site of one symbol is `codesearch {query, mode:
 "literal"}` (or `"regex"`): every match with `path` and `line`, no ranking or
-top-k, read from git's view of the worktree (tracked files incl. submodules, plus
-unignored untracked files), ~1s where `dual` costs minutes. An unknown `mode` or
-body field is an error, never a silent whole-tree `dual`. Complete only when
-`exhaustive: true`; otherwise the reply names the bound or rule that fired.
+top-k, read from git's view of the worktree -- every tracked file (submodules
+included) plus untracked files git does not ignore, with no directory-name noise
+list -- ~1s where `dual` costs minutes. An unknown `mode` or body field is an
+error, never a silent whole-tree `dual`. Complete only when `exhaustive: true`;
+otherwise the reply names the bound or rule that fired (`excluded_by_rule` lists
+pruned paths outside a git worktree). A multi-word query is matched as ONE phrase
+(the whole query verbatim, spaces included -- `fn sys_wait4` finds the
+definition, not every `fn` in the tree); `combine: "or"` splits it into terms and
+ranks any-term hits with all-term lines strictly on top, `combine: "and"`
+requires every term on one line. Whichever ran is named in `term_combination`.
 Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
 `glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
 or `exclude_glob` excludes; a glob admitting no file answers
-`glob_matched_no_files: true`), `case_insensitive`, `whole_word`. Reply shape:
+`glob_matched_no_files: true`), `case_insensitive`, `whole_word`, `timeout_ms` (scan wall-clock budget, default 20000 for regex; overrun answers `timed_out: true`, `exhaustive: false`, `budget_ms`). Reply shape:
 `output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
 `count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
 (24000) the rest spills to `spill_file` with `reply_truncated: true`.
@@ -35,6 +41,18 @@ or `exclude_glob` excludes; a glob admitting no file answers
 `exhaustive`; `files_unreadable` does, except under dependency stores
 (`files_unreadable_in_dependency_dirs`). A missing `path` answers with the root it
 resolved against: pass `root` or that project's `cwd`.
+
+`grep` is that same exhaustive scan as its own verb, for when the ask is
+literally "find this string": `{"pattern":"captureMicros","path":"src"}`,
+optionally `glob`, `case_insensitive`, `context`, `max_results` (default cap 200)
+and `output_mode` (`content` by default, `files_with_matches`, `count`). It
+answers with `output`, one `path:line: text` per hit, and `mode` telling you
+which reading ran. `pattern` is read as a regex when it carries an alternation
+bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a
+doubled `||` stays literal); pass `regex:true` or `regex:false` to decide it
+explicitly, and expect a refusal carrying the regex error text rather than an
+empty result when the pattern will not compile. `rg` is an accepted alias.
+`search` is `codesearch` -- the ranked BM25-plus-vector verb -- never `grep`.
 
 This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
@@ -80,6 +98,24 @@ sessions picking `1`, `2`, `3` silently read each other's responses. State lives
 on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
 response body, never in context. Phase mismatch resolves to the fresh
 `instruction` response.
+
+A bare state check -- phase, `prd_pending_count`, mutables-pending, nothing more
+-- dispatches `phase-status`, never `instruction`: `phase-status` returns only
+the compact phase-history struct, while `instruction` additionally composes and
+returns the full entry+phase prose block plus recall/orient data on every call,
+often 1000+ words an agent already holds from its last dispatch. Reserve
+`instruction` for an actual orient (fresh prompt, phase transition, drift,
+uncertainty about the served prose) where that prose is new information.
+
+When `instruction` is the right dispatch but the served prose likely hasn't
+changed since the last one this session read, pass that prior response's
+`instruction_hash`/`policy_hash` back as `known_instruction_hash`/
+`known_policy_hash` in the new body. An unchanged match suppresses the prose
+and discipline-policy blocks from the reply (`instruction_unchanged`/
+`discipline_policies_unchanged: true`, fields omitted) instead of resending
+them; a mismatch or first dispatch returns them in full as normal. This is a
+response-size optimization only -- phase/PRD/mutables/recall data still
+return every time.
 
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
@@ -133,11 +169,14 @@ competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
 were served and answering normally -- `git_log` among them. Where served (per
-the brick wall above): `codesearch`, `serp`/`browser`/`cdp`, git verbs (never
+the brick wall above): `codesearch`, `grep` (literal `path:line` scan), `codeinsight` (structure questions over a
+symbol index that covers the whole tree: `{}` for the overview, then `outline`,
+`find`, `callers`, `impact`, `tests`, `imports`, `cycles`, `coupling`, `complexity`,
+`duplicates`, `orphans` via `{"action": ...}`), `serp`/`browser`/`cdp`, git verbs (never
 raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
 `exec_js`, `memorize-fire`,
 `prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_init {path?, user_name?, user_email?, initial_branch?}` turns a non-repository directory into a repository (`path` defaults to the dispatch directory; pair it with `git_root_override` for a project with no repository yet): it refuses unknown fields (naming `unknown_fields` and `accepted_fields`), a path already inside a repository, a missing directory, `..`, `:` and anything under `.gm/` or `.agentplug*`; it writes repo-local `user.name`/`user.email` only when given, appends `.gm/exec-spool/` to `.gitignore` when no entry covers it, and its receipt is `{root, branch, created, gitignore}`. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_init {path?, user_name?, user_email?, initial_branch?}` turns a non-repository directory into a repository (`path` defaults to `cwd`; pair it with `git_root_override` for a project with no repository yet). It refuses unknown fields (naming `unknown_fields` and `accepted_fields`), a path already inside a repository (naming its `root`), a missing directory, `..`, `:` and anything under `.gm/` or `.agentplug*`; it sets repo-local `user.name`/`user.email` only when given, appends `.gm/exec-spool/` to `.gitignore` when no entry covers it, and returns `{root, branch, created, gitignore}`. `git_finalize {message}` bundles
+`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
 another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
