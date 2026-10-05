@@ -33,7 +33,7 @@ requires every term on one line. Whichever ran is named in `term_combination`.
 Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
 `glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
 or `exclude_glob` excludes; a glob admitting no file answers
-`glob_matched_no_files: true`), `case_insensitive`, `whole_word`. Reply shape:
+`glob_matched_no_files: true`), `case_insensitive`, `whole_word`, `timeout_ms` (scan wall-clock budget, default 20000 for regex; overrun answers `timed_out: true`, `exhaustive: false`, `budget_ms`). Reply shape:
 `output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
 `count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
 (24000) the rest spills to `spill_file` with `reply_truncated: true`.
