@@ -29,7 +29,7 @@ tmp/
 *.stackdump
 **/.tessl-plugin/
 .scan-progress.log
-.gm/dream-rsi/
+.gm/dream-rsi/.last-cycle-observation-count
 
 # >>> plugkit managed
 .gm/.embed-generation
