@@ -116,6 +116,21 @@ so nothing is blocked by this. No gm verb dispatches through oxibrowser any
 more: `serp` is an HTTP search over `host_fetch`, the same transport `fetch`
 uses.
 
+## Verified 2026-10-05 (side plugins load lazily, so every guest->sibling import needs an on-demand hook)
+
+The daemon's per-project eager-load list is `["gm"]` plus whatever `<root>/.agentplug/plugins.txt`
+declares (nothing writes that file today), so `libsql`/`bert`/`treesitter`/`oxibrowser`/`crux` are
+never instantiated for a project at load time. Commit `1b1ea8c` made them lazy on the assumption
+that `DispatchHandle::reinstantiate_plugin_into_pool_slot_if_reload_source_available` covers first
+use. It only covers `DispatchHandle::dispatch` -- the daemon's own top-level plugin verb. The
+guest-facing sibling imports (`host_vec_embed`, `host_plugin_call`, `call_oxibrowser`) read
+`HostState::siblings()` and fail outright on a missing key, so every embedding-dependent verb
+answered `embedder failed: query embedding unavailable -- the bert embedder failed` and `code_index`
+answered `libsql unavailable ... unknown_plugin` on every project. Fix: `registry.rs` publishes the
+compiled module set as a global `SIBLING_RELOAD_SOURCE` (the daemon sets it after its per-tick warm
+compile pass) and each of those three call sites calls `ensure_sibling_registered` before reporting
+the sibling absent. Any new guest->sibling import must do the same.
+
 ## Verified 2026-10-04 (windowless child spawns + runner self-update guard)
 
 **The recurrence is a VERSION-EQUAL downgrade, so version comparison can never
