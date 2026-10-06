@@ -26,7 +26,7 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 
 | repo | role |
 | --- | --- |
-| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, liqology, gm-config, rs-codeinsight, rs-plugkit, rs-search, obrowser, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, gm-config, rs-codeinsight, rs-plugkit, rs-search, obrowser, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
 | rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
 | rs-learn, rs-exec, gm-skill, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit or gm) |
 
