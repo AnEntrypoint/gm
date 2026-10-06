@@ -29,7 +29,12 @@ pruned paths outside a git worktree). A multi-word query is matched as ONE phras
 (the whole query verbatim, spaces included -- `fn sys_wait4` finds the
 definition, not every `fn` in the tree); `combine: "or"` splits it into terms and
 ranks any-term hits with all-term lines strictly on top, `combine: "and"`
-requires every term on one line. Whichever ran is named in `term_combination`.
+requires every term on one line. Whichever ran is named in `term_combination`
+and, for a multi-word query, restated in `query_note`. A `mode: "regex"` query
+carrying a metacharacter (`| ( ) [ ] { } * + ? ^ $ \ .`) is exempt: it is
+matched as ONE regular expression exactly as written, never split into terms,
+and `combine` has no effect on it -- `query_note` says so instead of claiming a
+phrase match.
 Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
 `glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
 or `exclude_glob` excludes; a glob admitting no file answers
