@@ -159,7 +159,6 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
     let apiData = {};
     let autoRefreshId = null;
 
-    // Pull chart colors from the SDK theme tokens so charts track paper/ink.
     const tok = (name, fallback) => {
       const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       return v || fallback;
@@ -312,12 +311,6 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
       updateTimestamp();
     }
 
-    // Distinguishes "no data source built for this section yet" from a transient
-    // fetch error: the top-of-page error banner (showError) already covers
-    // network failures on an endpoint that DOES exist. This covers metrics.json
-    // and insights.json, which have no generator yet (tracked in .gm/prd.yml),
-    // so their sections would otherwise stay frozen on their initial static
-    // markup (blank canvas, empty table, "--" cards) forever.
     function setUnavailable(sectionId, canvasId) {
       const section = document.getElementById(sectionId);
       if (!section) return;
