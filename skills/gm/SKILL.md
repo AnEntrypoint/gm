@@ -24,8 +24,9 @@ top-k, read from git's view of the worktree -- every tracked file (submodules
 included) plus untracked files git does not ignore, with no directory-name noise
 list -- ~1s where `dual` costs minutes. An unknown `mode` or body field is an
 error, never a silent whole-tree `dual`. Complete only when `exhaustive: true`;
-otherwise the reply names the bound or rule that fired (`excluded_by_rule` lists
-pruned paths outside a git worktree). A multi-word query is matched as ONE phrase
+read `partial_reason` for incompleteness and exclusion summaries for pruning rules
+when present. Missing optional diagnostics never prove completeness.
+A multi-word query is matched as ONE phrase
 (the whole query verbatim, spaces included -- `fn sys_wait4` finds the
 definition, not every `fn` in the tree); `combine: "or"` splits it into terms and
 ranks any-term hits with all-term lines strictly on top, `combine: "and"`
@@ -42,9 +43,12 @@ or `exclude_glob` excludes; a glob admitting no file answers
 `output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
 `count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
 (24000) the rest spills to `spill_file` with `reply_truncated: true`.
-`excluded_by_rule` (incl. `hidden_dir` on walked, non-git targets) never affects
-`exhaustive`; `files_unreadable` does, except under dependency stores
-(`files_unreadable_in_dependency_dirs`). A missing `path` answers with the root it
+Rule exclusions (incl. `hidden_dir` on walked, non-git targets) never affect
+`exhaustive`. Optional `excluded_by_rule` examples and `excluded_by_rule_count`
+describe pruning when present. Unreadable files affect completeness except under dependency stores
+(`files_unreadable_in_dependency_dirs`); their count may be reported in
+`partial_reason` rather than `files_unreadable`. Budget, size and listing bounds
+still govern completeness. A missing `path` answers with the root it
 resolved against: pass `root` or that project's `cwd`.
 
 `grep` is that same exhaustive scan as its own verb, for when the ask is
@@ -215,8 +219,11 @@ Prefix the body with `timeoutMs=<ms>`: it is an enforced wall-clock limit
 killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true,
 killed: true, error_code: exec_timeout` with `limit_ms` and the partial
 `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that
-budget plus 5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds`
-always wins, and `resume_task` re-polls a `timed_out` dispatch). A server that must
+budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds`
+sets the requested polling budget. Every MCP call caps applied polling at 240 s
+without changing the native execution limit. A polling timeout returns the original
+task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
+A server that must
 outlive the call is started detached: `spawn(process.execPath, [script], {detached:
 true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
 stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
