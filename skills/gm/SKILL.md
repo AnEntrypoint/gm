@@ -215,8 +215,11 @@ Prefix the body with `timeoutMs=<ms>`: it is an enforced wall-clock limit
 killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true,
 killed: true, error_code: exec_timeout` with `limit_ms` and the partial
 `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that
-budget plus 5 s when `timeout_seconds` is omitted (an explicit `timeout_seconds`
-always wins, and `resume_task` re-polls a `timed_out` dispatch). A server that must
+budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds`
+sets the requested polling budget. Every MCP call caps applied polling at 240 s
+without changing the native execution limit. A polling timeout returns the original
+task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
+A server that must
 outlive the call is started detached: `spawn(process.execPath, [script], {detached:
 true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
 stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
