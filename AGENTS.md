@@ -173,12 +173,10 @@ expect `git pull --rebase origin main` before a push.
 trusted to describe the binary: `crates/agentplug-runner/build.rs` writes
 `OUT_DIR/build_info.rs` with `COMMIT`, `BUILD_TS` and `RELEASE_BUILD`, exposed
 through `src/build_info.rs` and printed by `--build-info`.
-`RELEASE_BUILD` is true only when `AGENTPLUG_RELEASE_BUILD=1` is set, which only
-the release workflow does. `build.rs` emits `rerun-if-changed` for `.git/HEAD`
-and the resolved ref, but **agentplug is a submodule**, so that path does not
-exist at the manifest dir and the script does not rerun when you commit — `touch
-crates/agentplug-runner/build.rs` before a release-candidate build or it will
-report the previous commit.
+The release workflow sets `AGENTPLUG_RELEASE_BUILD=1`. Git-resolved HEAD,
+symbolic refs, and existing packed refs are Cargo inputs across ordinary,
+submodule and worktree checkouts; an ordinary commit refreshes `COMMIT`
+without touching source or clearing caches.
 
 **The guard** (`crates/agentplug-runner/src/download.rs`,
 `self_update_blocked_reason`, checked before anything is staged): refuse when
