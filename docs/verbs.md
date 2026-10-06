@@ -134,6 +134,16 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
                                offset past the end returns "" with "returned_lines":0 instead of failing.
                                Omit both for the whole file.
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
+{"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
+                               "allow_outside_root" is an alias. A path holding a ".." segment is
+                               still refused, so the opt-in widens which root a read may address,
+                               never whether it may climb out of one. The host sandbox is a second,
+                               independent gate: outside the project root it serves only paths under
+                               the user gm root or under a directory it will grant -- it grants the
+                               path itself, else its parent directory, when that directory carries a
+                               project marker (.git, .gm, package.json, Cargo.toml, go.mod,
+                               pyproject.toml). So `C:/Users/user/.codex` is reached through its
+                               parent `C:/Users/user`, which makes that parent readable too.
 ```
 
 Paged replies add `total_lines`, `offset`, `returned_lines` and `has_more_lines`.
@@ -146,8 +156,10 @@ Example, verified against this repo:
 ```
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}` (`data` is an alias) and returns
-`{"bytes": <written>}`. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
-takes `{"path":"<relative path>"}`.
+`{"bytes": <written>}`; a write outside the root is refused even with `allowOutsideRoot`, which
+widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
+takes `{"path":"<relative path>"}`. `fs_readdir` and `fs_stat` take the same
+`{"allowOutsideRoot":true}` opt-in as `fs_read`.
 
 ### `callers`, `callees`, `impact` -- the symbol graph
 
@@ -210,10 +222,10 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 
 | verb | body | purpose |
 |---|---|---|
-| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?}` | read a file or a line range |
+| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range |
 | `fs_write` | `{"path", "content"}` | write a file inside the project |
-| `fs_readdir` | `{"path"?}` | list one directory |
-| `fs_stat` | `{"path"}` | stat one path |
+| `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory |
+| `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path |
 | `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree |
 
 ## Execution
