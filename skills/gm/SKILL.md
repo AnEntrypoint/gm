@@ -45,11 +45,17 @@ resolved against: pass `root` or that project's `cwd`.
 `grep` is that same exhaustive scan as its own verb, for when the ask is
 literally "find this string": `{"pattern":"captureMicros","path":"src"}`,
 optionally `glob`, `case_insensitive`, `context`, `max_results` (default cap 200)
-and `output_mode` (`content` by default, `files_with_matches`, `count`). It
-answers with `output`, one `path:line: text` per hit, and `mode` telling you
-which reading ran. `pattern` is read as a regex when it carries an alternation
-bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a
-doubled `||` stays literal); pass `regex:true` or `regex:false` to decide it
+and `output_mode` (`content` by default, `files_with_matches`, `count`). `exclude`
+drops paths by glob -- one glob or an array,
+`{"exclude":["vendor/**","test/hardware/**"]}` -- which replaces a hand-written
+brace alternation to skip a vendored tree; `exclude_glob`/`exclude_globs` are
+aliases, a `!`-prefixed entry inside `glob` excludes too, the reply echoes the
+effective glob as `exclude_glob`, and exclusion never affects `exhaustive`.
+`content` answers `counts` (per-file `{path,count}`) plus `output`, one
+`path:line: text` per hit, and `mode` telling you which reading ran;
+`{"detail":true}` swaps `output` for structured `matches`. `pattern` is read as a
+regex when it carries an alternation bar, a `\d`-style class escape, a
+`[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal); pass `regex:true` or `regex:false` to decide it
 explicitly, and expect a refusal carrying the regex error text rather than an
 empty result when the pattern will not compile. `rg` is an accepted alias.
 `search` is `codesearch` -- the ranked BM25-plus-vector verb -- never `grep`.
