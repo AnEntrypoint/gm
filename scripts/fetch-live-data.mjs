@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-// Generates docs/api/releases.json and docs/api/npm-downloads.json at build time
-// (gh-pages.yml runs this before copying docs/api/*.json into dist). Neither file
-// is committed to git -- both are produced fresh on every deploy from live sources
-// (GitHub Releases API, npm downloads-counts API), the same way docs/stats.html
-// already expects the shape it reads.
-//
-// docs/api/metrics.json and docs/api/insights.json are NOT generated here: no
-// data source for open_issues/commits_per_week/contributors/avg_merge_time or
-// top_reviewers/top_files/velocity has been designed yet (tracked separately in
-// .gm/prd.yml). docs/stats.html shows a visible "data unavailable" state for
-// those two sections instead of fetching a file that does not exist.
-
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -89,8 +77,6 @@ async function main() {
     console.error('npm-downloads.json generation failed:', npmResult.reason.message);
   }
 
-  // Never fail the build over this: docs/stats.html shows a visible
-  // "data unavailable" state for whichever file this run could not produce.
 }
 
 main();
