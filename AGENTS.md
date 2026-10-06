@@ -52,7 +52,11 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 
 ## Implementation rules
 
-- Keep code and prose self-explanatory. Retain a comment only for a local fact that structure cannot express, such as a measured limit or an external workaround.
+- Keep code and prose self-explanatory. Put only current, non-expressible local constraints in this file.
+- Keep `agentplug-libsql`'s `serde_json` `preserve_order` feature. Its query rows and JavaScript `columns` result must retain SQL SELECT order.
+- Keep `oxibrowser-core` as both `rlib` and `cdylib`. The native clients use `rlib`; agentplug calls the WASM export through `cdylib`.
+- Keep Blitz rendering dependencies isolated in `oxibrowser-render`. Do not add them to the root workspace or core browser crate.
+- Keep the `RUSTSEC-2024-0436` exception only while Boa reaches `paste` through `boa_string`; remove it after the dependency path disappears.
 - Do not add synthetic tests, mocks, placeholders, or decorative glyphs. Verify behavior through the actual build and a live spool dispatch.
 - Keep tracked text UTF-8 without a BOM.
 - Use atomic create or rename for every single-writer and lock guard.
@@ -67,7 +71,7 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 
 Verify the changed surface with its real entry point. For `rs-plugkit`, build the guest and witness the changed verb through `agentplug-runner`. For `gm-mcp`, rebuild the bundle when its source or input schema changes. For release-facing changes, inspect the relevant workflow and resulting artifact.
 
-Use the gm git verbs. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
+Use the gm git verbs. Use `git_remote` to inspect configured remote URLs and the current branch's upstream without fetching or mutating state. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
 
 `gm-mcp` compacts every dispatch response before it crosses the wire; `gm-mcp/AGENTS.md` records which fields compact, which stay whole, and why.
 
