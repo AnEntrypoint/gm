@@ -204,6 +204,7 @@ The root `.gitmodules` file lists twelve git submodules. It defines their source
 - **`gm-mcp/`**: the MCP wrapper and its committed server bundle.
 - **`obrowser/`**: the browser engine and CDP support.
 - **`agentplug-crux/`**: the signal-concentration plugin.
+- **`agentplug-modlens/`**: the vision-bridge plugin, after liustack/modlens. Spool verb `modlens` reads an image through a multimodal API and answers structured evidence for text-only models.
 - **`gm-config/`**: the default remote configuration repository. This submodule holds prose, the FSM graph, gate hooks, and policy data. A user edits this repository directly, and gm pulls from it at run time. gm points at this repository by default, unless a project or user sets its own configuration repository.
 - **`vendor/tencentdb-agent-memory/`**: an optional alternate memory and skill-library backend. The `recall` and `memorize` verbs can target this backend instead of the default `.gm/memories/` and `gm.db` store (see the `memory.tencentdb_backend` field in `gm.config.json`). This submodule holds vendored code, not a fork.
 

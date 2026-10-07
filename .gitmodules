@@ -46,3 +46,7 @@
 [submodule "gm-mcp"]
 	path = gm-mcp
 	url = https://github.com/AnEntrypoint/gm-mcp.git
+[submodule "agentplug-modlens"]
+	path = agentplug-modlens
+	url = https://github.com/AnEntrypoint/agentplug-modlens.git
+	branch = main
