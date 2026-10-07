@@ -104,7 +104,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <li>exposes the <code>dispatch_verb</code> wasm export, one entry point, every verb</li>
     <li>owns the FSM in <code>src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>; the agent never advances state directly, it dispatches <code>transition</code> and the orchestrator validates against the four state planes</li>
     <li>services orchestrator verbs natively: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code>, <code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, <code>auto-recall</code></li>
-    <li>routes host verbs (<code>fs_*</code>, <code>kv_*</code>, <code>fetch</code>, <code>exec_js</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>browser</code>, <code>health</code>) to the imported host functions</li>
+    <li>routes host verbs (<code>fs_*</code>, <code>kv_*</code>, <code>fetch</code>, <code>exec_js</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, <code>health</code>) to the imported host functions</li>
     <li>watches <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, writes responses to <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> (nested) or <code>out/&lt;N&gt;.json</code> (root)</li>
   </ul>
 
@@ -136,7 +136,6 @@ article tbody tr:hover { background: var(--panel-1); }
   <h3>what it actually does</h3>
   <ul>
     <li>one shared daemon process serves every registered project on the machine -- up to four projects genuinely concurrent, a single project's own dispatches still serialize</li>
-    <li>drives the <code>browser</code> verb natively via direct CDP (no JS wrapper, no playwriter relay in the primary path)</li>
     <li>polls <code>plugkit-bin</code>'s Releases API every 600s for a newer wasm tag; on mismatch, downloads+verifies+hot-reloads in place</li>
     <li>self-updates its own executable too, not just the wasm it serves: it stages a verified <code>&lt;exe&gt;.new</code> and spawns it as a <code>takeover</code> process. That process pre-warms plugins before it signals ready, then the old daemon releases ownership -- a real handoff, no service gap</li>
     <li>writes structured lifecycle events (<code>dispatch.end</code>, <code>phase.transitioned</code>, etc, sent by rs-plugkit as <code>evt: {json}</code> lines via <code>host_log</code>) to each project's own <code>.gm/exec-spool/.watcher.log</code>, the surface <code>gmsniff</code> reads</li>
