@@ -69,7 +69,7 @@ An alternative one-line install adds the `/gm` skill and the `gm` MCP tool (the 
 npx github:AnEntrypoint/gm -g
 ```
 
-Both routes install at **user** scope, so every project gets the tools without a per-project trust prompt. This route runs `npx skills add AnEntrypoint/gm`, vendors the pre-bundled `gm-mcp` server to `~/.gm-tools/gm-mcp-server.mjs`, starts its shared HTTP server, and registers it with every agent host (`claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user` for Claude Code, `npx add-mcp -g` for the hosts add-mcp knows, plus a direct write for Cursor, Gemini and Codex); it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
+Drop `-g` to install into the current project folder instead of every agent host globally. This route runs `npx skills add AnEntrypoint/gm`, vendors the pre-bundled `gm-mcp` server to `~/.gm-tools/gm-mcp-server.mjs`, and registers that local file with every agent host (`npx add-mcp "node ~/.gm-tools/gm-mcp-server.mjs"` for the hosts add-mcp knows, plus a direct write for Claude Code); it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
 
 **The MCP server always launches from that local file, never from an `npx` github spec.** `npx -y github:AnEntrypoint/gm-mcp` re-resolves the git ref over the network and reinstalls on every connect: measured 8.2s with a warm npm cache and 22.2s cold on an idle machine, against 0.19s for the same bundle launched from disk. Claude Code allows 30s for the whole connect handshake, so under real load (several concurrent sessions, the runner's wasm pools resident) the network path blows that budget and the host reports `CONNECT_TIMEOUT` -- the session then has no `gm` tool for the rest of its life. The installer also rewrites any existing `npx -y github:AnEntrypoint/gm-mcp` registration it finds in `~/.claude.json` (user and per-project scope) and in the current folder's `.mcp.json`. To repair registrations without reinstalling the skill or runner:
 
@@ -84,41 +84,7 @@ The user registration launches the local bundle with Node.js. To repair a projec
 npx github:AnEntrypoint/gm --mcp-only
 ```
 
-An existing HTTP registration (`{"type":"http","url":"http://127.0.0.1:8787/mcp"}`) is left as it is: re-running the installer never downgrades the durable transport back to stdio. A project `.mcp.json` gm entry that the installer recognises as its own launcher is removed, because project scope outranks user scope and needs per-project approval -- measured: a session in that project reports `{"name":"gm","status":"pending","source":"project"}` and exposes no `mcp__gm__*` tools at all, while the same registration at user scope reports `connected` and exposes both.
-
-**A running agent host cannot gain these tools.** Claude Code fixes its tool list when the session starts, and nothing outside the session adds to it: the `reload_plugins` and `mcp_reconnect` control requests both refuse a server that was not in the config at startup, and no file watcher re-reads `mcpServers`. So after installing:
-
-- `gm` already listed under `/mcp` -> run `/mcp reconnect gm`;
-- `gm` missing from `/mcp` -> restart the agent host. Every new session already has it.
-
-To register or repair from inside a session, paste `! claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user`.
-
-Until then, dispatch the same verbs from the shell with no MCP client involved:
-
-```
-gm dispatch grep --body {"pattern":"foo","output_mode":"content"} --cwd C:/dev/proj
-gm dispatch codesearch '{"query":"chunk merger"}' --cwd C:/dev/proj
-gm dispatch health
-gm dispatch --help
-gm mcp-status        # registration, whether the server answers, and the remedy above
-```
-
-#### Working from a clone
-
-`npm link` in a checkout puts that checkout's own `gm` on PATH, with no network install, so the skill and the MCP registration both come from your working tree:
-
-```
-git clone https://github.com/AnEntrypoint/gm.git
-cd gm
-npm link          # links the "gm" bin declared in package.json
-gm -g             # install the skill, runner and MCP registration from this checkout
-gm --mcp-only     # or only (re)register the MCP server
-gm version        # print this checkout's version
-```
-
-On Windows, PowerShell ships a built-in `gm` alias for `Get-Member`, and an alias outranks an external command, so `gm` resolves to `Get-Member` there until the alias is removed. Every `gm` run writes `Remove-Item Alias:\gm -Force -ErrorAction SilentlyContinue` into the current user's PowerShell profile (current host and all hosts) when it does not already find the line there; open a new PowerShell afterwards.
-
-`gm` accepts only the verbs, subcommands and flags above (`gm version`, `gm -g`, `gm --mcp-only`, `gm dispatch <verb> [...]`, `gm mcp-status`, `gm --help`). Anything else is rejected with the usage text rather than starting an install.
+Restart the agent host afterwards; a running session keeps the registration it connected with.
 
 The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 
@@ -170,7 +136,7 @@ Every tool the agent uses is a dispatch verb. The agent has no direct shell acce
 - **`recall`**: a vector-plus-KV (key-value, a storage namespace inside a discipline) search against `.gm/memories/*.md` and a derived `gm.db` vector index. The search scores each result by cosine similarity times recency, and is namespace-aware. This verb lives in-tree in `rs-plugkit`.
 - **`codesearch`**: ranked (BM25 plus vector) and exhaustive (`literal`/`regex`/identifier) search across the project, backed by the `rs-search` backend.
 - **`callers`, `impact`, `codeinsight_index`**: the call graph. `callers {symbol}` lists every recorded call site, `impact {symbol}` walks what a symbol depends on, and `codeinsight_index` refreshes the tree-sitter symbol and call-edge index incrementally. Agents ask these first for who-calls, what-breaks, dead-code and blast-radius questions.
-- **`grep`**: an exhaustive literal scan of the tree that answers every hit as `path:line: text`. Takes `{"pattern":"...","path"?,"glob"?,"exclude"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?,"no_ignore"?}`; `rg` is an accepted alias. `exclude` drops paths by glob, one glob or an array -- `{"exclude":["vendor/**","test/hardware/**"]}`, with `exclude_glob`/`exclude_globs` as aliases -- so a scan never needs a hand-written brace alternation to skip a vendored tree; a `!`-prefixed entry inside `glob` (`{"glob":["**/*.rs","!vendor/**"]}`) excludes the same way, the reply echoes the effective glob back as `exclude_glob`, and exclusion never affects `exhaustive`. It honours the same `.gitignore`/hidden-directory/dependency-directory rules `codesearch` does, and `{"no_ignore":true}` (alias `include_ignored`) opts out of the `.gitignore` part so ignored files are scanned too, defaults to a 200-match cap, and `output_mode` selects `content` (every hit), `files_with_matches` (each path once) or `count` (per-path totals); `content` answers `counts[]` (per-file `{path,count}`) plus `output[]` (one `path:line: text` per hit), and `{"detail":true}` swaps `output[]` for structured `matches[]`. `search`/`codesearch` stays the ranked BM25-plus-vector verb; `grep` is the one to use when the question is literally "where is this string".
+- **`grep`**: an exhaustive literal scan of the tree that answers every hit as `path:line: text`. Takes `{"pattern":"...","path"?,"glob"?,"exclude"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?}`; `rg` is an accepted alias. `exclude` drops paths by glob, one glob or an array -- `{"exclude":["vendor/**","test/hardware/**"]}`, with `exclude_glob`/`exclude_globs` as aliases -- so a scan never needs a hand-written brace alternation to skip a vendored tree; a `!`-prefixed entry inside `glob` (`{"glob":["**/*.rs","!vendor/**"]}`) excludes the same way, the reply echoes the effective glob back as `exclude_glob`, and exclusion never affects `exhaustive`. It honours the same `.gitignore`/hidden-directory/dependency-directory rules `codesearch` does, defaults to a 200-match cap, and `output_mode` selects `content` (every hit), `files_with_matches` (each path once) or `count` (per-path totals); `content` answers `counts[]` (per-file `{path,count}`) plus `output[]` (one `path:line: text` per hit), and `{"detail":true}` swaps `output[]` for structured `matches[]`. `search`/`codesearch` stays the ranked BM25-plus-vector verb; `grep` is the one to use when the question is literally "where is this string".
 - **`memorize`**: writes to the recall index, using the BGE model's query/passage prefix asymmetry.
 - **`browser`**: a fast headless engine (oxibrowser, written in pure Rust) that starts no Chrome process. This verb supports navigate, evaluate, DOM (Document Object Model) query, and markdown extraction only. It holds one implicit session. gm accepts the `session new`, `session close`, and `session reset` commands here, but each command performs no action.
 - **`cdp`** (Chrome DevTools Protocol, used to drive a live browser): the same plain-text-body grammar as `browser`. This verb drives a real Chrome process over CDP, natively through `agentplug`, with no JS wrapper. Use this verb for anything `browser` cannot do. Examples: full CSS (Cascading Style Sheets, a styling language) fidelity, full layout fidelity, real screenshots, and the `capture`, `profile`, `trace`, and `viewport=` commands. A process-wide session registry keeps the launched Chrome child process and its CDP port alive across dispatches. The registry stores each session's browser profile at `.gm/browser-chrome-profile-<session_id>/`. The `session new`, `session list`, `session close <id>`, and `session reset <id>` commands manage these sessions directly. The commands `url=`, `dom=<selector>`, `screenshot[=name]`, and `timeout=<ms>` combine in any order inside one dispatch body. Set `GM_CHROME_CDP_ENDPOINT=http://127.0.0.1:9250` before a `cdp` or `browser` dispatch to attach to that running Chrome instance. `.gm/browser-config.json` can set the same value as `chrome_cdp_endpoint`. GM does not launch or terminate Chrome for an attached endpoint. `.gm/browser-config.json` also accepts `enable_webgpu`, `chrome_extra_args`, `load_extension`, `chrome_idle_ttl_seconds` and `chrome_max_concurrent`; see `gm-config/prose/browser.md`. The dispatch runs the script body itself as a real async function body. A bare expression such as `1+1` is auto-wrapped to return its own value, matching REPL (read-eval-print loop) behavior rather than plain statement execution.
