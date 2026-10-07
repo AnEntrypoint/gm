@@ -533,6 +533,13 @@ async function dispatchCommand() {
         console.error(`gm: no gm-mcp bundle at ${MCP_BUNDLE_PATH}, so dispatch cannot run`)
         return 1
     }
+    // An older bundle has no dispatch subcommand and falls through to its stdio
+    // server, which then waits on a pipe nobody is writing to -- say so instead.
+    const deployed = deployedBundleInfo()
+    if (deployed && !deployed.hasDispatch) {
+        console.error(`gm: the bundle at ${MCP_BUNDLE_PATH} is ${deployed.version ?? 'unknown'} and has no dispatch subcommand -- refresh it with gm --mcp-only`)
+        return 1
+    }
     const res = spawnSync(process.execPath, [MCP_BUNDLE_PATH, 'dispatch', ...process.argv.slice(3)], {
         stdio: 'inherit',
         windowsHide: true,
