@@ -69,18 +69,33 @@ An alternative one-line install adds the `/gm` skill and the `gm` MCP tool (the 
 npx github:AnEntrypoint/gm -g
 ```
 
-Drop `-g` to install into the current project folder instead of every agent host globally. This route runs `npx skills add AnEntrypoint/gm`, vendors the pre-bundled `gm-mcp` server to `~/.gm-tools/gm-mcp-server.mjs`, and registers that local file with every agent host (`npx add-mcp "node ~/.gm-tools/gm-mcp-server.mjs"` for the hosts add-mcp knows, plus a direct write for Claude Code); it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
+Both routes install at **user** scope, so every project gets the tools without a per-project trust prompt. This route runs `npx skills add AnEntrypoint/gm`, vendors the pre-bundled `gm-mcp` server to `~/.gm-tools/gm-mcp-server.mjs`, starts its shared HTTP server, and registers it with every agent host (`claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user` for Claude Code, `npx add-mcp -g` for the hosts add-mcp knows, plus a direct write for Cursor, Gemini and Codex); it is not published to the npm registry, so `npx github:...` is the invocation, never a bare package name.
 
 **The MCP server always launches from that local file, never from an `npx` github spec.** `npx -y github:AnEntrypoint/gm-mcp` re-resolves the git ref over the network and reinstalls on every connect: measured 8.2s with a warm npm cache and 22.2s cold on an idle machine, against 0.19s for the same bundle launched from disk. Claude Code allows 30s for the whole connect handshake, so under real load (several concurrent sessions, the runner's wasm pools resident) the network path blows that budget and the host reports `CONNECT_TIMEOUT` -- the session then has no `gm` tool for the rest of its life. The installer also rewrites any existing `npx -y github:AnEntrypoint/gm-mcp` registration it finds in `~/.claude.json` (user and per-project scope) and in the current folder's `.mcp.json`. To repair registrations without reinstalling the skill or runner:
 
 ```
-npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets node <absolute path>
-npx github:AnEntrypoint/gm --mcp-only      # project scope: .mcp.json gets a node -e launcher that resolves ~/.gm-tools at start, so the committed file works on every machine
+npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets {"type":"http","url":"http://127.0.0.1:8787/mcp"}
+npx github:AnEntrypoint/gm --mcp-only      # same registration, no skill or runner install
 ```
 
-An existing HTTP registration (`{"type":"http","url":"http://127.0.0.1:8787/mcp"}`) is left as it is: re-running the installer never downgrades the durable transport back to stdio.
+An existing HTTP registration (`{"type":"http","url":"http://127.0.0.1:8787/mcp"}`) is left as it is: re-running the installer never downgrades the durable transport back to stdio. A project `.mcp.json` gm entry that the installer recognises as its own launcher is removed, because project scope outranks user scope and needs per-project approval -- measured: a session in that project reports `{"name":"gm","status":"pending","source":"project"}` and exposes no `mcp__gm__*` tools at all, while the same registration at user scope reports `connected` and exposes both.
 
-Restart the agent host afterwards; a running session keeps the registration it connected with.
+**A running agent host cannot gain these tools.** Claude Code fixes its tool list when the session starts, and nothing outside the session adds to it: the `reload_plugins` and `mcp_reconnect` control requests both refuse a server that was not in the config at startup, and no file watcher re-reads `mcpServers`. So after installing:
+
+- `gm` already listed under `/mcp` -> run `/mcp reconnect gm`;
+- `gm` missing from `/mcp` -> restart the agent host. Every new session already has it.
+
+To register or repair from inside a session, paste `! claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user`.
+
+Until then, dispatch the same verbs from the shell with no MCP client involved:
+
+```
+gm dispatch grep --body {"pattern":"foo","output_mode":"content"} --cwd C:/dev/proj
+gm dispatch codesearch '{"query":"chunk merger"}' --cwd C:/dev/proj
+gm dispatch health
+gm dispatch --help
+gm mcp-status        # registration, whether the server answers, and the remedy above
+```
 
 #### Working from a clone
 
@@ -97,7 +112,7 @@ gm version        # print this checkout's version
 
 On Windows, PowerShell ships a built-in `gm` alias for `Get-Member`, and an alias outranks an external command, so `gm` resolves to `Get-Member` there until the alias is removed. Every `gm` run writes `Remove-Item Alias:\gm -Force -ErrorAction SilentlyContinue` into the current user's PowerShell profile (current host and all hosts) when it does not already find the line there; open a new PowerShell afterwards.
 
-`gm` accepts only the verbs and flags above. Anything else is rejected with the usage text rather than starting an install.
+`gm` accepts only the verbs, subcommands and flags above (`gm version`, `gm -g`, `gm --mcp-only`, `gm dispatch <verb> [...]`, `gm mcp-status`, `gm --help`). Anything else is rejected with the usage text rather than starting an install.
 
 The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 
