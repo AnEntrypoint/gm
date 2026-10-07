@@ -6,10 +6,23 @@ import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
 
+const USAGE = [
+  'Usage: gm [version] [-g|--global] [--mcp-only] [-h|--help]',
+  'Installs or repairs the gm skill, local MCP registration, and runner.',
+  '  version         print the version of this gm checkout',
+  '  -g, --global    register for every agent host (user scope)',
+  '  --mcp-only      repair MCP registrations only, no skill or runner install',
+  'For live dispatch, use the gm MCP tool after restarting the agent host, or the project spool with agentplug-runner spool.',
+].join('\n')
+
+const FLAGS = new Set(['-g', '--global', '--mcp-only', '-h', '--help'])
+const VERSION_FLAGS = new Set(['version', '--version', '-v'])
+
 const argv = process.argv.slice(2)
 const global = argv.includes('-g') || argv.includes('--global')
 const mcpOnly = argv.includes('--mcp-only')
 const help = argv.includes('-h') || argv.includes('--help')
+const unknownArgs = argv.filter(arg => !FLAGS.has(arg) && !VERSION_FLAGS.has(arg))
 
 const GM_TOOLS_DIR = path.join(os.homedir(), '.gm-tools')
 const MCP_BUNDLE_PATH = path.join(GM_TOOLS_DIR, 'gm-mcp-server.mjs')
@@ -17,9 +30,19 @@ const MCP_BUNDLE_URL = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/ma
 const LEGACY_NPX_SPEC = 'github:AnEntrypoint/gm-mcp'
 
 if (help) {
-  console.log('Usage: gm [-g|--global] [--mcp-only]')
-  console.log('Installs or repairs the gm skill, local MCP registration, and runner.')
-  console.log('For live dispatch, use the gm MCP tool after restarting the agent host, or the project spool with agentplug-runner spool.')
+  console.log(USAGE)
+  process.exit(0)
+}
+
+if (unknownArgs.length > 0) {
+  console.error(`gm: unrecognised ${unknownArgs.length === 1 ? 'argument' : 'arguments'}: ${unknownArgs.join(' ')}`)
+  console.error(USAGE)
+  process.exit(2)
+}
+
+if (argv.some(arg => VERSION_FLAGS.has(arg))) {
+  const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+  console.log(readJson(path.join(pkgRoot, 'package.json'))?.version ?? 'unknown')
   process.exit(0)
 }
 
@@ -81,6 +104,15 @@ function isCurrentEntry(entry, wanted) {
   return entry && entry.command === wanted.command && JSON.stringify(entry.args) === JSON.stringify(wanted.args)
 }
 
+// A {type:"http", url} entry is the durable transport: the client reaches a
+// shared server it can reconnect to, where a stdio child dies with its pipe.
+// Rewriting one back to stdio would trade that away on every installer run.
+function isHttpEntry(entry) {
+  if (!entry || typeof entry !== 'object') return false
+  if (String(entry.type ?? entry.transport ?? '').toLowerCase() === 'http') return true
+  return typeof entry.url === 'string' && entry.url.length > 0 && !entry.command
+}
+
 function readJson(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -99,6 +131,10 @@ function upsertGmServer(servers, wanted, label, create) {
   if (!servers || typeof servers !== 'object') return false
   const existing = servers.gm
   if (!existing && !create) return false
+  if (isHttpEntry(existing)) {
+    console.log(`kept the HTTP gm MCP server in ${label} (${existing.url}) -- the durable transport, not downgraded to stdio`)
+    return false
+  }
   if (isCurrentEntry(existing, wanted)) return false
   servers.gm = wanted
   console.log(`registered gm MCP server in ${label}${isLegacyNpxEntry(existing) ? ' (replaced legacy npx github spec)' : ''}`)
@@ -188,6 +224,32 @@ function registerKnownHostShapes() {
   registerCodex(CODEX_CONFIG_PATH)
 }
 
+// PowerShell ships a built-in `gm` alias for Get-Member, and an alias outranks
+// an external command, so on Windows the npm shim is unreachable from
+// PowerShell until the alias is removed in a profile that loads before use.
+const POWERSHELL_ALIAS_FIX = [
+  '$line = \'Remove-Item Alias:\\gm -Force -ErrorAction SilentlyContinue\'',
+  '$marker = \'# gm: PowerShell ships a built-in gm alias (Get-Member) that outranks the gm command\'',
+  'foreach ($profilePath in @($PROFILE, $PROFILE.CurrentUserAllHosts)) {',
+  '  if (-not $profilePath) { continue }',
+  '  $dir = Split-Path -Parent $profilePath',
+  '  if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }',
+  '  $text = if (Test-Path -LiteralPath $profilePath) { Get-Content -LiteralPath $profilePath -Raw } else { \'\' }',
+  '  if ($text -and $text.Contains($line)) { continue }',
+  '  $prefix = if ($text -and -not $text.EndsWith("`n")) { "`n" } else { \'\' }',
+  '  Add-Content -LiteralPath $profilePath -Value ($prefix + $marker + "`n" + $line + "`n") -NoNewline',
+  '  Write-Host "gm: removed the PowerShell gm alias in $profilePath -- open a new PowerShell to use gm there"',
+  '}',
+].join('\n')
+
+function unblockPowerShellAlias() {
+  if (process.platform !== 'win32') return
+  const res = spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', POWERSHELL_ALIAS_FIX], { stdio: 'inherit', windowsHide: true })
+  if (res.error) {
+    console.log(`gm: could not update the PowerShell profile (${res.error.message}); run 'Remove-Item Alias:\\gm -Force' in PowerShell to use gm there`)
+  }
+}
+
 function installRunner() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const installSh = path.join(pkgRoot, 'install.sh')
@@ -208,6 +270,7 @@ function installRunner() {
   }
 }
 
+unblockPowerShellAlias()
 if (!mcpOnly) {
   run('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'])
 }
