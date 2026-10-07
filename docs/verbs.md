@@ -245,11 +245,28 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 `git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_finalize`, `git_log`,
 `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`),
 `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
-`git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`.
+`git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
+`git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
 denial names the verb to dispatch next.
+
+The four `git_worktree_*` verbs are the sanctioned way to work in an isolated worktree -- never raw
+`git worktree` through `bash`:
+
+```
+{"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}   git_worktree_add: -b <ref> <path>
+{"path":"C:/dev/proj-sweep"}                                        git_worktree_add: <path> <HEAD>
+{"path":"C:/dev/proj-sweep"}                                        git_worktree_remove (force:true to drop a dirty one)
+{}                                                                  git_worktree_list / git_worktree_prune
+```
+
+`git_worktree_add` answers `{root, path, branch, created}`; `git_worktree_list` answers
+`{count, worktrees:[{path, head, branch, bare, detached, locked, prunable}]}` parsed from
+`git worktree list --porcelain`. All four refuse unknown fields, a `path` containing `..`, and a
+path under `.gm/` or `.agentplug*`; an absolute path outside the repository root needs
+`allowOutsideRoot:true`.
 
 ## Web
 
