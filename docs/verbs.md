@@ -290,31 +290,7 @@ Enabling `extensions.worktreeConfig` requires moving common `core.worktree` into
 
 ## Web
 
-`serp` (web search), `browser` (headless engine, no Chrome process: navigate, evaluate, DOM query,
-markdown extraction), `cdp` (a real Chrome over the DevTools Protocol: screenshots, `capture`,
-`profile`, `trace`, `viewport=`). `browser` and `cdp` take a plain-text command body through
-`raw_body`. `fetch` takes a JSON body and is HTTP(S)-only.
-
-### `serp` -- web search
-
-A plain text body is the query itself; a JSON body `{"query":"<text>"}` is the same request.
-
-```
-raw_body: "RigL dynamic sparse training from scratch"
-{"query":"RigL dynamic sparse training from scratch"}
-```
-
-It queries DuckDuckGo's lite endpoint over the same HTTP transport `fetch` uses and returns a
-compact ranked list, capped at 10 rows with each snippet clipped to 200 characters:
-
-```
--> ok:true, query:"RigL dynamic sparse training from scratch", engine:"duckduckgo-lite",
-   status:200, count:10, results:[{title, url, snippet}, ...]
-```
-
-A reply with `count: 0` is an error, never an empty answer: the endpoint answered with a bot
-challenge page (HTTP 202/403) or the transport failed, and `error` names which. Retry once, then
-reach a known URL with `fetch` instead.
+`fetch` takes a JSON body and is HTTP(S)-only.
 
 ## Orchestration and state
 
