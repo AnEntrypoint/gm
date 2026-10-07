@@ -71,6 +71,13 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 
 Verify the changed surface with its real entry point. For `rs-plugkit`, build the guest and witness the changed verb through `agentplug-runner`. For `gm-mcp`, rebuild the bundle when its source or input schema changes. For release-facing changes, inspect the relevant workflow and resulting artifact.
 
+Before a diagnostic override, save the original property descriptor. Record whether the target
+owns the property. Refuse an override unless the original state can be restored. Set
+`configurable: true` on new temporary own properties. In `finally`, restore an original own
+property with its exact saved descriptor. For an inherited property, delete the temporary own
+shadow. Verify the original property lookup and absence of probe state before the final live
+witness.
+
 Use the gm git verbs. Use `git_remote` to inspect configured remote URLs and the current branch's upstream without fetching or mutating state. Before delivery, resolve every residual, keep the worktree clean, update affected submodule pins, and verify the remote state. Do not claim completion from source inspection alone.
 
 `gm-mcp` compacts every dispatch response before it crosses the wire; `gm-mcp/AGENTS.md` records which fields compact, which stay whole, and why.
