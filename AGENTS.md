@@ -67,6 +67,10 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 - `config_sync::ensure_current` debounces on the last probe time whether or not a local checkout exists, and records that time in memory as well as on disk: the `.sync.json` write can fail under load, and with no local checkout every dispatch re-ran `git ls-remote` with no backoff (measured at more than one spawn per second, 24/7).
 - Keep this file below 30 KB. When it exceeds that limit, revalidate it against current source, history, and retained memory before compacting it.
 
+## Triage scripts
+
+`scripts/triage/` holds the one-call checks that cost the most time to improvise: `runner-status.sh` (watcher heartbeat age, pid liveness, plugin versions, exit 1 when dead), `runner-restart.sh` (stops runners by `/proc` exe and starts one detached watcher; `pkill -f` matches the calling shell and kills it), `check-pins.sh` (every submodule pin in HEAD exists on its remote; an unpublished pin breaks fresh clones), and `run-failure.sh <owner/repo> <run-id>` (failing step and error lines of a GitHub Actions run, escape codes stripped). Run `check-pins.sh` before pushing a submodule bump.
+
 ## Verification and delivery
 
 Verify the changed surface with its real entry point. For `rs-plugkit`, build the guest and witness the changed verb through `agentplug-runner`. For `gm-mcp`, rebuild the bundle when its source or input schema changes. For release-facing changes, inspect the relevant workflow and resulting artifact.
