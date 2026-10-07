@@ -69,7 +69,7 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 
 ## Triage scripts
 
-`scripts/triage/` holds the one-call checks that cost the most time to improvise: `runner-status.sh` (watcher heartbeat age, pid liveness, plugin versions, exit 1 when dead), `runner-restart.sh` (stops runners by `/proc` exe and starts one detached watcher; `pkill -f` matches the calling shell and kills it), `check-pins.sh` (every submodule pin in HEAD exists on its remote; an unpublished pin breaks fresh clones), and `run-failure.sh <owner/repo> <run-id>` (failing step and error lines of a GitHub Actions run, escape codes stripped). Run `check-pins.sh` before pushing a submodule bump.
+`scripts/triage/` holds the one-call checks that cost the most time to improvise: `runner-status.sh` (watcher heartbeat age, pid liveness, plugin versions, exit 1 when dead), `runner-restart.sh` (stops runners by `/proc` exe and starts one detached watcher; `pkill -f` matches the calling shell and kills it), `check-pins.sh` (every submodule pin in HEAD exists on its remote; an unpublished pin breaks fresh clones), and `run-failure.sh <owner/repo> <run-id>` (failing step and error lines of a GitHub Actions run, escape codes stripped), and `doctor.sh`, which runs the watcher check, the pin check and the latest failed CI run per release repo in one call. Run `check-pins.sh` before pushing a submodule bump.
 
 ## Verification and delivery
 
