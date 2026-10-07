@@ -1,10 +1,18 @@
 #!/usr/bin/env pwsh
 $ErrorActionPreference = "Stop"
+$installer = Join-Path $PSScriptRoot "bin/gm-install.js"
+if (-not (Test-Path $installer)) { throw "Use a local SolutionsAsService/gm checkout/package; bundled installer missing." }
+if ($args.Count -ge 2 -and $args[0] -eq '--with-runtime' -and $args[1] -eq '--runner-only') {
+    $args = @($args | Select-Object -Skip 2)
+    if ($args.Count -ne 1 -or $args[0] -ne "spool") { throw "Internal runner path accepts only spool; use Node CLI for help/dry-run." }
+} else {
+    & node $installer @args
+    exit $LASTEXITCODE
+}
+
 
 $Repo = "AnEntrypoint/agentplug-bin"
-$GmRepo = "AnEntrypoint/gm"
 $GmToolsDir = Join-Path $env:USERPROFILE ".gm-tools"
-$ClaudeSkillsDir = Join-Path $env:USERPROFILE ".claude\skills"
 
 function Resolve-AssetName {
     $arch = $env:PROCESSOR_ARCHITECTURE
@@ -33,74 +41,16 @@ function Resolve-InstallableTag {
             if ($hasAsset) { return $release.tag_name }
             Write-Warning "release $($release.tag_name) has no $AssetName asset -- trying the next older release"
         }
-        Write-Warning "no release in the 10 most recent carries a $AssetName asset -- falling back to git ls-remote (asset-unverified)"
+        Write-Warning "no release in the 10 most recent carries a $AssetName asset"
     } catch {
-        Write-Warning "GitHub API release lookup failed: $($_.Exception.Message) -- falling back to git ls-remote (asset-unverified)"
+        Write-Warning "GitHub API release lookup failed: $($_.Exception.Message)"
     }
-    try {
-        $refs = git ls-remote --tags --refs "https://github.com/$Repo.git" 2>$null
-        $tags = $refs | ForEach-Object {
-            if ($_ -match 'refs/tags/(.+)$') { $Matches[1] }
-        } | Sort-Object { [version]($_ -replace '^v','') } -ErrorAction SilentlyContinue
-        if ($tags) { return ($tags | Select-Object -Last 1) }
-    } catch {}
     return $null
 }
 
 function Get-Sha256 {
     param([string]$Path)
     (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
-}
-
-function Resolve-LatestGmTag {
-    try {
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$GmRepo/releases/latest" -Headers (Get-GitHubAuthHeaders) -UseBasicParsing -TimeoutSec 15
-        if ($release.tag_name) { return $release.tag_name }
-    } catch {
-        Write-Warning "GitHub API tag lookup failed: $($_.Exception.Message)"
-    }
-    return $null
-}
-
-function Install-Skill {
-    $tag = Resolve-LatestGmTag
-    if (-not $tag) {
-        Write-Error "FATAL: could not resolve latest release tag for $GmRepo"
-        exit 1
-    }
-    $ver = $tag -replace '^v', ''
-    Write-Host "gm-skill: resolved latest release $tag"
-
-    $work = Join-Path $env:TEMP "gm-skill-install-$PID"
-    New-Item -ItemType Directory -Force -Path $work | Out-Null
-    try {
-        $base = "https://github.com/$GmRepo/releases/download/$tag"
-        $asset = "gm-skill-$ver.tar.gz"
-        $assetPath = Join-Path $work $asset
-        $shaPath = "$assetPath.sha256"
-
-        Invoke-WebRequest -Uri "$base/$asset" -OutFile $assetPath -UseBasicParsing
-        Invoke-WebRequest -Uri "$base/$asset.sha256" -OutFile $shaPath -UseBasicParsing
-
-        $expected = (Get-Content $shaPath -Raw).Trim().Split()[0].ToLowerInvariant()
-        $actual = Get-Sha256 -Path $assetPath
-        if (-not $expected -or $actual -ne $expected) {
-            Write-Error "FATAL: sha256 mismatch for $asset (expected $expected, got $actual)"
-            exit 1
-        }
-
-        $extractDir = Join-Path $work "extract"
-        New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
-        tar -xzf $assetPath -C $extractDir
-
-        New-Item -ItemType Directory -Force -Path $ClaudeSkillsDir | Out-Null
-        $target = Join-Path $ClaudeSkillsDir "gm"
-        if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-        Copy-Item -Recurse -Force (Join-Path $extractDir "skills\gm") $target
-        Write-Host "installed gm skill $tag -> $target"
-    } finally {
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
-    }
 }
 
 function Remove-RetiredJsHost {
@@ -129,32 +79,8 @@ function Remove-RetiredJsHost {
     }
 }
 
-function Install-McpServer {
-    New-Item -ItemType Directory -Force -Path $GmToolsDir | Out-Null
-    $dest = Join-Path $GmToolsDir "gm-mcp-server.mjs"
-    $tmp = "$dest.tmp.$PID"
-    $url = "https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js"
-    try {
-        Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
-        Move-Item -Force $tmp $dest
-        Write-Host "installed gm-mcp server -> $dest"
-        Write-Host "register it (once) with:"
-        Write-Host "  claude mcp remove gm 2>`$null; claude mcp add gm -- node `"$dest`""
-    } catch {
-        Remove-Item -Force -ErrorAction SilentlyContinue $tmp
-        Write-Warning "could not download the gm-mcp server bundle: $($_.Exception.Message) -- the spool protocol still works without it"
-    }
-}
-
 function Main {
     param([string[]]$RunnerArgs)
-
-    if ($RunnerArgs.Count -gt 0 -and $RunnerArgs[0] -eq "install") {
-        Install-Skill
-        Install-McpServer
-        Remove-RetiredJsHost
-        return
-    }
 
     $asset = Resolve-AssetName
     if (-not $asset) {
@@ -176,8 +102,8 @@ function Main {
     $shaFile = "$dest.sha256.tmp.$PID"
 
     Write-Host "downloading $base/$asset"
-    Invoke-WebRequest -Uri "$base/$asset" -OutFile $tmp -UseBasicParsing
-    Invoke-WebRequest -Uri "$base/$asset.sha256" -OutFile $shaFile -UseBasicParsing
+    Invoke-WebRequest -Uri "$base/$asset" -OutFile $tmp -UseBasicParsing -TimeoutSec 30
+    Invoke-WebRequest -Uri "$base/$asset.sha256" -OutFile $shaFile -UseBasicParsing -TimeoutSec 30
 
     $expected = (Get-Content $shaFile -Raw).Trim().Split()[0].ToLowerInvariant()
     $actual = Get-Sha256 -Path $tmp
@@ -205,8 +131,12 @@ function Main {
 
     Remove-RetiredJsHost
 
-    & $dest @RunnerArgs
-    exit $LASTEXITCODE
+    $runner = Start-Process -FilePath $dest -ArgumentList $RunnerArgs -PassThru -NoNewWindow
+    if (-not $runner.WaitForExit(120000)) {
+        $runner.Kill()
+        throw "agentplug-runner timed out after 120 seconds"
+    }
+    exit $runner.ExitCode
 }
 
 Main -RunnerArgs $args

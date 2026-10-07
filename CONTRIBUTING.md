@@ -1,6 +1,6 @@
 # Contributing
 
-gm is maintained by one person. Issues and PRs are welcome; response time varies.
+This fork improves the default workflow and installation experience. Keep changes scoped and distinguish prompt guidance, installer behavior and optional upstream runtime code.
 
 ## Filing a good bug report
 
@@ -10,9 +10,9 @@ gm is a witnessed-execution project: a real command and its real output is worth
 
 PRs are welcome, but every file in this repo follows a few hard rules that a PR will be reshaped to match rather than merged as-is:
 
-- No comments in shipped code. Self-explanatory naming and structure replace them.
-- No test files, no test suites (`*.test.*`, `*.spec.*`, `test/`, `__tests__/`). Verification is running the real thing and reading the real output.
-- No decorative Unicode or emoji, plain ASCII text only.
+- Keep code clear; add concise comments where an invariant cannot be expressed by names alone.
+- Preserve and add focused regression tests. Run `npm test` and exercise changed real entrypoints. Label mocked checks honestly; they do not prove a live integration.
+- Keep source text UTF-8 and retain original licenses and attribution.
 - No stub, placeholder, or mock implementation ships -- a scaffold is acceptable only when it genuinely delegates to real behavior.
 
 The full discipline gm runs under is in [AGENTS.md](AGENTS.md).
@@ -21,8 +21,8 @@ The full discipline gm runs under is in [AGENTS.md](AGENTS.md).
 
 - `skills/gm/SKILL.md` -- the shipped skill
 - `bin/` -- installer
-- `gm-plugkit/` -- the wasm-wrapper daemon launcher
-- `rs-plugkit/`, `agentplug/`, and four more submodules -- the orchestrator and native host (see [README.md](README.md#developing-gm-itself))
+- `gm-plugkit/` -- inherited optional runtime pins and prose
+- `rs-plugkit/`, `agentplug/`, and four more submodules -- the orchestrator and native host (see [README.md](README.md#develop-and-verify))
 
 ## Questions
 

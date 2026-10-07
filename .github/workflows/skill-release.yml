@@ -1,10 +1,10 @@
 name: skill-release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'skills/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: gm-skill-release
@@ -13,94 +13,34 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          token: ${{ secrets.PUBLISHER_TOKEN }}
-          fetch-depth: 0
-
-      - name: Auto-bump patch version BEFORE packaging
-        id: bump
+          node-version: 22
+      - name: Verify the shipped default
+        run: npm test
+      - name: Package current revision without changing source
+        id: package
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-          EVENT_ACTOR: ${{ github.actor }}
-          EVENT_SENDER: ${{ github.event.sender.login }}
-          HEAD_SHA: ${{ github.sha }}
         run: |
-          set -e
-          resolve_human_author() {
-            local candidate="$1"
-            [[ "$candidate" =~ ^[A-Za-z0-9-]+$ ]] || return 1
-            local account
-            account=$(gh api "users/$candidate" --jq 'select(.type == "User") | [.login, (.id | tostring)] | @tsv') || return 1
-            [ -n "$account" ] || return 1
-            IFS=$'\t' read -r AUTHOR_LOGIN AUTHOR_ID <<< "$account"
-            [ -n "$AUTHOR_LOGIN" ] && [[ "$AUTHOR_ID" =~ ^[0-9]+$ ]]
-          }
-          if ! resolve_human_author "$EVENT_ACTOR" && ! resolve_human_author "$EVENT_SENDER"; then
-            initiating_commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA")
-            commit_author=$(jq -r '.author.login // empty' <<< "$initiating_commit")
-            commit_committer=$(jq -r '.committer.login // empty' <<< "$initiating_commit")
-            if ! resolve_human_author "$commit_author" && ! resolve_human_author "$commit_committer"; then
-              echo "::error::Cannot verify an initiating human GitHub account for skill release $HEAD_SHA"
-              exit 1
-            fi
-          fi
-          git config user.name "$AUTHOR_LOGIN"
-          git config user.email "${AUTHOR_ID}+${AUTHOR_LOGIN}@users.noreply.github.com"
-          git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-          CURRENT=$(node -e "console.log(require('./package.json').version)")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          node -e "
-            const fs = require('fs');
-            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            p.version = '$NEW_VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
-          "
-          git add package.json
-          git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
-          git push origin HEAD:main
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Package skill tarball with checksum
-        run: |
-          set -e
+          set -euo pipefail
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json')).version")
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]
           mkdir -p release-assets
-          VER="${{ steps.bump.outputs.version }}"
-          tar -czf "release-assets/gm-skill-$VER.tar.gz" skills
-          cd release-assets
-          sha256sum "gm-skill-$VER.tar.gz" | sed 's/ \*/  /' > "gm-skill-$VER.tar.gz.sha256"
-
-      - name: Publish release
+          tar -czf "release-assets/gm-skill-$VERSION.tar.gz" skills LICENSE
+          (cd release-assets && sha256sum "gm-skill-$VERSION.tar.gz" > "gm-skill-$VERSION.tar.gz.sha256")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Publish only to this repository
         env:
-          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-          VER: ${{ steps.bump.outputs.version }}
-          SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.package.outputs.version }}
+          REVISION: ${{ github.sha }}
         run: |
-          set -e
-          gh release create "v$VER" \
-            --repo AnEntrypoint/gm \
-            --title "gm skill v$VER" \
-            --notes "Auto-published from gm CI at $SHA" \
+          gh release create "v$VERSION" --repo "$GH_REPO" --target "$REVISION" \
+            --title "gm skill v$VERSION" --notes "Verified skill bundle from $REVISION. Optional runtime binaries are separate." \
             release-assets/*
-
-      - name: Verify every uploaded asset is actually fetchable
-        env:
-          VER: ${{ steps.bump.outputs.version }}
-        run: |
-          set -e
-          base="https://github.com/AnEntrypoint/gm/releases/download/v$VER"
-          for f in release-assets/*; do
-            name=$(basename "$f")
-            code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
-            if [ "$code" != "200" ]; then
-              echo "::error::published release v$VER's $name is not fetchable (HTTP $code)"
-              exit 1
-            fi
-          done
-          echo "[ok] all $(ls release-assets | wc -l) release assets confirmed fetchable at $base"
