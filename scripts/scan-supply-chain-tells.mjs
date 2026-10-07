@@ -7,7 +7,7 @@ import process from 'node:process'
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', 'vendor', '.cache',
   '.svelte-kit', '.nuxt', '.output', '.turbo', 'out', 'coverage', '.parcel-cache',
-  '.plugkit-browser-profile', '.plugkit-agent-worktree', '.wwebjs_auth', '.wwebjs_cache',
+  '.plugkit-agent-worktree', '.wwebjs_auth', '.wwebjs_cache',
 ])
 const CODE_EXT = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.sh', '.ps1', '.py'])
 const TEXT_EXT = new Set([...CODE_EXT, '.json', '.yml', '.yaml', '.md'])
@@ -178,7 +178,7 @@ function walk(dir, out) {
   }
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue
-    if (e.name.startsWith('.plugkit-browser-profile') || e.name.startsWith('.plugkit-browser-chrome-profile') || e.name.startsWith('.plugkit-agent-worktree')) continue
+    if (e.name.startsWith('.plugkit-agent-worktree')) continue
     const p = path.join(dir, e.name)
     if (e.isDirectory()) {
       walk(p, out)
