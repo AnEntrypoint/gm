@@ -7,7 +7,7 @@ const bundleDir = path.join(root, 'gm-plugkit', 'instructions');
 
 const FALLBACK_GATE_AND_RESIDUAL_KEYS = [
   'gates/long-gap-no-instruction',
-  'residual/prd-open', 'residual/browser-open', 'residual/tasks-running',
+  'residual/prd-open', 'residual/tasks-running',
   'residual/dirty-tree', 'residual/imperative',
 ];
 
@@ -120,56 +120,13 @@ function validatePlaceholderParity(specs) {
 function resolveConformancePaths() {
   const proseSourceDir = path.join(root, 'rs-plugkit', 'crates', 'plugkit-core', 'src', 'orchestrator', 'instructions', 'prose');
   return {
-    proseSourceDir,
-    browserMdPath: path.join(proseSourceDir, 'browser.md'),
     execJsOptsProseMdPath: path.join(proseSourceDir, 'prove.md'),
-    browserRsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'browser.rs'),
-    cdpEvalJsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'cdp_eval.js'),
     execJsRsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'exec_js.rs'),
   };
 }
 
 function checkEveryRequiredFileExists(requiredFiles) {
   return requiredFiles.filter((p) => !fs.existsSync(p));
-}
-
-function extractBrowserModePrefixesFromProse(browserMd) {
-  const bodyShapesMatch = browserMd.match(/## Body shapes[\s\S]*?```\r?\n([\s\S]*?)```/);
-  const promisedPrefixes = [];
-  if (!bodyShapesMatch) return promisedPrefixes;
-
-  for (const line of bodyShapesMatch[1].split(/\r?\n/)) {
-    const t = line.trim();
-    if (!t) continue;
-
-    const sessionMatch = t.match(/^session (\w+)/);
-    if (sessionMatch) { promisedPrefixes.push({ kind: 'session', name: sessionMatch[1] }); continue; }
-
-    const modeMatch = t.match(/^(\w+)(?:\s+\w+=<[^>]+>)*\\n/);
-    if (modeMatch && !['url', 'timeout', 'dom'].includes(modeMatch[1])) { promisedPrefixes.push({ kind: 'mode', name: modeMatch[1] }); continue; }
-
-    const kvMatch = t.match(/^(\w+)=</);
-    if (kvMatch) { promisedPrefixes.push({ kind: 'kv', name: kvMatch[1] }); continue; }
-  }
-  return promisedPrefixes;
-}
-
-function checkPrefixInImplementingCode(kind, name, browserRs, cdpEvalJs) {
-  if (kind === 'session') return browserRs.includes(`"session ${name}`);
-  if (kind === 'kv') return browserRs.includes(`"${name}="`) || cdpEvalJs.includes(`${name}=`);
-  return browserRs.includes(`"${name}\\n"`) || browserRs.includes(`"${name}"`) || cdpEvalJs.includes(`'${name}'`) || cdpEvalJs.includes(`"${name}"`);
-}
-
-function crossReferenceBrowserPrefixes(browserMd, browserRs, cdpEvalJs) {
-  const promisedPrefixes = extractBrowserModePrefixesFromProse(browserMd);
-  const conformanceFindings = [];
-
-  for (const { kind, name } of promisedPrefixes) {
-    if (!checkPrefixInImplementingCode(kind, name, browserRs, cdpEvalJs)) {
-      conformanceFindings.push(`browser.md promises ${kind} prefix "${name}" with zero implementing-code reference in browser.rs or cdp_eval.js`);
-    }
-  }
-  return { conformanceFindings, promisedPrefixCount: promisedPrefixes.length };
 }
 
 function extractExecJsOptsFieldsFromProse(execJsOptsProseMd) {
@@ -196,7 +153,7 @@ function crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs) {
 
 function runConformanceCheck() {
   const paths = resolveConformancePaths();
-  const requiredFiles = [paths.browserMdPath, paths.execJsOptsProseMdPath, paths.browserRsPath, paths.cdpEvalJsPath, paths.execJsRsPath];
+  const requiredFiles = [paths.execJsOptsProseMdPath, paths.execJsRsPath];
   const missingFiles = checkEveryRequiredFileExists(requiredFiles);
 
   if (missingFiles.length > 0) {
@@ -204,23 +161,18 @@ function runConformanceCheck() {
     return false;
   }
 
-  const browserMd = fs.readFileSync(paths.browserMdPath, 'utf8');
-  const browserRs = fs.readFileSync(paths.browserRsPath, 'utf8');
-  const cdpEvalJs = fs.readFileSync(paths.cdpEvalJsPath, 'utf8');
   const execJsOptsProseMd = fs.readFileSync(paths.execJsOptsProseMdPath, 'utf8');
   const execJsRs = fs.readFileSync(paths.execJsRsPath, 'utf8');
 
-  const browserResult = crossReferenceBrowserPrefixes(browserMd, browserRs, cdpEvalJs);
   const execJsResult = crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs);
-  const allFindings = [...browserResult.conformanceFindings, ...execJsResult.conformanceFindings];
 
-  if (allFindings.length) {
+  if (execJsResult.conformanceFindings.length) {
     console.error('prose-conformance FAILED -- prose promises capabilities with no confirmed implementing-code reference:');
-    for (const f of allFindings) console.error(`  - ${f}`);
+    for (const f of execJsResult.conformanceFindings) console.error(`  - ${f}`);
     return true;
   }
 
-  console.log(`prose-conformance: ${browserResult.promisedPrefixCount} browser mode-prefixes + ${execJsResult.promisedOptsFieldCount} exec_js opts fields all have a matching implementing-code reference`);
+  console.log(`prose-conformance: ${execJsResult.promisedOptsFieldCount} exec_js opts fields all have a matching implementing-code reference`);
   return false;
 }
 
