@@ -26,10 +26,31 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          EVENT_ACTOR: ${{ github.actor }}
+          EVENT_SENDER: ${{ github.event.sender.login }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -e
-          git config user.name "gm-bot"
-          git config user.email "noreply@github.com"
+          resolve_human_author() {
+            local candidate="$1"
+            [[ "$candidate" =~ ^[A-Za-z0-9-]+$ ]] || return 1
+            local account
+            account=$(gh api "users/$candidate" --jq 'select(.type == "User") | [.login, (.id | tostring)] | @tsv') || return 1
+            [ -n "$account" ] || return 1
+            IFS=$'\t' read -r AUTHOR_LOGIN AUTHOR_ID <<< "$account"
+            [ -n "$AUTHOR_LOGIN" ] && [[ "$AUTHOR_ID" =~ ^[0-9]+$ ]]
+          }
+          if ! resolve_human_author "$EVENT_ACTOR" && ! resolve_human_author "$EVENT_SENDER"; then
+            initiating_commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA")
+            commit_author=$(jq -r '.author.login // empty' <<< "$initiating_commit")
+            commit_committer=$(jq -r '.committer.login // empty' <<< "$initiating_commit")
+            if ! resolve_human_author "$commit_author" && ! resolve_human_author "$commit_committer"; then
+              echo "::error::Cannot verify an initiating human GitHub account for skill release $HEAD_SHA"
+              exit 1
+            fi
+          fi
+          git config user.name "$AUTHOR_LOGIN"
+          git config user.email "${AUTHOR_ID}+${AUTHOR_LOGIN}@users.noreply.github.com"
           git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           CURRENT=$(node -e "console.log(require('./package.json').version)")
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
