@@ -13,7 +13,7 @@ Two facts that stop most guessing:
    replies `{"ok":false,"error":"unknown verb","error_code":"unknown_verb"}`. Retired verbs leave
    one too. Names seen in that directory but absent from the tables below are not verbs in the
    current build: `glob`, `fs_glob`, `fs_list`, `exec`, `exec_bash`, `similarity`, `git_clone`,
-   `git_init`, `git_worktree`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
+   `git_init`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
    `submodule_drift_check`. Reach for `grep` where you would reach for `glob`, `fs_readdir` for
    `fs_list`, and `bash`/`exec_js` with `raw_body` for `exec_bash`.
 
@@ -250,6 +250,18 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
 denial names the verb to dispatch next.
+
+### `git_worktree` — linked checkouts
+
+| action | body | result |
+|---|---|---|
+| list | `{"action":"list"}` | `worktrees` from Git's NUL-delimited porcelain records |
+| add | `{"action":"add","path":"/absolute/checkout","ref":"HEAD","detach":true}` | `added`, `ref`, `detached` |
+| remove | `{"action":"remove","path":"/absolute/checkout"}` | `removed` |
+
+Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existing local branch name to attach it. Remove supplies no force flag: Git refuses dirty or locked worktrees. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the selected repository.
+
+Enabling `extensions.worktreeConfig` requires moving common `core.worktree` into the primary `config.worktree`; move `core.bare` there if true. Preserve the primary path semantics, then use `git config --worktree` for per-worktree author configuration. Verify `git rev-parse --show-toplevel` in both checkouts. A common `core.worktree` with the extension enabled can send subsequent GM dispatches to an administrative gitdir.
 
 ## Web
 
