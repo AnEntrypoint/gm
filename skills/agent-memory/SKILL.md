@@ -36,10 +36,12 @@ Assets are portable across agent frameworks and shareable across a team -- a new
 git clone https://github.com/AnEntrypoint/agent-memory.git
 cd agent-memory/deploy/global-images
 cp .env.example .env
-$EDITOR .env       # fill in LLM params for both the memory group and the proxy group
-./start-all.sh     # starts memory-core + memory-hub + proxy; prints a one-liner for Claude Code setup
+$EDITOR .env
+./start-all.sh
 ```
 
+Configure the LLM parameters for the memory and proxy groups in `.env` before starting the services.
+The start script runs MemoryCore, MemoryHub, and MemoryProxy, then prints the Claude Code setup command.
 Open the panel at `http://localhost:8125`.
 
 For a standalone Memory Hub, Proxy + Claude Code / CodeBuddy integration, port reference, and teardown, see `INSTALL.md` in the repo (`INSTALL_CN.md` for Chinese).
