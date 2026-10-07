@@ -117,10 +117,10 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    "or" (ranked union of any term)
 {"case_insensitive":true, "whole_word":true}
 {"refresh":true}                   re-read from disk for the exhaustive modes
-{"no_ignore":true}                 include files .gitignore would hide, in every mode: build output,
-                                   vendored trees and scratch scripts the project never committed
-                                   are listed and scanned like any other file. "include_ignored"
-                                   is an alias. .git is never listed either way.
+{"no_ignore":true}                               include files .gitignore would hide, in every mode: build output,
+                                                 vendored trees and scratch scripts the project never committed
+                                                 are listed and scanned like any other file. "include_ignored"
+                                                 is an alias. .git is never listed either way.
 ```
 
 Example, verified against this repo:
