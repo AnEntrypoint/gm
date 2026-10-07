@@ -78,7 +78,6 @@ publish-binaries:
         set -e
         VER=$(cargo pkgid | sed 's/.*#//')
         mkdir -p ./release-assets
-        # Map artifact-name -> final-asset-name
         cp bins/plugkit-win32-x64/plugkit.exe        release-assets/plugkit-win32-x64.exe
         cp bins/plugkit-win32-arm64/plugkit.exe      release-assets/plugkit-win32-arm64.exe
         cp bins/plugkit-darwin-x64/plugkit            release-assets/plugkit-darwin-x64
@@ -86,7 +85,6 @@ publish-binaries:
         cp bins/plugkit-linux-x64/plugkit             release-assets/plugkit-linux-x64
         cp bins/plugkit-linux-arm64/plugkit           release-assets/plugkit-linux-arm64
         chmod +x release-assets/plugkit-darwin-* release-assets/plugkit-linux-*
-        # Manifest
         cd release-assets
         sha256sum plugkit-* > plugkit.sha256
         echo "$VER" > plugkit.version
@@ -99,7 +97,6 @@ publish-binaries:
         VER: ${{ steps.stage.outputs.version }}
       run: |
         set -e
-        # Create release if missing (idempotent)
         if ! gh release view "v$VER" --repo AnEntrypoint/plugkit-bin >/dev/null 2>&1; then
           gh release create "v$VER" --repo AnEntrypoint/plugkit-bin \
             --title "plugkit v$VER" \
@@ -130,13 +127,11 @@ publish-binaries:
         fi
         jq --arg v "$VER" '.plugkitVersion = $v' gm-starter/gm.json > /tmp/gm.json
         mv /tmp/gm.json gm-starter/gm.json
-        # Also write the canonical bin/plugkit.version so dev builds work without CI
         echo "$VER" > gm-starter/bin/plugkit.version
         git config user.email "noreply@github.com"
         git config user.name "rs-plugkit-bot"
         git add gm-starter/gm.json gm-starter/bin/plugkit.version
         git commit -m "chore: bump plugkitVersion to $VER [skip ci]"
-        # Push, tolerating concurrent pushes (race noted in gm/AGENTS.md)
         for i in 1 2 3 4 5; do
           if git push origin main; then break; fi
           git pull --rebase origin main

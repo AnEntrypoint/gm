@@ -74,8 +74,13 @@ Drop `-g` to install into the current project folder instead of every agent host
 **The MCP server always launches from that local file, never from an `npx` github spec.** `npx -y github:AnEntrypoint/gm-mcp` re-resolves the git ref over the network and reinstalls on every connect: measured 8.2s with a warm npm cache and 22.2s cold on an idle machine, against 0.19s for the same bundle launched from disk. Claude Code allows 30s for the whole connect handshake, so under real load (several concurrent sessions, the runner's wasm pools resident) the network path blows that budget and the host reports `CONNECT_TIMEOUT` -- the session then has no `gm` tool for the rest of its life. The installer also rewrites any existing `npx -y github:AnEntrypoint/gm-mcp` registration it finds in `~/.claude.json` (user and per-project scope) and in the current folder's `.mcp.json`. To repair registrations without reinstalling the skill or runner:
 
 ```
-npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets node <absolute path>
-npx github:AnEntrypoint/gm --mcp-only      # project scope: .mcp.json gets a node -e launcher that resolves ~/.gm-tools at start, so the committed file works on every machine
+npx github:AnEntrypoint/gm -g --mcp-only
+```
+
+The user registration launches the local bundle with Node.js. To repair a project registration:
+
+```
+npx github:AnEntrypoint/gm --mcp-only
 ```
 
 Restart the agent host afterwards; a running session keeps the registration it connected with.
@@ -189,25 +194,32 @@ The [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) repository builds a
 
 ## Developing gm itself
 
-This repository holds nine git submodules. Each submodule holds source code only, with no compiled artifact checked in.
+The root `.gitmodules` file lists twelve git submodules. It defines their source locations and branches.
 
 - **`rs-plugkit/`**: the WASM guest. This submodule holds the orchestrator, the gates, and the spool dispatch logic (the gm "brain").
 - **`agentplug/`**: the native, plugin-agnostic host. This submodule loads WASM plugins, gm included, and drives the `browser` and `cdp` verbs natively through CDP.
 - **`agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`**: optional shared native plugins. `agentplug` can load each plugin alongside the gm WASM plugin, for embeddings, vector storage, and syntax parsing in turn.
 - **`rs-codeinsight`**: a standalone tree-sitter codebase analyzer (CLI and library). The call-graph verbs above are implemented natively in `rs-plugkit` (`code_index.rs`), not by linking this crate.
 - **`rs-search`**: a search backend. The `codesearch` verb consumes it.
+- **`gm-mcp/`**: the MCP wrapper and its committed server bundle.
+- **`obrowser/`**: the browser engine and CDP support.
+- **`agentplug-crux/`**: the signal-concentration plugin.
 - **`gm-config/`**: the default remote configuration repository. This submodule holds prose, the FSM graph, gate hooks, and policy data. A user edits this repository directly, and gm pulls from it at run time. gm points at this repository by default, unless a project or user sets its own configuration repository.
 - **`vendor/tencentdb-agent-memory/`**: an optional alternate memory and skill-library backend. The `recall` and `memorize` verbs can target this backend instead of the default `.gm/memories/` and `gm.db` store (see the `memory.tencentdb_backend` field in `gm.config.json`). This submodule holds vendored code, not a fork.
 
-A plain `git clone` command leaves all nine submodules empty. Clone with the submodules included, or set up the submodules after cloning:
+Clone with the submodules included:
 
 ```
 git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
-# or, in an existing checkout:
+```
+
+For an existing checkout:
+
+```
 git submodule update --init --recursive
 ```
 
-A plain `git clone` command leaves each submodule directory empty. This is normal, not a defect. Empty submodules matter only in one case: a developer changes one of these nine repositories' own source code. Empty submodules do not matter when a developer changes only the skill or the installer script in this repository's own tree.
+A plain `git clone` command leaves each submodule directory empty. This is normal, not a defect. Empty submodules matter only in one case: a developer changes one of these dependency repositories' own source code. Empty submodules do not matter when a developer changes only the skill or the installer script in this repository's own tree.
 
 ## License
 

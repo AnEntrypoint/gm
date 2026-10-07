@@ -1,5 +1,5 @@
 id: distribution
 title: distribution
-description: gm (glootius maximus) ships as a SQLite-style turnkey binary -- one package, no fanout -- because minimal maintenance surface is the same token-austerity discipline applied to shipping.
+description: gm installs skills, a native WASM runner, and a local MCP server from public source. Inspect the installed entry points and release evidence.
 layout: article
 source: ../docs/distribution.html
