@@ -12,8 +12,8 @@ numbered steps (or prose) ARE the procedure to follow.
 
 | name | when to use |
 |------|-------------|
-| `gm` | The primary driver for any non-trivial coding, refactoring, debugging, or multi-step engineering task. Use it first, for the whole task. |
-| `gm-continue` | The mandatory final handoff after a `gm` walk reaches `phase=COMPLETE` with `prd_pending_count=0`. Searches for remaining work; reloads `gm` or `wfgy-method` if any exists. |
+| `gm` | Bounded coding/debugging/review work using existing host tools; the default installation. |
+| `gm-continue` | Optional user-requested resumption of unfinished work; reuse the checkpoint and stop when nothing actionable remains. |
 | `wfgy-method` | Drift-recovery discipline for multi-step work: compare each step to the goal, weigh alternatives before ambiguous decisions, checkpoint before risky steps, bounded-retry-then-surface. |
 | `polaris-protocol` | WFGY 5.0 Polaris Protocol root: compile goals before execution, shoot problems into inspectable routes, control drift. Load first for complex/high-stakes/long-horizon work, then dispatch its children. |
 | `polaris-goal-compiler` | Compiles a goal into task atoms, active/blocked work, verification gates, and claim ceilings before execution. |
@@ -25,6 +25,8 @@ The authoritative list is the set of directories under `skills/`; each
 exactly when to reach for it.
 
 ---
+
+Only `gm` and `gm-continue` are installed by the default installer. Other skills in this source tree are optional inherited integrations; their presence is not a request to install services or expand ordinary tasks.
 
 ## Usage flow
 

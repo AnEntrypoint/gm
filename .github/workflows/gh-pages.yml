@@ -1,12 +1,6 @@
 name: gh-pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'site/**'
-      - 'docs/**'
-      - 'flatspace.config.mjs'
   workflow_dispatch: {}
 
 concurrency:

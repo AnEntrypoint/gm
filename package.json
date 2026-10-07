@@ -1,7 +1,7 @@
 {
   "name": "gm-skill",
   "version": "2.0.2779",
-  "description": "Canonical universal harness — AI-native software engineering via skill-driven orchestration; bootstraps plugkit for task execution and session isolation. Install in any AI coding agent host.",
+  "description": "Bounded repository-work skill with lightweight installation; optional upstream gm runtime integration.",
   "author": "AnEntrypoint",
   "license": "MIT",
   "type": "module",
@@ -14,21 +14,21 @@
     "ai-coding",
     "canonical"
   ],
-  "homepage": "https://github.com/AnEntrypoint/gm#readme",
+  "homepage": "https://github.com/SolutionsAsService/gm#readme",
   "bin": {
     "gm": "bin/gm-install.js"
   },
   "bugs": {
-    "url": "https://github.com/AnEntrypoint/gm/issues"
+    "url": "https://github.com/SolutionsAsService/gm/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnEntrypoint/gm.git"
+    "url": "https://github.com/SolutionsAsService/gm.git"
   },
   "files": [
     "skills/",
     "scripts/",
-    "bin/gm-install.js",
+    "bin/",
     "install.sh",
     "install.ps1",
     "bin/plugkit.sha256",
@@ -41,6 +41,17 @@
     "gm-plugkit/instructions/",
     "AGENTS.md",
     "README.md",
-    "gm.json"
-  ]
+    "gm.json",
+    "LICENSE",
+    "SKILLS.md",
+    "CONTRIBUTING.md",
+    "docs/DEFAULT-WORKFLOW-AUDIT.md",
+    "docs/UPSTREAM-RUNTIME-NOTES.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node scripts/check-default-workflow.mjs && node scripts/check-installation.mjs"
+  }
 }
