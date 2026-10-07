@@ -78,6 +78,12 @@ npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets {"t
 npx github:AnEntrypoint/gm --mcp-only      # same registration, no skill or runner install
 ```
 
+The user registration launches the local bundle with Node.js. To repair a project registration:
+
+```
+npx github:AnEntrypoint/gm --mcp-only
+```
+
 An existing HTTP registration (`{"type":"http","url":"http://127.0.0.1:8787/mcp"}`) is left as it is: re-running the installer never downgrades the durable transport back to stdio. A project `.mcp.json` gm entry that the installer recognises as its own launcher is removed, because project scope outranks user scope and needs per-project approval -- measured: a session in that project reports `{"name":"gm","status":"pending","source":"project"}` and exposes no `mcp__gm__*` tools at all, while the same registration at user scope reports `connected` and exposes both.
 
 **A running agent host cannot gain these tools.** Claude Code fixes its tool list when the session starts, and nothing outside the session adds to it: the `reload_plugins` and `mcp_reconnect` control requests both refuse a server that was not in the config at startup, and no file watcher re-reads `mcpServers`. So after installing:
@@ -223,25 +229,32 @@ The [rs-plugkit](https://github.com/AnEntrypoint/rs-plugkit) repository builds a
 
 ## Developing gm itself
 
-This repository holds nine git submodules. Each submodule holds source code only, with no compiled artifact checked in.
+The root `.gitmodules` file lists twelve git submodules. It defines their source locations and branches.
 
 - **`rs-plugkit/`**: the WASM guest. This submodule holds the orchestrator, the gates, and the spool dispatch logic (the gm "brain").
 - **`agentplug/`**: the native, plugin-agnostic host. This submodule loads WASM plugins, gm included, and drives the `browser` and `cdp` verbs natively through CDP.
 - **`agentplug-bert`, `agentplug-libsql`, `agentplug-treesitter`**: optional shared native plugins. `agentplug` can load each plugin alongside the gm WASM plugin, for embeddings, vector storage, and syntax parsing in turn.
 - **`rs-codeinsight`**: a standalone tree-sitter codebase analyzer (CLI and library). The call-graph verbs above are implemented natively in `rs-plugkit` (`code_index.rs`), not by linking this crate.
 - **`rs-search`**: a search backend. The `codesearch` verb consumes it.
+- **`gm-mcp/`**: the MCP wrapper and its committed server bundle.
+- **`obrowser/`**: the browser engine and CDP support.
+- **`agentplug-crux/`**: the signal-concentration plugin.
 - **`gm-config/`**: the default remote configuration repository. This submodule holds prose, the FSM graph, gate hooks, and policy data. A user edits this repository directly, and gm pulls from it at run time. gm points at this repository by default, unless a project or user sets its own configuration repository.
 - **`vendor/tencentdb-agent-memory/`**: an optional alternate memory and skill-library backend. The `recall` and `memorize` verbs can target this backend instead of the default `.gm/memories/` and `gm.db` store (see the `memory.tencentdb_backend` field in `gm.config.json`). This submodule holds vendored code, not a fork.
 
-A plain `git clone` command leaves all nine submodules empty. Clone with the submodules included, or set up the submodules after cloning:
+Clone with the submodules included:
 
 ```
 git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git
-# or, in an existing checkout:
+```
+
+For an existing checkout:
+
+```
 git submodule update --init --recursive
 ```
 
-A plain `git clone` command leaves each submodule directory empty. This is normal, not a defect. Empty submodules matter only in one case: a developer changes one of these nine repositories' own source code. Empty submodules do not matter when a developer changes only the skill or the installer script in this repository's own tree.
+A plain `git clone` command leaves each submodule directory empty. This is normal, not a defect. Empty submodules matter only in one case: a developer changes one of these dependency repositories' own source code. Empty submodules do not matter when a developer changes only the skill or the installer script in this repository's own tree.
 
 ## License
 
