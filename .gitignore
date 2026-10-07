@@ -143,3 +143,6 @@ gm-plugkit/.gm/
 
 # tessl tooling marker (foreign, not shipped)
 skills/gm-skill/.tessl-plugin/
+
+# modlens vision config holds API keys; keep it out of git
+.gm/modlens.json
