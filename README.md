@@ -78,7 +78,26 @@ npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets nod
 npx github:AnEntrypoint/gm --mcp-only      # project scope: .mcp.json gets a node -e launcher that resolves ~/.gm-tools at start, so the committed file works on every machine
 ```
 
+An existing HTTP registration (`{"type":"http","url":"http://127.0.0.1:8787/mcp"}`) is left as it is: re-running the installer never downgrades the durable transport back to stdio.
+
 Restart the agent host afterwards; a running session keeps the registration it connected with.
+
+#### Working from a clone
+
+`npm link` in a checkout puts that checkout's own `gm` on PATH, with no network install, so the skill and the MCP registration both come from your working tree:
+
+```
+git clone https://github.com/AnEntrypoint/gm.git
+cd gm
+npm link          # links the "gm" bin declared in package.json
+gm -g             # install the skill, runner and MCP registration from this checkout
+gm --mcp-only     # or only (re)register the MCP server
+gm version        # print this checkout's version
+```
+
+On Windows, PowerShell ships a built-in `gm` alias for `Get-Member`, and an alias outranks an external command, so `gm` resolves to `Get-Member` there until the alias is removed. Every `gm` run writes `Remove-Item Alias:\gm -Force -ErrorAction SilentlyContinue` into the current user's PowerShell profile (current host and all hosts) when it does not already find the line there; open a new PowerShell afterwards.
+
+`gm` accepts only the verbs and flags above. Anything else is rejected with the usage text rather than starting an install.
 
 The skill installs as `/gm`. On Claude Code, set the settings below for the reasoning-in-code method gm expects. The installer scripts do not change Claude Code settings on their own. Set these values through the `/config` command, or by editing `~/.claude/settings.json` directly.
 
