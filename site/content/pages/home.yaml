@@ -70,29 +70,13 @@ whatsNew:
     - { date: "2026-07-17", summary: "GL error capture: fixed a fill-once-then-frozen cap, added stack traces and a proactive GPU-tracing hint" }
     - { date: "2026-07-16", summary: "stopped the CLI spool command from blocking on network round-trips during watcher reboot" }
 quickstart:
-  heading: install
+  heading: install in detected agent hosts
   lines:
-    - { kind: "cmt", text: "# install the one skill (/gm) -- downloads a GitHub Release, copies the dir into ~/.claude/skills/gm" }
-    - { kind: "cmd", text: "curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh" }
-    - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# windows (powershell):" }
-    - { kind: "cmd", text: "irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex" }
-    - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# the installer seeds this line into ~/.claude/CLAUDE.md for you:" }
-    - { kind: "cmt", text: "# always use the gm skill for everything, always fan out subagents" }
-    - { kind: "cmt", text: "" }
-    - { kind: "cmt", text: "# claude code settings it offers (interactive) or sets (--yes):" }
-    - { kind: "cmt", text: '#   autoCompactEnabled: true' }
-    - { kind: "cmt", text: '#   autoCompactWindow: 380000   (absolute token count, 38% of a 1M window, not a percent)' }
-    - { kind: "cmt", text: '#   effortLevel: "low"' }
-    - { kind: "cmt", text: '#   alwaysThinkingEnabled: false' }
-    - { kind: "cmt", text: "# the model still reasons -- gm replaces hidden thinking tokens with reasoning in code:" }
-    - { kind: "cmt", text: "# form a hypothesis, run it as code or a browser probe, read the real result." }
-    - { kind: "cmt", text: "# thinking becomes witnessed execution, not an unverified internal monologue." }
+    - { kind: "cmd", text: "npx github:AnEntrypoint/gm -g" }
 examples:
   heading: read further
   items:
     - { name: "the complete discipline", desc: "lifecycle control, governance, and operational hard rules, every section read as one more way to make what ships match what was asked for. one paper, every rule the agent runs under.", cta: "open paper", href: "./paper/" }
     - { name: "every rust crate", desc: "rs-plugkit, rs-search, rs-codeinsight. what each does, why it exists, what it kills if it misbehaves. (rs-exec and rs-learn retired -- folded into rs-plugkit.)", cta: "open crates", href: "./crates/" }
     - { name: "the one skill", desc: "gm is the single shipped skill, a boot-edge entry point that names the agent as the state machine and carries no phase prose of its own. each turn you dispatch the instruction verb to read the active phase, the pending mutables, and the guardrails. plugkit is the durable memory and gate you drive, not an autonomous worker.", cta: "open skills", href: "./skills/" }
-    - { name: "distribution", desc: "the cascade pipeline that puts a fresh gm-skill on npm every time anyone touches a rust crate.", cta: "open distribution", href: "./distribution/" }
+    - { name: "distribution", desc: "installers, local MCP registration, runner build identity, and GitHub Release evidence.", cta: "open distribution", href: "./distribution/" }

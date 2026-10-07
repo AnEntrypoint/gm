@@ -7,8 +7,10 @@ Source: direct fetches of `onestardao/WFGY` primary files (`core/WFGY_Core_Flags
 Stated formula, consistent across `ProblemMap/glossary.md`, `ProblemMap/wfgy-metrics.md`, `core/WFGY_Core_Flagship_v2.0.txt`:
 
 ```
-deltaS = 1 - cos(I, G)      # I = item/current-state embedding, G = ground/goal/anchor embedding
+deltaS = 1 - cos(I, G)
 ```
+
+Here, `I` is the current-state embedding and `G` is the goal embedding.
 
 This is real, well-formed math if real embeddings are computed. It is not real math in the plain-prompt (`OS/TXTOS.txt`) usage path, because no embedding call happens there -- see below.
 
