@@ -292,6 +292,30 @@ Enabling `extensions.worktreeConfig` requires moving common `core.worktree` into
 
 `fetch` takes a JSON body and is HTTP(S)-only.
 
+### `crawl` -- browse pages through one of two engines
+
+`crawl` takes a **plain text body**, never a JSON object. Pass it as `raw_body`. The first line
+selects the engine; the rest is the crawl request (URLs and steps).
+
+| engine | runs | window |
+|---|---|---|
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over CDP through its `crawl_cdp` entry point | **HEADFUL**: a visible browser window |
+| `lightpanda` | the host's warm lightpanda process, through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
+
+Lightpanda is HEADLESS and cdp is HEADFUL. Choose `lightpanda` when no window should appear;
+choose `cdp` when the page must render in a visible browser.
+
+```
+raw_body: "engine=cdp\nhttps://example.com/\n"
+raw_body: "engine=lightpanda\nhttps://example.com/\n"
+```
+
+The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
+`stdout`, `stderr`, `exit_code`, `duration_ms`, and any further fields the host adds. An unknown
+engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
+
+The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
+
 ## Orchestration and state
 
 These drive the phase machine. Dispatched through the same spool.
