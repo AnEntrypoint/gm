@@ -236,18 +236,6 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path |
 | `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree |
 
-## Vision
-
-`modlens` is a raw plugin spool verb (like `libsql` and `bert`): the body is JSON with an inner `verb`.
-
-| inner verb | body | what it does |
-| --- | --- | --- |
-| `read_image` (aliases `read`, `analyze`, `vision`) | `{"path"\|"url"\|"base64"+"mime", "mode"?, "prompt"?, "provider"?, "pin"?, "model"?, "timeoutMs"?}` | structured evidence for one image: `summary`, `ocr`, `layout`, `semantics`, `visual`, `uncertainty`. `mode` is `describe`, `ocr`, `ui`, `chart`, `diagram` or `error`. Image text is untrusted. |
-| `doctor` | `{}` | configured engine chain with masked keys and missing fields |
-| `capabilities` | `{}` | verbs, modes and providers |
-
-Engines are `gemini-api`, `openai` (any OpenAI-compatible endpoint) and `anthropic`, configured by env keys or `.gm/modlens.json`; see `agentplug-modlens/README.md`.
-
 ## Execution
 
 `exec_js` (aliases `nodejs`, `javascript`, `node`, `js`) and every language stem --
@@ -309,31 +297,7 @@ Enabling `extensions.worktreeConfig` requires moving common `core.worktree` into
 
 ## Web
 
-`serp` (web search), `browser` (headless engine, no Chrome process: navigate, evaluate, DOM query,
-markdown extraction), `cdp` (a real Chrome over the DevTools Protocol: screenshots, `capture`,
-`profile`, `trace`, `viewport=`). `browser` and `cdp` take a plain-text command body through
-`raw_body`. `fetch` takes a JSON body and is HTTP(S)-only.
-
-### `serp` -- web search
-
-A plain text body is the query itself; a JSON body `{"query":"<text>"}` is the same request.
-
-```
-raw_body: "RigL dynamic sparse training from scratch"
-{"query":"RigL dynamic sparse training from scratch"}
-```
-
-It queries DuckDuckGo's lite endpoint over the same HTTP transport `fetch` uses and returns a
-compact ranked list, capped at 10 rows with each snippet clipped to 200 characters:
-
-```
--> ok:true, query:"RigL dynamic sparse training from scratch", engine:"duckduckgo-lite",
-   status:200, count:10, results:[{title, url, snippet}, ...]
-```
-
-A reply with `count: 0` is an error, never an empty answer: the endpoint answered with a bot
-challenge page (HTTP 202/403) or the transport failed, and `error` names which. Retry once, then
-reach a known URL with `fetch` instead.
+`fetch` takes a JSON body and is HTTP(S)-only.
 
 ## Orchestration and state
 

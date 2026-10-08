@@ -26,37 +26,32 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 
 | repo | role |
 | --- | --- |
-| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, agentplug-modlens, gm-config, rs-codeinsight, rs-plugkit, rs-search, obrowser, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, gm-config, rs-codeinsight, rs-plugkit, rs-search, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
 | rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
 | rs-learn, rs-exec, gm-skill, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit or gm) |
 
-`gm-config/gm.config.json` fields carry no inline `_comment` keys -- rationale lives here. `version` gates the schema; the file IS the workflow definition `crate::config::resolve` pulls on the debounce in `sync.debounce_ms` (default 300000ms, `shallow` fetch), reproducing stock gm behavior unmodified until edited. `instructions.keys` name per-state prose files under `instructions.dir`, resolved project-vendored-first then this repo's cache then compiled default. `fsm.graph`/`fsm.predicates_reference` are the state machine as data; `gates.predicate` may only name a predicate generated into `predicates_reference` from the same registry the code dispatches on -- a condition outside that registry needs a jit hook under `fsm.hooks_dir` instead. `messages.gates_dir`/`residual_dir` are operator-editable denial/residual text; editing them never changes when a gate fires. `memory.embed_dim` (384) is compile-time coupled to baked-in model weights -- changing it invalidates every stored vector and routes through an explicit drop-if-mismatch path, never silent. `memory.tencentdb_backend.vectors_db_dims` (768 default) is independent of `embed_dim`: it matches whichever TencentDB-compatible provider produced the indexed content, never gm's own embedder. `memory_sync.*_budget_ms` bound one `memory_md.rs::sync_index` pass; a pass that cannot finish records a `:partial` digest and converges across repeated dispatches rather than blocking one. `rssearch.table`/`index` and the `git_commits`/`code_chunks` equivalents accept only `[A-Za-z_][A-Za-z0-9_]*` since they interpolate into SQL. `scoring.*` splits two fusions: `recency_floor`/`cos_floor`/`dedup_jaccard_threshold`/`half_life_ms` govern recall's cosine-x-recency score, `bm25_k1`/`bm25_b`/`fusion_rrf_k`/`fusion_identifier_boost`/`fusion_vector_list_weight` govern codesearch's BM25+vector RRF fusion. `browser_witness.extra_*`/`claim_audit.extra_*` append to built-in defaults, never replace them. `cache.*` budgets are per-namespace so one greedy consumer cannot evict another's entries.
+`gm-config/gm.config.json` fields carry no inline `_comment` keys -- rationale lives here. `version` gates the schema; the file IS the workflow definition `crate::config::resolve` pulls on the debounce in `sync.debounce_ms` (default 300000ms, `shallow` fetch), reproducing stock gm behavior unmodified until edited. `instructions.keys` name per-state prose files under `instructions.dir`, resolved project-vendored-first then this repo's cache then compiled default. `fsm.graph`/`fsm.predicates_reference` are the state machine as data; `gates.predicate` may only name a predicate generated into `predicates_reference` from the same registry the code dispatches on -- a condition outside that registry needs a jit hook under `fsm.hooks_dir` instead. `messages.gates_dir`/`residual_dir` are operator-editable denial/residual text; editing them never changes when a gate fires. `memory.embed_dim` (384) is compile-time coupled to baked-in model weights -- changing it invalidates every stored vector and routes through an explicit drop-if-mismatch path, never silent. `memory.tencentdb_backend.vectors_db_dims` (768 default) is independent of `embed_dim`: it matches whichever TencentDB-compatible provider produced the indexed content, never gm's own embedder. `memory_sync.*_budget_ms` bound one `memory_md.rs::sync_index` pass; a pass that cannot finish records a `:partial` digest and converges across repeated dispatches rather than blocking one. `rssearch.table`/`index` and the `git_commits`/`code_chunks` equivalents accept only `[A-Za-z_][A-Za-z0-9_]*` since they interpolate into SQL. `scoring.*` splits two fusions: `recency_floor`/`cos_floor`/`dedup_jaccard_threshold`/`half_life_ms` govern recall's cosine-x-recency score, `bm25_k1`/`bm25_b`/`fusion_rrf_k`/`fusion_identifier_boost`/`fusion_vector_list_weight` govern codesearch's BM25+vector RRF fusion. `claim_audit.extra_*` append to built-in defaults, never replace them. `cache.*` budgets are per-namespace so one greedy consumer cannot evict another's entries.
 
 ## Working with gm
 
 Use the `gm` skill for engineering work. Prefer its MCP server. Without it, use the documented spool fallback: write one complete request atomically, prefix every request number with a unique session id, and poll the matching response. Never start a second watcher while a fresh watcher is busy. A stale or failed runner is a defect in its owning source, not a reason to bypass gm.
 
-Use the verbs exposed by the running plugin for search, browser, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it. `docs/verbs.md` is the verb inventory: every name, its body shape, and one example each.
+Use the verbs exposed by the running plugin for search, git, execution, memory, and state changes. Do not substitute platform-native tools when the matching verb exists. Read known runtime-state files directly only when the skill allows it. `docs/verbs.md` is the verb inventory: every name, its body shape, and one example each.
 
 Use `codesearch` as the canonical search verb. `code_search` is an accepted compatibility alias with identical behavior. `grep` (alias `rg`) is that same exhaustive scan under a grep-shaped body -- `{"pattern":"...","path"?,"glob"?,"exclude"?,"case_insensitive"?,"context"?,"max_results"?,"output_mode"?,"regex"?}` -- for the question that is literally "where is this string". `exclude` drops paths by glob, one glob or an array: `{"exclude":["vendor/**","test/hardware/**"]}`, which replaces a hand-written brace alternation to skip a vendored tree; `exclude_glob`/`exclude_globs` are aliases, a `!`-prefixed entry inside `glob` excludes too, the reply echoes the effective glob as `exclude_glob`, exclusion never affects `exhaustive`, and `codesearch` takes `exclude` under the same aliases. `output_mode:"content"` answers `counts[]` (per-file `{path,count}`) plus `output[]` (one `path:line: text` per hit); `{"detail":true}` gives structured `matches[]` instead. The pattern is read as a regex when it carries an alternation bar, a `\d`-style class escape, a `[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal), and `regex:true`/`regex:false` forces the reading either way. `search` is `codesearch`, not `grep`.
 
 Structural code questions (who calls X, what breaks if X changes, is X dead, a diff's blast radius) go to `callers {symbol}` / `impact {symbol}` first; `codesearch` (alias `code_search`) is the search verb and the exhaustive confirmation when the call-graph reply is empty.
 
-A project declares what codesearch must not walk in a `.codesearchignore` at its root: gitignore syntax, anchored at that file's directory, read *in addition to* `.gitignore` (a directory may also carry its own, applying to its immediate children). Use it for generated and vendored trees -- Chrome profile caches, genome dumps, build output -- so an unscoped query stays inside its 45 s wall budget instead of dying partway through at `exhaustive: false`. Every dropped path is reported per call in `excluded_by_rule_summary`/`excluded_by_rule_count` and rule exclusions never affect `exhaustive`, which stays governed only by the real bounds (budget, size ceiling, unreadable files, listing completeness); a project declaring nothing scans exactly what it scanned before.
+A project declares what codesearch must not walk in a `.codesearchignore` at its root: gitignore syntax, anchored at that file's directory, read *in addition to* `.gitignore` (a directory may also carry its own, applying to its immediate children). Use it for generated and vendored trees -- genome dumps, build output -- so an unscoped query stays inside its 45 s wall budget instead of dying partway through at `exhaustive: false`. Every dropped path is reported per call in `excluded_by_rule_summary`/`excluded_by_rule_count` and rule exclusions never affect `exhaustive`, which stays governed only by the real bounds (budget, size ceiling, unreadable files, listing completeness); a project declaring nothing scans exactly what it scanned before.
 
 The on-disk PRD and mutable state is authoritative. A walk completes only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 
 Give each subagent its own session id and tell it to use the gm skill, codeinsight (`callers`/`impact`) first. Parallelize independent work, but assign one writer to each shared surface. A submodule change includes updating the parent pin.
 
-Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into every subagent prompt; agents run `session list` and reuse a live session before launching (`chrome_max_concurrent` defaults to 2), and end with `session close-all` then `session list` to confirm none remain. The parent closes the shared id after its subagents finish. Never run a scratch agentplug daemon against a real project root while other agents work: its orphan sweep sees every gm chrome on the machine.
-
 ## Implementation rules
 
 - Keep code and prose self-explanatory. Put only current, non-expressible local constraints in this file.
 - Keep `agentplug-libsql`'s `serde_json` `preserve_order` feature. Its query rows and JavaScript `columns` result must retain SQL SELECT order.
-- Keep `oxibrowser-core` as both `rlib` and `cdylib`. The native clients use `rlib`; agentplug calls the WASM export through `cdylib`.
-- Keep Blitz rendering dependencies isolated in `oxibrowser-render`. Do not add them to the root workspace or core browser crate.
-- Keep the `RUSTSEC-2024-0436` exception only while Boa reaches `paste` through `boa_string`; remove it after the dependency path disappears.
 - Do not add synthetic tests, mocks, placeholders, or decorative glyphs. Verify behavior through the actual build and a live spool dispatch.
 - Keep tracked text UTF-8 without a BOM.
 - Use atomic create or rename for every single-writer and lock guard.
@@ -66,6 +61,10 @@ Browsers: one task, one Chrome. The parent passes a single `sessionId=<id>` into
 - Every Windows child spawn in `agentplug` goes through `windowless::apply_windowless`, and `agentplug-runner` calls `ensure_hidden_console()` before anything else. `CREATE_NO_WINDOW` alone is not enough: it leaves a console-subsystem child (git.exe, node, powershell) console-less, and its own console-subsystem children (git.exe -> git.exe -> git-remote-https.exe) then allocate a fresh conhost each and flash a window. A console the runner owns and hides is inherited by the whole subtree instead, so git chains stay windowless; `apply_windowless` falls back to `CREATE_NO_WINDOW` only when no console exists.
 - `config_sync::ensure_current` debounces on the last probe time whether or not a local checkout exists, and records that time in memory as well as on disk: the `.sync.json` write can fail under load, and with no local checkout every dispatch re-ran `git ls-remote` with no backoff (measured at more than one spawn per second, 24/7).
 - Keep this file below 30 KB. When it exceeds that limit, revalidate it against current source, history, and retained memory before compacting it.
+
+## Triage scripts
+
+`scripts/triage/` holds the one-call checks that cost the most time to improvise: `runner-status.sh` (watcher heartbeat age, pid liveness, plugin versions, exit 1 when dead), `runner-restart.sh` (stops runners by `/proc` exe and starts one detached watcher; `pkill -f` matches the calling shell and kills it), `check-pins.sh` (every submodule pin in HEAD exists on its remote; an unpublished pin breaks fresh clones), `run-failure.sh <owner/repo> <run-id>` (failing step and error lines of a GitHub Actions run, escape codes stripped), and `doctor.sh`, which runs the watcher check, the pin check and the latest failed CI run per release repo in one call. Run `check-pins.sh` before pushing a submodule bump.
 
 ## Verification and delivery
 
@@ -107,40 +106,19 @@ the heartbeat stayed fresh because the daemon was idle, not because the fix
 worked. Always confirm the long verb actually executed before believing a
 liveness measurement taken "during" it.
 
-**STILL BROKEN — oxibrowser serves an empty document.**
-Reproduced on oxibrowser 0.18.3 (plugin gm 0.1.1296). `url=https://example.com`
-returns `ok:true` and JS sees the right `location.href` ("https://example.com/")
-and `readyState:"complete"` — so it is the same session and navigation reported
-success — but `document.documentElement` is **null**, `outerHTML` length 0, and
-all three read paths come back empty: `evaluate` (`NO BODY`), `dom=h1` (ok with
-no matches), and `extract-markdown` (`markdown: ""`).
-
-Narrowed, not fixed: `Session::navigate` (oxibrowser-core/src/session.rs:545)
-looks correct — it fetches, errors on >=400, builds `Page::from_html`, sets
-`active_page` and calls `inject_dom_snapshot()`. The `document.documentElement`
-getter (js/runtime.rs:5465) is also correct, returning null only when both the
-render doc and the DOM snapshot are empty. So the break is between
-`inject_dom_snapshot()` and the JS realm the plugin's `evaluate` runs in. Left
-for the obrowser repo rather than patched speculatively from here: it is a young
-engine (2 commits), the lifecycle involved is substantial, and `browser`
-(lightpanda) and `cdp` (real Chrome) both work and are the documented fallbacks,
-so nothing is blocked by this. No gm verb dispatches through oxibrowser any
-more: `serp` is an HTTP search over `host_fetch`, the same transport `fetch`
-uses.
-
 ## Verified 2026-10-05 (side plugins load lazily, so every guest->sibling import needs an on-demand hook)
 
 The daemon's per-project eager-load list is `["gm"]` plus whatever `<root>/.agentplug/plugins.txt`
-declares (nothing writes that file today), so `libsql`/`bert`/`treesitter`/`oxibrowser`/`crux` are
+declares (nothing writes that file today), so `libsql`/`bert`/`treesitter`/`crux` are
 never instantiated for a project at load time. Commit `1b1ea8c` made them lazy on the assumption
 that `DispatchHandle::reinstantiate_plugin_into_pool_slot_if_reload_source_available` covers first
 use. It only covers `DispatchHandle::dispatch` -- the daemon's own top-level plugin verb. The
-guest-facing sibling imports (`host_vec_embed`, `host_plugin_call`, `call_oxibrowser`) read
+guest-facing sibling imports (`host_vec_embed`, `host_plugin_call`) read
 `HostState::siblings()` and fail outright on a missing key, so every embedding-dependent verb
 answered `embedder failed: query embedding unavailable -- the bert embedder failed` and `code_index`
 answered `libsql unavailable ... unknown_plugin` on every project. Fix: `registry.rs` publishes the
 compiled module set as a global `SIBLING_RELOAD_SOURCE` (the daemon sets it after its per-tick warm
-compile pass) and each of those three call sites calls `ensure_sibling_registered` before reporting
+compile pass) and each of those two call sites calls `ensure_sibling_registered` before reporting
 the sibling absent. Any new guest->sibling import must do the same.
 ## Dream-RSI grounded replay (arxiv 2609.14858)
 
