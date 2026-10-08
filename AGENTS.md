@@ -272,5 +272,12 @@ decision; the runner guard does not cover it.
 - `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
   `pushed_commit_refused` / `amend_requires_head`. `git_commit_dedup_key` carries `amend` so an
   amend is never answered by a replayed non-amend commit.
+- **`git_commit_dedup_lookup` must require HEAD to still equal the recorded `sha_full`, not merely
+  that the object exists.** The replay only checked `cat-file -e <sha>`, and an object dropped by
+  `git_reset_head` is still present, so the canonical repair -- reset HEAD, then re-commit the same
+  message over the same paths -- hit the same dedup key and answered `committed:true` with the old
+  sha while HEAD never moved. Witnessed live: re-commit after `git_reset_head {count:1}` reported
+  `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Now the lookup compares `rev-parse HEAD`
+  to the record, so a stale entry falls through to a real commit.
 - Swapping the live runner needs no manual daemon start: `daemon-guard` respawns the daemon within
   seconds of `Stop-Process`, and `.status.json`'s `ts` is fresh again on the next poll.
