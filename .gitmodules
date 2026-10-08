@@ -35,10 +35,6 @@
 	path = vendor/tencentdb-agent-memory
 	url = https://github.com/AnEntrypoint/agent-memory.git
 	branch = main
-[submodule "obrowser"]
-	path = obrowser
-	url = https://github.com/AnEntrypoint/obrowser.git
-	branch = main
 [submodule "agentplug-crux"]
 	path = agentplug-crux
 	url = https://github.com/AnEntrypoint/agentplug-crux.git
@@ -46,7 +42,3 @@
 [submodule "gm-mcp"]
 	path = gm-mcp
 	url = https://github.com/AnEntrypoint/gm-mcp.git
-[submodule "agentplug-modlens"]
-	path = agentplug-modlens
-	url = https://github.com/AnEntrypoint/agentplug-modlens.git
-	branch = main
