@@ -137,3 +137,17 @@ gm-plugkit/.gm/
 # tessl tooling marker (foreign, not shipped)
 skills/gm-skill/.tessl-plugin/
 
+# browser verb profiles and state: per-run Chrome user-data dirs, large and never source
+.gm/browser-*/
+.gm/browser-profiles/
+.gm/browser-profile-default/
+.gm/browser-state/
+
+# one-shot codesearch results and FSM rejection diagnostics written under .gm/
+.gm/codesearch-result-*.json
+.gm/fsm-graph-rejected.json
+
+# stray gm runtime directories created inside skill folders
+skills/.gm/
+skills/gm/.gm/
+
