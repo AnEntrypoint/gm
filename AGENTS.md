@@ -248,3 +248,29 @@ decision; the runner guard does not cover it.
 - The sha256 pin is checked only at download time against the GitHub release sidecar (`download.rs:299`), and `ensure_plugin_installed` returns as soon as a wasm exists (`:1294`), so an installed wasm is never re-verified and `~/.gm-tools/plugkit.wasm.sha256` is a local record, not an enforced pin. Sideloading a fresh build is safe and needs no pin bump.
 - `gm.version` is currently `local-dev-sideload-body-parse-diagnostic`, which is non-semver, so the auto-updater can never overwrite a sideloaded wasm and staleness is manual-only until a semver version is restored. A session expecting an auto-update to fix stale verbs waits forever.
 - A swap needs no daemon restart: write a sibling `.tmp` and rename, and the daemon hot-reloads (`health` `ok:true`, `daemon-status.json`'s hash updates). Back up first; roll back by restoring the backup.
+
+## Verified 2026-10-08 (git_commit content filters, amend, moving HEAD)
+
+- `git commit -- <paths>` re-hashes worktree content itself, so it needs the clean filter as much
+  as `git add` does. With `commit` absent from `GIT_SUBCOMMANDS_APPLYING_CONTENT_FILTERS`, a spoint
+  commit stored a CRLF blob while `git_add` (already in the list) staged LF, so index and HEAD
+  disagreed, the tree stayed dirty after committing, and `git show` rendered `@@ -1,116 +1,122 @@`
+  instead of three hunks. The list is now `["add","status","diff","checkout","commit","stash"]`.
+  Measured in a scratch repo whose `core.autocrlf=true` lives only in the system config: `git add`
+  alone produced a 0-CR index blob while `git commit -- path` produced a 116-CR HEAD blob; with the
+  fix both are 0-CR.
+- **`core.autocrlf` does not strip CR from a file whose stored blob already has CR**
+  (`has_crlf_in_index` in convert.c). So the filter fix repairs a repo whose blobs are LF, and does
+  NOT repair one where a CRLF blob already landed -- amending keeps the CRLF. The repair is
+  `git_reset_head` followed by a re-commit: once the index falls back to the LF parent blob the
+  clean filter fires again.
+- `git_reset_head {count | to, mode: mixed|soft, allow_staged}` moves HEAD back without touching the
+  worktree. It refuses `pushed_commit_refused` when HEAD is reachable from any `refs/remotes/` ref,
+  `staged_paths_present` when the index holds paths the request did not name (`allow_staged:true`
+  overrides), `target_not_ancestor_of_head`, and `already_at_target`. `mode:hard` is refused -- this
+  verb never rewrites the worktree.
+- `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
+  `pushed_commit_refused` / `amend_requires_head`. `git_commit_dedup_key` carries `amend` so an
+  amend is never answered by a replayed non-amend commit.
+- Swapping the live runner needs no manual daemon start: `daemon-guard` respawns the daemon within
+  seconds of `Stop-Process`, and `.status.json`'s `ts` is fresh again on the next poll.
