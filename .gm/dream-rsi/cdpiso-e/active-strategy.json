@@ -1,0 +1,1 @@
+{"evidence":[{"dispatch_id":"1791380514603-500-166b42740c12566f","exit_code":0,"fingerprint":"1872cb85d9679ea4","gate_drift":false,"mutable_open_count":1,"prd_open_count":30,"quality":0.03125,"ts":1791380543036,"verb":"browser"}],"failed_dispatch_count":0,"gate_drift_failure_count":0,"observation_count":1,"selection":"continue-current-exploration","successful_dispatch_count":1}
