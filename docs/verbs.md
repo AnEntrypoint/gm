@@ -254,7 +254,14 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`),
 `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
-`git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
+`git_reset_head`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
+
+`git_reset_head` moves HEAD backward without touching the worktree -- `{"count":1}` or `{"to":"<rev>"}`,
+`mode` `mixed` (default) or `soft`. It refuses when the commit at HEAD is reachable from any
+`refs/remotes/` ref (`pushed_commit_refused`), when the index holds staged paths not named by the
+request (`staged_paths_present`, overridden by `allow_staged:true`), and when the target is not an
+ancestor of HEAD. `git_commit {"amend":true}` rewrites the current commit instead of stacking a
+child, and refuses when that commit is already published (`pushed_commit_refused`).
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
