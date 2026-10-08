@@ -150,4 +150,5 @@ skills/gm-skill/.tessl-plugin/
 # stray gm runtime directories created inside skill folders
 skills/.gm/
 skills/gm/.gm/
-
+# volatile per-project reorientation marker
+.gm/dream-rsi/_any-session/
