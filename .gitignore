@@ -20,6 +20,8 @@ docs/styles.css
 docs/badges/
 docs/api/releases.json
 docs/api/npm-downloads.json
+docs/api/metrics.json
+docs/api/insights.json
 *.tgz
 tmp/
 .claude/scheduled_tasks.lock
