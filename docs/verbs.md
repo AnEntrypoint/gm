@@ -70,10 +70,11 @@ accepts `exclude` under the same aliases.
 {"context":2}                                    include N lines before and after each hit
 {"max_results":200}                              hit cap (default 200); aliases: maxResults, limit, max_matches, k
 {"max_files":50000}                              file cap (default 50000)
-{"refresh":true}                                 re-read from disk: walk instead of `git ls-files --cached`,
-                                                 and bypass the mtime-keyed content cache, so uncommitted
-                                                 edits and untracked files are visible. "file_source":"disk"
-                                                 and "no_cache":true are aliases.
+{"refresh":true}                                 re-read from disk: walk instead of `git ls-files` (tracked
+                                                 plus untracked files git does not ignore), and bypass the
+                                                 mtime-keyed content cache. An unscoped walk also skips noise
+                                                 and hidden directories, so its file set can be smaller.
+                                                 "file_source":"disk" and "no_cache":true are aliases.
 {"no_ignore":true}                               include files .gitignore would hide -- build output, vendored
                                                  trees, scratch scripts the project never committed -- so they
                                                  are listed and scanned like any other file. "include_ignored"
@@ -98,6 +99,8 @@ Example, verified against this repo:
 `mode:"comments"` returns `comments` and `directives` (`#!/bin/sh` shebangs, `# syntax=docker/...`,
 `# shellcheck disable=...` land in `directives`, never in `comments`), plus `comment_count`,
 `directive_count`, `files`, `output`, `file_source` and `exhaustive`.
+
+Comment syntax is mapped per extension. JS-family files (`.js`, `.ts`, `.rs`, `.go`, `.c`, ...) take `//` and `/* */`, and their string, regex and template-literal bodies are never comments; `${...}` interpolations are code. CSS takes `/* */` only. Shell, YAML, TOML, Python and similar take `#`. HTML takes `<!-- -->` plus the `<script>` and `<style>` bodies. WebAssembly text takes `;;` and `(; ;)`. A `.template` file takes the syntax of its stem. Only shebangs and tool pragmas land in `directives`. A file with no mapping is counted in `files_skipped_no_syntax_count`; `files_skipped_no_syntax` holds a sample and `files_skipped_no_syntax_file` (when present) lists every such path.
 
 ### `codesearch` (aliases `code_search`, `search`) -- where is this concept
 
@@ -322,6 +325,34 @@ The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
+
+### Browser steps for `engine=cdp`
+
+A `cdp` body may open with `session=<name>`, then one step per line. The steps reimplement the documented behaviour of [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0) over the shared headful Chrome lease, so every step runs in a visible window.
+
+- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset.
+- A session's tab lives as long as the shared Chrome, which closes 15 minutes after its last lease. Without `session=`, a call opens its own tab and closes it when it ends.
+
+| Step | Does |
+|---|---|
+| `url=<url>`, or a bare URL | navigate and wait for the load |
+| `snapshot` | accessibility tree; each element line starts `uid=N` |
+| `click=<uid>`, `dblclick=<uid>`, `hover=<uid>` | mouse input at the element's centre |
+| `click_at=<x>,<y>` | mouse click at CSS pixels |
+| `fill=<uid> <value>` | text replaces the value; a select takes an option's value or label; a checkbox or radio takes `true` or `false` |
+| `type=<text>` | key events into the focused element |
+| `press=<key>` | `Enter`, `Tab`, `Escape`, arrows, `Home`, `End`, `F1`-`F12`, `Control+A`, `Control++` |
+| `upload=<uid> <path>[;<path>]` | file input |
+| `wait_for=<text>` | until the page shows the text |
+| `reload`, `back`, `forward` | navigate |
+| `console` | console messages, uncaught errors and dialogs |
+| `network`, `network=<reqid>` | requests; one request with its headers and body |
+| `dialog=accept\|dismiss` | policy for JavaScript dialogs; default accept |
+| `screenshot=<path>`, `screenshot_full=<path>`, `screenshot_uid=<uid> <path>` | PNG, or `.jpg` / `.webp` by extension |
+| `trace_start`, `trace_stop[=<path>]` | performance trace; the reply carries a summary; a `.gz` path compresses |
+| `eval=<js>` | page script; returns its value |
+
+A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches. Chrome replays a tab's earlier console messages on attach; network events are seen from attach onward.
 
 ## Orchestration and state
 
