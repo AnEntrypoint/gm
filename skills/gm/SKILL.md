@@ -316,8 +316,10 @@ the two differ, the stricter rule applies.
   The only stops are a spawn refusal and a headroom stop. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
-  Win32_OperatingSystem` FreePhysicalMemory). A headroom stop is logged with the
-  real count and timestamp.
+  Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
+  the `id` column of `vmstat 1 2 | tail -1`, and free memory is the `MemAvailable`
+  line of `/proc/meminfo`, in GiB). A headroom stop is logged with the real count
+  and timestamp.
 - **Shortfall.** If `shortfall` holds while independent work remains, log a
   FAILURE line as defined in `.gm/instructions/entry.md` (Completion refill), with
   the count, the timestamp and the open slices. Then launch to the `target`, not just out of `shortfall`. If
@@ -366,6 +368,8 @@ The walk loop, run on every tick and every completion:
 3. Spare slots hop: launch `gm-hop` in the remaining slots, from the candidates of an
    untraversed node.
 4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
+
+An untraversed node is a principle-kind node of `skills/dream-rsi/gm-graph.json` whose id is not in the walk's visited set, the `visited` IDs passed to `gm-hop`.
 
 A hop spawns its own successor (1c, Successor spawn), passing its `next_choice.why` as the
 successor's `rhetoric`; the orchestrator spawns a successor only when none was named.
