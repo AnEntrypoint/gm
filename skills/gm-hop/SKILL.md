@@ -30,6 +30,10 @@ and its author. Use the discipline as its author would, and nominate the next no
 
    `<TAG>` is the last six characters of your SESSION_ID.
 
+A row is resolved only with a witness. Read the `prd-resolve` reply. If
+`witness_dispatch_id_verified` is `false`, the row is not resolved: leave it
+pending and say so in the output.
+
 ## Nominate
 
 Pick the successor only from `candidates`. The orchestrator delivers that list with
