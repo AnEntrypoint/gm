@@ -46,8 +46,7 @@ matched as ONE regular expression exactly as written, never split into terms,
 and `combine` has no effect on it -- `query_note` says so instead of claiming a
 phrase match.
 Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
-`glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a leading `!`
-or `exclude_glob` excludes; a glob admitting no file answers
+`glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a glob admitting no file answers
 `glob_matched_no_files: true`), `case_insensitive`, `whole_word`, `timeout_ms` (scan wall-clock budget, default 20000 for regex; overrun answers `timed_out: true`, `exhaustive: false`, `budget_ms`). Reply shape:
 `output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
 `count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
@@ -64,11 +63,9 @@ resolved against: pass `root` or that project's `cwd`.
 literally "find this string": `{"pattern":"captureMicros","path":"src"}`,
 optionally `glob`, `case_insensitive`, `context`, `max_results` (default cap 200)
 and `output_mode` (`content` by default, `files_with_matches`, `count`). `exclude`
-drops paths by glob -- one glob or an array,
-`{"exclude":["vendor/**","test/hardware/**"]}` -- which replaces a hand-written
-brace alternation to skip a vendored tree; `exclude_glob`/`exclude_globs` are
-aliases, a `!`-prefixed entry inside `glob` excludes too, the reply echoes the
-effective glob as `exclude_glob`, and exclusion never affects `exhaustive`.
+drops paths by glob: an array of globs,
+`{"exclude":["vendor/**","test/hardware/**"]}`, which replaces a hand-written
+brace alternation to skip a vendored tree; exclusion never affects `exhaustive`.
 `content` answers `counts` (per-file `{path,count}`) plus `output`, one
 `path:line: text` per hit, and `mode` telling you which reading ran;
 `{"detail":true}` swaps `output` for structured `matches`. `pattern` is read as a
@@ -78,17 +75,6 @@ explicitly, and expect a refusal carrying the regex error text rather than an
 empty result when the pattern will not compile. `rg` is an accepted alias.
 `search` is `codesearch` -- the ranked BM25-plus-vector verb -- never `grep`.
 
-This is a well understood, long-horizon task.
-Instead of questioning the user, record them as mutables, and use exhaustive research to reach
-the most obvious conclusions, if observability needs to be increased immediately roll out more
-sophisticated tooling to get the insight required, not making any assumptions is non-negotiable,
-every internal process question shall be exhaustively answered, using multiple sessions if needed,
-the agent shall orchestrate as many parallel subagents over as many waves of workflow as required to reach the
-objective as described by the user's instruction. Additional steps that are in-spirit shall
-be additionally planned and executed since they are an implicit part of the instruction, maximal expansion
-of planning steps and execution of all remaining steps from previous plans, and all new plans that arise,
-before the required threshold for completion. Section 1b is this paragraph made mechanical: a
-graph, not a mood.
 Dispatch `instruction` whenever uncertain; never invent the next step from memory.
 
 ## Subagent quota (every turn)
@@ -150,16 +136,6 @@ returns the full entry+phase prose block plus recall/orient data on every call,
 often 1000+ words an agent already holds from its last dispatch. Reserve
 `instruction` for an actual orient (fresh prompt, phase transition, drift,
 uncertainty about the served prose) where that prose is new information.
-
-When `instruction` is the right dispatch but the served prose likely hasn't
-changed since the last one this session read, pass that prior response's
-`instruction_hash`/`policy_hash` back as `known_instruction_hash`/
-`known_policy_hash` in the new body. An unchanged match suppresses the prose
-and discipline-policy blocks from the reply (`instruction_unchanged`/
-`discipline_policies_unchanged: true`, fields omitted) instead of resending
-them; a mismatch or first dispatch returns them in full as normal. This is a
-response-size optimization only -- phase/PRD/mutables/recall data still
-return every time.
 
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
@@ -359,8 +335,8 @@ the two differ, the stricter rule applies.
   Win32_OperatingSystem` FreePhysicalMemory). A headroom stop is logged with the
   real count and timestamp.
 - **Shortfall.** If `shortfall` holds while independent work remains, log a
-  FAILURE line as a `prd-add` row that names the count, the timestamp and the
-  open slices. Then launch to the `target`, not just out of `shortfall`. If
+  FAILURE line as defined in `.gm/instructions/entry.md` (Completion refill), with
+  the count, the timestamp and the open slices. Then launch to the `target`, not just out of `shortfall`. If
   the gap repeats, the skill is wrong: dispatch `instruction`, correct this
   section, and restart the walk.
 - **Walk workers.** Every subagent in a walk is a traversal hop or a PRD row
@@ -389,6 +365,9 @@ brief is the four fields of Section 1c, Brief, ending in one call:
 All hop prose lives in `skills/gm-hop/SKILL.md`. Nothing about a hop's procedure
 is restated here. A hop nominates its successor and spawns it with the same call.
 
+- A hop is spawned only when it has a target: a located change or a located defect. A hop with
+  no target answers NOT-APPLICABLE, and its slot goes to a pending verified row (`gm-exec`)
+  or stays empty. Empty hops do not count as useful work.
 - Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
   hops. `shortfall` does not hold until the wave returns.
 - Successor recovery. A hop that returns `NEXT: none`, or returns without a NEXT line,
