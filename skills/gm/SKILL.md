@@ -305,8 +305,8 @@ real hit (`failCount > 0`/`blockedCount > 0`) is world-scope, one-way-door
 
 ## 1b. Meta-graph -- dynamic scope discovery, multi-session, multi-agent, goal-oriented dispatch
 
-The dispatch layer wrapping `lean`'s own P1-P9 graph (see the `lean` skill for
-every node) is served prose, arriving automatically with the phase's own
+The dispatch layer wrapping the gm graph (every node is served prose) arrives
+automatically with the phase's own
 response: scope-discovery-as-fixed-point, multi-session/multi-agent fan-out,
 shared-transform mapping review, and large-finding-set partition-once at
 SPECIFY (`gm-config/prose/specify.md`, "Scope discovery and fan-out");
@@ -338,13 +338,44 @@ the two differ, the stricter rule applies.
   SESSION_ID and the brick-wall opener from Section 1.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
+  The only stops are a spawn refusal and a headroom stop (CPU at or above 80%
+  or free memory under 2 GB). A headroom stop is logged with the real count and
+  timestamp.
 - **Below floor.** If live count falls under half the ceiling while independent
-  work remains, add a `prd-add` row that names the count, the timestamp and the
+  work remains, log a FAILURE line as a `prd-add` row that names the count, the timestamp and the
   open slices. Then launch until the ceiling is filled, not just the floor. If
   the gap repeats, the skill is wrong: dispatch `instruction`, correct this
   section, and restart the walk.
+- **Walk workers.** Every subagent in a walk is a traversal hop or a PRD row
+  resolver, with its own SESSION_ID. A file read is part of a worker's brief,
+  never a separate subagent.
+- **Continuous quota.** From the first dispatch to the terminal state, live walk
+  workers stay above half the ceiling. The target is the ceiling. The count is
+  checked on every completion and every resume, and a shortfall is refilled in
+  the same turn.
+- **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
+  nodes, count your live workers, launch one worker per open row or node until
+  the ceiling, wait for completion notices, then repeat. The loop ends only at
+  the terminal state with `prd_pending_count=0`.
 - **Single session.** Stay single-session only for one focused mechanical edit.
   Any other work with two or more independent slices fans out.
+
+## 1d. Hops are discipline advocates
+
+A graph hop is a principle node. Its label names a discipline and its author
+(for example "Jobs To Be Done -- Clayton Christensen"). Every visit to a
+principle node is one subagent that exercises that author's discipline on the
+walk's current subject, with maximum advocacy: it states the discipline's
+strongest case, applies its method to real evidence, and reports what the
+discipline requires and what it rules out. The subagent's brief opens with the
+node label and the brick-wall opener from Section 1.
+
+- A hop never works from the graph index. The index only orders the nodes.
+- Phase nodes are orchestrator waypoints. Gate and terminal nodes are checked
+  by the orchestrator against their predicates; they are not hops.
+- Hops run under the walk loop in Section 1c. Every principle node in the
+  walk's scope gets one hop, and the live count stays above half the ceiling
+  until each hop has returned.
 
 ## 2. Invariants -- true under any graph
 
@@ -402,14 +433,7 @@ exit. Confused Deputy.
 
 ## 3. Anchors
 
-This catalogue is `lean`'s own P1-P9 graph by another name -- Frame/Specify
-maps onto P1/P2, Change onto P3+P6, Verify onto P4, Correct and Decide-and-stop
-onto P9's fixed-point/variant/bounded-retry discipline, Disclose onto P5.
-Secure has no lean phase of its own; it is this file's addition, exercised
-inside whichever phase touches a trust boundary. Section 1b is the dispatch
-layer wrapped around this graph, not a second copy of it -- for full
-node-level detail and lean's own internal backreferences, see the `lean`
-skill; nothing below restates them.
+This catalogue lists techniques by purpose. The served prose for each phase names the techniques that phase uses, and that prose is authoritative. Secure is this file's addition, exercised inside whichever phase touches a trust boundary. Section 1b is the dispatch layer wrapped around the gm graph, not a second copy of it; the graph's node-level detail and backreferences live in the served `instruction` prose, and nothing below restates them.
 
 Take the state's purpose from its served prose. If that prose carries a
 named-technique catalogue, use it and add nothing. Otherwise draw below only where
