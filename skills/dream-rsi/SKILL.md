@@ -1,6 +1,6 @@
 ---
 name: dream-rsi
-description: Infer strategy proposals from Dream-RSI observation logs, and measure and propose lean-graph traversal coverage. Run as a background agent on the smallest available model at an interval. Proposes only; never deploys.
+description: Infer strategy proposals from Dream-RSI observation logs, and measure and propose gm-graph traversal coverage. Run as a background agent on the smallest available model at an interval. Proposes only; never deploys.
 ---
 
 # dream-rsi inference
@@ -9,7 +9,7 @@ Run this as a background subagent on the smallest available model. The subagent 
 
 Inputs:
 - `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records with `dispatch_id`, `verb`, `fingerprint`, `exit_code`, `gate_drift` (bool), `prd_open_count`, `mutable_open_count`, `quality` (0..1), `ts`, `reply_sha256`, and optional `lean_node`. Orchestration verbs and `dream-*` dispatches are not recorded.
-- The lean graph: `skills/dream-rsi/lean-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension`, `terminal`, or `phase`; edge `kind` is `forward` or `backreference`).
+- The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension`, `terminal`, or `phase`; edge `kind` is `forward` or `backreference`).
 - Phase history: `.gm/turn-state.json` `phase_history`.
 - Walk evidence: `.gm/lean-walk/<NODE>.json`, one subagent record per node (`node`, `phase`, `applied`, `witness`).
 
@@ -21,11 +21,11 @@ Inputs:
 4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. The agent shall not propose a change for a verb until its failure exits are shown to be real errors.
 5. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log.
 
-## Part B: lean traversal
+## Part B: gm-graph traversal
 
-The goal is to walk every traversable lean node (all kinds except `phase`) and every edge, through real work.
+The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
 
-1. Load the graph. Traversable nodes are those whose `kind` is not `phase`. Edges are all `edges` entries.
+1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
 2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true` and a `witness`. A missing file means no walk yet. `phase_history` confirms the session reached that node's phase.
 3. Build the set of every `dispatch_id` across all observation files.
 4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness` appears in that set. Report any failure in `rejected_walks` with the missing ids. The agent shall never count a rejected walk.
@@ -33,7 +33,7 @@ The goal is to walk every traversable lean node (all kinds except `phase`) and e
    - `nodes_verified` over `traversable_nodes`.
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
    - Forward-edge coverage approximates a forward edge as covered when both endpoints have verified walks. Say that this is an approximation.
-6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: gates first, then nodes in a phase with no verified walk, then backreference edges never fired. For each, give the node id, its phase, the condition to walk it on the next real task, and the evidence that would count as a walk.
+6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes in a phase with no verified walk, then backreference edges never fired. For each, give the node id, its phase, the condition to walk it on the next real task, and the evidence that would count as a walk.
 
 ## Output
 

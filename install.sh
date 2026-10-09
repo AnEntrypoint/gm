@@ -156,9 +156,13 @@ install_skill() {
   tar -xzf "${work}/${asset}" -C "${work}/extract"
 
   mkdir -p "$CLAUDE_SKILLS_DIR"
-  rm -rf "${CLAUDE_SKILLS_DIR}/gm"
-  cp -R "${work}/extract/skills/gm" "${CLAUDE_SKILLS_DIR}/gm"
-  log "installed gm skill ${tag} -> ${CLAUDE_SKILLS_DIR}/gm"
+  for skill_dir in "${work}/extract/skills"/*/; do
+    skill_name="$(basename "$skill_dir")"
+    [ -f "${skill_dir}SKILL.md" ] || continue
+    rm -rf "${CLAUDE_SKILLS_DIR}/${skill_name}"
+    cp -R "$skill_dir" "${CLAUDE_SKILLS_DIR}/${skill_name}"
+    log "installed ${skill_name} skill ${tag} -> ${CLAUDE_SKILLS_DIR}/${skill_name}"
+  done
 }
 
 quarantine_retired_js_host() {
