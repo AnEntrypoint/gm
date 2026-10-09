@@ -11,4 +11,4 @@ The skills shipped with this project live in `skills/<name>/SKILL.md`; the direc
 | `polaris-goal-compiler` | Compiles a goal into task atoms, gates and claim ceilings before execution. |
 | `fifth-dimension-engine` | Lifts a target into higher problem-coordinates and returns structured routes; use after goal compilation. |
 | `agent-memory` | TencentDB Agent Memory for cross-session, cross-framework team memory; distinct from this project's recall store. |
-| `dream-rsi` | Propose-only strategy inference from Dream-RSI observation logs and lean-graph coverage; never deploys. |
+| `dream-rsi` | Propose-only strategy inference from Dream-RSI observation logs and gm-graph coverage; never deploys. |
