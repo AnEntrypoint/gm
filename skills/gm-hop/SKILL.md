@@ -34,11 +34,17 @@ A row is resolved only with a witness. Read the `prd-resolve` reply. If
 `witness_dispatch_id_verified` is `false`, the row is not resolved: leave it
 pending and say so in the output.
 
-## Nominate
+## Nominate: required
 
-Pick the successor only from `candidates`. The orchestrator delivers that list with
-the call. Write its rhetoric in one or two sentences. To hand the next hop its own candidates,
-look up that node's outgoing edges with the command below, and pass them along:
+Name exactly one successor from `candidates`. This is the last thing you do, and
+your output is incomplete without it. Pick the candidate whose discipline attacks
+what you found weakest, and write its rhetoric in one or two sentences.
+
+If you cannot name a successor, write `NEXT: none` and state why. The orchestrator
+then names one for you from the outgoing edges of your node, using the gm skill
+Section 1d recovery. A missing NEXT is never silently dropped.
+
+To hand the successor its own candidates, look up that node's outgoing edges:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_ID>
 
@@ -53,4 +59,4 @@ At most 80 words:
 
     VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
     CHANGED: <files, or none>
-    NEXT: <NEXT_NODE>
+    NEXT: <NEXT_NODE>, or none with the reason
