@@ -289,7 +289,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-sets the parallelism floor. Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract (1c). Full fan-out discipline (SESSION_ID minting): served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -320,37 +320,43 @@ not a mood.
 Fan out by default. Served prose sets the same rules with more detail; where
 the two differ, the stricter rule applies.
 
-- **Ceiling.** The host caps concurrent subagents. Find the cap by launching.
-  A refusal reading "Concurrent subagent limit reached. You can run N subagents
-  at once" names N. Launch the full wave first; keep launching while independent
-  work remains until a refusal. The live build named its ceiling at 20
-  ("You can run 20 subagents at once"). Never hardcode N.
-- **Target.** Fill the ceiling: keep as many subagents live as independent work
-  allows, up to the ceiling.
-- **Floor.** Half the ceiling is the minimum live count at any moment while
-  independent work remains. Before any refusal, the ceiling is the largest wave
-  accepted so far, so the floor is half of that.
-- **Count.** The build reports no live count: `instruction` returns no
-  `subagents_running`, and `.gm/pool/` does not exist. Count your own launches
-  minus completion notices. Re-count on every completion and every resume.
+- **Definitions.** Each term is defined here once. Every other mention in this
+  skill and in the served `instruction` prose names the term and adds no number.
+  - `ceiling`: the N in the latest refusal "Concurrent subagent limit reached. You
+    can run N subagents at once". Until a refusal, the largest wave accepted so
+    far. Found by launching: launch the full wave first, and keep launching while
+    independent work remains until a refusal. Never a constant.
+  - `live`: own launches minus completion notices, the count of record. `instruction`
+    serves a `concurrency_shortfall.running` value that is not verified against
+    launches, so it is not `live`. Where `.gm/pool/` exists, its `.live` file
+    count is read as `live` instead.
+  - `target`: the `ceiling`. Keep as many subagents live as independent work
+    allows, up to it.
+  - `shortfall`: true when `2 * live < ceiling` while independent work remains.
+    It is the same test as "live under half the ceiling", with no rounding.
+  Re-count `live` on every completion and every resume.
 - **Launch.** Split the work into independent slices before you dispatch. Send
   every slice of one wave in one tool-call block. Each slice gets its own
   SESSION_ID and the brick-wall opener from Section 1.
+- **Brief.** Every subagent brief has four fields, in this order: the brick-wall opener
+  (Section 1), the heartbeat step verbatim ("write .gm/pool/<name>.live on start,
+  delete it on finish"), its own SESSION_ID, and one call. A brief without the
+  heartbeat step is refused, so every spawn is countable.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
   The only stops are a spawn refusal and a headroom stop (CPU at or above 80%
   or free memory under 2 GB). A headroom stop is logged with the real count and
   timestamp.
-- **Below floor.** If live count falls under half the ceiling while independent
-  work remains, log a FAILURE line as a `prd-add` row that names the count, the timestamp and the
-  open slices. Then launch until the ceiling is filled, not just the floor. If
+- **Shortfall.** If `shortfall` holds while independent work remains, log a
+  FAILURE line as a `prd-add` row that names the count, the timestamp and the
+  open slices. Then launch to the `target`, not just out of `shortfall`. If
   the gap repeats, the skill is wrong: dispatch `instruction`, correct this
   section, and restart the walk.
 - **Walk workers.** Every subagent in a walk is a traversal hop or a PRD row
   resolver, with its own SESSION_ID. A file read is part of a worker's brief,
   never a separate subagent.
 - **Continuous quota.** From the first dispatch to the terminal state, live walk
-  workers stay above half the ceiling. The target is the ceiling. The count is
+  workers never hold `shortfall`. The target is the `ceiling`. The count is
   checked on every completion and every resume, and a shortfall is refilled in
   the same turn.
 - **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
@@ -364,15 +370,15 @@ the two differ, the stricter rule applies.
 
 A hop is one subagent that loads the `gm-hop` skill with parameters. Every
 principle node is a book and its author; the node label gives both. The subagent's
-brief is the brick-wall opener from Section 1, its own SESSION_ID, and one call:
+brief is the four fields of Section 1c, Brief, ending in one call:
 
-    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; depth=<n>; rhetoric=<text>")
+    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; rhetoric=<text>")
 
 All hop prose lives in `skills/gm-hop/SKILL.md`. Nothing about a hop's procedure
 is restated here. A hop nominates its successor and spawns it with the same call.
 
 - Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
-  hops. The live count stays above half the ceiling until the wave returns.
+  hops. `shortfall` does not hold until the wave returns.
 - An executor is one subagent that loads `gm-exec` with `args="row=<id>; session=<SESSION_ID>"`.
   All executor prose lives in `skills/gm-exec/SKILL.md`.
 - While open PRD rows exist, executors take free slots first, one per row, and rows
