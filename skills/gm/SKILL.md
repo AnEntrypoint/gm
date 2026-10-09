@@ -114,9 +114,9 @@ missing, the runtime is not installed: run the repo's `install.sh` (or
 `install.ps1`) before any gm work. A verb you cannot run is named in your reply
 with the reason; do not drop it silently.
 
-Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
-`.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate
-first. **Write that in-file atomically: body to a sibling temp name, then
+Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; the dispatch completes when
+`.gm/exec-spool/out/<verb>-<N>.json` lands, so condition-poll for that file under
+the completion contract below, never narrate first. **Write that in-file atomically: body to a sibling temp name, then
 `mv`/`Move-Item` it onto `<N>.txt`.** A plain `>` redirect creates the file empty
 and fills it a moment later; a claim landing in that window dispatches a torn
 body and answers with a validation error naming a field you did supply (live:
@@ -154,8 +154,8 @@ gives the project two sweepers that cannot see each other's claims, so each
 one's orphan sweep answers `dispatch_orphaned` for the other's running work and
 deletes the claim under it. That is the `dispatch_orphaned` storm with a rotating
 `sweeping_pid`, and it is self-inflicted -- seven concurrent watchers were
-observed on one project this way. A stale timestamp or a proven-absent status
-PID is the only license to start one. This is launching an existing local
+observed on one project this way. A proven-absent status PID is the only
+license to start one; a stale `ts` is advisory and licenses nothing. This is launching an existing local
 executable, nothing more; it reaches no network. The runner updates itself in
 the background on its own schedule once running (binary and plugins alike) --
 that update path never touches this skill or this session. A future
@@ -182,8 +182,9 @@ explicit validation error naming what it wanted -- both arrive through the
 ordinary read cycle. So a missing out-file means exactly one thing: *the
 dispatch has not finished yet*. Check `in/<verb>/<N>.txt.inflight` -- while that
 claim exists the work is still running, and a cold codesearch index/embed pass
-or a contended daemon legitimately takes minutes, not seconds. Condition-poll it
-(never a blind sleep, never a blind re-dispatch, which only adds a second
+or a contended daemon legitimately takes minutes, not seconds. Completion contract: condition-poll
+the out-file until it lands or the `.inflight` claim clears, whichever comes
+first (never a blind sleep, never a blind re-dispatch, which only adds a second
 competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
@@ -329,7 +330,8 @@ the two differ, the stricter rule applies.
   the brief adds no prose.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
-  The only stops are a spawn refusal and a headroom stop. Headroom is read before
+  The stops are: no independent slice remains (the remaining-slice count falls on
+  every launch and reaches zero), a spawn refusal, and a headroom stop. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory). A headroom stop is logged with the
@@ -381,9 +383,14 @@ is restated here. A hop nominates its successor and spawns it with the same call
   `args="row=<id>; session=<SESSION_ID>"`. That skill holds the whole procedure: mutable
   collection, JIT execution, the nine stages (SPECIFY through COMPLETE), and process of
   elimination when a witness fails. Stage prose lives only in `skills/gm-exec/SKILL.md`.
-- Saturation: each completion re-counts `live`. A freed slot takes, in this order: a PRD
-  row's `gm-exec` (one per open row); then a node traversal (`gm-hop`). A slot is never left
-  empty while a row or a node remains.
+- The walk loop, run on every tick and every completion:
+  1. Count `live`: own launches minus completion notices.
+  2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row
+     has no run, launch one `gm-exec` run per row (`prd-list` with status pending).
+  3. Spare slots hop: with the remaining slots, launch `gm-hop` runs for node traversals,
+     each nominated from the candidates of a node the walk has not yet traversed.
+  4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
+  A slot is never left empty while a pending row or an untraversed node remains.
 - Rows are executed before hops take slots. Rows naming the same file run concurrently when
   they name different lines; each executor edits with exact-match Edit on the file as it is
   now and never rewrites the whole file.
@@ -414,8 +421,7 @@ compiled-default fallback are not drift. Re-read; don't trust cached memory of a
 state.
 
 **Default, don't ask.** Ambiguity becomes `prd-add` or a stated assumption.
-Round trip ≈ 100x a recoverable wrong default. Cost of Delay, Consent vs.
-Consensus, Disagree and Commit, Satisficing.
+Round trip ≈ 100x a recoverable wrong default.
 
 **Default across choices, never facts.** Missing fact gets `codesearch`, `fetch`,
 `recall`, or `prd-add`. Cargo Cult Science.
@@ -446,7 +452,7 @@ exit. Confused Deputy.
 
 ## 3. Anchors
 
-This catalogue lists techniques by purpose. The served prose for each phase names the techniques that phase uses, and that prose is authoritative. Secure is this file's addition, exercised inside whichever phase touches a trust boundary. Section 1b is the dispatch layer wrapped around the gm graph, not a second copy of it; the graph's node-level detail and backreferences live in the served `instruction` prose, and nothing below restates them.
+This catalogue lists techniques by purpose. The served prose for each phase names the techniques that phase uses, and that prose is authoritative. Secure is this file's addition, exercised inside whichever phase touches a trust boundary.
 
 Take the state's purpose from its served prose. If that prose carries a
 named-technique catalogue, use it and add nothing. Otherwise draw below only where
@@ -466,7 +472,8 @@ Hyrum's Law.
 by hand to real inputs; property-based and mutation reasoning (Claessen & Hughes;
 DeMillo) as live exploratory execution; Residuality Theory (O'Reilly); Fallacies
 of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the
-running system; Fagan Inspection re-reading the request's literal words against
+running system, where the Red expectation is a witness row recording the output the
+request implies, written before the Green change; Fagan Inspection re-reading the request's literal words against
 the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules;
 Devil's Advocate. No test files, ever (Section 1).
 **Secure** — Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE;
