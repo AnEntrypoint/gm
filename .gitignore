@@ -158,3 +158,15 @@ skills/gm/.gm/
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
 .gm/crawl-cdp-profile/
+
+# gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
+.gm/lean-walk/
+.gm/lean-walk-v1-readonly/
+.gm/lean-edge-walk.json
+.gm/lean-edge-walk.progress
+.gm/lean-traverse-route.json
+.gm/disciplines/lean-walk/
+.gm/disciplines/gm-ubiq-lean/
+
+# memorize-fire generated recall memos (rebuilt from gm.db, which is untracked)
+.gm/memories/mem-*.md
