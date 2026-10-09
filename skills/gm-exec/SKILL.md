@@ -26,7 +26,9 @@ are not run, and this session edits no file. Witness the row's acceptance throug
 surface it names: a verb reply, a served `instruction` response, or a `codesearch` readback of the
 file. Each witness line states which surface it observed. A row whose served surface omits its
 file is closed on the readback, and that line says so. `prd-resolve` runs only when the witness
-dispatch id is verified.
+dispatch id is verified: the dispatch ledger holds it with exit code 0, its verb is a witness verb
+(`exec_js`, `codesearch`, `code_search`, `search`, `grep` or `rg`), and the session that dispatched it
+differs from the resolving session.
 
 ## Harness
 
@@ -50,12 +52,18 @@ not run: identify the owning process before rerunning, and never kill another la
 
 Witness outcomes are not PRD rows. Append one line per run to `/config/workspace/gm/.gm/witness-log.md`:
 the witness, the exit code, the RESULT line, the timestamp, and the dispatch id. Close the
-parent row by citing that line.
+parent row by citing that line. Before each append, if the active log has 1000 or more lines,
+rename it atomically (same directory) to `witness-log-<UTC yyyymmddThhmmssZ>.md` and append to a
+fresh `witness-log.md`. If the rename finds no active log, another session rotated it first, so
+append to the fresh file. Archives are never edited or deleted, because a resolved row cites a line
+that stays in its archive. Any prune of the active log keeps every line that a resolved row cites.
 
 A prose row (a change to a skill, instruction or served key) is witnessed by an observed change
 in a verb reply or a served phase response, read by a session that did not edit the prose.
 Reading back the text just written proves storage, not behavior, so the editing session cannot
-close its own prose row.
+close its own prose row. A code row has the same rule: its witness is dispatched by a session other
+than the executor. `prd-resolve` refuses a witness whose dispatch session equals the resolving session
+(`prd-resolve-self-witness`), so an executor's own witness never closes its row.
 
 ## Mutables and JIT execution
 
@@ -104,7 +112,9 @@ make progress.
        node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the witness line>","witness_dispatch_id":"<dispatch id>"}' --cwd /config/workspace/gm
 
    If `witness_dispatch_id_verified` is `false`, the row is not resolved. Flag it for
-   reopening, and say so in the output.
+   reopening, and say so in the output. The resolving session must differ from the session that
+   dispatched the witness. When this run is the executor, it stops at `STATUS: BLOCKED`, and a
+   `mode=witness` run from another session resolves the row.
 
 ## Process of elimination: when a witness fails
 
@@ -148,7 +158,8 @@ and does not resolve its row.
 - Never kill another lane's process. Check: the receipt names no kill command.
 - Write nothing outside the row's files, the receipts directory and the witness log. Check:
   `git_status` with `paths` shows no change outside them.
-- Receipts are append-only. Check: every receipt file keeps each earlier session's section; a
-  session that finds an existing receipt appends its own section under its own session heading.
+- Receipts are create-only. Check: each stage receipt is made by an exclusive create that refuses
+  an existing file; a session that finds the file present appends its own section under its own
+  session heading, and no earlier session's section is replaced.
 - A prose row is closed by an independent session. Check: the `session` that closes it is not the
   session whose `EMIT` edited the file.
