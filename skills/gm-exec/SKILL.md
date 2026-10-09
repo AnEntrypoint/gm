@@ -36,6 +36,8 @@ and stop.
 
 6. If the change cannot be witnessed, or the row is wrong, do not resolve it. Report
    BLOCKED with the reason.
+7. Read the `prd-resolve` reply. If `witness_dispatch_id_verified` is `false`, the
+   row is not resolved: report BLOCKED and name the reply.
 
 ## Output
 
