@@ -27,7 +27,15 @@ only a located path.
    to find them.
 3. Make the change the discipline calls for. Witness it live: dispatch the verb or
    read the served text it touches. Do not commit.
-4. If work remains that you do not do now, add one PRD row for it:
+4. Verify before you write. For each finding, print the cited lines and confirm the
+   defect text is in them:
+
+       sed -n 'START,ENDp' /config/workspace/gm/<file>
+
+   If the defect is not there, fix the citation or drop the finding. Never write a row
+   that cites text that is not in the file. Stale rows block executors.
+
+5. If work remains that you do not do now, add one PRD row for it:
 
        node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>","subject":"<the work, with file and line>"}' --cwd /config/workspace/gm
 
