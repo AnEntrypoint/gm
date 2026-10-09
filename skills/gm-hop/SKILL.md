@@ -50,9 +50,13 @@ Two hops must never edit one file at once. Before you edit a file, claim it:
 1. Frame. State the discipline's field in one paragraph, in the author's terms. Then
    read the project state that the discipline governs.
 2. Plan. List every change the discipline calls for across the project. Create one
-   PRD row for each, one dispatch per row, with ids `<NODE>-<n>`:
+   PRD row for each, one dispatch per row. Row ids are unique across all hops, so
+   each id carries your hop tag: `<NODE>-<TAG>-<n>`, where `<TAG>` is the last six
+   characters of your SESSION_ID. Before each create, read the id with
+   `prd-list` and `{"id":...}`. If it already exists, pick the next free `<n>`. A
+   `prd-add` on an existing id overwrites another hop's row.
 
-       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<n>","subject":"<the change: file:line, the defect, the fix>"}' --cwd /config/workspace/gm
+       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","subject":"<the change: file:line, the defect, the fix>"}' --cwd /config/workspace/gm
 
    Never batch rows. Keep each subject to one change.
 3. Execute. For each row you can claim, claim its files, make the smallest change
@@ -61,7 +65,7 @@ Two hops must never edit one file at once. Before you edit a file, claim it:
    verb and read its reply. For a skill, invoke it and read its output. Then resolve
    the row:
 
-       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<n>","witness_evidence":"<the live line that proves the change>"}' --cwd /config/workspace/gm
+       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","witness_evidence":"<the live line that proves the change>"}' --cwd /config/workspace/gm
 
    A row you cannot claim or witness stays pending, with a one-line note in the
    verdict.
