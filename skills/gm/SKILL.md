@@ -323,8 +323,8 @@ the two differ, the stricter rule applies.
 - **Ceiling.** The host caps concurrent subagents. Find the cap by launching.
   A refusal reading "Concurrent subagent limit reached. You can run N subagents
   at once" names N. Launch the full wave first; keep launching while independent
-  work remains until a refusal. The live build has accepted a wave of 24. Never
-  hardcode N.
+  work remains until a refusal. The live build named its ceiling at 20
+  ("You can run 20 subagents at once"). Never hardcode N.
 - **Target.** Fill the ceiling: keep as many subagents live as independent work
   allows, up to the ceiling.
 - **Floor.** Half the ceiling is the minimum live count at any moment while
@@ -362,20 +362,34 @@ the two differ, the stricter rule applies.
 
 ## 1d. Hops are discipline advocates
 
-A graph hop is a principle node. Its label names a discipline and its author
-(for example "Jobs To Be Done -- Clayton Christensen"). Every visit to a
-principle node is one subagent that exercises that author's discipline on the
-walk's current subject, with maximum advocacy: it states the discipline's
-strongest case, applies its method to real evidence, and reports what the
-discipline requires and what it rules out. The subagent's brief opens with the
-node label and the brick-wall opener from Section 1.
+A hop is one subagent visiting one principle node. Every principle node is a
+book and its author; the node label gives both (for example "Jobs To Be Done --
+Clayton Christensen"; a node with no author gives "unattributed"). The
+subagent's brief is the brick-wall opener from Section 1, its own SESSION_ID,
+and one skill call:
+
+    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>")
+
+All hop instructions live in the `gm-hop` skill (`skills/gm-hop/SKILL.md`). The
+brief carries no other instructions.
 
 - A hop never works from the graph index. The index only orders the nodes.
-- Phase nodes are orchestrator waypoints. Gate and terminal nodes are checked
-  by the orchestrator against their predicates; they are not hops.
-- Hops run under the walk loop in Section 1c. Every principle node in the
-  walk's scope gets one hop, and the live count stays above half the ceiling
-  until each hop has returned.
+- Phase nodes are orchestrator waypoints. Gate and terminal nodes are checked by
+  the orchestrator against their predicates; they are not hops.
+- Hops run under the walk loop in Section 1c. Every principle node in the walk's
+  scope gets one hop, and the live count stays above half the ceiling until each
+  hop has returned.
+- A hop critiques at maximum scope and records each defensible finding as a PRD
+  row (`prd-add`, one row per dispatch). A hop ends only when its discipline has
+  no further defensible finding. It writes no file.
+- An executor takes one open PRD row and resolves it with a witness. Its brief is
+  the opener and one call: `Skill(skill="gm-exec", args="row=<id>; session=<SESSION_ID>")`.
+  All executor instructions live in the `gm-exec` skill (`skills/gm-exec/SKILL.md`).
+- Balance: while open PRD rows exist, executors take the free slots first, one
+  executor per row, and rows that name the same file run one at a time. Hops fill
+  the slots that no open row can use. A wave with no open rows is all hops.
+- The orchestrator commits and pushes what the executors change, once the wave
+  has returned, through `git_finalize`.
 
 ## 2. Invariants -- true under any graph
 
