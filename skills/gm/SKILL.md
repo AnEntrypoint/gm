@@ -93,6 +93,18 @@ graph, not a mood.
 `prd_pending_count=0`. There is no other exit. Dispatch `instruction` whenever
 uncertain; never invent the next step from memory.
 
+## Subagent quota (every turn)
+
+Before ending any turn, count live subagents with ListAgents. If the count is below the number of independent slices available, launch the difference now, in the same turn, before any other step.
+
+A sequential chain is not a reason to stay at one subagent. Split the chain by file, row or hop so each piece is an independent slice, and launch them together.
+
+A writer that holds the only path does not replace the other slices. Launch the read-only witnesses and the non-colliding rows alongside it.
+
+A count below the quota at turn end is a failure. Record it as one PRD line with the count and time, then launch to the quota before the next message.
+
+When the count drops after a pull or a publish, re-check the count immediately after the pull and launch before reporting.
+
 ## 0. Precedence
 
 Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose)
