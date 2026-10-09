@@ -365,9 +365,11 @@ brief is the four fields of Section 1c, Brief, ending in one call:
 All hop prose lives in `skills/gm-hop/SKILL.md`. Nothing about a hop's procedure
 is restated here. A hop nominates its successor and spawns it with the same call.
 
-- A hop is spawned only when it has a target: a located change or a located defect. A hop with
-  no target answers NOT-APPLICABLE, and its slot goes to a pending verified row (`gm-exec`)
-  or stays empty. Empty hops do not count as useful work.
+- A hop is spawned only when it has a target: a located change or a located defect. A hop
+  with no target answers NOT-APPLICABLE, and its slot goes to a PRD row's next stage or to
+  another node traversal. Empty hops do not count as useful work.
+- Hops make PRD rows. Each finding a hop cannot finish in its own run becomes one verified
+  row, and that row is executed by one `gm-exec` run (Section 1d).
 - Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
   hops. `shortfall` does not hold until the wave returns.
 - Successor recovery. A hop that returns `NEXT: none`, or returns without a NEXT line,
@@ -375,12 +377,16 @@ is restated here. A hop nominates its successor and spawns it with the same call
   outgoing edges in the graph (the command in the gm-hop skill), picks the candidate
   that attacks the open finding, writes its rhetoric, and spawns it with the same
   Skill call. No unnamed successor is dropped.
-- An executor is one subagent that loads `gm-exec` with `args="row=<id>; session=<SESSION_ID>"`.
-  All executor prose lives in `skills/gm-exec/SKILL.md`.
-- While open PRD rows exist, executors take free slots first, one per row. Rows naming
-  the same file run concurrently when they name different lines; each executor edits
-  with exact-match Edit on the file as it is now and never rewrites the whole file.
-  Hops fill slots no open row can use.
+- A PRD row is closed by one subagent that loads `gm-exec` with
+  `args="row=<id>; session=<SESSION_ID>"`. That skill holds the whole procedure: mutable
+  collection, JIT execution, the nine stages (SPECIFY through COMPLETE), and process of
+  elimination when a witness fails. Stage prose lives only in `skills/gm-exec/SKILL.md`.
+- Saturation: each completion re-counts `live`. A freed slot takes, in this order: a PRD
+  row's `gm-exec` (one per open row); then a node traversal (`gm-hop`). A slot is never left
+  empty while a row or a node remains.
+- Rows are executed before hops take slots. Rows naming the same file run concurrently when
+  they name different lines; each executor edits with exact-match Edit on the file as it is
+  now and never rewrites the whole file.
 - The orchestrator delivers what the subagents change, once the wave returns, by
   the Autonomy rule (line 20).
 
