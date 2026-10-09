@@ -263,7 +263,7 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any found, same turn, no separate approval needed. A test suite is never evidence of anything and is
+No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any test file this walk itself created in this session, same turn, no separate approval needed. Created in this session means untracked and absent from `git ls-files` at session start, so record that set before the first write. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked. A test suite is never evidence of anything and is
 never consulted, run, or cited, even alongside other evidence: a test authored
 in the same pass as its fix reliably shares the fix's own misreading of the
 request, so "tests pass" only proves the code agrees with itself. Verification
