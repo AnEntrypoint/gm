@@ -154,8 +154,8 @@ gives the project two sweepers that cannot see each other's claims, so each
 one's orphan sweep answers `dispatch_orphaned` for the other's running work and
 deletes the claim under it. That is the `dispatch_orphaned` storm with a rotating
 `sweeping_pid`, and it is self-inflicted -- seven concurrent watchers were
-observed on one project this way. A proven-absent status PID is the only
-license to start one; a stale `ts` is advisory and licenses nothing. This is launching an existing local
+observed on one project this way. A stale timestamp or a proven-absent status
+PID is the only license to start one. This is launching an existing local
 executable, nothing more; it reaches no network. The runner updates itself in
 the background on its own schedule once running (binary and plugins alike) --
 that update path never touches this skill or this session. A future
@@ -330,8 +330,7 @@ the two differ, the stricter rule applies.
   the brief adds no prose.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
-  The stops are: no independent slice remains (the remaining-slice count falls on
-  every launch and reaches zero), a spawn refusal, and a headroom stop. Headroom is read before
+  The only stops are a spawn refusal and a headroom stop. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory). A headroom stop is logged with the
