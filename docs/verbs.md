@@ -166,9 +166,12 @@ Example, verified against this repo:
 -> ok:true, total_lines:215, returned_lines:4, has_more_lines:true, content:"curl -fsSL ..."
 ```
 
-`fs_write` takes `{"path":"<relative path>","content":"<text>"}` (`data` is an alias) and returns
-`{"bytes": <written>}`; a write outside the root is refused even with `allowOutsideRoot`, which
-widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
+`fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
+`content`, and the value may be a JSON string (with `\n` for each newline) **or an array of lines**,
+which is joined with `\n` plus a trailing newline. A raw, non-JSON body is accepted too when its
+first line is a `path=<relative path>` directive and everything after it is the file contents. There
+is no append mode: a write replaces the whole file. It returns `{"bytes": <written>}`; a write outside
+the root is refused even with `allowOutsideRoot`, which widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
 takes `{"path":"<relative path>"}`. `fs_readdir` and `fs_stat` take the same
 `{"allowOutsideRoot":true}` opt-in as `fs_read`.
 
@@ -234,7 +237,7 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 | verb | body | purpose |
 |---|---|---|
 | `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range |
-| `fs_write` | `{"path", "content"}` | write a file inside the project |
+| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) |
 | `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory |
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path |
 | `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree |
