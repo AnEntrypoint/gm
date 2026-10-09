@@ -2,7 +2,8 @@ name: bump-pins
 
 # Moves every submodule pin to the latest main that has passed its own checks.
 # Runs on schedule and on repository_dispatch so a submodule release reaches gm
-# without waiting for the next manual bump.
+# without waiting for the next manual bump. A rejected push re-fetches and retries,
+# so a pin is never left behind by a race with another writer.
 
 on:
   schedule:
@@ -33,48 +34,57 @@ jobs:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         shell: bash
         run: |
-          set -euo pipefail
-          targets=()
-          blocked=0
-          while read -r path repo; do
-            [ -n "$path" ] || continue
-            sha=$(git ls-remote "https://github.com/$repo.git" refs/heads/main | awk '{print $1}')
-            [ -n "$sha" ] || { echo "::error::no main for $repo"; exit 1; }
-            current=$(git ls-tree HEAD "$path" | awk '{print $3}')
-            [ "$sha" = "$current" ] && continue
-            pending=$(gh api "repos/$repo/commits/$sha/check-runs" --jq '[.check_runs[] | select(.conclusion == null or (.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral"))] | length')
-            if [ "$pending" != "0" ]; then
-              echo "::notice::$repo@${sha:0:9} has $pending non-green check(s)"
-              blocked=1
-            fi
-            targets+=("$path $sha")
-          done <<'PINS'
-          rs-plugkit AnEntrypoint/rs-plugkit
-          rs-codeinsight AnEntrypoint/rs-codeinsight
-          rs-search AnEntrypoint/rs-search
-          agentplug AnEntrypoint/agentplug
-          agentplug-bert AnEntrypoint/agentplug-bert
-          agentplug-crux AnEntrypoint/agentplug-crux
-          agentplug-libsql AnEntrypoint/agentplug-libsql
-          agentplug-treesitter AnEntrypoint/agentplug-treesitter
-          gm-config AnEntrypoint/gm-config
-          gm-mcp AnEntrypoint/gm-mcp
-          obrowser AnEntrypoint/obrowser
-          PINS
-          if [ "${#targets[@]}" = "0" ]; then
-            echo "all pins already at latest main"
-            exit 0
-          fi
-          if [ "$blocked" = "1" ]; then
-            echo "::notice::train held: not every project is green, no pin moved"
-            exit 0
-          fi
-          for t in "${targets[@]}"; do
-            path=${t% *}
-            sha=${t#* }
-            git update-index --cacheinfo "160000,$sha,$path"
-          done
+          set -uo pipefail
           git config user.name "lanmower"
           git config user.email "lanmower@users.noreply.github.com"
-          git commit -m "chore: advance all submodule pins to latest main together"
-          git push origin HEAD:main
+          for attempt in 1 2 3 4 5; do
+            git fetch --depth=1 origin main
+            git reset --hard FETCH_HEAD
+            targets=()
+            blocked=0
+            while read -r path repo; do
+              [ -n "$path" ] || continue
+              sha=$(git ls-remote "https://github.com/$repo.git" refs/heads/main | awk '{print $1}')
+              [ -n "$sha" ] || { echo "::error::no main for $repo"; exit 1; }
+              current=$(git ls-tree HEAD "$path" | awk '{print $3}')
+              [ "$sha" = "$current" ] && continue
+              pending=$(gh api "repos/$repo/actions/runs?head_sha=$sha&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length')
+              if [ "$pending" != "0" ]; then
+                echo "::notice::$repo@${sha:0:9} has $pending non-green run(s)"
+                blocked=1
+              fi
+              targets+=("$path $sha")
+            done <<'PINS'
+            rs-plugkit AnEntrypoint/rs-plugkit
+            rs-codeinsight AnEntrypoint/rs-codeinsight
+            rs-search AnEntrypoint/rs-search
+            agentplug AnEntrypoint/agentplug
+            agentplug-bert AnEntrypoint/agentplug-bert
+            agentplug-crux AnEntrypoint/agentplug-crux
+            agentplug-libsql AnEntrypoint/agentplug-libsql
+            agentplug-treesitter AnEntrypoint/agentplug-treesitter
+            gm-config AnEntrypoint/gm-config
+            gm-mcp AnEntrypoint/gm-mcp
+            obrowser AnEntrypoint/obrowser
+          PINS
+            if [ "${#targets[@]}" = "0" ]; then
+              echo "all pins already at latest main"
+              exit 0
+            fi
+            if [ "$blocked" = "1" ]; then
+              echo "::notice::train held: a target has a non-green run, no pin moved"
+              exit 0
+            fi
+            for t in "${targets[@]}"; do
+              git update-index --cacheinfo "160000,${t#* },${t% *}"
+            done
+            git commit -m "chore: advance all submodule pins to latest main together"
+            if git push origin HEAD:main; then
+              echo "pins advanced on attempt $attempt"
+              exit 0
+            fi
+            echo "::notice::push raced another writer on attempt $attempt; re-fetching"
+            sleep $((attempt * 3))
+          done
+          echo "::error::could not advance pins after 5 attempts"
+          exit 1
