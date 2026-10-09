@@ -2,7 +2,7 @@
 
 ## What a Gate Is
 
-A verification gate is a **check that must pass before moving to the next atom**. It prevents fake completion by requiring proof of actual readiness.
+A verification gate is a **check that shall pass before the next atom begins**. It prevents fake completion by requiring proof of actual readiness.
 
 ## Types of Gates
 
@@ -51,7 +51,7 @@ For an atom:
 ## Gate Failure
 
 If an atom fails its gate:
-- **Do not move forward** -- you have incomplete work that looks complete
+- **The agent shall not move forward** while incomplete work looks complete
 - **Return to the atom** -- what's actually missing?
 - **Fix or redefine** -- either finish the work or redefine the atom scope
 

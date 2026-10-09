@@ -24,21 +24,16 @@ if (help) {
 }
 
 const PROJECT_LAUNCH_SNIPPET =
-  "const p=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +
-  "if(!require('fs').existsSync(p)){console.error('gm-mcp bundle missing at '+p+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}" +
-  "import(require('url').pathToFileURL(p).href)"
+  "const bundlePath=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +
+  "if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}" +
+  "import(require('url').pathToFileURL(bundlePath).href)"
 
-function run(cmd, args) {
-  const res = spawnSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32', windowsHide: true })
-  if (res.status !== 0) {
-    process.exit(res.status ?? 1)
-  }
-}
+const IS_WINDOWS = process.platform === 'win32'
 
-function runDirect(cmd, args) {
-  const res = spawnSync(cmd, args, { stdio: 'inherit', windowsHide: true })
-  if (res.status !== 0) {
-    process.exit(res.status ?? 1)
+function runChild(cmd, args, { shell = false } = {}) {
+  const result = spawnSync(cmd, args, { stdio: 'inherit', shell, windowsHide: true })
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1)
   }
 }
 
@@ -52,9 +47,9 @@ function projectServerEntry() {
 
 async function vendorMcpBundle() {
   fs.mkdirSync(GM_TOOLS_DIR, { recursive: true })
-  const res = await fetch(MCP_BUNDLE_URL)
-  if (!res.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${res.status}`)
-  const body = await res.text()
+  const response = await fetch(MCP_BUNDLE_URL)
+  if (!response.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${response.status}`)
+  const body = await response.text()
   if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
   const freshHash = sha256Short(body)
   const deployedHash = fs.existsSync(MCP_BUNDLE_PATH) ? sha256Short(fs.readFileSync(MCP_BUNDLE_PATH)) : null
@@ -95,14 +90,23 @@ function writeJsonAtomic(file, value) {
   fs.renameSync(tmp, file)
 }
 
-function upsertGmServer(servers, wanted, label, create) {
+function needsGmServerUpdate(servers, wanted, create) {
   if (!servers || typeof servers !== 'object') return false
+  if (!servers.gm && !create) return false
+  return !isCurrentEntry(servers.gm, wanted)
+}
+
+function setGmServer(servers, wanted, label) {
   const existing = servers.gm
-  if (!existing && !create) return false
-  if (isCurrentEntry(existing, wanted)) return false
   servers.gm = wanted
   console.log(`registered gm MCP server in ${label}${isLegacyNpxEntry(existing) ? ' (replaced legacy npx github spec)' : ''}`)
-  return true
+}
+
+function syncGmServers(configPath, config, targets, wanted) {
+  const stale = targets.filter(t => needsGmServerUpdate(t.servers, wanted, t.create))
+  if (stale.length === 0) return
+  for (const t of stale) setGmServer(t.servers, wanted, t.label)
+  writeJsonAtomic(configPath, config)
 }
 
 function registerClaudeCode() {
@@ -110,28 +114,30 @@ function registerClaudeCode() {
   const userConfig = readJson(userConfigPath)
   if (userConfig && typeof userConfig === 'object') {
     if (global) userConfig.mcpServers ||= {}
-    let changed = upsertGmServer(userConfig.mcpServers, globalServerEntry(), `${userConfigPath} mcpServers`, global)
+    const targets = [{ servers: userConfig.mcpServers, label: `${userConfigPath} mcpServers`, create: global }]
     for (const [projectPath, project] of Object.entries(userConfig.projects || {})) {
-      changed = upsertGmServer(project?.mcpServers, globalServerEntry(), `${userConfigPath} projects[${projectPath}].mcpServers`, false) || changed
+      targets.push({ servers: project?.mcpServers, label: `${userConfigPath} projects[${projectPath}].mcpServers`, create: false })
     }
-    if (changed) writeJsonAtomic(userConfigPath, userConfig)
+    syncGmServers(userConfigPath, userConfig, targets, globalServerEntry())
   }
 
   const projectConfigPath = path.join(process.cwd(), '.mcp.json')
   const projectConfig = readJson(projectConfigPath)
-  if (!global && !projectConfig) {
+  if (!projectConfig) {
+    if (global) return
     writeJsonAtomic(projectConfigPath, { mcpServers: { gm: projectServerEntry() } })
     console.log(`registered gm MCP server in ${projectConfigPath} (create)`)
-  } else if (projectConfig && typeof projectConfig === 'object') {
-    if (!global) projectConfig.mcpServers ||= {}
-    if (upsertGmServer(projectConfig.mcpServers, projectServerEntry(), `${projectConfigPath} mcpServers`, !global)) writeJsonAtomic(projectConfigPath, projectConfig)
+    return
   }
+  if (typeof projectConfig !== 'object') return
+  if (!global) projectConfig.mcpServers ||= {}
+  syncGmServers(projectConfigPath, projectConfig, [{ servers: projectConfig.mcpServers, label: `${projectConfigPath} mcpServers`, create: !global }], projectServerEntry())
 }
 
 function registerOtherHosts() {
   const scopeFlag = global ? ['-g'] : []
   const launch = `node ${MCP_BUNDLE_PATH}`
-  run('npx', ['-y', 'add-mcp', process.platform === 'win32' ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'])
+  runChild('npx', ['-y', 'add-mcp', IS_WINDOWS ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
 }
 
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
@@ -142,7 +148,7 @@ function registerJsonMcpHost(configPath) {
   const config = readJson(configPath)
   if (!config || typeof config !== 'object') return
   config.mcpServers ||= {}
-  if (upsertGmServer(config.mcpServers, globalServerEntry(), `${configPath} mcpServers`, true)) writeJsonAtomic(configPath, config)
+  syncGmServers(configPath, config, [{ servers: config.mcpServers, label: `${configPath} mcpServers`, create: true }], globalServerEntry())
 }
 
 function tomlQuotedString(value) {
@@ -161,24 +167,24 @@ function registerCodex(configPath) {
     `args = [ ${tomlQuotedString(MCP_BUNDLE_PATH)} ]`,
   ]
 
-  let start = lines.findIndex(line => gmHeaderRe.test(line))
-  let end = lines.length
-  if (start !== -1) {
-    for (let i = start + 1; i < lines.length; i++) {
-      if (anyHeaderRe.test(lines[i]) && !gmHeaderRe.test(lines[i])) { end = i; break }
+  let gmSectionStart = lines.findIndex(line => gmHeaderRe.test(line))
+  let gmSectionEnd = lines.length
+  if (gmSectionStart !== -1) {
+    for (let i = gmSectionStart + 1; i < lines.length; i++) {
+      if (anyHeaderRe.test(lines[i]) && !gmHeaderRe.test(lines[i])) { gmSectionEnd = i; break }
     }
   }
 
-  const newLines = start === -1
+  const newLines = gmSectionStart === -1
     ? lines.concat(lines[lines.length - 1] === '' ? [] : [''], wantedLines)
-    : lines.slice(0, start).concat(wantedLines, lines.slice(end))
+    : lines.slice(0, gmSectionStart).concat(wantedLines, lines.slice(gmSectionEnd))
 
   const newText = newLines.join('\n')
   if (newText !== text) {
     const tmp = `${configPath}.tmp.${process.pid}`
     fs.writeFileSync(tmp, newText)
     fs.renameSync(tmp, configPath)
-    console.log(`registered gm MCP server in ${configPath}${start !== -1 ? ' (replaced existing table)' : ''}`)
+    console.log(`registered gm MCP server in ${configPath}${gmSectionStart !== -1 ? ' (replaced existing table)' : ''}`)
   }
 }
 
@@ -193,23 +199,16 @@ function installRunner() {
   const installSh = path.join(pkgRoot, 'install.sh')
   const installPs1 = path.join(pkgRoot, 'install.ps1')
 
-  if (process.platform === 'win32') {
-    if (fs.existsSync(installPs1)) {
-      runDirect('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
-    } else {
-      runDirect('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
-    }
-  } else {
-    if (fs.existsSync(installSh)) {
-      run('sh', [installSh, 'spool'])
-    } else {
-      run('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'])
-    }
+  if (IS_WINDOWS) {
+    if (fs.existsSync(installPs1)) return runChild('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
+    return runChild('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
   }
+  if (fs.existsSync(installSh)) return runChild('sh', [installSh, 'spool'], { shell: IS_WINDOWS })
+  runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'], { shell: IS_WINDOWS })
 }
 
 if (!mcpOnly) {
-  run('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'])
+  runChild('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'], { shell: IS_WINDOWS })
 }
 await vendorMcpBundle()
 registerOtherHosts()
