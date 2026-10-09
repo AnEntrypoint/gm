@@ -348,10 +348,9 @@ the two differ, the stricter rule applies.
 - **Launch.** Split the work into independent slices before you dispatch. Send
   every slice of one wave in one tool-call block. Each slice gets its own
   SESSION_ID and the brick-wall opener from Section 1.
-- **Brief.** Every subagent brief has four fields, in this order: the brick-wall opener
-  (Section 1), the heartbeat step verbatim ("write .gm/pool/<name>.live on start,
-  delete it on finish"), its own SESSION_ID, and one call. A brief without the
-  heartbeat step is refused, so every spawn is countable.
+- **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
+  skill file holds the procedure, the codeinsight-first rule and the witness rules, so
+  the brief adds no prose.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
   The only stops are a spawn refusal and a headroom stop. Headroom is read before

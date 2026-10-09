@@ -20,6 +20,10 @@ and stop.
 
 ## Procedure
 
+Code questions: `codeinsight` (`callers`/`impact`) first, then `codesearch`. `Read`
+only a located path.
+
+
 1. Read the row in full:
 
        node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-list --body '{"session_id":"<session>","id":"<row>"}' --cwd /config/workspace/gm
@@ -34,10 +38,12 @@ and stop.
 
        node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the live reply or the served text line that proves the change>"}' --cwd /config/workspace/gm
 
-6. If the change cannot be witnessed, or the row is wrong, do not resolve it. Report
-   BLOCKED with the reason.
+6. If the change cannot be witnessed, or the row is wrong, revert every edit you made:
+   replace your new text with the original text exactly. Then do not resolve the row.
+   Report BLOCKED with the reason.
 7. Read the `prd-resolve` reply. If `witness_dispatch_id_verified` is `false`, the
-   row is not resolved: report BLOCKED and name the reply.
+   row is not resolved: revert your edits as in step 6, and report BLOCKED and name
+   the reply.
 
 ## Output
 
