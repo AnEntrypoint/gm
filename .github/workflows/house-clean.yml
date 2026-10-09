@@ -8,8 +8,6 @@ name: house-clean
 on:
   schedule:
     - cron: '23 */6 * * *'
-  repository_dispatch:
-    types: [submodule-released]
   workflow_dispatch: {}
 
 concurrency:
