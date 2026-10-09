@@ -72,9 +72,9 @@ This is a well understood, long-horizon task.
 Instead of questioning the user, record them as mutables, and use exhaustive research to reach
 the most obvious conclusions, if observability needs to be increased immediately roll out more
 sophisticated tooling to get the insight required, not making any assumptions is non-negotiable,
-all internal process questions must be exhaustively answered, use multiple sessions if needed,
-orchestrate as many parallel subagents over as many waves of workflow required to reach the
-objective as described by the user's instruction. Additional steps that are in-spirit should
+every internal process question shall be exhaustively answered, using multiple sessions if needed,
+the agent shall orchestrate as many parallel subagents over as many waves of workflow as required to reach the
+objective as described by the user's instruction. Additional steps that are in-spirit shall
 be additionally planned and executed since they are an implicit part of the instruction, maximal expansion
 of planning steps and execution of all remaining steps from previous plans, and all new plans that arise,
 before the required threshold for completion. Section 1b is this paragraph made mechanical: a
@@ -144,10 +144,9 @@ return every time.
 Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
-**Start, never install -- and never a second one.** A dead watcher is either a
-`ts` stale >5min with no future `busy_until`, or a status `pid` that the host
-proves is absent (`kill -0 <pid>` on Unix; `Get-Process -Id <pid>` on
-PowerShell). A recent timestamp only proves that a process wrote once; it does
+**Start, never install -- and never a second one.** A dead watcher is one whose
+status `ts` is stale with no future `busy_until`, or whose status `pid` is proven
+absent. A recent timestamp only proves that a process wrote once; it does
 not prove that process still exists. In either verified-dead case, the
 already-installed local binary is not running. Start it --
 `~/.gm-tools/agentplug-runner spool`
@@ -192,26 +191,18 @@ or a contended daemon legitimately takes minutes, not seconds. Condition-poll it
 competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
-were served and answering normally -- `git_log` among them. Where served (per
-the brick wall above): `codesearch`, `grep` (literal `path:line` scan), `codeinsight` (structure questions over a
-symbol index that covers the whole tree: `{}` for the overview, then `outline`,
-`find`, `callers`, `impact`, `tests`, `imports`, `cycles`, `coupling`, `complexity`,
-`duplicates`, `orphans` via `{"action": ...}`), git verbs (never
-raw `git` via Bash, gated `deviation.bash-git-bypass`), `recall`, `fetch`,
-`exec_js`, `memorize-fire`,
-`prd-add`/`prd-resolve`/`mutable-add`/`mutable-resolve`, `transition`,
-`phase-status`, `filter`. `git_pull {remote?, branch?, ff_only?}` performs the ordinary fetch-and-integrate path. `git_stash {include_untracked?, message?, paths?}` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop {ref?}` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop {ref?}` removes it afterwards. `git_stash_list {}` lists shelves. All stash verbs refuse unknown fields. `git_checkout {ref, create?}` switches branch; `git_checkout {paths:[...], ref?}` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
+were served and answering normally -- `git_log` among them. Where served: the verb set is the registry that `dispatch health` answers. The agent shall never run raw `git` via Bash (gated `deviation.bash-git-bypass`). `git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
 add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
 another agent shares the worktree, pass `paths:[...]` to `git_commit`/
 `git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
 and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the
 sanctioned push of a commit you already made over someone else's dirt.
-`git_log {limit?, range|ref|rev?, path?, paths?}` keeps only commits touching the
-pathspecs. `git_diff {range|ref|rev?, staged?, stat?, path?, paths?}`.
-`git_show {rev?, path?, paths?, stat?}`: `path` prints that file at the revision
+`git_log` with `paths` keeps only commits touching those pathspecs. `git_diff`
+scopes the same way.
+`git_show`: `path` prints that file at the revision
 (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
 refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
-`git_status {paths?, summary?, limit?}` scopes to those pathspecs;
+`git_status` scopes to `paths`;
 `summary: true` returns counts by status plus the first `limit` (default 20)
 `first_paths`, and `limit` alone caps each status list (`truncated_totals` names
 the real totals).
@@ -232,8 +223,7 @@ budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds`
 sets the requested polling budget. Every MCP call caps applied polling at 240 s
 without changing the native execution limit. A polling timeout returns the original
 task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
-A server that must
-outlive the call is started detached: `spawn(process.execPath, [script], {detached:
+When a server must outlive the call, it is started detached: `spawn(process.execPath, [script], {detached:
 true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
 stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
 (`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000
@@ -242,11 +232,7 @@ text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can 
 read directly. Use a language verb such as `bash` only when the request
 specifically needs shell syntax.
 
-**One row per dispatch.** `prd-add`/`mutable-add` take a single
-`{"id","subject"}` row, never a batched `{"items":[...]}` -- a batched body is
-rejected with a validation error, costing a round trip. Batch by writing several
-numbered in-files in the SAME tool-call block instead; that is what "batch
-independent dispatches" means here.
+**Batching.** Independent dispatches go in one tool-call block, one row per `prd-add`/`mutable-add` call; a batched `{"items":[...]}` body is rejected, and the single-row shape is enforced by the verb.
 
 **The one exception: runtime-state files.** Spool response JSON
 (`.gm/exec-spool/out/*.json`), `.status.json`, `.turn-summary.json`, and this
@@ -269,9 +255,7 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere, no exceptions -- not written, not edited, not
-left on disk even if a project already has one (remove any found, same turn,
-no separate approval needed). A test suite is never evidence of anything and is
+No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any found, same turn, no separate approval needed. A test suite is never evidence of anything and is
 never consulted, run, or cited, even alongside other evidence: a test authored
 in the same pass as its fix reliably shares the fix's own misreading of the
 request, so "tests pass" only proves the code agrees with itself. Verification
@@ -281,9 +265,7 @@ and read the real output, re-derived from the request's own words each time,
 never from the diff just written. Reasoning is execution, not monologue.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
-every body -- verbs that validate their body fields accept `SESSION_ID`,
-`session_id` and `sessionId` alike, so the spelling written here dispatches as
-written. Batch independent dispatches; never edit one file twice per block.
+every body. Batch independent dispatches; never edit one file twice per block.
 
 Use JIT-execution to your advantage: batch up exhaustive checks to rule out many things
 at the same time, use flow and error control to make the process predictable
@@ -332,8 +314,8 @@ count, any names, and replaces defaults wholesale -- no merge.
 **Terminal is what the graph declares.** Its own gates plus
 `prd_pending_count=0`, not a name match.
 
-**Gates are read, not inferred.** Never assume push, CI,
-submodules or residual-scan guard any edge. Read the `policy` block too.
+**Gates are read, not inferred.** The agent shall never assume that push, CI,
+submodules or residual-scan guard any edge. The agent shall also read the `policy` block.
 
 **A denial is authoritative.** Satisfy the named predicate, re-dispatch. Never
 route around it.
