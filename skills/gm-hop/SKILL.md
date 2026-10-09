@@ -1,25 +1,25 @@
 ---
 name: gm-hop
-description: Self-contained gm node traversal. One hop applies one book's discipline to the gm project: it changes what the discipline calls for, records the findings it cannot finish as verified PRD rows, and nominates the next node from the graph's edges with the rhetoric that carries the argument on. Invoke with args "node=<ID>; book=<title>; author=<author>; rhetoric=<text>; visited=<IDs>; depth=<n>".
+description: Self-contained gm node traversal. One hop advocates one book's discipline across the whole gm project at maximum extent: it audits every surface against every claim of the discipline, changes what it can witness, records every remaining gap as a verified PRD row, and nominates the next node from the graph's edges by the biggest need it found, with the rhetoric for the handover. Invoke with args "node=<ID>; book=<title>; author=<author>; rhetoric=<text>; visited=<IDs>; depth=<n>".
 ---
 
 # gm-hop
 
-One hop is one visit to one principle node of the gm graph. Each principle node is a
-book and its author. A hop applies that book's discipline to the project, leaves
-something checkable behind, and hands the argument to the next node. Everything a hop
-needs is in this file: no other skill is loaded and no other agent is spawned for
-the hop's own work.
+One hop advocates one book's discipline for the whole gm project. The node is a book and
+its author. Advocate it as its author would: state its claims, then test every surface of
+the project against every claim, and do not stop at the first gap. Every gap the discipline
+can name becomes a PRD row. The hop ends by handing the biggest need it found to the next
+node, with rhetoric that carries the argument on.
 
 ## Arguments
 
 - `node=<ID>`: the principle node you are visiting, for example `JTBD`.
 - `book=<title>`: the work that states the discipline.
 - `author=<author>`: its author. If the node names none, use `unattributed`.
-- `rhetoric=<text>`: the argument handed over by the previous hop, with its open question.
-  Empty for the first hop of a chain.
+- `rhetoric=<text>`: the argument handed over by the previous hop, with its open question. Empty for
+  the first hop of a chain.
 - `visited=<IDs>`: nodes already visited in this walk, separated by `,`. Never nominate one of them.
-- `depth=<n>`: hops before this one in the chain. Empty means 1.
+- `depth=<n>`: hops before this one. Empty means 1.
 
 If `node` or `book` is missing, answer `VERDICT: NOT-APPLICABLE` naming the field, and stop.
 
@@ -29,72 +29,82 @@ Dispatch gm verbs with the bundled CLI from `/config/workspace/gm`:
 
     node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --body '<json>' --cwd /config/workspace/gm
 
-Use your own SESSION_ID in every body. Code questions: `codeinsight` (`callers`/`impact`)
-first, then `codesearch` with `mode:"literal"`. `Read` only a located path. Never use raw
-`grep`, `find` or `git` in Bash.
+Use your own SESSION_ID in every body. Code questions: `codeinsight` (`callers`/`impact`) first,
+then `codesearch` with `mode:"literal"`. `Read` only a located path. Never use raw `grep`, `find`
+or `git` in Bash.
 
 ## Step 1: take up the rhetoric
 
-If `rhetoric` is set, argue its open question from this book's discipline, in one
-paragraph, in the author's terms. If it is empty, open with the weakest claim you can find
-in the project for this discipline.
+If `rhetoric` is set, argue its open question from this book's discipline, in one paragraph, in
+the author's terms. If it is empty, open with the weakest claim you can find for this discipline.
 
-## Step 2: find where the discipline changes the project
+## Step 2: state the discipline's claims
 
-Use `codesearch` to find the places the discipline applies: skill prose, served prose
-in `.gm/instructions/`, scripts, code under `gm-mcp/`, `gm-plugkit/`, `bin/`, and docs.
-Read only the located lines. If the discipline cannot touch the project, answer
-NOT-APPLICABLE with one line of reason and write `NEXT: none`.
+List the claims this book makes that can be tested on a project. Write each as one checkable
+sentence in the author's terms, with its test. Aim for every claim the book makes that bears on
+software, documents or agent workflows. A claim with no test is not yet a claim.
 
-## Step 3: verify before you write
+## Step 3: audit every surface
 
-For every finding, print the cited lines and confirm the defect text is there:
+Enumerate the project's surfaces with `codesearch`: `skills/*/SKILL.md`, `.gm/instructions/*.md`,
+`docs/*.md`, `AGENTS.md`, `README.md`, `SKILLS.md`, `scripts/`, `bin/`, `install.sh`, `install.ps1`,
+`gm-mcp/`, `gm-plugkit/`. For each claim, test each surface. Read only the located lines. A
+violation, or a place the claim is missing where it applies, is a finding.
+
+## Step 4: verify every finding before you write it
+
+For each finding, print the cited lines and confirm the defect text is there:
 
     sed -n 'START,ENDp' /config/workspace/gm/<file>
 
-If the text is absent, fix the citation or drop the finding. Stale rows block executors, so
-a row that cites absent text is never written.
+If the text is absent, fix the citation or drop the finding. A row that cites absent text is never
+written, because stale rows block executors.
 
-## Step 4: change what you can, witness it
+## Step 5: change what you can, witness it
 
-If a finding is a change you can finish now, and its file has no uncommitted changes from
-another writer (`git status --short <file>` through `git_status`), make it with exact-match
-Edit. Witness the change through its live entry point, read the reply, and keep its
-`dispatch_id`. A change without a live witness is reverted.
+A finding you can close now, in one file with no uncommitted changes from another writer
+(`git_status` with `paths`), you change with exact-match Edit. Witness the change through its live
+entry point, read the reply, and keep its `dispatch_id`. A change without a live witness is
+reverted.
 
-## Step 5: record what you cannot finish as PRD rows
+## Step 6: record every remaining gap as a PRD row
 
-Every remaining verified finding becomes one PRD row, one dispatch per row. These rows
-are executed by the `gm-exec` executor, which runs the nine stages:
+Every other verified finding becomes one PRD row, one dispatch per row. There is no cap: record
+every gap the discipline names. These rows are closed by the `gm-exec` run, which holds the nine
+stages, mutables and witnesses:
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","subject":"<the work, with file and line>"}' --cwd /config/workspace/gm
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","subject":"<the gap: file, lines, the claim it breaks, the change>"}' --cwd /config/workspace/gm
 
-`<TAG>` is the last six characters of your SESSION_ID. Before each `prd-add`, read the id
-with `prd-list` and `{"id":...}`: an existing id is overwritten, so pick the next free `<n>`.
-Read each row back after you add it.
+`<TAG>` is the last six characters of your SESSION_ID. Before each `prd-add`, read the id with
+`prd-list` and `{"id":...}`, because an existing id is overwritten. Read each row back after you
+add it. A question you cannot answer by a run is a mutable: `mutable-add`, so the executor can close
+it by a live run.
 
-A question the row cannot answer is a mutable. Record it with `mutable-add`, so the executor
-can close it by a live run.
+Resolve a row only with `prd-resolve` and `witness_dispatch_id` set to the dispatch id of a live
+witness. If `witness_dispatch_id_verified` is `false`, the row stays pending, and you say so.
 
-## Step 6: resolve only with a witness
+## Step 7: find the biggest need
 
-Resolve a row only with `prd-resolve`, `witness_dispatch_id` set to the dispatch id of your
-live witness. If `witness_dispatch_id_verified` is `false`, the row stays pending and you
-say so.
+Group your rows by surface, and by the claim each one breaks. The biggest need is the surface or
+claim with the most rows that no candidate discipline already covers, or the single gap with the
+largest effect on the project. Name it in one sentence with its row ids.
 
-## Step 7: nominate the next node
+## Step 8: nominate the next node by that need
 
-Every node has edges to other nodes, and those edges are the candidates. List the outgoing
-edges of your node from the graph:
+List the outgoing edges of your node from the graph. Those are the candidates:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NODE>
 
-Drop every candidate listed in `visited`. From the rest, pick the one whose discipline attacks
-the weakest claim you found. Its label gives its book and author. Write its rhetoric in one or
-two sentences: the open question, and the argument it must take up.
+Drop every candidate in `visited`. From the rest, pick the candidate whose discipline attacks the
+biggest need from Step 7. If no candidate attacks it, pick the one that attacks the next biggest.
 
-Then list that candidate's own outgoing edges, dropping `visited` and your node, and pass
-them as its candidates:
+Write the rhetoric for the handover, in at most three sentences:
+
+- the biggest need, with its row ids;
+- the open question the next discipline must answer about it;
+- what the next hop should advocate across the project, and the surface to start from.
+
+Then list the chosen candidate's outgoing edges, dropping `visited` and your node, as its candidates:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_NODE>
 
@@ -106,16 +116,17 @@ Do not spawn when `depth` is 6 or more. At depth 6 the chain ends: write `NEXT: 
 
 ## Useful work
 
-A hop is useful only if it leaves something checkable: a witnessed change, or one or more
-verified PRD rows. A hop that leaves neither has failed. Say why, and write `NEXT: none`.
-A hop that did useful work but has no candidate left writes `NEXT: none, no candidates`, and
-the orchestrator takes over the chain.
+A hop is useful only if it leaves something checkable: a witnessed change, or one or more verified
+PRD rows. A hop that leaves neither has failed. Say why, and write `NEXT: none`. A hop that did useful
+work but has no candidate left writes `NEXT: none, no candidates`, and the orchestrator takes over.
 
 ## Output
 
-At most 100 words:
+At most 120 words:
 
     VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
+    CLAIMS: <claims tested, surfaces audited>
     CHANGED: <file and witness dispatch id, or none>
-    ROWS: <id and cited line of each verified row, or none>
+    ROWS: <count, and the id and cited line of each row>
+    NEED: <the biggest need, in one sentence>
     NEXT: <NEXT_NODE and depth, or none with the reason>
