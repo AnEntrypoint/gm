@@ -1,6 +1,6 @@
 ---
 name: gm-hop
-description: Self-contained gm node traversal. One hop advocates one book's discipline across the whole gm project at maximum extent: it audits every surface against every claim of the discipline, changes what it can witness, records every remaining gap as a verified PRD row, and nominates the next node from the graph's edges by the biggest need it found, with the rhetoric for the handover. Invoke with args "node=<ID>; book=<title>; author=<author>; rhetoric=<text>; visited=<IDs>; depth=<n>".
+description: Self-contained gm node traversal. One hop advocates one book's discipline across the whole gm project at maximum extent. It audits every surface against every claim of the discipline, changes what it can witness, records every remaining gap as a verified PRD row, and nominates the next node from the graph's edges by the biggest need it found, with the rhetoric for the handover. Invoke with args as one JSON object, for example {"node":"<ID>","book":"<title>","author":"<author>","rhetoric":"<text>","visited":["<IDs>"],"depth":<n>,"session":"<SESSION_ID>"}.
 ---
 
 # gm-hop
@@ -13,21 +13,29 @@ node, with rhetoric that carries the argument on.
 
 ## Arguments
 
-- `node=<ID>`: the principle node you are visiting, for example `JTBD`.
-- `book=<title>`: the work that states the discipline.
-- `author=<author>`: its author. If the node names none, use `unattributed`.
-- `rhetoric=<text>`: the argument handed over by the previous hop, with its open question. Empty for
-  the first hop of a chain.
-- `visited=<IDs>`: nodes already visited in this walk, separated by `,`. Never nominate one of them.
-- `depth=<n>`: hops before this one. Empty means 1.
+The args string is one JSON object with the keys below. Parsing does not split on `;` or `=`, so a title or rhetoric may contain them.
 
-If `node` or `book` is missing, answer `VERDICT: NOT-APPLICABLE` naming the field, and stop.
+- `"node"` (string): the principle node you are visiting, for example `JTBD`. It must be a node of kind
+  `principle` in `skills/dream-rsi/gm-graph.json`; a gate, terminal, phase or tension node is refused.
+- `"book"` (string): the work that states the discipline.
+- `"author"` (string): its author. If the node names none, use `unattributed`.
+- `"rhetoric"` (string): the argument handed over by the previous hop, with its open question. Empty for
+  the first hop of a chain.
+- `"visited"` (array of strings): nodes already visited in this walk. Never nominate one of them.
+- `"depth"` (integer): hops before this one. Absent means 1.
+- `"session"` (string): the hop's own SESSION_ID, bound to every dispatch body it writes (`prd-add`,
+  `mutable-add`, `prd-resolve`).
+
+An args string that is not one JSON object is refused before any dispatch: the hop answers `VERDICT: NOT-APPLICABLE` naming the validation error (`args is not one JSON object: <error>`), and writes no rows.
+
+If `node`, `book` or `session` is missing, or `node` is not a principle node, answer `VERDICT: NOT-APPLICABLE` naming the field, and stop.
+A hop without `session` writes no rows.
 
 ## Harness
 
-Dispatch gm verbs with the bundled CLI from `/config/workspace/gm`:
+Dispatch gm verbs with the bundled CLI from the invoking session's project root:
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --body '<json>' --cwd /config/workspace/gm
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --body '<json>' --cwd <invoking project root>
 
 Use your own SESSION_ID in every body. Code questions: `codeinsight` (`callers`/`impact`) first,
 then `codesearch` with `mode:"literal"`. `Read` only a located path. Never use raw `grep`, `find`
@@ -73,7 +81,7 @@ Every other verified finding becomes one PRD row, one dispatch per row. There is
 every gap the discipline names. These rows are closed by the `gm-exec` run, which holds the nine
 stages, mutables and witnesses:
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","subject":"<the gap: file, lines, the claim it breaks, the change>"}' --cwd /config/workspace/gm
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-add --body '{"session_id":"<your SESSION_ID>","id":"<NODE>-<TAG>-<n>","subject":"<the gap: file, lines, the claim it breaks, the change>"}' --cwd <invoking project root>
 
 `<TAG>` is the last six characters of your SESSION_ID. Before each `prd-add`, read the id with
 `prd-list` and `{"id":...}`, because an existing id is overwritten. Read each row back after you
@@ -91,26 +99,26 @@ largest effect on the project. Name it in one sentence with its row ids.
 
 ## Step 8: nominate the next node by that need
 
-List the outgoing edges of your node from the graph. Those are the candidates:
+List the outgoing edges of your node from the graph. Those are the edge candidates:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NODE>
 
-Drop every candidate in `visited`. From the rest, pick the candidate whose discipline attacks the
-biggest need from Step 7. If no candidate attacks it, pick the one that attacks the next biggest.
+Drop every edge candidate in `visited`. From the rest, pick the edge candidate whose discipline attacks the
+biggest need from Step 7. If no edge candidate attacks it, pick the one that attacks the next biggest.
 
 Write the `next_choice.why` for the handover, in at most three sentences. The successor receives it
 verbatim as its `rhetoric`:
 
 - the biggest need, with its row ids;
 - the open question the next discipline must answer about it;
-- what the next hop should advocate across the project, and the surface to start from.
+- what the next hop shall advocate across the project, and the surface to start from.
 
-Then list the chosen candidate's outgoing edges, dropping `visited` and your node, as its candidates:
+Then list the chosen candidate's outgoing edges, dropping `visited` and your node, as its edge candidates:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_NODE>
 
 Spawn the successor yourself with the Agent tool. Its brief is one call and nothing else:
-`Skill(skill="gm-hop", args="node=<NEXT_NODE>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<next_choice.why>; visited=<visited plus your node>; depth=<depth+1>")`.
+`Skill(skill="gm-hop", args='{"node":"<NEXT_NODE>","book":"<NEXT_BOOK>","author":"<NEXT_AUTHOR>","rhetoric":"<next_choice.why>","visited":["<visited plus your node>"],"depth":<depth+1>,"session":"<SESSION_ID of the successor>"}')`.
 Then end. If you cannot name a successor, write `next_choice: none, <reason>`; the orchestrator
 names one for you from your node's edges (skills/gm/SKILL.md 1c, Successor spawn).
 
@@ -120,12 +128,13 @@ At depth 6 or more the chain ends: write `next_choice: none, depth limit`.
 
 A hop is useful only if it leaves something checkable: a witnessed change, or one or more verified
 PRD rows. A hop that leaves neither has failed. Say why, and write `next_choice: none`. A hop that did
-useful work but has no candidate left writes `next_choice: none, no candidates`, and the orchestrator
+useful work but has no edge candidate left writes `next_choice: none, no candidates`, and the orchestrator
 takes over.
 
 ## Output
 
-At most 120 words:
+At most 120 words. VERDICT is derived, never chosen: NOT-APPLICABLE when a field is missing or `node` is not a principle node; VIOLATED
+when ROWS names one or more rows or CHANGED names a witnessed change; HOLDS when both are none.
 
     VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
     CLAIMS: <claims tested, surfaces audited>
