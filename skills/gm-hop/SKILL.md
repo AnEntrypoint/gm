@@ -98,8 +98,8 @@ List the outgoing edges of your node from the graph. Those are the candidates:
 Drop every candidate in `visited`. From the rest, pick the candidate whose discipline attacks the
 biggest need from Step 7. If no candidate attacks it, pick the one that attacks the next biggest.
 
-Write the `next_choice.why` for the handover, in at most three sentences. The orchestrator passes it
-verbatim to the successor as `rhetoric`:
+Write the `next_choice.why` for the handover, in at most three sentences. The successor receives it
+verbatim as its `rhetoric`:
 
 - the biggest need, with its row ids;
 - the open question the next discipline must answer about it;
@@ -109,9 +109,10 @@ Then list the chosen candidate's outgoing edges, dropping `visited` and your nod
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_NODE>
 
-Do not spawn a successor. Your receipt nominates it, and the orchestrator alone launches it
-(skills/gm/SKILL.md 1c, Successor owner) with the brief
-`node=<NEXT_NODE>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<next_choice.why>; visited=<visited plus your node>; depth=<depth+1>`.
+Spawn the successor yourself with the Agent tool. Its brief is one call and nothing else:
+`Skill(skill="gm-hop", args="node=<NEXT_NODE>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<next_choice.why>; visited=<visited plus your node>; depth=<depth+1>")`.
+Then end. If you cannot name a successor, write `next_choice: none, <reason>`; the orchestrator
+names one for you from your node's edges (skills/gm/SKILL.md 1c, Successor spawn).
 
 At depth 6 or more the chain ends: write `next_choice: none, depth limit`.
 

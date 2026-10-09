@@ -14,7 +14,7 @@ and `Read` only a located path."**
 
 - Never ask permission for a read-only step (`objdump`, `codesearch`, reading a log, a diagnostic run). Run it, then report the result.
 - Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
-- An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the only exit is the terminal state with `prd_pending_count=0`, then `Skill(skill="gm-continue")`.
+- An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the exit guard, with its world-scope exception, is the walk loop in Section 1c.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
 - Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
@@ -114,18 +114,9 @@ missing, the runtime is not installed: run the repo's `install.sh` (or
 `install.ps1`) before any gm work. A verb you cannot run is named in your reply
 with the reason; do not drop it silently.
 
-Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
-`.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate
-first. **Write that in-file atomically: body to a sibling temp name, then
-`mv`/`Move-Item` it onto `<N>.txt`.** A plain `>` redirect creates the file empty
-and fills it a moment later; a claim landing in that window dispatches a torn
-body and answers with a validation error naming a field you did supply (live:
-two dispatches answered `query required`, same `request_fingerprint`, for bodies
-that carried a `query`). A rename is atomic, so the file only ever appears
-complete. `<N>` MUST be `<session_id>-<N>`, never a bare integer: the daemon keys
-in-flight claims by literal `(verb, N)` with no per-session partition, so two
-sessions picking `1`, `2`, `3` silently read each other's responses. State lives
-on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
+The spool file protocol (request and response paths, the atomic in-file write,
+and the session-prefixed `<N>`) is in `skills/gm/spool-adapter.md`; follow it for
+every spool write. State lives on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
 response body, never in context. Phase mismatch resolves to the fresh
 `instruction` response.
 
@@ -144,10 +135,9 @@ Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; ca
 status `ts` is stale with no future `busy_until`, or whose status `pid` is proven
 absent. A recent timestamp only proves that a process wrote once; it does
 not prove that process still exists. In either verified-dead case, the
-already-installed local binary is not running. Start it --
-`~/.gm-tools/agentplug-runner spool`
-(PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`) --
-fire-and-forget, then write the first verb immediately. A `ts` that is merely
+already-installed local binary is not running. Start it as the spool adapter
+document (`docs/verbs.md`, Dispatching) gives, then write the first verb
+immediately. A `ts` that is merely
 recent-but-not-this-second is a BUSY watcher, not a dead one: its heartbeat
 oscillates while one dispatch occupies it, and starting another process then
 gives the project two sweepers that cannot see each other's claims, so each
@@ -163,8 +153,8 @@ that update path never touches this skill or this session. A future
 sleep, never a death declaration. `dispatch_orphaned` = bare re-dispatch once
 `ts` is fresh; changing `sweeping_pid` is a respawn, not a stuck loop.
 
-**If the binary is entirely absent** (`~/.gm-tools/agentplug-runner` does not
-exist -- a genuinely new machine, not a dead watcher), that is a one-time
+**If the binary is entirely absent** (the runner binary that the spool adapter
+document names does not exist -- a genuinely new machine, not a dead watcher), that is a one-time
 human setup step, not something to dispatch from inside a task: say so and
 stop; point at the project's own install docs rather than fetching or piping
 anything yourself.
@@ -263,14 +253,6 @@ Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Batch independent dispatches; never edit one file twice per block.
 
-Use JIT-execution to your advantage: batch up exhaustive checks to rule out many things
-at the same time, use flow and error control to make the process predictable
-and use many commands in the execution space as your batching process, to save
-as many turns as you can, think laterally to allow this to help you expand
-on and maximize the solution-bearing output of your calls. Orient this processing
-around optimizing the wall clock time you need to perform the exhaustive troubleshooting
-you also need
-
 Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
@@ -348,8 +330,16 @@ the two differ, the stricter rule applies.
   the same turn.
 - **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
   nodes, count your live workers, launch one worker per open row or node until
-  the ceiling, wait for completion notices, then repeat. The loop ends only at
-  the terminal state with `prd_pending_count=0`.
+  the ceiling, wait for completion notices, then repeat. This loop is the exit
+  guard: it ends only at the terminal state with `prd_pending_count=0`, then
+  `Skill(skill="gm-continue")`. The one other end of a turn is a world-scoped
+  one-way door (Section 4).
+- **Successor spawn.** Each hop spawns its own successor from its `next_choice` and
+  `next_choice.why`, with the same Skill call it was itself spawned with. The orchestrator
+  is the fallback: when a hop returns `next_choice: none`, or returns without one, the
+  orchestrator names the successor from that node's outgoing edges and spawns it. Only
+  the orchestrator counts `live` against the `ceiling` and runs the headroom check, so
+  a fallback spawn is placed by it.
 - **Single session.** Stay single-session only for one focused mechanical edit.
   Any other work with two or more independent slices fans out; never split one
   small task artificially.
@@ -375,6 +365,8 @@ The walk loop, run on every tick and every completion:
    untraversed node.
 4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
 
+A hop spawns its own successor (1c, Successor spawn), passing its `next_choice.why` as the
+successor's `rhetoric`; the orchestrator spawns a successor only when none was named.
 A slot is never left empty while a pending row or an untraversed node remains. Executors
 edit with exact-match Edit on the file as it is now, so rows naming the same file may run
 together when they name different lines. The orchestrator delivers what the subagents

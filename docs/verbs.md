@@ -31,6 +31,16 @@ Plain-text-body verbs take `raw_body` instead of `body` (see "Execution" below).
 Through the spool directly: write the body to `.gm/exec-spool/in/<verb>/<N>.txt` atomically, then
 read `.gm/exec-spool/out/<verb>-<N>.json`. Prefix `N` with a session id.
 
+### Starting the watcher
+
+Start the installed runner detached and fire-and-forget. Do not wait on it; write the first verb
+immediately. The runner binary lives at `~/.gm-tools/agentplug-runner`.
+
+- POSIX: `~/.gm-tools/agentplug-runner spool`
+- PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`
+
+When to start one is owned by `skills/gm/SKILL.md` (the verified-dead rule).
+
 `cwd` selects the project. `cwd` defaults to the process working directory, and gm resolves the
 project root from it with `git rev-parse --show-toplevel`. Where cwd is not itself inside a git
 repository, pass `git_root_override` in the body to pin the root.
