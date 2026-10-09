@@ -14,6 +14,8 @@ and its author. Use the discipline as its author would, and nominate the next no
 - `book=<title>`: the work that states the discipline.
 - `author=<author>`: its author. Empty if none.
 - `rhetoric=<text>`: the argument handed over by the previous hop.
+- `candidates=<list>`: the nodes this node can go to, as `ID|book|author` entries
+  separated by `;`. Only these are valid successors.
 
 ## Do
 
@@ -30,12 +32,16 @@ and its author. Use the discipline as its author would, and nominate the next no
 
 ## Nominate
 
-Choose the next principle node from the graph (`kind` is `principle` in
-`skills/dream-rsi/gm-graph.json`). Pick the one whose discipline attacks what you
-found weakest. Write its rhetoric in one or two sentences. Then spawn it with the
-Agent tool. Open the brief with the brick-wall opener from the gm skill, then:
+Pick the successor only from `candidates`. The orchestrator delivers that list with
+the call. Write its rhetoric in one or two sentences. To hand the next hop its own candidates,
+look up that node's outgoing edges with the command below, and pass them along:
 
-    Skill(skill="gm-hop", args="node=<NEXT_ID>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<NEXT_RHETORIC>")
+    node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_ID>
+
+Then spawn the successor with the Agent tool. Open the brief with the brick-wall
+opener from the gm skill, then one call:
+
+    Skill(skill="gm-hop", args="node=<NEXT_ID>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<NEXT_RHETORIC>; candidates=<NEXT_CANDIDATES>")
 
 ## Output
 
