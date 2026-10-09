@@ -7,7 +7,7 @@ description: The primary driver for every coding, refactoring, debugging, or eng
 
 **Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this;
 code questions go to codeinsight (`callers`/`impact`) first, then the code-search port,
-and `Read` only a located path."**
+and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
 ## Autonomy (read first; overrides any urge to ask)
 
@@ -15,6 +15,7 @@ and `Read` only a located path."**
 - Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
 - An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the exit guard, with its world-scope exception, is the walk loop in Section 1c.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
+- Work the user has already asked for, or a plan they have already approved, is go-ahead. Do it without asking again, and do not restate it as a question. "Go ahead" on a named step means run that step, then the next step it implies.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
 - Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
 - A delivery is witnessed by separate read dispatches, never by the `git_finalize` command that makes it: `git_show {rev}` of the pushed sha for the commit, and `ci-status {sha}` for CI state, where status `unknown` is reported as unknown, not as success. `git_finalize {message, paths}` is the command only, not a witness.
@@ -78,9 +79,9 @@ Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; ca
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
 **Start, never install -- and never a second one.** A dead watcher is one whose
-status `ts` is stale with no future `busy_until`, or whose status `pid` is proven
-absent. A recent timestamp only proves that a process wrote once; it does
-not prove that process still exists. In either verified-dead case, the
+status `ts` is more than 300000 ms old with no future `busy_until`, or whose status
+`pid` is proven absent. A recent timestamp only proves that a process wrote once, so
+the timestamp alone never proves liveness. In either verified-dead case, the
 already-installed local binary is not running. Start it as
 `skills/gm/spool-adapter.md` gives, then write the first verb
 immediately. A `ts` that is merely
@@ -90,8 +91,8 @@ gives the project two sweepers that cannot see each other's claims, so each
 one's orphan sweep answers `dispatch_orphaned` for the other's running work and
 deletes the claim under it. That is the `dispatch_orphaned` storm with a rotating
 `sweeping_pid`, and it is self-inflicted -- seven concurrent watchers were
-observed on one project this way. A stale timestamp or a proven-absent status
-PID is the only license to start one. This is launching an existing local
+observed on one project this way. A proven-absent status PID is the only license
+to start one. This is launching an existing local
 executable, nothing more; it reaches no network. The runner updates itself in
 the background on its own schedule once running (binary and plugins alike) --
 that update path never touches this skill or this session. A future
@@ -123,21 +124,7 @@ or a contended daemon legitimately takes minutes, not seconds. Condition-poll it
 competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
-were served and answering normally -- `git_log` among them. Where served: the verb set is the registry that `dispatch health` answers. The agent shall never run raw `git` via Bash (gated `deviation.bash-git-bypass`). `git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles
-add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When
-another agent shares the worktree, pass `paths:[...]` to `git_commit`/
-`git_finalize`: only those pathspecs are staged, committed and porcelain-gated,
-and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the
-sanctioned push of a commit you already made over someone else's dirt.
-`git_log` with `paths` keeps only commits touching those pathspecs. `git_diff`
-scopes the same way.
-`git_show`: `path` prints that file at the revision
-(same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three
-refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
-`git_status` scopes to `paths`;
-`summary: true` returns counts by status plus the first `limit` (default 20)
-`first_paths`, and `limit` alone caps each status list (`truncated_totals` names
-the real totals).
+were served and answering normally -- `git_log` among them. Where served: the verb set is the registry that `dispatch health` answers. The agent shall never run raw `git` via Bash (gated `deviation.bash-git-bypass`). The git verbs' body shapes and semantics are in `docs/verbs.md`, Git.
 
 Exec body rules (raw body, `timeoutMs`, ESM and `.cjs` scratch files, output truncation, MCP polling caps) are in `docs/verbs.md`, Execution.
 
@@ -157,6 +144,8 @@ walk an entire filesystem uncached and unbounded on every call, where
 `codesearch` is a purpose-built, cached, incremental index -- the ban is a
 resource/blast-radius boundary, not a preference between equivalent tools.
 
+**Unscoped and repeated scans run in a subagent.** A `codesearch` with no `path`, `glob` or `path_glob`, or one you would repeat for the same question, runs in a subagent that returns only the located `path:line` lines. The orchestrator keeps the locations, never the match text.
+
 A `transition` response's `phase_label` field is internal bookkeeping, not a
 dispatch target -- it is never a real `Skill()` name and calling `Skill()` with
 it fails. The entered phase's own served prose (in that same response, or the
@@ -171,8 +160,7 @@ request, so "tests pass" only proves the code agrees with itself. Verification
 is exhaustive manual debugging with live code execution against the real
 system, same turn as the work -- run the actual code path against real state
 and read the real output, re-derived from the request's own words each time, with the expected value recorded as a witness line before the live dispatch; a witness passes only when the observed output matches that recorded line, never from the diff just written. Reasoning is execution, not monologue.
-The only sanctioned driving adapter is live execution through the real entry point:
-each verb is driven by its live dispatch through that one dispatch port (SKILL.md Section 1), and no test file or test suite stands in for it.
+The only sanctioned driving adapter is live execution through the real entry point, and it is the adapter for every port: the dispatch port (each verb driven by its live dispatch, SKILL.md Section 1), the code-search port (`codesearch`), the fetch port (`fetch`) and the state port (the PRD and state verbs). No test file or test suite stands in for any of them.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Never edit one file twice per block.
@@ -188,7 +176,7 @@ defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): 
 
 The `scan_deps` mechanism -- body params, `node_modules` walk bounding, and
 hit-escalation rules for the "HiddenSpawn"-class obfuscated dropper -- is
-served prose at SPECIFY (`gm-config/prose/specify.md`, "Supply-chain scan"),
+served prose at SPECIFY,
 arriving automatically with every SPECIFY-phase `instruction` response; no
 separate lookup needed. Dispatch it on any project's first dependency-install
 this session, and before trusting freshly-cloned/updated `node_modules`. A
@@ -201,10 +189,8 @@ The dispatch layer wrapping the gm graph (every node is served prose) arrives
 automatically with the phase's own
 response: scope-discovery-as-fixed-point, multi-session/multi-agent fan-out,
 shared-transform mapping review, and large-finding-set partition-once at
-SPECIFY (`gm-config/prose/specify.md`, "Scope discovery and fan-out");
-scheduled housekeeping and `memorize-fire` at DECIDE
-(`gm-config/prose/decide.md`, "Housekeeping and memorization are scheduled
-runs"). Section 1b is the opening paragraph above made mechanical: a graph,
+SPECIFY;
+scheduled housekeeping and `memorize-fire` at DECIDE. Section 1b is the opening paragraph above made mechanical: a graph,
 not a mood.
 
 ## 1c. Parallelism contract -- every session that drives a walk
@@ -215,30 +201,45 @@ the two differ, served text wins under section 0 precedence.
 - **Definitions.** Each term is defined here once. Every other mention in this
   skill and in the served `instruction` prose names the term and adds no number.
   - `ceiling`: the N in the latest refusal "Concurrent subagent limit reached. You
-    can run N subagents at once". Until a refusal, the largest wave accepted so
-    far. Found by launching: launch the full wave first, and keep launching while
-    independent work remains until a refusal. Never a constant.
-  - `live`: the lead's own launches minus the completion notices it has received,
-    written as `tick <n> live=<count> <UTC>` to `.gm/witness-log.md` on every launch
-    and every completion. `pool-observe` `slots.live` counts `.gm/pool/*.live` files
+    can run N subagents at once". Until a refusal the ceiling is unknown: the
+    largest wave accepted so far is a lower bound, stated as "at least K", and is
+    never the ceiling or the floor of `shortfall`. Found by launching: launch the
+    full wave first, and keep launching while independent work remains until a
+    refusal. Never a constant.
+  - `live`: unique ids launched minus unique ids done in `.gm/pool/ledger-<wave>.txt`,
+    whose lines are `launch <id>` and `done <id>`, one per launch and per completion.
+    Compute it with `awk '$1=="launch"{L[$2]=1} $1=="done"{D[$2]=1} END{for(k in L){if(!(k in D)) n++}; print n+0}' .gm/pool/ledger-<wave>.txt`,
+    and log the printed count as `tick <n> event=<launch|done>-<k> live=<count> <UTC>` (`k` counts
+    that kind from 1) to `.gm/witness-log.md`. `pool-observe` `slots.live` counts `.gm/pool/*.live` files
     that no writer creates, so it reads 0 and is not `live`. `instruction` serves a
     `concurrency_shortfall.running` value that is not verified against launches,
     so it is not `live` either.
   - `target`: the `ceiling`. Keep as many subagents live as independent work
     allows, up to it.
-  - `shortfall`: true when `2 * live < ceiling` while independent work remains.
-    It is the same test as "live under half the ceiling", with no rounding.
+  - `floor`: `min(10, ceiling)`. Before the first refusal the ceiling is unknown, so
+    the floor is `min(10, size of the first wave launched in full)`. That launch size is
+    not an accepted wave bound, and the first refusal replaces it with the measured ceiling.
+  - `shortfall`: true when `live < floor` while independent work remains and headroom is ok.
+    A headroom stop is logged and is not a shortfall; the floor applies again as soon as
+    headroom clears.
   Re-count `live` on every completion and every resume.
-- **Launch.** Split the work into independent slices before you dispatch. Send
-  every slice of one wave in one tool-call block. Each slice gets its own
-  SESSION_ID and the brick-wall opener from Section 1.
+- **Launch.** Split the work into slices before you dispatch. Each slice names the
+  files, refs and spool dirs it writes. Two slices that name one surface are
+  serialized, never launched in the same wave. Send every remaining slice of one
+  wave in one tool-call block. Each slice gets its own SESSION_ID and the
+  brick-wall opener defined in the preamble above.
 - **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
   skill file holds the procedure, the codeinsight-first invariant and the witness invariants, so
   the brief adds no prose.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains.
-  The only stops are a spawn refusal, a headroom stop, and exhausted slices: when no
-  independent slice remains, the loop ends. The measure is the count of unlaunched
+  The only stops are a spawn refusal and exhausted slices: when no
+  independent slice remains, the loop ends. A headroom stop is a pause, not an exit:
+  the loop logs it, keeps its open slices, and resumes launching at the next completion
+  notice or tick whose headroom read is ok (CPU under 80% and free memory at least 2 GB).
+  A status report, a checkpoint message, or
+  waiting for a completion notice is not a stop. Ending a turn with `live` below the
+  floor while independent work remains is a shortfall, whatever the message says. The measure is the count of unlaunched
   slices, which falls by one on every launch, so the loop is bounded even if the host
   never refuses. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
@@ -248,31 +249,36 @@ the two differ, served text wins under section 0 precedence.
   line of `/proc/meminfo`, in GiB). A headroom stop is logged with the real count
   and timestamp.
 - **Shortfall.** If `shortfall` holds while independent work remains, log a
-  FAILURE line as defined in `.gm/instructions/entry.md` (Completion refill), with
+  FAILURE line as defined in the `Shortfall:` sub-bullet of `.gm/instructions/entry.md` (Standing invariants: lean traversal), with
   the count, the timestamp and the open slices. Then launch to the `target`, not just out of `shortfall`. If
   the gap repeats, the skill is wrong: dispatch `instruction`, correct this
   section, and restart the walk at its first step (`prd-list`, the `live` recount in Definitions,
   launch to `target`). Restarts are bounded to two per walk, and each restart
-  logs its FAILURE line first, so the FAILURE lines are the count. A third repeat
-  is a blocker: record it as a FAILURE row with `prd-add` and stop the walk.
+  appends its FAILURE line to `.gm/witness-log.md` first, so the FAILURE lines there are the count. A third repeat
+  is a blocker: append its FAILURE line to `.gm/witness-log.md`, file the blocker as a PRD row with `prd-add`, and stop the walk.
   The PRD behind the state port is the only persisted state the restart reads.
-- **Walk workers.** Every subagent in a walk is a traversal hop or a PRD row
+- **Walk workers.** Every subagent in a walk is a hop or a PRD row
   resolver, with its own SESSION_ID. A file read is part of a worker's brief,
   never a separate subagent.
-- **Continuous quota.** From the first dispatch to the terminal state, the `target`
-  and `shortfall` rules in Definitions hold, and a shortfall is refilled in the same turn.
+- **Continuous quota.** For all t: (work open at t and headroom ok at t) implies
+  live(t) >= floor, where the floor is the `floor` term defined in Definitions.
+  A headroom stop at t is a logged precondition that suspends the implication for that t,
+  and a shortfall is refilled in the same turn once headroom is ok.
 - **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
   nodes, count your live workers, launch one worker per open row or node until
-  the ceiling, wait for completion notices, then repeat. This loop is the exit
-  guard: it ends only at the terminal state with `prd_pending_count=0`, then
-  `Skill(skill="gm-continue")`. The one other end of a turn is a world-scoped
-  one-way door (Section 4).
-- **Successor spawn.** Each hop spawns its own successor from its `next_choice` and
-  `next_choice.why`, with the same Skill call it was itself spawned with. The orchestrator
-  is the fallback: when a hop returns `next_choice: none`, or returns without one, the
-  orchestrator names the successor from that node's outgoing edges and spawns it. Only
-  the orchestrator counts `live` against the `ceiling` and runs the headroom check, so
-  a fallback spawn is placed by it.
+  the ceiling, then call `wait` (`dispatch wait --body '{"ms":60000}'`, the one waiting primitive;
+  completion notices arrive between calls), then repeat. This loop is the exit
+  guard: it ends at the terminal state with `prd_pending_count=0`, then
+  `Skill(skill="gm-continue")`. Fuel bounds it: at most 40 cycles per walk. A cycle
+  that closes no row and launches no worker is a stall, and two consecutive stalls end
+  the loop. At 0 fuel or after two stalls, the open rows are recorded and
+  `Skill(skill="gm-continue")` takes over, and its repeat-gap check bounds restarts.
+  The one other end of a turn is a world-scoped one-way door (Section 4).
+- **Successor spawn.** The successor rules (`next_choice`, `visited`, depth limit, the
+  depth-limit stop) are defined once, in `skills/gm-hop/SKILL.md`. A hop spawns its own
+  successor by those rules. The orchestrator is the fallback only when a hop returns
+  `next_choice: none` or none at all, and it places that spawn itself, because only the
+  orchestrator counts `live` against the `ceiling` and runs the headroom check.
 - **Single session.** Stay single-session only when the row file list names exactly one
   path (mechanical: one edit to one file). Otherwise split the work into slices whose file
   sets are pairwise disjoint (independent: one writer per surface, `.gm/instructions/entry.md`
@@ -283,20 +289,22 @@ the two differ, served text wins under section 0 precedence.
 The orchestrator runs two kinds of subagent. Each is one spawn that loads one skill with
 parameters, and the skill holds the whole procedure:
 
-- Node traversal: `Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; rhetoric=<text>; visited=<IDs>; depth=<n>")`.
-  `skills/gm-hop/SKILL.md` contains the traversal: candidates from the graph's edges, the
+- Node hop: `Skill(skill="gm-hop", args='{"node":"<ID>","book":"<title>","author":"<author>","rhetoric":"<text>","visited":["<IDs>"],"depth":<n>,"session":"<SESSION_ID>"}')`.
+  `skills/gm-hop/SKILL.md` contains the traversal: edge candidates from the graph's edges, the
   rhetoric, the visited set, PRD rows, witnesses, and successor nomination.
 - PRD execution: `Skill(skill="gm-exec", args="row=<id>; session=<SESSION_ID>")`.
   `skills/gm-exec/SKILL.md` contains the whole execution flow: mutables, JIT execution, the
   nine stages, process of elimination, the witness log and delivery.
 
+A hop is one node visit: one book and its author, the node the hop advocates. `skills/gm-hop/SKILL.md` defines the unit and the traversal procedure.
+
 The walk loop, run on every tick and every completion:
 
-1. Count `live`: read the last `tick <n> live=<count>` line of `.gm/witness-log.md` (1c). Each launch and each completion writes that line, so the count is on disk and not in context.
+1. Count `live`: read the last `tick <n> event=<id> live=<count>` line of `.gm/witness-log.md` (1c). Each launch and each completion writes that line, so the count is on disk and not in context. Any compaction or rotation of `.gm/witness-log.md` keeps the newest tick line, carried into the fresh file, so this read always finds one.
 2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row has
    no run, launch one `gm-exec` per row (`prd-list` with status pending).
-3. Spare slots hop: launch `gm-hop` in the remaining slots, from the candidates of an
-   untraversed node.
+3. Spare slots hop: launch `gm-hop` in the remaining slots, from the edge candidates of an
+   untraversed node, with `depth=1` for a fresh chain.
 4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
 
 An untraversed node is a principle-kind node of `skills/dream-rsi/gm-graph.json` whose id is not in the walk's visited set, the `visited` IDs passed to `gm-hop`.

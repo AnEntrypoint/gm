@@ -8,7 +8,7 @@ A row closes only with a witness: a dispatch id from its own live run. A row wit
 
 ## Parallel PRD fan-out
 
-Fan-out: one worker per independent slice, up to the ceiling. The ceiling is found by launching until a spawn refusal names it, and is never a constant (SKILL.md section 1c). Shortfall is true when `2 * live < ceiling` while independent work remains (SKILL.md section 1c), and the orchestrator must close that shortfall before advancing. Each worker takes its own session id.
+Fan-out: one worker per independent slice, up to the ceiling. The ceiling is found by launching until a spawn refusal names it, and is never a constant (SKILL.md section 1c). `shortfall` is true when `live < floor` while independent work remains and headroom is ok, where `floor` is `min(10, ceiling)` (SKILL.md section 1c), and the orchestrator must close that shortfall before advancing. Each worker takes its own session id.
 
 Every open row is resolved by its own parallel worker, with its own session id.
 
