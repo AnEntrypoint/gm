@@ -8,6 +8,9 @@ description: One gm-graph hop. Applies one book's discipline to the gm project, 
 A hop applies one discipline to the gm project. The node is a suggestion: a book
 and its author. Use the discipline as its author would, and nominate the next node.
 
+Code questions: `codeinsight` (`callers`/`impact`) first, then `codesearch`. `Read`
+only a located path.
+
 ## Arguments
 
 - `node=<ID>`: the principle node ID, for example `JTBD`.
