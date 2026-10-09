@@ -64,11 +64,11 @@ jobs:
             echo "$REPO does not exist; nothing to prune"
             exit 0
           fi
-          latest=$(gh api "repos/$REPO/releases/latest" --jq '.tag_name' 2>/dev/null || true)
-          if [ -z "$latest" ]; then
+          if ! gh api "repos/$REPO/releases/latest" >/dev/null 2>&1; then
             echo "$REPO has no published release; nothing to prune"
             exit 0
           fi
+          latest=$(gh api "repos/$REPO/releases/latest" --jq '.tag_name')
           assets=$(gh api "repos/$REPO/releases/latest" --jq '.assets | length')
           if [ "$assets" = "0" ]; then
             echo "::error::latest release $latest of $REPO has no assets; refusing to prune anything"
