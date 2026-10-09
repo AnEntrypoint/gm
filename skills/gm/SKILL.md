@@ -398,8 +398,10 @@ is restated here. A hop nominates its successor and spawns it with the same call
   Skill call. No unnamed successor is dropped.
 - An executor is one subagent that loads `gm-exec` with `args="row=<id>; session=<SESSION_ID>"`.
   All executor prose lives in `skills/gm-exec/SKILL.md`.
-- While open PRD rows exist, executors take free slots first, one per row, and rows
-  naming the same file run one at a time. Hops fill slots no open row can use.
+- While open PRD rows exist, executors take free slots first, one per row. Rows naming
+  the same file run concurrently when they name different lines; each executor edits
+  with exact-match Edit on the file as it is now and never rewrites the whole file.
+  Hops fill slots no open row can use.
 - The orchestrator delivers what the subagents change, once the wave returns, by
   the Autonomy rule (line 20).
 

@@ -34,16 +34,20 @@ only a located path.
 4. Witness the change with its real entry point, not with a test. For prose, dispatch
    `instruction` and read the served text. For a verb, dispatch the verb and read the
    reply. Read the output yourself.
-5. Resolve the row with the witness:
+5. Resolve the row with the witness. `witness_dispatch_id` is the `dispatch_id` field of
+   the live dispatch that served your change (the `instruction` reply or the verb reply),
+   copied exactly. The store refuses an id it did not run. `witness_evidence` is the
+   live line that proves the change.
 
-       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the live reply or the served text line that proves the change>"}' --cwd /config/workspace/gm
+       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the live line>","witness_dispatch_id":"<dispatch_id of that live reply>"}' --cwd /config/workspace/gm
 
 6. If the change cannot be witnessed, or the row is wrong, revert every edit you made:
    replace your new text with the original text exactly. Then do not resolve the row.
    Report BLOCKED with the reason.
 7. Read the `prd-resolve` reply. If `witness_dispatch_id_verified` is `false`, the
    row is not resolved: revert your edits as in step 6, and report BLOCKED and name
-   the reply.
+   the reply. If the store still shows the row `completed` or `resolved`, say so in
+   the report, so the orchestrator reopens it.
 
 ## Output
 
