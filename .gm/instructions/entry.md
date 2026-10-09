@@ -111,7 +111,7 @@ Monotonicity is enforced: a fixed condition is never traded for a new one. Rice 
   - The orchestrator does not end a turn while work is open and headroom allows a launch.
 - Replacement on completion: every gm-worker that completes is replaced in the same turn by one new worker on a real row from `slots.candidates` in the instruction response. Never wait for a batch to finish.
 - Traversal on low supply: when open PRD rows fall below what the launched workers need to stay busy, the orchestrator dispatches traversal hops that create new rows (`prd-add` rows, read back as `slots.open_rows`) before launching more resolvers. Row creation slows when rows resolve faster than workers take them.
-- Every subagent brief carries the four fields defined in skills/gm/SKILL.md 1c (Brief), including the heartbeat step, so every spawn is countable.
+- Every subagent spawn is one Skill call with its row or node in the args (skills/gm/SKILL.md 1c, Brief). The skill file holds the procedure.
 - Observable pool. Every subagent writes `.gm/pool/<its-session-id>.live` on start and deletes it on finish. The definition of `live` is skills/gm/SKILL.md 1c. A `shortfall` while work is open triggers a refill and a rule update in this prose.
 - Completion refill. After every subagent completion, the orchestrator re-counts `live`. While work is open (`prd-list` shows pending rows), it launches gm-worker subagents in the same turn, before any other step, up to the `target` as open work and machine headroom allow. Launching stops only at the spawn ceiling (a spawn refusal names it) or when headroom is exhausted, checked before each launch as skills/gm/SKILL.md 1c (Refill) defines, and recorded as a FAILURE line naming the resource cause. The orchestrator nominates successors from real open rows on every completion; a worker never relies on the orchestrator to refill it.
   - Standing rule: open-PRD growth between checks is itself a failure. The orchestrator drains by dispatching gm-worker on open rows before any other step.
@@ -120,9 +120,9 @@ Monotonicity is enforced: a fixed condition is never traded for a new one. Rice 
   - Shortfall: while pending rows are open, record a FAILURE line with the count, timestamp and open slices, then launch to the `target`.
   - The orchestrator does not end a turn while work is open and headroom allows a launch. It re-counts its own live launches after each launch and keeps launching until a spawn refusal names the ceiling or headroom is exhausted.
   - A worker that ends at a blocker frees its slot like any completion, and is refilled.
-  - Each brief names its row from a text scan of `.gm/prd.yml` (pending = status not resolved), because `prd-list` fails when the YAML is broken; the brief says so.
+  - Each spawn passes its row in the Skill args, taken from a text scan of `.gm/prd.yml` (pending = status not resolved), because `prd-list` fails when the YAML is broken.
   - FAILURE lines carry the real count and UTC timestamp read at the time of the check, never an estimate.
-  - Every subagent brief names its successor from a real pending row (`prd-list`), so the chain never ends with zero successors.
+  - Every spawn names its successor in the Skill args from a real pending row (`prd-list`), so the chain never ends with zero successors.
   - FAILURE lines carry the count, timestamp and open slices: `FAILURE: <timestamp> live count fell to <n> with <m> open slices`.
   - Rule: if `prd-list` fails to parse, fix or restore the state file before any launch. If the verb is down, parse rows with a text scan of `.gm/prd.yml` (pending = rows whose status is not resolved) before any launch; never launch on an unparsed state file.
 - Replacement on completion: every gm-worker that completes is replaced in the same turn by one new worker on a successor from `slots.candidates`, the single successor source. Never wait for a batch to finish.
