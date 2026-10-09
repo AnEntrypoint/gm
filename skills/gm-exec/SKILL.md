@@ -1,96 +1,124 @@
 ---
 name: gm-exec
-description: Executes one PRD row end to end. Collects every unknown as a mutable, closes each mutable by running code on this project (JIT execution), makes the change by process of elimination, witnesses it live, and resolves the row. Invoke with args "row=<id>; session=<SESSION_ID>".
+description: Self-contained gm PRD executor. Closes one PRD row through the nine stages (SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE) in one run, with mutables collected and closed by code run on the project (JIT execution), process of elimination when a witness fails, a witness log, and delivery. Invoke with args "row=<id>; session=<SESSION_ID>".
 ---
 
 # gm-exec
 
-One executor takes one open PRD row and closes it. It runs the whole row in this run:
-SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE and COMPLETE. It does not spawn
-other agents for those stages. Each stage writes a short receipt to
-`/config/workspace/gm/.gm/receipts/<row>/NN-<STAGE>.md`, so the chain can be audited.
-
-Code questions: `codeinsight` (`callers`/`impact`) first, then `codesearch`. `Read` only a
-located path.
+One run closes one PRD row. Everything the old gm flow required for execution is here, so
+this run needs no other skill and spawns no other agent. Work the nine stages in order, in
+this run. Each stage writes a receipt to `/config/workspace/gm/.gm/receipts/<row>/NN-<STAGE>.md`.
+A stage that cannot be executed is a blocker on the row, and is never skipped.
 
 ## Arguments
 
-- `row=<id>`: the PRD row ID.
-- `session=<SESSION_ID>`: your SESSION_ID, used in every dispatch body.
+- `row=<id>`: the PRD row to close.
+- `session=<SESSION_ID>`: your SESSION_ID. Use it in every dispatch body.
 
-Read the row first:
+If either field is missing, answer `STATUS: BLOCKED` naming it, and stop.
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-list --body '{"session_id":"<session>","id":"<row>"}' --cwd /config/workspace/gm
+## Harness
 
-## Mutables: collect every unknown
+Dispatch every gm verb with the bundled CLI, from `/config/workspace/gm`:
 
-Any question the row leaves open is a mutable. Record each one before you act on it:
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --body '<json>' --cwd /config/workspace/gm
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch mutable-add --body '{"session_id":"<session>","id":"<row>-M<n>","question":"<the open question>"}' --cwd /config/workspace/gm
+Keep the `dispatch_id` of every reply that you rely on. A claim without a dispatch id is not
+in the system. A missing out-file means the dispatch has not finished: poll it, never
+re-dispatch blindly. Read a row before writing it: `prd-add` on an existing id overwrites
+its subject. Row ids are real: never invent one for a witness run.
 
-A mutable closes only when code run on this project answers it. Reading the code is not
-an answer, and neither is a guess. Close each one with its answer and the dispatch id of
-the run that produced it:
+Code questions: `codeinsight` (`callers`/`impact`) first, then `codesearch` with
+`mode:"literal"`. `Read` only a located path. Never use raw `grep`, `find` or `git` in Bash.
 
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch mutable-resolve --body '{"session_id":"<session>","id":"<row>-M<n>","answer":"<the answer>","witness_dispatch_id":"<dispatch id of the run>"}' --cwd /config/workspace/gm
+## Witness: the audit primitive
 
-A mutable that cannot be answered by a run is not closed. It stays open, and the row
-is blocked on it, with the question written in the receipt.
+A claim without `(id, hash, ts)` is not in the system. Every witness is a live run on this
+project, read by you, with its dispatch id kept. A witness that fails with `EADDRINUSE` did
+not run: identify the owning process before rerunning, and never kill another lane's process.
 
-## JIT execution: run, do not assume
+Witness outcomes are not PRD rows. Append one line per run to `/config/workspace/gm/.gm/witness-log.md`:
+the witness, the exit code, the RESULT line, the timestamp, and the dispatch id. Close the
+parent row by citing that line.
 
-Answer every question with a live run, at the moment you need the answer. Use
-`exec_js` for logic, `codesearch` for every definition and call site, and the verbs
-the row names for behaviour. Read the reply yourself. Keep the dispatch id of each run:
-a claim without a dispatch id is not in the system.
+## Mutables and JIT execution
 
-Use a run to test a claim before you build on it. A claim you have not run is a mutable.
+A mutable is an open question. Record every unknown the row raises as a mutable before you
+act on it:
 
-## The stages
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch mutable-add --body '{"session_id":"<session>","id":"<row>-M<n>","question":"<question>"}' --cwd /config/workspace/gm
 
-1. **SPECIFY**: restate the row and its acceptance criteria. Record every open question as a mutable.
-2. **PROVE**: state the change's precondition, invariant and postcondition. Each one is a
-   claim, so each one is run or recorded as a mutable.
+A mutable closes only when code run on this project answers it. That run's output is the
+witness. Reading code is not an answer, and neither is a guess:
+
+    node ~/.gm-tools/gm-mcp-server.mjs dispatch mutable-resolve --body '{"session_id":"<session>","id":"<row>-M<n>","answer":"<answer>","witness_dispatch_id":"<dispatch id of the run>"}' --cwd /config/workspace/gm
+
+JIT execution: answer each question with a live run at the moment you need it, through
+`exec_js` for logic, `codesearch` for every definition and call site, and the row's named
+verbs for behaviour. Test a claim with a run before you build on it. A claim you have not
+run is a mutable.
+
+A question no run can answer becomes a stated assumption, filed as a PRD row, and worked
+on. Ask the user only for a world-scoped one-way door: irreversible, money, another
+person, production, legal or safety. Never ask the user to choose between options that
+make progress.
+
+## The nine stages
+
+1. **SPECIFY**: restate the row and its acceptance criteria, with the mutables it raises.
+   Dispatch `scan_deps` first if this session has not yet scanned dependencies.
+2. **PROVE**: typed obligations for the change: precondition, invariant, postcondition.
+   Each one is run or recorded as a mutable.
 3. **EMIT**: make the change the row names, on the files it names, with exact-match Edit.
-   Never rewrite a whole file. Then witness the change through its live entry point:
-   dispatch the verb, or read the served text, and keep the dispatch id.
-4. **STATE**: check that the change replays idempotently, and say which state it owns.
-5. **CONC**: name the files touched and confirm no other writer's uncommitted edits sit in them.
-   If one does, stop and record a blocker: do not edit over another writer.
-6. **SEC**: check the change for secrets, injection and identity: a run that proves each one.
-7. **RES**: list the failure modes of the change. For each one, run it.
-8. **DECIDE**: re-read the receipts and the live witness against the row's own words.
-   Do not rely on the diff.
-9. **COMPLETE**: resolve the row with the witness:
+   Never rewrite a whole file. Witness it through its live entry point and keep the dispatch id.
+4. **STATE**: the change replays idempotently. Say which state it owns, and run that.
+5. **CONC**: name each file the change touches. If another writer has uncommitted changes in
+   one of them, stop and record a blocker. Never edit over another writer.
+6. **SEC**: check the change for secrets, injection and identity. Each check is a run.
+7. **RES**: list the failure modes of the change, with partial failure. Run each one.
+8. **DECIDE**: check the receipts and the live witnesses against the row's own words. Do
+   not rely on the diff. Check the push or CI result if the change has been delivered.
+9. **COMPLETE**: resolve the row, citing the witness line and its dispatch id:
 
-       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the live line>","witness_dispatch_id":"<dispatch id of the EMIT witness>"}' --cwd /config/workspace/gm
+       node ~/.gm-tools/gm-mcp-server.mjs dispatch prd-resolve --body '{"session_id":"<session>","id":"<row>","witness_evidence":"<the witness line>","witness_dispatch_id":"<dispatch id>"}' --cwd /config/workspace/gm
 
-   If `witness_dispatch_id_verified` is `false`, the row is not resolved. Say so.
+   If `witness_dispatch_id_verified` is `false`, the row is not resolved. Flag it for
+   reopening, and say so in the output.
 
-## Process of elimination: when the witness fails
+## Process of elimination: when a witness fails
 
-A witness that fails is a fact about the code, not a reason to stop. Work it out:
+A failed witness is a fact about the code. Work it out:
 
-1. List every candidate cause of the failure, each one as a mutable.
-2. Eliminate candidates one at a time: a live run per candidate, which rules it in or out.
-3. Fix only the cause that survives. Make the smallest change to the code that removes it.
-4. Witness again through the same live entry point. Keep the dispatch id.
+1. List every candidate cause as a mutable.
+2. Eliminate candidates one at a time, each by a live run that rules it in or out.
+3. Fix only the cause that survives, with the smallest change.
+4. Witness again through the same entry point, and keep the dispatch id.
 
-If every candidate is eliminated and the failure remains, the row is blocked. Write the
-last surviving mutable into the receipt, and do not resolve.
+If every candidate is eliminated and the failure remains, the row is blocked. Name the last
+open mutable in the receipt, and do not resolve.
+
+## Delivery
+
+When the change is complete and witnessed, commit only the files this run changed, with
+`git_finalize {message, paths}`, and push. Run it only if no other writer has uncommitted
+changes in those files (CONC). Otherwise leave the change uncommitted and name the files in
+the output, so the orchestrator delivers it. The delivery is witnessed by the `git_finalize`
+reply: commit sha and push result.
 
 ## Output
 
-At most 80 words:
+At most 100 words:
 
     STATUS: RESOLVED | BLOCKED
     ROW: <id>
-    FILES: <files changed, or none>
-    WITNESS: <the live line and its dispatch id, or the blocker>
+    FILES: <changed files, or none>
+    WITNESS: <the witness line, its dispatch id, and the witness-log line>
     MUTABLES: <open mutables, or none>
+    DELIVERY: <commit sha and push result, or "left uncommitted: <files>">
 
 ## Rules
 
 - No test files, ever. Witness with the live system.
-- Do not commit or push. The orchestrator commits after the wave returns.
-- Never edit a file another writer has uncommitted changes in. Record a blocker instead.
+- Never edit a file another writer has uncommitted changes in.
+- Never kill another lane's process.
+- Write nothing outside the row's files, the receipts directory and the witness log.

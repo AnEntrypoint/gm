@@ -354,46 +354,31 @@ the two differ, the stricter rule applies.
   Any other work with two or more independent slices fans out; never split one
   small task artificially.
 
-## 1d. Hops are skill loads
+## 1d. The two skills and the loop
 
-A hop is one subagent that loads the `gm-hop` skill with parameters. Every
-principle node is a book and its author; the node label gives both. The subagent's
-brief is the four fields of Section 1c, Brief, ending in one call:
+The orchestrator runs two kinds of subagent. Each is one spawn that loads one skill with
+parameters, and the skill holds the whole procedure:
 
-    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; rhetoric=<text>")
+- Node traversal: `Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; rhetoric=<text>; visited=<IDs>; depth=<n>")`.
+  `skills/gm-hop/SKILL.md` contains the traversal: candidates from the graph's edges, the
+  rhetoric, the visited set, PRD rows, witnesses, and successor nomination.
+- PRD execution: `Skill(skill="gm-exec", args="row=<id>; session=<SESSION_ID>")`.
+  `skills/gm-exec/SKILL.md` contains the whole execution flow: mutables, JIT execution, the
+  nine stages, process of elimination, the witness log and delivery.
 
-All hop prose lives in `skills/gm-hop/SKILL.md`. Nothing about a hop's procedure
-is restated here. A hop nominates its successor and spawns it with the same call.
+The walk loop, run on every tick and every completion:
 
-- A hop is spawned only when it has a target: a located change or a located defect. A hop
-  with no target answers NOT-APPLICABLE, and its slot goes to a PRD row's next stage or to
-  another node traversal. Empty hops do not count as useful work.
-- Hops make PRD rows. Each finding a hop cannot finish in its own run becomes one verified
-  row, and that row is executed by one `gm-exec` run (Section 1d).
-- Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
-  hops. `shortfall` does not hold until the wave returns.
-- Successor recovery. A hop that returns `NEXT: none`, or returns without a NEXT line,
-  leaves its successor unnamed. The orchestrator names it: it reads that node's
-  outgoing edges in the graph (the command in the gm-hop skill), picks the candidate
-  that attacks the open finding, writes its rhetoric, and spawns it with the same
-  Skill call. No unnamed successor is dropped.
-- A PRD row is closed by one subagent that loads `gm-exec` with
-  `args="row=<id>; session=<SESSION_ID>"`. That skill holds the whole procedure: mutable
-  collection, JIT execution, the nine stages (SPECIFY through COMPLETE), and process of
-  elimination when a witness fails. Stage prose lives only in `skills/gm-exec/SKILL.md`.
-- The walk loop, run on every tick and every completion:
-  1. Count `live`: own launches minus completion notices.
-  2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row
-     has no run, launch one `gm-exec` run per row (`prd-list` with status pending).
-  3. Spare slots hop: with the remaining slots, launch `gm-hop` runs for node traversals,
-     each nominated from the candidates of a node the walk has not yet traversed.
-  4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
-  A slot is never left empty while a pending row or an untraversed node remains.
-- Rows are executed before hops take slots. Rows naming the same file run concurrently when
-  they name different lines; each executor edits with exact-match Edit on the file as it is
-  now and never rewrites the whole file.
-- The orchestrator delivers what the subagents change, once the wave returns, by
-  the Autonomy rule (line 20).
+1. Count `live`: own launches minus completion notices.
+2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row has
+   no run, launch one `gm-exec` per row (`prd-list` with status pending).
+3. Spare slots hop: launch `gm-hop` in the remaining slots, from the candidates of an
+   untraversed node.
+4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
+
+A slot is never left empty while a pending row or an untraversed node remains. Executors
+edit with exact-match Edit on the file as it is now, so rows naming the same file may run
+together when they name different lines. The orchestrator delivers what the subagents
+change, once the wave returns, by the Autonomy rule (line 20).
 
 ## 2. Invariants -- true under any graph
 
