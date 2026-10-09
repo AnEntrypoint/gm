@@ -98,7 +98,8 @@ List the outgoing edges of your node from the graph. Those are the candidates:
 Drop every candidate in `visited`. From the rest, pick the candidate whose discipline attacks the
 biggest need from Step 7. If no candidate attacks it, pick the one that attacks the next biggest.
 
-Write the rhetoric for the handover, in at most three sentences:
+Write the `next_choice.why` for the handover, in at most three sentences. The orchestrator passes it
+verbatim to the successor as `rhetoric`:
 
 - the biggest need, with its row ids;
 - the open question the next discipline must answer about it;
@@ -108,17 +109,18 @@ Then list the chosen candidate's outgoing edges, dropping `visited` and your nod
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_NODE>
 
-Spawn the successor with the Agent tool. The brief is one call, and nothing else:
+Do not spawn a successor. Your receipt nominates it, and the orchestrator alone launches it
+(skills/gm/SKILL.md 1c, Successor owner) with the brief
+`node=<NEXT_NODE>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<next_choice.why>; visited=<visited plus your node>; depth=<depth+1>`.
 
-    Skill(skill="gm-hop", args="node=<NEXT_NODE>; book=<NEXT_BOOK>; author=<NEXT_AUTHOR>; rhetoric=<NEXT_RHETORIC>; visited=<visited plus your node>; depth=<depth+1>")
-
-Do not spawn when `depth` is 6 or more. At depth 6 the chain ends: write `NEXT: none, depth limit`.
+At depth 6 or more the chain ends: write `next_choice: none, depth limit`.
 
 ## Useful work
 
 A hop is useful only if it leaves something checkable: a witnessed change, or one or more verified
-PRD rows. A hop that leaves neither has failed. Say why, and write `NEXT: none`. A hop that did useful
-work but has no candidate left writes `NEXT: none, no candidates`, and the orchestrator takes over.
+PRD rows. A hop that leaves neither has failed. Say why, and write `next_choice: none`. A hop that did
+useful work but has no candidate left writes `next_choice: none, no candidates`, and the orchestrator
+takes over.
 
 ## Output
 
@@ -129,4 +131,5 @@ At most 120 words:
     CHANGED: <file and witness dispatch id, or none>
     ROWS: <count, and the id and cited line of each row>
     NEED: <the biggest need, in one sentence>
-    NEXT: <NEXT_NODE and depth, or none with the reason>
+    next_choice: <NEXT_NODE; NEXT_BOOK; NEXT_AUTHOR; depth=<depth+1>, or none with the reason>
+    next_choice.why: <the rhetoric for the handover, in at most three sentences>
