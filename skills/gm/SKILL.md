@@ -95,7 +95,7 @@ uncertain; never invent the next step from memory.
 
 ## Subagent quota (every turn)
 
-Before ending any turn, count live subagents with ListAgents. If the count is below the number of independent slices available, launch the difference now, in the same turn, before any other step.
+Before ending any turn, count live subagents with task_list. If the count is below the number of independent slices available, launch the difference now, in the same turn, before any other step.
 
 A sequential chain is not a reason to stay at one subagent. Split the chain by file, row or hop so each piece is an independent slice, and launch them together.
 
