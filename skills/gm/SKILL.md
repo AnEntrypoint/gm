@@ -360,36 +360,25 @@ the two differ, the stricter rule applies.
 - **Single session.** Stay single-session only for one focused mechanical edit.
   Any other work with two or more independent slices fans out.
 
-## 1d. Hops are discipline advocates
+## 1d. Hops are skill loads
 
-A hop is one subagent visiting one principle node. Every principle node is a
-book and its author; the node label gives both (for example "Jobs To Be Done --
-Clayton Christensen"; a node with no author gives "unattributed"). The
-subagent's brief is the brick-wall opener from Section 1, its own SESSION_ID,
-and one skill call:
+A hop is one subagent that loads the `gm-hop` skill with parameters. Every
+principle node is a book and its author; the node label gives both. The subagent's
+brief is the brick-wall opener from Section 1, its own SESSION_ID, and one call:
 
-    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>")
+    Skill(skill="gm-hop", args="node=<ID>; book=<title>; author=<author>; depth=<n>; rhetoric=<text>")
 
-All hop instructions live in the `gm-hop` skill (`skills/gm-hop/SKILL.md`). The
-brief carries no other instructions.
+All hop prose lives in `skills/gm-hop/SKILL.md`. Nothing about a hop's procedure
+is restated here. A hop nominates its successor and spawns it with the same call.
 
-- A hop never works from the graph index. The index only orders the nodes.
-- Phase nodes are orchestrator waypoints. Gate and terminal nodes are checked by
-  the orchestrator against their predicates; they are not hops.
-- Hops run under the walk loop in Section 1c. Every principle node in the walk's
-  scope gets one hop, and the live count stays above half the ceiling until each
-  hop has returned.
-- A hop critiques at maximum scope and records each defensible finding as a PRD
-  row (`prd-add`, one row per dispatch). A hop ends only when its discipline has
-  no further defensible finding. It writes no file.
-- An executor takes one open PRD row and resolves it with a witness. Its brief is
-  the opener and one call: `Skill(skill="gm-exec", args="row=<id>; session=<SESSION_ID>")`.
-  All executor instructions live in the `gm-exec` skill (`skills/gm-exec/SKILL.md`).
-- Balance: while open PRD rows exist, executors take the free slots first, one
-  executor per row, and rows that name the same file run one at a time. Hops fill
-  the slots that no open row can use. A wave with no open rows is all hops.
-- The orchestrator commits and pushes what the executors change, once the wave
-  has returned, through `git_finalize`.
+- Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
+  hops. The live count stays above half the ceiling until the wave returns.
+- An executor is one subagent that loads `gm-exec` with `args="row=<id>; session=<SESSION_ID>"`.
+  All executor prose lives in `skills/gm-exec/SKILL.md`.
+- While open PRD rows exist, executors take free slots first, one per row, and rows
+  naming the same file run one at a time. Hops fill slots no open row can use.
+- The orchestrator commits and pushes what the subagents change, once the wave
+  returns, through `git_finalize`.
 
 ## 2. Invariants -- true under any graph
 
