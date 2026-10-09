@@ -5,9 +5,8 @@ description: The primary driver for every coding, refactoring, debugging, or eng
 
 # gm
 
-**Brick wall: `codesearch` replaces Grep/Glob/Explore/Bash `find`/`grep`/`rg`
-everywhere, no exceptions. `fetch` replaces WebFetch/WebSearch. Every `Agent`/`Task` dispatch opens with "use the gm skill for this;
-code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`,
+**Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this;
+code questions go to codeinsight (`callers`/`impact`) first, then the code-search port,
 and `Read` only a located path."**
 
 ## Autonomy (read first; overrides any urge to ask)
@@ -18,7 +17,7 @@ and `Read` only a located path."**
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
 - Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
-- A delivery is witnessed by the `git_finalize` reply (commit sha, push result, CI state), not by the local diff.
+- A delivery is witnessed by separate read dispatches, never by the `git_finalize` command that makes it: `git_show {rev}` of the pushed sha for the commit, and `ci-status {sha}` for CI state, where status `unknown` is reported as unknown, not as success. `git_finalize {message, paths}` is the command only, not a witness.
 
 Codeinsight first: `callers {symbol}` before reading, editing or deleting a
 function (who calls it, what must stay valid), `impact {symbol, max_depth}` for
@@ -27,53 +26,10 @@ radius. An empty reply is proof only when `codeinsight_index` says `complete:
 true`; otherwise confirm with a `codesearch` identifier query. Served prose
 ("Code intelligence first") has the full table.
 
-Every definition AND every call site of one symbol is `codesearch {query, mode:
-"literal"}` (or `"regex"`): every match with `path` and `line`, no ranking or
-top-k, read from git's view of the worktree -- every tracked file (submodules
-included) plus untracked files git does not ignore, with no directory-name noise
-list -- ~1s where `dual` costs minutes. An unknown `mode` or body field is an
-error, never a silent whole-tree `dual`. Complete only when `exhaustive: true`;
-read `partial_reason` for incompleteness and exclusion summaries for pruning rules
-when present. Missing optional diagnostics never prove completeness.
-A multi-word query is matched as ONE phrase
-(the whole query verbatim, spaces included -- `fn sys_wait4` finds the
-definition, not every `fn` in the tree); `combine: "or"` splits it into terms and
-ranks any-term hits with all-term lines strictly on top, `combine: "and"`
-requires every term on one line. Whichever ran is named in `term_combination`
-and, for a multi-word query, restated in `query_note`. A `mode: "regex"` query
-carrying a metacharacter (`| ( ) [ ] { } * + ? ^ $ \ .`) is exempt: it is
-matched as ONE regular expression exactly as written, never split into terms,
-and `combine` has no effect on it -- `query_note` says so instead of claiming a
-phrase match.
-Scope: `path` (subdirectory or file; a subdirectory `root` works the same),
-`glob`/`path_glob` (real globs, string or array, `**/*.{js,mjs}`; a glob admitting no file answers
-`glob_matched_no_files: true`), `case_insensitive`, `whole_word`, `timeout_ms` (scan wall-clock budget, default 20000 for regex; overrun answers `timed_out: true`, `exhaustive: false`, `budget_ms`). Reply shape:
-`output` = `matches` (default) | `compact` (`path:line: text`) | `files` |
-`count`; `limit` (alias `head_limit`/`k`/`max_results`); past `max_chars`
-(24000) the rest spills to `spill_file` with `reply_truncated: true`.
-Rule exclusions (incl. `hidden_dir` on walked, non-git targets) never affect
-`exhaustive`. Optional `excluded_by_rule` examples and `excluded_by_rule_count`
-describe pruning when present. Unreadable files affect completeness except under dependency stores
-(`files_unreadable_in_dependency_dirs`); their count may be reported in
-`partial_reason` rather than `files_unreadable`. Budget, size and listing bounds
-still govern completeness. A missing `path` answers with the root it
-resolved against: pass `root` or that project's `cwd`.
+Adapters: the code-search port is `codesearch`, which replaces Grep, Glob, Explore and Bash `find`/`grep`/`rg`; the fetch port is `fetch`, which replaces WebFetch and WebSearch.
 
-`grep` is that same exhaustive scan as its own verb, for when the ask is
-literally "find this string": `{"pattern":"captureMicros","path":"src"}`,
-optionally `glob`, `case_insensitive`, `context`, `max_results` (default cap 200)
-and `output_mode` (`content` by default, `files_with_matches`, `count`). `exclude`
-drops paths by glob: an array of globs,
-`{"exclude":["vendor/**","test/hardware/**"]}`, which replaces a hand-written
-brace alternation to skip a vendored tree; exclusion never affects `exhaustive`.
-`content` answers `counts` (per-file `{path,count}`) plus `output`, one
-`path:line: text` per hit, and `mode` telling you which reading ran;
-`{"detail":true}` swaps `output` for structured `matches`. `pattern` is read as a
-regex when it carries an alternation bar, a `\d`-style class escape, a
-`[a-z]`-shaped range or an edge anchor (a doubled `||` stays literal); pass `regex:true` or `regex:false` to decide it
-explicitly, and expect a refusal carrying the regex error text rather than an
-empty result when the pattern will not compile. `rg` is an accepted alias.
-`search` is `codesearch` -- the ranked BM25-plus-vector verb -- never `grep`.
+`codesearch` and `grep` (alias `rg`) own their body fields, modes, output shapes and the `exhaustive`
+completeness rule in `docs/verbs.md` (Code lookup). Read it before dispatching either verb.
 
 Dispatch `instruction` whenever uncertain; never invent the next step from memory.
 
@@ -99,25 +55,15 @@ Section 4's world-scope is the sole exception.
 
 ## 1. Harness
 
-Prefer an already-connected `gm`/`mcp_tool` server over raw spool writes when
-one is available this turn; it wraps the same write-then-poll cycle into one
-call with cleaned output. Fall back to the raw protocol below otherwise --
-never spend a turn connecting one before dispatching real work.
+Every verb goes through one dispatch port: `dispatch(verb, body, cwd)` writes the
+request, waits for its reply and returns it with its `dispatch_id`. The port may have
+several adapters (transports). They are listed in `skills/gm/spool-adapter.md`, which
+names the sanctioned default: the first that applies this turn. No other section
+names one. A verb you cannot run is named in your reply with the
+reason; do not drop it silently.
 
-**No gm MCP tools in this host?** Use the bundled CLI, which runs the same
-dispatch with no MCP involved:
-
-    node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> [--body '<json>'] [--raw '<text>'] --cwd <project root>
-
-Check it first with `dispatch health`. If `~/.gm-tools/gm-mcp-server.mjs` is
-missing, the runtime is not installed: run the repo's `install.sh` (or
-`install.ps1`) before any gm work. A verb you cannot run is named in your reply
-with the reason; do not drop it silently.
-
-The spool file protocol (request and response paths, the atomic in-file write,
-and the session-prefixed `<N>`) is in `skills/gm/spool-adapter.md`; follow it for
-every spool write. State lives on disk (`.turn-summary.json`, `.gm/prd.yml`, `.gm/mutables.yml`) and in every
-response body, never in context. Phase mismatch resolves to the fresh
+State lives on disk behind one state port (its file layout is listed once, in the `## State`
+section of the served instructions) and in every response body, never in context. Phase mismatch resolves to the fresh
 `instruction` response.
 
 A bare state check -- phase, `prd_pending_count`, mutables-pending, nothing more
@@ -193,30 +139,7 @@ refuse unknown fields, naming `unknown_fields` and `accepted_fields`.
 `first_paths`, and `limit` alone caps each status list (`truncated_totals` names
 the real totals).
 
-`exec_js` evaluates its raw body in a separate Node process, delivered on the
-child's stdin, so the body is never part of its command line and a process-listing
-query that filters command lines for a marker string cannot match the runner
-itself. It does not inject the caller's `tools` object. A `.js` scratch file in a
-repo whose package.json says `"type": "module"` is ESM: give a scratch file that
-uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API:
-`const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
-Prefix the body with `timeoutMs=<ms>`: it is an enforced wall-clock limit
-(default 300000, hard ceiling 900000). At expiry the child's whole process tree is
-killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true,
-killed: true, error_code: exec_timeout` with `limit_ms` and the partial
-`stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that
-budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds`
-sets the requested polling budget. Every MCP call caps applied polling at 240 s
-without changing the native execution limit. A polling timeout returns the original
-task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
-When a server must outlive the call, it is started detached: `spawn(process.execPath, [script], {detached:
-true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is
-stopped in a later call by its pid; never pass `stdio: "inherit"`. Output fields
-(`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000
-characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain
-text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be
-read directly. Use a language verb such as `bash` only when the request
-specifically needs shell syntax.
+Exec body rules (raw body, `timeoutMs`, ESM and `.cjs` scratch files, output truncation, MCP polling caps) are in `docs/verbs.md`, Execution.
 
 **Batching.** Independent dispatches go in one tool-call block, one row per `prd-add`/`mutable-add` call; a batched `{"items":[...]}` body is rejected, and the single-row shape is enforced by the verb.
 
@@ -247,11 +170,12 @@ in the same pass as its fix reliably shares the fix's own misreading of the
 request, so "tests pass" only proves the code agrees with itself. Verification
 is exhaustive manual debugging with live code execution against the real
 system, same turn as the work -- run the actual code path against real state
-and read the real output, re-derived from the request's own words each time,
-never from the diff just written. Reasoning is execution, not monologue.
+and read the real output, re-derived from the request's own words each time, with the expected value recorded as a witness line before the live dispatch; a witness passes only when the observed output matches that recorded line, never from the diff just written. Reasoning is execution, not monologue.
+The only sanctioned driving adapter is live execution through the real entry point:
+each verb is driven by its live dispatch through that one dispatch port (SKILL.md Section 1), and no test file or test suite stands in for it.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
-every body. Batch independent dispatches; never edit one file twice per block.
+every body. Never edit one file twice per block.
 
 Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
@@ -285,8 +209,8 @@ not a mood.
 
 ## 1c. Parallelism contract -- every session that drives a walk
 
-Fan out by default. Served prose sets the same rules with more detail; where
-the two differ, the stricter rule applies.
+Fan out by default. Served prose sets the same invariants with more detail; where
+the two differ, served text wins under section 0 precedence.
 
 - **Definitions.** Each term is defined here once. Every other mention in this
   skill and in the served `instruction` prose names the term and adds no number.
@@ -294,10 +218,10 @@ the two differ, the stricter rule applies.
     can run N subagents at once". Until a refusal, the largest wave accepted so
     far. Found by launching: launch the full wave first, and keep launching while
     independent work remains until a refusal. Never a constant.
-  - `live`: the `slots.live` field of a `pool-observe` reply (dispatch
-    `pool-observe` with `{"session_id":"<SESSION_ID>"}`). It is the only source of
-    `live`. Own launches minus completion notices are held in context, not on disk,
-    so they are never read as `live`. `instruction` serves a
+  - `live`: the lead's own launches minus the completion notices it has received,
+    written as `tick <n> live=<count> <UTC>` to `.gm/witness-log.md` on every launch
+    and every completion. `pool-observe` `slots.live` counts `.gm/pool/*.live` files
+    that no writer creates, so it reads 0 and is not `live`. `instruction` serves a
     `concurrency_shortfall.running` value that is not verified against launches,
     so it is not `live` either.
   - `target`: the `ceiling`. Keep as many subagents live as independent work
@@ -309,11 +233,14 @@ the two differ, the stricter rule applies.
   every slice of one wave in one tool-call block. Each slice gets its own
   SESSION_ID and the brick-wall opener from Section 1.
 - **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
-  skill file holds the procedure, the codeinsight-first rule and the witness rules, so
+  skill file holds the procedure, the codeinsight-first invariant and the witness invariants, so
   the brief adds no prose.
 - **Refill.** On every completion, in the same turn, launch one replacement per
-  freed slot while independent work remains. Never wait for a batch to finish.
-  The only stops are a spawn refusal and a headroom stop. Headroom is read before
+  freed slot while independent work remains.
+  The only stops are a spawn refusal, a headroom stop, and exhausted slices: when no
+  independent slice remains, the loop ends. The measure is the count of unlaunched
+  slices, which falls by one on every launch, so the loop is bounded even if the host
+  never refuses. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
@@ -324,14 +251,16 @@ the two differ, the stricter rule applies.
   FAILURE line as defined in `.gm/instructions/entry.md` (Completion refill), with
   the count, the timestamp and the open slices. Then launch to the `target`, not just out of `shortfall`. If
   the gap repeats, the skill is wrong: dispatch `instruction`, correct this
-  section, and restart the walk.
+  section, and restart the walk at its first step (`prd-list`, the `live` recount in Definitions,
+  launch to `target`). Restarts are bounded to two per walk, and each restart
+  logs its FAILURE line first, so the FAILURE lines are the count. A third repeat
+  is a blocker: record it as a FAILURE row with `prd-add` and stop the walk.
+  The PRD behind the state port is the only persisted state the restart reads.
 - **Walk workers.** Every subagent in a walk is a traversal hop or a PRD row
   resolver, with its own SESSION_ID. A file read is part of a worker's brief,
   never a separate subagent.
-- **Continuous quota.** From the first dispatch to the terminal state, live walk
-  workers never hold `shortfall`. The target is the `ceiling`. The count is
-  checked on every completion and every resume, and a shortfall is refilled in
-  the same turn.
+- **Continuous quota.** From the first dispatch to the terminal state, the `target`
+  and `shortfall` rules in Definitions hold, and a shortfall is refilled in the same turn.
 - **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
   nodes, count your live workers, launch one worker per open row or node until
   the ceiling, wait for completion notices, then repeat. This loop is the exit
@@ -344,9 +273,10 @@ the two differ, the stricter rule applies.
   orchestrator names the successor from that node's outgoing edges and spawns it. Only
   the orchestrator counts `live` against the `ceiling` and runs the headroom check, so
   a fallback spawn is placed by it.
-- **Single session.** Stay single-session only for one focused mechanical edit.
-  Any other work with two or more independent slices fans out; never split one
-  small task artificially.
+- **Single session.** Stay single-session only when the row file list names exactly one
+  path (mechanical: one edit to one file). Otherwise split the work into slices whose file
+  sets are pairwise disjoint (independent: one writer per surface, `.gm/instructions/entry.md`
+  L2). Two or more such slices fan out; never split one small task artificially.
 
 ## 1d. The two skills and the loop
 
@@ -362,7 +292,7 @@ parameters, and the skill holds the whole procedure:
 
 The walk loop, run on every tick and every completion:
 
-1. Count `live`: dispatch `pool-observe` and read `slots.live` (1c).
+1. Count `live`: read the last `tick <n> live=<count>` line of `.gm/witness-log.md` (1c). Each launch and each completion writes that line, so the count is on disk and not in context.
 2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row has
    no run, launch one `gm-exec` per row (`prd-list` with status pending).
 3. Spare slots hop: launch `gm-hop` in the remaining slots, from the candidates of an
@@ -375,8 +305,11 @@ A hop spawns its own successor (1c, Successor spawn), passing its `next_choice.w
 successor's `rhetoric`; the orchestrator spawns a successor only when none was named.
 A slot is never left empty while a pending row or an untraversed node remains. Executors
 edit with exact-match Edit on the file as it is now, so rows naming the same file may run
-together when they name different lines. The orchestrator delivers what the subagents
-change, once the wave returns, by the Autonomy rule (line 20).
+together when they name different lines. Once the executor wave returns, a verifier wave
+runs before any delivery: one slice per executed row, each under a SESSION_ID that executed
+none of the rows. Each verifier checks its row's diff (`git_diff` with `paths`) against the
+row text and reports pass or fail. The orchestrator delivers what the subagents change, by
+the Autonomy invariant (line 20), only for rows whose verifier passed.
 
 ## 2. Invariants -- true under any graph
 
