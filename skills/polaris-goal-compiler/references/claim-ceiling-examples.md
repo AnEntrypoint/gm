@@ -32,7 +32,7 @@ The point is not optimism or pessimism. It is that a local success should not be
 
 - You have three candidate lemmas but open debt on the fourth.
 - Claim ceiling: you may say "three of four lemmas supported." You may **not** say "the route is proven" while open debt remains.
-- Open debt must stay visible, not be silently folded into a "done."
+- The agent shall keep open debt visible and shall not silently fold it into a "done."
 
 ### Long multi-round planning
 

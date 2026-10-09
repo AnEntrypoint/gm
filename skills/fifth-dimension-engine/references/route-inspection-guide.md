@@ -38,6 +38,6 @@ A route is strong only if its weak points are visible. The attack surfaces are:
 
 ## Relationship to verification gates
 
-If a Polaris Goal Compiler verification gate applies to this atom, the route must pass that gate before you claim the atom is done. Route inspection is the substance of that gate; the gate is the decision rule.
+If a Polaris Goal Compiler verification gate applies to this atom, the route shall pass that gate before the agent claims the atom is done. Route inspection is the substance of that gate; the gate is the decision rule.
 
 See `../SKILL.md` for the engine interface and `route-structure.md` for what each layer means.
