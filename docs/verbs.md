@@ -342,6 +342,8 @@ These drive the phase machine. Dispatched through the same spool.
 the recovery verb. A long idle gap makes every other verb return
 `gate_denied` / `long-gap-no-instruction` until `instruction` is dispatched again.
 
+Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash` in the new body. An unchanged match suppresses the prose and discipline-policy blocks from the reply (`instruction_unchanged`/`discipline_policies_unchanged: true`, fields omitted); a mismatch or first dispatch returns them in full. Assert only a hash read off a response actually received. This is a response-size optimization only: phase, PRD, mutables and recall data return every time.
+
 ## Storage, cache and diagnostics
 
 `sql_open`, `sql_close`, `sql_list_dbs`, `sql_exec`, `sql_query`, `sql_smoke`, `sql_serialize`,
