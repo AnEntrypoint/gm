@@ -1,0 +1,82 @@
+name: house-clean
+
+# Keeps the update channels clean: each -bin repo holds only its latest published
+# release, and gm never tracks a built plugin or a plugkit version pin. Installers
+# and the gm-mcp release bridge read only the latest release, so a superseded
+# release has no reader. Drafts are skipped, so an in-flight publish is never touched.
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  repository_dispatch:
+    types: [submodule-released]
+  workflow_dispatch: {}
+
+concurrency:
+  group: gm-house-clean
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tree-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          submodules: false
+      - name: Fail when a built artifact or plugkit version pin is tracked
+        shell: bash
+        run: |
+          set -euo pipefail
+          stale=$(git ls-files -- '*.wasm' 'bin/plugkit*' 'gm-plugkit/plugkit*' 'bin/*.version' 'gm-plugkit/*.version')
+          if [ -n "$stale" ]; then
+            echo "::error::built or version-pinned artifacts are tracked in gm; they are published to the -bin repos, not committed:"
+            echo "$stale"
+            exit 1
+          fi
+          echo "[ok] no built artifacts or version pins tracked"
+
+  prune-releases:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - plugkit-bin
+          - agentplug-bin
+          - agentplug-bert-bin
+          - agentplug-crux-bin
+          - agentplug-lightpanda-bin
+          - agentplug-codeinsight-bin
+          - agentplug-libsql-bin
+          - agentplug-treesitter-bin
+    steps:
+      - name: Keep only the latest release of AnEntrypoint/${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          REPO: AnEntrypoint/${{ matrix.repo }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh repo view "$REPO" >/dev/null 2>&1; then
+            echo "$REPO does not exist; nothing to prune"
+            exit 0
+          fi
+          latest=$(gh api "repos/$REPO/releases/latest" --jq '.tag_name' 2>/dev/null || true)
+          if [ -z "$latest" ]; then
+            echo "$REPO has no published release; nothing to prune"
+            exit 0
+          fi
+          assets=$(gh api "repos/$REPO/releases/latest" --jq '.assets | length')
+          if [ "$assets" = "0" ]; then
+            echo "::error::latest release $latest of $REPO has no assets; refusing to prune anything"
+            exit 1
+          fi
+          gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name' | while read -r tag; do
+            if [ "$tag" = "$latest" ]; then continue; fi
+            gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
+            echo "pruned $tag"
+          done
+          echo "kept $latest in $REPO"
