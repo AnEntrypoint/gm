@@ -86,10 +86,12 @@ function Install-Skill {
         tar -xzf $assetPath -C $extractDir
 
         New-Item -ItemType Directory -Force -Path $ClaudeSkillsDir | Out-Null
-        $target = Join-Path $ClaudeSkillsDir "gm"
-        if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-        Copy-Item -Recurse -Force (Join-Path $extractDir "skills\gm") $target
-        Write-Host "installed gm skill $tag -> $target"
+        Get-ChildItem -Directory (Join-Path $extractDir "skills") | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } | ForEach-Object {
+            $target = Join-Path $ClaudeSkillsDir $_.Name
+            if (Test-Path $target) { Remove-Item -Recurse -Force $target }
+            Copy-Item -Recurse -Force $_.FullName $target
+            Write-Host "installed $($_.Name) skill $tag -> $target"
+        }
     } finally {
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
     }
