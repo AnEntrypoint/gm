@@ -22,12 +22,12 @@ async function fetchReleases() {
     headers: githubHeaders()
   });
   if (!res.ok) throw new Error(`GitHub releases fetch failed: ${res.status} ${res.statusText}`);
-  const raw = await res.json();
-  const releases = raw.map((r) => ({
-    tag: r.tag_name,
-    name: r.name || r.tag_name,
-    date: r.published_at || r.created_at,
-    url: r.html_url
+  const rawReleases = await res.json();
+  const releases = rawReleases.map((release) => ({
+    tag: release.tag_name,
+    name: release.name || release.tag_name,
+    date: release.published_at || release.created_at,
+    url: release.html_url
   }));
   return { releases, timestamp: new Date().toISOString() };
 }
@@ -36,7 +36,7 @@ async function fetchNpmDownloadsForPackage(pkg) {
   const res = await fetch(`https://api.npmjs.org/downloads/range/last-month/${encodeURIComponent(pkg)}`);
   if (!res.ok) throw new Error(`npm downloads fetch failed for ${pkg}: ${res.status} ${res.statusText}`);
   const data = await res.json();
-  return (data.downloads || []).map((d) => ({ date: d.day, count: d.downloads }));
+  return (data.downloads || []).map((dailyRow) => ({ date: dailyRow.day, count: dailyRow.downloads }));
 }
 
 async function fetchNpmDownloads() {
@@ -103,13 +103,13 @@ async function fetchGithubStats() {
   ]);
 
   const timestamp = new Date(now).toISOString();
-  const commitTime = (c) => Date.parse(c.commit.author.date);
-  const commitsPerWeek = recentCommits.filter((c) => commitTime(c) >= now - 7 * DAY_MS).length;
+  const commitTime = (commit) => Date.parse(commit.commit.author.date);
+  const commitsPerWeek = recentCommits.filter((commit) => commitTime(commit) >= now - 7 * DAY_MS).length;
 
-  const mergedPulls = closedPulls.filter((p) => p.merged_at);
+  const mergedPulls = closedPulls.filter((pull) => pull.merged_at);
   const mergeDurations = mergedPulls
-    .filter((p) => Date.parse(p.merged_at) >= now - WINDOW_DAYS * DAY_MS)
-    .map((p) => Date.parse(p.merged_at) - Date.parse(p.created_at));
+    .filter((pull) => Date.parse(pull.merged_at) >= now - WINDOW_DAYS * DAY_MS)
+    .map((pull) => Date.parse(pull.merged_at) - Date.parse(pull.created_at));
   const avgMergeMs = mergeDurations.length
     ? mergeDurations.reduce((sum, ms) => sum + ms, 0) / mergeDurations.length
     : null;
@@ -127,7 +127,7 @@ async function fetchGithubStats() {
     .sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at))
     .slice(0, REVIEW_SAMPLE);
   const reviewBatches = await Promise.all(
-    reviewSample.map((p) => githubPages(`https://api.github.com/repos/${REPO}/pulls/${p.number}/reviews`, 2))
+    reviewSample.map((pull) => githubPages(`https://api.github.com/repos/${REPO}/pulls/${pull.number}/reviews`, 2))
   );
   const reviewCounts = {};
   for (const reviews of reviewBatches) {
@@ -142,7 +142,7 @@ async function fetchGithubStats() {
 
   const commitSample = recentCommits.slice(0, COMMIT_SAMPLE);
   const commitDetails = await Promise.all(
-    commitSample.map((c) => githubJson(`https://api.github.com/repos/${REPO}/commits/${c.sha}`))
+    commitSample.map((commit) => githubJson(`https://api.github.com/repos/${REPO}/commits/${commit.sha}`))
   );
   const fileCounts = {};
   for (const detail of commitDetails) {
@@ -157,7 +157,7 @@ async function fetchGithubStats() {
   const velocity = [];
   for (let i = 0; i < WEEKS; i++) {
     const weekStart = new Date(thisWeek.getTime() - i * 7 * DAY_MS);
-    const merged = mergedPulls.filter((p) => startOfIsoWeek(new Date(p.merged_at)).getTime() === weekStart.getTime()).length;
+    const merged = mergedPulls.filter((pull) => startOfIsoWeek(new Date(pull.merged_at)).getTime() === weekStart.getTime()).length;
     velocity.push({ week: weekStart.toISOString().slice(0, 10), merged });
   }
 

@@ -1,11 +1,11 @@
 ---
 name: gm-continue
-description: The mandatory final handoff after a gm walk reaches phase=COMPLETE with prd_pending_count=0. Never end a gm session with prose alone -- dispatch this skill instead. It searches for genuinely remaining work and reloads gm if any exists; if gm already ran a full walk without resolving everything, it loads wfgy-method instead to apply bounded-retry-then-surface discipline before any further gm re-entry. Use immediately after any gm chain reaches its terminal state, never as a substitute for gm itself.
+description: The mandatory final handoff after a gm walk reaches phase=COMPLETE with prd_pending_count=0. The agent shall never end a gm session with prose alone, and shall dispatch this skill instead. Searches for remaining work and reloads gm if any exists, or loads wfgy-method if a walk already repeated the same gap. Use immediately when any gm chain reaches its terminal state, never as a substitute for gm itself.
 ---
 
 # gm-continue
 
-This is the only allowed next step when a `gm` walk reaches `phase=COMPLETE AND prd_pending_count=0`. Never end that turn with prose alone -- dispatch this skill instead, every time, no exceptions for "it looks finished."
+When a `gm` walk reaches `phase=COMPLETE AND prd_pending_count=0`, the agent shall dispatch this skill, the only allowed next step, every time. It shall never end that turn with prose alone, even for "it looks finished."
 
 **This skill itself has exactly two allowed ways to end, and no others.** (1) Dispatch `Skill(skill="gm")` with the remaining PRD rows (found reachable work, or reopened an `external`/`out-of-reach` row, or this is the first confirming pass this session) -- `gm` then runs and, when it reaches COMPLETE again, calls back into this same skill. (2) Confirm there are no remaining PRD rows and none can be added -- a real, witnessed check (steps 2-4 below actually run, not assumed), not a feeling of "probably done." There is no third path: no prose-only stop that isn't outcome (2), no deferring to the user to decide whether to continue, no partial confirmation. Every dispatch of this skill lands in exactly one of these two states before the turn ends.
 
@@ -19,7 +19,7 @@ This is the only allowed next step when a `gm` walk reaches `phase=COMPLETE AND 
 5. Two outcomes, decided by what steps 2-4 actually find:
    - **Real remaining work found** (any PRD item at all, a reopened external/out-of-reach row, an unaddressed noun from the request, an edge case never exercised, a residual never triaged, a sibling repo never checked): dispatch `Skill(skill="gm")` and instruct it explicitly to finish ALL remaining tasks in `.gm/prd.yml` and fix any issues that arise while doing so -- not a narrow slice, not "just the reopened ones." Tell it plainly what was found so it lands directly in PLAN with real rows, not a blind re-orient.
    - **Nothing found, but this is the first `gm-continue` dispatch this session**: dispatch `Skill(skill="gm")` anyway, once, to let a full independent PLAN pass confirm it from inside `gm`'s own discipline (fresh `codesearch`/`recall`, `prd_pending_count=0` reached with nothing new added). That confirming turn inside `gm` is the actual stopping point -- prose-only is earned there, not here.
-   - **Nothing found, and `gm-continue` already ran that confirming pass this session** (counter >= 1): the loop is closed. Prose-only summary is authorized. Do not dispatch anything further.
+   - **Nothing found, and `gm-continue` already ran that confirming pass this session** (counter >= 1): the loop is closed. Prose-only summary is authorized. The agent shall not dispatch anything further.
 
 ## When to load `wfgy-method` instead of `gm`
 

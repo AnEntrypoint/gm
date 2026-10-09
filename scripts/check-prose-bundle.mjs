@@ -22,12 +22,12 @@ function readIfPresent(p) {
 
 function extractDefaultsTable(fsmVendorRs, tableName) {
   const re = new RegExp(`const ${tableName}:\\s*&\\[\\(&str,\\s*&str\\)\\]\\s*=\\s*&\\[([\\s\\S]*?)\\];`);
-  const m = fsmVendorRs.match(re);
-  if (!m) return null;
+  const tableMatch = fsmVendorRs.match(re);
+  if (!tableMatch) return null;
   const entries = [];
   const rowRe = /\(\s*"([^"]+)"\s*,\s*([A-Za-z_][A-Za-z0-9_:]*)\s*\)/g;
   let row;
-  while ((row = rowRe.exec(m[1])) !== null) {
+  while ((row = rowRe.exec(tableMatch[1])) !== null) {
     entries.push({ key: row[1], constPath: row[2] });
   }
   return entries;
@@ -35,15 +35,15 @@ function extractDefaultsTable(fsmVendorRs, tableName) {
 
 function extractConstText(sourceText, constName) {
   const re = new RegExp(`const ${constName}:\\s*&str\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"\\s*;`);
-  const m = sourceText.match(re);
-  return m ? m[1] : null;
+  const constMatch = sourceText.match(re);
+  return constMatch ? constMatch[1] : null;
 }
 
 function placeholdersIn(text) {
   const found = new Set();
-  const re = /\{([a-z_]+)\}/g;
-  let m;
-  while ((m = re.exec(text)) !== null) found.add(`{${m[1]}}`);
+  const placeholderRe = /\{([a-z_]+)\}/g;
+  let placeholderMatch;
+  while ((placeholderMatch = placeholderRe.exec(text)) !== null) found.add(`{${placeholderMatch[1]}}`);
   return found;
 }
 
@@ -73,7 +73,7 @@ function deriveKeySpecs() {
   return specs;
 }
 
-function validateBundleCompleteness(keys) {
+function findBundleGaps(keys) {
   const missing = [];
   const empty = [];
   for (const key of keys) {
@@ -81,16 +81,19 @@ function validateBundleCompleteness(keys) {
     if (!fs.existsSync(fp)) { missing.push(key); continue; }
     if (fs.readFileSync(fp, 'utf8').trim() === '') empty.push(key);
   }
-  if (missing.length || empty.length) {
-    if (missing.length) console.error(`prose bundle missing entries: ${missing.join(', ')}`);
-    if (empty.length) console.error(`prose bundle empty entries: ${empty.join(', ')}`);
-    return false;
-  }
-  console.log(`prose bundle complete: ${keys.length} keys present and non-empty`);
-  return true;
+  return { missing, empty };
 }
 
-function validatePlaceholderParity(specs) {
+function reportBundleGaps(gaps, keyCount) {
+  if (gaps.missing.length || gaps.empty.length) {
+    if (gaps.missing.length) console.error(`prose bundle missing entries: ${gaps.missing.join(', ')}`);
+    if (gaps.empty.length) console.error(`prose bundle empty entries: ${gaps.empty.join(', ')}`);
+    return;
+  }
+  console.log(`prose bundle complete: ${keyCount} keys present and non-empty`);
+}
+
+function findPlaceholderParityFindings(specs) {
   const findings = [];
   for (const { key, constName, placeholders } of specs) {
     const fp = path.join(bundleDir, `${key}.md`);
@@ -107,14 +110,17 @@ function validatePlaceholderParity(specs) {
       }
     }
   }
+  return findings;
+}
+
+function reportPlaceholderParity(findings, specs) {
   if (findings.length) {
     console.error('prose-placeholder-parity FAILED -- .md overrides drifted from the substituting Rust consts:');
-    for (const f of findings) console.error(`  - ${f}`);
-    return true;
+    for (const finding of findings) console.error(`  - ${finding}`);
+    return;
   }
-  const withTokens = specs.filter((s) => s.placeholders.size > 0).length;
+  const withTokens = specs.filter((spec) => spec.placeholders.size > 0).length;
   console.log(`prose-placeholder-parity: ${specs.length} keys checked, ${withTokens} carrying placeholders, all matching their Rust consts`);
-  return false;
 }
 
 function resolveConformancePaths() {
@@ -126,15 +132,16 @@ function resolveConformancePaths() {
 }
 
 function checkEveryRequiredFileExists(requiredFiles) {
-  return requiredFiles.filter((p) => !fs.existsSync(p));
+  return requiredFiles.filter((filePath) => !fs.existsSync(filePath));
 }
 
 function extractExecJsOptsFieldsFromProse(execJsOptsProseMd) {
   const optsFieldRe = /opts\.([a-zA-Z][a-zA-Z0-9]*)/g;
   const promisedOptsFields = new Set();
-  let m;
-  while ((m = optsFieldRe.exec(execJsOptsProseMd)) !== null) {
-    if (m[1] !== 'true' && m[1] !== 'false') promisedOptsFields.add(m[1]);
+  let optsFieldMatch;
+  while ((optsFieldMatch = optsFieldRe.exec(execJsOptsProseMd)) !== null) {
+    const fieldName = optsFieldMatch[1];
+    if (fieldName !== 'true' && fieldName !== 'false') promisedOptsFields.add(fieldName);
   }
   return promisedOptsFields;
 }
@@ -151,36 +158,39 @@ function crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs) {
   return { conformanceFindings, promisedOptsFieldCount: promisedOptsFields.size };
 }
 
-function runConformanceCheck() {
+function findConformance() {
   const paths = resolveConformancePaths();
   const requiredFiles = [paths.execJsOptsProseMdPath, paths.execJsRsPath];
   const missingFiles = checkEveryRequiredFileExists(requiredFiles);
 
   if (missingFiles.length > 0) {
-    console.log(`prose-conformance: skipping -- missing file(s) (submodules not populated, or a partial/shallow checkout): ${missingFiles.map((p) => path.relative(root, p)).join(', ')}`);
-    return false;
+    return { skipped: missingFiles.map((filePath) => path.relative(root, filePath)), findings: [], promisedOptsFieldCount: 0 };
   }
 
   const execJsOptsProseMd = fs.readFileSync(paths.execJsOptsProseMdPath, 'utf8');
   const execJsRs = fs.readFileSync(paths.execJsRsPath, 'utf8');
+  const { conformanceFindings, promisedOptsFieldCount } = crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs);
+  return { skipped: [], findings: conformanceFindings, promisedOptsFieldCount };
+}
 
-  const execJsResult = crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs);
-
-  if (execJsResult.conformanceFindings.length) {
-    console.error('prose-conformance FAILED -- prose promises capabilities with no confirmed implementing-code reference:');
-    for (const f of execJsResult.conformanceFindings) console.error(`  - ${f}`);
-    return true;
+function reportConformance(conformance) {
+  if (conformance.skipped.length > 0) {
+    console.log(`prose-conformance: skipping -- missing file(s) (submodules not populated, or a partial/shallow checkout): ${conformance.skipped.join(', ')}`);
+    return;
   }
-
-  console.log(`prose-conformance: ${execJsResult.promisedOptsFieldCount} exec_js opts fields all have a matching implementing-code reference`);
-  return false;
+  if (conformance.findings.length) {
+    console.error('prose-conformance FAILED -- prose promises capabilities with no confirmed implementing-code reference:');
+    for (const finding of conformance.findings) console.error(`  - ${finding}`);
+    return;
+  }
+  console.log(`prose-conformance: ${conformance.promisedOptsFieldCount} exec_js opts fields all have a matching implementing-code reference`);
 }
 
 const derivedSpecs = deriveKeySpecs();
-const keys = derivedSpecs ? derivedSpecs.map((s) => s.key) : FALLBACK_GATE_AND_RESIDUAL_KEYS;
+const keys = derivedSpecs ? derivedSpecs.map((spec) => spec.key) : FALLBACK_GATE_AND_RESIDUAL_KEYS;
 
 if (derivedSpecs) {
-  const missingFromDerived = FALLBACK_GATE_AND_RESIDUAL_KEYS.filter((k) => !keys.includes(k));
+  const missingFromDerived = FALLBACK_GATE_AND_RESIDUAL_KEYS.filter((key) => !keys.includes(key));
   console.log(`prose bundle keys derived from fsm_vendor GATE_DEFAULTS + RESIDUAL_DEFAULTS: ${keys.length}`);
   if (missingFromDerived.length) {
     console.log(`note: previously-hardcoded keys no longer in the Rust tables: ${missingFromDerived.join(', ')}`);
@@ -189,9 +199,16 @@ if (derivedSpecs) {
   console.log('prose bundle keys: falling back to the hardcoded list -- rs-plugkit sources unavailable (submodule not populated, or a partial/shallow checkout)');
 }
 
-const bundleFailed = !validateBundleCompleteness(keys);
-const placeholderFailed = derivedSpecs ? validatePlaceholderParity(derivedSpecs) : false;
-const conformanceFailed = runConformanceCheck();
+const bundleGaps = findBundleGaps(keys);
+reportBundleGaps(bundleGaps, keys.length);
+const parityFindings = derivedSpecs ? findPlaceholderParityFindings(derivedSpecs) : [];
+if (derivedSpecs) reportPlaceholderParity(parityFindings, derivedSpecs);
+const conformance = findConformance();
+reportConformance(conformance);
+
+const bundleFailed = bundleGaps.missing.length > 0 || bundleGaps.empty.length > 0;
+const placeholderFailed = parityFindings.length > 0;
+const conformanceFailed = conformance.findings.length > 0;
 
 if (bundleFailed || placeholderFailed || conformanceFailed) {
   process.exit(1);
