@@ -89,24 +89,16 @@ extract_tag_owning_asset_from_releases_json() {
 
 resolve_installable_tag() {
   asset_name="$1"
-  releases_json=$(fetch_json "https://api.github.com/repos/${REPO}/releases?per_page=10")
-  if [ -n "$releases_json" ]; then
-    tag=$(extract_tag_owning_asset_from_releases_json "$releases_json" "$asset_name")
-    if [ -n "${tag:-}" ]; then
-      echo "$tag"
-      return 0
-    fi
-    log "no release in the 10 most recent carries a ${asset_name} asset -- falling back to git ls-remote (asset-unverified)"
-  else
-    log "GitHub API release lookup failed -- falling back to git ls-remote (asset-unverified)"
+  releases_json=$(fetch_json "https://api.github.com/repos/${REPO}/releases/latest")
+  if [ -z "$releases_json" ]; then
+    log "GitHub API release lookup for ${REPO} failed; refusing to install an older or unverified release"
+    return 0
   fi
-  if command -v git >/dev/null 2>&1; then
-    tag=$(git ls-remote --tags --refs "https://github.com/${REPO}.git" 2>/dev/null \
-      | sed -n 's#.*refs/tags/##p' \
-      | sort -t. -k1,1n -k2,2n -k3,3n \
-      | tail -1)
+  if ! printf '%s' "$releases_json" | tr ',' '\n' | awk -v needle="\"name\": \"${asset_name}\"" 'index($0, needle) > 0 { found = 1 } END { exit !found }'; then
+    log "the latest release of ${REPO} carries no ${asset_name} asset; refusing to install an older release"
+    return 0
   fi
-  echo "${tag:-}"
+  extract_tag_owning_asset_from_releases_json "$releases_json" "$asset_name"
 }
 
 fetch() (
