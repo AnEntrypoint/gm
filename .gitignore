@@ -155,3 +155,6 @@ skills/gm/.gm/
 
 # Dream-RSI scratch trees have path names past the Windows 260-char limit; git status must not walk them
 .gm/dream-rsi/
+
+# Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
+.gm/crawl-cdp-profile/
