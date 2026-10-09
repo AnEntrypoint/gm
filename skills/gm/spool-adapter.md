@@ -9,3 +9,12 @@ Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool
 Write the in-file atomically: write the body to a sibling temp name, then `mv` (PowerShell: `Move-Item`) it onto `<N>.txt`. A plain `>` redirect creates the file empty and fills it a moment later, so a claim that lands in that window dispatches a torn body and is answered with a validation error for a field the body does supply. A rename is atomic, so the file only ever appears complete.
 
 `<N>` is `<session_id>-<N>`, never a bare integer. The daemon keys in-flight claims by literal `(verb, N)` with no per-session partition, so two sessions that pick `1`, `2` and `3` read each other's responses.
+
+## Starting the watcher
+
+Start the installed runner detached and fire-and-forget. Do not wait on it; write the first verb immediately. The runner binary lives at `~/.gm-tools/agentplug-runner`.
+
+- POSIX: `~/.gm-tools/agentplug-runner spool`
+- PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`
+
+When to start one is owned by `skills/gm/SKILL.md` (the verified-dead rule).
