@@ -14,8 +14,19 @@ A stage that cannot be executed is a blocker on the row, and is never skipped.
 
 - `row=<id>`: the PRD row to close.
 - `session=<SESSION_ID>`: your SESSION_ID. Use it in every dispatch body.
+- `mode=witness` (optional): a witness-only run. It closes a prose row that another session
+  edited, and it edits nothing.
 
 If either field is missing, answer `STATUS: BLOCKED` naming it, and stop.
+
+## Witness mode
+
+When `mode=witness` is set, run SPECIFY, PROVE, DECIDE and COMPLETE only. EMIT, STATE, SEC and RES
+are not run, and this session edits no file. Witness the row's acceptance through the observable
+surface it names: a verb reply, a served `instruction` response, or a `codesearch` readback of the
+file. Each witness line states which surface it observed. A row whose served surface omits its
+file is closed on the readback, and that line says so. `prd-resolve` runs only when the witness
+dispatch id is verified.
 
 ## Harness
 
@@ -71,14 +82,19 @@ make progress.
 ## The nine stages
 
 1. **SPECIFY**: restate the row and its acceptance criteria, with the mutables it raises.
-   Dispatch `scan_deps` first if this session has not yet scanned dependencies.
+   Dispatch `scan_deps` first if this session has not yet scanned dependencies. Check each
+   cited line and quote against the working tree. If the cited text is absent from the
+   working tree and from HEAD, the premise is false: witness the absence with `codesearch`,
+   and resolve the row as stale with that witness.
 2. **PROVE**: typed obligations for the change: precondition, invariant, postcondition.
    Each one is run or recorded as a mutable.
 3. **EMIT**: make the change the row names, on the files it names, with exact-match Edit.
    Never rewrite a whole file. Witness it through its live entry point and keep the dispatch id.
 4. **STATE**: the change replays idempotently. Say which state it owns, and run that.
-5. **CONC**: name each file the change touches. If another writer has uncommitted changes in
-   one of them, stop and record a blocker. Never edit over another writer.
+5. **CONC**: name each file the change touches, and list any other writer's uncommitted hunks
+   in it (`git_status` with `paths`). Those hunks are not a stop: the edit is an exact-match
+   replacement of text read in the current file, so it preserves them. Record the hunks in the
+   receipt. Delivery of a shared file is the orchestrator's, below.
 6. **SEC**: check the change for secrets, injection and identity. Each check is a run.
 7. **RES**: list the failure modes of the change, with partial failure. Run each one.
 8. **DECIDE**: check the receipts and the live witnesses against the row's own words. Do
@@ -121,9 +137,18 @@ At most 100 words:
     MUTABLES: <open mutables, or none>
     DELIVERY: <commit sha and push result, or "left uncommitted: <files>">
 
-## Rules
+## Invariants
 
-- No test files, ever. Witness with the live system.
-- Never edit a file another writer has uncommitted changes in.
-- Never kill another lane's process.
-- Write nothing outside the row's files, the receipts directory and the witness log.
+An invariant is a rule with a check. A run that breaks one logs a FAILURE line in its receipt
+and does not resolve its row.
+
+- No test files, ever. Check: no path in the row's `git_status` or `git_diff` names a test file.
+- Edits are exact-match only. Check: each `git_diff` hunk this run wrote replaces text the run
+  read; a whole-file rewrite fails the check, and another writer's hunks remain in the diff.
+- Never kill another lane's process. Check: the receipt names no kill command.
+- Write nothing outside the row's files, the receipts directory and the witness log. Check:
+  `git_status` with `paths` shows no change outside them.
+- Receipts are append-only. Check: every receipt file keeps each earlier session's section; a
+  session that finds an existing receipt appends its own section under its own session heading.
+- A prose row is closed by an independent session. Check: the `session` that closes it is not the
+  session whose `EMIT` edited the file.
