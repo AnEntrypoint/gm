@@ -173,6 +173,9 @@ node-only; traversal hops started late, so node supply ran out; the served rules
 from gm-config (the native config cache did not sync); stuck background shells and Monitors held the
 GPU lock and the orchestrator's attention.
 
+Observed ceiling on 2026-10-09 (14:07Z): the live build accepted 24 at `.gm/instructions/entry.md:58`
+(a refreshed codesearch in session gm-cli-3109570-1791554460239, recorded as row DRY-25).
+
 Drop to 0 live on 2026-10-09 (13:33Z): eight resolvers finished in one window and nothing relaunched
 them in that turn. Successors were chosen by hand because `slots.candidates` came back empty while
 779 rows were pending, with the pool observe `candidates:` and `live_rows:` null. The empty list
