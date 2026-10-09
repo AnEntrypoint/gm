@@ -114,9 +114,9 @@ missing, the runtime is not installed: run the repo's `install.sh` (or
 `install.ps1`) before any gm work. A verb you cannot run is named in your reply
 with the reason; do not drop it silently.
 
-Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; the dispatch completes when
-`.gm/exec-spool/out/<verb>-<N>.json` lands, so condition-poll for that file under
-the completion contract below, never narrate first. **Write that in-file atomically: body to a sibling temp name, then
+Create `.gm/exec-spool/in/<verb>/` when it is absent, then write `.gm/exec-spool/in/<verb>/<N>.txt` as JSON; read
+`.gm/exec-spool/out/<verb>-<N>.json` in the SAME tool-call block, never narrate
+first. **Write that in-file atomically: body to a sibling temp name, then
 `mv`/`Move-Item` it onto `<N>.txt`.** A plain `>` redirect creates the file empty
 and fills it a moment later; a claim landing in that window dispatches a torn
 body and answers with a validation error naming a field you did supply (live:
@@ -182,9 +182,8 @@ explicit validation error naming what it wanted -- both arrive through the
 ordinary read cycle. So a missing out-file means exactly one thing: *the
 dispatch has not finished yet*. Check `in/<verb>/<N>.txt.inflight` -- while that
 claim exists the work is still running, and a cold codesearch index/embed pass
-or a contended daemon legitimately takes minutes, not seconds. Completion contract: condition-poll
-the out-file until it lands or the `.inflight` claim clears, whichever comes
-first (never a blind sleep, never a blind re-dispatch, which only adds a second
+or a contended daemon legitimately takes minutes, not seconds. Condition-poll it
+(never a blind sleep, never a blind re-dispatch, which only adds a second
 competing dispatch to the same queue); `.status.json`'s `busy_until` and
 `queue_depth` say how contended the project is. Concluding "verb unavailable"
 from silence has cost real sessions whole turns falling back from verbs that
