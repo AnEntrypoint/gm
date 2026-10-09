@@ -392,6 +392,11 @@ is restated here. A hop nominates its successor and spawns it with the same call
 
 - Hops run under the walk loop in Section 1c. Phase, gate and terminal nodes are not
   hops. `shortfall` does not hold until the wave returns.
+- Successor recovery. A hop that returns `NEXT: none`, or returns without a NEXT line,
+  leaves its successor unnamed. The orchestrator names it: it reads that node's
+  outgoing edges in the graph (the command in the gm-hop skill), picks the candidate
+  that attacks the open finding, writes its rhetoric, and spawns it with the same
+  Skill call. No unnamed successor is dropped.
 - An executor is one subagent that loads `gm-exec` with `args="row=<id>; session=<SESSION_ID>"`.
   All executor prose lives in `skills/gm-exec/SKILL.md`.
 - While open PRD rows exist, executors take free slots first, one per row, and rows
