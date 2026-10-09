@@ -89,9 +89,7 @@ be additionally planned and executed since they are an implicit part of the inst
 of planning steps and execution of all remaining steps from previous plans, and all new plans that arise,
 before the required threshold for completion. Section 1b is this paragraph made mechanical: a
 graph, not a mood.
-`Skill(skill="gm-continue")` at the graph's terminal state with
-`prd_pending_count=0`. There is no other exit. Dispatch `instruction` whenever
-uncertain; never invent the next step from memory.
+Dispatch `instruction` whenever uncertain; never invent the next step from memory.
 
 ## Subagent quota (every turn)
 
@@ -301,7 +299,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-defines the parallelism contract (1c). Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -356,9 +354,11 @@ the two differ, the stricter rule applies.
   heartbeat step is refused, so every spawn is countable.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains. Never wait for a batch to finish.
-  The only stops are a spawn refusal and a headroom stop (CPU at or above 80%
-  or free memory under 2 GB). A headroom stop is logged with the real count and
-  timestamp.
+  The only stops are a spawn refusal and a headroom stop. Headroom is read before
+  each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
+  (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
+  Win32_OperatingSystem` FreePhysicalMemory). A headroom stop is logged with the
+  real count and timestamp.
 - **Shortfall.** If `shortfall` holds while independent work remains, log a
   FAILURE line as a `prd-add` row that names the count, the timestamp and the
   open slices. Then launch to the `target`, not just out of `shortfall`. If
@@ -376,7 +376,8 @@ the two differ, the stricter rule applies.
   the ceiling, wait for completion notices, then repeat. The loop ends only at
   the terminal state with `prd_pending_count=0`.
 - **Single session.** Stay single-session only for one focused mechanical edit.
-  Any other work with two or more independent slices fans out.
+  Any other work with two or more independent slices fans out; never split one
+  small task artificially.
 
 ## 1d. Hops are skill loads
 
@@ -395,8 +396,8 @@ is restated here. A hop nominates its successor and spawns it with the same call
   All executor prose lives in `skills/gm-exec/SKILL.md`.
 - While open PRD rows exist, executors take free slots first, one per row, and rows
   naming the same file run one at a time. Hops fill slots no open row can use.
-- The orchestrator commits and pushes what the subagents change, once the wave
-  returns, through `git_finalize`.
+- The orchestrator delivers what the subagents change, once the wave returns, by
+  the Autonomy rule (line 20).
 
 ## 2. Invariants -- true under any graph
 
