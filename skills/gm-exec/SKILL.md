@@ -41,6 +41,11 @@ Witness outcomes are not PRD rows. Append one line per run to `/config/workspace
 the witness, the exit code, the RESULT line, the timestamp, and the dispatch id. Close the
 parent row by citing that line.
 
+A prose row (a change to a skill, instruction or served key) is witnessed by an observed change
+in a verb reply or a served phase response, read by a session that did not edit the prose.
+Reading back the text just written proves storage, not behavior, so the editing session cannot
+close its own prose row.
+
 ## Mutables and JIT execution
 
 A mutable is an open question. Record every unknown the row raises as a mutable before you
