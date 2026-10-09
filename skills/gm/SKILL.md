@@ -17,6 +17,8 @@ and `Read` only a located path."**
 - An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the only exit is the terminal state with `prd_pending_count=0`, then `Skill(skill="gm-continue")`.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
+- Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
+- A delivery is witnessed by the `git_finalize` reply (commit sha, push result, CI state), not by the local diff.
 
 Codeinsight first: `callers {symbol}` before reading, editing or deleting a
 function (who calls it, what must stay valid), `impact {symbol, max_depth}` for
@@ -286,9 +288,9 @@ you also need
 Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
-native Grep/Glob/find/raw-git tools with no discouragement otherwise. Full
-fan-out discipline (SESSION_ID minting, when to fan out vs stay single-session):
-served `instruction` prose, "Subagent fan-out" section.
+native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
+sets the parallelism floor. Full fan-out discipline (SESSION_ID minting): served
+`instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
 
@@ -312,6 +314,37 @@ scheduled housekeeping and `memorize-fire` at DECIDE
 (`gm-config/prose/decide.md`, "Housekeeping and memorization are scheduled
 runs"). Section 1b is the opening paragraph above made mechanical: a graph,
 not a mood.
+
+## 1c. Parallelism contract -- every session that drives a walk
+
+Fan out by default. Served prose sets the same rules with more detail; where
+the two differ, the stricter rule applies.
+
+- **Ceiling.** The host caps concurrent subagents. Find the cap by launching.
+  A refusal reading "Concurrent subagent limit reached. You can run N subagents
+  at once" names N. Launch the full wave first; keep launching while independent
+  work remains until a refusal. The live build has accepted a wave of 24. Never
+  hardcode N.
+- **Target.** Fill the ceiling: keep as many subagents live as independent work
+  allows, up to the ceiling.
+- **Floor.** Half the ceiling is the minimum live count at any moment while
+  independent work remains. Before any refusal, the ceiling is the largest wave
+  accepted so far, so the floor is half of that.
+- **Count.** The build reports no live count: `instruction` returns no
+  `subagents_running`, and `.gm/pool/` does not exist. Count your own launches
+  minus completion notices. Re-count on every completion and every resume.
+- **Launch.** Split the work into independent slices before you dispatch. Send
+  every slice of one wave in one tool-call block. Each slice gets its own
+  SESSION_ID and the brick-wall opener from Section 1.
+- **Refill.** On every completion, in the same turn, launch one replacement per
+  freed slot while independent work remains. Never wait for a batch to finish.
+- **Below floor.** If live count falls under half the ceiling while independent
+  work remains, add a `prd-add` row that names the count, the timestamp and the
+  open slices. Then launch until the ceiling is filled, not just the floor. If
+  the gap repeats, the skill is wrong: dispatch `instruction`, correct this
+  section, and restart the walk.
+- **Single session.** Stay single-session only for one focused mechanical edit.
+  Any other work with two or more independent slices fans out.
 
 ## 2. Invariants -- true under any graph
 
