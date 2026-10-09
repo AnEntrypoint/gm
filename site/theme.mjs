@@ -324,9 +324,9 @@ export default {
       const id = doc.id;
       if (!id) throw new Error('page missing id: ' + JSON.stringify(doc).slice(0, 100));
       const path = id === 'home' ? 'index.html' : `${id}/index.html`;
-      if (id === 'home' && doc.hero) doc.hero = { ...doc.hero, stats: liveStats };
+      const withLiveStats = id === 'home' && doc.hero ? { ...doc, hero: { ...doc.hero, stats: liveStats } } : doc;
 
-      let page = doc;
+      let page = withLiveStats;
       if (doc.layout === 'article') {
         if (!doc.source) throw new Error(`article page ${id} missing source`);
         const sourcePath = resolve(THIS_DIR, doc.source);
@@ -334,7 +334,7 @@ export default {
         const raw = readFileSync(sourcePath, 'utf8');
         let articleHtml = extractArticle(raw);
         articleHtml = rewriteLegacyLinks(articleHtml, '');
-        page = { ...doc, articleHtml };
+        page = { ...withLiveStats, articleHtml };
       }
       outputs.push({ path, html: renderHtml({ site, navItems, page }) });
     }

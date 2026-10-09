@@ -31,20 +31,19 @@ for (const name of entries) {
   if (already.has(name)) continue
   const target = path.join(root, name)
   const start = Date.now()
-  let out, code
+  let stdout, exitCode
   try {
-    out = execFileSync('node', [scannerPath, target], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000, windowsHide: true })
-    code = 0
+    stdout = execFileSync('node', [scannerPath, target], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 180000, windowsHide: true })
+    exitCode = 0
   } catch (err) {
-    out = err.stdout || ''
-    code = err.status ?? (err.signal ? 'killed:' + err.signal : 1)
+    stdout = err.stdout || ''
+    exitCode = err.status ?? (err.signal ? 'killed:' + err.signal : 1)
   }
-  const ms = Date.now() - start
-  const block = `=== ${name} ===\n(exit ${code}, ${ms}ms)\n${out.trim()}\n\n`
+  const elapsedMs = Date.now() - start
+  const block = `=== ${name} ===\n(exit ${exitCode}, ${elapsedMs}ms)\n${stdout.trim()}\n\n`
   fs.appendFileSync(logPath, block)
-  const lastSummaryLine = out.trim().split('\n').pop() || ''
-  const isClean = /: 0 finding/.test(lastSummaryLine)
-  console.error(`[${isClean ? 'clean' : 'FINDINGS'}] ${name} (${ms}ms)`)
+  const lastSummaryLine = stdout.trim().split('\n').pop() || ''
+  console.error(`${name} (${elapsedMs}ms): ${lastSummaryLine || 'no summary line, exit ' + exitCode}`)
 }
 
 console.error('done')

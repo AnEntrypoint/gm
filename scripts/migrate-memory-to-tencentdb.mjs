@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, renameSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { basename, join, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
@@ -19,11 +19,11 @@ const RS_LEARN_DB = join(PROJECT, ".gm", "rs-learn.db");
 const ARCHIVE_DIR = join(PROJECT, ".gm", "memories-archive-tencentdb", NAMESPACE);
 
 function isDerivableStateMirroringMemorizeRs(text) {
-  const t = text.trim();
-  if (t.length > 40 && /^[0-9a-fA-F]+$/.test(t)) {
+  const trimmed = text.trim();
+  if (trimmed.length > 40 && /^[0-9a-fA-F]+$/.test(trimmed)) {
     return "memo is a hex hash; git log is the source of truth";
   }
-  const lower = t.toLowerCase();
+  const lower = trimmed.toLowerCase();
   const bad = [
     ["we used to ", "historical framing belongs in git log + CHANGELOG"],
     ["used to do", "historical framing belongs in git log + CHANGELOG"],
@@ -46,9 +46,9 @@ function isDerivableStateMirroringMemorizeRs(text) {
 }
 
 function parseMemoryMdFrontmatterFile(raw) {
-  const m = raw.match(/^---\n([\s\S]*?)\n---\n\n([\s\S]*)$/);
-  if (!m) return null;
-  const [, frontmatter, body] = m;
+  const frontmatterMatch = raw.match(/^---\n([\s\S]*?)\n---\n\n([\s\S]*)$/);
+  if (!frontmatterMatch) return null;
+  const [, frontmatter, body] = frontmatterMatch;
   const fields = {};
   for (const line of frontmatter.split("\n")) {
     const idx = line.indexOf(":");
@@ -79,24 +79,41 @@ function probeLegacyRsLearnDb() {
   };
 }
 
-function dispatchVerb(verb, body, timeoutMs = 30_000) {
-  const n = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function spoolResponsePath(verb, requestId) {
+  return join(SPOOL_OUT, `${verb}-${requestId}.json`);
+}
+
+function writeSpoolRequest(verb, requestId, body) {
   const inDir = join(SPOOL_IN, verb);
-  const outPath = join(SPOOL_OUT, `${verb}-${n}.json`);
-  execFileSync("mkdir", ["-p", inDir], { windowsHide: true });
-  execFileSync("node", ["-e", `require('fs').writeFileSync(${JSON.stringify(join(inDir, `${n}.txt`))}, ${JSON.stringify(JSON.stringify(body))})`], { windowsHide: true });
+  const requestPath = join(inDir, `${requestId}.txt`);
+  mkdirSync(inDir, { recursive: true });
+  writeFileSync(`${requestPath}.tmp`, JSON.stringify(body));
+  renameSync(`${requestPath}.tmp`, requestPath);
+}
+
+function awaitSpoolResponse(outPath, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (existsSync(outPath)) {
       try {
         return JSON.parse(readFileSync(outPath, "utf8"));
-      } catch (parseErrorWhileStillBeingWritten) {
-        void parseErrorWhileStillBeingWritten;
+      } catch {
+        // response is still being written; poll again
       }
     }
-    execFileSync("sleep", ["0.2"], { windowsHide: true });
+    sleepSync(200);
   }
   throw new Error(`dispatch timeout waiting for ${outPath}`);
+}
+
+export function dispatchVerb(verb, body, timeoutMs = 30_000) {
+  const requestId = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  writeSpoolRequest(verb, requestId, body);
+  return awaitSpoolResponse(spoolResponsePath(verb, requestId), timeoutMs);
 }
 
 function main() {
@@ -138,21 +155,21 @@ function main() {
     }
     try {
       const resp = dispatchVerb("memorize", { text: parsed.text, namespace: NAMESPACE, kind: "l0" });
-      if (resp.ok) {
-        kept++;
-        if (ARCHIVE) {
-          try {
-            const dest = join(ARCHIVE_DIR, path.slice(path.lastIndexOf("/") + 1));
-            mkdirSync(dirname(dest), { recursive: true });
-            renameSync(path, dest);
-            archived++;
-          } catch (e) {
-            console.log(`[migrate]   WARN: migrated ${parsed.key} but failed to archive source ${path}: ${e.message}`);
-          }
-        }
-      } else {
+      if (!resp.ok) {
         errored++;
         console.log(`[migrate]   ERROR migrating ${parsed.key}: ${resp.error || JSON.stringify(resp)}`);
+        continue;
+      }
+      kept++;
+      if (ARCHIVE) {
+        try {
+          const dest = join(ARCHIVE_DIR, basename(path));
+          mkdirSync(dirname(dest), { recursive: true });
+          renameSync(path, dest);
+          archived++;
+        } catch (e) {
+          console.log(`[migrate]   WARN: migrated ${parsed.key} but failed to archive source ${path}: ${e.message}`);
+        }
       }
     } catch (e) {
       errored++;
@@ -172,4 +189,5 @@ function main() {
   }
 }
 
-main();
+const isEntrypoint = resolve(process.argv[1] ?? "").toLowerCase() === resolve(fileURLToPath(import.meta.url)).toLowerCase();
+if (isEntrypoint) main();

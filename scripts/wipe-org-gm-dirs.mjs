@@ -15,7 +15,8 @@ function gh(args) {
 function listActiveRepos() {
   const out = gh(["repo", "list", ORG, "--limit", "500", "--json", "name,isArchived,defaultBranchRef"]);
   const repos = JSON.parse(out);
-  return repos.filter(r => !r.isArchived && r.name !== SKIP_SELF);
+  if (!Array.isArray(repos)) throw new Error(`gh repo list did not return an array: ${out.slice(0, 200)}`);
+  return repos.filter(repo => repo && typeof repo.name === "string" && !repo.isArchived && repo.name !== SKIP_SELF);
 }
 
 function cloneShallow(repo, dir) {
@@ -55,9 +56,9 @@ function main() {
   }
   const summary = {
     total_repos_scanned: repos.length,
-    wiped: results.filter(r => r.action === "wiped" || r.action === "would-wipe").length,
-    skipped: results.filter(r => r.action === "skipped-no-gm-dir").length,
-    errors: results.filter(r => r.action === "error"),
+    wiped: results.filter(result => result.action === "wiped" || result.action === "would-wipe").length,
+    skipped: results.filter(result => result.action === "skipped-no-gm-dir").length,
+    errors: results.filter(result => result.action === "error"),
   };
   console.log(JSON.stringify({ summary, results }, null, 2));
 }

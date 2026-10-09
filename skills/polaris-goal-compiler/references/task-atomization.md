@@ -2,7 +2,7 @@
 
 ## What Makes an Atom
 
-A task atom is the smallest executable unit of work. It must satisfy all of:
+A task atom is the smallest executable unit of work. It shall satisfy all of:
 
 1. **Atomic** -- Cannot be divided further without losing meaning
 2. **Completable** -- Can be finished in one session/sprint

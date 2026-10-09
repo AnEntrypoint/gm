@@ -1,8 +1,7 @@
 ---
 name: agent-memory
-description: Sets up and drives TencentDB Agent Memory (MemoryCore + MemoryHub + MemoryProxy + MemoryPanel, from AnEntrypoint/agent-memory) -- a persistent, cross-session memory and knowledge system for AI agents. Chat Memory (L0 conversation -> L1 atom -> L2 scenario -> L3 persona), a versioned Skill library extracted from past work, a Wiki + CodeGraph knowledge map over docs and code, and a human-controlled review panel. Use when the user wants an agent team to share and accumulate memory/skills/knowledge across sessions and across multiple agent frameworks (not just this one Claude Code session), when they mention "memory hub", "team memory", "chat memory", "skill library", "wiki", "codegraph", or ask to install/configure/troubleshoot the memory-tencentdb plugin, or when onboarding a new agent into an existing team's accumulated experience. As of gm's tencentdb_backend addition, this system's format can ALSO be gm's own memorize/recall/memorize-fire/memorize-prune backend for an opted-in namespace (see gm.config.json's memory.tencentdb_backend) -- when that's enabled, the verb surface an agent already knows is unchanged; only the storage target moves. Use this skill for the standalone deployment (Docker Compose, panel UI, team review) or when gm's own backend is not what's being asked about.
+description: Sets up and drives TencentDB Agent Memory (MemoryCore, MemoryHub, MemoryProxy, MemoryPanel) for agent teams. Use when the user mentions "memory hub", "team memory", "chat memory", "skill library", "wiki", "codegraph", or asks to install, configure or troubleshoot the memory-tencentdb plugin, onboard a new agent, or deploy standalone (Docker Compose, panel UI, team review).
 license: MIT
-compatibility: Requires Docker (or Node.js >= 22.16 for source install) to run MemoryCore/MemoryHub/MemoryProxy services locally or self-hosted; a running LLM endpoint (OpenAI-compatible) for extraction/embedding. Panel UI served over HTTP. Verified against AnEntrypoint/agent-memory (published fork of TencentCloud/TencentDB-Agent-Memory).
 metadata:
   origin: AnEntrypoint/agent-memory
   upstream: TencentCloud/TencentDB-Agent-Memory
@@ -11,6 +10,8 @@ allowed-tools: Skill, Read, Write, Bash, WebFetch
 ---
 
 # agent-memory
+
+Requires a running OpenAI-compatible LLM endpoint for extraction and embedding; Docker or Node.js >= 22.16 for the services.
 
 TencentDB Agent Memory gives an agent team a shared, growing memory instead of starting cold every session. Two ways it relates to gm's own `memorize-fire`/`recall` (see `wfgy-method`/`gm` skills for that): (1) as a fully standalone system (this skill's main content, below) when the ask spans multiple agent frameworks, multiple team members, or needs a human-reviewable panel; (2) as an opt-in storage backend for gm's own memory verbs (`memory.tencentdb_backend` in `gm.config.json`, disabled by default) -- when a namespace is routed to it, gm's `memorize`/`recall`/`memorize-fire`/`memorize-prune` write file-pointer-indexed content compatible with this system's format instead of gm's default 384-dim md-corpus store, with no change to the verb surface an agent calls. Reach for THIS skill's setup instructions (Docker Compose, panel UI) for the standalone deployment; reach for `gm`'s own docs when the ask is just "make gm's memory use the Tencent-compatible backend."
 
@@ -119,7 +120,7 @@ corpus no longer duplicates what the new backend now serves.
 
 - No logs at all: `memory-tencentdb.enabled` not `true`, or the gateway/service was never restarted after config changes.
 - Records exist but nothing recalls: `recall.enabled` is false, or `recall.scoreThreshold` is too high.
-- No vector results: the `embedding` config is missing one of `apiKey`/`baseUrl`/`model`/`dimensions` -- any single missing field silently degrades to keyword-only mode rather than erroring.
+- No vector results: the `embedding` config is missing one of `apiKey`/`baseUrl`/`model`/`dimensions` -- any single missing field disables vector search, logs an `[EMBEDDING CONFIG ERROR]` line at error level, and the plugin keeps running without embeddings instead of refusing to start.
 - History disappearing too fast: `l0l1RetentionDays` set too low (1-2) without explicitly enabling `allowAggressiveCleanup`.
 
 ## Security

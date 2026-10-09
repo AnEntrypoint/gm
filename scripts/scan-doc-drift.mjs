@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { walkFiles } from './lib/walk-files.mjs'
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 
@@ -30,26 +31,6 @@ function isAllowedRetirementMention(patternName, line) {
   return RETIREMENT_CONTEXT_RE.test(line);
 }
 
-function walk(startPath, files) {
-  const abs = path.join(root, startPath);
-  if (!fs.existsSync(abs)) return;
-  const stat = fs.statSync(abs);
-  if (stat.isFile()) {
-    if (DOC_EXTENSIONS.has(path.extname(abs))) files.push(abs);
-    return;
-  }
-  for (const entry of fs.readdirSync(abs)) {
-    if (EXCLUDE_SEGMENTS.includes(entry)) continue;
-    const rel = path.join(startPath, entry);
-    const childAbs = path.join(root, rel);
-    const childStat = fs.statSync(childAbs);
-    if (childStat.isDirectory()) {
-      walk(rel, files);
-    } else if (DOC_EXTENSIONS.has(path.extname(childAbs)) && !EXCLUDE_SEGMENTS.some((seg) => childAbs.includes(seg))) {
-      files.push(childAbs);
-    }
-  }
-}
 
 function scanFile(filePath) {
   const text = fs.readFileSync(filePath, 'utf8');
@@ -65,13 +46,11 @@ function scanFile(filePath) {
   return findings;
 }
 
-const files = [];
-for (const docRoot of DOC_ROOTS) walk(docRoot, files);
+const isDocFile = (filePath) => DOC_EXTENSIONS.has(path.extname(filePath)) && !EXCLUDE_SEGMENTS.some((seg) => filePath.includes(seg));
+const files = DOC_ROOTS.flatMap((docRoot) => walkFiles(path.join(root, docRoot), { skipName: (name) => EXCLUDE_SEGMENTS.includes(name), includeFile: isDocFile }));
+const uniqueFiles = [...new Set(files)];
 
-const uniqueFiles = [...new Set(files)].filter((f) => !EXCLUDE_SEGMENTS.some((seg) => f.includes(seg)));
-
-let allFindings = [];
-for (const file of uniqueFiles) allFindings = allFindings.concat(scanFile(file));
+const allFindings = uniqueFiles.flatMap(scanFile);
 
 if (allFindings.length > 0) {
   console.error(`doc-drift: ${allFindings.length} retired-reference hit(s) found in live documentation`);
@@ -79,7 +58,7 @@ if (allFindings.length > 0) {
     console.error(`  ${f.file}:${f.line} [${f.pattern}] ${f.text}`);
   }
   process.exit(1);
-} else {
-  console.log(`doc-drift: clean (${uniqueFiles.length} doc files scanned, 0 retired-reference hits)`);
-  process.exit(0);
 }
+const checked = RETIRED_PATTERNS.map((p) => p.name).join(', ');
+console.log(`doc-drift: 0 hits for ${RETIRED_PATTERNS.length} retired-reference patterns (${checked}) in ${uniqueFiles.length} doc files`);
+process.exit(0);

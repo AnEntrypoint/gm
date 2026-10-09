@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { walkFiles } from './lib/walk-files.mjs'
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', 'vendor', '.cache',
@@ -11,6 +12,10 @@ const SKIP_DIRS = new Set([
 ])
 const CODE_EXT = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.sh', '.ps1', '.py'])
 const TEXT_EXT = new Set([...CODE_EXT, '.json', '.yml', '.yaml', '.md'])
+const WALK_FILTERS = {
+  skipName: (name) => SKIP_DIRS.has(name) || name.startsWith('.plugkit-agent-worktree'),
+  includeFile: (filePath) => TEXT_EXT.has(path.extname(filePath)),
+}
 
 const EXACT_STRINGS = [
   { sig: 'A9-2057', why: 'campaign/version tag literal seen in a live C2 stager' },
@@ -97,7 +102,7 @@ const SUSPICIOUS_UNICODE = [
   { cp: 0x0421, name: 'CYRILLIC CAPITAL С (looks like Latin C)' },
   { cp: 0x0441, name: 'CYRILLIC SMALL с (looks like Latin c)' },
 ]
-const SUSPICIOUS_UNICODE_MAP = new Map(SUSPICIOUS_UNICODE.map(u => [u.cp, u.name]))
+const SUSPICIOUS_UNICODE_MAP = new Map(SUSPICIOUS_UNICODE.map(entry => [entry.cp, entry.name]))
 
 const SENTENCE_SPLIT_RE = /[.?!]+/
 const DESOURO_RE = /it['’]s not\s+(?:just\s+)?([^,]+),\s*it['’]s/i
@@ -130,13 +135,13 @@ const FLUFF_WORDS = [
   'seamlessly integrate', 'unlock the potential', 'take it to the next level',
   'in today’s fast-paced', 'stay ahead of the curve', 'best-in-class',
 ]
-const FLUFF_VOCAB_RE = new RegExp('\\b(' + FLUFF_WORDS.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'gi')
+const FLUFF_VOCAB_RE = new RegExp('\\b(' + FLUFF_WORDS.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'gi')
 
 function analyzeProseTells(text) {
-  const sentences = text.split(SENTENCE_SPLIT_RE).map(s => s.trim()).filter(Boolean)
+  const sentences = text.split(SENTENCE_SPLIT_RE).map(sentence => sentence.trim()).filter(Boolean)
   const sentenceCount = sentences.length
-  const lengths = sentences.map(s => s.split(/\s+/).filter(Boolean).length)
-  const wordCount = lengths.reduce((a, b) => a + b, 0)
+  const lengths = sentences.map(sentence => sentence.split(/\s+/).filter(Boolean).length)
+  const wordCount = lengths.reduce((total, length) => total + length, 0)
 
   let burstiness = 0
   if (sentenceCount > 1) {
@@ -165,57 +170,40 @@ function analyzeProseTells(text) {
 const PROSE_TELL_EXT = new Set(['.md'])
 const PROSE_TELL_MIN_SENTENCES = 8
 const PROSE_TELL_SCORE_THRESHOLD = 0.5
-const SUSPICIOUS_UNICODE_RE = new RegExp('[' + SUSPICIOUS_UNICODE.map(u => '\\u' + u.cp.toString(16).padStart(4, '0')).join('') + ']', 'g')
+const SUSPICIOUS_UNICODE_RE = new RegExp('[' + SUSPICIOUS_UNICODE.map(entry => '\\u' + entry.cp.toString(16).padStart(4, '0')).join('') + ']', 'g')
 
 const ESCAPED_ASCII_RUN = /(\\u00[2-7][0-9a-fA-F]){6,}/
 
-function walk(dir, out) {
-  let entries
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true })
-  } catch {
-    return
-  }
-  for (const e of entries) {
-    if (SKIP_DIRS.has(e.name)) continue
-    if (e.name.startsWith('.plugkit-agent-worktree')) continue
-    const p = path.join(dir, e.name)
-    if (e.isDirectory()) {
-      walk(p, out)
-    } else if (e.isFile() && TEXT_EXT.has(path.extname(e.name))) {
-      out.push(p)
-    }
-  }
-}
 
-function scanFile(filePath) {
-  let text
-  try {
-    text = fs.readFileSync(filePath, 'utf8')
-  } catch {
-    return []
-  }
+function scanExactStrings(text, filePath) {
   const findings = []
-
   for (const { sig, why } of EXACT_STRINGS) {
     if (text.includes(sig)) {
       findings.push({ filePath, kind: 'exact-string', sig, why })
     }
   }
+  return findings
+}
 
+function scanPatterns(text, filePath) {
+  const findings = []
   for (const { name, re, why, weak } of PATTERNS) {
-    const m = text.match(re)
-    if (m) {
-      const line = text.slice(0, m.index).split('\n').length
+    const match = text.match(re)
+    if (match) {
+      const line = text.slice(0, match.index).split('\n').length
       findings.push({ filePath, kind: weak ? 'pattern-weak' : 'pattern', name, why, line })
     }
   }
+  return findings
+}
 
+function scanMinifiedTail(text, filePath) {
+  const findings = []
   const lines = text.split('\n')
-  const nonBlank = lines.filter(l => l.trim().length > 0)
+  const nonBlank = lines.filter(line => line.trim().length > 0)
   if (nonBlank.length >= 5) {
-    const lens = nonBlank.map(l => l.length)
-    const avgLen = lens.reduce((a, b) => a + b, 0) / lens.length
+    const lens = nonBlank.map(line => line.length)
+    const avgLen = lens.reduce((total, length) => total + length, 0) / lens.length
     const lastLen = lens[lens.length - 1]
     const looksMinified = /[;,]\s*[a-zA-Z_$][\w$]*\s*=/.test(nonBlank[nonBlank.length - 1]) &&
       /\b(function|=>|require\(|const |let |var )\b/.test(nonBlank[nonBlank.length - 1])
@@ -229,7 +217,11 @@ function scanFile(filePath) {
       })
     }
   }
+  return findings
+}
 
+function scanEscapedAsciiRun(text, filePath) {
+  const findings = []
   if (ESCAPED_ASCII_RUN.test(text)) {
     findings.push({
       filePath,
@@ -238,55 +230,62 @@ function scanFile(filePath) {
       why: '6+ consecutive \\uXXXX escapes decoding to plain ASCII — deliberate string obfuscation to defeat plaintext grep (e.g. \\u0068\\u0074\\u0074\\u0070 = "http")',
     })
   }
-
-  if (CODE_EXT.has(path.extname(filePath))) {
-    const matches = text.match(SUSPICIOUS_UNICODE_RE)
-    if (matches && matches.length) {
-      let newlineOffsets = null
-      const lineOf = (idx) => {
-        if (!newlineOffsets) {
-          newlineOffsets = []
-          for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) newlineOffsets.push(i)
-        }
-        let lo = 0, hi = newlineOffsets.length
-        while (lo < hi) { const mid = (lo + hi) >> 1; if (newlineOffsets[mid] < idx) lo = mid + 1; else hi = mid }
-        return lo + 1
-      }
-      const seen = new Set()
-      SUSPICIOUS_UNICODE_RE.lastIndex = 0
-      let m
-      while ((m = SUSPICIOUS_UNICODE_RE.exec(text)) !== null) {
-        const cp = m[0].codePointAt(0)
-        const line = lineOf(m.index)
-        const key = cp + ':' + line
-        if (seen.has(key)) continue
-        seen.add(key)
-        findings.push({
-          filePath,
-          kind: 'unicode',
-          name: SUSPICIOUS_UNICODE_MAP.get(cp),
-          codepoint: '0x' + cp.toString(16),
-          line,
-          why: 'invisible or confusable Unicode codepoint inside a code file — used to hide code from visual review or disguise an identifier/URL as something else',
-        })
-        if (SUSPICIOUS_UNICODE_RE.lastIndex === m.index) SUSPICIOUS_UNICODE_RE.lastIndex++
-      }
-    }
-  }
-
-  if (PROSE_TELL_EXT.has(path.extname(filePath))) {
-    const report = analyzeProseTells(text)
-    if (report.sentenceCount >= PROSE_TELL_MIN_SENTENCES && report.aiProbabilityScore >= PROSE_TELL_SCORE_THRESHOLD) {
-      findings.push({
-        filePath,
-        kind: 'prose-tell',
-        name: 'statistical-ai-prose-signature',
-        why: `ai_probability_score=${report.aiProbabilityScore.toFixed(2)} over ${report.sentenceCount} sentences (burstiness=${report.burstiness.toFixed(1)}, desouro=${report.desouroConstructs}, triplets=${report.tripletStructures}, fluff=${report.rhetoricalFluff}, validation=${report.explicitValidation}) — statistical rhetorical fingerprint of LLM-authored prose (uniform sentence rhythm and/or stock rhetorical constructs and overused vocabulary); a heuristic signal, not proof, for docs that should read as human-reviewed and specific`,
-      })
-    }
-  }
-
   return findings
+}
+
+function scanSuspiciousUnicode(text, filePath) {
+  const findings = []
+  const seen = new Set()
+  let line = 1
+  let cursor = 0
+  for (const unicodeMatch of text.matchAll(SUSPICIOUS_UNICODE_RE)) {
+    for (; cursor < unicodeMatch.index; cursor++) if (text.charCodeAt(cursor) === 10) line++
+    const codePoint = unicodeMatch[0].codePointAt(0)
+    const key = codePoint + ':' + line
+    if (seen.has(key)) continue
+    seen.add(key)
+    findings.push({
+      filePath,
+      kind: 'unicode',
+      name: SUSPICIOUS_UNICODE_MAP.get(codePoint),
+      codepoint: '0x' + codePoint.toString(16),
+      line,
+      why: 'invisible or confusable Unicode codepoint inside a code file — used to hide code from visual review or disguise an identifier/URL as something else',
+    })
+  }
+  return findings
+}
+
+function scanProseTells(text, filePath) {
+  const findings = []
+  const report = analyzeProseTells(text)
+  if (report.sentenceCount >= PROSE_TELL_MIN_SENTENCES && report.aiProbabilityScore >= PROSE_TELL_SCORE_THRESHOLD) {
+    findings.push({
+      filePath,
+      kind: 'prose-tell',
+      name: 'statistical-ai-prose-signature',
+      why: `ai_probability_score=${report.aiProbabilityScore.toFixed(2)} over ${report.sentenceCount} sentences (burstiness=${report.burstiness.toFixed(1)}, desouro=${report.desouroConstructs}, triplets=${report.tripletStructures}, fluff=${report.rhetoricalFluff}, validation=${report.explicitValidation}) — statistical rhetorical fingerprint of LLM-authored prose (uniform sentence rhythm and/or stock rhetorical constructs and overused vocabulary); a heuristic signal, not proof, for docs that should read as human-reviewed and specific`,
+    })
+  }
+  return findings
+}
+
+function scanFile(filePath) {
+  let text
+  try {
+    text = fs.readFileSync(filePath, 'utf8')
+  } catch {
+    return []
+  }
+  const ext = path.extname(filePath)
+  return [
+    ...scanExactStrings(text, filePath),
+    ...scanPatterns(text, filePath),
+    ...scanMinifiedTail(text, filePath),
+    ...scanEscapedAsciiRun(text, filePath),
+    ...(CODE_EXT.has(ext) ? scanSuspiciousUnicode(text, filePath) : []),
+    ...(PROSE_TELL_EXT.has(ext) ? scanProseTells(text, filePath) : []),
+  ]
 }
 
 function main() {
@@ -296,15 +295,15 @@ function main() {
   for (const root of roots) {
     const stat = fs.existsSync(root) ? fs.statSync(root) : null
     if (!stat) continue
-    if (stat.isDirectory()) walk(root, files)
+    if (stat.isDirectory()) walkFiles(root, WALK_FILTERS, files)
     else files.push(root)
   }
 
   let totalFindings = 0
   const filesWithFindings = new Set()
   for (let idx = 0; idx < files.length; idx++) {
-    const f = files[idx]
-    const findings = scanFile(f)
+    const sourceFile = files[idx]
+    const findings = scanFile(sourceFile)
     for (const finding of findings) {
       totalFindings++
       filesWithFindings.add(finding.filePath)
