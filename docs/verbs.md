@@ -132,8 +132,38 @@ Example, verified against this repo:
 -> bm25_hits: [{key, score, symbol:{kind,name,path,line_start,line_end}, text}, ...]
 ```
 
-`dual` returns `vector_hits`, `bm25_hits`, `phrase_hits` and `commits`, each row carrying `key`,
-`text`, `score` and a `symbol` (`{kind, name, path, line_start, line_end}`) when one was indexed.
+`dual` on a multi-word query returns compact `hits` rows `{at, sym, snip, lit}`, where `lit` is true when the row holds the query verbatim. Doc sections are hidden and counted in `docs_hidden`, and `commits` is omitted, unless `docs: true`. Hits are nearest neighbours, so a term absent from every hit is not proven absent: `literal` decides it. Commit hits are leads, confirmed with `git_show`. Each raw row carries `key`, `text`, `score` and a `symbol` (`{kind, name, path, line_start, line_end}`) when one was indexed.
+Four modes: `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly, answering in about
+one second on a large workspace where `dual` costs minutes; `filename` matches paths only. An unknown `mode`
+is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
+token (3-96 characters) is answered by an exhaustive whole-word scan: `mode: "symbol"` lists `definitions`
+before `references`, and a miss retries as `symbol_substring`. `verbose: true` returns the raw `bm25_hits`,
+`vector_hits` and `commits` channels.
+Completeness: a `literal` or `regex` reply is complete only when it carries `exhaustive: true`. `partial_reason`
+names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
+`files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
+`excluded_by_rule`, `glob_matched_no_files`). Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
+never affect `exhaustive`. Missing optional diagnostics never prove completeness.
+
+Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
+contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
+outside any git worktree is walked instead (`file_source: "walk"`, with `walk_reason`). `path_glob` is a real
+glob (`**/*.{js,mjs}`), matched case-insensitively; a glob that admits no file sets `glob_matched_no_files: true`
+and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex); an overrun answers
+`timed_out: true`, `exhaustive: false` and `budget_ms`. Past `max_chars` (24000) the rest spills to
+`spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
+`files` or `count`.
+
+Query and body: `query` is required in every mode; `pattern` and `literal` are not fields. Any other body
+field is refused with the supported list, and `path` or `glob` sent to `dual` is refused, so a scope never
+silently widens. A multi-word query matches as one phrase; `combine: "or"` ranks any-term hits with all-term
+lines first, and `combine: "and"` requires every term on one line. `term_combination` names the reading that
+ran. A `regex` query carrying a metacharacter is matched as one regular expression, and `combine` has no
+effect on it. Give the result limit as `max_results` or `k`, never both with different values.
+
+`grep` answers the same way: its reply's `mode` names the reading that ran, and a pattern that will not
+compile is refused with the regex error text rather than an empty result.
+
 Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
 
 ### `fs_read` -- read a file or a line range
@@ -242,13 +272,21 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 
 `exec_js` (aliases `nodejs`, `javascript`, `node`, `js`) and every language stem --
 `bash`, `sh`, `shell`, `zsh`, `python`, `py`, `powershell`, `ps1`, `ssh`, `go`, `rust`, `c`, `cpp`,
-`java`, `deno` -- take a **plain text body**, never a JSON object. Pass it as `raw_body`. The first
-line is `timeoutMs=<ms>`; it is mandatory for the exec family and defaults to 300000 when absent.
+`java`, `deno` -- take a **plain text body**, never a JSON object. Pass it as `raw_body`. The optional
+first line `timeoutMs=<ms>` is an enforced wall-clock limit (default 300000, hard ceiling 900000).
 `lang` selects a language stem by name. `filter` compacts stdout (grep, ls, tree, JSON, diff).
 
 ```
 raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 ```
+
+`exec_js` evaluates its raw body in a separate Node process, delivered on the child's stdin, so the body is never part of its command line and a process-listing query that filters command lines for a marker string cannot match the runner itself. It does not inject the caller's `tools` object. A `.js` scratch file in a repo whose package.json says `"type": "module"` is ESM: give a scratch file that uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API: `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
+
+At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget. Every MCP call caps applied polling at 240 s without changing the native execution limit. A polling timeout returns the original task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
+
+A server that must outlive the call is started detached: `spawn(process.execPath, [script], {detached: true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is stopped in a later call by its pid; never pass `stdio: "inherit"`.
+
+Output fields (`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000 characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be read directly. Use a language verb such as `bash` only when the request specifically needs shell syntax.
 
 ## Git
 
