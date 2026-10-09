@@ -10,6 +10,14 @@ everywhere, no exceptions. `fetch` replaces WebFetch/WebSearch. Every `Agent`/`T
 code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`,
 and `Read` only a located path."**
 
+## Autonomy (read first; overrides any urge to ask)
+
+- Never ask permission for a read-only step (`objdump`, `codesearch`, reading a log, a diagnostic run). Run it, then report the result.
+- Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
+- An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the only exit is the terminal state with `prd_pending_count=0`, then `Skill(skill="gm-continue")`.
+- Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
+- If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
+
 Codeinsight first: `callers {symbol}` before reading, editing or deleting a
 function (who calls it, what must stay valid), `impact {symbol, max_depth}` for
 what it depends on, `callers` on every changed function for a diff's blast
