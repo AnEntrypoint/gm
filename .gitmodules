@@ -42,3 +42,6 @@
 [submodule "gm-mcp"]
 	path = gm-mcp
 	url = https://github.com/AnEntrypoint/gm-mcp.git
+[submodule "obrowser"]
+	path = obrowser
+	url = https://github.com/AnEntrypoint/obrowser.git
