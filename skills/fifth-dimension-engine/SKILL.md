@@ -1,6 +1,6 @@
 ---
 name: fifth-dimension-engine
-description: WFGY 5.0's core problem-solving tool. Lifts targets into higher problem-coordinates and returns structured routes (proof paths, strategy kernels, research structures, repair paths, positioning routes). Theorem work to everyday decisions. Use after Goal Compiler to execute the compiled problem specification.
+description: WFGY 5.0's core problem-solving tool. Lifts targets into higher problem-coordinates and returns structured routes. Use after Goal Compiler to execute the compiled problem specification.
 license: MIT
 compatibility: Portable "shoot + [problem]" command; works wherever an assistant can run a natural-language prompt. Upstream ships it as the current main product surface of WFGY 5.0 Polaris Protocol.
 metadata:
@@ -10,7 +10,7 @@ metadata:
 
 # Fifth-Dimension Engine
 
-WFGY 5.0's core problem-solving tool. Lifts a target into a higher problem-coordinate, then returns a route that can be inspected, attacked, expanded, and tested.
+WFGY 5.0's core problem-solving tool. Lifts a target into a higher problem-coordinate, then returns a structured route that can be inspected, attacked, expanded, and tested. Route kinds: proof paths, strategy kernels, research structures, repair paths, positioning routes.
 
 **Before you decide, shoot first.**
 
