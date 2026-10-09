@@ -159,3 +159,27 @@ decision; the runner guard does not cover it.
   `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Now the lookup compares `rev-parse HEAD`
   to the record, so a stale entry falls through to a real commit.
 - `daemon-guard` respawns the daemon after `Stop-Process`; no manual start is needed.
+
+## Verified 2026-10-09 (pool drops: causes, empty candidates, unverified nominations)
+
+Recorded causes of earlier drops: the rule was shadowed by a stale vendored prose file; heartbeats
+were not refreshed during lock waits; successors were free text and often ineligible; GPU-lock
+timeouts ended runs; completions were not refilled in the same turn; `slots.live` read 0 while
+workers ran.
+
+Recorded causes of the drop below 12 on 2026-10-09: completions were refilled in batches, not one
+per completion; resolvers nominated browser, GPU and design successors that could not run
+node-only; traversal hops started late, so node supply ran out; the served rules were not refreshed
+from gm-config (the native config cache did not sync); stuck background shells and Monitors held the
+GPU lock and the orchestrator's attention.
+
+Drop to 0 live on 2026-10-09 (13:33Z): eight resolvers finished in one window and nothing relaunched
+them in that turn. Successors were chosen by hand because `slots.candidates` came back empty while
+779 rows were pending, with the pool observe `candidates:` and `live_rows:` null. The empty list
+was logged as a defect row afterwards.
+
+A raw `prd-list` ignores `limit` and `status`, so one read cost about 35k tokens. Reading through
+exec_js over the prd-list result avoids that cost.
+
+Two nominations in that cycle were title-only and unverified: `trav-edge-check-relative-imports-skips-edge-root`
+(a gate change) and `tsl-only-shaders` (a shader rewrite). Neither was checked before launch.
