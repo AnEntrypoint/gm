@@ -26,25 +26,17 @@ function Get-GitHubAuthHeaders {
 function Resolve-InstallableTag {
     param([string]$AssetName)
     try {
-        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases?per_page=10" -Headers (Get-GitHubAuthHeaders) -UseBasicParsing -TimeoutSec 15
-        foreach ($release in $releases) {
-            if (-not $release.tag_name) { continue }
-            $hasAsset = $release.assets | Where-Object { $_.name -eq $AssetName }
-            if ($hasAsset) { return $release.tag_name }
-            Write-Warning "release $($release.tag_name) has no $AssetName asset -- trying the next older release"
-        }
-        Write-Warning "no release in the 10 most recent carries a $AssetName asset -- falling back to git ls-remote (asset-unverified)"
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers (Get-GitHubAuthHeaders) -UseBasicParsing -TimeoutSec 15
     } catch {
-        Write-Warning "GitHub API release lookup failed: $($_.Exception.Message) -- falling back to git ls-remote (asset-unverified)"
+        Write-Warning "GitHub API release lookup for $Repo failed: $($_.Exception.Message); refusing to install an older or unverified release"
+        return $null
     }
-    try {
-        $refs = git ls-remote --tags --refs "https://github.com/$Repo.git" 2>$null
-        $tags = $refs | ForEach-Object {
-            if ($_ -match 'refs/tags/(.+)$') { $Matches[1] }
-        } | Sort-Object { [version]($_ -replace '^v','') } -ErrorAction SilentlyContinue
-        if ($tags) { return ($tags | Select-Object -Last 1) }
-    } catch {}
-    return $null
+    if (-not $release.tag_name) { return $null }
+    if (-not ($release.assets | Where-Object { $_.name -eq $AssetName })) {
+        Write-Warning "the latest release of $Repo ($($release.tag_name)) carries no $AssetName asset; refusing to install an older release"
+        return $null
+    }
+    return $release.tag_name
 }
 
 function Get-Sha256 {
