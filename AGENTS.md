@@ -42,7 +42,7 @@ The agent shall use the verbs exposed by the running plugin for search, git, exe
 
 For a structural code question (who calls X, what breaks if X changes, is X dead, a diff's blast radius), the agent shall dispatch `callers {symbol}` / `impact {symbol}` first, and shall confirm an empty call-graph reply with `codesearch` (alias `code_search`).
 
-A project shall list its generated and vendored trees for codesearch to skip in a `.codesearchignore` at its root (gitignore syntax, read in addition to `.gitignore`; a subdirectory may carry its own, scoped to its children), so that an unscoped query stays inside its 45 s budget. The system shall report dropped paths in `excluded_by_rule_summary`/`excluded_by_rule_count`, and shall keep rule exclusions out of `exhaustive`, which stays bound to the real limits.
+A project shall list its generated and vendored trees for codesearch to skip in a `.codesearchignore` at its root (gitignore syntax, read in addition to `.gitignore`; a subdirectory may carry its own, scoped to its children), so that an unscoped query stays inside its 45 s budget. The system shall report dropped paths in `excluded_by_rule_summary`/`excluded_by_rule_count`, and shall keep gm-state exclusions (`gm_state_dir`, `agentplug_kv_cache`) out of `exhaustive`; any other rule exclusion clears it, as every real limit does.
 
 The system shall treat the on-disk PRD and mutable state as authoritative. A walk shall complete only when the live state machine accepts `COMPLETE`, all required rows are closed, and `gm-continue` has checked for remaining work.
 

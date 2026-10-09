@@ -146,7 +146,7 @@ Completeness: a `literal` or `regex` reply is complete only when it carries `exh
 names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
 `files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
 `excluded_by_rule`, `glob_matched_no_files`). Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
-never affect `exhaustive`. Missing optional diagnostics never prove completeness.
+of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` names the first five excluded paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
 
 Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
 contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
@@ -155,7 +155,7 @@ glob (`**/*.{js,mjs}`), matched case-insensitively; a glob that admits no file s
 and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex); an overrun answers
 `timed_out: true`, `exhaustive: false` and `budget_ms`. Past `max_chars` (24000) the rest spills to
 `spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
-`files` or `count`.
+`files` or `count`. A spill also carries `counts_by_file` inline (`N path` rows, busiest first), so the per-file answer never waits on the spill file.
 
 Query and body: `query` is required in every mode; `pattern` and `literal` are not fields. Any other body
 field is refused with the supported list, and `path` or `glob` sent to `dual` is refused, so a scope never
