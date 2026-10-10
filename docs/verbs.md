@@ -296,6 +296,8 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
 `git_reset_head`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
 
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the sanctioned push of a commit you already made over someone else's dirt. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
+
 `git_reset_head` moves HEAD backward without touching the worktree -- `{"count":1}` or `{"to":"<rev>"}`,
 `mode` `mixed` (default) or `soft`. It refuses when the commit at HEAD is reachable from any
 `refs/remotes/` ref (`pushed_commit_refused`), when the index holds staged paths not named by the
@@ -378,6 +380,10 @@ These drive the phase machine. Dispatched through the same spool.
 `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay`,
 `dream-replay-round`.
 
+`prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
+`{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
+alias of `subject`.
+
 `instruction` is the entry point: it serves the prose for the current phase and a gate denial names
 the recovery verb. A long idle gap makes every other verb return
 `gate_denied` / `long-gap-no-instruction` until `instruction` is dispatched again.
@@ -391,7 +397,7 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 `kv_query`, `env_get`, `health`, `status`, `close`, `config_resolve`, `config-sync-now`,
 `dataflow_resolve`, `tencentdb-compat-probe`, `tencentdb-memory-import`.
 
-`wait` and `sleep` return `unsupported_by_design`: wasm has no real timer here. `learn` is retired.
+On the live gm dispatch, `wait` and `sleep` take `{"ms": N}` and reply `completed: true, waited_ms: N`. `learn` is retired.
 
 ## Two verbs the native host answers
 
