@@ -31,7 +31,7 @@ Plain-text-body verbs take `raw_body` instead of `body` (see "Execution" below).
 Through the spool directly: write the body to `.gm/exec-spool/in/<verb>/<N>.txt` atomically, then
 read `.gm/exec-spool/out/<verb>-<N>.json`. Prefix `N` with a session id.
 
-The watcher launch command is in `skills/gm/spool-adapter.md`.
+The watcher launch command is in `spool-adapter.md`.
 
 `cwd` selects the project. `cwd` defaults to the process working directory, and gm resolves the
 project root from it with `git rev-parse --show-toplevel`. Where cwd is not itself inside a git
