@@ -14,6 +14,8 @@ const DOC_ROOTS = [
   'gm-config/prose',
   'rs-plugkit/README.md',
   'rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose',
+  '.github',
+  'skills',
 ];
 
 const EXCLUDE_SEGMENTS = ['node_modules', '.git', 'CHANGELOG.md', 'paper-review-wood.md'];
@@ -22,6 +24,7 @@ const RETIRED_PATTERNS = [
   { name: 'rs-learn', re: /rs-learn/i },
   { name: 'npx gm-skill install', re: /npx\s+gm-skill\s+install/i },
   { name: 'bare bootstrap/0.txt id', re: /bootstrap\/0\.txt/ },
+  { name: 'rs-exec superseded surface', re: /\bretired\s+(?:`|<code>)?rs-exec\b|\brs-exec(?:`|<\/code>)?\s+(?:crate|host-helper|surfaces?)\b/i },
 ];
 
 const RETIREMENT_CONTEXT_RE = /retired|tombstone|no longer|folded into|is now retired|archived/i;
@@ -46,7 +49,7 @@ function scanFile(filePath) {
   return findings;
 }
 
-const isDocFile = (filePath) => DOC_EXTENSIONS.has(path.extname(filePath)) && !EXCLUDE_SEGMENTS.some((seg) => filePath.includes(seg));
+const isDocFile = (filePath) => DOC_EXTENSIONS.has(path.extname(filePath)) && !filePath.split(path.sep).some((part) => EXCLUDE_SEGMENTS.includes(part));
 const files = DOC_ROOTS.flatMap((docRoot) => walkFiles(path.join(root, docRoot), { skipName: (name) => EXCLUDE_SEGMENTS.includes(name), includeFile: isDocFile }));
 const uniqueFiles = [...new Set(files)];
 
