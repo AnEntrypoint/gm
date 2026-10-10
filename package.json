@@ -16,7 +16,8 @@
   ],
   "homepage": "https://github.com/AnEntrypoint/gm#readme",
   "bin": {
-    "gm": "bin/gm-install.js"
+    "gm": "bin/gm-install.js",
+    "gm-dispatch": "bin/gm"
   },
   "bugs": {
     "url": "https://github.com/AnEntrypoint/gm/issues"
