@@ -1,6 +1,6 @@
 ---
 name: gm-hop
-description: Self-contained gm node traversal. One hop advocates one book's discipline across the whole gm project at maximum extent. It audits every surface against every claim of the discipline, changes what it can witness, records every remaining gap as a verified PRD row, and nominates the next node from the graph's edges by the biggest need it found, with the rhetoric for the handover. Invoke with args as one JSON object, for example {"node":"<ID>","book":"<title>","author":"<author>","rhetoric":"<text>","visited":["<IDs>"],"depth":<n>,"session":"<SESSION_ID>"}.
+description: Self-contained gm node traversal. One hop advocates one book's discipline across the whole gm project at maximum extent. It audits every surface against every claim of the discipline, changes what it can witness, records every remaining gap as a verified PRD row, and nominates the next node from the graph's edges by the biggest need it found, with the rhetoric for the handover. Invoke with one JSON object; its keys are listed in Arguments.
 ---
 
 # gm-hop
@@ -13,7 +13,7 @@ node, with rhetoric that carries the argument on.
 
 ## Arguments
 
-The args string is one JSON object with the keys below. Parsing does not split on `;` or `=`, so a title or rhetoric may contain them.
+The args string is one JSON object with the keys below, for example `{"node":"<ID>","book":"<title>","author":"<author>","rhetoric":"<text>","visited":["<IDs>"],"depth":<n>,"session":"<SESSION_ID>"}`. Parsing does not split on `;` or `=`, so a title or rhetoric may contain them.
 
 - `"node"` (string): the principle node you are visiting, for example `JTBD`. It must be a node of kind
   `principle` in `skills/dream-rsi/gm-graph.json`; a gate, terminal, phase or tension node is refused.
@@ -21,15 +21,14 @@ The args string is one JSON object with the keys below. Parsing does not split o
 - `"author"` (string): its author. If the node names none, use `unattributed`.
 - `"rhetoric"` (string): the argument handed over by the previous hop, with its open question. Empty for
   the first hop of a chain.
-- `"visited"` (array of strings): nodes already visited in this walk. Never nominate one of them.
-- `"depth"` (integer): hops before this one. Absent means 1.
+- `"visited"` (array of strings, required): nodes already visited in this walk. Never nominate one of them.
+- `"depth"` (integer, required): hops before this one.
 - `"session"` (string): the hop's own SESSION_ID, bound to every dispatch body it writes (`prd-add`,
   `mutable-add`, `prd-resolve`).
 
 An args string that is not one JSON object is refused before any dispatch: the hop answers `VERDICT: NOT-APPLICABLE` naming the validation error (`args is not one JSON object: <error>`), and writes no rows.
 
-If `node`, `book` or `session` is missing, or `node` is not a principle node, answer `VERDICT: NOT-APPLICABLE` naming the field, and stop.
-A hop without `session` writes no rows.
+If `node`, `book`, `session`, `visited` or `depth` is missing, if `depth` is not an integer, or if `node` is not a principle node, answer `VERDICT: NOT-APPLICABLE` naming the field, and stop, writing no rows.
 
 ## Harness
 
@@ -63,7 +62,7 @@ violation, or a place the claim is missing where it applies, is a finding.
 
 For each finding, print the cited lines and confirm the defect text is there:
 
-    sed -n 'START,ENDp' /config/workspace/gm/<file>
+    Read /config/workspace/gm/<file> at offset START and limit END-START+1
 
 If the text is absent, fix the citation or drop the finding. A row that cites absent text is never
 written, because stale rows block executors.
@@ -91,6 +90,8 @@ it by a live run.
 Resolve a row only with `prd-resolve` and `witness_dispatch_id` set to the dispatch id of a live
 witness. If `witness_dispatch_id_verified` is `false`, the row stays pending, and you say so.
 
+Each hop retires or merges an equal count of stale rows: for every row it adds, one stale row is retired or merged into another row naming the same gap. A stale row is one whose cited file, line or claim no longer resolves in source. The hop's ROWS line states both counts.
+
 ## Step 7: find the biggest need
 
 Group your rows by surface, and by the claim each one breaks. The biggest need is the surface or
@@ -99,11 +100,11 @@ largest effect on the project. Name it in one sentence with its row ids.
 
 ## Step 8: nominate the next node by that need
 
-List the outgoing edges of your node from the graph. Those are the edge candidates:
+List the outgoing edges of your node from the graph. The drop set is `visited`, your node itself, and every target that is not a principle node. The edge candidates are the edges that remain; a gate, terminal, phase or tension target is refused by the successor, so it is never nominated:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NODE>
 
-Drop every edge candidate in `visited`. From the rest, pick the edge candidate whose discipline attacks the
+Drop every edge candidate in the drop set named above. From the rest, pick the edge candidate whose discipline attacks the
 biggest need from Step 7. If no edge candidate attacks it, pick the one that attacks the next biggest.
 
 Write the `next_choice.why` for the handover, in at most three sentences. The successor receives it
@@ -113,7 +114,7 @@ verbatim as its `rhetoric`:
 - the open question the next discipline must answer about it;
 - what the next hop shall advocate across the project, and the surface to start from.
 
-Then list the chosen candidate's outgoing edges, dropping `visited` and your node, as its edge candidates:
+Then list the chosen candidate's outgoing edges, dropping the drop set named above, as its edge candidates:
 
     node -e 'const g=require("/config/workspace/gm/skills/dream-rsi/gm-graph.json"); const n=process.argv[1]; const L=Object.fromEntries(g.nodes.map(x=>[x.id,x.label])); console.log(g.edges.filter(e=>e.from===n).map(e=>e.to+"|"+(L[e.to]||"")).join(";"))' <NEXT_NODE>
 

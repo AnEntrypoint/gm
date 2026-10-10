@@ -237,7 +237,7 @@ the two differ, served text wins under section 0 precedence.
   brick-wall opener defined in the preamble above.
 - **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
   skill file holds the procedure, the codeinsight-first invariant and the witness invariants, so
-  the brief adds no prose.
+  the brief adds no prose. Walk workers and hops are never spawned with `subagent_type: "fork"`: a fork inherits the full parent conversation, which breaks the own-SESSION_ID, brief-only isolation.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains.
   The only stops are a spawn refusal and exhausted slices: when no
@@ -248,7 +248,8 @@ the two differ, served text wins under section 0 precedence.
   waiting for a completion notice is not a stop. Ending a turn with `live` below the
   floor while independent work remains is a shortfall, whatever the message says. The measure is the count of unlaunched
   slices, which falls by one on every launch, so the loop is bounded even if the host
-  never refuses. Headroom is read before
+  never refuses. A paused cycle counts as a stall of the walk loop (Walk loop, below), so the
+  pause case is bounded by its two-stall rule. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
@@ -278,7 +279,7 @@ the two differ, served text wins under section 0 precedence.
   guard: it ends at the terminal state with `prd_pending_count=0`, then
   `Skill(skill="gm-continue")`. Fuel bounds it: at most 40 cycles per walk. A cycle
   that closes no row and launches no worker is a stall, and two consecutive stalls end
-  the loop. At 0 fuel or after two stalls, the open rows are recorded and
+  the loop. A cycle in which a headroom stop holds the launches is logged as a headroom stop and is not a stall; it does not count toward the two. At 0 fuel or after two stalls, the open rows are recorded and
   `Skill(skill="gm-continue")` takes over, and its repeat-gap check bounds restarts.
   The one other end of a turn is a world-scoped one-way door (Section 4).
 - **Successor spawn.** The successor rules (`next_choice`, `visited`, depth limit, the
