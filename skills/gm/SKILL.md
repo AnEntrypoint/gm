@@ -386,7 +386,9 @@ Principles; JTBD (Christensen).
 **Specify** — EARS; INVEST; Cockburn Use Cases; Quality Attribute Scenario;
 MoSCoW; Impact Mapping; Definition of Done.
 **Change** — Mikado Method; small batches (Reinertsen); characterization
-behaviour (Feathers), witnessed live; Boy Scout Rule (Martin); Opportunistic
+behaviour (Feathers), witnessed live before the first edit: each touched function's
+current behaviour is recorded by a live dispatch first, and no edit starts until that
+record exists; Boy Scout Rule (Martin); Opportunistic
 Refactoring and Rule of Three (Fowler); Broken Windows (Hunt & Thomas); DRY; Code
 Smells; Strangler Fig; SOLID; Deep Modules (Ousterhout); SLAP; Chesterton's Fence;
 Hyrum's Law.
