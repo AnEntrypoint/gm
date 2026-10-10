@@ -1,20 +1,4 @@
 #!/usr/bin/env node
-// gm -- the shell entrypoint for gm's spool dispatch.
-//
-// gm ships as a skill plus an MCP server, so nothing named `gm` ever reaches PATH and a plain
-// shell has no way to run a verb. This launcher is that missing entrypoint: it forwards to
-// gm-mcp's own `dispatch` command, which is the same dispatch the gm MCP tool runs, with no MCP
-// client and no daemon of its own involved.
-//
-//   gm codesearch literal MSG_PEEK --path litebox      sugar: builds {"query","mode","path"}
-//   gm codesearch '{"query":"MSG_PEEK","mode":"dual"}' raw: any dispatch body
-//   gm dispatch <verb> [flags]                         explicit passthrough
-//   gm ensure-http | http-status | ...                 gm-mcp's own subcommands
-//
-// The sugar form exists because gm's own prose writes searches as `gm codesearch literal <needle>`
-// and a mode word is not a dispatch body. It applies to the search verbs only; every other
-// invocation is forwarded untouched, so this file can never reinterpret a real dispatch.
-
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,15 +7,16 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.dirname(here)
 const CLI = process.env.GM_MCP_CLI || path.join(repoRoot, 'gm-mcp', 'src', 'cli.js')
 
-// gm-mcp's own subcommands: forwarded verbatim, never prefixed with `dispatch`.
-const SUBCOMMANDS = new Set([
+const GM_MCP_SUBCOMMANDS = new Set([
   'dispatch', 'ensure-http', 'http-status', 'http-supervise', 'dev-sync',
   'pin-local-build', 'unpin-local-build', 'self-update-status',
 ])
 const SEARCH_VERBS = new Set(['grep', 'rg', 'codesearch', 'code_search', 'search'])
 const MODES = new Set(['literal', 'regex', 'dual', 'filename', 'comments'])
-// Flags the sugar form folds into the body. --cwd stays a cli.js flag; everything else passes through.
-const BODY_FLAGS = new Set(['path', 'glob', 'path_glob', 'max_matches', 'k', 'limit', 'max_results'])
+const SUGAR_BODY_FLAGS = new Set(['path', 'glob', 'path_glob', 'max_matches', 'k', 'limit', 'max_results'])
+const SUGAR_BODY_FLAG_ALIASES = { glob: 'path_glob' }
+const SUGAR_NUMERIC_BODY_FLAGS = new Set(['max_matches', 'k', 'limit', 'max_results'])
+const CLI_DISPATCH_USAGE_ARGS = ['dispatch']
 
 const argv = process.argv.slice(2)
 
@@ -40,25 +25,30 @@ function run(args) {
   process.exit(result.status ?? 1)
 }
 
-const head = argv[0]
-if (argv.length === 0 || head === '--help' || head === '-h' || SUBCOMMANDS.has(head) || head.startsWith('-')) {
-  // No args: cli.js's own dispatch usage, whose examples are written as `gm dispatch ...`.
-  run(argv.length === 0 ? ['dispatch'] : argv)
+const isRawDispatchBodyArg = (arg) => arg.startsWith('{') || arg.startsWith('@')
+
+function sugarBodyValue(flagName, value) {
+  const bodyField = SUGAR_BODY_FLAG_ALIASES[flagName] ?? flagName
+  return SUGAR_NUMERIC_BODY_FLAGS.has(bodyField) ? Number(value) : value
 }
 
-const verb = head
+const [verbOrSubcommand] = argv
+if (argv.length === 0 || verbOrSubcommand === '--help' || verbOrSubcommand === '-h' || GM_MCP_SUBCOMMANDS.has(verbOrSubcommand) || verbOrSubcommand.startsWith('-')) {
+  run(argv.length === 0 ? CLI_DISPATCH_USAGE_ARGS : argv)
+}
+
+const verb = verbOrSubcommand
 const mode = SEARCH_VERBS.has(verb) && MODES.has(argv[1]) ? argv[1] : null
 if (mode === null) {
   run(['dispatch', ...argv])
 }
 
-// A JSON or @file body wins over the sugar: this launcher never mangles a real dispatch body.
-if (argv.slice(2).some((a) => a.startsWith('{') || a.startsWith('@'))) {
+if (argv.slice(2).some(isRawDispatchBodyArg)) {
   run(['dispatch', ...argv])
 }
 
 const body = { query: null, mode }
-const rest = []
+const cliDispatchFlags = []
 const needle = []
 for (let i = 2; i < argv.length; i++) {
   const arg = argv[i]
@@ -67,19 +57,16 @@ for (let i = 2; i < argv.length; i++) {
     const name = eq === -1 ? arg.slice(2) : arg.slice(2, eq)
     const inline = eq === -1 ? undefined : arg.slice(eq + 1)
     const value = inline !== undefined ? inline : argv[i + 1]
-    if (BODY_FLAGS.has(name) && value !== undefined && !value.startsWith('--')) {
+    if (SUGAR_BODY_FLAGS.has(name) && value !== undefined && !value.startsWith('--')) {
       if (inline === undefined) i += 1
-      body[name === 'glob' ? 'path_glob' : name] = name === 'max_matches' || name === 'k' || name === 'limit' || name === 'max_results'
-        ? Number(value)
-        : value
+      body[SUGAR_BODY_FLAG_ALIASES[name] ?? name] = sugarBodyValue(name, value)
       continue
     }
-    // Any other flag belongs to cli.js dispatch (--cwd, --timeout, --no-ignore, ...), never to the query.
-    if (!BODY_FLAGS.has(name)) {
-      rest.push(arg)
+    if (!SUGAR_BODY_FLAGS.has(name)) {
+      cliDispatchFlags.push(arg)
       if (inline === undefined && value !== undefined && !value.startsWith('--')) {
         i += 1
-        rest.push(value)
+        cliDispatchFlags.push(value)
       }
       continue
     }
@@ -93,4 +80,4 @@ if (needle.length === 0) {
 }
 body.query = needle.join(' ')
 
-run(['dispatch', verb, '--body', JSON.stringify(body), ...rest])
+run(['dispatch', verb, '--body', JSON.stringify(body), ...cliDispatchFlags])
