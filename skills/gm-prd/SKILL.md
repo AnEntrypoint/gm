@@ -21,7 +21,7 @@ One run, one row, one session. Stages run in order, none a subagent. Each writes
 
 `mode=witness` runs SPECIFY, PROVE, DECIDE and COMPLETE only, edits nothing, and closes a row another session edited.
 
-No test files. Never kill another lane's process. A failed witness: causes become mutables; bisect by live runs; fix the survivor; witness again. Delivery: `git_finalize {message, paths}` for this run's files only, when no other writer holds them (it commits and pushes), then `ci-status` on the sha. Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
+No test files. Never kill another lane's process. A failed witness: causes become mutables; bisect by live runs; fix the survivor; witness again. Delivery: `git_finalize {message, paths}` for this run's files only, when no other writer holds them (it commits and pushes), then `ci-status` on the sha. A `remote_moved` refusal on a dirty tree takes the clean-tree step FIRST: `git_status {"paths":[<dirty paths>]}`, commit or revert each in the lane that owns it, then `git_push {rev:"<sha>"}` -- the recovery pulls and republishes in one dispatch, and it only refuses over paths the incoming range also changes, so dirt outside that range never blocks it. Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
 
 ## Rules
 - Read a row before writing it. `prd-add` on an existing id overwrites its subject, so a witness blocker on an existing row is appended to that row's text with its original subject kept. Never reuse the row's own id for a blocker: that rescopes the row.
