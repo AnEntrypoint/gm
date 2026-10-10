@@ -80,6 +80,7 @@ When the agent starts a subagent, the agent shall give the subagent its own sess
 - `git_commit_dedup_lookup` shall answer a replay only while `rev-parse HEAD` equals the recorded `sha_full`; object existence is not enough, because `git_reset_head` leaves dropped objects present. Falsified by: a replay answered after `git_reset_head` moves HEAD off the recorded `sha_full`.
 - Dream-RSI's cycle trigger shall dispatch `dreamrsi-replay` only. `dreamrsi-select` shall never be dispatched unattended, because it writes `active-strategy.json` directly. Falsified by: a codesearch literal `dreamrsi-select` in the cycle-trigger source returning any hit.
 - When the agent rebuilds `rs-plugkit`, the agent shall pass `--features slim`, the build command that `rs-plugkit/AGENTS.md` owns. Falsified by: a built `rs-plugkit` wasm whose size is 100 MB or more.
+- `scripts/sync-lean-graph.mjs emit` copies gm-config's authored graph and prose into an outdir and never into `rs-plugkit`: `rs-plugkit/crates/plugkit-core/src/orchestrator/fsm.rs` holds the lean graph as `include_str!("lean_graph.json")` and validates it into the enforced gates, so replacing it needs its own reviewed rebuild. Falsified by: an `emit` that writes any path under `rs-plugkit/`.
 
 ## Triage scripts
 

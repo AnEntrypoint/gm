@@ -95,16 +95,20 @@ function writeSpoolRequest(verb, requestId, body) {
   renameSync(`${requestPath}.tmp`, requestPath);
 }
 
+function tryReadSpoolResponse(outPath) {
+  if (!existsSync(outPath)) return undefined;
+  try {
+    return JSON.parse(readFileSync(outPath, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
 function awaitSpoolResponse(outPath, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (existsSync(outPath)) {
-      try {
-        return JSON.parse(readFileSync(outPath, "utf8"));
-      } catch {
-        // response is still being written; poll again
-      }
-    }
+    const response = tryReadSpoolResponse(outPath);
+    if (response !== undefined) return response;
     sleepSync(200);
   }
   throw new Error(`dispatch timeout waiting for ${outPath}`);
