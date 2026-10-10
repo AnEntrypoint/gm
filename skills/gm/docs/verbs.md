@@ -134,6 +134,10 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    and the cap is off by default
 {"max_files":50000}                file cap
 {"path":"<dir or file>"}           narrow the scan
+{"paths":["src/a.rs","src/b/"]}    narrow it to exactly those files and directories; "files" is an alias
+{"exclude":["vendor/**"]}          drop paths from the scan: one glob or a list of them, matched like
+                                   "glob", so name a whole tree as "vendor/**"; "exclude_glob" and
+                                   "exclude_globs" are aliases
 {"path_glob":"**/*.rs"}            narrow by glob; "glob" is an alias
 {"combine":"phrase"}               "phrase" (default for a multi-word query), "and" (every term on one line),
                                    "or" (ranked union of any term)
@@ -141,7 +145,15 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 {"refresh":true}                   re-read from disk for the exhaustive modes
 {"no_ignore":true}                               include files .gitignore would hide, in every mode, under the
                                                  rule `grep`'s `no_ignore` entry states above.
+{"head_limit":10}                                alias of `k`; `{"verbatim":true}` means `combine:"phrase"`.
+{"no_cache":true, "force_disk":true}             aliases of `refresh`.
+{"docs":false}                                   in the exhaustive modes, exclude docs (`*.md`, `*.adoc`,
+                                                 `docs/` trees); `{"mode":"comments"}` (or `comments`/`comments_only`)
+                                                 runs the comment scan instead, with no `query` needed.
 ```
+
+`exhaustive` in a REQUEST is not the reply's coverage flag: sending `exhaustive: true` only implies `no_ignore`.
+Coverage is reported back, and `exhaustive: false` there means the scan stopped early.
 
 Example, verified against this repo:
 
@@ -190,9 +202,6 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
 
 ```
 {"path":"<relative path>"}     required, relative and within the project
-{"offset":0, "limit":200}      read a line range; both clamp to the file's real line count, so an
-                               offset past the end returns "" with "returned_lines":0 instead of failing.
-                               Omit both for the whole file.
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
 {"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
                                "allow_outside_root" is an alias. A path holding a ".." segment is
@@ -206,14 +215,36 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
                                parent `C:/Users/user`, which makes that parent readable too.
 ```
 
-Paged replies add `total_lines`, `offset`, `returned_lines` and `has_more_lines`.
-
-Example, verified against this repo:
+Line ranges. Every alias is **1-based and inclusive on both ends**: the start alias names the first line
+returned, `endLine`/`end`/`to` the last line returned, and `limit`/`count`/`lines` a number of lines, never
+an end line. Accepted aliases, resolved in this order (the first pair with a key present wins):
 
 ```
-{"path":"README.md", "offset":22, "limit":4}
--> ok:true, total_lines:215, returned_lines:4, has_more_lines:true, content:"curl -fsSL ..."
+startLine / endLine     start / end (and start / count)     from / to     offset / limit     line / lines
 ```
+
+So `{"startLine":1040,"endLine":1100}` and `{"from":1040,"to":1100}` and `{"offset":1040,"limit":61}` all
+return lines 1040-1100. An end line past the last line clamps, and the reply then carries
+`clamped_to_total_lines` plus `end_line_requested`; a start line past the last line is an error naming the
+file's line count, as is a start of 0, an end before the start, or any range on an empty file. A key that
+looks like a range but is not one of these (`start_line`, `endline`, `firstLine`, ...) is refused by name
+instead of being ignored: unknown range keys never silently return the whole file.
+
+Ranged replies add `total_lines`, `start_line`, `end_line`, `returned_lines`, `has_more_lines`,
+`next_start_line` and a 0-based `offset` kept for compatibility; `range_basis` states the convention in the
+reply itself. Omit every range key for the whole file, which is returned exactly as before.
+
+Paged example:
+
+```
+{"path":"src/dsp/audio_thread.cpp","startLine":1040,"endLine":1100}
+-> ok:true, total_lines:3177, start_line:1040, end_line:1100, has_more_lines:true, next_start_line:1101,
+   content:"<those 61 lines only>"
+```
+
+A reply cut by the whole-reply character cap is spilled to `<out>.reply.txt` with the same range, and the
+notice reports `spill_range: lines 1040-1100 of 3177 (1-based, inclusive)`, `spill_lines` and a `next_range`
+to send for the rest; page it with `gm_result` on that spill file.
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
 `content`, and the value may be a JSON string (with `\n` for each newline) **or an array of lines**,
@@ -287,7 +318,7 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 
 | verb | body | purpose | kind |
 |---|---|---|---|
-| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range | query |
+| `fs_read` | `{"path", "startLine"?, "endLine"? (or "start"/"end", "from"/"to", "offset"/"limit", "line"/"lines", "start"/"count"), "max_bytes"?, "allowOutsideRoot"?}` | read a file or a 1-based inclusive line range | query |
 | `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) | command |
 | `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory | query |
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path | query |
