@@ -100,7 +100,9 @@ Example, verified against this repo:
 
 `mode:"comments"` returns `comments` and `directives` (`#!/bin/sh` shebangs, `# syntax=docker/...`,
 `# shellcheck disable=...` land in `directives`, never in `comments`), plus `comment_count`,
-`directive_count`, `files`, `output`, `file_source` and `exhaustive`.
+`directive_count`, `files`, `output`, `file_source` and `exhaustive`. `glob` (one string or an array,
+with `!` entries excluded) and `output_mode` apply here too: `files_with_matches` and `count` drop
+`comments`, `directives` and `output`, keeping `files`, the counts and `file_source`.
 
 Comment syntax is mapped per extension. JS-family files (`.js`, `.ts`, `.rs`, `.go`, `.c`, ...) take `//` and `/* */`, and their string, regex and template-literal bodies are never comments; `${...}` interpolations are code. CSS takes `/* */` only. Shell, YAML, TOML, Python and similar take `#`. HTML takes `<!-- -->` plus the `<script>` and `<style>` bodies. WebAssembly text takes `;;` and `(; ;)`. A `.template` file takes the syntax of its stem. Only shebangs and tool pragmas land in `directives`. A file with no mapping is counted in `files_skipped_no_syntax_count`; `files_skipped_no_syntax` holds a sample and `files_skipped_no_syntax_file` (when present) lists every such path.
 
@@ -308,6 +310,11 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 request (`staged_paths_present`, overridden by `allow_staged:true`), and when the target is not an
 ancestor of HEAD. `git_commit {"amend":true}` rewrites the current commit instead of stacking a
 child, and refuses when that commit is already published (`pushed_commit_refused`).
+
+`git_status {"eol":true}` adds `eol`, one `{path, index, worktree, attr}` entry per tracked path from
+`git ls-files --eol` (index and worktree line endings plus the attribute text), with `eol_count` and
+`eol_mismatch_count` (paths whose index and worktree endings differ). Scope it with `paths`, since the
+whole tracked tree is a long reply.
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Observed (SESSION_ID spoint-orch-b186-r41): a paths-scoped `git_commit` committed only the named file, excluded another lane's staged deletion, and reported the excluded entries. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
