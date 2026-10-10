@@ -159,6 +159,8 @@ and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex);
 `spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
 `files` or `count`. A spill also carries `counts_by_file` inline (`N path` rows, busiest first), so the per-file answer never waits on the spill file.
 
+Split path arguments: a `literal` query shaped like `apps/<surface>/<file>` also matches a run of quoted arguments on one line that spells the same path, such as `join(ROOT, 'apps', 'world', '_fixtures', 'e2e-ci-arena.js')` (the last segment may carry a file extension). Those hits sit in `split_form_matches`, counted by `split_form_count` and `split_form_files`, and never in `matches`, `count` or `occurrence_count`; `split_form_truncated` past 50. A join split across lines is not matched. A `regex` or `dual` reply for such a query carries `split_form_not_searched` instead.
+
 Query and body: `query` is required in every mode; `pattern` and `literal` are not fields. Any other body
 field is refused with the supported list, and `path` or `glob` sent to `dual` is refused, so a scope never
 silently widens. A multi-word query matches as one phrase; `combine: "or"` ranks any-term hits with all-term
