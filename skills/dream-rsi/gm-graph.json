@@ -58,7 +58,7 @@
   },
   {
    "id": "JTBD",
-   "label": "Jobs To Be Done — Clayton Christensen",
+   "label": "Jobs To Be Done - Clayton Christensen",
    "kind": "principle",
    "phase": "P1",
    "book": "Jobs To Be Done",
@@ -74,7 +74,7 @@
   },
   {
    "id": "EARS",
-   "label": "EARS Requirements Syntax — Alistair Mavin",
+   "label": "EARS Requirements Syntax - Alistair Mavin",
    "kind": "principle",
    "phase": "P1",
    "book": "EARS Requirements Syntax",
@@ -82,7 +82,7 @@
   },
   {
    "id": "INVEST",
-   "label": "INVEST — Bill Wake",
+   "label": "INVEST - Bill Wake",
    "kind": "principle",
    "phase": "P1",
    "book": "INVEST",
@@ -90,7 +90,7 @@
   },
   {
    "id": "THINSLICE",
-   "label": "Thin Vertical Slice — Alistair Cockburn",
+   "label": "Thin Vertical Slice - Alistair Cockburn",
    "kind": "principle",
    "phase": "P1",
    "book": "Thin Vertical Slice",
@@ -98,7 +98,7 @@
   },
   {
    "id": "SPIKE",
-   "label": "Spike Solution — Kent Beck",
+   "label": "Spike Solution - Kent Beck",
    "kind": "principle",
    "phase": "P1",
    "book": "Spike Solution",
@@ -106,7 +106,7 @@
   },
   {
    "id": "YAGNI",
-   "label": "YAGNI — Ron Jeffries",
+   "label": "YAGNI - Ron Jeffries",
    "kind": "principle",
    "phase": "P1",
    "book": "YAGNI",
@@ -128,7 +128,7 @@
   },
   {
    "id": "UBIQ",
-   "label": "Ubiquitous Language — Eric Evans",
+   "label": "Ubiquitous Language - Eric Evans",
    "kind": "principle",
    "phase": "P2",
    "book": "Ubiquitous Language",
@@ -136,7 +136,7 @@
   },
   {
    "id": "CLEANNAME",
-   "label": "Intention-Revealing Names — Robert C. Martin",
+   "label": "Intention-Revealing Names - Robert C. Martin",
    "kind": "principle",
    "phase": "P2",
    "book": "Intention-Revealing Names",
@@ -144,7 +144,7 @@
   },
   {
    "id": "MILNER",
-   "label": "Well-Typed Programs Cannot Go Wrong — Robin Milner",
+   "label": "Well-Typed Programs Cannot Go Wrong - Robin Milner",
    "kind": "principle",
    "phase": "P2",
    "book": "Well-Typed Programs Cannot Go Wrong",
@@ -152,7 +152,7 @@
   },
   {
    "id": "ILLEGAL",
-   "label": "Make Illegal States Unrepresentable — Yaron Minsky",
+   "label": "Make Illegal States Unrepresentable - Yaron Minsky",
    "kind": "principle",
    "phase": "P2",
    "book": "Make Illegal States Unrepresentable",
@@ -160,7 +160,7 @@
   },
   {
    "id": "PARSEDV",
-   "label": "Parse, Don't Validate — Alexis King",
+   "label": "Parse, Don't Validate - Alexis King",
    "kind": "principle",
    "phase": "P2",
    "book": "Parse, Don't Validate",
@@ -168,7 +168,7 @@
   },
   {
    "id": "WADLER",
-   "label": "Theorems for Free — Philip Wadler",
+   "label": "Theorems for Free - Philip Wadler",
    "kind": "principle",
    "phase": "P2",
    "book": "Theorems for Free",
@@ -176,7 +176,7 @@
   },
   {
    "id": "DBC",
-   "label": "Design by Contract — Bertrand Meyer",
+   "label": "Design by Contract - Bertrand Meyer",
    "kind": "principle",
    "phase": "P2",
    "book": "Design by Contract",
@@ -184,7 +184,7 @@
   },
   {
    "id": "CQS",
-   "label": "Command-Query Separation — Bertrand Meyer",
+   "label": "Command-Query Separation - Bertrand Meyer",
    "kind": "principle",
    "phase": "P2",
    "book": "Command-Query Separation",
@@ -192,7 +192,7 @@
   },
   {
    "id": "PARNAS",
-   "label": "Information Hiding — David Parnas",
+   "label": "Information Hiding - David Parnas",
    "kind": "principle",
    "phase": "P2",
    "book": "Information Hiding",
@@ -200,7 +200,7 @@
   },
   {
    "id": "DEEPMOD",
-   "label": "Deep Modules — John Ousterhout",
+   "label": "Deep Modules - John Ousterhout",
    "kind": "principle",
    "phase": "P2",
    "book": "Deep Modules",
@@ -208,7 +208,7 @@
   },
   {
    "id": "ACCEPTPORT",
-   "label": "Ports and Adapters — Alistair Cockburn",
+   "label": "Ports and Adapters - Alistair Cockburn",
    "kind": "principle",
    "phase": "P2",
    "book": "Ports and Adapters",
@@ -216,7 +216,7 @@
   },
   {
    "id": "COMMENTSMELL",
-   "label": "A Comment Is a Deodorant for Bad Smells — Fowler and Beck",
+   "label": "A Comment Is a Deodorant for Bad Smells - Fowler and Beck",
    "kind": "principle",
    "phase": "P2",
    "book": "A Comment Is a Deodorant for Bad Smells",
@@ -230,7 +230,7 @@
   },
   {
    "id": "TOTALITY",
-   "label": "Total Functional Programming — David Turner",
+   "label": "Total Functional Programming - David Turner",
    "kind": "principle",
    "phase": "P3",
    "book": "Total Functional Programming",
@@ -238,7 +238,7 @@
   },
   {
    "id": "GUARD",
-   "label": "Guard Clause — Martin Fowler",
+   "label": "Guard Clause - Martin Fowler",
    "kind": "principle",
    "phase": "P3",
    "book": "Guard Clause",
@@ -246,7 +246,7 @@
   },
   {
    "id": "SLAP",
-   "label": "Single Level of Abstraction — Kent Beck",
+   "label": "Single Level of Abstraction - Kent Beck",
    "kind": "principle",
    "phase": "P3",
    "book": "Single Level of Abstraction",
@@ -254,7 +254,7 @@
   },
   {
    "id": "STRUCTPROG",
-   "label": "Structured Programming — Edsger Dijkstra",
+   "label": "Structured Programming - Edsger Dijkstra",
    "kind": "principle",
    "phase": "P3",
    "book": "Structured Programming",
@@ -262,7 +262,7 @@
   },
   {
    "id": "IMMUT",
-   "label": "Purely Functional Data Structures — Chris Okasaki",
+   "label": "Purely Functional Data Structures - Chris Okasaki",
    "kind": "principle",
    "phase": "P3",
    "book": "Purely Functional Data Structures",
@@ -270,7 +270,7 @@
   },
   {
    "id": "OWNERSHIP",
-   "label": "Ownership and Borrowing — Matsakis and Klock",
+   "label": "Ownership and Borrowing - Matsakis and Klock",
    "kind": "principle",
    "phase": "P3",
    "book": "Ownership and Borrowing",
@@ -278,7 +278,7 @@
   },
   {
    "id": "DRY",
-   "label": "Don't Repeat Yourself — Hunt and Thomas",
+   "label": "Don't Repeat Yourself - Hunt and Thomas",
    "kind": "principle",
    "phase": "P3",
    "book": "Don't Repeat Yourself",
@@ -286,7 +286,7 @@
   },
   {
    "id": "KISS",
-   "label": "KISS — Kelly Johnson",
+   "label": "KISS - Kelly Johnson",
    "kind": "principle",
    "phase": "P3",
    "book": "KISS",
@@ -300,7 +300,7 @@
   },
   {
    "id": "DIJKSTRATEST",
-   "label": "Testing Shows Presence, Never Absence — Edsger Dijkstra",
+   "label": "Testing Shows Presence, Never Absence - Edsger Dijkstra",
    "kind": "principle",
    "phase": "P4",
    "book": "Testing Shows Presence, Never Absence",
@@ -308,7 +308,7 @@
   },
   {
    "id": "ORACLEBIAS",
-   "label": "Implementation-Biased Test Generation — LLM test-generation study",
+   "label": "Implementation-Biased Test Generation - LLM test-generation study",
    "kind": "principle",
    "phase": "P4",
    "book": "Implementation-Biased Test Generation",
@@ -316,7 +316,7 @@
   },
   {
    "id": "INDEPVER",
-   "label": "Independence-Based Verification — Grabowski",
+   "label": "Independence-Based Verification - Grabowski",
    "kind": "principle",
    "phase": "P4",
    "book": "Independence-Based Verification",
@@ -324,7 +324,7 @@
   },
   {
    "id": "ADVERSARIAL",
-   "label": "Adversarial Red-Blue Agent Verification — Thukkaram",
+   "label": "Adversarial Red-Blue Agent Verification - Thukkaram",
    "kind": "principle",
    "phase": "P4",
    "book": "Adversarial Red-Blue Agent Verification",
@@ -332,7 +332,7 @@
   },
   {
    "id": "HUGHES",
-   "label": "QuickCheck Property-Based Testing — Claessen and Hughes",
+   "label": "QuickCheck Property-Based Testing - Claessen and Hughes",
    "kind": "principle",
    "phase": "P4",
    "book": "QuickCheck Property-Based Testing",
@@ -340,7 +340,7 @@
   },
   {
    "id": "PBTAGENT",
-   "label": "Agentic Property-Based Testing — Hypothesis agent study",
+   "label": "Agentic Property-Based Testing - Hypothesis agent study",
    "kind": "principle",
    "phase": "P4",
    "book": "Agentic Property-Based Testing",
@@ -348,7 +348,7 @@
   },
   {
    "id": "INVARIANTRUN",
-   "label": "Stateful Invariant Runs over Random Call Sequences — Foundry and Hypothesis",
+   "label": "Stateful Invariant Runs over Random Call Sequences - Foundry and Hypothesis",
    "kind": "principle",
    "phase": "P4",
    "book": "Stateful Invariant Runs over Random Call Sequences",
@@ -356,7 +356,7 @@
   },
   {
    "id": "METAMORPH",
-   "label": "Metamorphic Testing — T. Y. Chen",
+   "label": "Metamorphic Testing - T. Y. Chen",
    "kind": "principle",
    "phase": "P4",
    "book": "Metamorphic Testing",
@@ -364,7 +364,7 @@
   },
   {
    "id": "FUZZ",
-   "label": "Coverage-Guided Fuzzing — Michał Zalewski",
+   "label": "Coverage-Guided Fuzzing - Michał Zalewski",
    "kind": "principle",
    "phase": "P4",
    "book": "Coverage-Guided Fuzzing",
@@ -372,7 +372,7 @@
   },
   {
    "id": "CONTRACTTEST",
-   "label": "Consumer-Driven Contract Test — Ian Robinson",
+   "label": "Consumer-Driven Contract Test - Ian Robinson",
    "kind": "principle",
    "phase": "P4",
    "book": "Consumer-Driven Contract Test",
@@ -380,7 +380,7 @@
   },
   {
    "id": "CHARTEST",
-   "label": "Characterization Test, Legacy Only — Michael Feathers",
+   "label": "Characterization Test, Legacy Only - Michael Feathers",
    "kind": "principle",
    "phase": "P4",
    "book": "Characterization Test, Legacy Only",
@@ -426,7 +426,7 @@
   },
   {
    "id": "RULE5072",
-   "label": "50/72 Commit Format — Tim Pope",
+   "label": "50/72 Commit Format - Tim Pope",
    "kind": "principle",
    "phase": "P5",
    "book": "50/72 Commit Format",
@@ -442,7 +442,7 @@
   },
   {
    "id": "GITSTATE",
-   "label": "Git Is the State — stateless runtime, Kapale",
+   "label": "Git Is the State - stateless runtime, Kapale",
    "kind": "principle",
    "phase": "P5",
    "book": "Git Is the State",
@@ -458,7 +458,7 @@
   },
   {
    "id": "BISECT",
-   "label": "git bisect as the Regression Oracle — Linus Torvalds",
+   "label": "git bisect as the Regression Oracle - Linus Torvalds",
    "kind": "principle",
    "phase": "P5",
    "book": "git bisect as the Regression Oracle",
@@ -466,7 +466,7 @@
   },
   {
    "id": "SEMVER",
-   "label": "Semantic Versioning — Tom Preston-Werner",
+   "label": "Semantic Versioning - Tom Preston-Werner",
    "kind": "principle",
    "phase": "P5",
    "book": "Semantic Versioning",
@@ -474,7 +474,7 @@
   },
   {
    "id": "ADRN",
-   "label": "ADR, Irreversible Forks Only — Michael Nygard",
+   "label": "ADR, Irreversible Forks Only - Michael Nygard",
    "kind": "principle",
    "phase": "P5",
    "book": "ADR, Irreversible Forks Only",
@@ -488,7 +488,7 @@
   },
   {
    "id": "NODELETE",
-   "label": "Agents Avoid Deleting Code — Ebrahimi et al.",
+   "label": "Agents Avoid Deleting Code - Ebrahimi et al.",
    "kind": "principle",
    "phase": "P6",
    "book": "Agents Avoid Deleting Code",
@@ -496,7 +496,7 @@
   },
   {
    "id": "GUARDANDGO",
-   "label": "Guard-and-Go Fallback Accumulation — Vector Labs",
+   "label": "Guard-and-Go Fallback Accumulation - Vector Labs",
    "kind": "principle",
    "phase": "P6",
    "book": "Guard-and-Go Fallback Accumulation",
@@ -512,7 +512,7 @@
   },
   {
    "id": "CHURN",
-   "label": "Rising Churn and Duplication — Harding and Kloster, GitClear",
+   "label": "Rising Churn and Duplication - Harding and Kloster, GitClear",
    "kind": "principle",
    "phase": "P6",
    "book": "Rising Churn and Duplication",
@@ -520,7 +520,7 @@
   },
   {
    "id": "SLOPDRIFT",
-   "label": "Behavioural Drift over Long Trajectories — Orlanski et al.",
+   "label": "Behavioural Drift over Long Trajectories - Orlanski et al.",
    "kind": "principle",
    "phase": "P6",
    "book": "Behavioural Drift over Long Trajectories",
@@ -552,7 +552,7 @@
   },
   {
    "id": "TARPIT",
-   "label": "Out of the Tar Pit — Moseley and Marks",
+   "label": "Out of the Tar Pit - Moseley and Marks",
    "kind": "principle",
    "phase": "P6",
    "book": "Out of the Tar Pit",
@@ -560,7 +560,7 @@
   },
   {
    "id": "LEANSW",
-   "label": "A Plea for Lean Software — Niklaus Wirth",
+   "label": "A Plea for Lean Software - Niklaus Wirth",
    "kind": "principle",
    "phase": "P6",
    "book": "A Plea for Lean Software",
@@ -568,7 +568,7 @@
   },
   {
    "id": "KOLMOGOROV",
-   "label": "Kolmogorov Complexity — Kolmogorov and Chaitin",
+   "label": "Kolmogorov Complexity - Kolmogorov and Chaitin",
    "kind": "principle",
    "phase": "P6",
    "book": "Kolmogorov Complexity",
@@ -590,7 +590,7 @@
   },
   {
    "id": "CONTEXTROT",
-   "label": "Context Rot — Hong et al.",
+   "label": "Context Rot - Hong et al.",
    "kind": "principle",
    "phase": "P7",
    "book": "Context Rot",
@@ -700,13 +700,13 @@
   },
   {
    "id": "OUSTERHOUTC",
-   "label": "Comments Capture What Code Cannot — John Ousterhout",
+   "label": "Comments Capture What Code Cannot - John Ousterhout",
    "kind": "tension",
    "phase": "P8"
   },
   {
    "id": "NAURTHEORY",
-   "label": "Programming as Theory Building — Peter Naur",
+   "label": "Programming as Theory Building - Peter Naur",
    "kind": "tension",
    "phase": "P8"
   },
@@ -718,7 +718,7 @@
   },
   {
    "id": "HYRUM",
-   "label": "Hyrum's Law — Hyrum Wright",
+   "label": "Hyrum's Law - Hyrum Wright",
    "kind": "tension",
    "phase": "P8"
   },
@@ -736,13 +736,13 @@
   },
   {
    "id": "SPECDRIFT",
-   "label": "Silent Spec-Code Drift — Grabowski",
+   "label": "Silent Spec-Code Drift - Grabowski",
    "kind": "tension",
    "phase": "P8"
   },
   {
    "id": "CTXEXPLODE",
-   "label": "Context Explosion in Whole-Repo Reasoning — Grabowski",
+   "label": "Context Explosion in Whole-Repo Reasoning - Grabowski",
    "kind": "tension",
    "phase": "P8"
   },
@@ -754,7 +754,7 @@
   },
   {
    "id": "FIXPOINT",
-   "label": "Least Fixed Point — Kleene and Tarski",
+   "label": "Least Fixed Point - Kleene and Tarski",
    "kind": "principle",
    "phase": "P9",
    "book": "Least Fixed Point",
@@ -778,7 +778,7 @@
   },
   {
    "id": "VARIANT",
-   "label": "Well-Founded Variant — Robert Floyd",
+   "label": "Well-Founded Variant - Robert Floyd",
    "kind": "principle",
    "phase": "P9",
    "book": "Well-Founded Variant",
@@ -794,7 +794,7 @@
   },
   {
    "id": "RICE",
-   "label": "Rice's Theorem — Henry Gordon Rice",
+   "label": "Rice's Theorem - Henry Gordon Rice",
    "kind": "principle",
    "phase": "P9",
    "book": "Rice's Theorem",
@@ -802,7 +802,7 @@
   },
   {
    "id": "HALTING",
-   "label": "Halting Problem — Alan Turing",
+   "label": "Halting Problem - Alan Turing",
    "kind": "principle",
    "phase": "P9",
    "book": "Halting Problem",
@@ -810,7 +810,7 @@
   },
   {
    "id": "LEHMAN",
-   "label": "Lehman's Laws of Software Evolution — Meir Lehman",
+   "label": "Lehman's Laws of Software Evolution - Meir Lehman",
    "kind": "principle",
    "phase": "P9",
    "book": "Lehman's Laws of Software Evolution",
@@ -818,7 +818,7 @@
   },
   {
    "id": "KNUTHOPT",
-   "label": "Premature Optimization — Donald Knuth",
+   "label": "Premature Optimization - Donald Knuth",
    "kind": "principle",
    "phase": "P9",
    "book": "Premature Optimization",
@@ -826,7 +826,7 @@
   },
   {
    "id": "LOWERBOUND",
-   "label": "Lower Bound Reached — information-theoretic argument",
+   "label": "Lower Bound Reached - information-theoretic argument",
    "kind": "principle",
    "phase": "P9",
    "book": "Lower Bound Reached",
