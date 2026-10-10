@@ -120,7 +120,17 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>Omit <code>-g</code> for a project installation. The published source defines the supported installer options in <code>bin/gm-install.js</code>.</p>
 
-<h2>2. Connect the installed MCP server</h2>
+<h2>2. Run a verb from a shell</h2>
+
+<p class="first">A verb does not need an agent host. In a checkout, <code>./bin/gm</code> forwards to gm-mcp's own <code>dispatch</code> subcommand, which is the same dispatch the <code>gm</code> MCP tool runs, so a plain shell reaches the project spool with no MCP client in the loop.</p>
+<pre><code>./bin/gm codesearch literal BUNDLE_VERSION --path gm-mcp/src</code></pre>
+
+<p>That sugar form builds <code>{"query","mode","path"}</code>. It applies to the search verbs (<code>grep</code>, <code>rg</code>, <code>codesearch</code>, <code>code_search</code>, <code>search</code>) only, because a mode word is not a dispatch body. Any argument starting with <code>{</code> or <code>@</code>, and every other verb, passes through untouched:</p>
+<pre><code>./bin/gm codesearch '{"query":"BUNDLE_VERSION","mode":"literal","path":"gm-mcp/src"}'</code></pre>
+
+<p><code>--cwd</code>, <code>--timeout</code> and <code>--no-ignore</code> stay dispatch flags, never body fields. <code>npm link</code> in a checkout puts the entrypoint on PATH as <code>gm-dispatch</code>.</p>
+
+<h2>3. Connect the installed MCP server</h2>
 
 <p class="first">The installed bundle is <code>~/.gm-tools/gm-mcp-server.mjs</code>. Agent hosts launch it with Node.js. A registration uses this local file, so each connection does not reinstall a GitHub package.</p>
 
@@ -140,7 +150,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>The default transport uses the host's standard input and output pipes. A lost pipe ends that connection. The HTTP transport permits a client to reconnect.</p>
 
-<h2>3. Inspect the installed runner</h2>
+<h2>4. Inspect the installed runner</h2>
 
 <p class="first">The runner executes WebAssembly (WASM) plugins and serves project spool requests. The agent drives the workflow through those requests. The daemon can serve several projects on one machine.</p>
 
@@ -162,7 +172,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <p>In Windows PowerShell:</p>
 <pre><code>&amp; "$env:USERPROFILE\.gm-tools\agentplug-runner.exe" spool</code></pre>
 
-<h2>4. Source ownership</h2>
+<h2>5. Source ownership</h2>
 
 <p class="first">The root <code>.gitmodules</code> file lists the dependency repositories. Clone their source when developing a dependency:</p>
 <pre><code>git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git</code></pre>
@@ -187,7 +197,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>Code, history, and memory indexes share the project database at <code>.gm/gm.db</code>. Durable memory documents live under <code>.gm/memories/</code>. See <a href="https://github.com/AnEntrypoint/gm/blob/main/README.md">README.md</a> and <a href="https://github.com/AnEntrypoint/gm/blob/main/AGENTS.md">AGENTS.md</a> for the source and runtime contracts.</p>
 
-<h2>5. Release evidence</h2>
+<h2>6. Release evidence</h2>
 
 <p class="first">The <code>skill-release.yml</code> workflow runs when a push to <code>main</code> changes <code>skills/**</code>. It increases the package version, packages the skills, and publishes a GitHub Release archive with its SHA-256 file.</p>
 
