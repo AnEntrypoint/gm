@@ -185,3 +185,10 @@ exec_js over the prd-list result avoids that cost.
 
 Two nominations in that cycle were title-only and unverified: `trav-edge-check-relative-imports-skips-edge-root`
 (a gate change) and `tsl-only-shaders` (a shader rewrite). Neither was checked before launch.
+
+## Verified 2026-10-10 (a queued gh-pages run held the deploy group for five days)
+
+- `gh-pages.yml` puts every run in `concurrency: group: gh-pages` with `cancel-in-progress: false`. A run created 2026-10-05T21:09:21Z stayed `queued` and never got a job, and it held that group: every run after it went `pending` and was cancelled by the next run that arrived, so the site kept serving the 2026-10-05 build. Fifteen consecutive cancels are recorded between 2026-10-09T14:17Z and 2026-10-10T19:23Z (34 runs total on the workflow).
+- Neither a new `workflow_dispatch` nor a push frees the group; the newest run only joins the queue behind the holder, and a pending run that is cancelled never deploys. The repair is to cancel the holder -- `gh run cancel <holder-run-id>` -- after which the newest run starts within seconds.
+- The block is per concurrency group, not runner starvation: `doc-drift`, `skill-release` and `bump-pins` completed normally throughout the same window, and `actions/runs?status=pending` for the repo reported exactly one pending run.
+- Detection, one call: `gh api 'repos/AnEntrypoint/gm/actions/workflows/gh-pages.yml/runs?per_page=100' --jq '.workflow_runs[]|select(.status!="completed")|[.id,.status,.created_at]'`. Any non-completed run older than a few minutes is the holder; `jobs == 0` after minutes of pending is the zombie shape.
