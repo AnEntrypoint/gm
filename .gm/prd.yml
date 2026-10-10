@@ -1,0 +1,15 @@
+- id: gm-config-vendored-prose-shadows-config-cache
+  SESSION_ID: orch-main-r133
+  title: Vendored .gm/instructions/<key>.md silently shadows the gm-config prose cache
+  description: 'Live cause found by row gm-config-refresh-degraded-silent-nested-copy-cause (session orch-main-r133). For c:/dev/gm the served entry prose is byte-prefixed by C:/dev/gm/.gm/instructions/entry.md (22192 chars), NOT by the top-level .gm/config-source-cache-default/prose/entry.md (27435). Cause: tier1_project_vendored (rs-plugkit/crates/plugkit-core/src/prose.rs:154) answers Outcome::LocalOverride at prose.rs:163 and sits first in the tier loop (prose.rs:194-198); it wins whenever .gm/instructions/.vendored.json is absent, because is_unedited_snapshot (prose.rs:141-146) then reports the file as edited. tier2 (prose.rs:169-182 -> read_from_cache_root prose.rs:397-427) is never reached, so every prose edit shipped to gm-config is inert for that project, and resolve_with_degradation (prose.rs:102-112) maps LocalOverride to None so the reply still reports degraded=false: the shadowing is silent. Control arm: a scratch root with no .gm/instructions/entry.md DID serve a sentinel appended to its cache prose/entry.md (dispatch 1791669394130-3-117a2632b0f43cc2).'
+  acceptance_criteria: 1) A project whose .gm/instructions/<key>.md is a byte-identical vendored snapshot of the cache copy serves the cache copy (or reports a non-silent tier), proven by a sentinel appended to the cache copy appearing in the served text while the vendored copy is unchanged. 2) .gm/instructions/.vendored.json is written on every vendoring publish so is_unedited_snapshot is true for an unedited file. 3) An edited vendored file is reported as such on the wire (degraded or an explicit tier/outcome), never silently.
+  witness_plan: exec_js sentinel probe against two roots (one with a vendored copy + .vendored.json, one without), dispatching the plain instruction surface and comparing the served text prefix to each on-disk copy; pass on prefix match.
+  depends_on:
+  - gm-config-refresh-degraded-silent-nested-copy-cause
+  tags:
+  - config
+  - prose
+  - silent-degradation
+  - r133
+  session_id: orch-main-r133
+  status: pending
