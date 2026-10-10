@@ -158,6 +158,8 @@ skills/gm/.gm/
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
 .gm/crawl-profiles/
+# crawl_cdp lease profile, created by agentplug-host crawl_lease.rs at root/.gm/crawl-cdp-profile
+.gm/crawl-cdp-profile/
 
 # gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
 .gm/lean-walk/

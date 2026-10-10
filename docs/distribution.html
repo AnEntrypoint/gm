@@ -150,6 +150,10 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>The default transport uses the host's standard input and output pipes. A lost pipe ends that connection. The HTTP transport permits a client to reconnect.</p>
 
+<p>Every entry point leaves the shared HTTP server up instead of tearing it down. <code>ensure-http</code> arms <code>http-supervise</code>, a detached sibling that probes <code>/health</code> every 15 seconds and starts the server again when two consecutive probes answer nothing, and <code>gm-mcp/scripts/install-autostart.mjs</code> installs a boot hook plus a five-minute crontab guard so the port is listening before any session starts.</p>
+
+<p>A reply is bounded: gm-mcp cuts a response at 24,000 characters and writes the rest to a spill file under <code>.gm/exec-spool/out/</code> that the truncation notice names. <code>gm_result</code> reads that file back from any project's spool, not only the one this server started in: <code>result_file</code> takes the absolute path or a name resolved through <code>cwd</code>, <code>field</code> reads one key, and <code>offset</code> with <code>limit</code> (1 to 16,000) page through it.</p>
+
 <h2>4. Inspect the installed runner</h2>
 
 <p class="first">The runner executes WebAssembly (WASM) plugins and serves project spool requests. The agent drives the workflow through those requests. The daemon can serve several projects on one machine.</p>
@@ -161,6 +165,8 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <pre><code>&amp; "$env:USERPROFILE\.gm-tools\agentplug-runner.exe" --build-info</code></pre>
 
 <p>The identity includes the compiled commit and release-build flag. The runner protects a local build from replacement by its automatic release updater. An update refusal can also come from the configured update guard.</p>
+
+<p>Release integrity rides on the <code>.sha256</code> sidecar published beside the release, not on a version string, because a same-version release can be a downgrade. The release bridge upgrades the installed runner and the guest plugin from that sidecar. gm-mcp runs the deployed-bundle staleness check on a timer in every process, HTTP included, instead of only at startup: a long-lived server that swaps in a refreshed bundle closes its listening socket, spawns the replacement, and exits only once the replacement answers <code>/health</code> with a different pid.</p>
 
 <p>Check the reported build identity and update refusal before changing an installation. Keep project state and runtime state available for diagnosis. The project status file is <code>.gm/exec-spool/.status.json</code>.</p>
 
