@@ -23,6 +23,7 @@ No test files. Never kill another lane's process. A failed witness: causes becom
 
 ## Rules
 - Read a row before writing it. `prd-add` on an existing id overwrites its subject, so a witness blocker on an existing row is appended to that row's text with its original subject kept. Never reuse the row's own id for a blocker: that rescopes the row.
+- At SPECIFY the orchestrator dispatches `scan_deps` and logs its result as a PRD row.
 - Row ids are real: read them with `prd-list {"status":"pending"}` filtered in exec_js; never invent one for a witness run. A row name absent from `.gm/prd.yml` cannot be resolved.
 - Witness outcomes are not PRD rows. Each run appends one line to `.gm/witness-log.md` (witness, exit code, RESULT line, UTC, dispatch id), and the parent row is closed with `prd-resolve` citing that line. One output closes one row: `prd-resolve` refuses a witness output sha256 already bound to another row (`prd-resolve-duplicate-witness`).
 - `prd-resolve` binding: `witness_dispatch_id`, or all four of `witness_exit_code` (integer 0), `witness_output_sha256`, `witness_output_path` and `witness_ts`. A body without a binding is refused as unbound. `witness_dispatch_id_verified:false` is text evidence only: flag the row for reopening.
