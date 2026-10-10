@@ -1,11 +1,3 @@
-// Generates and checks the vendored lean copies of gm-config's graph and prose.
-//
-//   node scripts/sync-lean-graph.mjs check            exit 1 on any byte drift
-//   node scripts/sync-lean-graph.mjs emit <outdir>    write the authored copies to <outdir>
-//
-// `emit` never writes into rs-plugkit: the lean graph is include_str!-ed into the wasm guest,
-// so replacing it changes the enforced gates and needs its own reviewed rebuild.
-
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -17,11 +9,10 @@ const authoredProseDir = path.join(root, 'gm-config', 'prose');
 const leanGraph = path.join(root, 'rs-plugkit', 'crates', 'plugkit-core', 'src', 'orchestrator', 'lean_graph.json');
 const leanProseDir = path.join(root, 'rs-plugkit', 'crates', 'plugkit-core', 'src', 'orchestrator', 'instructions', 'prose');
 
-// rs-plugkit/AGENTS.md ("Lean graph and compiled prose") keeps these as separate compiled prose.
-const COMPILED_PROSE = new Set(['entry.md', 'entry-extended.md']);
+const RS_PLUGKIT_COMPILED_PROSE = new Set(['entry.md', 'entry-extended.md']);
 
 function sharedProse(dir) {
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.md') && !COMPILED_PROSE.has(f)).sort();
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.md') && !RS_PLUGKIT_COMPILED_PROSE.has(f)).sort();
 }
 
 function sameBytes(a, b) {
