@@ -38,6 +38,7 @@ Launch only advertised ids; no manual fill. A slot stays empty only when no pend
 
 ## Heartbeat
 - Every brief opens with: write `.gm/pool/<session>.live` on start, delete it on finish. A brief without this step is refused.
+- **Empty heartbeats cost the pool its dedupe.** `slots.live_rows` and `live_heartbeats` are empty while no brief wrote its `.live` file, and `pool-observe` then advertises rows that live workers already hold -- measured 2026-10-10: all 5 advertised slots named rows with a running worker and `live_heartbeats: 0`, so every advertised slot read as free and had to be hand-filtered to avoid a second writer on one surface. A wave launched without the heartbeat step is a wave that cannot be de-duplicated.
 - Format (session, row, start), the read-before-write check and the 5-minute refresh: `gm-config/prose/worker-rules.md` section 1. Refresh at any gm call, including during lock waits.
 
 ## Shortfall and FAILURE
@@ -81,6 +82,7 @@ The skills under `c:/dev/gm/skills/` are the lever that changes pool behaviour; 
 - Default to parallel dispatch when the closure decomposes into independent slices; split by file, row or hop. Slices naming one surface run in turn; pairwise-disjoint slices launch in one block. A single focused mechanical edit stays single-session; never a manufactured split.
 - Walk workers are gm-prd or gm-hop, never a fork: a fork inherits the parent conversation and breaks SESSION_ID isolation.
 - Each subagent's prompt opens with the brick-wall opener ("use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`, and `Read` only a located path") and carries its own SESSION_ID, never the parent's value: the daemon keys claims by `(verb, session_id-N)`. The brief restates no other verb names, spool paths, body shapes or phase mechanics: `Skill(skill="gm")` supplies those.
+- **A brief that names a source path names one that exists.** Verify the path in the target project (`codesearch {mode:"filename"}`) before the launch, or tell the worker to locate it itself. Measured 2026-10-10: three briefs named `rs-plugkit/gm-plugin`, which does not exist in c:/dev/gm -- one worker blocked on it and three more were mid-flight with a wrong path, each corrected by a mid-flight `SendMessage`. A wrong path in a brief is not a typo, it is a blocked slot.
 - `gm_processor_capacity` (4 on this build) queues dispatches beyond it; it is not the number of subagents to launch.
 - Queue order: open PRD rows first (one subagent per row), then independent node slices. A subagent that ends early is re-dispatched with the same slice, never dropped. The walk advances only when its slices have returned.
 - Hops and executors share one pool. No hop or executor opens a branch or worktree to avoid a collision; a collision is recovered by re-reading the row or file, reapplying the change on current state, and retrying.
