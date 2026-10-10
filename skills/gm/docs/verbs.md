@@ -120,7 +120,9 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    "literal"/"regex": exhaustive, every match with path:line, no ranking;
                                    "filename": matches paths only
 {"k":10}                           result cap for "dual"; aliases: max_results, maxResults, limit
-{"max_matches":1000}               hit cap for the exhaustive modes
+{"max_matches":1000}               hit cap for the exhaustive modes: it caps the rows returned,
+                                   never the files scanned -- every file in scope is still read,
+                                   and the cap is off by default
 {"max_files":50000}                file cap
 {"path":"<dir or file>"}           narrow the scan
 {"path_glob":"**/*.rs"}            narrow by glob; "glob" is an alias
