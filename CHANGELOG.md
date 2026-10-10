@@ -12,7 +12,7 @@
 
 **agentplug runtime fixes landed the same two days.** `settle_store_lock` no longer fails the release build with E0382, and every `gm.db` writer records a lock owner so a stale lock can be reaped instead of blocking the next writer. Answered out-files are kept for the two-hour witness horizon, the shared-store recycle default drops from 1600 to 600 MB, and cheap admission waits 120 s where heavy waits 180 s.
 
-**Repo hygiene: runtime trees stop showing up in `git status`.** Dream-RSI scratch state is untracked (its path names exceed the Windows 260-char limit, so git could not walk them) and the remaining runtime trees are ignored: `.gm/lightpanda/`, `.gm/traversal/`, `.gm/pool/` (subagent heartbeats) and the rotated config-source cache markers. Dream-RSI's `lean-graph.json` is gone, renamed to `gm-graph.json`. `docs/verbs.md` now documents `bin/gm`, `chrome`, `pool-brief` and `git_amend`, which shipped without inventory entries.
+**Repo hygiene: runtime trees stop showing up in `git status`.** Dream-RSI scratch state is untracked (its path names exceed the Windows 260-char limit, so git could not walk them) and the remaining runtime trees are ignored: `.gm/lightpanda/`, `.gm/traversal/`, `.gm/pool/` (subagent heartbeats) and the rotated config-source cache markers. Dream-RSI's `lean-graph.json` is gone, renamed to `gm-graph.json`. The verb inventory, now at `skills/gm/docs/verbs.md`, documents `bin/gm`, `chrome`, `pool-brief` and `git_amend`, which shipped without inventory entries.
 
 ## 2026-10-05 - busy ticks no longer spin, one standalone watcher per project
 
