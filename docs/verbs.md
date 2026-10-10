@@ -35,6 +35,15 @@ read `.gm/exec-spool/out/<verb>-<N>.json`. Prefix `N` with a session id.
 project root from it with `git rev-parse --show-toplevel`. Where cwd is not itself inside a git
 repository, pass `git_root_override` in the body to pin the root.
 
+`bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's own `dispatch`
+subcommand, so a plain shell runs a verb with no MCP client and no daemon of its own involved.
+Search verbs also take a sugar form, `gm codesearch literal <needle> --path <dir> --glob <glob>`,
+which builds `{"query","mode","path"}`; the sugar exists because a mode word is not a dispatch body,
+and it applies to `grep`/`rg`/`codesearch`/`code_search`/`search` only. Any argument starting with
+`{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never
+reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body
+fields. It is exposed for `npm link` as `gm-dispatch`.
+
 ## Code lookup
 
 ### `grep` (alias `rg`) -- where is this string
@@ -250,7 +259,8 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 ## Git
 
-`git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_finalize`, `git_log`,
+`git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_amend`, `git_finalize`,
+`git_log`,
 `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`),
 `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
@@ -261,7 +271,9 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 `refs/remotes/` ref (`pushed_commit_refused`), when the index holds staged paths not named by the
 request (`staged_paths_present`, overridden by `allow_staged:true`), and when the target is not an
 ancestor of HEAD. `git_commit {"amend":true}` rewrites the current commit instead of stacking a
-child, and refuses when that commit is already published (`pushed_commit_refused`).
+child, and refuses when that commit is already published (`pushed_commit_refused`). `git_amend` is
+that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler,
+and carries the same `pushed_commit_refused` refusal.
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
@@ -323,6 +335,16 @@ engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
 
+### `chrome` -- the headful CDP crawl as a named verb
+
+`chrome` takes the same **plain text body** as `crawl` and runs the same step grammar, pinned to
+`engine: cdp` and `headless: false`, so a caller that always wants a real visible Chrome never
+restates the engine line. It answers the same host JSON object.
+
+```
+raw_body: "https://example.com/\nsnapshot\n"
+```
+
 ## Orchestration and state
 
 These drive the phase machine. Dispatched through the same spool.
@@ -336,11 +358,16 @@ These drive the phase machine. Dispatched through the same spool.
 `memory-namespace-audit`, `codeinsight-namespace-audit`, `calculus-model-check`,
 `component-loader-reconcile`, `component-loader-hmr`, `dream-policy-register`,
 `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay`,
-`dream-replay-round`.
+`dream-replay-round`, `pool-brief`.
 
 `instruction` is the entry point: it serves the prose for the current phase and a gate denial names
 the recovery verb. A long idle gap makes every other verb return
 `gate_denied` / `long-gap-no-instruction` until `instruction` is dispatched again.
+
+`pool-brief` hands one subagent its brief for one PRD row. Its body takes three non-empty string
+fields: `row` (a PRD row id), `session` (the subagent's SESSION_ID -- the key is spelled `session`,
+never `session_id`) and `role` (one of `resolver`, `traversal`). A missing or empty field is refused
+with the list of what is required.
 
 ## Storage, cache and diagnostics
 

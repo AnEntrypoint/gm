@@ -57,16 +57,17 @@ features:
     - name: "search by meaning, not by keyword, and answers come back whole"
       desc: "memory recall does not keep a searchable index of raw text anywhere; it stores only vector embeddings, so a query matches by meaning, not by matching words. code search adds one more signal on top of the usual text match: it can rank results by which git commits touched them most relevantly or most recently, not just static grep. both search verbs hand back the full matched content, never a truncated snippet, so the agent is not forced to go fetch the rest. every verb response is also deliberately short and token-optimized, so none of that context gets spent for nothing."
 whatsNew:
-  heading: "what's new (last two weeks)"
+  heading: "what's new (october 8-10, 2026)"
   items:
-    - { date: "2026-07-28", summary: "gmsniff stale-registry bug fixed (daemon-registry/daemon-status now read from the live ~/.agentplug path); browser-verb health verified fleet-wide; comment-policy sweep" }
-    - { date: "2026-07-25", summary: "browser session-launch TOCTOU race fixed (concurrent dispatches no longer spawn duplicate Chrome instances); codeinsight wall-budget and daemon-concurrency fixes" }
-    - { date: "2026-07-24", summary: "system-wide verification sweep across gm/ccsniff/gmsniff; vocabulary sync; comment-sweep completion" }
-    - { date: "2026-07-23", summary: "no-comments policy closed the loop with a full-repo sweep; threading/pool fairness fixes; mutables lifecycle made project-configurable" }
-    - { date: "2026-07-22", summary: "dead gm-log observability restored (a 2-week-silent gap was invisible until now); ccsniff/gmsniff detector gaps closed" }
-    - { date: "2026-07-21", summary: "dynamic FSM framework: the phase graph is now project-overridable data, not hardcoded Rust; runner self-update; a real COMPLETE-gate bypass bug fixed" }
-    - { date: "2026-07-17", summary: "GL error capture: fixed a fill-once-then-frozen cap, added stack traces and a proactive GPU-tracing hint" }
-    - { date: "2026-07-16", summary: "stopped the CLI spool command from blocking on network round-trips during watcher reboot" }
+    - { date: "2026-10-10", summary: "bin/gm is a shell entrypoint: a plain bash now runs any verb (`gm codesearch literal <needle> --path <dir>`) with no MCP client and no daemon of its own in the loop" }
+    - { date: "2026-10-10", summary: "gm-mcp 0.2.21 checks the deployed bundle for staleness on a timer in every process, HTTP included, and every entry point now leaves the shared HTTP server up instead of tearing it down" }
+    - { date: "2026-10-10", summary: "crawling releases what it opens: crawl_cdp closes the targets this run created, and the headful CDP crawl is exposed under its own name as the chrome verb" }
+    - { date: "2026-10-10", summary: "agentplug: every gm.db writer records a lock owner so a stale lock can be reaped, answered out-files survive for the two-hour witness horizon, and the shared-store recycle default drops from 1600 to 600 MB" }
+    - { date: "2026-10-09", summary: "the subagent pool became part of the machine, not a convention: hops are skill loads that nominate their own successor, pool-brief hands one subagent one PRD row, and every change commits and pushes as it lands" }
+    - { date: "2026-10-09", summary: "release integrity moved onto a published sha256 sidecar with a self-updating release bridge, and a build that is not a release is now treated as a sideload" }
+    - { date: "2026-10-09", summary: "dispatch replies are capped at 24,000 characters with a spill file for the rest, and gm_result reads that spill from the project that produced it; the installer ships every release skill, not only gm" }
+    - { date: "2026-10-08", summary: "search verbs gained --no-ignore, crawl became a plain-text-body verb, and live session leases ride along on every instruction dispatch" }
+    - { date: "2026-10-08", summary: "versions now live: gm 2.0.2800, gm-mcp bundle 0.2.21, agentplug 0.1.262" }
 quickstart:
   heading: install in detected agent hosts
   lines:
