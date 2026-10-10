@@ -1,0 +1,1 @@
+[{"discovery_ids":["d-base","d-cand"],"id":"w1","nodes":[{"children":[],"cost":1,"id":"d-base","round":0,"score":1.0},{"children":[],"cost":1,"id":"d-cand","round":1,"score":1.0}],"owner_session_id":"goal-s7-w-drmr"}]

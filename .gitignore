@@ -170,3 +170,18 @@ skills/gm/.gm/
 
 # memorize-fire generated recall memos (rebuilt from gm.db, which is untracked)
 .gm/memories/mem-*.md
+
+# config-source cache rotation: a rotated-out cache tree and its sync marker are left
+# behind under a .stale name when the live tree is rebuilt
+.gm/config-source-cache-default.stale-*/
+*.sync.json.stale
+
+# Lightpanda browser-engine server runtime (its own serve.log, one per crawl session)
+.gm/lightpanda/
+
+# lean-walk traversal scratch: per-slice traverse/verdict/witness notes, rewritten each walk
+.gm/traversal/
+
+# subagent heartbeat directory: every subagent writes .gm/pool/<session>.live on start and
+# deletes it on finish, so the directory holds no source (skills/gm/SKILL.md, pool protocol)
+.gm/pool/
