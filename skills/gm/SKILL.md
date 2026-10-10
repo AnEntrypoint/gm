@@ -15,6 +15,13 @@ and `Read` only a located path. A scan subagent returns only located `path:line`
 - Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
 - An unmet goal, or a stop hook that re-fires, is NOT a reason to stop or to repeat a status report. Keep working the graph; the exit guard, with its world-scope exception, is the walk loop in Section 1c.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop; continue with the next default step unless they say stop.
+- Fix every issue you find, never asking whether to. A failing check, a merge conflict, a residual, a failing CI job or a missing file is a defect: fix it in the same turn and verify the fix. Ask only for world-scoped one-way doors (Section 4).
+- This is a well understood, long-horizon task. Never question the user about process, scope or assumptions. Record each open question as a mutable (`mutable-add`), resolve it by exhaustive research (codesearch, callers, recall, fetch, a live witness), and keep going. Not making assumptions is non-negotiable: every internal process question is answered by research, never by asking.
+- Always do what the request already implies. Steps that are in the spirit of the instruction are an implicit part of it: plan and execute the adjacent, implied, downstream and cleanup work as well, without asking. Never present options when the answer is obvious from the request; choose the obvious answer and do it. A request answered by "should I?" is a failure to act on what was already asked.
+- Expand plans maximally. Each row gets its corner cases, caveats and failure modes, and a second pass over the new rows runs until a pass adds nothing. Run every remaining step of earlier plans, and every new plan that arises, before the completion threshold. Trivial clarifications are never a stop.
+- Orchestrate as many parallel subagents over as many waves as the objective needs. One wave is never the end of the work; the next wave starts when the previous one's slices are exhausted and the objective is still open.
+- Consolidate continuously. Local and upstream changes merge as the work proceeds, and consolidation is achieved by pushing: pull, resolve conflicts, commit with explicit paths, push, and bump each submodule pin in the parent. Never leave a commit unpushed or a pin behind.
+- Builds and cascading updates run through GitHub Actions, not a local toolchain. After a push, verify through `ci-status` and fix any failing job before reporting success; a pending or failing job is never reported as passing.
 - Work the user has already asked for, or a plan they have already approved, is go-ahead. Do it without asking again, and do not restate it as a question. "Go ahead" on a named step means run that step, then the next step it implies.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
 - Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
@@ -230,7 +237,7 @@ the two differ, served text wins under section 0 precedence.
   brick-wall opener defined in the preamble above.
 - **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
   skill file holds the procedure, the codeinsight-first invariant and the witness invariants, so
-  the brief adds no prose.
+  the brief adds no prose. Walk workers and hops are never spawned with `subagent_type: "fork"`: a fork inherits the full parent conversation, which breaks the own-SESSION_ID, brief-only isolation.
 - **Refill.** On every completion, in the same turn, launch one replacement per
   freed slot while independent work remains.
   The only stops are a spawn refusal and exhausted slices: when no
@@ -241,7 +248,8 @@ the two differ, served text wins under section 0 precedence.
   waiting for a completion notice is not a stop. Ending a turn with `live` below the
   floor while independent work remains is a shortfall, whatever the message says. The measure is the count of unlaunched
   slices, which falls by one on every launch, so the loop is bounded even if the host
-  never refuses. Headroom is read before
+  never refuses. A headroom pause is not a stall of the walk loop: it does not count toward the
+  two-stall rule (Walk loop, below), and the loop resumes at the next tick whose headroom read is ok. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
@@ -271,7 +279,7 @@ the two differ, served text wins under section 0 precedence.
   guard: it ends at the terminal state with `prd_pending_count=0`, then
   `Skill(skill="gm-continue")`. Fuel bounds it: at most 40 cycles per walk. A cycle
   that closes no row and launches no worker is a stall, and two consecutive stalls end
-  the loop. At 0 fuel or after two stalls, the open rows are recorded and
+  the loop. A cycle in which a headroom stop holds the launches is logged as a headroom stop and is not a stall; it does not count toward the two. At 0 fuel or after two stalls, the open rows are recorded and
   `Skill(skill="gm-continue")` takes over, and its repeat-gap check bounds restarts.
   The one other end of a turn is a world-scoped one-way door (Section 4).
 - **Successor spawn.** The successor rules (`next_choice`, `visited`, depth limit, the
@@ -386,7 +394,9 @@ Principles; JTBD (Christensen).
 **Specify** — EARS; INVEST; Cockburn Use Cases; Quality Attribute Scenario;
 MoSCoW; Impact Mapping; Definition of Done.
 **Change** — Mikado Method; small batches (Reinertsen); characterization
-behaviour (Feathers), witnessed live; Boy Scout Rule (Martin); Opportunistic
+behaviour (Feathers), witnessed live before the first edit: each touched function's
+current behaviour is recorded by a live dispatch first, and no edit starts until that
+record exists; Boy Scout Rule (Martin); Opportunistic
 Refactoring and Rule of Three (Fowler); Broken Windows (Hunt & Thomas); DRY; Code
 Smells; Strangler Fig; SOLID; Deep Modules (Ousterhout); SLAP; Chesterton's Fence;
 Hyrum's Law.
