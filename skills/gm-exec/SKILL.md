@@ -1,6 +1,6 @@
 ---
 name: gm-exec
-description: Self-contained gm PRD executor. Closes one PRD row through the nine stages (SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE) in one run, with mutables collected and closed by code run on the project (JIT execution), process of elimination when a witness fails, a witness log, and delivery. Invoke with args "row=<id>; session=<SESSION_ID>".
+description: Self-contained gm PRD executor. Closes one PRD row through the nine stages (SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE) in one run, with mutables collected and closed by code run on the project (JIT execution), process of elimination when a witness fails, a witness log, and delivery. Use when a PRD row must be closed through the gm nine stages, or a gm walk dispatches a row executor. Invoke with args "row=<id>; session=<SESSION_ID>".
 ---
 
 # gm-exec
@@ -121,7 +121,7 @@ make progress.
 A failed witness is a fact about the code. Work it out:
 
 1. List every candidate cause as a mutable.
-2. Eliminate candidates one at a time, each by a live run that rules it in or out.
+2. Eliminate candidates by live runs, each ruling in or out the surviving set. Each run splits the surviving mutables as evenly as their order allows: bisect ordered causes (commit range, config keys) first, so n candidates take about log2 n runs, and eliminate the remainder one at a time.
 3. Fix only the cause that survives, with the smallest change.
 4. Witness again through the same entry point, and keep the dispatch id.
 
