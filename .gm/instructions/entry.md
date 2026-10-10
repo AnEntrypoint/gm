@@ -57,20 +57,19 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 **There is no next session where a "ready to resume" turn actually resumes -- writing that sentence ends the conversation as surely as never writing anything again.** A response with no tool call is the last message of this conversation, full stop, regardless of how the prose frames it ("Session N closes," "standing work ready for next invocation," "user can resume with /gm," a recap of decisions made so far). The user re-typing `/gm` later is not this chain continuing -- it is a new, separate invocation that has to re-discover everything the closing summary just threw away. The only mechanism that produces an actual next action instead of silence is a dispatch in the SAME response, never a description of what a future response would do.
 
 ## Parallel slots (standing invariants)
-- Slot counts, `target`, `live`, refill and `shortfall` are defined once in skills/gm/SKILL.md 1c (Parallelism contract). On every completion, pass the completed worker's row, surface and session on to its replacement.
+- Completion refill is defined once in skills/gm/SKILL.md 1c (Refill, Shortfall): slot counts, `target`, `live`, `shortfall`, headroom and the refill trigger. The replacement takes the completed worker's row, surface and session.
 - Successors come from the candidates list in the instruction response (slots.candidates). A successor named in free text is advisory: launch it only if it is in candidates and is node-only.
 - GPU rows wait while another owner holds .gpu-lock/owner.json. Browser rows wait for the shared browser lease. A timed-out lock wait is a failed run, not a result. Keep node rows flowing meanwhile.
 - Blocker rows are annotations and never candidates. A blocked worker records the blocker and still nominates a node-only successor.
 - When candidates run out before the target, a traversal hop logs node-only PRDs with mutables and just-in-time execution. When rows resolve faster than the pool refills, pause new row creation.
 - Keep all work on main. On a collision, retry the step. Never branch.
-- No Claude-only waiting primitives for pool work: Monitor, ScheduleWakeup, CronCreate and shell sleep loops are not used. Workers wait with a gm verb or by finishing the check directly; the orchestrator re-counts its own launches minus completion notices. Two workers armed Monitors in one cycle, which the user has ruled out.
-- Pool workers get their brief from gm through the pool-brief verb, never from a Claude skill.
+- No Claude-only waiting primitives for pool work: Monitor, ScheduleWakeup, CronCreate and shell sleep loops are not used. Workers wait with a gm verb or by finishing the check directly; the orchestrator counts `live` (skills/gm/SKILL.md 1c). Two workers armed Monitors in one cycle, which the user has ruled out.
+- Pool workers get their brief from the Claude skill that runs them: `Skill(skill="gm-hop")` for a hop and `Skill(skill="gm-exec")` for a PRD row (`skills/gm/SKILL.md` section 1d).
 - The orchestrator loop is: wait (the gm wait verb, called as wait {"ms":60000}; ms is a positive integer, maximum 60000), then instruction, then launch the free slots from slots.candidates; repeat while open work exists.
 - Never use Monitor, ScheduleWakeup, CronCreate or shell sleep loops for pool work.
 - Keep node supply: when the node candidates fall below the `ceiling` (skills/gm/SKILL.md 1c), start a traversal hop. A traversal hop logs node-only PRDs and resolves none.
 - Successors come only from the node-first candidate list. A nomination in free text is checked against that list before launch.
 - Stop a background shell or Monitor that has printed nothing for 10 minutes, before it holds a lock.
-- On every wake, tick, resume and completion, refill before any other step, per skills/gm/SKILL.md 1c (Refill).
 - No branches: all work is on main; branch-creating verbs are refused.
 - When `slots.candidates` is empty, refill per skills/gm/SKILL.md 1c (Refill) from a scan of pending rows in the same turn, read those rows through exec_js over the prd-list result (not a raw prd-list), log the empty candidate list as a defect row, and launch a nominated successor only after its acceptance text is read.
 
@@ -79,28 +78,28 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 - Hop = one node traversal (one book and author), defined in skills/gm/SKILL.md section 1d; this file does not restate the unit.
 - A hop lists the real pending rows for its surface, records a one-line action per row, nominates its successor from that same list, and never invents an id.
 - Every hop runs as its own subagent (Agent tool), with its own SESSION_ID and a prompt that opens with the brick-wall opener (gm skill, codeinsight first). The orchestrator never performs hop work inline; it spawns every hop, the first and each successor, then reads that hop's receipt.
-- A hop spawns its own successor from its `next_choice`, passing `next_choice.why` verbatim as the successor's rhetoric (skills/gm/SKILL.md 1c, Successor spawn). The orchestrator spawns a successor only when a hop returns `next_choice: none`.
+- A hop spawns its own successor from its `next_choice`, passing `next_choice.why` verbatim as the successor's rhetoric and `depth=<depth+1>` (skills/gm/SKILL.md 1c, Successor spawn). The orchestrator spawns a successor only when a hop returns `next_choice: none`.
 - All parallel work lands on `main`. No hop or executor opens a branch or a worktree to avoid a collision. A collision is recovered: re-read the row or file, reapply the change on the current state, retry. Collision avoidance by isolation is refused, since it serialises the pool.
 - The `ceiling` is defined in skills/gm/SKILL.md 1c; this file names no number.
-- A drain is a failure: when `live` reaches 0 or `shortfall` holds with independent work open, refill per skills/gm/SKILL.md 1c, and record the gap that let the pool drain as a PRD row (`prd-add`), so the correction lands as a versioned change rather than an edit to the prose a walk is running. Short tasks finish before others start, so a ceiling probe must hold its subagents open with real work (a witness run), never with sleep; sleep is blocked, so an overlap test that depends on it measures nothing.
+- A drain is a failure: when `live` reaches 0 or `shortfall` holds with independent work open, refill per skills/gm/SKILL.md 1c, and log a FAILURE line to `.gm/witness-log.md` as skills/gm/SKILL.md 1c (Shortfall) defines. A blocker row is filed with `prd-add` only on the third repeat. Short tasks finish before others start, so a ceiling probe must hold its subagents open with real work (a witness run), never with sleep; sleep is blocked, so an overlap test that depends on it measures nothing.
 - A PRD row is closed by one `gm-exec` run (skills/gm-exec/SKILL.md): mutables collected and closed by code run on the project, JIT execution, the nine stages (SPECIFY through COMPLETE) in order, and process of elimination when a witness fails. No stage is a separate subagent.
 - Witness outcomes are not PRD rows. A worker records its run in the witness log (`.gm/witness-log.md`, one line per run: witness, exit code, RESULT line, timestamp) and does not close the parent row. A row closes only after a second session re-runs the cited witness and matches its exit code and RESULT line; that second session closes it with `prd-resolve` citing its own witness-log line. Adding an outcome row for each run inflated the pending count from about 380 to 681 while the parents never closed, so the count measured nothing about progress.
 - Duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) are not progress: merge them into the base row.
 - Row ids are real. Read them with `prd-list {"status":"pending"}` filtered in exec_js; never invent one for a witness run. A row name absent from the PRD cannot be resolved.
-- Read a row before writing it. `prd-add` on an existing id overwrites its subject, so a witness blocker on an existing row is appended to that row's text with its original subject kept.
+- Read a row before writing it. `prd-add` on an existing id is refused unless the body carries `overwrite:true`, which rescopes the row; a witness blocker on an existing row is appended to that row's text with its original subject kept.
 - `prd-resolve` needs `witness_evidence`. A resolution with `witness_dispatch_id_verified:false` is text evidence only: flag it for reopening if its criteria were not witnessed.
-- A launched batch with no queue drains: keep a queue of ready rows and launch from it at every completion, per skills/gm/SKILL.md 1c (Refill). A `shortfall` with work open is logged as a FAILURE line (Completion refill).
-- Never run below the refusal limit with ready work waiting; a single running subagent while work is open is a defect (skills/gm/SKILL.md 1c, Refill).
+- A launched batch with no queue drains: refill from a queue of ready rows is defined in skills/gm/SKILL.md 1c (Refill). A `shortfall` with work open is logged as a FAILURE line (skills/gm/SKILL.md 1c, Shortfall).
+- Refill and the floor: skills/gm/SKILL.md 1c (Refill).
 - Browsers are headful. Every Chromium launch uses `headless: false`; headless runs are refused. Each run closes the browser it opened, and before any new browser-using spawn, orphaned test Chrome (a remote-debugging-port or crawl-profile command line whose parent run has ended) is reaped. The user's own Chrome is never touched.
-- Completion refill. Re-count `live` and refill per skills/gm/SKILL.md 1c (Refill, Walk loop). A worker never waits on the orchestrator to refill it; successors come from real open rows on every completion.
-  - Headroom is checked before each launch as skills/gm/SKILL.md 1c (Refill) defines it. A headroom stop is logged as a FAILURE line with the real count and timestamp.
+- A worker never waits on the orchestrator to refill it; its successor comes from a real open row (skills/gm/SKILL.md 1c, Refill).
+  - Headroom gate before each launch: skills/gm/SKILL.md 1c (Refill).
   - Open-PRD growth between checks is a failure. Drain by launching gm-exec on open rows before any other step.
-  - Shortfall: `shortfall` (skills/gm/SKILL.md 1c) while pending rows are open is a failure. Failures and resource stops are logged as a FAILURE line: one `prd-add` row, the only mechanism for logging a failure or a shortfall, whose subject is `FAILURE: <timestamp> live count fell to <n> with <m> open slices`. The count and UTC timestamp are read at the time of the check, never estimated.
-  - A worker that ends at a blocker frees its slot like any completion, and is refilled. Only live subagents are counted, never completed reports.
+  - Shortfall: `shortfall` (skills/gm/SKILL.md 1c) while pending rows are open is a failure. Failures and resource stops are appended to `.gm/witness-log.md` as one line `FAILURE: <timestamp> live count fell to <n> with <m> open slices`; a FAILURE line is a log event, not a PRD row, so it leaves prd_pending_count unchanged. The count and UTC timestamp are read at the time of the check, never estimated.
+  - Completion and `live` counting: skills/gm/SKILL.md 1c (Refill, Definitions).
   - Each brief names its row from a text scan of the PRD (pending = status not resolved) and its successor from a real pending row, because `prd-list` fails when the YAML is broken. If `prd-list` fails to parse, repair the state file before any launch; never launch on an unparsed state file.
   - If the gate runtime is not confirmed loaded (the status file reports the new plugkit), log a FAILURE line and still launch the free slots.
 - Traversal on low supply: when open PRD rows fall below what the launched workers need to stay busy, the orchestrator dispatches traversal hops that create new rows (`prd-add` rows, read back as `slots.open_rows`) before launching more resolvers. Row creation slows when rows resolve faster than workers take them.
-- Observable pool. `live` is defined in skills/gm/SKILL.md 1c. A `shortfall` while work is open triggers a refill and an update to this prose.
+- Observable pool: a `shortfall` while work is open triggers a refill and an update to this prose (skills/gm/SKILL.md 1c, Shortfall).
 - Hops and PRD executors share one pool. Walks that find PRDs and runs that execute them run concurrently, saturating the pool; nothing waits for a single hop or row to finish before the next one starts.
 - A hop creates PRDs; executor subagents run them while traversal continues. A hop never executes its own PRDs.
 - A hop's receipt must name an executed witness (a command, a crawl result, a codesearch output). A transition without one is refused; a phase walk is never a note.
@@ -118,7 +117,7 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 - Traversal is non-linear and continuous: no fixed node list. Each hop spawns its successor from its own next_choice, with its why as motivation; open PRD rows and open mutables fill any slot a nomination does not.
 - Canaries, checked on every refill (skills/gm/SKILL.md 1c): a subagent that closed without a change or a passing witness; a PRD listing that returns nothing while rows are pending; a free slot while ready work exists; traversal with no new evidence over a window. A tripped canary is fixed in the gm instructions or the dispatch path before the walk continues.
 - Store-lane starvation: a read-only verb can wait on the global store lane held by another worker and return `executed:false` after about 120 s. Retry once, count the retry in the FAILURE line, and never retry in a loop.
-- Headroom before every launch, not only at refill: the gate of skills/gm/SKILL.md 1c (Refill). Reap only test browsers, identified by their temp user-data-dir on the command line; never touch the user's own Chrome.
+- Headroom gate before every launch: skills/gm/SKILL.md 1c (Refill). Reap only test browsers, identified by their temp user-data-dir on the command line; never touch the user's own Chrome.
 - EADDRINUSE: a witness that fails with a port already in use did not run. Identify the owning process before rerunning, and never kill another lane's process.
 
 ## Grounded Dream-RSI replay
@@ -141,7 +140,7 @@ The nine phases are scheduling; filter = engine on every candidate, gating witne
 
 - **Measurement gates optimization** *claims*, not effort -- a measured-correct change ships however costly.
 - **Bounds prevent cascades:** explicit per-surface writer capacity converts crash to graceful degradation -- bounds writers, not coverage.
-- **Effort is unbounded:** the maximal-effort fully-destructive run is the default; the only costs weighed are maintenance-surface left behind (net-smaller wins, a heavy dep for a few lines loses) and the correctness-cost of an unverified claim.
+- **Effort is unbounded:** the default transform is non-destructive; a destructive transform runs only after it names the prior version it leaves readable (git sha); the only costs weighed are maintenance-surface left behind (net-smaller wins, a heavy dep for a few lines loses) and the correctness-cost of an unverified claim.
 - **Direction eliminates waste:** motion that does not reduce distance is dead.
 - **Monotonic closure on first build:** a partial build externalizes residual cost as unaudited state; mature artifact = first artifact.
 - **Witness is the audit primitive:** a claim without `(id, hash, ts)` is not in the system.
@@ -158,7 +157,7 @@ The state port (`skills/gm/SKILL.md`, Section 1 Harness) reads and writes these 
 
 ## Spool ABI
 
-Write `in/<lang>/<N>.<ext>` for language stems, `in/<verb>/<N>.txt` for orchestrator + host verbs. The watcher streams `out/<verb>-<N>.{out,err}` and finalizes `out/<verb>-<N>.json` synchronously -- read it once it lands. Parallelize independent dispatches in one message; serialize dependents at the data-flow edge. Every git operation routes through the git verbs (`git_status`/`git_finalize`/`git_push`/...), never a raw `git` shell body (gated `deviation.bash-git-bypass`); route every other capability through its verb.
+Write `in/<lang>/<N>.<ext>` for language stems, `in/<verb>/<N>.txt` for orchestrator + host verbs. The watcher streams `out/<verb>-<N>.{out,err}` and finalizes `out/<verb>-<N>.json` synchronously -- read it once it lands. Parallelize independent dispatches in one message; serialize dependents at the data-flow edge. Every git operation routes through the git verbs (`git_status`/`git_finalize`/`git_push`/...), never a raw `git` shell body (the gate is stated once, in `skills/gm/SKILL.md`); route every other capability through its verb.
 
 ## SESSION_ID
 
@@ -188,7 +187,7 @@ those. The single-session rule and its fan-out counterpart are defined in skills
 
 ## Inspection routing
 
-Every capability has exactly one sanctioned surface and the platform's native tools are never it: code/file/symbol search is the `codesearch` verb, defaulting to cwd but never confined to it -- `codesearch {root|projectPath: "<abs>", query, mode?}` targets any folder (a submodule, a sibling repo like `C:/dev/liqology`, any other project on disk), with its own persistent index/cache at `<root>/.gm/gm.db` isolated from and reusable independent of the current project's own index; a sibling repo is never `Read`-by-path scanned or shelled out to `find`/Grep/Glob just because it sits outside cwd -- pass `root`/`projectPath` instead. Runtime-state files (spool response JSON, `.status.json`) are `Read`, and Bash survives only for the boot probe and shell-only non-git tooling (`curl`, `sh`, `pwsh`) -- `find`/`grep`/`rg` are explicitly NOT in that survivor list, whether typed directly or through `PowerShell`/`Get-ChildItem -Recurse`/`Select-String`. Reaching for Glob/Grep/Explore, or the identical search shelled out via `Bash("find ...")`/`Bash("grep ...")`/`Bash("rg ...")`, or any host-native search is reaching around the surface -- it is blocked; the verb IS the surface, regardless of which literal tool call carries the reach, and regardless of whether the target is cwd or an external root. Spool responses are synchronous; poll external state via `until <check>; do sleep N; done`.
+Every capability has exactly one sanctioned surface and the platform's native tools are never it: code/file/symbol search is the `codesearch` verb, defaulting to cwd but never confined to it -- `codesearch {root|projectPath: "<abs>", query, mode?}` targets any folder (a submodule, a sibling repo like `C:/dev/liqology`, any other project on disk), with its own persistent index/cache at `<root>/.gm/gm.db` isolated from and reusable independent of the current project's own index; a sibling repo is never `Read`-by-path scanned or shelled out to `find`/Grep/Glob just because it sits outside cwd -- pass `root`/`projectPath` instead. Runtime-state files (spool response JSON, `.status.json`) are `Read`, and Bash survives only for the boot probe and shell-only non-git tooling (`curl`, `sh`, `pwsh`) -- `find`/`grep`/`rg` are explicitly NOT in that survivor list, whether typed directly or through `PowerShell`/`Get-ChildItem -Recurse`/`Select-String`. Reaching for Glob/Grep/Explore, or the identical search shelled out via `Bash("find ...")`/`Bash("grep ...")`/`Bash("rg ...")`, or any host-native search is reaching around the surface -- it is blocked; the verb IS the surface, regardless of which literal tool call carries the reach, and regardless of whether the target is cwd or an external root. Spool responses are synchronous; wait on external state with the `wait {"ms":N}` verb (N at most 60000), the only waiting primitive, never a shell sleep loop.
 
 **Code intelligence first.** A structural question -- who calls this, what breaks if it changes, is it dead, what is in this file -- goes to the call-graph verbs before `codesearch` or `Read`: they answer from the persisted symbol/call-edge index in about a second, one dispatch, no file bodies.
 
@@ -229,8 +228,8 @@ The host ceiling limits simultaneous subagents; the orchestrator fills the ceili
 - A `shortfall` with unassigned work is logged with the count, timestamp and open slices. Fan-out continues to the `target`.
 - A subagent that ends early is re-dispatched with the same slice, never dropped.
 - The walk advances only when its slices have returned.
-- On every wake, resume, loop tick or completion, the orchestrator re-counts `live`, then launches each unlaunched independent slice before any other step, and does not end the turn while slices remain and the target is not filled.
+- Refill on every wake, resume, loop tick or completion is the rule in skills/gm/SKILL.md 1c (Refill); the turn does not end while independent slices remain.
 
 Witness: while work remains and headroom allows, every open unit has a worker. The live count is bounded only by the spawn ceiling and headroom.
 
-- Before and after every git_pull, git_push, merge, update or delivery step, the orchestrator counts its own live launches and launches the available independent slices, so the step never lowers the count. A delivery step is never a reason to drop running subagents; a step that cannot run while subagents are running is run by a subagent.
+- Before and after every git_pull, git_push, merge, update or delivery step, refill per skills/gm/SKILL.md 1c (Refill). A delivery step is never a reason to drop running subagents; a step that cannot run while subagents are running is run by a subagent.

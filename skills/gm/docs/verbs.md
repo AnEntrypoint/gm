@@ -1,7 +1,8 @@
 # gm verb inventory
 
 Every tool an agent uses under gm is a dispatch verb. This file is the inventory: the exact verb
-names, which ones answer a code question, the body shape each accepts, and one example each.
+names, which ones answer a code question, the body shape each accepts, and one example each. Each
+verb is classed `query` (no observable side effect) or `command` (changes state), in its section.
 
 Two facts that stop most guessing:
 
@@ -39,6 +40,8 @@ project root from it with `git rev-parse --show-toplevel`. Where cwd is not itse
 repository, pass `git_root_override` in the body to pin the root.
 
 ## Code lookup
+
+Every verb in this section is `query` except `codeinsight_index` and `codeinsight` with `action` `sync`, which are `command` (they build or refresh the index).
 
 ### `grep` (alias `rg`) -- where is this string
 
@@ -125,10 +128,8 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    "or" (ranked union of any term)
 {"case_insensitive":true, "whole_word":true}
 {"refresh":true}                   re-read from disk for the exhaustive modes
-{"no_ignore":true}                               include files .gitignore would hide, in every mode: build output,
-                                                 vendored trees and scratch scripts the project never committed
-                                                 are listed and scanned like any other file. "include_ignored"
-                                                 is an alias. .git is never listed either way.
+{"no_ignore":true}                               include files .gitignore would hide, in every mode, under the
+                                                 rule `grep`'s `no_ignore` entry states above.
 ```
 
 Example, verified against this repo:
@@ -252,6 +253,8 @@ trusting an empty reply.
 
 ## Memory
 
+`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
+
 `recall` searches `.gm/memories/*.md` and its derived vector index. It is namespace-aware, scores
 cosine times recency, and does not touch the source tree.
 
@@ -271,13 +274,13 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 
 ## Filesystem
 
-| verb | body | purpose |
-|---|---|---|
-| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range |
-| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) |
-| `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory |
-| `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path |
-| `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree |
+| verb | body | purpose | kind |
+|---|---|---|---|
+| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range | query |
+| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) | command |
+| `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory | query |
+| `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path | query |
+| `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree; writes its result document and cache | command |
 
 ## Execution
 
@@ -302,10 +305,14 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 ## Git
 
 `git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_finalize`, `git_log`,
-`git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`),
+`git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`), `git_remote`,
 `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
 `git_reset_head`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
+
+Kind: `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
+
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the sanctioned push of a commit you already made over someone else's dirt. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
 
 `git_reset_head` moves HEAD backward without touching the worktree -- `{"count":1}` or `{"to":"<rev>"}`,
 `mode` `mixed` (default) or `soft`. It refuses when the commit at HEAD is reachable from any
@@ -437,6 +444,10 @@ These drive the phase machine. Dispatched through the same spool.
 `component-loader-reconcile`, `component-loader-hmr`, `dream-policy-register`,
 `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay`,
 `dream-replay-round`.
+
+`prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
+`{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
+alias of `subject`.
 
 `instruction` is the entry point: it serves the prose for the current phase and a gate denial names
 the recovery verb. A long idle gap makes every other verb return
