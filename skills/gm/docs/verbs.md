@@ -324,7 +324,13 @@ child, and refuses when that commit is already published (`pushed_commit_refused
 `git_status {"eol":true}` adds `eol`, one `{path, index, worktree, attr}` entry per tracked path from
 `git ls-files --eol` (index and worktree line endings plus the attribute text), with `eol_count` and
 `eol_mismatch_count` (paths whose index and worktree endings differ). Scope it with `paths`, since the
-whole tracked tree is a long reply.
+whole tracked tree is a long reply. The `eol` array holds at most `limit` entries (default 10, the same
+bound as the default listing); `eol_count` and `eol_mismatch_count` stay exact over every entry. When the
+array is capped, `eol_truncated` is `true`, the full raw `git ls-files --eol` listing is written to
+`eol_spill_file` under `.gm/exec-spool/out/`, and `eol_spill_write_failed` is set if that write fails.
+Spill retention: `spill_file` and `eol_spill_file` both use the `git_status-` prefix; the newest 20
+`git_status-*.txt` files are kept in `.gm/exec-spool/out/`, and each git_status call that writes a spill
+deletes the older ones. A reply that wrote a spill names this rule in `spill_retention`.
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Observed (SESSION_ID spoint-orch-b186-r41): a paths-scoped `git_commit` committed only the named file, excluded another lane's staged deletion, and reported the excluded entries. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
