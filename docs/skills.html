@@ -113,7 +113,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>The walk skills shipped beside <code>gm</code></h2>
 
-<p><code>SKILLS.md</code> at the repo root is the authoritative table, and the directories under <code>skills/</code> are the authoritative list. None of these carries phase prose either: each reads its own state from the orchestrator and drives the walk with verbs. A hop is one principle (a book's discipline) over one surface; a PRD row is one run; both count against the pool that <code>gm-orchestrate</code> ticks.</p>
+<p><code>SKILLS.md</code> at the repo root is the authoritative table, and the directories under <code>skills/</code> are the authoritative list. None of these carries phase prose either: each reads its own state from the orchestrator and drives the walk with verbs. A hop is one principle (a book's discipline) over one surface; a PRD row is one run; both count against the pool that <code>gm-orchestrate</code> ticks. The Node.js installer installs every skill the release ships, not only <code>gm</code>, so these directories reach disk in one install.</p>
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">main-thread pool loop</span><span class="phase">one walk</span></div>
@@ -144,6 +144,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="skill">
   <div class="skill-header"><h2>instruction</h2><span class="role">phase prose, generated per call</span><span class="phase">every turn</span></div>
   <div class="row"><span class="k">role</span><span>Return the current phase's imperative body, with the live FSM state, PRD summary, mutables status, residual-scan state, and recall pack already woven in. Replaces the bodies of the former gm / planning / gm-execute / gm-emit / gm-complete / update-docs / governance / code-search skill files.</span></div>
+  <div class="row"><span class="k">session lease</span><span>An <code>instruction</code> dispatch rides with live session leases: the caller records one lease file per SESSION_ID, and the reply names the project's current owner in <code>session_owner_lease</code> (<code>session_id</code>, <code>pid</code>, <code>live</code>) together with <code>session_owner_before_this_dispatch</code>. <code>session_mismatch</code> is true when the caller's session is not that owner and the owner's process still holds its lease, so a second session can see that another live session owns the walk.</span></div>
   <div class="row"><span class="k">forbids</span><span>Treating the response as static. The body changes every call as state advances.</span></div>
 </div>
 
@@ -215,7 +216,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="skill">
   <div class="skill-header"><h2>crawl / chrome</h2><span class="role">browser automation</span></div>
   <div class="row"><span class="k">role</span><span>Drive a page with a plain-text step grammar over <code>engine=cdp</code> or <code>engine=lightpanda</code>: one step per line (<code>url=</code> or a bare URL, <code>snapshot</code>, <code>click=&lt;uid&gt;</code>, <code>fill=&lt;uid&gt; &lt;value&gt;</code>, <code>press=</code>, <code>wait_for=</code>, <code>console</code>, <code>network</code>, <code>screenshot=&lt;path&gt;</code>). <code>chrome</code> takes the same body pinned to <code>engine: cdp</code> and <code>headless: false</code>, over the shared headful Chrome lease, and answers the same host JSON object. The standalone <code>cdp</code> verb is removed; <code>crawl</code> with <code>engine=cdp</code> replaces it.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>A <code>session=&lt;name&gt;</code> line keeps one tab and its uid map across calls; without it a call opens its own tab and closes it when it ends. A snapshot numbers each element <code>uid=N</code>, and a uid no snapshot of the session printed is refused.</span></div>
+  <div class="row"><span class="k">in plain terms</span><span>A target this run created is closed when it ends: <code>Target.closeTarget</code> for a browser session, <code>/json/close/&lt;id&gt;</code> for an HTTP endpoint, whether the run succeeded, threw, or hit its watchdog. A <code>session=&lt;name&gt;</code> line keeps one tab and its uid map across calls; without it a call opens its own tab and closes it when it ends. A snapshot numbers each element <code>uid=N</code>, and a uid no snapshot of the session printed is refused.</span></div>
 </div>
 
 <div class="skill">
