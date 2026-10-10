@@ -1,0 +1,6 @@
+# 07 RES -- XY-SPOOL-FILENAME-WRITER
+
+Failure mode 1: a temp staged inside in/<verb>/ is taken by a cold sweep before the rename. Effect: request lost, answered spool_filename_rejected, no dispatch. Mitigated in prose by staging outside in/; code fix filed as SPOOL-TEMP-STAGED-IN-INBOX.
+Failure mode 2: a non-conforming file written after a cold sweep is never answered at all -- the "answered, not dropped" guarantee only covers files present when a sweep runs. Reproduced: 3 s with no quarantine and no answer. Filed as SPOOL-SWEEP-CADENCE-UNANSWERED.
+Failure mode 3 (partial failure): the daemon answers the wrong diagnosis. The error blames a non-conforming NAME, but is_spool_request_path tests only the EXTENSION, so a well-named .md request is rejected for a reason the message does not state. Filed as SPOOL-MEMORIZE-MD-WRITER (189 of 279).
+Failure mode 4: two sessions using bare integers collide on the claim key. Already owned by pending row BLOCKER-SKILLGM-spool-inname-validation; not re-filed.
