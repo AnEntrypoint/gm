@@ -30,6 +30,7 @@
     "skills/",
     "scripts/",
     "bin/gm-install.js",
+    "bin/gm",
     "install.sh",
     "install.ps1",
     "gm-plugkit/instructions/",
