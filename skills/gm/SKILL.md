@@ -41,18 +41,6 @@ completeness rule in `docs/verbs.md` (Code lookup). Read it before dispatching e
 
 Dispatch `instruction` whenever uncertain; never invent the next step from memory.
 
-## Subagent quota (every turn)
-
-Before ending any turn, count live subagents with task_list. If the count is below the number of independent slices available, launch the difference now, in the same turn, before any other step.
-
-A sequential chain is not a reason to stay at one subagent. Split the chain by file, row or hop so each piece is an independent slice, and launch them together.
-
-A writer that holds the only path does not replace the other slices. Launch the read-only witnesses and the non-colliding rows alongside it.
-
-A count below the quota at turn end is a failure. Record it as one PRD line with the count and time, then launch to the quota before the next message.
-
-When the count drops after a pull or a publish, re-check the count immediately after the pull and launch before reporting.
-
 ## 0. Precedence
 
 Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose)
@@ -200,132 +188,19 @@ SPECIFY;
 scheduled housekeeping and `memorize-fire` at DECIDE. Section 1b is the opening paragraph above made mechanical: a graph,
 not a mood.
 
-## 1c. Parallelism contract -- every session that drives a walk
+## 1c. Orchestration, hops and PRD rows
 
-Fan out by default. Served prose sets the same invariants with more detail; where
-the two differ, served text wins under section 0 precedence.
+Each topic has one home; this section routes.
+- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, shortfall, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
+- Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle over one surface, one receipt.
+- PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
+- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
 
-- **Definitions.** Each term is defined here once. Every other mention in this
-  skill and in the served `instruction` prose names the term and adds no number.
-  - `ceiling`: the N in the latest refusal "Concurrent subagent limit reached. You
-    can run N subagents at once". Until a refusal the ceiling is unknown: the
-    largest wave accepted so far is a lower bound, stated as "at least K", and is
-    never the ceiling or the floor of `shortfall`. Found by launching: launch the
-    full wave first, and keep launching while independent work remains until a
-    refusal. Never a constant.
-  - `live`: unique ids launched minus unique ids done in `.gm/pool/ledger-<wave>.txt`,
-    whose lines are `launch <id>` and `done <id>`, one per launch and per completion.
-    Compute it with `awk '$1=="launch"{L[$2]=1} $1=="done"{D[$2]=1} END{for(k in L){if(!(k in D)) n++}; print n+0}' .gm/pool/ledger-<wave>.txt`,
-    and log the printed count as `tick <n> event=<launch|done>-<k> live=<count> <UTC>` (`k` counts
-    that kind from 1) to `.gm/witness-log.md`. `pool-observe` `slots.live` counts `.gm/pool/*.live` files
-    that no writer creates, so it reads 0 and is not `live`. `instruction` serves a
-    `concurrency_shortfall.running` value that is not verified against launches,
-    so it is not `live` either.
-  - `target`: the `ceiling`. Keep as many subagents live as independent work
-    allows, up to it.
-  - `floor`: `min(10, ceiling)`. Before the first refusal the ceiling is unknown, so
-    the floor is `min(10, size of the first wave launched in full)`. That launch size is
-    not an accepted wave bound, and the first refusal replaces it with the measured ceiling.
-  - `shortfall`: true when `live < floor` while independent work remains and headroom is ok.
-    A headroom stop is logged and is not a shortfall; the floor applies again as soon as
-    headroom clears.
-  Re-count `live` on every completion and every resume.
-- **Launch.** Split the work into slices before you dispatch. Each slice names the
-  files, refs and spool dirs it writes. Two slices that name one surface are
-  serialized, never launched in the same wave. Send every remaining slice of one
-  wave in one tool-call block. Each slice gets its own SESSION_ID and the
-  brick-wall opener defined in the preamble above.
-- **Brief.** A spawn brief is one call: `Skill(skill="<name>", args="<fields>")`. The
-  skill file holds the procedure, the codeinsight-first invariant and the witness invariants, so
-  the brief adds no prose. Walk workers and hops are never spawned with `subagent_type: "fork"`: a fork inherits the full parent conversation, which breaks the own-SESSION_ID, brief-only isolation.
-- **Refill.** On every completion, in the same turn, launch one replacement per
-  freed slot while independent work remains.
-  The only stops are a spawn refusal and exhausted slices: when no
-  independent slice remains, the loop ends. A headroom stop is a pause, not an exit:
-  the loop logs it, keeps its open slices, and resumes launching at the next completion
-  notice or tick whose headroom read is ok (CPU under 80% and free memory at least 2 GB).
-  A status report, a checkpoint message, or
-  waiting for a completion notice is not a stop. Ending a turn with `live` below the
-  floor while independent work remains is a shortfall, whatever the message says. The measure is the count of unlaunched
-  slices, which falls by one on every launch, so the loop is bounded even if the host
-  never refuses. A headroom pause is not a stall of the walk loop: it does not count toward the
-  two-stall rule (Walk loop, below), and the loop resumes at the next tick whose headroom read is ok. Headroom is read before
-  each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
-  (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
-  Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
-  the `id` column of `vmstat 1 2 | tail -1`, and free memory is the `MemAvailable`
-  line of `/proc/meminfo`, in GiB). A headroom stop is logged with the real count
-  and timestamp.
-- **Shortfall.** If `shortfall` holds while independent work remains, log a
-  FAILURE line as defined in the `Shortfall:` sub-bullet of `.gm/instructions/entry.md` (Standing invariants: lean traversal), with
-  the count, the timestamp and the open slices. Then launch to the `target`, not just out of `shortfall`. If
-  the gap repeats, the skill is wrong: dispatch `instruction`, correct this
-  section, and restart the walk at its first step (`prd-list`, the `live` recount in Definitions,
-  launch to `target`). Restarts are bounded to two per walk, and each restart
-  appends its FAILURE line to `.gm/witness-log.md` first, so the FAILURE lines there are the count. A third repeat
-  is a blocker: append its FAILURE line to `.gm/witness-log.md`, file the blocker as a PRD row with `prd-add`, and stop the walk.
-  The PRD behind the state port is the only persisted state the restart reads.
-- **Walk workers.** Every subagent in a walk is a hop or a PRD row
-  resolver, with its own SESSION_ID. A file read is part of a worker's brief,
-  never a separate subagent.
-- **Continuous quota.** For all t: (work open at t and headroom ok at t) implies
-  live(t) >= floor, where the floor is the `floor` term defined in Definitions.
-  A headroom stop at t is a logged precondition that suspends the implication for that t,
-  and a shortfall is refilled in the same turn once headroom is ok.
-- **Walk loop.** Each cycle: read open PRD rows (`prd-list`) and traversal
-  nodes, count your live workers, launch one worker per open row or node until
-  the ceiling, then call `wait` (`dispatch wait --body '{"ms":60000}'`, the one waiting primitive;
-  completion notices arrive between calls), then repeat. This loop is the exit
-  guard: it ends at the terminal state with `prd_pending_count=0`, then
-  `Skill(skill="gm-continue")`. Fuel bounds it: at most 40 cycles per walk. A cycle
-  that closes no row and launches no worker is a stall, and two consecutive stalls end
-  the loop. A cycle in which a headroom stop holds the launches is logged as a headroom stop and is not a stall; it does not count toward the two. At 0 fuel or after two stalls, the open rows are recorded and
-  `Skill(skill="gm-continue")` takes over, and its repeat-gap check bounds restarts.
-  The one other end of a turn is a world-scoped one-way door (Section 4).
-- **Successor spawn.** The successor rules (`next_choice`, `visited`, depth limit, the
-  depth-limit stop) are defined once, in `skills/gm-hop/SKILL.md`. A hop spawns its own
-  successor by those rules. The orchestrator is the fallback only when a hop returns
-  `next_choice: none` or none at all, and it places that spawn itself, because only the
-  orchestrator counts `live` against the `ceiling` and runs the headroom check.
-- **Single session.** Stay single-session only when the row file list names exactly one
-  path (mechanical: one edit to one file). Otherwise split the work into slices whose file
-  sets are pairwise disjoint (independent: one writer per surface, `.gm/instructions/entry.md`
-  L2). Two or more such slices fan out; never split one small task artificially.
+Every subagent brief opens with the brick-wall opener and carries its own SESSION_ID.
 
-## 1d. The two skills and the loop
+## 1d. Units
 
-The orchestrator runs two kinds of subagent. Each is one spawn that loads one skill with
-parameters, and the skill holds the whole procedure:
-
-- Node hop: `Skill(skill="gm-hop", args='{"node":"<ID>","book":"<title>","author":"<author>","rhetoric":"<text>","visited":["<IDs>"],"depth":<n>,"session":"<SESSION_ID>"}')`.
-  `skills/gm-hop/SKILL.md` contains the traversal: edge candidates from the graph's edges, the
-  rhetoric, the visited set, PRD rows, witnesses, and successor nomination.
-- PRD execution: `Skill(skill="gm-exec", args="row=<id>; session=<SESSION_ID>")`.
-  `skills/gm-exec/SKILL.md` contains the whole execution flow: mutables, JIT execution, the
-  nine stages, process of elimination, the witness log and delivery.
-
-A hop is one node visit: one book and its author, the node the hop advocates. `skills/gm-hop/SKILL.md` defines the unit and the traversal procedure.
-
-The walk loop, run on every tick and every completion:
-
-1. Count `live`: read the last `tick <n> event=<id> live=<count>` line of `.gm/witness-log.md` (1c). Each launch and each completion writes that line, so the count is on disk and not in context. Any compaction or rotation of `.gm/witness-log.md` keeps the newest tick line, carried into the fresh file, so this read always finds one.
-2. Saturate with PRD executors: while `live` is below the `ceiling` and a pending PRD row has
-   no run, launch one `gm-exec` per row (`prd-list` with status pending).
-3. Spare slots hop: launch `gm-hop` in the remaining slots, from the edge candidates of an
-   untraversed node, with `depth=1` for a fresh chain.
-4. Log the tick: `live`, `ceiling`, rows executing, hops running, outcomes since the last tick.
-
-An untraversed node is a principle-kind node of `skills/dream-rsi/gm-graph.json` whose id is not in the walk's visited set, the `visited` IDs passed to `gm-hop`.
-
-A hop spawns its own successor (1c, Successor spawn), passing its `next_choice.why` as the
-successor's `rhetoric`; the orchestrator spawns a successor only when none was named.
-A slot is never left empty while a pending row or an untraversed node remains. Executors
-edit with exact-match Edit on the file as it is now, so rows naming the same file may run
-together when they name different lines. Once the executor wave returns, a verifier wave
-runs before any delivery: one slice per executed row, each under a SESSION_ID that executed
-none of the rows. Each verifier checks its row's diff (`git_diff` with `paths`) against the
-row text and reports pass or fail. The orchestrator delivers what the subagents change, by
-the Autonomy invariant (line 20), only for rows whose verifier passed.
+A hop is one principle (a book's discipline) applied to one surface. A PRD row is one run. Both count against the pool that `gm-orchestrate` ticks.
 
 ## 2. Invariants -- true under any graph
 
