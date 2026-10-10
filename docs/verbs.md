@@ -313,6 +313,20 @@ Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target an
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
 denial names the verb to dispatch next.
 
+`git_merge_abort` answers `{aborted, merge_in_progress, head}`. A repository with no merge in
+progress is a clean reply (`aborted:false, merge_in_progress:false`) and never a raw git error.
+The abort runs `git reset --merge`, which refuses while the index and the worktree disagree for a
+path -- typically a file git auto-merged that another session then edited afterwards. The verb
+shelves exactly those paths (`git stash push --keep-index -- <paths>`, which leaves the index
+content in the worktree so the reset can run), aborts, then pops the shelf so the edits land back
+in the worktree as unstaged edits; the reply carries `preserved_paths` and `restored`. Nothing is
+discarded silently: when the shelf or the pop cannot run, the reply names the stash entry that
+still holds the edits. Unmerged (conflicted) paths are never shelved -- they come back in
+`conflicted` and the verb refuses rather than rewriting a conflict another session is resolving. A
+refusal names every blocking path in `blocking_paths` plus `next_dispatch`: `git_add {paths:[...]}`
+to accept the worktree version, or `git_stash {paths:[...]}` then `git_merge_abort` then
+`git_stash_pop`. `{"preserve":false}` shelves nothing and reports instead of working around.
+
 The four `git_worktree_*` verbs are the sanctioned way to work in an isolated worktree -- never raw
 `git worktree` through `bash`:
 
