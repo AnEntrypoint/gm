@@ -12,3 +12,6 @@ The skills shipped with this project live in `skills/<name>/SKILL.md`; the direc
 | `fifth-dimension-engine` | Lifts a target into higher problem-coordinates and returns structured routes; use after goal compilation. |
 | `agent-memory` | TencentDB Agent Memory for cross-session, cross-framework team memory; distinct from this project's recall store. |
 | `dream-rsi` | Propose-only strategy inference from Dream-RSI observation logs and gm-graph coverage; never deploys. |
+| `gm-orchestrate` | Main-thread pool loop for a gm walk: observe, launch advertised rows and hops, log, wait. |
+| `gm-hop` | One traversal hop: a principle or book name and a surface path in, one receipt naming the next principle out. |
+| `gm-prd` | Closes one PRD row through the nine gm stages in one run; invoked with `row=<id>; session=<SESSION_ID>`. |
