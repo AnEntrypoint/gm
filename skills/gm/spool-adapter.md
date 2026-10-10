@@ -25,4 +25,4 @@ Start the installed runner detached and fire-and-forget. Do not wait on it; writ
 - POSIX: `~/.gm-tools/agentplug-runner spool`
 - PowerShell: `& "$env:USERPROFILE\.gm-tools\agentplug-runner" spool`
 
-When to start one is owned by `skills/gm/SKILL.md` (the verified-dead rule).
+When to start one is owned by `SKILL.md` (the verified-dead rule).

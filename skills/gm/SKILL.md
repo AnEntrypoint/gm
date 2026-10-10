@@ -58,7 +58,7 @@ Section 4's world-scope is the sole exception.
 
 Every verb goes through one dispatch port: `dispatch(verb, body, cwd)` writes the
 request, waits for its reply and returns it with its `dispatch_id`. The port may have
-several adapters (transports). They are listed in `skills/gm/spool-adapter.md`, which
+several adapters (transports). They are listed in `spool-adapter.md`, which
 names the sanctioned default: the first that applies this turn. No other section
 names one. A verb you cannot run is named in your reply with the
 reason; do not drop it silently.
@@ -83,7 +83,7 @@ status `ts` is more than 300000 ms old with no future `busy_until`, or whose sta
 `pid` is proven absent. A recent timestamp only proves that a process wrote once, so
 the timestamp alone never proves liveness. In either verified-dead case, the
 already-installed local binary is not running. Start it as
-`skills/gm/spool-adapter.md` gives, then write the first verb
+`spool-adapter.md` gives, then write the first verb
 immediately. A `ts` that is merely
 recent-but-not-this-second is a BUSY watcher, not a dead one: its heartbeat
 oscillates while one dispatch occupies it, and starting another process then
@@ -153,7 +153,7 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any found, same turn, no separate approval needed. A test suite is never evidence of anything and is
+No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any test file this walk itself created in this session, same turn, no separate approval needed. Created in this session means untracked and absent from `git ls-files` at session start, so record that set before the first write. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked. A test suite is never evidence of anything and is
 never consulted, run, or cited, even alongside other evidence: a test authored
 in the same pass as its fix reliably shares the fix's own misreading of the
 request, so "tests pass" only proves the code agrees with itself. Verification
