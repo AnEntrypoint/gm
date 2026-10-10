@@ -7,6 +7,8 @@ description: Closes one PRD row through the nine gm stages in one run. Input: ro
 
 One run, one row, one session. Stages run in order, none a subagent. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row, `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm Section 1.
 
+## Procedure
+
 1. SPECIFY: restate the row and acceptance; check each cited line against the tree (absent: stale). Unknowns: `mutable-add`.
 2. PROVE: precondition, invariant, postcondition; run each.
 3. EMIT: exact-match Edit only; witness through the live entry point; keep the dispatch id.
