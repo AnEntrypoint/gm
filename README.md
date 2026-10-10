@@ -141,7 +141,7 @@ Every tool the agent uses is a dispatch verb. The agent has no direct shell acce
 - **`git_status`, `branch_status`, `git_push`**: git verbs that check a clean porcelain status before they run.
 - **`filter`**: an in-WASM stdout compaction step, for grep, ls, tree, JSON, and diff output.
 
-`docs/verbs.md` is the full verb inventory: every verb name, its body shape, and one example each. Code lookup is `grep`, `codesearch`, `fs_read` and `callers`/`callees`/`impact`; `recall` is memory only and never scans the tree.
+`skills/gm/docs/verbs.md` is the full verb inventory: every verb name, its body shape, and one example each. Code lookup is `grep`, `codesearch`, `fs_read` and `callers`/`callees`/`impact`; `recall` is memory only and never scans the tree.
 
 ### Gates
 
