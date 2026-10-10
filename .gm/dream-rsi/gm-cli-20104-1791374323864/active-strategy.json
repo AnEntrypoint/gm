@@ -1,1 +1,0 @@
-{"evidence":[{"dispatch_id":"1791374327009-500-d40f787360769296","exit_code":0,"fingerprint":"5ac769da0dceee1e","gate_drift":false,"mutable_open_count":1,"prd_open_count":30,"quality":0.03125,"ts":1791374327142,"verb":"grep"}],"failed_dispatch_count":0,"gate_drift_failure_count":0,"observation_count":1,"selection":"continue-current-exploration","successful_dispatch_count":1}
