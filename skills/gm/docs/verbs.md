@@ -334,6 +334,8 @@ deletes the older ones. A reply that wrote a spill names this rule in `spill_ret
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Observed (SESSION_ID spoint-orch-b186-r41): a paths-scoped `git_commit` committed only the named file, excluded another lane's staged deletion, and reported the excluded entries. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count` -- observed refusing a 1359-path sweep of this repo (SESSION_ID orch-main-r67) -- because a blanket commit carries another writer's in-flight edits with it. `git_commit` with no `message` replies `error: message required` and commits nothing.
+
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
 denial names the verb to dispatch next.
@@ -468,9 +470,9 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 `kv_query`, `env_get`, `health`, `status`, `close`, `config_resolve`, `config-sync-now`,
 `dataflow_resolve`, `tencentdb-compat-probe`, `tencentdb-memory-import`.
 
-`wait {"ms":N}` works: `ms` is a positive integer, and the verified values are 1000 and 60000. A wait replies `ok:true`, `verb:"wait"`, `completed:true`, `waited_ms:N` (the spool JSON nests the last two under `data`). Observed: `wait {"ms":1000}` returned completed:true, waited_ms:1000, and `wait {"ms":60000}` returned completed:true, waited_ms:60000 (SESSION_ID spoint-orch-b186-r41).
+`wait {"ms":N}` works, but it is not a way to idle past one minute: `ms` is an integer in `1..max_ms`, and `max_ms` is 60000. Inside that range a wait replies `ok:true`, `verb:"wait"`, `completed:true`, `waited_ms:N` (the spool JSON nests the last two under `data`). Outside it the dispatch is refused before any time passes: `ok:false`, `error_code:"invalid_args"`, `error:"wait ms must be between 1 and max_ms"`, `max_ms:60000`, `received:N`. Observed (SESSION_ID orch-main-r67): `wait {"ms":1000}` returned completed:true, waited_ms:1000 and `wait {"ms":60000}` returned completed:true, waited_ms:60000; `wait {"ms":60001}`, `wait {"ms":120000}` and `wait {"ms":0}` each returned that `invalid_args` reply.
 
-`sleep {"ms":N}` is a separate verb with its own reply: `ok:true`, `verb:"sleep"`, `completed:true`, `waited_ms:N` (nested under `data` in the spool JSON, as for wait). Observed: `sleep {"ms":1000}` returned completed:true, waited_ms:1000 (SESSION_ID spoint-orch-b186-gmfix17).
+`sleep {"ms":N}` is a separate verb with its own reply: `ok:true`, `verb:"sleep"`, `completed:true`, `waited_ms:N` (nested under `data` in the spool JSON, as for wait). It enforces the same `1..max_ms` range with `max_ms` 60000, and its refusal text still names `wait ms`. Observed: `sleep {"ms":1000}` returned completed:true, waited_ms:1000 (SESSION_ID spoint-orch-b186-gmfix17), and `sleep {"ms":120000}` returned `ok:false`, `error_code:"invalid_args"`, `error:"wait ms must be between 1 and max_ms"`, `max_ms:60000`, `received:120000` (SESSION_ID orch-main-r67).
 
 `learn` is retired.
 
