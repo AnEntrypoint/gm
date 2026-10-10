@@ -78,6 +78,8 @@ npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets {"t
 npx github:AnEntrypoint/gm --mcp-only      # same registration, no skill or runner install
 ```
 
+A verb also runs from a plain shell, with no agent host and no MCP client in the loop. In a checkout, `./bin/gm` forwards to the same dispatch the `gm` MCP tool runs, and `npm link` puts that entry point on PATH as `gm-dispatch`. The search verbs take a sugar form -- `./bin/gm codesearch literal <needle> --path <dir>` builds `{"query","mode","path"}` -- while any argument starting with `{` or `@`, and every other verb, is forwarded untouched.
+
 The user registration launches the local bundle with Node.js. To repair a project registration:
 
 ```
