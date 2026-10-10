@@ -157,7 +157,7 @@ skills/gm/.gm/
 .gm/dream-rsi/
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
-.gm/crawl-cdp-profile/
+.gm/crawl-profiles/
 
 # gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
 .gm/lean-walk/
