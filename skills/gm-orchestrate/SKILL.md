@@ -1,29 +1,79 @@
 ---
 name: gm-orchestrate
-description: Main-thread pool loop for a gm walk: observe, launch advertised rows and hops, log, wait.
+description: Main-thread pool loop for a gm walk: observe, launch advertised rows and hops, log, wait, refill, exit. Owns every pool rule.
 ---
 
 # gm-orchestrate
 
-Phase prose lives in the gm entry.
+Owns the pool protocol. The gm entry and gm 1c name this skill and add no pool rule.
 
 ## Terms
-- `ceiling`: N in a spawn refusal ("can run N subagents at once"); found by launching.
-- `live`: launched minus done ids in `.gm/pool/ledger-<wave>.txt`.
-- `floor` = min(10, ceiling). `shortfall`: live < floor with independent work open and headroom ok.
+- `ceiling`: N in a spawn refusal ("can run N subagents at once"). Found by launching, never a constant; hold at or just below it while work remains. `target` = ceiling.
+- `live`: launched minus done ids in `.gm/pool/ledger-<wave>.txt`. Count of record: ListAgents, cross-checked against fresh `.gm/pool/*.live` (at most 5 min old). `slots.live` and `concurrency_shortfall.running` are not the count.
+- `floor` = min(10, ceiling); before a refusal, min(10, the first full wave). The spawn ceiling is 20 until a refusal records another N.
+- `shortfall`: live < floor while independent work is open and headroom is ok.
 
 ## Tick
-1. Observe: `instruction`; take `concurrency_shortfall.launch` (node-first, from `slots.candidates`); recount `live`.
-2. Launch in one tool-call block, up to the ceiling: rows first, then hops from untraversed principle nodes (`skills/dream-rsi/gm-graph.json`, not in `visited`). Row: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SID>"}')`. `<SID>` = `<parent>-<k>`, unique.
-3. Log: `launch <id>` to the ledger; `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
-4. `wait {"ms":60000}`; each completion appends `done <id>` and refills its slot this turn.
+1. Observe: count live (ListAgents, `.live` files); dispatch `instruction`; take `concurrency_shortfall.launch` (node-first, from `slots.candidates`, at most 32). Empty while shortfall > 0 is a defect row.
+2. Launch in one tool-call block, up to the ceiling. Rows first: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Then hops from untraversed principle nodes of `skills/dream-rsi/gm-graph.json` not in `visited`: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SID>"}')`, depth 1 for a fresh chain. `<SID>` = `<parent>-<k>`, unique.
+3. Log `launch <id>` to the ledger and `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
+4. `wait {"ms":60000}` (integer, max 60000). Each completion appends `done <id>` and refills its slot this turn, before any other step.
+5. Re-count live after each launch and each completion. Log the tick: live, ceiling, rows executing, hops running, outcomes since the last tick.
 
-Launch only advertised ids; no manual fill.
+Launch only advertised ids; no manual fill. A slot stays empty only when no pending row and no untraversed node remain.
 
-## Limits
-- Headroom: CPU >= 80% or free memory < 2 GB pauses launches (no stall).
-- Shortfall: log `FAILURE: <UTC> live=<n> pending=<m>`; launch to the ceiling this turn. Two restarts per walk; a third repeat files a blocker row and stops.
-- Chains split into slices by file, row or hop; one surface runs in turn. A hop spawns its successor; spawn one only for `next: none`.
-- After an executor wave, a verifier per row (a SESSION_ID that executed none) checks its `git_diff`; deliver passing rows.
-- Stop: no pending rows and terminal phase: `Skill(skill="gm-continue")`. Fuel 40 ticks; two stalls in a row (no row closed, no launch) end the loop after open rows are recorded.
-- Before ending a turn, `live` reaches `floor` while work remains. Wait with `wait` only; never Monitor, ScheduleWakeup, CronCreate or sleep.
+## Refill and successors
+- Every completion: one replacement per freed slot in the same turn; never wait for a batch. Pass the completed worker's row, surface and session to its replacement. Read the live count after the refill.
+- Successors come only from `slots.candidates` (node-first). A free-text nomination is advisory: read its acceptance text, then launch only if it is in candidates and node-only. Title-only nominations are checked before launch.
+- A declined or colliding successor is replaced in the same turn by the next eligible candidate.
+- A worker that ends at a blocker is not a replacement. Blocker rows are annotations, never candidates; a blocked worker records its blocker and still nominates a node-only successor.
+- A hop spawns its own successor (gm-hop). The orchestrator spawns one only when a hop returns `next: none`.
+- Node supply: when node candidates fall below twice the floor, start a traversal hop (it logs node-only rows and resolves none).
+- Low row supply: dispatch hops that create rows (`prd-add`) before more resolvers. Pause row creation when rows resolve faster than the pool refills.
+- Candidates empty while rows are pending: read open rows through exec_js over the `prd-list` result (last block per id, status not resolved); `prd-list` ignores limit and status. Log the empty list as a defect row.
+- Each brief names its row from a text scan of `.gm/prd.yml` (pending = status not resolved) and its successor from a real pending row. If `prd-list` fails to parse, repair the state file before any launch.
+- Open-PRD growth between checks is a failure: drain by dispatching gm-prd on open rows before any other step.
+- A replacement wave launches only after the gate runtime is confirmed loaded (the status file reports the new plugkit); otherwise log a canary alarm and do not re-spawn.
+- Executors need a row that names its file (gm-prd).
+
+## Heartbeat
+- Every brief opens with: write `.gm/pool/<session>.live` on start, delete it on finish. A brief without this step is refused.
+- Format (session, row, start), the read-before-write check and the 5-minute refresh: `gm-config/prose/worker-rules.md` section 1. Refresh at any gm call, including during lock waits.
+
+## Shortfall and FAILURE
+- `shortfall` while work is open: log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md` (a log event, not a PRD row; prd_pending_count is unchanged), then launch to the target in the same turn. Count and timestamp are read at check time, never estimated.
+- Two restarts per walk. A repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1. A third repeat files a blocker row (`<row>-blocker-<session>`, `prd-add`) and stops.
+- Refill while rows are open: launch min(refill_needed, ceiling - live), with refill_needed = floor - live.
+- Floor gate: `prd-resolve` and phase advance are denied (`floor_gate_denied`) while rows are open and the count of record is under the floor; the denial names pool-observe, slots.launch and refill_needed. Pass body.live to pool-observe on every call (kept 5 min in `.gm/pool/count-of-record.json`). With no fresh record there is no denial.
+- Recorded drops (lessons): a rule shadowed by a stale vendored prose file; heartbeats not refreshed during lock waits; free-text successors that were ineligible; GPU-lock timeouts ending runs; completions refilled in batches; browser, GPU or design successors nominated for a node-only pool; traversal started late; served rules not refreshed from gm-config; stuck background shells and Monitors holding the GPU lock. On 2026-10-09 live fell to 0 with 779 rows pending and candidates empty: refill from a scan of pending rows in the same turn.
+
+## Headroom and leases
+- Before each launch: CPU >= 80% or available memory < 2048 MB pauses launches. Available = free MB + min(runner pid PrivateMemorySize64, shared_store_recycle_limit_mb in `.gm/exec-spool/.status.json`), the runner's recyclable store. A headroom stop is not a stall or a shortfall, and it does not end the turn. Log the cause with the real count and UTC (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance Win32_OperatingSystem` FreePhysicalMemory; Linux: the `id` column of `vmstat 1 2`, and `MemAvailable` in `/proc/meminfo`).
+- GPU rows wait while another owner holds `.gpu-lock/owner.json` (`scripts/gpulock.mjs`); browser rows wait for the shared browser lease. A timed-out lock wait is a failed run, not a result. Node rows keep flowing meanwhile.
+- Stop a background shell or Monitor that has printed nothing for 10 minutes, before it holds a lock.
+- Browsers are headful: every Chromium launch uses `headless: false`; headless runs are refused. Each run closes the browser it opened. Before a browser-using spawn, reap orphaned test Chrome (a remote-debugging-port or crawl-profile command line whose run has ended); never touch the user's own Chrome. The no-engine `crawl` runs `cdp` (visible); `engine=lightpanda` runs only when a body asks for it; a `headless` line in a crawl body is refused. A shared Chrome closes with its last lease.
+- Store-lane starvation: a read-only verb may return `executed:false` after about 120 s. Retry once, count the retry in the pool log, never loop.
+- EADDRINUSE: a witness that fails on a port in use did not run. Identify the owning process; never kill another lane's process.
+
+## Fan-out
+- Default to parallel dispatch when the closure decomposes into independent slices; split by file, row or hop. Slices naming one surface run in turn; pairwise-disjoint slices launch in one block. A single focused mechanical edit stays single-session; never a manufactured split.
+- Walk workers are gm-prd or gm-hop, never a fork: a fork inherits the parent conversation and breaks SESSION_ID isolation.
+- Each subagent's prompt opens with the brick-wall opener ("use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then `codesearch`, and `Read` only a located path") and carries its own SESSION_ID, never the parent's value: the daemon keys claims by `(verb, session_id-N)`. The brief restates no other verb names, spool paths, body shapes or phase mechanics: `Skill(skill="gm")` supplies those.
+- `gm_processor_capacity` (4 on this build) queues dispatches beyond it; it is not the number of subagents to launch.
+- Queue order: open PRD rows first (one subagent per row), then independent node slices. A subagent that ends early is re-dispatched with the same slice, never dropped. The walk advances only when its slices have returned.
+- Hops and executors share one pool. No hop or executor opens a branch or worktree to avoid a collision; a collision is recovered by re-reading the row or file, reapplying the change on current state, and retrying.
+- Before and after every git_pull, git_push, merge, update or delivery step: count live, dispatch `instruction`, and launch the available independent slices. A delivery step never lowers the count; a step that cannot run while subagents are live is run by a subagent.
+- Served rule, open conflict: briefs come from the pool-brief verb, never from a Claude skill. The `Skill(...)` launch forms above are the gm 1c design. Until the owner decides, both stand as written.
+
+## Exit and stalls
+- A turn ends only at the terminal state with `prd_pending_count=0`, or at a world-scoped one-way door (the continuation invariant in the served prose). A headroom stop does not end a turn. Any other stop is a defect: dispatch the next verb in the same turn.
+- No rows pending and phase terminal: `Skill(skill="gm-continue")`.
+- Fuel: 40 ticks per walk. Two consecutive stalls (no row closed, no launch) end the loop after open rows are recorded. A headroom-stop tick is logged and is not a stall.
+- Before ending a turn, live reaches the floor while work remains and headroom is ok.
+- Wait only with `wait`; never Monitor, ScheduleWakeup, CronCreate, shell sleep or shell grep.
+- No branches: all work stays on main; branch-creating verbs are refused.
+- Saturate the pool: every free slot holds an executor or a hop. Find the ceiling at run time and hold it. A drain is failure: when live reaches 0, or falls under the last ceiling while work is open, spawn a full batch in the same turn.
+- Keep the pool over-subscribed: keep a queue of ready rows and hops larger than the pool, and refill each completion from it.
+- Traversal is non-linear and continuous; open rows and open mutables fill any slot a nomination does not.
+- Canaries, checked on every refill: a subagent that closed without a change or a passing witness; a PRD listing empty while rows are pending; a free slot while ready work exists; traversal with no new evidence over a window. Fix the gm instructions or the dispatch path before the walk continues.
+- Verifier wave: after each executor wave, one verifier per executed row, under a SESSION_ID that executed none of the rows, checks its `git_diff` against the row text. Deliver only passing rows.
