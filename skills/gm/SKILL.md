@@ -248,8 +248,8 @@ the two differ, served text wins under section 0 precedence.
   waiting for a completion notice is not a stop. Ending a turn with `live` below the
   floor while independent work remains is a shortfall, whatever the message says. The measure is the count of unlaunched
   slices, which falls by one on every launch, so the loop is bounded even if the host
-  never refuses. A paused cycle counts as a stall of the walk loop (Walk loop, below), so the
-  pause case is bounded by its two-stall rule. Headroom is read before
+  never refuses. A headroom pause is not a stall of the walk loop: it does not count toward the
+  two-stall rule (Walk loop, below), and the loop resumes at the next tick whose headroom read is ok. Headroom is read before
   each launch: CPU at or above 80% or free memory under 2 GB is a headroom stop
   (Windows: `Get-CimInstance Win32_Processor` LoadPercentage, `Get-CimInstance
   Win32_OperatingSystem` FreePhysicalMemory. Linux: CPU busy percent is 100 minus
