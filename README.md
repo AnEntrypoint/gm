@@ -182,7 +182,7 @@ gm's design has no mocks, no fakes, and no test files or test suites on disk. gm
 
 ## Release pipeline
 
-A push to the `main` branch starts the `.github/workflows/publish.yml` workflow:
+A push to the `main` branch starts the `.github/workflows/skill-release.yml` workflow:
 
 1. The workflow bumps the version value in `gm.json` and in `package.json`.
 2. The workflow bundles the release file set into `gm-skill-<version>.tar.gz`, adds a sha256 sidecar file, and uploads both files to a tagged GitHub Release on `AnEntrypoint/gm`. This step has no build step and uses no npm registry.
