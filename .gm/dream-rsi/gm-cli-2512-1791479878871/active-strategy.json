@@ -1,1 +1,0 @@
-{"evidence":[{"dispatch_id":"1791479880096-500-151f364bfeb2cd1","exit_code":0,"fingerprint":"5f3c326016c16f01","gate_drift":false,"mutable_open_count":1,"prd_open_count":3,"quality":0.2,"ts":1791479880157,"verb":"health"}],"failed_dispatch_count":0,"gate_drift_failure_count":0,"observation_count":1,"selection":"continue-current-exploration","successful_dispatch_count":1}
