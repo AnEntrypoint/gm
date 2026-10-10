@@ -161,7 +161,7 @@ Completeness: a `literal` or `regex` reply is complete only when it carries `exh
 names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
 `files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
 `excluded_by_rule`, `glob_matched_no_files`). Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
-of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` names the first five excluded paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
+of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` rides only when a rule dropped code, and names the first five such paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
 
 Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
 contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
