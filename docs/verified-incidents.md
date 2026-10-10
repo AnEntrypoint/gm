@@ -4,18 +4,18 @@ Dated findings behind the standing rules in AGENTS.md. Read the section whose su
 
 ## Verified 2026-09-14 (upstream merge + daemon heartbeat)
 
-**FIXED UPSTREAM, verified here — the daemon "looks dead" bug.** `registry.rs`'s
+**FIXED UPSTREAM, verified here: the daemon "looks dead" bug.** `registry.rs`'s
 own comment records it: `slot_content_hashes()` takes each slot's mutex, so the
 10s heartbeat ticker blocked behind whatever dispatch held the slot and went
 **76 seconds stale**; every client then read the status as stale, concluded the
 daemon was dead, and spawned a competing one. That is the daemon start/exit churn
 that follows a slow dispatch, and it is exactly what repeatedly bit the docstudio
-sessions — a `git_commit` with a large message would appear swallowed, the status
+sessions: a `git_commit` with a large message would appear swallowed, the status
 `ts` would look minutes old, the daemon would be killed and restarted, and the
 dispatch was lost in the churn.
 
 `slot_snapshot_without_blocking()` fixes it. Re-verified on runner 0.1.135 by
-driving a real 75-second `exec_js` (it genuinely held a slot — status read `busy`
+driving a real 75-second `exec_js` (it genuinely held a slot; status read `busy`
 throughout, and the verb returned `exit_code:0`, "held a slot for 75075ms") while
 polling `.status.json` every 5s: **worst heartbeat age 2,964 ms** against a
 300,000 ms dead-threshold. It never came close to looking dead.
@@ -35,7 +35,7 @@ answered `embedder failed: query embedding unavailable -- the bert embedder fail
 answered `libsql unavailable ... unknown_plugin` on every project. Fix: `registry.rs` publishes the
 compiled module set as a global `SIBLING_RELOAD_SOURCE` (the daemon sets it after its per-tick warm
 compile pass) and each of those two call sites calls `ensure_sibling_registered` before reporting
-the sibling absent. Any new guest->sibling import must do the same.
+the sibling absent. Any new guest->sibling import follows the rule at AGENTS.md:64.
 ## Verified 2026-10-04 (windowless child spawns + runner self-update guard)
 
 **The recurrence is a VERSION-EQUAL downgrade, so version comparison can never
@@ -73,7 +73,7 @@ runner is a local build (either its sha256 matches
 `--build-info` reports `release_build:false`); and require the incoming release
 version to be STRICTLY greater than the running one. `promote_staged_exe_to_canonical`
 re-checks `installed_runner_blocks_promotion` at takeover, so a staged copy that
-slipped past staging still cannot overwrite a pinned local binary — the process
+slipped past staging still cannot overwrite a pinned local binary: the process
 then keeps running from the staged copy instead. `staged_binary_self_check` is
 untouched. `AGENTPLUG_ALLOW_UPDATE_OVER_LOCAL_BUILD=1` overrides the local-build
 refusal only; `pin-local-build` / `unpin-local-build` maintain the sha256 pin by
@@ -94,7 +94,7 @@ self-updated mid-measurement.
 **Method notes, both of which cost a wasted measurement:**
 - conhost is NOT parented to the process that caused the console here, so
   attributing console flashes by `ParentProcessId` finds nothing. Detect them by
-  enumerating VISIBLE windows and matching the title — a new console's title is
+  enumerating VISIBLE windows and matching the title; a new console's title is
   the console app's path.
 - **conhost count is not a usable before/after metric on this machine**: the
   default terminal is Windows Terminal, so consoles are hosted by
@@ -108,13 +108,13 @@ self-updated mid-measurement.
 **Swapping the live runner binary:** Windows refuses to overwrite a running
 image but allows renaming it. `taskkill` every `agentplug-runner.exe`, rename the
 canonical exe aside, copy the new one in, and restart the daemon. Deleting the
-file first does not work — the gm session respawns `spool` every few seconds and
+file first does not work; the gm session respawns `spool` every few seconds and
 re-locks it. A `finally` block is not optional here: a failed restore leaves the
 pre-fix binary live and self-updating.
 
 **Still open, same class, JS side:** `~/.gm-tools/gm-mcp-server.mjs` self-updates
 from a release channel via `gm-mcp/src/self-update.js` (backing up to `.prev`)
-and the 08:57 copy lost two `windowsHide` sites the `.prev` copy has —
+and the 08:57 copy lost two `windowsHide` sites the `.prev` copy has:
 `execFileSync("git", [...])` and `spawnSync(process.execPath, ["--check", ...])`.
 The release channel is shipping a bundle without them, so the same
 "update silently reverts a fix" shape applies there. Not touched pending a
@@ -151,11 +151,37 @@ decision; the runner guard does not cover it.
 - `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
   `pushed_commit_refused` / `amend_requires_head`. `git_commit_dedup_key` carries `amend` so an
   amend is never answered by a replayed non-amend commit.
-- **`git_commit_dedup_lookup` must require HEAD to still equal the recorded `sha_full`, not merely
-  that the object exists.** The replay only checked `cat-file -e <sha>`, and an object dropped by
+- **The `git_commit_dedup_lookup` replay rule is owned by AGENTS.md:66.** The replay only checked `cat-file -e <sha>`, and an object dropped by
   `git_reset_head` is still present, so the canonical repair -- reset HEAD, then re-commit the same
   message over the same paths -- hit the same dedup key and answered `committed:true` with the old
   sha while HEAD never moved. Witnessed live: re-commit after `git_reset_head {count:1}` reported
   `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Now the lookup compares `rev-parse HEAD`
   to the record, so a stale entry falls through to a real commit.
 - `daemon-guard` respawns the daemon after `Stop-Process`; no manual start is needed.
+
+## Verified 2026-10-09 (pool drops: causes, empty candidates, unverified nominations)
+
+Recorded causes of earlier drops: the rule was shadowed by a stale vendored prose file; heartbeats
+were not refreshed during lock waits; successors were free text and often ineligible; GPU-lock
+timeouts ended runs; completions were not refilled in the same turn; `slots.live` read 0 while
+workers ran.
+
+Recorded causes of the drop below 12 on 2026-10-09: completions were refilled in batches, not one
+per completion; resolvers nominated browser, GPU and design successors that could not run
+graph-node-only; traversal hops started late, so graph-node supply ran out; the served rules were not refreshed
+from gm-config (the native config cache did not sync); stuck background shells and Monitors held the
+GPU lock and the orchestrator's attention.
+
+Observed ceiling on 2026-10-09 (14:07Z): the live build accepted 24 at `.gm/instructions/entry.md:58`
+(a refreshed codesearch in session gm-cli-3109570-1791554460239, recorded as row DRY-25).
+
+Drop to 0 live on 2026-10-09 (13:33Z): eight resolvers finished in one window and nothing relaunched
+them in that turn. Successors were chosen by hand because the pool candidates list (`slots.candidates`) came back empty while
+779 rows were pending, with the pool observe `candidates:` and `live_rows:` null. The empty list
+was logged as a defect row afterwards.
+
+A raw `prd-list` ignores `limit` and `status`, so one read cost about 35k tokens. Reading through
+exec_js over the prd-list result avoids that cost.
+
+Two nominations in that cycle were title-only and unverified: `trav-edge-check-relative-imports-skips-edge-root`
+(a gate change) and `tsl-only-shaders` (a shader rewrite). Neither was checked before launch.

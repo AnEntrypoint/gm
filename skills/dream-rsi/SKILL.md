@@ -23,9 +23,9 @@ Inputs:
 
 ## Part B: gm-graph traversal
 
-The goal is to walk every traversable gm-graph node (all kinds except `phase`) and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d).
+The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
 
-1. Load the graph. Traversable nodes are those whose `kind` is not `phase`. Edges are all `edges` entries.
+1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
 2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true` and a `witness`. A missing file means no walk yet. `phase_history` confirms the session reached that node's phase.
 3. Build the set of every `dispatch_id` across all observation files.
 4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness` appears in that set. Report any failure in `rejected_walks` with the missing ids. The agent shall never count a rejected walk.
@@ -33,7 +33,7 @@ The goal is to walk every traversable gm-graph node (all kinds except `phase`) a
    - `nodes_verified` over `traversable_nodes`.
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
    - Forward-edge coverage approximates a forward edge as covered when both endpoints have verified walks. Say that this is an approximation.
-6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: gates first, then nodes in a phase with no verified walk, then backreference edges never fired. For each, give the node id, its phase, the condition to walk it on the next real task, and the evidence that would count as a walk.
+6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes in a phase with no verified walk, then backreference edges never fired. For each, give the node id, its phase, the condition to walk it on the next real task, and the evidence that would count as a walk.
 
 ## Output
 
