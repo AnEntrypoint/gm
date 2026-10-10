@@ -60,14 +60,13 @@ whatsNew:
   heading: "what's new (october 8-10, 2026)"
   items:
     - { date: "2026-10-10", summary: "bin/gm is a shell entrypoint: a plain bash now runs any verb (`gm codesearch literal <needle> --path <dir>`) with no MCP client and no daemon of its own in the loop" }
-    - { date: "2026-10-10", summary: "gm-mcp 0.2.21 checks the deployed bundle for staleness on a timer in every process, HTTP included, and every entry point now leaves the shared HTTP server up instead of tearing it down" }
+    - { date: "2026-10-10", summary: "gm-mcp 0.2.24 checks the deployed bundle for staleness on a timer in every process, HTTP included, and every entry point now leaves the shared HTTP server up instead of tearing it down" }
     - { date: "2026-10-10", summary: "crawling releases what it opens: crawl_cdp closes the targets this run created, and the headful CDP crawl is exposed under its own name as the chrome verb" }
     - { date: "2026-10-10", summary: "agentplug: every gm.db writer records a lock owner so a stale lock can be reaped, answered out-files survive for the two-hour witness horizon, and the shared-store recycle default drops from 1600 to 600 MB" }
     - { date: "2026-10-09", summary: "the subagent pool became part of the machine, not a convention: hops are skill loads that nominate their own successor, pool-brief hands one subagent one PRD row, and every change commits and pushes as it lands" }
     - { date: "2026-10-09", summary: "release integrity moved onto a published sha256 sidecar with a self-updating release bridge, and a build that is not a release is now treated as a sideload" }
     - { date: "2026-10-09", summary: "dispatch replies are capped at 24,000 characters with a spill file for the rest, and gm_result reads that spill from the project that produced it; the installer ships every release skill, not only gm" }
-    - { date: "2026-10-08", summary: "search verbs gained --no-ignore, crawl became a plain-text-body verb, and live session leases ride along on every instruction dispatch" }
-    - { date: "2026-10-08", summary: "versions now live: gm 2.0.2800, gm-mcp bundle 0.2.21, agentplug 0.1.262" }
+    - { date: "2026-10-08", summary: "search verbs gained --no-ignore, crawl became a plain-text-body verb, live session leases ride along on every instruction dispatch, and git_amend is reachable as its own verb" }
 quickstart:
   heading: install in detected agent hosts
   lines:
