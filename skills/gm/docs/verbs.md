@@ -13,10 +13,11 @@ Two facts that stop most guessing:
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
    replies `{"ok":false,"error":"unknown verb","error_code":"unknown_verb"}`. Retired verbs leave
    one too. Names seen in that directory but absent from the tables below are not verbs in the
-   current build: `glob`, `fs_glob`, `fs_list`, `exec`, `exec_bash`, `similarity`, `git_clone`,
-   `git_init`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
+   current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`,
+   `similarity`, `git_clone`, `git_init`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
    `submodule_drift_check`. Reach for `grep` where you would reach for `glob`, `fs_readdir` for
-   `fs_list`, and `bash`/`exec_js` with `raw_body` for `exec_bash`.
+   `fs_list`, and `bash`/`exec_js` with `raw_body` for `exec_bash`. There is no delete verb: remove
+   a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
 
 ## Dispatching
 
