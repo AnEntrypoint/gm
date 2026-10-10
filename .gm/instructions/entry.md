@@ -26,7 +26,7 @@ The walk is the lean graph (the book "lean", AnEntrypoint/lean skills/lean/SKILL
 
 Gates must hold before the walk advances: G_START, G_CONTRACT, G_INDEP, G_NET, G_DONE, G_SWEEP.
 
-The FSM graph must load before any PRD executor (`gm-exec`) runs. Its node keys are the phase and gate keys above (P1..P9, G_*); `lean-p1..p9` and `complete` are invalid keys, and a COMPLETE-to-G_FIXPOINT path must exist. A graph that fails to load blocks every worker; fix it at source in gm-config.
+The FSM graph must load before any PRD executor (`gm-prd`) runs. Its node keys are the phase and gate keys above (P1..P9, G_*); `lean-p1..p9` and `complete` are invalid keys, and a COMPLETE-to-G_FIXPOINT path must exist. A graph that fails to load blocks every worker; fix it at source in gm-config.
 
 Every principle node is applied as work, never recited: it changes the artifact, a dispatch, a mutable row or a recorded reason.
 
@@ -64,7 +64,7 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 - When candidates run out before the target, a traversal hop logs node-only PRDs with mutables and just-in-time execution. When rows resolve faster than the pool refills, pause new row creation.
 - Keep all work on main. On a collision, retry the step. Never branch.
 - No Claude-only waiting primitives for pool work: Monitor, ScheduleWakeup, CronCreate and shell sleep loops are not used. Workers wait with a gm verb or by finishing the check directly; the orchestrator counts `live` (skills/gm/SKILL.md 1c). Two workers armed Monitors in one cycle, which the user has ruled out.
-- Pool workers get their brief from the Claude skill that runs them: `Skill(skill="gm-hop")` for a hop and `Skill(skill="gm-exec")` for a PRD row (`skills/gm/SKILL.md` section 1d).
+- Pool workers get their brief from the Claude skill that runs them: `Skill(skill="gm-hop")` for a hop and `Skill(skill="gm-prd")` for a PRD row (`skills/gm-orchestrate/SKILL.md`).
 - The orchestrator loop is: wait (the gm wait verb, called as wait {"ms":60000}; ms is a positive integer, maximum 60000), then instruction, then launch the free slots from slots.candidates; repeat while open work exists.
 - Never use Monitor, ScheduleWakeup, CronCreate or shell sleep loops for pool work.
 - Keep node supply: when the node candidates fall below the `ceiling` (skills/gm/SKILL.md 1c), start a traversal hop. A traversal hop logs node-only PRDs and resolves none.
@@ -82,7 +82,7 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 - All parallel work lands on `main`. No hop or executor opens a branch or a worktree to avoid a collision. A collision is recovered: re-read the row or file, reapply the change on the current state, retry. Collision avoidance by isolation is refused, since it serialises the pool.
 - The `ceiling` is defined in skills/gm/SKILL.md 1c; this file names no number.
 - A drain is a failure: when `live` reaches 0 or `shortfall` holds with independent work open, refill per skills/gm/SKILL.md 1c, and log a FAILURE line to `.gm/witness-log.md` as skills/gm/SKILL.md 1c (Shortfall) defines. A blocker row is filed with `prd-add` only on the third repeat. Short tasks finish before others start, so a ceiling probe must hold its subagents open with real work (a witness run), never with sleep; sleep is blocked, so an overlap test that depends on it measures nothing.
-- A PRD row is closed by one `gm-exec` run (skills/gm-exec/SKILL.md): mutables collected and closed by code run on the project, JIT execution, the nine stages (SPECIFY through COMPLETE) in order, and process of elimination when a witness fails. No stage is a separate subagent.
+- A PRD row is closed by one `gm-prd` run (skills/gm-prd/SKILL.md): mutables collected and closed by code run on the project, JIT execution, the nine stages (SPECIFY through COMPLETE) in order, and process of elimination when a witness fails. No stage is a separate subagent.
 - Witness outcomes are not PRD rows. A worker records its run in the witness log (`.gm/witness-log.md`, one line per run: witness, exit code, RESULT line, timestamp) and does not close the parent row. A row closes only after a second session re-runs the cited witness and matches its exit code and RESULT line; that second session closes it with `prd-resolve` citing its own witness-log line. Adding an outcome row for each run inflated the pending count from about 380 to 681 while the parents never closed, so the count measured nothing about progress.
 - Duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) are not progress: merge them into the base row.
 - Row ids are real. Read them with `prd-list {"status":"pending"}` filtered in exec_js; never invent one for a witness run. A row name absent from the PRD cannot be resolved.
@@ -93,7 +93,7 @@ An invariant is a rule with a check. Each one names the check that verifies it, 
 - Browsers are headful. Every Chromium launch uses `headless: false`; headless runs are refused. Each run closes the browser it opened, and before any new browser-using spawn, orphaned test Chrome (a remote-debugging-port or crawl-profile command line whose parent run has ended) is reaped. The user's own Chrome is never touched.
 - A worker never waits on the orchestrator to refill it; its successor comes from a real open row (skills/gm/SKILL.md 1c, Refill).
   - Headroom gate before each launch: skills/gm/SKILL.md 1c (Refill).
-  - Open-PRD growth between checks is a failure. Drain by launching gm-exec on open rows before any other step.
+  - Open-PRD growth between checks is a failure. Drain by launching gm-prd on open rows before any other step.
   - Shortfall: `shortfall` (skills/gm/SKILL.md 1c) while pending rows are open is a failure. Failures and resource stops are appended to `.gm/witness-log.md` as one line `FAILURE: <timestamp> live count fell to <n> with <m> open slices`; a FAILURE line is a log event, not a PRD row, so it leaves prd_pending_count unchanged. The count and UTC timestamp are read at the time of the check, never estimated.
   - Completion and `live` counting: skills/gm/SKILL.md 1c (Refill, Definitions).
   - Each brief names its row from a text scan of the PRD (pending = status not resolved) and its successor from a real pending row, because `prd-list` fails when the YAML is broken. If `prd-list` fails to parse, repair the state file before any launch; never launch on an unparsed state file.
