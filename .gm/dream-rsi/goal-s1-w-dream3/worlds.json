@@ -1,0 +1,1 @@
+[{"discovery_ids":["discovery-1","discovery-2"],"id":"world-1","nodes":[{"children":[],"cost":1,"id":"discovery-1","round":0,"score":1.0},{"children":[],"cost":1,"id":"discovery-2","round":1,"score":1.0}],"owner_session_id":"goal-s1-w-dream3"}]
