@@ -57,7 +57,6 @@ jobs:
           agentplug-treesitter AnEntrypoint/agentplug-treesitter
           gm-config AnEntrypoint/gm-config
           gm-mcp AnEntrypoint/gm-mcp
-          obrowser AnEntrypoint/obrowser
           PINS
           if [ "${#advance[@]}" = "0" ]; then
             echo "no target cleared the release-path gate"
