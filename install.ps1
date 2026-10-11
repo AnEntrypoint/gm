@@ -54,6 +54,29 @@ function Resolve-LatestGmTag {
     return $null
 }
 
+function Install-SkillAssets {
+    param([string]$SourceRoot, [string]$DestRoot)
+
+    $manifest = Join-Path $SourceRoot "skills/skill-assets.txt"
+    if (-not (Test-Path $manifest)) {
+        Write-Warning "no skill asset manifest at $manifest"
+        return
+    }
+    foreach ($line in @(Get-Content $manifest)) {
+        $rel = ($line.Trim()) -replace '/', [IO.Path]::DirectorySeparatorChar
+        if (-not $rel -or $rel.StartsWith("#")) { continue }
+        $src = Join-Path $SourceRoot (Join-Path "skills" $rel)
+        if (-not (Test-Path $src)) {
+            Write-Warning "skill asset absent at $src"
+            continue
+        }
+        $dest = Join-Path $DestRoot $rel
+        New-Item -ItemType Directory -Force -Path (Split-Path -Path $dest -Parent) | Out-Null
+        Copy-Item -Force $src $dest
+        Write-Host "installed skill asset $rel -> $dest"
+    }
+}
+
 function Install-Skill {
     $tag = Resolve-LatestGmTag
     if (-not $tag) {
@@ -92,6 +115,7 @@ function Install-Skill {
             Copy-Item -Recurse -Force $_.FullName $target
             Write-Host "installed $($_.Name) skill $tag -> $target"
         }
+        Install-SkillAssets -SourceRoot $extractDir -DestRoot $ClaudeSkillsDir
     } finally {
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
     }
