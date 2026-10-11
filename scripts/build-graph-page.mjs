@@ -43,7 +43,7 @@ const edgeRows = graph.edges.map((edge) => `      <tr><td><code>${esc(edge.from)
 
 const page = `<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Phases</strong> group the principles, <strong>gates</strong> guard moves between them, and <strong>tensions</strong> stay open across phases until they are resolved.</p>
 
-<p>This page is generated from <code>skills/dream-rsi/gm-graph.json</code> by <code>scripts/build-graph-page.mjs</code>. The same file is published as <a href="./api/gm-graph.json"><code>api/gm-graph.json</code></a>.</p>
+<p>This page is generated from <code>skills/dream-rsi/gm-graph.json</code> by <code>scripts/build-graph-page.mjs</code>. The same file is published as <a href="../docs/api/gm-graph.json"><code>docs/api/gm-graph.json</code></a>.</p>
 
 <h2>At a glance</h2>
 <table>
