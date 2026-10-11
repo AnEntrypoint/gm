@@ -60,46 +60,34 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>SPECIFY -&gt; PROVE -&gt; EMIT -&gt; STATE -&gt; CONC -&gt; SEC -&gt; RES -&gt; DECIDE -&gt; COMPLETE</strong>. It is a non-linear graph with feedback edges, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state</strong>: 102 states and 187 edges, 85 of them feedback edges. It is a non-linear graph, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
 <article>
 
-<h2>The state machine, in one diagram</h2>
+<h2>The state machine, by phase</h2>
 
 <table>
-<caption>Forward transitions (the phase order)</caption>
-<thead><tr><th>From</th><th>To</th><th>Condition</th></tr></thead>
+<caption>Phases in order</caption>
+<thead><tr><th>Phase</th><th>Name</th><th>Principle states</th></tr></thead>
 <tbody>
-<tr><td>start</td><td>SPECIFY</td><td>user message</td></tr>
-<tr><td>SPECIFY</td><td>PROVE</td><td>cover closed</td></tr>
-<tr><td>PROVE</td><td>EMIT</td><td>every mutable witnessed</td></tr>
-<tr><td>EMIT</td><td>STATE</td><td>source hygiene gates pass</td></tr>
-<tr><td>STATE</td><td>CONC</td><td>idempotency gate passes</td></tr>
-<tr><td>CONC</td><td>SEC</td><td>disjointness witnessed</td></tr>
-<tr><td>SEC</td><td>RES</td><td>no secrets in diff</td></tr>
-<tr><td>RES</td><td>DECIDE</td><td>no unchecked panics</td></tr>
-<tr><td>DECIDE</td><td>COMPLETE</td><td>PRD empty AND git clean AND CI green</td></tr>
-<tr><td>COMPLETE</td><td>end</td><td>-</td></tr>
-</tbody>
-</table>
-<table>
-<caption>Backward transitions (feedback edges)</caption>
-<thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
-<tbody>
-<tr><td>PROVE</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>EMIT</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>STATE</td><td>EMIT</td><td>code repair</td></tr>
-<tr><td>CONC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>SEC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>RES</td><td>EMIT</td><td>panic elimination</td></tr>
-<tr><td>DECIDE</td><td>SPECIFY</td><td>empirical fitness feedback</td></tr>
-<tr><td>DECIDE</td><td>PROVE</td><td>unproven obligation</td></tr>
+<tr><td>P1</td><td>SHAPE</td><td>8</td></tr>
+<tr><td>P2</td><td>CONTRACT</td><td>12</td></tr>
+<tr><td>P3</td><td>BUILD</td><td>8</td></tr>
+<tr><td>P4</td><td>VERIFY</td><td>14</td></tr>
+<tr><td>P5</td><td>RECORD</td><td>8</td></tr>
+<tr><td>P6</td><td>PRESSURE</td><td>11</td></tr>
+<tr><td>P7</td><td>CONTEXT ECONOMY</td><td>14</td></tr>
+<tr><td>P8</td><td>STANDING TENSIONS</td><td>0 (tension nodes)</td></tr>
+<tr><td>P9</td><td>CONVERGENCE</td><td>10</td></tr>
+<tr><td>end</td><td>COMPLETE (walk complete), or the fixed point (a sweep changed nothing)</td><td>terminal</td></tr>
 </tbody>
 </table>
 
-<p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
+<p>The graph has 85 principle states in total. Its 187 edges are 102 forward edges and 85 feedback (back-reference) edges, which return the walk to an earlier phase. Of the 26 gates, 24 block a transition when unmet. The other 2 are advisory (contract-only-description, verifier-independence) and never refuse a transition.</p>
+
+<p>The FSM is owned by <code>rs-plugkit/crates/plugkit-core/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"There is no skip button. There is no 'just this once.' The arrows are arrows. The cushion is the cushion. Sit."</div>
 
@@ -159,18 +147,18 @@ article tbody tr:hover { background: var(--panel-1); }
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">SPECIFY, PROVE, COMPLETE</span></div>
+  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">P1 SHAPE, P4 VERIFY, COMPLETE</span></div>
   <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd.yml</code>; the orchestrator owns the serializer so concurrent dispatch from parallel <code>exec_js</code> calls cannot corrupt it.</span></div>
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">SPECIFY, PROVE</span></div>
-  <div class="row"><span class="k">role</span><span>Every unknown surfaced during SPECIFY lands here with <code>status: unknown</code>. <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
+  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">P1 SHAPE, P4 VERIFY</span></div>
+  <div class="row"><span class="k">role</span><span>Every unknown surfaced during P1 SHAPE lands here with <code>status: unknown</code>. <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time. Name the hypothesis as a mutable, run exactly one real test against it, and read the real result. Then either cross it off or check it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
 </div>
 
 <div class="skill">
-  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">PROVE, EMIT</span></div>
+  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">P4 VERIFY, P3 BUILD</span></div>
   <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or the recall store (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store, so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers. The file keeps gaining facts without growing without bound.</span></div>
@@ -178,7 +166,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>residual-scan</h2><span class="role">stop-gate challenge</span><span class="phase">COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no running tasks. The agent either expands the PRD with in-spirit residuals and re-enters PROVE, or states "residual scan: none reachable in-spirit" directly. Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
+  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no running tasks. The agent either expands the PRD with in-spirit residuals and re-enters P4 VERIFY, or states "residual scan: none reachable in-spirit" directly. Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
 </div>
 
 <div class="skill">
