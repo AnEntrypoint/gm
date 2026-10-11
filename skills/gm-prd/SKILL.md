@@ -26,7 +26,7 @@ No test files. Never kill another lane's process. A failed witness: causes becom
 Before that commit: if a touched path sits in a bake-input closure (`codesearch` `BAKE_INPUTS_`), re-generate every artifact the closure produces and commit them in the SAME path-scoped commit as the source edit, then require `node scripts/check-cache-keys.mjs` to exit 0.
 
 ## Rules
-- Read a row before writing it. `prd-add` on an existing id overwrites its subject, so a witness blocker on an existing row is appended to that row's text with its original subject kept. Never reuse the row's own id for a blocker: that rescopes the row.
+- Read a row before writing it. `prd-add` on an existing id is refused (`prd-add refused: id '<id>' already exists`) unless the body carries `overwrite:true`, which rescopes it, so a witness blocker on an existing row is appended to that row's text with its original subject kept. Never reuse the row's own id for a blocker: that rescopes the row.
 - At SPECIFY the orchestrator dispatches `scan_deps` and logs its result as a PRD row.
 - Row ids are real: read them with `prd-list {"status":"pending"}` filtered in exec_js; never invent one for a witness run. A row name absent from `.gm/prd.yml` cannot be resolved.
 - Witness outcomes are not PRD rows. Each run appends one line to `.gm/witness-log.md` (witness, exit code, RESULT line, UTC, dispatch id), and the parent row is closed with `prd-resolve` citing that line. One output closes one row: `prd-resolve` refuses a witness output sha256 already bound to another row (`prd-resolve-duplicate-witness`).
