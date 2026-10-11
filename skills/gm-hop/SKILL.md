@@ -31,6 +31,7 @@ No witnessed change or verified row: `next: none`, with the reason.
 - A hop creates PRDs; it never executes its own. Duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) are merged into the base row, never added.
 - The receipt names an executed witness (a command, a crawl result, a codesearch output). A receipt without one is refused.
 - Instructions to agents: ultra-compact, meaning intact.
+- **A successor spawn refused by the concurrent-subagent ceiling is parked, not dropped.** Measured 2026-10-11 in C:/dev/spoint (SESSION_ID orch-main, ceiling 20): a hop's own successor spawn returned "Concurrent subagent limit reached", so the chain died at the ceiling while the pool stayed saturated. On that refusal, write the successor spec to `.gm/pool/<session>.next` -- principle, surface, depth, `visited`, `rhetoric`, witness id -- and end the receipt with `HOP next-principle <NAME> <surface> (spawn blocked: ceiling; parked at .gm/pool/<session>.next)`. The parked file is a ready slice: the orchestrator relaunches it into the first freed slot, which is how the pool held 20 across the handoff. Never re-spawn in a loop against the refusal.
 
 Receipt (120 words max):
 ```
