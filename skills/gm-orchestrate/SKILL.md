@@ -15,7 +15,7 @@ Owns the pool protocol. The gm entry and gm 1c name this skill and add no pool r
 
 ## Tick
 1. Observe: count live (ledger recipe, Terms); dispatch `instruction`; take `concurrency_shortfall.launch` (node-first, from `slots.candidates`, at most 32). Empty while shortfall > 0 is a defect row.
-2. Launch in one tool-call block, up to the ceiling. Rows first: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Then hops from untraversed principle nodes of `skills/dream-rsi/gm-graph.json` not in `visited`: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SID>"}')`, depth 1 for a fresh chain. `<SID>` = `<parent>-<k>`, unique.
+2. Launch in one tool-call block, up to the ceiling. Rows first: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Then hops from untraversed principle nodes of the gm repo's `C:/dev/gm/skills/dream-rsi/gm-graph.json` not in `visited` (never a project-relative path): `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SID>"}')`, depth 1 for a fresh chain. `<SID>` = `<parent>-<k>`, unique.
 3. Before each spawn, log `launch <SESSION_ID> surface=<path> row=<id|->` to the ledger. Then log `tick <n> event=<id> live=<count> floor=<floor> <UTC>` to `.gm/witness-log.md`, with `live` from the ledger recipe.
 4. `wait {"ms":60000}` (integer, max 600000). Each completion appends `done <SESSION_ID>` and refills its slot this turn, before any other step, while independent slices remain (a parked `.next`, an open row, or an untraversed node on a surface with no live writer).
 5. Re-count live after each launch and each completion. Log the tick: live, ceiling, rows executing, hops running, outcomes since the last tick.
