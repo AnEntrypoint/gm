@@ -1,0 +1,2 @@
+# data files an installed skill needs beside its SKILL.md; one path per line, relative to skills/
+dream-rsi/gm-graph.json
