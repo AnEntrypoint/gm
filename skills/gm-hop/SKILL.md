@@ -5,7 +5,7 @@ description: One traversal hop: a principle or book name and a surface path in, 
 
 # gm-hop
 
-Args: one JSON object `{"principle":"<node id, label or book>","surface":"<path>","session":"<SESSION_ID>","depth":<n>,"visited":[],"rhetoric":""}` (last three optional). A missing `principle`, `surface` or `session`, or a `principle` matching no principle node of `skills/dream-rsi/gm-graph.json` (id, label or book): `VERDICT: NOT-APPLICABLE`, no writes.
+Args: one JSON object `{"principle":"<node id, label or book>","surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"visited":[],"rhetoric":""}` (`depth`, `visited`, `rhetoric` optional; `wave` names the ledger `.gm/pool/ledger-<wave>.txt`). A missing `principle`, `surface` or `session`, or a `principle` matching no principle node of `skills/dream-rsi/gm-graph.json` (id, label or book): `VERDICT: NOT-APPLICABLE`, no writes.
 
 Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` literal rooted at the surface. `Read` only located paths.
 
@@ -16,7 +16,7 @@ Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` liter
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert a change that has no live witness.
 5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` (the full SESSION_ID, never a suffix of it: sessions whose ids share a tail would share a tag). `prd-list` the id first; `prd-add` refuses an existing id unless the body carries `overwrite:true`, so a refused id takes the next `<n>`, and `overwrite` is never sent for another session's row. Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
-7. Nominate the successor: a principle edge from this node, not in `visited`, that attacks the need. At `depth` 6 or more: `next: none, depth limit`. Otherwise spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). No `Agent` tool (a hop that itself runs under `task_spawn`): spawn the same slice with `task_spawn {lang:"agent", code:"<prompt: Skill(skill=\"gm-hop\", args='{...}')>", timeoutMs:1800000}`, then read `task_output`; `lang:"agent"` runs `claude -p <prompt> --permission-mode bypassPermissions` (pass `permissionMode` to narrow it).
+7. Nominate the successor: a principle edge from this node, not in `visited`, that attacks the need. At `depth` 6 or more: `next: none, depth limit`. Otherwise append `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, then spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, `wave` unchanged, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). Your receipt's last act appends `done <session>` to the same ledger, on every verdict. No `Agent` tool (a hop that itself runs under `task_spawn`): spawn the same slice with `task_spawn {lang:"agent", code:"<prompt: Skill(skill=\"gm-hop\", args='{...}')>", timeoutMs:1800000}`, then read `task_output`; `lang:"agent"` runs `claude -p <prompt> --permission-mode bypassPermissions` (pass `permissionMode` to narrow it).
 
 No witnessed change or verified row: `next: none`, with the reason.
 
@@ -28,6 +28,7 @@ No witnessed change or verified row: `next: none`, with the reason.
 - Choose the next node by project fit and diversity. Never label edges forward or backward to the agent.
 - Back-verify: traversal is unfinished until earlier applied nodes that a later change may affect are re-checked.
 - Each confirmed node-only row is `prd-add`ed at once, never batched to the end of the hop. A hop with zero rows logged 15 minutes after its heartbeat start stops and returns a receipt: surfaces scanned, candidates checked, rows logged (0), reason.
+- A NOT-APPLICABLE receipt never deletes `.gm/pool/<session>.next`. Only the orchestrator deletes a parked spec, after its relaunch is accepted.
 - A hop creates PRDs; it never executes its own. Duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) are merged into the base row, never added.
 - The receipt names an executed witness (a command, a crawl result, a codesearch output). A receipt without one is refused.
 - Instructions to agents: ultra-compact, meaning intact.
