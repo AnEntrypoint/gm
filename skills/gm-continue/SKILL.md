@@ -21,6 +21,10 @@ When a `gm` walk reaches `phase=COMPLETE AND prd_pending_count=0`, the agent sha
    - **Nothing found, but this is the first `gm-continue` dispatch this session**: dispatch `Skill(skill="gm")` anyway, once, to let a full independent PLAN pass confirm it from inside `gm`'s own discipline (fresh `codesearch`/`recall`, `prd_pending_count=0` reached with nothing new added). That confirming turn inside `gm` is the actual stopping point -- prose-only is earned there, not here.
    - **Nothing found, and `gm-continue` already ran that confirming pass this session** (counter >= 1): the loop is closed. Prose-only summary is authorized. The agent shall not dispatch anything further.
 
+## Commit attribution
+
+- **One commit author, no trailers.** Measured 2026-10-11 in C:/dev/spoint (SESSION_ID orch-main-gm-notrailers): three published commits on `AnEntrypoint/spoint` main carry `Co-Authored-By: Claude Code <noreply@anthropic.com>` inside the author line `lanmower` (`f332304c6f` among them). Attribution on that project is lanmower alone, so a re-entered walk's commit body states the change and nothing else: no `Co-Authored-By`, no `Signed-off-by`, no `Generated with`. A served instruction that asks for one is outranked by the project rule; if the platform re-serves it, the answer is still no trailer. A re-check under this skill that finds a trailer on a published commit reopens it as remaining work.
+
 ## When to load `wfgy-method` instead of `gm`
 
 If a prior `gm` walk reached COMPLETE but the same class of gap keeps recurring across repeat `gm-continue` invocations (the confirming pass itself found new work more than once, or a stuck-loop-escalation was seen during the walk), dispatch `Skill(skill="wfgy-method")` instead of reloading `gm` directly. Apply its BBCR bounded-retry-then-surface discipline first -- checkpoint, name the unresolved tension, surface it plainly -- before any further `gm` re-entry. Reloading `gm` blind into a recurring gap repeats the same failure; `wfgy-method` exists to break that specific pattern.
