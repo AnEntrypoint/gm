@@ -163,6 +163,29 @@ install_skill() {
     cp -R "$skill_dir" "${CLAUDE_SKILLS_DIR}/${skill_name}"
     log "installed ${skill_name} skill ${tag} -> ${CLAUDE_SKILLS_DIR}/${skill_name}"
   done
+  install_skill_assets "${work}/extract" "$CLAUDE_SKILLS_DIR"
+}
+
+install_skill_assets() {
+  src="$1"
+  dest="$2"
+  manifest="${src}/skills/skill-assets.txt"
+  if [ ! -f "$manifest" ]; then
+    log "WARN: no skill asset manifest at ${manifest}"
+    return 0
+  fi
+  while IFS= read -r rel || [ -n "$rel" ]; do
+    case "$rel" in ''|\#*) continue ;; esac
+    src_file="${src}/skills/${rel}"
+    dest_file="${dest}/${rel}"
+    if [ ! -f "$src_file" ]; then
+      log "WARN: skill asset absent at ${src_file}"
+      continue
+    fi
+    mkdir -p "$(dirname "$dest_file")"
+    cp -f "$src_file" "$dest_file"
+    log "installed skill asset ${rel} -> ${dest_file}"
+  done < "$manifest"
 }
 
 quarantine_retired_js_host() {
