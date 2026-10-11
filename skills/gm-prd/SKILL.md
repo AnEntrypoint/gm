@@ -5,7 +5,7 @@ description: Closes one PRD row through the nine gm stages in one run. Input: ro
 
 # gm-prd
 
-One run, one row, one session. Stages run in order, none a subagent. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row, `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm Section 1.
+One run, one row, one session. Stages run in order, none a subagent. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row, `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm Section 1. This is the PRD-resolution tracker, separate from the node traversal (gm-orchestrate). The row's state is kept on its own receipts; it never changes the frontier count, and a row is not a node.
 
 ## Procedure
 
