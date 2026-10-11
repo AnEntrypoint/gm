@@ -145,6 +145,10 @@ Every tool the agent uses is a dispatch verb. The agent has no direct shell acce
 
 `skills/gm/docs/verbs.md` is the full verb inventory: every verb name, its body shape, and one example each. Code lookup is `grep`, `codesearch`, `fs_read` and `callers`/`callees`/`impact`; `recall` is memory only and never scans the tree.
 
+### Background work
+
+A dispatch's child outlives the dispatch when it holds no pipe back to the runner. The supported idiom is one redirected, subshell-detached command writing its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Confirm survival from a second dispatch, by pid or by that log. `skills/gm/docs/verbs.md`, section Execution, states the rule together with the two ways a child still dies: one that keeps the runner's pipes open is adopted as a task and ends with that task's timeout, and every child dies with the tree when the dispatch hits `timeoutMs`.
+
 ### Gates
 
 Files under `.gm/` track orchestration state as markers. gm does not use hook events for this purpose. The condition that admits a Write, an Edit, or a git operation before execution runs natively inside `plugkit.wasm`. This logic lives in `rs-plugkit`'s `gates.rs` file, through its `hook_pre_tool_use` and `hook_stop` exports. Both exports read the same marker files.

@@ -85,6 +85,7 @@ When a submodule commit changes, the same delivery shall update the parent pin t
 - Dream-RSI's cycle trigger shall dispatch `dreamrsi-replay` only. `dreamrsi-select` shall never be dispatched unattended, because it writes `active-strategy.json` directly. Falsified by: a codesearch literal `dreamrsi-select` in the cycle-trigger source returning any hit.
 - When the agent rebuilds `rs-plugkit`, the agent shall pass `--features slim`, the build command that `rs-plugkit/AGENTS.md` owns. Falsified by: a built `rs-plugkit` wasm whose size is 100 MB or more.
 - `scripts/sync-lean-graph.mjs emit` copies gm-config's authored graph and prose into an outdir and never into `rs-plugkit`: `rs-plugkit/crates/plugkit-core/src/orchestrator/fsm.rs` holds the lean graph as `include_str!("lean_graph.json")` and validates it into the enforced gates, so replacing it needs its own reviewed rebuild. Falsified by: an `emit` that writes any path under `rs-plugkit/`.
+- The Windows job object `agentplug/crates/agentplug-host/src/process_tree.rs` assigns to an exec child shall carry no `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`: closing that handle when a dispatch returns shall leave work the caller backgrounded running, and `terminate_containment` (timeout expiry, `task-stop`) shall stay the only path that ends the tree. Falsified by: a codesearch literal `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` in that file returning a hit.
 
 ## Triage scripts
 
