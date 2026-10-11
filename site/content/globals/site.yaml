@@ -1,6 +1,6 @@
 title: "gm"
 tagline: "the comedown for vibe coding"
-description: "vibe coding ships fast and lies about being done. gm puts a deterministic SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE, COMPLETE pipeline around your coding agent, so the good vibe survives contact with a gate that actually checks. one skill, every harness. the orchestrator lives in rust as plugkit.wasm."
+description: "vibe coding ships fast and then claims it is finished. gm adds a checkable walk around your coding agent: nine phases from SHAPE to CONVERGENCE, 26 gates that name the condition that failed, and a pool of subagents that works a graph of disciplines in parallel. one skill, every harness. the orchestrator is rust compiled to wasm."
 repo: "https://github.com/AnEntrypoint/gm"
 url: "https://anentrypoint.github.io/gm"
 year: 2026
