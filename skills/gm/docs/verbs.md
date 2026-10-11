@@ -498,7 +498,7 @@ A uid is the number a snapshot printed for an element. It stays with that elemen
 These drive the phase machine. Dispatched through the same spool.
 
 `instruction`, `transition`, `transition-revert`, `phase-status`, `residual-scan`, `claim-audit`,
-`submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
+`comment-audit`, `submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
 `mutable-resolve`, `mutable-list`, `mutable-defer`, `task-spawn`, `task-list`, `task-stop`,
 `task-output`, `memorize-fire`, `memorize-backfill`, `memorize-continue`, `auto-recall`,
 `discipline`, `discipline-note`, `discipline-check-removal`, `discipline-audit`, `fsm-vendor`,
@@ -547,7 +547,7 @@ The agentplug daemon, not the gm plugin, handles these:
 
 ## Getting a verb's own documentation
 
-Six verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
-`fs_read`, `fs_write`, `fs_readdir` or `fs_stat` and the reply is
+Seven verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
+`fs_read`, `fs_write`, `fs_readdir`, `fs_stat` or `comment-audit` and the reply is
 `{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb replies with an error naming
 the fields it accepts once you pass it a body it rejects.
