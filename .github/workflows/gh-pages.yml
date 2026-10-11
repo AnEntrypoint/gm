@@ -6,6 +6,8 @@ on:
     paths:
       - 'site/**'
       - 'docs/**'
+      - 'skills/dream-rsi/gm-graph.json'
+      - 'scripts/build-graph-page.mjs'
       - 'flatspace.config.mjs'
   workflow_dispatch: {}
 
@@ -33,6 +35,9 @@ jobs:
         run: |
           npm install
           npm run build
+
+      - name: Build graph page from the graph source
+        run: node scripts/build-graph-page.mjs
 
       - name: Build flatspace site
         run: npx flatspace@latest build
