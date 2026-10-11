@@ -14,7 +14,7 @@ Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` liter
 2. List its testable claims: one checkable sentence each, with its test.
 3. `codesearch` every instance a claim governs on the surface; print cited lines; drop absent text.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert a change that has no live witness.
-5. `prd-add` each other finding as `<principle>-<tag>-<n>` (tag = last six of your SESSION_ID), after `prd-list` shows the id is free (an existing id is overwritten). Retire or merge one stale row per row added.
+5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` (the full SESSION_ID, never a suffix of it: sessions whose ids share a tail would share a tag). `prd-list` the id first; `prd-add` refuses an existing id unless the body carries `overwrite:true`, so a refused id takes the next `<n>`, and `overwrite` is never sent for another session's row. Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
 7. Nominate the successor: a principle edge from this node, not in `visited`, that attacks the need. At `depth` 6 or more: `next: none, depth limit`. Otherwise spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). No `Agent` tool (a hop that itself runs under `task_spawn`): spawn the same slice with `task_spawn {lang:"agent", code:"<prompt: Skill(skill=\"gm-hop\", args='{...}')>", timeoutMs:1800000}`, then read `task_output`; `lang:"agent"` runs `claude -p <prompt> --permission-mode bypassPermissions` (pass `permissionMode` to narrow it).
 
