@@ -16,7 +16,7 @@ Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` liter
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert a change that has no live witness.
 5. `prd-add` each other finding as `<principle>-<tag>-<n>` (tag = last six of your SESSION_ID), after `prd-list` shows the id is free (an existing id is overwritten). Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
-7. Nominate the successor: a principle edge from this node, not in `visited`, that attacks the need. At `depth` 6 or more: `next: none, depth limit`. Otherwise spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, and `rhetoric` = your `next_choice.why` verbatim (three sentences max).
+7. Nominate the successor: a principle edge from this node, not in `visited`, that attacks the need. At `depth` 6 or more: `next: none, depth limit`. Otherwise spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). No `Agent` tool (a hop that itself runs under `task_spawn`): spawn the same slice with `task_spawn {lang:"agent", code:"<prompt: Skill(skill=\"gm-hop\", args='{...}')>", timeoutMs:1800000}`, then read `task_output`; `lang:"agent"` runs `claude -p <prompt> --permission-mode bypassPermissions` (pass `permissionMode` to narrow it).
 
 No witnessed change or verified row: `next: none`, with the reason.
 
@@ -31,6 +31,7 @@ No witnessed change or verified row: `next: none`, with the reason.
 - A hop creates PRDs; it never executes its own. Duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) are merged into the base row, never added.
 - The receipt names an executed witness (a command, a crawl result, a codesearch output). A receipt without one is refused.
 - Instructions to agents: ultra-compact, meaning intact.
+- **A hop never dispatches `Skill(skill="gm-continue")`.** That call is the parent orchestrator's terminal move, never a hop's. Measured 2026-10-11 in C:/dev/spoint (hop DBC over src/terrain): a finishing hop dispatched it, read `.turn-summary.json` (`phase: MILNER`, 4973 pending rows), found its premise unmet and spent its last turn writing an explanation instead of a receipt. A hop ends on its receipt, plus the parked line when it names a successor.
 - **A successor spawn refused by the concurrent-subagent ceiling is parked, not dropped.** Measured 2026-10-11 in C:/dev/spoint (SESSION_ID orch-main, ceiling 20): a hop's own successor spawn returned "Concurrent subagent limit reached", so the chain died at the ceiling while the pool stayed saturated. On that refusal, write the successor spec to `.gm/pool/<session>.next` -- principle, surface, depth, `visited`, `rhetoric`, witness id -- and end the receipt with `HOP next-principle <NAME> <surface> (spawn blocked: ceiling; parked at .gm/pool/<session>.next)`. The parked file is a ready slice: the orchestrator relaunches it into the first freed slot, which is how the pool held 20 across the handoff. Never re-spawn in a loop against the refusal.
 
 Receipt (120 words max):
