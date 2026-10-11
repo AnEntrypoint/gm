@@ -5,11 +5,12 @@ description: One traversal hop: a principle or book name and a surface path in, 
 
 # gm-hop
 
-Args: one JSON object `{"principle":"<node id, label or book>","surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"visited":[],"rhetoric":""}` (`depth`, `visited`, `rhetoric` optional; `wave` names the ledger `.gm/pool/ledger-<wave>.txt`). A missing `principle`, `surface` or `session`, or a `principle` matching no principle node of `skills/dream-rsi/gm-graph.json` (id, label or book): `VERDICT: NOT-APPLICABLE`, no writes.
+Args: one JSON object `{"principle":"<node id, label or book>","surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"visited":[],"rhetoric":""}` (`depth`, `visited`, `rhetoric` optional; `wave` names the ledger `.gm/pool/ledger-<wave>.txt`). A missing `principle`, `surface` or `session`, or a `principle` matching no principle node of the gm repo's `skills/dream-rsi/gm-graph.json` (`C:/dev/gm/skills/dream-rsi/gm-graph.json`; the project root never holds it) (id, label or book): `VERDICT: NOT-APPLICABLE`, no writes.
 
 Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` literal rooted at the surface. `Read` only located paths.
 
 ## Procedure
+0. Load the node from `gm-graph.json`. Its `label` field (`Author - Title`, e.g. `Meyer - Design by Contract`) names the discipline: run that discipline first, against the surface. Then list every entry of `edges` where the node is `from` or `to`, with its `kind` (`forward` or `backreference`) and `condition`. Node ids are never renamed. The next node is nominated only after the discipline has run, and only along an edge whose `from` is this node.
 1. Argue `rhetoric`'s open question in one paragraph, or the principle's weakest claim if empty.
 2. List its testable claims: one checkable sentence each, with its test.
 3. `codesearch` every instance a claim governs on the surface; print cited lines; drop absent text.
