@@ -5,20 +5,20 @@ description: One traversal hop: a principle or book name and a surface path in, 
 
 # gm-hop
 
-Args: one JSON object `{"principle":"<node id, label or book>","surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"visited":[],"rhetoric":""}` (`depth`, `visited`, `rhetoric`, `max_depth` optional; `wave` names the ledger `.gm/pool/ledger-<wave>.txt`; `max_depth` defaults to 6 and is the wave's cap, a wave of 1 spawns no successor). A missing `principle`, `surface` or `session`, or a `principle` matching no principle node of the gm repo's `skills/dream-rsi/gm-graph.json` (`C:/dev/gm/skills/dream-rsi/gm-graph.json`; the project root never holds it) (id, label or book): `VERDICT: NOT-APPLICABLE`, no writes.
+Args: one JSON object `{"node":{"id":"<id>","label":"<Author - Title>","advocate":"<advocate spec>","links":[{"to":"<id>","guards":["<guard>"]}]},"surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"rhetoric":""}`. `links` is sorted lexically by `to`. The payload is the only graph data a hop receives: it never loads `gm-graph.json`, and its links carry no direction, position or edge kind. `rhetoric`, `max_depth` (default 6, the wave's cap) and `wave` (names the ledger `.gm/pool/ledger-<wave>.txt`) are optional, except `wave` is required for ledger lines. A missing `node`, `surface` or `session`: `VERDICT: NOT-APPLICABLE`, no writes.
 
 Verbs: gm Section 1. Code questions: callers and impact, then `codesearch` literal rooted at the surface. `Read` only located paths.
 
 ## Procedure
 This hop is one node traversal. Its ledger `launch` and `done` lines are attributes of that traversal (gm-orchestrate, Attributes).
-0. Load the node from `gm-graph.json`. Its `label` field (`Author - Title`, e.g. `Meyer - Design by Contract`) names the discipline: run that discipline first, against the surface. Then list every entry of `edges` where the node is `from` or `to`, with its `kind` (`forward` or `backreference`) and `condition`. Node ids are never renamed. The next node is nominated only after the discipline has run, and only along an edge whose `from` is this node.
+0. Run the discipline named by `node.label` (e.g. `Meyer - Design by Contract`), against the surface, using `node.advocate` as its spec. Each entry of `node.links` is `{to, guards}`: a link is eligible when every guard holds on the surface, and only then is its `to` nominable. The next node is nominated only after the discipline has run. Node ids are never renamed.
 1. Argue `rhetoric`'s open question in one paragraph, or the principle's weakest claim if empty.
 2. List its testable claims: one checkable sentence each, with its test.
 3. `codesearch` every instance a claim governs on the surface; print cited lines; drop absent text.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert a change that has no live witness.
 5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` (the full SESSION_ID, never a suffix of it: sessions whose ids share a tail would share a tag). `prd-list` the id first; `prd-add` refuses an existing id unless the body carries `overwrite:true`, so a refused id takes the next `<n>`, and `overwrite` is never sent for another session's row. Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
-7. Nominate the next node: a `forward` edge whose `from` is this node, not in `visited`, whose `condition` holds, and which attacks the need. The successor must be a node with `kind: principle` in `skills/dream-rsi/gm-graph.json`; a tension, gate, terminal or phase node is refused, and you nominate the next principle edge instead. At `depth` at or above `max_depth` (default 6): `next: none, depth limit`. Otherwise append `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, then spawn it with `Agent` running `Skill(skill="gm-hop", args='{...}')` at `depth+1`, `visited` plus this node, `wave` unchanged, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). Your receipt's last act appends `done <session>` to the same ledger, on every verdict. No `Agent` tool (a hop that itself runs under `task_spawn`): spawn the same slice with `task_spawn {lang:"agent", code:"<prompt: Skill(skill=\"gm-hop\", args='{...}')>", timeoutMs:1800000}`, then read `task_output`; `lang:"agent"` runs `claude -p <prompt> --permission-mode bypassPermissions` (pass `permissionMode` to narrow it).
+7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable, whatever its position or history. At `depth` at or above `max_depth` (default 6): `next: none, depth limit`. Otherwise the receipt's `next:` names the link's `to` and `depth+1`, and `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child's payload from the private graph, writes `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. A hop never reads the private graph to build a payload. Your receipt's last act appends `done <session>` to the same ledger, on every verdict.
 
 No witnessed change or verified row: `next: none`, with the reason.
 
@@ -29,7 +29,7 @@ No witnessed change or verified row: `next: none`, with the reason.
 - A hop lists the real pending rows for its surface, records a one-line action per row, nominates its successor from that same list, and never invents an id.
 - Every hop runs as its own subagent with its own SESSION_ID. The orchestrator never performs hop work inline; it dispatches the hop and reads its receipt.
 - Motivation travels: `next_choice.why` goes verbatim to the next hop as `rhetoric`.
-- Choose the next node by project fit and diversity. Never label edges forward or backward to the agent.
+- Choose the next node by project fit and diversity.
 - Back-verify: traversal is unfinished until earlier applied nodes that a later change may affect are re-checked.
 - Each confirmed node-only row is `prd-add`ed at once, never batched to the end of the hop. A hop with zero rows logged 15 minutes after its heartbeat start stops and returns a receipt: surfaces scanned, candidates checked, rows logged (0), reason.
 - A NOT-APPLICABLE receipt never deletes `.gm/pool/<session>.next`. Only the orchestrator deletes a parked spec, after its relaunch is accepted.
