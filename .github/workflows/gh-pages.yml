@@ -42,6 +42,9 @@ jobs:
       - name: Build flatspace site
         run: npx flatspace@latest build
 
+      - name: Verify the graph page is in the build output
+        run: test -f dist/graph/index.html
+
       - name: Fetch live release + npm download data
         run: node scripts/fetch-live-data.mjs
         env:
