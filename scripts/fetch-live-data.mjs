@@ -173,12 +173,49 @@ async function fetchGithubStats() {
   return { metrics, insights };
 }
 
+const STAR_PAGE_LIMIT = 100;
+
+async function fetchStarHistory() {
+  const headers = { ...githubHeaders(), Accept: 'application/vnd.github.star+json' };
+  const starredAt = [];
+  for (let page = 1; ; page++) {
+    if (page > STAR_PAGE_LIMIT) throw new Error(`more than ${STAR_PAGE_LIMIT * PAGE_SIZE} stargazers; raise STAR_PAGE_LIMIT`);
+    const res = await fetch(`https://api.github.com/repos/${REPO}/stargazers?per_page=${PAGE_SIZE}&page=${page}`, { headers });
+    if (!res.ok) throw new Error(`GitHub stargazers fetch failed: ${res.status} ${res.statusText}`);
+    const batch = await res.json();
+    starredAt.push(...batch.map((star) => Date.parse(star.starred_at)));
+    if (batch.length < PAGE_SIZE) break;
+  }
+
+  const now = Date.now();
+  const dayKey = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const today = dayKey(now);
+  const perDay = {};
+  for (const ms of starredAt) perDay[dayKey(ms)] = (perDay[dayKey(ms)] || 0) + 1;
+  const first = Object.keys(perDay).sort()[0] ?? today;
+
+  const stars = [];
+  let total = 0;
+  for (let ms = Date.parse(first); dayKey(ms) <= today; ms += DAY_MS) {
+    total += perDay[dayKey(ms)] || 0;
+    stars.push({ date: dayKey(ms), count: total });
+  }
+  return { generated: new Date(now).toISOString(), repo: REPO, stars };
+}
+
 async function main() {
   await mkdir(apiDir, { recursive: true });
 
-  const results = await Promise.allSettled([fetchReleases(), fetchNpmDownloads(), fetchGithubStats()]);
+  const results = await Promise.allSettled([fetchReleases(), fetchNpmDownloads(), fetchGithubStats(), fetchStarHistory()]);
 
-  const [releasesResult, npmResult, statsResult] = results;
+  const [releasesResult, npmResult, statsResult, starsResult] = results;
+
+  if (starsResult.status === 'fulfilled') {
+    await writeFile(path.join(apiDir, 'stars.json'), JSON.stringify(starsResult.value, null, 2) + '\n');
+    console.log('wrote docs/api/stars.json');
+  } else {
+    console.error('stars.json generation failed:', starsResult.reason.message);
+  }
 
   if (releasesResult.status === 'fulfilled') {
     await writeFile(path.join(apiDir, 'releases.json'), JSON.stringify(releasesResult.value, null, 2) + '\n');
