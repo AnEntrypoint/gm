@@ -13,7 +13,6 @@ metadata:
 WFGY (Wan Fa Gui Yi, "all methods return to one") is a reasoning-drift-control technique from `onestardao/WFGY`. This skill ports its portable behavioral core to a text-generating agent's own multi-step work. Provenance and what was dropped: `references/honesty-and-provenance.md`. Technical basis of each claim: `references/wfgy-core-mechanism.md`.
 
 **On deltaS**: deltaS = 1 - cos(I, G) (I = current state, G = goal/anchor). Absent a real embedding call, any numeric deltaS you produce is your own qualitative estimate, not a measurement. Use the label ("deltaS is climbing," "deltaS looks high here") as shorthand for "this step is drifting from the stated goal"; never present a specific decimal as computed. When a spool `similarity` verb is available, see `references/deltas-measurement.md`.
-
 The current build serves no embedding verb, so every deltaS here is your own estimate. Say so explicitly ("deltaS looks high here, my own estimate, no embedding measured").
 
 ## G - the anchor (BBMC pattern: compare state against goal)
