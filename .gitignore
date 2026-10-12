@@ -193,3 +193,6 @@ skills/gm/.gm/
 
 # runtime witness log: appended by every session, never versioned
 .gm/witness-log.md
+
+# gm-prd receipts: per-row runtime audit trail, not versioned
+.gm/receipts/
