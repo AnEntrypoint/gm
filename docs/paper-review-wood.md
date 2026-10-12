@@ -1,5 +1,7 @@
 # Peer Review: "The Complete Discipline: Lifecycle Control, Governance, and Operational Hard Rules for LLM Coding Agents"
 
+> **Superseded revision.** This review covers the May 2026 revision of the paper (Papers I-IV consolidated). It is kept as the record of that revision. Its claims about the current repository are superseded.
+
 **Reviewed document:** `docs/paper.html` (May 2026 consolidation of Papers I-IV)  
 **Reviewer:** Wood  
 **Scope:** Clarity, internal consistency, gaps not covered in the paper, and structural observations
