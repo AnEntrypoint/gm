@@ -95,7 +95,7 @@ When a submodule commit changes, the same delivery shall update the parent pin t
 
 ## Triage scripts
 
-`scripts/triage/` holds the one-call checks; each script's header states its usage and output (`runner-status.sh` exits 1 when dead, `doctor.sh` exits 1 when any check fails). Before pushing a submodule bump, the agent shall run `check-pins.sh`. Before bumping the parent pin, the agent shall witness the submodule change through its own live entry point: one bump per verified change, never a bump made to test a fix. Falsified by: a submodule bump pushed with no `check-pins.sh` run, or a parent pin bump with no witness dispatch id.
+`scripts/triage/` holds the one-call checks; each script's header states its usage and output (`runner-status.sh` exits 1 when dead, `doctor.sh` exits 1 when any check fails). Parent pins advance in CI. `.github/workflows/bump-pins.yml` runs `scripts/bump-pins.sh` on every push to main, on each submodule release, and hourly; it commits the advanced pins to main with `[skip ci]`. Each target's own release-path runs gate its advance, `check-pins.sh` runs on the candidate before the push, and a rejected push recomputes every pin on the new base. The commit body names the bump run. A manual submodule bump still runs `check-pins.sh` before its push. Falsified by: a green bump run whose parent gitlinks differ from the remote main tips, a bump commit with no passing `check-pins.sh`, or a bump commit with no bump run id.
 
 ## Verification and delivery
 
