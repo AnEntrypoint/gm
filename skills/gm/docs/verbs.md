@@ -111,7 +111,8 @@ Example, verified against this repo:
 -> with {"detail":true}: matches: [{path, line, match, text, occurrence_count}, ...]
 ```
 
-`mode:"comments"` returns `comments` and `directives` (`#!/bin/sh` shebangs, `# shellcheck disable=...` land in `directives`, never in `comments`), plus `comment_count`,
+`mode:"comments"` returns `comments` and `directives` (`#!/bin/sh` shebangs, `# syntax=docker/...`,
+`# shellcheck disable=...` land in `directives`, never in `comments`), plus `comment_count`,
 `directive_count`, `files`, `output`, `file_source` and `exhaustive`. `glob` (one string or an array,
 with `!` entries excluded) and `output_mode` apply here too: `files_with_matches` and `count` drop
 `comments`, `directives` and `output`, keeping `files`, the counts and `file_source`.
@@ -133,7 +134,7 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    and the cap is off by default
 {"max_files":50000}                file cap
 {"path":"<dir or file>"}           narrow the scan
-{"paths":["skills/gm/SKILL.md","skills/gm/docs/"]}    narrow it to exactly those files and directories; "files" is an alias
+{"paths":["src/a.rs","src/b/"]}    narrow it to exactly those files and directories; "files" is an alias
 {"exclude":["vendor/**"]}          drop paths from the scan: one glob or a list of them, matched like
                                    "glob", so name a whole tree as "vendor/**"; "exclude_glob" and
                                    "exclude_globs" are aliases
@@ -165,9 +166,10 @@ Example, verified against this repo:
 Four modes: `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly, answering in about
 one second on a large workspace where `dual` costs minutes; `filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
-token (3-96 characters) is answered by an exhaustive whole-word scan: `mode: "symbol"` lists `definitions`
-before `references`, and a miss retries as `symbol_substring`. `verbose: true` returns the raw `bm25_hits`,
-`vector_hits` and `commits` channels.
+token (3-96 characters) is answered by an exhaustive whole-word scan. There is no `symbol` mode: it is refused
+and the refusal names the valid set. `k` (alias `head_limit`) caps the result count; `0` means unlimited for
+`literal`, `regex` and `filename`, and is refused for `dual`, which is ranked top-k. `verbose: true` returns the
+raw `bm25_hits`, `vector_hits` and `commits` channels.
 Completeness: a `literal` or `regex` reply is complete only when it carries `exhaustive: true`. `partial_reason`
 names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
 `files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
@@ -183,7 +185,7 @@ and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex);
 `spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
 `files` or `count`. A spill also carries `counts_by_file` inline (`N path` rows, busiest first), so the per-file answer never waits on the spill file.
 
-Split path arguments: a `literal` query shaped like `skills/<skill>/<file>` also matches a run of quoted arguments on one line that spells the same path, such as `join(ROOT, 'skills', 'gm', 'docs', 'verbs.md')` (the last segment may carry a file extension). Those hits sit in `split_form_matches`, counted by `split_form_count` and `split_form_files`, and never in `matches`, `count` or `occurrence_count`; `split_form_truncated` past 50. A join split across lines is not matched. A `regex` or `dual` reply for such a query carries `split_form_not_searched` instead.
+Split path arguments: a `literal` query shaped like `apps/<surface>/<file>` also matches a run of quoted arguments on one line that spells the same path, such as `join(ROOT, 'apps', 'world', '_fixtures', 'e2e-ci-arena.js')` (the last segment may carry a file extension). Those hits sit in `split_form_matches`, counted by `split_form_count` and `split_form_files`, and never in `matches`, `count` or `occurrence_count`; `split_form_truncated` past 50. A join split across lines is not matched. A `regex` or `dual` reply for such a query carries `split_form_not_searched` instead.
 
 Query and body: `query` is required in every mode; `pattern` and `literal` are not fields. Any other body
 field is refused with the supported list, and `path` or `glob` sent to `dual` is refused, so a scope never
@@ -236,7 +238,7 @@ reply itself. Omit every range key for the whole file, which is returned exactly
 Paged example:
 
 ```
-{"path":"skills/gm/SKILL.md","startLine":1,"endLine":40}
+{"path":"src/dsp/audio_thread.cpp","startLine":1040,"endLine":1100}
 -> ok:true, total_lines:3177, start_line:1040, end_line:1100, has_more_lines:true, next_start_line:1101,
    content:"<those 61 lines only>"
 ```
@@ -349,7 +351,7 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s (floored at the 300000 default, capped at 900000), so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the original task handle plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass the task handle as `resume_task` to re-poll that dispatch without redispatching.
 
-A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash <script> ><log> 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
+A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
 
 Output fields (`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000 characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be read directly. Use a language verb such as `bash` only when the request specifically needs shell syntax.
 
@@ -583,7 +585,7 @@ and returns the row with `resolved: true`.
 
 **Migration.** The legacy single files `.gm/prd.yml` and `.gm/mutables.yml` are still read and are
 split into the folders on the first write that touches them, after which a marker
-(.gm/prd.absorbed.json) lets reads skip them. No row is dropped and no flag day is needed: a
+(`.gm/prd.absorbed.json`) lets reads skip them. No row is dropped and no flag day is needed: a
 legacy row whose id already has a file, or already sits in the log, is suppressed rather than
 duplicated or resurrected. The legacy files are never rewritten and never deleted, because projects
 track and commit them.
