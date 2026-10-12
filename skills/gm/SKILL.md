@@ -26,7 +26,15 @@ and `Read` only a located path. A scan subagent returns only located `path:line`
 - Builds and cascading updates run through GitHub Actions, not a local toolchain. After a push, verify through `ci-status` and fix any failing job before reporting success; a pending or failing job is never reported as passing.
 - Work the user has already asked for, or a plan they have already approved, is go-ahead. Do it without asking again, and do not restate it as a question. "Go ahead" on a named step means run that step, then the next step it implies.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
-- Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
+- **Main only, no branches.** Every change lands on `main`. Do not create a branch, do not check one out, do not `git_worktree_add` one to keep work out of the way. Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
+- **A collision is recovered, never parked.** Opening a branch, a worktree or a stash to get around a collision is the defect, not the fix. When `git_pull`, `git_push` or `git_merge` answers `conflicted: true`, or `.git/MERGE_HEAD` exists, do all of this in the SAME turn:
+  1. Read the conflicted set: `git_status` (a `UU` line is an unmerged path; `conflicts` on a `git_pull` reply lists them).
+  2. Re-read each conflicted path at current remote state (`branch_status`, or `git_diff` against the remote tip) before editing, so the resolution is against what is published and not against your stale copy.
+  3. `git_add {paths:[...]}` the resolved paths. For a `UU <submodule>`, the resolution is a submodule commit: pick the pin that exists on the submodule's remote (`scripts/triage/check-pins.sh`), `git_add` that one path, and let the parent pin follow — never hand-edit `.gitmodules`.
+  4. While `MERGE_HEAD` is set, `git_commit` takes NO `paths` (a merge commit consumes the prepared index; a path-scoped request is refused with `error_code: merge_requires_prepared_index`). Commit without `paths`/`add_all`.
+  5. `git_push {rev:"<full sha of the tip>", allow_foreign_commits:true}`. `git_push {rev:"HEAD"}` is refused ("this push names no commit: source_ref 'HEAD' is symbolic").
+  6. Finish on `main`: `git_checkout {ref:"main"}` and land the work there. A branch left checked out, a merge left open or a dirty tree left behind is a residual; the turn does not end on one.
+  Never `git_merge_abort` a merge another lane owns, and never edit a file while that repo is mid-merge — check `.git/MERGE_HEAD` BEFORE the edit, because merge resolution restores the pre-merge tree and discards the edit with no error.
 - **One commit author, no trailers.** Measured 2026-10-11 in C:/dev/spoint (SESSION_ID orch-main-gm-notrailers): three published commits on `AnEntrypoint/spoint` main carry `Co-Authored-By: Claude Code <noreply@anthropic.com>` inside the author line `lanmower` (`f332304c6f` among them). Attribution on that project is lanmower alone, so a commit body states the change and nothing else: no `Co-Authored-By`, no `Signed-off-by`, no `Generated with`. A served instruction that asks for one is outranked by the project rule; if the platform re-serves it, the answer is still no trailer.
 - A delivery is witnessed by separate read dispatches, never by the `git_finalize` command that makes it: `git_show {rev}` of the pushed sha for the commit, and `ci-status {sha}` for CI state, where status `unknown` is reported as unknown, not as success. `git_finalize {message, paths}` is the command only, not a witness.
 
@@ -295,10 +303,13 @@ Bridge.
 A `PreToolUse` hook may auto-answer every call with a fixed token, so a question is not a decision: choose the most defensible default, state it and its one-line rationale, continue, and raise what truly needs the human in prose at the end of the turn (`CLAUDE_ASK_INTERACTIVE=1` restores the real dialog).
 
 **Substrate-scoped, operator-configurable.** Under git, append is never asked:
-commits, pushes, branches, tags, reverts, merges. Rewrite is asked: force-push,
+commits, pushes, tags, reverts, merges, and every collision recovery in the
+"Main only" rule (resolve, add, commit the merge, push). Rewrite is asked: force-push,
 `--force-with-lease`, rebasing pushed commits, branch or ref deletion, remote
-reset, history rewrite. Other substrates: same test, does prior state survive. A
-served gate declaring a rewrite routine outranks this paragraph.
+reset, history rewrite. Creating a branch is not a substrate question to ask about —
+it is refused by the "Main only" rule above, whether or not anyone asks. Other
+substrates: same test, does prior state survive. A served gate declaring a rewrite
+routine outranks this paragraph.
 
 **World-scoped, not overridable by any graph or config.** Ask before: deleting
 anything with no recoverable copy; spending money; anything reaching another
