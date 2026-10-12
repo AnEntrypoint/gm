@@ -293,6 +293,14 @@ trusting an empty reply.
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
 `{"max_files":500}`, `{"dead_code":true}`, `{"dead_code_limit":200}`.
 
+A `callers`, `callees`, `impact` or `status` dispatch whose incremental refresh does not
+finish inside its budget is REFUSED rather than answered from the cached graph:
+`error_code: "failed"`, `next_dispatch_hint: "codeinsight"`, and an `error` that names the
+refresh which clears it, `codeinsight {"action":"sync","root":"<root>"}`. Sync is incremental,
+so a pass that does not finish still advances the index and a further pass finishes it. The
+refusal carries that pass's counters as `key=value` plus at most two deferred file names;
+the full `deferred_set` lives in the sync report the message points at, never in the refusal.
+
 ## Memory
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
@@ -338,7 +346,7 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 `exec_js` evaluates its raw body in a separate Node process, delivered on the child's stdin, so the body is never part of its command line and a process-listing query that filters command lines for a marker string cannot match the runner itself. It does not inject the caller's `tools` object. A `.js` scratch file in a repo whose package.json says `"type": "module"` is ESM: give a scratch file that uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API: `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
 
-At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget. Every MCP call caps applied polling at 240 s without changing the native execution limit. A polling timeout returns the original task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
+At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s (floored at the 300000 default, capped at 900000), so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the original task handle plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass the task handle as `resume_task` to re-poll that dispatch without redispatching.
 
 A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
 
@@ -355,7 +363,7 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 
 Kind: `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over someone else's dirt: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit: source_ref 'HEAD' is symbolic, so publishing it would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a lineage, not one commit: `git_push` sends `git push origin <rev>:<branch>`, so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract -- no refspec publishes a commit without its ancestors -- so `rev` names the tip, it never narrows the set. `git_commit` does not publish; `git_push` is the only publishing surface. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over someone else's dirt: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a lineage, not one commit: `git_push` sends `git push origin <rev>:<branch>`, so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract -- no refspec publishes a commit without its ancestors -- so `rev` names the tip, it never narrows the set. `git_commit` does not publish; `git_push` is the only publishing surface. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
 
 `git_reset_head` moves HEAD backward without touching the worktree -- `{"count":1}` or `{"to":"<rev>"}`,
 `mode` `mixed` (default) or `soft`. It refuses when the commit at HEAD is reachable from any
@@ -453,7 +461,8 @@ The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `
 `stdout`, `stderr`, `exit_code`, `duration_ms`, and any further fields the host adds. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
 
-The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
+The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. Its whole step grammar
+is served by the `cdp` engine, including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome` -- the headful CDP crawl as a named verb
 
@@ -469,7 +478,7 @@ raw_body: "https://example.com/\nsnapshot\n"
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps reimplement the documented behaviour of [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0) over the shared headful Chrome lease, so every step runs in a visible window.
 
-- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset.
+- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is the same directive under the name the retired `cdp` verb used.
 - A session's tab lives as long as the shared Chrome, which closes 15 minutes after its last lease. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -489,7 +498,25 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `dialog=accept\|dismiss` | policy for JavaScript dialogs; default accept |
 | `screenshot=<path>`, `screenshot_full=<path>`, `screenshot_uid=<uid> <path>` | PNG, or `.jpg` / `.webp` by extension |
 | `trace_start`, `trace_stop[=<path>]` | performance trace; the reply carries a summary; a `.gz` path compresses |
+| `wait=<ms>`, `wait <ms>` | idle that many milliseconds; 60000 is the limit |
 | `eval=<js>` | page script; returns its value |
+| `cdp <Domain.method>` | one raw CDP command; its params are the JSON object on the next line, omitted when the command takes none |
+| `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
+
+A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
+`result` and `cdp Page.captureScreenshot` yields `data` as base64. The command runs on the page's
+session, so a browser-level domain is not reachable this way.
+
+An `events` step arms its capture when the call attaches, not where the line sits, so events fired
+by an earlier step are still collected; the entry keeps filling until the call ends. `where` keeps
+the events whose dotted field, read out of the event params, contains (`~`), equals (`=`) or differs
+from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the
+rest in `dropped`. The domain is enabled for you, so `events Debugger.scriptParsed` sends
+`Debugger.enable`.
+
+```
+raw_body: "engine=cdp\nsessionId=orch-main-r270-63\nevents Debugger.scriptParsed where url~mapspinner limit=600\ncdp Page.navigate\n{\"url\":\"http://localhost:3001/?singleplayer\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
+```
 
 A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches. Chrome replays a tab's earlier console messages on attach; network events are seen from attach onward.
 
