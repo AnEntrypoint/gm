@@ -9,7 +9,7 @@ Run this as a background subagent on the smallest available model. The subagent 
 
 Inputs:
 - `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records with `dispatch_id`, `verb`, `fingerprint`, `exit_code`, `gate_drift` (bool), `prd_open_count`, `mutable_open_count`, `quality` (0..1), `ts`, `reply_sha256`, and optional `lean_node`. Orchestration verbs and `dream-*` dispatches are not recorded.
-- The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension`, `terminal`, or `phase`; edge `kind` is `forward` or `backreference`).
+- The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension`, `terminal`, or `phase`; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - Phase history: `.gm/turn-state.json` `phase_history`.
 - Walk evidence: `.gm/lean-walk/<NODE>.json`, one subagent record per node (`node`, `phase`, `applied`, `witness`).
 
@@ -34,6 +34,33 @@ The goal is to walk every principle-kind gm-graph node and every edge, through r
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
    - Forward-edge coverage approximates a forward edge as covered when both endpoints have verified walks. Say that this is an approximation.
 6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes in a phase with no verified walk, then backreference edges never fired. For each, give the node id, its phase, the condition to walk it on the next real task, and the evidence that would count as a walk.
+
+## Part C: the discipline tree
+
+The graph is one tree, not nine. Every book is its own node. `book_index` names
+each anchor book and the node that carries it: 43 got a node of their own and 12
+are the same book as a node the lean tree already carried, so they join it there
+rather than duplicating it. Their `phase` is the prose file that used to own
+them, which is the only thing that ever separated them.
+
+Traversal is nonlinear by construction. Every node can be reached, left and
+re-entered, and no book is confined to its own phase: every book has at least one
+edge to a book of another phase, so a walk begun anywhere can reach anywhere.
+A `phase` node is the door into and back out of its phase, not a leaf.
+
+**The terminal is `G_FIXPOINT`** ("sweep changed nothing"). `G_SURFACE` is the
+halt, not the goal: it means the walk stopped and handed the ambiguity to a
+human. Movement toward `G_FIXPOINT` is measured by `convergence.measure`,
+`unwalked_nodes + unfired_backreferences`, and that measure is non-increasing
+(`MONOTONE`): a step counts as movement only when it walks a node that had no
+walk or fires a backreference that had never fired, so re-walking walked ground
+is not progress. The terminal is reached when a full sweep changes nothing:
+`G_SWEEP` found no reopened gate, no counterexample and no growth.
+
+`scripts/check-discipline-tree.mjs` is the gate on all of the above. It counts
+isolated nodes, unreachable nodes, dead-end nodes and phase-partitioned books and
+fails when any of those counts is non-zero. Run it after any edit to the graph;
+CI runs it on every push and pull request to main.
 
 ## Output
 
