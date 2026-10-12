@@ -190,3 +190,6 @@ skills/gm/.gm/
 
 # editor settings folder: never tracked anywhere in this tree
 .vscode/
+
+# runtime witness log: appended by every session, never versioned
+.gm/witness-log.md
