@@ -19,7 +19,7 @@ TencentDB Agent Memory gives an agent team a shared, growing memory instead of s
 
 - **Chat Memory**: retains preferences, facts, decisions, and interaction history per agent. Distilled in layers: L0 raw conversation -> L1 atom -> L2 scenario -> L3 persona.
 - **Skill library**: after complex work, an agent can extract a reusable Skill (versioned, with resource files, trigger boundaries, execution steps, validation rules) from its own conversation/tool-call history, then share it with the team after review.
-- **Wiki + CodeGraph**: turns docs/specs/runbooks into a linked Wiki; indexes code symbols, files, call relationships, and impact paths into a CodeGraph, both queryable on demand rather than injected wholesale into context.
+- **Wiki + CodeGraph**: turns documentation, specs and runbooks into a linked Wiki; indexes code symbols, files, call relationships, and impact paths into a CodeGraph, both queryable on demand rather than injected wholesale into context.
 - **Memory Panel**: a human-controlled review/control surface (not just a dashboard) for what gets promoted, shared, or pruned.
 
 Assets are portable across agent frameworks and shareable across a team -- a new agent or team member can load existing memory instead of relearning from scratch.
@@ -35,10 +35,7 @@ Assets are portable across agent frameworks and shareable across a team -- a new
 
 ```bash
 git clone https://github.com/AnEntrypoint/agent-memory.git
-cd agent-memory/deploy/global-images
-cp .env.example .env
-$EDITOR .env
-./start-all.sh
+# inside the clone: follow its Docker Compose deploy README
 ```
 
 Configure the LLM parameters for the memory and proxy groups in `.env` before starting the services.
@@ -59,11 +56,11 @@ Minimal config in `~/.openclaw/openclaw.json`:
 { "memory-tencentdb": { "enabled": true } }
 ```
 
-Zero-config works for basic capability. Production tuning groups: `capture`, `extraction`, `pipeline`, `recall`, `persona`, `embedding` -- see `references/openclaw-config.md` for the full recommended template and failure-mode notes (embedding four-tuple, retention-day gating, etc.).
+Zero-config works for basic capability. Production tuning groups: `capture`, `extraction`, `pipeline`, `recall`, `persona`, `embedding` -- see the upstream plugin documentation for the full recommended template and failure-mode notes (embedding four-tuple, retention-day gating, etc.).
 
 ### 3. Migrating from an older install (v1.x/v0.x -> v2.0.0+)
 
-Use the migration tool documented at `MemoryCore/scripts/migrate-v2-to-v3/README.md` in the repo. New installs skip this.
+Use the migration tool documented in the upstream repo's migration README. New installs skip this.
 
 ### 4. Migrating gm's own memories into the `tencentdb_backend` store
 
