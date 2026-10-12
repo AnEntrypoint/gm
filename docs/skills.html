@@ -60,7 +60,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state</strong>: 102 states and 187 edges, 85 of them feedback edges. It is a non-linear graph, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state</strong>: in <code>gm-config/fsm/graph.json</code>, 102 states and 187 edges (102 forward, 85 feedback). It is a non-linear graph, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
@@ -85,7 +85,7 @@ article tbody tr:hover { background: var(--panel-1); }
 </tbody>
 </table>
 
-<p>The graph has 85 principle states in total. Its 187 edges are 102 forward edges and 85 feedback (back-reference) edges, which return the walk to an earlier phase. Of the 26 gates, 24 block a transition when unmet. The other 2 are advisory (contract-only-description, verifier-independence) and never refuse a transition.</p>
+<p>That state machine has 85 principle states. Its feedback edges return the walk to an earlier phase. Of its 26 gates, 24 block a transition when unmet. The other 2 are advisory (contract-only-description, verifier-independence) and never refuse a transition.</p>
 
 <p>The FSM is owned by <code>rs-plugkit/crates/plugkit-core/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
 
@@ -93,15 +93,17 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>How the boot skill works</h2>
 
-<p>The <code>gm</code> SKILL.md body says, in essence: <em>on every turn, dispatch the <code>instruction</code> verb through the spool; obey what it returns.</em></p>
+<p>The <code>gm</code> SKILL.md body says: <em>Dispatch <code>instruction</code> whenever uncertain; never invent the next step from memory.</em></p>
 
 <p>It contains no phase prose, no checklists, no transition diagrams. Those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator. The current FSM state, the current PRD, and the current mutables and residual-scan state are baked in.</p>
 
-<p>This collapses a chain of fourteen former skill files into a single dispatch surface. The first seven: gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance. The remaining seven: code-search, ssh, pages, create-lang-plugin, memorize, textprocessing. The behaviors those files elicit are properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
+<p>History: the phase prose once lived in thirteen skill files, the first seven being gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, and the remaining six code-search, ssh, pages, create-lang-plugin, memorize, textprocessing. The orchestrator serves that prose through one dispatch surface. The behaviors those files elicit are properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
 
 <h2>The walk skills shipped beside <code>gm</code></h2>
 
 <p><code>SKILLS.md</code> at the repo root is the authoritative table, and the directories under <code>skills/</code> are the authoritative list. None of these carries phase prose either: each reads its own state from the orchestrator and drives the walk with verbs. A hop is one principle (a book's discipline) over one surface; a PRD row is one run; both count against the pool that <code>gm-orchestrate</code> ticks. The Node.js installer installs every skill the release ships, not only <code>gm</code>, so these directories reach disk in one install.</p>
+
+<p>Install from a checkout and every skill directory lands as a link, not a copy: <code>install.sh</code>, <code>install.ps1</code> or <code>node bin/gm-install.js</code>, run beside <code>skills/</code> or with <code>GM_SKILL_SOURCE_DIR</code> set, place a directory junction on Windows and a symlink elsewhere, so <code>~/.claude/skills/&lt;name&gt;/SKILL.md</code> and <code>&lt;checkout&gt;/skills/&lt;name&gt;/SKILL.md</code> are one file and a source edit is served on the next dispatch. A directory may already hold live gm state, so a displaced install is parked under <code>.gm-skill-prelink/</code>, never deleted. With no local source, the <code>npx</code> and release-tarball routes still copy, announce it loudly, and record it in <code>.gm-skill-install-modes</code>. The agentplug daemon's <code>SKILL.md</code> refresh skips a linked install, because a link is the source of truth, not an install, and names a copy install that had drifted.</p>
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">main-thread pool loop</span><span class="phase">one walk</span></div>
@@ -110,7 +112,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-hop</h2><span class="role">one traversal hop</span><span class="phase">one principle</span></div>
-  <div class="row"><span class="k">role</span><span>A principle or book name and a surface path in, one receipt naming the next principle out. Invoked with <code>{"principle":"&lt;name&gt;","surface":"&lt;path&gt;","session":"&lt;SESSION_ID&gt;"}</code>.</span></div>
+  <div class="row"><span class="k">role</span><span>A principle node and a surface path in, one receipt naming the next principle out. Invoked with <code>{"node":{"id":"&lt;id&gt;","label":"&lt;Author - Title&gt;","advocate":"&lt;advocate spec&gt;","links":[{"to":"&lt;id&gt;","guards":["&lt;guard&gt;"]}]},"surface":"&lt;path&gt;","session":"&lt;SESSION_ID&gt;","wave":"&lt;wave&gt;","depth":&lt;n&gt;,"rhetoric":""}</code>.</span></div>
 </div>
 
 <div class="skill">
@@ -131,7 +133,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>instruction</h2><span class="role">phase prose, generated per call</span><span class="phase">every turn</span></div>
-  <div class="row"><span class="k">role</span><span>Return the current phase's imperative body, with the live FSM state, PRD summary, mutables status, residual-scan state, and recall pack already woven in. Replaces the bodies of the former gm / planning / gm-execute / gm-emit / gm-complete / update-docs / governance / code-search skill files.</span></div>
+  <div class="row"><span class="k">role</span><span>Return the current phase's imperative body, with the live FSM state, PRD summary, mutables status, residual-scan state, and recall pack already woven in. Serves the phase prose; no per-phase skill file exists.</span></div>
   <div class="row"><span class="k">session lease</span><span>An <code>instruction</code> dispatch rides with live session leases: the caller records one lease file per SESSION_ID, and the reply names the project's current owner in <code>session_owner_lease</code> (<code>session_id</code>, <code>pid</code>, <code>live</code>) together with <code>session_owner_before_this_dispatch</code>. <code>session_mismatch</code> is true when the caller's session is not that owner and the owner's process still holds its lease, so a second session can see that another live session owns the walk.</span></div>
   <div class="row"><span class="k">forbids</span><span>Treating the response as static. The body changes every call as state advances.</span></div>
 </div>
@@ -159,7 +161,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">P4 VERIFY, P3 BUILD</span></div>
-  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or the recall store (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
+  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or the recall store (everything else). A direct verb dispatch, not a subagent spawn.</span></div>
   <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
   <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store, so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers. The file keeps gaining facts without growing without bound.</span></div>
 </div>
