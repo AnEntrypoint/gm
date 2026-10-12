@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+import { spawnSync } from 'node:child_process'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const here = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.dirname(here)
+const CLI = process.env.GM_MCP_CLI || path.join(repoRoot, 'gm-mcp', 'src', 'cli.js')
+
+const GM_MCP_SUBCOMMANDS = new Set([
+  'dispatch', 'ensure-http', 'http-status', 'http-supervise', 'dev-sync',
+  'pin-local-build', 'unpin-local-build', 'self-update-status',
+])
+const SEARCH_VERBS = new Set(['grep', 'rg', 'codesearch', 'code_search', 'search'])
+const MODES = new Set(['literal', 'regex', 'dual', 'filename', 'comments'])
+const SUGAR_BODY_FLAGS = new Set(['path', 'glob', 'path_glob', 'max_matches', 'k', 'limit', 'max_results'])
+const SUGAR_BODY_FLAG_ALIASES = { glob: 'path_glob' }
+const SUGAR_NUMERIC_BODY_FLAGS = new Set(['max_matches', 'k', 'limit', 'max_results'])
+const CLI_DISPATCH_USAGE_ARGS = ['dispatch']
+
+const argv = process.argv.slice(2)
+
+function run(args) {
+  const result = spawnSync(process.execPath, [CLI, ...args], { stdio: 'inherit' })
+  process.exit(result.status ?? 1)
+}
+
+const isRawDispatchBodyArg = (arg) => arg.startsWith('{') || arg.startsWith('@')
+
+function sugarBodyValue(flagName, value) {
+  const bodyField = SUGAR_BODY_FLAG_ALIASES[flagName] ?? flagName
+  return SUGAR_NUMERIC_BODY_FLAGS.has(bodyField) ? Number(value) : value
+}
+
+const [verbOrSubcommand] = argv
+if (argv.length === 0 || verbOrSubcommand === '--help' || verbOrSubcommand === '-h' || GM_MCP_SUBCOMMANDS.has(verbOrSubcommand) || verbOrSubcommand.startsWith('-')) {
+  run(argv.length === 0 ? CLI_DISPATCH_USAGE_ARGS : argv)
+}
+
+const verb = verbOrSubcommand
+const mode = SEARCH_VERBS.has(verb) && MODES.has(argv[1]) ? argv[1] : null
+if (mode === null) {
+  run(['dispatch', ...argv])
+}
+
+if (argv.slice(2).some(isRawDispatchBodyArg)) {
+  run(['dispatch', ...argv])
+}
+
+const body = { query: null, mode }
+const cliDispatchFlags = []
+const needle = []
+for (let i = 2; i < argv.length; i++) {
+  const arg = argv[i]
+  if (arg.startsWith('--')) {
+    const eq = arg.indexOf('=')
+    const name = eq === -1 ? arg.slice(2) : arg.slice(2, eq)
+    const inline = eq === -1 ? undefined : arg.slice(eq + 1)
+    const value = inline !== undefined ? inline : argv[i + 1]
+    if (SUGAR_BODY_FLAGS.has(name) && value !== undefined && !value.startsWith('--')) {
+      if (inline === undefined) i += 1
+      body[SUGAR_BODY_FLAG_ALIASES[name] ?? name] = sugarBodyValue(name, value)
+      continue
+    }
+    if (!SUGAR_BODY_FLAGS.has(name)) {
+      cliDispatchFlags.push(arg)
+      if (inline === undefined && value !== undefined && !value.startsWith('--')) {
+        i += 1
+        cliDispatchFlags.push(value)
+      }
+      continue
+    }
+  }
+  needle.push(arg)
+}
+
+if (needle.length === 0) {
+  console.error('gm: no query -- usage: gm codesearch literal <needle> [--path <dir>] [--glob <glob>]')
+  process.exit(2)
+}
+body.query = needle.join(' ')
+
+run(['dispatch', verb, '--body', JSON.stringify(body), ...cliDispatchFlags])

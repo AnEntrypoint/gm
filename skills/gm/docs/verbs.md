@@ -39,6 +39,15 @@ The watcher launch command is in `spool-adapter.md`.
 project root from it with `git rev-parse --show-toplevel`. Where cwd is not itself inside a git
 repository, pass `git_root_override` in the body to pin the root.
 
+`bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's own `dispatch`
+subcommand, so a plain shell runs a verb with no MCP client and no daemon of its own involved.
+Search verbs also take a sugar form, `gm codesearch literal <needle> --path <dir> --glob <glob>`,
+which builds `{"query","mode","path"}`; the sugar exists because a mode word is not a dispatch body,
+and it applies to `grep`/`rg`/`codesearch`/`code_search`/`search` only. Any argument starting with
+`{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never
+reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body
+fields. It is exposed for `npm link` as `gm-dispatch`.
+
 ## Code lookup
 
 Every verb in this section is `query` except `codeinsight_index` and `codeinsight` with `action` `sync`, which are `command` (they build or refresh the index).
@@ -120,9 +129,15 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    "literal"/"regex": exhaustive, every match with path:line, no ranking;
                                    "filename": matches paths only
 {"k":10}                           result cap for "dual"; aliases: max_results, maxResults, limit
-{"max_matches":1000}               hit cap for the exhaustive modes
+{"max_matches":1000}               hit cap for the exhaustive modes: it caps the rows returned,
+                                   never the files scanned -- every file in scope is still read,
+                                   and the cap is off by default
 {"max_files":50000}                file cap
 {"path":"<dir or file>"}           narrow the scan
+{"paths":["src/a.rs","src/b/"]}    narrow it to exactly those files and directories; "files" is an alias
+{"exclude":["vendor/**"]}          drop paths from the scan: one glob or a list of them, matched like
+                                   "glob", so name a whole tree as "vendor/**"; "exclude_glob" and
+                                   "exclude_globs" are aliases
 {"path_glob":"**/*.rs"}            narrow by glob; "glob" is an alias
 {"combine":"phrase"}               "phrase" (default for a multi-word query), "and" (every term on one line),
                                    "or" (ranked union of any term)
@@ -130,7 +145,15 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 {"refresh":true}                   re-read from disk for the exhaustive modes
 {"no_ignore":true}                               include files .gitignore would hide, in every mode, under the
                                                  rule `grep`'s `no_ignore` entry states above.
+{"head_limit":10}                                alias of `k`; `{"verbatim":true}` means `combine:"phrase"`.
+{"no_cache":true, "force_disk":true}             aliases of `refresh`.
+{"docs":false}                                   in the exhaustive modes, exclude docs (`*.md`, `*.adoc`,
+                                                 `docs/` trees); `{"mode":"comments"}` (or `comments`/`comments_only`)
+                                                 runs the comment scan instead, with no `query` needed.
 ```
+
+`exhaustive` in a REQUEST is not the reply's coverage flag: sending `exhaustive: true` only implies `no_ignore`.
+Coverage is reported back, and `exhaustive: false` there means the scan stopped early.
 
 Example, verified against this repo:
 
@@ -150,7 +173,7 @@ Completeness: a `literal` or `regex` reply is complete only when it carries `exh
 names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
 `files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
 `excluded_by_rule`, `glob_matched_no_files`). Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
-of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` names the first five excluded paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
+of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` rides only when a rule dropped code, and names the first five such paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
 
 Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
 contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
@@ -179,9 +202,6 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
 
 ```
 {"path":"<relative path>"}     required, relative and within the project
-{"offset":0, "limit":200}      read a line range; both clamp to the file's real line count, so an
-                               offset past the end returns "" with "returned_lines":0 instead of failing.
-                               Omit both for the whole file.
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
 {"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
                                "allow_outside_root" is an alias. A path holding a ".." segment is
@@ -195,14 +215,36 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
                                parent `C:/Users/user`, which makes that parent readable too.
 ```
 
-Paged replies add `total_lines`, `offset`, `returned_lines` and `has_more_lines`.
-
-Example, verified against this repo:
+Line ranges. Every alias is **1-based and inclusive on both ends**: the start alias names the first line
+returned, `endLine`/`end`/`to` the last line returned, and `limit`/`count`/`lines` a number of lines, never
+an end line. Accepted aliases, resolved in this order (the first pair with a key present wins):
 
 ```
-{"path":"README.md", "offset":22, "limit":4}
--> ok:true, total_lines:215, returned_lines:4, has_more_lines:true, content:"curl -fsSL ..."
+startLine / endLine     start / end (and start / count)     from / to     offset / limit     line / lines
 ```
+
+So `{"startLine":1040,"endLine":1100}` and `{"from":1040,"to":1100}` and `{"offset":1040,"limit":61}` all
+return lines 1040-1100. An end line past the last line clamps, and the reply then carries
+`clamped_to_total_lines` plus `end_line_requested`; a start line past the last line is an error naming the
+file's line count, as is a start of 0, an end before the start, or any range on an empty file. A key that
+looks like a range but is not one of these (`start_line`, `endline`, `firstLine`, ...) is refused by name
+instead of being ignored: unknown range keys never silently return the whole file.
+
+Ranged replies add `total_lines`, `start_line`, `end_line`, `returned_lines`, `has_more_lines`,
+`next_start_line` and a 0-based `offset` kept for compatibility; `range_basis` states the convention in the
+reply itself. Omit every range key for the whole file, which is returned exactly as before.
+
+Paged example:
+
+```
+{"path":"src/dsp/audio_thread.cpp","startLine":1040,"endLine":1100}
+-> ok:true, total_lines:3177, start_line:1040, end_line:1100, has_more_lines:true, next_start_line:1101,
+   content:"<those 61 lines only>"
+```
+
+A reply cut by the whole-reply character cap is spilled to `<out>.reply.txt` with the same range, and the
+notice reports `spill_range: lines 1040-1100 of 3177 (1-based, inclusive)`, `spill_lines` and a `next_range`
+to send for the rest; page it with `gm_result` on that spill file.
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
 `content`, and the value may be a JSON string (with `\n` for each newline) **or an array of lines**,
@@ -251,6 +293,14 @@ trusting an empty reply.
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
 `{"max_files":500}`, `{"dead_code":true}`, `{"dead_code_limit":200}`.
 
+A `callers`, `callees`, `impact` or `status` dispatch whose incremental refresh does not
+finish inside its budget is REFUSED rather than answered from the cached graph:
+`error_code: "failed"`, `next_dispatch_hint: "codeinsight"`, and an `error` that names the
+refresh which clears it, `codeinsight {"action":"sync","root":"<root>"}`. Sync is incremental,
+so a pass that does not finish still advances the index and a further pass finishes it. The
+refusal carries that pass's counters as `key=value` plus at most two deferred file names;
+the full `deferred_set` lives in the sync report the message points at, never in the refusal.
+
 ## Memory
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
@@ -276,7 +326,7 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 
 | verb | body | purpose | kind |
 |---|---|---|---|
-| `fs_read` | `{"path", "offset"?, "limit"?, "max_bytes"?, "allowOutsideRoot"?}` | read a file or a line range | query |
+| `fs_read` | `{"path", "startLine"?, "endLine"? (or "start"/"end", "from"/"to", "offset"/"limit", "line"/"lines", "start"/"count"), "max_bytes"?, "allowOutsideRoot"?}` | read a file or a 1-based inclusive line range | query |
 | `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) | command |
 | `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory | query |
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path | query |
@@ -298,35 +348,46 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget. Every MCP call caps applied polling at 240 s without changing the native execution limit. A polling timeout returns the original task handle: pass it as `resume_task` to re-poll that dispatch without redispatching.
 
-A server that must outlive the call is started detached: `spawn(process.execPath, [script], {detached: true, stdio: "ignore", windowsHide: true}).unref()` survives the call and is stopped in a later call by its pid; never pass `stdio: "inherit"`.
+A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
 
 Output fields (`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000 characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be read directly. Use a language verb such as `bash` only when the request specifically needs shell syntax.
 
 ## Git
 
-`git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_finalize`, `git_log`,
-`git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`), `git_remote`,
+`git_status`, `branch_status`, `git_push`, `git_add`, `git_commit`, `git_amend`, `git_finalize`,
+`git_log`, `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_poll`, `ci-status` (alias `ci_status`),
+`git_remote`,
 `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
 `git_reset_head`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
 
 Kind: `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"HEAD"}` is the sanctioned push of a commit you already made over someone else's dirt. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles add->commit->porcelain-gate->push->CI-watch; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over someone else's dirt: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a lineage, not one commit: `git_push` sends `git push origin <rev>:<branch>`, so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract -- no refspec publishes a commit without its ancestors -- so `rev` names the tip, it never narrows the set. `git_commit` does not publish; `git_push` is the only publishing surface. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
 
 `git_reset_head` moves HEAD backward without touching the worktree -- `{"count":1}` or `{"to":"<rev>"}`,
 `mode` `mixed` (default) or `soft`. It refuses when the commit at HEAD is reachable from any
 `refs/remotes/` ref (`pushed_commit_refused`), when the index holds staged paths not named by the
 request (`staged_paths_present`, overridden by `allow_staged:true`), and when the target is not an
 ancestor of HEAD. `git_commit {"amend":true}` rewrites the current commit instead of stacking a
-child, and refuses when that commit is already published (`pushed_commit_refused`).
+child, and refuses when that commit is already published (`pushed_commit_refused`). `git_amend` is
+that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler,
+and carries the same `pushed_commit_refused` refusal.
 
 `git_status {"eol":true}` adds `eol`, one `{path, index, worktree, attr}` entry per tracked path from
 `git ls-files --eol` (index and worktree line endings plus the attribute text), with `eol_count` and
 `eol_mismatch_count` (paths whose index and worktree endings differ). Scope it with `paths`, since the
-whole tracked tree is a long reply.
+whole tracked tree is a long reply. The `eol` array holds at most `limit` entries (default 10, the same
+bound as the default listing); `eol_count` and `eol_mismatch_count` stay exact over every entry. When the
+array is capped, `eol_truncated` is `true`, the full raw `git ls-files --eol` listing is written to
+`eol_spill_file` under `.gm/exec-spool/out/`, and `eol_spill_write_failed` is set if that write fails.
+Spill retention: `spill_file` and `eol_spill_file` both use the `git_status-` prefix; the newest 20
+`git_status-*.txt` files are kept in `.gm/exec-spool/out/`, and each git_status call that writes a spill
+deletes the older ones. A reply that wrote a spill names this rule in `spill_retention`.
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Observed (SESSION_ID spoint-orch-b186-r41): a paths-scoped `git_commit` committed only the named file, excluded another lane's staged deletion, and reported the excluded entries. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
+
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count` -- observed refusing a 1359-path sweep of this repo (SESSION_ID orch-main-r67) -- because a blanket commit carries another writer's in-flight edits with it. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
@@ -400,13 +461,24 @@ The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `
 `stdout`, `stderr`, `exit_code`, `duration_ms`, and any further fields the host adds. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
 
-The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
+The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. Its whole step grammar
+is served by the `cdp` engine, including raw `cdp <Domain.method>` commands and event capture.
+
+### `chrome` -- the headful CDP crawl as a named verb
+
+`chrome` takes the same **plain text body** as `crawl` and runs the same step grammar, pinned to
+`engine: cdp` and `headless: false`, so a caller that always wants a real visible Chrome never
+restates the engine line. It answers the same host JSON object.
+
+```
+raw_body: "https://example.com/\nsnapshot\n"
+```
 
 ### Browser steps for `engine=cdp`
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps reimplement the documented behaviour of [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0) over the shared headful Chrome lease, so every step runs in a visible window.
 
-- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset.
+- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is the same directive under the name the retired `cdp` verb used.
 - A session's tab lives as long as the shared Chrome, which closes 15 minutes after its last lease. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -426,7 +498,25 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `dialog=accept\|dismiss` | policy for JavaScript dialogs; default accept |
 | `screenshot=<path>`, `screenshot_full=<path>`, `screenshot_uid=<uid> <path>` | PNG, or `.jpg` / `.webp` by extension |
 | `trace_start`, `trace_stop[=<path>]` | performance trace; the reply carries a summary; a `.gz` path compresses |
+| `wait=<ms>`, `wait <ms>` | idle that many milliseconds; 60000 is the limit |
 | `eval=<js>` | page script; returns its value |
+| `cdp <Domain.method>` | one raw CDP command; its params are the JSON object on the next line, omitted when the command takes none |
+| `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
+
+A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
+`result` and `cdp Page.captureScreenshot` yields `data` as base64. The command runs on the page's
+session, so a browser-level domain is not reachable this way.
+
+An `events` step arms its capture when the call attaches, not where the line sits, so events fired
+by an earlier step are still collected; the entry keeps filling until the call ends. `where` keeps
+the events whose dotted field, read out of the event params, contains (`~`), equals (`=`) or differs
+from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the
+rest in `dropped`. The domain is enabled for you, so `events Debugger.scriptParsed` sends
+`Debugger.enable`.
+
+```
+raw_body: "engine=cdp\nsessionId=orch-main-r270-63\nevents Debugger.scriptParsed where url~mapspinner limit=600\ncdp Page.navigate\n{\"url\":\"http://localhost:3001/?singleplayer\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
+```
 
 A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches. Chrome replays a tab's earlier console messages on attach; network events are seen from attach onward.
 
@@ -435,7 +525,7 @@ A uid is the number a snapshot printed for an element. It stays with that elemen
 These drive the phase machine. Dispatched through the same spool.
 
 `instruction`, `transition`, `transition-revert`, `phase-status`, `residual-scan`, `claim-audit`,
-`submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
+`comment-audit`, `submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
 `mutable-resolve`, `mutable-list`, `mutable-defer`, `task-spawn`, `task-list`, `task-stop`,
 `task-output`, `memorize-fire`, `memorize-backfill`, `memorize-continue`, `auto-recall`,
 `discipline`, `discipline-note`, `discipline-check-removal`, `discipline-audit`, `fsm-vendor`,
@@ -443,7 +533,7 @@ These drive the phase machine. Dispatched through the same spool.
 `memory-namespace-audit`, `codeinsight-namespace-audit`, `calculus-model-check`,
 `component-loader-reconcile`, `component-loader-hmr`, `dream-policy-register`,
 `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay`,
-`dream-replay-round`.
+`dream-replay-round`, `pool-brief`.
 
 `prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
 `{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
@@ -455,6 +545,11 @@ the recovery verb. A long idle gap makes every other verb return
 
 Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash` in the new body. An unchanged match suppresses the prose and discipline-policy blocks from the reply (`instruction_unchanged`/`discipline_policies_unchanged: true`, fields omitted); a mismatch or first dispatch returns them in full. Assert only a hash read off a response actually received. This is a response-size optimization only: phase, PRD, mutables and recall data return every time.
 
+`pool-brief` hands one subagent its brief for one PRD row. Its body takes three non-empty string
+fields: `row` (a PRD row id), `session` (the subagent's SESSION_ID -- the key is spelled `session`,
+never `session_id`) and `role` (one of `resolver`, `traversal`). A missing or empty field is refused
+with the list of what is required.
+
 ## Storage, cache and diagnostics
 
 `sql_open`, `sql_close`, `sql_list_dbs`, `sql_exec`, `sql_query`, `sql_smoke`, `sql_serialize`,
@@ -462,9 +557,9 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 `kv_query`, `env_get`, `health`, `status`, `close`, `config_resolve`, `config-sync-now`,
 `dataflow_resolve`, `tencentdb-compat-probe`, `tencentdb-memory-import`.
 
-`wait {"ms":N}` works: `ms` is a positive integer, and the verified values are 1000 and 60000. A wait replies `ok:true`, `verb:"wait"`, `completed:true`, `waited_ms:N` (the spool JSON nests the last two under `data`). Observed: `wait {"ms":1000}` returned completed:true, waited_ms:1000, and `wait {"ms":60000}` returned completed:true, waited_ms:60000 (SESSION_ID spoint-orch-b186-r41).
+`wait {"ms":N}` idles the caller: `ms` is an integer in `1..max_ms`, and `max_ms` is 600000 (10 minutes), so a longer incident wait is one dispatch, not a chain. Inside that range a wait replies `ok:true`, `verb:"wait"`, `completed:true`, `waited_ms:N` (the spool JSON nests the last two under `data`). Outside it the dispatch is refused before any time passes: `ok:false`, `error_code:"invalid_args"`, `error:"wait ms must be between 1 and max_ms"`, `max_ms:600000`, `received:N`. Observed (SESSION_ID orch-main-r67): `wait {"ms":1000}` returned completed:true, waited_ms:1000 and `wait {"ms":60000}` returned completed:true, waited_ms:60000; `wait {"ms":60001}`, `wait {"ms":120000}` and `wait {"ms":0}` each returned that `invalid_args` reply -- those three were measured while `max_ms` was 60000. At the 600000 cap `wait {"ms":120000}` is one accepted call.
 
-`sleep {"ms":N}` is a separate verb with its own reply: `ok:true`, `verb:"sleep"`, `completed:true`, `waited_ms:N` (nested under `data` in the spool JSON, as for wait). Observed: `sleep {"ms":1000}` returned completed:true, waited_ms:1000 (SESSION_ID spoint-orch-b186-gmfix17).
+`sleep {"ms":N}` is a separate verb with its own reply: `ok:true`, `verb:"sleep"`, `completed:true`, `waited_ms:N` (nested under `data` in the spool JSON, as for wait). It shares `wait`'s handler, so it enforces the same `1..max_ms` range with `max_ms` 600000, and its refusal text still names `wait ms`. Observed: `sleep {"ms":1000}` returned completed:true, waited_ms:1000 (SESSION_ID spoint-orch-b186-gmfix17), and `sleep {"ms":120000}` returned `ok:false`, `error_code:"invalid_args"`, `error:"wait ms must be between 1 and max_ms"`, `max_ms:60000`, `received:120000` (SESSION_ID orch-main-r67) -- measured while `max_ms` was 60000; at the 600000 cap that body is accepted too.
 
 `learn` is retired.
 
@@ -479,7 +574,7 @@ The agentplug daemon, not the gm plugin, handles these:
 
 ## Getting a verb's own documentation
 
-Six verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
-`fs_read`, `fs_write`, `fs_readdir` or `fs_stat` and the reply is
+Seven verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
+`fs_read`, `fs_write`, `fs_readdir`, `fs_stat` or `comment-audit` and the reply is
 `{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb replies with an error naming
 the fields it accepts once you pass it a body it rejects.
