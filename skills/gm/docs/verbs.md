@@ -293,6 +293,14 @@ trusting an empty reply.
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
 `{"max_files":500}`, `{"dead_code":true}`, `{"dead_code_limit":200}`.
 
+A `callers`, `callees`, `impact` or `status` dispatch whose incremental refresh does not
+finish inside its budget is REFUSED rather than answered from the cached graph:
+`error_code: "failed"`, `next_dispatch_hint: "codeinsight"`, and an `error` that names the
+refresh which clears it, `codeinsight {"action":"sync","root":"<root>"}`. Sync is incremental,
+so a pass that does not finish still advances the index and a further pass finishes it. The
+refusal carries that pass's counters as `key=value` plus at most two deferred file names;
+the full `deferred_set` lives in the sync report the message points at, never in the refusal.
+
 ## Memory
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
