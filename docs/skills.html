@@ -150,7 +150,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">P1 SHAPE, P4 VERIFY, COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd.yml</code>; the orchestrator owns the serializer so concurrent dispatch from parallel <code>exec_js</code> calls cannot corrupt it.</span></div>
+  <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd/</code>, one file per row: the orchestrator compare-and-swaps the row&#39;s own file, so a concurrent dispatch from a parallel <code>exec_js</code> call cannot corrupt a different row, and a resolved row moves into <code>.gm/prd-log.jsonl</code>.</span></div>
 </div>
 
 <div class="skill">
