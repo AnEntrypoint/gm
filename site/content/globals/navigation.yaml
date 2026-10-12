@@ -9,6 +9,7 @@ links:
       - { label: skills,       href: "./skills/" }
       - { label: distribution, href: "./distribution/" }
       - { label: graph,        href: "./graph/" }
+      - { label: dada graph, href: "./dada-graph/" }
   - label: more
     group:
       - { label: showcase, href: "./made-with/" }
