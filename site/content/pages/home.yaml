@@ -8,7 +8,7 @@ hero:
     - { label: "the speed stays; the guesswork goes" }
     - { label: "nine phases, P1 SHAPE to P9 CONVERGENCE" }
     - { label: "26 gates; 24 can block a move" }
-    - { label: "zero test files, checkable" }
+    - { label: "16 test files in gm-mcp/test/, 1 in agentplug" }
     - { label: "one skill, every harness" }
   ctas:
     - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
@@ -25,11 +25,11 @@ features:
     - name: "nine phases, one walk"
       desc: "P1 SHAPE defines the problem. P2 CONTRACT states what must hold. P3 BUILD writes the change. P4 VERIFY checks it against the running system. P5 RECORD commits it with a reason. P6 PRESSURE looks for cruft and fallbacks that piled up. P7 CONTEXT ECONOMY keeps the working context small. P8 STANDING TENSIONS keeps open questions visible. P9 CONVERGENCE runs a full sweep that must stop changing. A failed check sends the walk back to the phase that owns the fix. The agent moves with the transition verb, and the gates decide whether the move is allowed."
     - name: "gates that name what failed"
-      desc: "the live graph has 26 gates. 24 block a move until their check passes: work state (one task in flight, rows closed, mutables resolved, worktree clean), delivery (CI validated against the current commit, submodules clean, residual scan fired), and source hygiene (no synthetic test files, no secrets in the diff, no hedge language). 2 are advisory and only advise. A denial names the failed condition, and the agent cannot route around it."
+      desc: "gm-config/fsm/graph.json has 26 gates. 24 block a move until their check passes: work state (one task in flight, rows closed, mutables resolved, worktree clean), delivery (CI validated against the current commit, submodules clean, residual scan fired), and source hygiene (no synthetic test files, no secrets in the diff, no hedge language). 2 are advisory and only advise. A denial names the failed condition, and the agent cannot route around it."
     - name: "unknowns get resolved by running code"
       desc: "an open question is a row in .gm/mutables.yml. the agent tests one hypothesis at a time against real code, reads the real result, and either closes the question or keeps it open. exec_js runs the claim, codesearch finds where something lives, and recall brings back what was already learned. \"this should work\" becomes a live check, so what ships is backed by output you can point to."
     - name: "work runs in a pool of subagents"
-      desc: "independent work runs in parallel. the orchestrator fills a pool of subagents to a target, launches PRD rows first, and then hops along a graph of 86 principles. each hop applies one principle to one part of the code and nominates the next principle to visit. a chain stops at depth 6, and a visited set stops it from looping. the pool target is half the platform ceiling after a saturated wave lost most of its agents to connection resets."
+      desc: "independent work runs in parallel. the orchestrator fills a pool of subagents to a target, launches PRD rows first, and then hops along a graph of 129 principles. each hop applies one principle to one part of the code and nominates the next principle to visit. a chain stops at depth 6, and a visited set stops it from looping. the pool holds at the ceiling while work remains, and halves for one incident window after a mass drain."
     - name: "one MCP tool, every gm verb in code"
       desc: "the gm MCP server now exposes one tool, gm_codemode. it runs a short async JavaScript body in which every gm verb is a function: await gm.codesearch({...}), await gm.git_status({...}). gm.list() shows what is available and gm.describe(name) returns a verb's input schema when you need it, so the tool list stays one entry long."
     - name: "one skill, every harness"

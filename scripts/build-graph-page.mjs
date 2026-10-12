@@ -25,7 +25,16 @@ const tensions = graph.nodes.filter((node) => node.kind === 'tension')
 
 const principleCard = (node) => `      <li><strong>${esc(node.book ?? node.label)}</strong>${node.author ? ` <span class="author">${esc(node.author)}</span>` : ''} <code>${esc(node.id)}</code> <span class="fan">${outgoing.get(node.id) ?? 0} outgoing</span></li>`
 
-const phaseSections = phaseNodes.map((phase) => {
+const phaseGroups = phaseNodes.map((phase) => ({ id: phase.id, label: phase.label, phase: phase.phase }))
+const phaseValues = new Set(phaseGroups.map((group) => group.phase))
+for (const node of principles) {
+  if (!phaseValues.has(node.phase)) {
+    phaseValues.add(node.phase)
+    phaseGroups.push({ id: node.phase, label: node.phase, phase: node.phase })
+  }
+}
+
+const phaseSections = phaseGroups.map((phase) => {
   const members = principles.filter((node) => node.phase === phase.phase)
   const tensionMembers = tensions.filter((node) => node.phase === phase.phase)
   return `  <section id="${esc(phase.id.toLowerCase())}">
@@ -90,4 +99,4 @@ ${edgeRows}
 fs.mkdirSync(path.dirname(apiPath), { recursive: true })
 fs.writeFileSync(pagePath, page)
 fs.copyFileSync(graphPath, apiPath)
-console.log(`graph page: ${graph.nodes.length} nodes, ${graph.edges.length} edges -> docs/graph.html`)
+console.log(`graph page written to docs/graph.html: ${graph.nodes.length} nodes, ${graph.edges.length} edges`)
