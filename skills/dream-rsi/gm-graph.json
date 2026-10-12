@@ -1,6 +1,6 @@
 {
  "source": "hand-authored in this file; no generator produces it",
- "node_count": 110,
+ "node_count": 111,
  "nodes": [
   {
    "id": "G_START",
@@ -141,6 +141,14 @@
    "phase": "P2",
    "book": "Intention-Revealing Names",
    "author": "Robert C. Martin"
+  },
+  {
+   "id": "LAMPORT",
+   "label": "Time, Clocks and the Ordering of Events - Leslie Lamport",
+   "kind": "principle",
+   "phase": "P2",
+   "book": "Time, Clocks and the Ordering of Events",
+   "author": "Leslie Lamport"
   },
   {
    "id": "MILNER",
@@ -833,9 +841,9 @@
    "author": "information-theoretic argument"
   }
  ],
- "edge_count": 205,
- "forward_edges": 100,
- "backreference_edges": 105,
+ "edge_count": 209,
+ "forward_edges": 102,
+ "backreference_edges": 107,
  "edges": [
   {
    "from": "JTBD",
@@ -894,6 +902,18 @@
   {
    "from": "MILNER",
    "to": "ILLEGAL",
+   "kind": "forward",
+   "condition": null
+  },
+  {
+   "from": "DBC",
+   "to": "LAMPORT",
+   "kind": "forward",
+   "condition": null
+  },
+  {
+   "from": "LAMPORT",
+   "to": "INVARIANTRUN",
    "kind": "forward",
    "condition": null
   },
@@ -1706,6 +1726,18 @@
    "to": "DBC",
    "kind": "backreference",
    "condition": "the invariant broke under a call sequence"
+  },
+  {
+   "from": "INVARIANTRUN",
+   "to": "LAMPORT",
+   "kind": "backreference",
+   "condition": "the same call sequence replayed in another order gave another result"
+  },
+  {
+   "from": "LAMPORT",
+   "to": "DBC",
+   "kind": "backreference",
+   "condition": "an obligation holds only before another event and the contract omits that order"
   },
   {
    "from": "METAMORPH",
