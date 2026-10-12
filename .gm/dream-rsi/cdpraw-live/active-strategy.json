@@ -1,1 +1,0 @@
-{"evidence":[{"dispatch_id":"1791181286097-500-53f0dcc06c45e2c4","exit_code":0,"fingerprint":"bc8ee64aca9fa931","gate_drift":false,"mutable_open_count":1,"prd_open_count":14,"quality":0.0625,"ts":1791181286320,"verb":"cdp"}],"failed_dispatch_count":0,"gate_drift_failure_count":0,"observation_count":1,"selection":"continue-current-exploration","successful_dispatch_count":1}

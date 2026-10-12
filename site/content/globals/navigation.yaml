@@ -8,6 +8,7 @@ links:
       - { label: crates,       href: "./crates/" }
       - { label: skills,       href: "./skills/" }
       - { label: distribution, href: "./distribution/" }
+      - { label: graph,        href: "./graph/" }
   - label: more
     group:
       - { label: showcase, href: "./made-with/" }

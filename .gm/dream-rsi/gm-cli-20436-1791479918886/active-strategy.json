@@ -1,1 +1,0 @@
-{"evidence":[{"dispatch_id":"1791479919533-500-148120c7e3c6f25d","exit_code":0,"fingerprint":"bbd5b5c4410604dd","gate_drift":false,"mutable_open_count":1,"prd_open_count":3,"quality":0.2,"ts":1791479919591,"verb":"fs_readdir"}],"failed_dispatch_count":0,"gate_drift_failure_count":0,"observation_count":1,"selection":"continue-current-exploration","successful_dispatch_count":1}
