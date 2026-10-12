@@ -142,7 +142,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <li><a href="#s7">Constraint Tiers</a></li>
     <li><a href="#s8">Pre-Emit Verification Protocol</a></li>
     <li><a href="#s9">In-Phase Quality: The Search and Code Discipline</a></li>
-    <li><a href="#s10">Structural Parallelism and Wave Execution</a></li>
+    <li><a href="#s10">Structural Parallelism and Pool Execution</a></li>
     <li><a href="#s11">Permanent Observability</a></li>
     <li><a href="#s12">The Memorize Sub-Agent</a></li>
     <li><a href="#s13">Governance Layer</a></li>
@@ -213,60 +213,45 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>The state machine model blocks the two most damaging failures. The agent acts on an UNKNOWN value, or the agent stops before it meets the real requirement. A forward transition checks only resolved facts, never a guess. A backward transition fires at once when the agent finds any new unknown, so no workaround can carry across a phase boundary. The current phase depends only on the last transition the agent made, never on what the agent says it intends. The FSM has no other path to change phase.</p>
 
+<p>The phase names in this section are the current ones. Earlier revisions used SPECIFY, PROVE, EMIT, STATE, CONC, SEC, RES and DECIDE. Those names still appear in the hard-rule tags of sections 22 to 43 and in some older passages, and they map as follows: SPECIFY is P1 SHAPE; PROVE is P4 VERIFY; EMIT is P3 BUILD; DECIDE is P9 CONVERGENCE, whose delivery checks are gates (ci-validated-fresh, residual-scan-fired); COMPLETE is the terminal state. STATE, CONC, SEC and RES are no longer phases. They are obligation gates: state-obligations-ready, conc-obligations-ready, sec-obligations-ready and res-obligations-ready.</p>
+
 <table>
-<caption>Forward transitions (the phase order)</caption>
-<thead><tr><th>From</th><th>To</th><th>Condition</th></tr></thead>
+<caption>Phase-to-phase edges in the live FSM (schema 2). Edges through a gate are counted at the gate, not here.</caption>
+<thead><tr><th>From</th><th>To</th><th>Forward edges</th><th>Feedback edges</th></tr></thead>
 <tbody>
-<tr><td>start</td><td>SPECIFY</td><td>the FSM's entry point</td></tr>
-<tr><td>SPECIFY</td><td>PROVE</td><td>cover closed</td></tr>
-<tr><td>PROVE</td><td>EMIT</td><td>every mutable KNOWN</td></tr>
-<tr><td>EMIT</td><td>STATE</td><td>source hygiene gates pass</td></tr>
-<tr><td>STATE</td><td>CONC</td><td>idempotency gate passes</td></tr>
-<tr><td>CONC</td><td>SEC</td><td>disjointness witnessed</td></tr>
-<tr><td>SEC</td><td>RES</td><td>no secrets in diff</td></tr>
-<tr><td>RES</td><td>DECIDE</td><td>no unchecked panics</td></tr>
-<tr><td>DECIDE</td><td>COMPLETE</td><td>PRD empty AND git clean AND pushed AND CI green</td></tr>
-<tr><td>COMPLETE</td><td>end</td><td>docs refreshed</td></tr>
-</tbody>
-</table>
-<table>
-<caption>Backward transitions (feedback edges)</caption>
-<thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
-<tbody>
-<tr><td>PROVE</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>EMIT</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>STATE</td><td>EMIT</td><td>code repair</td></tr>
-<tr><td>CONC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>CONC</td><td>EMIT</td><td>code repair</td></tr>
-<tr><td>SEC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>SEC</td><td>EMIT</td><td>code repair</td></tr>
-<tr><td>RES</td><td>EMIT</td><td>panic elimination</td></tr>
-<tr><td>RES</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>DECIDE</td><td>SPECIFY</td><td>empirical fitness feedback</td></tr>
-<tr><td>DECIDE</td><td>PROVE</td><td>unproven obligation</td></tr>
+<tr><td>P2 CONTRACT</td><td>P3 BUILD</td><td>1</td><td>0</td></tr>
+<tr><td>P2 CONTRACT</td><td>P4 VERIFY</td><td>3</td><td>0</td></tr>
+<tr><td>P6 PRESSURE</td><td>P5 RECORD</td><td>1</td><td>0</td></tr>
+<tr><td>P7 CONTEXT ECONOMY</td><td>P4 VERIFY</td><td>1</td><td>0</td></tr>
+<tr><td>P8 STANDING TENSIONS</td><td>P6 PRESSURE</td><td>1</td><td>0</td></tr>
+<tr><td>P3 BUILD</td><td>P2 CONTRACT</td><td>0</td><td>2</td></tr>
+<tr><td>P4 VERIFY</td><td>P2 CONTRACT</td><td>0</td><td>3</td></tr>
+<tr><td>P5 RECORD</td><td>P1 SHAPE</td><td>0</td><td>3</td></tr>
+<tr><td>P8 STANDING TENSIONS</td><td>P5 RECORD</td><td>0</td><td>3</td></tr>
 </tbody>
 </table>
 
 <div class="gm-callout"><span class="who">from the gm field guide</span>"A forward transition needs every one of its conditions met. A backward transition needs only one new problem. The system favors finishing, but only when the agent clears every step in order."</div>
 
 <h3>2.1 Phases</h3>
-<p>The graph has nine phases. The agent moves forward only when a guard passes, or moves backward on a feedback edge. <strong>SPECIFY</strong> covers alignment and research. It repeats until it closes every open unknown, and it exits when a pass finds no new unknown. <strong>PROVE</strong> resolves each mutable through witnessed execution. It exits only when every mutable reaches the WITNESSED state, and a gate checks this before exit. <strong>EMIT</strong> writes the artifacts. A gate checks the source: no test file, no decorative symbol, no marker that defers work. <strong>STATE</strong> checks the functional core: it checks totality, ownership, and idempotency, and a gate checks that a replay stays safe. <strong>CONC</strong> checks concurrency: happens-before order, disjointness, and contention bounds. <strong>SEC</strong> checks security under zero trust: injection, identity, and authority, and a gate checks that the diff holds no secret. <strong>RES</strong> checks resilience: the exception model, graceful degradation, and stress cases. <strong>DECIDE</strong> checks the work like an adversary, not like a reviewer who agrees by default. It runs every reachable corner case through real execution. It owns git consolidation and CI/CD validation, where CI/CD means continuous integration and continuous delivery. It allows the move to COMPLETE only when every one of these conditions holds together. Three conditions concern work state: the PRD is empty, every mutable is witnessed, and the worktree is clean. Two conditions concern git: the remote branch has the push, and the residual scan has run. Two conditions concern automated checks: the CI marker matches HEAD, and the live exec_js witness has run. Three conditions concern final review: every submodule is clean, the claim audit is clean, and the text holds no hedge language. <strong>COMPLETE</strong> refreshes the docs and closes the session.</p>
+<p>The live state machine (<code>gm-config/fsm/graph.json</code>, schema 2) has 102 states and 187 edges. The walk moves through nine phases in order, <strong>P1 SHAPE</strong> to <strong>P9 CONVERGENCE</strong>. Each phase holds its principles: P1 SHAPE 8, P2 CONTRACT 12, P3 BUILD 8, P4 VERIFY 14, P5 RECORD 8, P6 PRESSURE 11, P7 CONTEXT ECONOMY 14, and P9 CONVERGENCE 10, which is 85 principle states in all. <strong>P8 STANDING TENSIONS</strong> holds the tension nodes that stay open across phases rather than principles to satisfy once. Two terminal states end a walk: <strong>COMPLETE</strong> (walk complete) and the fixed point (sweep changed nothing).</p>
 
-<p>The agent dispatches the <code>instruction</code> verb on every turn. The WASM orchestrator (<code>rs-plugkit/src/orchestrator/</code>) builds each phase's response on that same call, from the live FSM state, the PRD, the mutables, and the recall pack. This response is a pure function of the current state. The served prose can never drift from the real state, because the real state is its only input. No skill file exists per phase. The one shipped skill is a short body that names the agent as the state machine itself. It tells the agent to dispatch <code>instruction</code> every turn and to run the verb the response names. Plugkit never advances the phase on its own; only the agent dispatches <code>transition</code>.</p>
+<p>Transitions pass through 26 gates. Twenty-four are blocking and hold the move until their predicate passes. Two are advisory and never refuse a transition: the contract-only-description and verifier-independence checks, which code cannot observe. The blocking gates check work state (one task in flight, every PRD row closed, mutables resolved and typed, worktree clean, a net-negative change), delivery (CI validated against the current HEAD, submodules clean, residual scan fired), and source hygiene (no synthetic test files, no secrets in the diff, no hedge language, no graphical symbols, no unchecked panics, no admit-deferral markers). A denial names the condition that failed.</p>
+
+<p>The agent dispatches the <code>instruction</code> verb on every turn. The WASM orchestrator (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/</code>) builds each phase's response on that same call, from the live FSM state, the PRD, the mutables, and the recall pack. This response is a pure function of the current state. The served prose can never drift from the real state, because the real state is its only input. No skill file exists per phase. The one shipped skill is a short body that names the agent as the state machine itself. It tells the agent to dispatch <code>instruction</code> every turn and to run the verb the response names. Plugkit never advances the phase on its own; only the agent dispatches <code>transition</code>.</p>
 
 <h3>2.2 Forward Transitions (Ladders)</h3>
 <p>An exit condition is a set of checks. Every check in the set must pass at the same time. This rule rules out a state where code exists before the check that should have caught its fault.</p>
 
 <h3>2.3 Backward Transitions (Snakes)</h3>
-<p>A new unknown at any phase forces a backward transition at once. No count builds up toward a limit, and no override can stop it:</p>
+<p>A failed check sends the walk back to the phase that owns the fix. The live graph has 85 feedback edges out of 187, and they are the only way back. The largest groups are:</p>
 <ul>
-  <li>PROVE to SPECIFY: a discovery that reshapes the plan, or a mutable that stays unresolved after 2 passes</li>
-  <li>STATE, CONC, SEC, or RES to EMIT: a code repair; any phase to SPECIFY: a genuinely new unknown, or a plan reshape</li>
-  <li>CONC to STATE, and SEC to STATE: an ownership or boundary check that flows back into the functional core</li>
-  <li>DECIDE to SPECIFY: real-world test result feeds back into the plan; DECIDE to PROVE: an unproven claim surfaces late</li>
+  <li>P5 RECORD to P1 SHAPE, and P8 STANDING TENSIONS to P5 RECORD: a discovery that reshapes the plan or a tension that comes back open</li>
+  <li>P4 VERIFY to P2 CONTRACT, and P3 BUILD to P2 CONTRACT: a fault whose fix belongs in the contract rather than the code</li>
+  <li>P6 PRESSURE to P2 CONTRACT, P7 CONTEXT ECONOMY to P3 BUILD, and similar edges: the same rule applied to the remaining phases</li>
 </ul>
 
-<p>The agent must fix an invariant violation at its root cause. A local patch over the symptom is not an acceptable fix. An unexpected behavior found during EMIT forces a fix at the true source of the fault.</p>
+<p>The agent must fix an invariant violation at its root cause. A local patch over the symptom is not an acceptable fix. An unexpected behavior found during VERIFY forces a fix at the true source of the fault.</p>
 
 <blockquote><strong>Observation (Termination).</strong> The set of discoverable unknowns is finite, and each planning pass reduces it. These two facts together prove the process ends. Sessions observed so far reach this end point in 2 to 4 passes.</blockquote>
 
@@ -292,10 +277,10 @@ article tbody tr:hover { background: var(--panel-1); }
 <p>Witnessed output is the only fact the discipline accepts as ground truth. Without it, the mutable stays at UNKNOWN, no matter how plausible the guess looks. Research on code-generation errors reaches the same conclusion: verification by reasoning alone misses a fault that only appears at runtime. Checking the result against a live system repeatedly is the method proven to reduce fabricated results.<sup><a href="#r10">10</a>,<a href="#r11">11</a></sup></p>
 
 <h3>3.3 The Two-Pass Rule</h3>
-<p>If a mutable stays unresolved after two resolution attempts, the agent reclassifies it as a new unknown and forces a backward transition to SPECIFY. This rule stops the agent from repeating one failing strategy in an endless loop.</p>
+<p>If a mutable stays unresolved after two resolution attempts, the agent reclassifies it as a new unknown and sends the walk back to P1 SHAPE. This rule stops the agent from repeating one failing strategy in an endless loop.</p>
 
 <h3>3.4 Surprise Absorption Prohibition</h3>
-<p>The agent must not silently absorb a gap between an expected result and the real result. Every such gap creates a new named mutable and forces a backward transition to SPECIFY. This rule stops workaround debt from building up.</p>
+<p>The agent must not silently absorb a gap between an expected result and the real result. Every such gap creates a new named mutable and sends the walk back to P1 SHAPE. This rule stops workaround debt from building up.</p>
 
 <hr>
 
@@ -306,12 +291,13 @@ article tbody tr:hover { background: var(--panel-1); }
 <h3>4.1 Structure</h3>
 <p>Each row in <code>.gm/prd.yml</code> states an id, an imperative subject, and a status (pending, then in_progress, then completed). It also states acceptance criteria, edge cases, and dependency links in both directions. It also states an effort estimate, a route-family tag, and a load score lambda between 0 and 1. Every task beyond a single-line, single-file edit must use a PRD row.</p>
 
-<p>The formula <code>verification_budget = lambda x (1 - tier_confidence)</code> sets how much more verification a row needs. A row with lambda greater than 0.75 needs a witness before EMIT.</p>
+<p>The formula <code>verification_budget = lambda x (1 - tier_confidence)</code> sets how much more verification a row needs. A row with lambda greater than 0.75 needs a witness before it leaves P4 VERIFY.</p>
 
 <p>Two independent studies support this design. A SANER 2026 registered report finds that writing the spec before the code reduces errors. A separate study of the Agentless method finds that a constrained sequence of localize, repair, and validate steps beats a free-form agent loop. This constrained sequence wins on the SWE-bench benchmark, at lower cost.<sup><a href="#r16">16</a>,<a href="#r7">7</a></sup></p>
 
-<h3>4.2 Wave-Based Parallel Execution</h3>
-<p>A dependency DAG (directed acyclic graph) sets the order of waves. Each wave batches every pending item whose dependencies are met into one message of concurrent spool dispatches. The width of this fan-out is bounded by the spool's concurrency cap, not by the number of agents. The rules forbid platform Task or Explore subagents, because a subagent that returns only prose in isolation stalls the chain (see section 38). Parallel work runs only as N concurrent spool dispatches the orchestrator serves.</p>
+<h3>4.2 Pool-Driven Traversal</h3>
+<p>The walk advances by hops. A hop applies one principle to one surface. The <code>gm-hop</code> skill checks each testable claim of the principle with a code search, closes what a single exact edit closes, records every other finding as a PRD row, and then nominates its successor: an outgoing edge of the principle's node that has not been visited and that attacks the biggest open need. A chain stops at depth 6, and the visited set stops it from revisiting a node. Each hop runs as a subagent with its own session id.</p>
+<p>The <code>gm-orchestrate</code> skill owns the pool. Its ceiling is the number of subagents the platform accepts at once. The ceiling is found by launching, not configured, and it was 20 when measured. A full wave of 20 lost 17 subagents to <code>ECONNRESET</code> in one window on 2026-10-10, so the target is held at half the ceiling (10) until that defect closes, then raised by 2 per clean window. Each tick counts the live subagents, launches the PRD rows first and then the hops from untraversed principle nodes, and refills freed slots while independent work remains. The phase gate <code>pool-floor-met</code> refuses a transition while the live count is below the floor.</p>
 
 <h3>4.3 Stop-Checkpoint Enforcement</h3>
 <p>A marker-file gate checks three conditions at the stop checkpoint. Each condition on its own blocks the stop: a non-empty <code>.gm/prd.yml</code>, a dirty worktree, or an unpushed HEAD. The gate reads state from disk. It does not depend on a hook event.</p>
@@ -352,7 +338,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <p>A rule that lives only in the agent's own context is a rule the agent can edit or ignore. The same process that would break the rule also holds the power to change it. The orchestrator moves every gate out of the agent's own context: onto disk, and into the WASM verb surface. Enforcement lives at this fixed external boundary (the ABI, or application binary interface), not as an internal habit the model has to choose to keep.</p>
 
 <h3>6.1 Single-Skill Architecture</h3>
-<p>Gm ships as one skill, <code>gm-skill</code>. It carries one short body of hard rules and holds no per-phase content. It tells the agent to dispatch <code>instruction</code> every turn, and the orchestrator builds the phase-specific instruction on each call. This design replaces an earlier chain of fourteen skills (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, ssh, pages, create-lang-plugin, memorize, textprocessing). The <code>instruction</code> response and the verb-dispatch surface now cover everything those fifteen skills did. This fix removes the friction of keeping fifteen coupled prose files synchronized. One short, fixed body plus a response built from live data replaces all fifteen.</p>
+<p>Gm ships as one skill, <code>gm-skill</code>. It carries one short body of hard rules and holds no per-phase content. It tells the agent to dispatch <code>instruction</code> every turn, and the orchestrator builds the phase-specific instruction on each call. This design replaces an earlier chain of fourteen skills (gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, code-search, ssh, pages, create-lang-plugin, memorize, textprocessing). The <code>instruction</code> response and the verb-dispatch surface now cover everything those fifteen skills did. This fix removes the friction of keeping fifteen coupled prose files synchronized. One short, fixed body plus a response built from live data replaces all fifteen. The tarball publishes the whole <code>skills/</code> tree beside that boot body: <code>gm-orchestrate</code> (the pool loop), <code>gm-hop</code> (one traversal hop), <code>gm-prd</code> (one PRD row) and <code>gm-continue</code> (the terminal handoff) load by name to run a walk, and each reads its state from the same <code>instruction</code> response instead of carrying phase prose of its own.</p>
 
 <h3>6.2 Spool Dispatch and Marker Gates</h3>
 <p>Marker files on disk drive state-machine enforcement. No event drives it. The earlier design used host-process hook callbacks (session-start, prompt-submit, pre-tool-use, stop). Gm retires that design. The gate now runs inside <code>plugkit.wasm</code> itself (<code>rs-plugkit</code>'s <code>gates.rs</code>, plus its <code>hook_pre_tool_use</code> and <code>hook_stop</code> exports). It reads disk state before any tool runs. The WASM host calls the gate. On denial, the gate shows its reason text to the model. The marker files under <code>.gm/</code> hold the discipline's persistent state:</p>
@@ -392,7 +378,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>A check that only runs in memory, and fails once the code touches disk, is a false pass. This is the costliest kind of failure, because it looks like a real pass. Two-stage verification closes this gap between the in-memory state and the file the agent actually saves. <strong>Pre-emit:</strong> the agent imports the target module and runs the proposed logic in memory against real input and error input. It records the expected output, checks that every gate condition holds, and only then writes the file.</p>
 
-<p><strong>Post-emit:</strong> the agent imports the module again, this time from disk, re-runs the same input, and compares the result exactly against the pre-emit result. A known difference gets a fix, then a re-check. An unknown difference forces a backward transition to SPECIFY. This second stage catches faults a test written after the code would miss. Examples include a serialization bug, a mismatch in how imports resolve, or a filesystem race condition.</p>
+<p><strong>Post-emit:</strong> the agent imports the module again, this time from disk, re-runs the same input, and compares the result exactly against the pre-emit result. A known difference gets a fix, then a re-check. An unknown difference sends the walk back to P1 SHAPE. This second stage catches faults a test written after the code would miss. Examples include a serialization bug, a mismatch in how imports resolve, or a filesystem race condition.</p>
 
 <hr>
 
@@ -421,11 +407,31 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <hr>
 
-<h2 id="s10">10. Structural Parallelism and Wave Execution</h2>
+<h2 id="s10">10. Structural Parallelism and Pool Execution</h2>
 
-<p>Running independent work one item at a time wastes available time. Wave discipline fills that gap. The agent batches every pending item whose dependencies are met into one message of concurrent spool dispatches, collects the results, then plans the next wave. It runs until it clears the whole related PRD family, and it never stops mid-wave to ask for direction.</p>
+<p>Running independent work one item at a time wastes available time. The orchestrator fills its pool up to the target instead. PRD rows and principle hops launch as the work they depend on closes, not on a fixed wave plan. The orchestrator keeps the pool filled until the whole related PRD family is cleared, and it does not stop to ask for direction between ticks.</p>
 
-<p>Every kind of work can run in a wave.</p>
+<p>Section 4.2 gives the pool rules. The live graph has 102 states and 187 edges, so the same principle can be reached from several chains. The visited set keeps each chain finite, and the depth limit of 6 bounds its length.</p>
+
+<h3>10.1 Measured Dispatch Latency (a sample, not a benchmark)</h3>
+
+<p>The gm-mcp server logs the start and end of every dispatch. The sample below is the median dispatch time per verb and day, with the number of dispatches in brackets. The log covers 2026-10-09 to 2026-10-11, and 2026-10-11 is a partial day.</p>
+
+<table>
+<caption>Median dispatch time (ms) per verb and day, from the gm-mcp server log</caption>
+<thead><tr><th>Verb</th><th>2026-10-09</th><th>2026-10-10</th><th>2026-10-11</th></tr></thead>
+<tbody>
+<tr><td>phase-status</td><td>1019 (67)</td><td>260 (10)</td><td>100 (3)</td></tr>
+<tr><td>codesearch</td><td>295 (25)</td><td>1019 (10)</td><td>not enough data</td></tr>
+<tr><td>exec_js</td><td>8068 (67)</td><td>13209 (14)</td><td>261 (5)</td></tr>
+<tr><td>git_status</td><td>205 (5)</td><td>7352 (2)</td><td>1173 (7)</td></tr>
+<tr><td>git_finalize</td><td>6033 (10)</td><td>not enough data</td><td>6240 (5)</td></tr>
+</tbody>
+</table>
+
+<p>The medians move in both directions. Verb mix, spool contention and sample size change from day to day, so this table records the state of the system on each day. It does not isolate the effect of any one change. A claim about efficiency needs a fixed workload, measured on each build against the same spool.</p>
+
+<p>Every kind of work can run in a pool slot.</p>
 
 <hr>
 
@@ -434,7 +440,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <p>A problem the agent cannot measure is a problem it cannot reduce. Observability makes every part of the system visible. Every subsystem answers a query with no restart. The agent reads drift straight from structured state, never from a guess based on rendered output.</p>
 
 <h3>11.1 Mandatory Enumeration</h3>
-<p>Every planning pass lists each subsystem that lacks a queryable inspection endpoint, and creates one PRD item per gap. SPECIFY exits only when a pass finds zero gaps.</p>
+<p>Every planning pass lists each subsystem that lacks a queryable inspection endpoint, and creates one PRD item per gap. P1 SHAPE exits only when a pass finds zero gaps.</p>
 
 <h3>11.2 Server-Side</h3>
 <p>Every subsystem exposes a <code>/debug/&lt;subsystem&gt;</code> endpoint. This endpoint emits structured JSONL (JSON Lines) in the shape <code>{subsystem, severity, ts}</code>. A plain <code>console.log</code> call does not count as observability. The agent wraps instrumentation around the dispatch boundary once. It never adds instrumentation to each handler separately.</p>
@@ -479,13 +485,13 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h3>13.2 Four State Planes</h3>
 <p>The system tracks agent state across four separate planes. All four must agree with each other at every phase transition. Each plane has one concrete test that detects an inconsistency:</p>
 <dl>
-  <dt>epistemic:</dt><dd>what the agent knows, what it remains unsure about, and which mutables stay unresolved. <em>Detection test:</em> count the unresolved mutables (epsilon). PROVE exits only when epsilon equals 0. Any named UNKNOWN with no witness is still an open mutable.</dd>
+  <dt>epistemic:</dt><dd>what the agent knows, what it remains unsure about, and which mutables stay unresolved. <em>Detection test:</em> count the unresolved mutables (epsilon). P4 VERIFY exits only when epsilon equals 0. Any named UNKNOWN with no witness is still an open mutable.</dd>
   <dt>operational:</dt><dd>what the agent has done: which artifacts exist on disk, and which code has run. <em>Detection test:</em> run <code>git status</code> (an uncommitted change means this plane is inconsistent). Also check the acceptance-criteria assertions (a failing assertion means this plane is inconsistent). Also check that <code>exec_js</code> returned a real witnessed value, not just a predicted one.</dd>
   <dt>relational:</dt><dd>what the agent has told the user, and which commitments remain open. <em>Detection test:</em> the agent's prior response has an open statement such as "I will" or "next I'll". This statement has no matching completed action in the operational plane, so the gap is a relational inconsistency.</dd>
   <dt>temporal:</dt><dd>what happened in an earlier session, and what the PRD keeps across a context reset. <em>Detection test:</em> <code>.gm/prd.yml</code> exists and still has a pending item while the phase claims COMPLETE: this is a temporal inconsistency. A <code>recall</code> hit that surfaces a prior design decision different from the current plan is a weaker temporal inconsistency, and it needs a fresh witness.</dd>
 </dl>
 
-<p>A phase transition is valid only when all four planes agree with the exit condition for that transition. If the agent advances from PROVE toward EMIT while the epistemic plane still holds an unresolved mutable, the agent's state is inconsistent. This holds true no matter what the operational plane shows.</p>
+<p>A phase transition is valid only when all four planes agree with the exit condition for that transition. If the agent advances from P4 VERIFY toward the next phase while the epistemic plane still holds an unresolved mutable, the agent's state is inconsistent. This holds true no matter what the operational plane shows.</p>
 
 <h3>13.3 Five Refused Collapses</h3>
 <p>The discipline refuses five patterns outright. Each one breaks the discipline while still looking like it follows the discipline:</p>
@@ -504,16 +510,16 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>Four metrics drive every quality-gate decision at a phase transition:</p>
 <dl>
   <dt>DeltaS (state delta):</dt><dd>the number of state-plane inconsistencies a proposed change would introduce. The agent must reject a change with DeltaS greater than 0, or resolve the inconsistency, before it advances the phase.</dd>
-  <dt>lambda (load score):</dt><dd>the consequence weight of a PRD item, a number from 0.0 to 1.0. An item with lambda greater than 0.75 needs a witnessed check before EMIT. The formula <code>verification_budget = lambda x (1 - tier_confidence)</code> sets how much verification remains. Here <em>tier_confidence</em> is the fraction of this item's acceptance criteria already witnessed (0.0 means none witnessed, 1.0 means all witnessed). More prior witnessing shrinks the remaining budget in direct proportion.</dd>
-  <dt>epsilon (epistemic gap):</dt><dd>the count of unresolved mutables in the epistemic plane. PROVE exits only when the final pass reaches epsilon equal to 0.</dd>
-  <dt>Coverage (0.70 or higher):</dt><dd>the share of load-bearing behaviors witnessed by a live <code>exec_js</code> dispatch against the real system, never a standing test file. Coverage of 0.70 or higher across the behaviors an EMIT pass touches is the acceptance criterion. Any behavior a session cannot witness live this way is not load-bearing, by definition.</dd>
+  <dt>lambda (load score):</dt><dd>the consequence weight of a PRD item, a number from 0.0 to 1.0. An item with lambda greater than 0.75 needs a witnessed check before it leaves P4 VERIFY. The formula <code>verification_budget = lambda x (1 - tier_confidence)</code> sets how much verification remains. Here <em>tier_confidence</em> is the fraction of this item's acceptance criteria already witnessed (0.0 means none witnessed, 1.0 means all witnessed). More prior witnessing shrinks the remaining budget in direct proportion.</dd>
+  <dt>epsilon (epistemic gap):</dt><dd>the count of unresolved mutables in the epistemic plane. P4 VERIFY exits only when the final pass reaches epsilon equal to 0.</dd>
+  <dt>Coverage (0.70 or higher):</dt><dd>the share of load-bearing behaviors witnessed by a live <code>exec_js</code> dispatch against the real system, never a standing test file. Coverage of 0.70 or higher across the behaviors a BUILD pass touches is the acceptance criterion. Any behavior a session cannot witness live this way is not load-bearing, by definition.</dd>
 </dl>
 
 <hr>
 
 <h2 id="s15">15. Failure Taxonomy</h2>
 
-<p>This taxonomy lists sixteen failure modes across four categories. Each mode is a specific way an error enters the process, or a specific way the agent loses real information. Each mode maps to a rule elsewhere in this paper that stops it. Every SPECIFY pass checks each PRD item against this full list:</p>
+<p>This taxonomy lists sixteen failure modes across four categories. Each mode is a specific way an error enters the process, or a specific way the agent loses real information. Each mode maps to a rule elsewhere in this paper that stops it. Every P1 SHAPE pass checks each PRD item against this full list:</p>
 
 <h3>Grounding Failures</h3>
 <ol>
@@ -555,13 +561,13 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>A git push is not a local action. A push starts a build, test, and deploy pipeline on a remote system. The CI result is the true measure of correctness. The agent must not report COMPLETE before CI finishes.</p>
 
 <h3>16.2 CI Watch Protocol</h3>
-<p>After each push, the agent sends <code>gh run watch</code> through the spool. The agent polls until the run finishes, then checks the result. A green CI run must exist before the agent can move from VERIFY to COMPLETE. The stop-checkpoint gate blocks session close when the latest push has no recorded green run. The agent must not move past DECIDE while CI is pending or red.</p>
+<p>After each push, the agent sends <code>gh run watch</code> through the spool. The agent polls until the run finishes, then checks the result. A green CI run must exist before the agent can move from P9 CONVERGENCE to COMPLETE. The stop-checkpoint gate blocks session close when the latest push has no recorded green run. The agent must not move past P9 CONVERGENCE while CI is pending or red.</p>
 
 <h3>16.3 Five CI Failure Types</h3>
 <p>The agent sorts each CI failure into one of five types:</p>
 <ol>
   <li><strong>Import error:</strong> the system cannot find a module. Check <code>package.json</code> or <code>Cargo.toml</code>, not the source file.</li>
-  <li><strong>Type error:</strong> a schema does not match. Return to SPECIFY and check the interface again.</li>
+  <li><strong>Type error:</strong> a schema does not match. Return to P1 SHAPE and check the interface again.</li>
   <li><strong>Test failure:</strong> an assertion does not match. Find the root cause first. Do not silence the assertion.</li>
   <li><strong>Lint failure:</strong> the code breaks a style rule. Fix the code. Do not add <code>// eslint-disable</code>.</li>
   <li><strong>Build timeout:</strong> run the build again once. If the timeout repeats, find and fix the cause: split the job, cache the dependencies, raise the CI timeout, or find the hang. A repeated timeout always has a real fix.</li>
@@ -572,7 +578,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s17">17. Maximal Cover</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Maximal Cover <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY]</span></div>
+  <div class="rule-title">Hard Rule: Maximal Cover <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE]</span></div>
   <p>When the scope is larger than the agent can reach in one pass, the agent must build the largest possible plan. The agent must not refuse the task. The agent must not do one small part and leave the rest for later. A plan that covers only part of the task is a refusal in disguise. The agent must plan the widest, deepest reading of the request that this session can do. A smaller plan is the exception, and the agent must give a reason for it.</p>
   <p>Required action: list every bounded part of the request that this session can do. Write this list into the PRD, with each part's dependencies stated. Do all of the listed work. Build cost, CI run time, work across repositories, and the size of a breaking change are reasons to do the full plan. They are never reasons to cut it down.</p>
   <p>The agent may find extra work that fits the spirit of the original request. The agent may add this work to the PRD and do it without asking first. Every piece of work is possible to finish. When a task looks unreachable, the agent must find a way to reach it. The agent runs the failing tool directly, or starts a new copy of the service. The agent opens the change in another repository, or writes the script that gets the needed credential. The agent must not name a task unreachable and stop. Only work truly outside the original request goes into a later plan, and even that work gets its own PRD row. The agent must never simply stop.</p>
@@ -587,10 +593,10 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s18">18. Bounded Autonomy</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: User Request = Authorization <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY, PROVE]</span></div>
+  <div class="rule-title">Hard Rule: User Request = Authorization <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE, P4 VERIFY]</span></div>
   <p>The user's first message asking for X is approval to do X. The PRD records this approval. The PRD is not a second approval gate. The user already said to do X. The agent must not then ask whether to proceed, whether to do X, or which form of X to use. Each of these questions is a stall, not caution. Each one makes the user wait.</p>
   <p>The agent may state a tradeoff inside the same chain, in one sentence -- for example, "using shape A because Y". This lets the user interrupt if needed. The agent must not use this as a reason to stop and wait. Work across many repositories, build cost, CI run time, and binary size are never reasons to ask the user to check again.</p>
-  <p>A written PRD is the user's approval. Once the PRD exists, the PROVE phase owns the work through to COMPLETE. The agent resolves every doubt during the work by a witnessed check, by recall, or by reading the PRD again. The agent must not ask the user to resolve a doubt.</p>
+  <p>A written PRD is the user's approval. Once the PRD exists, the walk owns the work through to COMPLETE. The agent resolves every doubt during the work by a witnessed check, by recall, or by reading the PRD again. The agent must not ask the user to resolve a doubt.</p>
   <p>The agent asks the user only as a last resort. This applies when the action is destructive, cannot be undone, and the PRD does not cover it. It also applies when the user's intent cannot be found in the PRD, memory, the code, or the web. The channel for this is <code>pause</code>, which renames <code>prd.yml</code> to <code>prd.paused.yml</code> and puts the question in the header. Asking inside the conversation is a last resort below this last resort. When a question starts to form, the agent must first widen its search and send a <code>WebSearch</code>/<code>WebFetch</code> pack. The agent asks the user only when both of these searches return nothing. Most questions an agent wants to ask are really an attempt to narrow scope. The answer the user would give often matches what one web search would find.</p>
   <p><code>pause</code> and the stop checkpoint: when the agent sends <code>pause</code>, the system renames the PRD to <code>prd.paused.yml</code>. The stop gate then reads <code>.gm/prd.yml</code>, finds no active PRD, and lets the session close as normal. At the start of the next session, <code>skill-bootstrap.js</code> finds <code>prd.paused.yml</code> with no active <code>prd.yml</code>. It renames the file back, and the agent resumes from where it paused. The rename is a single file operation that finishes before stop runs, so there is no timing conflict.</p>
 </div>
@@ -634,7 +640,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s21">21. ORIENT: Pre-Planning Recall Pack</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: ORIENT <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY]</span></div>
+  <div class="rule-title">Hard Rule: ORIENT <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE]</span></div>
   <p>At the start of every planning session, the agent sends 3 to 5 <code>recall</code> calls against the nouns in the request. The agent also sends 3 to 5 <code>codesearch</code> calls against the same nouns, all in one message. A hit gives a <code>weak_prior</code>. A miss confirms the unknown is genuinely new.</p>
   <p>The agent must send this pack of calls together in one message, never one at a time. An agent that skips ORIENT still pays the same search cost later in the turn. That agent also risks giving an answer that disagrees with a fact an earlier session already found.</p>
   <p>ORIENT costs little compared to the cost of finding the same fact twice, or of giving an answer that disagrees with an earlier witnessed fact. Its true cost equals the cost of skipping it. The agent will run the same searches anyway, only later, after it has already named unknowns that may already be stale.</p>
@@ -649,7 +655,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>Small rough edges build up over time. Each edge left unfixed is a small, lasting flaw. Together, these flaws make the work look machine-made, even when each line of code is correct on its own. The Fix on Sight rule stops a known flaw from surviving past the turn that finds it.</p>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Fix on Sight <span style="font-weight:400;font-size:11px;opacity:0.6;">[P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>The agent fixes every problem it finds during the work, in this same turn, at its root cause. A defer marker, a swallowed error, hidden output, a skipped test, and a note to "fix this next session" are all the same failure. Each one carries a known bad signal past the moment the agent found it.</p>
   <p>The correct sequence is: find the problem, find its cause, fix the root cause, check the fix, then continue. When the fix reveals a new unknown, the agent returns to planning. When the fix is out of scope and cannot be undone, the agent adds it to the PRD as a residual before moving on. A sentence in the response is not a substitute for a PRD row.</p>
 </div>
@@ -667,7 +673,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <p>The agent treats the architecture as changeable. The architecture is not a fixed base the agent must work around. It is a shape the agent may reshape as needed. Every architecture change that clearly improves the design becomes a PRD row right away, not a deferred idea. The same applies to a change that clearly lowers the future cost of maintaining the code. The agent is encouraged to replace custom code with a built-in feature or a well-maintained, widely-used library. The agent may only do this when the change leaves less code for the team to maintain. Adding a large new dependency to remove a few lines of code raises the total maintenance cost, and the rule forbids this case. The agent may make the swap only when both the line count and the maintenance burden go down.</p>
 
 <h3>22.3 The Jank Sweep</h3>
-<p>At SPECIFY, the agent lists in the PRD every possible item of unfinished or rough work, for every part of the system the request touches. This means every part still immature, every unfinished edge, and every path only half built. This spans the graphic interface, the user experience, and the visual interface. It also spans the state the client holds, the state the server holds, the boundary between the two, and any other part the request reaches. The word <em>jank</em> names the target: the sweep looks for work that is rough or unpolished or nearly done, not only for outright bugs. Each item becomes its own PRD row, including a row for performance measurement and a row for security review wherever those checks apply. The sweep covers only the part of the system the request touches, not the whole repository without limit. Inside that boundary, the sweep must be complete. Every problem the agent finds along the way gets its own debug-and-fix plan, added to the PRD in the same turn. Every small improvement the agent notices gets added too.</p>
+<p>At P1 SHAPE, the agent lists in the PRD every possible item of unfinished or rough work, for every part of the system the request touches. This means every part still immature, every unfinished edge, and every path only half built. This spans the graphic interface, the user experience, and the visual interface. It also spans the state the client holds, the state the server holds, the boundary between the two, and any other part the request reaches. The word <em>jank</em> names the target: the sweep looks for work that is rough or unpolished or nearly done, not only for outright bugs. Each item becomes its own PRD row, including a row for performance measurement and a row for security review wherever those checks apply. The sweep covers only the part of the system the request touches, not the whole repository without limit. Inside that boundary, the sweep must be complete. Every problem the agent finds along the way gets its own debug-and-fix plan, added to the PRD in the same turn. Every small improvement the agent notices gets added too.</p>
 
 <h3>22.4 The Tell-Tale Sweep</h3>
 <p>The agent may find one sign of machine-written design along the way. Examples: a generic decoration, an over-explained comment, a generic placeholder name, or any other clearly machine-authored shape. This one finding starts a sweep of the whole codebase. A single instance is never a one-off local fix. It is proof that the same pattern likely exists elsewhere. The agent adds this sweep to the PRD as its own rows. One row scans the codebase. One row covers each group of findings. One row fixes and checks the fixes across every file the sweep can reach. One sign left unfixed anywhere shows that the whole codebase looks machine-made, so the sweep must not stop at the first instance it finds.</p>
@@ -677,7 +683,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s24">24. Nothing Fake</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Nothing Fake <span style="font-weight:400;font-size:11px;opacity:0.6;">[PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Nothing Fake <span style="font-weight:400;font-size:11px;opacity:0.6;">[P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>What the agent ships must run against real services, real data, and real binary files. The agent must not put a stub, a mock, or a placeholder return value into source code the user will run. The same ban covers a path that only works with test fixtures, a "TODO: implement" note, a hardcoded sample response, and a demo-mode fallback. Code like this passes a check now, but reaches production and misrepresents what actually works.</p>
   <p>Scaffolding and thin wrapper code are allowed when they call through to real behavior. Examples: an empty file placed before the agent writes its body, or a thin adapter that wraps a real upstream API. A build target that compiles, but is not yet wired to anything and calls only itself, is another example. The test is: if the agent runs this code, does it do the thing it claims to do? When the answer is no, the code is a stub.</p>
   <p>Before the agent writes a wrapper or adapter, the agent must check whether an existing library or tool already does the same job. Keeping a local copy of something an upstream package already solves is its own failure. The local copy drifts out of date and collects bugs the upstream package has already fixed.</p>
@@ -691,7 +697,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s25">25. Web-Search Before Pause</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Web-Search Before Pause <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY, PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Web-Search Before Pause <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE, P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>The agent may need to send <code>pause</code>, or ask a question in the conversation, whose answer likely exists on the public web. Examples: a missing artifact, a prebuilt binary, or the status of a library. Other examples: a build recipe, a version compatibility fact, an upstream issue, or "does X exist for Y". Before doing either, the agent must first run <code>WebSearch</code> and at least one targeted <code>WebFetch</code>. The agent may pause or ask only after the web search returns nothing useful, or returns options the agent has already checked and ruled out.</p>
   <p>Pausing on a question the web could answer is a stall disguised as caution. Fix on sight: return to planning, search the web, then resume the task.</p>
   <p>Some questions genuinely need the user: a private credential, or a choice between options the agent has already presented. Another example is approval for a destructive action that cannot be undone.</p>
@@ -705,12 +711,12 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: No Test Files, Ever <span style="font-weight:400;font-size:11px;opacity:0.6;">[VERIFY, COMPLETE]</span></div>
-  <p>The project has no standing test file of any kind, not one file and not many. The agent must not add a <code>*.test.*</code> file, a <code>*.spec.*</code> file, a <code>test/</code> or <code>__tests__/</code> directory, or a jest/mocha/vitest/pytest/unittest import, ever, for any reason. Verification runs a live <code>exec_js</code> dispatch against real data and the real system. This dispatch runs in the same turn as the change it checks, and it reads the real output. A failed check sends the task back to PROVE.</p>
+  <p>The project has no standing test file of any kind, not one file and not many. The agent must not add a <code>*.test.*</code> file, a <code>*.spec.*</code> file, a <code>test/</code> or <code>__tests__/</code> directory, or a jest/mocha/vitest/pytest/unittest import, ever, for any reason. Verification runs a live <code>exec_js</code> dispatch against real data and the real system. This dispatch runs in the same turn as the change it checks, and it reads the real output. A failed check sends the task back to P4 VERIFY.</p>
   <p>A test file of any kind, single or many, standing in for that live check is the same rule violation. It reports a pass the real path never produced. When a behavior needs a check inside the page, the agent registers it in <code>window.__debug</code> and asserts it from a live <code>exec_js</code> dispatch, not from a file on disk.</p>
 </div>
 
 <h3>26.1 A Budget on the Witness Pass, Not a File</h3>
-<p>The verification effort for an EMIT pass is a budget, not a target to fill. Each witness must check one behavior the system depends on. A repeated assertion inside one dispatch is dead weight, and the agent must remove it. Each subsystem starts with its own witness pass, but the normal outcome is to combine passes into one dispatch. An example: checking <code>profiles+observability+auth+context</code> together against one running system. Combining passes keeps the total witness effort growing at the same rate as the number of subsystems, not faster.</p>
+<p>The verification effort for a BUILD pass is a budget, not a target to fill. Each witness must check one behavior the system depends on. A repeated assertion inside one dispatch is dead weight, and the agent must remove it. Each subsystem starts with its own witness pass, but the normal outcome is to combine passes into one dispatch. An example: checking <code>profiles+observability+auth+context</code> together against one running system. Combining passes keeps the total witness effort growing at the same rate as the number of subsystems, not faster.</p>
 
 <h3>26.2 Use Overlap to Remove Passes</h3>
 <p>When witnessing subsystem A also exercises subsystem B as a side effect, subsystem B does not need its own separate witness. Real examples: the agent-machine tool-loop witness also exercises the bash dispatch code, and the dashboard witness checks the API surface and the tool registration together. A gateway witness that runs one platform through a stub-shaped loop covers all 18 adapters at once. Overlap is a signal to remove the now-redundant pass, not to add another assertion.</p>
@@ -752,7 +758,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s30">30. The Spool Dispatch Surface</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY, PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Every Dispatch Through The Spool <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE, P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>Code execution and every utility verb write a file to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.&lt;ext&gt;</code>. The language verbs are: <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, and <code>java</code>. The host verbs are: <code>fs_read</code>, <code>fs_write</code>, <code>fs_stat</code>, <code>fs_readdir</code>, <code>kv_get</code>, <code>kv_put</code>, <code>kv_query</code>, <code>fetch</code>, <code>exec_js</code>, <code>env_get</code>, <code>recall</code>, <code>codesearch</code>, <code>memorize</code>, and <code>health</code>. The git inspect verbs are: <code>git_status</code>, <code>branch_status</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, and <code>git_branch</code>. The git mutate verbs are: <code>git_add</code>, <code>git_commit</code>, <code>git_finalize</code>, <code>git_push</code> (stage, commit, and push), <code>git_checkout</code>, <code>git_fetch</code>, <code>git_rm</code>, <code>git_revert</code>, and <code>git_reset</code>. The orchestrator verbs are: <code>instruction</code>, <code>transition</code>, <code>phase-status</code>, <code>prd-add</code>/<code>prd-resolve</code>/<code>prd-list</code>, <code>mutable-add</code>/<code>mutable-resolve</code>/<code>mutable-list</code>, <code>memorize-fire</code>, <code>residual-scan</code>, and <code>auto-recall</code>. Output lands at <code>out/&lt;verb&gt;-&lt;N&gt;.json</code> for a nested verb, and at <code>out/&lt;N&gt;.json</code> for a root verb.</p>
   <p>Git is a first-class spool surface. It is never a shell command. The dispatch gate denies any <code>bash</code>/<code>sh</code>/<code>powershell</code> body whose command is mostly git (<code>deviation.bash-git-bypass</code>), and the denial names the matching git verb. The Bash gate denies inline tool arguments, JSON-form dispatch, and any attempt to bypass the spool, for example <code>Bash(node script.js)</code> or <code>Bash(python -c ...)</code>. Only <code>gh</code> runs directly through Bash.</p>
 </div>
@@ -775,15 +781,15 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s31">31. The Mutables File as Co-Equal Hook Gate</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Mutables File Co-Equal With PRD <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY, PROVE, EMIT]</span></div>
-  <p><code>.gm/mutables.yml</code> lives alongside <code>.gm/prd.yml</code>. Every unknown found during SPECIFY becomes a row with <code>status: unknown</code>. The dispatcher blocks Write, Edit, NotebookEdit, <code>git commit</code>, <code>git push</code>, and the stop checkpoint while any row still has <code>status: unknown</code>. A row changes to <code>witnessed</code> only once <code>witness_evidence</code> holds real proof: a file and line number, a codesearch hit, or an exec output snippet.</p>
+  <div class="rule-title">Hard Rule: Mutables File Co-Equal With PRD <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE, P4 VERIFY, P3 BUILD]</span></div>
+  <p><code>.gm/mutables.yml</code> lives alongside <code>.gm/prd.yml</code>. Every unknown found during P1 SHAPE becomes a row with <code>status: unknown</code>. The dispatcher blocks Write, Edit, NotebookEdit, <code>git commit</code>, <code>git push</code>, and the stop checkpoint while any row still has <code>status: unknown</code>. A row changes to <code>witnessed</code> only once <code>witness_evidence</code> holds real proof: a file and line number, a codesearch hit, or an exec output snippet.</p>
 </div>
 
 <p>Section 3 tracked each named mutable only inside the context window. A fact "tracked" purely in reasoning disappears on compaction, on restart, or when a subagent spawns. This in-memory tracking gives no guarantee that the fact stays around. The mutables file moves this tracking onto disk. It stores an on-disk row that the spool-dispatch gate reads on its own, apart from agent memory. This row is the durable form of the UNKNOWN or WITNESSED state.</p>
 
 <p>The split between <code>mutables.yml</code> and <code>prd.yml</code> separates what to do from what must be true. A PRD item can finish its work while a mutable it references still holds UNKNOWN status. Item completion and invariant checking are separate conditions, and the dispatcher checks each one on its own.</p>
 
-<p>The witness-evidence rule blocks a state change made only through narration. Evidence must take one of three forms: a file and line number, a codesearch hit, or an exec output snippet. A status change with no evidence gets rejected on read. The row stays UNKNOWN, and the EMIT gate stays closed. Before this rule, the agent could talk past this check. A file structurally refuses to let that happen now.</p>
+<p>The witness-evidence rule blocks a state change made only through narration. Evidence must take one of three forms: a file and line number, a codesearch hit, or an exec output snippet. A status change with no evidence gets rejected on read. The row stays UNKNOWN, and the BUILD gate stays closed. Before this rule, the agent could talk past this check. A file structurally refuses to let that happen now.</p>
 
 <hr>
 
@@ -800,7 +806,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s33">33. Synchronous-Under-Wasm Execution Contract</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Every Exec Carries A Real Timeout <span style="font-weight:400;font-size:11px;opacity:0.6;">[PROVE - EMIT]</span></div>
+  <div class="rule-title">Hard Rule: Every Exec Carries A Real Timeout <span style="font-weight:400;font-size:11px;opacity:0.6;">[P4 VERIFY - P3 BUILD]</span></div>
   <p><code>exec_js</code> runs synchronously under the wasm host. The orchestrator runs the user subprocess through <code>child_process.spawnSync</code> and blocks the watcher for the whole duration. Every dispatch must carry a positive <code>timeoutMs</code> value; a missing or zero value is a hard error. On a timeout, the system keeps any partial streamed output and marks the response sidecar with <code>timedOut: true</code>.</p>
 </div>
 
@@ -815,7 +821,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s34">34. Hook Denials Throw, Never Mutate</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Throw on Denial <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY, PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Throw on Denial <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE, P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>A hook that blocks a tool call <em>throws</em> an error, and that error carries a direct instruction as its text. The hook does not rewrite the call's arguments into a form that fails on its own. It is not a shell command that exits with code 1, and not a Node one-liner that writes to stderr and calls process.exit. The thrown error is the whole denial surface.</p>
 </div>
 
@@ -828,7 +834,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s35">35. CI Is the Build</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[PROVE, EMIT, DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: Push, Watch, Fix On Red <span style="font-weight:400;font-size:11px;opacity:0.6;">[P4 VERIFY, P3 BUILD, P9 CONVERGENCE]</span></div>
   <p>For the Rust crates in this org (<code>rs-plugkit</code>, <code>rs-search</code>, <code>rs-codeinsight</code>) and for the gm publish chain, <code>git push</code> triggers the build pipeline. <code>cargo build</code> and <code>cargo test</code> never run locally. A toolchain mismatch, an rustc version difference, or a missing system dependency never blocks a push. Push first, then watch CI through <code>gh run watch</code> dispatched over the spool, and fix any red result.</p>
 </div>
 
@@ -856,7 +862,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s37">37. Meaning Through the Agent, Mechanics Through Code</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: Semantic Work Is the Agent's Own Judgment <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY - PROVE - EMIT]</span></div>
+  <div class="rule-title">Hard Rule: Semantic Work Is the Agent's Own Judgment <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE - P4 VERIFY - P3 BUILD]</span></div>
   <p>A task whose correctness depends on real understanding is the agent's own judgment, made inline, never a separate model call. This covers tasks such as summarizing, classifying, and extracting intent. It also covers rewriting, translating, removing semantic duplicates, scoring, labeling, and deciding whether two pieces of text mean the same thing. plugkit is the harness, and the agent is itself the model plugkit dispatches. So the agent makes each semantic decision on the spot, from the situation in front of it. When the work covers many independent items, the agent fans them out as N parallel spool dispatches in one message, one item per dispatch.</p>
 </div>
 
@@ -871,7 +877,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s38">38. The Continuation Invariant: A Toolless Turn Is A Stop</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: While The Chain Is In-Flight, Every Turn Ends In A Tool Call <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY - PROVE - EMIT - DECIDE]</span></div>
+  <div class="rule-title">Hard Rule: While The Chain Is In-Flight, Every Turn Ends In A Tool Call <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE - P4 VERIFY - P3 BUILD - P9 CONVERGENCE]</span></div>
   <p>Every programming agent reads only tool calls and their outputs. An assistant message that ends in prose with no tool call <em>is</em> the end of the turn, and the harness stops there. So while the chain is still running (phase not equal to COMPLETE, or prd_pending greater than 0), the agent never ends a turn in prose. It never writes a summary or a recap; a summary is itself a stop. The only event that allows a prose-only turn is plugkit returning phase=COMPLETE and prd_pending=0. Before any apparent stop, the agent dispatches <code>phase-status</code> and checks the result again. A non-terminal phase means the urge to stop was a mistake, and the fix is to dispatch <code>instruction</code> and keep going.</p>
 </div>
 
@@ -889,7 +895,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 <h2 id="s39">39. Spool Dispatch Replaces Platform Hooks</h2>
 
 <div class="hard-rule">
-  <div class="rule-title">Hard Rule: The Gate Is The Spool, Not A Host Hook <span style="font-weight:400;font-size:11px;opacity:0.6;">[SPECIFY - PROVE]</span></div>
+  <div class="rule-title">Hard Rule: The Gate Is The Spool, Not A Host Hook <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE - P4 VERIFY]</span></div>
   <p>Marker files in <code>.gm/</code> track orchestration state, and the dispatch layer gates on those files, never on an agent-host hook event. No skill prose, gate denial, or instruction names a host-specific invocation form, such as a plugin-namespaced skill or a host-specific subagent type. The action that satisfies a gate is always a portable spool dispatch: write <code>.gm/exec-spool/in/instruction/&lt;N&gt;.txt</code>, then read the response.</p>
 </div>
 
@@ -946,7 +952,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p><strong>L2 Bounds.</strong> Only one writer may act on a given surface at a time. Each managed resource has a hard limit; when the agent hits that limit, it must place new work in a wait queue. A state change made outside an approved surface cannot be reconciled with the true state, so the discipline forbids it.</p>
 
-<p><strong>L3 Direction.</strong> Each accepted write must move the task closer to done, never further away; a write that does not make progress is rejected. Each accepted write gets an audit record: an id, a hash, and a timestamp. The system classifies the recent run of writes as one of four types: convergent, flat, divergent, or chaotic. Work must stop when the run is not convergent. The DECIDE phase checks four facts together as the sign of real convergence. The worktree is clean, and the remote branch has the latest push. The PRD list is empty, and every mutable is witnessed.</p>
+<p><strong>L3 Direction.</strong> Each accepted write must move the task closer to done, never further away; a write that does not make progress is rejected. Each accepted write gets an audit record: an id, a hash, and a timestamp. The system classifies the recent run of writes as one of four types: convergent, flat, divergent, or chaotic. Work must stop when the run is not convergent. P9 CONVERGENCE checks four facts together as the sign of real convergence. The worktree is clean, and the remote branch has the latest push. The PRD list is empty, and every mutable is witnessed.</p>
 
 <p><strong>Closure anti-shape.</strong> This is the most common way an agent fails the L3 check. The agent's own response text is never a valid place to make a change. When the agent writes an action inside its response instead of sending a real dispatch for it, the action fails L3: it gets no id, hash, or timestamp; the recall index never sees it; the trajectory classifier never counts it; and the gate does not let the agent advance. The system detects this failure by its structure, not by checking a list of known bad phrases.</p>
 
@@ -954,7 +960,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p><strong>Summary.</strong> Measuring cost first stops the agent from making an unproven optimization claim. Fixed bounds stop one runaway surface from breaking every other surface. Checking direction stops the agent from doing work that does not move the task forward. The agent can tune each of the three layers on its own, apart from the other two.</p>
 
-<blockquote>Each phase applies the filter at a different point of commitment. SPECIFY runs the L1 and L2 checks cheaply, using ORIENT and the PRD dependency graph. PROVE runs the L3 check over every witnessed change it writes to the central store. EMIT runs the L3 check as an audit of the files on disk. DECIDE runs the trajectory classifier over the four facts named above. The filter drives the work; the phases only schedule when each check runs.</blockquote>
+<blockquote>Each phase applies the filter at a different point of commitment. P1 SHAPE runs the L1 and L2 checks cheaply, using ORIENT and the PRD dependency graph. P4 VERIFY runs the L3 check over every witnessed change it writes to the central store. P3 BUILD runs the L3 check as an audit of the files on disk. P9 CONVERGENCE runs the trajectory classifier over the four facts named above. The filter drives the work; the phases only schedule when each check runs.</blockquote>
 
 <hr>
 
@@ -1043,7 +1049,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <div class="cross-footer">
   <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit, rs-search, rs-codeinsight</span></a>
-  <a href="./skills.html"><strong>skills</strong><span>one skill, every verb</span></a>
+  <a href="./skills.html"><strong>skills</strong><span>one boot skill, every verb</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>the SQLite model</span></a>
 </div>
 
