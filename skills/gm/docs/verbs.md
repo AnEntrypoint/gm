@@ -387,7 +387,7 @@ deletes the older ones. A reply that wrote a spill names this rule in `spill_ret
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Observed (SESSION_ID spoint-orch-b186-r41): a paths-scoped `git_commit` committed only the named file, excluded another lane's staged deletion, and reported the excluded entries. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
-`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count` -- observed refusing a 1359-path sweep of this repo (SESSION_ID orch-main-r67) -- because a blanket commit carries another writer's in-flight edits with it. `git_commit` with no `message` replies `error: message required` and commits nothing.
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count` -- observed refusing a 1359-path sweep of this repo (SESSION_ID orch-main-r67) -- because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while any sibling holds a dirty path, which is the normal state, so the refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main -- the gap that makes a HEAD-only check call a file absent, a pin stale and `dangling_reference` trip. Publish with the Git API route instead (blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push was refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
@@ -407,8 +407,20 @@ refusal names every blocking path in `blocking_paths` plus `next_dispatch`: `git
 to accept the worktree version, or `git_stash {paths:[...]}` then `git_merge_abort` then
 `git_stash_pop`. `{"preserve":false}` shelves nothing and reports instead of working around.
 
-The four `git_worktree_*` verbs are the sanctioned way to work in an isolated worktree -- never raw
-`git worktree` through `bash`:
+**Main only: work in the shared work tree; collisions are recovered, not avoided.** No lane opens a
+worktree, side branch or scratch checkout to obtain a clean HEAD: every extra tree ends in a
+consolidation run, and a publish from one merges back into the tree every other lane is writing --
+in a shared work tree that merge is exactly where lanes sweep each other's uncommitted edits.
+Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row
+or file, reapplies the change on current state and retries. A READ question is answered without a
+second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main`; a whole tree
+with `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards.
+
+The `git_worktree_*` verbs below are therefore a LAST RESORT with exactly one legitimate use: a
+read-only reproduction of another commit -- bisecting a regression by running the red-capable
+command at a candidate sha -- which is removed again with `git_worktree_remove`. Never edit, commit
+or publish from one, and never reach for one to get a clean HEAD. Where that use applies, these four
+are the sanctioned way to do it -- never raw `git worktree` through `bash`:
 
 ```
 {"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}   git_worktree_add: -b <ref> <path>
