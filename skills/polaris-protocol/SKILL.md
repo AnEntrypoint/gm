@@ -64,7 +64,7 @@ CLOSED --next atom------------------------------------> COMPILED
 
 - **Compile first. Execute one active atom. Verify before unlock. Claim only what is supported.** (Goal Compiler)
 - **shoot + [your problem]** -- the Fifth-Dimension Engine interface.
-- **deltaS = 1 - cos(I, G)** -- drift between current state (I) and goal (G). Without a real embedding call, deltaS is a qualitative label ("deltaS looks high here"), never a computed decimal -- unless a real `similarity` verb is available (see WFGY-Method).
+- **deltaS = 1 - cos(I, G)** -- drift between current state (I) and goal (G). Without a real embedding call, deltaS is a qualitative label ("deltaS looks high here"), never a computed decimal (see WFGY-Method).
 
 "Compile first. Then shoot." is the spine of the whole protocol.
 
