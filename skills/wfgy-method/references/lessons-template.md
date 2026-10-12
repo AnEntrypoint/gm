@@ -30,3 +30,9 @@ config option, never infer the name from sibling examples alone
 ```
 
 Newest entries at the top. Keep each entry short -- a few lines, not a full incident report. The value is in the "generalizes to" line being genuinely reusable, not in exhaustive detail about the one instance.
+
+## Recording durable lessons (the self-learning surface)
+
+The moment a bounded-retry cycle (`references/bbcr-checkpoint-retry.md`) resolves, whether it succeeded or had to surface to the user, or the moment you catch a concrete, non-obvious mistake anywhere in the task, append an entry to `<project-root>/.wfgy/lessons.md` (create the file and its parent directory if they don't exist yet) before finishing the turn. Use the entry shape above.
+
+Read `.wfgy/lessons.md` at the start of a new task in this project, if it exists, before applying the disciplines in `SKILL.md` -- a lesson already recorded here is exactly the kind of drift this skill exists to catch earlier next time.
