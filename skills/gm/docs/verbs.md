@@ -21,11 +21,11 @@ Two facts that stop most guessing:
 
 ## Dispatching
 
-Through the MCP tool `gm`:
+Through the MCP tool `gm_codemode`, the only tool the server registers. Each verb is a function on `gm` inside the code body:
 
 ```
-{ "verb": "grep", "session_id": "<your session id>", "cwd": "C:/dev/proj",
-  "body": { "pattern": "kLinkQuantum", "output_mode": "content" } }
+gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\", mode: \"literal\", path: \"src\"}})",
+  "cwd": "C:/dev/proj" })
 ```
 
 Plain-text-body verbs take `raw_body` instead of `body` (see "Execution" below).
