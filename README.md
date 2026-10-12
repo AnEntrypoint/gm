@@ -59,7 +59,7 @@ Install the `/gm` skill on Windows PowerShell:
 irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main install
 ```
 
-Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). Each script downloads the `gm-skill-<version>.tar.gz` asset. Each script checks the download against a published sha256 sidecar file. Each script then copies `skills/gm` into `~/.claude/skills/gm/`.
+Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). Each script downloads the `gm-skill-<version>.tar.gz` asset. Each script checks the download against a published sha256 sidecar file. Each script then installs `skills/gm` into `~/.claude/skills/gm/`. Run from a gm checkout (or with `GM_SKILL_SOURCE_DIR` set) that install is a link — a directory junction on Windows, a symlink elsewhere — so `~/.claude/skills/gm/SKILL.md` and `<checkout>/skills/gm/SKILL.md` are one file and a source edit is served on the next dispatch. With no local source it copies, and says so loudly; a copy is recorded in `~/.claude/skills/.gm-skill-install-modes`.
 
 Inside a project that uses gm, the same two scripts run again without the `install` argument, for example `curl -fsSL .../install.sh | sh -s -- spool`. In this mode, each script resolves, checks, and runs the `agentplug-runner` binary (the native spool host) from `AnEntrypoint/agentplug-bin` releases. This step replaces the old `bun x gm-plugkit@latest spool` command. gm no longer uses a separate JS (JavaScript, a source-file language this repository tracks) launcher.
 
