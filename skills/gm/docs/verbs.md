@@ -552,6 +552,16 @@ A uid is the number a snapshot printed for an element. It stays with that elemen
 
 These drive the phase machine. Dispatched through the same spool.
 
+**The graph is a set of independent nodes, not nine stages.** `gm-config/fsm/graph.json` declares
+the nodes and the edges between them, and `rs-plugkit` compiles the same file as its twin. A node
+is a principle, a tension, a gate or a terminal, and each serves its own prose, keyed by that
+node's `prose_key`. There is no phase group: nothing in the graph gates entry to a set of nodes.
+A node is entered from any neighbour that has an edge to it and left along any edge out of it, so
+a walk is a graph walk with many distinct paths. The runtime word `phase` is the node key you
+currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes, not the two
+ends of a pipeline. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
+against; its `provenance` field records the concern a book came from and groups nothing.
+
 `instruction`, `transition`, `transition-revert`, `phase-status`, `residual-scan`, `claim-audit`,
 `comment-audit`, `submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
 `mutable-resolve`, `mutable-list`, `mutable-defer`, `task-spawn`, `task-list`, `task-stop`,
