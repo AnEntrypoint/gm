@@ -92,6 +92,7 @@ When a submodule commit changes, the same delivery shall update the parent pin t
 - When the agent rebuilds `rs-plugkit`, the agent shall pass `--features slim`, the build command that `rs-plugkit/AGENTS.md` owns. Falsified by: a built `rs-plugkit` wasm whose size is 100 MB or more.
 - `scripts/sync-lean-graph.mjs emit` copies gm-config's authored graph and prose into an outdir and never into `rs-plugkit`: `rs-plugkit/crates/plugkit-core/src/orchestrator/fsm.rs` holds the lean graph as `include_str!("lean_graph.json")` and validates it into the enforced gates, so replacing it needs its own reviewed rebuild. Falsified by: an `emit` that writes any path under `rs-plugkit/`.
 - The Windows job object `agentplug/crates/agentplug-host/src/process_tree.rs` assigns to an exec child carries no `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`: `terminate_containment` (timeout expiry, `task-stop`) is the only path that ends the tree (`docs/verified-incidents.md`, Verified 2026-10-11). Falsified by: a codesearch literal `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` in that file returning a hit.
+- Credentials and secrets shall never enter a commit. Before each commit the agent shall run `node scripts/check-staged-secrets.mjs` in the repository being committed and shall commit only when it prints `RESULT: PASS`. The scan covers the staged diff only; rewriting already-pushed history is out of scope and needs the owner's approval. Falsified by: a commit whose staged diff contains a line the script reports, or a commit whose receipt names no script run.
 
 ## Triage scripts
 
