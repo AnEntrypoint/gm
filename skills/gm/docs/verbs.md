@@ -411,13 +411,26 @@ The four `git_worktree_*` verbs are the sanctioned way to work in an isolated wo
 `git worktree` through `bash`:
 
 ```
-{"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}   git_worktree_add: -b <ref> <path>
-{"path":"C:/dev/proj-sweep"}                                        git_worktree_add: <path> <HEAD>
-{"path":"C:/dev/proj-sweep"}                                        git_worktree_remove (force:true to drop a dirty one)
-{}                                                                  git_worktree_list / git_worktree_prune
+{"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}                 git_worktree_add: -b <ref> <path> <HEAD>
+{"path":"/tmp/sweep","ref":"sweep/comments","rev":"5ba0bd4a","create":true}       git_worktree_add: -b <ref> <path> <rev>
+{"path":"/tmp/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
+{"path":"/tmp/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
+{"path":"C:/dev/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
+{"path":"C:/dev/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
+{}                                                                                git_worktree_list / git_worktree_prune
 ```
 
-`git_worktree_add` answers `{root, path, branch, created}`; `git_worktree_list` answers
+`rev` (also `commit` or `start_point`) names the commit to land on, and `ref` names a branch, so a
+caller that wants a specific commit sends `rev`. With `create:true` and both fields, `rev` is the
+start point of the new branch named by `ref`. With `create:true` and `ref` alone, a `ref` that
+resolves to a commit and names no existing branch DETACHES at that commit instead of opening a
+branch at HEAD: `git worktree add -b <40-hex> <path>` reads the hex as a branch name, warns that the
+refname is ambiguous, and still creates it at HEAD. `create:true` with a `ref` naming an existing
+branch is refused rather than re-pointed. After every add the verb reads the new worktree's `HEAD`
+and, when it is not the requested commit, refuses and removes the worktree again -- a worktree at
+the wrong commit is never reported as `ok:true`.
+
+`git_worktree_add` answers `{root, path, branch, detached, rev, created}`; `git_worktree_list` answers
 `{count, worktrees:[{path, head, branch, bare, detached, locked, prunable}]}` parsed from
 `git worktree list --porcelain`. All four refuse unknown fields, a `path` containing `..`, and a
 path under `.gm/` or `.agentplug*`; an absolute path outside the repository root needs
