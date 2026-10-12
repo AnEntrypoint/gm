@@ -195,7 +195,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s1">1. Introduction</h2>
 
-<p>LLM coding agents are capable but not reliable at every step. Gm runs as one skill (<code>gm-skill</code>, npm-published, WASM-backed, where WASM is WebAssembly, the binary format the tool compiles to) across every Claude-style skill host. This use shows three failure types. Each type injects a different kind of error between the request and the finished work:</p>
+<p>LLM coding agents are capable but not reliable at every step. Gm runs as one skill (<code>gm-skill</code>, WASM-backed, where WASM is WebAssembly, the binary format the tool compiles to) across every Claude-style skill host. This work shows three failure types. Each type injects a different kind of error between the request and the finished work:</p>
 
 <ol>
   <li><strong>Assumption propagation:</strong> the agent treats an unverified guess as a proven fact. Later steps build on this guess. When the guess turns out wrong, the error spreads through every later step. The agent cannot tell an UNKNOWN value from a WITNESSED value by its surface form alone.</li>
@@ -297,7 +297,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h3>4.2 Pool-Driven Traversal</h3>
 <p>The walk advances by hops. A hop applies one principle to one surface. The <code>gm-hop</code> skill checks each testable claim of the principle with a code search, closes what a single exact edit closes, records every other finding as a PRD row, and then nominates its successor: an outgoing edge of the principle's node that has not been visited and that attacks the biggest open need. A chain stops at depth 6, and the visited set stops it from revisiting a node. Each hop runs as a subagent with its own session id.</p>
-<p>The <code>gm-orchestrate</code> skill owns the pool. Its ceiling is the number of subagents the platform accepts at once. The ceiling is found by launching, not configured, and it was 24 when measured on 2026-10-09; the target equals the ceiling. On 2026-10-10 a wave of 20 lost 17 subagents to <code>ECONNRESET</code> in one window. Each tick counts the live subagents, launches the PRD rows first and then the hops from untraversed principle nodes, and refills freed slots while independent work remains. The phase gate <code>pool-floor-met</code> refuses a transition while the live count is below the floor.</p>
+<p>The <code>gm-orchestrate</code> skill owns the pool. Its ceiling is the number of subagents the platform accepts at once. The ceiling is found by launching, not configured, and it measured 24 on 2026-10-09; the target equals the ceiling. On 2026-10-10 a wave of 20 lost 17 subagents to <code>ECONNRESET</code> in one window. Each tick counts the live subagents, launches the PRD rows first and then the hops from untraversed principle nodes, and refills freed slots while independent work remains. The phase gate <code>pool-floor-met</code> refuses a transition while the live count is below the floor.</p>
 
 <h3>4.3 Stop-Checkpoint Enforcement</h3>
 <p>A marker-file gate checks three conditions at the stop checkpoint. Each condition on its own blocks the stop: a non-empty <code>.gm/prd/</code>, a dirty worktree, or an unpushed HEAD. The gate reads state from disk. It does not depend on a hook event.</p>
@@ -851,7 +851,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
   <p>When <code>.gm/prd/</code> is empty or missing, and no task is running, the stop-checkpoint gate fires one residual-scan challenge. This challenge fires before the gate allows the agent to stop. The agent must then do one of two things. It can re-enter planning, add to the PRD, and do the work, or it can state directly "residual scan: none reachable in-spirit". The marker file <code>.gm/residual-check-fired</code> makes this challenge fire only once per stopping window. The marker clears at the next prompt submission, so the next stopping window starts fresh.</p>
 </div>
 
-<p>An empty PRD is a needed condition for done, but not enough on its own. The PRD records work the agent already decided to do. The gate instead checks the complement of that set: work that should have been decided but was not. This gap is exactly where a session can stop too early. It finishes every item it wrote down, stops, and leaves real remaining work undiscovered.</p>
+<p>An empty PRD is a needed condition for done, but not enough on its own. The PRD records work the agent already decided to do. The gate instead checks the complement of that set: work that should be decided but is not. This gap is exactly where a session can stop too early. It finishes every item it wrote down, stops, and leaves real remaining work undiscovered.</p>
 
 <p>The gate fires only once per stopping window, so the gate itself does not become noise. A second refused stop in the same window would loop without ever ending. The marker clears at the next prompt submission, and that starts a fresh window.</p>
 
@@ -868,7 +868,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <p>A regular expression that tries to decide a meaning question produces noise disguised as a real answer. It runs, returns a value, and that value bears no real relation to the question. Meaning routes to the agent's own judgment. Mechanics route to deterministic code. Each engine handles only the work it does well. Mechanics means parsing, sorting, hashing, and counting, all decidable by a fixed procedure. Meaning means understanding language. Is this change a fix or a feature? Does this docstring contradict its function? Do these two error messages mean the same thing?</p>
 
-<p>A keyword list or a regex over meaning-bearing phrases is the same failure named in Nothing Fake (section 24). Here it applies to judgment instead of code. It looks correct because it runs and returns, but it has no real connection to what was asked.</p>
+<p>A keyword list or a regex over meaning-bearing phrases is the same failure named in Nothing Fake (section 24). Here it applies to judgment instead of code. It looks correct because it runs and returns, but it has no real connection to what the request asked.</p>
 
 <p>Fan-out is the parallel half of this rule. N independent items become N parallel dispatches in one message, never one batched call. A single batched judgment call dilutes the signal for each item by averaging across the whole batch. The added cost of fan-out is small, and the gain in judgment quality is large. This mirrors memorize-fire's own fan-out rule (section 12): one unit of work per call.</p>
 
@@ -878,7 +878,7 @@ read  .gm/exec-spool/out/memorize-fire-&lt;N&gt;.json</code></pre>
 
 <div class="hard-rule">
   <div class="rule-title">Hard Rule: While The Chain Is In-Flight, Every Turn Ends In A Tool Call <span style="font-weight:400;font-size:11px;opacity:0.6;">[P1 SHAPE - P4 VERIFY - P3 BUILD - P9 CONVERGENCE]</span></div>
-  <p>Every programming agent reads only tool calls and their outputs. An assistant message that ends in prose with no tool call <em>is</em> the end of the turn, and the harness stops there. So while the chain is still running (phase not equal to COMPLETE, or prd_pending greater than 0), the agent never ends a turn in prose. It never writes a summary or a recap; a summary is itself a stop. The only event that allows a prose-only turn is plugkit returning phase=COMPLETE and prd_pending=0. Before any apparent stop, the agent dispatches <code>phase-status</code> and checks the result again. A non-terminal phase means the urge to stop was a mistake, and the fix is to dispatch <code>instruction</code> and keep going.</p>
+  <p>Every programming agent reads only tool calls and their outputs. An assistant message that ends in prose with no tool call <em>is</em> the end of the turn, and the harness stops there. So while the chain is still running (phase not equal to COMPLETE, or prd_pending greater than 0), the agent never ends a turn in prose. It never writes a summary or a recap; a summary is itself a stop. The only event that allows a prose-only turn is plugkit returning phase=COMPLETE and prd_pending=0. Before any apparent stop, the agent dispatches <code>phase-status</code> and checks the result again. A non-terminal phase means the urge to stop is a mistake, and the fix is to dispatch <code>instruction</code> and keep going.</p>
 </div>
 
 <p>This rule targets the main mechanical cause of long-horizon failure. A completed sub-piece of work, plus a "here is what I did" paragraph, plus zero tool calls, reads to the harness as a terminal state. This holds regardless of the agent's real intent. No amount of in-context reminder to "remember to continue" survives this. The closing sentence and the stop are the same event by construction.</p>
