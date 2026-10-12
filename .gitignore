@@ -157,6 +157,8 @@ skills/gm/.gm/
 .gm/dream-rsi/
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
+.gm/crawl-profiles/
+# crawl_cdp lease profile, created by agentplug-host crawl_lease.rs at root/.gm/crawl-cdp-profile
 .gm/crawl-cdp-profile/
 
 # gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
@@ -170,3 +172,21 @@ skills/gm/.gm/
 
 # memorize-fire generated recall memos (rebuilt from gm.db, which is untracked)
 .gm/memories/mem-*.md
+
+# config-source cache rotation: a rotated-out cache tree and its sync marker are left
+# behind under a .stale name when the live tree is rebuilt
+.gm/config-source-cache-default.stale-*/
+*.sync.json.stale
+
+# Lightpanda browser-engine server runtime (its own serve.log, one per crawl session)
+.gm/lightpanda/
+
+# lean-walk traversal scratch: per-slice traverse/verdict/witness notes, rewritten each walk
+.gm/traversal/
+
+# subagent heartbeat directory: every subagent writes .gm/pool/<session>.live on start and
+# deletes it on finish, so the directory holds no source (skills/gm/SKILL.md, pool protocol)
+.gm/pool/
+
+# editor settings folder: never tracked anywhere in this tree
+.vscode/

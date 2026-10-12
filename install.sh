@@ -5,6 +5,11 @@ REPO="AnEntrypoint/agentplug-bin"
 GM_REPO="AnEntrypoint/gm"
 GM_TOOLS_DIR="${HOME}/.gm-tools"
 CLAUDE_SKILLS_DIR="${HOME}/.claude/skills"
+AGENTS_SKILLS_DIR="${HOME}/.agents/skills"
+SKILL_MODE_LEDGER=".gm-skill-install-modes"
+# a displaced install is parked under a dotted directory: a plain sibling of the
+# skill directories would itself be discovered and served as a skill
+SKILL_PRELINK_DIR=".gm-skill-prelink"
 
 log() { printf '%s\n' "$*" >&2; }
 
@@ -128,7 +133,148 @@ resolve_latest_gm_tag() {
   fi
 }
 
+skill_install_roots() {
+  printf '%s\n' "$CLAUDE_SKILLS_DIR" "$AGENTS_SKILLS_DIR"
+}
+
+# A persistent source tree to install FROM, so an installed skill can be a link
+# into it instead of a copy that drifts.
+skill_source_dir() {
+  override="${GM_SKILL_SOURCE_DIR:-}"
+  if [ -n "$override" ] && [ -f "${override}/gm/SKILL.md" ]; then
+    printf '%s\n' "$override"
+    return 0
+  fi
+  here=$(cd "$(dirname "$0")" 2>/dev/null && pwd) || here=""
+  if [ -n "$here" ] && [ -f "${here}/skills/gm/SKILL.md" ]; then
+    printf '%s\n' "${here}/skills"
+    return 0
+  fi
+  return 1
+}
+
+# Windows: a directory junction needs no elevation, a symlink does.
+# mac/linux: a directory symlink. Never a copy that pretends to be a link --
+# MSYS `ln -s` silently copies when symlink creation is refused, so on those
+# platforms only mklink is accepted.
+link_skill_dir() {
+  src="$1"
+  dest="$2"
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+      # MSYS rewrites "/J" into a path unless path conversion is off, and turns
+      # `cmd /c` into `cmd //c`; with conversion off the plain form is correct.
+      if command -v cmd >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
+        wsrc=$(cygpath -w "$src")
+        wdst=$(cygpath -w "$dest")
+        MSYS_NO_PATHCONV=1 cmd /c mklink /J "$wdst" "$wsrc" >/dev/null 2>&1 && return 0
+      fi
+      return 1
+      ;;
+  esac
+  ln -s "$src" "$dest" 2>/dev/null
+}
+
+record_skill_mode() {
+  root="$1"; name="$2"; mode="$3"; src="$4"
+  file="${root}/${SKILL_MODE_LEDGER}"
+  tmp="${file}.tmp.$$"
+  {
+    printf '# gm skill install modes: <name> <linked|copied|refused> <iso-ts> <source>\n'
+    if [ -f "$file" ]; then
+      while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in ''|\#*) continue ;; esac
+        case "$line" in "${name} "*) continue ;; esac
+        printf '%s\n' "$line"
+      done < "$file"
+    fi
+    printf '%s %s %s %s\n' "$name" "$mode" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$src"
+  } > "$tmp"
+  mv -f "$tmp" "$file"
+}
+
+resolve_skill_dir() {
+  (cd "$1" 2>/dev/null && pwd -P) || printf '%s' "$1"
+}
+
+install_one_skill() {
+  src="$1"; name="$2"; root="$3"
+  dest="${root}/${name}"
+  mkdir -p "$root"
+  if [ -L "$dest" ]; then
+    # readlink -f is not portable (absent on BSD/macOS); pwd -P is
+    current=$(resolve_skill_dir "$dest")
+    wanted=$(resolve_skill_dir "$src")
+    if [ -n "$current" ] && [ "$current" = "$wanted" ]; then
+      record_skill_mode "$root" "$name" linked "$src"
+      log "linked ${name} -> ${dest} => ${src} (already the source directory)"
+      return 0
+    fi
+    rm -f "$dest"
+  elif [ -d "$dest" ]; then
+    park="${root}/${SKILL_PRELINK_DIR}"
+    mkdir -p "$park"
+    aside="${park}/${name}-$(date +%s)"
+    if ! mv "$dest" "$aside" 2>/dev/null; then
+      if [ "${GM_SKILL_LINK_FORCE:-0}" = "1" ]; then
+        rm -rf "$dest"
+      else
+        record_skill_mode "$root" "$name" refused "$src"
+        log "REFUSED ${name} -> ${dest}: could not move the existing install aside; it stays a COPY and will drift from ${src} -- rerun with GM_SKILL_LINK_FORCE=1 to replace it"
+        return 0
+      fi
+    fi
+  elif [ -e "$dest" ]; then
+    rm -f "$dest"
+  fi
+  if link_skill_dir "$src" "$dest"; then
+    record_skill_mode "$root" "$name" linked "$src"
+    log "linked ${name} -> ${dest} => ${src} (edits to the source are served immediately)"
+    return 0
+  fi
+  cp -R "$src" "$dest"
+  record_skill_mode "$root" "$name" copied "$src"
+  log "WARNING: ${name} -> ${dest} is a COPY (no junction/symlink available here); it is NOT the file at ${src} and will drift silently -- recorded in ${root}/${SKILL_MODE_LEDGER}"
+}
+
+check_installed_skills() {
+  srcdir="$1"
+  bad=0
+  for root in $(skill_install_roots); do
+    for skill_dir in "${srcdir}"/*/; do
+      [ -f "${skill_dir}SKILL.md" ] || continue
+      name=$(basename "$skill_dir")
+      [ -f "${root}/${name}/SKILL.md" ] || continue
+      if [ "$(sha256_file "${skill_dir}SKILL.md")" != "$(sha256_file "${root}/${name}/SKILL.md")" ]; then
+        log "DRIFT ${name} at ${root}/${name}/SKILL.md: contents differ from ${skill_dir}SKILL.md"
+        bad=1
+        continue
+      fi
+      if [ ! -L "${root}/${name}" ]; then
+        log "DRIFT ${name} at ${root}/${name}/SKILL.md: contents match but it is a SEPARATE file, so the next source edit will not reach it"
+        bad=1
+      fi
+    done
+  done
+  if [ "$bad" -eq 0 ]; then
+    log "skill check: every installed skill is the source file"
+  fi
+}
+
 install_skill() {
+  srcdir=$(skill_source_dir) || srcdir=""
+  if [ -n "$srcdir" ]; then
+    log "gm-skill source: ${srcdir} -- installing from the checkout, not a release tarball"
+    for root in $(skill_install_roots); do
+      for skill_dir in "${srcdir}"/*/; do
+        [ -f "${skill_dir}SKILL.md" ] || continue
+        install_one_skill "${skill_dir%/}" "$(basename "$skill_dir")" "$root"
+      done
+    done
+    check_installed_skills "$srcdir"
+    return 0
+  fi
+
   tag=$(resolve_latest_gm_tag)
   if [ -z "$tag" ]; then
     log "FATAL: could not resolve latest release tag for ${GM_REPO}"
@@ -155,14 +301,40 @@ install_skill() {
   mkdir -p "${work}/extract"
   tar -xzf "${work}/${asset}" -C "${work}/extract"
 
-  mkdir -p "$CLAUDE_SKILLS_DIR"
-  for skill_dir in "${work}/extract/skills"/*/; do
-    skill_name="$(basename "$skill_dir")"
-    [ -f "${skill_dir}SKILL.md" ] || continue
-    rm -rf "${CLAUDE_SKILLS_DIR}/${skill_name}"
-    cp -R "$skill_dir" "${CLAUDE_SKILLS_DIR}/${skill_name}"
-    log "installed ${skill_name} skill ${tag} -> ${CLAUDE_SKILLS_DIR}/${skill_name}"
+  for root in $(skill_install_roots); do
+    mkdir -p "$root"
+    for skill_dir in "${work}/extract/skills"/*/; do
+      skill_name="$(basename "$skill_dir")"
+      [ -f "${skill_dir}SKILL.md" ] || continue
+      rm -rf "${root}/${skill_name}"
+      cp -R "$skill_dir" "${root}/${skill_name}"
+      record_skill_mode "$root" "$skill_name" copied "release:${tag}"
+      log "WARNING: ${skill_name} -> ${root}/${skill_name} is a COPY with no local source beside this installer; it will not track a checkout -- set GM_SKILL_SOURCE_DIR (or run from a gm checkout) to install it as a link"
+    done
+    install_skill_assets "${work}/extract" "$root"
   done
+}
+
+install_skill_assets() {
+  src="$1"
+  dest="$2"
+  manifest="${src}/skills/skill-assets.txt"
+  if [ ! -f "$manifest" ]; then
+    log "WARN: no skill asset manifest at ${manifest}"
+    return 0
+  fi
+  while IFS= read -r rel || [ -n "$rel" ]; do
+    case "$rel" in ''|\#*) continue ;; esac
+    src_file="${src}/skills/${rel}"
+    dest_file="${dest}/${rel}"
+    if [ ! -f "$src_file" ]; then
+      log "WARN: skill asset absent at ${src_file}"
+      continue
+    fi
+    mkdir -p "$(dirname "$dest_file")"
+    cp -f "$src_file" "$dest_file"
+    log "installed skill asset ${rel} -> ${dest_file}"
+  done < "$manifest"
 }
 
 quarantine_retired_js_host() {

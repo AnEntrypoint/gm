@@ -59,7 +59,7 @@ Install the `/gm` skill on Windows PowerShell:
 irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main install
 ```
 
-Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). Each script downloads the `gm-skill-<version>.tar.gz` asset. Each script checks the download against a published sha256 sidecar file. Each script then copies `skills/gm` into `~/.claude/skills/gm/`.
+Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). Each script downloads the `gm-skill-<version>.tar.gz` asset. Each script checks the download against a published sha256 sidecar file. Each script then installs `skills/gm` into `~/.claude/skills/gm/`. Run from a gm checkout (or with `GM_SKILL_SOURCE_DIR` set) that install is a link — a directory junction on Windows, a symlink elsewhere — so `~/.claude/skills/gm/SKILL.md` and `<checkout>/skills/gm/SKILL.md` are one file and a source edit is served on the next dispatch. With no local source it copies, and says so loudly; a copy is recorded in `~/.claude/skills/.gm-skill-install-modes`.
 
 Inside a project that uses gm, the same two scripts run again without the `install` argument, for example `curl -fsSL .../install.sh | sh -s -- spool`. In this mode, each script resolves, checks, and runs the `agentplug-runner` binary (the native spool host) from `AnEntrypoint/agentplug-bin` releases. This step replaces the old `bun x gm-plugkit@latest spool` command. gm no longer uses a separate JS (JavaScript, a source-file language this repository tracks) launcher.
 
@@ -77,6 +77,8 @@ Drop `-g` to install into the current project folder instead of every agent host
 npx github:AnEntrypoint/gm -g --mcp-only   # user scope: ~/.claude.json gets {"type":"http","url":"http://127.0.0.1:8787/mcp"}
 npx github:AnEntrypoint/gm --mcp-only      # same registration, no skill or runner install
 ```
+
+A verb also runs from a plain shell, with no agent host and no MCP client in the loop. In a checkout, `./bin/gm` forwards to the same dispatch the `gm` MCP tool runs, and `npm link` puts that entry point on PATH as `gm-dispatch`. The search verbs take a sugar form -- `./bin/gm codesearch literal <needle> --path <dir>` builds `{"query","mode","path"}` -- while any argument starting with `{` or `@`, and every other verb, is forwarded untouched.
 
 The user registration launches the local bundle with Node.js. To repair a project registration:
 
@@ -142,6 +144,10 @@ Every tool the agent uses is a dispatch verb. The agent has no direct shell acce
 - **`filter`**: an in-WASM stdout compaction step, for grep, ls, tree, JSON, and diff output.
 
 `skills/gm/docs/verbs.md` is the full verb inventory: every verb name, its body shape, and one example each. Code lookup is `grep`, `codesearch`, `fs_read` and `callers`/`callees`/`impact`; `recall` is memory only and never scans the tree.
+
+### Background work
+
+A dispatch's child outlives the dispatch when it holds no pipe back to the runner. The supported idiom is one redirected, subshell-detached command writing its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Confirm survival from a second dispatch, by pid or by that log. `skills/gm/docs/verbs.md`, section Execution, states the rule together with the two ways a child still dies: one that keeps the runner's pipes open is adopted as a task and ends with that task's timeout, and every child dies with the tree when the dispatch hits `timeoutMs`.
 
 ### Gates
 
