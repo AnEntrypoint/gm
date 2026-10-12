@@ -57,7 +57,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="title-block">
   <h1>Every rust crate behind gm (glootius maximus)</h1>
   <div class="author">three wasm cdylibs, one orchestrator, one native runner</div>
-  <div class="date">cushion-certified - 2026</div>
+  <div class="date">2026</div>
 </div>
 
 <div class="abstract-block">
@@ -85,7 +85,7 @@ article tbody tr:hover { background: var(--panel-1); }
 </tbody>
 </table>
 
-<div class="gm-callout">"You did not type cargo once. You did not bump a version. You pushed and the cushion did the rest. This is the correct order of operations."</div>
+<div class="gm-callout">A push to main publishes the change. No local cargo build and no hand-edited version are needed.</div>
 
 <p>Three crates contribute.</p>
 
@@ -96,9 +96,9 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> own the state machine (nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state; 102 states, 187 edges, 25 gates), dispatch every verb the agent fires, and serve phase prose on demand via the <code>instruction</code> verb. This is the wasm guest. <code>agentplug-runner</code> (a native wasmtime host, see below) is the sole loader that runs it. The other two crates on this page are its imports, alongside agentplug's own shared native plugins.</p>
+  <p><strong>Job:</strong> own the state machine (146 nodes: 129 principles, 8 tensions, 7 gates and 2 end states; 376 edges; 26 gates, of which 24 can block a move), dispatch every verb the agent fires, and serve the prose for the current node on demand via the <code>instruction</code> verb. This is the WebAssembly (wasm) guest. <code>agentplug-runner</code> (a native wasmtime host, see below) is the sole loader that runs it. The other two crates on this page are its imports, alongside agentplug's own shared native plugins.</p>
 
-  <h3>what it actually does</h3>
+  <h3>what it does</h3>
   <ul>
     <li>compiles to a single <code>plugkit-slim.wasm</code> targeting <code>wasm32-wasip1</code>; published to <code>plugkit-bin</code> GitHub Releases; the npm package <code>plugkit-wasm</code> is not kept current by CI</li>
     <li>exposes the <code>dispatch_verb</code> wasm export, one entry point, every verb</li>
@@ -133,7 +133,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
   <p><strong>Job:</strong> the sole loader of <code>plugkit-slim.wasm</code> -- a real native <code>wasmtime</code> binary, not a JS wasm-host. <code>agentplug-runner</code> loads gm's wasm as one plugin among siblings (<code>agentplug-bert</code>, <code>agentplug-libsql</code>, <code>agentplug-treesitter</code>). It routes the wasm guest's <code>host_plugin_call</code>/<code>host_vec_embed</code> imports to those shared plugins, so gm's own wasm ships without baked-in embedding weights. Not a Rust crate on <code>crates.io</code> in the same publishing sense as the other three. It is a standalone binary, published to <code>AnEntrypoint/agentplug-bin</code> Releases per platform, sha256-verified at install time.</p>
 
-  <h3>what it actually does</h3>
+  <h3>what it does</h3>
   <ul>
     <li>one shared daemon process serves every registered project on the machine -- up to four projects genuinely concurrent, a single project's own dispatches still serialize</li>
     <li>polls <code>plugkit-bin</code>'s Releases API for a newer wasm tag; on mismatch, downloads+verifies+hot-reloads in place</li>
@@ -157,7 +157,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
   <p><strong>Job:</strong> tree-sitter-based code structure analysis. Powers the symbol layer of <code>codesearch</code> and the session-start architectural overview that lands in the agent's opening context. Published as <code>@anentrypoint/rs-codeinsight-wasm</code>.</p>
 
-  <h3>what it actually does</h3>
+  <h3>what it does</h3>
   <ul>
     <li>walks the project tree, parses every supported language via tree-sitter, builds a structural index</li>
     <li>computes per-file metrics: lines, functions, classes, average complexity, parameter counts, long functions, large files</li>
@@ -181,9 +181,9 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search (open)</a></span>
   </div>
 
-  <p><strong>Job:</strong> answer <code>codesearch &lt;words&gt;</code>. BM25 plus embedding fusion over file content, scan-embed-sweep pipeline, with snippet windows and tunable context. Published as <code>@anentrypoint/rs-search-wasm</code>.</p>
+  <p><strong>Job:</strong> answer <code>codesearch &lt;words&gt;</code>. BM25 (a term-frequency ranking) combined with embedding similarity (closeness of meaning) over file content, scan-embed-sweep pipeline, with snippet windows and tunable context. Published as <code>@anentrypoint/rs-search-wasm</code>.</p>
 
-  <h3>what it actually does</h3>
+  <h3>what it does</h3>
   <ul>
     <li>scans the project (respecting <code>.gitignore</code>), tokenizes file content, builds a sparse term-frequency index plus a dense embedding index</li>
     <li>fuses BM25 with embedding cosine; reranks with a sweep pass; returns top matches with surrounding line context</li>
@@ -217,14 +217,14 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p><strong>Push to the relevant repo. That's it.</strong> No <code>cargo update</code>, no local cargo build, no version bumps. The sibling repos (<code>rs-codeinsight</code>, <code>rs-search</code>) publish their own <code>@anentrypoint/&lt;name&gt;-wasm</code> artifacts independently, then <code>cascade.yml</code> uses <code>gh workflow run</code> to fire <code>rs-plugkit</code>'s <code>release.yml</code>. <code>rs-plugkit</code> rebuilds its own wasm and publishes it.A skill change pushed to <code>main</code> runs <code>skill-release.yml</code>, which bumps the patch version in <code>package.json</code>, tars <code>skills/</code> into <code>gm-skill-VERSION.tar.gz</code>, and uploads it, sha256-sidecarred, to a tagged GitHub Release on <code>AnEntrypoint/gm</code>, with no npm registry step. The next <code>install.sh</code>/<code>install.ps1</code> run picks up the change.</p>
 
-<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-codeinsight</code> and <code>rs-search</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade ever stops working, that token has rotated. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
+<p>The <code>PUBLISHER_TOKEN</code> secret in <code>rs-codeinsight</code> and <code>rs-search</code> authorizes their <code>cascade.yml</code> to trigger <code>rs-plugkit</code>'s <code>release.yml</code> via <code>workflow_dispatch</code>. If the cascade stops working, check whether the token has expired or been revoked. Set it with <code>gh secret set PUBLISHER_TOKEN --repo AnEntrypoint/&lt;repo&gt;</code>.</p>
 
 <p><strong><code>agentplug</code> is a separate, decoupled pipeline</strong>. It consumes the cascade's output rather than joining it. Its own CI builds only the native host binary (published to <code>agentplug-bin</code>) and the shared plugins' own <code>*-bin</code> releases. None of them build or publish gm's wasm. Every host (agentplug-runner included) fetches the same <code>plugkit-slim.wasm</code> from <code>plugkit-bin</code> at runtime via its own 600s poll. A plugkit-core change flows through the cascade above with zero agentplug rebuild needed. An agentplug-side change (a new native subsystem, a browser/task fix) rebuilds only <code>agentplug-runner</code>, independent of everything above.</p>
 
 <h2>notes on the architecture</h2>
 
 <blockquote>
-  "Three crates is one more than necessary and two fewer than tempting. The temptation is to fold <code>rs-search</code> and <code>rs-codeinsight</code> into one, they both walk the tree. The reason not to: codeinsight runs once per session, search runs hundreds of times. Different latency budget, different cache shape, different release cadence. Sit down. Don't merge them."
+  Three crates, not two and not one. Folding rs-search and rs-codeinsight into one looks simpler, because both walk the tree. Keep them apart: codeinsight runs once per session, search runs hundreds of times, and the two have different latency budgets, cache shapes and release cadences.
 </blockquote>
 
 </article>
