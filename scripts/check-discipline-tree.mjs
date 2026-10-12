@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 // Counts the two things that make the gm discipline tree untraversable and fails
 // when either is non-zero: nodes no edge reaches, and books whose every edge
-// stays inside the phase that owns them. Every check below records a row even
+// stays inside the concern it was authored under. Every check below records a row even
 // when it passes, so an absent row is a missing check rather than a pass.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,7 +38,7 @@ for (const n of nodes) {
   byId.set(n.id, n);
 }
 
-const phaseOf = (id) => (byId.get(id) || {}).phase;
+const provenanceOf = (id) => (byId.get(id) || {}).provenance;
 const inDeg = new Map(nodes.map((n) => [n.id, 0]));
 const outDeg = new Map(nodes.map((n) => [n.id, 0]));
 const crossDeg = new Map(nodes.map((n) => [n.id, 0]));
@@ -57,9 +57,9 @@ for (const e of edges) {
   if (e.kind !== 'forward' && e.kind !== 'backreference') badKind.push(key);
   if (byId.has(e.from)) outDeg.set(e.from, outDeg.get(e.from) + 1);
   if (byId.has(e.to)) inDeg.set(e.to, inDeg.get(e.to) + 1);
-  const fromPhase = phaseOf(e.from);
-  const toPhase = phaseOf(e.to);
-  if (byId.has(e.from) && byId.has(e.to) && fromPhase !== toPhase && fromPhase !== null && toPhase !== null) {
+  const fromProvenance = provenanceOf(e.from);
+  const toProvenance = provenanceOf(e.to);
+  if (byId.has(e.from) && byId.has(e.to) && fromProvenance !== toProvenance && fromProvenance !== null && toProvenance !== null) {
     crossDeg.set(e.from, crossDeg.get(e.from) + 1);
     crossDeg.set(e.to, crossDeg.get(e.to) + 1);
   }
@@ -116,9 +116,9 @@ if (noOut.length) fail('zero-dead-end-nodes', named(noOut));
 record('zero-dead-end-nodes', true, `0 of ${nodes.length}`);
 
 console.log(`book nodes: ${bookNodes.length}`);
-console.log(`phase-partitioned books: ${partitioned(bookNodes).length}`);
-if (partitioned(bookNodes).length) fail('zero-phase-partitioned-books', named(partitioned(bookNodes)));
-record('zero-phase-partitioned-books', true, `0 of ${bookNodes.length}`);
+console.log(`provenance-partitioned books: ${partitioned(bookNodes).length}`);
+if (partitioned(bookNodes).length) fail('zero-provenance-partitioned-books', named(partitioned(bookNodes)));
+record('zero-provenance-partitioned-books', true, `0 of ${bookNodes.length}`);
 
 if (index.length !== 55) fail('book-index-complete', `book_index has ${index.length} rows, expected 55`);
 record('book-index-complete', true, `${index.length} rows`);
@@ -128,9 +128,9 @@ if (indexUnresolved.length) fail('book-index-resolves', named(indexUnresolved.ma
 record('book-index-resolves', true, `${index.length} rows`);
 if (indexBookless.length) fail('book-index-nodes-carry-a-book', named(indexBookless.map((r) => r.node)));
 record('book-index-nodes-carry-a-book', true, `${index.length} rows`);
-console.log(`phase-partitioned anchor books: ${partitioned(indexNodes).length}`);
-if (partitioned(indexNodes).length) fail('zero-phase-partitioned-anchors', named(partitioned(indexNodes)));
-record('zero-phase-partitioned-anchors', true, `0 of ${indexNodes.length}`);
+console.log(`provenance-partitioned anchor books: ${partitioned(indexNodes).length}`);
+if (partitioned(indexNodes).length) fail('zero-provenance-partitioned-anchors', named(partitioned(indexNodes)));
+record('zero-provenance-partitioned-anchors', true, `0 of ${indexNodes.length}`);
 
 const booklessAuthor = bookNodes.filter((n) => !(typeof n.author === 'string' && n.author.length));
 if (booklessAuthor.length) fail('book-nodes-name-an-author', named(booklessAuthor));
