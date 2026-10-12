@@ -1,6 +1,6 @@
 {
  "source": "hand-authored in this file; no generator produces it",
- "node_count": 111,
+ "node_count": 154,
  "nodes": [
   {
    "id": "G_START",
@@ -839,11 +839,441 @@
    "phase": "P9",
    "book": "Lower Bound Reached",
    "author": "information-theoretic argument"
+  },
+  {
+   "id": "SOLID",
+   "label": "SOLID Principles - Robert C. Martin",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "SOLID Principles",
+   "author": "Robert C. Martin",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "CLEANARCH",
+   "label": "Clean Architecture - Robert C. Martin",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Clean Architecture",
+   "author": "Robert C. Martin",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "CYNEFIN",
+   "label": "Cynefin Framework - Dave Snowden",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Cynefin Framework",
+   "author": "Dave Snowden",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "WARDLEY",
+   "label": "Wardley Mapping - Simon Wardley",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Wardley Mapping",
+   "author": "Simon Wardley",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "FIVEWHYS",
+   "label": "Five Whys - Taiichi Ohno",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Five Whys",
+   "author": "Taiichi Ohno",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "FIRSTPRIN",
+   "label": "First Principles Thinking - Aristotle",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "First Principles Thinking",
+   "author": "Aristotle",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "MECE",
+   "label": "MECE - Barbara Minto",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "MECE",
+   "author": "Barbara Minto",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "MORPHBOX",
+   "label": "Morphological Box - Fritz Zwicky",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Morphological Box",
+   "author": "Fritz Zwicky",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "PUGH",
+   "label": "Pugh Matrix - Stuart Pugh",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Pugh Matrix",
+   "author": "Stuart Pugh",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "SOLIDSRP",
+   "label": "SOLID-SRP - Robert C. Martin",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "SOLID-SRP",
+   "author": "Robert C. Martin",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "OCCAM",
+   "label": "Occam's Razor - William of Ockham",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Occam's Razor",
+   "author": "William of Ockham",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "DEVILADV",
+   "label": "Devil's Advocate - Catholic Canonization Process",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Devil's Advocate",
+   "author": "Catholic Canonization Process",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "FEYNMAN",
+   "label": "Feynman Technique - Richard Feynman",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Feynman Technique",
+   "author": "Richard Feynman",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "SWOT",
+   "label": "SWOT - Albert Humphrey",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "SWOT",
+   "author": "Albert Humphrey",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "MOSCOW",
+   "label": "MoSCoW - Dai Clegg",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "MoSCoW",
+   "author": "Dai Clegg",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "USECASES",
+   "label": "Cockburn Use Cases - Alistair Cockburn",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Cockburn Use Cases",
+   "author": "Alistair Cockburn",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "PERT",
+   "label": "PERT - US Navy",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "PERT",
+   "author": "US Navy",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "VERTSLICE",
+   "label": "Vertical Slice Architecture - Jimmy Bogard",
+   "kind": "principle",
+   "phase": "SPECIFY",
+   "book": "Vertical Slice Architecture",
+   "author": "Jimmy Bogard",
+   "source": "prose-anchor",
+   "prose": "specify.md"
+  },
+  {
+   "id": "CONWAY",
+   "label": "Conway's Law - Melvin Conway",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "Conway's Law",
+   "author": "Melvin Conway",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "COHESION",
+   "label": "Cohesion Criteria - Larry Constantine",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "Cohesion Criteria",
+   "author": "Larry Constantine",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "GOFSTRATEGY",
+   "label": "GoF-Strategy - Gamma Helm Johnson Vlissides",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "GoF-Strategy",
+   "author": "Gamma Helm Johnson Vlissides",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "GOFOBSERVER",
+   "label": "GoF-Observer - Gamma Helm Johnson Vlissides",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "GoF-Observer",
+   "author": "Gamma Helm Johnson Vlissides",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "WALKSKEL",
+   "label": "Walking Skeleton - Alistair Cockburn",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "Walking Skeleton",
+   "author": "Alistair Cockburn",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "GITHUBFLOW",
+   "label": "GitHub Flow - GitHub",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "GitHub Flow",
+   "author": "GitHub",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "EDA",
+   "label": "Event-Driven Architecture - Distributed Systems Convention",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "Event-Driven Architecture",
+   "author": "Distributed Systems Convention",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "FALLACIES",
+   "label": "Fallacies of Distributed Computing - Peter Deutsch",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "Fallacies of Distributed Computing",
+   "author": "Peter Deutsch",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "CAP",
+   "label": "CAP Theorem - Eric Brewer",
+   "kind": "principle",
+   "phase": "EMIT",
+   "book": "CAP Theorem",
+   "author": "Eric Brewer",
+   "source": "prose-anchor",
+   "prose": "emit.md"
+  },
+  {
+   "id": "STRIDE",
+   "label": "STRIDE Threat Model - Loren Kohnfelder",
+   "kind": "principle",
+   "phase": "SECURE",
+   "book": "STRIDE Threat Model",
+   "author": "Loren Kohnfelder",
+   "source": "prose-anchor",
+   "prose": "sec.md"
+  },
+  {
+   "id": "OWASP",
+   "label": "OWASP Top 10 - OWASP Foundation",
+   "kind": "principle",
+   "phase": "SECURE",
+   "book": "OWASP Top 10",
+   "author": "OWASP Foundation",
+   "source": "prose-anchor",
+   "prose": "sec.md"
+  },
+  {
+   "id": "LINDDUN",
+   "label": "LINDDUN Privacy Threat Model - KU Leuven",
+   "kind": "principle",
+   "phase": "SECURE",
+   "book": "LINDDUN Privacy Threat Model",
+   "author": "KU Leuven",
+   "source": "prose-anchor",
+   "prose": "sec.md"
+  },
+  {
+   "id": "REGENV",
+   "label": "Regulated Environment - Compliance Convention",
+   "kind": "principle",
+   "phase": "SECURE",
+   "book": "Regulated Environment",
+   "author": "Compliance Convention",
+   "source": "prose-anchor",
+   "prose": "sec.md"
+  },
+  {
+   "id": "SIL61508",
+   "label": "IEC 61508 SIL Levels - IEC",
+   "kind": "principle",
+   "phase": "SECURE",
+   "book": "IEC 61508 SIL Levels",
+   "author": "IEC",
+   "source": "prose-anchor",
+   "prose": "sec.md"
+  },
+  {
+   "id": "REDGREEN",
+   "label": "Red/Green TDD - Kent Beck",
+   "kind": "principle",
+   "phase": "STATE",
+   "book": "Red/Green TDD",
+   "author": "Kent Beck",
+   "source": "prose-anchor",
+   "prose": "state.md"
+  },
+  {
+   "id": "TDDCHICAGO",
+   "label": "TDD Chicago School - Chicago/Detroit Tradition",
+   "kind": "principle",
+   "phase": "STATE",
+   "book": "TDD Chicago School",
+   "author": "Chicago/Detroit Tradition",
+   "source": "prose-anchor",
+   "prose": "state.md"
+  },
+  {
+   "id": "TESTPYRAMID",
+   "label": "Testing Pyramid - Mike Cohn",
+   "kind": "principle",
+   "phase": "STATE",
+   "book": "Testing Pyramid",
+   "author": "Mike Cohn",
+   "source": "prose-anchor",
+   "prose": "state.md"
+  },
+  {
+   "id": "MUTATION",
+   "label": "Mutation Testing - Richard Lipton",
+   "kind": "principle",
+   "phase": "STATE",
+   "book": "Mutation Testing",
+   "author": "Richard Lipton",
+   "source": "prose-anchor",
+   "prose": "state.md"
+  },
+  {
+   "id": "FAGAN",
+   "label": "Fagan Inspection - Michael Fagan",
+   "kind": "principle",
+   "phase": "STATE",
+   "book": "Fagan Inspection",
+   "author": "Michael Fagan",
+   "source": "prose-anchor",
+   "prose": "state.md"
+  },
+  {
+   "id": "PYRAMIDPRIN",
+   "label": "Pyramid Principle - Barbara Minto",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "Pyramid Principle",
+   "author": "Barbara Minto",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
+  },
+  {
+   "id": "BLUF",
+   "label": "BLUF - US Military Doctrine",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "BLUF",
+   "author": "US Military Doctrine",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
+  },
+  {
+   "id": "INVPYRAMID",
+   "label": "Inverted Pyramid Style - Journalism Convention",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "Inverted Pyramid Style",
+   "author": "Journalism Convention",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
+  },
+  {
+   "id": "PLAINENG",
+   "label": "Plain English - William Strunk Jr",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "Plain English",
+   "author": "William Strunk Jr",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
+  },
+  {
+   "id": "DIATAXIS",
+   "label": "Diataxis Framework - Daniele Procida",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "Diataxis Framework",
+   "author": "Daniele Procida",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
+  },
+  {
+   "id": "DOCSASCODE",
+   "label": "Docs-as-Code - Ralf D. Muller",
+   "kind": "principle",
+   "phase": "DOCS",
+   "book": "Docs-as-Code",
+   "author": "Ralf D. Muller",
+   "source": "prose-anchor",
+   "prose": "update_docs.md"
   }
  ],
- "edge_count": 209,
- "forward_edges": 102,
- "backreference_edges": 107,
+ "edge_count": 352,
+ "forward_edges": 234,
+ "backreference_edges": 118,
  "edges": [
   {
    "from": "JTBD",
@@ -2098,7 +2528,1161 @@
    "to": "ADRN",
    "kind": "backreference",
    "condition": "the ambiguity is human-owned"
+  },
+  {
+   "from": "G_START",
+   "to": "P1",
+   "kind": "forward",
+   "condition": "one task in flight opens P1 SHAPE"
+  },
+  {
+   "from": "P1",
+   "to": "P2",
+   "kind": "forward",
+   "condition": "G_CONTRACT satisfied: the contract is the only durable description"
+  },
+  {
+   "from": "P2",
+   "to": "P3",
+   "kind": "forward",
+   "condition": "the contract is agreed in the domain's own words, so the build can be total"
+  },
+  {
+   "from": "P3",
+   "to": "P4",
+   "kind": "forward",
+   "condition": "G_INDEP satisfied: the verifier has not read the implementation"
+  },
+  {
+   "from": "P4",
+   "to": "P5",
+   "kind": "forward",
+   "condition": "G_NET satisfied: the change closes net-negative, or states why not"
+  },
+  {
+   "from": "P5",
+   "to": "P6",
+   "kind": "forward",
+   "condition": "G_DONE satisfied: the contract is satisfied and recorded"
+  },
+  {
+   "from": "P6",
+   "to": "P7",
+   "kind": "forward",
+   "condition": "the artefact survived pressure, so count what it cost to reason about"
+  },
+  {
+   "from": "P7",
+   "to": "P8",
+   "kind": "forward",
+   "condition": "context spend is bounded, so name the tensions that are still standing"
+  },
+  {
+   "from": "P8",
+   "to": "P9",
+   "kind": "forward",
+   "condition": "the tensions are named and not resolved: measure convergence anyway"
+  },
+  {
+   "from": "P1",
+   "to": "JTBD",
+   "kind": "forward",
+   "condition": "P1 SHAPE opens by naming the job"
+  },
+  {
+   "from": "P2",
+   "to": "UBIQ",
+   "kind": "forward",
+   "condition": "P2 CONTRACT opens in the language the domain already uses"
+  },
+  {
+   "from": "P3",
+   "to": "TOTALITY",
+   "kind": "forward",
+   "condition": "P3 BUILD opens by refusing partial functions"
+  },
+  {
+   "from": "P4",
+   "to": "DIJKSTRATEST",
+   "kind": "forward",
+   "condition": "P4 VERIFY opens with an oracle that is not the code"
+  },
+  {
+   "from": "P5",
+   "to": "CONVCOM",
+   "kind": "forward",
+   "condition": "P5 RECORD opens with the message a future reader receives"
+  },
+  {
+   "from": "P6",
+   "to": "NODELETE",
+   "kind": "forward",
+   "condition": "P6 PRESSURE opens where agents refuse to delete"
+  },
+  {
+   "from": "P7",
+   "to": "SMALLESTSET",
+   "kind": "forward",
+   "condition": "P7 CONTEXT ECONOMY opens with the smallest set of high-signal tokens"
+  },
+  {
+   "from": "P8",
+   "to": "OUSTERHOUTC",
+   "kind": "forward",
+   "condition": "P8 STANDING TENSIONS opens with what code cannot say"
+  },
+  {
+   "from": "P9",
+   "to": "FIXPOINT",
+   "kind": "forward",
+   "condition": "P9 CONVERGENCE opens by asking for a fixed point"
+  },
+  {
+   "from": "LIVEPLAN",
+   "to": "P1",
+   "kind": "backreference",
+   "condition": "a shape decision is reopened after the plan moved"
+  },
+  {
+   "from": "ACCEPTPORT",
+   "to": "P2",
+   "kind": "backreference",
+   "condition": "a port was added without a contract change"
+  },
+  {
+   "from": "KISS",
+   "to": "P3",
+   "kind": "backreference",
+   "condition": "the simplest build was not the one that shipped"
+  },
+  {
+   "from": "SANITIZE",
+   "to": "P4",
+   "kind": "backreference",
+   "condition": "a verifier found what the sanitizer gate should have caught"
+  },
+  {
+   "from": "ADRN",
+   "to": "P5",
+   "kind": "backreference",
+   "condition": "a decision was recorded as code instead of as an ADR"
+  },
+  {
+   "from": "DIFFBUDGET",
+   "to": "P6",
+   "kind": "backreference",
+   "condition": "the diff grew while the pressure phase was closing"
+  },
+  {
+   "from": "GREPFIRST",
+   "to": "P7",
+   "kind": "backreference",
+   "condition": "an exact-string search lost to an embedding call"
+  },
+  {
+   "from": "TACIT",
+   "to": "P8",
+   "kind": "backreference",
+   "condition": "tacit knowledge resisted specification again"
+  },
+  {
+   "from": "MAINTCOST",
+   "to": "P8",
+   "kind": "backreference",
+   "condition": "the measured maintenance cost of agent code rose again"
+  },
+  {
+   "from": "CTXEXPLODE",
+   "to": "P8",
+   "kind": "backreference",
+   "condition": "whole-repo reasoning blew the context budget again"
+  },
+  {
+   "from": "LOWERBOUND",
+   "to": "P9",
+   "kind": "backreference",
+   "condition": "a lower bound is reached and the sweep has not converged"
+  },
+  {
+   "from": "INVARIANTRUN",
+   "to": "RICE",
+   "kind": "forward",
+   "condition": "the invariant asserts a semantic property of the program, which Rice's theorem makes undecidable in general"
+  },
+  {
+   "from": "JTBD",
+   "to": "CYNEFIN",
+   "kind": "forward",
+   "condition": "the job is named but the domain is not yet classified"
+  },
+  {
+   "from": "CYNEFIN",
+   "to": "WARDLEY",
+   "kind": "forward",
+   "condition": "the domain is complex, so map the landscape before committing"
+  },
+  {
+   "from": "WARDLEY",
+   "to": "FIRSTPRIN",
+   "kind": "forward",
+   "condition": "the map shows a component nobody can reason about: reduce it to primitives"
+  },
+  {
+   "from": "WARDLEY",
+   "to": "KNUTHOPT",
+   "kind": "forward",
+   "condition": "the map says the component is a commodity, so stop optimising it"
+  },
+  {
+   "from": "FIRSTPRIN",
+   "to": "MECE",
+   "kind": "forward",
+   "condition": "the reduction must be mutually exclusive and collectively exhaustive"
+  },
+  {
+   "from": "FIRSTPRIN",
+   "to": "TOTALITY",
+   "kind": "forward",
+   "condition": "reduced to primitives, every case must be handled"
+  },
+  {
+   "from": "MECE",
+   "to": "MORPHBOX",
+   "kind": "forward",
+   "condition": "an exhaustive breakdown is only a space until you enumerate it"
+  },
+  {
+   "from": "MECE",
+   "to": "PYRAMIDPRIN",
+   "kind": "forward",
+   "condition": "a MECE breakdown is written as a pyramid, not as a list"
+  },
+  {
+   "from": "MORPHBOX",
+   "to": "PUGH",
+   "kind": "forward",
+   "condition": "score the enumerated options against a baseline"
+  },
+  {
+   "from": "MORPHBOX",
+   "to": "VARIANT",
+   "kind": "forward",
+   "condition": "the enumerated space needs a well-founded order or the search does not terminate"
+  },
+  {
+   "from": "PUGH",
+   "to": "SWOT",
+   "kind": "forward",
+   "condition": "the winning option still carries strengths, weaknesses, opportunities and threats"
+  },
+  {
+   "from": "PUGH",
+   "to": "REACHABLE",
+   "kind": "forward",
+   "condition": "a scored option is only real if the code that implements it is reachable"
+  },
+  {
+   "from": "SWOT",
+   "to": "MOSCOW",
+   "kind": "forward",
+   "condition": "rank what survives into must, should, could and will not"
+  },
+  {
+   "from": "SWOT",
+   "to": "LEHMAN",
+   "kind": "forward",
+   "condition": "strengths decay: the system evolves whether it is planned or not"
+  },
+  {
+   "from": "MOSCOW",
+   "to": "USECASES",
+   "kind": "forward",
+   "condition": "a must-have becomes a use case with a goal and a scope"
+  },
+  {
+   "from": "MOSCOW",
+   "to": "INVEST",
+   "kind": "forward",
+   "condition": "a must-have is only a story once it is independent, negotiable and small"
+  },
+  {
+   "from": "USECASES",
+   "to": "PERT",
+   "kind": "forward",
+   "condition": "the use case set has an order and a critical path"
+  },
+  {
+   "from": "USECASES",
+   "to": "EARS",
+   "kind": "forward",
+   "condition": "a use case step becomes one requirement sentence"
+  },
+  {
+   "from": "PERT",
+   "to": "VERTSLICE",
+   "kind": "forward",
+   "condition": "schedule one vertical slice first"
+  },
+  {
+   "from": "PERT",
+   "to": "LIVEPLAN",
+   "kind": "forward",
+   "condition": "the critical path is a plan, and a plan lives only for the current task"
+  },
+  {
+   "from": "VERTSLICE",
+   "to": "THINSLICE",
+   "kind": "forward",
+   "condition": "the slice must be thin enough to ship end to end"
+  },
+  {
+   "from": "BISECT",
+   "to": "FIVEWHYS",
+   "kind": "forward",
+   "condition": "the bisect names the commit, not the cause"
+  },
+  {
+   "from": "FIVEWHYS",
+   "to": "OCCAM",
+   "kind": "forward",
+   "condition": "the fifth why names a cause with no simpler explanation"
+  },
+  {
+   "from": "FIVEWHYS",
+   "to": "GUARDANDGO",
+   "kind": "forward",
+   "condition": "the fifth why lands on a fallback that was added and never removed"
+  },
+  {
+   "from": "OCCAM",
+   "to": "DEVILADV",
+   "kind": "forward",
+   "condition": "the simplest account must survive a hostile reading"
+  },
+  {
+   "from": "OCCAM",
+   "to": "KOLMOGOROV",
+   "kind": "forward",
+   "condition": "the shortest account of the artefact is the one with the lowest description length"
+  },
+  {
+   "from": "OCCAM",
+   "to": "YAGNI",
+   "kind": "forward",
+   "condition": "the simplest account already excludes what is not needed"
+  },
+  {
+   "from": "DEVILADV",
+   "to": "FEYNMAN",
+   "kind": "forward",
+   "condition": "an adverse finding you cannot explain in plain terms is not understood"
+  },
+  {
+   "from": "DEVILADV",
+   "to": "ADVERSARIAL",
+   "kind": "forward",
+   "condition": "the hostile reading becomes red-blue verification, not an opinion"
+  },
+  {
+   "from": "DEVILADV",
+   "to": "FAGAN",
+   "kind": "forward",
+   "condition": "the hostile reading becomes an inspection role, not an argument"
+  },
+  {
+   "from": "FEYNMAN",
+   "to": "SOLIDSRP",
+   "kind": "forward",
+   "condition": "explaining it names one responsibility per unit"
+  },
+  {
+   "from": "FEYNMAN",
+   "to": "COMMENTSMELL",
+   "kind": "forward",
+   "condition": "if you cannot explain it without a comment, the name is wrong"
+  },
+  {
+   "from": "SOLIDSRP",
+   "to": "SOLID",
+   "kind": "forward",
+   "condition": "one responsibility per unit is the S of SOLID"
+  },
+  {
+   "from": "SOLIDSRP",
+   "to": "CQS",
+   "kind": "forward",
+   "condition": "one responsibility means a command and a query never share a unit"
+  },
+  {
+   "from": "SOLID",
+   "to": "CLEANARCH",
+   "kind": "forward",
+   "condition": "the dependency rule puts policy inside and mechanism outside"
+  },
+  {
+   "from": "SOLID",
+   "to": "PARNAS",
+   "kind": "forward",
+   "condition": "the dependency rule is information hiding"
+  },
+  {
+   "from": "CLEANARCH",
+   "to": "DEEPMOD",
+   "kind": "forward",
+   "condition": "a clean boundary is worthless unless the module behind it is deep"
+  },
+  {
+   "from": "CLEANARCH",
+   "to": "ACCEPTPORT",
+   "kind": "forward",
+   "condition": "ports and adapters is the same boundary drawn at the edge"
+  },
+  {
+   "from": "XYPROB",
+   "to": "OCCAM",
+   "kind": "forward",
+   "condition": "the reported problem is a solution in disguise: ask for the simplest account of the real one"
+  },
+  {
+   "from": "SPIKE",
+   "to": "WARDLEY",
+   "kind": "forward",
+   "condition": "before the spike, map whether the unknown is a commodity or a differentiator"
+  },
+  {
+   "from": "SUBAGENT",
+   "to": "CONWAY",
+   "kind": "forward",
+   "condition": "splitting work across subagents splits the design along the split"
+  },
+  {
+   "from": "CONWAY",
+   "to": "COHESION",
+   "kind": "forward",
+   "condition": "the team boundary became a module boundary: check the module still has one job"
+  },
+  {
+   "from": "CONWAY",
+   "to": "PARNAS",
+   "kind": "forward",
+   "condition": "a team boundary that leaks is a module boundary that leaks"
+  },
+  {
+   "from": "COHESION",
+   "to": "GOFSTRATEGY",
+   "kind": "forward",
+   "condition": "one job with many variants wants a strategy, not a switch"
+  },
+  {
+   "from": "COHESION",
+   "to": "SLAP",
+   "kind": "forward",
+   "condition": "one job per module is one level of abstraction per function"
+  },
+  {
+   "from": "GOFSTRATEGY",
+   "to": "GOFOBSERVER",
+   "kind": "forward",
+   "condition": "the variant must notify without knowing who listens"
+  },
+  {
+   "from": "GOFSTRATEGY",
+   "to": "ILLEGAL",
+   "kind": "forward",
+   "condition": "a strategy object makes the illegal variant unrepresentable"
+  },
+  {
+   "from": "GOFOBSERVER",
+   "to": "WALKSKEL",
+   "kind": "forward",
+   "condition": "the observer is wired only once the skeleton walks"
+  },
+  {
+   "from": "GOFOBSERVER",
+   "to": "EDA",
+   "kind": "forward",
+   "condition": "observer at module scale is event-driven at system scale"
+  },
+  {
+   "from": "GOFOBSERVER",
+   "to": "ACCEPTPORT",
+   "kind": "forward",
+   "condition": "an observer is a port and the notification is the adapter"
+  },
+  {
+   "from": "WALKSKEL",
+   "to": "THINSLICE",
+   "kind": "forward",
+   "condition": "a walking skeleton is the thinnest slice that stands up"
+  },
+  {
+   "from": "EDA",
+   "to": "FALLACIES",
+   "kind": "forward",
+   "condition": "an event-driven system pays the eight fallacies"
+  },
+  {
+   "from": "EDA",
+   "to": "GITSTATE",
+   "kind": "forward",
+   "condition": "the event log is the state, and the state lives in git"
+  },
+  {
+   "from": "FALLACIES",
+   "to": "CAP",
+   "kind": "forward",
+   "condition": "the network is not reliable, so name which of consistency or availability you give up"
+  },
+  {
+   "from": "FALLACIES",
+   "to": "CONTRACTTEST",
+   "kind": "forward",
+   "condition": "an unreliable transport is caught by a consumer contract, not a unit test"
+  },
+  {
+   "from": "CAP",
+   "to": "LAMPORT",
+   "kind": "forward",
+   "condition": "the choice means nothing until events have an order"
+  },
+  {
+   "from": "CONVCOM",
+   "to": "GITHUBFLOW",
+   "kind": "forward",
+   "condition": "the commit format is only enforced by a flow with a review gate"
+  },
+  {
+   "from": "GITHUBFLOW",
+   "to": "SEMVER",
+   "kind": "forward",
+   "condition": "the merge is only shippable once it is versioned"
+  },
+  {
+   "from": "GUARD",
+   "to": "STRIDE",
+   "kind": "forward",
+   "condition": "a guard clause that admits an attacker is a threat, not a defence"
+  },
+  {
+   "from": "STRIDE",
+   "to": "OWASP",
+   "kind": "forward",
+   "condition": "the spoof, tamper and repudiation model is checked against the top ten"
+  },
+  {
+   "from": "OWASP",
+   "to": "LINDDUN",
+   "kind": "forward",
+   "condition": "the injection and leak classes also have a privacy half"
+  },
+  {
+   "from": "OWASP",
+   "to": "SANITIZE",
+   "kind": "forward",
+   "condition": "the top ten are caught by a sanitizer gate, not by review"
+  },
+  {
+   "from": "LINDDUN",
+   "to": "REGENV",
+   "kind": "forward",
+   "condition": "a privacy threat in a regulated environment needs an evidence trail"
+  },
+  {
+   "from": "LINDDUN",
+   "to": "SUBAGENT",
+   "kind": "forward",
+   "condition": "a privacy threat is only contained if the subagent never sees the data"
+  },
+  {
+   "from": "REGENV",
+   "to": "SIL61508",
+   "kind": "forward",
+   "condition": "the regulator names a safety integrity level"
+  },
+  {
+   "from": "REGENV",
+   "to": "REGEVIDENCE",
+   "kind": "forward",
+   "condition": "a regulated environment needs an evidence trail, and that is a standing tension"
+  },
+  {
+   "from": "SIL61508",
+   "to": "GUARDANDGO",
+   "kind": "forward",
+   "condition": "a safety integrity claim does not survive a silently accumulated fallback"
+  },
+  {
+   "from": "SIL61508",
+   "to": "BOUNDEDRETRY",
+   "kind": "forward",
+   "condition": "a safety claim that cannot be re-established twice is surfaced, not retried"
+  },
+  {
+   "from": "FAGAN",
+   "to": "REDGREEN",
+   "kind": "forward",
+   "condition": "an inspection finds the defect before there is a test to go red"
+  },
+  {
+   "from": "REDGREEN",
+   "to": "TDDCHICAGO",
+   "kind": "forward",
+   "condition": "red/green is a discipline only when the test is written first"
+  },
+  {
+   "from": "REDGREEN",
+   "to": "CHARTEST",
+   "kind": "forward",
+   "condition": "a characterization test goes green first and then green forever"
+  },
+  {
+   "from": "TDDCHICAGO",
+   "to": "TESTPYRAMID",
+   "kind": "forward",
+   "condition": "test-first at every level inverts into a pyramid"
+  },
+  {
+   "from": "TDDCHICAGO",
+   "to": "AGENTQA",
+   "kind": "forward",
+   "condition": "test-first under an agent is a QA contract, not a ritual"
+  },
+  {
+   "from": "TESTPYRAMID",
+   "to": "MUTATION",
+   "kind": "forward",
+   "condition": "a pyramid of passing tests says nothing until the tests can kill a mutant"
+  },
+  {
+   "from": "TESTPYRAMID",
+   "to": "FUZZ",
+   "kind": "forward",
+   "condition": "the wide base of the pyramid is generated, not handwritten"
+  },
+  {
+   "from": "MUTATION",
+   "to": "METAMORPH",
+   "kind": "forward",
+   "condition": "a surviving mutant is a relation the metamorphic check should have broken"
+  },
+  {
+   "from": "MUTATION",
+   "to": "REGRESSGUARD",
+   "kind": "forward",
+   "condition": "a surviving mutant is a regression a later sweep must not reintroduce"
+  },
+  {
+   "from": "FAGAN",
+   "to": "BLAME",
+   "kind": "forward",
+   "condition": "an inspection finding names a person and a commit, or nobody owns it"
+  },
+  {
+   "from": "PBTAGENT",
+   "to": "MUTATION",
+   "kind": "forward",
+   "condition": "an agent-generated property is only evidence if it can kill a mutant"
+  },
+  {
+   "from": "LLMJUDGE",
+   "to": "FAGAN",
+   "kind": "forward",
+   "condition": "an LLM verdict is an inspection finding, and a finding needs a named owner"
+  },
+  {
+   "from": "PYRAMIDPRIN",
+   "to": "BLUF",
+   "kind": "forward",
+   "condition": "the pyramid answers with the bottom line first"
+  },
+  {
+   "from": "BLUF",
+   "to": "INVPYRAMID",
+   "kind": "forward",
+   "condition": "a bottom line up front is the inverted pyramid of the newsroom"
+  },
+  {
+   "from": "INVPYRAMID",
+   "to": "PLAINENG",
+   "kind": "forward",
+   "condition": "the inverted pyramid only lands if the prose is plain"
+  },
+  {
+   "from": "PLAINENG",
+   "to": "DIATAXIS",
+   "kind": "forward",
+   "condition": "plain prose still has to know whether it is a tutorial, a how-to, a reference or an explanation"
+  },
+  {
+   "from": "DIATAXIS",
+   "to": "DOCSASCODE",
+   "kind": "forward",
+   "condition": "the four kinds stay apart only when docs are built with the code"
+  },
+  {
+   "from": "DOCSASCODE",
+   "to": "NODUPEDOC",
+   "kind": "forward",
+   "condition": "docs-as-code references the code and never restates it"
+  },
+  {
+   "from": "PYRAMIDPRIN",
+   "to": "WHYNOTWHAT",
+   "kind": "forward",
+   "condition": "the bottom line is the why and the diff carries the what"
+  },
+  {
+   "from": "BLUF",
+   "to": "RULE5072",
+   "kind": "forward",
+   "condition": "BLUF is the 50/72 subject line of the commit"
+  },
+  {
+   "from": "INVPYRAMID",
+   "to": "HEADERONLY",
+   "kind": "forward",
+   "condition": "a doc that leads with the answer is a header that loads and a body that fires on trigger"
+  },
+  {
+   "from": "PLAINENG",
+   "to": "CLEANNAME",
+   "kind": "forward",
+   "condition": "plain prose starts with a name that says what it is"
+  },
+  {
+   "from": "DIATAXIS",
+   "to": "AGENTSMD",
+   "kind": "forward",
+   "condition": "AGENTS.md is the reference kind, not an encyclopaedia"
+  },
+  {
+   "from": "DOCSASCODE",
+   "to": "SEMVER",
+   "kind": "forward",
+   "condition": "docs ship with the version they describe"
+  },
+  {
+   "from": "MILNER",
+   "to": "HALTING",
+   "kind": "forward",
+   "condition": "a type that makes a class of error unrepresentable is a decidable fragment Rice's theorem leaves you"
+  },
+  {
+   "from": "WADLER",
+   "to": "LEANSW",
+   "kind": "forward",
+   "condition": "a free theorem is a guarantee you got without writing the code that would have weighed it down"
+  },
+  {
+   "from": "STRUCTPROG",
+   "to": "TDDCHICAGO",
+   "kind": "forward",
+   "condition": "structured programming is the same discipline applied to the control flow of the test"
+  },
+  {
+   "from": "IMMUT",
+   "to": "GITSTATE",
+   "kind": "forward",
+   "condition": "an immutable value is state you never have to reconcile, and git is that state"
+  },
+  {
+   "from": "OWNERSHIP",
+   "to": "CONWAY",
+   "kind": "forward",
+   "condition": "one owner per value is one team per module"
+  },
+  {
+   "from": "CONTEXTROT",
+   "to": "DIATAXIS",
+   "kind": "forward",
+   "condition": "context rots when one document tries to be all four kinds at once"
+  },
+  {
+   "from": "COMPACT",
+   "to": "PYRAMIDPRIN",
+   "kind": "forward",
+   "condition": "a compaction writes its conclusion first, or the reader re-reads the whole thing"
+  },
+  {
+   "from": "OBSCOMPRESS",
+   "to": "INVPYRAMID",
+   "kind": "forward",
+   "condition": "an observed behaviour compresses to its most load-bearing sentence"
+  },
+  {
+   "from": "STABLEPREFIX",
+   "to": "DOCSASCODE",
+   "kind": "forward",
+   "condition": "the stable prefix is the doc that ships with the version"
+  },
+  {
+   "from": "TOOLBUDGET",
+   "to": "PUGH",
+   "kind": "forward",
+   "condition": "a tool definition is admitted only if it wins against the baseline of not having it"
+  },
+  {
+   "from": "GREPFIRST",
+   "to": "OCCAM",
+   "kind": "forward",
+   "condition": "an exact string is the shortest account of what you are looking for"
+  },
+  {
+   "from": "MONOTONE",
+   "to": "KOLMOGOROV",
+   "kind": "forward",
+   "condition": "monotone improvement is measured in description length, not in lines"
+  },
+  {
+   "from": "UBIQ",
+   "to": "CYNEFIN",
+   "kind": "forward",
+   "condition": "the ubiquitous language is only complete once the domain is classified"
+  },
+  {
+   "from": "DIJKSTRATEST",
+   "to": "REDGREEN",
+   "kind": "forward",
+   "condition": "a test that shows presence, never absence, is written red first"
+  },
+  {
+   "from": "ORACLEBIAS",
+   "to": "OCCAM",
+   "kind": "forward",
+   "condition": "an assertion that mirrors the code is the shortest account of nothing"
+  },
+  {
+   "from": "NODELETE",
+   "to": "COHESION",
+   "kind": "forward",
+   "condition": "a module nobody dares delete has more than one job"
+  },
+  {
+   "from": "CHURN",
+   "to": "TESTPYRAMID",
+   "kind": "forward",
+   "condition": "rising churn concentrates at the wide base of the pyramid"
+  },
+  {
+   "from": "SMALLESTSET",
+   "to": "MECE",
+   "kind": "forward",
+   "condition": "the smallest set of tokens is the MECE partition of what the reader needs"
+  },
+  {
+   "from": "REWORK",
+   "to": "PERT",
+   "kind": "forward",
+   "condition": "a rework loop is a critical path nobody scheduled"
+  },
+  {
+   "from": "FIXPOINT",
+   "to": "CONWAY",
+   "kind": "forward",
+   "condition": "a fixed point of the organisation is a fixed point of the architecture"
+  },
+  {
+   "from": "LOWERBOUND",
+   "to": "KOLMOGOROV",
+   "kind": "forward",
+   "condition": "a lower bound is an information-theoretic bound on description length"
   }
  ],
- "undefined_endpoints": []
+ "undefined_endpoints": [],
+ "book_index": [
+  {
+   "mermaid": "bluf",
+   "prose": "update_docs.md",
+   "node": "BLUF"
+  },
+  {
+   "mermaid": "cap_theorem",
+   "prose": "emit.md",
+   "node": "CAP"
+  },
+  {
+   "mermaid": "clean_architecture",
+   "prose": "specify.md",
+   "node": "CLEANARCH"
+  },
+  {
+   "mermaid": "cockburn_use_cases",
+   "prose": "specify.md",
+   "node": "USECASES"
+  },
+  {
+   "mermaid": "cohesion_criteria",
+   "prose": "emit.md",
+   "node": "COHESION"
+  },
+  {
+   "mermaid": "conventional_commits",
+   "prose": "emit.md",
+   "node": "CONVCOM"
+  },
+  {
+   "mermaid": "conways_law",
+   "prose": "emit.md",
+   "node": "CONWAY"
+  },
+  {
+   "mermaid": "cynefin_framework",
+   "prose": "specify.md",
+   "node": "CYNEFIN"
+  },
+  {
+   "mermaid": "devils_advocate",
+   "prose": "specify.md",
+   "node": "DEVILADV"
+  },
+  {
+   "mermaid": "diataxis_framework",
+   "prose": "update_docs.md",
+   "node": "DIATAXIS"
+  },
+  {
+   "mermaid": "docs_as_code",
+   "prose": "update_docs.md",
+   "node": "DOCSASCODE"
+  },
+  {
+   "mermaid": "dry",
+   "prose": "emit.md",
+   "node": "DRY"
+  },
+  {
+   "mermaid": "ears_requirements",
+   "prose": "specify.md",
+   "node": "EARS"
+  },
+  {
+   "mermaid": "event_driven_architecture",
+   "prose": "emit.md",
+   "node": "EDA"
+  },
+  {
+   "mermaid": "fagan_inspection",
+   "prose": "state.md",
+   "node": "FAGAN"
+  },
+  {
+   "mermaid": "fallacies_of_distributed_computing",
+   "prose": "emit.md",
+   "node": "FALLACIES"
+  },
+  {
+   "mermaid": "feynman_technique",
+   "prose": "specify.md",
+   "node": "FEYNMAN"
+  },
+  {
+   "mermaid": "first_principles_thinking",
+   "prose": "specify.md",
+   "node": "FIRSTPRIN"
+  },
+  {
+   "mermaid": "five_whys",
+   "prose": "specify.md",
+   "node": "FIVEWHYS"
+  },
+  {
+   "mermaid": "github_flow",
+   "prose": "emit.md",
+   "node": "GITHUBFLOW"
+  },
+  {
+   "mermaid": "gof_observer_pattern",
+   "prose": "emit.md",
+   "node": "GOFOBSERVER"
+  },
+  {
+   "mermaid": "gof_strategy_pattern",
+   "prose": "emit.md",
+   "node": "GOFSTRATEGY"
+  },
+  {
+   "mermaid": "hexagonal_architecture",
+   "prose": "emit.md",
+   "node": "ACCEPTPORT"
+  },
+  {
+   "mermaid": "iec_61508_sil_levels",
+   "prose": "sec.md",
+   "node": "SIL61508"
+  },
+  {
+   "mermaid": "inverted_pyramid_style",
+   "prose": "update_docs.md",
+   "node": "INVPYRAMID"
+  },
+  {
+   "mermaid": "invest",
+   "prose": "specify.md",
+   "node": "INVEST"
+  },
+  {
+   "mermaid": "kiss_principle",
+   "prose": "emit.md",
+   "node": "KISS"
+  },
+  {
+   "mermaid": "linddun",
+   "prose": "sec.md",
+   "node": "LINDDUN"
+  },
+  {
+   "mermaid": "mece",
+   "prose": "specify.md",
+   "node": "MECE"
+  },
+  {
+   "mermaid": "morphological_box",
+   "prose": "specify.md",
+   "node": "MORPHBOX"
+  },
+  {
+   "mermaid": "moscow",
+   "prose": "specify.md",
+   "node": "MOSCOW"
+  },
+  {
+   "mermaid": "mutation_testing",
+   "prose": "state.md",
+   "node": "MUTATION"
+  },
+  {
+   "mermaid": "occams_razor",
+   "prose": "specify.md",
+   "node": "OCCAM"
+  },
+  {
+   "mermaid": "owasp_top_10",
+   "prose": "sec.md",
+   "node": "OWASP"
+  },
+  {
+   "mermaid": "pert",
+   "prose": "specify.md",
+   "node": "PERT"
+  },
+  {
+   "mermaid": "plain_english_strunk_white",
+   "prose": "update_docs.md",
+   "node": "PLAINENG"
+  },
+  {
+   "mermaid": "property_based_testing",
+   "prose": "state.md",
+   "node": "HUGHES"
+  },
+  {
+   "mermaid": "pugh_matrix",
+   "prose": "specify.md",
+   "node": "PUGH"
+  },
+  {
+   "mermaid": "pyramid_principle",
+   "prose": "update_docs.md",
+   "node": "PYRAMIDPRIN"
+  },
+  {
+   "mermaid": "red_green_tdd",
+   "prose": "state.md",
+   "node": "REDGREEN"
+  },
+  {
+   "mermaid": "regulated_environment",
+   "prose": "sec.md",
+   "node": "REGENV"
+  },
+  {
+   "mermaid": "single_level_of_abstraction_principle",
+   "prose": "emit.md",
+   "node": "SLAP"
+  },
+  {
+   "mermaid": "solid_principles",
+   "prose": "specify.md",
+   "node": "SOLID"
+  },
+  {
+   "mermaid": "solid_srp",
+   "prose": "specify.md",
+   "node": "SOLIDSRP"
+  },
+  {
+   "mermaid": "spike_solution",
+   "prose": "specify.md",
+   "node": "SPIKE"
+  },
+  {
+   "mermaid": "stride",
+   "prose": "sec.md",
+   "node": "STRIDE"
+  },
+  {
+   "mermaid": "swot",
+   "prose": "specify.md",
+   "node": "SWOT"
+  },
+  {
+   "mermaid": "tdd_chicago_school",
+   "prose": "state.md",
+   "node": "TDDCHICAGO"
+  },
+  {
+   "mermaid": "testing_pyramid",
+   "prose": "state.md",
+   "node": "TESTPYRAMID"
+  },
+  {
+   "mermaid": "thin_vertical_slice",
+   "prose": "specify.md",
+   "node": "THINSLICE"
+  },
+  {
+   "mermaid": "vertical_slice_architecture",
+   "prose": "specify.md",
+   "node": "VERTSLICE"
+  },
+  {
+   "mermaid": "walking_skeleton",
+   "prose": "emit.md",
+   "node": "WALKSKEL"
+  },
+  {
+   "mermaid": "wardley_mapping",
+   "prose": "specify.md",
+   "node": "WARDLEY"
+  },
+  {
+   "mermaid": "xy_problem",
+   "prose": "specify.md",
+   "node": "XYPROB"
+  },
+  {
+   "mermaid": "yagni",
+   "prose": "emit.md",
+   "node": "YAGNI"
+  }
+ ],
+ "entry_points": [
+  "G_START"
+ ],
+ "convergence": {
+  "terminal": "G_FIXPOINT",
+  "halt": "G_SURFACE",
+  "measure": "unwalked_nodes + unfired_backreferences",
+  "monotone": "non-increasing across sweeps",
+  "reached_when": "a full sweep changed nothing: no gate reopened, no counterexample found, the artefact did not grow",
+  "declared_by": [
+   "FIXPOINT",
+   "MONOTONE",
+   "REGRESSGUARD",
+   "LOWERBOUND",
+   "G_SWEEP",
+   "G_FIXPOINT"
+  ]
+ },
+ "unconditioned_edge_ceiling": 103
 }
