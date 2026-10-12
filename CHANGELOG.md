@@ -6,7 +6,7 @@
 
 **Why:** the single-file store is what made a concurrent-lane lost update possible: two lanes rewriting one file races, and an `ok:true` `prd-add` could later answer "prd id not found". One file per row makes that structurally impossible, not merely less likely.
 
-**Measured:** rs-plugkit `45f41caf`, gm-config `5cfc399e`.
+**Measured:** rs-plugkit `45f41caf` (native-check and release green; predicates-md-drift green on rerun), gm-config `5cfc399e`. Served live against `C:\dev\gm` with plugin gm 0.1.1612: `prd-add` absorbed the legacy `.gm/prd.yml` (232778 bytes, 309 row ids) into `.gm/prd/` with 0 ids left without a file, the new row landed at `.gm/prd/<id>.yml`, `prd-list {"id":...}` answered it with `store_total: 310`, and `prd-resolve` answered `filed_to: .gm/prd-log.jsonl` with `row_file_cleared: true` -- the row file gone, the folder back to 309, and one hash-chained line in the log carrying ts, session, prev (genesis) and sha256. `prd-list {"id":...}` then answered the same id from that log with `resolved: true`. The same three steps on a mutable absorbed `.gm/mutables.yml` (356215 bytes, 367 ids) into 367 files, 0 missing, and moved the resolved one to `.gm/mutables-log.jsonl`.
 
 ## 2026-10-10 - a shell entrypoint for gm, the subagent pool as real verbs, crawling that releases its targets
 
