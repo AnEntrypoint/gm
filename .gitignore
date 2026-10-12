@@ -103,8 +103,19 @@ tmp/
 # revisions, 743MB logical history for a currently-2.1MB file), roughly
 # half of .git on-disk blob weight -- untracked here per this project own
 # derived-stores-are-transient-never-tracked policy.
+#
+# The successors of those two files: PRD rows and mutables now live one file
+# per row under .gm/prd/ and .gm/mutables/, so two lanes can never lose each
+# other's row to one whole-file rewrite, and a resolved row's material moves
+# into .gm/prd-log.jsonl / .gm/mutables-log.jsonl, append-only and hash-chained.
+# The row folders are the same transient class as the files they replace; the two
+# commit logs are the durable record and are NOT ignored.
 .gm/prd.yml
 .gm/mutables.yml
+.gm/prd/
+.gm/mutables/
+.gm/prd.absorbed.json
+.gm/mutables.absorbed.json
 .gm/.gm-continue-count
 # <<< plugkit managed
 .gm/pw-sock-*/
