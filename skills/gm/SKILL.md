@@ -211,7 +211,10 @@ A hop is one principle (a book's discipline) applied to one surface. A PRD row i
 
 **Derive, never assume.** Current state, legal transitions, edge gates and
 terminal state come from the live response. A graph may have any states, any
-count, any names, and replaces defaults wholesale -- no merge.
+count, any names, and replaces defaults wholesale -- no merge. The graph is a set
+of independent nodes with many paths between them, not a sequence of phases: the
+runtime word `phase` names the node key you currently stand on, never a group of
+nodes, and no node gates entry to a set of others.
 
 **Terminal is what the graph declares.** Its own gates plus
 `prd_pending_count=0`, not a name match.
