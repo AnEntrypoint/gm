@@ -29,7 +29,7 @@ A hop consumes a surface and EMITS a node. The walk is what grows the tree, so e
 Write `.gm/lean-walk/<NODE>.json` (one file per node id; overwrite the node's own file, never another's) as:
 
 ```
-{node, phase, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
+{node, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
  links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...]}
 ```
 
