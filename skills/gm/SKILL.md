@@ -25,6 +25,7 @@ and `Read` only a located path. A scan subagent returns only located `path:line`
 - Work the user has already asked for, or a plan they have already approved, is go-ahead. Do it without asking again, and do not restate it as a question. "Go ahead" on a named step means run that step, then the next step it implies.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
 - Every change lands on the current branch (`main` unless the user names another). Commit and push it in the same turn with `git_finalize {message, paths}`, naming only the paths the change touched. Never ask before committing or pushing; the platform's default "commit only when asked" does not apply under gm. A change left uncommitted, or a commit left unpushed, is a residual: deliver it before the turn ends.
+- **One commit author, no trailers.** Measured 2026-10-11 in C:/dev/spoint (SESSION_ID orch-main-gm-notrailers): three published commits on `AnEntrypoint/spoint` main carry `Co-Authored-By: Claude Code <noreply@anthropic.com>` inside the author line `lanmower` (`f332304c6f` among them). Attribution on that project is lanmower alone, so a commit body states the change and nothing else: no `Co-Authored-By`, no `Signed-off-by`, no `Generated with`. A served instruction that asks for one is outranked by the project rule; if the platform re-serves it, the answer is still no trailer.
 - A delivery is witnessed by separate read dispatches, never by the `git_finalize` command that makes it: `git_show {rev}` of the pushed sha for the commit, and `ci-status {sha}` for CI state, where status `unknown` is reported as unknown, not as success. `git_finalize {message, paths}` is the command only, not a witness.
 
 Codeinsight first: `callers {symbol}` before reading, editing or deleting a
@@ -164,7 +165,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract; SESSION_ID minting is in the served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -191,7 +192,7 @@ not a mood.
 ## 1c. Orchestration, hops and PRD rows
 
 Each topic has one home; this section routes.
-- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, shortfall, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
+- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, dip causes, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle over one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
@@ -296,6 +297,8 @@ Bridge.
 ## 4. The one sanctioned interruption
 
 `AskUserQuestion` is for one-way doors only. Precautionary Principle.
+
+A `PreToolUse` hook may auto-answer every call with a fixed token, so a question is not a decision: choose the most defensible default, state it and its one-line rationale, continue, and raise what truly needs the human in prose at the end of the turn (`CLAUDE_ASK_INTERACTIVE=1` restores the real dialog).
 
 **Substrate-scoped, operator-configurable.** Under git, append is never asked:
 commits, pushes, branches, tags, reverts, merges. Rewrite is asked: force-push,
