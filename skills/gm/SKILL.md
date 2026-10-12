@@ -165,7 +165,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract; SESSION_ID minting is in the served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -192,7 +192,7 @@ not a mood.
 ## 1c. Orchestration, hops and PRD rows
 
 Each topic has one home; this section routes.
-- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, shortfall, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
+- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, dip causes, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle over one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
