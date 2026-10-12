@@ -108,41 +108,29 @@ const build = () => {
     }).join(', ')
   }
 
-  const phaseNodes = nodes.filter((node) => node.kind === 'phase')
-  const phaseNodeByValue = new Map(phaseNodes.map((node) => [node.phase, node]))
-  const NO_PHASE = '(no phase)'
+  const NO_PROVENANCE = '(unattributed)'
   const buckets = new Map()
   for (const node of nodes) {
-    const key = node.phase ?? NO_PHASE
+    const key = node.provenance ?? NO_PROVENANCE
     if (!buckets.has(key)) buckets.set(key, [])
     buckets.get(key).push(node)
   }
-  const bucketOrder = [
-    ...phaseNodes.map((node) => node.phase),
-    ...[...buckets.keys()].filter((key) => key !== NO_PHASE && !phaseNodeByValue.has(key)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-    ...(buckets.has(NO_PHASE) ? [NO_PHASE] : []),
-  ]
+  const bucketOrder = [...buckets.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
   const phaseRows = bucketOrder.map((key) => {
     const members = buckets.get(key)
-    const phaseNode = phaseNodeByValue.get(key)
-    const head = phaseNode
-      ? nodeLink(phaseNode.id, INDEX)
-      : esc(key === NO_PHASE ? 'no phase' : key)
+    const head = esc(key === NO_PROVENANCE ? 'unattributed' : key)
     const principles = members.filter((node) => node.kind === 'principle').length
     const tensions = members.filter((node) => node.kind === 'tension').length
-    const others = members.filter((node) => node.kind !== 'principle' && node.kind !== 'tension' && node !== phaseNode).length
-    const memberLinks = members.filter((node) => node !== phaseNode).map((node) => nodeLink(node.id, INDEX)).join(', ')
+    const others = members.filter((node) => node.kind !== 'principle' && node.kind !== 'tension').length
+    const memberLinks = members.map((node) => nodeLink(node.id, INDEX)).join(', ')
     return `      <tr><td>${head}</td><td>${members.length}</td><td>${principles}</td><td>${tensions}</td><td>${others}</td><td>${memberLinks || 'none'}</td></tr>`
   }).join('\n')
 
   const nodeSections = nodes.map((node) => {
     const out = outgoing.get(node.id) ?? []
     const incomingList = incoming.get(node.id) ?? []
-    const phaseNode = node.phase ? phaseNodeByValue.get(node.phase) : null
-    const phaseCell = node.phase
-      ? `phase ${phaseNode ? nodeLink(phaseNode.id, INDEX) : esc(node.phase)}`
-      : 'no phase'
+    const phaseCell = node.provenance ? `concern ${esc(node.provenance)}` : 'unattributed'
     const heading = node.book
       ? `<code>${esc(node.id)}</code> ${esc(node.book)}${node.author ? ` <span class="author">${esc(node.author)}</span>` : ''}`
       : `<code>${esc(node.id)}</code> ${esc(node.label)}`
@@ -168,11 +156,11 @@ const build = () => {
   const edgeRows = edges.map((edge) => `      <tr><td>${nodeLink(edge.from, INDEX)}</td><td>${nodeLink(edge.to, INDEX)}</td><td>${esc(edge.kind)}</td><td>${esc(edge.condition ?? '')}</td></tr>`).join('\n')
 
   const linkCount = edges.length * 2
-  const description = `the full gm graph, generated from skills/dream-rsi/gm-graph.json: ${nodes.length} nodes, ${kindCount('principle')} principles, ${phaseNodes.length} phases, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const description = `the full gm graph, generated from skills/dream-rsi/gm-graph.json: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} concerns of provenance and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
 
-  const page = `<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Phases</strong> group the principles, <strong>gates</strong> guard moves between them, and <strong>tensions</strong> stay open across phases until they are resolved.</p>
+  const page = `<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Gates</strong> guard the edges they sit on, and <strong>tensions</strong> stay open until they are resolved. There are no phases: every node is independent, and the walk is a graph walk with many paths.</p>
 
-<p>Every node below is its own anchor, listed flat and in full: ${nodes.length} nodes, none of them behind a bucket. Each one names every node it reaches and every node that reaches it, in both directions, so a walk can start anywhere and move node to node. The phase table above the list is an index, not a gate: it points at the same anchors.</p>
+<p>Every node below is its own anchor, listed flat and in full: ${nodes.length} nodes, none of them behind a bucket. Each one names every node it reaches and every node that reaches it, in both directions, so a walk can start anywhere and move node to node. The concern index above the list is provenance, not a gate: it says where each book came from and points at the same anchors.</p>
 
 <p>This page is generated from <code>skills/dream-rsi/gm-graph.json</code> by <code>scripts/build-graph-page.mjs</code>. Every count on it is derived from that file at build time. The same file is published as <a href="../docs/api/gm-graph.json"><code>docs/api/gm-graph.json</code></a>.</p>
 
@@ -183,7 +171,7 @@ const build = () => {
   <tbody>
     <tr><td>Nodes</td><td>${nodes.length}</td></tr>
     <tr><td>Principles</td><td>${kindCount('principle')}</td></tr>
-    <tr><td>Phases</td><td>${kindCount('phase')}</td></tr>
+    <tr><td>Concerns (provenance, not grouping)</td><td>${bucketOrder.length}</td></tr>
     <tr><td>Gates</td><td>${kindCount('gate')}</td></tr>
     <tr><td>Terminals</td><td>${kindCount('terminal')}</td></tr>
     <tr><td>Standing tensions</td><td>${kindCount('tension')}</td></tr>
@@ -198,10 +186,10 @@ const build = () => {
   </tbody>
 </table>
 
-<h2>Phase index</h2>
+<h2>Concern index</h2>
 <table>
   <caption>An index over the same node anchors, not a separate view of them</caption>
-  <thead><tr><th>Phase</th><th>Nodes</th><th>Principles</th><th>Tensions</th><th>Other</th><th>Members</th></tr></thead>
+  <thead><tr><th>Concern</th><th>Nodes</th><th>Principles</th><th>Tensions</th><th>Other</th><th>Members</th></tr></thead>
   <tbody>
 ${phaseRows}
   </tbody>
