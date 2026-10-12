@@ -187,3 +187,6 @@ skills/gm/.gm/
 # subagent heartbeat directory: every subagent writes .gm/pool/<session>.live on start and
 # deletes it on finish, so the directory holds no source (skills/gm/SKILL.md, pool protocol)
 .gm/pool/
+
+# editor settings folder: never tracked anywhere in this tree
+.vscode/
