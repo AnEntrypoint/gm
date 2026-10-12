@@ -1,21 +1,46 @@
 #!/usr/bin/env node
-// Generates docs/graph.html (the body flatspace hosts at /graph/) and mirrors the
-// graph source to docs/api/gm-graph.json.
+// Generates the graph pages that flatspace hosts (docs/graph.html at /graph/ and
+// docs/dada-graph.html at /dada-graph/) and mirrors each graph source to docs/api/.
 //
-// Every number on the page is derived here from skills/dream-rsi/gm-graph.json.
-// Nothing is hand-written: the page description that site/content/pages/graph.yaml
-// carries is rewritten here too, so a graph change cannot leave a stale count
-// behind. A graph that cannot be rendered as a walkable node-to-node page is a
-// build failure with a named reason code, never a silently broken page.
+// One code path renders every entry of GRAPHS. Every number on a page is derived
+// here from that entry's graph JSON. Nothing is hand-written: the description that
+// each pageSource YAML carries is rewritten here too, so a graph change cannot leave
+// a stale count behind. A graph that cannot be rendered as a walkable node-to-node
+// page is a build failure with a named reason code, never a silently broken page.
+// Every page is rendered before the first file is written, so a refused graph
+// leaves every output untouched.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const graphPath = path.join(repoRoot, 'skills', 'dream-rsi', 'gm-graph.json')
-const pagePath = path.join(repoRoot, 'docs', 'graph.html')
-const apiPath = path.join(repoRoot, 'docs', 'api', 'gm-graph.json')
-const pageSourcePath = path.join(repoRoot, 'site', 'content', 'pages', 'graph.yaml')
+
+const GRAPHS = [
+  {
+    source: 'skills/dream-rsi/gm-graph.json',
+    page: 'docs/graph.html',
+    api: 'docs/api/gm-graph.json',
+    pageSource: 'site/content/pages/graph.yaml',
+    title: 'graph',
+    subject: 'the full gm graph',
+    lede: '<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Gates</strong> guard the edges they sit on, and <strong>tensions</strong> stay open until they are resolved. There are no phases: every node is independent, and the walk is a graph walk with many paths.</p>',
+    guardCaption: 'Gates guard moves; terminals end a walk',
+  },
+  {
+    source: 'skills/dream-rsi/dada-graph.json',
+    page: 'docs/dada-graph.html',
+    api: 'docs/api/dada-graph.json',
+    pageSource: 'site/content/pages/dada-graph.yaml',
+    title: 'DADA graph',
+    subject: 'the full DADA graph',
+    lede: '<p class="lede">The DADA graph uses the same node layout as the gm graph. A <strong>principle</strong> is one discipline from a named book or author, a <strong>tension</strong> stays open until it is resolved, <strong>gates</strong> guard the edges they sit on, and <strong>terminals</strong> mark the end nodes. Each edge is <strong>forward</strong> or a <strong>back-reference</strong>, and most edges carry a condition.</p>',
+    guardCaption: 'Gates guard edges; terminals mark the end nodes',
+  },
+]
+
+const HOPS = 'hop'
+const INDEX = 'idx'
+const NO_PROVENANCE = '(unattributed)'
 
 const fail = (reasonCode, detail) => {
   const err = new Error(`${reasonCode}: ${detail}`)
@@ -28,7 +53,12 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&
 const byIdOrder = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })
 const anchorOf = (id) => `node-${id}`
 
-const build = () => {
+const renderGraph = (entry) => {
+  const graphPath = path.join(repoRoot, entry.source)
+  const pagePath = path.join(repoRoot, entry.page)
+  const apiPath = path.join(repoRoot, entry.api)
+  const pageSourcePath = path.join(repoRoot, entry.pageSource)
+
   const graph = JSON.parse(fs.readFileSync(graphPath, 'utf8'))
   if (!Array.isArray(graph.nodes) || graph.nodes.length === 0) fail('graph_nodes_missing', `${graphPath} carries no nodes[]`)
   if (!Array.isArray(graph.edges)) fail('graph_edges_missing', `${graphPath} carries no edges[]`)
@@ -53,7 +83,7 @@ const build = () => {
   }
   const declaredBroken = Array.isArray(graph.undefined_endpoints) ? graph.undefined_endpoints : []
   if (declaredBroken.length > 0) {
-    fail('graph_declared_undefined_endpoints', `gm-graph.json declares ${declaredBroken.length} undefined endpoint(s): ${declaredBroken.slice(0, 10).join(', ')}`)
+    fail('graph_declared_undefined_endpoints', `${entry.source} declares ${declaredBroken.length} undefined endpoint(s): ${declaredBroken.slice(0, 10).join(', ')}`)
   }
 
   const kindCount = (kind) => nodes.filter((node) => node.kind === kind).length
@@ -64,13 +94,14 @@ const build = () => {
     ['forward_edges', edgeKindCount('forward')],
     ['backreference_edges', edgeKindCount('backreference')],
   ]) {
-    if (!(key in graph)) fail('graph_count_missing', `${key} is absent from gm-graph.json; the page derives it and cannot check an absent hand-written count`)
+    if (!(key in graph)) fail('graph_count_missing', `${key} is absent from ${entry.source}; the page derives it and cannot check an absent hand-written count`)
     if (graph[key] !== actual) fail('graph_count_drift', `${key}=${graph[key]} but the graph has ${actual}`)
   }
 
   const entryPoints = Array.isArray(graph.entry_points) ? graph.entry_points : []
   for (const id of entryPoints) if (!byId.has(id)) fail('graph_undefined_entry_point', id)
-  const bookIndex = Array.isArray(graph.book_index) ? graph.book_index : []
+  const hasBooks = Array.isArray(graph.book_index)
+  const bookIndex = hasBooks ? graph.book_index : []
 
   const labelOf = (id) => byId.get(id)?.label ?? id
   const titleOf = (id) => {
@@ -95,8 +126,6 @@ const build = () => {
     fail('graph_unlinked_node', `${unlinked.length} node(s) carry no edge in either direction: ${unlinked.slice(0, 10).map((node) => node.id).join(', ')}`)
   }
 
-  const HOPS = 'hop'
-  const INDEX = 'idx'
   const nodeLink = (id, cls) => `<a class="${cls}" href="#${esc(anchorOf(id))}" title="${esc(titleOf(id))}">${esc(id)}</a>`
   const edgeRun = (list, side) => {
     if (!list || list.length === 0) return 'none'
@@ -108,7 +137,6 @@ const build = () => {
     }).join(', ')
   }
 
-  const NO_PROVENANCE = '(unattributed)'
   const buckets = new Map()
   for (const node of nodes) {
     const key = node.provenance ?? NO_PROVENANCE
@@ -156,13 +184,24 @@ const build = () => {
   const edgeRows = edges.map((edge) => `      <tr><td>${nodeLink(edge.from, INDEX)}</td><td>${nodeLink(edge.to, INDEX)}</td><td>${esc(edge.kind)}</td><td>${esc(edge.condition ?? '')}</td></tr>`).join('\n')
 
   const linkCount = edges.length * 2
-  const description = `the full gm graph, generated from skills/dream-rsi/gm-graph.json: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} concerns of provenance and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} concerns of provenance and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const booksRow = hasBooks ? `    <tr><td>Books</td><td>${bookIndex.length}</td></tr>\n` : ''
+  const booksSection = hasBooks ? `<h2>Books</h2>
+<table>
+  <caption>${bookIndex.length} books, each its own node</caption>
+  <thead><tr><th>Book</th><th>Node</th><th>Prose</th></tr></thead>
+  <tbody>
+${bookRows}
+  </tbody>
+</table>
 
-  const page = `<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Gates</strong> guard the edges they sit on, and <strong>tensions</strong> stay open until they are resolved. There are no phases: every node is independent, and the walk is a graph walk with many paths.</p>
+` : ''
+
+  const page = `${entry.lede}
 
 <p>Every node below is its own anchor, listed flat and in full: ${nodes.length} nodes, none of them behind a bucket. Each one names every node it reaches and every node that reaches it, in both directions, so a walk can start anywhere and move node to node. The concern index above the list is provenance, not a gate: it says where each book came from and points at the same anchors.</p>
 
-<p>This page is generated from <code>skills/dream-rsi/gm-graph.json</code> by <code>scripts/build-graph-page.mjs</code>. Every count on it is derived from that file at build time. The same file is published as <a href="../docs/api/gm-graph.json"><code>docs/api/gm-graph.json</code></a>.</p>
+<p>This page is generated from <code>${entry.source}</code> by <code>scripts/build-graph-page.mjs</code>. Every count on it is derived from that file at build time. The same file is published as <a href="../${entry.api}"><code>${entry.api}</code></a>.</p>
 
 <h2>At a glance</h2>
 <table>
@@ -175,8 +214,7 @@ const build = () => {
     <tr><td>Gates</td><td>${kindCount('gate')}</td></tr>
     <tr><td>Terminals</td><td>${kindCount('terminal')}</td></tr>
     <tr><td>Standing tensions</td><td>${kindCount('tension')}</td></tr>
-    <tr><td>Books</td><td>${bookIndex.length}</td></tr>
-    <tr><td>Edges</td><td>${edges.length}</td></tr>
+${booksRow}    <tr><td>Edges</td><td>${edges.length}</td></tr>
     <tr><td>Forward edges</td><td>${edgeKindCount('forward')}</td></tr>
     <tr><td>Back-reference edges</td><td>${edgeKindCount('backreference')}</td></tr>
     <tr><td>Conditioned edges</td><td>${edges.filter((edge) => edge.condition).length}</td></tr>
@@ -201,23 +239,14 @@ ${nodeSections}
 
 <h2>Gates and terminals</h2>
 <table>
-  <caption>Gates guard moves; terminals end a walk</caption>
+  <caption>${entry.guardCaption}</caption>
   <thead><tr><th>Node</th><th>Kind</th><th>Condition</th><th>Out</th><th>In</th></tr></thead>
   <tbody>
 ${guardRows}
   </tbody>
 </table>
 
-<h2>Books</h2>
-<table>
-  <caption>${bookIndex.length} books, each its own node</caption>
-  <thead><tr><th>Book</th><th>Node</th><th>Prose</th></tr></thead>
-  <tbody>
-${bookRows}
-  </tbody>
-</table>
-
-<h2>Every edge</h2>
+${booksSection}<h2>Every edge</h2>
 <details>
   <summary>Show all ${edges.length} edges</summary>
   <table>
@@ -237,19 +266,22 @@ ${edgeRows}
   const renderedHops = page.split(`class="${HOPS}"`).length - 1
   if (renderedHops !== linkCount) fail('graph_page_link_count_mismatch', `${renderedHops} hop links rendered, ${linkCount} expected`)
 
-  const source = fs.readFileSync(pageSourcePath, 'utf8')
-  if (!/^description:/m.test(source)) fail('graph_page_source_description_missing', `${pageSourcePath} has no description: line to derive`)
-  const nextSource = source.replace(/^description:.*$/m, `description: "${esc(description)}"`)
-  if (nextSource !== source) fs.writeFileSync(pageSourcePath, nextSource)
+  const sourceText = fs.readFileSync(pageSourcePath, 'utf8')
+  if (!/^description:/m.test(sourceText)) fail('graph_page_source_description_missing', `${pageSourcePath} has no description: line to derive`)
+  const nextSource = sourceText.replace(/^description:.*$/m, `description: "${esc(description)}"`)
 
-  fs.mkdirSync(path.dirname(apiPath), { recursive: true })
-  fs.writeFileSync(pagePath, page)
-  fs.copyFileSync(graphPath, apiPath)
-  console.log(`graph page: ${nodes.length} nodes, ${edges.length} edges, ${linkCount} node-to-node links -> docs/graph.html`)
+  return { entry, graphPath, pagePath, apiPath, pageSourcePath, sourceText, nextSource, page, nodeCount: nodes.length, edgeCount: edges.length, linkCount }
 }
 
 try {
-  build()
+  const rendered = GRAPHS.map(renderGraph)
+  for (const r of rendered) {
+    if (r.nextSource !== r.sourceText) fs.writeFileSync(r.pageSourcePath, r.nextSource)
+    fs.mkdirSync(path.dirname(r.apiPath), { recursive: true })
+    fs.writeFileSync(r.pagePath, r.page)
+    fs.copyFileSync(r.graphPath, r.apiPath)
+    console.log(`${r.entry.title} page: ${r.nodeCount} nodes, ${r.edgeCount} edges, ${r.linkCount} node-to-node links -> ${r.entry.page}`)
+  }
 } catch (err) {
   process.stderr.write(`::error::[build-graph-page] ${err.message}\n`)
   process.exit(1)
