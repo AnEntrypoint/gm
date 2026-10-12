@@ -1,0 +1,410 @@
+<p class="lede">The graph is the map a walk follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Phases</strong> group the principles, <strong>gates</strong> guard moves between them, and <strong>tensions</strong> stay open across phases until they are resolved.</p>
+
+<p>This page is generated from <code>skills/dream-rsi/gm-graph.json</code> by <code>scripts/build-graph-page.mjs</code>. The same file is published as <a href="../docs/api/gm-graph.json"><code>docs/api/gm-graph.json</code></a>.</p>
+
+<h2>At a glance</h2>
+<table>
+  <caption>Graph size</caption>
+  <thead><tr><th>Part</th><th>Count</th></tr></thead>
+  <tbody>
+    <tr><td>Nodes</td><td>111</td></tr>
+    <tr><td>Principles</td><td>86</td></tr>
+    <tr><td>Phases</td><td>9</td></tr>
+    <tr><td>Gates</td><td>6</td></tr>
+    <tr><td>Terminals</td><td>2</td></tr>
+    <tr><td>Standing tensions</td><td>8</td></tr>
+    <tr><td>Edges</td><td>209</td></tr>
+    <tr><td>Forward edges</td><td>102</td></tr>
+    <tr><td>Back-reference edges</td><td>107</td></tr>
+  </tbody>
+</table>
+
+<h2>Phases and their principles</h2>
+  <section id="p1">
+    <h3>P1 · SHAPE</h3>
+    <p>8 principles.</p>
+    <ol>
+      <li><strong>Jobs To Be Done</strong> <span class="author">Clayton Christensen</span> <code>JTBD</code> <span class="fan">1 outgoing</span></li>
+      <li><strong>XY Problem</strong> <span class="author">unattributed</span> <code>XYPROB</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>EARS Requirements Syntax</strong> <span class="author">Alistair Mavin</span> <code>EARS</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>INVEST</strong> <span class="author">Bill Wake</span> <code>INVEST</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Thin Vertical Slice</strong> <span class="author">Alistair Cockburn</span> <code>THINSLICE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Spike Solution</strong> <span class="author">Kent Beck</span> <code>SPIKE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>YAGNI</strong> <span class="author">Ron Jeffries</span> <code>YAGNI</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Live Plan, Current Task Only</strong> <span class="author">unattributed</span> <code>LIVEPLAN</code> <span class="fan">2 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p2">
+    <h3>P2 · CONTRACT</h3>
+    <p>13 principles.</p>
+    <ol>
+      <li><strong>Ubiquitous Language</strong> <span class="author">Eric Evans</span> <code>UBIQ</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Intention-Revealing Names</strong> <span class="author">Robert C. Martin</span> <code>CLEANNAME</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Time, Clocks and the Ordering of Events</strong> <span class="author">Leslie Lamport</span> <code>LAMPORT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Well-Typed Programs Cannot Go Wrong</strong> <span class="author">Robin Milner</span> <code>MILNER</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Make Illegal States Unrepresentable</strong> <span class="author">Yaron Minsky</span> <code>ILLEGAL</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Parse, Don&#39;t Validate</strong> <span class="author">Alexis King</span> <code>PARSEDV</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Theorems for Free</strong> <span class="author">Philip Wadler</span> <code>WADLER</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Design by Contract</strong> <span class="author">Bertrand Meyer</span> <code>DBC</code> <span class="fan">4 outgoing</span></li>
+      <li><strong>Command-Query Separation</strong> <span class="author">Bertrand Meyer</span> <code>CQS</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Information Hiding</strong> <span class="author">David Parnas</span> <code>PARNAS</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Deep Modules</strong> <span class="author">John Ousterhout</span> <code>DEEPMOD</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Ports and Adapters</strong> <span class="author">Alistair Cockburn</span> <code>ACCEPTPORT</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>A Comment Is a Deodorant for Bad Smells</strong> <span class="author">Fowler and Beck</span> <code>COMMENTSMELL</code> <span class="fan">1 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p3">
+    <h3>P3 · BUILD</h3>
+    <p>8 principles.</p>
+    <ol>
+      <li><strong>Total Functional Programming</strong> <span class="author">David Turner</span> <code>TOTALITY</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Guard Clause</strong> <span class="author">Martin Fowler</span> <code>GUARD</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Single Level of Abstraction</strong> <span class="author">Kent Beck</span> <code>SLAP</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Structured Programming</strong> <span class="author">Edsger Dijkstra</span> <code>STRUCTPROG</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Purely Functional Data Structures</strong> <span class="author">Chris Okasaki</span> <code>IMMUT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Ownership and Borrowing</strong> <span class="author">Matsakis and Klock</span> <code>OWNERSHIP</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Don&#39;t Repeat Yourself</strong> <span class="author">Hunt and Thomas</span> <code>DRY</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>KISS</strong> <span class="author">Kelly Johnson</span> <code>KISS</code> <span class="fan">2 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p4">
+    <h3>P4 · VERIFY</h3>
+    <p>14 principles.</p>
+    <ol>
+      <li><strong>Testing Shows Presence, Never Absence</strong> <span class="author">Edsger Dijkstra</span> <code>DIJKSTRATEST</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Implementation-Biased Test Generation</strong> <span class="author">LLM test-generation study</span> <code>ORACLEBIAS</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Independence-Based Verification</strong> <span class="author">Grabowski</span> <code>INDEPVER</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Adversarial Red-Blue Agent Verification</strong> <span class="author">Thukkaram</span> <code>ADVERSARIAL</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>QuickCheck Property-Based Testing</strong> <span class="author">Claessen and Hughes</span> <code>HUGHES</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Agentic Property-Based Testing</strong> <span class="author">Hypothesis agent study</span> <code>PBTAGENT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Stateful Invariant Runs over Random Call Sequences</strong> <span class="author">Foundry and Hypothesis</span> <code>INVARIANTRUN</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Metamorphic Testing</strong> <span class="author">T. Y. Chen</span> <code>METAMORPH</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Coverage-Guided Fuzzing</strong> <span class="author">Michał Zalewski</span> <code>FUZZ</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Consumer-Driven Contract Test</strong> <span class="author">Ian Robinson</span> <code>CONTRACTTEST</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Characterization Test, Legacy Only</strong> <span class="author">Michael Feathers</span> <code>CHARTEST</code> <span class="fan">1 outgoing</span></li>
+      <li><strong>Agent-Native QA over MCP</strong> <span class="author">unattributed</span> <code>AGENTQA</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>LLM as a Judge</strong> <span class="author">unattributed</span> <code>LLMJUDGE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Sanitizer and Static Analysis Gate</strong> <span class="author">unattributed</span> <code>SANITIZE</code> <span class="fan">2 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p5">
+    <h3>P5 · RECORD</h3>
+    <p>8 principles.</p>
+    <ol>
+      <li><strong>Conventional Commits</strong> <span class="author">unattributed</span> <code>CONVCOM</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>50/72 Commit Format</strong> <span class="author">Tim Pope</span> <code>RULE5072</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>The Diff Records What, the Message Records Why</strong> <span class="author">unattributed</span> <code>WHYNOTWHAT</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Git Is the State</strong> <span class="author">stateless runtime, Kapale</span> <code>GITSTATE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>git blame as the Index</strong> <span class="author">unattributed</span> <code>BLAME</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>git bisect as the Regression Oracle</strong> <span class="author">Linus Torvalds</span> <code>BISECT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Semantic Versioning</strong> <span class="author">Tom Preston-Werner</span> <code>SEMVER</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>ADR, Irreversible Forks Only</strong> <span class="author">Michael Nygard</span> <code>ADRN</code> <span class="fan">2 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p6">
+    <h3>P6 · PRESSURE</h3>
+    <p>11 principles.</p>
+    <ol>
+      <li><strong>Agents Avoid Deleting Code</strong> <span class="author">Ebrahimi et al.</span> <code>NODELETE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Guard-and-Go Fallback Accumulation</strong> <span class="author">Vector Labs</span> <code>GUARDANDGO</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Type-4 Semantic Clones in Agent Pull Requests</strong> <span class="author">unattributed</span> <code>TYPE4</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Rising Churn and Duplication</strong> <span class="author">Harding and Kloster, GitClear</span> <code>CHURN</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Behavioural Drift over Long Trajectories</strong> <span class="author">Orlanski et al.</span> <code>SLOPDRIFT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Deletion-Completeness Check</strong> <span class="author">unattributed</span> <code>DELETIONGATE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Net-Negative Diff Target</strong> <span class="author">unattributed</span> <code>DIFFBUDGET</code> <span class="fan">1 outgoing</span></li>
+      <li><strong>Reachability Analysis</strong> <span class="author">unattributed</span> <code>REACHABLE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Out of the Tar Pit</strong> <span class="author">Moseley and Marks</span> <code>TARPIT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>A Plea for Lean Software</strong> <span class="author">Niklaus Wirth</span> <code>LEANSW</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Kolmogorov Complexity</strong> <span class="author">Kolmogorov and Chaitin</span> <code>KOLMOGOROV</code> <span class="fan">2 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p7">
+    <h3>P7 · CONTEXT ECONOMY</h3>
+    <p>14 principles.</p>
+    <ol>
+      <li><strong>The Smallest Set of High-Signal Tokens</strong> <span class="author">unattributed</span> <code>SMALLESTSET</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Context Rot</strong> <span class="author">Hong et al.</span> <code>CONTEXTROT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Rework Loops Dominate Token Spend</strong> <span class="author">unattributed</span> <code>REWORK</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Progressive Disclosure via SKILL.md</strong> <span class="author">unattributed</span> <code>PROGDISC</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Header Loads, Body Fires on Trigger</strong> <span class="author">unattributed</span> <code>HEADERONLY</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>AGENTS.md Hierarchical, Not Encyclopaedic</strong> <span class="author">unattributed</span> <code>AGENTSMD</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Reference, Never Restate</strong> <span class="author">unattributed</span> <code>NODUPEDOC</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Subagent Context Isolation</strong> <span class="author">unattributed</span> <code>SUBAGENT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Phase-Boundary Compaction</strong> <span class="author">unattributed</span> <code>COMPACT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Observational Context Compression</strong> <span class="author">unattributed</span> <code>OBSCOMPRESS</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Server-Side Memory Across Sessions</strong> <span class="author">unattributed</span> <code>MEMTOOL</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Stable Prefix for Cache Hits</strong> <span class="author">unattributed</span> <code>STABLEPREFIX</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Tool and MCP Definition Overhead</strong> <span class="author">unattributed</span> <code>TOOLBUDGET</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Exact-String Retrieval Before Embedding Retrieval</strong> <span class="author">unattributed</span> <code>GREPFIRST</code> <span class="fan">1 outgoing</span></li>
+    </ol>
+  </section>
+  <section id="p8">
+    <h3>P8 · STANDING TENSIONS</h3>
+    <p>0 principles, 8 standing tensions.</p>
+    <ol>
+
+    </ol>
+    <p><strong>Standing tensions</strong></p>
+    <ul>
+      <li>Comments Capture What Code Cannot - John Ousterhout <code>OUSTERHOUTC</code></li>
+      <li>Programming as Theory Building - Peter Naur <code>NAURTHEORY</code></li>
+      <li>Tacit Knowledge Resists Specification <code>TACIT</code></li>
+      <li>Hyrum&#39;s Law - Hyrum Wright <code>HYRUM</code></li>
+      <li>Regulated Environments Need an Evidence Trail <code>REGEVIDENCE</code></li>
+      <li>Measured Maintenance Cost of Agent Code <code>MAINTCOST</code></li>
+      <li>Silent Spec-Code Drift - Grabowski <code>SPECDRIFT</code></li>
+      <li>Context Explosion in Whole-Repo Reasoning - Grabowski <code>CTXEXPLODE</code></li>
+    </ul>
+  </section>
+  <section id="p9">
+    <h3>P9 · CONVERGENCE</h3>
+    <p>10 principles.</p>
+    <ol>
+      <li><strong>Least Fixed Point</strong> <span class="author">Kleene and Tarski</span> <code>FIXPOINT</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Monotonic Improvement Only</strong> <span class="author">unattributed</span> <code>MONOTONE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>No Regression Across Sweeps</strong> <span class="author">unattributed</span> <code>REGRESSGUARD</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Well-Founded Variant</strong> <span class="author">Robert Floyd</span> <code>VARIANT</code> <span class="fan">3 outgoing</span></li>
+      <li><strong>Bounded Retry, Then Surface</strong> <span class="author">unattributed</span> <code>BOUNDEDRETRY</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Rice&#39;s Theorem</strong> <span class="author">Henry Gordon Rice</span> <code>RICE</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Halting Problem</strong> <span class="author">Alan Turing</span> <code>HALTING</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Lehman&#39;s Laws of Software Evolution</strong> <span class="author">Meir Lehman</span> <code>LEHMAN</code> <span class="fan">1 outgoing</span></li>
+      <li><strong>Premature Optimization</strong> <span class="author">Donald Knuth</span> <code>KNUTHOPT</code> <span class="fan">2 outgoing</span></li>
+      <li><strong>Lower Bound Reached</strong> <span class="author">information-theoretic argument</span> <code>LOWERBOUND</code> <span class="fan">1 outgoing</span></li>
+    </ol>
+  </section>
+
+<h2>Gates and terminals</h2>
+<table>
+  <caption>Gates guard moves; terminals end a walk</caption>
+  <thead><tr><th>Node</th><th>Kind</th><th>Condition</th><th>Outgoing edges</th></tr></thead>
+  <tbody>
+      <tr><td><code>G_START</code></td><td>gate</td><td>one task in flight</td><td>1</td></tr>
+      <tr><td><code>G_CONTRACT</code></td><td>gate</td><td>contract is the only durable description</td><td>2</td></tr>
+      <tr><td><code>G_INDEP</code></td><td>gate</td><td>verifier has not read the implementation</td><td>2</td></tr>
+      <tr><td><code>G_NET</code></td><td>gate</td><td>change closes net-negative, or states why not</td><td>2</td></tr>
+      <tr><td><code>G_DONE</code></td><td>gate</td><td>contract satisfied and recorded</td><td>2</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td>gate</td><td>full sweep, all phases</td><td>7</td></tr>
+      <tr><td><code>G_FIXPOINT</code></td><td>terminal</td><td>sweep changed nothing</td><td>2</td></tr>
+      <tr><td><code>G_SURFACE</code></td><td>terminal</td><td>variant did not decrease</td><td>1</td></tr>
+  </tbody>
+</table>
+
+<h2>Every edge</h2>
+<details>
+  <summary>Show all 209 edges</summary>
+  <table>
+    <caption>Edges, from node to node</caption>
+    <thead><tr><th>From</th><th>To</th><th>Kind</th><th>Condition</th></tr></thead>
+    <tbody>
+      <tr><td><code>JTBD</code></td><td><code>XYPROB</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>XYPROB</code></td><td><code>EARS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>EARS</code></td><td><code>INVEST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>INVEST</code></td><td><code>THINSLICE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>THINSLICE</code></td><td><code>SPIKE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SPIKE</code></td><td><code>YAGNI</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>YAGNI</code></td><td><code>LIVEPLAN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>UBIQ</code></td><td><code>CLEANNAME</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CLEANNAME</code></td><td><code>MILNER</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>MILNER</code></td><td><code>ILLEGAL</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DBC</code></td><td><code>LAMPORT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>LAMPORT</code></td><td><code>INVARIANTRUN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ILLEGAL</code></td><td><code>PARSEDV</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>PARSEDV</code></td><td><code>WADLER</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>WADLER</code></td><td><code>DBC</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DBC</code></td><td><code>CQS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CQS</code></td><td><code>PARNAS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>PARNAS</code></td><td><code>DEEPMOD</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DEEPMOD</code></td><td><code>ACCEPTPORT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CLEANNAME</code></td><td><code>COMMENTSMELL</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>TOTALITY</code></td><td><code>GUARD</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>GUARD</code></td><td><code>SLAP</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SLAP</code></td><td><code>STRUCTPROG</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>STRUCTPROG</code></td><td><code>IMMUT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>IMMUT</code></td><td><code>OWNERSHIP</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>OWNERSHIP</code></td><td><code>DRY</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DRY</code></td><td><code>KISS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DIJKSTRATEST</code></td><td><code>ORACLEBIAS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ORACLEBIAS</code></td><td><code>INDEPVER</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>INDEPVER</code></td><td><code>ADVERSARIAL</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ADVERSARIAL</code></td><td><code>HUGHES</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>HUGHES</code></td><td><code>PBTAGENT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>PBTAGENT</code></td><td><code>INVARIANTRUN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>INVARIANTRUN</code></td><td><code>METAMORPH</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>METAMORPH</code></td><td><code>FUZZ</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>FUZZ</code></td><td><code>CONTRACTTEST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CONTRACTTEST</code></td><td><code>CHARTEST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>AGENTQA</code></td><td><code>LLMJUDGE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>LLMJUDGE</code></td><td><code>SANITIZE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CONVCOM</code></td><td><code>RULE5072</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>RULE5072</code></td><td><code>WHYNOTWHAT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>WHYNOTWHAT</code></td><td><code>GITSTATE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>GITSTATE</code></td><td><code>BLAME</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>BLAME</code></td><td><code>BISECT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>BISECT</code></td><td><code>SEMVER</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SEMVER</code></td><td><code>ADRN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>NODELETE</code></td><td><code>GUARDANDGO</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>GUARDANDGO</code></td><td><code>TYPE4</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>TYPE4</code></td><td><code>CHURN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CHURN</code></td><td><code>SLOPDRIFT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SLOPDRIFT</code></td><td><code>DELETIONGATE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DELETIONGATE</code></td><td><code>REACHABLE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>REACHABLE</code></td><td><code>DIFFBUDGET</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>TARPIT</code></td><td><code>LEANSW</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>LEANSW</code></td><td><code>KOLMOGOROV</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SMALLESTSET</code></td><td><code>CONTEXTROT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>CONTEXTROT</code></td><td><code>REWORK</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>REWORK</code></td><td><code>PROGDISC</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>PROGDISC</code></td><td><code>HEADERONLY</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>HEADERONLY</code></td><td><code>AGENTSMD</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>AGENTSMD</code></td><td><code>NODUPEDOC</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>NODUPEDOC</code></td><td><code>SUBAGENT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SUBAGENT</code></td><td><code>COMPACT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>COMPACT</code></td><td><code>OBSCOMPRESS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>OBSCOMPRESS</code></td><td><code>MEMTOOL</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>MEMTOOL</code></td><td><code>STABLEPREFIX</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>STABLEPREFIX</code></td><td><code>TOOLBUDGET</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>TOOLBUDGET</code></td><td><code>GREPFIRST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>OUSTERHOUTC</code></td><td><code>NAURTHEORY</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>NAURTHEORY</code></td><td><code>TACIT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>HYRUM</code></td><td><code>REGEVIDENCE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>REGEVIDENCE</code></td><td><code>MAINTCOST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SPECDRIFT</code></td><td><code>CTXEXPLODE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>FIXPOINT</code></td><td><code>MONOTONE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>MONOTONE</code></td><td><code>REGRESSGUARD</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>REGRESSGUARD</code></td><td><code>VARIANT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>VARIANT</code></td><td><code>BOUNDEDRETRY</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>RICE</code></td><td><code>HALTING</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>HALTING</code></td><td><code>LEHMAN</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>KNUTHOPT</code></td><td><code>LOWERBOUND</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_START</code></td><td><code>JTBD</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>LIVEPLAN</code></td><td><code>G_CONTRACT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_CONTRACT</code></td><td><code>UBIQ</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ACCEPTPORT</code></td><td><code>TOTALITY</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>KISS</code></td><td><code>G_INDEP</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_INDEP</code></td><td><code>DIJKSTRATEST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SANITIZE</code></td><td><code>G_NET</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_NET</code></td><td><code>NODELETE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DIFFBUDGET</code></td><td><code>CONVCOM</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ADRN</code></td><td><code>G_DONE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_DONE</code></td><td><code>G_SWEEP</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>SMALLESTSET</code></td><td><code>G_START</code></td><td>backreference</td><td></td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>FIXPOINT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>FIXPOINT</code></td><td><code>G_FIXPOINT</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>G_START</code></td><td>backreference</td><td>a gate reopened</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>G_INDEP</code></td><td>backreference</td><td>a property was falsified</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>KNUTHOPT</code></td><td>backreference</td><td>a budget sits above its floor</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>G_NET</code></td><td>backreference</td><td>the artifact grew</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>SMALLESTSET</code></td><td>backreference</td><td>context spend rose per unit of change</td></tr>
+      <tr><td><code>G_SWEEP</code></td><td><code>OUSTERHOUTC</code></td><td>backreference</td><td>a tension fired</td></tr>
+      <tr><td><code>G_FIXPOINT</code></td><td><code>LOWERBOUND</code></td><td>backreference</td><td>no gate reopened, no counterexample, no growth</td></tr>
+      <tr><td><code>G_FIXPOINT</code></td><td><code>G_SWEEP</code></td><td>backreference</td><td>a later sweep reopened a gate</td></tr>
+      <tr><td><code>VARIANT</code></td><td><code>G_SURFACE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>BOUNDEDRETRY</code></td><td><code>G_SURFACE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>KOLMOGOROV</code></td><td><code>PARNAS</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>DBC</code></td><td><code>INDEPVER</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ILLEGAL</code></td><td><code>HUGHES</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>ACCEPTPORT</code></td><td><code>CONTRACTTEST</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>WHYNOTWHAT</code></td><td><code>BLAME</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>MAINTCOST</code></td><td><code>DELETIONGATE</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>PROGDISC</code></td><td><code>AGENTQA</code></td><td>forward</td><td></td></tr>
+      <tr><td><code>XYPROB</code></td><td><code>JTBD</code></td><td>backreference</td><td>the stated problem is not the real one</td></tr>
+      <tr><td><code>EARS</code></td><td><code>DBC</code></td><td>backreference</td><td>the requirement is not falsifiable</td></tr>
+      <tr><td><code>INVEST</code></td><td><code>THINSLICE</code></td><td>backreference</td><td>the task depends on another task</td></tr>
+      <tr><td><code>THINSLICE</code></td><td><code>PARNAS</code></td><td>backreference</td><td>the slice cuts across a module boundary</td></tr>
+      <tr><td><code>SPIKE</code></td><td><code>LIVEPLAN</code></td><td>backreference</td><td>the unknown survived the spike</td></tr>
+      <tr><td><code>YAGNI</code></td><td><code>TARPIT</code></td><td>backreference</td><td>generality has one caller</td></tr>
+      <tr><td><code>LIVEPLAN</code></td><td><code>G_START</code></td><td>backreference</td><td>the plan outlived its task</td></tr>
+      <tr><td><code>G_CONTRACT</code></td><td><code>SPECDRIFT</code></td><td>backreference</td><td>a second durable description appeared</td></tr>
+      <tr><td><code>UBIQ</code></td><td><code>ILLEGAL</code></td><td>backreference</td><td>the domain term is absent from the type</td></tr>
+      <tr><td><code>CLEANNAME</code></td><td><code>UBIQ</code></td><td>backreference</td><td>the name cannot carry the meaning</td></tr>
+      <tr><td><code>COMMENTSMELL</code></td><td><code>CLEANNAME</code></td><td>backreference</td><td>prose was needed to explain the code</td></tr>
+      <tr><td><code>MILNER</code></td><td><code>ILLEGAL</code></td><td>backreference</td><td>a stuck state is reachable</td></tr>
+      <tr><td><code>ILLEGAL</code></td><td><code>DBC</code></td><td>backreference</td><td>the type cannot express the rule</td></tr>
+      <tr><td><code>PARSEDV</code></td><td><code>ILLEGAL</code></td><td>backreference</td><td>validation repeats in the interior</td></tr>
+      <tr><td><code>WADLER</code></td><td><code>MILNER</code></td><td>backreference</td><td>the signature permits what the contract forbids</td></tr>
+      <tr><td><code>DBC</code></td><td><code>WADLER</code></td><td>backreference</td><td>the contract lives in prose, not in the signature</td></tr>
+      <tr><td><code>CQS</code></td><td><code>DBC</code></td><td>backreference</td><td>a query mutated state</td></tr>
+      <tr><td><code>PARNAS</code></td><td><code>DEEPMOD</code></td><td>backreference</td><td>a decision is not hidden by any module</td></tr>
+      <tr><td><code>DEEPMOD</code></td><td><code>OUSTERHOUTC</code></td><td>backreference</td><td>the interface needs prose to be usable</td></tr>
+      <tr><td><code>ACCEPTPORT</code></td><td><code>PARNAS</code></td><td>backreference</td><td>an adapter leaked into the core</td></tr>
+      <tr><td><code>TOTALITY</code></td><td><code>PARSEDV</code></td><td>backreference</td><td>a partial function escaped its domain</td></tr>
+      <tr><td><code>GUARD</code></td><td><code>SLAP</code></td><td>backreference</td><td>the branch structure still needs explanation</td></tr>
+      <tr><td><code>SLAP</code></td><td><code>DEEPMOD</code></td><td>backreference</td><td>the function mixes abstraction levels</td></tr>
+      <tr><td><code>STRUCTPROG</code></td><td><code>GUARD</code></td><td>backreference</td><td>control flow is untraceable</td></tr>
+      <tr><td><code>IMMUT</code></td><td><code>OWNERSHIP</code></td><td>backreference</td><td>shared mutable state crossed a boundary</td></tr>
+      <tr><td><code>OWNERSHIP</code></td><td><code>IMMUT</code></td><td>backreference</td><td>a borrow outlived its owner</td></tr>
+      <tr><td><code>DRY</code></td><td><code>KOLMOGOROV</code></td><td>backreference</td><td>one fact has two representations</td></tr>
+      <tr><td><code>KISS</code></td><td><code>YAGNI</code></td><td>backreference</td><td>the solution exceeds the problem</td></tr>
+      <tr><td><code>G_INDEP</code></td><td><code>INDEPVER</code></td><td>backreference</td><td>the verifier read the implementation</td></tr>
+      <tr><td><code>DIJKSTRATEST</code></td><td><code>INVARIANTRUN</code></td><td>backreference</td><td>green does not mean correct</td></tr>
+      <tr><td><code>ORACLEBIAS</code></td><td><code>G_INDEP</code></td><td>backreference</td><td>the assertion mirrors the code</td></tr>
+      <tr><td><code>INDEPVER</code></td><td><code>ADVERSARIAL</code></td><td>backreference</td><td>the two agents shared context</td></tr>
+      <tr><td><code>ADVERSARIAL</code></td><td><code>ORACLEBIAS</code></td><td>backreference</td><td>the verifier adopted the implementer&#39;s assumptions</td></tr>
+      <tr><td><code>HUGHES</code></td><td><code>ILLEGAL</code></td><td>backreference</td><td>the property is falsified</td></tr>
+      <tr><td><code>PBTAGENT</code></td><td><code>METAMORPH</code></td><td>backreference</td><td>the proposed property restates the code</td></tr>
+      <tr><td><code>INVARIANTRUN</code></td><td><code>DBC</code></td><td>backreference</td><td>the invariant broke under a call sequence</td></tr>
+      <tr><td><code>INVARIANTRUN</code></td><td><code>LAMPORT</code></td><td>backreference</td><td>the same call sequence replayed in another order gave another result</td></tr>
+      <tr><td><code>LAMPORT</code></td><td><code>DBC</code></td><td>backreference</td><td>an obligation holds only before another event and the contract omits that order</td></tr>
+      <tr><td><code>METAMORPH</code></td><td><code>LLMJUDGE</code></td><td>backreference</td><td>no oracle exists for the direct output</td></tr>
+      <tr><td><code>FUZZ</code></td><td><code>PARSEDV</code></td><td>backreference</td><td>the input crashed the parser</td></tr>
+      <tr><td><code>CONTRACTTEST</code></td><td><code>HYRUM</code></td><td>backreference</td><td>a consumer broke on an unpromised behaviour</td></tr>
+      <tr><td><code>CHARTEST</code></td><td><code>SPECDRIFT</code></td><td>backreference</td><td>current behaviour is the only description left</td></tr>
+      <tr><td><code>LLMJUDGE</code></td><td><code>INDEPVER</code></td><td>backreference</td><td>judge and author are the same model</td></tr>
+      <tr><td><code>AGENTQA</code></td><td><code>SANITIZE</code></td><td>backreference</td><td>verification needs a human dashboard</td></tr>
+      <tr><td><code>SANITIZE</code></td><td><code>TOTALITY</code></td><td>backreference</td><td>a sanitizer or analyser reports</td></tr>
+      <tr><td><code>CONVCOM</code></td><td><code>WHYNOTWHAT</code></td><td>backreference</td><td>the message says what, not why</td></tr>
+      <tr><td><code>RULE5072</code></td><td><code>CONVCOM</code></td><td>backreference</td><td>the subject does not stand alone</td></tr>
+      <tr><td><code>WHYNOTWHAT</code></td><td><code>ADRN</code></td><td>backreference</td><td>the reason is unrecoverable from history</td></tr>
+      <tr><td><code>GITSTATE</code></td><td><code>LIVEPLAN</code></td><td>backreference</td><td>state exists outside the repository</td></tr>
+      <tr><td><code>BLAME</code></td><td><code>RULE5072</code></td><td>backreference</td><td>the introducing commit explains nothing</td></tr>
+      <tr><td><code>BISECT</code></td><td><code>LIVEPLAN</code></td><td>backreference</td><td>no commit isolates the change</td></tr>
+      <tr><td><code>SEMVER</code></td><td><code>CONTRACTTEST</code></td><td>backreference</td><td>a promise broke without a major bump</td></tr>
+      <tr><td><code>ADRN</code></td><td><code>YAGNI</code></td><td>backreference</td><td>a reversible decision was recorded</td></tr>
+      <tr><td><code>G_NET</code></td><td><code>DIFFBUDGET</code></td><td>backreference</td><td>the artifact grew</td></tr>
+      <tr><td><code>NODELETE</code></td><td><code>DELETIONGATE</code></td><td>backreference</td><td>the old path survives beside the new</td></tr>
+      <tr><td><code>GUARDANDGO</code></td><td><code>DELETIONGATE</code></td><td>backreference</td><td>a fallback was added, not removed</td></tr>
+      <tr><td><code>TYPE4</code></td><td><code>DRY</code></td><td>backreference</td><td>two functions mean the same thing</td></tr>
+      <tr><td><code>CHURN</code></td><td><code>G_NET</code></td><td>backreference</td><td>the diff is net-positive again</td></tr>
+      <tr><td><code>SLOPDRIFT</code></td><td><code>INVARIANTRUN</code></td><td>backreference</td><td>behaviour drifted across iterations</td></tr>
+      <tr><td><code>DELETIONGATE</code></td><td><code>REACHABLE</code></td><td>backreference</td><td>superseded code is still reachable</td></tr>
+      <tr><td><code>REACHABLE</code></td><td><code>DIFFBUDGET</code></td><td>backreference</td><td>an entry point has no caller</td></tr>
+      <tr><td><code>TARPIT</code></td><td><code>ILLEGAL</code></td><td>backreference</td><td>the state is accidental</td></tr>
+      <tr><td><code>LEANSW</code></td><td><code>KOLMOGOROV</code></td><td>backreference</td><td>size grew without a reason</td></tr>
+      <tr><td><code>KOLMOGOROV</code></td><td><code>DEEPMOD</code></td><td>backreference</td><td>the description exceeds the content</td></tr>
+      <tr><td><code>SMALLESTSET</code></td><td><code>COMPACT</code></td><td>backreference</td><td>context grew without new signal</td></tr>
+      <tr><td><code>CONTEXTROT</code></td><td><code>SUBAGENT</code></td><td>backreference</td><td>quality fell as the window filled</td></tr>
+      <tr><td><code>REWORK</code></td><td><code>G_INDEP</code></td><td>backreference</td><td>iteration, not generation, spent the budget</td></tr>
+      <tr><td><code>PROGDISC</code></td><td><code>HEADERONLY</code></td><td>backreference</td><td>the body loaded when it was not needed</td></tr>
+      <tr><td><code>HEADERONLY</code></td><td><code>AGENTSMD</code></td><td>backreference</td><td>the header does not predict the trigger</td></tr>
+      <tr><td><code>AGENTSMD</code></td><td><code>NODUPEDOC</code></td><td>backreference</td><td>the file restates the README</td></tr>
+      <tr><td><code>NODUPEDOC</code></td><td><code>DRY</code></td><td>backreference</td><td>two documents describe one fact</td></tr>
+      <tr><td><code>SUBAGENT</code></td><td><code>OBSCOMPRESS</code></td><td>backreference</td><td>the subagent returned raw output</td></tr>
+      <tr><td><code>COMPACT</code></td><td><code>OBSCOMPRESS</code></td><td>backreference</td><td>compaction cut an active subgoal</td></tr>
+      <tr><td><code>OBSCOMPRESS</code></td><td><code>GREPFIRST</code></td><td>backreference</td><td>an exact string was paraphrased away</td></tr>
+      <tr><td><code>MEMTOOL</code></td><td><code>COMPACT</code></td><td>backreference</td><td>history is replayed each session</td></tr>
+      <tr><td><code>STABLEPREFIX</code></td><td><code>TOOLBUDGET</code></td><td>backreference</td><td>the cache is missing</td></tr>
+      <tr><td><code>TOOLBUDGET</code></td><td><code>PROGDISC</code></td><td>backreference</td><td>tool definitions dominate the prompt</td></tr>
+      <tr><td><code>GREPFIRST</code></td><td><code>SMALLESTSET</code></td><td>backreference</td><td>retrieval returned approximate matches</td></tr>
+      <tr><td><code>OUSTERHOUTC</code></td><td><code>WHYNOTWHAT</code></td><td>backreference</td><td>the knowledge has no home in the code</td></tr>
+      <tr><td><code>NAURTHEORY</code></td><td><code>MEMTOOL</code></td><td>backreference</td><td>the theory died with the session</td></tr>
+      <tr><td><code>TACIT</code></td><td><code>ADRN</code></td><td>backreference</td><td>the constraint was never stated anywhere</td></tr>
+      <tr><td><code>HYRUM</code></td><td><code>CONTRACTTEST</code></td><td>backreference</td><td>an unpromised behaviour became a contract</td></tr>
+      <tr><td><code>REGEVIDENCE</code></td><td><code>ADRN</code></td><td>backreference</td><td>the audit needs an artifact git does not hold</td></tr>
+      <tr><td><code>MAINTCOST</code></td><td><code>G_NET</code></td><td>backreference</td><td>merged code costs more than it saved</td></tr>
+      <tr><td><code>SPECDRIFT</code></td><td><code>G_CONTRACT</code></td><td>backreference</td><td>two descriptions disagree</td></tr>
+      <tr><td><code>CTXEXPLODE</code></td><td><code>PROGDISC</code></td><td>backreference</td><td>the agent must read the whole repository</td></tr>
+      <tr><td><code>G_DONE</code></td><td><code>G_INDEP</code></td><td>backreference</td><td>the contract is not satisfied</td></tr>
+      <tr><td><code>FIXPOINT</code></td><td><code>MONOTONE</code></td><td>backreference</td><td>the sweep produced a change</td></tr>
+      <tr><td><code>MONOTONE</code></td><td><code>REGRESSGUARD</code></td><td>backreference</td><td>a measure moved the wrong way</td></tr>
+      <tr><td><code>REGRESSGUARD</code></td><td><code>INVARIANTRUN</code></td><td>backreference</td><td>an earlier sweep&#39;s gain was lost</td></tr>
+      <tr><td><code>VARIANT</code></td><td><code>BOUNDEDRETRY</code></td><td>backreference</td><td>the open-condition count did not fall</td></tr>
+      <tr><td><code>BOUNDEDRETRY</code></td><td><code>G_SURFACE</code></td><td>backreference</td><td>the same condition fired twice with no new information</td></tr>
+      <tr><td><code>RICE</code></td><td><code>BOUNDEDRETRY</code></td><td>backreference</td><td>no analyser decides the property</td></tr>
+      <tr><td><code>HALTING</code></td><td><code>VARIANT</code></td><td>backreference</td><td>no analyser decides termination of the sweep</td></tr>
+      <tr><td><code>LEHMAN</code></td><td><code>G_START</code></td><td>backreference</td><td>the environment changed under a converged system</td></tr>
+      <tr><td><code>KNUTHOPT</code></td><td><code>G_SWEEP</code></td><td>backreference</td><td>the profile contradicts the assumption</td></tr>
+      <tr><td><code>LOWERBOUND</code></td><td><code>G_FIXPOINT</code></td><td>backreference</td><td>the bound is already reached, stop here</td></tr>
+      <tr><td><code>G_SURFACE</code></td><td><code>ADRN</code></td><td>backreference</td><td>the ambiguity is human-owned</td></tr>
+    </tbody>
+  </table>
+</details>
