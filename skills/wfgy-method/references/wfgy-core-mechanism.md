@@ -1,10 +1,10 @@
 # WFGY core mechanism -- technical basis
 
-Source: direct fetches of `onestardao/WFGY` primary files (`core/WFGY_Core_Flagship_v2.0.txt`, `ProblemMap/wfgy-metrics.md`, `ProblemMap/glossary.md`, `OS/TXTOS.txt`, `archive/wfgy_1_0_sdk_archive/{README.md,wfgy_engine.py,bbmc.py,bbcr.py,bbam.py,bbpf.py}`). Every claim in `SKILL.md` and `honesty-and-provenance.md` traces to something quoted or paraphrased here.
+Source: direct fetches of the primary files of the `onestardao/WFGY` repository (its core flagship document, ProblemMap metrics and glossary, TXT-OS document and SDK archive). Every claim in `SKILL.md` and `honesty-and-provenance.md` traces to something quoted or paraphrased here.
 
 ## deltaS (delta-S)
 
-Stated formula, consistent across `ProblemMap/glossary.md`, `ProblemMap/wfgy-metrics.md`, `core/WFGY_Core_Flagship_v2.0.txt`:
+Stated formula, consistent across the upstream glossary, metrics and core flagship documents:
 
 ```
 deltaS = 1 - cos(I, G)
@@ -12,15 +12,15 @@ deltaS = 1 - cos(I, G)
 
 Here, `I` is the current-state embedding and `G` is the goal embedding.
 
-This is real, well-formed math if real embeddings are computed. It is not real math in the plain-prompt (`OS/TXTOS.txt`) usage path, because no embedding call happens there -- see below.
+This is real, well-formed math if real embeddings are computed. It is not real math in the plain-prompt (upstream TXT-OS document) usage path, because no embedding call happens there -- see below.
 
-Thresholds are given but **inconsistent across the project's own documents**: `core/WFGY_Core_Flagship_v2.0.txt` gives 4 zones (safe <0.40, transit 0.40-0.60, risk 0.60-0.85, danger >0.85); `ProblemMap/glossary.md` collapses to 3 zones (stable <0.40, transitional 0.40-0.60, high risk >=0.60); `ProblemMap/wfgy-metrics.md`'s production PASS/WARN/FAIL table uses yet a different cutoff (PASS <=0.45, not <=0.40). `OS/TXTOS.txt`'s own worked example produces `deltaS: 1.8` -- outside every zone table the same document defines (max stated ceiling is "danger >=0.85"), with no acknowledgment that this breaks its own scale.
+Thresholds are given but **inconsistent across the project's own documents**: The upstream core flagship document gives 4 zones (safe <0.40, transit 0.40-0.60, risk 0.60-0.85, danger >0.85); The upstream glossary collapses to 3 zones (stable <0.40, transitional 0.40-0.60, high risk >=0.60); The upstream metrics document's production PASS/WARN/FAIL table uses yet a different cutoff (PASS <=0.45, not <=0.40). The upstream TXT-OS document's own worked example produces `deltaS: 1.8` -- outside every zone table the same document defines (max stated ceiling is "danger >=0.85"), with no acknowledgment that this breaks its own scale.
 
 Constants in the core file's `[Defaults]` block (`gamma=0.618` -- literally the golden ratio truncated -- plus `theta_c=0.75`, `zeta_min=0.10`, `alpha_blend=0.50`, etc.) carry no derivation or citation anywhere in the source; this reads as aesthetic constant-picking, not empirical tuning.
 
-## BBMC (real name in source: "Boundary-Bounded Memory Chunks" per glossary; "Semantic Residue Minimization" per TXTOS.txt)
+## BBMC (real name in source: "Boundary-Bounded Memory Chunks" per glossary; "Semantic Residue Minimization" per the TXT-OS document)
 
-Formula (`core/`, `bbmc.py`): `B = I - G + m*c^2` ("semantic residue"), computed in the archived SDK as vector subtraction plus an optional constant offset, then L2 norm. The `m*c^2` term is decorative (evokes mass-energy equivalence, has no real meaning here); with the core file's own default `m=0` it vanishes and the formula reduces to plain `I - G`.
+Formula (upstream core document and SDK archive): `B = I - G + m*c^2` ("semantic residue"), computed in the archived SDK as vector subtraction plus an optional constant offset, then L2 norm. The `m*c^2` term is decorative (evokes mass-energy equivalence, has no real meaning here); with the core file's own default `m=0` it vanishes and the formula reduces to plain `I - G`.
 
 **Portable pattern kept in this skill:** diff current state against a stated anchor/goal. This survives as qualitative comparison without needing real embeddings.
 
@@ -28,13 +28,13 @@ Formula (`core/`, `bbmc.py`): `B = I - G + m*c^2` ("semantic residue"), computed
 
 Formula version is dressed in dynamical-systems notation (`x_{t+1} = x_t + sum V_i(...) + sum W_j(...) P_j`) with undefined terms -- the least concretely specified of the three kept patterns. But the source also gives a real, checkable gate condition: "bridge allowed only if delta_s decreases AND W_c < 0.5*theta_c" -- proceed down a candidate path only if it measurably reduces drift and stays within a stability bound.
 
-The archived SDK's `bbpf.py` implements something concrete: generate `k` perturbed candidate vectors, score each by a stability function, prefer lower-deviation candidates.
+The archived SDK's BBPF module implements something concrete: generate `k` perturbed candidate vectors, score each by a stability function, prefer lower-deviation candidates.
 
 **Portable pattern kept in this skill:** when a decision has real alternatives, generate more than one before committing; prefer whichever most clearly advances the stated goal.
 
-## BBCR ("Break-Before-Crash Reset" per glossary/core; "BigBig Coupling Resolver" per TXTOS.txt -- the source itself uses two different expansions of the same acronym, an internal inconsistency worth knowing about)
+## BBCR ("Break-Before-Crash Reset" per glossary/core; "BigBig Coupling Resolver" per the TXT-OS document -- the source itself uses two different expansions of the same acronym, an internal inconsistency worth knowing about)
 
-The most concretely specified and most honestly portable of the four. Real trigger condition (`core/`, `bbcr.py`): residue norm exceeds a threshold `B_c`, OR a stability function drops below `epsilon`. Real operation, directly implemented in the archived SDK's `collapse_rebirth` function: reset to a prior stable state, retry, bounded by `max_retries` (SDK default: **3**); after retries are exhausted, log a warning and return the last (unstable) state rather than looping forever. `OS/TXTOS.txt`'s own framing adds an explicit "ask the user" fallback when no clean resolution is found, rather than silently proceeding.
+The most concretely specified and most honestly portable of the four. Real trigger condition (upstream core document and SDK archive): residue norm exceeds a threshold `B_c`, OR a stability function drops below `epsilon`. Real operation, directly implemented in the archived SDK's `collapse_rebirth` function: reset to a prior stable state, retry, bounded by `max_retries` (SDK default: **3**); after retries are exhausted, log a warning and return the last (unstable) state rather than looping forever. The upstream TXT-OS document's own framing adds an explicit "ask the user" fallback when no clean resolution is found, rather than silently proceeding.
 
 **Portable pattern kept in this skill:** checkpoint before risky steps; on detected real incoherence, revert and retry a bounded number of times (this skill recommends 2-3, matching the SDK's real default); after that, surface the unresolved issue explicitly rather than picking an answer anyway.
 
@@ -50,4 +50,4 @@ A LangChain/LlamaIndex adapter in the source repo reportedly does real cosine-di
 
 ## The base engine's self-monitoring loop (distinct from Avatar's later "dual closed-loop" design)
 
-`core/WFGY_Core_Flagship_v2.0.txt` defines a trend classifier over consecutive deltaS values: compute the step-to-step change plus a rolling mean over the last (up to) 5 steps, then bucket the trajectory as convergent / recursive / divergent / chaotic based on the sign and magnitude of that change. This is a real, checkable procedure for "is this task's drift getting better or worse over time," independent of whether the underlying deltaS numbers are truly computed or self-estimated -- the classification logic itself is sound either way.
+The upstream core flagship document defines a trend classifier over consecutive deltaS values: compute the step-to-step change plus a rolling mean over the last (up to) 5 steps, then bucket the trajectory as convergent / recursive / divergent / chaotic based on the sign and magnitude of that change. This is a real, checkable procedure for "is this task's drift getting better or worse over time," independent of whether the underlying deltaS numbers are truly computed or self-estimated -- the classification logic itself is sound either way.
