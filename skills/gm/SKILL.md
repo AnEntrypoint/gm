@@ -298,6 +298,8 @@ Bridge.
 
 `AskUserQuestion` is for one-way doors only. Precautionary Principle.
 
+A `PreToolUse` hook may auto-answer every call with a fixed token, so a question is not a decision: choose the most defensible default, state it and its one-line rationale, continue, and raise what truly needs the human in prose at the end of the turn (`CLAUDE_ASK_INTERACTIVE=1` restores the real dialog).
+
 **Substrate-scoped, operator-configurable.** Under git, append is never asked:
 commits, pushes, branches, tags, reverts, merges. Rewrite is asked: force-push,
 `--force-with-lease`, rebasing pushed commits, branch or ref deletion, remote
