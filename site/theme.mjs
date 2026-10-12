@@ -295,38 +295,13 @@ export default {
     const docs = ctx.read('pages').docs;
     if (!docs.length) throw new Error('no pages found in site/content/pages');
 
-    const formatStat = (n) => {
-      if (n == null || isNaN(n)) return null;
-      if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-      return String(n);
-    };
-    const readJson = (rel) => {
-      try {
-        const p = resolve(THIS_DIR, '..', rel);
-        if (!existsSync(p)) return null;
-        return JSON.parse(readFileSync(p, 'utf8'));
-      } catch { return null; }
-    };
-    const starsJson = readJson('docs/api/stars.json');
-    const npmJson = readJson('docs/api/npm-downloads.json');
-    const liveStats = {
-      stars: (() => {
-        const arr = Array.isArray(starsJson) ? starsJson : (starsJson && starsJson.stars) || [];
-        const last = arr[arr.length - 1];
-        return formatStat(last && last.count);
-      })(),
-      npm: formatStat(npmJson && npmJson.total_30d),
-    };
-
     const outputs = [];
     for (const doc of docs) {
       const id = doc.id;
       if (!id) throw new Error('page missing id: ' + JSON.stringify(doc).slice(0, 100));
       const path = id === 'home' ? 'index.html' : `${id}/index.html`;
-      const withLiveStats = id === 'home' && doc.hero ? { ...doc, hero: { ...doc.hero, stats: liveStats } } : doc;
 
-      let page = withLiveStats;
+      let page = doc;
       if (doc.layout === 'article') {
         if (!doc.source) throw new Error(`article page ${id} missing source`);
         const sourcePath = resolve(THIS_DIR, doc.source);
@@ -334,7 +309,7 @@ export default {
         const raw = readFileSync(sourcePath, 'utf8');
         let articleHtml = extractArticle(raw);
         articleHtml = rewriteLegacyLinks(articleHtml, '');
-        page = { ...withLiveStats, articleHtml };
+        page = { ...doc, articleHtml };
       }
       outputs.push({ path, html: renderHtml({ site, navItems, page }) });
     }
