@@ -563,6 +563,29 @@ These drive the phase machine. Dispatched through the same spool.
 `{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
 alias of `subject`.
 
+**Where the rows live.** One file per row: a PRD row is `.gm/prd/<id>.yml` and a mutable is
+`.gm/mutables/<id>.yml`. The folder IS the index -- there is no second list to keep in step with it,
+and no verb writes a file that holds another lane's rows, so two lanes adding two different rows can
+never lose each other's work to one whole-file rewrite. A file is a single YAML mapping (or a
+sequence of blocks when a row has more than one), so it is editable by hand. Writing one row is a
+compare-and-swap of that row's file alone under a temp-file-plus-rename, so a partial write cannot
+leave a row unreadable.
+
+**Resolution moves the row.** `prd-resolve` (and `mutable-resolve`) append the row's material to
+`.gm/prd-log.jsonl` (`.gm/mutables-log.jsonl`) and remove the row file, so the folder holds open
+work only. The log is append-only and hash-chained: every line carries `prev`, the sha256 of the
+line before it, plus `ts`, `ts_ms`, the session that resolved it and the full block set, so a
+truncation or an edit is visible rather than silent. The resolve reply names `filed_to`, `filed_at`
+and `row_file_cleared`. A resolved id is still answerable: `prd-list {"id":"<id>"}` reads the log
+and returns the row with `resolved: true`.
+
+**Migration.** The legacy single files `.gm/prd.yml` and `.gm/mutables.yml` are still read and are
+split into the folders on the first write that touches them, after which a marker
+(.gm/prd.absorbed.json) lets reads skip them. No row is dropped and no flag day is needed: a
+legacy row whose id already has a file, or already sits in the log, is suppressed rather than
+duplicated or resurrected. The legacy files are never rewritten and never deleted, because projects
+track and commit them.
+
 `instruction` is the entry point: it serves the prose for the current phase and a gate denial names
 the recovery verb. A long idle gap makes every other verb return
 `gate_denied` / `long-gap-no-instruction` until `instruction` is dispatched again.
