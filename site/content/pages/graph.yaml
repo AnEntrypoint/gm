@@ -1,5 +1,5 @@
 id: graph
 title: graph
-description: "the full gm graph, generated from skills/dream-rsi/gm-graph.json: 86 principles across nine phases, the gates that guard each move, the standing tensions, and every edge."
+description: "the full gm graph, generated from skills/dream-rsi/gm-graph.json: 154 nodes, 129 principles, 9 phases, 352 edges; every node is its own anchor and links to every node it touches."
 layout: article
 source: ../docs/graph.html

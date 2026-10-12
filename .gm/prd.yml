@@ -53,8 +53,9 @@
 - id: PLUGKIT-SEMVER-VERSION-SET
   title: Set gm.version to a semver string in the plugin release metadata
   description: 'gm.version is currently local-dev-sideload-body-parse-diagnostic, which the auto-updater cannot compare. Replace it with a semver version. Witness: the configured gm.version matches the semver grammar (MAJOR.MINOR.PATCH) in the source that the updater reads.'
-  status: pending
+  status: completed
   session_id: lean-node-INVEST
+  witness: 'exec_js dispatch 1791778543596-500-b4b73bcc410e99f8 exit 0: /config/.agentplug/plugins/gm.version reads 0.1.1585, passes MAJOR.MINOR.PATCH grammar; no gm.local-dev-sideload.json marker. Witness line in .gm/witness-log.md (2026-10-12T04:16:13Z, gm-version-semver-sideload-clear). Receipts .gm/receipts/PLUGKIT-SEMVER-VERSION-SET/01-09.'
 - id: PLUGKIT-SEMVER-UPDATE-WITNESS
   title: Witness that the auto-updater replaces a sideloaded plugkit wasm once gm.version is semver
   description: 'Depends on PLUGKIT-SEMVER-VERSION-SET. Sideload a stale gm.wasm, let the updater run, and confirm daemon-status.json loaded_plugin_content_sha256.gm matches the release wasm. Witness: the sha256 comparison from a live daemon, recorded in the row resolution.'
@@ -73,8 +74,9 @@
 - id: INVEST-EARS-DOC-NO-REMOVED-VERBS
   title: 'Docs: no document names a verb the current build does not register'
   description: 'Split from EARS-DOCS-CURRENT-CONCISE. Testable criterion: no document under gm-config/prose, skills/ or README.md names a verb absent from the current build. Verbs in the retired list of docs/verbs.md are the reference set. Witness: a grep for each retired verb name returns zero hits outside docs/verbs.md. Size thresholds are an open decision and stay out of this row.'
-  status: pending
+  status: completed
   session_id: lean-node-INVEST
+  witness: 'exec_js grep over gm-config/prose, skills, README.md excluding skills/gm/docs/verbs.md: zero retired-verb usages (3 remaining hits are the glob body-field alias). Edits: skills/wfgy-method/SKILL.md, skills/polaris-protocol/SKILL.md, skills/wfgy-method/references/honesty-and-provenance.md.'
 - id: INVEST-XYPROB-RUNTIME-AUDIT
   title: Audit runtime paths gm writes inside submodule worktrees
   description: 'Split from XYPROB-runtime-state-in-submodules, which fails INVEST Estimable (the fix is undecided between an ignore rule and more untrack commits). For rs-plugkit, libsql and treesitter, list the untracked runtime paths gm writes (.gm/dream-rsi/, .gm/exec-spool/ and other runtime roots). Witness: git_status per submodule, with the path list recorded as the row resolution.'
@@ -83,8 +85,14 @@
 - id: INVEST-XYPROB-RUNTIME-IGNORE-RS-PLUGKIT
   title: 'rs-plugkit: ignore the gm runtime roots so a runtime writer stops dirtying the pin'
   description: 'Split from XYPROB-runtime-state-in-submodules; depends on INVEST-XYPROB-RUNTIME-AUDIT for the path list. Add an ignore rule inside rs-plugkit covering the runtime roots that audit records. libsql and treesitter are out of this row''s scope. Witness: git_status on rs-plugkit reports dirty:false after gm writes a dream-rsi observation.'
-  status: pending
+  status: completed
   session_id: lean-node-INVEST
+  witness: 'witness=rs-plugkit-git-status-after-dream-rsi-observation exit=0 RESULT=PASS: git_status {cwd: /config/gm/rs-plugkit} dispatch 1791778443422-192-16ece5fc5b90bd2b dirty:false changed_paths:0 head 9e540c1; observation by dispatch 1791778406199-186-2837bb802efb651a created rs-plugkit/.gm/dream-rsi; ignore at rs-plugkit/.gitignore:21. Logged in .gm/witness-log.md.'
+  witness_binding:
+    exit_code: 0
+    output_sha256: fde227aa44958368ef6ad40864985fe9ca29e4dc5c12e39d23b6093e0acef367
+    output_path: rs-plugkit/.gm/exec-spool/out/git_status-gm-drain-INVEST-XYPROB-RUNTIME-IGNORE-RS-PLUGKIT-821188-1791778443295-884.json
+    ts: 2026-10-12T04:14:03.295Z
 - id: INVEST-GCONTRACT-MEMORY-KIND-ENUM
   title: 'memorize-fire: kind is a closed enum that rejects other values at parse time'
   description: 'Split from G_CONTRACT-memory-kind-enum, which fails INVEST Small (it crosses rs-plugkit code and two prose files). Make memorize-fire''s kind a closed enum (user, feedback, project, reference) in the rs-plugkit orchestrator memory handling, rejecting any other value at parse time. Witness: memorize-fire with kind ''other'' returns a parse error; kind ''user'' succeeds.'
@@ -1457,3 +1465,405 @@
   subject: 'witness: prd-add derives an id when none is given'
   session_id: gm-cli-8716-1791671143459
   status: pending
+- id: ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-1
+  title: 'gm-mcp/src/singleton.js: readSingletonState (singleton.js:58-65) returns null on any read or parse error, so a corrupt state file is treated as no singleton with no log line. Confirm the fallback is intended and log or surface the corrupt case.'
+  status: pending
+  session_id: gm-goal-hop-ADVERSARIAL-1
+- id: INDEPVER-gm-goal-hop-INDEPVER-1-1
+  title: 'INDEPVER: gm-mcp self-update accepts a fetched bundle with no digest or signature check (src/self-update.js:185-196, 224-236); its only checks are shebang, node --check and version guard, all self-referential to the same bytes'
+  status: pending
+  surface: gm-mcp/src
+  principle: INDEPVER
+  session_id: gm-goal-hop-INDEPVER-1
+- id: CONTRACTTEST-gm-goal-hop-CONTRACTTEST-1-1
+  surface: gm-mcp/src
+  principle: CONTRACTTEST
+  text: 'gm-mcp/src declares no reply contract: codesearch for dispatch_id returns 0 matches in 18 files (dispatch 1791745357180-192-b0406a44dab65aa9), yet live codemode replies carry dispatch_id, ok and verb. Consumers read a field the surface does not promise. Action: name the reply schema in gm-mcp/src or cite its owning source, then witness a live reply against it.'
+  session_id: gm-goal-hop-CONTRACTTEST-1
+  status: pending
+- id: HUGHES-gm-goal-hop-HUGHES-1-1
+  title: 'gm-mcp/src has zero property-based checks: no generator, shrink or property test over any codec or comparator (codesearch regex generator|shrink|round.?trip|assert over 18 files)'
+  status: pending
+  session_id: gm-goal-hop-HUGHES-1
+- id: METAMORPH-gm-goal-hop-METAMORPH-1-1
+  node: METAMORPH
+  phase: P4
+  session_id: gm-goal-hop-METAMORPH-1
+  source: gm-mcp/src/dispatch.js:991-993,1001,1821-1823,1921
+  status: pending
+  title: 'Metamorphic: session identity routes differently in body.SESSION_ID than in body.session_id'
+  description: 'Relation under test: moving the same session id from the dispatch argument into the body must not change routing. explicitBodySessionId (dispatch.js:991) reads only body.SESSION_ID, and runDispatch (1822) lets it override the argument. body.session_id is never read for routing (1823 requires the argument, else error "session_id required"), then overwritten by the argument (1921). Static reading only; the live witness is pending.'
+  witness: codesearch literal explicitBodySessionId over gm-mcp/src (dispatch 1791745379279-221-fbb67cceb4454bd6). Done when a live dispatch with body.session_id and no argument, and one with body.SESSION_ID and no argument, return the same routing or the difference is recorded as intended.
+- id: HUGHES-gm-goal-hop-HUGHES-1-2
+  title: 'gm-mcp/src/response-compact.js:323-325 unchangedByCompaction compares JSON.stringify(before) === JSON.stringify(after): key-order-sensitive, so a key-reordered but value-equal object reports changed (property unchanged(x, reorder(x)) fails; conservative direction only)'
+  status: pending
+  session_id: gm-goal-hop-HUGHES-1
+- id: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1
+  session_id: gm-goal-hop-INVARIANTRUN-1
+  status: pending
+  subject: 'INVARIANTRUN on gm-mcp/src: the spool write-and-poll cycle has no check over successive dispatches. codesearch literal "invariant" returns 0 hits in 18 files (dispatch 1791745375695-217-f35c0adc0d51c071); "unique" returns 0 hits, so the AGENTS.md rule that every request number carries a unique session id is not checked on this surface. Add a sequence-level check over a random dispatch run, witnessed live, with no mock.'
+- id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1
+  status: pending
+  title: 'LLM judge over live registered-tool replies: none exists in gm-mcp/src'
+  body: 'Witness dispatch 1791745396656-277-42785d7851ed2f2f: codesearch regex judge|rubric|verdict|llm over gm-mcp/src, 0 matches in 18 files. codemode.js:14-15 (zod validatedArgs) and :70 (isError reply) and mcp-server.js:73 (failedDispatchResult isError) verify well-formedness and structured errors only. Gap: no check judges reply correctness. Action: add an LLM-judge step over live reply text, witnessed by a live dispatch.'
+  session_id: gm-goal-hop-LLMJUDGE-2
+- id: ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2
+  title: 'gm-mcp/src self-update: the only publisher-independent gate is the operator-set freeze (GM_MCP_NO_SELF_UPDATE, no-self-update file, local-build pin, self-update.js:31-45, 215-222). Every other check reads the candidate''s own bytes: shebang (BUNDLE_SHEBANG, line 16), node --check (line 189), version guard parseBundleVersion(bytes) (lines 64, 102-113). Witness: codesearch dispatch 1791745392415-263-34927f120f9d2a1 and 1791745391002-253-2ff7fc6e37b9c8a0. Action: record that the freeze is the sole out-of-band control in the gm-mcp self-update contract, or add a digest from a channel the publisher does not write.'
+  surface: gm-mcp/src
+  principle: ADVERSARIAL
+  session_id: gm-goal-hop-ADVERSARIAL-1
+  status: pending
+- id: HUGHES-gm-goal-hop-HUGHES-2-1
+  title: readSingletonState returns null on corrupt state JSON with no log line
+  status: pending
+  body: 'gm-mcp/src/singleton.js:57-65. readSingletonState catches every error (ENOENT and JSON.parse failure alike) and returns null silently (catch at :62-64). A corrupt singleton state file is indistinguishable from a missing one. Action: log the parse error to stderr with the state path, keep null for ENOENT only, and witness with a corrupt state file through the live singleton path. Source: hop HUGHES, gm-goal-hop-HUGHES-2; decodedJsonText (dispatch.js:437-446) is NOT silent, it returns {error, scanned}.'
+  session_id: gm-goal-hop-HUGHES-2
+- id: HUGHES-gm-goal-hop-HUGHES-2-2
+  title: No property-based (QuickCheck-style) test of the no-silent-swallow invariant exists in gm-mcp
+  status: pending
+  body: 'codesearch quickcheck/property over gm-mcp (53 files): 0 quickcheck matches; property matches are only vendored bundle and lockfile text. The invariant has no generated-input check. Action: decide with the owner whether a property test may live in gm-mcp (AGENTS.md bans synthetic tests; a generated-input check against real code paths is a different case). Witness: none yet. Source: hop HUGHES, gm-goal-hop-HUGHES-2.'
+  session_id: gm-goal-hop-HUGHES-2
+- id: CHARTEST-gm-goal-hop-CHARTEST-1-1
+  status: pending
+  title: 'CHARTEST: pin gm-mcp self-update and release-bridge behaviour with characterization tests before change'
+  body: 'Present need: gm-mcp/src/self-update.js and gm-mcp/src/release-bridge.js carry the bundle-replacement and release-trust logic (assertLoadableBundle, assertReleaseAssetUrl, backup to .prev, freeze markers) and no file under gm-mcp/test imports either module (codesearch "src/<module>" over gm-mcp/test: 0 references each). Need: write characterization tests that record current observable outputs (rejected URLs, loadable-bundle assertion, freeze reasons, .prev backup) before any of the rows that rename or restructure these files run. Scope: gm-mcp/test only; no src edits. Witness: node --test over gm-mcp/test passes, and the pinned outputs match a live run of gm-mcp/src/cli.js self-update-status.'
+  session_id: gm-goal-hop-CHARTEST-1
+- id: CHARTEST-gm-goal-hop-CHARTEST-1-2
+  status: pending
+  session_id: gm-goal-hop-CHARTEST-1
+  title: 'CHARTEST: 12 gm-mcp/src modules have no characterization test'
+  body: 'Present need: 14 of 18 modules in gm-mcp/src have zero references from gm-mcp/test (codesearch "src/<module>" over gm-mcp/test): bundle-refresh.js, bundle-version.js, cli.js, codemode.js, dev-sync.js, git-adapter.js, index.js, mcp-server.js, paths.js, release-bridge.js, self-update.js, server-log.js, singleton.js, transport-guard.js. Only dispatch.js (6 refs), http-transport.js, response-compact.js and verbs.js (1 each) are pinned. The self-update and release-bridge pair is CHARTEST-gm-goal-hop-CHARTEST-1-1; this row covers the other 12. Need: before any src row that restructures one of these modules runs, add a test file that pins its exported behaviour as it stands. Witness: the per-module codesearch count rises from 0 for each module that gets a row, and node --test over gm-mcp/test passes.'
+- id: HYRUM-gm-goal-hop-HYRUM-d2-1
+  status: pending
+  title: gm-mcp/src declares no dispatch_id reply contract, yet rs-plugkit prd.rs and served complete.md read it
+  text: 'codesearch dispatch_id path gm-mcp/src: 0 occurrences in 18 files (exhaustive, dispatch 1791745412593-297-46a05165aba7cd0a). Readers outside: rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs:920-922 reads witness_dispatch_id or dispatch_id from the witness body; prd.rs:1181 greps spool out for the id; .gm/instructions/complete.md:17 serves the witness_dispatch_id contract to workers. Producers: rs-plugkit wasm_dispatch/verbs.rs:2629; agentplug-runner daemon/claim_dispatch.rs:475-518. Action: declare the reply field and its consumers in one owning source (gm-mcp README or the spool reply schema), then witness a live codemode reply carrying dispatch_id against that declaration.'
+  session_id: gm-goal-hop-HYRUM-d2
+  blockedBy:
+  - external
+  deferReason: 'created in error: HYRUM is a tension node, not a principle; no hop may name it'
+- id: FUZZ-gm-goal-hop-FUZZ-2-1
+  node: FUZZ
+  phase: P4
+  session_id: gm-goal-hop-FUZZ-2
+  status: pending
+  source: gm-mcp/src/dispatch.js:991-993,1821-1823,1921
+  title: 'Fuzz: body.SESSION_ID reroutes a dispatch to another session; body.session_id is dropped'
+  description: 'Live spelling witness. prd-list with argument session_id gm-goal-hop-FUZZ-2 and body.session_id=FUZZ-BODY-LOWER answered under the argument (out file prd-list-gm-goal-hop-FUZZ-2-*, dispatch 1791745426571-315). The same call with body.SESSION_ID=FUZZ-BODY-UPPER answered under FUZZ-BODY-UPPER (out file prd-list-FUZZ-BODY-UPPER-*, dispatch 1791745426700-316). With argument session_id empty, body.session_id gives "session_id required" while body.SESSION_ID routes (dispatch 1791745445867-357, out FUZZ-NOARG-UPPER). Hazard: a body can claim another session id, and that session gets the response and lease.'
+  witness: dispatch 1791745426571-315 and 1791745426700-316 (out file names), 1791745445867-357 (no-argument routing); see METAMORPH-gm-goal-hop-METAMORPH-1-1
+- id: FUZZ-gm-goal-hop-FUZZ-1-1
+  subject: gm-mcp readDaemonLiveness throws on a .status.json whose JSON is null
+  description: 'gm-mcp/src/dispatch.js readDaemonLiveness: the try block guards JSON.parse only. A .status.json containing the JSON literal null parses to null, and the next line reads status.pid, throwing TypeError "Cannot read properties of null (reading pid)". Witness (executed, node on the scratchpad witness.mjs): body null -> THREW TypeError; body {"ts":0} -> OK. Fix shape: return coldProjectLiveness() when the parsed value is not a non-null object. Not yet fixed: no live spool witness was run.'
+  status: pending
+  session_id: gm-goal-hop-FUZZ-1
+- id: METAMORPH-gm-goal-hop-METAMORPH-2-1
+  subject: 'Spool request numbers: check per-query metamorphic relation live (reordered dispatches give identical results)'
+  description: 'Witness: codesearch counts for nextN and publishSpoolRequest are identical in AB and BA order (dispatch ids 1791745452151-361-c816fdf003c016ab, 1791745452455-363-d340408a2d47f6ad, 1791745452880-364-d6edacb00bf5c270, 1791745453316-365-b99d2a566e911e0c). Next: turn this into a repeatable check over gm-mcp request numbering. Source: gm-mcp/src/dispatch.js:326-330 (nextN counter, process-local) and :1824.'
+  status: pending
+  session_id: gm-goal-hop-METAMORPH-2
+- id: METAMORPH-gm-goal-hop-METAMORPH-2-2
+  subject: publishSpoolRequest refuses an existing request file instead of overwriting it
+  description: 'gm-mcp/src/dispatch.js:355-366 writes a temp file and renameSync(tempPath, inPath) with no existence check, so a duplicate request number silently replaces an earlier pending request. nextN (dispatch.js:326-330) guarantees uniqueness only within one process; the counter resets on restart. Fix: refuse when inPath exists, using an exclusive create or an existence check before rename.'
+  status: pending
+  session_id: gm-goal-hop-METAMORPH-2
+- id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1
+  surface: gm-mcp/src
+  principle: PBTAGENT
+  session_id: gm-goal-hop-PBTAGENT-2
+  status: pending
+  title: 'Agent-written property suite over gm-mcp/src: the open PBTAGENT question is untested and its only route is blocked by an owner decision'
+  body: 'Testable claim: an agent-written property suite over gm-mcp/src finds at least one defect that the existing example tests miss. Test: none run yet. Witness of the premise: codesearch literal property, proptest, fast-check over gm-mcp/src (18 files, 4731 lines) returns 0 matches (dispatch 1791745419271-304-114be0cd64d90816). Blocker: AGENTS.md bans synthetic tests and mocks, and whether a generated-input check against real code paths may live in gm-mcp is an owner decision already filed as HUGHES-gm-goal-hop-HUGHES-2-2. Candidate defects a property run would target are already filed: HUGHES-gm-goal-hop-HUGHES-1-2 (key-order-sensitive unchangedByCompaction) and HUGHES-gm-goal-hop-HUGHES-2-1 (silent readSingletonState catch). Action: after the owner decides, write one property over unchangedByCompaction and one over readSingletonState against live code, and witness that the run executes and reports its counts. No change made in this hop.'
+- id: SANITIZE-gm-goal-hop-SANITIZE-3-1
+  subject: 'Reply text has no sanitizer before a judge reads it: gm-mcp/src has no sanitize step on the reply path'
+  description: 'SANITIZE hop over gm-mcp/src, rhetoric from LLMJUDGE. Claim tested: reply text is cleaned before any judge reads it. Result: FAILS. codesearch literal ''sanitize'' over gm-mcp/src (18 files, 4731 lines): 0 matches, dispatch 1791745435241-331-7d1364d677cdf462. ''judge'' also 0 matches in the same scan. The only escape routine, dispatch.js:368-424 (repairedJsonStringLiterals), repairs inbound request JSON string literals, not reply text. response-compact.js cleanResponse/truncateLongText (76-115) only truncates long strings, drops blank values and duplicate rows; it strips no control characters, markup or instruction-like text. Witness read: dispatch 1791745454201-367-c31886a868c614d7. Need: a sanitize stage between the reply and any judge, defined in gm-mcp/src, before an LLM judge is added.'
+  status: pending
+  session_id: gm-goal-hop-SANITIZE-3
+- id: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-3-1
+  status: pending
+  title: 'INVARIANTRUN on gm-mcp/src: no sequence-level check over successive spool dispatches'
+  subject: 'INVARIANTRUN on gm-mcp/src (hop 3, PBTAGENT successor): codesearch literal ''invariant'' and ''sequence'' return 0 hits in 18 files (dispatch 1791745487451-417-4d67dcb68e0007bf and 1791745487752-419-6514f276c3912975). No dispatch-level check of request uniqueness exists: ''dispatch_id'' has 0 hits, and the only ''random'' is the temp-file suffix at gm-mcp/src/dispatch.js:1042. The AGENTS.md unique-session-id rule is unchecked on this surface. Verdict VIOLATED. Owner decision HUGHES-gm-goal-hop-HUGHES-2-2 gates the fix; no edit made this hop. Supersedes nothing; duplicates INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1 in substance and waits on the same decision.'
+  session_id: gm-goal-hop-INVARIANTRUN-3
+- id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1
+  title: CHANGELOG says the release bridge runs at most hourly; code and AGENTS.md say 10 minutes
+  description: 'gm-mcp/CHANGELOG.md:42 (Unreleased, sha256 release bridge entry) states ''at most hourly''. gm-mcp/src/release-bridge.js DEFAULT_INTERVAL_MS = 10 * 60 * 1000 and gm-mcp/AGENTS.md:78 says 10 minutes. Fix: change the changelog line to 10 minutes. Witness: codesearch ''at most hourly'' in gm-mcp.'
+  status: pending
+  session_id: gm-goal-hop-SPECDRIFT-2
+  blockedBy:
+  - external
+  deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'
+- id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2
+  title: AGENTS.md says a self-update is served from the next connect, not the current process; HTTP mode hands over in-process
+  description: 'gm-mcp/AGENTS.md:76 says the new bundle is served from the next connect, not the current process. gm-mcp/src/index.js:47 wires scheduleStaleDeployedBundleChecks to handOverToRefreshedBundle in HTTP mode; gm-mcp/src/bundle-refresh.js spawns a replacement, releases the port and calls process.exit(0) in this process. The handover is undocumented. Decide: document it in AGENTS.md and README, or change the code to match the spec. Witness: fs_read gm-mcp/src/bundle-refresh.js dispatch 1791745504641-439-b84ea4bf6a64ea55.'
+  status: pending
+  session_id: gm-goal-hop-SPECDRIFT-2
+  blockedBy:
+  - external
+  deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'
+- id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3
+  title: AGENTS.md names a verify-build step that does not exist
+  description: gm-mcp/AGENTS.md states verify-build checks the updater parser against BUNDLE_VERSION before byte drift. A literal codesearch for verify-build in gm-mcp returns zero matches (dispatch 1791745487987-420-61f966bbd700d1de). The equivalent check is gm-mcp/scripts/check-bin-drift.mjs (parseBundleVersion against BUNDLE_VERSION). Fix the AGENTS.md name to check-bin-drift.mjs.
+  status: pending
+  session_id: gm-goal-hop-SPECDRIFT-2
+  blockedBy:
+  - external
+  deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'
+- id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4
+  title: Spec requires the daemon owner lock to agree before a runner signal; code allows an absent lock
+  description: gm-mcp/AGENTS.md:78 says the SIGTERM to the daemon proceeds only when its owner lock must agree with daemon-status.json. gm-mcp/src/release-bridge.js signalDaemonForSwap refuses only when the lock exists and names another pid (ownerText && Number(ownerText) !== pid); a missing daemon-owner.lock passes. Either tighten the code to require the lock or relax the AGENTS.md wording to 'when present'.
+  status: pending
+  session_id: gm-goal-hop-SPECDRIFT-2
+  blockedBy:
+  - external
+  deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'
+- id: PBTAGENT-gm-goal-hop-PBTAGENT-3-1
+  status: pending
+  title: singleton.js readSingletonState drops a corrupt gm-mcp-http.json with no diagnostic line (catch returns null, ensureHttpSingleton then rmSync's the file and spawns silently)
+  body: 'Witness dispatch: bash in /config/gm with AGENTPLUG_HOME=<scratch>/home holding truncated gm-mcp-http.json (''{"port": 59871, "pid": 12''). ensureHttpSingleton({port:59871, wait:false}) returned spawned:true pid 1432752, the state file was removed, and the only log line was http-singleton-spawned; no line names the corrupt state. Fix surface: gm-mcp/src/singleton.js:57-65 catch should record a diagnostic for error.code !== ''ENOENT'' (appendDiagnostic and describeError already imported), then rebuild the committed gm-mcp bundle per AGENTS.md. Not edited by this hop: the fix needs the bundle rebuild, beyond one exact-match edit.'
+  session_id: gm-goal-hop-PBTAGENT-3
+- id: METAMORPH-gm-goal-hop-METAMORPH-4-1
+  node: METAMORPH
+  phase: P4
+  session_id: gm-goal-hop-METAMORPH-4
+  source: gm-mcp/src/dispatch.js:327-329,991-1011,1819-1824
+  title: 'Metamorphic: relabeling session_id keeps replies equal modulo identity fields (dispatch_id, session_id echo, timing, now, pid-bearing out paths); a live owner lease is the one designed divergence (session_mismatch)'
+  witness: 'live dispatch health and phase-status, session gm-goal-hop-METAMORPH-4 vs gm-goal-hop-METAMORPH-4r, cwd /config/gm: diff differs only in dispatch_id, session_id echo, last_event/last_event_age_ms, now, out-file path; dispatch ids 1791745589169-477, 1791745589850-478, 1791745590699-479, 1791745591251-480'
+  description: 'The relation as the rhetoric states it (same result under a relabeled session) is false literally: the reply carries dispatch_id, the session_id echo and a pid/timestamp out path. The correct relation normalizes those fields. applySessionLeaseVerdict (dispatch.js:996-1011) sets session_mismatch when a different session id acts on a root whose owner lease is live, so the relation has a precondition: no live owner. Witnessed only with no owner; the live-owner branch is unwitnessed.'
+  status: pending
+- id: METAMORPH-gm-goal-hop-METAMORPH-4-2
+  node: METAMORPH
+  phase: P4
+  session_id: gm-goal-hop-METAMORPH-4
+  source: gm-mcp/src/dispatch.js:1819-1824; gm-mcp/src/response-compact.js:151
+  title: 'gm-mcp/src has no check over successive dispatches: nothing replays one read-only verb under a relabeled session and compares the normalized replies'
+  witness: codesearch found no replay or metamorphic test under gm-mcp/src; the two-session comparison above (dispatch ids 1791745589169-477 vs 1791745589850-478, phase-status 1791745590699-479 vs 1791745591251-480) was run by hand and is not a check
+  description: 'Add a gm-mcp check: dispatch health and phase-status under two session ids on one root, strip dispatch_id, session_id echo, timing, now and pid-bearing paths, then assert equality. Run it on every bundle rebuild. Scope: read-only verbs with no live owner lease; a live-owner case needs its own expected divergence (session_mismatch true).'
+  acceptance: the check exits 0 on main; a deliberately injected session-dependent field makes it exit 1
+  status: pending
+- id: FUZZ-gm-goal-hop-FUZZ-5-1
+  status: pending
+  title: 'Lease verdict reads body.SESSION_ID while the dispatched body takes top-level session_id: a mismatched pair can make the ownership check and the executed session disagree'
+  surface: gm-mcp/src
+  principle: FUZZ
+  witness:
+  - 1791745674383-500-ebac8db2396d0a64
+  - 1791745674843-500-3ba09a84ab864239
+  action: Probe a read-only verb that returns session_owner_before_this_dispatch with session_id=A and body.SESSION_ID=B; if the owner check follows B while the write follows A, normalize SESSION_ID once in the dispatch layer (dispatch.js:991 explicitBodySessionId vs dispatch.js:1921 fullBody)
+  session_id: gm-goal-hop-FUZZ-5
+- id: BISECT-gm-goal-w2-BISECT-1
+  title: gm-mcp/src has no bisectable regression oracle
+  why: 'BISECT hop over gm-mcp/src: codesearch for "bisect" and "oracle" returns 0 lines in 18 files (dispatch 1791745695059-500-72e84044580d404f, 1791745695763-500-b436b330969a021e). The only deterministic good/bad predicate for the gm-mcp bundle is scripts/check-bin-drift.mjs, which sits outside src/. Need: a src-scoped check whose exit code a git bisect can drive.'
+  session_id: gm-goal-w2-BISECT
+  status: pending
+- id: RULE5072-gm-goal-w2-RULE5072-1
+  title: 'Verify 50/72 commit-format enforcement on the git_commit path: gm-mcp/src has no subject-length or body-wrap check, so enforcement, if any, lives in rs-plugkit'
+  status: pending
+  session_id: gm-goal-w2-RULE5072
+- id: ADRN-gm-goal-w2-ADRN-1
+  title: 'ADRN: gm-mcp self-update fork (GMMCP-SELFUPDATE-GUARD-DECISION) has no recorded decision'
+  status: pending
+  session_id: gm-goal-w2-ADRN
+  description: 'Irreversible fork in gm-mcp/src/self-update.js: whether self-update may overwrite local windowsHide fixes. codesearch for ADR and decision in gm-mcp/src returns 0 occurrences (18 files, exhaustive); windowsHide appears at 7 sites across 6 files. Action: once GMMCP-SELFUPDATE-GUARD-DECISION is decided, record the chosen option as an ADR entry in AGENTS.md, as that row requires.'
+- id: CONVCOM-gm-goal-w2-CONVCOM-1
+  subject: 'CONVCOM: commit subjects on main are not enforced as type(scope): description; 4 of the last 8 subjects have no type prefix and gm-mcp/src has no subject check'
+  status: pending
+  session_id: gm-goal-w2-CONVCOM
+- id: GITSTATE-gm-goal-w2-GITSTATE-1
+  title: 'gm-mcp: durable runtime state lives outside git (singleton state, local-build pin)'
+  status: pending
+  description: 'Principle GITSTATE (Git Is the State) audit of gm-mcp/src. singleton.js:70 writes a JSON state file via stateFilePath() and self-update.js:68 writes the local-build pin under homedir; both persist across restarts and are not reproducible from git. Classify each as ephemeral coordination (allowed, documented) or durable state needing a declared home. Witness: codesearch dispatch 1791745708385-500-44194e69f01685fe, 1791745717737-500-589309c66305187d.'
+  session_id: gm-goal-w2-GITSTATE
+- id: GITSTATE-gm-goal-w2-GITSTATE-2
+  title: 'gm-mcp: append-only logs written outside git (server-log, dev-sync)'
+  status: pending
+  description: 'GITSTATE audit of gm-mcp/src: server-log.js:66 and dev-sync.js:95 append records to log files outside the repository with no verb that reads them back. Decide whether logs are declared runtime-only output or are removed from the state path. Witness: codesearch dispatch 1791745709579-500-a7d05f20ccd7a39e.'
+  session_id: gm-goal-w2-GITSTATE
+- id: GUARDANDGO-gm-goal-w2-GUARDANDGO-1
+  status: pending
+  title: 'Guard-and-go: gm-mcp dispatch.js keeps the silent process-cwd fallback behind GM_MCP_ALLOW_PROCESS_CWD=1 beside the cwd-required guard; decide whether the opt-in stays'
+  witness: 1791745716463-500-10b4410e8774054f
+  evidence: 'gm-mcp/src/dispatch.js:26-46 resolveDispatchRoot: cwd-required refusal at line 37, old fallback retained at line 33 under GM_MCP_ALLOW_PROCESS_CWD'
+  session_id: gm-goal-w2-GUARDANDGO
+- id: NODELETE-gm-goal-w2-NODELETE-1
+  status: pending
+  title: 'gm-mcp singleton: retire the legacy GM_MCP_HTTP_SINGLETON toggle beside its replacements'
+  body: 'Present need: gm-mcp/src/singleton.js httpSingletonEnabled() (lines 43-48) reads three env names: GM_MCP_NO_HTTP_SINGLETON and GM_MCP_HTTP_SINGLETON_OFF (new names) and the legacy GM_MCP_HTTP_SINGLETON, whose old value still disables the singleton. The superseded toggle survives beside its replacements. Need: decide whether any deployed launcher still sets GM_MCP_HTTP_SINGLETON; if none does, delete the legacy read (lines 47-48) and keep the two current names; if one does, migrate it and then delete. Witness: rebuild the committed gm-mcp bundle, verify-build, and one live MCP dispatch with the legacy variable set to off, confirming the singleton stays disabled or enabled as the new names dictate. Evidence: codesearch literal "legacy" on gm-mcp/src, singleton.js:47.'
+  session_id: gm-goal-w2-NODELETE
+- id: TYPE4-gm-goal-w2-TYPE4-1
+  subject: Deduplicate flagValue helper in gm-mcp/src/http-transport.js and index.js
+  description: 'http-transport.js:15 and index.js:13 define byte-identical flagValue(name) (argv scan for --name, returns next non-flag token). Witness: codesearch dispatch 1791745727845-500-c5c1f4a0525f20de. Candidate fix: import flagValue from one module, after checking index.js <-> http-transport.js import direction to avoid a cycle.'
+  status: pending
+  session_id: gm-goal-w2-TYPE4
+- id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1
+  status: pending
+  title: 'LIVEPLAN: live-plan store holds 264 pending rows of 276; no retire row has closed its split rows'
+  description: 'Witness: prd-list count 276 total, pending 264 (limit-3 listing truncated:true). LIVEPLAN-RETIRE-EARS-DOCS-CURRENT-CONCISE closing_condition needs INVEST-EARS-DOC-PATHS-EXIST and INVEST-EARS-DOC-NO-REMOVED-VERBS closed; both pending. Action: close or retire stale pending rows so the store holds only the current task.'
+  session_id: gm-goal-w3-LIVEPLAN
+  phase: P1
+  node: LIVEPLAN
+- id: JTBD-gm-goal-w3-JTBD-1
+  status: pending
+  title: 'Job: a skill description names the user situation that triggers it and the outcome it delivers (gm-hop, skills/gm-hop/SKILL.md:3 states mechanism only)'
+  session_id: gm-goal-w3-JTBD
+- id: XYPROB-gm-goal-w3-XYPROB-1
+  status: pending
+  title: 'XY Problem is named in skills/gm/SKILL.md:268 (Frame) and the graph backreference condition only; no skill text runs the stated-vs-real-problem check (codesearch "real problem": 0 hits on skills/)'
+  session_id: gm-goal-w3-XYPROB
+- id: JTBD-gm-goal-w3-JTBD-2
+  status: pending
+  title: 'Job: gm-orchestrate description names the trigger situation (a gm walk with advertised rows) and the outcome, not only the pool-loop mechanism (skills/gm-orchestrate/SKILL.md:3)'
+  session_id: gm-goal-w3-JTBD
+- id: CLEANNAME-gm-goal-w3-CLEANNAME-1
+  title: 'gm-mcp/src/dispatch.js:1824 `const n = resume_task || nextN(session_id)` and :1209 `const t = setTimeout`: rename to intention-revealing names (sequence, timer)'
+  status: pending
+  session_id: gm-goal-w3-CLEANNAME
+- id: CLEANNAME-gm-goal-w3-CLEANNAME-2
+  title: 'gm-mcp/src/self-update.js:91-92 `const a = parts(left)` / `const b = parts(right)`: rename to leftParts and rightParts'
+  status: pending
+  session_id: gm-goal-w3-CLEANNAME
+- id: SPIKE-gm-goal-w3-SPIKE-1
+  description: 'Claim check on surface skills for node SPIKE. Claim 1, a spike is time-boxed: holds in PRD rows (SPIKE-GMMCP-SELFUPDATE-REVERT states Time box: one live check) but skills/gm/SKILL.md:268 names the principle only as an anchor label. Claim 2, a spike answers one unknown and is then discarded: no skill states it. Witness: codesearch literal SPIKE on path skills returned 4 hits, all in skills/dream-rsi/gm-graph.json (lines 100, 874, 879, 1539); codesearch literal spike returned 1 hit (gm-graph.json:1542). The SKILL.md:268 line was found by grep, not codesearch. Close: decide whether the time-box rule belongs in skills/gm/SKILL.md section 3 Anchors or stays PRD-scoped.'
+  node: SPIKE
+  obligation_kind: discovery
+  phase: P1
+  session_id: gm-goal-w3-SPIKE
+  status: pending
+  title: 'Spike: skills/gm/SKILL.md names Spike Solution only as an anchor label; the time-box and discard rule lives only in spike PRD rows'
+- id: CLEANNAME-gm-goal-w3-CLEANNAME-3
+  title: 'gm-mcp/src/release-bridge.js:94 `const os = {linux,darwin,win32}[platform]`: rename to a name that says it maps platform to release OS label; the name collides with the node os module'
+  status: pending
+  session_id: gm-goal-w3-CLEANNAME
+- id: CLEANNAME-gm-goal-w3-CLEANNAME-4
+  title: 'Atomic-write temp path names diverge: tmp, temp, temporary, candidate, tempPath across dispatch.js:359,938, release-bridge.js:73,264,302, singleton.js:192; pick one name for the write-then-rename pattern'
+  status: pending
+  session_id: gm-goal-w3-CLEANNAME
+- id: UBIQ-gm-goal-w3-UBIQ-1
+  session_id: gm-goal-w3-UBIQ
+  status: pending
+  subject: 'UBIQ on gm-mcp/src: dispatch.js names one session concept two ways. sessionId is the parameter in nextN (327), ensureAgentLease (907), refreshCallerHeartbeat (923), recordLeaseSession (956), instructionOwnerKey (1722), plainTextOwnerTransport (1772); session_id is the wire key and the runDispatch parameter (1819-1837). Folds into BLOCKER-SKILLGM-session-id-alias-normalize: rename the helper parameters to session_id in the same change, no separate fix. Witness: codesearch sessionId literal, gm-mcp/src, 24 occurrences in 2 files.'
+- id: EARS-gm-goal-w3-EARS-1
+  title: 'Polaris verification gate: replace "looks complete" with a witness test'
+  node: EARS
+  phase: P1
+  status: pending
+  session_id: gm-goal-w3-EARS
+  description: 'skills/polaris-goal-compiler/references/verification-gates.md:54 reads "The agent shall not move forward while incomplete work looks complete". "looks complete" has no checkable test, so the requirement cannot be falsified. EARS needs a condition a witness can confirm, e.g. "while an atom has no recorded verification witness". Surface: skills, principle EARS, hop wave-3.'
+  closing_condition: Line 54 names a witness-checkable condition and a codesearch for "looks complete" in skills/polaris-goal-compiler returns no hit.
+- id: EARS-gm-goal-w3-EARS-2
+  title: 'Polaris goal compiler: define the excluded task classes'
+  node: EARS
+  phase: P1
+  status: pending
+  session_id: gm-goal-w3-EARS
+  description: 'skills/polaris-goal-compiler/SKILL.md:44 excludes "trivial single-step tasks, reflex responses, or simple lookups". Those terms are undefined, so a reader cannot test whether a task is excluded. EARS needs a measurable boundary, e.g. a step count or a named tool-call count. Surface: skills, principle EARS, hop wave-3.'
+  closing_condition: Line 44 states a measurable exclusion boundary (step or tool-call count) and no undefined class term remains in that sentence.
+- id: INVEST-gm-goal-w3-INVEST-1
+  status: pending
+  title: 'INVEST Small: skills/gm-orchestrate/SKILL.md body is 31249 bytes, the largest skill body, loaded on every pool trigger; no row names it'
+  body: 'Measured: wc -c skills/gm-orchestrate/SKILL.md = 31249 (gm/SKILL.md 23517, gm-hop 12145). Action: split the verb-reference and rule detail into a references file so a trigger loads only the pool loop. Surface file is modified by another lane (git status M); do not edit it from this row until that lane commits.'
+  session_id: gm-goal-w3-INVEST
+- id: INVEST-gm-goal-w3-INVEST-2
+  status: pending
+  title: 'INVEST Estimable: stale skill-header rows cite sizes the files no longer have'
+  body: 'Measured 2026-10-11 frontmatter description line (wc -c of grep line 3): polaris-protocol 289 bytes (row HEADERONLY-POLARIS-PROTOCOL-DESC says 1000); fifth-dimension-engine 199 (row says 683); polaris-goal-compiler 283 (row says 817). Retire those three rows with prd-resolve citing this measurement from a session other than the row author; the rows are not closed by this hop because a self-witness is refused.'
+  session_id: gm-goal-w3-INVEST
+- id: SLAP-gm-goal-w4-SLAP-1
+  title: 'SLAP: dispatch.js mixes raw fs lock/status primitives (writeFileSync lines 1044, 1071, 1167, 1179; JSON status readFileSync 1376) with spool dispatch orchestration; extract the lock and status primitives to one helper. Witness: codesearch writeFileSync/readFileSync literal, root gm-mcp/src, session gm-goal-w4-SLAP.'
+  session_id: gm-goal-w4-SLAP
+  status: pending
+- id: SLAP-gm-goal-w4-SLAP-2
+  title: 'SLAP: release-bridge.js (lines 251, 258) and self-update.js (lines 59, 133) compute sha256 and read wasm/runner bytes inline inside install and update flows; move byte-level read and hash into a helper so each flow stays at one abstraction level. Witness: codesearch readFileSync literal, root gm-mcp/src, session gm-goal-w4-SLAP.'
+  session_id: gm-goal-w4-SLAP
+  status: pending
+- id: TOTALITY-gm-goal-w4-TOTALITY-1
+  status: pending
+  title: 'TOTALITY: 13 of 17 JSON.parse sites in gm-mcp/src are unread; verify each is inside a try or a total fallback'
+  witness: codesearch JSON.parse on gm-mcp/src, dispatch 1791747207804-500-9c3608273e761a81; read dispatch.js:439,851, singleton.js:59, mcp-server.js:53 are guarded
+  session_id: gm-goal-w4-TOTALITY
+- id: TOTALITY-gm-goal-w4-TOTALITY-2
+  status: pending
+  title: 'TOTALITY: confirm release-bridge.js and self-update.js throws (lines 113-300) are caught by their callers, not escaping as unhandled rejections'
+  witness: codesearch throw on gm-mcp/src, dispatch 1791747208128-500-5b2ab7afc3b36e12
+  session_id: gm-goal-w4-TOTALITY
+- id: DBC-gm-goal-w4-DBC-1
+  status: pending
+  title: gm-mcp codemode silently strips unknown argument keys (contract not enforced at the call boundary)
+  body: 'Claim (DBC, precondition on verb calls): arguments must satisfy the verb schema, and a call carrying keys outside the schema is refused. Witness: gm-mcp/src/codemode.js:15 validates with z.object(tool.inputSchema), which strips unknown keys by default, so a misspelled field is dropped with no error. Live check, session gm-goal-w4-DBC: codesearch with bogus_field:1 was admitted and searched; codesearch with cwd:12345 was refused ("cwd: expected string"). Type checks hold; unknown-key rejection does not. Fix is not a one-line change: .strict() would reject the session_id and cwd defaults the codemode contract forwards to verbs whose schema omits them. Needs a test on that path and a bundle rebuild (gm-mcp src and committed bundle together).'
+  session_id: gm-goal-w4-DBC
+- id: ACCEPTPORT-gm-goal-w4-ACCEPTPORT-1
+  status: pending
+  title: gm-mcp/src/dispatch.js imports node:child_process and fs directly; core dispatch is not behind a port
+  surface: gm-mcp/src
+  witness: 'codesearch 1791747203094-500-6a58615c436a0702 (from "" count 96): dispatch.js:6 spawn, :3 fs; mcp-server.js:3 imports dispatch.js'
+  action: Move spawn and spool-fs access in dispatch.js behind an injected port (adapter) so mcp-server.js depends on the port, not the process adapter
+  session_id: gm-goal-w4-ACCEPTPORT
+- id: ACCEPTPORT-gm-goal-w4-ACCEPTPORT-2
+  status: pending
+  title: Child-process spawns bypass git-adapter port in release-bridge, self-update, singleton, dev-sync
+  surface: gm-mcp/src
+  witness: 'codesearch 1791747203094-500-6a58615c436a0702: release-bridge.js:2 execFile, self-update.js:2 spawnSync, singleton.js:2 spawn, dev-sync.js:2 spawn; git-adapter.js:1 spawnSync is the only git port'
+  action: Route process spawning in these modules through one process port (or git-adapter for git), so the only host-process boundary is one module
+  session_id: gm-goal-w4-ACCEPTPORT
+- id: PARNAS-gm-goal-w4-PARNAS-1
+  title: gm-mcp/src/dispatch.js exports spool, daemon and lease internals that four other modules import
+  status: pending
+  obligation_kind: discovery
+  session_id: gm-goal-w4-PARNAS
+  body: 'Information hiding: dispatch.js exports pidAlive (dispatch.js:857), daemonNotRunning (:1499), readDaemonLiveness (:1373), readSpoolDispatchState (:1532), ensureAgentLease (:907) and more; singleton.js:7 imports pidAlive, release-bridge.js:8 imports pidAlive and inflightDispatchCount. Witness: codesearch import in gm-mcp/src, dispatch 1791747209943-500-f4f9d0a9ef8093f2. Action: move liveness and lease decisions behind one owning module interface; keep helpers module-private.'
+- id: PARNAS-gm-goal-w4-PARNAS-2
+  title: inflightDispatchCount is a shared dispatch counter read by four modules with no owning interface
+  status: pending
+  obligation_kind: discovery
+  session_id: gm-goal-w4-PARNAS
+  body: 'Information hiding: dispatch.js:15 exports inflightDispatchCount, imported by bundle-refresh.js:2, self-update.js:9, transport-guard.js:3, release-bridge.js:8. Each consumer assumes the counter representation. Test: codesearch import in gm-mcp/src (witness 1791747209943-500-f4f9d0a9ef8093f2). Action: expose one query function from the owning module that returns a verdict, not the raw counter.'
+- id: WADLER-gm-goal-w4-WADLER-1
+  status: pending
+  title: 'gm-mcp/src: 71 hand-written Array.isArray object guards; one shared plain-object predicate'
+  body: 'Principle: WADLER (Theorems for Free). Witness: codesearch literal "Array.isArray(" over gm-mcp/src = 71 occurrences in 7 files (dispatch.js 33, response-compact.js 28, cli.js, http-transport.js, mcp-server.js, release-bridge.js, transport-guard.js); codesearch "function isPlainObject" = 0 matches. Repeated shape: typeof X === "object" && !Array.isArray(X), e.g. dispatch.js:81, 106, 141, 161, 168, 530, 767, 1700, 1735. Action: define one isPlainObject(value) in a single module and route the guards through it; the type fact then has one definition and cannot drift between copies. Not edited in this hop: the change spans two files and needs a live gm-mcp bundle rebuild.'
+  session_id: gm-goal-w4-WADLER
+- id: WADLER-gm-goal-w4-WADLER-2
+  status: pending
+  title: 'gm-mcp/src/dispatch.js: daemon status liveness copies one typeof guard per field'
+  body: 'Principle: WADLER. Witness: codesearch literal "typeof " over gm-mcp/src lists dispatch.js:1421-1429 as nine consecutive lines of the form if (typeof status.F === "number") liveness.F = status.F (shared_process boolean, queue_wait_ms, queue_depth, queue_position, claimed_step_count, queued_step_count, gm_processor_capacity, and the daemon_active_projects copy at 1429). Action: derive the liveness copy from one field list with a single typed pick, so the field set is stated once and a new status field cannot be silently dropped. Not edited in this hop: a loop-based rewrite is a multi-line change needing a live status witness.'
+  session_id: gm-goal-w4-WADLER
+- id: DEEPMOD-gm-goal-w4-DEEPMOD-1
+  subject: Third flagValue copy in gm-mcp/scripts/install-autostart.mjs:28 (extends TYPE4-gm-goal-w2-TYPE4-1)
+  description: 'gm-mcp/scripts/install-autostart.mjs:28 defines a third byte-equivalent flagValue(name) alongside gm-mcp/src/index.js:13 and gm-mcp/src/http-transport.js:15, which TYPE4-gm-goal-w2-TYPE4-1 covers. Witness: codesearch literal "flagValue" on gm-mcp, dispatch 1791747214777-500-d359a7a96f7f71b (14 lines in 4 files). Scope: the script is outside src/, so the shared helper must be importable from the script without pulling index.js (which starts the server on import of main). Resolve with TYPE4-gm-goal-w2-TYPE4-1.'
+  status: pending
+  session_id: gm-goal-w4-DEEPMOD
+- id: CQS-gm-goal-w4-CQS-1
+  title: 'CQS: runnerEnsureInFlight is a query that mutates state and kills a child'
+  description: 'gm-mcp/src/dispatch.js:1105 runnerEnsureInFlight(root, now) is a predicate ("is a runner ensure in flight?") but deletes inflightEnsuresByRoot entries (lines 1109, 1113, 1117) and calls entry.child?.kill() (line 1118) before returning false. Witness: codesearch literal "writeFileSync(" and read of dispatch.js:1105-1122. Fix: move the reap (delete + kill) into a command called from ensureSpoolRunnerRunning (dispatch.js:1139), leaving runnerEnsureInFlight pure. Requires a gm-mcp bundle rebuild with the src edit.'
+  status: pending
+  session_id: gm-goal-w4-CQS
+- id: CQS-gm-goal-w4-CQS-2
+  title: 'CQS: capReplyText returns capped text and writes the spill file'
+  description: 'gm-mcp/src/dispatch.js:275 capReplyText(text, maxChars, spillPath, ...) returns the reply text (query) and writes spillPath with fs.writeFileSync (line 277) as a side effect. Witness: codesearch literal "writeFileSync(" hit at dispatch.js:277 inside capReplyText. Fix: make the spill write a separate command that the caller runs before the pure cap computation. Requires a gm-mcp bundle rebuild.'
+  status: pending
+  session_id: gm-goal-w4-CQS
+- id: XYPROB-runtime-state-in-submodules-blocker-gm-drain-XYPROB-runtime-state-in-submodules
+  status: pending
+  title: 'Blocker: XYPROB-runtime-state-in-submodules cannot COMPLETE in its own session (self-witness refused)'
+  description: 'Blocker for XYPROB-runtime-state-in-submodules stage COMPLETE. PROVE confirmed a real ignore gap: rs-plugkit/.gitignore does not match transient .gm/config-source-cache-default.*.lock/ and .staging-*/ (dispatch 1791778417296-189-f0e293bcdcaf91d3, NOT_IGNORED). Closing the row needs a witness dispatch from another session, and the fix is owned by INVEST-XYPROB-RUNTIME-IGNORE-RS-PLUGKIT. Receipts: /config/gm/.gm/receipts/XYPROB-runtime-state-in-submodules/.'
+  session_id: gm-drain-XYPROB-runtime-state-in-submodules
+- id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE
+  title: 'Blocker for DREAMRSI-PROPOSE-SLICE: no build, push or live witness available in this run'
+  body: 'Row DREAMRSI-PROPOSE-SLICE (dream-strategy-propose verb) cannot close this run. SPECIFY and PROVE passed: dream_rsi::automatic_replay exists (orchestrator/dream_rsi.rs:619), orchestrator/mod.rs routes dream-replay-cycle at line 406, and dream-strategy-propose is absent from the registered verb list and from source. EMIT is blocked: no cargo or rustup on this host, so the wasm guest cannot be built locally (AGENTS.md build line; builds run in GitHub Actions). The witness needs a live agentplug-runner dispatch of the new verb, which the running plugin 0.1.1585 cannot serve until a release ships it. Delivery is blocked by the run instruction Do not push. Owner decision needed: authorize the rs-plugkit change to be committed and pushed so CI builds and releases it, then a witness from another session runs the live dispatch and the active-strategy.json byte-identity check. Unblocks the parent row when witnessed.'
+  session_id: gm-drain-DREAMRSI-PROPOSE-SLICE
+  status: pending
+- id: G_CONTRACT-memory-kind-enum-blocker-gm-drain-G_CONTRACT-memory-kind-enum
+  status: pending
+  subject: 'Owner decision needed before the closed-enum move: memorize-fire kind is a storage tier, not the four memory types. rs-plugkit memorize.rs:36 and wasm_dispatch/verbs/memory.rs:501 default kind to "l0" (memory.rs:778 defaults to "l1") and pass it to tencentdb_memory::write as a tier. The prose sentence (gm-config/prose/entry-extended.md:46 and the rs-plugkit copy) lists user|feedback|project|reference. Making kind a four-value enum rejects the l0/l1 default and every current caller. Owner must pick: (a) the closed set is the storage tiers (l0, l1, ...) and the prose sentence is rewritten to name them, or (b) the four memory types become a separate field and kind stays a tier. Row stays pending until chosen; INVEST-GCONTRACT-MEMORY-KIND-ENUM is blocked on this choice.'
+  blockedBy:
+  - owner-decision
+  session_id: gm-drain-G_CONTRACT-memory-kind-enum
+- id: JTBD-CREDENTIAL-KEEPOUT-blocker-gm-drain-JTBD-CREDENTIAL-KEEPOUT
+  title: 'Blocker: JTBD-CREDENTIAL-KEEPOUT needs a scope decision and a push-free witness'
+  body: 'Stage EMIT cannot run. (1) Owner decision needed on scope: diff-only (YAGNI-JTBD-CREDENTIAL-KEEPOUT, proposed) or history-wide scan (LIVEPLAN-RETIRE-JTBD-CREDENTIAL-KEEPOUT closing condition). The decision is recorded in AGENTS.md, which then states the boundary. Mutable: JTBD-CREDENTIAL-KEEPOUT-SCOPE. (2) The witness (seeded credential blocked at git_push, INVEST-JTBD-CREDENTIAL-PUSH-WITNESS) would push the seeded credential if the gate fails, so it cannot run in a session that may not push. Run it in a scratch repo or with an approved push. Receipts: .gm/receipts/JTBD-CREDENTIAL-KEEPOUT/01-03.'
+  status: pending
+  obligation_kind: blocker
+  session_id: gm-drain-JTBD-CREDENTIAL-KEEPOUT
+- id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-JTBD-SPEND-VISIBILITY
+  status: pending
+  obligation_kind: discovery
+  session_id: gm-drain-JTBD-SPEND-VISIBILITY
+  title: 'Blocker for JTBD-SPEND-VISIBILITY: owner must name the token source for walk spend'
+  body: 'EMIT cannot run. The row asks for per-walk token and dispatch spend split by phase and re-entered phase, read from recorded dispatches. No gm-owned record holds token counts: rs-plugkit, gm-mcp, agentplug, rs-codeinsight and gm-config have no input/output/cache token fields (grep, session gm-drain-JTBD-SPEND-VISIBILITY). Dispatch records hold id, verb, exit and timestamps only. Owner decision needed: (a) read token usage from Claude Code session transcripts (outside gm; needs a path and a join key to dispatch ids), or (b) narrow the row to dispatch counts and wall time per phase, which the existing records can supply once the per-dispatch phase field is confirmed. Receipts: .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md, 02-PROVE.md.'
