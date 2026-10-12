@@ -156,7 +156,7 @@ Files under `.gm/` track orchestration state as markers. gm does not use hook ev
 - **session-start**: starts plugkit, seeds `.gm/next-step.md`, and sets the `needs-gm` marker.
 - **turn entry**: the `instruction` verb reminds the agent to dispatch a verb first, and attaches the per-prompt auto-recall data.
 - **pre-tool-use**: blocks a Write or an Edit or a git operation before the gm skill runs for that turn.
-- **stop**: blocks the end of a session in four cases. Case one: `.gm/prd.yml` (PRD, list of planned and resolved work rows tracked in .gm/prd.yml) still has an open row. Case two: a mutable value is unresolved. Case three: the residual scan has not run. Case four: the worktree is dirty or unpushed.
+- **stop**: blocks the end of a session in four cases. Case one: `.gm/prd/` (PRD, one file per planned work row, `.gm/prd/<id>.yml`, with resolved rows moved into `.gm/prd-log.jsonl`) still holds an open row file. Case two: a mutable value is unresolved. Case three: the residual scan has not run. Case four: the worktree is dirty or unpushed.
 - **PROVE to EMIT**: `mutables-all-resolved`.
 - **EMIT to STATE**: `no-synthetic-test-files`, `no-graphical-symbols-in-diff`, `no-admit-deferral-markers`.
 - **STATE to CONC**: `idempotent-dispatch-replay-safe`.
