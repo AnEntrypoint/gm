@@ -149,14 +149,6 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any test file this walk itself created in this session, same turn, no separate approval needed. Created in this session means untracked and absent from `git ls-files` at session start, so record that set before the first write. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked. A test suite is never evidence of anything and is
-never consulted, run, or cited, even alongside other evidence: a test authored
-in the same pass as its fix reliably shares the fix's own misreading of the
-request, so "tests pass" only proves the code agrees with itself. Verification
-is exhaustive manual debugging with live code execution against the real
-system, same turn as the work -- run the actual code path against real state
-and read the real output, re-derived from the request's own words each time, with the expected value recorded as a witness line before the live dispatch; a witness passes only when the observed output matches that recorded line, never from the diff just written. Reasoning is execution, not monologue.
-The only sanctioned driving adapter is live execution through the real entry point, and it is the adapter for every port: the dispatch port (each verb driven by its live dispatch, SKILL.md Section 1), the code-search port (`codesearch`), the fetch port (`fetch`) and the state port (the PRD and state verbs). No test file or test suite stands in for any of them.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Never edit one file twice per block.
@@ -283,7 +275,7 @@ of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the
 running system, where the Red expectation is a witness row recording the output the
 request implies, written before the Green change; Fagan Inspection re-reading the request's literal words against
 the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules;
-Devil's Advocate. No test files, ever (Section 1).
+Devil's Advocate. No test files, ever (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`).
 **Secure** — Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE;
 OWASP Top 10; LINDDUN. Credentials are asymmetric: no revert reaches a log or
 mirror.
