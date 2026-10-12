@@ -407,8 +407,20 @@ refusal names every blocking path in `blocking_paths` plus `next_dispatch`: `git
 to accept the worktree version, or `git_stash {paths:[...]}` then `git_merge_abort` then
 `git_stash_pop`. `{"preserve":false}` shelves nothing and reports instead of working around.
 
-The four `git_worktree_*` verbs are the sanctioned way to work in an isolated worktree -- never raw
-`git worktree` through `bash`:
+**Main only: work in the shared work tree; collisions are recovered, not avoided.** No lane opens a
+worktree, side branch or scratch checkout to obtain a clean HEAD: every extra tree ends in a
+consolidation run, and a publish from one merges back into the tree every other lane is writing --
+in a shared work tree that merge is exactly where lanes sweep each other's uncommitted edits.
+Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row
+or file, reapplies the change on current state and retries. A READ question is answered without a
+second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main`; a whole tree
+with `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards.
+
+The `git_worktree_*` verbs below are therefore a LAST RESORT with exactly one legitimate use: a
+read-only reproduction of another commit -- bisecting a regression by running the red-capable
+command at a candidate sha -- which is removed again with `git_worktree_remove`. Never edit, commit
+or publish from one, and never reach for one to get a clean HEAD. Where that use applies, these four
+are the sanctioned way to do it -- never raw `git worktree` through `bash`:
 
 ```
 {"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}   git_worktree_add: -b <ref> <path>
