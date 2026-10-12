@@ -30,3 +30,7 @@ The durable-lessons mechanism (`.wfgy/lessons.md`, described in the main `SKILL.
 ## Attribution
 
 WFGY, Wan Fa Gui Yi, and the underlying deltaS/BBMC/BBPF/BBCR/BBAM concepts originate from `onestardao/WFGY` (creator: PSBigBig). This skill is an independent, honesty-first reimplementation of the portable parts of that technique for use by a text-generating coding agent -- not an official WFGY product, not a verbatim copy of any WFGY file, and not endorsed by or affiliated with the original project.
+
+## What this skill is not
+
+It does not compute real embeddings, real cosine similarity, or real attention-weight statistics -- every place the original relies on that computation, this skill hands the equivalent judgment to the calling agent explicitly (see `references/deltas-measurement.md` and `references/bbam-narrow-focus.md`). It does not reproduce the original TXT-OS file's scripted demo output or its skepticism-deflection behavior. It is not a site-maintenance or project-specific tool; it carries no assumptions about what project it's applied in.
