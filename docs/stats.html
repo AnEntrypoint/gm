@@ -80,6 +80,7 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
   <main>
     <section id="stars">
       <h2>Star Trend</h2>
+      <div style="font-family:var(--ff-mono);font-size:12px;color:var(--panel-text-2);margin-bottom:8px;">Cumulative stars per day, from docs/api/stars.json, which scripts/fetch-live-data.mjs writes on each deploy.</div>
       <canvas id="starsChart"></canvas>
     </section>
 
@@ -317,7 +318,7 @@ main .data-unavailable-note { font-family: var(--ff-mono); font-size: 12px; colo
       if (!section.querySelector('.data-unavailable-note')) {
         const note = document.createElement('div');
         note.className = 'data-unavailable-note';
-        note.textContent = 'Data unavailable -- no source configured for this metric yet.';
+        note.textContent = 'Data unavailable: the metric file did not load.';
         section.appendChild(note);
       }
       if (canvasId) {
