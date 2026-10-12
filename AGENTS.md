@@ -6,6 +6,10 @@ This repository publishes the `gm-skill` release artifact. The installed `/gm` s
 
 When the agent starts work, the agent shall first read `SKILLS.md`. When a request or an edited file matches a skill's frontmatter description, the agent shall read that `skills/<name>/SKILL.md`. If this file conflicts with the served `instruction` response, project configuration, or the applicable skill, the served response, configuration, or skill shall govern. Falsified by: `fs_stat` on `SKILLS.md` or on `skills/<name>/SKILL.md` returning an error, or a served `instruction` reply that contradicts the applicable skill.
 
+## Skill install materialisation
+
+An installed skill must be the file it was installed from, or the install must say it is not. `install.sh`, `install.ps1` and `bin/gm-install.js` each materialise `~/.claude/skills/<name>` and `~/.agents/skills/<name>` from `<checkout>/skills/` (or `GM_SKILL_SOURCE_DIR`) as a link — a directory junction on Windows, a symlink elsewhere — so a source edit is served on the next dispatch. No local source (the `npx` and release-tarball routes) means a copy, announced loudly and recorded in `<root>/.gm-skill-install-modes`. A displaced install is parked under `<root>/.gm-skill-prelink/`, never deleted. MSYS `ln -s` silently copies when symlink creation is refused, so on MINGW/MSYS/CYGWIN only `mklink /J` counts as a link. `agentplug-runner/src/download.rs refresh_installed_skill_md` skips a source-linked install and names a copy install that had drifted. Falsified by: editing `skills/<name>/SKILL.md` and not seeing the edit at `~/.claude/skills/<name>/SKILL.md`, or `node bin/gm-install.js --check-skills` printing `DRIFT`.
+
 ## Glossary
 
 - **walk**: one run of the gm state machine that the orchestrator drives to completion, bounded by the walk loop in `skills/gm/SKILL.md` (Section 1c).

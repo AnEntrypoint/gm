@@ -5,6 +5,12 @@ $Repo = "AnEntrypoint/agentplug-bin"
 $GmRepo = "AnEntrypoint/gm"
 $GmToolsDir = Join-Path $env:USERPROFILE ".gm-tools"
 $ClaudeSkillsDir = Join-Path $env:USERPROFILE ".claude\skills"
+$AgentsSkillsDir = Join-Path $env:USERPROFILE ".agents\skills"
+$SkillInstallRoots = @($ClaudeSkillsDir, $AgentsSkillsDir)
+$SkillModeLedger = ".gm-skill-install-modes"
+# a displaced install is parked under a dotted directory: a plain sibling would
+# itself be discovered and served as a skill
+$SkillPreLinkDir = ".gm-skill-prelink"
 
 function Resolve-AssetName {
     $arch = $env:PROCESSOR_ARCHITECTURE
@@ -77,7 +83,135 @@ function Install-SkillAssets {
     }
 }
 
+function Write-SkillModeLedger {
+    param([string]$Root, [string]$Name, [string]$Mode, [string]$Source)
+
+    $file = Join-Path $Root $SkillModeLedger
+    $kept = @()
+    if (Test-Path $file) {
+        foreach ($line in @(Get-Content $file)) {
+            $t = $line.Trim()
+            if (-not $t -or $t.StartsWith("#")) { continue }
+            if (($t -split '\s+')[0] -ne $Name) { $kept += $t }
+        }
+    }
+    $kept += "$Name $Mode $([DateTime]::UtcNow.ToString('o')) $Source"
+    $tmp = "$file.tmp.$PID"
+    Set-Content -Path $tmp -Value (@("# gm skill install modes: <name> <linked|copied|refused> <iso-ts> <source>") + $kept) -Encoding utf8
+    Move-Item -Force $tmp $file
+    Remove-Item -Force -ErrorAction SilentlyContinue $tmp
+}
+
+function Resolve-LocalSkillSource {
+    $override = $env:GM_SKILL_SOURCE_DIR
+    if ($override -and (Test-Path (Join-Path $override "gm\SKILL.md"))) { return $override }
+    if (-not $PSScriptRoot) { return $null }
+    $local = Join-Path $PSScriptRoot "skills"
+    if (Test-Path (Join-Path $local "gm\SKILL.md")) { return $local }
+    return $null
+}
+
+function Remove-SkillTarget {
+    param([string]$Path)
+    $item = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return }
+    if ($item.LinkType) { Remove-Item -LiteralPath $Path -Force; return }
+    Remove-Item -LiteralPath $Path -Recurse -Force
+}
+
+function Install-OneSkill {
+    param([string]$SourceDir, [string]$Name, [string]$Root)
+
+    $dest = Join-Path $Root $Name
+    $item = Get-Item -LiteralPath $dest -Force -ErrorAction SilentlyContinue
+    if ($item -and $item.LinkType) {
+        $current = if ($item.Target) { ($item.Target -join '') } else { $null }
+        if ($current -and $current.TrimEnd('\') -eq $SourceDir.TrimEnd('\')) {
+            Write-SkillModeLedger -Root $Root -Name $Name -Mode "linked" -Source $SourceDir
+            Write-Host "linked $Name -> $dest => $SourceDir (already the source directory)"
+            return
+        }
+        Remove-Item -LiteralPath $dest -Force
+    } elseif ($item) {
+        $park = Join-Path $Root $SkillPreLinkDir
+        New-Item -ItemType Directory -Force -Path $park | Out-Null
+        $aside = Join-Path $park "$Name-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+        try {
+            Move-Item -LiteralPath $dest -Destination $aside -Force -ErrorAction Stop
+        } catch {
+            Write-SkillModeLedger -Root $Root -Name $Name -Mode "refused" -Source $SourceDir
+            Write-Warning "REFUSED $Name -> ${dest}: could not move the existing install aside ($($_.Exception.Message)); it stays a COPY and will drift from $SourceDir -- rerun with -ForceLink to replace it"
+            return
+        }
+    }
+
+    # a directory junction needs no elevation on Windows; a symbolic link does
+    try {
+        New-Item -ItemType Junction -Path $dest -Value $SourceDir -ErrorAction Stop | Out-Null
+        Write-SkillModeLedger -Root $Root -Name $Name -Mode "linked" -Source $SourceDir
+        Write-Host "linked $Name (junction) -> $dest => $SourceDir (edits to the source are served immediately)"
+        return
+    } catch {
+        $junctionError = $_.Exception.Message
+    }
+    try {
+        New-Item -ItemType SymbolicLink -Path $dest -Value $SourceDir -ErrorAction Stop | Out-Null
+        Write-SkillModeLedger -Root $Root -Name $Name -Mode "linked" -Source $SourceDir
+        Write-Host "linked $Name (symlink) -> $dest => $SourceDir (edits to the source are served immediately)"
+        return
+    } catch {
+        $symlinkError = $_.Exception.Message
+    }
+    Copy-Item -Recurse -Force $SourceDir $dest
+    Write-SkillModeLedger -Root $Root -Name $Name -Mode "copied" -Source $SourceDir
+    Write-Warning "$Name -> ${dest} is a COPY (junction failed: $junctionError; symlink failed: $symlinkError); it is NOT the file at $SourceDir and will drift silently -- recorded in $(Join-Path $Root $SkillModeLedger)"
+}
+
+function Test-InstalledSkills {
+    param([string]$SourceRoot)
+
+    $drift = @()
+    foreach ($root in $SkillInstallRoots) {
+        foreach ($d in Get-ChildItem -Directory $SourceRoot | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") }) {
+            $dest = Join-Path $root (Join-Path $d.Name "SKILL.md")
+            if (-not (Test-Path $dest)) { continue }
+            $src = Join-Path $d.FullName "SKILL.md"
+            if ((Get-Sha256 -Path $src) -ne (Get-Sha256 -Path $dest)) {
+                Write-Warning "DRIFT $($d.Name) at ${dest}: contents differ from $src"
+                $drift += $dest
+                continue
+            }
+            $a = Get-Item -LiteralPath $src
+            $b = Get-Item -LiteralPath $dest
+            if (-not $b.LinkType -and $a.FullName -ne $b.FullName) {
+                Write-Warning "DRIFT $($d.Name) at ${dest}: contents match but it is a SEPARATE file, so the next source edit will not reach it"
+                $drift += $dest
+            }
+        }
+    }
+    if ($drift.Count -eq 0) { Write-Host "skill check: every installed skill is the source file" }
+}
+
+function Install-SkillFromSource {
+    param([string]$SourceRoot)
+
+    Write-Host "gm-skill source: $SourceRoot -- installing from the checkout, not a release tarball"
+    foreach ($root in $SkillInstallRoots) {
+        New-Item -ItemType Directory -Force -Path $root | Out-Null
+        foreach ($d in Get-ChildItem -Directory $SourceRoot | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") }) {
+            Install-OneSkill -SourceDir $d.FullName -Name $d.Name -Root $root
+        }
+    }
+    Test-InstalledSkills -SourceRoot $SourceRoot
+}
+
 function Install-Skill {
+    $localSource = Resolve-LocalSkillSource
+    if ($localSource) {
+        Install-SkillFromSource -SourceRoot $localSource
+        return
+    }
+
     $tag = Resolve-LatestGmTag
     if (-not $tag) {
         Write-Error "FATAL: could not resolve latest release tag for $GmRepo"
@@ -108,14 +242,19 @@ function Install-Skill {
         New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
         tar -xzf $assetPath -C $extractDir
 
-        New-Item -ItemType Directory -Force -Path $ClaudeSkillsDir | Out-Null
-        Get-ChildItem -Directory (Join-Path $extractDir "skills") | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } | ForEach-Object {
-            $target = Join-Path $ClaudeSkillsDir $_.Name
-            if (Test-Path $target) { Remove-Item -Recurse -Force $target }
-            Copy-Item -Recurse -Force $_.FullName $target
-            Write-Host "installed $($_.Name) skill $tag -> $target"
+        foreach ($root in $SkillInstallRoots) {
+            New-Item -ItemType Directory -Force -Path $root | Out-Null
+            Get-ChildItem -Directory (Join-Path $extractDir "skills") | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } | ForEach-Object {
+                $target = Join-Path $root $_.Name
+                # a junction/symlink must be unlinked, never recursed: Remove-Item
+                # -Recurse on a link deletes the TARGET's contents
+                Remove-SkillTarget -Path $target
+                Copy-Item -Recurse -Force $_.FullName $target
+                Write-SkillModeLedger -Root $root -Name $_.Name -Mode "copied" -Source "release:$tag"
+                Write-Warning "$($_.Name) -> ${target} is a COPY with no local source beside this installer; it will not track a checkout -- set GM_SKILL_SOURCE_DIR (or run from a gm checkout) to install it as a link"
+            }
+            Install-SkillAssets -SourceRoot $extractDir -DestRoot $root
         }
-        Install-SkillAssets -SourceRoot $extractDir -DestRoot $ClaudeSkillsDir
     } finally {
         Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $work
     }

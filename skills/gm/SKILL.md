@@ -21,6 +21,8 @@ and `Read` only a located path. A scan subagent returns only located `path:line`
 - Expand plans maximally. Each row gets its corner cases, caveats and failure modes, and a second pass over the new rows runs until a pass adds nothing. Run every remaining step of earlier plans, and every new plan that arises, before the completion threshold. Trivial clarifications are never a stop.
 - Orchestrate as many parallel subagents over as many waves as the objective needs. One wave is never the end of the work; the next wave starts when the previous one's slices are exhausted and the objective is still open.
 - Consolidate continuously. Local and upstream changes merge as the work proceeds, and consolidation is achieved by pushing: pull, resolve conflicts, commit with explicit paths, push, and bump each submodule pin in the parent. Never leave a commit unpushed or a pin behind.
+- **Work in the shared work tree on `main`; collisions are recovered, not avoided.** No worktree, side branch or scratch checkout to obtain a clean HEAD: every extra tree ends in a consolidation run, and a publish from one merges back into the tree every other lane is writing -- in a shared work tree that merge is exactly where lanes sweep each other's uncommitted edits. Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row or file, reapplies the change on current state and retries. A READ question is answered without a second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main`; a whole tree with `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards. Never publish from either.
+- **In a shared work tree the Git API route is the publish path, not `git_finalize`.** `git_finalize` commits locally and then refuses to push while any sibling holds a dirty path, which is the normal state -- measured 2026-10-12 in C:/dev/gm (lane a48ac11a): local main `09575d5d` against remote main `538a0c80`, twelve unpushed local commits, each from a `git_finalize` that refused to push over ~150 `clashing_paths` while the same content was already published. Each refused push leaves a local commit redundant with the published one and widens the gap between local HEAD, the work tree and remote main -- the gap that makes a HEAD-only check call a file absent, a pin stale, and `git_finalize`'s own `dangling_reference` gate trip. Publish with the API: POST blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset, then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A `git_finalize` whose push was refused is reported as redundant, never carried as unpushed work, and never repaired by resetting `refs/heads/main`: moving a ref under running lanes is not a fix.
 - Builds and cascading updates run through GitHub Actions, not a local toolchain. After a push, verify through `ci-status` and fix any failing job before reporting success; a pending or failing job is never reported as passing.
 - Work the user has already asked for, or a plan they have already approved, is go-ahead. Do it without asking again, and do not restate it as a question. "Go ahead" on a named step means run that step, then the next step it implies.
 - If a dispatch is needed, drive the gm graph through `instruction` / `phase-status`; do not replace it with an ad-hoc loop.
@@ -149,14 +151,6 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any test file this walk itself created in this session, same turn, no separate approval needed. Created in this session means untracked and absent from `git ls-files` at session start, so record that set before the first write. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked. A test suite is never evidence of anything and is
-never consulted, run, or cited, even alongside other evidence: a test authored
-in the same pass as its fix reliably shares the fix's own misreading of the
-request, so "tests pass" only proves the code agrees with itself. Verification
-is exhaustive manual debugging with live code execution against the real
-system, same turn as the work -- run the actual code path against real state
-and read the real output, re-derived from the request's own words each time, with the expected value recorded as a witness line before the live dispatch; a witness passes only when the observed output matches that recorded line, never from the diff just written. Reasoning is execution, not monologue.
-The only sanctioned driving adapter is live execution through the real entry point, and it is the adapter for every port: the dispatch port (each verb driven by its live dispatch, SKILL.md Section 1), the code-search port (`codesearch`), the fetch port (`fetch`) and the state port (the PRD and state verbs). No test file or test suite stands in for any of them.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Never edit one file twice per block.
@@ -165,7 +159,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract; SESSION_ID minting is in the served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -192,7 +186,7 @@ not a mood.
 ## 1c. Orchestration, hops and PRD rows
 
 Each topic has one home; this section routes.
-- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, shortfall, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
+- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, dip causes, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle over one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
@@ -283,7 +277,7 @@ of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the
 running system, where the Red expectation is a witness row recording the output the
 request implies, written before the Green change; Fagan Inspection re-reading the request's literal words against
 the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules;
-Devil's Advocate. No test files, ever (Section 1).
+Devil's Advocate. No test files, ever (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`).
 **Secure** — Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE;
 OWASP Top 10; LINDDUN. Credentials are asymmetric: no revert reaches a log or
 mirror.
@@ -297,6 +291,8 @@ Bridge.
 ## 4. The one sanctioned interruption
 
 `AskUserQuestion` is for one-way doors only. Precautionary Principle.
+
+A `PreToolUse` hook may auto-answer every call with a fixed token, so a question is not a decision: choose the most defensible default, state it and its one-line rationale, continue, and raise what truly needs the human in prose at the end of the turn (`CLAUDE_ASK_INTERACTIVE=1` restores the real dialog).
 
 **Substrate-scoped, operator-configurable.** Under git, append is never asked:
 commits, pushes, branches, tags, reverts, merges. Rewrite is asked: force-push,
