@@ -24,12 +24,24 @@ Live under the ceiling while independent work is open is a shortfall, every time
 
 ## Tick
 1. Observe: count live (ListAgents, `.live` files); dispatch `instruction`; take `concurrency_shortfall.launch` (node-first, from `slots.candidates`, at most 32). Empty while shortfall > 0 is a defect row.
-2. Launch in one tool-call block, up to the ceiling. Rows first: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Then hops from untraversed principle nodes of `skills/dream-rsi/gm-graph.json` not in `visited`: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SID>"}')`, depth 1 for a fresh chain. `<SID>` = `<parent>-<k>`, unique.
+2. Launch in one tool-call block, up to the ceiling. Rows first: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Then hops, one per untraversed principle node of `skills/dream-rsi/gm-graph.json` not in `visited`, launched as a NODE and never as a bare name: `Skill(skill="gm-hop", args='{"node":{"id":"<id>","label":"<label>","book":"<book>","author":"<author>","kind":"<kind>","phase":"<phase>","advocate":"<author> - <book>","links":[{"to":"<id>","guards":["<condition>"]}]},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}')`. Build `node.links` by the rule in Node-to-node hop payloads. `<SID>` = `<parent>-<k>`, unique.
 3. Log `launch <id>` to the ledger and `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
 4. `wait {"ms":60000}` (integer, max 60000). Each completion appends `done <id>` and refills its slot this turn, before any other step.
 5. Re-count live after each launch and each completion. Log the tick: live, ceiling, rows executing, hops running, outcomes since the last tick.
 
 Launch only advertised ids; no manual fill. A slot stays empty only when no pending row and no untraversed node remain.
+
+## Node-to-node hop payloads
+
+A hop is an EDGE, not a discovery: it is nominated FROM the node it stands on TO a named neighbour that node links to. `skills/dream-rsi/gm-graph.json` is the only source, and it is read at launch time -- `node_count`/`edge_count` in it are stale hand-written fields, so never take a count from them.
+
+- `node.id`, `node.label`, `node.book`, `node.author`, `node.kind`, `node.phase` come from the `nodes[]` entry. `advocate` is `"<author> - <book>"` (the `Meyer - Design by Contract` shape `gm-hop` step 0 expects), and is the bare `book` when `author` is `unattributed`.
+- `node.links` = one entry per `edges[]` entry whose `from` equals `node.id`, of BOTH `kind`s -- `forward` AND `backreference`. Traversal is nonlinear only because the backreference exits are carried: they are how a walk re-enters ground an earlier hop changed. Each entry is `{to, guards}` with `guards = []` when `condition` is null and `[condition]` otherwise, sorted lexically by `to` (gm-hop requires that order). A link carries no direction, position or edge kind, so a hop cannot tell a re-entry from an advance -- that is the point.
+- An edge whose `to` is not an `id` in `nodes[]` is never put in `links`: `prd-add` `gm-graph-dangling-edge-<from>-<to>` instead. Dropping it silently would leave a node whose only exit is invisible.
+- A node with `links: []` is still launched -- the discipline runs -- but it can nominate nothing, so its receipt says `next: none`.
+- **Backward compatibility**: `principle` is still sent and equals `node.id`, so an old reader resolves the same node. A payload that carries `principle` with no `node` is a stale payload: `gm-hop` answers it `VERDICT: NOT-APPLICABLE` and writes nothing, because a hop never loads the graph and so cannot turn a name into links. That is a loud refusal, never a misread. `node` is authoritative whenever both are present.
+
+**How you know a hop came from links and not from a fresh discovery.** The ledger `launch` line carries `from=<id> links=<n>`. Every receipt's `next:` is then checked against the `links[].to` that hop was launched with: a `next:` naming an id outside that set was not nominated from a neighbour, so do NOT build a child from it -- log `nomination-not-from-links <UTC> from=<id> next=<id>` to `.gm/witness-log.md` and `prd-add` `gm-hop-nomination-not-from-links-<from>-<to>`. Count `link_hops` (receipts whose `next:` is in the launched links) against `non_link_nominations` per wave: a wave that launched hops and reports `link_hops == 0` is a wave whose payload carried no links, which is exactly the silent no-op this rule exists to make visible. Measured 2026-10-12 on the published graph (154 nodes, 352 edges, 234 forward / 118 backreference): a forward-only payload would hide 118 of 352 edges and shrink the exits of real nodes -- `G_SWEEP` 7 -> 1, `RICE` 2 -> 1, `EARS` 2 -> 1. Every node has at least one link, so `links=0` on a launched node is always a derivation defect, never a graph fact.
 
 ## Refill and successors
 - Every completion: one replacement per freed slot in the same turn; never wait for a batch. Pass the completed worker's row, surface and session to its replacement. Read the live count after the refill.
@@ -43,6 +55,7 @@ Launch only advertised ids; no manual fill. A slot stays empty only when no pend
 - Each brief names its row from a text scan of `.gm/prd.yml` (pending = status not resolved) and its successor from a real pending row. If `prd-list` fails to parse, repair the state file before any launch.
 - Open-PRD growth between checks is a failure: drain by dispatching gm-prd on open rows before any other step.
 - A replacement wave launches only after the gate runtime is confirmed loaded (the status file reports the new plugkit); otherwise log a canary alarm and do not re-spawn.
+- **Node emission is asserted, not assumed.** Each hop emits `.gm/lean-walk/<node.id>.json` (gm-hop, Node emission). On every completion, that file must exist for the node the hop was launched with; a completed hop with no file emitted no node, so `prd-add` `gm-lean-walk-node-emission-missing-<session>` and do not count the node as walked. The count of record is `emitted` = the node files this wave's hops wrote, read from the directory, never from a receipt's claim. A wave of completed hops with `emitted == 0` is the exact signature of a producer that consumes surfaces and emits nothing: dream-rsi Part B `nodes_verified` stays flat while `traversable_nodes` grows.
 - Executors need a row that names its file (gm-prd).
 
 ## Heartbeat
