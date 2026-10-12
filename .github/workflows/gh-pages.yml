@@ -7,6 +7,9 @@ on:
       - 'site/**'
       - 'docs/**'
       - 'skills/dream-rsi/gm-graph.json'
+      - 'skills/dream-rsi/dada-graph.json'
+      - 'docs/dada-graph.html'
+      - 'docs/api/dada-graph.json'
       - 'scripts/build-graph-page.mjs'
       - 'flatspace.config.mjs'
   workflow_dispatch: {}
@@ -43,7 +46,7 @@ jobs:
         run: npx flatspace@latest build
 
       - name: Verify the graph page is in the build output
-        run: test -f dist/graph/index.html
+        run: test -f dist/graph/index.html && test -f dist/dada-graph/index.html
 
       - name: Fetch live release + npm download data
         run: node scripts/fetch-live-data.mjs
