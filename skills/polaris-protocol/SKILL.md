@@ -96,4 +96,4 @@ CLOSED --next atom------------------------------------> COMPILED
 - `fifth-dimension-engine` -- shoot a complex atom into a structured route.
 - `wfgy-method` -- hold drift control across every state.
 
-For the full DAG, integration workflows, and mismatch detection, see `../POLARIS-SKILLS-GUIDE.md`.
+For the full DAG, integration workflows, and mismatch detection, see the upstream Polaris skills guide.
