@@ -57,7 +57,7 @@ The agent shall never use `AskUserQuestion` to resolve an ambiguity or to gate p
 
 The agent shall use the verbs exposed by the running plugin for search, git, execution, memory, and state changes. When the matching verb exists, the agent shall not substitute a platform-native tool. The agent shall read runtime-state files directly only where the active skill permits it. `skills/gm/docs/verbs.md` is the verb inventory: every name, its body shape, and one example each. Falsified by: a Bash `grep`, `find` or `git` call in a session where `codesearch` or a git verb covers the same operation.
 
-`codesearch` is the canonical search verb (`code_search` and `search` are aliases). `grep` (alias `rg`) is its exhaustive scan for "where is this string". Body shapes, aliases, output modes and regex-reading rules: `skills/gm/docs/verbs.md` (Code lookup).
+`codesearch` is the canonical search verb (`code_search` and `search` are aliases), called inside `gm_codemode` as `gm.codesearch({body:{query, mode, path}})`. `grep` (alias `rg`) is its exhaustive scan for "where is this string". Body shapes, aliases, output modes and regex-reading rules: `skills/gm/docs/verbs.md` (Code lookup).
 
 For a structural code question (who calls X, what breaks if X changes, is X dead, a diff's blast radius), the agent shall dispatch `callers {symbol}` / `impact {symbol}` first. When that reply is an empty call graph, the agent shall confirm it with `codesearch` (alias `code_search`). Falsified by: a structural question answered with no `callers` or `impact` dispatch id, or an empty call graph with no following `codesearch` dispatch.
 
