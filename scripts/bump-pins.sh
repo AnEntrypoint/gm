@@ -17,7 +17,14 @@ set -uo pipefail
 base="${PIN_REMOTE_BASE:-https://github.com/AnEntrypoint}"
 retries="${PIN_RETRIES:-6}"
 witness="${GITHUB_RUN_ID:-local}"
-targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp"
+targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp vendor/tencentdb-agent-memory"
+
+repo_of() {
+  case "$1" in
+    vendor/tencentdb-agent-memory) echo agent-memory ;;
+    *) echo "$1" ;;
+  esac
+}
 
 # A target is gated when its remote tip has a release-path run that is not green.
 # A gate that cannot be read holds the target; it never passes by default.
@@ -30,16 +37,17 @@ gate_ok() {
 # Stage the gate-cleared targets whose gitlink differs from their remote main tip.
 # Sets STAGED to the number staged and BODY to one line per change.
 stage_pins() {
-  local path sha cur
+  local path repo sha cur
   STAGED=0
   BODY=""
   for path in $targets; do
-    sha=$(git ls-remote "$base/$path.git" refs/heads/main | awk '{print $1}')
+    repo=$(repo_of "$path")
+    sha=$(git ls-remote "$base/$repo.git" refs/heads/main | awk '{print $1}')
     if [ -z "$sha" ]; then
       echo "::error::no main for $path at $base"
       return 1
     fi
-    if ! gate_ok "$path" "$sha"; then
+    if ! gate_ok "$repo" "$sha"; then
       echo "held $path@${sha:0:9}: a release-path run for it is not green"
       continue
     fi
