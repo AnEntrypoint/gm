@@ -22,6 +22,24 @@ This hop is one node traversal. Its ledger `launch` and `done` lines are attribu
 
 No witnessed change or verified row: `next: none`, with the reason.
 
+## Node emission (the walk expands the tree)
+
+A hop consumes a surface and EMITS a node. The walk is what grows the tree, so emission is not optional and not a summary of the receipt -- it is a file with a fixed shape, written on EVERY verdict, including NOT-APPLICABLE.
+
+Write `.gm/lean-walk/<NODE>.json` (one file per node id; overwrite the node's own file, never another's) as:
+
+```
+{node, phase, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
+ links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...]}
+```
+
+- `links_offered` is the `to` of every entry of the payload's `node.links`, verbatim. `link_taken` is the `to` you nominate in `next:`, or `null` at `next: none`. Those two fields are what make a hop provably an EDGE: `link_taken` is either null or a member of `links_offered`, never a third value.
+- `applied:true` only when at least one change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists every dispatch id the witness quotes; `skills/dream-rsi/SKILL.md` Part B step 4 rejects the whole record as a walk when one of them is absent from `.gm/dream-rsi/<session>/observations.json` -- so an id you did not really dispatch is a rejected record, not a verified node.
+- Stamp `lean_node:"<NODE>"` on your dispatches. `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs` reads that body field and `orchestrator/dream_rsi.rs` records it on every observation, which is the only tracked emitter the node has. Nothing in gm sends it unless a hop does.
+- **A discipline the surface demands that is not among `links_offered` is emitted, not dropped.** Append one JSON line to `.gm/lean-walk/new-nodes.jsonl`: `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}`. `id` is the upper-case slug of the book title; refuse an `id` that already exists in `nodes[]` -- join that node instead of duplicating it. A hop never edits `skills/dream-rsi/gm-graph.json`; the graph's owner promotes an emitted node into it. That promotion is how the walk expands the tree.
+
+`.gm/lean-walk/` is gitignored runtime state, so emission costs no commit and no push.
+
 ## Rules
 - A receipt is the hop's own. When a hop spawns a successor, its receipt names the child session in `next:` and carries no text from the child; the orchestrator reads each receipt by the session it launched, never by the text a parent returns.
 - A row for a principle already filed in this walk by another wave is merged by the orchestrator, not added again. A hop still lists and cites what it filed.
@@ -52,6 +70,7 @@ VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
 PRINCIPLE: <id>; SURFACE: <path>; WITNESS: <audit dispatch id>
 CHANGED: <file, dispatch id> | none
 ROWS: <n>: <ids>
+EMITTED: .gm/lean-walk/<NODE>.json [+1 new node]
 NEED: <one sentence>
 next: <id>; depth=<n+1> | none, <reason>
 ```
