@@ -1,0 +1,5 @@
+# deltaS measurement
+
+## Real deltaS via the similarity verb
+
+If a gm-plugkit spool is running in this project (check `.gm/exec-spool/.status.json`) **AND its build serves a `similarity` verb**, you can get a real deltaS instead of a self-estimate: dispatch `{"text_a": "<G>", "text_b": "<current state>"}` and read back `{"similarity", "distance"}` -- `distance` is a genuine `1 - cos(I, G)` from real BGE-small-en-v1.5 embeddings. Do NOT assume the verb exists just because a spool is running: not every build serves it, and an unrecognized verb is silently left queued with no response rather than erroring, so a missing response after a normal read cycle means the verb is NOT available -- treat that exactly like no spool. When you get a real distance back, use it as deltaS and say so explicitly ("deltaS = 0.31, computed"). Otherwise fall back to the qualitative label and say so explicitly too ("deltaS looks high here, my own estimate, no embedding tool available"). Never let the reader assume one when you did the other.
