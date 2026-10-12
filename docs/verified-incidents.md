@@ -57,8 +57,8 @@ expect `git pull --rebase origin main` before a push.
 
 **Build identity is baked at compile time**, because nothing on disk can be
 trusted to describe the binary: `agentplug/crates/agentplug-runner/build.rs` writes
-`OUT_DIR/build_info.rs` with `COMMIT`, `BUILD_TS` and `RELEASE_BUILD`, exposed
-through `src/build_info.rs` and printed by `--build-info`.
+a generated `build_info.rs` (in `OUT_DIR`) with `COMMIT`, `BUILD_TS` and `RELEASE_BUILD`, exposed
+through `agentplug/crates/agentplug-runner/src/build_info.rs` and printed by `--build-info`.
 The release workflow sets `AGENTPLUG_RELEASE_BUILD=1`. Git-resolved HEAD,
 symbolic refs, and existing packed refs are Cargo inputs across ordinary,
 submodule and worktree checkouts; an ordinary commit refreshes `COMMIT`
@@ -123,7 +123,7 @@ decision; the runner guard does not cover it.
 ## Verified 2026-10-07 (plugkit wasm load path, rebuild flags, sideload)
 
 - The daemon LOADS `~/.agentplug/plugins/gm.wasm`, not `~/.gm-tools/plugkit.wasm`: `daemon-status.json`'s `loaded_plugin_content_sha256.gm` matches the former. Both paths exist, so a staleness hunt that stats only `~/.gm-tools/plugkit.wasm` reads the wrong file; a refresh writes both.
-- Rebuild with `--features slim` -- `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without it `weights/bge-small-en-v1.5.safetensors` (133 MB) is embedded and the artifact is 139,690,176 bytes; with it ~5.06 MB. Reuse the existing target dir (incremental build measured 1m06s).
+- Rebuild with `--features slim` -- `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without it the bge-small-en-v1.5 safetensors weights (133 MB) are embedded and the artifact is 139,690,176 bytes; with it ~5.06 MB. Reuse the existing target dir (incremental build measured 1m06s).
 - The sha256 pin is checked only at download time against the GitHub release sidecar (`download_and_verify`, `download.rs:705`), and `ensure_plugin_installed` (`download.rs:1776`) returns as soon as a wasm exists, so an installed wasm is never re-verified and `~/.gm-tools/plugkit.wasm.sha256` is a local record, not an enforced pin. Sideloading a fresh build is safe and needs no pin bump.
 - `gm.version` is currently `local-dev-sideload-body-parse-diagnostic`, which is non-semver, so the auto-updater can never overwrite a sideloaded wasm and staleness is manual-only until a semver version is restored. A session expecting an auto-update to fix stale verbs waits forever.
 - A swap needs no daemon restart: write a sibling `.tmp` and rename, and the daemon hot-reloads (`health` `ok:true`, `daemon-status.json`'s hash updates). Back up first; roll back by restoring the backup.
@@ -147,7 +147,7 @@ decision; the runner guard does not cover it.
   worktree. On 2026-10-08, in an earlier build, it also refused `staged_paths_present` when the index held
   paths the request did not name (`allow_staged:true` overrode it), `target_not_ancestor_of_head`,
   and `already_at_target`. Current source has none of these three codes. The pushed-commit refusal
-  is `pushed_commit_refused` at `wasm_dispatch/verbs/git.rs:2197`, in the amend path. `mode:hard` is
+  is `pushed_commit_refused` at `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2197`, in the amend path. `mode:hard` is
   refused -- this verb never rewrites the worktree.
 - `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
   `pushed_commit_refused` (`git.rs:2197`); on an unborn HEAD it fails with "amend requires an existing HEAD commit". `git_commit_dedup_key` carries `amend` so an
@@ -200,5 +200,5 @@ Two nominations in that cycle were title-only and unverified: `trav-edge-check-r
 - Cause: `agentplug/crates/agentplug-host/src/process_tree.rs` set `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` on the job object `Job::assign` creates for every exec child, and job membership is inherited by descendants, so `Job::drop` at the end of `exec_js::run` closed the handle and Windows terminated the whole tree. The runner in service was `0.1.294` (commit `225200d`), which still carried the flag, while the checked-out submodule at `f87064f` did not, so reading the checkout alone made the bug look already fixed.
 - Fix: `Job::assign` creates the job with no limit flags. The job is now only a kill switch for `terminate_containment`, which runs at `timeoutMs` expiry and on `task-stop`; returning from a dispatch kills nothing. Pinned by `exec_js::tests::detached_writer_is_still_appending_a_minute_after_the_dispatch_returned`, which asserts a redirected writer is still appending 60 seconds after the dispatch returned.
 - Second mechanism, unchanged and still live: a backgrounded child that keeps the runner's stdout or stderr pipe open is adopted as a task and ends with that task's 30-minute deadline, so the redirect in the idiom is part of the contract, not decoration.
-- Witness: dispatch `1791713402860-500-44475da329867bd1` returned at 10:09:59Z having started `bash .scratch/bgprobe/writer.sh`; dispatch `1791713499562-500-181ddfad4fb41b00` at 10:11:35Z read 79 appended ticks from pid 47497. It was still appending at 10:18:45Z (tick 445) and ran to tick 461, ~9 minutes and five later dispatches after the one that started it, until an explicit `Stop-Process` ended it.
+- Witness: dispatch `1791713402860-500-44475da329867bd1` returned at 10:09:59Z having started a background probe writer; dispatch `1791713499562-500-181ddfad4fb41b00` at 10:11:35Z read 79 appended ticks from pid 47497. It was still appending at 10:18:45Z (tick 445) and ran to tick 461, ~9 minutes and five later dispatches after the one that started it, until an explicit `Stop-Process` ended it.
 - The installed runner is a local build of `225200d` plus this fix: `--build-info` reports `release_build: false`, which makes `reconcileRunner` in `gm-mcp/src/release-bridge.js` answer `skipped: local-build`, so no later upstream release silently replaces it. The previous binary is kept as `~/.gm-tools/agentplug-runner.exe.bak-pre-durable-20261011-100752Z`.
