@@ -54,13 +54,13 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="title-block">
   <h1>One boot skill, every verb</h1>
   <div class="author">one boot body, one wasm orchestrator, four walk skills, you dispatch every phase on demand</div>
-  <div class="date">cushion-certified - 2026</div>
+  <div class="date">2026</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state</strong>: in <code>gm-config/fsm/graph.json</code>, 102 states and 187 edges (102 forward, 85 feedback). It is a non-linear graph, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a short entry document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>nine phases, P1 SHAPE through P9 CONVERGENCE, then the COMPLETE terminal state</strong>: in <code>gm-config/fsm/graph.json</code>, 102 states and 187 edges (102 forward, 85 feedback). It is a non-linear graph, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
   </div>
 </div>
 
@@ -68,28 +68,13 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>The state machine, by phase</h2>
 
-<table>
-<caption>Phases in order</caption>
-<thead><tr><th>Phase</th><th>Name</th><th>Principle states</th></tr></thead>
-<tbody>
-<tr><td>P1</td><td>SHAPE</td><td>8</td></tr>
-<tr><td>P2</td><td>CONTRACT</td><td>12</td></tr>
-<tr><td>P3</td><td>BUILD</td><td>8</td></tr>
-<tr><td>P4</td><td>VERIFY</td><td>14</td></tr>
-<tr><td>P5</td><td>RECORD</td><td>8</td></tr>
-<tr><td>P6</td><td>PRESSURE</td><td>11</td></tr>
-<tr><td>P7</td><td>CONTEXT ECONOMY</td><td>14</td></tr>
-<tr><td>P8</td><td>STANDING TENSIONS</td><td>0 (tension nodes)</td></tr>
-<tr><td>P9</td><td>CONVERGENCE</td><td>10</td></tr>
-<tr><td>end</td><td>COMPLETE (walk complete), or the fixed point (a sweep changed nothing)</td><td>terminal</td></tr>
-</tbody>
-</table>
+<p>The graph has 146 nodes: 129 principles, 8 tensions, 7 gates and 2 end states (<code>gm-config/fsm/graph.json</code>). Edges can send the walk back to an earlier node.</p>
 
-<p>That state machine has 85 principle states. Its feedback edges return the walk to an earlier phase. Of its 26 gates, 24 block a transition when unmet. The other 2 are advisory (contract-only-description, verifier-independence) and never refuse a transition.</p>
+<p>Of its 26 gates, 24 block a transition when unmet. The other 2, lean-contract-only-description and lean-verifier-independent, are advisory and never refuse a transition.</p>
 
-<p>The FSM is owned by <code>rs-plugkit/crates/plugkit-core/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
+<p>The FSM is owned by <code>rs-plugkit/crates/plugkit-core/src/orchestrator/</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next node's instruction body) or refuses with a reason naming the unmet gate condition.</p>
 
-<div class="gm-callout"><span class="who">from the gm field guide</span>"There is no skip button. There is no 'just this once.' The arrows are arrows. The cushion is the cushion. Sit."</div>
+
 
 <h2>How the boot skill works</h2>
 
@@ -97,7 +82,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>It contains no phase prose, no checklists, no transition diagrams. Those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator. The current FSM state, the current PRD, and the current mutables and residual-scan state are baked in.</p>
 
-<p>History: the phase prose once lived in thirteen skill files, the first seven being gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance, and the remaining six code-search, ssh, pages, create-lang-plugin, memorize, textprocessing. The orchestrator serves that prose through one dispatch surface. The behaviors those files elicit are properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
+
 
 <h2>The walk skills shipped beside <code>gm</code></h2>
 
@@ -221,7 +206,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>fetch</h2><span class="role">HTTPS GET/POST</span></div>
-  <div class="row"><span class="k">role</span><span>Direct HTTPS egress. Embedding calls are serviced in-wasm via baked Q4 weights; LLM-tier work is offloaded to the host agent via callback protocol.</span></div>
+  <div class="row"><span class="k">role</span><span>Direct HTTPS egress. LLM-tier work is offloaded to the host agent via callback protocol.</span></div>
 </div>
 
 <div class="skill">
@@ -237,9 +222,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>notes on the verb surface</h2>
 
-<blockquote>
-  "Every skill is now an <code>instruction</code> response that knows the current state of the world. The behavior the file elicits is woven into a string. The orchestrator generates it in milliseconds, freshly, from the phase, the PRD, the mutables, and the recall pack. The chair is the same chair. The cushion is now part of the floor.", from the gm field guide
-</blockquote>
+
 
 </article>
 

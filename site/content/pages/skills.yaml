@@ -1,5 +1,5 @@
 id: skills
 title: skills
-description: "gm (glootius maximus) boots on one skill, gm (the gm-skill npm package): a boot-edge entry point carrying only the ABI an agent needs before the orchestrator takes over, the same across every harness, with no phase prose of its own. You dispatch plugkit's instruction verb each turn to read phase prose, orchestration state, and guardrails -- you are the state machine, and plugkit is the durable memory and gate you drive. The skill is a single dispatch surface, with gm-orchestrate, gm-hop, gm-prd and gm-continue shipped beside it to run the walk itself."
+description: "gm (glootius maximus) starts from one skill, gm (the gm-skill release archive). It is a short entry document with no phase prose of its own, the same in every harness. Each turn the agent calls plugkit's instruction verb to read the current state, the prose for it, and the guardrails. The agent moves the walk forward, and plugkit keeps the state and enforces the gates. gm-orchestrate, gm-hop, gm-prd and gm-continue ship beside the skill to run the walk."
 layout: article
 source: ../docs/skills.html
