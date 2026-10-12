@@ -149,14 +149,6 @@ next `instruction`) is the only instruction for that phase; no separate skill
 load is needed or exists per-phase. The sole host-level `Skill()` calls in this
 flow are the initial `/gm` load and the terminal `Skill(skill="gm-continue")`.
 
-No test files, ever, anywhere (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`): remove any test file this walk itself created in this session, same turn, no separate approval needed. Created in this session means untracked and absent from `git ls-files` at session start, so record that set before the first write. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked. A test suite is never evidence of anything and is
-never consulted, run, or cited, even alongside other evidence: a test authored
-in the same pass as its fix reliably shares the fix's own misreading of the
-request, so "tests pass" only proves the code agrees with itself. Verification
-is exhaustive manual debugging with live code execution against the real
-system, same turn as the work -- run the actual code path against real state
-and read the real output, re-derived from the request's own words each time, with the expected value recorded as a witness line before the live dispatch; a witness passes only when the observed output matches that recorded line, never from the diff just written. Reasoning is execution, not monologue.
-The only sanctioned driving adapter is live execution through the real entry point, and it is the adapter for every port: the dispatch port (each verb driven by its live dispatch, SKILL.md Section 1), the code-search port (`codesearch`), the fetch port (`fetch`) and the state port (the PRD and state verbs). No test file or test suite stands in for any of them.
 Token austerity: signal only, no narration or hedging. PowerShell input UTF-8
 no-BOM. First-turn body `{"prompt":"<user request>"}`, later `{}`. SESSION_ID in
 every body. Never edit one file twice per block.
@@ -165,7 +157,7 @@ Every `Agent`/`Task` dispatch, with no exception, opens its prompt with the
 brick-wall opener above (gm skill, codeinsight first) --
 a fresh subagent inherits none of this file's prose and defaults to its own
 native Grep/Glob/find/raw-git tools with no discouragement otherwise. Section 1c
-defines the parallelism contract. Full fan-out discipline (SESSION_ID minting): served
+defines the parallelism contract; SESSION_ID minting is in the served
 `instruction` prose, "Subagent fan-out" section.
 
 ## 1a. Supply-chain scan (every project, every session touching dependencies)
@@ -192,7 +184,7 @@ not a mood.
 ## 1c. Orchestration, hops and PRD rows
 
 Each topic has one home; this section routes.
-- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, shortfall, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
+- Main thread: `Skill(skill="gm-orchestrate")`. It holds the pool protocol: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, dip causes, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out and walk workers.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle over one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
@@ -283,7 +275,7 @@ of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the
 running system, where the Red expectation is a witness row recording the output the
 request implies, written before the Green change; Fagan Inspection re-reading the request's literal words against
 the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules;
-Devil's Advocate. No test files, ever (Section 1).
+Devil's Advocate. No test files, ever (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`).
 **Secure** — Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE;
 OWASP Top 10; LINDDUN. Credentials are asymmetric: no revert reaches a log or
 mirror.
@@ -297,6 +289,8 @@ Bridge.
 ## 4. The one sanctioned interruption
 
 `AskUserQuestion` is for one-way doors only. Precautionary Principle.
+
+A `PreToolUse` hook may auto-answer every call with a fixed token, so a question is not a decision: choose the most defensible default, state it and its one-line rationale, continue, and raise what truly needs the human in prose at the end of the turn (`CLAUDE_ASK_INTERACTIVE=1` restores the real dialog).
 
 **Substrate-scoped, operator-configurable.** Under git, append is never asked:
 commits, pushes, branches, tags, reverts, merges. Rewrite is asked: force-push,

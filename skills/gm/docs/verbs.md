@@ -293,6 +293,14 @@ trusting an empty reply.
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
 `{"max_files":500}`, `{"dead_code":true}`, `{"dead_code_limit":200}`.
 
+A `callers`, `callees`, `impact` or `status` dispatch whose incremental refresh does not
+finish inside its budget is REFUSED rather than answered from the cached graph:
+`error_code: "failed"`, `next_dispatch_hint: "codeinsight"`, and an `error` that names the
+refresh which clears it, `codeinsight {"action":"sync","root":"<root>"}`. Sync is incremental,
+so a pass that does not finish still advances the index and a further pass finishes it. The
+refusal carries that pass's counters as `key=value` plus at most two deferred file names;
+the full `deferred_set` lives in the sync report the message points at, never in the refusal.
+
 ## Memory
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
@@ -453,7 +461,8 @@ The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `
 `stdout`, `stderr`, `exit_code`, `duration_ms`, and any further fields the host adds. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
 
-The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it.
+The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. Its whole step grammar
+is served by the `cdp` engine, including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome` -- the headful CDP crawl as a named verb
 
@@ -469,7 +478,7 @@ raw_body: "https://example.com/\nsnapshot\n"
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps reimplement the documented behaviour of [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0) over the shared headful Chrome lease, so every step runs in a visible window.
 
-- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset.
+- `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is the same directive under the name the retired `cdp` verb used.
 - A session's tab lives as long as the shared Chrome, which closes 15 minutes after its last lease. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -489,7 +498,25 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `dialog=accept\|dismiss` | policy for JavaScript dialogs; default accept |
 | `screenshot=<path>`, `screenshot_full=<path>`, `screenshot_uid=<uid> <path>` | PNG, or `.jpg` / `.webp` by extension |
 | `trace_start`, `trace_stop[=<path>]` | performance trace; the reply carries a summary; a `.gz` path compresses |
+| `wait=<ms>`, `wait <ms>` | idle that many milliseconds; 60000 is the limit |
 | `eval=<js>` | page script; returns its value |
+| `cdp <Domain.method>` | one raw CDP command; its params are the JSON object on the next line, omitted when the command takes none |
+| `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
+
+A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
+`result` and `cdp Page.captureScreenshot` yields `data` as base64. The command runs on the page's
+session, so a browser-level domain is not reachable this way.
+
+An `events` step arms its capture when the call attaches, not where the line sits, so events fired
+by an earlier step are still collected; the entry keeps filling until the call ends. `where` keeps
+the events whose dotted field, read out of the event params, contains (`~`), equals (`=`) or differs
+from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the
+rest in `dropped`. The domain is enabled for you, so `events Debugger.scriptParsed` sends
+`Debugger.enable`.
+
+```
+raw_body: "engine=cdp\nsessionId=orch-main-r270-63\nevents Debugger.scriptParsed where url~mapspinner limit=600\ncdp Page.navigate\n{\"url\":\"http://localhost:3001/?singleplayer\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
+```
 
 A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches. Chrome replays a tab's earlier console messages on attach; network events are seen from attach onward.
 

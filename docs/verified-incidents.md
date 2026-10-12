@@ -35,7 +35,7 @@ answered `embedder failed: query embedding unavailable -- the bert embedder fail
 answered `libsql unavailable ... unknown_plugin` on every project. Fix: `registry.rs` publishes the
 compiled module set as a global `SIBLING_RELOAD_SOURCE` (the daemon sets it after its per-tick warm
 compile pass) and each of those two call sites calls `ensure_sibling_registered` before reporting
-the sibling absent. Any new guest->sibling import follows the rule at AGENTS.md:64.
+the sibling absent. Any new guest->sibling import follows the rule at AGENTS.md:88.
 ## Verified 2026-10-04 (windowless child spawns + runner self-update guard)
 
 **The recurrence is a VERSION-EQUAL downgrade, so version comparison can never
@@ -50,8 +50,8 @@ compare IDENTITY, not version.
 **How releases are cut:** `agentplug/.github/workflows/release.yml`, on push to `main`.
 A `bump` job rewrites the patch version in `agentplug/Cargo.toml`, then a matrix job builds
 6 targets and publishes assets plus `.sha256` to `AnEntrypoint/agentplug-bin`.
-The runner consumes `releases/latest` and stages `.exe.new` -> `takeover` ->
-`promote_staged_exe_to_canonical` -> re-exec. There is no way to trigger a
+The runner consumes `releases/latest` and stages `.exe.new`, then `takeover`, then
+`promote_staged_exe_to_canonical`, then re-exec. There is no way to trigger a
 release other than pushing to `main`, and CI pushes its own bump commits, so
 expect `git pull --rebase origin main` before a push.
 
@@ -99,9 +99,9 @@ self-updated mid-measurement.
 - **conhost count is not a usable before/after metric on this machine**: the
   default terminal is Windows Terminal, so consoles are hosted by
   `OpenConsole.exe`, and peak conhost was 24 before vs 25 after while the real
-  signal went 189 -> 0.
+  signal went from 189 to 0.
 - The flash only reproduces with the daemon running (its repeated `project_root`
-  -> `git rev-parse` calls). Launching the binary as a one-shot `spool` client
+  calls to `git rev-parse`). Launching the binary as a one-shot `spool` client
   shows nothing, so an A/B built on one-shot launches will falsely report both
   builds clean.
 
@@ -124,7 +124,7 @@ decision; the runner guard does not cover it.
 
 - The daemon LOADS `~/.agentplug/plugins/gm.wasm`, not `~/.gm-tools/plugkit.wasm`: `daemon-status.json`'s `loaded_plugin_content_sha256.gm` matches the former. Both paths exist, so a staleness hunt that stats only `~/.gm-tools/plugkit.wasm` reads the wrong file; a refresh writes both.
 - Rebuild with `--features slim` -- `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without it `weights/bge-small-en-v1.5.safetensors` (133 MB) is embedded and the artifact is 139,690,176 bytes; with it ~5.06 MB. Reuse the existing target dir (incremental build measured 1m06s).
-- The sha256 pin is checked only at download time against the GitHub release sidecar (`download.rs:299`), and `ensure_plugin_installed` returns as soon as a wasm exists (`:1294`), so an installed wasm is never re-verified and `~/.gm-tools/plugkit.wasm.sha256` is a local record, not an enforced pin. Sideloading a fresh build is safe and needs no pin bump.
+- The sha256 pin is checked only at download time against the GitHub release sidecar (`download_and_verify`, `download.rs:705`), and `ensure_plugin_installed` (`download.rs:1776`) returns as soon as a wasm exists, so an installed wasm is never re-verified and `~/.gm-tools/plugkit.wasm.sha256` is a local record, not an enforced pin. Sideloading a fresh build is safe and needs no pin bump.
 - `gm.version` is currently `local-dev-sideload-body-parse-diagnostic`, which is non-semver, so the auto-updater can never overwrite a sideloaded wasm and staleness is manual-only until a semver version is restored. A session expecting an auto-update to fix stale verbs waits forever.
 - A swap needs no daemon restart: write a sibling `.tmp` and rename, and the daemon hot-reloads (`health` `ok:true`, `daemon-status.json`'s hash updates). Back up first; roll back by restoring the backup.
 
@@ -144,19 +144,20 @@ decision; the runner guard does not cover it.
   `git_reset_head` followed by a re-commit: once the index falls back to the LF parent blob the
   clean filter fires again.
 - `git_reset_head {count | to, mode: mixed|soft, allow_staged}` moves HEAD back without touching the
-  worktree. It refuses `pushed_commit_refused` when HEAD is reachable from any `refs/remotes/` ref,
-  `staged_paths_present` when the index holds paths the request did not name (`allow_staged:true`
-  overrides), `target_not_ancestor_of_head`, and `already_at_target`. `mode:hard` is refused -- this
-  verb never rewrites the worktree.
+  worktree. On 2026-10-08, in an earlier build, it also refused `staged_paths_present` when the index held
+  paths the request did not name (`allow_staged:true` overrode it), `target_not_ancestor_of_head`,
+  and `already_at_target`. Current source has none of these three codes. The pushed-commit refusal
+  is `pushed_commit_refused` at `wasm_dispatch/verbs/git.rs:2197`, in the amend path. `mode:hard` is
+  refused -- this verb never rewrites the worktree.
 - `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
-  `pushed_commit_refused` / `amend_requires_head`. `git_commit_dedup_key` carries `amend` so an
+  `pushed_commit_refused` (`git.rs:2197`); on an unborn HEAD it fails with "amend requires an existing HEAD commit". `git_commit_dedup_key` carries `amend` so an
   amend is never answered by a replayed non-amend commit.
-- **The `git_commit_dedup_lookup` replay rule is owned by AGENTS.md:66.** The replay only checked `cat-file -e <sha>`, and an object dropped by
+- **The `git_commit_dedup_lookup` replay rule is owned by AGENTS.md:90.** The replay checks only `cat-file -e <sha>`, and an object dropped by
   `git_reset_head` is still present, so the canonical repair -- reset HEAD, then re-commit the same
   message over the same paths -- hit the same dedup key and answered `committed:true` with the old
   sha while HEAD never moved. Witnessed live: re-commit after `git_reset_head {count:1}` reported
-  `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Now the lookup compares `rev-parse HEAD`
-  to the record, so a stale entry falls through to a real commit.
+  `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Open: the replay does not yet compare `rev-parse HEAD`
+  to the recorded `sha_full` (AGENTS.md:90).
 - `daemon-guard` respawns the daemon after `Stop-Process`; no manual start is needed.
 
 ## Verified 2026-10-09 (pool drops: causes, empty candidates, unverified nominations)
