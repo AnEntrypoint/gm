@@ -1,6 +1,6 @@
 ---
 name: polaris-protocol
-description: "WFGY 5.0 Polaris Protocol, the tree root for complex, multi-step, high-stakes, or long-horizon work where premature completion or goal drift is a risk. Load first, then dispatch polaris-goal-compiler (compile), fifth-dimension-engine (shoot) or wfgy-method (drift control)."
+description: "Entry point that routes multi-step work to polaris-goal-compiler (compile the goal into atoms) and fifth-dimension-engine (shoot a complex atom into a route). Load only when a task needs both; does not cover drift control (wfgy-method) or the work itself."
 license: MIT
 compatibility: "Portable protocol; upstream released the Goal Compiler ChatGPT-first (teaser) and the Fifth-Dimension Engine as the main product surface. This skill wraps both plus WFGY-Method drift control into one discoverable entry point for any assistant or agent that loads skills."
 metadata:
@@ -13,6 +13,10 @@ metadata:
 Polaris is the active public route of WFGY 5.0, upstream onestardao/WFGY. The **Fifth-Dimension Engine** is the current main product surface; the **Polaris Goal Compiler** is the first public protocol component. **WFGY-Method** supplies the drift-control discipline that keeps the whole system aligned with the original goal.
 
 This skill is the **tree root**. It does not re-explain the children -- it wires them into one state machine and tells you which child to dispatch at each step. Treat the three child skills as the transitions of the machine below.
+
+## When to load
+
+Load this root first for complex, multi-step, high-stakes, or long-horizon work where premature completion or goal drift is a risk. Then dispatch the children listed under Children below: compile, shoot, and drift control.
 
 ## The tree
 
@@ -64,7 +68,7 @@ CLOSED --next atom------------------------------------> COMPILED
 
 - **Compile first. Execute one active atom. Verify before unlock. Claim only what is supported.** (Goal Compiler)
 - **shoot + [your problem]** -- the Fifth-Dimension Engine interface.
-- **deltaS = 1 - cos(I, G)** -- drift between current state (I) and goal (G). Without a real embedding call, deltaS is a qualitative label ("deltaS looks high here"), never a computed decimal -- unless a real `similarity` verb is available (see WFGY-Method).
+- **deltaS = 1 - cos(I, G)** -- drift between current state (I) and goal (G). Without a real embedding call, deltaS is a qualitative label ("deltaS looks high here"), never a computed decimal (see WFGY-Method).
 
 "Compile first. Then shoot." is the spine of the whole protocol.
 
@@ -92,4 +96,4 @@ CLOSED --next atom------------------------------------> COMPILED
 - `fifth-dimension-engine` -- shoot a complex atom into a structured route.
 - `wfgy-method` -- hold drift control across every state.
 
-For the full DAG, integration workflows, and mismatch detection, see `../POLARIS-SKILLS-GUIDE.md`.
+For the full DAG, integration workflows, and mismatch detection, see the upstream Polaris skills guide.

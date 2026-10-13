@@ -9,6 +9,9 @@ import os from 'node:os'
 const argv = process.argv.slice(2)
 const global = argv.includes('-g') || argv.includes('--global')
 const mcpOnly = argv.includes('--mcp-only')
+const skillsOnly = argv.includes('--skills-only')
+const checkSkills = argv.includes('--check-skills')
+const forceLink = argv.includes('--force-link')
 const help = argv.includes('-h') || argv.includes('--help')
 
 const GM_TOOLS_DIR = path.join(os.homedir(), '.gm-tools')
@@ -17,8 +20,11 @@ const MCP_BUNDLE_URL = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/ma
 const LEGACY_NPX_SPEC = 'github:AnEntrypoint/gm-mcp'
 
 if (help) {
-  console.log('Usage: gm [-g|--global] [--mcp-only]')
+  console.log('Usage: gm [-g|--global] [--mcp-only] [--skills-only] [--check-skills] [--force-link]')
   console.log('Installs or repairs the gm skill, local MCP registration, and runner.')
+  console.log('  --skills-only   materialise the skills and stop (no MCP registration, no runner)')
+  console.log('  --check-skills  report installed-skill drift against the source and stop')
+  console.log('  --force-link    replace an installed skill directory that could not be moved aside')
   console.log('For live dispatch, use the gm MCP tool after restarting the agent host, or the project spool with agentplug-runner spool.')
   process.exit(0)
 }
@@ -47,12 +53,19 @@ function projectServerEntry() {
 
 async function vendorMcpBundle() {
   fs.mkdirSync(GM_TOOLS_DIR, { recursive: true })
-  const response = await fetch(MCP_BUNDLE_URL)
-  if (!response.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${response.status}`)
-  const body = await response.text()
-  if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
-  const freshHash = sha256Short(body)
   const deployedHash = fs.existsSync(MCP_BUNDLE_PATH) ? sha256Short(fs.readFileSync(MCP_BUNDLE_PATH)) : null
+  let body
+  try {
+    const response = await fetch(MCP_BUNDLE_URL)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    body = await response.text()
+    if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
+  } catch (err) {
+    if (deployedHash === null) throw new Error(`fetch ${MCP_BUNDLE_URL} failed (${err.message}) and no bundle is deployed at ${MCP_BUNDLE_PATH}`)
+    console.log(`WARNING: ${MCP_BUNDLE_URL} unreachable (${err.message}); keeping the deployed bundle at ${MCP_BUNDLE_PATH} (sha256 ${deployedHash}) -- rerun to refresh it`)
+    return
+  }
+  const freshHash = sha256Short(body)
   if (deployedHash === freshHash) {
     console.log(`gm-mcp server already current at ${MCP_BUNDLE_PATH} (sha256 ${freshHash})`)
     return
@@ -66,6 +79,237 @@ async function vendorMcpBundle() {
 
 function sha256Short(content) {
   return createHash('sha256').update(content).digest('hex').slice(0, 12)
+}
+
+const SKILL_MODE_LEDGER = '.gm-skill-install-modes'
+const SKILL_PRELINK_DIR = '.gm-skill-prelink'
+
+function skillInstallRoots() {
+  const home = os.homedir()
+  return [path.join(home, '.claude', 'skills'), path.join(home, '.agents', 'skills')]
+}
+
+function sourceSkillNames(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .filter(e => e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'SKILL.md')))
+      .map(e => e.name)
+      .sort()
+  } catch {
+    return []
+  }
+}
+
+function isNpmCacheSource(dir) {
+  return path.resolve(dir).split(/[\\/]+/).includes('_npx')
+}
+
+function resolveLocalSkillSource() {
+  const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+  const override = (process.env.GM_SKILL_SOURCE_DIR || '').trim()
+  const dir = override || path.join(pkgRoot, 'skills')
+  const names = sourceSkillNames(dir)
+  if (names.length === 0) return null
+  return { dir, names, fromEnv: Boolean(override), disposable: isNpmCacheSource(dir) }
+}
+
+function lstatOrNull(p) {
+  try {
+    return fs.lstatSync(p)
+  } catch {
+    return null
+  }
+}
+
+function samePath(a, b) {
+  const norm = p => path.resolve(p).replace(/[\\/]+$/, '')
+  return IS_WINDOWS ? norm(a).toLowerCase() === norm(b).toLowerCase() : norm(a) === norm(b)
+}
+
+function linkDir(src, dest) {
+  if (IS_WINDOWS) {
+    try {
+      fs.symlinkSync(src, dest, 'junction')
+      return 'junction'
+    } catch {}
+    try {
+      fs.symlinkSync(src, dest, 'dir')
+      return 'symlink'
+    } catch {}
+    return null
+  }
+  try {
+    fs.symlinkSync(src, dest, 'dir')
+    return 'symlink'
+  } catch {
+    return null
+  }
+}
+
+function copyDir(src, dest) {
+  fs.cpSync(src, dest, { recursive: true })
+}
+
+function clearDest(dest) {
+  const st = lstatOrNull(dest)
+  if (!st) return 'absent'
+  if (st.isSymbolicLink()) {
+    fs.unlinkSync(dest)
+    return 'replaced-link'
+  }
+  if (st.isDirectory()) {
+    const park = path.join(path.dirname(dest), SKILL_PRELINK_DIR)
+    fs.mkdirSync(park, { recursive: true })
+    const aside = path.join(park, `${path.basename(dest)}-${Date.now()}`)
+    try {
+      fs.renameSync(dest, aside)
+      return `moved-aside:${aside}`
+    } catch (e) {
+      if (!forceLink) return `refused:${e.code || 'EBUSY'}`
+      fs.rmSync(dest, { recursive: true, force: true })
+      return 'deleted'
+    }
+  }
+  fs.unlinkSync(dest)
+  return 'replaced-file'
+}
+
+function readLedger(root) {
+  const file = path.join(root, SKILL_MODE_LEDGER)
+  const kept = []
+  try {
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const t = line.trim()
+      if (!t || t.startsWith('#')) continue
+      kept.push(t)
+    }
+  } catch {}
+  return { file, kept }
+}
+
+function recordMode(root, name, mode, source) {
+  const { file, kept } = readLedger(root)
+  const ts = new Date().toISOString()
+  const lines = kept.filter(l => l.split(/\s+/)[0] !== name)
+  lines.push(`${name} ${mode} ${ts} ${source}`)
+  const tmp = `${file}.tmp.${process.pid}`
+  fs.writeFileSync(tmp, `# gm skill install modes: <name> <linked|copied|refused> <iso-ts> <source>\n${lines.join('\n')}\n`)
+  fs.renameSync(tmp, file)
+}
+
+function materialiseSkill({ dir, name, root, copyOnly = false }) {
+  const src = path.join(dir, name)
+  const dest = path.join(root, name)
+  fs.mkdirSync(root, { recursive: true })
+
+  if (!copyOnly) {
+    const existing = lstatOrNull(dest)
+    if (existing && existing.isSymbolicLink()) {
+      let current = null
+      try {
+        current = fs.realpathSync(dest)
+      } catch {}
+      if (current && samePath(current, src)) {
+        recordMode(root, name, 'linked', src)
+        console.log(`linked ${name} -> ${dest} => ${src} (already the source directory)`)
+        return { mode: 'linked', kind: 'already', status: 'already' }
+      }
+    }
+  }
+
+  const cleared = clearDest(dest)
+  if (cleared.startsWith('refused:')) {
+    recordMode(root, name, 'refused', src)
+    console.log(`REFUSED ${name} -> ${dest}: could not move the existing install aside (${cleared.slice(8)}); it stays a COPY and will drift from ${src} -- rerun with --force-link to replace it`)
+    return { mode: 'refused', status: cleared }
+  }
+
+  const kind = copyOnly ? null : linkDir(src, dest)
+  if (kind) {
+    recordMode(root, name, 'linked', src)
+    console.log(`linked ${name} (${kind}) -> ${dest} => ${src} (edits to the source are served immediately)`)
+    return { mode: 'linked', kind, status: cleared }
+  }
+
+  copyDir(src, dest)
+  recordMode(root, name, 'copied', src)
+  const why = copyOnly
+    ? 'the source is npm npx cache, which npm can delete or replace'
+    : 'no junction/symlink available here'
+  console.log(`WARNING: ${name} -> ${dest} is a COPY (${why}); it is NOT the file at ${src} and will drift silently -- recorded in ${path.join(root, SKILL_MODE_LEDGER)}`)
+  return { mode: 'copied', status: cleared }
+}
+
+function sameFile(a, b) {
+  try {
+    const sa = fs.statSync(a)
+    const sb = fs.statSync(b)
+    return Boolean(sa.ino) && sa.ino === sb.ino && sa.dev === sb.dev
+  } catch {
+    return false
+  }
+}
+
+function checkSkill({ dir, name, root }) {
+  const src = path.join(dir, name, 'SKILL.md')
+  const dest = path.join(root, name, 'SKILL.md')
+  if (!fs.existsSync(dest)) return { name, state: 'absent' }
+  const a = fs.readFileSync(src)
+  const b = fs.readFileSync(dest)
+  if (sha256Short(a) !== sha256Short(b)) return { name, state: 'DRIFT' }
+  return { name, state: sameFile(src, dest) ? 'same-file' : 'equal-copy' }
+}
+
+function skillDriftReport(source, roots) {
+  const rows = []
+  for (const root of roots) {
+    for (const name of source.names) rows.push({ root, ...checkSkill({ dir: source.dir, name, root }) })
+  }
+  const bad = rows.filter(r => r.state === 'DRIFT' || (r.state === 'equal-copy' && !source.disposable))
+  for (const r of bad) {
+    const why = r.state === 'DRIFT'
+      ? 'contents differ'
+      : 'contents match but it is a SEPARATE file, so the next source edit will not reach it'
+    console.log(`DRIFT ${r.name} at ${path.join(r.root, r.name, 'SKILL.md')} (${r.state}): ${why}`)
+  }
+  if (bad.length === 0) {
+    console.log(source.disposable
+      ? `skill check: every installed skill is a current copy of ${source.dir}`
+      : 'skill check: every installed skill is the source file')
+  }
+  return bad
+}
+
+function installOrCheckSkills() {
+  const source = resolveLocalSkillSource()
+  if (!source) {
+    if (checkSkills) {
+      console.log('skill check: no local gm skill source (no ./skills beside this installer, GM_SKILL_SOURCE_DIR unset) -- nothing to compare')
+      return
+    }
+    runChild('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'], { shell: IS_WINDOWS })
+    return
+  }
+  const roots = skillInstallRoots()
+  console.log(`gm-skill source: ${source.dir}${source.fromEnv ? ' (GM_SKILL_SOURCE_DIR)' : ''} -- ${source.names.length} skill(s)`)
+  if (checkSkills) {
+    skillDriftReport(source, roots)
+    return
+  }
+  for (const root of roots) {
+    for (const name of source.names) materialiseSkill({ dir: source.dir, name, root, copyOnly: source.disposable })
+  }
+  skillDriftReport(source, roots)
+}
+
+if (checkSkills) {
+  installOrCheckSkills()
+  process.exit(0)
+}
+
+if (!mcpOnly) {
+  installOrCheckSkills()
+  if (skillsOnly) process.exit(0)
 }
 
 function isLegacyNpxEntry(entry) {
@@ -207,9 +451,6 @@ function installRunner() {
   runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'], { shell: IS_WINDOWS })
 }
 
-if (!mcpOnly) {
-  runChild('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'], { shell: IS_WINDOWS })
-}
 await vendorMcpBundle()
 registerOtherHosts()
 registerKnownHostShapes()

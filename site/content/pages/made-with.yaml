@@ -1,5 +1,5 @@
 id: made-with
-title: showcase
-description: Projects made with gm (glootius maximus).
+title: "gm showcase: AnEntrypoint repositories"
+description: "gm is a skill and MCP server for developers who use Claude Code, Cursor, Gemini CLI or Codex. It keeps a plan of rows, runs real checks, and refuses to let the agent mark a task finished until those checks pass. New to gm? Install it from the distribution page or read its skills."
 layout: article
 source: ../docs/made-with.html
