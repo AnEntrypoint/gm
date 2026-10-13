@@ -77,7 +77,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit</a></span>
   </div>
   <p><strong>Job:</strong> owns the state machine, the gates, the orchestrator verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and the host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). Its one crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the guest as <code>plugkit-slim.wasm</code>.</p>
-  <p>It enforces a workflow graph of 146 states (129 principle, 8 tension, 7 gate and 2 terminal), joined by 376 edges. The graph holds 26 gate predicates. Two are marked <code>advisory: true</code>, and the other 24 are not. The lean copy embedded in the orchestrator has the same counts as <code>gm-config/fsm/graph.json</code>.</p>
+  <p>It enforces a workflow graph of 146 states (129 principle, 8 tension, 6 gate and 3 terminal), joined by 376 edges. The graph holds 26 gate predicates. Two are marked <code>advisory: true</code>, and the other 24 are not. The lean copy embedded in the orchestrator has the same counts as <code>gm-config/fsm/graph.json</code>.</p>
 </div>
 
 <div class="crate">
