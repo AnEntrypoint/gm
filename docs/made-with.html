@@ -2,14 +2,14 @@
 <html lang="en" class="ds-247420" data-theme="auto"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>showcase - gm - 247420</title>
-<meta name="description" content="projects from AnEntrypoint built using the gm workflow.">
+<title>gm showcase: AnEntrypoint repositories (247420)</title>
+<meta name="description" content="Selected AnEntrypoint repositories, starting with gm.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <script type="module">
-  import { installStyles } from 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.js';
+  import { installStyles } from 'https://cdn.jsdelivr.net/npm/anentrypoint-design@0.0.471/dist/247420.js';
   installStyles();
   document.documentElement.classList.add('ds-247420');
 </script>
@@ -23,8 +23,11 @@ main > a { display: grid; grid-template-columns: 180px 1fr auto; gap: 16px; padd
 main > a:hover { background: var(--panel-2); text-decoration: none; }
 main > a h2, main > a h3 { font-size: 14px; font-weight: 600; margin: 0; color: var(--panel-text); }
 main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height: 1.5; }
+main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600; text-transform: lowercase; letter-spacing: .04em; color: var(--panel-text-2); margin: 16px 0 4px; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag { background: var(--panel-2); color: var(--panel-text-2); border: 1px solid var(--panel-3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: var(--ff-mono, monospace); }
+.tag.status { border-style: dashed; color: var(--panel-text-3); }
+@media (max-width:640px){ main > a { grid-template-columns: 1fr; gap: 6px; } }
 </style>
 <style>
 .gm-topbar{display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--panel-1);box-shadow:var(--panel-shadow);border-bottom:1px solid var(--panel-3);position:sticky;top:0;z-index:50}
@@ -50,8 +53,8 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
 <header class="app-topbar gm-topbar">
   <div class="gm-brand"><span>247420</span><span class="slash"> / </span><span class="leaf">gm</span></div>
   <nav>
-    <a href="./index.html">home</a>
-    <a href="./paper.html">paper</a>
+    <a href="https://247420.xyz">home</a>
+    <a href="./paper.html">gm paper</a>
     <details class="gm-dd"><summary>docs</summary><div class="gm-dd-menu">
       <a href="./crates.html">crates</a>
       <a href="./skills.html">skills</a>
@@ -59,7 +62,6 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
     </div></details>
     <details class="gm-dd"><summary>more</summary><div class="gm-dd-menu">
       <a href="./made-with.html">showcase</a>
-      <a href="./stats.html">stats</a>
       <a href="https://247420.xyz">247420</a>
       <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">GitHub</a>
     </div></details>
@@ -67,187 +69,166 @@ main > a p { font-size: 12px; color: var(--panel-text-2); margin: 0; line-height
 </header>
 <div class="app-crumb"><span>247420</span><span class="sep">/</span><span>gm</span><span class="sep">/</span><span class="leaf">showcase</span></div>
 
-
-
-
-
   <header>
-    <h1>Made with gm</h1>
-    <p>Projects from <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:var(--panel-accent)">AnEntrypoint</a> built using the gm workflow.</p>
+    <h1>gm showcase: AnEntrypoint repositories</h1>
+    <p>gm is a skill-driven orchestration harness for AI-native software engineering. It is for coding, refactoring, debugging and engineering work. To use gm, install it from <a href="./distribution.html">distribution</a>. To see what it does, read <a href="./skills.html">skills</a>.</p>
+    <p>The other entries are selected repositories from the <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:var(--panel-accent)">AnEntrypoint</a> GitHub organization. Descriptions are the repositories' GitHub descriptions, or a summary of each README where GitHub has none. Dashes in descriptions are written as colons. Archived repositories are listed last and marked.</p>
   </header>
   <main>
-    <a href="https://github.com/AnEntrypoint/gm-exec" target="_blank" rel="noopener" class="card">
+    <h2 class="group">gm</h2>
+    <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" class="card">
       <div class="card-top">
-        <span class="repo-name">gm-exec</span>
-        <span class="stars">123</span>
+        <span class="repo-name">gm</span>
       </div>
-      <p class="desc">Exec dispatcher powering gm, multi-language code execution with session isolation and live output streaming.</p>
-      <div class="tags"><span class="tag">exec</span> <span class="tag">runtime</span></div>
+      <div class="tags"><span class="tag">harness</span> <span class="tag">skills</span></div>
     </a>
-    <a href="https://github.com/AnEntrypoint/hyper-nat" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">hyper-nat</span>
-        <span class="stars">75</span>
-      </div>
-      <p class="desc">NAT traversal library. Punch through firewalls without a relay server.</p>
-      <div class="tags"><span class="tag">networking</span> <span class="tag">p2p</span></div>
-    </a>
+
+    <h2 class="group">other projects</h2>
     <a href="https://github.com/AnEntrypoint/agentgui" target="_blank" rel="noopener" class="card">
       <div class="card-top">
         <span class="repo-name">agentgui</span>
-        <span class="stars">10</span>
       </div>
-      <p class="desc">Multi-agent GUI for Claude Code, Gemini CLI, and other coding tools. Sidebar UI with streaming conversations.</p>
+      <p class="desc">Multi-agent GUI for AI coding assistants: Claude Code, Gemini CLI, OpenCode &amp; more. npx agentgui</p>
       <div class="tags"><span class="tag">gui</span> <span class="tag">agents</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/vexify" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">vexify</span>
-        <span class="stars">6</span>
-      </div>
-      <p class="desc">Portable vector database. Auto-installs Ollama embeddings, no config needed.</p>
-      <div class="tags"><span class="tag">database</span> <span class="tag">embeddings</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/codebasesearch" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">codebasesearch</span>
-        <span class="stars">4</span>
-      </div>
-      <p class="desc">Fast BM25 codebase search with MCP protocol support.</p>
-      <div class="tags"><span class="tag">search</span> <span class="tag">MCP</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/codemode-agent" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">codemode-agent</span>
-        <span class="stars">4</span>
-      </div>
-      <p class="desc">Agent framework with MCP integration for complex multi-step workflows.</p>
-      <div class="tags"><span class="tag">agents</span> <span class="tag">MCP</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/acpreact" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">acpreact</span>
-        <span class="stars">3</span>
-      </div>
-      <p class="desc">React bindings and patterns for agentic coding pipelines.</p>
-      <div class="tags"><span class="tag">react</span> <span class="tag">frontend</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/mcp-thorns" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">mcp-thorns</span>
-        <span class="stars">3</span>
-      </div>
-      <p class="desc">MCP server with sharp edges, tools for agents that need direct system access.</p>
-      <div class="tags"><span class="tag">MCP</span> <span class="tag">tools</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/zellous" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">zellous</span>
-        <span class="stars">3</span>
-      </div>
-      <p class="desc">Production push-to-talk over WebRTC with Opus codec and Discord-style ducking.</p>
-      <div class="tags"><span class="tag">audio</span> <span class="tag">WebRTC</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/audit-cc-tail" target="_blank" rel="noopener" class="card">
       <div class="card-top">
         <span class="repo-name">audit-cc-tail</span>
-        <span class="stars">2</span>
       </div>
-      <p class="desc">Detects distinct Claude model variants per family from behavioral fingerprinting.</p>
-      <div class="tags"><span class="tag">claude</span> <span class="tag">diagnostics</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/thebird" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">thebird</span>
-        
-      </div>
-      <p class="desc">Anthropic SDK to Gemini streaming bridge. Drop-in adapter for cross-provider code.</p>
-      <div class="tags"><span class="tag">bridge</span> <span class="tag">streaming</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/wasivst" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">wasivst</span>
-        
-      </div>
-      <p class="desc">Run unmodified Windows VST2/VST3 plugins in the browser via WASM.</p>
-      <div class="tags"><span class="tag">audio</span> <span class="tag">WASM</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/floosie" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">floosie</span>
-        
-      </div>
-      <p class="desc">Universal stream processing platform. Pipe anything to anything.</p>
-      <div class="tags"><span class="tag">streams</span> <span class="tag">pipeline</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/diagen" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">diagen</span>
-        <span class="stars">1</span>
-      </div>
-      <p class="desc">Text-to-speech and facial animation server for VRM avatars.</p>
-      <div class="tags"><span class="tag">TTS</span> <span class="tag">animation</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/busybase" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">busybase</span>
-        <span class="stars">1</span>
-      </div>
-      <p class="desc">Supabase-like HTTP API over SQLite. No Postgres, no infra, just a file.</p>
-      <div class="tags"><span class="tag">database</span> <span class="tag">sqlite</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/godot-kit" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">godot-kit</span>
-        <span class="stars">1</span>
-      </div>
-      <p class="desc">Agentic Godot 4.x boilerplate, REPL, CLI debugging, live reload for agent-driven game dev.</p>
-      <div class="tags"><span class="tag">godot</span> <span class="tag">gamedev</span></div>
-    </a>
-    <a href="https://github.com/AnEntrypoint/ancient-anguish" target="_blank" rel="noopener" class="card">
-      <div class="card-top">
-        <span class="repo-name">ancient-anguish</span>
-        
-      </div>
-      <p class="desc">MUD game in React + Vite. Text-based multiplayer world with a modern frontend.</p>
-      <div class="tags"><span class="tag">game</span> <span class="tag">multiplayer</span></div>
+      <p class="desc">Detects distinct Claude model variants per family from behavioral fingerprints in Claude Code JSONL history</p>
+      <div class="tags"><span class="tag">Claude</span> <span class="tag">diagnostics</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/baremetal-plugs" target="_blank" rel="noopener" class="card">
       <div class="card-top">
         <span class="repo-name">baremetal-plugs</span>
-        
       </div>
-      <p class="desc">Vital wavetable synth running on bare-metal Raspberry Pi 4 via Circle, no OS.</p>
+      <p class="desc">Vital wavetable synth on baremetal Raspberry Pi 4 via Circle framework</p>
       <div class="tags"><span class="tag">audio</span> <span class="tag">embedded</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/busybase" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">busybase</span>
+      </div>
+      <p class="desc">Supabase-like HTTP SQLite database</p>
+      <div class="tags"><span class="tag">database</span> <span class="tag">SQLite</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/codebasesearch" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">codebasesearch</span>
+      </div>
+      <p class="desc">Semantic code search across a repository, from the CLI or as an MCP server.</p>
+      <div class="tags"><span class="tag">search</span> <span class="tag">MCP</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/floosie" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">floosie</span>
+      </div>
+      <p class="desc">Universal stream processing platform. Pipe anything to anything.</p>
+      <div class="tags"><span class="tag">streams</span> <span class="tag">pipeline</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/godot-kit" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">godot-kit</span>
+      </div>
+      <p class="desc">Agentic Godot 4.x development boilerplate: REPL/CLI debugging, gdtoolkit, DAP, scene inspector</p>
+      <div class="tags"><span class="tag">godot</span> <span class="tag">gamedev</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/thebird" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">thebird</span>
+      </div>
+      <p class="desc">Anthropic SDK to Gemini streaming bridge</p>
+      <div class="tags"><span class="tag">bridge</span> <span class="tag">streaming</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/thorns" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">thorns</span>
+      </div>
+      <p class="desc">Cross-platform codebase analysis with tree-sitter: dependency graph, code duplication, coupling and file sizes.</p>
+      <div class="tags"><span class="tag">MCP</span> <span class="tag">tools</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/wasivst" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">wasivst</span>
+      </div>
+      <p class="desc">Run unmodified Windows VST2/VST3 plugins in the browser via WASM</p>
+      <div class="tags"><span class="tag">audio</span> <span class="tag">WASM</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/zellous" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">zellous</span>
+      </div>
+      <p class="desc">Production-ready Push-to-Talk application with Opus codec, dynamic rooms, and audio replay</p>
+      <div class="tags"><span class="tag">audio</span> <span class="tag">WebRTC</span></div>
+    </a>
+    <h2 class="group">archived</h2>
+    <a href="https://github.com/AnEntrypoint/acpreact" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">acpreact</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Multi-agent ACP SDK with chat platform adapters and a zero-dependency TUI.</p>
+      <div class="tags"><span class="tag">react</span> <span class="tag">frontend</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/ancient-anguish" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">ancient-anguish</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Ancient Anguish-like MUD game built with React + Vite, deployed to GitHub Pages</p>
+      <div class="tags"><span class="tag">game</span> <span class="tag">multiplayer</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/codemode-agent" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">codemode-agent</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Advanced AI agent framework with MCP integration</p>
+      <div class="tags"><span class="tag">agents</span> <span class="tag">MCP</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/dialog-generator" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">dialog-generator</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Text-to-Speech + Facial Animation Server for VRM</p>
+      <div class="tags"><span class="tag">TTS</span> <span class="tag">animation</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/gm-exec" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">gm-exec</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">wanna develop an app</p>
+      <div class="tags"><span class="tag">exec</span> <span class="tag">runtime</span></div>
+    </a>
+    <a href="https://github.com/AnEntrypoint/hyper-nat" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">hyper-nat</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Tunnels UDP and TCP connections peer to peer, so network tools and LAN games work over the internet.</p>
+      <div class="tags"><span class="tag">networking</span> <span class="tag">p2p</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/jit-render" target="_blank" rel="noopener" class="card">
       <div class="card-top">
-        <span class="repo-name">jit-render</span>
-        
+        <span class="repo-name">jit-render</span> <span class="tag status">archived</span>
       </div>
-      <p class="desc">Generative UI framework built on WebJSX and web standards. No virtual DOM overhead.</p>
+      <p class="desc">Generative UI framework with WebJSX and web-standards-first rendering</p>
       <div class="tags"><span class="tag">UI</span> <span class="tag">framework</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/milkvid" target="_blank" rel="noopener" class="card">
       <div class="card-top">
-        <span class="repo-name">milkvid</span>
-        <span class="stars">1</span>
+        <span class="repo-name">milkvid</span> <span class="tag status">archived</span>
       </div>
-      <p class="desc">Milkdrop preset video renderer via butterchurn, WebCodecs, and ffmpeg.wasm.</p>
+      <p class="desc">Milkdrop preset video renderer: butterchurn + WebCodecs + ffmpeg</p>
       <div class="tags"><span class="tag">video</span> <span class="tag">audio</span></div>
     </a>
+    <a href="https://github.com/AnEntrypoint/vexify" target="_blank" rel="noopener" class="card">
+      <div class="card-top">
+        <span class="repo-name">vexify</span> <span class="tag status">archived</span>
+      </div>
+      <p class="desc">Portable vector database with auto-installing Ollama embeddings. Zero-config semantic search via SQLite.</p>
+      <div class="tags"><span class="tag">database</span> <span class="tag">embeddings</span></div>
+    </a>
   </main>
-  <script>
-    window.__debug = { madeWith: { projects: [{"name":"gm-exec","stars":123,"tags":["exec","runtime"]},{"name":"hyper-nat","stars":75,"tags":["networking","p2p"]},{"name":"agentgui","stars":10,"tags":["gui","agents"]},{"name":"vexify","stars":6,"tags":["database","embeddings"]},{"name":"codebasesearch","stars":4,"tags":["search","MCP"]},{"name":"codemode-agent","stars":4,"tags":["agents","MCP"]},{"name":"acpreact","stars":3,"tags":["react","frontend"]},{"name":"mcp-thorns","stars":3,"tags":["MCP","tools"]},{"name":"zellous","stars":3,"tags":["audio","WebRTC"]},{"name":"audit-cc-tail","stars":2,"tags":["claude","diagnostics"]},{"name":"thebird","stars":0,"tags":["bridge","streaming"]},{"name":"wasivst","stars":0,"tags":["audio","WASM"]},{"name":"floosie","stars":0,"tags":["streams","pipeline"]},{"name":"diagen","stars":1,"tags":["TTS","animation"]},{"name":"busybase","stars":1,"tags":["database","sqlite"]},{"name":"godot-kit","stars":1,"tags":["godot","gamedev"]},{"name":"ancient-anguish","stars":0,"tags":["game","multiplayer"]},{"name":"baremetal-plugs","stars":0,"tags":["audio","embedded"]},{"name":"jit-render","stars":0,"tags":["UI","framework"]},{"name":"milkvid","stars":1,"tags":["video","audio"]}] } };
-  </script>
-
-
-
-
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
 <span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> and <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
-<span>probably emerging</span>
 </footer>
 
 </body></html>

@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skills - gm - 247420</title>
-<meta name="description" content="The gm boot skill, the four walk skills shipped beside it, and how every one of them dispatches phase prose, orchestrator verbs and host verbs through the wasm spool.">
+<meta name="description" content="gm makes a coding agent record evidence before it marks a task done: each task is a plan row that closes only with a recorded witness. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. Install it (the commands are on the distribution page), then ask your agent to use the gm skill. This page lists the gm skills and the orchestrator verbs.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -27,7 +27,6 @@ article code { font-family: var(--ff-mono); font-size: 12px; background: var(--p
 .skill-header { display: flex; align-items: baseline; gap: 12px; margin: 0 0 10px 0; flex-wrap: wrap; }
 .skill-header h2 { margin: 0; font-size: 19px; }
 .skill-header .role { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); }
-.skill-header .phase { margin-left: auto; font-family: var(--ff-mono); font-size: 11px; padding: 2px 8px; background: var(--panel-2); border-radius: 999px; color: var(--panel-text-2); }
 .row { display: grid; grid-template-columns: 100px 1fr; gap: 8px; margin: 6px 0; font-size: 13px; }
 .row .k { font-family: var(--ff-mono); font-size: 11px; color: var(--panel-text-2); text-transform: uppercase; letter-spacing: .06em; }
 .flow { display:block; margin:12px 0; padding:14px 16px; background: var(--panel-2); border-radius:6px; font-family: var(--ff-mono); font-size:11px; line-height:1.5; color:var(--panel-text); white-space: pre; overflow-x:auto; }
@@ -52,210 +51,106 @@ article tbody tr:hover { background: var(--panel-1); }
 </head>
 <body>
 <div class="title-block">
-  <h1>One boot skill, every verb</h1>
-  <div class="author">one boot body, one wasm orchestrator, four walk skills, you dispatch every phase on demand</div>
-  <div class="date">cushion-certified - 2026</div>
+  <h1>The gm skills</h1>
+  <div class="author">what the gm skills are, and which verbs serve them</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    The boot skill is <code>gm</code> (the harness of gm, glootius maximus; the <code>gm-skill</code> GitHub Release tarball), and it is the only one an agent loads up front. Its <code>SKILL.md</code> contains no phase prose, which is the point: it is a boot-edge ABI document, not a procedure. It carries only what an agent needs before the orchestrator takes over: invocation syntax, spool paths, verb names, gate conditions, transition markers. Every phase instruction is served from elsewhere. The tarball ships the whole <code>skills/</code> tree and the installer copies every directory under it that carries a <code>SKILL.md</code>, so four walk skills sit beside <code>gm</code> and are loaded by name once a walk starts: <code>gm-orchestrate</code> ticks the subagent pool, <code>gm-hop</code> runs one traversal hop, <code>gm-prd</code> closes one PRD row, and <code>gm-continue</code> is the terminal handoff. The state machine is <strong>SPECIFY -&gt; PROVE -&gt; EMIT -&gt; STATE -&gt; CONC -&gt; SEC -&gt; RES -&gt; DECIDE -&gt; COMPLETE</strong>. It is a non-linear graph with feedback edges, not a chain. It lives inside the wasm orchestrator (rs-plugkit). It is served to the agent on demand through the <code>instruction</code> verb, with the current FSM state baked into every response. The agent dispatches verbs by writing files into <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>. The wasm watcher reads them, the orchestrator routes them, and the output lands in <code>.gm/exec-spool/out/</code>. No chain of skill files, no subagent invocations.
+    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose tasks each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server, then type <code>/gm</code> in your coding agent.
   </div>
 </div>
 
 <article>
 
-<h2>The state machine, in one diagram</h2>
+<h2>What you can do next</h2>
+
+<p>Once <code>/gm</code> is loaded, the agent dispatches <code>instruction</code> to orient, and <code>phase-status</code> for a bare state check. The <a href="#orchestrator-verbs">orchestrator verbs</a> section lists the verbs this page documents, and <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">the verb inventory</a> gives each verb's body shape.</p>
+
+<h2>Terms</h2>
+
+<ul>
+  <li><code>walk</code>: one run of the gm state machine that the orchestrator drives to completion.</li>
+  <li><code>plan row</code>: one entry in the plan. It closes only with recorded <code>witness_evidence</code>.</li>
+  <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
+  <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial, which names the recovery verb.</li>
+  <li><code>mutable</code>: an open question that the agent records instead of asking the user.</li>
+  <li><code>verb</code>: a named gm operation an agent calls, such as <code>codesearch</code> or <code>instruction</code>.</li>
+  <li><code>dispatch</code>: one request an agent sends to run a verb.</li>
+</ul>
+
+<h2>The entry skill</h2>
+
+<p><code>skills/gm/SKILL.md</code> is the entry skill for engineering work. It sets the autonomy rules, which say how far the agent acts without asking, and the search and git routing: code search goes through <code>codesearch</code>, and git goes through the git verbs.</p>
+
+<h2>The walk skills</h2>
+
+<p>These skills sit beside <code>gm</code>. <code>gm-orchestrate</code> and <code>gm-hop</code> are invoked only from <code>gm</code> and are not loaded directly.</p>
+
+<div class="skill">
+  <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">runs the walk loop</span></div>
+  <div class="row"><span class="k">does</span><span>Runs the pool loop of a walk: it observes, launches plan rows and graph hops, logs, waits, refills freed slots and exits.</span></div>
+  </div>
+
+<div class="skill">
+  <div class="skill-header"><h2>gm-hop</h2><span class="role">one step through the graph</span></div>
+  <div class="row"><span class="k">does</span><span>Applies one principle from the graph to one surface and writes one receipt. It names the next principle to visit.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>gm-prd</h2><span class="role">closes one plan row</span></div>
+  <div class="row"><span class="k">does</span><span>Closes one plan row through nine stages in one run.</span></div>
+</div>
+
+<div class="skill">
+  <div class="skill-header"><h2>gm-continue</h2><span class="role">final check when the walk is done</span></div>
+  <div class="row"><span class="k">does</span><span>Runs when the walk reaches COMPLETE with no pending plan rows. It searches for remaining work before the walk ends.</span></div>
+</div>
+
+<h2>The discipline skills</h2>
+
+<p>These skills hold method rather than walk control. Each one is loaded when its frontmatter description matches the task.</p>
 
 <table>
-<caption>Forward transitions (the phase order)</caption>
-<thead><tr><th>From</th><th>To</th><th>Condition</th></tr></thead>
+<thead><tr><th>Skill</th><th>Does</th></tr></thead>
 <tbody>
-<tr><td>start</td><td>SPECIFY</td><td>user message</td></tr>
-<tr><td>SPECIFY</td><td>PROVE</td><td>cover closed</td></tr>
-<tr><td>PROVE</td><td>EMIT</td><td>every mutable witnessed</td></tr>
-<tr><td>EMIT</td><td>STATE</td><td>source hygiene gates pass</td></tr>
-<tr><td>STATE</td><td>CONC</td><td>idempotency gate passes</td></tr>
-<tr><td>CONC</td><td>SEC</td><td>disjointness witnessed</td></tr>
-<tr><td>SEC</td><td>RES</td><td>no secrets in diff</td></tr>
-<tr><td>RES</td><td>DECIDE</td><td>no unchecked panics</td></tr>
-<tr><td>DECIDE</td><td>COMPLETE</td><td>PRD empty AND git clean AND CI green</td></tr>
-<tr><td>COMPLETE</td><td>end</td><td>-</td></tr>
+<tr><td><code>wfgy-method</code></td><td>Drift control: compares each step to the goal and checkpoints before a risky step.</td></tr>
+<tr><td><code>polaris-protocol</code></td><td>Routes multi-step work to <code>polaris-goal-compiler</code> and <code>fifth-dimension-engine</code>, when a task needs both.</td></tr>
+<tr><td><code>polaris-goal-compiler</code></td><td>Compiles a goal into gated task atoms and claim ceilings.</td></tr>
+<tr><td><code>fifth-dimension-engine</code></td><td>Lifts a complex target into a structured route. Use after polaris-goal-compiler, or when a request is written as shoot + [problem].</td></tr>
+<tr><td><code>agent-memory</code></td><td>Sets up TencentDB Agent Memory for agent teams.</td></tr>
+<tr><td><code>dream-rsi</code></td><td>Proposes strategy changes from observation logs and measures gm-graph coverage. It proposes only and never deploys.</td></tr>
 </tbody>
 </table>
+
+<h2 id="orchestrator-verbs">The orchestrator verbs</h2>
+
+<p>An agent dispatches a verb through the gm MCP server, using the <code>gm_codemode</code> tool. Without MCP, it writes the request to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;SESSION_ID&gt;-&lt;N&gt;.txt</code> and reads the reply from <code>.gm/exec-spool/out/&lt;verb&gt;-&lt;SESSION_ID&gt;-&lt;N&gt;.json</code>, where <code>&lt;N&gt;</code> is <code>&lt;pid&gt;-&lt;ms&gt;-&lt;counter&gt;</code>.</p>
+
 <table>
-<caption>Backward transitions (feedback edges)</caption>
-<thead><tr><th>From</th><th>To</th><th>Trigger</th></tr></thead>
+<thead><tr><th>Verb</th><th>Does</th></tr></thead>
 <tbody>
-<tr><td>PROVE</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>EMIT</td><td>SPECIFY</td><td>reshaping discovery</td></tr>
-<tr><td>STATE</td><td>EMIT</td><td>code repair</td></tr>
-<tr><td>CONC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>SEC</td><td>STATE</td><td>boundary enforcement</td></tr>
-<tr><td>RES</td><td>EMIT</td><td>panic elimination</td></tr>
-<tr><td>DECIDE</td><td>SPECIFY</td><td>empirical fitness feedback</td></tr>
-<tr><td>DECIDE</td><td>PROVE</td><td>unproven obligation</td></tr>
+<tr><td><code>instruction</code></td><td>Serves the prose for the current phase. It is the entry point of the walk.</td></tr>
+<tr><td><code>phase-status</code></td><td>Returns the compact state only: the phase, <code>prd_pending_count</code> and the pending mutables, with no prose.</td></tr>
+<tr><td><code>transition</code></td><td>Moves the walk to a target node, when the gates on that move allow it.</td></tr>
+<tr><td><code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code></td><td>Adds, resolves and lists plan rows. Each open row is one file in <code>.gm/prd/</code> in the project. A resolved row moves to <code>.gm/prd-log.jsonl</code>.</td></tr>
+<tr><td><code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code></td><td>Add, resolve and list mutables. Each open mutable is one file in <code>.gm/mutables/</code>. A resolved one moves to <code>.gm/mutables-log.jsonl</code>.</td></tr>
+<tr><td><code>fsm-vendor</code></td><td>Writes the compiled default prose into <code>.gm/instructions/</code>, where a vendored file takes precedence over the config repo's cached prose.</td></tr>
+<tr><td><code>codesearch</code>, <code>grep</code></td><td><code>codesearch</code> is ranked search over the project. <code>grep</code> is an exhaustive literal or regex scan that reports each hit as <code>path:line</code>.</td></tr>
+<tr><td><code>recall</code>, <code>memorize</code></td><td>Search the project's memory files in <code>.gm/memories/</code>, and store a memory.</td></tr>
+<tr><td><code>exec_js</code></td><td>Runs code in a subprocess. A leading <code>timeoutMs=&lt;ms&gt;</code> line sets its budget, with a default of 300000 ms.</td></tr>
+<tr><td><code>git_finalize</code>, <code>git_push</code>, <code>git_show</code>, <code>ci-status</code></td><td>Commit and push with <code>git_finalize</code>, publish a named commit with <code>git_push</code>, show a commit with <code>git_show</code>, and check its CI with <code>ci-status</code>.</td></tr>
+<tr><td><code>health</code></td><td>Reports the subsystem and verb tables and the alias table. Recall and codesearch probes run only when the body sets <code>probes</code> to true.</td></tr>
+<tr><td><code>gm_result</code></td><td>Reads a reply that is cut at the reply size limit, from its spill file.</td></tr>
 </tbody>
 </table>
-
-<p>The FSM is owned by <code>rs-plugkit/src/orchestrator/{mod,state,transitions,mutables,memorize}.rs</code>. The agent never advances the state machine directly; it dispatches the <code>transition</code> verb with the requested target. The orchestrator either accepts (returns the next-phase instruction body) or refuses with a reason naming the unmet gate condition.</p>
-
-<div class="gm-callout"><span class="who">from the gm field guide</span>"There is no skip button. There is no 'just this once.' The arrows are arrows. The cushion is the cushion. Sit."</div>
-
-<h2>How the boot skill works</h2>
-
-<p>The <code>gm</code> SKILL.md body says, in essence: <em>on every turn, dispatch the <code>instruction</code> verb through the spool; obey what it returns.</em></p>
-
-<p>It contains no phase prose, no checklists, no transition diagrams. Those would drift the moment the orchestrator changed. Every instruction surface the agent reads at runtime is generated by the orchestrator. The current FSM state, the current PRD, and the current mutables and residual-scan state are baked in.</p>
-
-<p>This collapses a chain of fourteen former skill files into a single dispatch surface. The first seven: gm, planning, gm-execute, gm-emit, gm-complete, update-docs, governance. The remaining seven: code-search, ssh, pages, create-lang-plugin, memorize, textprocessing. The behaviors those files elicit are properties of the orchestrator's response to <code>instruction</code> and the verbs the agent dispatches in reply.</p>
-
-<h2>The walk skills shipped beside <code>gm</code></h2>
-
-<p><code>SKILLS.md</code> at the repo root is the authoritative table, and the directories under <code>skills/</code> are the authoritative list. None of these carries phase prose either: each reads its own state from the orchestrator and drives the walk with verbs. A hop is one principle (a book's discipline) over one surface; a PRD row is one run; both count against the pool that <code>gm-orchestrate</code> ticks. The Node.js installer installs every skill the release ships, not only <code>gm</code>, so these directories reach disk in one install.</p>
-
-<div class="skill">
-  <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">main-thread pool loop</span><span class="phase">one walk</span></div>
-  <div class="row"><span class="k">role</span><span>Observe, launch advertised rows and hops, log, wait. Owns the pool protocol: <code>ceiling</code>, <code>live</code>, <code>floor</code> and <code>shortfall</code>, the tick, refill, shortfall and headroom gate, the walk loop and its exit guard, successor spawn, single-session fan-out and walk workers.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>gm-hop</h2><span class="role">one traversal hop</span><span class="phase">one principle</span></div>
-  <div class="row"><span class="k">role</span><span>A principle or book name and a surface path in, one receipt naming the next principle out. Invoked with <code>{"principle":"&lt;name&gt;","surface":"&lt;path&gt;","session":"&lt;SESSION_ID&gt;"}</code>.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>gm-prd</h2><span class="role">one PRD row, one run</span><span class="phase">nine stages</span></div>
-  <div class="row"><span class="k">role</span><span>Closes one PRD row through the nine gm stages in one run; invoked with <code>row=&lt;id&gt;; session=&lt;SESSION_ID&gt;</code>.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>gm-continue</h2><span class="role">terminal handoff</span><span class="phase">COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>The final handoff after a <code>gm</code> walk reaches <code>phase=COMPLETE</code> with <code>prd_pending_count=0</code>; searches for remaining work before the walk ends.</span></div>
-</div>
-
-<p>The remaining shipped skills are discipline bodies, not walk control: <code>wfgy-method</code> (drift recovery: compare to the goal, weigh alternatives, checkpoint, bounded retry), <code>polaris-protocol</code> (the WFGY 5.0 Polaris root for complex, high-stakes or long-horizon work; dispatches its children), <code>polaris-goal-compiler</code> (a goal into task atoms, gates and claim ceilings), <code>fifth-dimension-engine</code> (a target lifted into higher problem-coordinates, returning structured routes), <code>agent-memory</code> (TencentDB Agent Memory for cross-session, cross-framework team memory, distinct from this project's recall store) and <code>dream-rsi</code> (propose-only strategy inference from observation logs and gm-graph coverage; never deploys).</p>
-
-<h2>The orchestrator verbs</h2>
-
-<p>These are the verbs the agent uses to drive the state machine. Each is dispatched the same way: write a request body to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, read the response from <code>.gm/exec-spool/out/&lt;verb&gt;-&lt;N&gt;.json</code>.</p>
-
-<div class="skill">
-  <div class="skill-header"><h2>instruction</h2><span class="role">phase prose, generated per call</span><span class="phase">every turn</span></div>
-  <div class="row"><span class="k">role</span><span>Return the current phase's imperative body, with the live FSM state, PRD summary, mutables status, residual-scan state, and recall pack already woven in. Replaces the bodies of the former gm / planning / gm-execute / gm-emit / gm-complete / update-docs / governance / code-search skill files.</span></div>
-  <div class="row"><span class="k">session lease</span><span>An <code>instruction</code> dispatch rides with live session leases: the caller records one lease file per SESSION_ID, and the reply names the project's current owner in <code>session_owner_lease</code> (<code>session_id</code>, <code>pid</code>, <code>live</code>) together with <code>session_owner_before_this_dispatch</code>. <code>session_mismatch</code> is true when the caller's session is not that owner and the owner's process still holds its lease, so a second session can see that another live session owns the walk.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Treating the response as static. The body changes every call as state advances.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>transition</h2><span class="role">phase advance / regress</span><span class="phase">phase gate</span></div>
-  <div class="row"><span class="k">role</span><span>Request a forward transition (ladder) or backward transition (snake). Orchestrator validates against the four state planes (epistemic, operational, relational, temporal). Returns the new phase's instruction body on success, or a refusal naming the unmet gate.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>phase-status</h2><span class="role">read current FSM state</span><span class="phase">any</span></div>
-  <div class="row"><span class="k">role</span><span>One-shot probe of where the orchestrator thinks the agent is. Used by the harness to render breadcrumbs and by the residual-scan gate to decide whether to fire.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>prd-add / prd-resolve / prd-list</h2><span class="role">work-item ledger</span><span class="phase">SPECIFY, PROVE, COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Append PRD items, mark them resolved with witness evidence, enumerate the live state. Backed by <code>.gm/prd.yml</code>; the orchestrator owns the serializer so concurrent dispatch from parallel <code>exec_js</code> calls cannot corrupt it.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>mutable-add / mutable-resolve / mutable-list</h2><span class="role">named-unknown ledger</span><span class="phase">SPECIFY, PROVE</span></div>
-  <div class="row"><span class="k">role</span><span>Every unknown surfaced during SPECIFY lands here with <code>status: unknown</code>. <code>mutable-resolve</code> flips a row to <code>witnessed</code> only when <code>witness_evidence</code> (file:line, codesearch hit, exec output snippet) is filled. Write/Edit/git operations are hard-blocked while any row is still unknown.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>This is a differential diagnosis, run one row at a time. Name the hypothesis as a mutable, run exactly one real test against it, and read the real result. Then either cross it off or check it. Never guess from memory or from what the docs say should happen, only from what the code just did.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>memorize-fire</h2><span class="role">background fact write</span><span class="phase">PROVE, EMIT</span></div>
-  <div class="row"><span class="k">role</span><span>Classifies the supplied fact and persists it to AGENTS.md (top-level rules) or the recall store (everything else). Replaces the prior <code>Agent(subagent_type=&apos;gm:memorize&apos;)</code> spawn; this is a direct verb dispatch.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Inline edits to AGENTS.md or CLAUDE.md. Both are managed exclusively through this verb.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>AGENTS.md is where a rule lands first: it is durable and human-readable, and it survives context compaction. The same rule is then also fired into the vector memory store, so a future turn can recall it just by working on something related. The flow is bidirectional: memory periodically drains back into AGENTS.md as compressed one-line pointers. The file keeps gaining facts without growing without bound.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>residual-scan</h2><span class="role">stop-gate challenge</span><span class="phase">COMPLETE</span></div>
-  <div class="row"><span class="k">role</span><span>Fires once per stop window when the PRD is empty/missing AND no running tasks. The agent either expands the PRD with in-spirit residuals and re-enters PROVE, or states "residual scan: none reachable in-spirit" directly. Marker <code>.gm/residual-check-fired</code> keeps the challenge one-shot per window.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>auto-recall</h2><span class="role">prompt-submit recall injection</span><span class="phase">every prompt</span></div>
-  <div class="row"><span class="k">role</span><span>The orchestrator derives a 2-6 word recall query from the user prompt and searches the recall store. It emits a "## Recall for this prompt" block into the next <code>instruction</code> body. Together with the session-start codeinsight overview, this makes sure every turn begins with prior memory loaded.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>pool-brief</h2><span class="role">subagent brief for one PRD row</span><span class="phase">fan-out</span></div>
-  <div class="row"><span class="k">role</span><span>Hands one subagent its brief for one PRD row. The body takes three non-empty string fields: <code>row</code> (a PRD row id), <code>session</code> (the subagent's SESSION_ID -- the key is spelled <code>session</code>, never <code>session_id</code>) and <code>role</code> (one of <code>resolver</code>, <code>traversal</code>). A missing or empty field is refused with the list of what is required.</span></div>
-</div>
-
-<h2>The host verbs</h2>
-
-<p>Side-effecting capabilities the agent uses inside a phase. All dispatched through the same spool surface; all serviced by the wasm host.</p>
-
-<div class="skill">
-  <div class="skill-header"><h2>exec_js</h2><span class="role">synchronous code execution</span></div>
-  <div class="row"><span class="k">role</span><span>Run a snippet in <code>nodejs</code>, <code>python</code>, <code>bash</code>, <code>typescript</code>, <code>deno</code>, <code>go</code>, <code>rust</code>, <code>c</code>, <code>cpp</code>, or <code>java</code>. Synchronous under wasm: the host runs the subprocess via <code>child_process.spawnSync</code> and blocks the watcher for the duration. Every call requires a positive <code>timeoutMs</code>; missing or zero is a hard error. Partial output preserved on timeout.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>codesearch</h2><span class="role">project-local search</span></div>
-  <div class="row"><span class="k">role</span><span>BM25 + embedding fusion over the project tree, plus tree-sitter symbol layer. Two-words-then-iterate query protocol; minimum four attempts before declaring absent. Emits <code>[index fully synced: ...]</code> so freshness is visible.</span></div>
-  <div class="row"><span class="k">forbids</span><span><span class="tag danger">find</span>, <span class="tag danger">grep</span>, <span class="tag danger">rg</span>, <span class="tag danger">Glob</span>, <span class="tag danger">Explore</span>. The Bash gate denies these in favour of codesearch.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>Beyond plain text matching, results can be ranked by which git commits touched a file most relevantly or most recently. A hot recent change outranks a stale untouched match. A hit returns the full matched content, not a truncated snippet, so the agent never has to go fetch the rest separately. The response body itself stays short and token-optimized either way.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>recall / memorize</h2><span class="role">read/write memory</span></div>
-  <div class="row"><span class="k">role</span><span>Backed by <code>.gm/gm.db</code> (KV + vec). Per-discipline isolation via <code>@&lt;name&gt;</code> sigil in the request; without a sigil, recall fans broadly across enabled disciplines and <code>memorize</code> writes narrowly to <code>default</code>.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>Memory does not keep a searchable index of raw text; it stores only vector embeddings. Recall works purely on semantic similarity: there is no keyword or full-text index to search instead. A hit returns the full matched content, never a truncated snippet. Identical content hashes to the same key, so re-learning a fact never creates a duplicate. Stale or wrong memories are pruned the moment they are noticed. Ranking blends similarity with recency, so an older memory fades unless something reinforces it again. A relevant pack of memories auto-attaches at the start of each turn without the agent asking for it.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>crawl / chrome</h2><span class="role">browser automation</span></div>
-  <div class="row"><span class="k">role</span><span>Drive a page with a plain-text step grammar over <code>engine=cdp</code> or <code>engine=lightpanda</code>: one step per line (<code>url=</code> or a bare URL, <code>snapshot</code>, <code>click=&lt;uid&gt;</code>, <code>fill=&lt;uid&gt; &lt;value&gt;</code>, <code>press=</code>, <code>wait_for=</code>, <code>console</code>, <code>network</code>, <code>screenshot=&lt;path&gt;</code>). <code>chrome</code> takes the same body pinned to <code>engine: cdp</code> and <code>headless: false</code>, over the shared headful Chrome lease, and answers the same host JSON object. The standalone <code>cdp</code> verb is removed; <code>crawl</code> with <code>engine=cdp</code> replaces it.</span></div>
-  <div class="row"><span class="k">in plain terms</span><span>A target this run created is closed when it ends: <code>Target.closeTarget</code> for a browser session, <code>/json/close/&lt;id&gt;</code> for an HTTP endpoint, whether the run succeeded, threw, or hit its watchdog. A <code>session=&lt;name&gt;</code> line keeps one tab and its uid map across calls; without it a call opens its own tab and closes it when it ends. A snapshot numbers each element <code>uid=N</code>, and a uid no snapshot of the session printed is refused.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>fs_read / fs_write / fs_stat / fs_readdir</h2><span class="role">file-system access</span></div>
-  <div class="row"><span class="k">role</span><span>Wasm-host filesystem verbs. Used by the orchestrator and by user-side dispatch for any read/write that does not go through Edit/Write.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>kv_get / kv_put / kv_query</h2><span class="role">project-scoped KV store</span></div>
-  <div class="row"><span class="k">role</span><span>Backed by <code>gm.db</code>. Used by the orchestrator for residual-scan markers, gm-fired sentinels, mutables/PRD serialization, and any project-state the agent needs to survive context compaction.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>fetch</h2><span class="role">HTTPS GET/POST</span></div>
-  <div class="row"><span class="k">role</span><span>Direct HTTPS egress. Embedding calls are serviced in-wasm via baked Q4 weights; LLM-tier work is offloaded to the host agent via callback protocol.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>git_status / git_finalize / git_amend / ...</h2><span class="role">git through the spool</span></div>
-  <div class="row"><span class="k">role</span><span>Every git operation is a verb: <code>git_status</code>, <code>branch_status</code>, <code>git_add</code>, <code>git_commit</code>, <code>git_amend</code>, <code>git_finalize</code>, <code>git_push</code>, <code>git_log</code>, <code>git_diff</code>, <code>git_show</code>, <code>git_fetch</code>, <code>git_pull</code>, <code>git_poll</code>, <code>ci-status</code>, <code>git_remote</code>, <code>git_branch</code>, <code>git_merge</code>, <code>git_stash</code>, <code>git_reset_head</code> and the worktree verbs. <code>git_finalize {message, paths}</code> bundles add, commit, the porcelain gate and push; name <code>paths</code> every time, because an unscoped commit carries another writer's in-flight edits with it.</span></div>
-  <div class="row"><span class="k">forbids</span><span>Raw <code>git</code> through Bash. A delivery is witnessed by <code>git_show {rev}</code> and <code>ci-status {sha}</code> in separate reads, never by the dispatch that made it.</span></div>
-</div>
-
-<div class="skill">
-  <div class="skill-header"><h2>health</h2><span class="role">one-shot system probe</span></div>
-  <div class="row"><span class="k">role</span><span>Returns plugkit version + pin-match, watcher liveness, runner state, recall-store status, cache dirs, inbox/outbox counts, recent dispatch fires, recent errors. Use before assuming any component is broken.</span></div>
-</div>
-
-<h2>notes on the verb surface</h2>
-
-<blockquote>
-  "Every skill is now an <code>instruction</code> response that knows the current state of the world. The behavior the file elicits is woven into a string. The orchestrator generates it in milliseconds, freshly, from the phase, the PRD, the mutables, and the recall pack. The chair is the same chair. The cushion is now part of the floor.", from the gm field guide
-</blockquote>
 
 </article>
 
 <div class="cross-footer">
-  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit - rs-search - rs-codeinsight</span></a>
-  <a href="./distribution.html"><strong>distribution</strong><span>one skill, one wasm</span></a>
+  <a href="./crates.html"><strong>rust crates</strong><span>rs-plugkit, rs-search, rs-codeinsight, agentplug</span></a>
+  <a href="./distribution.html"><strong>distribution</strong><span>install, registration and checks</span></a>
   <a href="./paper.html"><strong>paper</strong><span>the complete discipline</span></a>
 </div>
 

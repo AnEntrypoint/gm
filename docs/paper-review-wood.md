@@ -1,6 +1,8 @@
 # Peer Review: "The Complete Discipline: Lifecycle Control, Governance, and Operational Hard Rules for LLM Coding Agents"
 
-**Reviewed document:** `docs/paper.html` (May 2026 consolidation of Papers I-IV)  
+> **Superseded revision.** This review covers an earlier revision of the paper (Papers I-IV consolidated). It is kept as the record of that revision. Its claims about the current repository are superseded.
+
+**Reviewed document:** the earlier consolidation of Papers I-IV, superseded by the current `docs/paper.html`  
 **Reviewer:** Wood  
 **Scope:** Clarity, internal consistency, gaps not covered in the paper, and structural observations
 
@@ -75,7 +77,7 @@ Section 18 describes `exec:pause` as renaming `prd.yml` to `prd.paused.yml` to s
 ## IV. Gaps Not Covered in the Paper
 
 **1. No quantitative evidence for any claim.**  
-The paper explicitly positions itself as "a practical engineering artifact rather than a theoretical claim" and acknowledges production use across 12 platforms over two months. Yet every claim is qualitative. No failure rates before/after applying the discipline are reported. No comparison between platforms with full enforcement and platforms without it. No data on how often each failure mode occurs or how often each hard rule fires. Even crude observational data would distinguish "this rule fires often and prevents real failures" from "this rule has never fired in production." The absence makes it impossible to prioritize the rules or evaluate which are load-bearing.
+The paper explicitly positions itself as "a practical engineering artifact rather than a theoretical claim" Yet every claim is qualitative. No failure rates before/after applying the discipline are reported. No comparison between platforms with full enforcement and platforms without it. No data on how often each failure mode occurs or how often each hard rule fires. Even crude observational data would distinguish "this rule fires often and prevents real failures" from "this rule has never fired in production." The absence makes it impossible to prioritize the rules or evaluate which are load-bearing.
 
 **2. Concurrent session behavior on the shared SQLite memory database.**  
 Section 19.3 states that `rs-learn.db` is committed to git so memory state shares across machines and sessions. The paper does not address what happens when two agents -- running on separate machines against separate branches -- both memorize facts in the same turn. SQLite is not a concurrent database; parallel writes from two git-synced sessions would create a merge conflict on a binary file. The paper's recommendation to commit the database is correct but incomplete without a strategy for this conflict case.

@@ -1,6 +1,6 @@
 ---
 name: polaris-goal-compiler
-description: Compiles goals into task atoms, active and blocked work, verification gates and claim ceilings before execution. Part of WFGY 5.0 Polaris Protocol. Use before complex AI work to make it inspectable, harder to fake, and less likely to collapse into premature completion.
+description: "Use before complex, multi-step, long-horizon, or high-stakes AI work when no prior plan exists, to compile the goal into gated task atoms and claim ceilings. Does not solve the problem or control drift."
 license: MIT
 compatibility: Upstream Polaris Goal Compiler is released ChatGPT-first (teaser compatibility is ChatGPT only); portability to other assistants, coding agents, and skill systems is a stated design direction, not an officially supported target in the teaser release. This skill is a portable Claude Code adaptation of that protocol.
 metadata:
@@ -10,7 +10,7 @@ metadata:
 
 # Polaris Goal Compiler
 
-A human-AI communication protocol under WFGY 5.0 Polaris Protocol.
+A human-AI communication protocol under WFGY 5.0 Polaris Protocol. It compiles a goal into task atoms, active and blocked work, verification gates and claim ceilings before execution, so complex AI work stays inspectable, harder to fake, and less likely to collapse into premature completion.
 
 **Compile first. Execute one active atom. Verify before unlock. Claim only what is supported.**
 
