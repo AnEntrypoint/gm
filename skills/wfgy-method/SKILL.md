@@ -1,6 +1,6 @@
 ---
 name: wfgy-method
-description: "Applies WFGY (Wan Fa Gui Yi) drift control to multi-step agent work: compares each step against the stated goal, checkpoints before risky steps, and records durable lessons. Use when starting a non-trivial multi-step task, when a task risks losing its goal over many steps, when a decision has real alternatives, or when the agent contradicts itself or goes in circles. Distinct from gm-continue, which invokes this skill when a gm walk repeats the same gap."
+description: "Drift-check step, not a planner: applies WFGY (Wan Fa Gui Yi) drift control to multi-step agent work by comparing each step against the stated goal, checkpointing before risky steps, and recording durable lessons. Use when a task risks losing its goal over many steps, or the agent contradicts itself or goes in circles. Does not plan or decompose work (polaris-goal-compiler does that). Distinct from gm-continue, which invokes this skill when a gm walk repeats the same gap."
 license: MIT
 compatibility: "Designed for Claude Code. No external services, embedding models, or network access required for the core discipline."
 metadata:

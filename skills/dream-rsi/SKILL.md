@@ -1,11 +1,11 @@
 ---
 name: dream-rsi
-description: Infer strategy proposals from Dream-RSI observation logs, and measure and propose gm-graph traversal coverage. Run as a background agent on the smallest available model at an interval. Proposes only; never deploys.
+description: "Infer strategy proposals from Dream-RSI observation logs, and measure and propose gm-graph traversal coverage. Use when observation logs need strategy proposals. Proposes only; never deploys."
 ---
 
 # dream-rsi inference
 
-Run this as a background subagent on the smallest available model. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
+Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
 
 Inputs:
 - `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records with `dispatch_id`, `verb`, `fingerprint`, `exit_code`, `gate_drift` (bool), `prd_open_count`, `mutable_open_count`, `quality` (0..1), `ts`, `reply_sha256`, and optional `lean_node`. Orchestration verbs and `dream-*` dispatches are not recorded.

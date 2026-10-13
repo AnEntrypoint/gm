@@ -7,8 +7,6 @@ GM_TOOLS_DIR="${HOME}/.gm-tools"
 CLAUDE_SKILLS_DIR="${HOME}/.claude/skills"
 AGENTS_SKILLS_DIR="${HOME}/.agents/skills"
 SKILL_MODE_LEDGER=".gm-skill-install-modes"
-# a displaced install is parked under a dotted directory: a plain sibling of the
-# skill directories would itself be discovered and served as a skill
 SKILL_PRELINK_DIR=".gm-skill-prelink"
 
 log() { printf '%s\n' "$*" >&2; }
@@ -137,8 +135,6 @@ skill_install_roots() {
   printf '%s\n' "$CLAUDE_SKILLS_DIR" "$AGENTS_SKILLS_DIR"
 }
 
-# A persistent source tree to install FROM, so an installed skill can be a link
-# into it instead of a copy that drifts.
 skill_source_dir() {
   override="${GM_SKILL_SOURCE_DIR:-}"
   if [ -n "$override" ] && [ -f "${override}/gm/SKILL.md" ]; then
@@ -153,17 +149,11 @@ skill_source_dir() {
   return 1
 }
 
-# Windows: a directory junction needs no elevation, a symlink does.
-# mac/linux: a directory symlink. Never a copy that pretends to be a link --
-# MSYS `ln -s` silently copies when symlink creation is refused, so on those
-# platforms only mklink is accepted.
 link_skill_dir() {
   src="$1"
   dest="$2"
   case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*)
-      # MSYS rewrites "/J" into a path unless path conversion is off, and turns
-      # `cmd /c` into `cmd //c`; with conversion off the plain form is correct.
       if command -v cmd >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
         wsrc=$(cygpath -w "$src")
         wdst=$(cygpath -w "$dest")
@@ -202,7 +192,6 @@ install_one_skill() {
   dest="${root}/${name}"
   mkdir -p "$root"
   if [ -L "$dest" ]; then
-    # readlink -f is not portable (absent on BSD/macOS); pwd -P is
     current=$(resolve_skill_dir "$dest")
     wanted=$(resolve_skill_dir "$src")
     if [ -n "$current" ] && [ "$current" = "$wanted" ]; then
