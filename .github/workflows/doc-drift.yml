@@ -23,3 +23,9 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/scan-doc-drift.mjs
+      - name: Every graph count in the site and docs matches a graph
+        run: node scripts/check-doc-counts.mjs
+      - name: Every repository path the site and docs name resolves
+        run: node scripts/check-doc-paths.mjs
+      - name: Both graphs traverse, and shared nodes agree on kind
+        run: node scripts/check-graph-traversal.mjs
