@@ -1,23 +1,4 @@
 #!/usr/bin/env node
-// remote-cmp.mjs -- compare a worktree blob against the REMOTE committed blob for the same path.
-//
-// Usage: node remote-cmp.mjs [--repo=owner/name] [--ref=main] <path> [...]
-//
-// One verdict per path:
-//   IDENTICAL  the worktree blob equals the blob committed on that remote ref
-//   DIFFERS    it does not -- the path is genuinely uncommitted (another lane owns it)
-//   ABSENT     the ref carries no blob at that path (a file that is new here)
-//   DIRECTORY  the path is a directory; directories have no blob
-//   ERROR      no comparison happened (unresolvable path, auth, rate limit, network)
-//
-// Every path argument is resolved to a repo-relative POSIX path before it reaches the
-// GitHub contents API: absolute paths, backslashes, a leading "./" and a path typed
-// relative to a subdirectory all land on the same string. The build this replaces passed
-// the argument through untouched, so `C:/dev/spoint/AGENTS.md` was requested as
-// /contents/C:/dev/spoint/AGENTS.md and GitHub answered 404 for EVERY path -- which read
-// as "the remote does not have this file" when nothing had in fact been asked for.
-//
-// Exit status: 0 when every path got a verdict, 1 when any path answered ERROR.
 import { execFileSync } from 'node:child_process'
 import { statSync } from 'node:fs'
 import nodePath from 'node:path'
@@ -66,7 +47,6 @@ try {
 
 const fold = (s) => (process.platform === 'win32' ? s.toLowerCase() : s)
 
-// One repo-relative POSIX path, or null when the argument is not under this repo at all.
 function toRel(raw) {
   let s = String(raw).replace(/^["']+|["']+$/g, '').trim().replace(/\\/g, '/')
   while (s.startsWith('./')) s = s.slice(2)
@@ -170,7 +150,6 @@ for (const raw of targets) {
   }
   let local
   try {
-    // --path applies the .gitattributes clean filter, so the hash is the committed blob.
     local = git(['hash-object', '--path', rel, '--', rel])
   } catch (e) {
     console.log(`${rel}: ERROR git hash-object failed: ${String(e.message || e).split('\n')[0]}`)

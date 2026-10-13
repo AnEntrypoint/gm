@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# One call for the whole picture: watcher health, submodule pins, and the latest failed CI run of each
-# release-facing repo. Usage: doctor.sh   (run from the gm root). Exit 1 if any check fails.
 here=$(cd "$(dirname "$0")" && pwd)
 rc=0
 echo "== watcher"; "$here/runner-status.sh" "$PWD" || rc=1

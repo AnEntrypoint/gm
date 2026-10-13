@@ -1,6 +1,6 @@
 ---
 name: gm-prd
-description: Closes one PRD row through the nine gm stages in one run. Input: row=<id>; session=<SESSION_ID>; optional mode=witness. Owns every PRD-row rule.
+description: "Closes one PRD row through the nine gm stages in one run. Input: row=<id>; session=<SESSION_ID>; optional mode=witness. PRD-row rules are defined in this skill."
 ---
 
 # gm-prd

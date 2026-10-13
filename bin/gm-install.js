@@ -61,8 +61,6 @@ async function vendorMcpBundle() {
     body = await response.text()
     if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
   } catch (err) {
-    // MCP registration, the runner and the skills all come after this step, so an
-    // unreachable host must not abort an install that already has a working bundle.
     if (deployedHash === null) throw new Error(`fetch ${MCP_BUNDLE_URL} failed (${err.message}) and no bundle is deployed at ${MCP_BUNDLE_PATH}`)
     console.log(`WARNING: ${MCP_BUNDLE_URL} unreachable (${err.message}); keeping the deployed bundle at ${MCP_BUNDLE_PATH} (sha256 ${deployedHash}) -- rerun to refresh it`)
     return
@@ -83,17 +81,7 @@ function sha256Short(content) {
   return createHash('sha256').update(content).digest('hex').slice(0, 12)
 }
 
-// --- skill materialisation -------------------------------------------------
-// A skill installed as a COPY drifts from its source silently: the served prose
-// and the source prose become two files. Where a persistent source tree is
-// available (<checkout>/skills, or GM_SKILL_SOURCE_DIR) the install materialises
-// each skill directory as a LINK into that tree, so both paths are one file.
-// Windows: a directory junction (no elevation); elsewhere: a directory symlink.
-// Neither available -> copy, loudly, and record it in the mode ledger.
-
 const SKILL_MODE_LEDGER = '.gm-skill-install-modes'
-// A displaced install is parked under a dotted directory: a plain sibling of the
-// skill directories would itself be discovered and served as a skill.
 const SKILL_PRELINK_DIR = '.gm-skill-prelink'
 
 function skillInstallRoots() {
@@ -112,10 +100,6 @@ function sourceSkillNames(dir) {
   }
 }
 
-// npm unpacks a `github:` spec into its own cache (<prefix>/_npx/<hash>/node_modules/<pkg>)
-// and owns that directory: a later npx run, or `npm cache clean`, removes or replaces it.
-// A skill linked from there is a link to a path the user does not control, so the npx
-// route installs a copy instead and says so, the same way a route with no local source does.
 function isNpmCacheSource(dir) {
   return path.resolve(dir).split(/[\\/]+/).includes('_npx')
 }
@@ -166,8 +150,6 @@ function copyDir(src, dest) {
   fs.cpSync(src, dest, { recursive: true })
 }
 
-// Frees `dest` so a link can take its place. A live install may hold a .gm state
-// directory, so a real directory is moved aside, never deleted.
 function clearDest(dest) {
   const st = lstatOrNull(dest)
   if (!st) return 'absent'
@@ -283,9 +265,6 @@ function skillDriftReport(source, roots) {
   for (const root of roots) {
     for (const name of source.names) rows.push({ root, ...checkSkill({ dir: source.dir, name, root }) })
   }
-  // A copy is the intended mode for a disposable source (the npx route), so only a
-  // content mismatch is drift there; against a checkout, a copy is drift even when
-  // the contents still match, because the next source edit will not reach it.
   const bad = rows.filter(r => r.state === 'DRIFT' || (r.state === 'equal-copy' && !source.disposable))
   for (const r of bad) {
     const why = r.state === 'DRIFT'
@@ -472,8 +451,6 @@ function installRunner() {
   runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'], { shell: IS_WINDOWS })
 }
 
-// The skills were materialised above; a second `npx skills add` run here would install
-// over them from the network and replace each link with a copy of its own.
 await vendorMcpBundle()
 registerOtherHosts()
 registerKnownHostShapes()

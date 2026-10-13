@@ -25,7 +25,7 @@ function extractDefaultsTable(fsmVendorRs, tableName) {
   const tableMatch = fsmVendorRs.match(re);
   if (!tableMatch) return null;
   const entries = [];
-  const rowRe = /\(\s*"([^"]+)"\s*,\s*([A-Za-z_][A-Za-z0-9_:]*)\s*\)/g;
+  const rowRe = /\(\s*"([^"]+)"\s*,\s*([A-Za-z_][A-Za-z0-9_:]*)\s*,?\s*\)/g;
   let row;
   while ((row = rowRe.exec(tableMatch[1])) !== null) {
     entries.push({ key: row[1], constPath: row[2] });
@@ -47,27 +47,35 @@ function placeholdersIn(text) {
   return found;
 }
 
+function requireSource(p) {
+  const text = readIfPresent(p);
+  if (text === null) throw new Error(`source file missing: ${path.relative(root, p)}`);
+  return text;
+}
+
 function deriveKeySpecs() {
-  const fsmVendorRs = readIfPresent(fsmVendorPath);
-  const gatesRs = readIfPresent(gatesRsPath);
-  const residualRs = readIfPresent(residualRsPath);
-  if (!fsmVendorRs || !gatesRs || !residualRs) return null;
+  const fsmVendorRs = requireSource(fsmVendorPath);
+  const gatesRs = requireSource(gatesRsPath);
+  const residualRs = requireSource(residualRsPath);
 
   const gateRows = extractDefaultsTable(fsmVendorRs, 'GATE_DEFAULTS');
   const residualRows = extractDefaultsTable(fsmVendorRs, 'RESIDUAL_DEFAULTS');
-  if (!gateRows || !residualRows || gateRows.length === 0 || residualRows.length === 0) return null;
+  if (!gateRows) throw new Error('could not match `const GATE_DEFAULTS` table in fsm_vendor.rs');
+  if (!residualRows) throw new Error('could not match `const RESIDUAL_DEFAULTS` table in fsm_vendor.rs');
+  if (gateRows.length === 0) throw new Error('GATE_DEFAULTS table in fsm_vendor.rs yielded no rows');
+  if (residualRows.length === 0) throw new Error('RESIDUAL_DEFAULTS table in fsm_vendor.rs yielded no rows');
 
   const specs = [];
   for (const { key, constPath } of gateRows) {
     const constName = constPath.split('::').pop();
     const text = extractConstText(gatesRs, constName) ?? extractConstText(residualRs, constName);
-    if (text === null) return null;
+    if (text === null) throw new Error(`could not extract text of \`const ${constName}: &str\` for gates/${key} (searched gates.rs and residual.rs)`);
     specs.push({ key: `gates/${key}`, constName, placeholders: placeholdersIn(text) });
   }
   for (const { key, constPath } of residualRows) {
     const constName = constPath.split('::').pop();
     const text = extractConstText(residualRs, constName) ?? extractConstText(gatesRs, constName);
-    if (text === null) return null;
+    if (text === null) throw new Error(`could not extract text of \`const ${constName}: &str\` for residual/${key} (searched residual.rs and gates.rs)`);
     specs.push({ key: `residual/${key}`, constName, placeholders: placeholdersIn(text) });
   }
   return specs;
@@ -126,9 +134,14 @@ function reportPlaceholderParity(findings, specs) {
 function resolveConformancePaths() {
   const proseSourceDir = path.join(root, 'rs-plugkit', 'crates', 'plugkit-core', 'src', 'orchestrator', 'instructions', 'prose');
   return {
-    execJsOptsProseMdPath: path.join(proseSourceDir, 'prove.md'),
+    rsPlugkitCratesDir: path.join(root, 'rs-plugkit', 'crates'),
+    proseSourceDir,
     execJsRsPath: path.join(root, 'agentplug', 'crates', 'agentplug-host', 'src', 'exec_js.rs'),
   };
+}
+
+function listProseMdFiles(proseSourceDir) {
+  return fs.readdirSync(proseSourceDir).filter((name) => name.endsWith('.md')).map((name) => path.join(proseSourceDir, name));
 }
 
 function checkEveryRequiredFileExists(requiredFiles) {
@@ -146,13 +159,14 @@ function extractExecJsOptsFieldsFromProse(execJsOptsProseMd) {
   return promisedOptsFields;
 }
 
-function crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs) {
-  const promisedOptsFields = extractExecJsOptsFieldsFromProse(execJsOptsProseMd);
+function crossReferenceExecJsOptsFields(proseText, execJsRs) {
+  const promisedOptsFields = extractExecJsOptsFieldsFromProse(proseText);
   const conformanceFindings = [];
 
   for (const field of promisedOptsFields) {
-    if (!execJsRs.includes(`opts.get("${field}")`)) {
-      conformanceFindings.push(`prove.md promises exec_js opts.${field} with no matching opts.get("${field}") in exec_js.rs`);
+    const optsGetRe = new RegExp(`opts\\s*\\.get\\(\\s*"${field}"\\s*\\)`);
+    if (!optsGetRe.test(execJsRs)) {
+      conformanceFindings.push(`prose promises exec_js opts.${field} with no matching opts.get("${field}") in exec_js.rs`);
     }
   }
   return { conformanceFindings, promisedOptsFieldCount: promisedOptsFields.size };
@@ -160,22 +174,28 @@ function crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs) {
 
 function findConformance() {
   const paths = resolveConformancePaths();
-  const requiredFiles = [paths.execJsOptsProseMdPath, paths.execJsRsPath];
-  const missingFiles = checkEveryRequiredFileExists(requiredFiles);
-
-  if (missingFiles.length > 0) {
-    return { skipped: missingFiles.map((filePath) => path.relative(root, filePath)), findings: [], promisedOptsFieldCount: 0 };
+  if (!fs.existsSync(paths.rsPlugkitCratesDir)) {
+    return { skipped: 'rs-plugkit submodule is not populated (rs-plugkit/crates absent); exec_js opts cross-check NOT run', findings: [], promisedOptsFieldCount: 0 };
   }
 
-  const execJsOptsProseMd = fs.readFileSync(paths.execJsOptsProseMdPath, 'utf8');
+  const missingFiles = checkEveryRequiredFileExists([paths.proseSourceDir, paths.execJsRsPath]);
+  if (missingFiles.length > 0) {
+    const findings = missingFiles.map((filePath) => `required file missing while rs-plugkit is populated: ${path.relative(root, filePath)}`);
+    return { skipped: null, findings, promisedOptsFieldCount: 0 };
+  }
+
+  const proseText = listProseMdFiles(paths.proseSourceDir).map((filePath) => fs.readFileSync(filePath, 'utf8')).join('\n');
   const execJsRs = fs.readFileSync(paths.execJsRsPath, 'utf8');
-  const { conformanceFindings, promisedOptsFieldCount } = crossReferenceExecJsOptsFields(execJsOptsProseMd, execJsRs);
-  return { skipped: [], findings: conformanceFindings, promisedOptsFieldCount };
+  const { conformanceFindings, promisedOptsFieldCount } = crossReferenceExecJsOptsFields(proseText, execJsRs);
+  if (promisedOptsFieldCount === 0) {
+    conformanceFindings.push('no exec_js opts.<field> promises found in any rs-plugkit prose .md file; the cross-check would pass vacuously');
+  }
+  return { skipped: null, findings: conformanceFindings, promisedOptsFieldCount };
 }
 
 function reportConformance(conformance) {
-  if (conformance.skipped.length > 0) {
-    console.log(`prose-conformance: skipping -- missing file(s) (submodules not populated, or a partial/shallow checkout): ${conformance.skipped.join(', ')}`);
+  if (conformance.skipped) {
+    console.log(`prose-conformance: SKIPPED -- ${conformance.skipped}`);
     return;
   }
   if (conformance.findings.length) {
@@ -186,7 +206,16 @@ function reportConformance(conformance) {
   console.log(`prose-conformance: ${conformance.promisedOptsFieldCount} exec_js opts fields all have a matching implementing-code reference`);
 }
 
-const derivedSpecs = deriveKeySpecs();
+const cratesPresent = fs.existsSync(path.join(root, 'rs-plugkit', 'crates'));
+let derivedSpecs = null;
+if (cratesPresent) {
+  try {
+    derivedSpecs = deriveKeySpecs();
+  } catch (err) {
+    console.error(`prose bundle key derivation FAILED (rs-plugkit/crates is present): ${err.message}`);
+    process.exit(1);
+  }
+}
 const keys = derivedSpecs ? derivedSpecs.map((spec) => spec.key) : FALLBACK_GATE_AND_RESIDUAL_KEYS;
 
 if (derivedSpecs) {
