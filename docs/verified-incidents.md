@@ -148,16 +148,16 @@ decision; the runner guard does not cover it.
   paths the request did not name (`allow_staged:true` overrode it), `target_not_ancestor_of_head`,
   and `already_at_target`. Current source has none of these three codes. The pushed-commit refusal
   is `pushed_commit_refused` at `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2197`, in the amend path. `mode:hard` is
-  refused -- this verb never rewrites the worktree.
+  accepted by the current source, which runs `git reset --hard` on `git_reset`; the earlier refusal is not implemented.
 - `git_commit {amend:true}` rewrites the current commit instead of stacking a child, and refuses
   `pushed_commit_refused` (`git.rs:2197`); on an unborn HEAD it fails with "amend requires an existing HEAD commit". `git_commit_dedup_key` carries `amend` so an
   amend is never answered by a replayed non-amend commit.
-- **The `git_commit_dedup_lookup` replay rule is owned by AGENTS.md:90.** The replay checks only `cat-file -e <sha>`, and an object dropped by
+- **The `git_commit_dedup_lookup` replay rule is owned by the AGENTS.md bullet of that name.** The replay checks only `cat-file -e <sha>`, and an object dropped by
   `git_reset_head` is still present, so the canonical repair -- reset HEAD, then re-commit the same
   message over the same paths -- hit the same dedup key and answered `committed:true` with the old
   sha while HEAD never moved. Witnessed live: re-commit after `git_reset_head {count:1}` reported
-  `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Open: the replay does not yet compare `rev-parse HEAD`
-  to the recorded `sha_full` (AGENTS.md:90).
+  `sha 91f22ebd57` and left `rev-list --count HEAD` at 1. Fixed: the replay now compares `rev-parse HEAD`
+  to the recorded `sha_full`.
 - `daemon-guard` respawns the daemon after `Stop-Process`; no manual start is needed.
 
 ## Verified 2026-10-09 (pool drops: causes, empty candidates, unverified nominations)
