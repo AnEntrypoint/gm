@@ -541,16 +541,7 @@ a walk is a graph walk with many distinct paths. The runtime word `phase` is the
 currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
 against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 
-`instruction`, `transition`, `transition-revert`, `phase-status`, `residual-scan`, `claim-audit`,
-`comment-audit`, `submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
-`mutable-resolve`, `mutable-list`, `mutable-defer`, `task-spawn`, `task-list`, `task-stop`,
-`task-output`, `memorize-fire`, `memorize-backfill`, `memorize-continue`, `auto-recall`,
-`discipline`, `discipline-note`, `discipline-check-removal`, `discipline-audit`, `fsm-vendor`,
-`fsm-validate`, `fsm-propose-override`, `predicates-md`, `capability-resolve`,
-`memory-namespace-audit`, `codeinsight-namespace-audit`, `calculus-model-check`,
-`component-loader-reconcile`, `component-loader-hmr`, `dream-policy-register`,
-`dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay`,
-`dream-replay-round`, `pool-brief`.
+`phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `mutable-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `memory-namespace-audit`, `calculus-model-check`, `component-loader-hmr`, `dream-replay` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `mutable-add`, `mutable-resolve`, `mutable-defer`, `task-spawn`, `task-stop`, `memorize-backfill`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal` and `dream-replay-round` are `command`. `memorize-fire` and `auto-recall` keep the classes given with the memory verbs.
 
 `prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
 `{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has no `title`. `status` takes `pending`, `ready`, `completed`, `blocked` or `all` (every open and resolved row). `offset` with `limit` pages the listing: `next_offset` names the next page, null when done.
@@ -604,14 +595,11 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied`. 
 
 ## Storage, cache and diagnostics
 
-`sql_open`, `sql_close`, `sql_list_dbs`, `sql_exec`, `sql_query`, `sql_smoke`, `sql_serialize`,
-`sql_deserialize`, `cache_get`, `cache_put`, `cache_invalidate`, `cache_stats`, `kv_get`, `kv_put`,
-`kv_query`, `env_get`, `health`, `status`, `close`, `config_resolve`, `config-sync-now`,
-`dataflow_resolve`, `tencentdb-compat-probe`, `tencentdb-memory-import`.
+`sql_list_dbs`, `sql_query`, `sql_serialize`, `cache_get`, `cache_stats`, `kv_get`, `kv_query`, `env_get`, `health`, `status`, `dataflow_resolve` and `tencentdb-compat-probe` are `query`; `sql_open`, `sql_close`, `sql_exec`, `sql_smoke`, `sql_deserialize`, `cache_put`, `cache_invalidate`, `kv_put`, `close`, `config_resolve`, `config-sync-now` and `tencentdb-memory-import` are `command`.
 
-`wait {"ms":N}` idles the caller for N milliseconds. `ms` takes a positive integer from 1 to 600000 (`max_ms`, 10 minutes), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
+`wait {"ms":N}` idles the caller for N milliseconds. It is a `command`, since it dispatches a host exec_js call. `ms` takes a positive integer from 1 to 600000 (`max_ms`, 10 minutes), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
 
-`sleep {"ms":N}` shares `wait`'s handler (the orchestrator maps both names to `wait::handle`), so it takes the same body, enforces the same range and returns the same reply.
+`sleep {"ms":N}` shares `wait`'s handler (the orchestrator maps both names to `wait::handle`), so it takes the same body, enforces the same range and returns the same reply and carries the same class.
 
 `learn` is retired.
 
