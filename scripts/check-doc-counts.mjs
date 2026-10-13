@@ -37,10 +37,36 @@ const graphs = [
   },
 }));
 
-// Each claim kind maps to the counts that may satisfy it.
-const allowedFor = (kind) => graphs
-  .filter((g) => g.count[kind] !== null && g.count[kind] !== undefined)
-  .map((g) => [g.count[kind], g.label]);
+// A sentence that names one graph binds its counts to that graph. A sentence naming none or
+// several leaves a count free to match any graph.
+const labelsFor = {
+  'state machine': /state machine|gm-config\/fsm\/graph\.json/i,
+  'hop graph': /hop graph|gm-graph\.json/i,
+  'DADA graph': /DADA graph|dada-graph/i,
+};
+const sentenceAround = (line, index) => {
+  const starts = [line.lastIndexOf('. ', index), line.lastIndexOf('; ', index)];
+  const from = Math.max(0, ...starts.map((i) => (i < 0 ? 0 : i)));
+  const ends = [line.indexOf('. ', index), line.indexOf('; ', index)].filter((i) => i >= 0);
+  const to = ends.length ? Math.min(...ends) : line.length;
+  return line.slice(from, to);
+};
+// An HTML table cell has no sentence of its own, so it takes the graph the nearest preceding
+// line names alone (within 30 lines), which is the paragraph that introduces the table.
+const introducerFor = (lines, index) => {
+  for (let i = index; i >= Math.max(0, index - 30); i -= 1) {
+    const named = Object.keys(labelsFor).filter((label) => labelsFor[label].test(lines[i]));
+    if (named.length === 1) return lines[i];
+  }
+  return '';
+};
+const allowedFor = (kind, sentence) => {
+  const named = Object.keys(labelsFor).filter((label) => labelsFor[label].test(sentence));
+  return graphs
+    .filter((g) => g.count[kind] !== null && g.count[kind] !== undefined)
+    .filter((g) => named.length !== 1 || g.label === named[0])
+    .map((g) => [g.count[kind], g.label]);
+};
 
 const claims = [
   { kind: 'nodes', re: /\b(\d+) (?:graph )?nodes\b/g, groups: [1] },
@@ -76,7 +102,9 @@ for (const rel of files) {
       for (const m of line.matchAll(claim.re)) {
         for (const group of claim.groups) {
           const value = Number(m[group]);
-          const allowed = allowedFor(claim.kind);
+          const inTable = m[0].startsWith('<td>');
+          const context = inTable ? introducerFor(lines, i) : sentenceAround(line, m.index);
+          const allowed = allowedFor(claim.kind, context);
           checked += 1;
           if (!allowed.some(([count]) => count === value)) {
             violations.push(`${rel}:${i + 1}: "${m[0]}" is not a ${claim.kind} count of any graph (${allowed.map(([c, l]) => `${c} ${l}`).join(', ')})`);
