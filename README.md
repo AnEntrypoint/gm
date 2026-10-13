@@ -65,7 +65,7 @@ The `bin/gm` entry point runs a verb from a plain shell, with no agent host and 
 
 The walk is a graph of 146 nodes in `gm-config/fsm/graph.json`: 129 principles, 8 tensions, 7 gates and 2 terminal nodes, joined by 376 edges. No node has a fixed place in a sequence. The agent makes a move by dispatching a verb. It writes a request file to `.gm/exec-spool/in/<verb>/<N>.txt`, and the runner writes the reply to `.gm/exec-spool/out/`. The reply carries the next instruction, or the reason for a refusal.
 
-The plan is the file `.gm/prd.yml`. Each row closes only with recorded `witness_evidence`. Open questions are recorded in `.gm/mutables.yml` and closed with `mutable-resolve`. The walk completes only when the `prd-all-closed` gate passes.
+The plan is one file per row, `.gm/prd/<id>.yml`. Each row closes only with recorded `witness_evidence`. Open questions are one file per mutable, `.gm/mutables/<id>.yml`, and close with `mutable-resolve`. The walk completes only when the `prd-all-closed` gate passes.
 
 ### Tools
 
