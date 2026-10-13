@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skills - gm - 247420</title>
-<meta name="description" content="The gm skills: the entry skill, the four walk skills and the discipline skills shipped beside them, and which verbs the orchestrator serves.">
+<meta name="description" content="gm makes a coding agent record evidence before it marks a task done: each task is a plan row that closes only with a recorded witness. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. Install it (the commands are on the distribution page), then ask your agent to use the gm skill. This page lists the gm skills and the orchestrator verbs.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -58,7 +58,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan of rows that each close with evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The entry skill is <code>/gm</code>, from <code>skills/gm/SKILL.md</code>. It holds the standing rules and points the agent at the walk skills. The prose for the current phase and the live graph state come from the orchestrator through the <code>instruction</code> verb. The release ships eleven skill directories that each contain a <code>SKILL.md</code>: gm, four walk skills and six discipline skills.
+    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose tasks each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server, then type <code>/gm</code> in your coding agent.
   </div>
 </div>
 
@@ -66,32 +66,32 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>What you can do next</h2>
 
-<p>Install with the commands on the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server. In a project, ask the agent to dispatch <code>instruction</code>, which returns the current phase's prose and the state it sits in. The <a href="#orchestrator-verbs">orchestrator verbs</a> section lists the verbs this page documents. <code>skills/gm/docs/verbs.md</code> is the verb inventory, with the body shape of each verb.</p>
+<p>Once <code>/gm</code> is loaded, the agent dispatches <code>instruction</code> to orient, and <code>phase-status</code> for a bare state check. The <a href="#orchestrator-verbs">orchestrator verbs</a> section lists the verbs this page documents, and <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">the verb inventory</a> gives each verb's body shape.</p>
 
 <h2>Terms</h2>
 
 <ul>
   <li><code>walk</code>: one run of the gm state machine that the orchestrator drives to completion.</li>
-  <li><code>plan row</code>: one entry in the plan, also called a PRD row. It closes only with recorded <code>witness_evidence</code>.</li>
+  <li><code>plan row</code>: one entry in the plan. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
-  <li><code>gate</code>: a named check that a graph edge lists in its <code>gates</code>. Each gate names a <code>predicate</code> or a <code>hook</code>. A move along that edge is refused while the check fails.</li>
-  <li><code>mutable</code>: an open question, recorded with <code>mutable-add</code> until a live check answers it.</li>
-  <li><code>dispatch</code>: one request that asks the gm runner to run a verb.</li>
+  <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial, which names the recovery verb.</li>
+  <li><code>mutable</code>: an open question that the agent records instead of asking the user.</li>
+  <li><code>verb</code>: a named gm operation an agent calls, such as <code>codesearch</code> or <code>instruction</code>.</li>
+  <li><code>dispatch</code>: one request an agent sends to run a verb.</li>
 </ul>
 
 <h2>The entry skill</h2>
 
-<p><code>skills/gm/SKILL.md</code> is the only skill an agent loads up front. It sets the autonomy rules, which say how far the agent acts without asking, and the search and git routing: code search goes through <code>codesearch</code>, and git goes through the git verbs.</p>
+<p><code>skills/gm/SKILL.md</code> is the entry skill for engineering work. It sets the autonomy rules, which say how far the agent acts without asking, and the search and git routing: code search goes through <code>codesearch</code>, and git goes through the git verbs.</p>
 
 <h2>The walk skills</h2>
 
-<p>These skills sit beside <code>gm</code>. Each one is loaded by name once a walk starts.</p>
+<p>These skills sit beside <code>gm</code>. <code>gm-orchestrate</code> and <code>gm-hop</code> are invoked only from <code>gm</code> and are not loaded directly.</p>
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">runs the walk loop</span></div>
-  <div class="row"><span class="k">does</span><span>Ticks the subagent pool: it launches plan rows and graph hops, waits on them, and refills freed slots. It also owns the walk loop and its exit check.</span></div>
-  <div class="row"><span class="k">pool terms</span><span><code>ceiling</code> is the most subagents that can run at once. <code>live</code> is the number running now. <code>floor</code> is the live count required while plan rows are open, min(10, ceiling). <code>shortfall</code> is live below the floor while independent work is open and headroom is ok.</span></div>
-</div>
+  <div class="row"><span class="k">does</span><span>Runs the pool loop of a walk: it observes, launches plan rows and graph hops, logs, waits, refills freed slots and exits.</span></div>
+  </div>
 
 <div class="skill">
   <div class="skill-header"><h2>gm-hop</h2><span class="role">one step through the graph</span></div>
@@ -100,7 +100,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-prd</h2><span class="role">closes one plan row</span></div>
-  <div class="row"><span class="k">does</span><span>Closes one plan row through nine stages in one run. Invoked with <code>row=&lt;id&gt;; session=&lt;SESSION_ID&gt;</code>.</span></div>
+  <div class="row"><span class="k">does</span><span>Closes one plan row through nine stages in one run.</span></div>
 </div>
 
 <div class="skill">
@@ -110,15 +110,15 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>The discipline skills</h2>
 
-<p>These skills hold method rather than walk control. Each one is loaded by name when its method fits the task.</p>
+<p>These skills hold method rather than walk control. Each one is loaded when its frontmatter description matches the task.</p>
 
 <table>
-<thead><tr><th>Skill</th><th>Use</th></tr></thead>
+<thead><tr><th>Skill</th><th>Does</th></tr></thead>
 <tbody>
 <tr><td><code>wfgy-method</code></td><td>Drift control: compares each step to the goal and checkpoints before a risky step.</td></tr>
-<tr><td><code>polaris-protocol</code></td><td>Complex, high-stakes or long-horizon work where premature completion or goal drift is a risk.</td></tr>
+<tr><td><code>polaris-protocol</code></td><td>Routes multi-step work to <code>polaris-goal-compiler</code> and <code>fifth-dimension-engine</code>, when a task needs both.</td></tr>
 <tr><td><code>polaris-goal-compiler</code></td><td>Compiles a goal into gated task atoms and claim ceilings.</td></tr>
-<tr><td><code>fifth-dimension-engine</code></td><td>Lifts a complex target into a structured route.</td></tr>
+<tr><td><code>fifth-dimension-engine</code></td><td>Lifts a complex target into a structured route. Use after polaris-goal-compiler, or when a request is written as shoot + [problem].</td></tr>
 <tr><td><code>agent-memory</code></td><td>Sets up TencentDB Agent Memory for agent teams.</td></tr>
 <tr><td><code>dream-rsi</code></td><td>Proposes strategy changes from observation logs and measures gm-graph coverage. It proposes only and never deploys.</td></tr>
 </tbody>
@@ -131,24 +131,20 @@ article tbody tr:hover { background: var(--panel-1); }
 <table>
 <thead><tr><th>Verb</th><th>Does</th></tr></thead>
 <tbody>
-<tr><td><code>instruction</code></td><td>Returns the prose for the current phase, with the plan rows and the open mutables.</td></tr>
+<tr><td><code>instruction</code></td><td>Serves the prose for the current phase. It is the entry point of the walk.</td></tr>
 <tr><td><code>phase-status</code></td><td>Returns the compact state only: the phase, <code>prd_pending_count</code> and the pending mutables, with no prose.</td></tr>
-<tr><td><code>transition</code></td><td>Asks the orchestrator to move to a target node. A refused move is a gate denial, which names the recovery verb.</td></tr>
-<tr><td><code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code></td><td>Add a plan row, close a row with recorded <code>witness_evidence</code>, and list open rows, one file per row in the project's <code>.gm/prd/</code> folder, a per-project runtime path that this repository does not hold. Resolved rows move to <code>.gm/prd-log.jsonl</code>, in the same runtime folder.</td></tr>
-<tr><td><code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code></td><td>Record an open question, close it once a live check answers it, and list the open questions.</td></tr>
-<tr><td><code>fsm-vendor</code></td><td>Copies the graph and the prose into the project so that the project can override them.</td></tr>
+<tr><td><code>transition</code></td><td>Moves the walk to a target node, when the gates on that move allow it.</td></tr>
+<tr><td><code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code></td><td>Adds, resolves and lists plan rows. Each open row is one file in <code>.gm/prd/</code> in the project. A resolved row moves to <code>.gm/prd-log.jsonl</code>.</td></tr>
+<tr><td><code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code></td><td>Add, resolve and list mutables. Each open mutable is one file in <code>.gm/mutables/</code>. A resolved one moves to <code>.gm/mutables-log.jsonl</code>.</td></tr>
+<tr><td><code>fsm-vendor</code></td><td>Writes the compiled default prose into <code>.gm/instructions/</code>, where a vendored file takes precedence over the config repo's cached prose.</td></tr>
 <tr><td><code>codesearch</code>, <code>grep</code></td><td><code>codesearch</code> is ranked search over the project. <code>grep</code> is an exhaustive literal or regex scan that reports each hit as <code>path:line</code>.</td></tr>
 <tr><td><code>recall</code>, <code>memorize</code></td><td>Search the project's memory files in <code>.gm/memories/</code>, and store a memory.</td></tr>
 <tr><td><code>exec_js</code></td><td>Runs code in a subprocess. A leading <code>timeoutMs=&lt;ms&gt;</code> line sets its budget, with a default of 300000 ms.</td></tr>
-<tr><td><code>git_finalize</code>, <code>git_push</code>, <code>git_show</code>, <code>ci-status</code></td><td>Commit and push, show a commit, and check CI for a commit.</td></tr>
-<tr><td><code>health</code></td><td>Reports plugin versions, the subsystem and verb tables, error codes and watcher liveness. Recall and codesearch probes run only when the body sets <code>probes</code> to true.</td></tr>
+<tr><td><code>git_finalize</code>, <code>git_push</code>, <code>git_show</code>, <code>ci-status</code></td><td>Commit and push with <code>git_finalize</code>, publish a named commit with <code>git_push</code>, show a commit with <code>git_show</code>, and check its CI with <code>ci-status</code>.</td></tr>
+<tr><td><code>health</code></td><td>Reports the subsystem and verb tables and the alias table. Recall and codesearch probes run only when the body sets <code>probes</code> to true.</td></tr>
 <tr><td><code>gm_result</code></td><td>Reads a reply that is cut at the reply size limit, from its spill file.</td></tr>
 </tbody>
 </table>
-
-<h2>How the skills install</h2>
-
-<p>Install steps and MCP registration are on the <a href="./distribution.html">distribution page</a>. An install from a checkout links each skill directory into each skill root, <code>~/.claude/skills</code> and <code>~/.agents/skills</code>, rather than copying it: a directory junction on Windows and a symlink elsewhere. So <code>~/.claude/skills/&lt;name&gt;/SKILL.md</code> and <code>&lt;checkout&gt;/skills/&lt;name&gt;/SKILL.md</code> are one file, so an edit to the source reaches both skill roots without a reinstall. The installers run beside <code>skills/</code> or with <code>GM_SKILL_SOURCE_DIR</code> set. With no local source, they copy the release archive.</p>
 
 </article>
 
