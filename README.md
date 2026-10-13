@@ -46,6 +46,8 @@ npx github:AnEntrypoint/gm -g
 
 Drop `-g` to install into the current project. `node bin/gm-install.js` takes `--mcp-only` (repair the MCP registration without reinstalling), `--skills-only`, `--check-skills` and `--force-link`.
 
+Inside a project that uses gm, the same two scripts run again without the `install` argument, for example `curl -fsSL .../install.sh | sh -s -- spool`. In this mode, each script resolves, checks, and runs the `agentplug-runner` binary (the native spool host) from `AnEntrypoint/agentplug-bin` releases. This step replaces the old `bun x gm-plugkit@latest spool` command. gm no longer uses a separate JS (JavaScript, a source-file language this repository tracks) launcher.
+
 The MCP server launches from the local bundle, `~/.gm-tools/gm-mcp-server.mjs`, and never from an `npx` GitHub spec. A spec re-resolves the package on every connect, which under load can exceed the host's connect timeout. To repair a registration:
 
 ```
