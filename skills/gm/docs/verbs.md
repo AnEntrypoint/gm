@@ -445,7 +445,7 @@ the wrong commit is never reported as `ok:true`.
 | add | `{"action":"add","path":"/absolute/checkout","ref":"HEAD","detach":true}` | `added`, `ref`, `detached` |
 | remove | `{"action":"remove","path":"/absolute/checkout"}` | `removed` |
 
-Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existing local branch name to attach it. Remove supplies no force flag: the verb runs `git worktree remove -- <path>` without `--force`. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the body's `cwd`, falling back to `repo`, `root` or `projectPath`.
+Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existing local branch name to attach it. Remove accepts `force:true` to drop a dirty checkout: the verb runs `git worktree remove` with `--force` only when `force` is true. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the body's `cwd`, falling back to `repo`, `root` or `projectPath`.
 
 ## Web
 
