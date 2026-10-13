@@ -1,7 +1,7 @@
 # AGENTS.md
 
 `gm-plugkit` is no longer an npm package or a Node entry point. The launcher
-edge is `install.sh`/`install.ps1` at the repo root: a POSIX shell script and
+edge is `install.sh`/`install.ps1` at the root of the parent `gm` repo (not inside this directory): a POSIX shell script and
 a PowerShell script that download the sha256-verified `agentplug-runner`
 binary directly from `AnEntrypoint/agentplug-bin` GitHub Releases, verify it,
 and exec it -- zero npm, npx, bun, or node in the critical boot path.
