@@ -1,20 +1,4 @@
 #!/usr/bin/env node
-// Per-phase dispatch count and median wall time for one gm session.
-//
-// Dispatches are the spool out records of one session: <verb>-<session>-<pid>-<ms>-<seq>.json
-// (and instruction .reply.txt files). Each carries a dispatch_id. The <ms> stamp in the
-// file name is the dispatch's start, the same clock the gm-mcp server logs as
-// dispatch-start. The server log's dispatch-end event carries the duration (ms) and its
-// end timestamp, so the start it implies is ts - ms. A record joins to the dispatch-end
-// with the same verb whose implied start lies within GM_JOIN_TOL_MS of the record's stamp.
-// Phase comes from phase-status responses and instruction replies of the session; a
-// dispatch takes the latest phase reported at or before its start.
-//
-// usage: node scripts/walk-spend.mjs <session_id>
-// env:   GM_SPOOL_OUT    spool out directory (default: <repo>/.gm/exec-spool/out)
-//        GM_MCP_LOG      gm-mcp server log (default: ~/.gm-tools/gm-mcp-server.log)
-//        GM_JOIN_TOL_MS  join tolerance in ms (default: 1500)
-
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -87,7 +71,6 @@ const phaseAt = (t) => {
   return current;
 };
 
-// Entries per phase: runs of the same phase in the reported timeline (re-entry = entries - 1).
 const entries = new Map();
 let prev = null;
 for (const ev of phaseEvents) {
@@ -95,7 +78,6 @@ for (const ev of phaseEvents) {
   prev = ev.phase;
 }
 
-// Server-log dispatch-end events indexed by verb, each with the start it implies.
 const endsByVerb = new Map();
 let logNote = null;
 if (!existsSync(logPath)) {

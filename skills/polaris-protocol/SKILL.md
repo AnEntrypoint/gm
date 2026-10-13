@@ -1,6 +1,6 @@
 ---
 name: polaris-protocol
-description: "Load for complex, multi-step, high-stakes, or long-horizon work where premature completion or goal drift is a risk."
+description: "Entry point that routes multi-step work to polaris-goal-compiler (compile the goal into atoms) and fifth-dimension-engine (shoot a complex atom into a route). Load only when a task needs both; does not cover drift control (wfgy-method) or the work itself."
 license: MIT
 compatibility: "Portable protocol; upstream released the Goal Compiler ChatGPT-first (teaser) and the Fifth-Dimension Engine as the main product surface. This skill wraps both plus WFGY-Method drift control into one discoverable entry point for any assistant or agent that loads skills."
 metadata:

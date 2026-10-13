@@ -1,9 +1,5 @@
 name: npx-route
 
-# Guards the one command a user types to install gm: `npx github:AnEntrypoint/gm -g`.
-# When this goes red, npm cannot pick an executable from package.json's bin map, so
-# npx exits with "could not determine executable to run" before any gm code runs,
-# and the documented install route in README.md is dead for every new user.
 
 on:
   push:
