@@ -2,8 +2,8 @@
 <html lang="en" class="ds-247420" data-theme="auto"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>showcase - gm - 247420</title>
-<meta name="description" content="gm is the canonical universal harness: skill-driven orchestration for AI-native software engineering. This page lists selected AnEntrypoint repositories.">
+<title>gm showcase: AnEntrypoint repositories (247420)</title>
+<meta name="description" content="Selected AnEntrypoint repositories, starting with gm.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -27,6 +27,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
 .tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag { background: var(--panel-2); color: var(--panel-text-2); border: 1px solid var(--panel-3); font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-family: var(--ff-mono, monospace); }
 .tag.status { border-style: dashed; color: var(--panel-text-3); }
+@media (max-width:640px){ main > a { grid-template-columns: 1fr; gap: 6px; } }
 </style>
 <style>
 .gm-topbar{display:flex;align-items:center;gap:14px;padding:10px 22px;background:var(--panel-1);box-shadow:var(--panel-shadow);border-bottom:1px solid var(--panel-3);position:sticky;top:0;z-index:50}
@@ -53,7 +54,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
   <div class="gm-brand"><span>247420</span><span class="slash"> / </span><span class="leaf">gm</span></div>
   <nav>
     <a href="https://247420.xyz">home</a>
-    <a href="./paper.html" title="the gm paper">paper</a>
+    <a href="./paper.html">gm paper</a>
     <details class="gm-dd"><summary>docs</summary><div class="gm-dd-menu">
       <a href="./crates.html">crates</a>
       <a href="./skills.html">skills</a>
@@ -70,7 +71,8 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
 
   <header>
     <h1>gm showcase: AnEntrypoint repositories</h1>
-    <p>Start with gm: install it from <a href="./distribution.html">distribution</a> or read its <a href="./skills.html">skills</a>. The other entries are selected repositories from the <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:var(--panel-accent)">AnEntrypoint</a> GitHub organization. Each card shows its repository's description, copied from GitHub when GitHub has one, with each em-dash written as a colon and each decorative glyph left out. Archived repositories come after the active ones, are marked, and are read-only.</p>
+    <p>gm is a skill-driven orchestration harness for AI-native software engineering. It is for coding, refactoring, debugging and engineering work. To use gm, install it from <a href="./distribution.html">distribution</a>. To see what it does, read <a href="./skills.html">skills</a>.</p>
+    <p>The other entries are selected repositories from the <a href="https://github.com/orgs/AnEntrypoint" target="_blank" rel="noopener" style="color:var(--panel-accent)">AnEntrypoint</a> GitHub organization. Descriptions are the repositories' GitHub descriptions, or a summary of each README where GitHub has none. Dashes in descriptions are written as colons. Archived repositories are listed last and marked.</p>
   </header>
   <main>
     <h2 class="group">gm</h2>
@@ -78,7 +80,6 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <div class="card-top">
         <span class="repo-name">gm</span>
       </div>
-      <p class="desc">gm: the canonical universal harness: skill-driven orchestration for AI-native software engineering</p>
       <div class="tags"><span class="tag">harness</span> <span class="tag">skills</span></div>
     </a>
 
@@ -115,6 +116,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <div class="card-top">
         <span class="repo-name">codebasesearch</span>
       </div>
+      <p class="desc">Semantic code search across a repository, from the CLI or as an MCP server.</p>
       <div class="tags"><span class="tag">search</span> <span class="tag">MCP</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/floosie" target="_blank" rel="noopener" class="card">
@@ -128,7 +130,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <div class="card-top">
         <span class="repo-name">godot-kit</span>
       </div>
-      <p class="desc">Agentic Godot 4.x development boilerplate - REPL/CLI debugging, gdtoolkit, DAP, scene inspector</p>
+      <p class="desc">Agentic Godot 4.x development boilerplate: REPL/CLI debugging, gdtoolkit, DAP, scene inspector</p>
       <div class="tags"><span class="tag">godot</span> <span class="tag">gamedev</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/thebird" target="_blank" rel="noopener" class="card">
@@ -142,6 +144,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <div class="card-top">
         <span class="repo-name">thorns</span>
       </div>
+      <p class="desc">Cross-platform codebase analysis with tree-sitter: dependency graph, code duplication, coupling and file sizes.</p>
       <div class="tags"><span class="tag">MCP</span> <span class="tag">tools</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/wasivst" target="_blank" rel="noopener" class="card">
@@ -158,10 +161,12 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <p class="desc">Production-ready Push-to-Talk application with Opus codec, dynamic rooms, and audio replay</p>
       <div class="tags"><span class="tag">audio</span> <span class="tag">WebRTC</span></div>
     </a>
+    <h2 class="group">archived</h2>
     <a href="https://github.com/AnEntrypoint/acpreact" target="_blank" rel="noopener" class="card">
       <div class="card-top">
         <span class="repo-name">acpreact</span> <span class="tag status">archived</span>
       </div>
+      <p class="desc">Multi-agent ACP SDK with chat platform adapters and a zero-dependency TUI.</p>
       <div class="tags"><span class="tag">react</span> <span class="tag">frontend</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/ancient-anguish" target="_blank" rel="noopener" class="card">
@@ -196,6 +201,7 @@ main > h2.group { font-family: var(--ff-mono); font-size: 12px; font-weight: 600
       <div class="card-top">
         <span class="repo-name">hyper-nat</span> <span class="tag status">archived</span>
       </div>
+      <p class="desc">Tunnels UDP and TCP connections peer to peer, so network tools and LAN games work over the internet.</p>
       <div class="tags"><span class="tag">networking</span> <span class="tag">p2p</span></div>
     </a>
     <a href="https://github.com/AnEntrypoint/jit-render" target="_blank" rel="noopener" class="card">
