@@ -48,11 +48,6 @@ jobs:
       - name: Verify the graph page is in the build output
         run: test -f dist/graph/index.html && test -f dist/dada-graph/index.html
 
-      - name: Fetch live release + npm download data
-        run: node scripts/fetch-live-data.mjs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Copy docs API data into dist
         run: |
           mkdir -p dist/docs/api

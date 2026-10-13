@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>distribution - gm - 247420</title>
-<meta name="description" content="gm's distribution: skills, a native WASM runner, and a local MCP server from public source.">
+<meta name="description" content="How gm is installed and checked: the install commands, the MCP server registration, the runner build check, the source ownership table and the release evidence.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -81,7 +81,6 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
     </div></details>
     <details class="gm-dd"><summary>more</summary><div class="gm-dd-menu">
       <a href="./made-with.html">showcase</a>
-      <a href="./stats.html">stats</a>
       <a href="https://247420.xyz">247420</a>
       <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener">GitHub</a>
     </div></details>
@@ -92,22 +91,22 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <div class="title-block">
   <h1>How gm is installed<br>and checked</h1>
   <div class="author">AnEntrypoint</div>
-  <div class="date">May 2026</div>
 </div>
 
 <div class="abstract-block">
-  <div class="abstract-title">Thesis</div>
+  <div class="abstract-title">Summary</div>
   <div class="abstract-text">
-    gm installs skills, a native WebAssembly host, and a local Model Context Protocol server from public source. The scripts check release checksums for the skill archive and runner. The agent drives the workflow through the installed server or project spool.
+    gm installs its skills, the native <code>agentplug-runner</code> and a local Model Context Protocol (MCP) server bundle. The installers check SHA-256 checksums for the skill archive and the runner. The agent drives the walk through the spool that the installed runner serves.
   </div>
 </div>
 
 <article>
-<h2>1. Install gm</h2>
 
-<p class="first">The <code>gm-skill</code> release contains the skills. The installers also download the native <code>agentplug-runner</code> host and the local Model Context Protocol (MCP) server bundle. Users do not need a Rust build toolchain.</p>
+<h2>What you can do next</h2>
 
-    <p>Use one route. <code>install.sh</code> or <code>install.ps1</code> installs the skill and the runner. <code>npx github:AnEntrypoint/gm -g</code> installs the skill and registers the MCP server in every detected agent host.</p>
+<p>Run one installer below, then check the installed runner with <code>--build-info</code> (section 4). Register the MCP server with the repair command in section 3 if your agent host does not list the <code>gm</code> tool.</p>
+
+<h2>1. Install</h2>
 
 <p>On macOS or Linux:</p>
 <pre><code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code></pre>
@@ -115,26 +114,21 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <p>In Windows PowerShell:</p>
 <pre><code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code></pre>
 
-<p>The scripts check SHA-256 checksums for the skill archive and runner download. They get the MCP bundle from the public <code>gm-mcp</code> repository. The bundle download does not have a release checksum check.</p>
+<p>The scripts download the release archive and the runner. Each download is checked against its published SHA-256 file. The scripts also download the gm-mcp server bundle. If that download fails, the installer warns, and the spool protocol still works without the bundle.</p>
 
-<p>To install the skill and MCP registration in detected agent hosts, use the Node.js installer:</p>
-<pre><code>node bin/gm-install.js -g</code></pre>
+<p>To install the skills and register the MCP server in every detected agent host, use one command:</p>
+<pre><code>npx github:AnEntrypoint/gm -g</code></pre>
 
-<p>Omit <code>-g</code> for a project installation. The published source defines the supported installer options in <code>bin/gm-install.js</code>.</p>
+<p>Drop <code>-g</code> to install into the current project only. The Node.js installer <code>bin/gm-install.js</code> also takes <code>--mcp-only</code>, which repairs an MCP registration without reinstalling anything, and <code>--skills-only</code>, which installs only the skills.</p>
 
 <h2>2. Run a verb from a shell</h2>
 
-<p class="first">A verb does not need an agent host. In a checkout, <code>./bin/gm</code> forwards to gm-mcp's own <code>dispatch</code> subcommand, which is the same dispatch the <code>gm</code> MCP tool runs, so a plain shell reaches the project spool with no MCP client in the loop.</p>
+<p>A verb does not need an agent host. In a checkout, <code>./bin/gm</code> forwards to the same dispatch that the <code>gm</code> MCP tool runs, so a plain shell reaches the project spool with no MCP client in the loop.</p>
 <pre><code>./bin/gm codesearch literal BUNDLE_VERSION --path gm-mcp/src</code></pre>
 
-<p>That sugar form builds <code>{"query","mode","path"}</code>. It applies to the search verbs (<code>grep</code>, <code>rg</code>, <code>codesearch</code>, <code>code_search</code>, <code>search</code>) only, because a mode word is not a dispatch body. Any argument starting with <code>{</code> or <code>@</code>, and every other verb, passes through untouched:</p>
-<pre><code>./bin/gm codesearch '{"query":"BUNDLE_VERSION","mode":"literal","path":"gm-mcp/src"}'</code></pre>
+<h2>3. Connect the MCP server</h2>
 
-<p><code>--cwd</code>, <code>--timeout</code> and <code>--no-ignore</code> stay dispatch flags, never body fields. <code>npm link</code> in a checkout puts the entrypoint on PATH as <code>gm-dispatch</code>.</p>
-
-<h2>3. Connect the installed MCP server</h2>
-
-<p class="first">The installed bundle is <code>~/.gm-tools/gm-mcp-server.mjs</code>. Agent hosts launch it with Node.js. A registration uses this local file, so each connection does not reinstall a GitHub package.</p>
+<p>The installed bundle is <code>~/.gm-tools/gm-mcp-server.mjs</code>. Agent hosts launch it with Node.js from that local file. A registration never launches the server from an <code>npx</code> GitHub spec, because that path re-resolves the package on every connect and can exceed the host's connect timeout.</p>
 
 <p>To repair a user registration:</p>
 <pre><code>node bin/gm-install.js -g --mcp-only</code></pre>
@@ -142,47 +136,34 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <p>To repair a project registration:</p>
 <pre><code>node bin/gm-install.js --mcp-only</code></pre>
 
-<p>Restart the agent host after a registration change. A running session retains the connection that it opened.</p>
+<p>Restart the agent host after a registration change.</p>
 
-<p>The server also supports a shared HTTP transport on the local machine. In Claude Code, register that transport with:</p>
+<p>The server also serves stateless streamable HTTP on the local machine, at <code>http://127.0.0.1:8787/mcp</code>. In Claude Code, register that transport with:</p>
 <pre><code>claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user</code></pre>
 
-<p>Start the shared HTTP server through the installed bundle:</p>
+<p>Start the shared HTTP server, or confirm that one is listening, with:</p>
 <pre><code>node ~/.gm-tools/gm-mcp-server.mjs ensure-http</code></pre>
 
-<p>The default transport uses the host's standard input and output pipes. A lost pipe ends that connection. The HTTP transport permits a client to reconnect.</p>
+<p><code>ensure-http</code> starts the server when no listener exists. <code>http-supervise</code> is the subcommand that supervises the server.</p>
 
-<p>Every entry point leaves the shared HTTP server running. <code>ensure-http</code> starts <code>http-supervise</code>, a background watchdog that checks <code>/health</code> every 15 seconds and restarts the server after two failed checks in a row. <code>gm-mcp/scripts/install-autostart.mjs</code> adds a boot hook and a one-minute crontab check, so the port is listening before any session starts.</p>
-
-<p>A reply is bounded: gm-mcp cuts a response at 24,000 characters and writes the rest to a spill file under <code>.gm/exec-spool/out/</code> that the truncation notice names. <code>gm_result</code> reads that file back from any project's spool, not only the one this server started in: <code>result_file</code> takes the absolute path or a name resolved through <code>cwd</code>, <code>field</code> reads one key, and <code>offset</code> with <code>limit</code> (1 to 16,000) page through it.</p>
+<p>A reply longer than 24,000 characters is cut. The rest goes to a spill file under <code>.gm/exec-spool/out/</code>, and <code>gm_result</code> reads that file.</p>
 
 <h2>4. Inspect the installed runner</h2>
 
-<p class="first">The runner executes WebAssembly (WASM) plugins and serves project spool requests. The agent drives the workflow through those requests. The daemon can serve several projects on one machine.</p>
-
-<p>On macOS or Linux, inspect the runner's build identity:</p>
+<p>On macOS or Linux, print the runner's build identity:</p>
 <pre><code>~/.gm-tools/agentplug-runner --build-info</code></pre>
 
 <p>In Windows PowerShell:</p>
 <pre><code>&amp; "$env:USERPROFILE\.gm-tools\agentplug-runner.exe" --build-info</code></pre>
 
-<p>The identity includes the compiled commit and release-build flag. The runner protects a local build from replacement by its automatic release updater. An update refusal can also come from the configured update guard.</p>
+<p>The output names the compiled commit and whether the build is a release build. Build identity checks compare the <code>commit</code> and <code>release_build</code> fields that <code>--build-info</code> reports, never the version string, because a release with the same version number can be a downgrade. The installers verify each download against its <code>.sha256</code> file.</p>
 
-<p>Release checks use the <code>.sha256</code> file published beside each release, not the version string, because a same-version release can be a downgrade. The release bridge upgrades the installed runner and the guest plugin from that sidecar. gm-mcp runs the deployed-bundle staleness check on a timer in every process, HTTP included, instead of only at startup: a long-lived server that swaps in a refreshed bundle closes its listening socket, spawns the replacement, and exits only once the replacement answers <code>/health</code> with a different pid.</p>
-
-<p>Check the reported build identity and update refusal before changing an installation. Keep project state and runtime state available for diagnosis. The project status file is <code>.gm/exec-spool/.status.json</code>.</p>
-
-<p>When the installed runner is absent from the process table, the documented spool entry point starts it. A fresh heartbeat alone does not prove that the process still exists.</p>
-
-<p>On macOS or Linux:</p>
+<p>The runner serves the project spool. Its status file is <code>.gm/exec-spool/.status.json</code>. A fresh heartbeat does not prove that the runner process exists. Start the spool host with:</p>
 <pre><code>~/.gm-tools/agentplug-runner spool</code></pre>
-
-<p>In Windows PowerShell:</p>
-<pre><code>&amp; "$env:USERPROFILE\.gm-tools\agentplug-runner.exe" spool</code></pre>
 
 <h2>5. Source ownership</h2>
 
-<p class="first">The root <code>.gitmodules</code> file lists the dependency repositories. Clone their source when developing a dependency:</p>
+<p>The root <code>.gitmodules</code> file lists 11 submodules. Clone them when you develop one of these dependencies:</p>
 <pre><code>git clone --recurse-submodules https://github.com/AnEntrypoint/gm.git</code></pre>
 
 <p>For an existing checkout:</p>
@@ -192,33 +173,31 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <thead><tr><th>Source</th><th>Responsibility</th></tr></thead>
 <tbody>
 <tr><td><code>skills/gm/SKILL.md</code></td><td>Agent workflow and tool routing.</td></tr>
-<tr><td><code>gm-config/</code></td><td>Default phase instructions, gates, messages, and workflow graph.</td></tr>
-<tr><td><code>rs-plugkit/</code></td><td>The gm WASM guest, orchestration, memory, and code search.</td></tr>
-<tr><td><code>agentplug/</code></td><td>The native <code>agentplug-runner</code> WASM host.</td></tr>
+<tr><td><code>gm-config/</code></td><td>Default prose, gate text, messages and the workflow graph (<code>fsm/graph.json</code>).</td></tr>
+<tr><td><code>rs-plugkit/</code></td><td>The gm WASM guest: orchestration, memory and code search.</td></tr>
+<tr><td><code>agentplug/</code></td><td>The native <code>agentplug-runner</code> host.</td></tr>
 <tr><td><code>gm-mcp/</code></td><td>The MCP wrapper around spool request and response handling.</td></tr>
-<tr><td><code>agentplug-bert/</code>, <code>agentplug-libsql/</code>, <code>agentplug-treesitter/</code></td><td>Shared embedding, database, and syntax plugins.</td></tr>
-<tr><td><code>rs-codeinsight/</code>, <code>rs-search/</code></td><td>Code analysis and search sources.</td></tr>
-<tr><td><code>agentplug-crux/</code></td><td>Signal-concentration plugin source.</td></tr>
-<tr><td><code>vendor/tencentdb-agent-memory/</code></td><td>The optional TencentDB-compatible memory system.</td></tr>
+<tr><td><code>agentplug-bert/</code>, <code>agentplug-libsql/</code>, <code>agentplug-treesitter/</code></td><td>Shared embedding, database and syntax plugins.</td></tr>
+<tr><td><code>rs-codeinsight/</code>, <code>rs-search/</code></td><td>Code structure analysis and the code search backend.</td></tr>
+<tr><td><code>agentplug-crux/</code></td><td>Plugin source.</td></tr>
+<tr><td><code>vendor/tencentdb-agent-memory/</code></td><td>The vendored TencentDB-compatible memory system.</td></tr>
 </tbody>
 </table>
 
-<p>Code, history, and memory indexes share the project database at <code>.gm/gm.db</code>. Durable memory documents live under <code>.gm/memories/</code>. See <a href="https://github.com/AnEntrypoint/gm/blob/main/README.md">README.md</a> and <a href="https://github.com/AnEntrypoint/gm/blob/main/AGENTS.md">AGENTS.md</a> for the source and runtime contracts.</p>
+<p>Durable memory documents live under <code>.gm/memories/</code>. The root <a href="https://github.com/AnEntrypoint/gm/blob/main/README.md">README.md</a> and <a href="https://github.com/AnEntrypoint/gm/blob/main/AGENTS.md">AGENTS.md</a> hold the source and runtime contracts.</p>
 
 <h2>6. Release evidence</h2>
 
-<p class="first">The <code>skill-release.yml</code> workflow runs when a push to <code>main</code> changes <code>skills/**</code>. It increases the package version, packages the skills, and publishes a GitHub Release archive with its SHA-256 file.</p>
+<p>The <code>skill-release.yml</code> workflow runs on a push to <code>main</code> that changes <code>skills/**</code>. It bumps the version in <code>gm.json</code> and <code>package.json</code>, packages the skills into <code>gm-skill-&lt;version&gt;.tar.gz</code>, and publishes the archive with its SHA-256 file to a tagged GitHub Release.</p>
 
-<p>The runner has a separate release workflow in <code>agentplug/</code>. Its release assets are published to <code>AnEntrypoint/agentplug-bin</code>. The source workflows define the build targets and update channel.</p>
+<p>The runner publishes from <code>agentplug</code> to the <code>AnEntrypoint/agentplug-bin</code> releases. A commit or a push does not prove that a release exists. Check the workflow run and fetch the expected artifact before you treat a release as published.</p>
 
-<p>A commit or push alone does not prove that a release exists. Inspect the workflow result and fetch the expected artifact before treating publication as complete.</p>
+<p>A change to the MCP wrapper requires rebuilding its committed bundle. A change to a dependency requires updating its pin in the root submodule.</p>
 
-<p>Source changes to the MCP wrapper require rebuilding its committed bundle. Changes to a dependency require updating the root submodule pin.</p>
 </article>
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
-<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> - <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
-<span>probably emerging</span>
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> and <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
 </footer>
 
 </body></html>
