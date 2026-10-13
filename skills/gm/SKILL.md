@@ -87,7 +87,7 @@ Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; ca
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
 **Start, never install -- and never a second one.** A dead watcher is one whose
-status `ts` is more than 300000 ms old with no future `busy_until`, or whose status
+status `ts` is older than the heartbeat threshold in `scripts/triage/runner-status.sh` with no future `busy_until`, or whose status
 `pid` is proven absent. A recent timestamp only proves that a process wrote once, so
 the timestamp alone never proves liveness. In either verified-dead case, the
 already-installed local binary is not running. Start it as
