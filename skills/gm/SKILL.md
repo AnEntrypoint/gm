@@ -273,7 +273,7 @@ the state's purpose and this project's substrate match the anchor's domain. No
 match is expected and normal -- run on Section 2. An anchor never overrides a gate.
 
 **Frame** — XY Problem; Naur; Cynefin (Snowden); Spike Solution (Beck); First
-Principles; JTBD (Christensen).
+Principles; JTBD (Christensen). XY check: restate the stated request and the problem it serves; when they differ, re-scope the row to the real problem before any edit.
 **Specify** — EARS; INVEST; Cockburn Use Cases; Quality Attribute Scenario;
 MoSCoW; Impact Mapping; Definition of Done.
 **Change** — Mikado Method; small batches (Reinertsen); characterization
