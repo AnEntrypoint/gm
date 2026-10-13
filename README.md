@@ -52,7 +52,7 @@ Inside a project, run the same script with the argument `spool`, for example `cu
 - **edge**: a move from one graph state to another. A gate can sit on an edge and refuse the move.
 - **predicate**: the check a gate runs, named in the `gates` array of `gm-config/fsm/graph.json`.
 - **verb**: a command the agent sends to gm, such as `codesearch` or `git_status`.
-- **spool**: the file queue under `.gm/exec-spool/`. A request is a file in `in/`, and the runner writes the reply to `out/`.
+- **spool**: the file queue under `.gm/exec-spool/`. A request is a file in `.gm/exec-spool/in/`, and the runner writes the reply to `.gm/exec-spool/out/`.
 - **plan row**: one task, stored as a file at `.gm/prd/<id>.yml`.
 - **mutable**: one open question, stored as a file at `.gm/mutables/<id>.yml`.
 - **principle**: one discipline, usually from a book or author, that the agent applies to the code, such as Jobs To Be Done (Clayton Christensen).
@@ -75,11 +75,11 @@ You describe a change, the agent works through plan rows, and each step runs a c
 
 The agent sends each move as a `transition` verb, and gm replies with the next instruction or the reason for a refusal.
 
-Each plan row closes only with recorded `witness_evidence`. Each mutable, one open question, closes with `mutable-resolve`.
+Each plan row closes only with recorded `witness_evidence`, a string that `prd-resolve` takes beside the row `id`, naming a file:line, codesearch hit or exec output specific to that row. Each mutable, one open question, closes with `mutable-resolve`.
 
 ### The graph
 
-The graph has 146 states, listed under `states` in `gm-config/fsm/graph.json`: 129 principles, 8 tensions, 6 gate states and 3 terminal states, joined by 376 edges. The walk starts at the `JTBD` principle node (`policy.initial_phase` in `gm-config/fsm/graph.json`) and ends on the edge from the gate state `G_SWEEP` into `COMPLETE`. Between them, each move follows an edge, and the gates on that edge decide it.
+The graph has 146 states, listed under `states` in `gm-config/fsm/graph.json`: 129 principles, 8 tensions (nodes whose `kind` is `tension`, such as `OUSTERHOUTC`), 6 gate states and 3 terminal states, joined by 376 edges. The walk starts at the `JTBD` principle node (`policy.initial_phase` in `gm-config/fsm/graph.json`) and ends on the edge from the gate state `G_SWEEP` into `COMPLETE`. Between them, each move follows an edge, and the gates on that edge decide it.
 
 ### Tools
 
@@ -104,7 +104,7 @@ To change gm's prompts or gate text for one project, run `fsm-vendor` in that pr
 
 **A configuration repository controls gm's behavior in the project, including its gate hooks, so point a project's configuration only at a repository you trust.**
 
-A prose tier that cannot be used makes gm serve its compiled default and emit a `prose_tier_degraded` event. An unreachable configuration repository makes gm serve the compiled default and record the reason in `.gm/exec-spool/.config-repo-unreachable.json`.
+gm reads served prose from three tiers, in order: the project vendored file in `.gm/instructions/`, then the cached configuration repository, then the compiled default. A tier that cannot be used makes gm serve the compiled default and emit a `prose_tier_degraded` event. An unreachable configuration repository makes gm serve the compiled default and record the reason in `.gm/exec-spool/.config-repo-unreachable.json`.
 
 ## Memory
 
@@ -127,8 +127,6 @@ The root `.gitmodules` file lists 11 submodules:
 - `vendor/tencentdb-agent-memory/`: the vendored alternate memory backend.
 
 The gate predicate registry is `rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs`. A predicate that a graph names but the registry lacks is refused as `fsm_unknown_predicate`, so the registry is the source of truth. The advisory gates are `lean-contract-only-description` and `lean-verifier-independent`.
-
-A request is a file under `.gm/exec-spool/in/`, and the runner writes the reply to `.gm/exec-spool/out/`.
 
 `node bin/gm-install.js` takes `--mcp-only` (repair the MCP registration without reinstalling), `--skills-only`, `--check-skills`, `--force-link`, and `-g` or `--global`.
 
