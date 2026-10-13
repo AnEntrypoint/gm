@@ -1,5 +1,5 @@
 id: distribution
 title: Install gm and check it works
-description: gm is a state machine for coding agents. This page covers installing its skills, the agentplug-runner binary and the local MCP server, and checking that each one works.
+description: gm is a state machine that decides when a coding agent's work is done. This page installs it for Claude Code, Cursor, Codex or Gemini and checks the runner.
 layout: article
 source: ../docs/distribution.html
