@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// Generates the graph pages that flatspace hosts (docs/graph.html at /graph/ and
-// docs/dada-graph.html at /dada-graph/) and mirrors each graph source to docs/api/.
-//
-// One code path renders every entry of GRAPHS. Every number on a page is derived
-// here from that entry's graph JSON. Nothing is hand-written: the description that
-// each pageSource YAML carries is rewritten here too, so a graph change cannot leave
-// a stale count behind. A graph that cannot be rendered as a walkable node-to-node
-// page is a build failure with a named reason code, never a silently broken page.
-// Every page is rendered before the first file is written, so a refused graph
-// leaves every output untouched.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,8 +63,6 @@ const renderGraph = (entry) => {
     byId.set(node.id, node)
   }
 
-  // A broken edge would render as a link to an anchor that does not exist, so the
-  // page is refused instead of shipped with dead traversal.
   const broken = edges.filter((edge) => !byId.has(edge.from) || !byId.has(edge.to))
   if (broken.length > 0) {
     const named = broken.slice(0, 10).map((edge) => `${edge.from} -> ${edge.to}`).join(', ')
@@ -119,8 +107,6 @@ const renderGraph = (entry) => {
     incoming.get(edge.to).push(edge)
   }
 
-  // A node with no edge in either direction is unreachable by traversal: it would
-  // sit on the page with nothing to click and nowhere to be clicked from.
   const unlinked = nodes.filter((node) => !outgoing.has(node.id) && !incoming.has(node.id))
   if (unlinked.length > 0) {
     fail('graph_unlinked_node', `${unlinked.length} node(s) carry no edge in either direction: ${unlinked.slice(0, 10).map((node) => node.id).join(', ')}`)
@@ -259,7 +245,6 @@ ${edgeRows}
 </details>
 `
 
-  // The page is only walkable if every anchor exists and every hop link rendered.
   for (const node of nodes) {
     if (!page.includes(`id="${anchorOf(node.id)}"`)) fail('graph_page_missing_anchor', `no anchor rendered for ${node.id}`)
   }

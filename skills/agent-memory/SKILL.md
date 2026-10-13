@@ -6,7 +6,7 @@ metadata:
   origin: AnEntrypoint/agent-memory
   upstream: TencentCloud/TencentDB-Agent-Memory
   provenance: published-fork-repackaged-as-skill
-allowed-tools: Skill, Read, Write, Bash, WebFetch
+allowed-tools: Read, Write, Bash
 ---
 
 # agent-memory

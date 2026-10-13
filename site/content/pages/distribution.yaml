@@ -1,5 +1,5 @@
 id: distribution
-title: distribution
-description: gm installs its skills, a native WebAssembly (WASM) runner and a local Model Context Protocol (MCP) server from public source. Check the installed entry points and the release evidence.
+title: Install gm and check it works
+description: gm is a state machine for coding agents. This page covers installing its skills, the agentplug-runner binary and the local MCP server, and checking that each one works.
 layout: article
 source: ../docs/distribution.html
