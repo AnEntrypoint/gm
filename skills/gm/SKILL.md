@@ -87,7 +87,7 @@ Boot probe, one call: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; ca
 .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
 
 **Start, never install -- and never a second one.** A dead watcher is one whose
-status `ts` is more than 300000 ms old with no future `busy_until`, or whose status
+status `ts` is older than the heartbeat threshold in `scripts/triage/runner-status.sh` with no future `busy_until`, or whose status
 `pid` is proven absent. A recent timestamp only proves that a process wrote once, so
 the timestamp alone never proves liveness. In either verified-dead case, the
 already-installed local binary is not running. Start it as
@@ -273,7 +273,7 @@ the state's purpose and this project's substrate match the anchor's domain. No
 match is expected and normal -- run on Section 2. An anchor never overrides a gate.
 
 **Frame** — XY Problem; Naur; Cynefin (Snowden); Spike Solution (Beck); First
-Principles; JTBD (Christensen).
+Principles; JTBD (Christensen). XY check: restate the stated request and the problem it serves; when they differ, re-scope the row to the real problem before any edit.
 **Specify** — EARS; INVEST; Cockburn Use Cases; Quality Attribute Scenario;
 MoSCoW; Impact Mapping; Definition of Done.
 **Change** — Mikado Method; small batches (Reinertsen); characterization
