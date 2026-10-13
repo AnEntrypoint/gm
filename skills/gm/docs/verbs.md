@@ -1,8 +1,8 @@
 # gm verb inventory
 
-Every tool an agent uses under gm is a dispatch verb. This file is the inventory: the exact verb
-names, which ones answer a code question, the body shape each accepts, and one example each. Each
-verb is classed `query` (no observable side effect) or `command` (changes state), in its section.
+Every operation an agent runs under gm is a dispatch verb. This file is the inventory: the exact verb
+names, which ones answer a code question, the body shape each accepts, and one example each. Sections class their verbs as
+`query` (no observable side effect) or `command` (changes state).
 
 Two facts that stop most guessing:
 
@@ -11,7 +11,7 @@ Two facts that stop most guessing:
    symbol graph. `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
 2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
-   replies `{"ok":false,"error":"unknown verb","error_code":"unknown_verb"}`. Retired verbs leave
+   replies `ok: false`, `error_code: unknown_verb`, and an `error` that begins `unknown verb:`. Retired verbs leave
    one too. Names seen in that directory but absent from the tables below are not verbs in the
    current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`,
    `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
@@ -35,14 +35,14 @@ read `.gm/exec-spool/out/<verb>-<N>.json`. Prefix `N` with a session id.
 
 The watcher launch command is in `skills/gm/spool-adapter.md`.
 
-`cwd` selects the project. `cwd` defaults to the process working directory, and gm resolves the
-project root from it with `git rev-parse --show-toplevel`. Where cwd is not itself inside a git
-repository, pass `git_root_override` in the body to pin the root.
+`cwd` selects the project. Without `cwd`, gm uses `GM_MCP_DEFAULT_CWD` or `CLAUDE_PROJECT_DIR`, else the process working directory when it is a git root, and refuses with `error: "cwd-required"` otherwise. gm resolves the
+project root from it with `git rev-parse --show-toplevel`. A cwd outside any git
+repository is its own root. A body field `git_root_override` pins the root for any verb.
 
 `bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's own `dispatch`
 subcommand, so a plain shell runs a verb with no MCP client and no daemon of its own involved.
 Search verbs also take a sugar form, `gm codesearch literal <needle> --path <dir> --glob <glob>`,
-which builds `{"query","mode","path"}`; the sugar exists because a mode word is not a dispatch body,
+which builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`; the sugar exists because a mode word is not a dispatch body,
 and it applies to `grep`/`rg`/`codesearch`/`code_search`/`search` only. Any argument starting with
 `{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never
 reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body
@@ -117,7 +117,7 @@ Example:
 with `!` entries excluded) and `output_mode` apply here too: `files_with_matches` and `count` drop
 `comments`, `directives` and `output`, keeping `files`, the counts and `file_source`.
 
-Comment syntax is mapped per extension. JS-family files (`.js`, `.ts`, `.rs`, `.go`, `.c`, ...) take `//` and `/* */`, and their string, regex and template-literal bodies are never comments; `${...}` interpolations are code. CSS takes `/* */` only. Shell, YAML, TOML, Python and similar take `#`. HTML takes `<!-- -->` plus the `<script>` and `<style>` bodies. WebAssembly text takes `;;` and `(; ;)`. A `.template` file takes the syntax of its stem. Only shebangs and tool pragmas land in `directives`. A file with no mapping is counted in `files_skipped_no_syntax_count`; `files_skipped_no_syntax` holds a sample and `files_skipped_no_syntax_file` (when present) lists every such path.
+Comment syntax is mapped per extension. JS-family files (`.js`, `.ts`, `.rs`, `.go`, `.c`, ...) take `//` and `/* */`, and their string, regex and template-literal bodies are never comments; `${...}` interpolations are code. CSS takes `/* */` only. Shell, YAML, TOML, Python and similar take `#`. HTML takes `<!-- -->`. WebAssembly text takes `;;` and `(; ;)`. A `.template` file takes the syntax of its stem. Only shebangs and tool pragmas land in `directives`. A file with no mapping is counted in `files_skipped_no_syntax_count`; `files_skipped_no_syntax` holds a sample and `files_skipped_no_syntax_file` (when present) lists every such path.
 
 ### `codesearch` (aliases `code_search`, `search`): where is this concept
 
@@ -147,8 +147,8 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                                  rule `grep`'s `no_ignore` entry states above.
 {"head_limit":10}                                alias of `k`; `{"verbatim":true}` means `combine:"phrase"`.
 {"no_cache":true, "force_disk":true}             aliases of `refresh`.
-{"docs":false}                                   in the exhaustive modes, exclude docs (`*.md`, `*.adoc`,
-                                                 `docs/` trees); `{"mode":"comments"}` (or `comments`/`comments_only`)
+{"docs":false}                                   in the exhaustive modes, exclude docs (`*.md`, `*.mdx`, `*.rst`, `*.adoc`,
+                                                 `docs/` and `doc/` trees); `{"mode":"comments"}` (or `comments`/`comments_only`)
                                                  runs the comment scan instead, with no `query` needed.
 ```
 
@@ -162,19 +162,19 @@ Example:
 -> bm25_hits: [{key, score, symbol:{kind,name,path,line_start,line_end}, text}, ...]
 ```
 
-`dual` on a multi-word query returns compact `hits` rows `{at, sym, snip, lit}`, where `lit` is true when the row holds the query verbatim. Doc sections are hidden and counted in `docs_hidden`, and `commits` is omitted, unless `docs: true`. Hits are nearest neighbours, so a term absent from every hit is not proven absent: `literal` decides it. Commit hits are leads, confirmed with `git_show`. Each raw row carries `key`, `text`, `score` and a `symbol` (`{kind, name, path, line_start, line_end}`) when one is indexed.
-Four modes: `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly, answering in about
-one second on a large workspace where `dual` costs minutes; `filename` matches paths only. An unknown `mode`
+`dual` on a multi-word query returns compact `hits` rows `{at, sym, snip, lit}`, where `lit` is true when the row holds the query verbatim. Doc sections are hidden and counted in `docs_hidden`, and `commits` is omitted, unless `docs: true`. Hits are nearest neighbours, so a term absent from every hit is not proven absent: `literal` decides it. Commit hits are leads, confirmed with `git_show`. Each raw row carries a `key` and, when one is indexed, a `symbol` (`{kind, name, path, line_start, line_end}`).
+Four modes: `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly.
+`filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
 token (3-96 characters) is answered by an exhaustive whole-word scan. There is no `symbol` mode: it is refused
-and the refusal names the valid set. `k` (alias `head_limit`) caps the result count; `0` means unlimited for
+and the refusal names the valid set. `k` caps the result count; `0` means unlimited for
 `literal`, `regex` and `filename`, and is refused for `dual`, which is ranked top-k. `verbose: true` returns the
 raw `bm25_hits`, `vector_hits` and `commits` channels.
 Completeness: a `literal` or `regex` reply is complete only when it carries `exhaustive: true`. `partial_reason`
-names the bound or skip that fired (`matches_truncated`, `files_truncated`, `budget_exhausted`,
-`files_skipped_too_large`, `files_unreadable`, `git_listing_incomplete`, `walk_listing_incomplete`,
-`excluded_by_rule`, `glob_matched_no_files`). Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
-of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are named in `excluded_by_rule_summary` and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` rides only when a rule dropped code, and names the first five such paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
+describes each bound or skip that fired and sets its flag in the reply (`matches_truncated`, `files_truncated`, `budget_exhausted`,
+`listing_incomplete` (with `walk_reason`), `glob_matched_no_files`, `glob_outside_path`, and the oversize or unreadable files, which `partial_reason` names in prose.
+Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
+of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are counted in `excluded_by_rule_summary`, which counts every rule, and never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` rides only when a rule dropped code, and names the first five such paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
 
 Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
 contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
@@ -185,9 +185,9 @@ and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex);
 `spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
 `files` or `count`. A spill also carries `counts_by_file` inline (`N path` rows, busiest first), so the per-file answer never waits on the spill file.
 
-Split path arguments: a `literal` query shaped like `apps/<surface>/<file>` also matches a run of quoted arguments on one line that spells the same path, such as `join(ROOT, 'apps', 'world', '_fixtures', 'e2e-ci-arena.js')` (the last segment may carry a file extension). Those hits sit in `split_form_matches`, counted by `split_form_count` and `split_form_files`, and never in `matches`, `count` or `occurrence_count`; `split_form_truncated` past 50. A join split across lines is not matched. A `regex` or `dual` reply for such a query carries `split_form_not_searched` instead.
+Split path arguments: a `literal` query shaped like `apps/<surface>/<file>` also matches a run of quoted arguments on one line that spells the same path, such as `join(ROOT, 'apps', 'world', '_fixtures', 'e2e-ci-arena.js')` (the last segment may carry a file extension). Those hits sit in `split_form_matches`, counted by `split_form_count` and `split_form_files`, and never in `matches`, `count` or `occurrence_count`; `split_form_truncated` past 50. A `regex` or `dual` reply for such a query carries `split_form_not_searched` instead.
 
-Query and body: `query` is required in every mode; `pattern` and `literal` are not fields. Any other body
+Query and body: `query` is required in every mode; `pattern` is an alias of `query` and, in dual mode, selects `literal`; `"literal": true` and `"regex": true` select those modes. Any other body
 field is refused with the supported list, and `path` or `glob` scope `dual` too (its ranked rows and its literal fallback), so a scope never
 silently widens. A multi-word query matches as one phrase; `combine: "or"` ranks any-term hits with all-term
 lines first, and `combine: "and"` requires every term on one line. `term_combination` names the reading that
@@ -197,7 +197,6 @@ effect on it. Give the result limit as `max_results` or `k`, never both with dif
 `grep` answers the same way: its reply's `mode` names the reading that ran, and a pattern that will not
 compile is refused with the regex error text rather than an empty result.
 
-Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
 
 ### `fs_read`: read a file or a line range
 
@@ -209,11 +208,10 @@ Note `grep` is not `codesearch` and `search` is `codesearch`, not `grep`.
                                still refused, so the opt-in widens which root a read may address,
                                never whether it may climb out of one. The host sandbox is a second,
                                independent gate: outside the project root it serves only paths under
-                               the user gm root or under a directory it will grant: it grants the
-                               path itself, else its parent directory, when that directory carries a
+                               the user gm root or under a directory it grants. It grants a directory
+                               only when that directory itself carries a
                                project marker (.git, .gm, package.json, Cargo.toml, go.mod,
-                               pyproject.toml). So `C:/Users/user/.codex` is reached through its
-                               parent `C:/Users/user`, which makes that parent readable too.
+                               pyproject.toml).
 ```
 
 Line ranges. Every alias is **1-based and inclusive on both ends**: the start alias names the first line
@@ -232,8 +230,8 @@ looks like a range but is not one of these (`start_line`, `endline`, `firstLine`
 instead of being ignored: unknown range keys never silently return the whole file.
 
 Ranged replies add `total_lines`, `start_line`, `end_line`, `returned_lines`, `has_more_lines`,
-`next_start_line` and a 0-based `offset` kept for compatibility; `range_basis` states the convention in the
-reply itself. Omit every range key for the whole file, which is returned exactly as before.
+`next_start_line` (while lines remain) and a 0-based `offset` kept for compatibility; `range_basis` states the convention in the
+reply itself. Omit every range key to read the whole file; without `max_bytes` the reply is the plain file text.
 
 Paged example:
 
@@ -251,7 +249,7 @@ to send for the rest; page it with `gm_result` on that spill file.
 `content`, and the value may be a JSON string (with `\n` for each newline) **or an array of lines**,
 which is joined with `\n` plus a trailing newline. A raw, non-JSON body is accepted too when its
 first line is a `path=<relative path>` directive and everything after it is the file contents. There
-is no append mode: a write replaces the whole file. It returns `{"bytes": <written>}`; a write outside
+is an append only when the body sets `append: true`; a whole-file write to an append-only path is refused, and any other write replaces the whole file. It returns `{"bytes": <written>}`; a write outside
 the root is refused even with `allowOutsideRoot`, which widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
 takes `{"path":"<relative path>"}`. `fs_readdir` and `fs_stat` take the same
 `{"allowOutsideRoot":true}` opt-in as `fs_read`.
@@ -268,9 +266,9 @@ Backed by the treesitter index. All three route into the same handler and share 
 {"path":"<path>"}              filter; "path_prefix" is an alias (find only)
 ```
 
-`impact` adds `{"max_depth":3}` and `{"direction":"callers"|"callees"}` (default `callers`, i.e.
+`impact` adds `{"max_depth":3}` (default 3, clamped to 1 through 10) and `{"direction":"callers"|"callees"}` (default `callers`, i.e.
 upstream). `callers` and `callees` return `symbol`, `defined_at` (one `path:line_start-line_end
-<kind>` per definition), `edges` (`<path>:<line> <caller> -> <callee>`), `distinct_callers`,
+<kind>` per definition), `callers` adds `edges` (`<path>:<line> <caller> -> <callee>`) and `distinct_callers`; `callees` adds `callees`, ranked by call count, and `distinct_callees`,
 `total` and `truncated`. `defined_at` is the answer to "where is symbol X defined".
 
 Example:
@@ -292,15 +290,15 @@ trusting an empty reply.
 `callees`, `impact`, `hotspots`, `orphans`. `outline` requires `path`; `find` requires `symbol`.
 
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
-`{"max_files":500}`, `{"dead_code":true}`, `{"dead_code_limit":200}`.
+`{"max_files":500}` (default 500), `{"dead_code":true}`, `{"dead_code_limit":200}` (default 200).
 
-A `callers`, `callees`, `impact` or `status` dispatch whose incremental refresh does not
-finish inside its budget is REFUSED rather than answered from the cached graph:
-`error_code: "failed"`, `next_dispatch_hint: "codeinsight"`, and an `error` that names the
+Every action except `outline` and `sync` drives sync passes to completion before it answers, for at most 45 s and six passes. An index that is still incomplete is answered with `index_current: false` and an `index_incomplete_reason`, unless
+the root is not granted to the host, or the index is incomplete and its store is busy. Either case is REFUSED with
+`error_code: "failed"` and `next_dispatch_hint: "codeinsight"`; `callers` answers a busy store instead, and a busy-store `error` names the
 refresh which clears it, `codeinsight {"action":"sync","root":"<root>"}`. Sync is incremental,
 so a pass that does not finish still advances the index and a further pass finishes it. The
-refusal carries that pass's counters as `key=value` plus at most two deferred file names;
-the full `deferred_set` lives in the sync report the message points at, never in the refusal.
+reply and the refusal carry that pass's counters as `key=value` plus at most two deferred file names;
+the full `deferred_set` lives in the sync report, never in the message.
 
 ## Memory
 
@@ -316,10 +314,10 @@ cosine times recency.
 ```
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
-`memorize-fire` flushes the corpus, `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain it, `forget` removes, `auto-recall` attaches per-prompt recall to an `instruction`.
+`memorize-fire` writes its body into the memorize inbox as one `.md` file, and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
+maintain it, `forget` deletes one key, and `auto-recall` answers a prompt body with three recall hits.
 
-A `recall` reply carries `hits` (the ranked list) and `vector_hits` (the same rows before scoring).
+A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
 The MCP wire compactor drops `vector_hits` when every row in it is already in `hits` and names it
 in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to keep both.
 
@@ -328,10 +326,10 @@ in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to k
 | verb | body | purpose | kind |
 |---|---|---|---|
 | `fs_read` | `{"path", "startLine"?, "endLine"? (or "start"/"end", "from"/"to", "offset"/"limit", "line"/"lines", "start"/"count"), "max_bytes"?, "allowOutsideRoot"?}` | read a file or a 1-based inclusive line range | query |
-| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; no append) | command |
+| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; `append: true` appends) | command |
 | `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory | query |
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path | query |
-| `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree; writes its result document and cache | command |
+| `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree; `root` or `projectPath` selects the tree and `full: true` forces a full scan | command |
 
 ## Execution
 
@@ -349,7 +347,7 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 **Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable is presence-tested, so `MSYS_NO_PATHCONV=0` disables conversion too. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
 
-At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. The MCP wrapper polls for that budget plus 5 s when `timeout_seconds` is omitted; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s (floored at the 300000 default, capped at 900000), so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the original task handle plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass the task handle as `resume_task` to re-poll that dispatch without redispatching.
+At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the body has no `timeoutMs=` line; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (floored at the 300000 default, capped at 900000), so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the original task handle plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass the task handle as `resume_task` to re-poll that dispatch without redispatching.
 
 A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
 
@@ -362,13 +360,13 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 `git_remote`,
 `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`,
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
-`git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
+`git_cherry_pick`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
 
 Kind: `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*`; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and CI watch steps; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated, and `git_finalize` then pushes by explicit ref. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over someone else's dirt: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a lineage, not one commit: `git_push` sends `git push origin <rev>:<branch>`, so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish; `git_push` is the only publishing surface. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (`truncated_totals` names the real totals).
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those pathspecs in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and CI watch steps; where absent, compose it. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over someone else's dirt: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a lineage, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish; `git_push` is the only publishing surface. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and `limit` alone caps each status list (default 10), and `truncated` is set when a list overflows.
 
-`git_reset` accepts `ref` or `rev` for the target, and `mode` (`mixed` default, `soft`, `hard`) or `hard:true`; `paths`/`files` scope it to the index. Unknown fields are refused. Naming both `ref` and `rev`, or `mode` and a conflicting `hard`, refuses `conflicting_fields`; `paths` require `mode` `mixed` (`accepted_modes_for_paths`); `.gm/` and `.agentplug*` pathspecs are refused as protected. `mode` `hard` runs `git reset --hard` and rewrites the worktree. `git_commit {"amend":true}` rewrites the current commit instead of stacking a child, and refuses when that commit is already published (`pushed_commit_refused`, amend path in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs`). `git_amend` is that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler, and carries the same `pushed_commit_refused` refusal.
+`git_reset` accepts `ref` or `rev` for the target, and `mode` (`mixed` default, `soft`, `hard`) or `hard:true`; `paths`/`files` scope it to the index. Unknown fields are refused. Naming `ref` and `rev` with different values, or `mode` and a conflicting `hard`, refuses with `conflicting_fields`; `paths` require `mode` `mixed` (`accepted_modes_for_paths`); `.gm/` and `.agentplug*` pathspecs are refused as protected. `mode` `hard` runs `git reset --hard` and rewrites the worktree. `git_commit {"amend":true}` rewrites the current commit instead of stacking a child, and refuses when that commit is already published (`pushed_commit_refused`, amend path in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs`). `git_amend` is that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler, and carries the same `pushed_commit_refused` refusal.
 
 `git_status {"eol":true}` adds `eol`, one `{path, index, worktree, attr}` entry per tracked path from
 `git ls-files --eol` (index and worktree line endings plus the attribute text), with `eol_count` and
@@ -383,15 +381,15 @@ deletes the older ones. A reply that wrote a spill names this rule in `spill_ret
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
-`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while any sibling holds a dirty path, which is the normal state, so the refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish with the Git API route instead (blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the push-dirty scope check blocks, which is the normal state, so the refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish with the Git API route instead (blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
 Each takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
-The git verbs check a clean porcelain status before they run, and a gate can deny any of them; a
+The publishing verbs (`git_push`, `git_finalize`) read the porcelain status before they run, and a gate can deny them; a
 denial names the verb to dispatch next.
 
 `git_merge_abort` answers `{aborted, merge_in_progress, head}`. A repository with no merge in
 progress is a clean reply (`aborted:false, merge_in_progress:false`) and never a raw git error.
-The abort runs `git reset --merge`, which refuses while the index and the worktree disagree for a
+The abort runs `git merge --abort`, which is `git reset --merge` and refuses while the index and the worktree disagree for a
 path: typically a file git auto-merged that another session then edited afterwards. The verb
 shelves exactly those paths (`git stash push --keep-index -- <paths>`, which leaves the index
 content in the worktree so the reset can run), aborts, then pops the shelf so the edits land back
@@ -430,18 +428,14 @@ are the sanctioned way to do it, and never raw `git worktree` through `bash`:
 `rev` (also `commit` or `start_point`) names the commit to land on, and `ref` names a branch, so a
 caller that wants a specific commit sends `rev`. With `create:true` and both fields, `rev` is the
 start point of the new branch named by `ref`. With `create:true` and `ref` alone, a `ref` that
-resolves to a commit and names no existing branch DETACHES at that commit instead of opening a
-branch at HEAD: `git worktree add -b <40-hex> <path>` reads the hex as a branch name, warns that the
-refname is ambiguous, and still creates it at HEAD. `create:true` with a `ref` naming an existing
+resolves to a commit and names no existing branch DETACHES at that commit (`--detach`) rather than being passed to `-b`. `create:true` with a `ref` naming an existing
 branch is refused rather than re-pointed. After every add the verb reads the new worktree's `HEAD`
 and, when it is not the requested commit, refuses and removes the worktree again: a worktree at
 the wrong commit is never reported as `ok:true`.
 
-`git_worktree_add` answers `{root, path, branch, detached, rev, created}`; `git_worktree_list` answers
+`git_worktree_add` answers `{root, path, branch, detached, rev, created, output}`; `git_worktree_list` answers
 `{count, worktrees:[{path, head, branch, bare, detached, locked, prunable}]}` parsed from
-`git worktree list --porcelain`. All four refuse unknown fields, a `path` containing `..`, and a
-path under `.gm/` or `.agentplug*`; an absolute path outside the repository root needs
-`allowOutsideRoot:true`.
+`git worktree list --porcelain`. The four verbs refuse unknown fields. `add` and `remove` also refuse a `path` containing `..` or a path under `.gm/` or `.agentplug*`, and an absolute path outside the repository root needs `allowOutsideRoot:true`.
 
 ### `git_worktree`: linked checkouts
 
@@ -451,9 +445,7 @@ path under `.gm/` or `.agentplug*`; an absolute path outside the repository root
 | add | `{"action":"add","path":"/absolute/checkout","ref":"HEAD","detach":true}` | `added`, `ref`, `detached` |
 | remove | `{"action":"remove","path":"/absolute/checkout"}` | `removed` |
 
-Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existing local branch name to attach it. Remove supplies no force flag: Git refuses dirty or locked worktrees. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the selected repository.
-
-Enabling `extensions.worktreeConfig` requires moving common `core.worktree` into the primary `config.worktree`; move `core.bare` there if true. Preserve the primary path semantics, then use `git config --worktree` for per-worktree author configuration. Verify `git rev-parse --show-toplevel` in both checkouts. A common `core.worktree` with the extension enabled can send subsequent GM dispatches to an administrative gitdir.
+Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existing local branch name to attach it. Remove supplies no force flag: the verb runs `git worktree remove -- <path>` without `--force`. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the body's `cwd`, falling back to `repo`, `root` or `projectPath`.
 
 ## Web
 
@@ -466,11 +458,11 @@ selects the engine; the rest is the crawl request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over CDP through its `crawl_cdp` entry point | **HEADFUL**: a visible browser window |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over CDP through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) unless the body has a `headful` line or `GM_CRAWL_CDP_HEADFUL` is set; then **HEADFUL**: a visible browser window |
 | `lightpanda` | the host's warm lightpanda process, through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
 
 Choose `lightpanda` when no window should appear;
-choose `cdp` when the page must render in a visible browser.
+choose `cdp` with a `headful` line when the page must render in a visible browser.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
@@ -478,17 +470,15 @@ raw_body: "engine=lightpanda\nhttps://example.com/\n"
 ```
 
 The reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, and any further fields the host adds. An unknown
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error` on a `cdp` reply. The `lightpanda` reply is the plugin's object, passed through. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. Its whole step grammar
 is served by the `cdp` engine, including raw `cdp <Domain.method>` commands and event capture.
 
-### `chrome`: the headful CDP crawl as a named verb
+### `chrome`: the CDP crawl as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same step grammar, pinned to
-`engine: cdp` and `headless: false`, so a caller that always wants a real visible Chrome never
-restates the engine line. It answers the same host JSON object.
+`chrome` takes the same **plain text body** as `crawl` and runs the same step grammar on the `cdp` engine, so the engine line is optional. It sets no window mode: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window. It answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"
@@ -496,10 +486,10 @@ raw_body: "https://example.com/\nsnapshot\n"
 
 ### Browser steps for `engine=cdp`
 
-A `cdp` body may open with `session=<name>`, then one step per line. The steps reimplement the documented behaviour of [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp) (Apache-2.0) over the shared headful Chrome lease, so every step runs in a visible window.
+A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
 - `session=<name>` (1-64 letters, digits, `-`, `_`) keeps the tab and its uid map across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
-- A session's tab lives as long as the shared Chrome, which closes 15 minutes after its last lease. Without `session=`, a call opens its own tab and closes it when it ends.
+- The shared Chrome closes when its last lease is released, at the end of the call that holds it. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
 |---|---|
@@ -524,8 +514,7 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
 
 A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
-`result` and `cdp Page.captureScreenshot` yields `data` as base64. The command runs on the page's
-session, so a browser-level domain is not reachable this way.
+`result` and `cdp Page.captureScreenshot` yields `data`. The command runs on the page's session.
 
 An `events` step arms its capture when the call attaches, not where the line sits, so events fired
 by an earlier step are still collected; the entry keeps filling until the call ends. `where` keeps
@@ -538,21 +527,19 @@ rest in `dropped`. The domain is enabled for you, so `events Debugger.scriptPars
 raw_body: "engine=cdp\nsessionId=example-1\nevents Debugger.scriptParsed where url~example limit=600\ncdp Page.navigate\n{\"url\":\"https://example.com/\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
 ```
 
-A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches. Chrome replays a tab's earlier console messages on attach; network events are seen from attach onward.
+A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches.
 
 ## Orchestration and state
 
 These drive the phase machine. Dispatched through the same spool.
 
-**The graph is a set of independent nodes, not nine stages.** `gm-config/fsm/graph.json` declares
-the nodes and the edges between them, and `rs-plugkit` compiles the same file as its twin. A node
+**The graph is a set of independent nodes, not a sequence of stages.** `gm-config/fsm/graph.json` declares its states (the nodes) and its edges, and `rs-plugkit` compiles its own lean graph, `rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json`, through `include_str!`. A node
 is a principle, a tension, a gate or a terminal, and each serves its own prose, keyed by that
-node's `prose_key`. There is no phase group: nothing in the graph gates entry to a set of nodes.
+node's `prose_key`.
 A node is entered from any neighbour that has an edge to it and left along any edge out of it, so
 a walk is a graph walk with many distinct paths. The runtime word `phase` is the node key you
-currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes, not the two
-ends of a pipeline. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
-against; its `provenance` field records the concern a book came from and groups nothing.
+currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
+against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 
 `instruction`, `transition`, `transition-revert`, `phase-status`, `residual-scan`, `claim-audit`,
 `comment-audit`, `submodule-check`, `prd-add`, `prd-resolve`, `prd-list`, `prd-defer`, `mutable-add`,
@@ -566,8 +553,7 @@ against; its `provenance` field records the concern a book came from and groups 
 `dream-replay-round`, `pool-brief`.
 
 `prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
-`{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
-alias of `subject`. `status` takes `pending`, `ready`, `completed`, `blocked` or `all` (every open and resolved row). `offset` with `limit` pages the listing: `next_offset` names the next page, null when done.
+`{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has no `title`. `status` takes `pending`, `ready`, `completed`, `blocked` or `all` (every open and resolved row). `offset` with `limit` pages the listing: `next_offset` names the next page, null when done.
 
 **Where the rows live.** One file per row: a PRD row is `.gm/prd/<id>.yml` and a mutable is
 `.gm/mutables/<id>.yml`. The folder IS the index: there is no second list to keep in step with it,
@@ -580,7 +566,7 @@ leave a row unreadable.
 **Resolution moves the row.** `prd-resolve` (and `mutable-resolve`) append the row's material to
 `.gm/prd-log.jsonl` (`.gm/mutables-log.jsonl`) and remove the row file, so the folder holds open
 work only. The log is append-only and hash-chained: every line carries `prev`, the sha256 of the
-line before it, plus `ts`, `ts_ms`, the session that resolved it and the full block set, so a
+line before it, plus `ts`, `ts_ms`, `session_id` when a dispatch session is known, and the resolved row's blocks as `material`, so a
 truncation or an edit is visible rather than silent. The resolve reply names `filed_to`, `filed_at`
 and `row_file_cleared`. A resolved id is still answerable: `prd-list {"id":"<id>"}` reads the log
 and returns the row with `resolved: true`.
@@ -588,22 +574,21 @@ and returns the row with `resolved: true`.
 **Migration.** The legacy single files `.gm/prd.yml` and `.gm/mutables.yml` are still read and are
 split into the folders on the first write that touches them, after which a marker
 (`.gm/prd.absorbed.json`) lets reads skip them. No row is dropped and no flag day is needed: a
-legacy row whose id already has a file, or already sits in the log, is suppressed rather than
-duplicated or resurrected. The legacy files are never rewritten and never deleted, because projects
+legacy row whose id already has a file is merged into that file, and a legacy row already in the commit log is skipped, so closed work is not resurrected. The legacy files are never rewritten and never deleted, because projects
 track and commit them.
 
 `instruction` is the entry point: it serves the prose for the current phase and a gate denial names
-the recovery verb. A long idle gap makes every other verb return
-`gate_denied` / `long-gap-no-instruction` until `instruction` is dispatched again.
+the recovery verb. A long idle gap makes orchestrator verbs and state-changing verbs return
+`gate_denied` with the `long-gap-no-instruction` gate text until `instruction` is dispatched again, except the verbs in the gate's exempt lists.
 
-Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash` in the new body. An unchanged match suppresses the prose and discipline-policy blocks from the reply (`instruction_unchanged`/`discipline_policies_unchanged: true`, fields omitted); a mismatch or first dispatch returns them in full. Assert only a hash read off a response actually received. This is a response-size optimization only: phase, PRD, mutables and recall data return every time.
+Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash` in the new body. An unchanged match empties the `instruction` field and sets `instruction_unchanged: true`, and the `discipline_policies` field is omitted; a mismatch or first dispatch returns them in full. Assert only a hash read off a response actually received. This is a response-size optimization only: phase, `prd_pending_count`, `mutables_pending_count` and `prd_items` are restated in every delta reply.
 
 `pool-brief` hands one subagent its brief for one PRD row. Its body takes three non-empty string
 fields: `row` (a PRD row id), `session` (the subagent's SESSION_ID: the key is spelled `session`,
 never `session_id`) and `role` (one of `resolver`, `traversal`). A missing or empty field is refused
 with the list of what is required.
 
-`pool-observe` is a `command`: it writes `.gm/pool/` state (the count of record and the spawn ceiling). It reports the pool's slot state and the launches it advertises. Its body takes `live`
+`pool-observe` writes `.gm/pool/` state (the count of record, the spawn ceiling and the held rows). It reports the pool's slot state and the launches it advertises. Its body takes `live`
 (the ListAgents count of running subagents, recorded as the count of record in
 `.gm/pool/count-of-record.json` for 5 minutes), `held` (an array of the row id of every running
 worker, kept for 30 minutes), and `refusal` (the text of a spawn refusal, which records the spawn
@@ -611,7 +596,7 @@ ceiling in `.gm/pool/ceiling.json`). Every field is optional. `limit` caps each 
 (default 12), `rules: true` adds the pool rules to the reply, `blocker_notes: true` adds the open
 rows that carry blocker notes, and `scanned_nodes` records traversal nodes as scanned, which leases
 each one for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `refill_needed`,
-`launch` (the ids to launch now), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and
+`launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and
 a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`,
 `candidates`, `candidates_removed`, `launch_filters` and `already_fixed_on_head`. A live count under
 the floor while rows are open is refused with `error_code` `floor_gate_denied`. Example body:
@@ -624,7 +609,7 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied`. 
 `kv_query`, `env_get`, `health`, `status`, `close`, `config_resolve`, `config-sync-now`,
 `dataflow_resolve`, `tencentdb-compat-probe`, `tencentdb-memory-import`.
 
-`wait {"ms":N}` idles the caller for N milliseconds. `ms` takes a positive integer from 1 to 600000 (`max_ms`, 10 minutes), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs`, or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
+`wait {"ms":N}` idles the caller for N milliseconds. `ms` takes a positive integer from 1 to 600000 (`max_ms`, 10 minutes), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
 
 `sleep {"ms":N}` shares `wait`'s handler (the orchestrator maps both names to `wait::handle`), so it takes the same body, enforces the same range and returns the same reply.
 
@@ -636,12 +621,11 @@ The agentplug daemon, not the gm plugin, handles these:
 
 | verb | purpose |
 |---|---|
-| `background-convert` | run a conversion off the dispatch thread |
+| `background-convert` | mark an in-flight dispatch `{verb, task}` as converted (`converted: true`), or answer `already_completed` or `unknown_task` |
 | `plugin-refresh` | force the plugin and runner update poll to fire on the next loop tick |
 
 ## Getting a verb's own documentation
 
-Seven verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
-`fs_read`, `fs_write`, `fs_readdir`, `fs_stat` or `comment-audit` and the reply is
-`{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb replies with an error naming
-the fields it accepts once you pass it a body it rejects.
+Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
+`fs_read`, `fs_write`, `fs_readdir`, `fs_stat`, `prd-add`, `prd-resolve`, `codeinsight`, `comment-audit`, `git_merge_abort` or `git_worktree` and the reply is
+`{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
