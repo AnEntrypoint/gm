@@ -6,7 +6,7 @@ hero:
   body: "For developers who use Claude Code, Cursor, Gemini CLI or Codex. You describe a change and the agent builds it. gm keeps that speed and adds a check at the end. Before the agent can say a task is done, every plan row must be closed, the CI marker that the agent writes must name HEAD, and submodules must be clean. A plan row is one task the agent must finish. A gate is a check the system runs in code before the agent may move to its next step. A failed gate names the gate and the condition that failed, so the agent fixes that instead of arguing it is finished. Install with npx github:AnEntrypoint/gm -g, which needs Node.js. Drop -g to install into the current project only."
   badges:
     - { label: "installs into Claude Code, Cursor, Gemini CLI and Codex" }
-    - { label: "146 graph nodes; 129 are principles" }
+    - { label: "146 states in the state machine; 129 are principles" }
     - { label: "26 gate predicates; 24 can block a step, 2 only advise" }
     - { label: "18 test files in gm-mcp/test/" }
     - { label: "one entry skill, installed as /gm" }
