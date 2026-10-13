@@ -1,6 +1,6 @@
 ---
 name: fifth-dimension-engine
-description: WFGY 5.0's core problem-solving tool. Lifts targets into higher problem-coordinates and returns structured routes. Use after Goal Compiler to execute the compiled problem specification.
+description: "Use after polaris-goal-compiler, or when a request is written as shoot + [problem]. Does not specify the problem or control drift."
 license: MIT
 compatibility: Portable "shoot + [problem]" command; works wherever an assistant can run a natural-language prompt. Upstream ships it as the current main product surface of WFGY 5.0 Polaris Protocol.
 metadata:
