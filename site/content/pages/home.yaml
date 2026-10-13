@@ -2,60 +2,46 @@ id: home
 title: gm
 hero:
   heading: "gm"
-  subheading: "a coding agent that cannot call its work done until the checks pass."
-  body: "You describe a change and the agent builds it. gm keeps that speed and adds a check at the end. Before the agent can say a task is done, every plan row must be closed, CI must pass on the current commit, and submodules must be clean. A failed gate names the gate and the condition that failed, so the agent fixes that instead of arguing it is finished. Each gate is code the system runs, not a line in a prompt."
+  subheading: "a check layer for the coding agent you already run: it stops the agent from calling a task done until the checks pass."
+  body: "For developers who use Claude Code, Cursor, Gemini CLI or Codex. You describe a change and the agent builds it. gm keeps that speed and adds a check at the end. Before the agent can say a task is done, every plan row must be closed, the CI marker that the agent writes must name HEAD, and submodules must be clean. A plan row is one task the agent must finish. A gate is a check the system runs in code before the agent may move to its next step. A failed gate names the gate and the condition that failed, so the agent fixes that instead of arguing it is finished. Install with npx github:AnEntrypoint/gm -g, which needs Node.js. Drop -g to install into the current project only."
   badges:
-    - { label: "the speed stays; the guesswork goes" }
+    - { label: "installs into Claude Code, Cursor, Gemini CLI and Codex" }
     - { label: "146 graph nodes; 129 are principles" }
-    - { label: "26 gates; 24 block a move, 2 advise" }
-    - { label: "16 test files in gm-mcp/test/" }
+    - { label: "26 gate predicates; 24 can block a step, 2 only advise" }
+    - { label: "18 test files in gm-mcp/test/" }
     - { label: "one entry skill, installed as /gm" }
   ctas:
-    - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm", primary: true }
-    - { label: "Install gm", href: "https://github.com/AnEntrypoint/gm#install" }
+    - { label: "Install gm", href: "https://github.com/AnEntrypoint/gm#install", primary: true }
+    - { label: "Read the paper", href: "./paper/" }
+    - { label: "Star on GitHub", href: "https://github.com/AnEntrypoint/gm" }
     - { label: "Discord", href: "https://discord.com/invite/c9VV59MKNr" }
-    - { label: "Read the crates", href: "./crates/" }
-    - { label: "Read the skills", href: "./skills/" }
 features:
   heading: "what gm does, in the order you meet it"
   items:
     - name: "a plan the agent cannot skip"
-      desc: "each task is a row in .gm/prd.yml, and the agent works through the rows. A row closes only with recorded witness_evidence from a real check. Once a row exists, the agent works it without asking you questions it can answer itself."
+      desc: "each task is a row file, .gm/prd/<id>.yml, and the agent works through the rows. A row closes only with the recorded result of a real check. The walk completes only when every row is closed. Once a row exists, the agent works it without asking you questions it can answer itself."
     - name: "one graph, one walk"
-      desc: "the walk is a graph of 146 nodes: 129 principles, 8 tensions, 7 gate nodes and 2 terminal nodes. No node sits in a fixed sequence. The agent moves along an edge with the transition verb, and the gates on that edge decide whether the move is allowed. A refused move names the gate and the condition that failed."
+      desc: "The work runs as a graph of nodes, listed in gm-config/fsm/graph.json. Most nodes are principles, and the graph also holds 8 tensions, 7 gate-kind states and 2 terminal nodes. A principle is one discipline from a method book that the agent applies to the code. The agent moves between nodes along edges, and the gate predicates on an edge decide whether the move is allowed. A refused move names the gate and the condition that failed. Independent steps run in parallel subagents."
     - name: "gates that name what failed"
-      desc: "gm-config/fsm/graph.json has 26 gates. 24 block a move until their check passes. They cover work state (one task in flight, all rows closed, mutables resolved, clean worktree), delivery (CI validated on the current commit, clean submodules, residual scan fired) and source hygiene (no synthetic test files, no secrets in the diff, no hedge language in the diff). The other 2 are advisory and never block a move."
+      desc: "Gate predicates on the graph's edges block a move until their check passes, and advisory predicates only report. They check work state (open rows, unresolved questions, a clean work tree), delivery (a CI-validated marker, clean submodules) and the diff (no mock test files, no hedge language). The CI gate compares a marker file with HEAD, and the agent writes that marker, so the gate records intent and does not prove that CI ran."
     - name: "unknowns get resolved by running code"
-      desc: "an open question is recorded as a mutable with mutable-add. The agent tests one hypothesis at a time against real code, reads the real result, and closes the mutable with mutable-resolve. exec_js runs the claim, codesearch finds where something lives, and recall brings back what the project already stored."
-    - name: "work runs in a pool of subagents"
-      desc: "independent work runs in parallel. The orchestrator fills a pool of subagents toward a ceiling, with one plan row or one graph hop per subagent. A hop applies one principle to one part of the code and names the next principle it visits. Each hop carries a depth counter, and a visited set stops the walk from revisiting a node."
-    - name: "one MCP tool, every gm verb in code"
-      desc: "the gm MCP server exposes one tool, gm_codemode. It runs a short async JavaScript body in which every gm verb is a function: await gm.codesearch({...}), await gm.git_status({...}). gm.list() shows what is available and gm.describe(name) returns a verb's input schema, so the tool list stays one entry long."
-    - name: "one entry skill, installed as /gm"
-      desc: "skills/gm/SKILL.md is the entry skill. It ships in the gm-skill release archive and is installed as /gm by install.sh, install.ps1 or bin/gm-install.js. The installer registers Claude Code, Cursor, Gemini CLI and Codex directly and passes other hosts to add-mcp. The walk skills gm-orchestrate, gm-hop, gm-prd and gm-continue install beside it."
-    - name: "every instruction is a file the runner reads"
-      desc: "a verb is a request file under .gm/exec-spool/in/<verb>/, and its answer is written to .gm/exec-spool/out/. The runner reads each request, runs it, and writes the reply, so every step is a file on disk that can be audited and replayed."
-    - name: "memory that is searched by meaning"
-      desc: "recall ranks stored memories by meaning, using embeddings (vectors of numbers that place text by meaning), and blends that similarity with recency. Older memories lose score over time, with a half-life of 30 days. Embeddings are computed on the machine by a shared plugin, so no text goes to an external embedder."
-    - name: "nothing fake, nothing decorative"
-      desc: "verification means running the real thing and reading the real output. The no-synthetic-test-files gate blocks mock test files from a diff, and the no-graphical-symbols-in-diff gate blocks decorative symbols."
-    - name: "the whole ask gets covered"
-      desc: "a large request becomes rows in the plan. Each row is executed and closed with recorded evidence, and the walk completes only when the prd-all-closed gate passes."
-    - name: "a small core, shared plugins"
-      desc: "the orchestrator is a WebAssembly (WASM) module, rs-plugkit, that holds the state machine, the gates and verb routing. The native agentplug-runner loads it once and serves the projects on the machine from one shared daemon. Embeddings come from the shared agentplug-bert plugin. rs-search provides code search, and rs-codeinsight parses code structure with tree-sitter."
+      desc: "an open question is recorded as a mutable with mutable-add, and it stays open until the agent answers it. The agent tests one hypothesis at a time against real code, reads the real result, and closes the mutable with mutable-resolve. exec_js runs the claim, codesearch finds where something lives, and recall brings back what the project already stored."
+    - name: "memory searched by meaning"
+      desc: "recall ranks stored memories by meaning, using embeddings (vectors that place text by meaning), and blends that with recency, with a 30-day half-life. With the default backend, embeddings are computed on the machine by the shared agentplug-bert plugin, so no text goes to an external embedder."
+    - name: "one tool for every action"
+      desc: "the gm MCP server exposes one tool, gm_codemode. It runs a short JavaScript body in which every gm verb is a function, such as gm.codesearch(...), and gm.list() shows the verbs that are available."
 whatsNew:
   heading: "what the current build does"
   items:
-    - { summary: "gm-mcp exposes one tool, gm_codemode: every gm verb runs from code as gm.<verb>(...), with gm.list() and gm.describe(name) for discovery" }
     - { summary: "the stdio server exits once its client disconnects and its in-flight dispatches finish" }
     - { summary: "GM_MCP_DAEMON_HEARTBEAT_STALE_MS overrides the daemon heartbeat bound, which defaults to 20000 ms" }
-    - { summary: "bin/gm is a shell entrypoint: a plain shell runs any verb with no MCP client" }
-    - { summary: "gm-mcp checks its deployed bundle for staleness every hour, in every process" }
+    - { summary: "bin/gm is a command-line entrypoint: a plain shell runs any verb with no MCP client" }
+    - { summary: "gm-mcp checks its deployed bundle for staleness every 30 seconds; GM_MCP_BUNDLE_DRIFT_INTERVAL_SECONDS changes that interval" }
     - { summary: "chrome is the headful CDP browser verb" }
     - { summary: "dispatch replies are capped at 24,000 characters; the rest goes to a spill file, and gm_result reads that spill file" }
     - { summary: "release archives publish with a SHA-256 sidecar, and the installer ships every release skill, not only gm" }
 quickstart:
-  heading: install in detected agent hosts
+  heading: install in every detected agent host
   lines:
     - { kind: "cmd", text: "npx github:AnEntrypoint/gm -g" }
 examples:
@@ -63,5 +49,5 @@ examples:
   items:
     - { name: "the complete discipline", desc: "the paper: the state machine, the gates, the pool and hops, and the operating rules the agent runs under.", cta: "read the paper", href: "./paper/" }
     - { name: "every rust crate", desc: "rs-plugkit, rs-search and rs-codeinsight: what each does and what it is responsible for. rs-exec and rs-learn are retired.", cta: "read the crates", href: "./crates/" }
-    - { name: "the skills", desc: "gm is the entry skill. gm-orchestrate runs the pool, gm-hop applies one principle to one surface, gm-prd closes one plan row, and gm-continue hands off a finished walk. The agent calls the instruction verb whenever it needs the prose for the current node.", cta: "read the skills", href: "./skills/" }
+    - { name: "the skills", desc: "gm is the entry skill. gm-orchestrate runs the pool, gm-hop applies one principle to one surface, gm-prd closes one plan row, and gm-continue hands off a finished walk.", cta: "read the skills", href: "./skills/" }
     - { name: "distribution", desc: "how gm is installed, how the local MCP server is registered, how to check the runner's build, and where each release is published.", cta: "read how it installs", href: "./distribution/" }

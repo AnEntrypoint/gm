@@ -1,5 +1,5 @@
 id: skills
-title: skills
-description: "gm is one entry skill, installed as /gm. It holds the rules and the verbs the agent dispatches. The prose for the current node comes from the orchestrator through the instruction verb. The four walk skills, gm-orchestrate, gm-hop, gm-prd and gm-continue, install beside it."
+title: The gm skills
+description: "gm makes a coding agent prove its work before it calls a task done: each task is a plan row that closes only with a recorded check. Install it, then type /gm in your agent. This page lists the gm skills and the orchestrator verbs its table documents."
 layout: article
 source: ../docs/skills.html

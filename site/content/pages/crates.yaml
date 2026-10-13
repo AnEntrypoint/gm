@@ -1,5 +1,5 @@
 id: crates
-title: rust crates
-description: "The Rust crates behind gm: rs-plugkit (orchestrator), rs-search (codesearch backend), rs-codeinsight (code structure) and the agentplug native host. rs-exec and rs-learn are retired."
+title: Rust crates behind gm
+description: "gm is an agent skill that drives coding, refactoring and debugging work. This page lists the Rust crates that run it: the orchestrator, code search ranking, code structure parsing and the native host. Two retired repositories are listed at the end."
 layout: article
 source: ../docs/crates.html
