@@ -1,15 +1,13 @@
 name: bump-pins
 
-# Fast-forwards every submodule consumer to the latest main of its target.
-# Nothing is committed or pushed: the run advances its own checkout and reports
-# the result. Runs on schedule and on repository_dispatch so a submodule release
-# reaches gm without waiting for the next cron tick.
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  push:
+    branches: [main]
   repository_dispatch:
     types: [submodule-released]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch: {}
 
 concurrency:
@@ -17,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   advance:
@@ -27,42 +25,16 @@ jobs:
         with:
           submodules: false
           token: ${{ secrets.PUBLISHER_TOKEN }}
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Fast-forward consumers to each target main (no commit)
+      - name: Commit identity for pin bumps
+        run: |
+          git config user.name "gm-pin-bot"
+          git config user.email "pins@users.noreply.github.com"
+
+      - name: Advance pins and publish to main
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         shell: bash
-        run: |
-          set -uo pipefail
-          advance=()
-          while read -r path repo; do
-            [ -n "$path" ] || continue
-            sha=$(git ls-remote "https://github.com/$repo.git" refs/heads/main | awk '{print $1}')
-            [ -n "$sha" ] || { echo "::error::no main for $repo"; exit 1; }
-            pending=$(gh api "repos/$repo/actions/runs?head_sha=$sha&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length')
-            if [ "$pending" != "0" ]; then
-              echo "::notice::$repo@${sha:0:9} has $pending non-green release-path run(s); $path held"
-              continue
-            fi
-            advance+=("$path")
-          done <<'PINS'
-          rs-plugkit AnEntrypoint/rs-plugkit
-          rs-codeinsight AnEntrypoint/rs-codeinsight
-          rs-search AnEntrypoint/rs-search
-          agentplug AnEntrypoint/agentplug
-          agentplug-bert AnEntrypoint/agentplug-bert
-          agentplug-crux AnEntrypoint/agentplug-crux
-          agentplug-libsql AnEntrypoint/agentplug-libsql
-          agentplug-treesitter AnEntrypoint/agentplug-treesitter
-          gm-config AnEntrypoint/gm-config
-          gm-mcp AnEntrypoint/gm-mcp
-          obrowser AnEntrypoint/obrowser
-          PINS
-          if [ "${#advance[@]}" = "0" ]; then
-            echo "no target cleared the release-path gate"
-            exit 0
-          fi
-          git submodule init -- "${advance[@]}"
-          git submodule update --remote --depth=1 -- "${advance[@]}"
-          git submodule status -- "${advance[@]}"
+        run: bash scripts/bump-pins.sh
