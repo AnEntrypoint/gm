@@ -6,7 +6,7 @@ metadata:
   origin: AnEntrypoint/agent-memory
   upstream: TencentCloud/TencentDB-Agent-Memory
   provenance: published-fork-repackaged-as-skill
-allowed-tools: Skill, Read, Write, Bash, WebFetch
+allowed-tools: Read, Write, Bash
 ---
 
 # agent-memory
@@ -19,7 +19,7 @@ TencentDB Agent Memory gives an agent team a shared, growing memory instead of s
 
 - **Chat Memory**: retains preferences, facts, decisions, and interaction history per agent. Distilled in layers: L0 raw conversation -> L1 atom -> L2 scenario -> L3 persona.
 - **Skill library**: after complex work, an agent can extract a reusable Skill (versioned, with resource files, trigger boundaries, execution steps, validation rules) from its own conversation/tool-call history, then share it with the team after review.
-- **Wiki + CodeGraph**: turns docs/specs/runbooks into a linked Wiki; indexes code symbols, files, call relationships, and impact paths into a CodeGraph, both queryable on demand rather than injected wholesale into context.
+- **Wiki + CodeGraph**: turns documentation, specs and runbooks into a linked Wiki; indexes code symbols, files, call relationships, and impact paths into a CodeGraph, both queryable on demand rather than injected wholesale into context.
 - **Memory Panel**: a human-controlled review/control surface (not just a dashboard) for what gets promoted, shared, or pruned.
 
 Assets are portable across agent frameworks and shareable across a team -- a new agent or team member can load existing memory instead of relearning from scratch.
@@ -35,10 +35,7 @@ Assets are portable across agent frameworks and shareable across a team -- a new
 
 ```bash
 git clone https://github.com/AnEntrypoint/agent-memory.git
-cd agent-memory/deploy/global-images
-cp .env.example .env
-$EDITOR .env
-./start-all.sh
+# inside the clone: follow its Docker Compose deploy README
 ```
 
 Configure the LLM parameters for the memory and proxy groups in `.env` before starting the services.
@@ -59,55 +56,15 @@ Minimal config in `~/.openclaw/openclaw.json`:
 { "memory-tencentdb": { "enabled": true } }
 ```
 
-Zero-config works for basic capability. Production tuning groups: `capture`, `extraction`, `pipeline`, `recall`, `persona`, `embedding` -- see `references/openclaw-config.md` for the full recommended template and failure-mode notes (embedding four-tuple, retention-day gating, etc.).
+Zero-config works for basic capability. Production tuning groups: `capture`, `extraction`, `pipeline`, `recall`, `persona`, `embedding` -- see the upstream plugin documentation for the full recommended template and failure-mode notes (embedding four-tuple, retention-day gating, etc.).
 
 ### 3. Migrating from an older install (v1.x/v0.x -> v2.0.0+)
 
-Use the migration tool documented at `MemoryCore/scripts/migrate-v2-to-v3/README.md` in the repo. New installs skip this.
+Use the migration tool documented in the upstream repo's migration README. New installs skip this.
 
 ### 4. Migrating gm's own memories into the `tencentdb_backend` store
 
-Distinct from #3 above (that's the standalone system's own internal format
-evolution). This is for a project that already has gm-native memories
-(`.gm/memories/*.md`, written by `memorize`/`memorize-fire` before
-`memory.tencentdb_backend` was enabled) and wants them carried over once a
-namespace opts into the Tencent-compatible backend, so recall doesn't go
-cold on the switch.
-
-Two ways to run this migration -- same underlying write path
-(`tencentdb_memory::write_cfg`), pick whichever fits the situation:
-
-- **From within a live agent session**: dispatch the
-  `tencentdb-memory-import` verb: `{"source_namespace": "default",
-  "dest_namespace": "<routed-namespace>", "kind": "l1"}`. It reads every
-  `.md` doc in the source namespace and re-embeds through gm's own 384-dim
-  pipeline.
-- **Batch/CLI, outside an agent session**: `node
-  scripts/migrate-memory-to-tencentdb.mjs --project <path> --namespace
-  <ns> [--dry-run] [--archive]`. Same write path, but also applies the
-  derivable-state discard filter (git-log-derivable facts, dated audit
-  entries, historical framing) the verb does not -- prefer this for a bulk
-  migration where discarding superfluous content matters, and the verb for
-  a single dispatch from an already-running session.
-
-Both refuse up front unless the destination namespace's resolved
-`memory.tencentdb_backend.vectors_db_dims` is exactly `384` -- gm's
-embedder cannot produce vectors at any other width, and a namespace
-configured for externally-embedded 768-dim content (the default) cannot
-safely receive them (recall queries that namespace through the
-project-resolved dim, not a per-import override, so a dim mismatch there
-is a real defect, not a formality). A project wanting both kinds of
-content needs two separate `tencentdb_backend`-routed namespaces, each at
-its own dim.
-
-By default this is a one-way copy, not a move: the source `.md` files and
-their `rssearch_vectors` index rows are left untouched, so the default
-backend keeps working for any namespace not also switched over. Pass
-`archive_source: true` (verb) or `--archive` (script) to opt into moving
-each successfully-migrated source file to
-`.gm/memories-archive-tencentdb/<namespace>/<filename>` instead of leaving
-it in place -- content stays inspectable, but the live `.gm/memories/`
-corpus no longer duplicates what the new backend now serves.
+Import verb, batch script, the 384-dim requirement and the archive option: `references/gm-memory-migration.md`.
 
 ## Verification (do this before declaring setup done)
 

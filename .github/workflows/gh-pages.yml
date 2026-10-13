@@ -6,6 +6,11 @@ on:
     paths:
       - 'site/**'
       - 'docs/**'
+      - 'skills/dream-rsi/gm-graph.json'
+      - 'skills/dream-rsi/dada-graph.json'
+      - 'docs/dada-graph.html'
+      - 'docs/api/dada-graph.json'
+      - 'scripts/build-graph-page.mjs'
       - 'flatspace.config.mjs'
   workflow_dispatch: {}
 
@@ -34,13 +39,20 @@ jobs:
           npm install
           npm run build
 
+      - name: Build graph page from the graph source
+        run: node scripts/build-graph-page.mjs
+
+      - name: Fetch the gm-config submodule that holds the state machine graph
+        run: git submodule update --init --depth 1 gm-config
+
+      - name: Check every graph count on the site and docs against its graph
+        run: node scripts/check-doc-counts.mjs
+
       - name: Build flatspace site
         run: npx flatspace@latest build
 
-      - name: Fetch live release + npm download data
-        run: node scripts/fetch-live-data.mjs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify the graph page is in the build output
+        run: test -f dist/graph/index.html && test -f dist/dada-graph/index.html
 
       - name: Copy docs API data into dist
         run: |
