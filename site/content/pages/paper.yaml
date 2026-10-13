@@ -1,8 +1,7 @@
 id: paper
-title: The Complete Discipline
-subtitle: The unified gm (glootius maximus) paper -- every phase and hard rule read as one more way to raise agentic signal-to-noise
-date: October 2026
-description: The Complete Discipline, the unified gm (glootius maximus) paper. gm exists to raise a coding agent's signal-to-noise ratio and enforce token austerity. This document frames the phase-gated lifecycle, mutable discipline, search protocol, governance layer, maximal cover, bounded autonomy, and learning loop as the noise-reduction machinery that 14,000+ hours of supervised modification converged on.
+title: "gm: a graph discipline for LLM coding agents"
+subtitle: "The graph, gates, walks, PRD rows, witnessed execution, memory and learning loop of the gm skill, as the repository ships them"
+description: "Describes the gm skill as the repository ships it: a 146-node discipline graph with 376 edges, gates that refuse transitions, hops that apply one principle to one surface, PRD rows closed by a witness from another session, and a memory and learning loop. Every count comes from a file in the repository."
 layout: article
 wide: true
 source: ../docs/paper.html
