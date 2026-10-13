@@ -4,7 +4,7 @@
       "command": "node",
       "args": [
         "-e",
-        "const p=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');if(!require('fs').existsSync(p)){console.error('gm-mcp bundle missing at '+p+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}import(require('url').pathToFileURL(p).href)"
+        "const bundlePath=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}import(require('url').pathToFileURL(bundlePath).href)"
       ]
     }
   }
