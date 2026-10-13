@@ -1,5 +1,5 @@
 id: skills
-title: skills
-description: "gm (glootius maximus) starts from one skill, gm (the gm-skill release archive). It is a short entry document with no phase prose of its own, the same in every harness. Each turn the agent calls plugkit's instruction verb to read the current state, the prose for it, and the guardrails. The agent moves the walk forward, and plugkit keeps the state and enforces the gates. gm-orchestrate, gm-hop, gm-prd and gm-continue ship beside the skill to run the walk."
+title: The gm skills
+description: "gm makes a coding agent prove its work before it calls a task done: each task is a plan row that closes only with a recorded check. Install it, then type /gm in your agent. This page lists the gm skills and the orchestrator verbs its table documents."
 layout: article
 source: ../docs/skills.html
