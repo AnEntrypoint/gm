@@ -108,12 +108,12 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <ul>
   <li><strong>Any system with Node.js, all parts:</strong> <code>npx github:AnEntrypoint/gm -g</code> installs the skills, registers the MCP server in each detected agent host (the app that runs your coding agent, such as Claude Code, Cursor, Codex or Gemini) and installs the runner. Without <code>-g</code>, the MCP registration goes into the current project. The skills and the runner install under your home directory.</li>
   <li><strong>macOS or Linux, runner only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code> installs the runner into <code>~/.gm-tools</code>, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected. Section 4 checks the installed runner.</li>
-  <li><strong>macOS or Linux, skills and MCP bundle only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install</code></li>
+  <li><strong>macOS or Linux, skills and MCP server bundle only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install</code></li>
   <li><strong>Windows PowerShell, runner only:</strong> <code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code> installs the runner the same way, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected.</li>
-  <li><strong>Windows, skills and MCP bundle only:</strong> from a checkout, run <code>powershell -ExecutionPolicy Bypass -File install.ps1 install</code>.</li>
+  <li><strong>Windows, skills and MCP server bundle only:</strong> from a checkout, run <code>powershell -ExecutionPolicy Bypass -File install.ps1 install</code>.</li>
 </ul>
 
-<p>The gm-mcp server bundle is downloaded without a checksum, unlike the runner download, which is checked against its <code>.sha256</code> file.</p>
+<p>The MCP server bundle (gm-mcp) is downloaded without a checksum, unlike the runner download, which is checked against its <code>.sha256</code> file.</p>
 
 <p>The Node.js installer <code>bin/gm-install.js</code> also takes <code>--mcp-only</code>, which repairs an MCP registration without reinstalling anything, and <code>--skills-only</code>, which copies or links the skills and stops (no MCP registration, no runner).</p>
 
@@ -168,7 +168,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <tbody>
 <tr><td><code>skills/gm/SKILL.md</code></td><td>Agent workflow and tool routing.</td></tr>
 <tr><td><code>gm-config/</code></td><td>Default prose, gate text, messages and the workflow graph (<code>fsm/graph.json</code>).</td></tr>
-<tr><td><code>rs-plugkit/</code></td><td>The gm WASM guest: orchestration, memory and code search.</td></tr>
+<tr><td><code>rs-plugkit/</code></td><td>The gm WebAssembly (WASM) guest: orchestration, memory and code search.</td></tr>
 <tr><td><code>agentplug/</code></td><td>The native <code>agentplug-runner</code> host.</td></tr>
 <tr><td><code>gm-mcp/</code></td><td>The MCP wrapper around spool request and response handling.</td></tr>
 <tr><td><code>agentplug-bert/</code>, <code>agentplug-libsql/</code>, <code>agentplug-treesitter/</code></td><td>Shared embedding, database and syntax plugins.</td></tr>
