@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// Gates the process-leak class: a file that starts something long-lived (a listener, a detached
-// child, a nohup'd server) and carries no guarantee that it ever stops. Existing offenders are
-// carried in the baseline, so the gate fires on NEW files only -- a job that reddens on history
-// gets muted, and a muted gate is not a gate.
-//
-//   node scripts/scan-process-leak-tells.mjs [file ...]        scan given files
-//   node scripts/scan-process-leak-tells.mjs --diff=<base>     scan files changed vs <base>
-//   node scripts/scan-process-leak-tells.mjs --baseline-write  rewrite the baseline from the tree
-//
-// exit 0 clean, 1 findings, 2 usage error.
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
