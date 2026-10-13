@@ -44,7 +44,9 @@ node bin/gm-install.js -g --mcp-only
 node bin/gm-install.js --mcp-only
 ```
 
-The `bin/gm` entry point runs a verb from a plain shell, with no agent host and no MCP client, using the same dispatch that the `gm` MCP tool runs.
+Restart the agent host after a registration change.
+
+The `bin/gm` entry point runs a verb from a plain shell, with no agent host and no MCP client, using the same dispatch that `gm.gm({verb, body})` inside the `gm_codemode` MCP tool runs.
 
 ## Terms
 
