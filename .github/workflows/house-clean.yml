@@ -18,6 +18,17 @@ permissions:
   contents: read
 
 jobs:
+  sweep-config-sync-litter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+      # Orphaned config-sync state: the checkout it describes is gone, so nothing can ever read
+          # it again. Report only -- the sweep is a report, not a gate, and this root's live state
+          # is deliberately left alone.
+      - run: node scripts/sweep-config-sync-litter.mjs --root .
   tree-hygiene:
     runs-on: ubuntu-latest
     steps:
