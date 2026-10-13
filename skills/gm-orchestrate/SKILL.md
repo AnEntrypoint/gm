@@ -33,6 +33,8 @@ Live under the ceiling while independent work is open is a shortfall, every time
 
 Launch only advertised ids; no manual fill. A slot stays empty only when no pending row and no untraversed node remain.
 
+**CI-only rows are not pool work.** A row whose witness needs a local cargo build is CI-only while the local cargo hook is in force (`gm-no-local-cargo-verified-by-ci`). Launching one into the pool spends a slot to reach EMIT and then block. Measured 2026-10-13 in C:/dev/gm (SESSION_ID gm-2e-fa19b3): the eight `SLAP-PLUGKIT-*` workers all ended blocked at SPECIFY or EMIT with no witness, and each row's cited line numbers were stale. The orchestrator skips such rows when they are advertised, files them to the CI lane as `<row>-ci-only`, and refills the slot from a non-cargo candidate. A row whose cited line no longer exists is also stale, and goes back to `prd-add` for re-scoping, not into a slot.
+
 ## Node-to-node hop payloads
 
 A hop is an EDGE, not a discovery: it is nominated FROM the node it stands on TO a named neighbour that node links to. `skills/dream-rsi/gm-graph.json` is the only source, and it is read at launch time -- `node_count`/`edge_count` in it are stale hand-written fields, so never take a count from them.
