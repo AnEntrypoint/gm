@@ -53,12 +53,21 @@ function projectServerEntry() {
 
 async function vendorMcpBundle() {
   fs.mkdirSync(GM_TOOLS_DIR, { recursive: true })
-  const response = await fetch(MCP_BUNDLE_URL)
-  if (!response.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${response.status}`)
-  const body = await response.text()
-  if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
-  const freshHash = sha256Short(body)
   const deployedHash = fs.existsSync(MCP_BUNDLE_PATH) ? sha256Short(fs.readFileSync(MCP_BUNDLE_PATH)) : null
+  let body
+  try {
+    const response = await fetch(MCP_BUNDLE_URL)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    body = await response.text()
+    if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
+  } catch (err) {
+    // MCP registration, the runner and the skills all come after this step, so an
+    // unreachable host must not abort an install that already has a working bundle.
+    if (deployedHash === null) throw new Error(`fetch ${MCP_BUNDLE_URL} failed (${err.message}) and no bundle is deployed at ${MCP_BUNDLE_PATH}`)
+    console.log(`WARNING: ${MCP_BUNDLE_URL} unreachable (${err.message}); keeping the deployed bundle at ${MCP_BUNDLE_PATH} (sha256 ${deployedHash}) -- rerun to refresh it`)
+    return
+  }
+  const freshHash = sha256Short(body)
   if (deployedHash === freshHash) {
     console.log(`gm-mcp server already current at ${MCP_BUNDLE_PATH} (sha256 ${freshHash})`)
     return
@@ -103,13 +112,21 @@ function sourceSkillNames(dir) {
   }
 }
 
+// npm unpacks a `github:` spec into its own cache (<prefix>/_npx/<hash>/node_modules/<pkg>)
+// and owns that directory: a later npx run, or `npm cache clean`, removes or replaces it.
+// A skill linked from there is a link to a path the user does not control, so the npx
+// route installs a copy instead and says so, the same way a route with no local source does.
+function isNpmCacheSource(dir) {
+  return path.resolve(dir).split(/[\\/]+/).includes('_npx')
+}
+
 function resolveLocalSkillSource() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const override = (process.env.GM_SKILL_SOURCE_DIR || '').trim()
   const dir = override || path.join(pkgRoot, 'skills')
   const names = sourceSkillNames(dir)
   if (names.length === 0) return null
-  return { dir, names, fromEnv: Boolean(override) }
+  return { dir, names, fromEnv: Boolean(override), disposable: isNpmCacheSource(dir) }
 }
 
 function lstatOrNull(p) {
@@ -198,21 +215,23 @@ function recordMode(root, name, mode, source) {
   fs.renameSync(tmp, file)
 }
 
-function materialiseSkill({ dir, name, root }) {
+function materialiseSkill({ dir, name, root, copyOnly = false }) {
   const src = path.join(dir, name)
   const dest = path.join(root, name)
   fs.mkdirSync(root, { recursive: true })
 
-  const existing = lstatOrNull(dest)
-  if (existing && existing.isSymbolicLink()) {
-    let current = null
-    try {
-      current = fs.realpathSync(dest)
-    } catch {}
-    if (current && samePath(current, src)) {
-      recordMode(root, name, 'linked', src)
-      console.log(`linked ${name} -> ${dest} => ${src} (already the source directory)`)
-      return { mode: 'linked', kind: 'already', status: 'already' }
+  if (!copyOnly) {
+    const existing = lstatOrNull(dest)
+    if (existing && existing.isSymbolicLink()) {
+      let current = null
+      try {
+        current = fs.realpathSync(dest)
+      } catch {}
+      if (current && samePath(current, src)) {
+        recordMode(root, name, 'linked', src)
+        console.log(`linked ${name} -> ${dest} => ${src} (already the source directory)`)
+        return { mode: 'linked', kind: 'already', status: 'already' }
+      }
     }
   }
 
@@ -223,7 +242,7 @@ function materialiseSkill({ dir, name, root }) {
     return { mode: 'refused', status: cleared }
   }
 
-  const kind = linkDir(src, dest)
+  const kind = copyOnly ? null : linkDir(src, dest)
   if (kind) {
     recordMode(root, name, 'linked', src)
     console.log(`linked ${name} (${kind}) -> ${dest} => ${src} (edits to the source are served immediately)`)
@@ -232,7 +251,10 @@ function materialiseSkill({ dir, name, root }) {
 
   copyDir(src, dest)
   recordMode(root, name, 'copied', src)
-  console.log(`WARNING: ${name} -> ${dest} is a COPY (no junction/symlink available here); it is NOT the file at ${src} and will drift silently -- recorded in ${path.join(root, SKILL_MODE_LEDGER)}`)
+  const why = copyOnly
+    ? 'the source is npm npx cache, which npm can delete or replace'
+    : 'no junction/symlink available here'
+  console.log(`WARNING: ${name} -> ${dest} is a COPY (${why}); it is NOT the file at ${src} and will drift silently -- recorded in ${path.join(root, SKILL_MODE_LEDGER)}`)
   return { mode: 'copied', status: cleared }
 }
 
@@ -261,14 +283,21 @@ function skillDriftReport(source, roots) {
   for (const root of roots) {
     for (const name of source.names) rows.push({ root, ...checkSkill({ dir: source.dir, name, root }) })
   }
-  const bad = rows.filter(r => r.state === 'DRIFT' || r.state === 'equal-copy')
+  // A copy is the intended mode for a disposable source (the npx route), so only a
+  // content mismatch is drift there; against a checkout, a copy is drift even when
+  // the contents still match, because the next source edit will not reach it.
+  const bad = rows.filter(r => r.state === 'DRIFT' || (r.state === 'equal-copy' && !source.disposable))
   for (const r of bad) {
     const why = r.state === 'DRIFT'
       ? 'contents differ'
       : 'contents match but it is a SEPARATE file, so the next source edit will not reach it'
     console.log(`DRIFT ${r.name} at ${path.join(r.root, r.name, 'SKILL.md')} (${r.state}): ${why}`)
   }
-  if (bad.length === 0) console.log('skill check: every installed skill is the source file')
+  if (bad.length === 0) {
+    console.log(source.disposable
+      ? `skill check: every installed skill is a current copy of ${source.dir}`
+      : 'skill check: every installed skill is the source file')
+  }
   return bad
 }
 
@@ -289,7 +318,7 @@ function installOrCheckSkills() {
     return
   }
   for (const root of roots) {
-    for (const name of source.names) materialiseSkill({ dir: source.dir, name, root })
+    for (const name of source.names) materialiseSkill({ dir: source.dir, name, root, copyOnly: source.disposable })
   }
   skillDriftReport(source, roots)
 }
@@ -443,9 +472,8 @@ function installRunner() {
   runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'], { shell: IS_WINDOWS })
 }
 
-if (!mcpOnly) {
-  runChild('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'], { shell: IS_WINDOWS })
-}
+// The skills were materialised above; a second `npx skills add` run here would install
+// over them from the network and replace each link with a copy of its own.
 await vendorMcpBundle()
 registerOtherHosts()
 registerKnownHostShapes()
