@@ -1,10 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
 
-// Scans only the lines this commit adds (the staged diff) for high-confidence
-// credential shapes. Exit 0 when clean, 1 when a shape is found, 2 when git
-// cannot produce the diff. Findings print the rule, path and line, never the value.
-
 const RULES = [
   ['aws-access-key-id', /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
   ['private-key-pem', /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/],

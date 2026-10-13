@@ -1,5 +1,5 @@
 id: crates
-title: rust crates
-description: "Every Rust crate behind gm (glootius maximus), listed as rs-plugkit, rs-search and rs-codeinsight. What each does, why it exists, and what it is responsible for keeping correct. rs-exec and rs-learn are retired and folded into rs-plugkit."
+title: Rust crates behind gm
+description: "gm is an agent skill that drives coding, refactoring and debugging work. This page lists the Rust crates that run it: the orchestrator, code search ranking, code structure parsing and the native host. Two retired repositories are listed at the end."
 layout: article
 source: ../docs/crates.html
