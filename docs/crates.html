@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rust crates - gm - 247420</title>
-<meta name="description" content="The Rust crates behind gm: rs-plugkit (orchestrator), rs-search (codesearch backend), rs-codeinsight (code structure) and the agentplug native host.">
+<meta name="description" content="gm is an agent skill that drives coding, refactoring and debugging work. This page lists the Rust crates that run it: the orchestrator, code search ranking, code structure parsing and the native host. Two retired repositories are listed at the end.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -30,10 +30,6 @@ article pre code { padding: 0; background: transparent; }
 .crate-header h2 { margin: 0; font-size: 20px; }
 .crate-header .role { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); }
 .crate-header .repo { margin-left: auto; font-family: var(--ff-mono); font-size: 11px; }
-.statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin: 12px 0; }
-.statgrid .cell { padding: 8px 10px; background: var(--panel-2); border-radius: 6px; }
-.statgrid .cell .label { font-family: var(--ff-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--panel-text-2); display: block; margin-bottom: 2px; }
-.statgrid .cell .value { font-family: var(--ff-mono); font-size: 12px; color: var(--panel-text); }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); font-family: var(--ff-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--panel-text); margin-right: 4px; }
 .tag.danger { background: color-mix(in oklab, var(--warn, #c0392b) 14%, transparent); color: var(--warn, #c0392b); }
 .diagram { display: block; margin: 12px 0; padding: 14px 16px; background: var(--panel-2); border-radius: 6px; font-family: var(--ff-mono); font-size: 11px; line-height: 1.4; color: var(--panel-text); white-space: pre; overflow-x: auto; }
@@ -62,15 +58,15 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm ships one WebAssembly guest, <code>plugkit-slim.wasm</code>, built from <code>rs-plugkit</code> for <code>wasm32-wasip1</code>. The native <code>agentplug-runner</code> loads it and serves the spool. <code>rs-search</code> backs the <code>codesearch</code> verb, and <code>rs-codeinsight</code> is a standalone tree-sitter analyzer. The repositories <code>rs-exec</code> and <code>rs-learn</code> are retired.
+    gm is a skill and MCP server for coding agents. It refuses to let the agent mark a task finished until its checks pass. This page lists the four Rust repositories behind it and what each one owns. Read it if you are installing gm, checking what runs on your machine, or changing one of its crates.
   </div>
 </div>
 
 <article>
 
-<h2>What you can do next</h2>
+<h2>Install and check</h2>
 
-<p>Check the runner you have with <code>agentplug-runner --build-info</code>, as described on the distribution page. Read a crate's section below for what it owns, then open its repository.</p>
+<p>To install gm, follow the <a href="./distribution.html">distribution page</a>. After installing, run <code>~/.gm-tools/agentplug-runner --build-info</code> to see the runner build (on Windows, <code>agentplug-runner.exe</code> in the same folder). Then read a crate's section below for what it owns, and open its repository.</p>
 
 <h2>The crates</h2>
 
@@ -81,16 +77,16 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit</a></span>
   </div>
   <p><strong>Job:</strong> owns the state machine, the gates, the orchestrator verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and the host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). Its one crate is <code>plugkit-core</code>, which builds to <code>plugkit-slim.wasm</code> for <code>wasm32-wasip1</code>.</p>
-  <p>The walk it enforces is a lean graph embedded in its orchestrator, which matches the counts of <code>gm-config/fsm/graph.json</code>: 146 nodes (129 principles, 8 tensions, 7 gates and 2 terminal nodes), 376 edges, and 26 gates. 24 of the gates block a move, and 2 are advisory.</p>
+  <p>It enforces a workflow graph of 146 states (129 principle, 8 tension, 7 gate and 2 terminal), joined by 376 edges. The graph holds 26 gate predicates. Two are marked <code>advisory: true</code>, and the other 24 are not. The lean copy embedded in the orchestrator has the same counts as <code>gm-config/fsm/graph.json</code>.</p>
 </div>
 
 <div class="crate">
   <div class="crate-header">
     <h2>rs-search</h2>
-    <span class="role">the file finder</span>
+    <span class="role">the search fusion library</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search</a></span>
   </div>
-  <p><strong>Job:</strong> provides the rank fusion that <code>codesearch</code> uses to combine its BM25 and embedding results. The BM25 and embedding channels run in <code>rs-plugkit</code>.</p>
+  <p><strong>Job:</strong> a dependency-free Rust library that ranks candidate lists with Reciprocal Rank Fusion and tokenizes text. <code>codesearch</code> uses the fusion to combine its BM25 and embedding results. The BM25 and embedding channels run in <code>rs-plugkit</code>, which consumes this library in its WASM build. It has no CLI and no server.</p>
 </div>
 
 <div class="crate">
@@ -108,12 +104,12 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the native host</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/agentplug">AnEntrypoint/agentplug</a></span>
   </div>
-  <p><strong>Job:</strong> <code>agentplug-runner</code> is the native host that loads <code>plugkit-slim.wasm</code>. Its commands are <code>spool</code>, <code>daemon</code>, <code>dispatch</code>, <code>takeover</code> and <code>--build-info</code>. One shared daemon serves the spool for every project on the machine. Its crates are <code>agentplug-host</code>, <code>agentplug-runner</code>, and the browser crates <code>agentplug-lightpanda</code> and <code>agentplug-lightpanda-wasm</code>.</p>
+  <p><strong>Job:</strong> <code>agentplug-runner</code> is the native host that loads <code>plugkit-slim.wasm</code> and serves the spool, the directory of request and response files that gm writes and polls. Its commands include <code>spool</code>, <code>daemon</code>, <code>dispatch</code>, <code>takeover</code> and <code>plugin</code>. One daemon runs per install directory and serves each project registered with it, and the <code>cwd</code> of a call is resolved to its project root. Its crates are <code>agentplug-host</code>, <code>agentplug-runner</code>, and the browser crates <code>agentplug-lightpanda</code> and <code>agentplug-lightpanda-wasm</code>.</p>
 </div>
 
 <h2>How a change ships</h2>
 
-<p>A skill change pushed to <code>main</code> publishes a <code>gm-skill</code> GitHub Release through <code>skill-release.yml</code>. The release archive holds the <code>skills/</code> tree and a SHA-256 file, and the installers check that file before they install. The WASM guest publishes through the release workflow of <code>rs-plugkit</code>.</p>
+<p>A change to <code>skills/</code> pushed to <code>main</code> publishes a GitHub Release of the gm repository through <code>skill-release.yml</code>. The release is tagged <code>v&lt;version&gt;</code> and holds the archive <code>gm-skill-&lt;version&gt;.tar.gz</code>, which contains the <code>skills/</code> tree, and its <code>.sha256</code> file. <code>install.sh</code> checks that file before it unpacks the archive. In <code>rs-plugkit</code>, <code>release.yml</code> calls the reusable workflow <code>wasm-plugin-release.yml</code>, which publishes the WASM guest.</p>
 
 <h2>Retired</h2>
 
@@ -122,9 +118,9 @@ article tbody tr:hover { background: var(--panel-1); }
 </article>
 
 <div class="cross-footer">
-  <a href="./skills.html"><strong>skills</strong><span>one entry skill, every verb</span></a>
+  <a href="./skills.html"><strong>skills</strong><span>gm skills and orchestrator verbs</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>install, registration and checks</span></a>
-  <a href="./paper.html"><strong>paper</strong><span>the complete discipline</span></a>
+  <a href="./paper.html"><strong>paper</strong><span>gm: a skill that makes LLM coding agents check their work against real command output</span></a>
 </div>
 
 </body></html>
