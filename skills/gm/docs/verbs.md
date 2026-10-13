@@ -238,13 +238,13 @@ reply itself. Omit every range key for the whole file, which is returned exactly
 Paged example:
 
 ```
-{"path":"src/dsp/audio_thread.cpp","startLine":1040,"endLine":1100}
--> ok:true, total_lines:3177, start_line:1040, end_line:1100, has_more_lines:true, next_start_line:1101,
-   content:"<those 61 lines only>"
+{"path":"skills/gm/docs/verbs.md","startLine":232,"endLine":244}
+-> ok:true, total_lines:641, start_line:232, end_line:244, has_more_lines:true, next_start_line:245,
+   content:"<those 13 lines only>"
 ```
 
 A reply cut by the whole-reply character cap is spilled to `<out>.reply.txt` with the same range, and the
-notice reports `spill_range: lines 1040-1100 of 3177 (1-based, inclusive)`, `spill_lines` and a `next_range`
+notice reports `spill_range: lines 232-244 of 641 (1-based, inclusive)`, `spill_lines` and a `next_range`
 to send for the rest; page it with `gm_result` on that spill file.
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
