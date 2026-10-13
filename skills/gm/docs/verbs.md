@@ -451,7 +451,7 @@ Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existi
 
 `fetch` takes a JSON body and is HTTP(S)-only.
 
-### `fetch`: one page, as readable markdown
+### `fetch`: one page as readable markdown, or a web search
 
 `fetch` is the fetch port, and it returns the **readable page**, not the transport payload:
 
@@ -467,9 +467,12 @@ body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
 
 | body field | does |
 |---|---|
-| `url` | the page to fetch; the only required field |
+| `url` | the page to fetch. Required unless `query` is given |
+| `query` | with no `url`, the call becomes a **web search**: aliases `q` and `search`. Discovery therefore lives on the same port as reading, so no agent needs a second tool for it |
+| `backend` | which keyless search backend to try, alias `engine`: a name, a comma-separated list, or a results-page URL template containing `{q}`. The `GM_SEARCH_BACKEND` environment variable sets the same order |
+| `count` | hits returned by a search. Default **10**, ceiling 50; `limit`, `max_results`, `k` and `n` are aliases |
 | `prompt` | answers that prompt against the converted page and returns the matching passages **instead of** the page. gm holds no outbound model credential, so answering is **extractive**: the passages are verbatim from the page, scored by how much of the prompt they cover, and `answer_mode` is always `"extractive"` |
-| `max_chars` | cap on characters returned. Default **20000**, ceiling 4000000, so one fetch can never dump a 280k-character page into context |
+| `max_chars` | cap on characters returned. Default **6000**, ceiling 4000000, so one fetch can never dump a 45k-character page into context; the default is small enough to read inline, and a clipped tail names how many characters were dropped |
 | `answer_max_chars` | cap on a prompt answer. Default 4000 |
 | `raw` | `true` (aliases `full_response`, `fullResponse`) is the escape hatch: the original body, no conversion, no prompt answering. Its default `max_chars` is 1000000 |
 | `method`, `headers`, `body`, `opts`, `timeoutMs` | passed to the transport. `timeoutMs` defaults to 60000, ceiling 600000 |
@@ -477,6 +480,27 @@ body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
 The reply carries `url`, `status`, `content_type`, `body_chars`, `converted`, `max_chars` and `truncated`, and then either
 `content` (the markdown) or `prompt`, `answer`, `answer_mode`, `answer_chars` and `passages` (one row per passage, with
 `score` and `matched_terms`). `help:true` returns the verb's own parameter text and sends no request.
+
+`fetch {}` answers `url required (or query, q or search for a web search)`.
+
+#### `fetch {query}`: the search half of the port
+
+A `query` with no `url` walks a list of **keyless** backends in order until one parses into hits, so no API key and no
+listening port are ever involved: `duckduckgo` (`https://html.duckduckgo.com/html/`), `mojeek`, `bing`, `searxng`,
+`brave`, `marginalia`. At most 4 are tried per call; every failed attempt is reported in `attempts` with its status, so
+a challenge page is visible rather than silent. `backend` (alias `engine`) or `GM_SEARCH_BACKEND` picks the order, and a
+value that is a URL names a results-page template (`{q}` is replaced by the encoded query).
+
+```
+body: {"query":"floating point determinism", "count":5}
+body: {"query":"rust wasm component", "backend":"mojeek,bing"}
+body: {"query":"openbw", "allowed_domains":["github.com"]}
+```
+
+A search reply carries `mode:"search"`, `query`, `backend`, `endpoint`, `status`, `count`, `found`, `limit`,
+`truncated`, `filters`, `attempts` and `results`, one row per hit: `rank`, `title`, `url`, `host`, `snippet`, each
+snippet clamped at 400 characters. Ten hits are a few KB, and **raw HTML is never returned unless `raw:true`**. An empty
+run across every backend is an error naming the backends tried and their failures.
 
 ### `websearch`: web discovery without leaving gm
 
@@ -493,7 +517,7 @@ body: {"url":"https://html.duckduckgo.com/html/?q=openbw", "prompt":"what is ope
 |---|---|
 | `query` | what to search for; `q` is an alias. Required unless `url` is given |
 | `url` | read this results page instead of building one from `query`. Use it when the default endpoint answers a challenge or consent page, or to reach another engine |
-| `engine` | `duckduckgo`, the default and the only built-in engine, read from `https://html.duckduckgo.com/html/`, which needs no credential and no API key. There is no other built-in engine: a second one arrives by passing its results page as `url` |
+| `engine` | `duckduckgo`, the default engine, read from `https://html.duckduckgo.com/html/`, which needs no credential and no API key. Any other keyless backend is reached by naming it here or in `backend` (or in `GM_SEARCH_BACKEND`): `mojeek`, `bing`, `searxng`, `brave`, `marginalia` are all built in, and any other results page arrives by passing it as `url`. `fetch {query}` walks the same list with fallback |
 | `limit` | rows returned. Default 8, ceiling 25; `max_results`, `maxResults` and `k` are aliases |
 | `allowed_domains` | keep only results whose host matches one of these suffixes |
 | `blocked_domains` | drop results whose host matches one of these suffixes |
@@ -502,7 +526,7 @@ body: {"url":"https://html.duckduckgo.com/html/?q=openbw", "prompt":"what is ope
 
 Both filters take host suffixes, so `example.com` matches `www.example.com` and `docs.example.com`, and either one
 accepts an array or a comma-separated string. The reply carries `query`, `engine`, `endpoint`, `status`, `count`,
-`found`, `limit`, `truncated`, `filters` and `results` (one row per hit: `title`, `url`, `host`, `snippet`, each
+`found`, `limit`, `truncated`, `filters` and `results` (one row per hit: `rank`, `title`, `url`, `host`, `snippet`, each
 snippet clamped at 400 characters), plus `prompt`/`answer` when a prompt was given. An empty `results` comes with a
 `note` naming the usual cause, a challenge page, and the two ways past it: `url` or `fetch` on a known URL.
 
