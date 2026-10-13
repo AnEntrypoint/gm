@@ -8,15 +8,15 @@ Two facts that stop most guessing:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is
    this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the
-   symbol graph. `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
+   symbol graph (the call graph that `codeinsight_index` builds). `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
 2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
    replies `ok: false`, `error_code: unknown_verb`, and an `error` that begins `unknown verb:`. Retired verbs leave
    one too. Names seen in that directory but absent from the tables below are not verbs in the
    current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`,
    `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`,
-   `submodule_drift_check`. Reach for `grep` where you would reach for `glob`, `fs_readdir` for
-   `fs_list`, and `bash`/`exec_js` with `raw_body` for `exec_bash`. There is no delete verb: remove
+   `submodule_drift_check`. Use `grep` in place of `glob`, `fs_readdir` in place of
+   `fs_list`, and `bash` or `exec_js` with `raw_body` in place of `exec_bash`. There is no delete verb: remove
    a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
 
 ## Dispatching
@@ -87,7 +87,7 @@ accepts `exclude` under the same aliases.
 {"max_files":50000}                              file cap (default 50000)
 {"refresh":true}                                 re-read from disk: walk instead of `git ls-files` (tracked
                                                  plus untracked files git does not ignore), and bypass the
-                                                 mtime-keyed content cache. An unscoped walk also skips noise
+                                                 content cache keyed by file modification time (mtime). An unscoped walk also skips noise
                                                  and hidden directories, so its file set can be smaller.
                                                  "file_source":"disk" and "no_cache":true are aliases.
 {"no_ignore":true}                               include files .gitignore would hide: build output, vendored
@@ -98,7 +98,7 @@ accepts `exclude` under the same aliases.
 ```
 
 The pattern is read as a regex when it carries a `|`, a `\d`-style class escape, a
-`[a-z]`-shaped range, or an edge anchor. A doubled `||` stays literal. A scan that reaches a limit returns `exhaustive: false` and, beside it, `partial: true` with a
+`[a-z]`-shaped range, or an edge anchor (a leading `^` or a trailing `$`). A doubled `||` stays literal. A scan that reaches a limit returns `exhaustive: false` and, beside it, `partial: true` with a
 `partial_reason` naming the limit that fired, plus `exhaustive_note` on how to reach full coverage:
 scope with `path`/`glob` and repeat per subtree.
 
@@ -162,7 +162,7 @@ Example:
 -> bm25_hits: [{key, score, symbol:{kind,name,path,line_start,line_end}, text}, ...]
 ```
 
-`dual` on a multi-word query returns compact `hits` rows `{at, sym, snip, lit}`, where `lit` is true when the row holds the query verbatim. Doc sections are hidden and counted in `docs_hidden`, and `commits` is omitted, unless `docs: true`. Hits are nearest neighbours, so a term absent from every hit is not proven absent: `literal` decides it. Commit hits are leads, confirmed with `git_show`. Each `bm25_hits` row carries a `key` and, when one is indexed, a `symbol` (`{kind, name, path, line_start, line_end}`).
+`dual` on a multi-word query returns compact `hits` rows `{at, sym, snip, lit}`, where `lit` is true when the row holds the query verbatim. In `dual` mode, doc sections are hidden and counted in `docs_hidden`, and `commits` is omitted, unless `docs: true`. Hits are nearest neighbours, so a term absent from every hit is not proven absent: `literal` decides it. Commit hits are leads, confirmed with `git_show`. Each `bm25_hits` row carries a `key` and, when one is indexed, a `symbol` (`{kind, name, path, line_start, line_end}`).
 Four modes, plus the comment scan (`mode:"comments"`): `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly.
 `filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
@@ -177,11 +177,11 @@ Rule exclusions (`excluded_by_rule`, `excluded_by_rule_count`)
 of gm's own state (`gm_state_dir`, `agentplug_kv_cache`) are counted in `excluded_by_rule_summary`, which counts every rule; they never affect `exhaustive`; every other rule (`gitignore`, `hidden_dir`, `noise_dir_name`) drops code, so it clears `exhaustive`. `excluded_by_rule` rides only when a rule dropped code, and names the first five such paths. A `path_glob` brace alternative whose directory lies outside `path` is named in `glob_outside_path`, which clears it too. Missing optional diagnostics never prove completeness.
 
 Scope: `literal` and `regex` scan git's view of the worktree (`file_source: "git"`): tracked files, submodule
-contents, and untracked files git does not ignore. A `root` or `path` naming a gitignored directory or a folder
+contents, and untracked files git does not ignore. A `root` (the project root to scan, alias `projectPath`) or `path` naming a gitignored directory or a folder
 outside any git worktree is walked instead (`file_source: "walk"`, with `walk_reason`). `path_glob` is a real
 glob (`**/*.{js,mjs}`), matched case-insensitively; a glob that admits no file sets `glob_matched_no_files: true`
 and `exhaustive: false`. `timeout_ms` bounds the scan (default 20000 for regex); an overrun answers
-`timed_out: true`, `exhaustive: false` and `budget_ms`. Past `max_chars` (24000) the rest spills to
+`timed_out: true`, `exhaustive: false` and `budget_ms`. Past `max_chars` (24000) the rest spills (a file that holds reply data the reply does not carry inline) to
 `spill_file` with `reply_truncated: true`. `output` is `matches` (default), `compact` (`path:line: text`),
 `files` or `count`. A spill also carries `counts_by_file` inline (`N path` rows, busiest first), so the per-file answer never waits on the spill file.
 
@@ -198,15 +198,15 @@ effect on it. Give the result limit as `max_results` or `k`, never both with dif
 compile is refused with the regex error text rather than an empty result.
 
 
-### `fs_read`: read a file or a line range
+### `fs_read`, `fs_write`, `fs_readdir`, `fs_stat`: read a file or a line range, write a file, list a directory, stat a path
 
 ```
 {"path":"<relative path>"}     required, relative and within the project
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
 {"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
                                "allow_outside_root" is an alias. A path holding a ".." segment is
-                               still refused, so the opt-in widens which root a read may address,
-                               never whether it may climb out of one. The host sandbox is a second,
+                               still refused, so the opt-in only changes which root a read may address:
+                               it does not change whether a path may climb out of that root. The host sandbox is a second,
                                independent gate: outside the project root it serves only paths under
                                the user gm root or under a directory it grants. It grants a directory
                                only when that directory itself carries a
@@ -221,6 +221,8 @@ an end line. Accepted aliases, resolved in this order (the first pair with a key
 ```
 startLine / endLine     start / end (and start / count)     from / to     offset / limit     line / lines
 ```
+
+The `line` and `lines` aliases name a start line and a line count, as `offset` and `limit` do.
 
 So `{"startLine":1040,"endLine":1100}` and `{"from":1040,"to":1100}` and `{"offset":1040,"limit":61}` all
 return lines 1040-1100. A request `offset` is the 1-based first line, unlike the 0-based `offset` in a reply. An end line past the last line clamps, and the reply then carries
@@ -241,18 +243,17 @@ Paged example:
    content:"<lines 232 to 244>"
 ```
 
-A reply longer than `reply_max_chars` is spilled to the file named by `spill_file`, with the same range, and the
+A reply longer than the cap that `reply_max_chars` reports is spilled to the file named by `spill_file`, with the same range, and the
 notice reports `spill_range: lines 232-244 of <n> (1-based, inclusive)`, `spill_lines`.
-Page the rest with `gm_result` on that file.
+Page the rest with the `gm_result` MCP tool on that file.
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
 `content`, and the value may be a JSON string (with `\n` for each newline) **or an array of lines**,
 which is joined with `\n` plus a trailing newline. A raw, non-JSON body is accepted too when its
 first line is a `path=<relative path>` directive and everything after it is the file contents. There
-is an append mode, which runs only when the body sets `append: true`; a whole-file write to an append-only path is refused with `append_only_rewrite_refused`, and any other write replaces the whole file. It returns `{"bytes": <written>}`; a write outside
+is an append mode, which runs only when the body sets `append: true`; a whole-file write to the append-only path `.gm/witness-log.md` is refused with `append_only_rewrite_refused`, and any other write replaces the whole file. It returns `{"bytes": <written>}`; a write outside
 the root is refused even with `allowOutsideRoot`, which widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat`
-takes `{"path":"<relative path>"}`. `fs_readdir` and `fs_stat` take the same
-`{"allowOutsideRoot":true}` opt-in as `fs_read`.
+takes `{"path":"<relative path>"}`.
 
 ### `callers`, `callees`, `impact`: who calls a symbol and what a change reaches
 
@@ -304,8 +305,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
 
-`recall` searches `.gm/memories/*.md` and its derived vector index. It is namespace-aware, scores
-cosine times recency.
+`recall` searches `.gm/memories/*.md` and its derived vector index. Hits are scored as cosine times recency, within the `namespace` the body names.
 
 ```
 {"query":"<text>"}        required
@@ -315,7 +315,7 @@ cosine times recency.
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
 `memorize-fire` writes its body as one `.md` file into the memorize inbox (`memorize_inbox` in `rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs`), and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain it, `forget` deletes one key, and `auto-recall` answers a prompt body with three recall hits.
+maintain the recall index, `forget` deletes one `key` from a namespace's key-value store, and `auto-recall` answers a prompt body with three recall hits.
 
 A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
 The gm-mcp response compactor (`gm-mcp/src/response-compact.js`) drops `vector_hits` when every row in it is already in `hits` and names it
@@ -347,9 +347,9 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 **Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable is presence-tested, so `MSYS_NO_PATHCONV=0` disables conversion too. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
 
-At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the body has no `timeoutMs=` line; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (floored at the 300000 default, capped at 900000), so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the original task handle plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass the task handle as `resume_task` to re-poll that dispatch without redispatching.
+At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the body has no `timeoutMs=` line; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (600000 ms by default), then held between the 300000 ms exec default and the 900000 ms hard ceiling, so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the dispatch's `task` id plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass that `task` id as `resume_task` to re-poll that dispatch without redispatching.
 
-A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway create is needed (`([wmiclass]'Win32_Process').Create`, `setsid`): the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
+A child a dispatch starts outlives the dispatch when it holds no pipe back to the runner. The runner holds the exec child and its whole tree in a Windows Job Object that carries no `KILL_ON_JOB_CLOSE`, so closing that handle when the dispatch returns leaves the tree running, and `terminate_containment` stays the only path that kills it (at `timeoutMs` expiry, and on `task-stop`). The one supported way to start durable background work is a redirected, subshell-detached child with its own log file: `( nohup bash /abs/path/script.sh >/abs/path/log 2>&1 & )`. Both halves are required: the redirect keeps the child off the runner's stdout and stderr, because a child that keeps those pipes open is instead adopted as a task and lives only until that task times out (30 minutes, not a daemon), and the subshell detaches it from the dispatch's shell so the shell does not wait on it. No breakaway call (a process start outside the job, such as `([wmiclass]'Win32_Process').Create` or `setsid`) is needed: the job no longer ends with the dispatch. Confirm survival from a SEPARATE dispatch, by pid or by the log that child appends, because a child checked only inside the dispatch that started it has not yet outlived anything.
 
 Output fields (`stdout`, `stderr`, `result`, a structured `result` included) show up to 16000 characters; a longer field ends in `OUTPUT TRUNCATED` naming `result_file`, a plain text file (`## result`, `## stdout`, `## stderr` sections, un-escaped) that can be read directly. Use a language stem such as `bash` only when the request specifically needs shell syntax.
 
@@ -364,7 +364,7 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 
 Class (query or command): `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and CI watch steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
+`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
 `git_reset` accepts `ref` or `rev` for the target, and `mode` (`mixed` default, `soft`, `hard`) or `hard:true`; `paths`/`files` limit the reset to those paths in the index. Unknown fields are refused. Naming `ref` and `rev` with different values, or `mode` and a conflicting `hard`, refuses with `conflicting_fields`; `paths` require `mode` `mixed` (`accepted_modes_for_paths`); `.gm/` and `.agentplug*` pathspecs are refused as protected. `mode` `hard` runs `git reset --hard` and rewrites the worktree. `git_commit {"amend":true}` rewrites the current commit instead of stacking a child, and refuses when that commit is already published (`pushed_commit_refused`, amend path in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs`). `git_amend` is that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler, and carries the same `pushed_commit_refused` refusal.
 
@@ -375,13 +375,13 @@ whole tracked tree is a long reply. The `eol` array holds at most `limit` entrie
 bound as the default listing); `eol_count` and `eol_mismatch_count` stay exact over every entry. When the
 array is capped, `eol_truncated` is `true`, the full raw `git ls-files --eol` listing is written to
 `eol_spill_file` under `.gm/exec-spool/out/`, and `eol_spill_write_failed` is set if that write fails.
-A spill is a file that holds reply data the reply does not carry inline. Spill retention: `spill_file` and `eol_spill_file` both use the `git_status-` prefix; the newest 20
+Spill retention: `spill_file` and `eol_spill_file` both use the `git_status-` prefix; the newest 20
 `git_status-*.txt` files are kept in `.gm/exec-spool/out/`, and each git_status call that writes a spill
 deletes the older ones. A reply that wrote a spill names this rule in `spill_retention`.
 
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
-`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the push-dirty scope check blocks, which is the normal state. The refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish with the Git API route instead (blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the `push-dirty` scope check (`push_dirty_scope`) blocks, which is the normal state. The refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish through the GitHub Git API instead (create blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
 Each git verb in this section takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}` to target another repository.
 The publishing verbs (`git_push`, `git_finalize`) read git's machine-readable status (porcelain) before they run, and a gate can deny them; a
@@ -401,10 +401,10 @@ refusal names every blocking path in `blocking_paths` plus `next_dispatch`: `git
 to accept the worktree version, or `git_stash {paths:[...]}` then `git_merge_abort` then
 `git_stash_pop`. `{"preserve":false}` shelves nothing and reports instead of working around.
 
-**Main only: work in the shared work tree; collisions are recovered, not avoided.** No lane opens a
+**Main only: work in the shared work tree; collisions are recovered, not avoided.** No lane (one parallel agent session) opens a
 worktree, side branch or scratch checkout to obtain a clean HEAD: every extra tree ends in a
 consolidation run (a merge back into the shared tree), and a publish from one merges back into the tree every other lane is writing. In a shared work tree that merge is exactly where lanes sweep each other's uncommitted edits.
-Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane (one parallel agent session) re-reads the row
+Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row
 or file, reapplies the change on current state and retries. A READ question is answered without a
 second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main`; a whole tree
 with `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards.
@@ -455,7 +455,7 @@ The `git_worktree_add`, `git_worktree_list` and `git_worktree_remove` verbs serv
 
 `fetch` is the web-reading verb, and it returns the **readable page**, not the transport payload:
 
-1. the response body is fetched over the host's `host_fetch` (HTTPS and HTTP only, no `file://`, no whitespace in the URL, 2048 bytes at most);
+1. the response body is fetched over `host_fetch`, which the native WASM host provides to the guest (HTTPS and HTTP only, no `file://`, no whitespace in the URL, 2048 bytes at most);
 2. when the body is HTML, it is converted to markdown **before** it is returned: `head`, `script`, `style`, `svg`, `nav`, `header`, `footer`, `aside`, `form`, `iframe`, `template`, `select`, `button`, `input`, `meta`, `link`, `canvas`, `object` and `embed` blocks are dropped, `article` or `main` wins over the rest of the document, and headings, lists, links, images, code fences and tables are kept as markdown; entities are decoded and blank runs are collapsed;
 3. a body that is not HTML (JSON, plain text, CSV, base64) is returned as it arrived.
 
@@ -479,7 +479,7 @@ body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
 
 The reply carries `url`, `status`, `content_type`, `body_chars`, `converted`, `max_chars` and `truncated`, and then either
 `content` (the markdown) or `prompt`, `answer`, `answer_mode`, `answer_chars` and `passages` (one row per passage, with
-`score` and `matched_terms`). `help:true` returns the verb's own parameter text and sends no request.
+`score` and `matched_terms`). On `fetch`, `help:true` returns its parameter text and sends no request.
 
 `fetch {}` answers `url required (or query, q or search for a web search)`.
 
@@ -488,7 +488,7 @@ The reply carries `url`, `status`, `content_type`, `body_chars`, `converted`, `m
 A `query` with no `url` walks a list of **keyless** backends in order until one parses into hits, so no API key and no
 listening port are ever involved: `duckduckgo` (`https://html.duckduckgo.com/html/`), `mojeek`, `bing`, `searxng`,
 `brave`, `marginalia`. At most 4 are tried per call; every failed attempt is reported in `attempts` with its status, so
-a challenge page is visible rather than silent. `backend` (alias `engine`) or `GM_SEARCH_BACKEND` picks the order, and a
+a challenge page (a bot check served in place of the results) is visible rather than silent. `backend` (alias `engine`) or `GM_SEARCH_BACKEND` picks the order, and a
 value that is a URL names a results-page template (`{q}` is replaced by the encoded query).
 
 ```
@@ -521,7 +521,7 @@ body: {"url":"https://html.duckduckgo.com/html/?q=openbw", "prompt":"what is ope
 | `limit` | rows returned. Default 8, ceiling 25; `max_results`, `maxResults` and `k` are aliases |
 | `allowed_domains` | keep only results whose host matches one of these suffixes |
 | `blocked_domains` | drop results whose host matches one of these suffixes |
-| `prompt` | answered against the kept rows, the same extractive way `fetch` answers one |
+| `prompt` | answered against the kept rows, the same extractive way `fetch` answers a prompt |
 | `max_chars`, `raw`, `timeoutMs` | as on `fetch`; `timeoutMs` defaults to 30000 |
 
 Both filters take host suffixes, so `example.com` matches `www.example.com` and `docs.example.com`, and either one
@@ -567,7 +567,7 @@ raw_body: "https://example.com/\nsnapshot\n"
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
-- `session=<name>` (a crawl session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
+- `session=<name>` (a crawl session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one crawl session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
 - The shared Chrome closes when its last lease is released, at the end of the call that holds it. A lease is the hold one call keeps on the shared Chrome. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -595,8 +595,8 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
 `result` and `cdp Page.captureScreenshot` yields `data`. The command runs on the page's CDP session.
 
-An `events` step arms its capture when the call attaches, not where the line sits, so events fired
-by an earlier step are still collected; the entry keeps filling until the call ends. `where` keeps
+An `events` step arms its capture when the call attaches to the shared Chrome, not where the line sits, so events fired
+by an earlier step are still collected; the events entry keeps filling until the call ends. `where` keeps
 the events whose dotted field, read out of the event params, contains (`~`), equals (`=`) or differs
 from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the
 rest in `dropped`. The CDP domain (the part before the dot) is enabled for you, so `events Debugger.scriptParsed` sends
@@ -606,7 +606,7 @@ rest in `dropped`. The CDP domain (the part before the dot) is enabled for you, 
 raw_body: "engine=cdp\nsessionId=example-1\nevents Debugger.scriptParsed where url~example limit=600\ncdp Page.navigate\n{\"url\":\"https://example.com/\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
 ```
 
-A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the session has printed is refused with an error. Console and network capture start when a call attaches to the shared Chrome.
+A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the crawl session has printed is refused with an error. Console and network capture start when a call attaches to the shared Chrome.
 
 ## Phase machine, PRD rows and pool
 
@@ -614,7 +614,7 @@ The verbs below drive the phase machine. They are dispatched through the same sp
 
 **The graph is a set of independent nodes, not a sequence of stages.** `gm-config/fsm/graph.json` declares its states (the nodes) and its edges, and `rs-plugkit` compiles its own lean graph, `rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json`, through `include_str!`. A node
 is a principle, a tension, a gate or a terminal, and each has its own prose, keyed by that
-node's `prose_key`.
+node's `prose_key`. An edge's `kind` is `forward` or `backreference`.
 A node is entered from any neighbour that has an edge to it and left along any edge out of it, so
 a walk is a graph walk with many distinct paths. The runtime word `phase` is the node key you
 currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
@@ -630,13 +630,13 @@ against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 and no verb writes a file that holds another lane's rows, so two lanes adding two different rows can
 never lose each other's work to one whole-file rewrite. A file is a single YAML mapping (or a
 sequence of blocks when a row has more than one), so it is editable by hand. Writing one row is a
-compare-and-swap of that row's file alone under a temp-file-plus-rename, so a partial write cannot
+compare-and-swap (the write proceeds only while the file still holds the bytes read earlier) of that row's file alone, under a temp file renamed over the row, so a partial write cannot
 leave a row unreadable.
 
 **Resolution moves the row.** `prd-resolve` (and `mutable-resolve`) append the row's material to
 `.gm/prd-log.jsonl` (`.gm/mutables-log.jsonl`) and remove the row file, so the folder holds open
 work only. The log is append-only and hash-chained: every line carries `prev`, the sha256 of the
-line before it, plus `ts`, `ts_ms`, `session_id` when a dispatch session is known, and the resolved row's blocks as `material`, so a
+line before it, plus `ts`, `ts_ms`, `session_id` when a dispatch session is known, and the resolved row's YAML blocks, converted to JSON, as `material`, so a
 truncation or an edit is visible rather than silent. The resolve reply names `filed_to`, `filed_at`
 and `row_file_cleared`. After resolution the id is still readable: `prd-list {"id":"<id>"}` reads the log
 and returns the row with `resolved: true`.
@@ -676,7 +676,7 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied`. 
 
 `sql_list_dbs`, `sql_query`, `sql_serialize`, `cache_get`, `cache_stats`, `kv_get`, `kv_query`, `env_get`, `health`, `status`, `dataflow_resolve` and `tencentdb-compat-probe` are `query`; `sql_open`, `sql_close`, `sql_exec`, `sql_smoke`, `sql_deserialize`, `cache_put`, `cache_invalidate`, `kv_put`, `close`, `config_resolve`, `config-sync-now` and `tencentdb-memory-import` are `command`.
 
-`wait {"ms":N}` idles the caller for N milliseconds. It is a `command`, since it dispatches a host exec_js call. `ms` takes a positive integer from 1 to 600000 (10 minutes, echoed as `max_ms` in a refusal), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
+`wait {"ms":N}` idles the caller for N milliseconds. It is a `command`, since it dispatches a host `exec_js` call. `ms` takes a positive integer from 1 to 600000 (10 minutes, echoed as `max_ms` in a refusal), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
 
 `sleep {"ms":N}` shares `wait`'s handler (the orchestrator maps both names to `wait::handle`), so it takes the same body, enforces the same range and returns the same reply and has the same query or command class.
 
