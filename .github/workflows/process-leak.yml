@@ -16,7 +16,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-      # New files only: a file that starts something long-lived and never guarantees it stops is
-      # the class that leaves shells and node processes behind. Pre-existing offenders live in
-      # .process-leak-baseline.json, so this job never reddens on history -- only on a new one.
       - run: node scripts/scan-process-leak-tells.mjs --diff=origin/main
