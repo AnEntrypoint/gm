@@ -1,5 +1,5 @@
 id: made-with
 title: "gm showcase: AnEntrypoint repositories"
-description: "Selected repositories from the AnEntrypoint GitHub organization. New to gm? Start with the gm repository. Its description: gm: the canonical universal harness: skill-driven orchestration for AI-native software engineering."
+description: "gm is a skill and MCP server for developers who use Claude Code, Cursor, Gemini CLI or Codex. It keeps a plan of rows, runs real checks, and refuses to let the agent mark a task finished until those checks pass. New to gm? Install it from the distribution page or read its skills."
 layout: article
 source: ../docs/made-with.html
