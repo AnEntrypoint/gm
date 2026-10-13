@@ -5,8 +5,8 @@ import {
   escapeHtml, escapeJson, extractArticle, rewriteLegacyLinks,
 } from 'anentrypoint-design/kits/flatspace-theme';
 
-const DESIGN_REPOSITORY_CSS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.css';
-const DESIGN_REPOSITORY_JS_URL = 'https://cdn.jsdelivr.net/gh/AnEntrypoint/design@main/dist/247420.js';
+const DESIGN_REPOSITORY_CSS_URL = 'https://cdn.jsdelivr.net/npm/anentrypoint-design@0.0.471/dist/247420.css';
+const DESIGN_REPOSITORY_JS_URL = 'https://cdn.jsdelivr.net/npm/anentrypoint-design@0.0.471/dist/247420.js';
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
