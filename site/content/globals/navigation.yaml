@@ -1,16 +1,17 @@
 links:
   - label: home
     href: ./
-  - label: paper
+  - label: install
+    href: ./distribution/
+  - label: how checks fit together
     href: ./paper/
   - label: docs
     group:
-      - { label: crates,       href: "./crates/" }
+      - { label: Rust crates,       href: "./crates/" }
       - { label: skills,       href: "./skills/" }
-      - { label: distribution, href: "./distribution/" }
-      - { label: graph,        href: "./graph/" }
-      - { label: dada graph, href: "./dada-graph/" }
-  - label: more
+      - { label: hop graph,        href: "./graph/" }
+      - { label: full DADA graph, href: "./dada-graph/" }
+  - label: showcase and links
     group:
       - { label: showcase, href: "./made-with/" }
       - { label: 247420,   href: "https://247420.xyz" }
