@@ -1,7 +1,7 @@
 id: paper
 title: "gm: a skill that gates AI coding agents on real command output"
-subtitle: "How gm's checks, gates and walks fit together, for developers who already use an AI coding agent."
-description: "gm is a skill for Claude Code, Cursor, Gemini CLI and Codex that runs real checks and refuses to let the agent mark a task finished until they pass."
+subtitle: "How gm's checks, gates and walks fit together. A gate is a condition on one move between states, and a failed gate refuses that move. A walk is one run of the gm state machine, driven to COMPLETE. For developers who already use an AI coding agent."
+description: "gm is a skill for Claude Code, Cursor, Gemini CLI and Codex that runs real checks and refuses to let the agent mark a task finished until those checks pass."
 layout: article
 wide: true
 source: ../docs/paper.html

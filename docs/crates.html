@@ -58,15 +58,15 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm is a skill for coding agents, with an MCP server (a tool interface that agents call) that runs it. Inside a gm walk, a gate denies a verb while its check fails. This page lists the four Rust repositories in gm's source tree and what each one owns. To install gm, start with the <a href="./distribution.html">distribution page</a>.
+    gm is a skill for coding agents. An MCP server (a tool interface that agents call) sends each call to the native runner. Inside a gm walk (one run of the state machine), a gate rejects a transition while its check fails. This page lists the four Rust repositories in gm's source tree and what each one owns. To install gm, start with the <a href="./distribution.html">distribution page</a>.
   </div>
 </div>
 
 <article>
 
-<h2>Install and check</h2>
+<h2>Runner location and build info</h2>
 
-<p>The installer places the runner at <code>~/.gm-tools/agentplug-runner</code> (on Windows, <code>~/.gm-tools/agentplug-runner.exe</code>), under the plain name, while the release asset carries a platform suffix such as <code>agentplug-runner-linux-x64</code>. Run <code>~/.gm-tools/agentplug-runner --build-info</code> to see the runner build.</p>
+<p>The installer downloads a platform release asset and saves it as <code>~/.gm-tools/agentplug-runner</code> (on Windows, <code>~/.gm-tools/agentplug-runner.exe</code>). The asset name has a platform suffix, such as <code>agentplug-runner-linux-x64</code>. Run <code>~/.gm-tools/agentplug-runner --build-info</code> to see the runner build.</p>
 
 <h2>The crates</h2>
 
@@ -76,8 +76,8 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the orchestrator</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit</a></span>
   </div>
-  <p><strong>Job:</strong> runs gm's workflow state machine and its gates, and answers the verbs (named commands) an agent sends it: workflow verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). The full list is in <code>skills/gm/docs/verbs.md</code>. Its only crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the WebAssembly module as <code>plugkit-slim.wasm</code>.</p>
-  <p>It enforces a workflow graph of 146 states joined by 376 edges, with 26 gate predicates. The copy at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code> has the same counts as <code>gm-config/fsm/graph.json</code>.</p>
+  <p><strong>Job:</strong> runs gm's workflow state machine and its gates, and answers the verbs (named commands) an agent sends it: workflow verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). The full list is in <code>skills/gm/docs/verbs.md</code>. Its only crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the WebAssembly module as <code>plugkit-slim.wasm</code>, the build with no baked-in embedding weights.</p>
+  <p>It enforces a workflow graph of 146 states joined by 376 edges, with 26 gate predicates. The enforced copy at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code> has the same counts as the authored graph, <code>gm-config/fsm/graph.json</code>.</p>
 </div>
 
 <div class="crate">
@@ -95,7 +95,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the code structure parser</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight</a></span>
   </div>
-  <p><strong>Job:</strong> a standalone code structure analyzer built on tree-sitter, shipped as a <code>codeinsight</code> command and a library. <code>agentplug-runner</code> fetches a <code>codeinsight</code> plugin binary by that name. <code>rs-plugkit</code> answers <code>callers</code> and <code>impact</code> queries itself, without linking this crate.</p>
+  <p><strong>Job:</strong> a standalone code structure analyzer built on tree-sitter, shipped as a <code>codeinsight</code> command and a library. <code>agentplug-runner</code> fetches a <code>codeinsight</code> plugin binary from the <code>AnEntrypoint/agentplug-codeinsight-bin</code> repository. <code>rs-plugkit</code> answers <code>callers</code> (who calls a symbol) and <code>impact</code> (a walk of the symbol graph from a symbol) queries itself, without linking this crate.</p>
 </div>
 
 <div class="crate">
@@ -104,14 +104,14 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the native host</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/agentplug">AnEntrypoint/agentplug</a></span>
   </div>
-  <p><strong>Job:</strong> <code>agentplug-runner</code> is the native host that loads <code>plugkit-slim.wasm</code> and serves the spool, the directory of request and response files that gm writes and polls. Its commands include <code>spool</code>, <code>daemon</code>, <code>dispatch</code>, <code>takeover</code> and <code>plugin</code>. One daemon runs per install directory and serves every registered project. Its crates are <code>agentplug-host</code>, <code>agentplug-runner</code>, and the lightpanda crates <code>agentplug-lightpanda</code> and <code>agentplug-lightpanda-wasm</code>.</p>
+  <p><strong>Job:</strong> <code>agentplug-runner</code> is the native host that loads <code>plugkit-slim.wasm</code> and serves the spool, the directory of request and response files that gm writes and polls. Its commands include <code>spool</code>, <code>daemon</code>, <code>dispatch</code>, <code>takeover</code> and <code>plugin</code>. One install directory runs at most one daemon, and that daemon serves every registered project. Its crates are <code>agentplug-host</code>, <code>agentplug-runner</code>, and the lightpanda crates <code>agentplug-lightpanda</code> and <code>agentplug-lightpanda-wasm</code>.</p>
 </div>
 
 <h2>How a change ships</h2>
 
-<p>A change to the gm skill publishes through <code>.github/workflows/skill-release.yml</code> when it lands on <code>main</code>. In <code>rs-plugkit</code>,<code>release.yml</code> calls the reusable workflow <code>wasm-plugin-release.yml</code>, which publishes the WebAssembly module as <code>plugkit-slim.wasm</code>.</p>
+<p>A change to the gm skill publishes through <code>.github/workflows/skill-release.yml</code> when it lands on <code>main</code>. In <code>rs-plugkit</code>, <code>release.yml</code> calls the reusable workflow <code>wasm-plugin-release.yml</code>, which publishes the WebAssembly module as <code>plugkit-slim.wasm</code>.</p>
 
-<h2>Retired</h2>
+<h2>Retired repositories</h2>
 
 <p><code>rs-exec</code> and <code>rs-learn</code> are retired. Their repositories are archived, and each one's README names <code>rs-plugkit</code> as its replacement.</p>
 

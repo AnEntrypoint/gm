@@ -58,23 +58,23 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose tasks each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server, then type <code>/gm</code> in your coding agent.
+    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose rows each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server, then type <code>/gm</code> in your coding agent.
   </div>
 </div>
 
 <article>
 
-<h2>What you can do next</h2>
+<h2>After you load /gm</h2>
 
-<p>Once <code>/gm</code> is loaded, the agent dispatches <code>instruction</code> to orient, and <code>phase-status</code> for a bare state check. The <a href="#orchestrator-verbs">orchestrator verbs</a> section lists the verbs this page documents, and <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">the verb inventory</a> gives each verb's body shape.</p>
+<p>Once <code>/gm</code> is loaded, the agent dispatches <code>instruction</code> to read the prose for the current phase, and <code>phase-status</code> for a state check. The <a href="#orchestrator-verbs">verb list</a> below names the verbs this page documents, and <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">the verb inventory</a> gives each verb's body shape.</p>
 
 <h2>Terms</h2>
 
 <ul>
   <li><code>walk</code>: one run of the gm state machine that the orchestrator drives to completion.</li>
-  <li><code>plan row</code>: one entry in the plan. It closes only with recorded <code>witness_evidence</code>.</li>
+  <li><code>plan row</code>, also called a PRD row: one entry in the plan. An open row is one file in <code>.gm/prd/</code>. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
-  <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial, which names the recovery verb.</li>
+  <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial. The denial names the verb to dispatch next.</li>
   <li><code>mutable</code>: an open question that the agent records instead of asking the user.</li>
   <li><code>verb</code>: a named gm operation an agent calls, such as <code>codesearch</code> or <code>instruction</code>.</li>
   <li><code>dispatch</code>: one request an agent sends to run a verb.</li>
@@ -86,7 +86,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>The walk skills</h2>
 
-<p>These skills sit beside <code>gm</code>. <code>gm-orchestrate</code> and <code>gm-hop</code> are invoked only from <code>gm</code> and are not loaded directly.</p>
+<p>These skills run inside a walk. <code>gm-orchestrate</code> and <code>gm-hop</code> are invoked only from <code>gm</code> and are not loaded directly.</p>
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">runs the walk loop</span></div>
@@ -124,9 +124,9 @@ article tbody tr:hover { background: var(--panel-1); }
 </tbody>
 </table>
 
-<h2 id="orchestrator-verbs">The orchestrator verbs</h2>
+<h2 id="orchestrator-verbs">The verbs this page documents</h2>
 
-<p>An agent dispatches a verb through the gm MCP server, using the <code>gm_codemode</code> tool. Without MCP, it writes the request to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;SESSION_ID&gt;-&lt;N&gt;.txt</code> and reads the reply from <code>.gm/exec-spool/out/&lt;verb&gt;-&lt;SESSION_ID&gt;-&lt;N&gt;.json</code>, where <code>&lt;N&gt;</code> is <code>&lt;pid&gt;-&lt;ms&gt;-&lt;counter&gt;</code>.</p>
+<p>An agent dispatches a verb through the <code>gm_codemode</code> tool of the gm MCP server, as <code>gm.&lt;verb&gt;({...})</code> in the code body. Without MCP, it writes the request to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;SESSION_ID&gt;-&lt;N&gt;.txt</code> and reads the reply from <code>.gm/exec-spool/out/&lt;verb&gt;-&lt;SESSION_ID&gt;-&lt;N&gt;.json</code>, where <code>&lt;N&gt;</code> is <code>&lt;pid&gt;-&lt;ms&gt;-&lt;counter&gt;</code>.</p>
 
 <table>
 <thead><tr><th>Verb</th><th>Does</th></tr></thead>
@@ -137,12 +137,12 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td><code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code></td><td>Adds, resolves and lists plan rows. Each open row is one file in <code>.gm/prd/</code> in the project. A resolved row moves to <code>.gm/prd-log.jsonl</code>.</td></tr>
 <tr><td><code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code></td><td>Add, resolve and list mutables. Each open mutable is one file in <code>.gm/mutables/</code>. A resolved one moves to <code>.gm/mutables-log.jsonl</code>.</td></tr>
 <tr><td><code>fsm-vendor</code></td><td>Writes the compiled default prose into <code>.gm/instructions/</code>, where a vendored file takes precedence over the config repo's cached prose.</td></tr>
-<tr><td><code>codesearch</code>, <code>grep</code></td><td><code>codesearch</code> is ranked search over the project. <code>grep</code> is an exhaustive literal or regex scan that reports each hit as <code>path:line</code>.</td></tr>
+<tr><td><code>codesearch</code>, <code>grep</code></td><td><code>codesearch</code> is ranked search over the project by default. Its <code>literal</code> and <code>regex</code> modes are exhaustive. <code>grep</code> is an exhaustive literal or regex scan that reports each hit as <code>path:line</code>.</td></tr>
 <tr><td><code>recall</code>, <code>memorize</code></td><td>Search the project's memory files in <code>.gm/memories/</code>, and store a memory.</td></tr>
 <tr><td><code>exec_js</code></td><td>Runs code in a subprocess. A leading <code>timeoutMs=&lt;ms&gt;</code> line sets its budget, with a default of 300000 ms.</td></tr>
-<tr><td><code>git_finalize</code>, <code>git_push</code>, <code>git_show</code>, <code>ci-status</code></td><td>Commit and push with <code>git_finalize</code>, publish a named commit with <code>git_push</code>, show a commit with <code>git_show</code>, and check its CI with <code>ci-status</code>.</td></tr>
+<tr><td><code>git_finalize</code>, <code>git_push</code>, <code>git_show</code>, <code>ci-status</code></td><td>Commit and push with <code>git_finalize</code>, naming <code>paths</code> each time. Publish a commit with <code>git_push</code> and <code>rev</code>; the push also sends each earlier commit on main that the remote lacks. Show a commit with <code>git_show</code>, and check its CI with <code>ci-status</code>.</td></tr>
 <tr><td><code>health</code></td><td>Reports the subsystem and verb tables and the alias table. Recall and codesearch probes run only when the body sets <code>probes</code> to true.</td></tr>
-<tr><td><code>gm_result</code></td><td>Reads a reply that is cut at the reply size limit, from its spill file.</td></tr>
+<tr><td><code>gm_result</code></td><td>Reads a reply that is cut at the reply size limit, from the file that holds the whole reply.</td></tr>
 </tbody>
 </table>
 

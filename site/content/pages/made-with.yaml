@@ -1,5 +1,5 @@
 id: made-with
-title: "gm showcase: AnEntrypoint repositories"
-description: "gm is a skill and MCP server for developers who use Claude Code, Cursor, Gemini CLI or Codex. It keeps a plan of rows, runs real checks, and refuses to let the agent mark a task finished until those checks pass. New to gm? Install it from the distribution page or read its skills."
+title: "gm showcase: selected AnEntrypoint repositories"
+description: "gm is a skill (instructions the agent reads from a SKILL.md file) and an MCP server for developers who use Claude Code, Cursor, Gemini CLI or Codex. It keeps a plan of rows, one file per row under .gm/prd/. A row is one task. Each row is resolved only with the recorded result of a real check. It refuses to let the agent mark a task finished until every row is resolved, a CI result is recorded for HEAD, and no submodule has drifted from its recorded commit. New to gm? Install gm from the distribution page, or read the gm skills page."
 layout: article
 source: ../docs/made-with.html
