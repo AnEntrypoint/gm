@@ -94,7 +94,6 @@ const status = C.Status ? C.Status({
     site.category ? site.category : null,
   ].filter(Boolean),
   right: [
-    site.year ? String(site.year) : null,
     site.repo ? h('a', { href: site.repo, target: '_blank', rel: 'noopener' }, 'source') : null,
   ].filter(Boolean),
 }) : null;
