@@ -1,5 +1,5 @@
 id: made-with
-title: showcase
-description: "Repositories in the AnEntrypoint GitHub organization, each with the description its repository carries."
+title: "gm showcase: AnEntrypoint repositories"
+description: "Selected repositories from the AnEntrypoint GitHub organization. New to gm? Start with the gm repository. Its description: gm: the canonical universal harness: skill-driven orchestration for AI-native software engineering."
 layout: article
 source: ../docs/made-with.html
