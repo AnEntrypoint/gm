@@ -51,6 +51,15 @@ const sentenceAround = (line, index) => {
   const to = ends.length ? Math.min(...ends) : line.length;
   return line.slice(from, to);
 };
+// An HTML table cell has no sentence of its own, so it takes the graph the nearest preceding
+// line names alone (within 30 lines), which is the paragraph that introduces the table.
+const introducerFor = (lines, index) => {
+  for (let i = index; i >= Math.max(0, index - 30); i -= 1) {
+    const named = Object.keys(labelsFor).filter((label) => labelsFor[label].test(lines[i]));
+    if (named.length === 1) return lines[i];
+  }
+  return '';
+};
 const allowedFor = (kind, sentence) => {
   const named = Object.keys(labelsFor).filter((label) => labelsFor[label].test(sentence));
   return graphs
@@ -93,7 +102,9 @@ for (const rel of files) {
       for (const m of line.matchAll(claim.re)) {
         for (const group of claim.groups) {
           const value = Number(m[group]);
-          const allowed = allowedFor(claim.kind, sentenceAround(line, m.index));
+          const inTable = m[0].startsWith('<td>');
+          const context = inTable ? introducerFor(lines, i) : sentenceAround(line, m.index);
+          const allowed = allowedFor(claim.kind, context);
           checked += 1;
           if (!allowed.some(([count]) => count === value)) {
             violations.push(`${rel}:${i + 1}: "${m[0]}" is not a ${claim.kind} count of any graph (${allowed.map(([c, l]) => `${c} ${l}`).join(', ')})`);
