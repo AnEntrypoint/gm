@@ -1,9 +1,5 @@
 name: bump-pins
 
-# Advances every submodule pin to the tip of its target's main and publishes the
-# result to main (scripts/bump-pins.sh). Runs on every push to main, on each
-# submodule release (repository_dispatch) and hourly as a backstop. The bump commit
-# carries [skip ci], so its own push does not re-trigger this workflow.
 
 on:
   push:

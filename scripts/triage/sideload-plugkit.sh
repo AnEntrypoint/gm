@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Build the gm plugkit wasm from rs-plugkit origin/main and swap it into the live runner home.
-# Usage: sideload-plugkit.sh   (from anywhere). Refuses unless rs-plugkit HEAD contains origin/main
-# and its source tree is clean. Records the built source in ~/.agentplug/plugins/gm.build.json and
-# waits for the daemon to report the new content hash. Backups sit beside each replaced file.
 set -euo pipefail
 
 gm_root=$(cd "$(dirname "$0")/../.." && pwd)
