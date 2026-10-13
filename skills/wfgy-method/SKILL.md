@@ -10,7 +10,7 @@ metadata:
 
 # WFGY method
 
-WFGY (Wan Fa Gui Yi, "all methods return to one") is a reasoning-drift-control technique from `onestardao/WFGY`. This skill ports its portable behavioral core to a text-generating agent's own multi-step work. Provenance and what was dropped: `references/honesty-and-provenance.md`. Technical basis of each claim: `references/wfgy-core-mechanism.md`.
+WFGY (Wan Fa Gui Yi, "all methods return to one") is a reasoning-drift-control technique from `onestardao/WFGY`. This skill ports its portable behavioral core to a text-generating agent's own multi-step work. Provenance and the dropped list: `references/honesty-and-provenance.md`. Technical basis of each claim: `references/wfgy-core-mechanism.md`.
 
 **On deltaS**: deltaS = 1 - cos(I, G) (I = current state, G = goal/anchor). Absent a real embedding call, any numeric deltaS you produce is your own qualitative estimate, not a measurement. Use the label ("deltaS is climbing," "deltaS looks high here") as shorthand for "this step is drifting from the stated goal"; never present a specific decimal as computed. When a spool `similarity` verb is available, see `references/deltas-measurement.md`.
 The current build serves no embedding verb, so every deltaS here is your own estimate. Say so explicitly ("deltaS looks high here, my own estimate, no embedding measured").
@@ -35,7 +35,7 @@ Before a risky step, note the last known good state. On real incoherence, return
 
 ## BBAM pattern - notice and correct over-narrow focus (agent-delegated: no real attention weights are read)
 
-Periodically ask whether recent output has narrowed onto one aspect of the task and stayed there; if so, name what was left unexamined and widen back out. Details: `references/bbam-narrow-focus.md`.
+Periodically ask whether recent output has narrowed onto one aspect of the task and stayed there; if so, name what remains unexamined and widen back out. Details: `references/bbam-narrow-focus.md`.
 
 ## Trend classifier - is drift getting better or worse over the whole task
 
