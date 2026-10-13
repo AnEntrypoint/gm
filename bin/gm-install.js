@@ -53,12 +53,21 @@ function projectServerEntry() {
 
 async function vendorMcpBundle() {
   fs.mkdirSync(GM_TOOLS_DIR, { recursive: true })
-  const response = await fetch(MCP_BUNDLE_URL)
-  if (!response.ok) throw new Error(`fetch ${MCP_BUNDLE_URL} -> HTTP ${response.status}`)
-  const body = await response.text()
-  if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
-  const freshHash = sha256Short(body)
   const deployedHash = fs.existsSync(MCP_BUNDLE_PATH) ? sha256Short(fs.readFileSync(MCP_BUNDLE_PATH)) : null
+  let body
+  try {
+    const response = await fetch(MCP_BUNDLE_URL)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    body = await response.text()
+    if (!body.startsWith('#!/usr/bin/env node')) throw new Error(`unexpected bundle head from ${MCP_BUNDLE_URL}`)
+  } catch (err) {
+    // MCP registration, the runner and the skills all come after this step, so an
+    // unreachable host must not abort an install that already has a working bundle.
+    if (deployedHash === null) throw new Error(`fetch ${MCP_BUNDLE_URL} failed (${err.message}) and no bundle is deployed at ${MCP_BUNDLE_PATH}`)
+    console.log(`WARNING: ${MCP_BUNDLE_URL} unreachable (${err.message}); keeping the deployed bundle at ${MCP_BUNDLE_PATH} (sha256 ${deployedHash}) -- rerun to refresh it`)
+    return
+  }
+  const freshHash = sha256Short(body)
   if (deployedHash === freshHash) {
     console.log(`gm-mcp server already current at ${MCP_BUNDLE_PATH} (sha256 ${freshHash})`)
     return
