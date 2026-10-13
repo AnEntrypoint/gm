@@ -112,5 +112,5 @@ The `gm-mcp` server shall compact every dispatch response before it crosses the 
 ## Dated findings and design
 
 - Dated runtime findings (daemon heartbeat, sibling imports, runner self-update, wasm sideload, git_commit content filters, amend, reset): `docs/verified-incidents.md`. When a failure touches one of those subsystems, the agent shall read it. Falsified by: a failure in one of those subsystems diagnosed with no read of `docs/verified-incidents.md` in the session.
-- Dream-RSI design, the cycle-boundary trigger and its git lifecycle: `docs/dream-rsi.md`.
+- Dream-RSI design, the cycle-boundary trigger and its git lifecycle: `docs/dream-rsi.md`. No daemon tick or scheduled job redeploys a strategy unattended.
 
