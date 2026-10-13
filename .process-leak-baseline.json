@@ -1,0 +1,9 @@
+{
+  "note": "pre-existing boot-without-stop files: the leak gate does not fire on these, only on new ones",
+  "files": {
+    "agentplug/crates/agentplug-host/src/exec_js.rs": 1,
+    "gm-mcp/src/index.js": 1,
+    "gm-mcp/src/mcp-server.js": 1,
+    "scripts/triage/runner-restart.sh": 1
+  }
+}
