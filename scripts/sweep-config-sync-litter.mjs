@@ -1,4 +1,20 @@
 #!/usr/bin/env node
+// Sweeps config-sync state litter: {cache}.<16-hex>.sync.json and its siblings. Nothing in
+// rs-plugkit ever deletes these, so they accumulate one per (repo,ref) per project root forever,
+// and the majority belong to scratch roots whose checkout has already been deleted.
+//
+// Deleting one is a CACHE MISS, not data loss: the "already at tip" test reads `git rev-parse
+// HEAD` in the checkout, never the stored sha, and the file is re-derived on the next sync. So
+// the sweep is safe -- but it still refuses to touch anything else sharing the cache root: the
+// checkout dir itself, the .lock directory (the single-flight mutex), .staging* and .retired.
+//
+//   node scripts/sweep-config-sync-litter.mjs [--root <dir>]... [--temp] [--max-age-days N] [--apply]
+//
+// By default only ORPHANED state is swept (its checkout is gone). --max-age-days N additionally
+// sweeps state older than N days even when the checkout survives, which costs the next sync its
+// debounce and backoff -- a cache miss, but a real one, so it is opt-in.
+//
+// Without --apply it only reports. exit 0 always: a sweep is never a gate.
 import { existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
@@ -55,6 +71,7 @@ function scanFilesIn(dir, report) {
         if (stat.isDirectory()) continue
         if (KEEP_PREFIXES.some((prefix) => name.startsWith(prefix))) continue
         if (!isSyncLitter(name)) continue
+        // The checkout this state describes is the sibling named by the part before the key.
         const stem = name.replace(/(\.native)?\.sync\.json(\.stale)?$/, '').replace(/\.tmp-\d+$/, '')
         const checkout = path.join(dir, stem.split('.')[0])
         const orphaned = !existsSync(checkout)
