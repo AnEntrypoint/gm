@@ -1,5 +1,5 @@
 id: skills
 title: The gm skills
-description: "gm makes a coding agent prove its work before it calls a task done: each task is a plan row that closes only with a recorded check. Install it, then type /gm in your agent. This page lists the gm skills and the orchestrator verbs its table documents."
+description: "gm makes a coding agent record evidence before it marks a task done: each task is a plan row that closes only with a recorded witness. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. Install it (the commands are on the distribution page), then ask your agent to use the gm skill. This page lists the gm skills and the orchestrator verbs."
 layout: article
 source: ../docs/skills.html
