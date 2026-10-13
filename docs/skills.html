@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Skills - gm - 247420</title>
-<meta name="description" content="gm makes a coding agent record evidence before it marks a task done: each task is a plan row that closes only with a recorded witness. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. Install it (the commands are on the distribution page), then ask your agent to use the gm skill. This page lists the gm skills and the orchestrator verbs.">
+<meta name="description" content="gm makes a coding agent record evidence before it marks a task done: each task is a plan row that closes only with a recorded witness. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. Install it (the commands are on the distribution page), then ask your agent to use the gm skill. This page lists the gm skills and the verbs an agent dispatches during a walk.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <style>
@@ -71,7 +71,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <h2>Terms</h2>
 
 <ul>
-  <li><code>walk</code>: one run of the gm state machine that the orchestrator drives to completion.</li>
+  <li><code>walk</code>: one run of the gm state machine that the agent drives to completion on its main thread, through the gm-orchestrate skill.</li>
   <li><code>plan row</code>, also called a PRD row: one entry in the plan. An open row is one file in <code>.gm/prd/</code>. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
   <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial. The denial names the verb to dispatch next.</li>
@@ -82,7 +82,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>The entry skill</h2>
 
-<p><code>skills/gm/SKILL.md</code> is the entry skill for engineering work. It sets the autonomy rules, which say how far the agent acts without asking, and the search and git routing: code search goes through <code>codesearch</code>, and git goes through the git verbs.</p>
+<p><code>skills/gm/SKILL.md</code> is the entry skill for engineering work. Its Autonomy section sets how far the agent acts without asking, and its routing covers search and git: code search goes through <code>codesearch</code>, and git goes through the git verbs.</p>
 
 <h2>The walk skills</h2>
 
@@ -90,7 +90,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">runs the walk loop</span></div>
-  <div class="row"><span class="k">does</span><span>Runs the pool loop of a walk: it observes, launches plan rows and graph hops, logs, waits, refills freed slots and exits.</span></div>
+  <div class="row"><span class="k">does</span><span>Runs the pool loop of a walk, which keeps the pool full. The pool is the set of parallel subagents a walk runs at once. The loop observes, launches plan rows and graph hops, logs, waits, refills freed slots and exits.</span></div>
   </div>
 
 <div class="skill">
@@ -105,7 +105,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-continue</h2><span class="role">final check when the walk is done</span></div>
-  <div class="row"><span class="k">does</span><span>Runs when the walk reaches COMPLETE with no pending plan rows. It searches for remaining work before the walk ends.</span></div>
+  <div class="row"><span class="k">does</span><span>Runs when the walk reaches its final phase, COMPLETE, with no pending plan rows. It searches for remaining work before the walk ends.</span></div>
 </div>
 
 <h2>The discipline skills</h2>
