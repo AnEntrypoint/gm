@@ -49,7 +49,7 @@ A hop is an EDGE, not a discovery: it is nominated FROM the node it stands on TO
 - Every completion: one replacement per freed slot in the same turn; never wait for a batch. Pass the completed worker's row, surface and session to its replacement. Read the live count after the refill.
 - Successors come only from `slots.candidates` (node-first). A free-text nomination is advisory: read its acceptance text, then launch only if it is in candidates and node-only. Title-only nominations are checked before launch.
 - A declined or colliding successor is replaced in the same turn by the next eligible candidate.
-- A worker that ends at a blocker is not a replacement. Blocker rows are annotations, never candidates; a blocked worker records its blocker and still nominates a node-only successor.
+- A worker that ends at a blocker frees its slot exactly like a closed row: refill that slot in the same turn from `slots.candidates`. Blocker rows are annotations, never candidates, so the replacement is always a different row. A blocked worker records its blocker and still nominates a node-only successor. Measured 2026-10-13 in C:/dev/gm (SESSION_ID gm-2e-fa19b3): 13 of 20 workers ended closed or blocked within nine minutes, and the pool fell to live 7 because completions were recorded but not refilled in the same turn.
 - A hop spawns its own successor (gm-hop). The orchestrator spawns one only when a hop returns `next: none`.
 - Node supply: when node candidates fall below twice the floor, start a traversal hop (it logs node-only rows and resolves none).
 - Low row supply: dispatch hops that create rows (`prd-add`) before more resolvers. Pause row creation when rows resolve faster than the pool refills.
