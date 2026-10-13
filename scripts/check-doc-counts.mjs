@@ -4,11 +4,10 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 // Usage: check-doc-counts.mjs [root]   (default: the gm checkout this script sits in).
-// Every "N nodes", "N edges", "N gate predicates" and "N principles" claim in the site and
-// docs must equal a count of one of the three graphs: the state machine
-// (gm-config/fsm/graph.json), the hop graph (skills/dream-rsi/gm-graph.json) or the DADA
-// graph (skills/dream-rsi/dada-graph.json). Exit 1 on any claim that matches none of them.
-// Exit 0 prints RESULT: PASS.
+// Every count claim in the site and docs must equal a count of one of the three graphs: the
+// state machine (gm-config/fsm/graph.json), the hop graph (skills/dream-rsi/gm-graph.json) or
+// the DADA graph (skills/dream-rsi/dada-graph.json). Exit 1 on any claim that matches none of
+// them, and print RESULT: PASS otherwise.
 
 const root = process.argv[2]
   ? path.resolve(process.argv[2])
@@ -18,20 +17,44 @@ const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8
 const fsm = readJson('gm-config/fsm/graph.json');
 const hop = readJson('skills/dream-rsi/gm-graph.json');
 const dada = readJson('skills/dream-rsi/dada-graph.json');
-const principles = (nodes) => nodes.filter((n) => n.kind === 'principle').length;
 
-const allowed = {
-  nodes: new Map([[fsm.states.length, 'state machine'], [hop.nodes.length, 'hop graph'], [dada.nodes.length, 'DADA graph']]),
-  edges: new Map([[fsm.edges.length, 'state machine'], [hop.edges.length, 'hop graph'], [dada.edges.length, 'DADA graph']]),
-  'gate predicates': new Map([[fsm.gates.length, 'state machine']]),
-  principles: new Map([
-    [principles(fsm.states), 'state machine'],
-    [principles(hop.nodes), 'hop graph'],
-    [principles(dada.nodes), 'DADA graph'],
-  ]),
-};
+// Each graph as {label, nodes, edges, gates, terminals, principles}. The state machine keeps its
+// nodes under "states"; the hop and DADA graphs keep them under "nodes".
+const graphs = [
+  { label: 'state machine', nodes: fsm.states, edges: fsm.edges, predicates: fsm.gates.length },
+  { label: 'hop graph', nodes: hop.nodes, edges: hop.edges },
+  { label: 'DADA graph', nodes: dada.nodes, edges: dada.edges },
+].map((g) => ({
+  predicates: g.predicates ?? null,
+  label: g.label,
+  count: {
+    nodes: g.nodes.length,
+    edges: g.edges.length,
+    principles: g.nodes.filter((n) => n.kind === 'principle').length,
+    gates: g.nodes.filter((n) => n.kind === 'gate').length,
+    terminals: g.nodes.filter((n) => n.kind === 'terminal').length,
+    predicates: g.predicates,
+  },
+}));
 
-const claim = /\b(\d+) (graph nodes|nodes|edges|gate predicates|principles?)\b/g;
+// Each claim kind maps to the counts that may satisfy it.
+const allowedFor = (kind) => graphs
+  .filter((g) => g.count[kind] !== null && g.count[kind] !== undefined)
+  .map((g) => [g.count[kind], g.label]);
+
+const claims = [
+  { kind: 'nodes', re: /\b(\d+) (?:graph )?nodes\b/g, groups: [1] },
+  { kind: 'edges', re: /\b(\d+) edges\b/g, groups: [1] },
+  { kind: 'predicates', re: /\b(\d+) gate predicates\b/g, groups: [1] },
+  { kind: 'principles', re: /\b(\d+) principles?\b/g, groups: [1] },
+  { kind: 'gates', re: /\b(\d+) gate(?:-kind states| nodes)\b/g, groups: [1] },
+  { kind: 'terminals', re: /\b(\d+) terminal nodes\b/g, groups: [1] },
+  { kind: 'gates', re: /\b(\d+) gate and (\d+) terminal\b/g, groups: [1] },
+  { kind: 'terminals', re: /\b(\d+) gate and (\d+) terminal\b/g, groups: [2] },
+  { kind: 'gates', re: /<td>gate nodes<\/td><td>(\d+)<\/td>/g, groups: [1] },
+  { kind: 'terminals', re: /<td>terminal nodes<\/td><td>(\d+)<\/td>/g, groups: [1] },
+];
+
 const files = [];
 const walk = (rel) => {
   const abs = path.join(root, rel);
@@ -45,23 +68,27 @@ const walk = (rel) => {
 for (const rel of ['README.md', 'docs', 'site/content']) walk(rel);
 
 const violations = [];
-let claims = 0;
+let checked = 0;
 for (const rel of files) {
   const lines = fs.readFileSync(path.join(root, rel), 'utf8').split('\n');
   lines.forEach((line, i) => {
-    for (const m of line.matchAll(claim)) {
-      const key = m[2] === 'graph nodes' ? 'nodes' : m[2] === 'principle' ? 'principles' : m[2];
-      claims += 1;
-      const value = Number(m[1]);
-      if (!allowed[key].has(value)) {
-        violations.push(`${rel}:${i + 1}: "${m[0]}" matches neither graph (${[...allowed[key].keys()].join(' or ')})`);
+    for (const claim of claims) {
+      for (const m of line.matchAll(claim.re)) {
+        for (const group of claim.groups) {
+          const value = Number(m[group]);
+          const allowed = allowedFor(claim.kind);
+          checked += 1;
+          if (!allowed.some(([count]) => count === value)) {
+            violations.push(`${rel}:${i + 1}: "${m[0]}" is not a ${claim.kind} count of any graph (${allowed.map(([c, l]) => `${c} ${l}`).join(', ')})`);
+          }
+        }
       }
     }
   });
 }
 
 for (const v of violations) console.log(`[FAIL] ${v}`);
-console.log(`checked ${claims} count claim(s) in ${files.length} file(s) against the state machine, hop and DADA graphs`);
+console.log(`checked ${checked} count claim(s) in ${files.length} file(s) against the state machine, hop and DADA graphs`);
 if (violations.length) {
   console.log(`RESULT: FAIL (${violations.length} stale count(s))`);
   process.exit(1);
