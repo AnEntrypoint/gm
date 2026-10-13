@@ -451,6 +451,61 @@ Add defaults to a detached checkout at `HEAD`. Set `detach:false` with an existi
 
 `fetch` takes a JSON body and is HTTP(S)-only.
 
+### `fetch`: one page, as readable markdown
+
+`fetch` is the fetch port, and it returns the **readable page**, not the transport payload:
+
+1. the response body is fetched over the host's `host_fetch` (HTTPS and HTTP only, no `file://`, no whitespace in the URL, 2048 bytes at most);
+2. when the body is HTML, it is converted to markdown **before** it is returned: `head`, `script`, `style`, `svg`, `nav`, `header`, `footer`, `aside`, `form`, `iframe`, `template`, `select`, `button`, `input`, `meta`, `link`, `canvas`, `object` and `embed` blocks are dropped, `article` or `main` wins over the rest of the document, and headings, lists, links, images, code fences and tables are kept as markdown; entities are decoded and blank runs are collapsed;
+3. a body that is not HTML (JSON, plain text, CSV, base64) is returned as it arrived.
+
+```
+body: {"url":"https://github.com/OpenBW/openbw"}
+body: {"url":"https://example.com/", "prompt":"what license does this project use?"}
+body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
+```
+
+| body field | does |
+|---|---|
+| `url` | the page to fetch; the only required field |
+| `prompt` | answers that prompt against the converted page and returns the matching passages **instead of** the page. gm holds no outbound model credential, so answering is **extractive**: the passages are verbatim from the page, scored by how much of the prompt they cover, and `answer_mode` is always `"extractive"` |
+| `max_chars` | cap on characters returned. Default **20000**, ceiling 4000000, so one fetch can never dump a 280k-character page into context |
+| `answer_max_chars` | cap on a prompt answer. Default 4000 |
+| `raw` | `true` (aliases `full_response`, `fullResponse`) is the escape hatch: the original body, no conversion, no prompt answering. Its default `max_chars` is 1000000 |
+| `method`, `headers`, `body`, `opts`, `timeoutMs` | passed to the transport. `timeoutMs` defaults to 60000, ceiling 600000 |
+
+The reply carries `url`, `status`, `content_type`, `body_chars`, `converted`, `max_chars` and `truncated`, and then either
+`content` (the markdown) or `prompt`, `answer`, `answer_mode`, `answer_chars` and `passages` (one row per passage, with
+`score` and `matched_terms`). `help:true` returns the verb's own parameter text and sends no request.
+
+### `websearch`: web discovery without leaving gm
+
+`websearch` (aliases `web_search`, `web-search`; `search` stays bound to `codesearch`) keeps discovery on the same
+port: it fetches a search engine results page through `fetch`'s transport and returns compact rows.
+
+```
+body: {"query":"openbw starcraft engine"}
+body: {"query":"rust wasm component", "limit":5, "allowed_domains":["github.com"]}
+body: {"url":"https://html.duckduckgo.com/html/?q=openbw", "prompt":"what is openbw?"}
+```
+
+| body field | does |
+|---|---|
+| `query` | what to search for; `q` is an alias. Required unless `url` is given |
+| `url` | read this results page instead of building one from `query`. Use it when the default endpoint answers a challenge or consent page, or to reach another engine |
+| `engine` | `duckduckgo`, the default and the only built-in engine, read from `https://html.duckduckgo.com/html/`, which needs no credential and no API key. There is no other built-in engine: a second one arrives by passing its results page as `url` |
+| `limit` | rows returned. Default 8, ceiling 25; `max_results`, `maxResults` and `k` are aliases |
+| `allowed_domains` | keep only results whose host matches one of these suffixes |
+| `blocked_domains` | drop results whose host matches one of these suffixes |
+| `prompt` | answered against the kept rows, the same extractive way `fetch` answers one |
+| `max_chars`, `raw`, `timeoutMs` | as on `fetch`; `timeoutMs` defaults to 30000 |
+
+Both filters take host suffixes, so `example.com` matches `www.example.com` and `docs.example.com`, and either one
+accepts an array or a comma-separated string. The reply carries `query`, `engine`, `endpoint`, `status`, `count`,
+`found`, `limit`, `truncated`, `filters` and `results` (one row per hit: `title`, `url`, `host`, `snippet`, each
+snippet clamped at 400 characters), plus `prompt`/`answer` when a prompt was given. An empty `results` comes with a
+`note` naming the usual cause, a challenge page, and the two ways past it: `url` or `fetch` on a known URL.
+
 ### `crawl`: browse pages through one of two engines
 
 `crawl` takes a plain text body (see Execution). The first line
