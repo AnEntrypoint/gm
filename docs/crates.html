@@ -66,7 +66,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>Install and check</h2>
 
-<p>To install gm, follow the <a href="./distribution.html">distribution page</a>. After installing, run <code>~/.gm-tools/agentplug-runner --build-info</code> to see the runner build (on Windows, <code>agentplug-runner.exe</code> in the same folder). Then read a crate's section below for what it owns, and open its repository.</p>
+<p>To install gm, follow the <a href="./distribution.html">distribution page</a>. The installer places the runner at <code>~/.gm-tools/agentplug-runner</code> (on Windows, <code>~/.gm-tools/agentplug-runner.exe</code>), under the plain name, while the release asset carries a platform suffix such as <code>agentplug-runner-linux-x64</code>. Run <code>~/.gm-tools/agentplug-runner --build-info</code> to see the runner build. Then read a crate's section below for what it owns, and open its repository.</p>
 
 <h2>The crates</h2>
 
@@ -76,7 +76,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the orchestrator</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit</a></span>
   </div>
-  <p><strong>Job:</strong> owns the state machine, the gates, the orchestrator verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and the host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). Its one crate is <code>plugkit-core</code>, which builds to <code>plugkit-slim.wasm</code> for <code>wasm32-wasip1</code>.</p>
+  <p><strong>Job:</strong> owns the state machine, the gates, the orchestrator verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and the host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). Its one crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the guest as <code>plugkit-slim.wasm</code>.</p>
   <p>It enforces a workflow graph of 146 states (129 principle, 8 tension, 7 gate and 2 terminal), joined by 376 edges. The graph holds 26 gate predicates. Two are marked <code>advisory: true</code>, and the other 24 are not. The lean copy embedded in the orchestrator has the same counts as <code>gm-config/fsm/graph.json</code>.</p>
 </div>
 
@@ -86,7 +86,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the search fusion library</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-search">AnEntrypoint/rs-search</a></span>
   </div>
-  <p><strong>Job:</strong> a dependency-free Rust library that ranks candidate lists with Reciprocal Rank Fusion and tokenizes text. <code>codesearch</code> uses the fusion to combine its BM25 and embedding results. The BM25 and embedding channels run in <code>rs-plugkit</code>, which consumes this library in its WASM build. It has no CLI and no server.</p>
+  <p><strong>Job:</strong> a dependency-free Rust library with two modules. <code>fusion</code> fuses ranked lists with Reciprocal Rank Fusion, and <code>tokenize</code> splits text into identifier-aware tokens. It has no BM25 and no vector code. <code>rs-plugkit</code> runs the BM25 and embedding channels of <code>codesearch</code> and calls this library to fuse their ranked lists and tokenize queries. It has no CLI and no server.</p>
 </div>
 
 <div class="crate">
@@ -120,7 +120,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="cross-footer">
   <a href="./skills.html"><strong>skills</strong><span>gm skills and orchestrator verbs</span></a>
   <a href="./distribution.html"><strong>distribution</strong><span>install, registration and checks</span></a>
-  <a href="./paper.html"><strong>paper</strong><span>gm: a skill that makes LLM coding agents check their work against real command output</span></a>
+  <a href="./paper.html"><strong>paper</strong><span>a skill that makes LLM coding agents check each step against real command output</span></a>
 </div>
 
 </body></html>
