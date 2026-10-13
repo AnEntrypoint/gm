@@ -179,7 +179,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s1">1. Introduction</h2>
 
-<p>An agent using gm writes its planned work as PRD rows, one file per row (section 9).</p>
+<p>Section 9 gives the form of the planned work that an agent using gm writes.</p>
 
 <hr>
 
@@ -203,7 +203,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td>gm-mcp</td><td><code>gm-mcp/</code></td><td>The MCP (Model Context Protocol) server, described in section 15</td></tr>
 <tr><td>rs-codeinsight</td><td><code>rs-codeinsight/</code></td><td>AST (abstract syntax tree) traversal, entity extraction and dependency graphs for a codebase, built with tree-sitter</td></tr>
 <tr><td>rs-search</td><td><code>rs-search/</code></td><td>Reciprocal rank fusion and identifier tokenization, described in section 12</td></tr>
-<tr><td>agentplug-bert</td><td><code>agentplug-bert/</code></td><td>The sibling plugin that holds the embedding weights (section 13)</td></tr>
+<tr><td>agentplug-bert</td><td><code>agentplug-bert/</code></td><td>The sibling plugin, described in section 13</td></tr>
 </tbody>
 </table>
 
@@ -231,7 +231,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>Each node carries a key, a kind, a label and a <code>prose_key</code> that selects its served prose. Each edge carries <code>from</code>, <code>to</code>, <code>kind</code> (forward or backreference), a label and its list of gate predicates. A forward edge leads onward through the graph, and a backreference edge leads back to an earlier node.</p>
 
-<p>Four graph files exist. The state machine that the walk enforces, <code>gm-config/fsm/graph.json</code>, and its enforced copy, <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, are identical at this revision, and <code>rs-plugkit/AGENTS.md</code> describes the copy as vendored. The hop graph is <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes and 360 edges (224 forward, 136 backreference), and the gm-orchestrate skill launches each hop from it. The DADA graph, <code>skills/dream-rsi/dada-graph.json</code>, is a separate catalogue of 366 nodes and 625 edges, converted from a mermaid flowchart. The published DADA page is built from it by <code>scripts/build-graph-page.mjs</code>, and no file under <code>skills/gm</code> or <code>rs-plugkit</code> names it.</p>
+<p>Four graph files exist. The state machine that the walk enforces, <code>gm-config/fsm/graph.json</code>, and its enforced copy, <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, are byte-identical at this revision, and <code>rs-plugkit/AGENTS.md</code> describes the copy as vendored. The hop graph is <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes and 360 edges (224 forward, 136 backreference), and the gm-orchestrate skill launches each hop from it. The DADA graph, <code>skills/dream-rsi/dada-graph.json</code>, is a separate catalogue of 366 nodes and 625 edges, converted from a mermaid flowchart. The published DADA page is built from it by <code>scripts/build-graph-page.mjs</code>, and no file under <code>skills/gm</code> or <code>rs-plugkit</code> names it.</p>
 
 <hr>
 
@@ -253,7 +253,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>The agent may stop only at G_FIXPOINT with <code>prd_pending_count</code> at zero, and the last dispatch is then <code>Skill(skill="gm-continue")</code> (<code>skills/gm-continue/SKILL.md</code>), which checks for remaining work. While a walk is in flight, every turn ends in a verb dispatch, and a turn without a tool call is a stop (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>, Continuation invariant). A stop hook that re-fires is not a reason to stop (<code>skills/gm/SKILL.md</code>, Autonomy).</p>
 
-<p>The main thread runs a walk through gm-orchestrate. A shortfall is a live count below the floor (section 8) while work is open and the machine has headroom (section 8), and each one is logged as <code>FAILURE</code>. A repeated shortfall restarts the walk at most twice, and a third repeat files a blocker row, <code>&lt;row&gt;-blocker-&lt;session&gt;</code>, and stops (<code>skills/gm-orchestrate/SKILL.md</code>, Shortfall and FAILURE).</p>
+<p>The main thread runs a walk through gm-orchestrate. A shortfall is a live count below the floor (section 8) while work is open and the machine has headroom (section 8), and each one is logged as <code>FAILURE</code>. A repeated shortfall restarts the walk at most twice, and a third repeat files a blocker row (section 9) and stops (<code>skills/gm-orchestrate/SKILL.md</code>, Shortfall and FAILURE).</p>
 
 <hr>
 
@@ -275,7 +275,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>A hop never reads the graph. Its links come from the payload. gm-orchestrate builds each link from the edges of the node and sorts the links by <code>to</code>. Each link carries the edge's <code>condition</code>, when the edge has one, as its guard. A link is eligible when every guard holds on the surface. The hop nominates the next node only from eligible links, and the chain stops at depth 6, the default <code>max_depth</code> in <code>skills/gm-hop/SKILL.md</code>, with <code>next: none, depth limit</code>.</p>
 
-<p>gm-hop directs each hop to write <code>.gm/lean-walk/&lt;NODE&gt;.json</code> on every verdict, including NOT-APPLICABLE. The file lists the links offered and the link taken. The link taken is either null or one of the links offered. A discipline the surface demands that the catalogue lacks is appended as a line to <code>.gm/lean-walk/new-nodes.jsonl</code>. The emitted line goes to <code>.gm/lean-walk/new-nodes.jsonl</code>, not to the catalogue.</p>
+<p>gm-hop directs each hop to write <code>.gm/lean-walk/&lt;NODE&gt;.json</code> on every verdict, including NOT-APPLICABLE. The file lists the links offered and the link taken. The link taken is either null or one of the links offered. A discipline the surface demands that the catalogue lacks is appended as a line to <code>.gm/lean-walk/new-nodes.jsonl</code>. The emitted line is not written to the catalogue.</p>
 
 <p>A hop commits its own change and does not push. The orchestrator publishes the tip of each wave in one push. A hop issues at most one <code>git_status</code> and one <code>git_commit</code>, plus one <code>branch_status</code> only when it needs remote state, and it does not pull. A hop never dispatches gm-continue. That call is the parent's terminal move.</p>
 
@@ -299,7 +299,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p><code>prd-resolve</code> closes a row. It moves the row into <code>.gm/prd-log.jsonl</code>, an append-only log (<code>skills/gm-prd/SKILL.md</code>). A resolved id stays answerable: <code>prd-list</code> with that id reads the log.</p>
 
-<p>gm-prd closes one row through the nine stages, in order, in one run with no subagent per stage (<code>skills/gm-prd/SKILL.md</code>, line 8). Each stage writes a create-only receipt, <code>.gm/receipts/&lt;row&gt;/NN-&lt;STAGE&gt;.md</code>. The gm-config prose gives each open row to one worker subagent (<code>gm-config/prose/complete.md</code>, line 16). The compiled entry prose at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>, line 61, describes each stage as a subagent; this paper follows the served skill, which is the default. The stage name SPECIFY appears only in prose files under <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose</code> and in no Rust source.</p>
+<p>gm-prd closes one row through the nine stages, in order, in one run with no subagent per stage (<code>skills/gm-prd/SKILL.md</code>, line 8). Each stage writes a create-only receipt, <code>.gm/receipts/&lt;row&gt;/NN-&lt;STAGE&gt;.md</code>. The gm-config prose gives each open row to one worker subagent (<code>gm-config/prose/complete.md</code>, line 16). The compiled entry prose at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>, line 61, states the same rule. The stage name SPECIFY appears only in prose files under <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose</code> and in no Rust source.</p>
 
 <table>
 <caption>The nine gm-prd stages, in order</caption>
@@ -377,7 +377,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s15">15. The spool and its transports</h2>
 
-<p>A body is written to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, and the reply lands in <code>.gm/exec-spool/out/</code>. An exec reply names its output in a <code>result_file</code>, and a reply longer than its limit spills to the <code>spill_file</code> that the reply names. While the claim <code>in/&lt;verb&gt;/&lt;N&gt;.txt.inflight</code> exists, the dispatch is claimed. The file <code>.gm/exec-spool/.status.json</code> reports the watcher's heartbeat.</p>
+<p>A body is written to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, and the reply lands in <code>.gm/exec-spool/out/</code>. An exec reply names its output in a <code>result_file</code>, and section 11 gives its reply limit and spill. While the claim <code>in/&lt;verb&gt;/&lt;N&gt;.txt.inflight</code> exists, the dispatch is claimed. The file <code>.gm/exec-spool/.status.json</code> reports the watcher's heartbeat.</p>
 
 <p>gm-mcp wraps the spool for MCP clients. It registers one tool, <code>gm_codemode</code>, whose code body calls every verb as <code>gm.&lt;verb&gt;(body)</code>. It serves stdio, which is the default registration, and stateless streamable HTTP on <code>127.0.0.1:8787/mcp</code>. Its transport failure modes and registration command are owned by <code>gm-mcp/README.md</code>. The Node launcher <code>bin/gm</code> exposes the same dispatch as its <code>dispatch</code> subcommand.</p>
 
