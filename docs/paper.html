@@ -402,7 +402,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p><code>git_finalize {message, paths}</code> commits the named paths and pushes them. In a shared work tree the publish path is the Git API route, with blobs, a tree on the remote tip, and a commit parented on that tip, then a read of each published blob. A <code>git_finalize</code> whose push is refused is reported as redundant, never as unpushed work. <code>git_remote</code> reads the remote URLs and the upstream without fetching or changing state. A pushed change is witnessed by two separate reads: <code>git_show {rev}</code> for the commit, and <code>ci-status {sha}</code> for the CI (continuous integration) state. A status of unknown is reported as unknown, never as success.</p>
 
-<p>A commit message gives the reason for the change, not a restatement of the diff (<code>AGENTS.md</code>, Verification and delivery). Attribution is one author, lanmower, with no <code>Co-Authored-By</code>, <code>Signed-off-by</code>, <code>Generated with</code> or assistant footer (<code>skills/gm/SKILL.md</code>, Autonomy). That skill words the body rule as stating the change and nothing else, and this paper follows the AGENTS.md rule.</p>
+<p>A commit message states the change and nothing else. Attribution is one author, lanmower, with no <code>Co-Authored-By</code>, <code>Signed-off-by</code>, <code>Generated with</code> or assistant footer (<code>skills/gm/SKILL.md</code>, Autonomy). The served skill governs this rule, and AGENTS.md now states the same rule.</p>
 
 <hr>
 
