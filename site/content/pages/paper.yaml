@@ -1,7 +1,7 @@
 id: paper
-title: "gm: a graph discipline for LLM coding agents"
-subtitle: "The graph, gates, walks, PRD rows, witnessed execution, memory and learning loop of the gm skill, as the repository ships them"
-description: "Describes the gm skill as the repository ships it: a 146-node discipline graph with 376 edges, gates that refuse transitions, hops that apply one principle to one surface, PRD rows closed by a witness from another session, and a memory and learning loop. Every count comes from a file in the repository."
+title: "gm: a skill that makes LLM coding agents check their work against real command output"
+subtitle: "How the checks, gates and walks fit together, for developers who use an LLM coding agent."
+description: "gm is a skill that makes LLM coding agents check each step against real command output before they move on."
 layout: article
 wide: true
 source: ../docs/paper.html
