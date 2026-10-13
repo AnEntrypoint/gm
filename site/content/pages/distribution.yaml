@@ -1,5 +1,5 @@
 id: distribution
-title: distribution
-description: gm installs skills, a native WASM runner, and a local MCP server from public source. Inspect the installed entry points and release evidence.
+title: Install gm and check it works
+description: gm is a state machine that decides when a coding agent's work is done. This page installs it for Claude Code, Cursor, Codex or Gemini and checks the runner.
 layout: article
 source: ../docs/distribution.html
