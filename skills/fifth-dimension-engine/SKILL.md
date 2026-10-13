@@ -1,6 +1,6 @@
 ---
 name: fifth-dimension-engine
-description: Use after Goal Compiler, or when a complex target needs a structured route (shoot + problem).
+description: "Use after polaris-goal-compiler, or when a request is written as shoot + [problem]. Does not specify the problem or control drift."
 license: MIT
 compatibility: Portable "shoot + [problem]" command; works wherever an assistant can run a natural-language prompt. Upstream ships it as the current main product surface of WFGY 5.0 Polaris Protocol.
 metadata:

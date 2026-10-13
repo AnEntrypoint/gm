@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# Advance each submodule pin to the tip of its target's main, then publish the
-# result to main. Usage: bump-pins.sh   (run from the gm root, with origin
-# pushable by the environment's credentials).
-#
-# Each attempt resets to origin/main, stages every gate-cleared target at its
-# remote main tip, commits, runs check-pins.sh on the candidate, and pushes.
-# A rejected push (another writer moved main) is recovered by recomputing on the
-# new base, not by skipping: the pins are re-resolved from current remote tips.
-#
-# Output: "published <sha>", or "already current <sha>". Exit 0 for either;
-# exit 1 when a remote cannot be read, check-pins fails, or the retry budget runs out.
-# Env: PIN_REMOTE_BASE (default https://github.com/AnEntrypoint), PIN_RETRIES (default 6),
-#      GITHUB_RUN_ID (recorded in the commit body as the witness).
 set -uo pipefail
 
 base="${PIN_REMOTE_BASE:-https://github.com/AnEntrypoint}"
@@ -26,16 +13,12 @@ repo_of() {
   esac
 }
 
-# A target is gated when its remote tip has a release-path run that is not green.
-# A gate that cannot be read holds the target; it never passes by default.
 gate_ok() {
   local pending
   pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length') || return 1
   [ "$pending" = "0" ]
 }
 
-# Stage the gate-cleared targets whose gitlink differs from their remote main tip.
-# Sets STAGED to the number staged and BODY to one line per change.
 stage_pins() {
   local path repo sha cur
   STAGED=0
