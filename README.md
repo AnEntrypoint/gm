@@ -78,7 +78,7 @@ The plan is one file per row, `.gm/prd/<id>.yml`. Each row closes only with reco
 
 ### The graph
 
-The graph has 146 nodes in `gm-config/fsm/graph.json`: 129 principles, 8 tensions, 7 gate-kind states and 2 terminal nodes, joined by 376 edges. Gate predicates sit on edges, not nodes. No node has a fixed place in a sequence.
+The graph has 146 nodes in `gm-config/fsm/graph.json`: 129 principles, 8 tensions, 6 gate-kind states and 3 terminal nodes, joined by 376 edges. Gate predicates sit on edges, not nodes. No node has a fixed place in a sequence.
 
 ### Tools
 
