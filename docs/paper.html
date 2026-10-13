@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>gm paper: 247420</title>
-<meta name="description" content="gm is a skill that drives LLM coding agents through a walk of graph nodes and PRD rows for coding, refactoring and debugging work.">
+<meta name="description" content="gm is a skill for Claude Code, Cursor, Gemini CLI and Codex that runs real checks and refuses to let the agent mark a task finished until they pass.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -119,14 +119,14 @@ article tbody tr:hover { background: var(--panel-1); }
   <h1>gm: a skill that makes LLM coding agents check their work against real command output</h1>
   <p class="subtitle" style="font-size:16px;color:var(--panel-text-2);margin:8px 0 0 0">How the checks, gates and walks fit together, for developers who use an LLM coding agent.</p>
   <div class="author">AnEntrypoint / gm</div>
-  <div class="byline">Describes the gm project as published on its main branch. The node and edge counts in section 3 are computed from the file named in their caption.</div>
+  <div class="byline">Describes gm on its main branch. Section 3 counts come from gm-config/fsm/graph.json.</div>
 </div>
 
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    <p style="margin:0 0 8px 0">gm is a skill for LLM coding agents. It targets three failures: acting on an unverified guess, losing resolved work when the context window fills, and declaring a task done before it meets the requirement. Each check moves out of the agent's reasoning and into files and gates, and a step closes only on the output of a real command run. Section 3 maps the graph that enforces this.</p>
-    <p style="margin:0">gm is for developers who run an LLM coding agent in their own project. Install it with the one-line command in <code>README.md</code>, or read <a href="./distribution.html">install</a> for the skill, runner and MCP server steps. Section 3 names the node a walk starts from, and section 5 gives its verbs and completion conditions.</p>
+    <p style="margin:0 0 8px 0">gm is a skill for LLM coding agents. It targets three failures: acting on an unverified guess, losing resolved work when the context window fills, and declaring a task done before it meets the requirement. Section 3 maps the graph that enforces the gates, section 4 gives the gates, and section 9 gives how a PRD row closes.</p>
+    <p style="margin:0">gm is for developers who run an LLM coding agent in their own project. Install with <code>npx github:AnEntrypoint/gm -g</code> (Node.js required), or follow <a href="./distribution.html">install</a> for the skill, runner and MCP server steps.</p>
   </div>
 </div>
 
@@ -161,21 +161,25 @@ article tbody tr:hover { background: var(--panel-1); }
 <h2 id="terms">Terms</h2>
 
 <dl>
-<dt>Verb</dt><dd>A named command the agent calls on the spool, such as <code>codesearch</code>. Section 15 describes the spool.</dd>
+<dt>Verb</dt><dd>A named command the agent sends to gm, such as <code>codesearch</code>. Section 15 describes the spool.</dd>
+<dt>Walk</dt><dd>One run of the gm state machine, driven to COMPLETE (<code>README.md</code>, Terms).</dd>
+<dt>Node</dt><dd>One vertex of the graph (section 3): a principle, tension, gate or terminal. A hop visits only a principle node.</dd>
+<dt>Dispatch</dt><dd>One call to a verb, written to the spool as a request file (<code>README.md</code>, The walk).</dd>
+<dt>Spool</dt><dd>A folder of request and reply files, <code>.gm/exec-spool/in/</code> and <code>.gm/exec-spool/out/</code>, served by the runner (section 15).</dd>
+<dt>Pool</dt><dd>The subagents a walk runs at once, up to the spawn ceiling (section 8).</dd>
 <dt>Principle</dt><dd>One discipline from a published book or method, applied by one hop. Section 3 gives the count.</dd>
-<dt>Hop</dt><dd>One principle applied to one surface (a file or path) by one subagent, which returns one receipt.</dd>
-<dt>Gate</dt><dd>A condition on an edge of the graph. A transition along that edge is refused while the condition fails.</dd>
+<dt>Hop</dt><dd>One node traversal by one subagent, defined in section 7.</dd>
+<dt>Orchestrator</dt><dd>The orchestration code in <code>rs-plugkit</code> that runs a walk, its gates and its pool (section 2).</dd>
+<dt>Gate</dt><dd>A predicate on an edge of the graph (section 4).</dd>
 <dt>PRD row (planned work)</dt><dd>One unit of planned work, stored as one file (section 9).</dd>
-<dt>Witness</dt><dd>A live dispatch whose reply carries the value under test (section 11).</dd>
+<dt>Witness</dt><dd>A live dispatch whose reply carries the value under test. Section 9 gives the binding that closes a row with one.</dd>
 <dt>Mutable</dt><dd>A named unknown that a decision depends on (section 10).</dd>
 <dt>AGENTS.md</dt><dd>The repository's agent rules file. <code>CLAUDE.md</code> imports it.</dd>
 </dl>
 
 <h2 id="s1">1. Introduction</h2>
 
-<p>gm keeps the state graph, the PRD rows and the mutables in files, and a step closes only on the output of a real run.</p>
-
-<p>This paper describes the system as this repository ships it.</p>
+<p>An agent using gm writes its planned work as PRD rows, one file per row (section 9).</p>
 
 <hr>
 
@@ -197,7 +201,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td>rs-plugkit</td><td><code>rs-plugkit/</code></td><td>The WASM (WebAssembly) guest: orchestration, spool verbs, memory and code search</td></tr>
 <tr><td>agentplug</td><td><code>agentplug/</code></td><td><code>agentplug-runner</code>, the native host that runs the daemon (section 15)</td></tr>
 <tr><td>gm-mcp</td><td><code>gm-mcp/</code></td><td>The MCP (Model Context Protocol) server, described in section 15</td></tr>
-<tr><td>rs-codeinsight</td><td><code>rs-codeinsight/</code></td><td>AST traversal, entity extraction and dependency graphs for a codebase, built with tree-sitter</td></tr>
+<tr><td>rs-codeinsight</td><td><code>rs-codeinsight/</code></td><td>AST (abstract syntax tree) traversal, entity extraction and dependency graphs for a codebase, built with tree-sitter</td></tr>
 <tr><td>rs-search</td><td><code>rs-search/</code></td><td>Reciprocal rank fusion and identifier tokenization, described in section 12</td></tr>
 <tr><td>agentplug-bert</td><td><code>agentplug-bert/</code></td><td>The sibling plugin that holds the embedding weights (section 13)</td></tr>
 </tbody>
@@ -209,7 +213,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s3">3. The discipline graph</h2>
 
-<p>The state machine that enforces gates and transitions is <code>gm-config/fsm/graph.json</code>, schema version 2. Its nodes and edges carry no phase field. Its nodes are principles, tensions, gates and terminals, and its edges join them. The policy block names the Jobs To Be Done (JTBD) node as the start of a walk (<code>initial_phase</code>) and G_FIXPOINT as its terminal (<code>terminal_phase</code>). The graph is a set of independent nodes, not a sequence of phases (<code>skills/gm/SKILL.md</code>, Section 2).</p>
+<p>The graph is the state machine that enforces gm's gates. Its nodes are principles, tensions, gates and terminals, and its edges join them. It is stored in <code>gm-config/fsm/graph.json</code> (schema version 2). The policy block names the Jobs To Be Done (JTBD) node as the start of a walk (<code>initial_phase</code>) and G_FIXPOINT as its terminal (<code>terminal_phase</code>).</p>
 
 <table>
 <caption>Node and edge counts of <code>gm-config/fsm/graph.json</code>, computed from the file</caption>
@@ -226,17 +230,17 @@ article tbody tr:hover { background: var(--panel-1); }
 </tbody>
 </table>
 
-<p>Each node carries a key, a kind, a label and a <code>prose_key</code> that selects its served prose. Each edge carries <code>from</code>, <code>to</code>, <code>kind</code> (forward or backreference), a label and its list of gate predicates. The graph keeps both forward and backreference edges.</p>
+<p>Each node carries a key, a kind, a label and a <code>prose_key</code> that selects its served prose. Each edge carries <code>from</code>, <code>to</code>, <code>kind</code> (forward or backreference), a label and its list of gate predicates. A forward edge leads onward through the graph, and a backreference edge leads back to an earlier node.</p>
 
-<p>Three graph files exist, and they are not all the same. The state machine that the walk enforces is <code>gm-config/fsm/graph.json</code>, with 146 states, 376 edges and 26 gates. Its enforced copy is <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, which <code>rs-plugkit/AGENTS.md</code> describes as a vendored copy of it; the two are identical at this revision. The hop graph is <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes (6 gate nodes) and 360 edges (224 forward, 136 backreference), and the gm-orchestrate skill launches each hop from it. The DADA graph, <code>skills/dream-rsi/dada-graph.json</code>, is converted from an external flowchart (366 nodes, 625 edges). The published DADA page is built from it by <code>scripts/build-graph-page.mjs</code>, and no file under <code>skills/gm</code> or <code>rs-plugkit</code> names it.</p>
+<p>Four graph files exist. The state machine that the walk enforces, <code>gm-config/fsm/graph.json</code>, and its enforced copy, <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, are identical at this revision, and <code>rs-plugkit/AGENTS.md</code> describes the copy as vendored. The hop graph is <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes (6 gate nodes) and 360 edges (224 forward, 136 backreference), and the gm-orchestrate skill launches each hop from it. The DADA graph, <code>skills/dream-rsi/dada-graph.json</code>, is a separate catalogue of 366 nodes and 625 edges, converted from a mermaid flowchart. The published DADA page is built from it by <code>scripts/build-graph-page.mjs</code>, and no file under <code>skills/gm</code> or <code>rs-plugkit</code> names it.</p>
 
 <hr>
 
 <h2 id="s4">4. Gates that refuse a step</h2>
 
-<p>A transition is a request to move along an edge. The orchestrator evaluates the gate predicates on that edge, and a failed predicate refuses the move. The graph names 26 gate predicates. Twenty-four are blocking. The two advisory gates never refuse a transition, because code cannot observe their condition: <code>lean-contract-only-description</code> and <code>lean-verifier-independent</code>. The names are listed in <code>gm-config/fsm/predicates.md</code>.</p>
+<p>A transition is a request to move along an edge. The orchestrator evaluates the gate predicates on that edge, and a failed predicate refuses the move. The graph names 26 gate predicates on the six edges that section 3 counts. <code>gm-config/fsm/graph.json</code> marks two of its gates <code>advisory: true</code>: <code>lean-contract-only-description</code> and <code>lean-verifier-independent</code>. Both always return true, because code cannot observe their condition, so neither refuses a transition. The other 24 gates carry no advisory flag, and each denial message contains the word blocking. <code>gm-config/fsm/predicates.md</code> is generated from the predicate registry and lists 28 predicates: the 26 above, plus <code>remote-hook-refused</code> and <code>lean-hop-witness-receipt</code>, which no graph gate names. The file labels four predicates BLOCKING and three ADVISORY (the two advisory gates above and <code>lean-hop-witness-receipt</code>), and it leaves the rest unlabeled.</p>
 
-<p>Each gate's <code>predicate</code> in <code>gm-config/fsm/graph.json</code> names a predicate listed in <code>gm-config/fsm/predicates.md</code>. A condition outside that list needs a jit hook under <code>fsm.hooks_dir</code>, or a Rust change that adds a compiled predicate. The denial text lives in <code>messages.gates_dir</code> and <code>messages.residual_dir</code>, and an operator can edit it without changing when a gate fires.</p>
+<p>A condition outside that list needs a jit hook under <code>fsm.hooks_dir</code>, or a Rust change that adds a compiled predicate. The denial text lives in <code>messages.gates_dir</code> and <code>messages.residual_dir</code>, and an operator can edit it without changing when a gate fires.</p>
 
 <p>A denial names the failed predicate and the verb that recovers it. It is authoritative: the agent satisfies the named predicate and dispatches the transition again, and it does not route around the denial. A gate that names a predicate outside the compiled set emits <code>fsm_unknown_predicate</code> and is denied permanently, never passed.</p>
 
@@ -244,33 +248,33 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s5">5. Walks and completion</h2>
 
-<p>A walk is one run of the state machine from the start node toward a terminal. The agent drives it with the <code>instruction</code> and <code>transition</code> verbs. <code>instruction</code> returns the served prose for the node the walk stands on, and it is reserved for an orient. <code>transition</code> moves the walk along an edge, and the gates of that edge decide whether the move succeeds. <code>phase-status</code> answers a bare state check (phase, <code>prd_pending_count</code>, mutables pending). The split is stated in <code>skills/gm/SKILL.md</code>, Section 1.</p>
+<p>The agent drives a walk with the <code>instruction</code> and <code>transition</code> verbs. <code>instruction</code> returns the served prose for the node the walk stands on, and it is reserved for an orient. <code>transition</code> moves the walk along an edge, and the gates of that edge decide whether the move succeeds. <code>phase-status</code> answers a bare state check (phase, <code>prd_pending_count</code>, mutables pending). The split is stated in <code>skills/gm/SKILL.md</code>, Section 1.</p>
 
-<p>A walk completes only when all three conditions hold: the live state machine accepts COMPLETE, every required PRD row is resolved, and gm-continue has checked for remaining work. COMPLETE has a forward edge to G_FIXPOINT. G_FIXPOINT is the convergence point of a sweep: it is reached when no gate reopens, no counterexample appears, and the artifact does not grow. The convergence rule is stated in <code>skills/dream-rsi/gm-graph.json</code>.</p>
+<p>A walk ends when the edge into COMPLETE passes all of its gates (<code>README.md</code>, The walk). Every required PRD row must be resolved, and gm-continue must have checked for remaining work (<code>AGENTS.md</code>). COMPLETE has a forward edge to G_FIXPOINT, the convergence point of a sweep: it is reached when no gate reopens, no counterexample appears, and the artifact does not grow. The convergence rule is stated in <code>skills/dream-rsi/gm-graph.json</code>.</p>
 
-<p>The main thread runs a walk through gm-orchestrate. A shortfall is a live count below the floor while independent work is open and headroom allows launches, and each one is logged as <code>FAILURE</code>. A repeated shortfall restarts the walk at most twice, and a third repeat files a blocker row, <code>&lt;row&gt;-blocker-&lt;session&gt;</code>, and stops (<code>skills/gm-orchestrate/SKILL.md</code>, Shortfall and FAILURE).</p>
+<p>The main thread runs a walk through gm-orchestrate. A shortfall is a live count below the floor (section 8) while work is open and the machine has headroom (section 8), and each one is logged as <code>FAILURE</code>. A repeated shortfall restarts the walk at most twice, and a third repeat files a blocker row, <code>&lt;row&gt;-blocker-&lt;session&gt;</code>, and stops (<code>skills/gm-orchestrate/SKILL.md</code>, Shortfall and FAILURE).</p>
 
 <hr>
 
 <h2 id="s6">6. When the agent may stop or ask</h2>
 
-<p>The agent asks the user only at a world-scoped one-way door, the sole interruption that <code>skills/gm/SKILL.md</code> (Section 4) sanctions. Every other question is a default. The agent chooses the most defensible default, states it in one line in the durable artifact (a commit body, an ADR or a PRD note), and continues. A missing fact gets a <code>codesearch</code>, a fetch, a recall or a <code>prd-add</code>.</p>
+<p>The agent asks the user only at a world-scoped one-way door, the sole interruption that <code>skills/gm/SKILL.md</code> (Section 4) sanctions. Every other unknown becomes a PRD row (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/complete.md</code>), and the agent continues.</p>
 
-<p>The served rules fix what the agent does without asking. A read-only step runs at once. Under git, an append is never asked: commits, pushes, tags, reverts, merges and every collision recovery run without a question. A rewrite is asked: a force push, a rebase of pushed commits, a branch or ref deletion, or a remote reset. Work the user has already asked for, or a plan they have approved, is go-ahead.</p>
+<p>The served rules fix what the agent does without asking. A read-only step runs at once. Under git, the agent runs commits, pushes, tags, reverts, merges and every collision recovery without a question. It asks before a rewrite: a force-push, <code>--force-with-lease</code>, rebasing pushed commits, branch or ref deletion, or a remote reset (<code>skills/gm/SKILL.md</code>, Section 4). Work the user has already asked for, or a plan they have approved, is go-ahead.</p>
 
-<p>Only the terminal phase <code>G_FIXPOINT</code> with <code>prd_pending_count</code> at zero authorizes a stop of the verb spool, and the last dispatch then is <code>gm-continue</code>. While a walk is in flight, every turn ends in a verb dispatch, and a turn without a tool call is a stop (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>). A stop hook that re-fires is not a reason to stop (<code>skills/gm/SKILL.md</code>, Autonomy).</p>
+<p>The walk stops at G_FIXPOINT, after COMPLETE. The agent may stop there only when <code>prd_pending_count</code> is zero, and the last dispatch is then <code>gm-continue</code> (<code>skills/gm-continue/SKILL.md</code>). While a walk is in flight, every turn ends in a verb dispatch, and a turn without a tool call is a stop (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>). A stop hook that re-fires is not a reason to stop (<code>skills/gm/SKILL.md</code>, Autonomy).</p>
 
 <hr>
 
 <h2 id="s7">7. Hops</h2>
 
-<p>A hop is one traversal of one node. The orchestrator launches each hop with one JSON object carrying these fields: <code>node</code> (its <code>id</code>, <code>label</code>, <code>book</code>, <code>author</code>, <code>kind</code>, <code>advocate</code> and <code>links</code>), <code>principle</code> (the id of the node the hop applies), <code>surface</code> (the path it works on), <code>session</code> (its own SESSION_ID), <code>wave</code>, <code>depth</code> and <code>rhetoric</code> (<code>skills/gm-orchestrate/SKILL.md</code>, step 2, shows the launch payload). A missing <code>node</code>, <code>surface</code> or <code>session</code> gives <code>VERDICT: NOT-APPLICABLE</code>.</p>
+<p>A hop applies one principle to one surface and returns one receipt that names an executed witness. A hop is one traversal of one node. The orchestrator launches each hop with one JSON payload, and <code>skills/gm-orchestrate/SKILL.md</code> (step 2) shows its fields.</p>
 
-<p>The hop runs eight steps, numbered 0 to 7 in the skill. Step 0 applies the node's discipline to the surface, named by <code>node.label</code>, with <code>node.advocate</code> as its spec. Step 1 argues the open question in one paragraph. Step 2 lists the node's testable claims, each with its test. Step 3 searches every instance those claims govern and cites the lines it found. Step 4 closes what one exact-match edit closes, when no other writer holds the file, and witnesses the change with a live dispatch. Step 5 records every other finding as a PRD row. Step 6 names the biggest remaining need in one sentence, and step 7 nominates the next node. The receipt is 120 words at most (<code>skills/gm-hop/SKILL.md</code>, Receipt) and names an executed witness. A receipt without one is refused.</p>
+<p>The hop runs eight steps, numbered 0 to 7 in the skill. Step 0 applies the node's discipline to the surface, named by <code>node.label</code>, with <code>node.advocate</code> as its spec. Step 1 argues the open question in one paragraph. Step 2 lists the node's testable claims, each with its test. Step 3 searches every instance those claims govern and cites the lines it found. Step 4 closes what one exact-match edit closes, when no other writer holds the file, and witnesses the change with a live dispatch. Step 5 records every other finding as a PRD row. Step 6 names the biggest remaining need in one sentence, and step 7 nominates the next node. The receipt is 120 words at most (<code>skills/gm-hop/SKILL.md</code>, Receipt) and names an executed witness. A receipt without a witness does not set <code>applied:true</code>.</p>
 
 <p>A hop never reads the graph. Its links come from the payload. gm-orchestrate builds each link from the edges of the node and sorts the links by <code>to</code>. Each link carries the edge's <code>condition</code>, when the edge has one, as its guard. A link is eligible when every guard holds on the surface. The hop nominates the next node only from eligible links, and the chain stops at depth 6, the default <code>max_depth</code> in <code>skills/gm-hop/SKILL.md</code>, with <code>next: none, depth limit</code>.</p>
 
-<p>gm-hop directs each hop to write <code>.gm/lean-walk/&lt;NODE&gt;.json</code> on every verdict, including NOT-APPLICABLE. The file lists the links offered and the link taken. The link taken is either null or one of the links offered. A discipline the surface demands that the catalogue lacks is appended as a line to <code>.gm/lean-walk/new-nodes.jsonl</code>. A hop never edits the catalogue; the graph's owner promotes an emitted node into it.</p>
+<p>gm-hop directs each hop to write <code>.gm/lean-walk/&lt;NODE&gt;.json</code> on every verdict, including NOT-APPLICABLE. The file lists the links offered and the link taken. The link taken is either null or one of the links offered. A discipline the surface demands that the catalogue lacks is appended as a line to <code>.gm/lean-walk/new-nodes.jsonl</code>. The emitted line goes to <code>.gm/lean-walk/new-nodes.jsonl</code>, not to the catalogue.</p>
 
 <p>A hop commits its own change and does not push. The orchestrator publishes the tip of each wave in one push. A hop issues at most one <code>git_status</code> and one <code>git_commit</code>, plus one <code>branch_status</code> only when it needs remote state, and it does not pull. A hop never dispatches gm-continue. That call is the parent's terminal move.</p>
 
@@ -280,7 +284,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>A walk runs its hops and PRD rows as subagents in a pool. The ceiling is the number of subagents the platform accepts at once, and the orchestrator finds it by launching: a spawn refusal states the ceiling, which <code>pool-observe</code> records in <code>.gm/pool/ceiling.json</code>. When no ceiling is recorded, <code>spawn_ceiling</code> in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/state.rs</code> falls back to <code>DEFAULT_SPAWN_CEILING</code>, which <code>rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/mod.rs</code> defines as 20. The floor is <code>min(10, ceiling)</code>. While PRD rows are open, the live count stays at or above the floor, and the <code>pool-floor-met</code> gate refuses a transition while open rows leave pool slots free.</p>
 
-<p>The orchestrator runs a tick in five steps, as <code>skills/gm-orchestrate/SKILL.md</code> lists them: observe, launch, log, wait, and re-count the live pool. Observe runs <code>pool-observe</code>, dispatched in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs</code> and implemented in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/observe.rs</code>. It reads the body fields <code>live</code> (the ListAgents count), <code>refusal</code> (the spawn refusal text) and <code>held</code> (the ids of the running workers). Its reply carries a <code>slots</code> block with <code>candidates</code>, <code>launch</code>, <code>live_rows</code>, <code>aging_heartbeats</code>, <code>candidates_removed</code>, <code>launch_filters</code>, <code>already_fixed_on_head</code> and <code>open_rows</code>, and top-level <code>floor</code>, <code>ceiling</code>, <code>free_slots</code> and <code>refill_needed</code>. The launch step starts PRD rows first and then one hop per untraversed principle node, from the advertised ids in <code>slots.launch</code> (<code>skills/gm-orchestrate/SKILL.md</code>, step 2). Log writes each launch to <code>.gm/pool/ledger-&lt;wave&gt;.txt</code> and each tick to <code>.gm/witness-log.md</code>. Wait pauses for up to 600000 ms (<code>MAX_WAIT_MS</code> in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/wait.rs</code>), and each completion refills its slot in the same turn before any other step. A freed slot stays empty when the reply's <code>refill_needed</code> is zero: when <code>open_rows</code> is zero, when no slot is free, or when no candidate row and no traversal entry can launch.</p>
+<p>The orchestrator runs a tick in five steps, as <code>skills/gm-orchestrate/SKILL.md</code> lists them: observe, launch, log, wait, and re-count the live pool. Observe runs <code>pool-observe</code>, dispatched in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs</code> and implemented in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/observe.rs</code>. It reads the body fields <code>live</code> (the ListAgents count), <code>refusal</code> (the spawn refusal text) and <code>held</code> (the ids of the running workers). Its reply reports the ceiling, the floor, the free slots and whether a refill is needed, and its <code>slots</code> block lists the launch candidates and the open rows. The full reply shape is in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/observe.rs</code>. The launch step starts PRD rows first and then one hop per untraversed principle node, from the advertised ids in <code>slots.launch</code> (<code>skills/gm-orchestrate/SKILL.md</code>, step 2). Log writes each launch to <code>.gm/pool/ledger-&lt;wave&gt;.txt</code> and each tick to <code>.gm/witness-log.md</code>. Wait pauses for up to 600000 ms (<code>MAX_WAIT_MS</code> in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/wait.rs</code>), and each completion refills its slot in the same turn before any other step. A freed slot stays empty when the reply's <code>refill_needed</code> is zero: when <code>open_rows</code> is zero, when no slot is free, or when no candidate row and no traversal entry can launch.</p>
 
 <p>Each subagent brief opens by writing <code>.gm/pool/&lt;session&gt;.live</code> and deletes that file on finish. The count of record comes from the subagent list. <code>slots.live</code> and the ledger's <code>live</code> are not the count. A successor that the ceiling refuses is parked at <code>.gm/pool/&lt;session&gt;.next</code>, and the orchestrator relaunches that spec into the first freed slot.</p>
 
@@ -294,7 +298,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p><code>prd-resolve</code> closes a row. It moves the row into <code>.gm/prd-log.jsonl</code>, an append-only, hash-chained log (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>). A resolved id stays answerable: <code>prd-list</code> with that id reads the log.</p>
 
-<p>gm-prd closes one row in one run, with no subagent in the stages. Each stage writes a create-only receipt, <code>.gm/receipts/&lt;row&gt;/NN-&lt;STAGE&gt;.md</code>.</p>
+<p>gm-prd closes one row through the nine stages, in order. Each stage writes a create-only receipt, <code>.gm/receipts/&lt;row&gt;/NN-&lt;STAGE&gt;.md</code>. The gm-config prose gives each open row to one worker subagent (<code>gm-config/prose/complete.md</code>, line 16), and that worker runs the nine stages in one run, with no subagent per stage (<code>skills/gm-prd/SKILL.md</code>, line 8). The gm-config entry prose names the skill for PRD rows (<code>gm-config/prose/entry.md</code>, line 60). The compiled copy at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>, line 61, says each stage is a subagent, which contradicts the skill and the gm-config prose. The stage name SPECIFY appears only in prose files under <code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose</code> and in no Rust source.</p>
 
 <table>
 <caption>The nine gm-prd stages, in order</caption>
@@ -318,19 +322,17 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s10">10. Mutables</h2>
 
-<p>A mutable is an open condition that a decision or a change depends on. <code>mutable-add</code> writes a file under <code>.gm/mutables/</code>, and <code>mutable-list</code> reads the open set. <code>mutable-resolve</code> closes one and accepts a <code>measured_value</code>. Two gates refuse a transition while mutables remain open: <code>mutables-all-resolved</code> and <code>mutables-all-typed</code>.</p>
-
-<p>AGENTS.md requires a falsifiable hypothesis, with the live witness that would refute it, before each change.</p>
+<p>A mutable is an open condition that a decision or a change depends on. <code>mutable-add</code> writes a file under <code>.gm/mutables/</code>, and <code>mutable-list</code> reads the open set. <code>mutable-resolve</code> closes one and accepts a <code>measured_value</code>. Two gates refuse a transition on mutables: <code>mutables-all-resolved</code> refuses while any mutable is unknown or pending, and <code>mutables-all-typed</code> refuses while a pending PROVE-kind mutable is untyped or depends on an unresolved id.</p>
 
 <hr>
 
 <h2 id="s11">11. Witnessed execution and the no-test rule</h2>
 
-<p>Execution is a spool verb. An exec verb takes a plain text body, sent as <code>raw_body</code>. The optional first line <code>timeoutMs=&lt;ms&gt;</code> sets the wall-clock limit, which defaults to 300000 ms and has a hard ceiling of 900000 ms (<code>gm-mcp/src/dispatch.js</code>, <code>gm-mcp/src/verb-table.js</code>). At expiry the child's process tree is killed, and the out-file reports <code>killed:true</code> with <code>exec_timeout</code>. A reply longer than its limit, 24000 characters by default (<code>DEFAULT_REPLY_MAX_CHARS</code> in <code>gm-mcp/src/dispatch.js</code>), is cut, and the truncation notice names a <code>spill_file</code> that holds the whole text.</p>
+<p>Execution is a spool verb. An exec verb takes a plain text body, sent as <code>raw_body</code>. The optional first line <code>timeoutMs=&lt;ms&gt;</code> sets the wall-clock limit, which defaults to 300000 ms (<code>rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs</code>) and has a hard ceiling of 900000 ms (<code>EXEC_HARD_CEILING_MS</code> in <code>gm-mcp/src/dispatch.js</code>). At expiry the run is killed, and the out-file reports <code>killed:true</code> with <code>exec_timeout</code>. A reply longer than its limit, 24000 characters by default (<code>DEFAULT_REPLY_MAX_CHARS</code> in <code>gm-mcp/src/dispatch.js</code>), is cut, and the truncation notice names a <code>spill_file</code> that holds the whole text.</p>
 
-<p>A witness is a live dispatch whose reply carries the value under test. AGENTS.md requires one before each change.</p>
+<p>AGENTS.md requires a falsifiable hypothesis and a live witness before each change.</p>
 
-<p>The gate <code>no-synthetic-test-files</code> refuses a test file or test directory in the diff, and verification is a live witness against real code instead. The MCP server's own test files are in <code>gm-mcp/test/</code>. The diff gates <code>no-secrets-in-diff</code>, <code>no-graphical-symbols-in-diff</code>, <code>no-hedge-language-in-diff</code>, <code>no-unchecked-panics-in-diff</code> and <code>no-admit-deferral-markers</code> refuse the matching text, and <code>claim-audit-clean</code> is the claim-audit gate.</p>
+<p>The gate <code>no-synthetic-test-files</code> refuses a standing test file or test directory that the working diff introduces (<code>gm-config/fsm/predicates.md</code>). Verification is a live witness against real code instead, and the submodules keep their own tests, such as <code>gm-mcp/test/</code>. The diff gates <code>no-secrets-in-diff</code>, <code>no-graphical-symbols-in-diff</code>, <code>no-hedge-language-in-diff</code>, <code>no-unchecked-panics-in-diff</code> and <code>no-admit-deferral-markers</code> refuse the matching text, and <code>claim-audit-clean</code> is the claim-audit gate.</p>
 
 <hr>
 
@@ -338,11 +340,13 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p><code>codesearch</code> is the search verb, with the aliases <code>code_search</code> and <code>search</code>. Its literal mode finds a string, and <code>grep</code>, with the alias <code>rg</code>, is the exhaustive scan that answers where a string occurs. A scan that hits a bound returns <code>exhaustive: false</code> with <code>partial: true</code> and a <code>partial_reason</code>, and <code>path</code> or <code>path_glob</code> narrows the scan.</p>
 
-<p>Structural questions go to the symbol graph first. <code>callers</code> lists who calls a symbol, <code>callees</code> lists what it calls, and <code>impact</code> walks the callers of a symbol up to <code>max_depth</code> (default 3), or its callees with <code>direction</code> set to <code>callees</code>. The graph comes from the treesitter index, so an empty call graph is trusted only after <code>codeinsight_index</code> runs on a fresh checkout, and AGENTS.md requires that an empty call graph be confirmed with <code>codesearch</code>. <code>codeinsight</code> with action <code>outline</code> requires a <code>path</code>.</p>
+<p>Structural questions go to the symbol graph first. <code>callers</code> lists who calls a symbol, <code>callees</code> lists what it calls, and <code>impact</code> walks the callers of a symbol up to <code>max_depth</code> (default 3), or its callees with <code>direction</code> set to <code>callees</code>. The graph comes from the treesitter index, so an empty call graph is trusted only after <code>codeinsight_index</code> runs on a fresh checkout, and AGENTS.md requires that an empty call graph be confirmed with <code>codesearch</code>. <code>codeinsight</code> with mode <code>outline</code> requires a <code>path</code>.</p>
 
 <p>A project lists its generated and vendored trees in a <code>.codesearchignore</code> at its root. The file uses gitignore syntax and is read in addition to <code>.gitignore</code>. Dropped paths appear in <code>excluded_by_rule_summary</code> and <code>excluded_by_rule_count</code>. Any exclusion other than gm's own state clears <code>exhaustive</code>. The index build has a wall-clock budget of 45000 ms (<code>index.wall_budget_ms</code> in <code>gm-config/gm.config.json</code>), and <code>index.max_file_bytes</code> caps the size of a file the index reads.</p>
 
-<p>rs-search is a dependency-free library with two source modules beside its crate root, <code>rs-search/src/lib.rs</code>. <code>rs-search/src/fusion.rs</code> implements reciprocal rank fusion (RRF) with <code>RRF_K = 60</code>, and <code>rs-search/src/tokenize.rs</code> tokenizes identifiers. Its source modules contain no BM25 or vector code. rs-plugkit runs the BM25 lexical channel and the embedding channel of section 13, and calls rs-search for tokenization and fusion: <code>bm25_rank_cfg</code> in <code>rs-plugkit/crates/plugkit-core/src/code_index.rs</code> tokenizes its query with rs-search, and <code>rs-plugkit/crates/plugkit-core/src/dataflow_exec.rs</code> calls <code>rs_search::fusion::fuse_n_cfg</code> to fuse the ranked lists. The BM25 parameters are k1 at 1.2 and b at 0.75 (<code>scoring.bm25_k1</code> and <code>scoring.bm25_b</code> in <code>gm-config/gm.config.json</code>).</p>
+<p>rs-search is a dependency-free library. Its crate root is <code>rs-search/src/lib.rs</code>, and it has two modules: <code>rs-search/src/fusion.rs</code> (reciprocal rank fusion (RRF), with <code>RRF_K = 60</code>) and <code>rs-search/src/tokenize.rs</code> (identifier tokenization). Its source modules contain no BM25 or vector code.</p>
+
+<p>rs-plugkit runs the BM25 lexical channel and the embedding channel of section 13, and calls rs-search for tokenization and fusion: <code>bm25_rank_cfg</code> in <code>rs-plugkit/crates/plugkit-core/src/code_index.rs</code> tokenizes its query with rs-search, and <code>rs-plugkit/crates/plugkit-core/src/dataflow_exec.rs</code> calls <code>rs_search::fusion::fuse_n_cfg</code> to fuse the ranked lists. The BM25 parameters are k1 at 1.2 and b at 0.75 (<code>scoring.bm25_k1</code> and <code>scoring.bm25_b</code> in <code>gm-config/gm.config.json</code>).</p>
 
 <hr>
 
@@ -360,19 +364,19 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s14">14. The learning loop</h2>
 
-<p>The learning loop has three parts: recall, memorize, and the Dream-RSI observation and replay cycle. Each <code>instruction</code> reply carries recall hits for its own query (section 13). Memorize stores the decisions a later task would otherwise re-derive (<code>gm-config/prose/lean-p1.md</code>, Memorize). Dream-RSI turns the record of real work into strategy proposals.</p>
+<p>The learning loop has three parts: recall, memorize, and the Dream-RSI observation and replay cycle. Recall, described in section 13, feeds the learning loop. Memorize stores the decisions a later task would otherwise re-derive (<code>gm-config/prose/lean-p1.md</code>, Memorize). Dream-RSI turns the record of real work into strategy proposals.</p>
 
-<p>Dream-RSI records each real work dispatch automatically into <code>.gm/dream-rsi/&lt;session&gt;/observations.json</code>. Orchestration bookkeeping and Dream-RSI's own maintenance dispatches are not recorded, so only real work counts. The current selection is held in <code>active-strategy.json</code>, which <code>observe_dispatch</code> in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs</code> rewrites on each observed dispatch.</p>
+<p>Dream-RSI records each real work dispatch automatically into <code>.gm/dream-rsi/&lt;session&gt;/observations.json</code>. Orchestration bookkeeping and Dream-RSI maintenance do not become outcomes (<code>rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md</code>). The current selection is held in <code>.gm/dream-rsi/&lt;session&gt;/active-strategy.json</code>, which <code>observe_dispatch</code> in <code>rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs</code> writes.</p>
 
-<p>A cycle trigger runs inside the agentplug-runner daemon. <code>spawn_dream_rsi_cycle_ticker</code> in <code>agentplug/crates/agentplug-runner/src/daemon.rs</code> wakes once every 60 seconds. For each known project it writes one <code>dream-replay-cycle</code> request, and only when at least 20 new observations have accumulated and at least 15 minutes have passed since the last cycle, as <code>docs/dream-rsi.md</code> states.</p>
+<p>A cycle trigger runs inside the agentplug-runner daemon. <code>spawn_dream_rsi_cycle_ticker</code> in <code>agentplug/crates/agentplug-runner/src/daemon.rs</code> wakes once every 60 seconds (<code>DREAM_RSI_CYCLE_TICK_INTERVAL_MS</code>) and hands its loop to <code>dream_cycle::spawn</code>. The loop in <code>agentplug/crates/agentplug-runner/src/dream_cycle.rs</code> writes requests for its <code>VERB</code> into <code>.gm/exec-spool/in/dream-replay-cycle</code> under each known project root. It is gated by <code>MIN_NEW_OBSERVATIONS</code> (20) and <code>COOLDOWN_MS</code> (15 minutes).</p>
 
-<p>A replay result is planning input and never execution authority. It cannot run a tool, evaluate a new outcome, or make an unrecorded branch observed; those need a real dispatch. Deploying an accepted strategy is a dispatch that an agent makes under the same gates as any other state change. No daemon tick or scheduled job redeploys a strategy.</p>
+<p>A replay result is planning input and never execution authority. It cannot run a tool, evaluate a new outcome, or make an unrecorded branch observed; those need a real dispatch. Deploying an accepted strategy is a dispatch that an agent makes under the same gates as any other state change. The cycle trigger's only verb is <code>dream-replay-cycle</code>, and no file under <code>agentplug/</code> names <code>dreamrsi-select</code>. The verb is routed to <code>dream_cycle::handle</code> at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs</code> (line 407).</p>
 
 <hr>
 
 <h2 id="s15">15. The spool and its transports</h2>
 
-<p>A body is written to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;task&gt;.txt</code>, and the reply lands in <code>.gm/exec-spool/out/</code>. An exec reply names its output in a <code>result_file</code>, and a reply longer than its limit spills to the <code>spill_file</code> that the reply names. While the claim <code>in/&lt;verb&gt;/&lt;task&gt;.txt.inflight</code> exists, the dispatch is claimed. The file <code>.gm/exec-spool/.status.json</code> reports the watcher's heartbeat.</p>
+<p>A body is written to <code>.gm/exec-spool/in/&lt;verb&gt;/&lt;N&gt;.txt</code>, and the reply lands in <code>.gm/exec-spool/out/</code>. An exec reply names its output in a <code>result_file</code>, and a reply longer than its limit spills to the <code>spill_file</code> that the reply names. While the claim <code>in/&lt;verb&gt;/&lt;N&gt;.txt.inflight</code> exists, the dispatch is claimed. The file <code>.gm/exec-spool/.status.json</code> reports the watcher's heartbeat.</p>
 
 <p>gm-mcp wraps the spool for MCP clients. It registers one tool, <code>gm_codemode</code>, whose code body calls every verb as <code>gm.&lt;verb&gt;(body)</code>. It serves stdio, which is the default registration, and stateless streamable HTTP on <code>127.0.0.1:8787/mcp</code>. Its transport failure modes and registration command are owned by <code>gm-mcp/README.md</code>. The Node launcher <code>bin/gm</code> exposes the same dispatch as its <code>dispatch</code> subcommand.</p>
 
@@ -382,30 +386,41 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s16">16. Git delivery</h2>
 
-<p>Every change lands on <code>main</code>, in the shared work tree. No branch, worktree or side checkout is opened to avoid a collision. A collision is recovered on <code>main</code> in the same turn. The agent reads the conflicted set with <code>git_status</code>, re-reads each path against the remote state, stages the resolved paths with <code>git_add</code>, commits without paths while <code>.git/MERGE_HEAD</code> is set, pushes the full sha of the tip with <code>git_push {rev, allow_foreign_commits:true}</code>, and finishes on <code>main</code>. <code>git_push {rev:"HEAD"}</code> is refused.</p>
+<p>Every change lands on <code>main</code>, in the shared work tree. No branch, worktree or side checkout is opened to avoid a collision. A collision is recovered on <code>main</code> in the same turn:</p>
+
+<ol>
+<li>Read the conflicted set with <code>git_status</code>.</li>
+<li>Re-read each path against the remote state.</li>
+<li>Stage the resolved paths with <code>git_add</code>.</li>
+<li>While <code>.git/MERGE_HEAD</code> is set, commit without paths.</li>
+<li>Push the full sha of the tip with <code>git_push {rev, allow_foreign_commits:true}</code>.</li>
+<li>Finish on <code>main</code>.</li>
+</ol>
+
+<p><code>git_push {rev:"HEAD"}</code> is refused.</p>
 
 <p><code>git_finalize {message, paths}</code> commits the named paths and pushes them. In a shared work tree the publish path is the Git API route, with blobs, a tree on the remote tip, and a commit parented on that tip, then a read of each published blob. A <code>git_finalize</code> whose push is refused is reported as redundant, never as unpushed work. <code>git_remote</code> reads the remote URLs and the upstream without fetching or changing state. A pushed change is witnessed by two separate reads: <code>git_show {rev}</code> for the commit, and <code>ci-status {sha}</code> for the CI (continuous integration) state. A status of unknown is reported as unknown, never as success.</p>
 
-<p>A commit body states the change and nothing else, with one author and no <code>Co-Authored-By</code>, <code>Signed-off-by</code>, <code>Generated with</code> or assistant footer, because attribution on every project here is lanmower alone (<code>skills/gm/SKILL.md</code>).</p>
+<p>A commit message gives the reason for the change, not a restatement of the diff (<code>AGENTS.md</code>, Verification and delivery). Attribution is one author, lanmower, with no <code>Co-Authored-By</code>, <code>Signed-off-by</code>, <code>Generated with</code> or assistant footer (<code>skills/gm/SKILL.md</code>, Autonomy). That skill words the body rule as stating the change and nothing else, and this paper follows the AGENTS.md rule.</p>
 
 <hr>
 
 <h2 id="s17">17. Invariants and what would break them</h2>
 
-<p>AGENTS.md states the repository's invariants. Each item below states one of them with the condition that falsifies it.</p>
+<p>AGENTS.md states the repository's invariants. Each item below states one of them with the condition that falsifies it, and its status at this revision. Status not checked means this paper ran no check for that item.</p>
 
 <ul>
-<li><strong>Configuration precedence.</strong> A vendored key in the project replaces the cached and compiled prose. Falsified by a vendored key whose <code>instruction</code> reply still carries the cached text.</li>
-<li><strong>Gate names.</strong> A gate names only a predicate generated into <code>gm-config/fsm/predicates.md</code>. Falsified by a gate that names a predicate outside that file.</li>
-<li><strong>Path safety.</strong> <code>fs_read {"path":"../etc/hostname"}</code> returns <code>error_code: failed</code>. Falsified by an <code>ok: true</code> reply for that path.</li>
-<li><strong>Remote transports.</strong> The system accepts only HTTP(S) remote transports with a nonempty authority, and refuses any other scheme. Falsified by a live dispatch that accepts a remote transport with another scheme or an empty authority. The URL allow-list in <code>rs-plugkit/crates/plugkit-core/src/config_path.rs</code> also names <code>ssh://</code>, which AGENTS.md does not allow.</li>
-<li><strong>One writer per surface.</strong> Each shared file, ref, submodule pin or spool directory has one writer. Falsified by two briefs that write the same surface.</li>
-<li><strong>Pin parity.</strong> Each parent gitlink points to its submodule's <code>main</code> tip, and <code>.github/workflows/bump-pins.yml</code> advances it. Falsified by a parent gitlink that differs from its target's remote <code>main</code> tip after a green bump run.</li>
-<li><strong>Replay identity.</strong> <code>git_commit_dedup_lookup</code> shall answer a replay only while <code>rev-parse HEAD</code> equals the recorded <code>sha_full</code>, because object existence is not enough after <code>git_reset</code>. Falsified by a replay answered after <code>git_reset</code> moves HEAD off the recorded <code>sha_full</code>. The code checks only that the object exists (<code>git cat-file -e</code>) and that the record is younger than 180000 ms, so this invariant does not yet hold.</li>
-<li><strong>Build identity.</strong> The update guard <code>locally_built_installed_reason</code> refuses to replace a runner whose <code>build_info::is_release_build()</code> is false, unless <code>update_over_local_build_allowed()</code> permits it. Falsified by a release swapped over a runner whose <code>RELEASE_BUILD</code> is false.</li>
-<li><strong>Single-writer markers.</strong> A single-writer or lock guard creates its marker by atomic create or atomic rename. Falsified by a plain write in the guard's source.</li>
-<li><strong>Text encoding.</strong> Every tracked text file is UTF-8 without a byte-order mark. Falsified by a tracked file that begins with <code>EF BB BF</code>.</li>
-<li><strong>Lean graph sync.</strong> <code>scripts/sync-lean-graph.mjs emit</code> never writes a path under <code>rs-plugkit/</code>. Falsified by an <code>emit</code> that writes there.</li>
+<li><strong>Configuration precedence.</strong> A vendored key in the project replaces the cached and compiled prose. Falsified by a vendored key whose <code>instruction</code> reply still carries the cached text. Status: not checked.</li>
+<li><strong>Gate names.</strong> A gate names only a predicate generated into <code>gm-config/fsm/predicates.md</code>. Falsified by a gate that names a predicate outside that file. Status: holds for the graph. Every predicate that a gate in <code>gm-config/fsm/graph.json</code> names appears in that file (section 4 gives the counts).</li>
+<li><strong>Path safety.</strong> <code>fs_read {"path":"../etc/hostname"}</code> returns <code>error_code: failed</code>. Falsified by an <code>ok: true</code> reply for that path. Status: holds. A live <code>fs_read</code> of that path returned <code>error_code: failed</code> in dispatch <code>1791898081799-500-daffa96e140c7de2</code>.</li>
+<li><strong>Remote transports.</strong> The system accepts only HTTP(S) remote transports with a nonempty authority, and refuses any other scheme. Falsified by a live dispatch that accepts a remote transport with another scheme or an empty authority. Status: does not hold. The URL allow-list in <code>rs-plugkit/crates/plugkit-core/src/config_path.rs</code> (line 8) also names <code>ssh://</code>, which AGENTS.md does not allow.</li>
+<li><strong>One writer per surface.</strong> Each shared file, ref, submodule pin or spool directory has one writer. Falsified by two briefs that write the same surface. Status: not checked.</li>
+<li><strong>Pin parity.</strong> Each parent gitlink points to its submodule's <code>main</code> tip, and <code>.github/workflows/bump-pins.yml</code> advances it. Falsified by a parent gitlink that differs from its target's remote <code>main</code> tip after a green bump run. Status: the workflow file exists. This paper does not compare the gitlinks.</li>
+<li><strong>Replay identity.</strong> <code>git_commit_dedup_lookup</code> shall answer a replay only while <code>rev-parse HEAD</code> equals the recorded <code>sha_full</code>, because object existence is not enough after <code>git_reset</code>. Falsified by a replay answered after <code>git_reset</code> moves HEAD off the recorded <code>sha_full</code>. Status: does not hold. The lookup in <code>rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs</code> checks only that the object exists (<code>git cat-file -e</code>) and that the record is younger than its 180000 ms TTL.</li>
+<li><strong>Build identity.</strong> The update guard <code>locally_built_installed_reason</code> refuses to replace a runner whose <code>build_info::is_release_build()</code> is false, unless <code>update_over_local_build_allowed()</code> permits it. Falsified by a release swapped over a runner whose <code>RELEASE_BUILD</code> is false. Status: the guard source has both checks (<code>agentplug/crates/agentplug-runner/src/download.rs</code>). This paper does not run it live.</li>
+<li><strong>Single-writer markers.</strong> A single-writer or lock guard creates its marker by atomic create or atomic rename. Falsified by a plain write in the guard's source. Status: not checked.</li>
+<li><strong>Text encoding.</strong> Every tracked text file is UTF-8 without a byte-order mark. Falsified by a tracked file that begins with <code>EF BB BF</code>. Status: not checked.</li>
+<li><strong>Lean graph sync.</strong> <code>scripts/sync-lean-graph.mjs emit</code> never writes a path under <code>rs-plugkit/</code>. Falsified by an <code>emit</code> that writes there. Status: not checked.</li>
 </ul>
 
 <hr>
@@ -415,15 +430,15 @@ article tbody tr:hover { background: var(--panel-1); }
 <ol>
 <li><strong>The live ceiling is not measured here.</strong> Section 8 gives the fallback default and says how the orchestrator finds the live value, and the paper records no value that any platform accepted.</li>
 <li><strong>Memory goes stale.</strong> An entry is a claim written at one time, and section 13 gives the rule for removing stale ones.</li>
-<li><strong>A walk is bounded, not proven complete.</strong> The graph is finite (section 3), the hop chain stops at its depth limit (section 7), and the orchestrator stops after a third repeated shortfall (section 5). These bounds end a walk. They do not show that the walk found all the work a request contains, and AGENTS.md requires a gm-continue check for remaining work before a walk completes.</li>
-<li><strong>The paper measures nothing.</strong> It reports no speed, failure rate or effect size. No <code>#[bench]</code> or <code>[[bench]]</code> target exists in <code>rs-plugkit</code> or <code>agentplug</code>. <code>AGENTS.md</code> requires a falsifiable hypothesis and a live witness before each change.</li>
+<li><strong>A walk is bounded, not proven complete.</strong> The graph is finite (section 3), the hop chain stops at its depth limit (section 7), and the orchestrator stops after a third repeated shortfall (section 5). These bounds end a walk. They do not show that the walk found all the work a request contains (section 5 lists the completion checks).</li>
+<li><strong>The paper measures nothing.</strong> It reports no speed, failure rate or effect size. No <code>#[bench]</code> or <code>[[bench]]</code> target exists in <code>rs-plugkit</code> or <code>agentplug</code>. The three failures named in the abstract are the design motivation, and the paper reports no count of them.</li>
 </ol>
 
 <hr>
 
 <h2 id="s19">19. Conclusion</h2>
 
-<p>Section 1 states the core design. Section 18 lists the limits of this paper.</p>
+<p>Sections 2 to 17 describe the components, gates, walks and verbs of gm. Section 18 lists what this paper does not measure.</p>
 
 </article>
 </div>
@@ -435,7 +450,7 @@ article tbody tr:hover { background: var(--panel-1); }
 </div>
 
 <footer style="padding:12px 20px;font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--panel-text-3);display:flex;justify-content:space-between;background:var(--panel-1);box-shadow:inset 0 1px 0 rgba(0,0,0,0.04);flex-wrap:wrap;gap:12px;">
-<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a> and <a href="./paper.html" style="color:var(--panel-text-2)">paper</a></span>
+<span>built with <a href="https://github.com/AnEntrypoint/gm" target="_blank" rel="noopener" style="color:var(--panel-text-2)">gm</a></span>
 </footer>
 
 </body></html>
