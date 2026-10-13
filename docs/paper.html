@@ -228,7 +228,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>Each node carries a key, a kind, a label and a <code>prose_key</code> that selects its served prose. Each edge carries <code>from</code>, <code>to</code>, <code>kind</code> (forward or backreference), a label and its list of gate predicates. The graph keeps both forward and backreference edges.</p>
 
-<p>Two graphs exist, and they differ. The enforced copy is <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, which <code>rs-plugkit/AGENTS.md</code> describes as a vendored copy of <code>gm-config/fsm/graph.json</code>; the two hold the same counts at this revision. The hop payload is built from <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes (6 gate nodes) and 360 edges (224 forward, 136 backreference). The gm-orchestrate skill launches each hop from that catalogue. The two files are kept separately, and their counts are not the same.</p>
+<p>Three graph files exist, and they differ. The state machine that the walk enforces is <code>gm-config/fsm/graph.json</code>, with 146 states, 376 edges and 26 gates. Its enforced copy is <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code>, which <code>rs-plugkit/AGENTS.md</code> describes as a vendored copy of it; the two are identical at this revision. The hop graph is <code>skills/dream-rsi/gm-graph.json</code>, a catalogue of 145 nodes (6 gate nodes) and 360 edges (224 forward, 136 backreference), and the gm-orchestrate skill launches each hop from it. The DADA graph, <code>skills/dream-rsi/dada-graph.json</code>, is converted from an external flowchart (366 nodes, 625 edges). It is published on the site, and the walk does not read it.</p>
 
 <hr>
 
