@@ -1,9 +1,5 @@
 name: house-clean
 
-# Keeps the update channels clean: each -bin repo holds only its latest published
-# release, and gm never tracks a built plugin or a plugkit version pin. Installers
-# and the gm-mcp release bridge read only the latest release, so a superseded
-# release has no reader. Drafts are skipped, so an in-flight publish is never touched.
 
 on:
   schedule:
@@ -25,9 +21,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-      # Orphaned config-sync state: the checkout it describes is gone, so nothing can ever read
-          # it again. Report only -- the sweep is a report, not a gate, and this root's live state
-          # is deliberately left alone.
       - run: node scripts/sweep-config-sync-litter.mjs --root .
   tree-hygiene:
     runs-on: ubuntu-latest
