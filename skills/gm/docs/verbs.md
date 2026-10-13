@@ -567,7 +567,7 @@ against; its `provenance` field records the concern a book came from and groups 
 
 `prd-list` brief rows name a row's text `title`, clamped to a fixed length. Full rows (`{"id":...}` or
 `{"full":true}`) name the same stored text `subject`, the field `prd-add` writes. `title` is the brief
-alias of `subject`.
+alias of `subject`. `status` takes `pending`, `ready`, `completed`, `blocked` or `all` (every open and resolved row). `offset` with `limit` pages the listing: `next_offset` names the next page, null when done.
 
 **Where the rows live.** One file per row: a PRD row is `.gm/prd/<id>.yml` and a mutable is
 `.gm/mutables/<id>.yml`. The folder IS the index: there is no second list to keep in step with it,
