@@ -8,8 +8,6 @@ $ClaudeSkillsDir = Join-Path $env:USERPROFILE ".claude\skills"
 $AgentsSkillsDir = Join-Path $env:USERPROFILE ".agents\skills"
 $SkillInstallRoots = @($ClaudeSkillsDir, $AgentsSkillsDir)
 $SkillModeLedger = ".gm-skill-install-modes"
-# a displaced install is parked under a dotted directory: a plain sibling would
-# itself be discovered and served as a skill
 $SkillPreLinkDir = ".gm-skill-prelink"
 
 function Resolve-AssetName {
@@ -145,7 +143,6 @@ function Install-OneSkill {
         }
     }
 
-    # a directory junction needs no elevation on Windows; a symbolic link does
     try {
         New-Item -ItemType Junction -Path $dest -Value $SourceDir -ErrorAction Stop | Out-Null
         Write-SkillModeLedger -Root $Root -Name $Name -Mode "linked" -Source $SourceDir
@@ -246,8 +243,6 @@ function Install-Skill {
             New-Item -ItemType Directory -Force -Path $root | Out-Null
             Get-ChildItem -Directory (Join-Path $extractDir "skills") | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } | ForEach-Object {
                 $target = Join-Path $root $_.Name
-                # a junction/symlink must be unlinked, never recursed: Remove-Item
-                # -Recurse on a link deletes the TARGET's contents
                 Remove-SkillTarget -Path $target
                 Copy-Item -Recurse -Force $_.FullName $target
                 Write-SkillModeLedger -Root $root -Name $_.Name -Mode "copied" -Source "release:$tag"

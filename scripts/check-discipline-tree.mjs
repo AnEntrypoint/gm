@@ -3,11 +3,6 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-// Counts the two things that make the gm discipline tree untraversable and fails
-// when either is non-zero: nodes no edge reaches, and books whose every edge
-// stays inside the concern it was authored under. Every check below records a row even
-// when it passes, so an absent row is a missing check rather than a pass.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const graphPath = path.join(root, 'skills', 'dream-rsi', 'gm-graph.json');
 
@@ -49,8 +44,6 @@ const seenEdge = new Set();
 for (const e of edges) {
   if (!byId.has(e.from)) undefinedEndpoints.push(`from ${e.from}`);
   if (!byId.has(e.to)) undefinedEndpoints.push(`to ${e.to}`);
-  // A pair may carry both a forward and a backreference edge, so the identity
-  // of an edge is the triple, not the pair.
   const key = `${e.from}>${e.to}>${e.kind}`;
   if (seenEdge.has(key)) duplicateEdges.push(key);
   seenEdge.add(key);
@@ -135,8 +128,6 @@ record('zero-provenance-partitioned-anchors', true, `0 of ${indexNodes.length}`)
 const booklessAuthor = bookNodes.filter((n) => !(typeof n.author === 'string' && n.author.length));
 if (booklessAuthor.length) fail('book-nodes-name-an-author', named(booklessAuthor));
 record('book-nodes-name-an-author', true, `${bookNodes.length} book nodes`);
-// An unattributed book carries its title alone, so the invariant is that the
-// label leads with the book, not that it always ends with " - <author>".
 const labelMismatch = bookNodes.filter((n) => !n.label.startsWith(n.book));
 if (labelMismatch.length) fail('book-label-carries-the-book', named(labelMismatch));
 record('book-label-carries-the-book', true, `${bookNodes.length} book nodes`);

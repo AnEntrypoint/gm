@@ -4,14 +4,6 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-// Guards the one path a user types to install gm: `npx github:AnEntrypoint/gm`.
-// npm resolves that spec's executable with libnpmexec's getBinFromManifest, which
-// takes the bin key equal to the unscoped package name, or a bin whose values are
-// all one file. A bin map that matches neither makes npx exit with "could not
-// determine executable to run" before any gm code runs. This check applies the
-// same rule to package.json, then with --live runs the real npx spec and reads
-// its usage line, so a passing run is a witness for the route itself.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkgPath = path.join(root, 'package.json');
 const live = process.argv.includes('--live');

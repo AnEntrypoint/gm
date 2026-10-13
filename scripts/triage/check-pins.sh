@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Verify every submodule pin recorded in HEAD exists on that submodule's remote. An unpublished pin makes
-# every fresh `git clone --recurse-submodules` fail. Usage: check-pins.sh   (run from the gm root)
-# Fetches one commit by sha from the remote into a throwaway repo, so a pin that is
-# reachable from a branch but is not its tip resolves without a submodule checkout (CI runs with submodules: false).
 fetched_by_sha() {
   local tmp rc=1
   tmp=$(mktemp -d) || return 1
