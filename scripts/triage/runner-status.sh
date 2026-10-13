@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# One-call watcher health: heartbeat age, pid liveness, versions, loaded plugins, queue.
-# Usage: runner-status.sh [project-root]   (default: current directory)
 root=${1:-$PWD}
 f="$root/.gm/exec-spool/.status.json"
 [ -f "$f" ] || { echo "no status file at $f -- watcher never started here"; exit 2; }
