@@ -134,7 +134,7 @@ The canonical search verb: ranked BM25 plus vector retrieval.
                                    and the cap is off by default
 {"max_files":50000}                file cap
 {"path":"<dir or file>"}           narrow the scan
-{"paths":["src/a.rs","src/b/"]}    narrow it to exactly those files and directories; "files" is an alias
+{"paths":["skills/gm/SKILL.md","skills/gm/docs/"]}    narrow it to exactly those files and directories; "files" is an alias
 {"exclude":["vendor/**"]}          drop paths from the scan: one glob or a list of them, matched like
                                    "glob", so name a whole tree as "vendor/**"; "exclude_glob" and
                                    "exclude_globs" are aliases
