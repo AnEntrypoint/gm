@@ -54,6 +54,8 @@ Sections: 0 Precedence, 1 Harness (1a supply chain, 1b meta-graph, 1c routing, 1
 
 Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose) > project `.gm/` vendored config > config-source repo > compiled default > Section 2 > Section 3. Higher tiers replace lower, never merge. Where this file contradicts served text, served text wins. Report the contradiction in one line. Section 4's world-scope is the sole exception.
 
+The config-file part of this order is the `Tier` enum (`config::Tier`, `rs-plugkit/crates/plugkit-core/src/config.rs`), whose variants in resolution order are `ProjectVendored`, `ProjectRepoSpec`, `UserRepoSpec`, `ImplicitDefaultRepo`, `BuiltinDefault`. The live-response, Section 2 and Section 3 tiers are skill prose outside that enum.
+
 ## 1. Harness
 
 - Every verb goes through one dispatch port: `dispatch(verb, body, cwd)` writes the request, waits for its reply, and returns it with its `dispatch_id`. The port's adapters are listed in `spool-adapter.md`, which names the sanctioned default (the first that applies this turn). No other section names one. Name in your reply any verb you cannot run, with the reason. Do not drop it silently.
