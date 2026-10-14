@@ -1,5 +1,0 @@
-id: JTBD-RESUME-INTERRUPTED-WALK-blocker-gm-drain-b-49
-subject: 'Blocker for JTBD-RESUME-INTERRUPTED-WALK: resume verb and live interrupt witness missing'
-blockedBy: '(1) the verb or state file a fresh session reads to find the first open row of an interrupted non-COMPLETE walk (U1; gm.list filter resume|state|phase|walk|continue returned nothing); (2) a live witness from a session other than gm-drain-b-49 that interrupts a walk with one open and one closed row, starts a fresh session, and shows the next dispatch targets only the open row (U2; supplied by gm walk plus prd-list and a dispatch in a fresh session). Premise correction: .gm/prd.yml is absent; rows are .gm/prd/<id>.yml plus .gm/prd-log.jsonl. SKILL.md lines 74 and 93 confirm gm-continue is terminal-only. Receipt: .gm/receipts/JTBD-RESUME-INTERRUPTED-WALK/01-SPECIFY.md.'
-session_id: gm-drain-b-49
-status: pending

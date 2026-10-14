@@ -1,4 +1,0 @@
-id: THINSLICE-GIT-APPEND-REWRITE
-subject: 'Thin slice for G_CONTRACT-git-append-rewrite-classification: append versus rewrite becomes a per-verb flag in the git verb registry; skills/gm/SKILL.md section 4 drops its enumerated list in the same change. Witness: git_reset_head on a commit reachable from a remote ref answers pushed_commit_refused, read from the registry flag.'
-session_id: lean-hop-THINSLICE
-status: pending

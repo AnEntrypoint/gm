@@ -1,4 +1,0 @@
-id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-b-51
-status: blocked
-subject: 'Blocked: JTBD-SPEND-VISIBILITY needs per-dispatch token usage that no layer records. blocked_by fact: input and output token usage per walk dispatch. Evidence: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:413-426 ObservationRecord has verb, ts, lean_node, exit_code, quality and no token field; gm-mcp/src has no spend or token producer (codesearch, session gm-drain-b-51). Dispatch count and wall time per phase and re-entered phase are derivable now. Verb that supplies the token fact: the runner or gm-mcp dispatch must return model usage into the spool reply, then a new rs-plugkit verb walk-spend reads it. Receipt: .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md. Row JTBD-SPEND-VISIBILITY stays pending.'
-session_id: gm-drain-b-51

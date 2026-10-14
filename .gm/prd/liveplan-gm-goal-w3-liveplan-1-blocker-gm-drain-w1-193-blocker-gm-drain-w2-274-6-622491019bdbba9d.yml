@@ -1,7 +1,0 @@
-id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-w1-193-blocker-gm-drain-w2-274
-subject: 'Blocked: LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-w1-193 cannot close without a retire-wave row. Its two prerequisites (INVEST-EARS-DOC-PATHS-EXIST, INVEST-EARS-DOC-NO-REMOVED-VERBS) are now completed; the store sweep over pending rows is not executed. Needs a retire-wave row naming the keep-list and a per-row witness, then the sweep. Receipt: .gm/receipts/LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-w1-193/01-SPECIFY.md'
-status: pending
-blockedBy:
-- external
-session_id: gm-drain-w2-274
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,4 +1,0 @@
-id: ACCEPTPORT-SPOOLFS-DISPATCH
-title: 'Ports and Adapters: dispatch.js writes spool in-files and reads lock/status files inline with fs; move them behind a spool-store adapter'
-status: pending
-session_id: lean-hop-ACCEPTPORT
