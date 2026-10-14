@@ -103,6 +103,7 @@ Lanes share one work tree and one git lane. Work on `main` only: no worktree, si
 - Publish through the Git API: POST blobs; a tree with `base_tree: <remote tip>`; a commit parented on that tip; PATCH `refs/heads/main` with `force` unset; re-read each blob at `?ref=main`.
 - `git_finalize` that refuses to push because a sibling holds a dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
+- `remote_moved` plus a conflicted `git_pull` (`conflicted: true`, `MERGE_HEAD` present): `git_merge_abort`, then `git_reset {ref:"origin/main", mode:"mixed"}` (the lane's local commit stays in the reflog and its files stay in the work tree), reapply each lane path on current state, then `git_finalize {message, paths}` for those paths only. It pushes the new sha; confirm with `git_remote` and `ci-status`.
 - Collision: re-read the row or file, reapply on current state, retry.
 - One commit author, no trailers (gm). Bake before commit (gm-hop).
 
