@@ -2,7 +2,7 @@ id: home
 title: gm
 hero:
   heading: "gm"
-  subheading: "a check layer for the coding agent you already run: it holds the agent to a list of recorded checks before it calls a task done."
+  subheading: "a check layer for the coding agent you already run: gm holds the agent to a list of recorded checks before it calls a task done."
   body: "You describe a change and the agent builds it. Before the agent can call a task done, every plan row (a task file in .gm/prd/) must be closed, a continuous integration (CI) result for HEAD must be recorded, and submodules must be clean."
   badges:
     - { label: "installs into Claude Code, Cursor, Gemini CLI and Codex" }
