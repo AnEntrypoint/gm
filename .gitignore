@@ -207,3 +207,10 @@ skills/gm/.gm/
 
 # gm-prd receipts: per-row runtime audit trail, not versioned
 .gm/receipts/
+
+# runtime lane scratch and a nested repo that is not a project submodule
+.gm/lanebuild/
+.gm/witness-out/
+.wt-lanewait/
+.wt-thrash/
+obrowser/
