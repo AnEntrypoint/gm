@@ -538,7 +538,7 @@ selects the engine; the rest is the crawl request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) unless the body has a `headful` line or `GM_CRAWL_CDP_HEADFUL` is set; then **HEADFUL**: a visible browser window |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) by default; **HEADFUL** (a visible browser window) when the body has a `headful` line or `GM_CRAWL_CDP_HEADFUL` is set to any value other than empty, `0`, `false`, `no` or `off` |
 | `lightpanda` | a headless browser: the host's warm lightpanda process, whose binary comes from `GM_LIGHTPANDA_PATH`, then `PATH`, run through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
 
 Choose `lightpanda` when no window should appear;
@@ -558,7 +558,7 @@ including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome`: the CDP crawl as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. It sets no window mode: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window. It answers the same host JSON object.
+`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The `chrome` verb sets no window mode of its own: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window, and the window is headless otherwise. The verb answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"

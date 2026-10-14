@@ -77,7 +77,7 @@ article tbody tr:hover { background: var(--panel-1); }
   <li><code>plan row</code>, also called a PRD row: one entry in the plan. An open row is one file in <code>.gm/prd/</code>. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
   <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial. The denial names the verb to dispatch next.</li>
-  <li><code>mutable</code>: an open question that the agent records instead of asking the user.</li>
+  <li><code>mutable</code>: an open question that the agent records with <code>mutable-add</code> instead of asking the user.</li>
   <li><code>verb</code>: a named gm operation an agent calls, such as <code>codesearch</code> or <code>instruction</code>.</li>
   <li><code>dispatch</code>: one request an agent sends to run a verb.</li>
 </ul>
