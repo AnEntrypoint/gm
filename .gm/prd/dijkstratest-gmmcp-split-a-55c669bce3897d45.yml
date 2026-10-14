@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-A
+subject: 'gm-mcp standing tests cluster A: re-express assertions as exec_js probes, then delete the files'
+body: 'Files: gm-mcp/test/response-compact.test.mjs (50), codemode-args.test.mjs (5), body-input.test.mjs (1), catalog.test.js (6), gm-result.test.js (4), prd-list-mcp-tool.test.mjs (3). Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Acceptance: each assertion has an exec_js probe against the real boundary witnessed from another session, then the files are removed from gm-mcp main. Land serially with B, C, D (single writer on gm-mcp/test). Not witnessed in-session.'
+session_id: gm-drain-bounded-51
+status: pending

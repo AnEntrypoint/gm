@@ -1,5 +1,0 @@
-id: AGENTSMD-MOVE-WINDOWLESS-RULE
-title: 'AGENTS.md hierarchy: move the Windows windowless-spawn rule from root to agentplug/AGENTS.md'
-body: 'Principle: AGENTS.md Hierarchical, Not Encyclopaedic. Root AGENTS.md line 61 (Implementation rules) states the windowless spawn invariant. Its owner is agentplug: agentplug/crates/agentplug-host/src/windowless.rs:9 (ensure_hidden_console) and :11 (apply_windowless). agentplug/AGENTS.md has zero mentions of windowless (grep witness). Action: add the rule to agentplug/AGENTS.md Runtime invariants, keep a one-line pointer in root. Do not edit root AGENTS.md this turn (another writer owns it).'
-session_id: lean-hop-AGENTSMD
-status: pending

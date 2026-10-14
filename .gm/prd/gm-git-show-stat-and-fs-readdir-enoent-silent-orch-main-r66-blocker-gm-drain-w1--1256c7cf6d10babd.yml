@@ -10,3 +10,6 @@ body: |-
   Next: a CI-capable lane makes the verbs.rs change, bumps the gitlink, and witnesses fs_readdir on a missing relative path from another session.
 session_id: gm-drain-w2-180
 status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

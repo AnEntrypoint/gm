@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-FINAL
+subject: 'gm-mcp: remove the gm-mcp/test directory and the npm test script once clusters A-D have landed'
+body: Depends on DIJKSTRATEST-GMMCP-SPLIT-A, -B, -C, -D (all must be resolved first). Remove the npm test script from gm-mcp/package.json, confirm gm-mcp/test is absent on main, then rerun check-bin-drift and verify-build via CI. Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Witness from another session.
+session_id: gm-drain-bounded-51
+status: pending

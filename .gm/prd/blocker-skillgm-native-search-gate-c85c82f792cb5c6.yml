@@ -1,4 +1,5 @@
 id: BLOCKER-SKILLGM-native-search-gate
 subject: 'Blocker for G_CONTRACT-native-search-ban-restated: first confirm the deviation gate id that blocks Glob/Grep/find/rg/Explore for content search, make that gate carry the rule, then trim the brick-wall and section 1 restatements in skills/gm/SKILL.md. Brick-wall opener stays (required in every Agent prompt). Prose stays until this lands.'
-session_id: lean-exec-skillgm-1
+session_id: gm-drain-bounded-18
+body: 'blocked_by: BLOCKER-SKILLGM-native-search-gate-needs-rs-plugkit-predicate-gm-drain-w3-55. SPECIFY and PROVE (receipts .gm/receipts/BLOCKER-SKILLGM-native-search-gate/01-SPECIFY.md, 02-PROVE-DECIDE.md): no deviation kind or predicate for native search exists in rs-plugkit (DEVIATION_TABLE 27 kinds, codesearch 1791974133706-500-fe2b0d8acc8a32f7 0 hits). Gate needs an rs-plugkit Rust change and CI-built wasm before the prose trim is witnessed.'
 status: pending

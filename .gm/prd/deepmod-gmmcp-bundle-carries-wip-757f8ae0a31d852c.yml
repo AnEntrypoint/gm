@@ -1,4 +1,0 @@
-id: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP
-title: 'gm-mcp: bin/gm-mcp-server.js was rebuilt from src/ including uncommitted dispatch.js, mcp-server.js and untracked git-adapter.js; decide which writer commits the bundle with its src'
-status: pending
-session_id: lean-hop-DEEPMOD

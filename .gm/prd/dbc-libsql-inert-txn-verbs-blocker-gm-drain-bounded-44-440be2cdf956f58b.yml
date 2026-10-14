@@ -1,0 +1,5 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-bounded-44
+subject: 'BLOCKER: deployed libsql guest still accepts begin as inert; source fix 0c9d68c not live'
+body: 'Parent row: DBC-LIBSQL-INERT-TXN-VERBS (not rescoped). Session gm-drain-bounded-44. Stage reached: PROVE. Receipts: .gm/receipts/DBC-LIBSQL-INERT-TXN-VERBS/01-SPECIFY-gm-drain-bounded-44.md and 02-PROVE-gm-drain-bounded-44.md. Live route exists now: gm.gm({verb:''libsql'', body:{verb:''begin'', path:...}}) (dispatch 1791974304920-500-7dfa9136b5a6139 returns ok:true; capabilities dispatch 1791974301832-500-f2dd7b7c6764465b lists begin/commit/rollback in inert_verbs). Source is already correct: agentplug-libsql commit 0c9d68c refuses them at db.rs:726-729. Missing fact: a libsql guest built from 0c9d68c or later, deployed to the runner. Verb that supplies it: a CI build of agentplug-libsql (publish workflow run id) plus a live gm.gm libsql begin dispatch returning ok:false naming the refusal. Row premise is stale: libsql_wasm.rs:223-233 does not exist. Update the row text when this blocker closes.'
+session_id: gm-drain-bounded-44
+status: pending

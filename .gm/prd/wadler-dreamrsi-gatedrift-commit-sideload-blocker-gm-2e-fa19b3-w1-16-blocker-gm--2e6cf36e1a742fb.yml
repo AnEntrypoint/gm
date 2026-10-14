@@ -3,3 +3,6 @@ subject: 'Blocker: served guest still not at rs-plugkit HEAD (source_sha 480fc43
 body: 'Parent row: WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-2e-fa19b3-w1-16-blocker-gm-drain-w1-314 (session gm-drain-w2-469). PROVE precondition fails: served guest source_sha 480fc4310f1a5c24822661283d12e0b9bb028fd4 differs from rs-plugkit HEAD 4b8e4c53cea934346244f0645670808baa281a8c (branch main, working tree dirty with other writers'' changes). Unblock by: CI build with --features slim at a clean rs-plugkit main tip, sideload of that guest, then a witness dispatch that shows a non-null automatic_replay selection or dream_rsi_advisory from a session other than the writer. Receipts: .gm/receipts/WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-2e-fa19b3-w1-16-blocker-gm-drain-w1-314/01-SPECIFY.md and 02-PROVE.md. Leader hypothesis H1: guest not at HEAD.'
 session_id: gm-drain-w2-469
 status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

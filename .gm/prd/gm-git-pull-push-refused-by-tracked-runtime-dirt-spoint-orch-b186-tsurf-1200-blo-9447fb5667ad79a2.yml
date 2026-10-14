@@ -3,3 +3,6 @@ subject: 'Blocker for gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-or
 body: 'Session gm-drain-w2-176 ran SPECIFY and PROVE. Source (git.rs push_dirty_scope blocks() ~8334, bin_drift_gate_input 1407-1412, push refusal text 4067-4072, pull overlap rule 3375/3406) shows the overlap rule is present; H1 narrows to the bin-drift gate only. Separating H1 from H2 needs a live git_pull/git_push on the shared dirty tree (other lanes write .gm/ and submodules; single-writer rule forbids the probe) against the CI-built wasm, and the witness must come from a session other than the row author (prd-resolve-self-witness). Unblock: a clean-tree witness window or a CI-built wasm plus an isolated clone (git archive of a remote sha) where the probe can run without touching the shared tree. Receipts: .gm/receipts/gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200/. Prior blocker: ...-blocker-gm-drain-w1-130 (dispatch 1791961393967-500-f1946e26317c673).'
 session_id: gm-drain-w2-176
 status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

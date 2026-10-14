@@ -1,5 +1,0 @@
-id: CQS-gm-goal-w4-CQS-1
-title: 'CQS: runnerEnsureInFlight is a query that mutates state and kills a child'
-description: 'gm-mcp/src/dispatch.js:1105 runnerEnsureInFlight(root, now) is a predicate ("is a runner ensure in flight?") but deletes inflightEnsuresByRoot entries (lines 1109, 1113, 1117) and calls entry.child?.kill() (line 1118) before returning false. Witness: codesearch literal "writeFileSync(" and read of dispatch.js:1105-1122. Fix: move the reap (delete + kill) into a command called from ensureSpoolRunnerRunning (dispatch.js:1139), leaving runnerEnsureInFlight pure. Requires a gm-mcp bundle rebuild with the src edit.'
-status: pending
-session_id: gm-goal-w4-CQS

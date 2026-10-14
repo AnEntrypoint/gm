@@ -1,5 +1,8 @@
 id: DBC-gm-goal-w4-DBC-1
+subject: gm-mcp codemode silently strips unknown argument keys (contract not enforced at the call boundary)
+session_id: gm-drain-bounded-43
+body: |-
+  Claim (DBC, precondition on verb calls): arguments must satisfy the verb schema, and a call carrying keys outside the schema is refused. Witness: gm-mcp/src/codemode.js:15 validates with z.object(tool.inputSchema), which strips unknown keys by default, so a misspelled field is dropped with no error. Live check, session gm-goal-w4-DBC: codesearch with bogus_field:1 was admitted and searched; codesearch with cwd:12345 was refused ("cwd: expected string"). Type checks hold; unknown-key rejection does not. Fix is not a one-line change: .strict() would reject the session_id and cwd defaults the codemode contract forwards to verbs whose schema omits them. Needs a test on that path and a bundle rebuild (gm-mcp src and committed bundle together).
+
+  blocked_by: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-bounded-43 (fix committed as 3529fda and pushed, live witness sha256 d9713e2f4de76150801737ee581f395b13e6fef00d608675f2401fba29df9a3c; the version-bump commit ecc084a cannot push until src/dispatch.js from another writer clears the bin drift gate).
 status: pending
-title: gm-mcp codemode silently strips unknown argument keys (contract not enforced at the call boundary)
-body: 'Claim (DBC, precondition on verb calls): arguments must satisfy the verb schema, and a call carrying keys outside the schema is refused. Witness: gm-mcp/src/codemode.js:15 validates with z.object(tool.inputSchema), which strips unknown keys by default, so a misspelled field is dropped with no error. Live check, session gm-goal-w4-DBC: codesearch with bogus_field:1 was admitted and searched; codesearch with cwd:12345 was refused ("cwd: expected string"). Type checks hold; unknown-key rejection does not. Fix is not a one-line change: .strict() would reject the session_id and cwd defaults the codemode contract forwards to verbs whose schema omits them. Needs a test on that path and a bundle rebuild (gm-mcp src and committed bundle together).'
-session_id: gm-goal-w4-DBC
