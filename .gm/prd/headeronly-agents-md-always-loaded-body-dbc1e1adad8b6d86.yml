@@ -1,0 +1,4 @@
+id: HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY
+title: 'Header/body: AGENTS.md (29511 bytes) is loaded whole every session via CLAUDE.md @AGENTS.md; keep only always-needed rules in it and move trigger-only sections to the owning SKILL.md or README'
+status: pending
+session_id: lean-hop-HEADERONLY
