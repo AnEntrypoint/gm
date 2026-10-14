@@ -1,4 +1,0 @@
-id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE
-title: 'gm-mcp: publish the trimmed tool descriptions (tools/list 11676 -> 4284 bytes) by committing the rebuilt bin and pushing main, then confirm the deployed ~/.gm-tools bundle picks it up'
-status: pending
-session_id: lean-hop-TOOLBUDGET

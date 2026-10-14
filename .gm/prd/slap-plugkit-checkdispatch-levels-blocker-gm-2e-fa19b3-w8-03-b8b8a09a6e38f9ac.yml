@@ -1,6 +1,0 @@
-id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03
-subject: 'Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS: EMIT and witness not runnable in session gm-2e-fa19b3-w8-03. Local builds are hook-blocked (CI-only build); the witness needs a live shell-git dispatch from a different session. Row cites stale lines: check_dispatch is gates.rs:466-774, not 404 (receipt .gm/receipts/SLAP-PLUGKIT-CHECKDISPATCH-LEVELS/01-SPECIFY.md).'
-blockedBy:
-- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS
-status: pending
-session_id: gm-2e-fa19b3-w8-03

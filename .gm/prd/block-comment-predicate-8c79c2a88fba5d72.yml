@@ -1,7 +1,0 @@
-id: BLOCK-COMMENT-PREDICATE
-title: 'Blocker: a predicate blocks transitions on added comments'
-subject: 'gm-config/prose/entry-extended.md ''Names and structure carry meaning; comments do not'' and the Token Discipline comment clause restate the comment-blocking rule. No comment predicate exists in rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs (only no-synthetic-test-files covers test files). Code target: add a predicate that fails when the working diff adds a comment, register it in predicate_registry.rs and transitions.rs for EXECUTE and VERIFY, then delete the prose duplicates in entry-extended.md to a reference.'
-status: pending
-blockedBy:
-- external
-session_id: lean-exec-entryext-1
