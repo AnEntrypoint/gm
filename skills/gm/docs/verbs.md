@@ -361,11 +361,17 @@ Each git verb is a `query` or a `command`.
 
 Query verbs:
 
-- `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_remote`, `git_stash_list`, `git_worktree_list`
+- `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `ci-log` (alias `ci_log`), `git_remote`, `git_stash_list`, `git_worktree_list`
 
 Command verbs (every other git verb):
 
 - `git_push`, `git_add`, `git_commit`, `git_amend`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_cherry_pick`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+
+`ci-log` reads what a step printed, which `ci-status` cannot answer: it answers a job's text, not its conclusion. Name `run_id` (every `ci-status` job row carries one) or `sha`, optionally `job_id` to read one job instead of the whole run, then filter with `job`, `step` and `pattern` (`mode` is `literal` or `regex`, and `ignore_case` folds all three). Each returned line is split into `{n, job, step, at, text}`, so three jobs' output compares without anyone parsing the `job\tstep\ttimestamp\t` prefix by hand. Default caps are `max_lines` 40 and `max_chars` 8000, so a 1900-line multi-job run is never dumped into context; the reply carries `lines_scanned`, `matched_lines`, `returned_lines`, `truncated` and `truncated_by` so a cap is visible rather than silent. It reads through the `gh` CLI, so an absent or unauthenticated `gh` is a clear `ok: false` naming the reason, never a hang:
+
+```
+ci-log {"github_repo":"lanmower/oscraft","run_id":38538275222,"step":"state hashes","pattern":"sha256"}
+```
 
 `git_remote` takes `{}` and answers `{branch, remotes, upstream}`. It inspects the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
