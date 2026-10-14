@@ -6,7 +6,7 @@ Dated evidence behind the rules in `skills/gm-orchestrate/SKILL.md` and `skills/
 
 - **ceiling** (rule: the ceiling is found by launching): Measured 2026-10-10: ceiling 20; a spawn refusal is the measurement, never a sign that this walk over-subscribed.
 - **floor** (rule: a dip is judged on the average): Measured 2026-10-13 in C:/dev/gm (SESSION_ID gm-2e-fa19b3): the pool sat at live 0 against floor 10 with 243 open rows, no tick had logged it, and `pool-observe` answered `floor_gate_denied`.
-- **Recorded drops (lessons)**: a rule shadowed by a stale vendored prose file; heartbeats not refreshed during lock waits; free-text successors that were ineligible; GPU-lock timeouts ending runs; completions refilled in batches; browser, GPU or design successors nominated for a node-only pool; traversal started late; served rules not refreshed from gm-config; stuck background shells and Monitors holding the GPU lock. On 2026-10-09 live fell to 0 with 779 rows pending and candidates empty: refill from a pending-row scan in the same turn.
+- **Recorded drops (lessons)**: a rule shadowed by a stale vendored prose file; heartbeats not refreshed during lock waits; free-text successors that were ineligible; exclusive-lock timeouts ending runs; completions refilled in batches; successors needing an exclusive lock nominated for a node-only pool; traversal started late; served rules not refreshed from gm-config; stuck background shells and Monitors holding an exclusive lock. On 2026-10-09 live fell to 0 with 779 rows pending and candidates empty: refill from a pending-row scan in the same turn.
 
 ## Node-to-node payloads (rule: links come from edges, both kinds)
 
