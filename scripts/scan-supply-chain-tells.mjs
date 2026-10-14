@@ -51,6 +51,11 @@ const PATTERNS = [
     why: 'eval() fed directly by network response content — remote code execution primitive',
   },
   {
+    name: 'eval-of-decoded-payload',
+    re: /\beval\s*\(\s*(await\s+)?(atob|unescape|decodeURIComponent|decodeURI|String\.fromCharCode|Buffer\.from)\s*\(/,
+    why: 'eval() fed directly by an inline decoder (atob, Buffer.from, fromCharCode, unescape, decodeURI) — the encoded-payload shape of a runtime-decoded remote code execution primitive; a variable hop between decoder and eval is not covered by this rule',
+  },
+  {
     name: 'xor-decode-helper',
     re: /charCodeAt\(\w+\s*%\s*\w+\.length\)/,
     why: 'per-byte XOR-against-key loop, the standard shape for decoding an obfuscated payload at runtime',
