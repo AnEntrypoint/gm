@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-A-blocker-gm-drain-a-43
+subject: 'Blocked: DIJKSTRATEST-GMMCP-SPLIT-A needs a witness from a session other than gm-drain-a-43'
+blockedBy: 'a cross-session witness of the exec_js probes replacing the 69 assertions in gm-mcp/test. Supplied by prd-resolve {id:"DIJKSTRATEST-GMMCP-SPLIT-A", witness_evidence, witness_dispatch_id} from a session other than gm-drain-a-43, after the probes land on gm-mcp main; ordered serially after DIJKSTRATEST-GMMCP-SPLIT-B, -C, -D (pending). Receipt: .gm/receipts/DIJKSTRATEST-GMMCP-SPLIT-A/01-SPECIFY.md'
+session_id: gm-drain-a-43
+status: pending
