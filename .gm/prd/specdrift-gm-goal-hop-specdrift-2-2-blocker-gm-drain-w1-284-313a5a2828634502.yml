@@ -1,0 +1,6 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2-blocker-gm-drain-w1-284
+subject: 'gm-mcp push refused by bin drift gate: other writers'' uncommitted src/ changes block delivery of commit 78dc78307e (AGENTS.md/README.md qualification of the next-connect sentence)'
+status: pending
+blockedBy:
+- gm-mcp-src-dirty-other-writers
+session_id: mcp-codemode-31304-1791959548201
