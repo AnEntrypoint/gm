@@ -94,6 +94,11 @@ Trigger: `ECONNRESET`, `ECONNREFUSED` or `server_error`. The row stays open and 
 - GPU rows wait for the GPU lock; browser rows wait for the browser lease. Neither idles the pool.
 - Browsers are headful (`headless: false`). Each run closes its own browser; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
+- Browser-last, cold-start and reload budgets, and minting a focused jit test instead of routing through a suite: defined in gm-prd: Witness economy.
+
+## Lane budget
+- **Concurrency ceiling ~6.** Above it two mass `ECONNRESET` drains dropped 9-16 agents at once. Launch to 6; past that hold the wave and let a completion free the slot.
+- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going.
 
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
