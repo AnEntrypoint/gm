@@ -51,7 +51,7 @@ For an atom:
 ## Gate Failure
 
 If an atom fails its gate:
-- **The agent shall not move forward** while incomplete work looks complete
+- **The agent shall not move forward** while an atom has no recorded verification witness
 - **Return to the atom** -- what's actually missing?
 - **Fix or redefine** -- either finish the work or redefine the atom scope
 
