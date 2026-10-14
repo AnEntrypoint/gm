@@ -1,0 +1,6 @@
+id: SLAP-PLUGKIT-GITFINALIZE-LEVELS-blocker-gm-2e-fa19b3-w8-01
+subject: 'Blocker for SLAP-PLUGKIT-GITFINALIZE-LEVELS: SPECIFY found the cited git.rs:1792 (547 lines) stale; git_finalize now sits at crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:3569-4290 (722 lines, single caller verbs.rs:3191). EMIT and witness cannot run locally: cargo is blocked by hook, the witness needs a wasm build plus a live agentplug-runner dispatch, so verification is CI-only. Next: re-scope the row to the live line range, then run EMIT in a session that can push and read ci-status.'
+status: blocked
+blockedBy:
+- SLAP-PLUGKIT-GITFINALIZE-LEVELS
+session_id: gm-2e-fa19b3-w8-01
