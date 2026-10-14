@@ -94,7 +94,7 @@ The MCP server exposes one tool, `gm_codemode`. Its short JavaScript body calls 
 
 ### Gates on the git path
 
-Git operations go through gm's git verbs (`git_status`, `git_finalize`, `git_push`, `git_show`, `ci-status` and the rest). The gates `prd-all-closed`, `mutables-all-resolved`, `residual-scan-fired` and `worktree-clean` refuse the move into COMPLETE while plan rows are open, mutables are unresolved, the residual scan has not run, or the worktree is dirty.
+Git operations go through gm's git verbs (`git_status`, `git_finalize`, `git_push`, `git_show` and the rest). The CI verb is `ci-status`, and `gm.describe` names it `ci_status`, because the dispatch accepts either spelling. The gates `prd-all-closed`, `mutables-all-resolved`, `residual-scan-fired` and `worktree-clean` refuse the move into COMPLETE while plan rows are open, mutables are unresolved, the residual scan has not run, or the worktree is dirty.
 
 ## Configuration from your own repo
 
