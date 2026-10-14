@@ -163,6 +163,8 @@ skills/.gm/
 skills/gm/.gm/
 # volatile per-project reorientation marker
 .gm/dream-rsi/_any-session/
+# Dream-RSI observations are runtime state: each dispatch appends to them, so tracking them rewrote tracked files on every dispatch. History keeps the earlier commits.
+.gm/dream-rsi/
 
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
