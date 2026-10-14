@@ -1,7 +1,0 @@
-id: BLOCK-G_CONTRACT-liqology-recurrence-threshold-gm-drain-w2-129
-subject: 'G_CONTRACT-liqology-recurrence-threshold PROVE blocked: the cited verb validation recurrence_count >= 2 does not exist in tracked code'
-blockedBy:
-- external
-body: 'SPECIFY witness: codesearch literal recurrence_count over rs-plugkit (dispatch 1791960812000-500-98e86ffa5d9c93ae) hits only prose .md and .gm files; literal suggest_fsm_update (dispatch 1791960819652-500-48ef0e69f7dd571) hits only the entry-extended.md prose in rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/. No .rs file carries recurrence_count, suggest_fsm_update, or a not-a-pattern rejection. The row''s premise that the verb validates recurrence_count >= 2 is unverified in the tree. PROVE cannot run its precondition. Deleting the threshold would remove the only statement of the rule (gm-config/prose/entry-extended.md line 80). Resolution: locate the suggest_fsm_update implementation (possibly in agentplug or a gm-mcp verb table) or confirm it is absent, then either add the validation or keep the threshold prose. Then re-run gm-prd on G_CONTRACT-liqology-recurrence-threshold.'
-session_id: gm-drain-w2-129
-status: pending

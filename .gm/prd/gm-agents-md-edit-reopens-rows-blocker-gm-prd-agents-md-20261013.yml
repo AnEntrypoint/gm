@@ -1,5 +1,0 @@
-id: gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013
-subject: 'Blocker for gm-agents-md-edit-reopens-rows: live witness not run; rule-edit acceptance half unmet by design'
-body: 'Root cause fixed in rs-plugkit 1b75240 (remote main 31a31c40 carries it): row_referenced_paths drops .md refs and rule_bindings fingerprint only anchored AGENTS.md#section refs. Open: (1) live witness not run in this lane (needs a scratch repo with a completed row carrying rule_bindings); (2) acceptance ''edit the witnessed rule and confirm the row reopens'' is unmet for prose witnesses: reopen_rows_for_changed_paths reports state not_rerunnable and leaves the row completed when the row cites no existing scripts/*.mjs|js|cjs witness. Decide: a fingerprint-changed row with no rerunnable witness should be reopened to pending. Also the freddie row cites no AGENTS.md#anchor, so it binds no rule. Local rs-plugkit main is ahead 2 (7d34666, aa3366d, unpushed, orchestrator wasm32 work by another lane) and behind 8.'
-session_id: gm-prd-agents-md-20261013
-status: pending

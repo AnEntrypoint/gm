@@ -1,5 +1,0 @@
-id: HUGHES-gm-goal-hop-HUGHES-2-1-blocker-gm-drain-w1-158
-subject: 'blocker: HUGHES-gm-goal-hop-HUGHES-2-1 cites a symbol absent from singleton.js'
-body: 'Row HUGHES-gm-goal-hop-HUGHES-2-1 cites readSingletonState at gm-mcp/src/singleton.js:57-65. Dispatch 1791958427971-500-e91f58fecb5d59af and 1791958440307-500-37d96451716a48fd find no such symbol in gm-mcp (exhaustive). The real reader is readStateFile at singleton.js:67-79, which already logs singleton-state-corrupt via appendDiagnostic for non-ENOENT parse errors (dispatch 1791958446446-500-d9f62e0ef08b6a5d). Open decisions: (1) row asks for stderr, code uses the diagnostic channel; choose one. (2) a live witness needs an exported path into readStateFile, not confirmed. Receipt: .gm/receipts/HUGHES-gm-goal-hop-HUGHES-2-1/01-SPECIFY.md. Resolution: re-scope the row to readStateFile with the chosen channel, then witness a corrupt state file against an absent one.'
-session_id: gm-drain-w1-158
-status: pending

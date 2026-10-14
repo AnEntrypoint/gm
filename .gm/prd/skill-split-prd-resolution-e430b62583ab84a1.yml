@@ -1,5 +1,0 @@
-id: SKILL-SPLIT-PRD-RESOLUTION
-subject: Split gm-prd into orient, unknowns, eliminate, edit, validate and publish skills that each load the next
-body: 'Each stage is its own skill and can proceed only by loading the next. State lives in the row''s receipt folder and the gm verbs. Witness: a row walks all six skills and the skill chain refuses a skip.'
-session_id: gm-invariants-08
-status: pending

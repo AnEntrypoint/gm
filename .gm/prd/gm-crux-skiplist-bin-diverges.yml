@@ -1,7 +1,0 @@
-id: gm-crux-skiplist-bin-diverges
-SESSION_ID: orch-main-r95
-acceptance: 'On the live crux build, ingest of c:/dev/gm lists bin/gm-install.js among its ingested files. Evidence: rs-plugkit/crates/plugkit-core/src/code_index.rs SKIP_DIRS (240-343) has no "bin" so codeinsight indexes bin/ (dispatch 1791662765972-500-175dbb77840606d1: outline bin/gm-install.js = 21 symbols on a complete index), but agentplug-crux/src/skiplist.rs:11 still lists "bin" and agentplug-crux/src/walk.rs SkipMode::ContentIngest consults it. Blocked for orch-main-r95: crux is a submodule (AnEntrypoint/agentplug-crux); the edit needs a submodule commit + pin bump + wasm rebuild before it can be witnessed live.'
-session_id: orch-main-r95
-severity: LOW
-subject: agentplug-crux skiplist still skips bin/, so CLI source under bin/ is invisible to crux ingest while rs-plugkit codeinsight indexes it
-status: pending

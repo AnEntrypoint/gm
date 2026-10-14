@@ -1,8 +1,0 @@
-id: SLAP-PLUGKIT-GITCOMMIT-LEVELS
-title: 'SLAP: separate git_commit argument extraction from the commit plan'
-description: 'rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_commit (line 1401, 340 lines) runs argument extraction (message, allow_empty, amend, paths and files aliases with type checks) inside the git_async_entry closure beside the git plan steps, with the plan and the response in one body. Scope: this function. Change: a CommitArgs struct parsed by one function that returns the usage error, with the closure reading the struct and running the plan. Behaviour unchanged: every error message (message required, paths must be an array of strings) and the dedup and amend behaviour stay identical. Witness: cargo build of rs-plugkit, then a live git_commit dispatch with an empty message returning the same error text.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

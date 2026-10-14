@@ -1,5 +1,0 @@
-id: G_CONTRACT-git-append-rewrite-classification-blocker-gm-drain-w1-93
-subject: 'Blocked: G_CONTRACT-git-append-rewrite-classification cannot close this run; the per-verb flag needs an rs-plugkit wasm rebuild and CI release, so no live witness can name it yet'
-session_id: gm-drain-w1-93
-body: 'Row G_CONTRACT-git-append-rewrite-classification (session gm-drain-w1-93) needs a per-verb append/rewrite flag in the git verb registry and SKILL.md section 4 citing it. SPECIFY found: SKILL.md:128 carries the classification prose (present); no per-verb flag exists (codesearch absent in rs-plugkit/crates/plugkit-core/src; registries are GIT_VERBS in mediator.rs:39 and GIT_RESET_* consts in wasm_dispatch/verbs/git.rs:7225). Closing needs a source edit in rs-plugkit (cargo local build blocked; verified by CI release only, AGENTS.md Work and verification), a release, a parent gitlink bump, then a live dispatch reading the flag. None of those completed in session gm-drain-w1-93. Next: land the flag in rs-plugkit via its publish path, then witness with prd-resolve citing that dispatch id.'
-status: pending

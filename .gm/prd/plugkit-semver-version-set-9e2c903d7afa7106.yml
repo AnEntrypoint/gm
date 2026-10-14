@@ -1,6 +1,0 @@
-id: PLUGKIT-SEMVER-VERSION-SET
-title: Set gm.version to a semver string in the plugin release metadata
-description: 'gm.version is currently local-dev-sideload-body-parse-diagnostic, which the auto-updater cannot compare. Replace it with a semver version. Witness: the configured gm.version matches the semver grammar (MAJOR.MINOR.PATCH) in the source that the updater reads.'
-status: completed
-session_id: lean-node-INVEST
-witness: 'exec_js dispatch 1791778543596-500-b4b73bcc410e99f8 exit 0: /config/.agentplug/plugins/gm.version reads 0.1.1585, passes MAJOR.MINOR.PATCH grammar; no gm.local-dev-sideload.json marker. Witness line in .gm/witness-log.md (2026-10-12T04:16:13Z, gm-version-semver-sideload-clear). Receipts .gm/receipts/PLUGKIT-SEMVER-VERSION-SET/01-09.'

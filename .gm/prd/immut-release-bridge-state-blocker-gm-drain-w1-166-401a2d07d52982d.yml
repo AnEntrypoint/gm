@@ -1,5 +1,0 @@
-id: IMMUT-RELEASE-BRIDGE-STATE-blocker-gm-drain-w1-166
-subject: 'Blocked: IMMUT-RELEASE-BRIDGE-STATE cannot deliver or witness-close while gm-mcp has other writers'' uncommitted hunks'
-body: 'Parent row IMMUT-RELEASE-BRIDGE-STATE. Edit is in gm-mcp/src/release-bridge.js (runReleaseBridge, next-value refactor); node --check and checked-recently dry run pass. Blockers: (1) src/release-bridge.js has another writer''s uncommitted runnerAssetName hunk, so committing it publishes foreign work; (2) gm-mcp has other lanes'' modified and staged paths, so the bundle rebuild would ship them; (3) the leader probe (checked-recently) does not reach the mutated paths, so it does not separate the hypotheses and cannot close the row on its own. Receipts: .gm/receipts/IMMUT-RELEASE-BRIDGE-STATE/01-03. Unblock: the owning writer of release-bridge.js commits its hunk, then a live run of the network-backed path witnesses the change from another session.'
-session_id: gm-drain-w1-166
-status: pending

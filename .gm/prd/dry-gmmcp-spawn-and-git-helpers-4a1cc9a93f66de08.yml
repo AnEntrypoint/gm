@@ -1,5 +1,0 @@
-id: DRY-GMMCP-SPAWN-AND-GIT-HELPERS
-status: pending
-subject: 'DRY in gm-mcp/src: the hidden detached spawn option set (windowsHide, stdio ignore, detached) repeats at three sites (dispatch.js ensureSpoolRunnerRunning, singleton.js spawnSingleton, dev-sync.js maybeStartDevSync), and dev-sync.js git() repeats the git-adapter.js gitToplevel spawnSync shape. Fold both into one spawn helper and one git runner owned by gm-mcp/src, then rebuild bin/gm-mcp-server.js (npm run build), and witness with npm run verify-build and npm test. Blocked on the active writer: at hop time gm-mcp/ had uncommitted edits to dispatch.js, singleton.js, mcp-server.js, http-transport.js, transport-guard.js, bin/gm-mcp-server.js and an untracked src/git-adapter.js, so this hop did not edit those surfaces.'
-witness: Not yet run. Start only after git -C gm-mcp status is clean or its writer hands the surface over.
-session_id: lean-hop-DRY

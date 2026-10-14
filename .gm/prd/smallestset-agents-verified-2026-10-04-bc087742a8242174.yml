@@ -1,9 +1,0 @@
-id: SMALLESTSET-AGENTS-VERIFIED-2026-10-04
-title: 'SMALLESTSET: compact AGENTS.md ''Verified 2026-10-04'' incident block (5.3 KB, largest block)'
-description: 'Context spend: the block is incident narration (VERSION-EQUAL downgrade, 189-window live witness, method notes, swap procedure). Keep only current constraints: runner self-update guard identity rule, pin sync on daemon boot, build identity baked by build.rs, windowless spawn rule (already in Implementation rules). Move the incident narrative and measurement method to agentplug/crates/agentplug-runner (README or CHANGELOG). Keep the open gm-mcp-server.mjs windowsHide item as one line with its owner file.'
-node: SMALLESTSET
-phase: P7
-session_id: lean-hop-SMALLESTSET
-source: AGENTS.md line 132-215
-witness: 'Symbols exist in source: apply_windowless (agentplug host, 10 refs), ensure_hidden_console (3), self_update_blocked_reason and marker_is_trustworthy_and_current (agentplug-runner/src/download.rs), spawn_dream_rsi_cycle_ticker (daemon.rs). Done when AGENTS.md section bytes drop by at least 4000 and the moved text is present at the owning README/CHANGELOG.'
-status: pending

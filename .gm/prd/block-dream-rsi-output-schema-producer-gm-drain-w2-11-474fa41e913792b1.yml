@@ -1,5 +1,0 @@
-id: BLOCK-dream-rsi-output-schema-producer-gm-drain-w2-11
-subject: Wire the dream-rsi inference producer in dream_rsi.rs so a live verb returns DreamRsiResult
-body: 'Parent: BLOCK-dream-rsi-output-schema-code (blocked on this producer). Evidence: codesearch regex DreamRsiStatus|PartA|PartB|INSUFFICIENT_RECORD_THRESHOLD|MAX_PART_A_PROPOSALS over rs-plugkit/crates returns 8 hits, all in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs (lines 30-96 definitions only); callers DreamRsiResult returns defined_at only; codesearch literal ''dream-replay'' and ''dream-round'' over rs-plugkit/crates has zero hits. Needed: a function in dream_rsi.rs that builds DreamRsiResult from the observation log (status, part_a, part_b, per_verb, proposals, rejected_walks, forward_edge_coverage_approx), wired to a dispatchable verb. Witness: a live verb dispatch whose reply carries status/part_a/part_b, plus the CI publish/release Build step (local cargo is hook-blocked). Dispatch ids: 1791959868313-500-c524516daad75a03, 1791959875748-500-d6f24eab2155c24a, 1791959878827-500-a07f478b7b625f0.'
-session_id: gm-drain-w2-11
-status: pending

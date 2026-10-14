@@ -1,5 +1,0 @@
-id: HUGHES-gm-goal-hop-HUGHES-2-2
-title: No property-based (QuickCheck-style) test of the no-silent-swallow invariant exists in gm-mcp
-status: pending
-body: 'codesearch quickcheck/property over gm-mcp (53 files): 0 quickcheck matches; property matches are only vendored bundle and lockfile text. The invariant has no generated-input check. Action: decide with the owner whether a property test may live in gm-mcp (AGENTS.md bans synthetic tests; a generated-input check against real code paths is a different case). Witness: none yet. Source: hop HUGHES, gm-goal-hop-HUGHES-2.'
-session_id: gm-goal-hop-HUGHES-2

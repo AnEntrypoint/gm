@@ -1,6 +1,0 @@
-id: witness-prd-add-id-derivation
-subject: witness prd-add id derivation
-description: friction fix probe
-session_id: gm-cli-19720-1791668101958
-status: completed
-witness: 'gm-mcp/src/dispatch.js prdAddIdDiagnostic passes a body with no id through when subject/title/name/task/goal/description/notes is non-empty; live dispatch derived id ''witness-prd-add-id-derivation'' (ok:true, added: witness-prd-add-id-derivation).'

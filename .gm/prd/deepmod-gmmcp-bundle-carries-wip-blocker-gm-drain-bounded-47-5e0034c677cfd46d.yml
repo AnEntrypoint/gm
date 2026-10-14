@@ -1,6 +1,0 @@
-id: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-bounded-47
-subject: 'Blocker for DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP: COMPLETE needs a witness from another session'
-blocked_by: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP
-body: 'Row DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP is delivered: gm-mcp c69b5c4 landed, parent pin bumped in 3801e5966dc9d38bf2fdbee223ae26cf71739639 and pushed (git_finalize 1791974370767-500-9574bbb4bc3d4d06). prd-resolve from this session hit a spool error and the self-witness rule forbids this session closing it. Needed to unblock: (1) a different session runs prd-resolve on the row with a witness of gm-mcp main equal to the parent gitlink (git_remote / gh api repos/AnEntrypoint/gm-mcp/commits/main) and check-bin-drift.mjs exit 0; (2) ci-status on 3801e5966dc9d38bf2fdbee223ae26cf71739639 reports green for bump-pins run 38551082204. Receipts: .gm/receipts/DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP/02-EMIT-gm-drain-bounded-47.md, 03-COMPLETE-gm-drain-bounded-47.md.'
-session_id: gm-drain-bounded-47
-status: pending

@@ -1,7 +1,0 @@
-SESSION_ID: orch-main-r66
-id: gm-git-show-stat-and-fs-readdir-enoent-silent-orch-main-r66
-severity: LOW
-status: pending
-session_id: orch-main-r66
-subject: gm git_show {rev, stat:true} returns only the rev (no stat, no diff, no error) and fs_readdir on a missing path returns error:'empty'/error_code:'failed' with no path or ENOENT reason -- both are silent no-ops on C:/dev/gm/rs-plugkit (dispatch 1791658569044-500-3557ebe463b6890, 1791658390925-500-a91ea55539406fa4)
-acceptance: git_show with {rev, stat:true} returns either the stat block or a named error naming the accepted fields; fs_readdir on a nonexistent/empty directory returns a reason naming the path and the errno (ENOENT/empty), never error:'empty' with next_dispatch_hint:'instruction'; both witnessed by a live dispatch and the change pushed to rs-plugkit main

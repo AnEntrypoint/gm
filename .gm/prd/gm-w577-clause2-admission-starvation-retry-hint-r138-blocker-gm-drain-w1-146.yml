@@ -1,7 +1,0 @@
-id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-gm-drain-w1-146
-kind: friction
-subject: 'Blocker: admission-starvation retry hint already emitted; live witness not obtained (r138)'
-session: gm-drain-w1-146
-body: 'Row gm-w577-clause2-admission-starvation-retry-hint-r138 cannot close. Code already emits the hint for every starved dispatch: agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs:2007-2048 (admission_starved_answer, re_dispatch_safe:true, executed:false) and :2487-2497; agentplug/crates/agentplug-host/src/registry.rs:160. The row''s ''for read-only dispatches'' qualifier has no predicate in code. Missing: a live witness that saturates the admission slots of a daemon and dispatches a verb, then reads the reply. Receipt: .gm/receipts/gm-w577-clause2-admission-starvation-retry-hint-r138/01-SPECIFY.md. Decision needed: whether the qualifier should be dropped (row then closes on the live witness alone) or a read-only predicate added.'
-session_id: gm-drain-w1-146
-status: pending

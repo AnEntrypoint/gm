@@ -1,8 +1,0 @@
-id: OBSCOMPRESS-EARS-EVIDENCE-SIDECAR-blocker-gm-drain-w1-225
-title: 'BLOCKER for OBSCOMPRESS-EARS-EVIDENCE-SIDECAR: pre-split EARS rewrite content is unrecoverable, byte-equivalence cannot be witnessed'
-scope:
-- .gm/lean-walk/EARS.json
-- .gm/lean-walk/EARS-rewrites.json
-witness: 'Witness that closes the parent row needs a copy of the pre-split EARS.json (its 114 rewrites and 19 prd_rewrites as they stood before the split). Receipts: .gm/receipts/OBSCOMPRESS-EARS-EVIDENCE-SIDECAR/01-SPECIFY.md and 02-PROVE.md. Live state: EARS.json 2423 bytes with counts and pointer (dispatch 1791958829188-500-9e986f95c698690b); sidecar parses with 114/19 entries (dispatch 1791958841313-500-ea393ecb500aa745). Unresolved: no git history (gitignored at .gitignore:176), no backup on disk. Resolve by one of: (a) owner supplies the pre-split copy, then re-witness the byte comparison; (b) owner accepts count and parse equivalence (114/19, pointer present) as the witness and the row closes with that stated default; (c) the row is re-scoped to drop the byte-equivalence clause.'
-session_id: gm-drain-w1-225
-status: pending

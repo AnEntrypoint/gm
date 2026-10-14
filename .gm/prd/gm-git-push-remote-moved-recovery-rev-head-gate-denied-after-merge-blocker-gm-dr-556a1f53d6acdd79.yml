@@ -1,5 +1,0 @@
-id: gm-git-push-remote-moved-recovery-rev-head-gate-denied-after-merge-blocker-gm-drain-w2-178
-subject: Witness for remote_moved recovery text needs a rebuilt guest and a live diverged fixture; rs-plugkit local main is diverged behind another lane's Cargo.toml
-body: 'Fix published: rs-plugkit main 7365b4cb7ba633f074417ab844167b7f5d042326 (git.rs reason and next_action_hint name rev <head_after of that pull>, not HEAD); remote compare status ahead (in history). Blocked on: (1) witness needs a wasm built with slim from that commit (CI, no local cargo) and a live diverged fixture dispatch through git_pull then the served push step, expecting no gate_denied and remote main equal to the local sha; (2) rs-plugkit local main at 108f965b is stranded (diverged 1 ahead 1 behind); git_pull refused because crates/plugkit-core/Cargo.toml is dirty from another lane. Recover: after that lane commits or stashes its Cargo.toml, git_pull main then git_push of the merge sha with allow_foreign_commits:true. Row stays pending.'
-session_id: gm-drain-w2-178
-status: pending

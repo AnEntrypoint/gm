@@ -1,5 +1,0 @@
-id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w1-62
-subject: 'Blocked: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER needs an elevated ETW disk attribution probe and a rebuilt, restarted daemon before a cross-session witness'
-body: 'Receipts: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER/01-SPECIFY.md and 02-PROVE.md. Measured idle PhysicalDisk(_Total) write over 20 s in session gm-drain-w1-62: mean 3.984 MB/s, bound 2 MB/s, fails. Per-process write counters attribute about 0.12 MB/s to agentplug processes, so the daemon is not the dominant source (H1 rejected). The leading hypothesis is writes below process attribution (H3), with other user processes as a partial contributor (H2). Closing needs: (1) an elevated logman or xperf disk trace that charges writes to file path and process, to separate H3 from H2; (2) a rebuilt and restarted daemon, because the daemon reports runner_version 0.1.311 while the row names 0.1.223; (3) a 20 s idle witness from another session. The row stays pending until then.'
-session_id: gm-drain-w1-62
-status: pending

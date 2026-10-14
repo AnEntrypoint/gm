@@ -1,5 +1,0 @@
-id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02
-subject: 'Blocker: THINSLICE-HORIZONTAL-NEED-SPLIT stages PROVE to COMPLETE not runnable in one run'
-body: 'Parent row THINSLICE-HORIZONTAL-NEED-SPLIT. SPECIFY receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT/01-SPECIFY.md. Live state: 297 pending rows (row text says 199), 122 untitled (row text says 72). All 6 needs (git-verb-signatures, output-cap-constants, tencentdb-config-defaults, recall-index-single-writer, precedence-enum, native-search-gate) have 2-5 rows across G_CONTRACT/BLOCKER-SKILLGM/THINSLICE/BLOCK layers and none reaches a witnessed file change. Remaining work: rewrite the layered rows to one row per need, then per-need witnessed verb or file change (rs-plugkit verb schema, config type, prose deletion) with CI witness. Needs its own multi-run plan, not a single row resolution.'
-session_id: gm-2e-fa19b3-w5-02
-status: pending

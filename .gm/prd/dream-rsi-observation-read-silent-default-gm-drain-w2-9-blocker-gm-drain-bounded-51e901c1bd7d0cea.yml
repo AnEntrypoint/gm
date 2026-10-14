@@ -1,5 +1,0 @@
-id: dream-rsi-observation-read-silent-default-gm-drain-w2-9-blocker-gm-drain-bounded-54
-subject: 'Blocked: dream-rsi-observation-read-silent-default-gm-drain-w2-9 needs a refuse-vs-count decision and a cross-session witness'
-status: pending
-body: 'blocked_by: (1) decision refuse-vs-count-and-log for malformed ObservationRecord entries in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs (lines 431, 457, 464-467), supplied by an owner decision in prose; (2) a CI-built rs-plugkit slim wasm (publish / release, step Build), since local cargo is hook-blocked; (3) a live dispatch witness from a session other than gm-drain-bounded-54, supplied by the dream-rsi read path via codesearch-cited dispatch id. Same facts already named by BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34 and BLOCK-dream-rsi-producer-eliminate-gm-drain-w3-19; this row adds only the refuse-vs-count decision. Receipt: .gm/receipts/dream-rsi-observation-read-silent-default-gm-drain-w2-9/01-SPECIFY.md'
-session_id: gm-drain-bounded-54

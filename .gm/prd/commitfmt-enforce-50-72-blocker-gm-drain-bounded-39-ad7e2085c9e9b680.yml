@@ -1,5 +1,0 @@
-id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-bounded-39
-subject: 'Blocker for COMMITFMT-ENFORCE-50-72: needs CI-built guest and cross-session witness'
-body: 'Blocks: COMMITFMT-ENFORCE-50-72 (session gm-drain-bounded-39). Missing fact: a CI-built rs-plugkit slim guest that refuses a git_commit subject over 50 chars or a body line over 72 (edit point rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2174-2176), plus a live witness dispatch id from a session other than the editor. Supplied by: the publish / release run (step Build) on the rs-plugkit push, then a git_commit dispatch with an over-long subject, read by another session. Receipts: .gm/receipts/COMMITFMT-ENFORCE-50-72/01-SPECIFY.md, 02-ELIMINATE.md.'
-session_id: gm-drain-bounded-39
-status: pending

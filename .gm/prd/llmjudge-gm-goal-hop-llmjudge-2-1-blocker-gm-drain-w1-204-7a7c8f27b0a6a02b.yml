@@ -1,5 +1,0 @@
-id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-204
-subject: 'Blocker: LLM judge transport and verdict contract undefined for gm-mcp'
-body: 'Row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 cannot close at SPECIFY. gm-mcp/src has no model client or credential source, and the row names no judge model, call path, rubric, or verdict shape. Receipt: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1/01-SPECIFY.md. Needed: a decision on where the judge runs (gm-mcp direct call vs. a gm-skill subagent such as jill), its credential path, the verdict schema, and a latency budget. Gap witness: codesearch dispatch 1791958719827-500-43a406759f738c03 (0 judge/rubric/llm hits).'
-session_id: gm-drain-w1-204
-status: pending

@@ -1,5 +1,0 @@
-id: DBC-LIBSQL-INERT-TXN-VERBS
-title: 'DBC: libsql begin/commit/rollback promise a transaction they do not give; remove or refuse them'
-status: pending
-description: 'Contract breach. agentplug-libsql/src/db.rs lists open/close/begin/commit/rollback as inert_verbs, and verbs.rs:349 documents them as accepted-but-inert no-ops. A postcondition of begin is that a transaction is open; it is false. Witness that no in-repo caller depends on it: grep for libsql_wasm::(begin|commit|rollback) over rs-plugkit returns zero hits; only the definitions at libsql_wasm.rs:223-233 match. Change: delete libsql_wasm::begin/commit/rollback and make the libsql plugin refuse begin/commit/rollback with an explicit error naming the missing transaction support, so the contract is never silently false. Verify by a live libsql.begin dispatch returning the explicit error, and by the rs-plugkit build.'
-session_id: lean-hop-DBC

@@ -1,5 +1,0 @@
-id: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34
-subject: 'PROVE blocked for BLOCKER-SKILLGM-precedence-enum: no local cargo, live witness needs CI-built guest from another session'
-status: pending
-body: 'Row BLOCKER-SKILLGM-precedence-enum cannot close in this run. Stage 01-SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-precedence-enum/01-SPECIFY.md. (1) Tier at rs-plugkit/crates/plugkit-core/src/config.rs:35 is not an ordered enum; precedence is match order in resolve_with (:700). (2) Row tier list mixes live-response and Section 2/3 layers that config::resolve does not have; default chosen: five config tiers only, scope to be ruled on by the row owner. (3) PROVE needs a wasm build via CI (local cargo hook-blocked) and a live witness dispatch from another session. Next step: row owner confirms scope (config tiers only, or include skill layers), then a CI-built guest and witness via the config resolution verb.'
-session_id: gm-drain-w1-34

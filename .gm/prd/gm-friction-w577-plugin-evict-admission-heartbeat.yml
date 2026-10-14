@@ -1,8 +1,0 @@
-SESSION_ID: orch-main-r77
-id: gm-friction-w577-plugin-evict-admission-heartbeat
-title: plugin evict must not drop a live admission heartbeat claim
-kind: blocker
-status: completed
-text: 'Row filed on re-read: absent from .gm/prd.yml (210 rows scanned, no id match). Requested source rs-plugkit/gm-plugin does not exist: rs-plugkit/crates holds only plugkit-core. The evict that can race an admitted in-flight dispatch lives in agentplug (agentplug/crates/agentplug-host/src/registry.rs:1387 sets last_active only at dispatch entry; agentplug/crates/agentplug-runner/src/daemon.rs:3546 evicts on last_active only, consulting no in-flight claim), and that file is under an active live writer this session. Evidence dispatches: 1791659256620-500-68674a0597c4811c (pool-observe: live=0, live_heartbeats=0, live_source=heartbeats, count_of_record absent, floor 10, shortfall 10), 1791659230356-500-10a68d6885e53e03 (rs-plugkit/crates listing + MERGE_HEAD absent + row absent from prd.yml).'
-session_id: orch-main-r77
-witness: 'selfcheck-idle-evict exit=0 RESULT: PASS; evicted=true when idle with no claim, evicted=false deferred=1 under a live in-flight admission claim, evicted=false deferred=1 under a heartbeat promising work until a future instant, evicted=true again once both clear. Code pushed as agentplug 66ba9ab3 (on origin/main via 3d41723); crawl.rs build break repaired so agentplug-host compiles.'

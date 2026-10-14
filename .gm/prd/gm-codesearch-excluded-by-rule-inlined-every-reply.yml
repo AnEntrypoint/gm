@@ -1,7 +1,0 @@
-id: gm-codesearch-excluded-by-rule-inlined-every-reply
-SESSION_ID: orch-main-r96
-title: 'codesearch: name excluded_by_rule only when a rule dropped code paths (rs-plugkit/crates/plugkit-core/src/code_index.rs insert_excluded_by_rule)'
-text: 'Defect: every literal, filename and comments reply inlines the whole rule listing (excluded_by_rule, up to 5 {path,rule,files} rows) even when only gm''s own state was dropped, which never clears exhaustive and nothing can act on. Acceptance: the listing rides only when a rule other than gm_state_dir/agentplug_kv_cache dropped paths; excluded_by_rule_summary and excluded_by_rule_count stay in every reply; no new reply fields.'
-session_id: orch-main-r96
-status: completed
-witness: 'served build 0.1.1564 (rs-plugkit 3dffce5e, release v0.1.1563 plugkit-slim.wasm sha256 6d67ffc3f0d4e186103b89feec53018c9dc50964241441542fd799af4060e91c): unscoped literal codesearch on C:/dev/gm omits excluded_by_rule entirely while excluded_by_rule_summary {gm_state_dir: 196} and excluded_by_rule_count 196 still ride and exhaustive stays true; the pre-change 0.1.1557 baseline (dispatch 1791664945852-500-461659f73f47ad3a) inlined 5 gm_state_dir rows. Code-rule case (dispatch 1791665831680-0-80ad5c3c606df523) still emits excluded_by_rule [{./.gm hidden_dir},{./node_modules noise_dir_name}] and clears exhaustive. Witnessed from session orch-main-r96-sub1, not a self-witness; one line appended to .gm/witness-log.md.'

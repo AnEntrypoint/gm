@@ -1,5 +1,0 @@
-id: BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w1-17
-subject: 'Blocker for BLOCK-dream-rsi-output-schema-code: the typed result structs exist (dream_rsi.rs:30-96) but nothing constructs DreamRsiResult, PartA, PartB or DreamRsiStatus (codesearch literal zero hits outside the definitions; callers DreamRsiResult shows defined_at only), so no live dispatch can witness the output shape. Blocked on wiring a producer for the inference result in dream_rsi.rs, then a CI build (local cargo is hook-blocked; CI publish/release is the proof).'
-body: 'Row: BLOCK-dream-rsi-output-schema-code. Session: gm-drain-w1-17. Stage reached: SPECIFY. Hypothesis: the row''s premise is ''no code exists'' is refuted (types and constants present at dream_rsi.rs:30-96), but the row''s acceptance (a live result carrying the shape) is unmet because no producer constructs the type. Witness that would refute: a live dream-replay or dream-round dispatch whose reply carries status/part_a/part_b. Probe not run: no producer exists to dispatch. Next: wire a producer, then witness through the live verb and CI build.'
-session_id: gm-drain-w1-17
-status: pending

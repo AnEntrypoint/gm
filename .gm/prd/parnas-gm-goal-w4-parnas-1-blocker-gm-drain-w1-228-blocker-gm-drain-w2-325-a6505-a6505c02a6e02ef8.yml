@@ -1,8 +1,0 @@
-id: PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-drain-w1-228-blocker-gm-drain-w2-325
-subject: 'Blocked: PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-drain-w1-228 PROVE precondition fails, gm-mcp/src/dispatch.js still carries a foreign writer''s WIP'
-body: 'Session gm-drain-w2-325 re-ran gm-prd on row PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-drain-w1-228. Witness: git_status {cwd: C:\dev\gm\gm-mcp}, dispatch 1791963835818-500-6417a58f5a9cae0a: branch main, dirty, modified src/dispatch.js (plus 18 others), staged src/self-update.js, untracked src/spool-store.js. The unblock condition is unmet, so EMIT stays closed. Receipts: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-drain-w1-228/01-SPECIFY.md and 02-PROVE.md. Unblock: the foreign writer lands or parks its gm-mcp WIP on main; then re-run gm-prd on PARNAS-gm-goal-w4-PARNAS-1 with a fresh SPECIFY. Witness of the closed state must come from a separate session after CI publishes the rebuilt bundle. Line numbers: pidAlive is dispatch.js:938 (parent cites a stale :857). Session_id: gm-drain-w2-325.'
-session_id: gm-drain-w2-325
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

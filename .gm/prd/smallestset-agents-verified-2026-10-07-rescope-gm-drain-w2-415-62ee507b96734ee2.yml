@@ -1,5 +1,0 @@
-id: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-rescope-gm-drain-w2-415
-subject: 'Verified 2026-10-07 plugkit load-path block: compact docs/verified-incidents.md lines 123-129 and re-check gm.version claim'
-body: 'Re-scoped from SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07, whose cited AGENTS.md lines do not exist (witness 1791965726230-500-e3af96feaf7af12b, 0 matches). Target: docs/verified-incidents.md lines 123-129 (heading plus four bullets, dated runtime finding). Verify the gm.version claim against installed plugin metadata before any edit. Receipt: .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07/01-SPECIFY.md.'
-session_id: gm-drain-w2-415
-status: pending

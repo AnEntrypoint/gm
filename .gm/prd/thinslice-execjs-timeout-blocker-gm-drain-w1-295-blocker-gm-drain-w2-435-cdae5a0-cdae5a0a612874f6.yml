@@ -1,8 +1,0 @@
-id: THINSLICE-EXECJS-TIMEOUT-blocker-gm-drain-w1-295-blocker-gm-drain-w2-435
-subject: 'Blocker for THINSLICE-EXECJS-TIMEOUT-blocker-gm-drain-w1-295: served gm-mcp still ignores typed exec_js timeoutMs'
-body: Re-run of the typed witness in session gm-drain-w2-435 still fails. exec_js {raw_body:'setTimeout(()=>{},60000)', timeoutMs:1500} ran 60236 ms, timed_out false, exit_code 0 (dispatch 1791966301715-500-d841084d5a44ad17). The no-field call ran 60301 ms (dispatch 1791966378336-500-249ab8d070fa3bb9). The typed field is not enforced on the live server, so the parent row's witness cannot bind. Unblock needs a gm-mcp server reload or restart from the installed bundle (the parent blocker cites served 0.2.44 vs installed 0.2.45). That is an operator action outside this run. Then re-run the typed witness and resolve THINSLICE-EXECJS-TIMEOUT with the new dispatch id. Row THINSLICE-EXECJS-TIMEOUT stays pending.
-session_id: gm-drain-w2-435
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

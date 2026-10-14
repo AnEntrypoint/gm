@@ -1,5 +1,0 @@
-id: DRY-GMMCP-SPAWN-AND-GIT-HELPERS-blocker-gm-drain-w1-76
-subject: 'Blocked: DRY-GMMCP-SPAWN-AND-GIT-HELPERS cannot be PROVEd while gm-mcp holds foreign uncommitted WIP on its surfaces'
-body: 'Row DRY-GMMCP-SPAWN-AND-GIT-HELPERS (session gm-drain-w1-76) stopped at SPECIFY. Receipt: .gm/receipts/DRY-GMMCP-SPAWN-AND-GIT-HELPERS/01-SPECIFY.md. Evidence: git_status gm-mcp dispatch 1791957636963-500-d465cd3c33b198d2 shows branch main, 8 modified (including src/dispatch.js and src/dev-sync.js, the row''s own surfaces) and 1 staged src/self-update.js. The row witness requires a clean gm-mcp status or a handed-over surface. Partial premise: src/hidden-spawn.js already holds the shared option set, but singleton.js:313,341,351,603 still inline windowsHide and git-adapter.js:47 still inlines spawnSync git. Unblock: when the gm-mcp writer lands or hands over, re-run gm-prd on the row; the blocker closes on the resulting witness dispatch id.'
-session_id: gm-drain-w1-76
-status: pending
