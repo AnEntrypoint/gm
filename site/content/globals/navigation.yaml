@@ -5,7 +5,7 @@ links:
     href: ./distribution/
   - label: how checks fit together
     href: ./paper/
-  - label: docs
+  - label: reference
     group:
       - { label: Rust crates,       href: "./crates/" }
       - { label: skills,       href: "./skills/" }

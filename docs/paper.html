@@ -355,7 +355,16 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s13">13. Memory</h2>
 
-<p>Memory is a set of markdown entries and a vector index over them. <code>memorize</code> writes its text to the memory index under a namespace, <code>default</code> unless the body names another, and <code>memorize-fire</code> writes its body as one <code>.md</code> file into the memorize inbox under <code>.gm/exec-spool/in/memorize/</code>. <code>recall</code> returns the ranked hits for a query, <code>auto-recall</code> returns up to three hits for a prompt, and each <code>instruction</code> reply carries recall hits for its own query, up to <code>instruction_recall_hits</code> (5 in <code>gm-config/gm.config.json</code>). <code>forget</code> deletes one key, and <code>memorize-prune</code>, <code>memorize-vacuum</code> and <code>memorize-retention</code> maintain the memorize inbox. The memory namespaces are <code>default</code> and <code>codeinsight</code> (<code>memory.namespaces</code> in <code>gm-config/gm.config.json</code>).</p>
+<p>Memory is a set of markdown entries and a vector index over them.</p>
+<ul>
+<li><code>memorize</code> writes its text to the memory index under a namespace. The namespace is <code>default</code> unless the body names another.</li>
+<li><code>memorize-fire</code> writes its body as one <code>.md</code> file into the memorize inbox under <code>.gm/exec-spool/in/memorize/</code>.</li>
+<li><code>recall</code> returns the ranked hits for a query.</li>
+<li><code>auto-recall</code> returns up to three hits for a prompt.</li>
+<li>Each <code>instruction</code> reply carries recall hits for its own query, up to <code>instruction_recall_hits</code>, which is 5 in <code>gm-config/gm.config.json</code>.</li>
+</ul>
+<p><code>forget</code> deletes one key. <code>memorize-prune</code>, <code>memorize-vacuum</code> and <code>memorize-retention</code> maintain the memorize inbox.</p>
+<p>The memory namespaces are <code>default</code> and <code>codeinsight</code> (<code>memory.namespaces</code> in <code>gm-config/gm.config.json</code>).</p>
 
 <p>Embeddings come from the bge-small-en-v1.5 weights in <code>agentplug-bert</code>. <code>memory.embed_dim</code> is 384, and AGENTS.md requires that a change to it drop every stored vector through an explicit drop-if-mismatch path, never silently.</p>
 

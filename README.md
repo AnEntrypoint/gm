@@ -79,7 +79,9 @@ Each plan row closes only with recorded `witness_evidence`, a string that `prd-r
 
 ### The graph
 
-The graph has 146 states, listed under `states` in `gm-config/fsm/graph.json`: 129 principles, 8 tensions (nodes whose `kind` is `tension`, such as `OUSTERHOUTC`), 6 gate states and 3 terminal states, joined by 376 edges. The walk starts at the `JTBD` principle node (`policy.initial_phase` in `gm-config/fsm/graph.json`) and ends on the edge from the gate state `G_SWEEP` into `COMPLETE`. Between them, each move follows an edge, and the gates on that edge decide it.
+The graph has 146 states, listed under `states` in `gm-config/fsm/graph.json`: 129 principles, 8 tensions (nodes whose `kind` is `tension`, such as `OUSTERHOUTC`), 6 gate states and 3 terminal states, joined by 376 edges. The walk starts at the `JTBD` principle node, the value of `policy.initial_phase` in `gm-config/fsm/graph.json`. Each move follows an edge, and the gates on that edge decide it.
+
+The same `policy` block names `G_FIXPOINT` as `policy.terminal_phase`. That node has no edge into `COMPLETE`: its outgoing edges go to `LOWERBOUND` and to `G_SWEEP`. The edge from the gate state `G_SWEEP` into `COMPLETE` is the only edge that enters `COMPLETE`. This README reports both values as the file gives them.
 
 ### Tools
 
