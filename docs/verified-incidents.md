@@ -122,11 +122,10 @@ decision; the runner guard does not cover it.
 
 ## Verified 2026-10-07 (plugkit wasm load path, rebuild flags, sideload)
 
-- The daemon LOADS `~/.agentplug/plugins/gm.wasm`, not `~/.gm-tools/plugkit.wasm`: `daemon-status.json`'s `loaded_plugin_content_sha256.gm` matches the former. Both paths exist, so a staleness hunt that stats only `~/.gm-tools/plugkit.wasm` reads the wrong file; a refresh writes both.
-- Rebuild with `--features slim` -- `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without it the bge-small-en-v1.5 safetensors weights (133 MB) are embedded and the artifact is 139,690,176 bytes; with it ~5.06 MB. Reuse the existing target dir (incremental build measured 1m06s).
-- The sha256 pin is checked only at download time against the GitHub release sidecar (`download_and_verify`, `download.rs:705`), and `ensure_plugin_installed` (`download.rs:1776`) returns as soon as a wasm exists, so an installed wasm is never re-verified and `~/.gm-tools/plugkit.wasm.sha256` is a local record, not an enforced pin. Sideloading a fresh build is safe and needs no pin bump.
-- `gm.version` is a semver string (`health` `version`, e.g. `0.1.1658`), so the auto-updater's version check is not blocked by a non-semver value.
-- A swap needs no daemon restart: write a sibling `.tmp` and rename, and the daemon hot-reloads (`health` `ok:true`, `daemon-status.json`'s hash updates). Back up first; roll back by restoring the backup.
+- The daemon loads `~/.agentplug/plugins/gm.wasm`, not `~/.gm-tools/plugkit.wasm` (`daemon-status.json` `loaded_plugin_content_sha256.gm` matches the former); a refresh writes both. A swap needs no restart: write a sibling `.tmp`, rename, and the daemon hot-reloads. Back up first.
+- Rebuild with `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without `slim` the bge-small-en-v1.5 weights (133 MB) are embedded and the artifact is 139,690,176 bytes; with it about 5.06 MB.
+- `ensure_plugin_installed` (`agentplug/crates/agentplug-runner/src/download.rs`) never re-verifies an installed wasm; the sha256 sidecar is checked only at download (`download_and_verify`, same file). `~/.gm-tools/plugkit.wasm.sha256` is a local record, not a pin, so a sideloaded build needs no pin bump.
+- `gm.version` is a semver string (`health` `version`, e.g. `0.1.1661`), so the auto-updater's version check is not blocked by a non-semver value.
 
 ## Verified 2026-10-08 (git_commit content filters, amend, moving HEAD)
 
