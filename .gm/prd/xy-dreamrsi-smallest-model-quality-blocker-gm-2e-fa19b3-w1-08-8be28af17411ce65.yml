@@ -1,0 +1,4 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08
+subject: 'Blocked: the EMIT witness for XY-DREAMRSI-SMALLEST-MODEL-QUALITY could not run. The Agent tool refused two subagents (haiku, sonnet) with ''Concurrent subagent limit reached'' (20 running). Re-run the two EARS hops over skills/dream-rsi/SKILL.md once slots free, write .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY/ev-haiku.json and ev-sonnet.json, compare applied rate and changes accuracy (quote matches path:line), then prd-resolve the parent with those two dispatch ids. Also: skills/dream-rsi/SKILL.md defines no applied/changes output, so the lean-walk evidence shape is the one compared.'
+status: pending
+session_id: mcp-codemode-19560-1791850592263

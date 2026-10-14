@@ -1,0 +1,7 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced
+title: 'Blocker: gm-continue two-dispatch bound and .gm/.gm-continue-count are prose only'
+subject: G_CONTRACT-gm-continue-end-states-counter stays open. codesearch finds .gm/.gm-continue-count only in .gitignore and rs-plugkit gitignore.rs; no code reads, increments or enforces the two-dispatch-per-turn bound or the two end states. The prose is the only definition, so it is not redundant with code and cannot be moved into dispatch state until the gm-continue dispatch implements the counter.
+blockedBy:
+- G_CONTRACT-gm-continue-end-states-counter
+session_id: lean-exec-small-1
+status: pending
