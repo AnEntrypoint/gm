@@ -10,7 +10,7 @@ links:
       - { label: Rust crates,       href: "./crates/" }
       - { label: skills,       href: "./skills/" }
       - { label: hop graph,        href: "./graph/" }
-      - { label: full DADA graph, href: "./dada-graph/" }
+      - { label: full DADA graph (generated from skills/dream-rsi/dada-graph.json), href: "./dada-graph/" }
   - label: showcase and links
     group:
       - { label: showcase, href: "./made-with/" }
