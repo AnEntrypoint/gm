@@ -1,0 +1,3 @@
+session=gm-drain-w1-29 row=BLOCKER-SKILLGM-exec-js-timeout-field
+
+Hypothesis H1: typed timeoutMs is folded and enforced (limit_ms equals the typed value). H2: typed field ignored (child runs to completion). Leader H1. Probe: script that sleeps 3 s with timeoutMs:1000. H1 predicts exec_timeout limit_ms 1000 at about 1 s; H2 predicts finished-after-3s. Probe run: dispatch 1791957213777-500-ef00cb621628d3cf returned error_code exec_timeout, limit_ms 1000, elapsed_ms 1033, killed true. Separates H1 from H2. Conflict probe (raw prefix plus typed field) returned error: timeoutMs is set both as the typed field and as a leading timeoutMs= line of the body; send one. Precondition, invariant, postcondition all hold.
