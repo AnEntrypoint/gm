@@ -550,3 +550,5 @@ GUARD-DISPATCH-INFLIGHT-INDENT | exit 0 | RESULT: cited indentation defect absen
 - NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-prdall-20261014-04-k08 witness: exec_js count of verbatim leave-transition sentence over gm-config/prose (160 scanned, 143 hit) and rs-plugkit/.../instructions/prose (159 scanned, 143 hit), exit 0, RESULT: H1 holds (stale 99/202), UTC 2026-10-14T07:43:46.521Z, dispatch 1791963688103-500-77b89d1cd56bda1e (session gm-drain-w2-313)
 
 - ORACLEBIAS-REBUILD-SIDELOAD-witness-blocker-gm-prdall-20261014-04-k06: instruction phase ORACLEBIAS under session gm-drain-w2-323 serves the ORACLEBIAS node with the expected-value-from-contract rule; exit 0; RESULT: PASS; UTC 2026-10-14T07:45:30.412Z; dispatch 1791963870224-500-eb7c5eb13e4098b7
+- JTBD-FRESH-CLONE-RECALL-blocker-gm-drain-w1-184 witness: recall {query:"walk loop pool refill", root:fresh-clone-184c (git archive HEAD .gm + 99 mem-*.md)}, exit 0, RESULT: PASS index_converged true at call 3 (prior lane: not converged in 8); caveat H3 root-shared index not excluded; UTC 2026-10-14T07:34:21Z, dispatch 1791963256798-500-b57bdd39ec2a04bb, session gm-drain-w2-260
+>
